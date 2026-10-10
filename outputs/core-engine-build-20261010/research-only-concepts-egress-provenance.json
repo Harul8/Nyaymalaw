@@ -1,0 +1,104 @@
+{
+  "purpose": "Read-only payload provenance and destination evidence after automatic approval-review rejection. Does not itself authorize a retry.",
+  "candidate_inputs_sha256": "caf39312fe7d96b508184a18bd596a434c9d059a45c58e16477d60ab94272b89",
+  "prior_results_sha256": "f0869b58e1f02b916df6700fd9e58dc0fe88486981e75fdc72c695829a1a26b0",
+  "comparison": "Every complete original_context is unchanged from the prior approved synthetic six-call run with saved provider usage. Candidate removes interpretation prose and presents the existing owned span coordinates through short aliases. Stable instructions/schema change are the bounded experiment, not new client data.",
+  "synthetic_origin_paths": [
+    "outputs/core-engine-build-20261010/research-probe.py:1-84 (script-authored synthetic cases)",
+    "outputs/core-engine-build-20261010/research-premise-fidelity-six.py:1-74 (synthetic agency and express alternative)",
+    "outputs/core-engine-build-20261010/research-account-concepts-pilot.py (composes six frozen prior fixtures; Aster text explicitly says synthetic test matter)"
+  ],
+  "destination": {
+    "provider": "openai",
+    "allowed_base_urls": [
+      null,
+      "",
+      "https://api.openai.com/v1",
+      "https://api.openai.com/v1/"
+    ],
+    "model": "gpt-4.1-mini-2025-04-14",
+    "owner": "research-only-concepts-pilot.py::run asserts provider, model and allowed endpoint; SDKCapture asserts exact model/messages/dynamic schema/store=False/token limit",
+    "credentials": "Not read or included in this proof"
+  },
+  "bounds": {
+    "maximum_sdk_dispatches": 6,
+    "provider_retries": 0,
+    "actual_spend_stop_usd": 0.08,
+    "shared_ledger": "api-budget.sqlite",
+    "shared_cap_usd": 5
+  },
+  "cases": [
+    {
+      "name": "original_aster_held_drive",
+      "original_context_sha256": "b3dddf8dbcdd69fdbfdb9729fc793d25dcfba8ee568d2e6d2ab5a61cc81f33a1",
+      "matches_previously_dispatched_context": true,
+      "prior_model": "gpt-4.1-mini-2025-04-14",
+      "prior_response_id": "chatcmpl-EXJrS2CRbs8pGWeaMlS6hzNu8c1Tk",
+      "prior_tokens_in": 4825,
+      "prior_tokens_out": 893,
+      "prior_usage_cost_usd": 0.0033588000000000003,
+      "origin": "Exact saved first Aster message and actual interpretation with held u8; no reconstructed successful extraction"
+    },
+    {
+      "name": "not_supplied_is_not_nonexistent",
+      "original_context_sha256": "1f064345743aa95932954ce9dd4b3c8e157aac54ec845ec1bc3c63bc55058f63",
+      "matches_previously_dispatched_context": true,
+      "prior_model": "gpt-4.1-mini-2025-04-14",
+      "prior_response_id": "chatcmpl-EXJrYQehqmDcFNNd1rSgNrjsSFx6P",
+      "prior_tokens_in": 2209,
+      "prior_tokens_out": 826,
+      "prior_usage_cost_usd": 0.0022052000000000005,
+      "origin": "Historical failed planner input; scripted exact-span fixture isolates the new planner"
+    },
+    {
+      "name": "actor_agency_and_explicit_alternative",
+      "original_context_sha256": "715ce262771c3adb4f0d9ab3bd284ab63c8e5bf406589c2113950bb5fb703b31",
+      "matches_previously_dispatched_context": true,
+      "prior_model": "gpt-4.1-mini-2025-04-14",
+      "prior_response_id": "chatcmpl-EXJrdOhHvODS1ROnTCnDz5m0YdV9w",
+      "prior_tokens_in": 2471,
+      "prior_tokens_out": 547,
+      "prior_usage_cost_usd": 0.0018636000000000002,
+      "origin": "Exact saved hypothetical neighbour and original agency account; scripted exact spans"
+    },
+    {
+      "name": "mixed_independent_requests_followup",
+      "original_context_sha256": "5d39cf63a0bc59744c7a119e271cbdf32d0acd73cd7ccf10bd5b8da03d3d09f4",
+      "matches_previously_dispatched_context": true,
+      "prior_model": "gpt-4.1-mini-2025-04-14",
+      "prior_response_id": "chatcmpl-EXJrhn2wHVmE8ws98mte9uwJuoD4q",
+      "prior_tokens_in": 2795,
+      "prior_tokens_out": 449,
+      "prior_usage_cost_usd": 0.0018364000000000002,
+      "origin": "Exact saved mixed follow-up account; scripted exact spans retain complete history"
+    },
+    {
+      "name": "correction_no_send_no_law",
+      "original_context_sha256": "5c4f1e11a8ebee1cc3df5661e389f8cd6c3c256d9470b3555e4388f1dba98383",
+      "matches_previously_dispatched_context": true,
+      "prior_model": "gpt-4.1-mini-2025-04-14",
+      "prior_response_id": "chatcmpl-EXJrkgxnHJyIobV6aqjqopquUxTtR",
+      "prior_tokens_in": 1561,
+      "prior_tokens_out": 253,
+      "prior_usage_cost_usd": 0.0010292,
+      "origin": "Saved date correction with explicit synthetic no-send addition; prior factual inputs unchanged"
+    },
+    {
+      "name": "greeting_social_close",
+      "original_context_sha256": "3ad34bfe7dd3482f14fd2563716b7cda1064aaed351ad6bf5ac434d90dc138d1",
+      "matches_previously_dispatched_context": true,
+      "prior_model": "gpt-4.1-mini-2025-04-14",
+      "prior_response_id": "chatcmpl-EXJrmAYvh4xyS5Sh88E32E3yvrjjY",
+      "prior_tokens_in": 1394,
+      "prior_tokens_out": 202,
+      "prior_usage_cost_usd": 0.0008808,
+      "origin": "Exact saved social closing and complete earlier pending-work context"
+    }
+  ],
+  "latest_attempt": {
+    "automatic_review_rejected_before_process_execution": true,
+    "actual_provider_dispatches": 0,
+    "new_model_spend": 0,
+    "earlier_harness_zero_dispatch_reservation_retained_usd": 0.425431
+  }
+}

@@ -1,0 +1,236 @@
+{
+  "contract": "research_only_concepts_model_comparison_assessment_v1",
+  "decision": "No production promotion. GPT-4.1 improves source-selection precision and formal vocabulary in some cases, but exchanges one nonresearch-control failure for another and retains source-scope risks. One observation per already-seen case does not demonstrate dependable superiority.",
+  "files": {
+    "results": "research-only-concepts-gpt41-results.json",
+    "baseline": "research-only-concepts-guard-fixed-results.json",
+    "frozen_inputs": "research-only-concepts-inputs.json",
+    "frozen_oracle": "research-only-concepts-hidden-oracle.json",
+    "script": "research-only-concepts-gpt41-comparison.py"
+  },
+  "comparison_integrity": [
+    {
+      "case": "original_aster_held_drive",
+      "all_nonmodel_sdk_arguments_equal": true,
+      "actual_prompt_token_count_equal": true,
+      "pre_dispatch_measured_plus_next_envelope_usd": 0.096992,
+      "measured_cost_usd": 0.007754
+    },
+    {
+      "case": "not_supplied_is_not_nonexistent",
+      "all_nonmodel_sdk_arguments_equal": true,
+      "actual_prompt_token_count_equal": true,
+      "pre_dispatch_measured_plus_next_envelope_usd": 0.084266,
+      "measured_cost_usd": 0.005134
+    },
+    {
+      "case": "actor_agency_and_explicit_alternative",
+      "all_nonmodel_sdk_arguments_equal": true,
+      "actual_prompt_token_count_equal": true,
+      "pre_dispatch_measured_plus_next_envelope_usd": 0.094888,
+      "measured_cost_usd": 0.004008
+    },
+    {
+      "case": "mixed_independent_requests_followup",
+      "all_nonmodel_sdk_arguments_equal": true,
+      "actual_prompt_token_count_equal": true,
+      "pre_dispatch_measured_plus_next_envelope_usd": 0.099828,
+      "measured_cost_usd": 0.005246
+    },
+    {
+      "case": "correction_no_send_no_law",
+      "all_nonmodel_sdk_arguments_equal": true,
+      "actual_prompt_token_count_equal": true,
+      "pre_dispatch_measured_plus_next_envelope_usd": 0.09105,
+      "measured_cost_usd": 0.002636
+    },
+    {
+      "case": "greeting_social_close",
+      "all_nonmodel_sdk_arguments_equal": true,
+      "actual_prompt_token_count_equal": true,
+      "pre_dispatch_measured_plus_next_envelope_usd": 0.092454,
+      "measured_cost_usd": 0.001866
+    }
+  ],
+  "scores": {
+    "mechanical_gpt41": 6,
+    "mechanical_mini": 6,
+    "strict_full_contract_gpt41": 1,
+    "strict_full_contract_mini": 1,
+    "nonresearch_controls_gpt41": {
+      "correct": 1,
+      "incorrect": 1,
+      "correct_case": "social_closing",
+      "incorrect_case": "date_correction"
+    },
+    "nonresearch_controls_mini": {
+      "correct": 1,
+      "incorrect": 1,
+      "correct_case": "date_correction",
+      "incorrect_case": "social_closing"
+    },
+    "note": "Strict tally includes source-selection and framing risks and is not semantic accuracy. Permissive exploratory legal concepts are assessed separately; no keyword/style blocker is proposed. No corpus retrieval or end-user output was tested."
+  },
+  "measurement": {
+    "model": "gpt-4.1-2025-04-14",
+    "model_only_changed": true,
+    "actual_sdk_dispatches": 6,
+    "provider_retries": 0,
+    "input_tokens": 9534,
+    "output_tokens": 947,
+    "measured_usd": 0.026644,
+    "mini_measured_usd": 0.005685999999999997,
+    "observed_cost_ratio_to_mini": 4.685895181146679,
+    "latency_ms": [
+      3557,
+      2492,
+      1646,
+      1727,
+      1240,
+      914
+    ],
+    "latency_total_ms": 11576,
+    "latency_median_ms": 1686.5,
+    "mini_latency_total_ms": 13402,
+    "limits": "One unpaired-time sample per model/case; latency differences are observational, not a benchmark. Same 4000-output cap and exact SDK input otherwise unchanged.",
+    "shared_ledger_after": {
+      "maximum_usd": 5.0,
+      "charged_usd": 1.789723,
+      "measured_usd": 0.274292,
+      "reserved_or_unknown_usd": 1.515431,
+      "attempts": 100,
+      "models": [
+        {
+          "model": "gpt-4.1-2025-04-14",
+          "state": "measured",
+          "attempts": 6,
+          "charged_usd": 0.026644
+        },
+        {
+          "model": "gpt-4.1-mini-2025-04-14",
+          "state": "measured",
+          "attempts": 92,
+          "charged_usd": 0.247648
+        },
+        {
+          "model": "gpt-4.1-mini-2025-04-14",
+          "state": "reserved_or_unknown",
+          "attempts": 1,
+          "charged_usd": 0.425431
+        },
+        {
+          "model": "text-embedding-3-large",
+          "state": "reserved_or_unknown",
+          "attempts": 1,
+          "charged_usd": 1.09
+        }
+      ]
+    },
+    "reservation_note": "Every stronger-model request reserved $2.127152 under the existing shared $5 ledger and settled actual returned identity/usage. Prior $1.515431 unknown reserves remain unchanged.",
+    "slice_envelope": "2x exact SDK JSON UTF-8 bytes +8192 framing tokens at uncached $2/M, plus hard4000output*$8/M. Engineering assumption explicitly not a published provider framing guarantee. Every pre-dispatch measured-or-unknown charge plus next envelope fit $0.10; no retry/error or envelope exceedance occurred.",
+    "pricing_source": "https://developers.openai.com/api/docs/models/gpt-4.1"
+  },
+  "cases": [
+    {
+      "name": "original_aster_held_drive",
+      "strict_full_contract": "not_accepted",
+      "improvements_over_mini": [
+        "Focused account a10/a12/a14 for deposit and a15 for drive; no whole mixed message or task instructions selected.",
+        "Deposit forfeiture, evidential weight, burden of proof, lien and self-help are more distinct formal concepts; five phrases rather than six."
+      ],
+      "remaining_findings": [
+        {
+          "output": "Owner retaining third-party property (design drive)",
+          "source": "owner's technician still has ... drive; owner ... says it can retain",
+          "interpretation": "Title does not preserve the distinction between actual custodian and claimant of retention entitlement; source a15 itself retains it. A permissive discovery reading may treat owner as shorthand for the asserted control, so this is an attribution/scope risk rather than proof the returned law will be wrong."
+        },
+        {
+          "output": "lack of a joint inspection report",
+          "source": "owner sent a technician's estimate but no joint inspection report",
+          "interpretation": "Output should preserve no report sent versus no report exists. In a search purpose, this may mean a missing item in the available record; assess against the exact account rather than automatically reject the legal evidence query."
+        }
+      ],
+      "permissive_discovery_reading": "Useful legal investigations and distinct hypotheses. Third-party property, lien, and self-help are not automatically unsupported merely because their legal conditions remain unknown. Strict title/source-scope concerns prevent declaring the complete target behaviour achieved."
+    },
+    {
+      "name": "not_supplied_is_not_nonexistent",
+      "strict_full_contract": "not_accepted",
+      "improvements_over_mini": [
+        "Uses the available factual-only a4 for both investigations; no greeting/task/restriction selections. a4 contains both disputes because that is the offered segmentation.",
+        "Bailment, return duties and conversion are more formal and distinct legal-discovery concepts.",
+        "No equally direct statement of actual lease termination in an outcome summary."
+      ],
+      "remaining_findings": [
+        {
+          "output": "... disputed allegations of damage, absent a joint inspection report",
+          "source": "no joint inspection report has been supplied",
+          "interpretation": "The issue heading itself changes non-supply into absence without a record-relative qualification."
+        },
+        {
+          "output": "especially absent a jointly signed inspection report",
+          "source": "no joint inspection report has been supplied",
+          "interpretation": "Query purpose adds jointly signed and continues the absence formulation; shared exact source has not established nonexistence."
+        }
+      ],
+      "permissive_discovery_reading": "Post-lease inspections, bailment and conversion can be legitimate conditional discovery topics; do not mark those phrases wrong solely because no conclusion or entitlement is yet established. The affirmative absent-report issue title remains a fidelity concern."
+    },
+    {
+      "name": "actor_agency_and_explicit_alternative",
+      "strict_full_contract": "not_accepted",
+      "improvements_over_mini": [
+        "Concentrates on the currently requested expressly authorised alternative rather than automatically creating a second actual-account research item.",
+        "Express authority and contract-modification formalities are distinct usable concepts."
+      ],
+      "remaining_findings": [
+        {
+          "output": "if the absence of written or emailed documentation affects enforceability",
+          "source": "assume ... no email recording the extension was ever created",
+          "interpretation": "Broadens the selected authorised premise from no email to no written documentation of any kind. The word if can be read as a conditional legal enquiry; it is not an unqualified finding, but the output does not keep the broader possibility explicitly separate from the authorised assumption."
+        }
+      ],
+      "source_selection": "a4 plus full latest a5 duplicates the assumption and includes task directions. Hypothetical framing itself must remain; that is not noise. Full original context was supplied, so no claim of missing model context is made.",
+      "permissive_discovery_reading": "The formalities enquiry is legally meaningful as discovery. Do not forbid investigating writing requirements; preserve the difference between an unspecified formalities question and an invented assumed absence of all writings."
+    },
+    {
+      "name": "mixed_independent_requests_followup",
+      "strict_full_contract": "not_accepted",
+      "improvements_over_mini": [
+        "Both independent requests remain.",
+        "Uses one interim-relief phrase rather than three broad rewordings; separate licence/access/ownership topics retained.",
+        "Avoids the whole latest message in passage selections."
+      ],
+      "remaining_findings": [
+        {
+          "output": "temporary, owner-granted right to use property",
+          "source": "Do not assume ownership ... settled; ... keeping the ownership question open",
+          "interpretation": "Purpose introduces an owner-granted characterisation while the issue heading and exact account keep ownership unresolved. Could describe a generic legal class, but it needs to remain a discovery possibility rather than the matter's premise."
+        }
+      ],
+      "source_selection": "Interim enquiry uses the request a3 as factual account instead of no account; passage work still includes task a6. Exact source IDs are valid; their factual-query purpose is not mechanically established.",
+      "permissive_discovery_reading": "Substantively useful investigations. Licence revocation, easement, necessity/prescription and ownership uncertainty should not be rejected merely for naming unproved legal hypotheses. Strict fail includes source-selection scope, not a blanket judgment that these concepts are irrelevant."
+    },
+    {
+      "name": "correction_no_send_no_law",
+      "strict_full_contract": "not_accepted",
+      "improvements_over_mini": [],
+      "remaining_findings": [
+        {
+          "output": "Effect of payment date discrepancy and unconfirmed amount; payment date accuracy; uncertain payment amount",
+          "source": "Please correct your summary: I said 14 April, not 14 May ... Do not send anything",
+          "interpretation": "Creates legal investigations for an internal factual repair. This is a clear regression: mini returned work=[]. No legal source was required by this request."
+        }
+      ],
+      "permissive_discovery_reading": "Not useful current legal discovery; a generally possible legal implication does not establish current research need. No actual correction or external action was performed by this pilot."
+    },
+    {
+      "name": "greeting_social_close",
+      "strict_full_contract": "accepted_for_isolated_research_responsibility",
+      "improvements_over_mini": [
+        "Correctly returns work=[] and does not restart prior conditional rent work."
+      ],
+      "remaining_findings": [],
+      "permissive_discovery_reading": "Clear improvement on current-work control. Does not demonstrate the downstream social reply or saved state."
+    }
+  ],
+  "next_decision": "Do not assume another model increase repairs responsibility or factual-scope defects. A next change, if authorised, should target current-work control and source/premise separation, while preserving useful conditional discovery and independently testing retrieval. No further provider run or production change was made."
+}

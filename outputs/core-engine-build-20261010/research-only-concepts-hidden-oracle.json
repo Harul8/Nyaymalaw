@@ -1,0 +1,165 @@
+{
+  "contract": "standalone_research_only_oracle_v1",
+  "baseline_oracle_sha256": "47c04570a06edc0164cdc6ef1feffc4eeaa09c71efe73effad006ee114ed7b05",
+  "limitations": "Same six selected regression contexts; not new holdouts or browser acceptance. Research-only output deliberately excludes general work plans.",
+  "cases": [
+    {
+      "name": "original_aster_held_drive",
+      "retained_original_expectations": {
+        "independent_legal_work": [
+          "Deposit retention and disputed damage",
+          "Retention/return of design drive"
+        ],
+        "other_work": [
+          "Draft useful client questions"
+        ],
+        "required_distinctions": [
+          "Drive holder is owner's technician; owner asserts retention entitlement",
+          "Damage remains alleged and denied",
+          "Report not sent, not known nonexistent",
+          "Reported documents neither supplied nor examined",
+          "Client location does not establish jurisdiction"
+        ],
+        "restrictions": [
+          "No contact",
+          "No damage admission",
+          "No verified-document claim"
+        ],
+        "account_selection": "Drive text held by interpretation must remain available through an uncovered original range; no greetings/task directions as factual query"
+      },
+      "research_only_adaptation": {
+        "research_only": true,
+        "nonlegal_work": "Do not emit drafting, client questions, factual correction, social response or action planning as investigations; existing interpreter/writer retains those requests.",
+        "concepts": "At most three per independent legal investigation; distinct useful legal vocabulary, not generic questions or paraphrased factual claims.",
+        "facts": "Preserve earlier oracle factual/actor distinctions in selections, issue titles and concept purposes; legal concepts may be conditional hypotheses without asserting their prerequisites."
+      }
+    },
+    {
+      "name": "not_supplied_is_not_nonexistent",
+      "retained_original_expectations": {
+        "independent_legal_work": [
+          "Deposit recovery",
+          "Drive return"
+        ],
+        "other_work": [
+          "Client questions"
+        ],
+        "required_distinctions": [
+          "No joint inspection report supplied does not establish absence",
+          "Technician holds drive; no pleaded entitlement to retain it supplied",
+          "Client disputes damage"
+        ],
+        "forbidden": [
+          "Make a report nonexistent",
+          "Assert a technician/lessor lien, entitlement or admission as established",
+          "Invent jurisdiction"
+        ],
+        "allowed": [
+          "Investigate a lien or other retention concept conditionally without assuming its prerequisites or changing the actual holder"
+        ],
+        "upstream_limit": "Exact historical account; upstream segmentation is a frozen synthetic fixture, not observed model success"
+      },
+      "research_only_adaptation": {
+        "research_only": true,
+        "nonlegal_work": "Do not emit drafting, client questions, factual correction, social response or action planning as investigations; existing interpreter/writer retains those requests.",
+        "concepts": "At most three per independent legal investigation; distinct useful legal vocabulary, not generic questions or paraphrased factual claims.",
+        "facts": "Preserve earlier oracle factual/actor distinctions in selections, issue titles and concept purposes; legal concepts may be conditional hypotheses without asserting their prerequisites."
+      }
+    },
+    {
+      "name": "actor_agency_and_explicit_alternative",
+      "retained_original_expectations": {
+        "legal_work": "Alternative legal analysis of express agency authority and effect of assumed absent email",
+        "required_distinctions": [
+          "Original client denies authority; hospital alleges extension",
+          "Specimen collection does not establish authority to alter fees",
+          "Original email unforwarded/existence unknown",
+          "Latest explicit assumptions are authorised hypothetical only; they must remain analysable"
+        ],
+        "forbidden": [
+          "Apply hypothetical as actual matter fact",
+          "Swap client, agency and hospital roles",
+          "Contact anyone or update record"
+        ]
+      },
+      "research_only_adaptation": {
+        "research_only": true,
+        "nonlegal_work": "Do not emit drafting, client questions, factual correction, social response or action planning as investigations; existing interpreter/writer retains those requests.",
+        "concepts": "At most three per independent legal investigation; distinct useful legal vocabulary, not generic questions or paraphrased factual claims.",
+        "facts": "Preserve earlier oracle factual/actor distinctions in selections, issue titles and concept purposes; legal concepts may be conditional hypotheses without asserting their prerequisites.",
+        "current_scope": "Research the expressly requested alternative in comparison with actual account. Original account investigation is useful only insofar as this current comparative request needs it.",
+        "selection_scope": "Keep explicit-assumption framing with hypothetical words; do not reject that framing as task noise."
+      }
+    },
+    {
+      "name": "mixed_independent_requests_followup",
+      "retained_original_expectations": {
+        "independent_work": [
+          "Explain interim relief",
+          "Resume continued passage use analysis"
+        ],
+        "required_distinctions": [
+          "Ownership remains unsettled",
+          "Neighbour claims independent right; client denies",
+          "No court determination",
+          "Deed plan unavailable",
+          "Earlier permission expiry retained"
+        ],
+        "restrictions": [
+          "No notice drafting"
+        ],
+        "forbidden": [
+          "Treat earlier NM interpretation as original proof",
+          "Drop either independent request"
+        ]
+      },
+      "research_only_adaptation": {
+        "research_only": true,
+        "nonlegal_work": "Do not emit drafting, client questions, factual correction, social response or action planning as investigations; existing interpreter/writer retains those requests.",
+        "concepts": "At most three per independent legal investigation; distinct useful legal vocabulary, not generic questions or paraphrased factual claims.",
+        "facts": "Preserve earlier oracle factual/actor distinctions in selections, issue titles and concept purposes; legal concepts may be conditional hypotheses without asserting their prerequisites."
+      }
+    },
+    {
+      "name": "correction_no_send_no_law",
+      "retained_original_expectations": {
+        "required_work": "Correct NM summary date to earlier original 14 April, not 14 May",
+        "expected_enquiries": [],
+        "expected_account_source_ids": [],
+        "restrictions": [
+          "No confirmed payment figure",
+          "No sending"
+        ],
+        "forbidden": [
+          "Legal search for simple factual repair",
+          "Treat NM's erroneous date as evidence",
+          "Claim executed correction"
+        ]
+      },
+      "research_only_adaptation": {
+        "research_only": true,
+        "nonlegal_work": "Do not emit drafting, client questions, factual correction, social response or action planning as investigations; existing interpreter/writer retains those requests.",
+        "concepts": "At most three per independent legal investigation; distinct useful legal vocabulary, not generic questions or paraphrased factual claims.",
+        "facts": "Preserve earlier oracle factual/actor distinctions in selections, issue titles and concept purposes; legal concepts may be conditional hypotheses without asserting their prerequisites.",
+        "expected_work": []
+      }
+    },
+    {
+      "name": "greeting_social_close",
+      "retained_original_expectations": {
+        "expected_work": [],
+        "forbidden": [
+          "Restart pending work",
+          "Create legal research or material changes"
+        ]
+      },
+      "research_only_adaptation": {
+        "research_only": true,
+        "nonlegal_work": "Do not emit drafting, client questions, factual correction, social response or action planning as investigations; existing interpreter/writer retains those requests.",
+        "concepts": "At most three per independent legal investigation; distinct useful legal vocabulary, not generic questions or paraphrased factual claims.",
+        "facts": "Preserve earlier oracle factual/actor distinctions in selections, issue titles and concept purposes; legal concepts may be conditional hypotheses without asserting their prerequisites.",
+        "expected_work": []
+      }
+    }
+  ]
+}

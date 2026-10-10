@@ -1,0 +1,32 @@
+# Preserve the exact bytes captured by these experiments' execution manifests.
+# Scope stays limited to this checkpoint; older evidence keeps its existing rules.
+assess-rerank-local.py -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+compare-rerank-local.py -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+compare-rerank-per-enquiry.py -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+compare-rerank-presentation.py -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+rerank-local-assessment.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+rerank-local-blinded-packet.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+rerank-local-independent-labels.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+rerank-local-manifest.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+rerank-local-results.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+rerank-per-enquiry-assessment.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+rerank-per-enquiry-manifest.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+rerank-per-enquiry-results.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+rerank-presentation-prepare-only.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+research-account-concepts-assessment.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+research-account-concepts-hidden-oracle.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+research-account-concepts-inputs.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+research-account-concepts-pilot.py -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+research-account-concepts-results.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+research-only-concepts-assessment.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+research-only-concepts-egress-provenance.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+research-only-concepts-executed-pilot.py -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+research-only-concepts-gpt41-assessment.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+research-only-concepts-gpt41-comparison.py -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+research-only-concepts-gpt41-results.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+research-only-concepts-guard-fixed-results.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+research-only-concepts-hidden-oracle.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+research-only-concepts-independent-assessment.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+research-only-concepts-inputs.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+research-only-concepts-results.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+retrieval-context-comparison.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol

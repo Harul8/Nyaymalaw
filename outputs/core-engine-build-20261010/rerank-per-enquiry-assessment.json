@@ -1,0 +1,1467 @@
+{
+  "scope": "Per-enquiry local candidate-ranking diagnostic only; not product final selection",
+  "manifest_sha256": "32fcc75af1abfe8c4998d43765796be6dac8ff6469d84b118918d4db664cbd84",
+  "results_sha256": "0cc37e44f8fce566d0c6a6c716c97a9006fe1d324565c1504b2e67e4cc9f8156",
+  "labels_sha256": "ed2f77251e807475c19bee732d9a62aa5d5d174ebd5a505b341e2d153643d0f8",
+  "model_load_seconds": 12.935926100006327,
+  "device": "cuda:0",
+  "dtype": "torch.float16",
+  "timings": [
+    {
+      "query_id": "deposit_and_drive:w1:q1",
+      "kind": "provision",
+      "elapsed_seconds": 2.066561499959789,
+      "prepared_pair_count": 127
+    },
+    {
+      "query_id": "deposit_and_drive:w1:q1",
+      "kind": "judgment",
+      "elapsed_seconds": 2.6567962000845,
+      "prepared_pair_count": 203
+    },
+    {
+      "query_id": "deposit_and_drive:w1:q2",
+      "kind": "provision",
+      "elapsed_seconds": 1.6646526000695303,
+      "prepared_pair_count": 125
+    },
+    {
+      "query_id": "deposit_and_drive:w1:q2",
+      "kind": "judgment",
+      "elapsed_seconds": 2.5278249999973923,
+      "prepared_pair_count": 193
+    },
+    {
+      "query_id": "deposit_and_drive:w1:q3",
+      "kind": "provision",
+      "elapsed_seconds": 1.6716257999651134,
+      "prepared_pair_count": 127
+    },
+    {
+      "query_id": "deposit_and_drive:w1:q3",
+      "kind": "judgment",
+      "elapsed_seconds": 2.640569799928926,
+      "prepared_pair_count": 197
+    }
+  ],
+  "ranked_source_identity": "Frozen corpus revision + corpus kind + store position; equal text at different positions stays distinct",
+  "round_robin_method": "Within each corpus, take the next unseen source from enquiry1,2,3 in supplied order, repeating until six unique source identities. Skip already selected identities within the active enquiry. No score threshold, relevance label, manual promotion or document-diversity rule participates.",
+  "top6_comparisons": {
+    "provision": {
+      "round_robin_top6": [
+        {
+          "position": 77351,
+          "passage_sha256": "b43ebd80cf384e31e3de57f93f6220b0384702f62a735f52f391749aab02568c",
+          "score": 0.12656909227371216,
+          "rank": 1,
+          "selected_by_query": "deposit_and_drive:w1:q1"
+        },
+        {
+          "position": 87268,
+          "passage_sha256": "a92b215cd3b90fb3694911031f1c249092db4c645b696f429ba91cd1a7c81da2",
+          "score": 0.01861780323088169,
+          "rank": 2,
+          "selected_by_query": "deposit_and_drive:w1:q2"
+        },
+        {
+          "position": 200049,
+          "passage_sha256": "3914df33987ca34556ba68d1fb01b0310e9a7607f5a2ba0c2490d05cec84d1ca",
+          "score": 0.06669065356254578,
+          "rank": 1,
+          "selected_by_query": "deposit_and_drive:w1:q3"
+        },
+        {
+          "position": 46850,
+          "passage_sha256": "ad0ff271aa04a11cc844c45951ad28a68d2ac5ab29ad937f16a63320334e6e65",
+          "score": 0.07211220264434814,
+          "rank": 2,
+          "selected_by_query": "deposit_and_drive:w1:q1"
+        },
+        {
+          "position": 4898,
+          "passage_sha256": "74dd94dd6db4a1e4da95d3c0f906be4e186fc2a6d3bb65df0084928316410e2a",
+          "score": 0.01572399213910103,
+          "rank": 3,
+          "selected_by_query": "deposit_and_drive:w1:q2"
+        },
+        {
+          "position": 88227,
+          "passage_sha256": "d072e785e2e811538cfc76ec239f67cc66e8f3e201c79ba7444f1f761f5d92d1",
+          "score": 0.008711384609341621,
+          "rank": 5,
+          "selected_by_query": "deposit_and_drive:w1:q3"
+        }
+      ],
+      "combined_focused_top6": [
+        {
+          "position": 38422,
+          "passage_sha256": "d2a3545778403413394b9eaa770951003994278bea94b9a698a893b077b9d6f5",
+          "score": 0.24418270587921143,
+          "rank": 1
+        },
+        {
+          "position": 281760,
+          "passage_sha256": "db97a6bf02fed85c2b64e86fc45e3d1f6b9f371cd3302dc595df914661a86648",
+          "score": 0.21419788897037506,
+          "rank": 2
+        },
+        {
+          "position": 88227,
+          "passage_sha256": "d072e785e2e811538cfc76ec239f67cc66e8f3e201c79ba7444f1f761f5d92d1",
+          "score": 0.19132767617702484,
+          "rank": 3
+        },
+        {
+          "position": 77351,
+          "passage_sha256": "b43ebd80cf384e31e3de57f93f6220b0384702f62a735f52f391749aab02568c",
+          "score": 0.18111833930015564,
+          "rank": 4
+        },
+        {
+          "position": 266808,
+          "passage_sha256": "d907bbaba2d57c02251587ea1000fb38e4a8f1830186917113c14428a2bd4610",
+          "score": 0.17596247792243958,
+          "rank": 5
+        },
+        {
+          "position": 200049,
+          "passage_sha256": "3914df33987ca34556ba68d1fb01b0310e9a7607f5a2ba0c2490d05cec84d1ca",
+          "score": 0.17567944526672363,
+          "rank": 6
+        }
+      ],
+      "each_query_top6": {
+        "deposit_and_drive:w1:q1": [
+          {
+            "position": 77351,
+            "passage_sha256": "b43ebd80cf384e31e3de57f93f6220b0384702f62a735f52f391749aab02568c",
+            "score": 0.12656909227371216,
+            "rank": 1
+          },
+          {
+            "position": 46850,
+            "passage_sha256": "ad0ff271aa04a11cc844c45951ad28a68d2ac5ab29ad937f16a63320334e6e65",
+            "score": 0.07211220264434814,
+            "rank": 2
+          },
+          {
+            "position": 4898,
+            "passage_sha256": "74dd94dd6db4a1e4da95d3c0f906be4e186fc2a6d3bb65df0084928316410e2a",
+            "score": 0.03934250399470329,
+            "rank": 3
+          },
+          {
+            "position": 87268,
+            "passage_sha256": "a92b215cd3b90fb3694911031f1c249092db4c645b696f429ba91cd1a7c81da2",
+            "score": 0.03753800690174103,
+            "rank": 4
+          },
+          {
+            "position": 200049,
+            "passage_sha256": "3914df33987ca34556ba68d1fb01b0310e9a7607f5a2ba0c2490d05cec84d1ca",
+            "score": 0.024423090741038322,
+            "rank": 5
+          },
+          {
+            "position": 46862,
+            "passage_sha256": "3d7642ae1aeb1200390d858eef5164e3fcb7c5601013149aaae56d5303b27c66",
+            "score": 0.02373468689620495,
+            "rank": 6
+          }
+        ],
+        "deposit_and_drive:w1:q2": [
+          {
+            "position": 77351,
+            "passage_sha256": "b43ebd80cf384e31e3de57f93f6220b0384702f62a735f52f391749aab02568c",
+            "score": 0.019160708412528038,
+            "rank": 1
+          },
+          {
+            "position": 87268,
+            "passage_sha256": "a92b215cd3b90fb3694911031f1c249092db4c645b696f429ba91cd1a7c81da2",
+            "score": 0.01861780323088169,
+            "rank": 2
+          },
+          {
+            "position": 4898,
+            "passage_sha256": "74dd94dd6db4a1e4da95d3c0f906be4e186fc2a6d3bb65df0084928316410e2a",
+            "score": 0.01572399213910103,
+            "rank": 3
+          },
+          {
+            "position": 87337,
+            "passage_sha256": "d7cbbeb8f325029f29bda18123b1f36ab67e5922b612df120004efc4de42c8c4",
+            "score": 0.0064882696606218815,
+            "rank": 4
+          },
+          {
+            "position": 88227,
+            "passage_sha256": "d072e785e2e811538cfc76ec239f67cc66e8f3e201c79ba7444f1f761f5d92d1",
+            "score": 0.005099818110466003,
+            "rank": 5
+          },
+          {
+            "position": 200049,
+            "passage_sha256": "3914df33987ca34556ba68d1fb01b0310e9a7607f5a2ba0c2490d05cec84d1ca",
+            "score": 0.003930085338652134,
+            "rank": 6
+          }
+        ],
+        "deposit_and_drive:w1:q3": [
+          {
+            "position": 200049,
+            "passage_sha256": "3914df33987ca34556ba68d1fb01b0310e9a7607f5a2ba0c2490d05cec84d1ca",
+            "score": 0.06669065356254578,
+            "rank": 1
+          },
+          {
+            "position": 87268,
+            "passage_sha256": "a92b215cd3b90fb3694911031f1c249092db4c645b696f429ba91cd1a7c81da2",
+            "score": 0.024145424365997314,
+            "rank": 2
+          },
+          {
+            "position": 4898,
+            "passage_sha256": "74dd94dd6db4a1e4da95d3c0f906be4e186fc2a6d3bb65df0084928316410e2a",
+            "score": 0.016466174274683,
+            "rank": 3
+          },
+          {
+            "position": 77351,
+            "passage_sha256": "b43ebd80cf384e31e3de57f93f6220b0384702f62a735f52f391749aab02568c",
+            "score": 0.013376603834331036,
+            "rank": 4
+          },
+          {
+            "position": 88227,
+            "passage_sha256": "d072e785e2e811538cfc76ec239f67cc66e8f3e201c79ba7444f1f761f5d92d1",
+            "score": 0.008711384609341621,
+            "rank": 5
+          },
+          {
+            "position": 87337,
+            "passage_sha256": "d7cbbeb8f325029f29bda18123b1f36ab67e5922b612df120004efc4de42c8c4",
+            "score": 0.0077555361203849316,
+            "rank": 6
+          }
+        ]
+      }
+    },
+    "judgment": {
+      "round_robin_top6": [
+        {
+          "position": 928389,
+          "passage_sha256": "2841fba55751f7f28e48998d33167f1a8224405b2c7c953b3595b40e85442d2d",
+          "score": 0.20055769383907318,
+          "rank": 1,
+          "selected_by_query": "deposit_and_drive:w1:q1"
+        },
+        {
+          "position": 1013737,
+          "passage_sha256": "ef040850d4b8a10da26052638c25b71e941c9fed1bd57f9747d65ef6f0ddeca9",
+          "score": 0.04778006672859192,
+          "rank": 1,
+          "selected_by_query": "deposit_and_drive:w1:q2"
+        },
+        {
+          "position": 799247,
+          "passage_sha256": "c9f41f8dcb86d459c65e5290c703ccbfd73bfb9235d0c27b5c1285960d697eb4",
+          "score": 0.13061773777008057,
+          "rank": 1,
+          "selected_by_query": "deposit_and_drive:w1:q3"
+        },
+        {
+          "position": 455313,
+          "passage_sha256": "9a7e70ce2fce955056c8b04c09906d85abe81e57e557284df9c942a47852fd79",
+          "score": 0.19915220141410828,
+          "rank": 2,
+          "selected_by_query": "deposit_and_drive:w1:q1"
+        },
+        {
+          "position": 951348,
+          "passage_sha256": "a2a631dbb21f930055cfff8c15436c73af125d2b4b6ef0ecb7539969664e18c0",
+          "score": 0.037467505782842636,
+          "rank": 2,
+          "selected_by_query": "deposit_and_drive:w1:q2"
+        },
+        {
+          "position": 323010,
+          "passage_sha256": "bb38f9781e08307dc83979c83c09d47f5f0d288f89dc9641fe88daa0a13db302",
+          "score": 0.11182181537151337,
+          "rank": 2,
+          "selected_by_query": "deposit_and_drive:w1:q3"
+        }
+      ],
+      "combined_focused_top6": [
+        {
+          "position": 951349,
+          "passage_sha256": "333cf87707e8bdebe0671faf9d5f9fb7963bea1e594851e0fc7773240c1bc0db",
+          "score": 0.7633073329925537,
+          "rank": 1
+        },
+        {
+          "position": 951348,
+          "passage_sha256": "a2a631dbb21f930055cfff8c15436c73af125d2b4b6ef0ecb7539969664e18c0",
+          "score": 0.5038184523582458,
+          "rank": 2
+        },
+        {
+          "position": 1011003,
+          "passage_sha256": "64ed0416e6c4204453c0fa7d63dac59b0e686a7874ae255ae6d7a6745f267341",
+          "score": 0.49764442443847656,
+          "rank": 3
+        },
+        {
+          "position": 511384,
+          "passage_sha256": "35898eb66862a3d5f35c798a99431ace1f6c11878278c7f65737e26db216369b",
+          "score": 0.44305816292762756,
+          "rank": 4
+        },
+        {
+          "position": 59031,
+          "passage_sha256": "d668dfa15c573bce53a50debc603d2b13924631c676a2869b1cef04ee2bb0144",
+          "score": 0.2333567589521408,
+          "rank": 5
+        },
+        {
+          "position": 689051,
+          "passage_sha256": "304f58d6f6dd65e18a43b3de42870f50e190dbc49eb824de92326a1bcd2bb51c",
+          "score": 0.19590157270431519,
+          "rank": 6
+        }
+      ],
+      "each_query_top6": {
+        "deposit_and_drive:w1:q1": [
+          {
+            "position": 928389,
+            "passage_sha256": "2841fba55751f7f28e48998d33167f1a8224405b2c7c953b3595b40e85442d2d",
+            "score": 0.20055769383907318,
+            "rank": 1
+          },
+          {
+            "position": 455313,
+            "passage_sha256": "9a7e70ce2fce955056c8b04c09906d85abe81e57e557284df9c942a47852fd79",
+            "score": 0.19915220141410828,
+            "rank": 2
+          },
+          {
+            "position": 217173,
+            "passage_sha256": "3d1e94075c069f36e667aca59dcb61a30e3cee9866a7470c6cd99f9581c2f8f2",
+            "score": 0.0948452427983284,
+            "rank": 3
+          },
+          {
+            "position": 504013,
+            "passage_sha256": "80b8006b075ab8d9617935d82ad5e6505a33da3b11e9f9fa3b504b6deca52e1f",
+            "score": 0.07737810909748077,
+            "rank": 4
+          },
+          {
+            "position": 418064,
+            "passage_sha256": "ad7d787fc2ef11f03f3d38edb92f0f15ec9d85f9e2683522b1379ffb0e5f75db",
+            "score": 0.07107366621494293,
+            "rank": 5
+          },
+          {
+            "position": 217176,
+            "passage_sha256": "7844f7fa4b7b2f052e3b95d27ea2b4fa1b31f40141bddb089bafd6bd696804e3",
+            "score": 0.06754669547080994,
+            "rank": 6
+          }
+        ],
+        "deposit_and_drive:w1:q2": [
+          {
+            "position": 1013737,
+            "passage_sha256": "ef040850d4b8a10da26052638c25b71e941c9fed1bd57f9747d65ef6f0ddeca9",
+            "score": 0.04778006672859192,
+            "rank": 1
+          },
+          {
+            "position": 951348,
+            "passage_sha256": "a2a631dbb21f930055cfff8c15436c73af125d2b4b6ef0ecb7539969664e18c0",
+            "score": 0.037467505782842636,
+            "rank": 2
+          },
+          {
+            "position": 951349,
+            "passage_sha256": "333cf87707e8bdebe0671faf9d5f9fb7963bea1e594851e0fc7773240c1bc0db",
+            "score": 0.027169233188033104,
+            "rank": 3
+          },
+          {
+            "position": 504013,
+            "passage_sha256": "80b8006b075ab8d9617935d82ad5e6505a33da3b11e9f9fa3b504b6deca52e1f",
+            "score": 0.02409944497048855,
+            "rank": 4
+          },
+          {
+            "position": 544379,
+            "passage_sha256": "5af6830acb33bee1a55815e5c4ba34dcd45ab7e1be23a91fffbc8ab8b9ad9c89",
+            "score": 0.023962024599313736,
+            "rank": 5
+          },
+          {
+            "position": 544363,
+            "passage_sha256": "173d5361dfb92b203b934ffa801789d4654e3c9a45cd0b766e5c298510cfbef1",
+            "score": 0.021206120029091835,
+            "rank": 6
+          }
+        ],
+        "deposit_and_drive:w1:q3": [
+          {
+            "position": 799247,
+            "passage_sha256": "c9f41f8dcb86d459c65e5290c703ccbfd73bfb9235d0c27b5c1285960d697eb4",
+            "score": 0.13061773777008057,
+            "rank": 1
+          },
+          {
+            "position": 323010,
+            "passage_sha256": "bb38f9781e08307dc83979c83c09d47f5f0d288f89dc9641fe88daa0a13db302",
+            "score": 0.11182181537151337,
+            "rank": 2
+          },
+          {
+            "position": 951349,
+            "passage_sha256": "333cf87707e8bdebe0671faf9d5f9fb7963bea1e594851e0fc7773240c1bc0db",
+            "score": 0.10762491822242737,
+            "rank": 3
+          },
+          {
+            "position": 951348,
+            "passage_sha256": "a2a631dbb21f930055cfff8c15436c73af125d2b4b6ef0ecb7539969664e18c0",
+            "score": 0.07477004081010818,
+            "rank": 4
+          },
+          {
+            "position": 1011003,
+            "passage_sha256": "64ed0416e6c4204453c0fa7d63dac59b0e686a7874ae255ae6d7a6745f267341",
+            "score": 0.05242456495761871,
+            "rank": 5
+          },
+          {
+            "position": 455313,
+            "passage_sha256": "9a7e70ce2fce955056c8b04c09906d85abe81e57e557284df9c942a47852fd79",
+            "score": 0.049958519637584686,
+            "rank": 6
+          }
+        ]
+      }
+    }
+  },
+  "fourteen_prelabelled_source_movements": [
+    {
+      "id": "source-01",
+      "category": "conditional_or_evidentiary_lead",
+      "reason": "Weak evidentiary analogy: the court identifies competing lease instruments and contested expenditure as issues requiring evidence, rather than accepting either party's requested rent adjustment. This can guide careful examination of the equipment agreement and asserted deductions, but provides no equipment-damage/deposit rule.",
+      "source_role": "Primary: reproduced commercial-premises lease clause and procedural history. Neighbours: rival party submissions and deciding-court discussion of unresolved evidence.",
+      "limitations": [
+        "Immovable commercial-premises eviction/provisional rent, not returned equipment or deposit damage.",
+        "No basis to import the reproduced reimbursement clause into Vale's agreement; no broad evidentiary mandate inferred from a case-specific direction."
+      ],
+      "supporting_quotes": [
+        {
+          "origin": "primary_passage",
+          "position": null,
+          "start": 358,
+          "end": 400,
+          "text": "Clause\n\n1(c) of the same reads as follows:"
+        },
+        {
+          "origin": "available_saved_neighbour",
+          "position": 594190,
+          "start": 969,
+          "end": 1097,
+          "text": "all these\n\ncontentious issues cannot be decided at this stage. Evidence will\n\nhave to be led by the parties to prove their case."
+        }
+      ],
+      "kind": "judgment",
+      "positions": [
+        594188
+      ],
+      "passage_sha256": "66428ba2b8f6d534a7fca6807381cad389dcb5316999e9c966af1c735f9e43c1",
+      "combined_focused": [
+        {
+          "position": 594188,
+          "passage_sha256": "66428ba2b8f6d534a7fca6807381cad389dcb5316999e9c966af1c735f9e43c1",
+          "score": 0.00877910852432251,
+          "rank": 97
+        }
+      ],
+      "each_query": {
+        "deposit_and_drive:w1:q1": [
+          {
+            "position": 594188,
+            "passage_sha256": "66428ba2b8f6d534a7fca6807381cad389dcb5316999e9c966af1c735f9e43c1",
+            "score": 0.004281254485249519,
+            "rank": 80
+          }
+        ],
+        "deposit_and_drive:w1:q2": [
+          {
+            "position": 594188,
+            "passage_sha256": "66428ba2b8f6d534a7fca6807381cad389dcb5316999e9c966af1c735f9e43c1",
+            "score": 0.002560870721936226,
+            "rank": 65
+          }
+        ],
+        "deposit_and_drive:w1:q3": [
+          {
+            "position": 594188,
+            "passage_sha256": "66428ba2b8f6d534a7fca6807381cad389dcb5316999e9c966af1c735f9e43c1",
+            "score": 0.006564249750226736,
+            "rank": 34
+          }
+        ]
+      },
+      "round_robin_selected": []
+    },
+    {
+      "id": "source-02",
+      "category": "wrong_relationship_or_scope",
+      "reason": "The committee and conditions concern tax orders/assessees, not a private equipment lease deposit or damage dispute. Generic dispute-resolution wording does not supply a route for this account.",
+      "source_role": "Statutory amendment text describing a tax-specific dispute-resolution scheme.",
+      "limitations": [
+        "No tax assessment, specified tax order or eligible assessee dispute is reported; no temporal currency assessment made."
+      ],
+      "supporting_quotes": [
+        {
+          "origin": "primary_passage",
+          "position": null,
+          "start": 501,
+          "end": 558,
+          "text": "dispute arising from any variation in the specified order"
+        },
+        {
+          "origin": "primary_passage",
+          "position": null,
+          "start": 1144,
+          "end": 1227,
+          "text": "eliminating the interface between the Dispute Resolution Committee and the assessee"
+        }
+      ],
+      "kind": "provision",
+      "positions": [
+        330012
+      ],
+      "passage_sha256": "4b84819f8592cead5af98559382c586476f0ce58c3d3bb9f0e8b72146e9c1df1",
+      "combined_focused": [
+        {
+          "position": 330012,
+          "passage_sha256": "4b84819f8592cead5af98559382c586476f0ce58c3d3bb9f0e8b72146e9c1df1",
+          "score": 0.07030384987592697,
+          "rank": 22
+        }
+      ],
+      "each_query": {
+        "deposit_and_drive:w1:q1": [
+          {
+            "position": 330012,
+            "passage_sha256": "4b84819f8592cead5af98559382c586476f0ce58c3d3bb9f0e8b72146e9c1df1",
+            "score": 0.005281333811581135,
+            "rank": 33
+          }
+        ],
+        "deposit_and_drive:w1:q2": [
+          {
+            "position": 330012,
+            "passage_sha256": "4b84819f8592cead5af98559382c586476f0ce58c3d3bb9f0e8b72146e9c1df1",
+            "score": 0.003324436955153942,
+            "rank": 9
+          }
+        ],
+        "deposit_and_drive:w1:q3": [
+          {
+            "position": 330012,
+            "passage_sha256": "4b84819f8592cead5af98559382c586476f0ce58c3d3bb9f0e8b72146e9c1df1",
+            "score": 0.0016549242427572608,
+            "rank": 40
+          }
+        ]
+      },
+      "round_robin_selected": []
+    },
+    {
+      "id": "source-03",
+      "category": "insufficient_held_context",
+      "reason": "The primary consists only of an ADR topic heading, with no operative test, procedure or remedy. Supplied section-17 neighbours address several unrelated Bar Council subjects and cannot establish a coherent arbitration rule for this deposit.",
+      "source_role": "Bare heading in a rules-labelled source; surrounding indexed rows are distinct rules/topics, not a shown operative ADR passage.",
+      "limitations": [
+        "Do not infer arbitration eligibility, agreement or procedure from the heading.",
+        "Repeated section number across different topics makes this context grouping ambiguous."
+      ],
+      "supporting_quotes": [
+        {
+          "origin": "primary_passage",
+          "position": null,
+          "start": 176,
+          "end": 247,
+          "text": "17. Arbitration, Conciliation and Alternate Dispute Resolution Systems."
+        },
+        {
+          "origin": "available_saved_neighbour",
+          "position": 176937,
+          "start": 59,
+          "end": 165,
+          "text": "All the permanent employees of the Council shall be entitled to the benefit of provident fund and gratuity"
+        }
+      ],
+      "kind": "provision",
+      "positions": [
+        177128,
+        177238
+      ],
+      "passage_sha256": "584615fda0a7be0a0fc8f7ea10e67cf05dcaf50c3193082511f5754264261730",
+      "combined_focused": [
+        {
+          "position": 177128,
+          "passage_sha256": "584615fda0a7be0a0fc8f7ea10e67cf05dcaf50c3193082511f5754264261730",
+          "score": 0.037326887249946594,
+          "rank": 40
+        },
+        {
+          "position": 177238,
+          "passage_sha256": "584615fda0a7be0a0fc8f7ea10e67cf05dcaf50c3193082511f5754264261730",
+          "score": 0.037326887249946594,
+          "rank": 41
+        }
+      ],
+      "each_query": {
+        "deposit_and_drive:w1:q1": [
+          {
+            "position": 177128,
+            "passage_sha256": "584615fda0a7be0a0fc8f7ea10e67cf05dcaf50c3193082511f5754264261730",
+            "score": 0.0028560124337673187,
+            "rank": 43
+          },
+          {
+            "position": 177238,
+            "passage_sha256": "584615fda0a7be0a0fc8f7ea10e67cf05dcaf50c3193082511f5754264261730",
+            "score": 0.0028560124337673187,
+            "rank": 44
+          }
+        ],
+        "deposit_and_drive:w1:q2": [
+          {
+            "position": 177128,
+            "passage_sha256": "584615fda0a7be0a0fc8f7ea10e67cf05dcaf50c3193082511f5754264261730",
+            "score": 0.0009253848693333566,
+            "rank": 45
+          },
+          {
+            "position": 177238,
+            "passage_sha256": "584615fda0a7be0a0fc8f7ea10e67cf05dcaf50c3193082511f5754264261730",
+            "score": 0.0009253848693333566,
+            "rank": 46
+          }
+        ],
+        "deposit_and_drive:w1:q3": [
+          {
+            "position": 177128,
+            "passage_sha256": "584615fda0a7be0a0fc8f7ea10e67cf05dcaf50c3193082511f5754264261730",
+            "score": 0.0005614787805825472,
+            "rank": 64
+          },
+          {
+            "position": 177238,
+            "passage_sha256": "584615fda0a7be0a0fc8f7ea10e67cf05dcaf50c3193082511f5754264261730",
+            "score": 0.0005614787805825472,
+            "rank": 65
+          }
+        ]
+      },
+      "round_robin_selected": []
+    },
+    {
+      "id": "source-04",
+      "category": "conditional_or_evidentiary_lead",
+      "reason": "Potential deposit-return/handover analogy and contrary-position lead, but the primary is counsel relying on a specific agreement, not a general holding requiring every deposit to be refunded without deduction. The neighbour expressly rejects the bank's argument and examines evidence of actual handover.",
+      "source_role": "Primary: respondent-bank submission plus quoted Deposit Agreement clause. Neighbours: landlady submission, further contractual terms, bank position, then deciding court rejecting that position.",
+      "limitations": [
+        "Premises lease/rent dispute, not equipment damage; the contractual terms cannot be imported.",
+        "The court paragraph literally says the bank was liable to refund, conflicting with the party roles and quoted contract; do not silently correct or use that actor wording as a clean general rule.",
+        "No holding here that an inspection report is mandatory or Vale's damage allegation unproved."
+      ],
+      "supporting_quotes": [
+        {
+          "origin": "primary_passage",
+          "position": null,
+          "start": 40,
+          "end": 98,
+          "text": "Per contra, Mr. Sandeep P. Agarwal, learned Senior counsel"
+        },
+        {
+          "origin": "available_saved_neighbour",
+          "position": 799249,
+          "start": 19,
+          "end": 113,
+          "text": "the aforesaid argument advanced by learned counsel\n\nfor the respondent-Bank is not persuasive."
+        },
+        {
+          "origin": "available_saved_neighbour",
+          "position": 799249,
+          "start": 492,
+          "end": 583,
+          "text": "There is nothing on record to demonstrate\n\nthat any steps were taken by the respondent-Bank"
+        }
+      ],
+      "kind": "judgment",
+      "positions": [
+        799246
+      ],
+      "passage_sha256": "6d9959b89f90772d56c6f7a56df82e823d3946009c60ade207ffb4e1c418e2ac",
+      "combined_focused": [
+        {
+          "position": 799246,
+          "passage_sha256": "6d9959b89f90772d56c6f7a56df82e823d3946009c60ade207ffb4e1c418e2ac",
+          "score": 0.016029147431254387,
+          "rank": 78
+        }
+      ],
+      "each_query": {
+        "deposit_and_drive:w1:q1": [
+          {
+            "position": 799246,
+            "passage_sha256": "6d9959b89f90772d56c6f7a56df82e823d3946009c60ade207ffb4e1c418e2ac",
+            "score": 0.007518718484789133,
+            "rank": 55
+          }
+        ],
+        "deposit_and_drive:w1:q2": [
+          {
+            "position": 799246,
+            "passage_sha256": "6d9959b89f90772d56c6f7a56df82e823d3946009c60ade207ffb4e1c418e2ac",
+            "score": 0.008315778337419033,
+            "rank": 22
+          }
+        ],
+        "deposit_and_drive:w1:q3": [
+          {
+            "position": 799246,
+            "passage_sha256": "6d9959b89f90772d56c6f7a56df82e823d3946009c60ade207ffb4e1c418e2ac",
+            "score": 0.015365341678261757,
+            "rank": 17
+          }
+        ]
+      },
+      "round_robin_selected": []
+    },
+    {
+      "id": "source-05",
+      "category": "wrong_relationship_or_scope",
+      "reason": "This is a municipal building-site lease-cum-sale form and associated allotment conditions. A purchase-price deposit securing development obligations is not a useful substantive source for an equipment damage deduction merely because both are called security deposits.",
+      "source_role": "Quoted statutory/form agreement and building-allotment conditions; no supplied deciding-court equipment/deposit holding.",
+      "limitations": [
+        "Different transaction, property and statutory allocation scheme.",
+        "Do not convert the form's security clause into a general right to forfeit a deposit."
+      ],
+      "supporting_quotes": [
+        {
+          "origin": "primary_passage",
+          "position": null,
+          "start": 58,
+          "end": 96,
+          "text": "The Lessee/ Purchaser is hereby put in"
+        },
+        {
+          "origin": "available_saved_neighbour",
+          "position": 332877,
+          "start": 915,
+          "end": 972,
+          "text": "This lease \nagreement is called Lease-cum-sale agreement."
+        }
+      ],
+      "kind": "judgment",
+      "positions": [
+        332879
+      ],
+      "passage_sha256": "83bd106158ed6c5e8701d0bab38e6599d26db88cacbc2574fbee68fbce78ef86",
+      "combined_focused": [
+        {
+          "position": 332879,
+          "passage_sha256": "83bd106158ed6c5e8701d0bab38e6599d26db88cacbc2574fbee68fbce78ef86",
+          "score": 0.13195425271987915,
+          "rank": 17
+        }
+      ],
+      "each_query": {
+        "deposit_and_drive:w1:q1": [
+          {
+            "position": 332879,
+            "passage_sha256": "83bd106158ed6c5e8701d0bab38e6599d26db88cacbc2574fbee68fbce78ef86",
+            "score": 0.056756895035505295,
+            "rank": 9
+          }
+        ],
+        "deposit_and_drive:w1:q2": [
+          {
+            "position": 332879,
+            "passage_sha256": "83bd106158ed6c5e8701d0bab38e6599d26db88cacbc2574fbee68fbce78ef86",
+            "score": 0.002082970691844821,
+            "rank": 81
+          }
+        ],
+        "deposit_and_drive:w1:q3": [
+          {
+            "position": 332879,
+            "passage_sha256": "83bd106158ed6c5e8701d0bab38e6599d26db88cacbc2574fbee68fbce78ef86",
+            "score": 0.0036499870475381613,
+            "rank": 52
+          }
+        ]
+      },
+      "round_robin_selected": []
+    },
+    {
+      "id": "source-06",
+      "category": "wrong_relationship_or_scope",
+      "reason": "The primary is respondents' jurisdiction argument in a mortgage suit. Adjacent reasoning expressly relies on immovable mortgaged property and distinguishes an ordinary contractual money suit. Vale's location alone cannot make this a Hyderabad forum rule for the deposit claim.",
+      "source_role": "Primary: respondents' counsel submission. Neighbours: appellants' contrary submission and deciding-court mortgage jurisdiction reasoning.",
+      "limitations": [
+        "No mortgage is reported in the equipment account.",
+        "Do not attribute counsel's assertion directly to the court or infer jurisdiction from the shared city name."
+      ],
+      "supporting_quotes": [
+        {
+          "origin": "primary_passage",
+          "position": null,
+          "start": 64,
+          "end": 116,
+          "text": "The reply of the learned counsel for the respondents"
+        },
+        {
+          "origin": "available_saved_neighbour",
+          "position": 1011004,
+          "start": 52,
+          "end": 187,
+          "text": "all suits\npertaining to a mortgage can only be instituted within the local\njurisdiction of the Court in which the property is situated."
+        }
+      ],
+      "kind": "judgment",
+      "positions": [
+        1011003
+      ],
+      "passage_sha256": "64ed0416e6c4204453c0fa7d63dac59b0e686a7874ae255ae6d7a6745f267341",
+      "combined_focused": [
+        {
+          "position": 1011003,
+          "passage_sha256": "64ed0416e6c4204453c0fa7d63dac59b0e686a7874ae255ae6d7a6745f267341",
+          "score": 0.49764442443847656,
+          "rank": 3
+        }
+      ],
+      "each_query": {
+        "deposit_and_drive:w1:q1": [
+          {
+            "position": 1011003,
+            "passage_sha256": "64ed0416e6c4204453c0fa7d63dac59b0e686a7874ae255ae6d7a6745f267341",
+            "score": 0.02165667712688446,
+            "rank": 24
+          }
+        ],
+        "deposit_and_drive:w1:q2": [
+          {
+            "position": 1011003,
+            "passage_sha256": "64ed0416e6c4204453c0fa7d63dac59b0e686a7874ae255ae6d7a6745f267341",
+            "score": 0.01024860143661499,
+            "rank": 17
+          }
+        ],
+        "deposit_and_drive:w1:q3": [
+          {
+            "position": 1011003,
+            "passage_sha256": "64ed0416e6c4204453c0fa7d63dac59b0e686a7874ae255ae6d7a6745f267341",
+            "score": 0.05242456495761871,
+            "rank": 5
+          }
+        ]
+      },
+      "round_robin_selected": []
+    },
+    {
+      "id": "source-07",
+      "category": "wrong_relationship_or_scope",
+      "reason": "This refundable equipment-security rule applies to toll-payment transponders supplied through the specified road-fee scheme, not private laser-cutter hire. City/equipment/deposit overlap does not extend that scheme.",
+      "source_role": "Scheme-specific operative rule concerning road toll collection devices.",
+      "limitations": [
+        "No toll-device installation or fee-collecting agency relationship appears in the account."
+      ],
+      "supporting_quotes": [
+        {
+          "origin": "primary_passage",
+          "position": null,
+          "start": 970,
+          "end": 1057,
+          "text": "installation of on board unit (transponder) or any other such device for payment of fee"
+        },
+        {
+          "origin": "primary_passage",
+          "position": null,
+          "start": 1135,
+          "end": 1203,
+          "text": "with Hyderabad Growth Corridor Limited or user fee collecting agency"
+        }
+      ],
+      "kind": "provision",
+      "positions": [
+        77351
+      ],
+      "passage_sha256": "b43ebd80cf384e31e3de57f93f6220b0384702f62a735f52f391749aab02568c",
+      "combined_focused": [
+        {
+          "position": 77351,
+          "passage_sha256": "b43ebd80cf384e31e3de57f93f6220b0384702f62a735f52f391749aab02568c",
+          "score": 0.18111833930015564,
+          "rank": 4
+        }
+      ],
+      "each_query": {
+        "deposit_and_drive:w1:q1": [
+          {
+            "position": 77351,
+            "passage_sha256": "b43ebd80cf384e31e3de57f93f6220b0384702f62a735f52f391749aab02568c",
+            "score": 0.12656909227371216,
+            "rank": 1
+          }
+        ],
+        "deposit_and_drive:w1:q2": [
+          {
+            "position": 77351,
+            "passage_sha256": "b43ebd80cf384e31e3de57f93f6220b0384702f62a735f52f391749aab02568c",
+            "score": 0.019160708412528038,
+            "rank": 1
+          }
+        ],
+        "deposit_and_drive:w1:q3": [
+          {
+            "position": 77351,
+            "passage_sha256": "b43ebd80cf384e31e3de57f93f6220b0384702f62a735f52f391749aab02568c",
+            "score": 0.013376603834331036,
+            "rank": 4
+          }
+        ]
+      },
+      "round_robin_selected": [
+        {
+          "position": 77351,
+          "passage_sha256": "b43ebd80cf384e31e3de57f93f6220b0384702f62a735f52f391749aab02568c",
+          "score": 0.12656909227371216,
+          "rank": 1,
+          "selected_by_query": "deposit_and_drive:w1:q1"
+        }
+      ]
+    },
+    {
+      "id": "source-08",
+      "category": "wrong_relationship_or_scope",
+      "reason": "The Income-tax dispute committee resolves specified assessment-order variations and associated tax penalties. It is not an available deposit-recovery mechanism on the supplied private lease facts.",
+      "source_role": "Tax-specific statute provision, including assessment/recomputation machinery.",
+      "limitations": [
+        "Near-overlap with source-02 is not independent support for a private contractual route.",
+        "No current statutory currency or taxpayer eligibility conclusion is made."
+      ],
+      "supporting_quotes": [
+        {
+          "origin": "primary_passage",
+          "position": null,
+          "start": 1067,
+          "end": 1095,
+          "text": "the Assessing Officer shall,"
+        },
+        {
+          "origin": "primary_passage",
+          "position": null,
+          "start": 1223,
+          "end": 1282,
+          "text": "pass an order of assessment, reassessment or recomputation;"
+        }
+      ],
+      "kind": "provision",
+      "positions": [
+        160356
+      ],
+      "passage_sha256": "c5bbf7d6353000f7c73fd051b1f411cf35fa35b24b79e4a85d2124d93a8665bb",
+      "combined_focused": [
+        {
+          "position": 160356,
+          "passage_sha256": "c5bbf7d6353000f7c73fd051b1f411cf35fa35b24b79e4a85d2124d93a8665bb",
+          "score": 0.03753800690174103,
+          "rank": 39
+        }
+      ],
+      "each_query": {
+        "deposit_and_drive:w1:q1": [
+          {
+            "position": 160356,
+            "passage_sha256": "c5bbf7d6353000f7c73fd051b1f411cf35fa35b24b79e4a85d2124d93a8665bb",
+            "score": 0.005641908384859562,
+            "rank": 31
+          }
+        ],
+        "deposit_and_drive:w1:q2": [
+          {
+            "position": 160356,
+            "passage_sha256": "c5bbf7d6353000f7c73fd051b1f411cf35fa35b24b79e4a85d2124d93a8665bb",
+            "score": 0.003285833168774843,
+            "rank": 10
+          }
+        ],
+        "deposit_and_drive:w1:q3": [
+          {
+            "position": 160356,
+            "passage_sha256": "c5bbf7d6353000f7c73fd051b1f411cf35fa35b24b79e4a85d2124d93a8665bb",
+            "score": 0.0016549242427572608,
+            "rank": 39
+          }
+        ]
+      },
+      "round_robin_selected": []
+    },
+    {
+      "id": "source-09",
+      "category": "wrong_relationship_or_scope",
+      "reason": "The deposit forfeiture is narrated as an earlier civil claim and compromise. The question being decided is whether the receipt is taxable revenue, not whether a lessor may retain Vale's deposit for contested equipment damage.",
+      "source_role": "Primary: narration of party plaint and settlement. Neighbours: tax reference question, tax authority decisions and tribunal positions, not adjudication of the underlying deposit entitlement.",
+      "limitations": [
+        "A compromise forfeiture is not a court holding that the forfeiture was legally required or valid in another dispute.",
+        "No tax issue is reported; do not transform similar monetary facts into matching legal scope."
+      ],
+      "supporting_quotes": [
+        {
+          "origin": "primary_passage",
+          "position": null,
+          "start": 890,
+          "end": 924,
+          "text": "Eventually, there was a compromise"
+        },
+        {
+          "origin": "available_saved_neighbour",
+          "position": 928387,
+          "start": 223,
+          "end": 329,
+          "text": "the amount of Rs. 40,000 received by the assessee as a forfeiture of security deposit is a revenue receipt"
+        }
+      ],
+      "kind": "judgment",
+      "positions": [
+        928389
+      ],
+      "passage_sha256": "2841fba55751f7f28e48998d33167f1a8224405b2c7c953b3595b40e85442d2d",
+      "combined_focused": [
+        {
+          "position": 928389,
+          "passage_sha256": "2841fba55751f7f28e48998d33167f1a8224405b2c7c953b3595b40e85442d2d",
+          "score": 0.09351231157779694,
+          "rank": 25
+        }
+      ],
+      "each_query": {
+        "deposit_and_drive:w1:q1": [
+          {
+            "position": 928389,
+            "passage_sha256": "2841fba55751f7f28e48998d33167f1a8224405b2c7c953b3595b40e85442d2d",
+            "score": 0.20055769383907318,
+            "rank": 1
+          }
+        ],
+        "deposit_and_drive:w1:q2": [
+          {
+            "position": 928389,
+            "passage_sha256": "2841fba55751f7f28e48998d33167f1a8224405b2c7c953b3595b40e85442d2d",
+            "score": 0.009303949773311615,
+            "rank": 19
+          }
+        ],
+        "deposit_and_drive:w1:q3": [
+          {
+            "position": 928389,
+            "passage_sha256": "2841fba55751f7f28e48998d33167f1a8224405b2c7c953b3595b40e85442d2d",
+            "score": 0.04248320683836937,
+            "rank": 8
+          }
+        ]
+      },
+      "round_robin_selected": [
+        {
+          "position": 928389,
+          "passage_sha256": "2841fba55751f7f28e48998d33167f1a8224405b2c7c953b3595b40e85442d2d",
+          "score": 0.20055769383907318,
+          "rank": 1,
+          "selected_by_query": "deposit_and_drive:w1:q1"
+        }
+      ]
+    },
+    {
+      "id": "source-10",
+      "category": "conditional_or_evidentiary_lead",
+      "reason": "A conditional forum-selection/contrary-route lead: deciding-court discussion and quoted authority distinguish disputed contractual claims ordinarily requiring evidence from appropriate writ proceedings. The neighbours preserve discretion and exceptions, so a categorical no-writ rule would overstate the source.",
+      "source_role": "Primary: deciding court quotes an earlier case's reasoning; neighbours contain the deciding court's qualified framing and another quoted authority explaining exceptions.",
+      "limitations": [
+        "Public-law/writ setting; Vale reports private equipment actors and has not asked specifically to file a writ.",
+        "Does not decide deposit entitlement, damage proof, jurisdiction over these parties or whether a particular remedy is presently maintainable.",
+        "Earlier quoted authorities are not independently supplied in full."
+      ],
+      "supporting_quotes": [
+        {
+          "origin": "primary_passage",
+          "position": null,
+          "start": 904,
+          "end": 962,
+          "text": "The dispute in this case was regarding the\nterms of offer."
+        },
+        {
+          "origin": "available_saved_neighbour",
+          "position": 504011,
+          "start": 4,
+          "end": 64,
+          "text": "A writ court should ordinarily not entertain a writ petition"
+        },
+        {
+          "origin": "available_saved_neighbour",
+          "position": 504014,
+          "start": 606,
+          "end": 686,
+          "text": "The High Court is not deprived of its jurisdiction to entertain a\npetition under"
+        }
+      ],
+      "kind": "judgment",
+      "positions": [
+        504013
+      ],
+      "passage_sha256": "80b8006b075ab8d9617935d82ad5e6505a33da3b11e9f9fa3b504b6deca52e1f",
+      "combined_focused": [
+        {
+          "position": 504013,
+          "passage_sha256": "80b8006b075ab8d9617935d82ad5e6505a33da3b11e9f9fa3b504b6deca52e1f",
+          "score": 0.15623357892036438,
+          "rank": 12
+        }
+      ],
+      "each_query": {
+        "deposit_and_drive:w1:q1": [
+          {
+            "position": 504013,
+            "passage_sha256": "80b8006b075ab8d9617935d82ad5e6505a33da3b11e9f9fa3b504b6deca52e1f",
+            "score": 0.07737810909748077,
+            "rank": 4
+          }
+        ],
+        "deposit_and_drive:w1:q2": [
+          {
+            "position": 504013,
+            "passage_sha256": "80b8006b075ab8d9617935d82ad5e6505a33da3b11e9f9fa3b504b6deca52e1f",
+            "score": 0.02409944497048855,
+            "rank": 4
+          }
+        ],
+        "deposit_and_drive:w1:q3": [
+          {
+            "position": 504013,
+            "passage_sha256": "80b8006b075ab8d9617935d82ad5e6505a33da3b11e9f9fa3b504b6deca52e1f",
+            "score": 0.006388320587575436,
+            "rank": 35
+          }
+        ]
+      },
+      "round_robin_selected": []
+    },
+    {
+      "id": "source-11",
+      "category": "conditional_or_evidentiary_lead",
+      "reason": "The adjacent court paragraph identifies an equipment-hire transaction as bailment and discusses contractual delivery, duration and return. That is a useful conditional conceptual lead for Vale. The primary inspection/fault-allocation terms are somebody else's agreement and cannot establish Vale's duties or admit damage.",
+      "source_role": "Primary: court reproduces specific equipment-lease terms. Neighbour paragraph24: deciding-court classification and legal discussion, including quotation of earlier tax authority.",
+      "limitations": [
+        "Tax dispute context; no provided holding resolving security-deposit retention or subsequent damage in Vale's relationship.",
+        "Prior inspection declaration is a contract term in that case, not a fact reported by this user or a mandatory universal inspection rule.",
+        "Useful with neighbour951350; primary alone is not general bailment authority."
+      ],
+      "supporting_quotes": [
+        {
+          "origin": "primary_passage",
+          "position": null,
+          "start": 80,
+          "end": 138,
+          "text": "The lessee has declared that it has taken prior inspection"
+        },
+        {
+          "origin": "available_saved_neighbour",
+          "position": 951350,
+          "start": 69,
+          "end": 152,
+          "text": "the transaction is a bailment as defined by\nsection 148\nof the Indian Contract Act."
+        },
+        {
+          "origin": "available_saved_neighbour",
+          "position": 951350,
+          "start": 338,
+          "end": 413,
+          "text": "the duration and the obligation to return after the purpose is accomplished"
+        }
+      ],
+      "kind": "judgment",
+      "positions": [
+        951349
+      ],
+      "passage_sha256": "333cf87707e8bdebe0671faf9d5f9fb7963bea1e594851e0fc7773240c1bc0db",
+      "combined_focused": [
+        {
+          "position": 951349,
+          "passage_sha256": "333cf87707e8bdebe0671faf9d5f9fb7963bea1e594851e0fc7773240c1bc0db",
+          "score": 0.7633073329925537,
+          "rank": 1
+        }
+      ],
+      "each_query": {
+        "deposit_and_drive:w1:q1": [
+          {
+            "position": 951349,
+            "passage_sha256": "333cf87707e8bdebe0671faf9d5f9fb7963bea1e594851e0fc7773240c1bc0db",
+            "score": 0.029986508190631866,
+            "rank": 14
+          }
+        ],
+        "deposit_and_drive:w1:q2": [
+          {
+            "position": 951349,
+            "passage_sha256": "333cf87707e8bdebe0671faf9d5f9fb7963bea1e594851e0fc7773240c1bc0db",
+            "score": 0.027169233188033104,
+            "rank": 3
+          }
+        ],
+        "deposit_and_drive:w1:q3": [
+          {
+            "position": 951349,
+            "passage_sha256": "333cf87707e8bdebe0671faf9d5f9fb7963bea1e594851e0fc7773240c1bc0db",
+            "score": 0.10762491822242737,
+            "rank": 3
+          }
+        ]
+      },
+      "round_robin_selected": []
+    },
+    {
+      "id": "source-12",
+      "category": "conditional_or_evidentiary_lead",
+      "reason": "Equipment-hire facts and the supplied adjacent bailment reasoning provide the same useful conditional conceptual lead as source-11. The court's statement about inspection and handover describes another transaction; it cannot prove return condition or agreed terms here.",
+      "source_role": "Primary: case-specific factual findings and reproduced agreement. Adjacent paragraph24: deciding-court bailment classification in a tax dispute.",
+      "limitations": [
+        "Same case and same decisive neighbour as source-11: do not count as independent corroborating authorities.",
+        "No security-deposit/damage holding or universal handover clause is supplied.",
+        "Primary reference to Companies Act is descriptive, not the governing rule for equipment damage."
+      ],
+      "supporting_quotes": [
+        {
+          "origin": "primary_passage",
+          "position": null,
+          "start": 78,
+          "end": 159,
+          "text": "The letter clearly shows that the equipment was already inspected by the customer"
+        },
+        {
+          "origin": "available_saved_neighbour",
+          "position": 951350,
+          "start": 69,
+          "end": 152,
+          "text": "the transaction is a bailment as defined by\nsection 148\nof the Indian Contract Act."
+        }
+      ],
+      "kind": "judgment",
+      "positions": [
+        951348
+      ],
+      "passage_sha256": "a2a631dbb21f930055cfff8c15436c73af125d2b4b6ef0ecb7539969664e18c0",
+      "combined_focused": [
+        {
+          "position": 951348,
+          "passage_sha256": "a2a631dbb21f930055cfff8c15436c73af125d2b4b6ef0ecb7539969664e18c0",
+          "score": 0.5038184523582458,
+          "rank": 2
+        }
+      ],
+      "each_query": {
+        "deposit_and_drive:w1:q1": [
+          {
+            "position": 951348,
+            "passage_sha256": "a2a631dbb21f930055cfff8c15436c73af125d2b4b6ef0ecb7539969664e18c0",
+            "score": 0.01678548939526081,
+            "rank": 30
+          }
+        ],
+        "deposit_and_drive:w1:q2": [
+          {
+            "position": 951348,
+            "passage_sha256": "a2a631dbb21f930055cfff8c15436c73af125d2b4b6ef0ecb7539969664e18c0",
+            "score": 0.037467505782842636,
+            "rank": 2
+          }
+        ],
+        "deposit_and_drive:w1:q3": [
+          {
+            "position": 951348,
+            "passage_sha256": "a2a631dbb21f930055cfff8c15436c73af125d2b4b6ef0ecb7539969664e18c0",
+            "score": 0.07477004081010818,
+            "rank": 4
+          }
+        ]
+      },
+      "round_robin_selected": [
+        {
+          "position": 951348,
+          "passage_sha256": "a2a631dbb21f930055cfff8c15436c73af125d2b4b6ef0ecb7539969664e18c0",
+          "score": 0.037467505782842636,
+          "rank": 2,
+          "selected_by_query": "deposit_and_drive:w1:q2"
+        }
+      ]
+    },
+    {
+      "id": "source-13",
+      "category": "wrong_relationship_or_scope",
+      "reason": "This explains financial-statement substance for finance leases, not civil obligations to refund a damage deposit. Economic/accounting presentation does not establish ownership, breach or compensation rights in the supplied private hire dispute.",
+      "source_role": "Accounting-standard principle. Saved neighbours include numerous different paragraph12 accounting topics, not one continuous legal rule on deposits.",
+      "limitations": [
+        "No financial reporting/classification dispute is reported.",
+        "Repeated paragraph-number grouping supplies unrelated accounting standards and should not be read as adjacent qualifications to one paragraph.",
+        "Do not use financial reality as proof of Vale's contract terms or legal title."
+      ],
+      "supporting_quotes": [
+        {
+          "origin": "primary_passage",
+          "position": null,
+          "start": 154,
+          "end": 272,
+          "text": "Transactions and other events are accounted for and presented in accordance with their substance and financial reality"
+        },
+        {
+          "origin": "primary_passage",
+          "position": null,
+          "start": 420,
+          "end": 485,
+          "text": "in the case of finance leases the substance and financial reality"
+        }
+      ],
+      "kind": "provision",
+      "positions": [
+        268045
+      ],
+      "passage_sha256": "82d23df808fcd1daaaa60514bc33d16728017f912646828e476390baddf48464",
+      "combined_focused": [
+        {
+          "position": 268045,
+          "passage_sha256": "82d23df808fcd1daaaa60514bc33d16728017f912646828e476390baddf48464",
+          "score": 0.06142404302954674,
+          "rank": 27
+        }
+      ],
+      "each_query": {
+        "deposit_and_drive:w1:q1": [
+          {
+            "position": 268045,
+            "passage_sha256": "82d23df808fcd1daaaa60514bc33d16728017f912646828e476390baddf48464",
+            "score": 0.00628990214318037,
+            "rank": 28
+          }
+        ],
+        "deposit_and_drive:w1:q2": [
+          {
+            "position": 268045,
+            "passage_sha256": "82d23df808fcd1daaaa60514bc33d16728017f912646828e476390baddf48464",
+            "score": 0.0029694451950490475,
+            "rank": 12
+          }
+        ],
+        "deposit_and_drive:w1:q3": [
+          {
+            "position": 268045,
+            "passage_sha256": "82d23df808fcd1daaaa60514bc33d16728017f912646828e476390baddf48464",
+            "score": 0.0059110685251653194,
+            "rank": 11
+          }
+        ]
+      },
+      "round_robin_selected": []
+    },
+    {
+      "id": "source-14",
+      "category": "wrong_relationship_or_scope",
+      "reason": "This is a notified Court-of-Wards claims procedure against a ward or ward property. There is no ward, court superintendence or notification in Vale's account; it cannot impose this six-month filing or discharge rule on the deposit claim.",
+      "source_role": "Special statutory procedure for wards/property under the specified scheme.",
+      "limitations": [
+        "Shared Telangana location and pecuniary-claim wording do not establish scheme applicability.",
+        "Do not infer a deadline for the matter from the isolated provision."
+      ],
+      "supporting_quotes": [
+        {
+          "origin": "primary_passage",
+          "position": null,
+          "start": 786,
+          "end": 818,
+          "text": "against the ward or his property"
+        },
+        {
+          "origin": "primary_passage",
+          "position": null,
+          "start": 887,
+          "end": 940,
+          "text": "within six months from the date of such notification."
+        }
+      ],
+      "kind": "provision",
+      "positions": [
+        88227
+      ],
+      "passage_sha256": "d072e785e2e811538cfc76ec239f67cc66e8f3e201c79ba7444f1f761f5d92d1",
+      "combined_focused": [
+        {
+          "position": 88227,
+          "passage_sha256": "d072e785e2e811538cfc76ec239f67cc66e8f3e201c79ba7444f1f761f5d92d1",
+          "score": 0.19132767617702484,
+          "rank": 3
+        }
+      ],
+      "each_query": {
+        "deposit_and_drive:w1:q1": [
+          {
+            "position": 88227,
+            "passage_sha256": "d072e785e2e811538cfc76ec239f67cc66e8f3e201c79ba7444f1f761f5d92d1",
+            "score": 0.022243669256567955,
+            "rank": 7
+          }
+        ],
+        "deposit_and_drive:w1:q2": [
+          {
+            "position": 88227,
+            "passage_sha256": "d072e785e2e811538cfc76ec239f67cc66e8f3e201c79ba7444f1f761f5d92d1",
+            "score": 0.005099818110466003,
+            "rank": 5
+          }
+        ],
+        "deposit_and_drive:w1:q3": [
+          {
+            "position": 88227,
+            "passage_sha256": "d072e785e2e811538cfc76ec239f67cc66e8f3e201c79ba7444f1f761f5d92d1",
+            "score": 0.008711384609341621,
+            "rank": 5
+          }
+        ]
+      },
+      "round_robin_selected": [
+        {
+          "position": 88227,
+          "passage_sha256": "d072e785e2e811538cfc76ec239f67cc66e8f3e201c79ba7444f1f761f5d92d1",
+          "score": 0.008711384609341621,
+          "rank": 5,
+          "selected_by_query": "deposit_and_drive:w1:q3"
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "Older seen matter and14 prelabelled targeted sources, not a corpus-wide or unfamiliar accuracy estimate.",
+    "Queries remain unchanged, including the unsupported not-supplied to nonexistence premise; discovery output is not authority.",
+    "Same frozen pool for every query. Neither recall route nor actual product final selection is measured.",
+    "Combined-input baseline was measured in an earlier process against identical hashed weights; latency comparison is not a counterbalanced performance trial.",
+    "Only14 targeted labels; new unlabelled candidates remain unassessed, so no precision, recall or accuracy fraction is inferred.",
+    "The two equipment-source leads share the same decisive saved neighbour; their higher ranks do not establish two independent authorities.",
+    "Labels include source purpose and neighbour-only relevance; ranks score the primary passage and do not verify court treatment or applicability."
+  ]
+}

@@ -1,0 +1,919 @@
+{
+  "contract": "standalone_research_only_inputs_v1",
+  "baseline_inputs_sha256": "706b298b179b838ca5456941b89c10b428077eba75bfe837ad82c1dce589822c",
+  "cases": [
+    {
+      "name": "original_aster_held_drive",
+      "origin": "Exact saved first Aster message and actual interpretation with held u8; no reconstructed successful extraction",
+      "context": {
+        "position": "first",
+        "latest": {
+          "source_id": "live-served-1:advocate",
+          "turn_id": "live-served-1",
+          "speaker": "advocate",
+          "record_role": "original_account",
+          "text": "Good afternoon. This is a synthetic test matter. We act for Aster Fabrication in Hyderabad. Our client rented a precision cutter and says it returned the machine on 6 September 2026. The owner retains the Rs 1,20,000 security deposit, alleging damage to the cutting head; our client denies causing damage. The owner sent a technician's estimate but no joint inspection report. Our client reports having a signed hire agreement and a bank-transfer receipt, but I have not supplied or examined those documents here. Separately, the owner's technician still has our client's original design drive, which the client says was lent only for setup; the owner now says it can retain the drive until repair costs are paid. First give a source-backed, conditional analysis of the deposit and drive disputes, including any material contrary position. Separately, draft a brief list of questions for our client that would clarify the important gaps. Do not contact anyone, do not treat the damage allegation as admitted, and do not assume the reported documents have been checked."
+        },
+        "conversation": [],
+        "current_records": {},
+        "saved_work": []
+      },
+      "aliases": {
+        "a1": {
+          "id": "live-served-1:advocate:0:15",
+          "source_id": "live-served-1:advocate",
+          "start": 0,
+          "end": 15
+        },
+        "a2": {
+          "id": "live-served-1:advocate",
+          "source_id": "live-served-1:advocate",
+          "start": 0,
+          "end": 1068
+        },
+        "a3": {
+          "id": "live-served-1:advocate:15:16",
+          "source_id": "live-served-1:advocate",
+          "start": 15,
+          "end": 16
+        },
+        "a4": {
+          "id": "live-served-1:advocate:16:48",
+          "source_id": "live-served-1:advocate",
+          "start": 16,
+          "end": 48
+        },
+        "a5": {
+          "id": "live-served-1:advocate:48:49",
+          "source_id": "live-served-1:advocate",
+          "start": 48,
+          "end": 49
+        },
+        "a6": {
+          "id": "live-served-1:advocate:49:91",
+          "source_id": "live-served-1:advocate",
+          "start": 49,
+          "end": 91
+        },
+        "a7": {
+          "id": "live-served-1:advocate:91:92",
+          "source_id": "live-served-1:advocate",
+          "start": 91,
+          "end": 92
+        },
+        "a8": {
+          "id": "live-served-1:advocate:92:182",
+          "source_id": "live-served-1:advocate",
+          "start": 92,
+          "end": 182
+        },
+        "a9": {
+          "id": "live-served-1:advocate:182:183",
+          "source_id": "live-served-1:advocate",
+          "start": 182,
+          "end": 183
+        },
+        "a10": {
+          "id": "live-served-1:advocate:183:305",
+          "source_id": "live-served-1:advocate",
+          "start": 183,
+          "end": 305
+        },
+        "a11": {
+          "id": "live-served-1:advocate:305:306",
+          "source_id": "live-served-1:advocate",
+          "start": 305,
+          "end": 306
+        },
+        "a12": {
+          "id": "live-served-1:advocate:306:376",
+          "source_id": "live-served-1:advocate",
+          "start": 306,
+          "end": 376
+        },
+        "a13": {
+          "id": "live-served-1:advocate:376:377",
+          "source_id": "live-served-1:advocate",
+          "start": 376,
+          "end": 377
+        },
+        "a14": {
+          "id": "live-served-1:advocate:377:513",
+          "source_id": "live-served-1:advocate",
+          "start": 377,
+          "end": 513
+        },
+        "a15": {
+          "id": "live-served-1:advocate:513:714",
+          "source_id": "live-served-1:advocate",
+          "start": 513,
+          "end": 714
+        },
+        "a16": {
+          "id": "live-served-1:advocate:714:839",
+          "source_id": "live-served-1:advocate",
+          "start": 714,
+          "end": 839
+        },
+        "a17": {
+          "id": "live-served-1:advocate:839:840",
+          "source_id": "live-served-1:advocate",
+          "start": 839,
+          "end": 840
+        },
+        "a18": {
+          "id": "live-served-1:advocate:840:937",
+          "source_id": "live-served-1:advocate",
+          "start": 840,
+          "end": 937
+        },
+        "a19": {
+          "id": "live-served-1:advocate:937:938",
+          "source_id": "live-served-1:advocate",
+          "start": 937,
+          "end": 938
+        },
+        "a20": {
+          "id": "live-served-1:advocate:938:1068",
+          "source_id": "live-served-1:advocate",
+          "start": 938,
+          "end": 1068
+        }
+      },
+      "wire": {
+        "system": "Message: You receive the exact latest advocate message, the complete\nattributed earlier conversation, current records, saved work, and original account\nspans with short owned IDs. Each ID selects unchanged words and their provenance.\nThe span catalogue includes earlier selections, uncovered ranges and full messages;\nthese describe available words, not their meaning or truth. NM interpretations\nare distinct from original accounts and cannot establish facts.\n\nPurpose: Prepare only the legal investigations needed now and their held-corpus\nsearches. Other stages handle replies, drafting, factual corrections and execution.\nDo not plan those activities, answer the legal questions or decide applicable law.\n\nLook for: Understand the latest message in the whole conversation. Identify current\nlegal questions and distinct disputes requiring legal investigation, including those\narising from supplied substantive material. Preserve separate investigations even\nwhen requested together. Earlier pending work is not automatically requested again.\nReturn no investigation where the current work needs no legal sources.\n\nFor each investigation, select the offered account IDs containing its relevant\noriginal account. Keep who says what, uncertainty, conditions, timing and negation.\nPrefer focused spans to a mixed full message. Do not select social words or task\ndirections as facts; retain words that establish an expressly hypothetical scope.\nA general legal question may have no factual account. Never recopy or paraphrase\nfacts into a search query: code uses the selected original words.\n\nThen propose normally two or three concise legal concept phrases likely to occur\nin provisions or judicial reasoning. Each should add a distinct search contribution,\nnot restate another phrase or instruct a model to perform work. Use fewer when\nsufficient. Concepts are investigation hypotheses; they cannot introduce new facts,\nestablish an entitlement or invent an authority, provision, citation or jurisdiction.\nThe original account and its qualifications remain the basis for later assessment.\n\nOutcome: Return work[]. Each item has issue, a neutral inquiry title;\naccount_source_ids, selected offered IDs; and concepts[], each with text and purpose\ndescribing its distinct search contribution. Use at most three concepts per\ninvestigation. Return work=[] when no legal investigation is needed now. No other\nwork plans, factual summaries, conclusions, status or completion claims.\n",
+        "user": "{\"original_context\": {\"position\": \"first\", \"latest\": {\"source_id\": \"live-served-1:advocate\", \"turn_id\": \"live-served-1\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"text\": \"Good afternoon. This is a synthetic test matter. We act for Aster Fabrication in Hyderabad. Our client rented a precision cutter and says it returned the machine on 6 September 2026. The owner retains the Rs 1,20,000 security deposit, alleging damage to the cutting head; our client denies causing damage. The owner sent a technician's estimate but no joint inspection report. Our client reports having a signed hire agreement and a bank-transfer receipt, but I have not supplied or examined those documents here. Separately, the owner's technician still has our client's original design drive, which the client says was lent only for setup; the owner now says it can retain the drive until repair costs are paid. First give a source-backed, conditional analysis of the deposit and drive disputes, including any material contrary position. Separately, draft a brief list of questions for our client that would clarify the important gaps. Do not contact anyone, do not treat the damage allegation as admitted, and do not assume the reported documents have been checked.\"}, \"conversation\": [], \"current_records\": {}, \"saved_work\": []}, \"original_account_spans\": [{\"id\": \"a1\", \"source_id\": \"live-served-1:advocate\", \"start\": 0, \"end\": 15, \"available_range\": \"earlier_exact_selection\", \"text\": \"Good afternoon.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a2\", \"source_id\": \"live-served-1:advocate\", \"start\": 0, \"end\": 1068, \"available_range\": \"complete_original\", \"text\": \"Good afternoon. This is a synthetic test matter. We act for Aster Fabrication in Hyderabad. Our client rented a precision cutter and says it returned the machine on 6 September 2026. The owner retains the Rs 1,20,000 security deposit, alleging damage to the cutting head; our client denies causing damage. The owner sent a technician's estimate but no joint inspection report. Our client reports having a signed hire agreement and a bank-transfer receipt, but I have not supplied or examined those documents here. Separately, the owner's technician still has our client's original design drive, which the client says was lent only for setup; the owner now says it can retain the drive until repair costs are paid. First give a source-backed, conditional analysis of the deposit and drive disputes, including any material contrary position. Separately, draft a brief list of questions for our client that would clarify the important gaps. Do not contact anyone, do not treat the damage allegation as admitted, and do not assume the reported documents have been checked.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a3\", \"source_id\": \"live-served-1:advocate\", \"start\": 15, \"end\": 16, \"available_range\": \"uncovered_original_range\", \"text\": \" \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a4\", \"source_id\": \"live-served-1:advocate\", \"start\": 16, \"end\": 48, \"available_range\": \"earlier_exact_selection\", \"text\": \"This is a synthetic test matter.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a5\", \"source_id\": \"live-served-1:advocate\", \"start\": 48, \"end\": 49, \"available_range\": \"uncovered_original_range\", \"text\": \" \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a6\", \"source_id\": \"live-served-1:advocate\", \"start\": 49, \"end\": 91, \"available_range\": \"earlier_exact_selection\", \"text\": \"We act for Aster Fabrication in Hyderabad.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a7\", \"source_id\": \"live-served-1:advocate\", \"start\": 91, \"end\": 92, \"available_range\": \"uncovered_original_range\", \"text\": \" \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a8\", \"source_id\": \"live-served-1:advocate\", \"start\": 92, \"end\": 182, \"available_range\": \"earlier_exact_selection\", \"text\": \"Our client rented a precision cutter and says it returned the machine on 6 September 2026.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a9\", \"source_id\": \"live-served-1:advocate\", \"start\": 182, \"end\": 183, \"available_range\": \"uncovered_original_range\", \"text\": \" \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a10\", \"source_id\": \"live-served-1:advocate\", \"start\": 183, \"end\": 305, \"available_range\": \"earlier_exact_selection\", \"text\": \"The owner retains the Rs 1,20,000 security deposit, alleging damage to the cutting head; our client denies causing damage.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a11\", \"source_id\": \"live-served-1:advocate\", \"start\": 305, \"end\": 306, \"available_range\": \"uncovered_original_range\", \"text\": \" \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a12\", \"source_id\": \"live-served-1:advocate\", \"start\": 306, \"end\": 376, \"available_range\": \"earlier_exact_selection\", \"text\": \"The owner sent a technician's estimate but no joint inspection report.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a13\", \"source_id\": \"live-served-1:advocate\", \"start\": 376, \"end\": 377, \"available_range\": \"uncovered_original_range\", \"text\": \" \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a14\", \"source_id\": \"live-served-1:advocate\", \"start\": 377, \"end\": 513, \"available_range\": \"earlier_exact_selection\", \"text\": \"Our client reports having a signed hire agreement and a bank-transfer receipt, but I have not supplied or examined those documents here.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a15\", \"source_id\": \"live-served-1:advocate\", \"start\": 513, \"end\": 714, \"available_range\": \"uncovered_original_range\", \"text\": \" Separately, the owner's technician still has our client's original design drive, which the client says was lent only for setup; the owner now says it can retain the drive until repair costs are paid. \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a16\", \"source_id\": \"live-served-1:advocate\", \"start\": 714, \"end\": 839, \"available_range\": \"earlier_exact_selection\", \"text\": \"First give a source-backed, conditional analysis of the deposit and drive disputes, including any material contrary position.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a17\", \"source_id\": \"live-served-1:advocate\", \"start\": 839, \"end\": 840, \"available_range\": \"uncovered_original_range\", \"text\": \" \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a18\", \"source_id\": \"live-served-1:advocate\", \"start\": 840, \"end\": 937, \"available_range\": \"earlier_exact_selection\", \"text\": \"Separately, draft a brief list of questions for our client that would clarify the important gaps.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a19\", \"source_id\": \"live-served-1:advocate\", \"start\": 937, \"end\": 938, \"available_range\": \"uncovered_original_range\", \"text\": \" \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a20\", \"source_id\": \"live-served-1:advocate\", \"start\": 938, \"end\": 1068, \"available_range\": \"earlier_exact_selection\", \"text\": \"Do not contact anyone, do not treat the damage allegation as admitted, and do not assume the reported documents have been checked.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}]}",
+        "operation": "research_only_concepts_pilot",
+        "schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "work"
+          ],
+          "properties": {
+            "work": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "issue",
+                  "account_source_ids",
+                  "concepts"
+                ],
+                "properties": {
+                  "issue": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "account_source_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "a1",
+                        "a2",
+                        "a3",
+                        "a4",
+                        "a5",
+                        "a6",
+                        "a7",
+                        "a8",
+                        "a9",
+                        "a10",
+                        "a11",
+                        "a12",
+                        "a13",
+                        "a14",
+                        "a15",
+                        "a16",
+                        "a17",
+                        "a18",
+                        "a19",
+                        "a20"
+                      ]
+                    }
+                  },
+                  "concepts": {
+                    "type": "array",
+                    "maxItems": 3,
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "text",
+                        "purpose"
+                      ],
+                      "properties": {
+                        "text": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "purpose": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tier": "routine",
+        "max_tokens": 4000
+      }
+    },
+    {
+      "name": "not_supplied_is_not_nonexistent",
+      "origin": "Historical failed planner input; scripted exact-span fixture isolates the new planner",
+      "context": {
+        "position": "first",
+        "conversation": [],
+        "latest": {
+          "source_id": "deposit_and_drive:advocate",
+          "turn_id": "deposit_and_drive",
+          "speaker": "advocate",
+          "record_role": "original_account",
+          "text": "Hello. We act for Vale Makers, based in Hyderabad. They leased a laser cutter and returned it on 3 September. The lessor is retaining the deposit, alleging damage; our client disputes causing it, and no joint inspection report has been supplied. Separately, the lessor's technician still has the client's design drive, which the client says was loaned only for setup. Identify legal routes for recovery of the deposit and return of the drive, and separately draft a short list of questions for our client. Do not send anything or treat the damage allegation as admitted."
+        },
+        "current_records": {},
+        "saved_work": []
+      },
+      "aliases": {
+        "a1": {
+          "id": "deposit_and_drive:advocate:0:6",
+          "source_id": "deposit_and_drive:advocate",
+          "start": 0,
+          "end": 6
+        },
+        "a2": {
+          "id": "deposit_and_drive:advocate",
+          "source_id": "deposit_and_drive:advocate",
+          "start": 0,
+          "end": 570
+        },
+        "a3": {
+          "id": "deposit_and_drive:advocate:6:7",
+          "source_id": "deposit_and_drive:advocate",
+          "start": 6,
+          "end": 7
+        },
+        "a4": {
+          "id": "deposit_and_drive:advocate:7:368",
+          "source_id": "deposit_and_drive:advocate",
+          "start": 7,
+          "end": 368
+        },
+        "a5": {
+          "id": "deposit_and_drive:advocate:368:506",
+          "source_id": "deposit_and_drive:advocate",
+          "start": 368,
+          "end": 506
+        },
+        "a6": {
+          "id": "deposit_and_drive:advocate:506:570",
+          "source_id": "deposit_and_drive:advocate",
+          "start": 506,
+          "end": 570
+        }
+      },
+      "wire": {
+        "system": "Message: You receive the exact latest advocate message, the complete\nattributed earlier conversation, current records, saved work, and original account\nspans with short owned IDs. Each ID selects unchanged words and their provenance.\nThe span catalogue includes earlier selections, uncovered ranges and full messages;\nthese describe available words, not their meaning or truth. NM interpretations\nare distinct from original accounts and cannot establish facts.\n\nPurpose: Prepare only the legal investigations needed now and their held-corpus\nsearches. Other stages handle replies, drafting, factual corrections and execution.\nDo not plan those activities, answer the legal questions or decide applicable law.\n\nLook for: Understand the latest message in the whole conversation. Identify current\nlegal questions and distinct disputes requiring legal investigation, including those\narising from supplied substantive material. Preserve separate investigations even\nwhen requested together. Earlier pending work is not automatically requested again.\nReturn no investigation where the current work needs no legal sources.\n\nFor each investigation, select the offered account IDs containing its relevant\noriginal account. Keep who says what, uncertainty, conditions, timing and negation.\nPrefer focused spans to a mixed full message. Do not select social words or task\ndirections as facts; retain words that establish an expressly hypothetical scope.\nA general legal question may have no factual account. Never recopy or paraphrase\nfacts into a search query: code uses the selected original words.\n\nThen propose normally two or three concise legal concept phrases likely to occur\nin provisions or judicial reasoning. Each should add a distinct search contribution,\nnot restate another phrase or instruct a model to perform work. Use fewer when\nsufficient. Concepts are investigation hypotheses; they cannot introduce new facts,\nestablish an entitlement or invent an authority, provision, citation or jurisdiction.\nThe original account and its qualifications remain the basis for later assessment.\n\nOutcome: Return work[]. Each item has issue, a neutral inquiry title;\naccount_source_ids, selected offered IDs; and concepts[], each with text and purpose\ndescribing its distinct search contribution. Use at most three concepts per\ninvestigation. Return work=[] when no legal investigation is needed now. No other\nwork plans, factual summaries, conclusions, status or completion claims.\n",
+        "user": "{\"original_context\": {\"position\": \"first\", \"conversation\": [], \"latest\": {\"source_id\": \"deposit_and_drive:advocate\", \"turn_id\": \"deposit_and_drive\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"text\": \"Hello. We act for Vale Makers, based in Hyderabad. They leased a laser cutter and returned it on 3 September. The lessor is retaining the deposit, alleging damage; our client disputes causing it, and no joint inspection report has been supplied. Separately, the lessor's technician still has the client's design drive, which the client says was loaned only for setup. Identify legal routes for recovery of the deposit and return of the drive, and separately draft a short list of questions for our client. Do not send anything or treat the damage allegation as admitted.\"}, \"current_records\": {}, \"saved_work\": []}, \"original_account_spans\": [{\"id\": \"a1\", \"source_id\": \"deposit_and_drive:advocate\", \"start\": 0, \"end\": 6, \"available_range\": \"earlier_exact_selection\", \"text\": \"Hello.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"deposit_and_drive\"}, {\"id\": \"a2\", \"source_id\": \"deposit_and_drive:advocate\", \"start\": 0, \"end\": 570, \"available_range\": \"complete_original\", \"text\": \"Hello. We act for Vale Makers, based in Hyderabad. They leased a laser cutter and returned it on 3 September. The lessor is retaining the deposit, alleging damage; our client disputes causing it, and no joint inspection report has been supplied. Separately, the lessor's technician still has the client's design drive, which the client says was loaned only for setup. Identify legal routes for recovery of the deposit and return of the drive, and separately draft a short list of questions for our client. Do not send anything or treat the damage allegation as admitted.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"deposit_and_drive\"}, {\"id\": \"a3\", \"source_id\": \"deposit_and_drive:advocate\", \"start\": 6, \"end\": 7, \"available_range\": \"uncovered_original_range\", \"text\": \" \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"deposit_and_drive\"}, {\"id\": \"a4\", \"source_id\": \"deposit_and_drive:advocate\", \"start\": 7, \"end\": 368, \"available_range\": \"earlier_exact_selection\", \"text\": \"We act for Vale Makers, based in Hyderabad. They leased a laser cutter and returned it on 3 September. The lessor is retaining the deposit, alleging damage; our client disputes causing it, and no joint inspection report has been supplied. Separately, the lessor's technician still has the client's design drive, which the client says was loaned only for setup. \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"deposit_and_drive\"}, {\"id\": \"a5\", \"source_id\": \"deposit_and_drive:advocate\", \"start\": 368, \"end\": 506, \"available_range\": \"earlier_exact_selection\", \"text\": \"Identify legal routes for recovery of the deposit and return of the drive, and separately draft a short list of questions for our client. \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"deposit_and_drive\"}, {\"id\": \"a6\", \"source_id\": \"deposit_and_drive:advocate\", \"start\": 506, \"end\": 570, \"available_range\": \"earlier_exact_selection\", \"text\": \"Do not send anything or treat the damage allegation as admitted.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"deposit_and_drive\"}]}",
+        "operation": "research_only_concepts_pilot",
+        "schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "work"
+          ],
+          "properties": {
+            "work": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "issue",
+                  "account_source_ids",
+                  "concepts"
+                ],
+                "properties": {
+                  "issue": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "account_source_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "a1",
+                        "a2",
+                        "a3",
+                        "a4",
+                        "a5",
+                        "a6"
+                      ]
+                    }
+                  },
+                  "concepts": {
+                    "type": "array",
+                    "maxItems": 3,
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "text",
+                        "purpose"
+                      ],
+                      "properties": {
+                        "text": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "purpose": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tier": "routine",
+        "max_tokens": 4000
+      }
+    },
+    {
+      "name": "actor_agency_and_explicit_alternative",
+      "origin": "Exact saved hypothetical neighbour and original agency account; scripted exact spans",
+      "context": {
+        "position": "follow_up",
+        "conversation": [
+          {
+            "source_id": "authority_to_bind:advocate",
+            "turn_id": "authority_to_bind",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "text": "We act for Merin Diagnostics. A hospital owes fees for reported laboratory services. The hospital says a collection agency agreed on our client's behalf to extend payment by 90 days. Our client says the agency only collected specimens and denies authorising any change to payment terms. I have not examined the written service agreement. No email recording the extension has been forwarded to us. Identify the legal questions governing whether the agency could bind our client and whether the hospital could rely on that extension. Do not contact the hospital or agency."
+          }
+        ],
+        "latest": {
+          "source_id": "explicit_alternative:advocate",
+          "turn_id": "explicit_alternative",
+          "speaker": "advocate",
+          "record_role": "original_account",
+          "text": "For a separate alternative analysis only, assume the agency was expressly authorised to extend payment and that no email recording the extension was ever created. Identify how those assumed facts would change the legal questions. Keep both assumptions separate from our client's actual denial and from what we know about the unforwarded email. Do not change the matter record or contact anyone."
+        },
+        "current_records": {},
+        "saved_work": []
+      },
+      "aliases": {
+        "a1": {
+          "id": "authority_to_bind:advocate:0:397",
+          "source_id": "authority_to_bind:advocate",
+          "start": 0,
+          "end": 397
+        },
+        "a2": {
+          "id": "authority_to_bind:advocate",
+          "source_id": "authority_to_bind:advocate",
+          "start": 0,
+          "end": 570
+        },
+        "a3": {
+          "id": "authority_to_bind:advocate:397:570",
+          "source_id": "authority_to_bind:advocate",
+          "start": 397,
+          "end": 570
+        },
+        "a4": {
+          "id": "explicit_alternative:advocate:0:163",
+          "source_id": "explicit_alternative:advocate",
+          "start": 0,
+          "end": 163
+        },
+        "a5": {
+          "id": "explicit_alternative:advocate",
+          "source_id": "explicit_alternative:advocate",
+          "start": 0,
+          "end": 394
+        },
+        "a6": {
+          "id": "explicit_alternative:advocate:163:394",
+          "source_id": "explicit_alternative:advocate",
+          "start": 163,
+          "end": 394
+        }
+      },
+      "wire": {
+        "system": "Message: You receive the exact latest advocate message, the complete\nattributed earlier conversation, current records, saved work, and original account\nspans with short owned IDs. Each ID selects unchanged words and their provenance.\nThe span catalogue includes earlier selections, uncovered ranges and full messages;\nthese describe available words, not their meaning or truth. NM interpretations\nare distinct from original accounts and cannot establish facts.\n\nPurpose: Prepare only the legal investigations needed now and their held-corpus\nsearches. Other stages handle replies, drafting, factual corrections and execution.\nDo not plan those activities, answer the legal questions or decide applicable law.\n\nLook for: Understand the latest message in the whole conversation. Identify current\nlegal questions and distinct disputes requiring legal investigation, including those\narising from supplied substantive material. Preserve separate investigations even\nwhen requested together. Earlier pending work is not automatically requested again.\nReturn no investigation where the current work needs no legal sources.\n\nFor each investigation, select the offered account IDs containing its relevant\noriginal account. Keep who says what, uncertainty, conditions, timing and negation.\nPrefer focused spans to a mixed full message. Do not select social words or task\ndirections as facts; retain words that establish an expressly hypothetical scope.\nA general legal question may have no factual account. Never recopy or paraphrase\nfacts into a search query: code uses the selected original words.\n\nThen propose normally two or three concise legal concept phrases likely to occur\nin provisions or judicial reasoning. Each should add a distinct search contribution,\nnot restate another phrase or instruct a model to perform work. Use fewer when\nsufficient. Concepts are investigation hypotheses; they cannot introduce new facts,\nestablish an entitlement or invent an authority, provision, citation or jurisdiction.\nThe original account and its qualifications remain the basis for later assessment.\n\nOutcome: Return work[]. Each item has issue, a neutral inquiry title;\naccount_source_ids, selected offered IDs; and concepts[], each with text and purpose\ndescribing its distinct search contribution. Use at most three concepts per\ninvestigation. Return work=[] when no legal investigation is needed now. No other\nwork plans, factual summaries, conclusions, status or completion claims.\n",
+        "user": "{\"original_context\": {\"position\": \"follow_up\", \"conversation\": [{\"source_id\": \"authority_to_bind:advocate\", \"turn_id\": \"authority_to_bind\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"text\": \"We act for Merin Diagnostics. A hospital owes fees for reported laboratory services. The hospital says a collection agency agreed on our client's behalf to extend payment by 90 days. Our client says the agency only collected specimens and denies authorising any change to payment terms. I have not examined the written service agreement. No email recording the extension has been forwarded to us. Identify the legal questions governing whether the agency could bind our client and whether the hospital could rely on that extension. Do not contact the hospital or agency.\"}], \"latest\": {\"source_id\": \"explicit_alternative:advocate\", \"turn_id\": \"explicit_alternative\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"text\": \"For a separate alternative analysis only, assume the agency was expressly authorised to extend payment and that no email recording the extension was ever created. Identify how those assumed facts would change the legal questions. Keep both assumptions separate from our client's actual denial and from what we know about the unforwarded email. Do not change the matter record or contact anyone.\"}, \"current_records\": {}, \"saved_work\": []}, \"original_account_spans\": [{\"id\": \"a1\", \"source_id\": \"authority_to_bind:advocate\", \"start\": 0, \"end\": 397, \"available_range\": \"earlier_exact_selection\", \"text\": \"We act for Merin Diagnostics. A hospital owes fees for reported laboratory services. The hospital says a collection agency agreed on our client's behalf to extend payment by 90 days. Our client says the agency only collected specimens and denies authorising any change to payment terms. I have not examined the written service agreement. No email recording the extension has been forwarded to us. \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"authority_to_bind\"}, {\"id\": \"a2\", \"source_id\": \"authority_to_bind:advocate\", \"start\": 0, \"end\": 570, \"available_range\": \"complete_original\", \"text\": \"We act for Merin Diagnostics. A hospital owes fees for reported laboratory services. The hospital says a collection agency agreed on our client's behalf to extend payment by 90 days. Our client says the agency only collected specimens and denies authorising any change to payment terms. I have not examined the written service agreement. No email recording the extension has been forwarded to us. Identify the legal questions governing whether the agency could bind our client and whether the hospital could rely on that extension. Do not contact the hospital or agency.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"authority_to_bind\"}, {\"id\": \"a3\", \"source_id\": \"authority_to_bind:advocate\", \"start\": 397, \"end\": 570, \"available_range\": \"earlier_exact_selection\", \"text\": \"Identify the legal questions governing whether the agency could bind our client and whether the hospital could rely on that extension. Do not contact the hospital or agency.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"authority_to_bind\"}, {\"id\": \"a4\", \"source_id\": \"explicit_alternative:advocate\", \"start\": 0, \"end\": 163, \"available_range\": \"earlier_exact_selection\", \"text\": \"For a separate alternative analysis only, assume the agency was expressly authorised to extend payment and that no email recording the extension was ever created. \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"explicit_alternative\"}, {\"id\": \"a5\", \"source_id\": \"explicit_alternative:advocate\", \"start\": 0, \"end\": 394, \"available_range\": \"complete_original\", \"text\": \"For a separate alternative analysis only, assume the agency was expressly authorised to extend payment and that no email recording the extension was ever created. Identify how those assumed facts would change the legal questions. Keep both assumptions separate from our client's actual denial and from what we know about the unforwarded email. Do not change the matter record or contact anyone.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"explicit_alternative\"}, {\"id\": \"a6\", \"source_id\": \"explicit_alternative:advocate\", \"start\": 163, \"end\": 394, \"available_range\": \"earlier_exact_selection\", \"text\": \"Identify how those assumed facts would change the legal questions. Keep both assumptions separate from our client's actual denial and from what we know about the unforwarded email. Do not change the matter record or contact anyone.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"explicit_alternative\"}]}",
+        "operation": "research_only_concepts_pilot",
+        "schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "work"
+          ],
+          "properties": {
+            "work": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "issue",
+                  "account_source_ids",
+                  "concepts"
+                ],
+                "properties": {
+                  "issue": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "account_source_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "a1",
+                        "a2",
+                        "a3",
+                        "a4",
+                        "a5",
+                        "a6"
+                      ]
+                    }
+                  },
+                  "concepts": {
+                    "type": "array",
+                    "maxItems": 3,
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "text",
+                        "purpose"
+                      ],
+                      "properties": {
+                        "text": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "purpose": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tier": "routine",
+        "max_tokens": 4000
+      }
+    },
+    {
+      "name": "mixed_independent_requests_followup",
+      "origin": "Exact saved mixed follow-up account; scripted exact spans retain complete history",
+      "context": {
+        "position": "follow_up",
+        "conversation": [
+          {
+            "source_id": "p1:advocate",
+            "turn_id": "p1",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "text": "In a Hyderabad matter, our client granted a neighbour written permission to use a passage until 30 June. We have the permission letter, but not the deed plan. Do not assume ownership of the passage is settled."
+          },
+          {
+            "source_id": "p1:nm",
+            "turn_id": "p1",
+            "speaker": "nm",
+            "record_role": "nm_interpretation",
+            "text": "We can compare withdrawal of permission with any claimed independent access right when the deed plan is supplied."
+          },
+          {
+            "source_id": "p2:advocate",
+            "turn_id": "p2",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "text": "The neighbour claims an access right independent of permission; we deny that, but no court has decided it."
+          },
+          {
+            "source_id": "p2:nm",
+            "turn_id": "p2",
+            "speaker": "nm",
+            "record_role": "nm_interpretation",
+            "text": "The deed plan is still missing and no ownership determination has been made."
+          }
+        ],
+        "latest": {
+          "source_id": "permission_followup:advocate",
+          "turn_id": "permission_followup",
+          "speaker": "advocate",
+          "record_role": "original_account",
+          "text": "Before returning to the passage issue, give me a short explanation of interim relief. Then resume the work on whether use can continue after the permission ends, keeping the ownership question open. The plan is still unavailable. Do not draft a notice yet."
+        },
+        "current_records": {
+          "ownership": {
+            "state": "disputed"
+          }
+        },
+        "saved_work": [
+          {
+            "id": "passage-review",
+            "status": "waiting_for_deed_plan",
+            "purpose": "Examine continuing passage use"
+          }
+        ]
+      },
+      "aliases": {
+        "a1": {
+          "id": "p1:advocate",
+          "source_id": "p1:advocate",
+          "start": 0,
+          "end": 209
+        },
+        "a2": {
+          "id": "p2:advocate",
+          "source_id": "p2:advocate",
+          "start": 0,
+          "end": 106
+        },
+        "a3": {
+          "id": "permission_followup:advocate:0:85",
+          "source_id": "permission_followup:advocate",
+          "start": 0,
+          "end": 85
+        },
+        "a4": {
+          "id": "permission_followup:advocate",
+          "source_id": "permission_followup:advocate",
+          "start": 0,
+          "end": 256
+        },
+        "a5": {
+          "id": "permission_followup:advocate:85:86",
+          "source_id": "permission_followup:advocate",
+          "start": 85,
+          "end": 86
+        },
+        "a6": {
+          "id": "permission_followup:advocate:86:198",
+          "source_id": "permission_followup:advocate",
+          "start": 86,
+          "end": 198
+        },
+        "a7": {
+          "id": "permission_followup:advocate:198:199",
+          "source_id": "permission_followup:advocate",
+          "start": 198,
+          "end": 199
+        },
+        "a8": {
+          "id": "permission_followup:advocate:199:229",
+          "source_id": "permission_followup:advocate",
+          "start": 199,
+          "end": 229
+        },
+        "a9": {
+          "id": "permission_followup:advocate:229:230",
+          "source_id": "permission_followup:advocate",
+          "start": 229,
+          "end": 230
+        },
+        "a10": {
+          "id": "permission_followup:advocate:230:256",
+          "source_id": "permission_followup:advocate",
+          "start": 230,
+          "end": 256
+        }
+      },
+      "wire": {
+        "system": "Message: You receive the exact latest advocate message, the complete\nattributed earlier conversation, current records, saved work, and original account\nspans with short owned IDs. Each ID selects unchanged words and their provenance.\nThe span catalogue includes earlier selections, uncovered ranges and full messages;\nthese describe available words, not their meaning or truth. NM interpretations\nare distinct from original accounts and cannot establish facts.\n\nPurpose: Prepare only the legal investigations needed now and their held-corpus\nsearches. Other stages handle replies, drafting, factual corrections and execution.\nDo not plan those activities, answer the legal questions or decide applicable law.\n\nLook for: Understand the latest message in the whole conversation. Identify current\nlegal questions and distinct disputes requiring legal investigation, including those\narising from supplied substantive material. Preserve separate investigations even\nwhen requested together. Earlier pending work is not automatically requested again.\nReturn no investigation where the current work needs no legal sources.\n\nFor each investigation, select the offered account IDs containing its relevant\noriginal account. Keep who says what, uncertainty, conditions, timing and negation.\nPrefer focused spans to a mixed full message. Do not select social words or task\ndirections as facts; retain words that establish an expressly hypothetical scope.\nA general legal question may have no factual account. Never recopy or paraphrase\nfacts into a search query: code uses the selected original words.\n\nThen propose normally two or three concise legal concept phrases likely to occur\nin provisions or judicial reasoning. Each should add a distinct search contribution,\nnot restate another phrase or instruct a model to perform work. Use fewer when\nsufficient. Concepts are investigation hypotheses; they cannot introduce new facts,\nestablish an entitlement or invent an authority, provision, citation or jurisdiction.\nThe original account and its qualifications remain the basis for later assessment.\n\nOutcome: Return work[]. Each item has issue, a neutral inquiry title;\naccount_source_ids, selected offered IDs; and concepts[], each with text and purpose\ndescribing its distinct search contribution. Use at most three concepts per\ninvestigation. Return work=[] when no legal investigation is needed now. No other\nwork plans, factual summaries, conclusions, status or completion claims.\n",
+        "user": "{\"original_context\": {\"position\": \"follow_up\", \"conversation\": [{\"source_id\": \"p1:advocate\", \"turn_id\": \"p1\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"text\": \"In a Hyderabad matter, our client granted a neighbour written permission to use a passage until 30 June. We have the permission letter, but not the deed plan. Do not assume ownership of the passage is settled.\"}, {\"source_id\": \"p1:nm\", \"turn_id\": \"p1\", \"speaker\": \"nm\", \"record_role\": \"nm_interpretation\", \"text\": \"We can compare withdrawal of permission with any claimed independent access right when the deed plan is supplied.\"}, {\"source_id\": \"p2:advocate\", \"turn_id\": \"p2\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"text\": \"The neighbour claims an access right independent of permission; we deny that, but no court has decided it.\"}, {\"source_id\": \"p2:nm\", \"turn_id\": \"p2\", \"speaker\": \"nm\", \"record_role\": \"nm_interpretation\", \"text\": \"The deed plan is still missing and no ownership determination has been made.\"}], \"latest\": {\"source_id\": \"permission_followup:advocate\", \"turn_id\": \"permission_followup\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"text\": \"Before returning to the passage issue, give me a short explanation of interim relief. Then resume the work on whether use can continue after the permission ends, keeping the ownership question open. The plan is still unavailable. Do not draft a notice yet.\"}, \"current_records\": {\"ownership\": {\"state\": \"disputed\"}}, \"saved_work\": [{\"id\": \"passage-review\", \"status\": \"waiting_for_deed_plan\", \"purpose\": \"Examine continuing passage use\"}]}, \"original_account_spans\": [{\"id\": \"a1\", \"source_id\": \"p1:advocate\", \"start\": 0, \"end\": 209, \"available_range\": \"complete_original\", \"text\": \"In a Hyderabad matter, our client granted a neighbour written permission to use a passage until 30 June. We have the permission letter, but not the deed plan. Do not assume ownership of the passage is settled.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"p1\"}, {\"id\": \"a2\", \"source_id\": \"p2:advocate\", \"start\": 0, \"end\": 106, \"available_range\": \"complete_original\", \"text\": \"The neighbour claims an access right independent of permission; we deny that, but no court has decided it.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"p2\"}, {\"id\": \"a3\", \"source_id\": \"permission_followup:advocate\", \"start\": 0, \"end\": 85, \"available_range\": \"earlier_exact_selection\", \"text\": \"Before returning to the passage issue, give me a short explanation of interim relief.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"permission_followup\"}, {\"id\": \"a4\", \"source_id\": \"permission_followup:advocate\", \"start\": 0, \"end\": 256, \"available_range\": \"complete_original\", \"text\": \"Before returning to the passage issue, give me a short explanation of interim relief. Then resume the work on whether use can continue after the permission ends, keeping the ownership question open. The plan is still unavailable. Do not draft a notice yet.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"permission_followup\"}, {\"id\": \"a5\", \"source_id\": \"permission_followup:advocate\", \"start\": 85, \"end\": 86, \"available_range\": \"uncovered_original_range\", \"text\": \" \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"permission_followup\"}, {\"id\": \"a6\", \"source_id\": \"permission_followup:advocate\", \"start\": 86, \"end\": 198, \"available_range\": \"earlier_exact_selection\", \"text\": \"Then resume the work on whether use can continue after the permission ends, keeping the ownership question open.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"permission_followup\"}, {\"id\": \"a7\", \"source_id\": \"permission_followup:advocate\", \"start\": 198, \"end\": 199, \"available_range\": \"uncovered_original_range\", \"text\": \" \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"permission_followup\"}, {\"id\": \"a8\", \"source_id\": \"permission_followup:advocate\", \"start\": 199, \"end\": 229, \"available_range\": \"earlier_exact_selection\", \"text\": \"The plan is still unavailable.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"permission_followup\"}, {\"id\": \"a9\", \"source_id\": \"permission_followup:advocate\", \"start\": 229, \"end\": 230, \"available_range\": \"uncovered_original_range\", \"text\": \" \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"permission_followup\"}, {\"id\": \"a10\", \"source_id\": \"permission_followup:advocate\", \"start\": 230, \"end\": 256, \"available_range\": \"earlier_exact_selection\", \"text\": \"Do not draft a notice yet.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"permission_followup\"}]}",
+        "operation": "research_only_concepts_pilot",
+        "schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "work"
+          ],
+          "properties": {
+            "work": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "issue",
+                  "account_source_ids",
+                  "concepts"
+                ],
+                "properties": {
+                  "issue": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "account_source_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "a1",
+                        "a2",
+                        "a3",
+                        "a4",
+                        "a5",
+                        "a6",
+                        "a7",
+                        "a8",
+                        "a9",
+                        "a10"
+                      ]
+                    }
+                  },
+                  "concepts": {
+                    "type": "array",
+                    "maxItems": 3,
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "text",
+                        "purpose"
+                      ],
+                      "properties": {
+                        "text": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "purpose": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tier": "routine",
+        "max_tokens": 4000
+      }
+    },
+    {
+      "name": "correction_no_send_no_law",
+      "origin": "Saved date correction with explicit synthetic no-send addition; prior factual inputs unchanged",
+      "context": {
+        "position": "follow_up",
+        "conversation": [
+          {
+            "source_id": "c1:advocate",
+            "turn_id": "c1",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "text": "The payment was made on 14 April. The amount is not yet checked."
+          },
+          {
+            "source_id": "c1:nm",
+            "turn_id": "c1",
+            "speaker": "nm",
+            "record_role": "nm_interpretation",
+            "text": "The reported payment was made on 14 May; the amount is unconfirmed."
+          }
+        ],
+        "latest": {
+          "source_id": "correction:advocate",
+          "turn_id": "correction",
+          "speaker": "advocate",
+          "record_role": "original_account",
+          "text": "Please correct your summary: I said 14 April, not 14 May. The amount remains uncertain; do not enter a confirmed payment figure. Do not send anything to anyone."
+        },
+        "current_records": {
+          "reported_payment_date": {
+            "value": "14 May",
+            "record_role": "nm_interpretation"
+          }
+        },
+        "saved_work": [
+          {
+            "id": "summary-1",
+            "status": "completed",
+            "kind": "summary"
+          }
+        ]
+      },
+      "aliases": {
+        "a1": {
+          "id": "c1:advocate",
+          "source_id": "c1:advocate",
+          "start": 0,
+          "end": 64
+        },
+        "a2": {
+          "id": "correction:advocate",
+          "source_id": "correction:advocate",
+          "start": 0,
+          "end": 160
+        }
+      },
+      "wire": {
+        "system": "Message: You receive the exact latest advocate message, the complete\nattributed earlier conversation, current records, saved work, and original account\nspans with short owned IDs. Each ID selects unchanged words and their provenance.\nThe span catalogue includes earlier selections, uncovered ranges and full messages;\nthese describe available words, not their meaning or truth. NM interpretations\nare distinct from original accounts and cannot establish facts.\n\nPurpose: Prepare only the legal investigations needed now and their held-corpus\nsearches. Other stages handle replies, drafting, factual corrections and execution.\nDo not plan those activities, answer the legal questions or decide applicable law.\n\nLook for: Understand the latest message in the whole conversation. Identify current\nlegal questions and distinct disputes requiring legal investigation, including those\narising from supplied substantive material. Preserve separate investigations even\nwhen requested together. Earlier pending work is not automatically requested again.\nReturn no investigation where the current work needs no legal sources.\n\nFor each investigation, select the offered account IDs containing its relevant\noriginal account. Keep who says what, uncertainty, conditions, timing and negation.\nPrefer focused spans to a mixed full message. Do not select social words or task\ndirections as facts; retain words that establish an expressly hypothetical scope.\nA general legal question may have no factual account. Never recopy or paraphrase\nfacts into a search query: code uses the selected original words.\n\nThen propose normally two or three concise legal concept phrases likely to occur\nin provisions or judicial reasoning. Each should add a distinct search contribution,\nnot restate another phrase or instruct a model to perform work. Use fewer when\nsufficient. Concepts are investigation hypotheses; they cannot introduce new facts,\nestablish an entitlement or invent an authority, provision, citation or jurisdiction.\nThe original account and its qualifications remain the basis for later assessment.\n\nOutcome: Return work[]. Each item has issue, a neutral inquiry title;\naccount_source_ids, selected offered IDs; and concepts[], each with text and purpose\ndescribing its distinct search contribution. Use at most three concepts per\ninvestigation. Return work=[] when no legal investigation is needed now. No other\nwork plans, factual summaries, conclusions, status or completion claims.\n",
+        "user": "{\"original_context\": {\"position\": \"follow_up\", \"conversation\": [{\"source_id\": \"c1:advocate\", \"turn_id\": \"c1\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"text\": \"The payment was made on 14 April. The amount is not yet checked.\"}, {\"source_id\": \"c1:nm\", \"turn_id\": \"c1\", \"speaker\": \"nm\", \"record_role\": \"nm_interpretation\", \"text\": \"The reported payment was made on 14 May; the amount is unconfirmed.\"}], \"latest\": {\"source_id\": \"correction:advocate\", \"turn_id\": \"correction\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"text\": \"Please correct your summary: I said 14 April, not 14 May. The amount remains uncertain; do not enter a confirmed payment figure. Do not send anything to anyone.\"}, \"current_records\": {\"reported_payment_date\": {\"value\": \"14 May\", \"record_role\": \"nm_interpretation\"}}, \"saved_work\": [{\"id\": \"summary-1\", \"status\": \"completed\", \"kind\": \"summary\"}]}, \"original_account_spans\": [{\"id\": \"a1\", \"source_id\": \"c1:advocate\", \"start\": 0, \"end\": 64, \"available_range\": \"complete_original\", \"text\": \"The payment was made on 14 April. The amount is not yet checked.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"c1\"}, {\"id\": \"a2\", \"source_id\": \"correction:advocate\", \"start\": 0, \"end\": 160, \"available_range\": \"complete_original\", \"text\": \"Please correct your summary: I said 14 April, not 14 May. The amount remains uncertain; do not enter a confirmed payment figure. Do not send anything to anyone.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"correction\"}]}",
+        "operation": "research_only_concepts_pilot",
+        "schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "work"
+          ],
+          "properties": {
+            "work": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "issue",
+                  "account_source_ids",
+                  "concepts"
+                ],
+                "properties": {
+                  "issue": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "account_source_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "a1",
+                        "a2"
+                      ]
+                    }
+                  },
+                  "concepts": {
+                    "type": "array",
+                    "maxItems": 3,
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "text",
+                        "purpose"
+                      ],
+                      "properties": {
+                        "text": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "purpose": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tier": "routine",
+        "max_tokens": 4000
+      }
+    },
+    {
+      "name": "greeting_social_close",
+      "origin": "Exact saved social closing and complete earlier pending-work context",
+      "context": {
+        "position": "follow_up",
+        "conversation": [
+          {
+            "source_id": "s1:advocate",
+            "turn_id": "s1",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "text": "When I return with the tenancy papers, we can look at the rent demand."
+          },
+          {
+            "source_id": "s1:nm",
+            "turn_id": "s1",
+            "speaker": "nm",
+            "record_role": "nm_interpretation",
+            "text": "The papers have not been provided; that work remains pending."
+          }
+        ],
+        "latest": {
+          "source_id": "social_closing:advocate",
+          "turn_id": "social_closing",
+          "speaker": "advocate",
+          "record_role": "original_account",
+          "text": "Thanks, this is enough for today. Good night."
+        },
+        "current_records": {},
+        "saved_work": [
+          {
+            "id": "rent-review",
+            "status": "waiting_for_documents"
+          }
+        ]
+      },
+      "aliases": {
+        "a1": {
+          "id": "s1:advocate",
+          "source_id": "s1:advocate",
+          "start": 0,
+          "end": 70
+        },
+        "a2": {
+          "id": "social_closing:advocate",
+          "source_id": "social_closing:advocate",
+          "start": 0,
+          "end": 45
+        }
+      },
+      "wire": {
+        "system": "Message: You receive the exact latest advocate message, the complete\nattributed earlier conversation, current records, saved work, and original account\nspans with short owned IDs. Each ID selects unchanged words and their provenance.\nThe span catalogue includes earlier selections, uncovered ranges and full messages;\nthese describe available words, not their meaning or truth. NM interpretations\nare distinct from original accounts and cannot establish facts.\n\nPurpose: Prepare only the legal investigations needed now and their held-corpus\nsearches. Other stages handle replies, drafting, factual corrections and execution.\nDo not plan those activities, answer the legal questions or decide applicable law.\n\nLook for: Understand the latest message in the whole conversation. Identify current\nlegal questions and distinct disputes requiring legal investigation, including those\narising from supplied substantive material. Preserve separate investigations even\nwhen requested together. Earlier pending work is not automatically requested again.\nReturn no investigation where the current work needs no legal sources.\n\nFor each investigation, select the offered account IDs containing its relevant\noriginal account. Keep who says what, uncertainty, conditions, timing and negation.\nPrefer focused spans to a mixed full message. Do not select social words or task\ndirections as facts; retain words that establish an expressly hypothetical scope.\nA general legal question may have no factual account. Never recopy or paraphrase\nfacts into a search query: code uses the selected original words.\n\nThen propose normally two or three concise legal concept phrases likely to occur\nin provisions or judicial reasoning. Each should add a distinct search contribution,\nnot restate another phrase or instruct a model to perform work. Use fewer when\nsufficient. Concepts are investigation hypotheses; they cannot introduce new facts,\nestablish an entitlement or invent an authority, provision, citation or jurisdiction.\nThe original account and its qualifications remain the basis for later assessment.\n\nOutcome: Return work[]. Each item has issue, a neutral inquiry title;\naccount_source_ids, selected offered IDs; and concepts[], each with text and purpose\ndescribing its distinct search contribution. Use at most three concepts per\ninvestigation. Return work=[] when no legal investigation is needed now. No other\nwork plans, factual summaries, conclusions, status or completion claims.\n",
+        "user": "{\"original_context\": {\"position\": \"follow_up\", \"conversation\": [{\"source_id\": \"s1:advocate\", \"turn_id\": \"s1\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"text\": \"When I return with the tenancy papers, we can look at the rent demand.\"}, {\"source_id\": \"s1:nm\", \"turn_id\": \"s1\", \"speaker\": \"nm\", \"record_role\": \"nm_interpretation\", \"text\": \"The papers have not been provided; that work remains pending.\"}], \"latest\": {\"source_id\": \"social_closing:advocate\", \"turn_id\": \"social_closing\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"text\": \"Thanks, this is enough for today. Good night.\"}, \"current_records\": {}, \"saved_work\": [{\"id\": \"rent-review\", \"status\": \"waiting_for_documents\"}]}, \"original_account_spans\": [{\"id\": \"a1\", \"source_id\": \"s1:advocate\", \"start\": 0, \"end\": 70, \"available_range\": \"complete_original\", \"text\": \"When I return with the tenancy papers, we can look at the rent demand.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"s1\"}, {\"id\": \"a2\", \"source_id\": \"social_closing:advocate\", \"start\": 0, \"end\": 45, \"available_range\": \"complete_original\", \"text\": \"Thanks, this is enough for today. Good night.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"social_closing\"}]}",
+        "operation": "research_only_concepts_pilot",
+        "schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "work"
+          ],
+          "properties": {
+            "work": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "issue",
+                  "account_source_ids",
+                  "concepts"
+                ],
+                "properties": {
+                  "issue": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "account_source_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "a1",
+                        "a2"
+                      ]
+                    }
+                  },
+                  "concepts": {
+                    "type": "array",
+                    "maxItems": 3,
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "text",
+                        "purpose"
+                      ],
+                      "properties": {
+                        "text": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "purpose": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tier": "routine",
+        "max_tokens": 4000
+      }
+    }
+  ]
+}

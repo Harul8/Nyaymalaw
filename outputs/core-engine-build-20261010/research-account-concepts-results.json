@@ -1,0 +1,2685 @@
+{
+  "started_utc": "2026-10-10T05:24:37.688107+00:00",
+  "prepared": {
+    "model": "gpt-4.1-mini-2025-04-14",
+    "script_sha256": "d30c87acb7f297fa468b5aa34b08749df04099c041c8de6412f33aba1a0019e6",
+    "inputs_sha256": "706b298b179b838ca5456941b89c10b428077eba75bfe837ad82c1dce589822c",
+    "hidden_oracle_sha256": "47c04570a06edc0164cdc6ef1feffc4eeaa09c71efe73effad006ee114ed7b05",
+    "system": "Message: You receive the advocate's exact latest message, complete\nattributed earlier conversation, current records and saved work, plus an earlier\ninterpretation proposal and an owned catalogue of original source spans. A span\nID identifies exact words, not their factual truth or their semantic category.\nOriginal accounts, NM interpretations and work instructions remain distinct.\n\nPurpose: Plan the independently useful work needed now and searches of held law.\nFor each independent legal investigation, select the original account to search\nfirst, then propose no more than three focused legal concept searches. Do not\nanswer, decide applicable law, execute actions or change records.\n\nLook for:\n1. Read the complete original conversation before the interpretation. Return a\nseparate work item for each independent legal investigation or dispute, even when\nrequested together, and separately preserve other requested results and applicable\nlimits. A diversion does not cancel earlier\nwork; earlier work does not override the current instruction. Do not force legal\nwork onto a greeting or research onto a task that the supplied account can resolve.\n2. Select work-supporting whole sources by source_id with quote=null, including\nthe current instruction. account_source_ids selects original account passages\nexclusively for LEGAL SEARCH, not for factual extraction or internal work generally.\nFor work needing law, select these IDs from the offered original spans. Use focused spans where a\nmessage mixes facts, social words and instructions. Keep attribution, uncertainty,\ntiming, negation, relationships and contrary positions. Do not copy or paraphrase\nthe account: code supplies the selected exact words. An uncovered range is merely\ntext not selected earlier, not proof that it is factual or irrelevant. Inspect it.\nAn NM statement may be reviewed but cannot prove its own factual content.\n3. Where law is needed, normally propose two or three concise phrases in the\nterminology likely to occur in provisions or judicial reasoning. Each must seek\na distinct useful concept connected to this investigation, not a synonym or a\ngeneric request to explain applicable law or draft questions. A client questionnaire\nmay use the available account and relevant research without its own duplicate\nsearch. Use fewer when sufficient. Independent disputes do not share one three-phrase cap merely because\nthe advocate asked about them together.\n4. A model-proposed legal concept is conditional discovery vocabulary, not an\nestablished legal relationship. It must not add or alter a factual premise. Keep\nconsequential missing conditions in unresolved. An expressly requested hypothetical\nremains distinct from the actual account. Do not invent an Act, provision number,\ncase citation, jurisdiction or governing rule. A user-supplied legal reference may\nguide discovery but remains unverified.\n\nOutcome: Return the declared work array. Each item contains purpose, outcome,\nsources, account_source_ids, constraints, unresolved and enquiries. Each enquiry\ncontains text, its distinct purpose, and basis: reported if the original source\nsupplies that legal concept, otherwise conditional. Neither basis proves it applies.\nAll references use offered IDs; every sources quote is null. Use zero to three\nenquiries per independent legal investigation. For work not needing legal search,\nreturn BOTH account_source_ids=[] and enquiries=[]; its supporting sources and full\ncontext still supply the account needed for that work. A general legal question\nwith no factual account may have enquiries with account_source_ids=[].\nUse an empty work list where no work is currently requested\nor justified. All outputs are proposals, not execution or completion claims.\n",
+    "schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "work"
+      ],
+      "properties": {
+        "work": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "purpose",
+              "outcome",
+              "sources",
+              "account_source_ids",
+              "constraints",
+              "unresolved",
+              "enquiries"
+            ],
+            "properties": {
+              "purpose": {
+                "type": "string",
+                "minLength": 1
+              },
+              "outcome": {
+                "type": "string",
+                "minLength": 1
+              },
+              "sources": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "source_id",
+                    "quote"
+                  ],
+                  "properties": {
+                    "source_id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "quote": {
+                      "type": "null"
+                    }
+                  }
+                }
+              },
+              "account_source_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "constraints": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "unresolved": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "enquiries": {
+                "type": "array",
+                "maxItems": 3,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "text",
+                    "purpose",
+                    "basis"
+                  ],
+                  "properties": {
+                    "text": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "purpose": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "basis": {
+                      "type": "string",
+                      "enum": [
+                        "reported",
+                        "conditional"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "max_output_tokens": 6500,
+    "maximum_logical_calls": 6,
+    "semantic_retries": 0,
+    "actual_spend_stop_usd": 0.08,
+    "shared_ledger": "api-budget.sqlite",
+    "shared_hard_cap_usd": 5,
+    "scope": "Candidate-only planner; no retrieval, no production edits; schema checks do not certify semantics",
+    "admission_scope": "Pilot mechanically rejects the whole candidate on any schema/reference defect; proposed production per-work isolation is not exercised here.",
+    "selfchecks": {
+      "cases": 6,
+      "original_held_drive_offered": true,
+      "repeated_words_distinct_by_coordinates": true,
+      "unknown_span_rejected": true,
+      "complete_original_sources_preserved": true,
+      "paid_calls": 0
+    }
+  },
+  "budget_before": {
+    "maximum_usd": 5.0,
+    "charged_usd": 1.320785,
+    "measured_usd": 0.230785,
+    "reserved_or_unknown_usd": 1.09,
+    "attempts": 81,
+    "models": [
+      {
+        "model": "gpt-4.1-mini-2025-04-14",
+        "state": "measured",
+        "attempts": 80,
+        "charged_usd": 0.230785
+      },
+      {
+        "model": "text-embedding-3-large",
+        "state": "reserved_or_unknown",
+        "attempts": 1,
+        "charged_usd": 1.09
+      }
+    ]
+  },
+  "calls": [
+    {
+      "name": "original_aster_held_drive",
+      "prompt_input": {
+        "original_context": {
+          "position": "first",
+          "latest": {
+            "source_id": "live-served-1:advocate",
+            "turn_id": "live-served-1",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "text": "Good afternoon. This is a synthetic test matter. We act for Aster Fabrication in Hyderabad. Our client rented a precision cutter and says it returned the machine on 6 September 2026. The owner retains the Rs 1,20,000 security deposit, alleging damage to the cutting head; our client denies causing damage. The owner sent a technician's estimate but no joint inspection report. Our client reports having a signed hire agreement and a bank-transfer receipt, but I have not supplied or examined those documents here. Separately, the owner's technician still has our client's original design drive, which the client says was lent only for setup; the owner now says it can retain the drive until repair costs are paid. First give a source-backed, conditional analysis of the deposit and drive disputes, including any material contrary position. Separately, draft a brief list of questions for our client that would clarify the important gaps. Do not contact anyone, do not treat the damage allegation as admitted, and do not assume the reported documents have been checked."
+          },
+          "conversation": [],
+          "current_records": {},
+          "saved_work": []
+        },
+        "interpretation_proposal": {
+          "contract": "core_understanding_v2",
+          "units": [
+            {
+              "id": "live-served-1:u1",
+              "kind": "courtesy",
+              "source": {
+                "source_id": "live-served-1:advocate",
+                "turn_id": "live-served-1",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "text": "Good afternoon.",
+                "start": 0,
+                "end": 15
+              },
+              "meaning": "A polite greeting to initiate the interaction.",
+              "context": [],
+              "requested_work": null,
+              "desired_result": null,
+              "unresolved": []
+            },
+            {
+              "id": "live-served-1:u2",
+              "kind": "information",
+              "source": {
+                "source_id": "live-served-1:advocate",
+                "turn_id": "live-served-1",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "text": "This is a synthetic test matter.",
+                "start": 16,
+                "end": 48
+              },
+              "meaning": "The case scenario is a simulated or hypothetical situation for testing purposes.",
+              "context": [],
+              "requested_work": null,
+              "desired_result": null,
+              "unresolved": []
+            },
+            {
+              "id": "live-served-1:u3",
+              "kind": "information",
+              "source": {
+                "source_id": "live-served-1:advocate",
+                "turn_id": "live-served-1",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "text": "We act for Aster Fabrication in Hyderabad.",
+                "start": 49,
+                "end": 91
+              },
+              "meaning": "The advocate represents the client named Aster Fabrication based in Hyderabad.",
+              "context": [],
+              "requested_work": null,
+              "desired_result": null,
+              "unresolved": []
+            },
+            {
+              "id": "live-served-1:u4",
+              "kind": "information",
+              "source": {
+                "source_id": "live-served-1:advocate",
+                "turn_id": "live-served-1",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "text": "Our client rented a precision cutter and says it returned the machine on 6 September 2026.",
+                "start": 92,
+                "end": 182
+              },
+              "meaning": "Client rented equipment and claims to have returned it on the stated date.",
+              "context": [],
+              "requested_work": null,
+              "desired_result": null,
+              "unresolved": []
+            },
+            {
+              "id": "live-served-1:u5",
+              "kind": "information",
+              "source": {
+                "source_id": "live-served-1:advocate",
+                "turn_id": "live-served-1",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "text": "The owner retains the Rs 1,20,000 security deposit, alleging damage to the cutting head; our client denies causing damage.",
+                "start": 183,
+                "end": 305
+              },
+              "meaning": "Owner withholds the security deposit citing damage, which the client disputes.",
+              "context": [],
+              "requested_work": null,
+              "desired_result": null,
+              "unresolved": []
+            },
+            {
+              "id": "live-served-1:u6",
+              "kind": "information",
+              "source": {
+                "source_id": "live-served-1:advocate",
+                "turn_id": "live-served-1",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "text": "The owner sent a technician's estimate but no joint inspection report.",
+                "start": 306,
+                "end": 376
+              },
+              "meaning": "An estimate of repairs has been provided without formal joint inspection documentation.",
+              "context": [],
+              "requested_work": null,
+              "desired_result": null,
+              "unresolved": []
+            },
+            {
+              "id": "live-served-1:u7",
+              "kind": "information",
+              "source": {
+                "source_id": "live-served-1:advocate",
+                "turn_id": "live-served-1",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "text": "Our client reports having a signed hire agreement and a bank-transfer receipt, but I have not supplied or examined those documents here.",
+                "start": 377,
+                "end": 513
+              },
+              "meaning": "Client holds relevant rental and payment documents, though these have not been reviewed by the advocate yet.",
+              "context": [],
+              "requested_work": null,
+              "desired_result": null,
+              "unresolved": []
+            },
+            {
+              "id": "live-served-1:u9",
+              "kind": "request",
+              "source": {
+                "source_id": "live-served-1:advocate",
+                "turn_id": "live-served-1",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "text": "First give a source-backed, conditional analysis of the deposit and drive disputes, including any material contrary position.",
+                "start": 714,
+                "end": 839
+              },
+              "meaning": "The advocate requests a detailed analysis grounded in legal or factual sources that considers all sides of the deposit and drive disputes, providing conditions under which different outcomes might arise.",
+              "context": [],
+              "requested_work": "analysis",
+              "desired_result": "A conditional, source-supported analytic overview of the security deposit withholding and the retention of the design drive disputes, including contrary positions.",
+              "unresolved": []
+            },
+            {
+              "id": "live-served-1:u10",
+              "kind": "request",
+              "source": {
+                "source_id": "live-served-1:advocate",
+                "turn_id": "live-served-1",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "text": "Separately, draft a brief list of questions for our client that would clarify the important gaps.",
+                "start": 840,
+                "end": 937
+              },
+              "meaning": "The advocate requests a concise set of questions aimed at their client to address uncertainties and incomplete information relevant to the case.",
+              "context": [],
+              "requested_work": "drafting",
+              "desired_result": "A brief list of clarifying questions for the client to complete the factual record and understand the dispute better.",
+              "unresolved": []
+            },
+            {
+              "id": "live-served-1:u11",
+              "kind": "restriction",
+              "source": {
+                "source_id": "live-served-1:advocate",
+                "turn_id": "live-served-1",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "text": "Do not contact anyone, do not treat the damage allegation as admitted, and do not assume the reported documents have been checked.",
+                "start": 938,
+                "end": 1068
+              },
+              "meaning": "Explicit instructions to avoid external communications, maintain presumption of innocence regarding damage claims, and not to presume document validity or review.",
+              "context": [],
+              "requested_work": null,
+              "desired_result": null,
+              "unresolved": []
+            }
+          ],
+          "issues": [
+            {
+              "unit": "live-served-1:u8",
+              "source_id": "live-served-1:advocate",
+              "quote": "The owner's technician still has our client's original design drive, which the client says was lent only for setup; the owner now says it can retain the drive until repair costs are paid.",
+              "mismatch": "Selected quote is not exact original source text: source_id='live-served-1:advocate', quote=\"The owner's technician still has our client's original design drive, which the client says was lent only for setup; the owner now says it can retain the drive until repair costs are paid.\""
+            }
+          ],
+          "status": "partial",
+          "semantic_review": "pending"
+        },
+        "original_span_catalogue": [
+          {
+            "id": "live-served-1:advocate:0:15",
+            "source_id": "live-served-1:advocate",
+            "start": 0,
+            "end": 15,
+            "origin": "earlier_exact_selection",
+            "text": "Good afternoon.",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "turn_id": "live-served-1"
+          },
+          {
+            "id": "live-served-1:advocate",
+            "source_id": "live-served-1:advocate",
+            "start": 0,
+            "end": 1068,
+            "origin": "complete_original",
+            "text": "Good afternoon. This is a synthetic test matter. We act for Aster Fabrication in Hyderabad. Our client rented a precision cutter and says it returned the machine on 6 September 2026. The owner retains the Rs 1,20,000 security deposit, alleging damage to the cutting head; our client denies causing damage. The owner sent a technician's estimate but no joint inspection report. Our client reports having a signed hire agreement and a bank-transfer receipt, but I have not supplied or examined those documents here. Separately, the owner's technician still has our client's original design drive, which the client says was lent only for setup; the owner now says it can retain the drive until repair costs are paid. First give a source-backed, conditional analysis of the deposit and drive disputes, including any material contrary position. Separately, draft a brief list of questions for our client that would clarify the important gaps. Do not contact anyone, do not treat the damage allegation as admitted, and do not assume the reported documents have been checked.",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "turn_id": "live-served-1"
+          },
+          {
+            "id": "live-served-1:advocate:15:16",
+            "source_id": "live-served-1:advocate",
+            "start": 15,
+            "end": 16,
+            "origin": "uncovered_original_range",
+            "text": " ",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "turn_id": "live-served-1"
+          },
+          {
+            "id": "live-served-1:advocate:16:48",
+            "source_id": "live-served-1:advocate",
+            "start": 16,
+            "end": 48,
+            "origin": "earlier_exact_selection",
+            "text": "This is a synthetic test matter.",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "turn_id": "live-served-1"
+          },
+          {
+            "id": "live-served-1:advocate:48:49",
+            "source_id": "live-served-1:advocate",
+            "start": 48,
+            "end": 49,
+            "origin": "uncovered_original_range",
+            "text": " ",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "turn_id": "live-served-1"
+          },
+          {
+            "id": "live-served-1:advocate:49:91",
+            "source_id": "live-served-1:advocate",
+            "start": 49,
+            "end": 91,
+            "origin": "earlier_exact_selection",
+            "text": "We act for Aster Fabrication in Hyderabad.",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "turn_id": "live-served-1"
+          },
+          {
+            "id": "live-served-1:advocate:91:92",
+            "source_id": "live-served-1:advocate",
+            "start": 91,
+            "end": 92,
+            "origin": "uncovered_original_range",
+            "text": " ",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "turn_id": "live-served-1"
+          },
+          {
+            "id": "live-served-1:advocate:92:182",
+            "source_id": "live-served-1:advocate",
+            "start": 92,
+            "end": 182,
+            "origin": "earlier_exact_selection",
+            "text": "Our client rented a precision cutter and says it returned the machine on 6 September 2026.",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "turn_id": "live-served-1"
+          },
+          {
+            "id": "live-served-1:advocate:182:183",
+            "source_id": "live-served-1:advocate",
+            "start": 182,
+            "end": 183,
+            "origin": "uncovered_original_range",
+            "text": " ",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "turn_id": "live-served-1"
+          },
+          {
+            "id": "live-served-1:advocate:183:305",
+            "source_id": "live-served-1:advocate",
+            "start": 183,
+            "end": 305,
+            "origin": "earlier_exact_selection",
+            "text": "The owner retains the Rs 1,20,000 security deposit, alleging damage to the cutting head; our client denies causing damage.",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "turn_id": "live-served-1"
+          },
+          {
+            "id": "live-served-1:advocate:305:306",
+            "source_id": "live-served-1:advocate",
+            "start": 305,
+            "end": 306,
+            "origin": "uncovered_original_range",
+            "text": " ",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "turn_id": "live-served-1"
+          },
+          {
+            "id": "live-served-1:advocate:306:376",
+            "source_id": "live-served-1:advocate",
+            "start": 306,
+            "end": 376,
+            "origin": "earlier_exact_selection",
+            "text": "The owner sent a technician's estimate but no joint inspection report.",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "turn_id": "live-served-1"
+          },
+          {
+            "id": "live-served-1:advocate:376:377",
+            "source_id": "live-served-1:advocate",
+            "start": 376,
+            "end": 377,
+            "origin": "uncovered_original_range",
+            "text": " ",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "turn_id": "live-served-1"
+          },
+          {
+            "id": "live-served-1:advocate:377:513",
+            "source_id": "live-served-1:advocate",
+            "start": 377,
+            "end": 513,
+            "origin": "earlier_exact_selection",
+            "text": "Our client reports having a signed hire agreement and a bank-transfer receipt, but I have not supplied or examined those documents here.",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "turn_id": "live-served-1"
+          },
+          {
+            "id": "live-served-1:advocate:513:714",
+            "source_id": "live-served-1:advocate",
+            "start": 513,
+            "end": 714,
+            "origin": "uncovered_original_range",
+            "text": " Separately, the owner's technician still has our client's original design drive, which the client says was lent only for setup; the owner now says it can retain the drive until repair costs are paid. ",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "turn_id": "live-served-1"
+          },
+          {
+            "id": "live-served-1:advocate:714:839",
+            "source_id": "live-served-1:advocate",
+            "start": 714,
+            "end": 839,
+            "origin": "earlier_exact_selection",
+            "text": "First give a source-backed, conditional analysis of the deposit and drive disputes, including any material contrary position.",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "turn_id": "live-served-1"
+          },
+          {
+            "id": "live-served-1:advocate:839:840",
+            "source_id": "live-served-1:advocate",
+            "start": 839,
+            "end": 840,
+            "origin": "uncovered_original_range",
+            "text": " ",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "turn_id": "live-served-1"
+          },
+          {
+            "id": "live-served-1:advocate:840:937",
+            "source_id": "live-served-1:advocate",
+            "start": 840,
+            "end": 937,
+            "origin": "earlier_exact_selection",
+            "text": "Separately, draft a brief list of questions for our client that would clarify the important gaps.",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "turn_id": "live-served-1"
+          },
+          {
+            "id": "live-served-1:advocate:937:938",
+            "source_id": "live-served-1:advocate",
+            "start": 937,
+            "end": 938,
+            "origin": "uncovered_original_range",
+            "text": " ",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "turn_id": "live-served-1"
+          },
+          {
+            "id": "live-served-1:advocate:938:1068",
+            "source_id": "live-served-1:advocate",
+            "start": 938,
+            "end": 1068,
+            "origin": "earlier_exact_selection",
+            "text": "Do not contact anyone, do not treat the damage allegation as admitted, and do not assume the reported documents have been checked.",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "turn_id": "live-served-1"
+          }
+        ]
+      },
+      "response": {
+        "data": {
+          "work": [
+            {
+              "purpose": "Legal analysis of the security deposit dispute regarding alleged damage to the rented precision cutter",
+              "outcome": "A conditional, source-backed analysis of the validity of withholding the security deposit, considering the client's denial, existence of a hire agreement, and lack of joint inspection report, including material contrary positions.",
+              "sources": [
+                {
+                  "source_id": "live-served-1:advocate",
+                  "quote": null
+                }
+              ],
+              "account_source_ids": [
+                "live-served-1:advocate"
+              ],
+              "constraints": [
+                "Do not treat the damage allegation as admitted",
+                "Do not assume reported documents have been checked",
+                "No external contact or document examination allowed"
+              ],
+              "unresolved": [
+                "Whether the hire agreement contains provisions about damage and deposit retention",
+                "Legal effect of absence of joint inspection report",
+                "Criteria under which deposit can be withheld despite client's denial"
+              ],
+              "enquiries": [
+                {
+                  "text": "What are the legal conditions or contractual terms governing the withholding of security deposits for alleged damages in equipment rental agreements?",
+                  "purpose": "To determine if the owner can lawfully retain the security deposit given the circumstances",
+                  "basis": "conditional"
+                },
+                {
+                  "text": "What is the legal significance of a joint inspection report in disputes over equipment damage and deposit retention?",
+                  "purpose": "To assess whether the absence of a joint inspection weakens the owner's claim",
+                  "basis": "conditional"
+                },
+                {
+                  "text": "What evidence or procedural requirements must the owner meet to justify retaining the security deposit against the renter's denial of damage?",
+                  "purpose": "To clarify burden of proof and procedural fairness in security deposit disputes",
+                  "basis": "conditional"
+                }
+              ]
+            },
+            {
+              "purpose": "Legal analysis of the dispute over retention of the client's original design drive by the owner",
+              "outcome": "A conditional, source-backed analysis of the rights of the owner to retain the client's design drive pending payment of repair costs, accounting for the client's position that the drive was lent only for setup and the owner's assertion of a lien.",
+              "sources": [
+                {
+                  "source_id": "live-served-1:advocate",
+                  "quote": null
+                }
+              ],
+              "account_source_ids": [
+                "live-served-1:advocate"
+              ],
+              "constraints": [
+                "Do not assume reported documents have been checked",
+                "No external contact allowed"
+              ],
+              "unresolved": [
+                "Whether the owner has a contractual or statutory lien over the design drive",
+                "Legal rights of possession and use of a design drive lent for setup only",
+                "Legal limits on retaining the drive until payment of repair costs"
+              ],
+              "enquiries": [
+                {
+                  "text": "Under what circumstances can an owner exercise a lien over a client's property (such as a design drive) in equipment rental disputes?",
+                  "purpose": "To determine if the owner may lawfully retain the design drive pending repair costs",
+                  "basis": "conditional"
+                },
+                {
+                  "text": "What are the legal principles relating to the use and return of lent property provided only temporarily for setup in a rental agreement?",
+                  "purpose": "To assess if the client's claim that the drive was lent only for setup affects ownership and retention rights",
+                  "basis": "conditional"
+                },
+                {
+                  "text": "Are there legal restrictions on withholding original client property as security for payment in disputes over repair costs?",
+                  "purpose": "To evaluate limitations on the owner's retention of the design drive",
+                  "basis": "conditional"
+                }
+              ]
+            },
+            {
+              "purpose": "Drafting a brief list of clarifying questions for the client to address gaps in the factual record",
+              "outcome": "A concise set of client questions aimed at clarifying key factual uncertainties relevant to the deposit and design drive disputes.",
+              "sources": [
+                {
+                  "source_id": "live-served-1:advocate",
+                  "quote": null
+                }
+              ],
+              "account_source_ids": [
+                "live-served-1:advocate"
+              ],
+              "constraints": [
+                "Questions should not presume admission of damage or document verification",
+                "Should address factual gaps only"
+              ],
+              "unresolved": [
+                "Specific contents and terms of hire agreement and payment records",
+                "Details of the return condition and inspection of the cutter",
+                "Details on the lending terms and current status of the design drive"
+              ],
+              "enquiries": [
+                {
+                  "text": "Can you provide a copy of the signed hire agreement and any clauses relating to damage and security deposits?",
+                  "purpose": "To clarify the contractual rights and obligations relevant to the deposit",
+                  "basis": "reported"
+                },
+                {
+                  "text": "Do you have any records or evidence regarding the condition of the precision cutter when returned, including any inspection notes or correspondence?",
+                  "purpose": "To establish facts about the equipment return condition",
+                  "basis": "reported"
+                },
+                {
+                  "text": "What were the exact terms and purpose of lending the design drive to the owner, and any agreements or instructions about its use and return?",
+                  "purpose": "To clarify the status and rights over the design drive",
+                  "basis": "reported"
+                }
+              ]
+            }
+          ]
+        },
+        "model": "gpt-4.1-mini-2025-04-14",
+        "usage": {
+          "tokens_in": 4825,
+          "tokens_out": 893,
+          "cost_usd": 0.0033588000000000003,
+          "cached_tokens": 0,
+          "provider_extra": {
+            "response_id": "chatcmpl-EXJrS2CRbs8pGWeaMlS6hzNu8c1Tk",
+            "usage_established": true
+          }
+        },
+        "latency_ms": 6650,
+        "retries": 0,
+        "completion": "complete"
+      },
+      "mechanically_admitted": {
+        "proposal": {
+          "work": [
+            {
+              "purpose": "Legal analysis of the security deposit dispute regarding alleged damage to the rented precision cutter",
+              "outcome": "A conditional, source-backed analysis of the validity of withholding the security deposit, considering the client's denial, existence of a hire agreement, and lack of joint inspection report, including material contrary positions.",
+              "sources": [
+                {
+                  "source_id": "live-served-1:advocate",
+                  "quote": null
+                }
+              ],
+              "account_source_ids": [
+                "live-served-1:advocate"
+              ],
+              "constraints": [
+                "Do not treat the damage allegation as admitted",
+                "Do not assume reported documents have been checked",
+                "No external contact or document examination allowed"
+              ],
+              "unresolved": [
+                "Whether the hire agreement contains provisions about damage and deposit retention",
+                "Legal effect of absence of joint inspection report",
+                "Criteria under which deposit can be withheld despite client's denial"
+              ],
+              "enquiries": [
+                {
+                  "text": "What are the legal conditions or contractual terms governing the withholding of security deposits for alleged damages in equipment rental agreements?",
+                  "purpose": "To determine if the owner can lawfully retain the security deposit given the circumstances",
+                  "basis": "conditional"
+                },
+                {
+                  "text": "What is the legal significance of a joint inspection report in disputes over equipment damage and deposit retention?",
+                  "purpose": "To assess whether the absence of a joint inspection weakens the owner's claim",
+                  "basis": "conditional"
+                },
+                {
+                  "text": "What evidence or procedural requirements must the owner meet to justify retaining the security deposit against the renter's denial of damage?",
+                  "purpose": "To clarify burden of proof and procedural fairness in security deposit disputes",
+                  "basis": "conditional"
+                }
+              ]
+            },
+            {
+              "purpose": "Legal analysis of the dispute over retention of the client's original design drive by the owner",
+              "outcome": "A conditional, source-backed analysis of the rights of the owner to retain the client's design drive pending payment of repair costs, accounting for the client's position that the drive was lent only for setup and the owner's assertion of a lien.",
+              "sources": [
+                {
+                  "source_id": "live-served-1:advocate",
+                  "quote": null
+                }
+              ],
+              "account_source_ids": [
+                "live-served-1:advocate"
+              ],
+              "constraints": [
+                "Do not assume reported documents have been checked",
+                "No external contact allowed"
+              ],
+              "unresolved": [
+                "Whether the owner has a contractual or statutory lien over the design drive",
+                "Legal rights of possession and use of a design drive lent for setup only",
+                "Legal limits on retaining the drive until payment of repair costs"
+              ],
+              "enquiries": [
+                {
+                  "text": "Under what circumstances can an owner exercise a lien over a client's property (such as a design drive) in equipment rental disputes?",
+                  "purpose": "To determine if the owner may lawfully retain the design drive pending repair costs",
+                  "basis": "conditional"
+                },
+                {
+                  "text": "What are the legal principles relating to the use and return of lent property provided only temporarily for setup in a rental agreement?",
+                  "purpose": "To assess if the client's claim that the drive was lent only for setup affects ownership and retention rights",
+                  "basis": "conditional"
+                },
+                {
+                  "text": "Are there legal restrictions on withholding original client property as security for payment in disputes over repair costs?",
+                  "purpose": "To evaluate limitations on the owner's retention of the design drive",
+                  "basis": "conditional"
+                }
+              ]
+            },
+            {
+              "purpose": "Drafting a brief list of clarifying questions for the client to address gaps in the factual record",
+              "outcome": "A concise set of client questions aimed at clarifying key factual uncertainties relevant to the deposit and design drive disputes.",
+              "sources": [
+                {
+                  "source_id": "live-served-1:advocate",
+                  "quote": null
+                }
+              ],
+              "account_source_ids": [
+                "live-served-1:advocate"
+              ],
+              "constraints": [
+                "Questions should not presume admission of damage or document verification",
+                "Should address factual gaps only"
+              ],
+              "unresolved": [
+                "Specific contents and terms of hire agreement and payment records",
+                "Details of the return condition and inspection of the cutter",
+                "Details on the lending terms and current status of the design drive"
+              ],
+              "enquiries": [
+                {
+                  "text": "Can you provide a copy of the signed hire agreement and any clauses relating to damage and security deposits?",
+                  "purpose": "To clarify the contractual rights and obligations relevant to the deposit",
+                  "basis": "reported"
+                },
+                {
+                  "text": "Do you have any records or evidence regarding the condition of the precision cutter when returned, including any inspection notes or correspondence?",
+                  "purpose": "To establish facts about the equipment return condition",
+                  "basis": "reported"
+                },
+                {
+                  "text": "What were the exact terms and purpose of lending the design drive to the owner, and any agreements or instructions about its use and return?",
+                  "purpose": "To clarify the status and rights over the design drive",
+                  "basis": "reported"
+                }
+              ]
+            }
+          ]
+        },
+        "work": [
+          {
+            "purpose": "Legal analysis of the security deposit dispute regarding alleged damage to the rented precision cutter",
+            "outcome": "A conditional, source-backed analysis of the validity of withholding the security deposit, considering the client's denial, existence of a hire agreement, and lack of joint inspection report, including material contrary positions.",
+            "sources": [
+              {
+                "source_id": "live-served-1:advocate",
+                "turn_id": "live-served-1",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "text": "Good afternoon. This is a synthetic test matter. We act for Aster Fabrication in Hyderabad. Our client rented a precision cutter and says it returned the machine on 6 September 2026. The owner retains the Rs 1,20,000 security deposit, alleging damage to the cutting head; our client denies causing damage. The owner sent a technician's estimate but no joint inspection report. Our client reports having a signed hire agreement and a bank-transfer receipt, but I have not supplied or examined those documents here. Separately, the owner's technician still has our client's original design drive, which the client says was lent only for setup; the owner now says it can retain the drive until repair costs are paid. First give a source-backed, conditional analysis of the deposit and drive disputes, including any material contrary position. Separately, draft a brief list of questions for our client that would clarify the important gaps. Do not contact anyone, do not treat the damage allegation as admitted, and do not assume the reported documents have been checked.",
+                "start": 0,
+                "end": 1068
+              }
+            ],
+            "account_source_ids": [
+              "live-served-1:advocate"
+            ],
+            "constraints": [
+              "Do not treat the damage allegation as admitted",
+              "Do not assume reported documents have been checked",
+              "No external contact or document examination allowed"
+            ],
+            "unresolved": [
+              "Whether the hire agreement contains provisions about damage and deposit retention",
+              "Legal effect of absence of joint inspection report",
+              "Criteria under which deposit can be withheld despite client's denial"
+            ],
+            "enquiries": [
+              {
+                "text": "What are the legal conditions or contractual terms governing the withholding of security deposits for alleged damages in equipment rental agreements?",
+                "purpose": "To determine if the owner can lawfully retain the security deposit given the circumstances",
+                "basis": "conditional"
+              },
+              {
+                "text": "What is the legal significance of a joint inspection report in disputes over equipment damage and deposit retention?",
+                "purpose": "To assess whether the absence of a joint inspection weakens the owner's claim",
+                "basis": "conditional"
+              },
+              {
+                "text": "What evidence or procedural requirements must the owner meet to justify retaining the security deposit against the renter's denial of damage?",
+                "purpose": "To clarify burden of proof and procedural fairness in security deposit disputes",
+                "basis": "conditional"
+              }
+            ],
+            "id": "live-served-1:w1",
+            "resolved_account": [
+              {
+                "id": "live-served-1:advocate",
+                "source_id": "live-served-1:advocate",
+                "start": 0,
+                "end": 1068,
+                "origin": "complete_original",
+                "text": "Good afternoon. This is a synthetic test matter. We act for Aster Fabrication in Hyderabad. Our client rented a precision cutter and says it returned the machine on 6 September 2026. The owner retains the Rs 1,20,000 security deposit, alleging damage to the cutting head; our client denies causing damage. The owner sent a technician's estimate but no joint inspection report. Our client reports having a signed hire agreement and a bank-transfer receipt, but I have not supplied or examined those documents here. Separately, the owner's technician still has our client's original design drive, which the client says was lent only for setup; the owner now says it can retain the drive until repair costs are paid. First give a source-backed, conditional analysis of the deposit and drive disputes, including any material contrary position. Separately, draft a brief list of questions for our client that would clarify the important gaps. Do not contact anyone, do not treat the damage allegation as admitted, and do not assume the reported documents have been checked.",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "turn_id": "live-served-1"
+              }
+            ]
+          },
+          {
+            "purpose": "Legal analysis of the dispute over retention of the client's original design drive by the owner",
+            "outcome": "A conditional, source-backed analysis of the rights of the owner to retain the client's design drive pending payment of repair costs, accounting for the client's position that the drive was lent only for setup and the owner's assertion of a lien.",
+            "sources": [
+              {
+                "source_id": "live-served-1:advocate",
+                "turn_id": "live-served-1",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "text": "Good afternoon. This is a synthetic test matter. We act for Aster Fabrication in Hyderabad. Our client rented a precision cutter and says it returned the machine on 6 September 2026. The owner retains the Rs 1,20,000 security deposit, alleging damage to the cutting head; our client denies causing damage. The owner sent a technician's estimate but no joint inspection report. Our client reports having a signed hire agreement and a bank-transfer receipt, but I have not supplied or examined those documents here. Separately, the owner's technician still has our client's original design drive, which the client says was lent only for setup; the owner now says it can retain the drive until repair costs are paid. First give a source-backed, conditional analysis of the deposit and drive disputes, including any material contrary position. Separately, draft a brief list of questions for our client that would clarify the important gaps. Do not contact anyone, do not treat the damage allegation as admitted, and do not assume the reported documents have been checked.",
+                "start": 0,
+                "end": 1068
+              }
+            ],
+            "account_source_ids": [
+              "live-served-1:advocate"
+            ],
+            "constraints": [
+              "Do not assume reported documents have been checked",
+              "No external contact allowed"
+            ],
+            "unresolved": [
+              "Whether the owner has a contractual or statutory lien over the design drive",
+              "Legal rights of possession and use of a design drive lent for setup only",
+              "Legal limits on retaining the drive until payment of repair costs"
+            ],
+            "enquiries": [
+              {
+                "text": "Under what circumstances can an owner exercise a lien over a client's property (such as a design drive) in equipment rental disputes?",
+                "purpose": "To determine if the owner may lawfully retain the design drive pending repair costs",
+                "basis": "conditional"
+              },
+              {
+                "text": "What are the legal principles relating to the use and return of lent property provided only temporarily for setup in a rental agreement?",
+                "purpose": "To assess if the client's claim that the drive was lent only for setup affects ownership and retention rights",
+                "basis": "conditional"
+              },
+              {
+                "text": "Are there legal restrictions on withholding original client property as security for payment in disputes over repair costs?",
+                "purpose": "To evaluate limitations on the owner's retention of the design drive",
+                "basis": "conditional"
+              }
+            ],
+            "id": "live-served-1:w2",
+            "resolved_account": [
+              {
+                "id": "live-served-1:advocate",
+                "source_id": "live-served-1:advocate",
+                "start": 0,
+                "end": 1068,
+                "origin": "complete_original",
+                "text": "Good afternoon. This is a synthetic test matter. We act for Aster Fabrication in Hyderabad. Our client rented a precision cutter and says it returned the machine on 6 September 2026. The owner retains the Rs 1,20,000 security deposit, alleging damage to the cutting head; our client denies causing damage. The owner sent a technician's estimate but no joint inspection report. Our client reports having a signed hire agreement and a bank-transfer receipt, but I have not supplied or examined those documents here. Separately, the owner's technician still has our client's original design drive, which the client says was lent only for setup; the owner now says it can retain the drive until repair costs are paid. First give a source-backed, conditional analysis of the deposit and drive disputes, including any material contrary position. Separately, draft a brief list of questions for our client that would clarify the important gaps. Do not contact anyone, do not treat the damage allegation as admitted, and do not assume the reported documents have been checked.",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "turn_id": "live-served-1"
+              }
+            ]
+          },
+          {
+            "purpose": "Drafting a brief list of clarifying questions for the client to address gaps in the factual record",
+            "outcome": "A concise set of client questions aimed at clarifying key factual uncertainties relevant to the deposit and design drive disputes.",
+            "sources": [
+              {
+                "source_id": "live-served-1:advocate",
+                "turn_id": "live-served-1",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "text": "Good afternoon. This is a synthetic test matter. We act for Aster Fabrication in Hyderabad. Our client rented a precision cutter and says it returned the machine on 6 September 2026. The owner retains the Rs 1,20,000 security deposit, alleging damage to the cutting head; our client denies causing damage. The owner sent a technician's estimate but no joint inspection report. Our client reports having a signed hire agreement and a bank-transfer receipt, but I have not supplied or examined those documents here. Separately, the owner's technician still has our client's original design drive, which the client says was lent only for setup; the owner now says it can retain the drive until repair costs are paid. First give a source-backed, conditional analysis of the deposit and drive disputes, including any material contrary position. Separately, draft a brief list of questions for our client that would clarify the important gaps. Do not contact anyone, do not treat the damage allegation as admitted, and do not assume the reported documents have been checked.",
+                "start": 0,
+                "end": 1068
+              }
+            ],
+            "account_source_ids": [
+              "live-served-1:advocate"
+            ],
+            "constraints": [
+              "Questions should not presume admission of damage or document verification",
+              "Should address factual gaps only"
+            ],
+            "unresolved": [
+              "Specific contents and terms of hire agreement and payment records",
+              "Details of the return condition and inspection of the cutter",
+              "Details on the lending terms and current status of the design drive"
+            ],
+            "enquiries": [
+              {
+                "text": "Can you provide a copy of the signed hire agreement and any clauses relating to damage and security deposits?",
+                "purpose": "To clarify the contractual rights and obligations relevant to the deposit",
+                "basis": "reported"
+              },
+              {
+                "text": "Do you have any records or evidence regarding the condition of the precision cutter when returned, including any inspection notes or correspondence?",
+                "purpose": "To establish facts about the equipment return condition",
+                "basis": "reported"
+              },
+              {
+                "text": "What were the exact terms and purpose of lending the design drive to the owner, and any agreements or instructions about its use and return?",
+                "purpose": "To clarify the status and rights over the design drive",
+                "basis": "reported"
+              }
+            ],
+            "id": "live-served-1:w3",
+            "resolved_account": [
+              {
+                "id": "live-served-1:advocate",
+                "source_id": "live-served-1:advocate",
+                "start": 0,
+                "end": 1068,
+                "origin": "complete_original",
+                "text": "Good afternoon. This is a synthetic test matter. We act for Aster Fabrication in Hyderabad. Our client rented a precision cutter and says it returned the machine on 6 September 2026. The owner retains the Rs 1,20,000 security deposit, alleging damage to the cutting head; our client denies causing damage. The owner sent a technician's estimate but no joint inspection report. Our client reports having a signed hire agreement and a bank-transfer receipt, but I have not supplied or examined those documents here. Separately, the owner's technician still has our client's original design drive, which the client says was lent only for setup; the owner now says it can retain the drive until repair costs are paid. First give a source-backed, conditional analysis of the deposit and drive disputes, including any material contrary position. Separately, draft a brief list of questions for our client that would clarify the important gaps. Do not contact anyone, do not treat the damage allegation as admitted, and do not assume the reported documents have been checked.",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "turn_id": "live-served-1"
+              }
+            ]
+          }
+        ],
+        "semantic_review": "not_assessed"
+      }
+    },
+    {
+      "name": "not_supplied_is_not_nonexistent",
+      "prompt_input": {
+        "original_context": {
+          "position": "first",
+          "conversation": [],
+          "latest": {
+            "source_id": "deposit_and_drive:advocate",
+            "turn_id": "deposit_and_drive",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "text": "Hello. We act for Vale Makers, based in Hyderabad. They leased a laser cutter and returned it on 3 September. The lessor is retaining the deposit, alleging damage; our client disputes causing it, and no joint inspection report has been supplied. Separately, the lessor's technician still has the client's design drive, which the client says was loaned only for setup. Identify legal routes for recovery of the deposit and return of the drive, and separately draft a short list of questions for our client. Do not send anything or treat the damage allegation as admitted."
+          },
+          "current_records": {},
+          "saved_work": []
+        },
+        "interpretation_proposal": {
+          "contract": "synthetic_exact_spans_only",
+          "units": [
+            {
+              "id": "fixture:u1",
+              "kind": "unclassified_fixture",
+              "source": {
+                "source_id": "deposit_and_drive:advocate",
+                "turn_id": "deposit_and_drive",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "text": "Hello.",
+                "start": 0,
+                "end": 6
+              },
+              "context": []
+            },
+            {
+              "id": "fixture:u2",
+              "kind": "unclassified_fixture",
+              "source": {
+                "source_id": "deposit_and_drive:advocate",
+                "turn_id": "deposit_and_drive",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "text": "We act for Vale Makers, based in Hyderabad. They leased a laser cutter and returned it on 3 September. The lessor is retaining the deposit, alleging damage; our client disputes causing it, and no joint inspection report has been supplied. Separately, the lessor's technician still has the client's design drive, which the client says was loaned only for setup. ",
+                "start": 7,
+                "end": 368
+              },
+              "context": []
+            },
+            {
+              "id": "fixture:u3",
+              "kind": "unclassified_fixture",
+              "source": {
+                "source_id": "deposit_and_drive:advocate",
+                "turn_id": "deposit_and_drive",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "text": "Identify legal routes for recovery of the deposit and return of the drive, and separately draft a short list of questions for our client. ",
+                "start": 368,
+                "end": 506
+              },
+              "context": []
+            },
+            {
+              "id": "fixture:u4",
+              "kind": "unclassified_fixture",
+              "source": {
+                "source_id": "deposit_and_drive:advocate",
+                "turn_id": "deposit_and_drive",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "text": "Do not send anything or treat the damage allegation as admitted.",
+                "start": 506,
+                "end": 570
+              },
+              "context": []
+            }
+          ],
+          "issues": [],
+          "semantic_review": "not_assessed"
+        },
+        "original_span_catalogue": [
+          {
+            "id": "deposit_and_drive:advocate:0:6",
+            "source_id": "deposit_and_drive:advocate",
+            "start": 0,
+            "end": 6,
+            "origin": "earlier_exact_selection",
+            "text": "Hello.",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "turn_id": "deposit_and_drive"
+          },
+          {
+            "id": "deposit_and_drive:advocate",
+            "source_id": "deposit_and_drive:advocate",
+            "start": 0,
+            "end": 570,
+            "origin": "complete_original",
+            "text": "Hello. We act for Vale Makers, based in Hyderabad. They leased a laser cutter and returned it on 3 September. The lessor is retaining the deposit, alleging damage; our client disputes causing it, and no joint inspection report has been supplied. Separately, the lessor's technician still has the client's design drive, which the client says was loaned only for setup. Identify legal routes for recovery of the deposit and return of the drive, and separately draft a short list of questions for our client. Do not send anything or treat the damage allegation as admitted.",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "turn_id": "deposit_and_drive"
+          },
+          {
+            "id": "deposit_and_drive:advocate:6:7",
+            "source_id": "deposit_and_drive:advocate",
+            "start": 6,
+            "end": 7,
+            "origin": "uncovered_original_range",
+            "text": " ",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "turn_id": "deposit_and_drive"
+          },
+          {
+            "id": "deposit_and_drive:advocate:7:368",
+            "source_id": "deposit_and_drive:advocate",
+            "start": 7,
+            "end": 368,
+            "origin": "earlier_exact_selection",
+            "text": "We act for Vale Makers, based in Hyderabad. They leased a laser cutter and returned it on 3 September. The lessor is retaining the deposit, alleging damage; our client disputes causing it, and no joint inspection report has been supplied. Separately, the lessor's technician still has the client's design drive, which the client says was loaned only for setup. ",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "turn_id": "deposit_and_drive"
+          },
+          {
+            "id": "deposit_and_drive:advocate:368:506",
+            "source_id": "deposit_and_drive:advocate",
+            "start": 368,
+            "end": 506,
+            "origin": "earlier_exact_selection",
+            "text": "Identify legal routes for recovery of the deposit and return of the drive, and separately draft a short list of questions for our client. ",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "turn_id": "deposit_and_drive"
+          },
+          {
+            "id": "deposit_and_drive:advocate:506:570",
+            "source_id": "deposit_and_drive:advocate",
+            "start": 506,
+            "end": 570,
+            "origin": "earlier_exact_selection",
+            "text": "Do not send anything or treat the damage allegation as admitted.",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "turn_id": "deposit_and_drive"
+          }
+        ]
+      },
+      "response": {
+        "data": {
+          "work": [
+            {
+              "purpose": "Investigate legal avenues for Vale Makers to recover the leasing deposit allegedly withheld due to damage claims.",
+              "outcome": "Identify legal concepts related to deposit withholding, condition of leased goods at return, proof requirements for damage claims, and the effect of absence of a joint inspection report on dispute resolution.",
+              "sources": [
+                {
+                  "source_id": "deposit_and_drive:advocate",
+                  "quote": null
+                }
+              ],
+              "account_source_ids": [
+                "deposit_and_drive:advocate:7:368"
+              ],
+              "constraints": [
+                "Do not treat the damage allegation as admitted.",
+                "No joint inspection report available."
+              ],
+              "unresolved": [
+                "Whether the lease agreement contains specific terms on deposit retention or damage claims.",
+                "Establishment of burden of proof for alleged damages."
+              ],
+              "enquiries": [
+                {
+                  "text": "Legal requirements for lessors to retain deposits after leased equipment return with alleged damage.",
+                  "purpose": "To determine under what circumstances a lessor can legally retain a deposit due to alleged damage to leased goods.",
+                  "basis": "reported"
+                },
+                {
+                  "text": "Effect and evidentiary status of absence of a joint inspection report in lease damage disputes.",
+                  "purpose": "To assess how lack of a joint inspection report impacts the legal position on disputed damage claims.",
+                  "basis": "reported"
+                },
+                {
+                  "text": "Burden and standard of proof in lease disputes concerning damage allegations and deposit retention.",
+                  "purpose": "To clarify which party must prove damage and what standard applies in deposit withholding disputes under lease contracts.",
+                  "basis": "conditional"
+                }
+              ]
+            },
+            {
+              "purpose": "Investigate legal options for recovering the client's design drive currently held by the lessor's technician.",
+              "outcome": "Clarify legal rights concerning possession and return of loaned equipment or digital media in a leasing context, including whether retention of the design drive is lawful or contested.",
+              "sources": [
+                {
+                  "source_id": "deposit_and_drive:advocate",
+                  "quote": null
+                }
+              ],
+              "account_source_ids": [
+                "deposit_and_drive:advocate:7:368"
+              ],
+              "constraints": [
+                "Treat the drive as loaned only for setup and client requests its return."
+              ],
+              "unresolved": [
+                "Terms of loan or lease agreement relating to ancillary equipment like digital drives.",
+                "Lawfulness of retaining the design drive after lease termination and return of main equipment."
+              ],
+              "enquiries": [
+                {
+                  "text": "Legal principles governing possession and return of loaned digital media or equipment ancillary to leased goods.",
+                  "purpose": "To determine client's rights to demand return of the design drive loaned solely for setup.",
+                  "basis": "reported"
+                },
+                {
+                  "text": "Conditions under which a lessor or technician may lawfully retain client's property post-lease.",
+                  "purpose": "To establish if retaining the design drive after return of the laser cutter is legally justified.",
+                  "basis": "conditional"
+                },
+                {
+                  "text": "Remedies available to clients for recovery of property wrongfully withheld after lease termination.",
+                  "purpose": "To identify legal routes for reclaiming the design drive from lessor's technician.",
+                  "basis": "reported"
+                }
+              ]
+            },
+            {
+              "purpose": "Draft a short list of questions for client to clarify facts relevant to recovering deposit and design drive.",
+              "outcome": "Produce targeted questions that gather essential facts to support legal advice and potential claims regarding the deposit dispute and design drive retention.",
+              "sources": [
+                {
+                  "source_id": "deposit_and_drive:advocate",
+                  "quote": null
+                }
+              ],
+              "account_source_ids": [
+                "deposit_and_drive:advocate:7:368"
+              ],
+              "constraints": [
+                "Questions must avoid implying admission of any damage.",
+                "Clients' perspective and statements only."
+              ],
+              "unresolved": [
+                "Specific lease terms and communications about damages and drive loan.",
+                "Any prior inspections, photos, or correspondence on equipment condition.",
+                "Details on the loan and use of the design drive during setup."
+              ],
+              "enquiries": [
+                {
+                  "text": "Key factual questions to determine client's perspective on the alleged damage and deposit dispute.",
+                  "purpose": "To gather client's account on condition of equipment at return and evidence supporting dispute of damage allegation.",
+                  "basis": "reported"
+                },
+                {
+                  "text": "Questions to clarify circumstances and terms of loaning the design drive to the lessor's technician.",
+                  "purpose": "To understand nature and scope of the loan of the design drive for setup purposes.",
+                  "basis": "reported"
+                },
+                {
+                  "text": "Questions to identify any relevant documentary evidence or communications related to deposit or design drive issues.",
+                  "purpose": "To collect any supporting documents or correspondence that could affect the legal strategy.",
+                  "basis": "reported"
+                }
+              ]
+            }
+          ]
+        },
+        "model": "gpt-4.1-mini-2025-04-14",
+        "usage": {
+          "tokens_in": 2209,
+          "tokens_out": 826,
+          "cost_usd": 0.0022052000000000005,
+          "cached_tokens": 0,
+          "provider_extra": {
+            "response_id": "chatcmpl-EXJrYQehqmDcFNNd1rSgNrjsSFx6P",
+            "usage_established": true
+          }
+        },
+        "latency_ms": 5073,
+        "retries": 0,
+        "completion": "complete"
+      },
+      "mechanically_admitted": {
+        "proposal": {
+          "work": [
+            {
+              "purpose": "Investigate legal avenues for Vale Makers to recover the leasing deposit allegedly withheld due to damage claims.",
+              "outcome": "Identify legal concepts related to deposit withholding, condition of leased goods at return, proof requirements for damage claims, and the effect of absence of a joint inspection report on dispute resolution.",
+              "sources": [
+                {
+                  "source_id": "deposit_and_drive:advocate",
+                  "quote": null
+                }
+              ],
+              "account_source_ids": [
+                "deposit_and_drive:advocate:7:368"
+              ],
+              "constraints": [
+                "Do not treat the damage allegation as admitted.",
+                "No joint inspection report available."
+              ],
+              "unresolved": [
+                "Whether the lease agreement contains specific terms on deposit retention or damage claims.",
+                "Establishment of burden of proof for alleged damages."
+              ],
+              "enquiries": [
+                {
+                  "text": "Legal requirements for lessors to retain deposits after leased equipment return with alleged damage.",
+                  "purpose": "To determine under what circumstances a lessor can legally retain a deposit due to alleged damage to leased goods.",
+                  "basis": "reported"
+                },
+                {
+                  "text": "Effect and evidentiary status of absence of a joint inspection report in lease damage disputes.",
+                  "purpose": "To assess how lack of a joint inspection report impacts the legal position on disputed damage claims.",
+                  "basis": "reported"
+                },
+                {
+                  "text": "Burden and standard of proof in lease disputes concerning damage allegations and deposit retention.",
+                  "purpose": "To clarify which party must prove damage and what standard applies in deposit withholding disputes under lease contracts.",
+                  "basis": "conditional"
+                }
+              ]
+            },
+            {
+              "purpose": "Investigate legal options for recovering the client's design drive currently held by the lessor's technician.",
+              "outcome": "Clarify legal rights concerning possession and return of loaned equipment or digital media in a leasing context, including whether retention of the design drive is lawful or contested.",
+              "sources": [
+                {
+                  "source_id": "deposit_and_drive:advocate",
+                  "quote": null
+                }
+              ],
+              "account_source_ids": [
+                "deposit_and_drive:advocate:7:368"
+              ],
+              "constraints": [
+                "Treat the drive as loaned only for setup and client requests its return."
+              ],
+              "unresolved": [
+                "Terms of loan or lease agreement relating to ancillary equipment like digital drives.",
+                "Lawfulness of retaining the design drive after lease termination and return of main equipment."
+              ],
+              "enquiries": [
+                {
+                  "text": "Legal principles governing possession and return of loaned digital media or equipment ancillary to leased goods.",
+                  "purpose": "To determine client's rights to demand return of the design drive loaned solely for setup.",
+                  "basis": "reported"
+                },
+                {
+                  "text": "Conditions under which a lessor or technician may lawfully retain client's property post-lease.",
+                  "purpose": "To establish if retaining the design drive after return of the laser cutter is legally justified.",
+                  "basis": "conditional"
+                },
+                {
+                  "text": "Remedies available to clients for recovery of property wrongfully withheld after lease termination.",
+                  "purpose": "To identify legal routes for reclaiming the design drive from lessor's technician.",
+                  "basis": "reported"
+                }
+              ]
+            },
+            {
+              "purpose": "Draft a short list of questions for client to clarify facts relevant to recovering deposit and design drive.",
+              "outcome": "Produce targeted questions that gather essential facts to support legal advice and potential claims regarding the deposit dispute and design drive retention.",
+              "sources": [
+                {
+                  "source_id": "deposit_and_drive:advocate",
+                  "quote": null
+                }
+              ],
+              "account_source_ids": [
+                "deposit_and_drive:advocate:7:368"
+              ],
+              "constraints": [
+                "Questions must avoid implying admission of any damage.",
+                "Clients' perspective and statements only."
+              ],
+              "unresolved": [
+                "Specific lease terms and communications about damages and drive loan.",
+                "Any prior inspections, photos, or correspondence on equipment condition.",
+                "Details on the loan and use of the design drive during setup."
+              ],
+              "enquiries": [
+                {
+                  "text": "Key factual questions to determine client's perspective on the alleged damage and deposit dispute.",
+                  "purpose": "To gather client's account on condition of equipment at return and evidence supporting dispute of damage allegation.",
+                  "basis": "reported"
+                },
+                {
+                  "text": "Questions to clarify circumstances and terms of loaning the design drive to the lessor's technician.",
+                  "purpose": "To understand nature and scope of the loan of the design drive for setup purposes.",
+                  "basis": "reported"
+                },
+                {
+                  "text": "Questions to identify any relevant documentary evidence or communications related to deposit or design drive issues.",
+                  "purpose": "To collect any supporting documents or correspondence that could affect the legal strategy.",
+                  "basis": "reported"
+                }
+              ]
+            }
+          ]
+        },
+        "work": [
+          {
+            "purpose": "Investigate legal avenues for Vale Makers to recover the leasing deposit allegedly withheld due to damage claims.",
+            "outcome": "Identify legal concepts related to deposit withholding, condition of leased goods at return, proof requirements for damage claims, and the effect of absence of a joint inspection report on dispute resolution.",
+            "sources": [
+              {
+                "source_id": "deposit_and_drive:advocate",
+                "turn_id": "deposit_and_drive",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "text": "Hello. We act for Vale Makers, based in Hyderabad. They leased a laser cutter and returned it on 3 September. The lessor is retaining the deposit, alleging damage; our client disputes causing it, and no joint inspection report has been supplied. Separately, the lessor's technician still has the client's design drive, which the client says was loaned only for setup. Identify legal routes for recovery of the deposit and return of the drive, and separately draft a short list of questions for our client. Do not send anything or treat the damage allegation as admitted.",
+                "start": 0,
+                "end": 570
+              }
+            ],
+            "account_source_ids": [
+              "deposit_and_drive:advocate:7:368"
+            ],
+            "constraints": [
+              "Do not treat the damage allegation as admitted.",
+              "No joint inspection report available."
+            ],
+            "unresolved": [
+              "Whether the lease agreement contains specific terms on deposit retention or damage claims.",
+              "Establishment of burden of proof for alleged damages."
+            ],
+            "enquiries": [
+              {
+                "text": "Legal requirements for lessors to retain deposits after leased equipment return with alleged damage.",
+                "purpose": "To determine under what circumstances a lessor can legally retain a deposit due to alleged damage to leased goods.",
+                "basis": "reported"
+              },
+              {
+                "text": "Effect and evidentiary status of absence of a joint inspection report in lease damage disputes.",
+                "purpose": "To assess how lack of a joint inspection report impacts the legal position on disputed damage claims.",
+                "basis": "reported"
+              },
+              {
+                "text": "Burden and standard of proof in lease disputes concerning damage allegations and deposit retention.",
+                "purpose": "To clarify which party must prove damage and what standard applies in deposit withholding disputes under lease contracts.",
+                "basis": "conditional"
+              }
+            ],
+            "id": "deposit_and_drive:w1",
+            "resolved_account": [
+              {
+                "id": "deposit_and_drive:advocate:7:368",
+                "source_id": "deposit_and_drive:advocate",
+                "start": 7,
+                "end": 368,
+                "origin": "earlier_exact_selection",
+                "text": "We act for Vale Makers, based in Hyderabad. They leased a laser cutter and returned it on 3 September. The lessor is retaining the deposit, alleging damage; our client disputes causing it, and no joint inspection report has been supplied. Separately, the lessor's technician still has the client's design drive, which the client says was loaned only for setup. ",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "turn_id": "deposit_and_drive"
+              }
+            ]
+          },
+          {
+            "purpose": "Investigate legal options for recovering the client's design drive currently held by the lessor's technician.",
+            "outcome": "Clarify legal rights concerning possession and return of loaned equipment or digital media in a leasing context, including whether retention of the design drive is lawful or contested.",
+            "sources": [
+              {
+                "source_id": "deposit_and_drive:advocate",
+                "turn_id": "deposit_and_drive",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "text": "Hello. We act for Vale Makers, based in Hyderabad. They leased a laser cutter and returned it on 3 September. The lessor is retaining the deposit, alleging damage; our client disputes causing it, and no joint inspection report has been supplied. Separately, the lessor's technician still has the client's design drive, which the client says was loaned only for setup. Identify legal routes for recovery of the deposit and return of the drive, and separately draft a short list of questions for our client. Do not send anything or treat the damage allegation as admitted.",
+                "start": 0,
+                "end": 570
+              }
+            ],
+            "account_source_ids": [
+              "deposit_and_drive:advocate:7:368"
+            ],
+            "constraints": [
+              "Treat the drive as loaned only for setup and client requests its return."
+            ],
+            "unresolved": [
+              "Terms of loan or lease agreement relating to ancillary equipment like digital drives.",
+              "Lawfulness of retaining the design drive after lease termination and return of main equipment."
+            ],
+            "enquiries": [
+              {
+                "text": "Legal principles governing possession and return of loaned digital media or equipment ancillary to leased goods.",
+                "purpose": "To determine client's rights to demand return of the design drive loaned solely for setup.",
+                "basis": "reported"
+              },
+              {
+                "text": "Conditions under which a lessor or technician may lawfully retain client's property post-lease.",
+                "purpose": "To establish if retaining the design drive after return of the laser cutter is legally justified.",
+                "basis": "conditional"
+              },
+              {
+                "text": "Remedies available to clients for recovery of property wrongfully withheld after lease termination.",
+                "purpose": "To identify legal routes for reclaiming the design drive from lessor's technician.",
+                "basis": "reported"
+              }
+            ],
+            "id": "deposit_and_drive:w2",
+            "resolved_account": [
+              {
+                "id": "deposit_and_drive:advocate:7:368",
+                "source_id": "deposit_and_drive:advocate",
+                "start": 7,
+                "end": 368,
+                "origin": "earlier_exact_selection",
+                "text": "We act for Vale Makers, based in Hyderabad. They leased a laser cutter and returned it on 3 September. The lessor is retaining the deposit, alleging damage; our client disputes causing it, and no joint inspection report has been supplied. Separately, the lessor's technician still has the client's design drive, which the client says was loaned only for setup. ",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "turn_id": "deposit_and_drive"
+              }
+            ]
+          },
+          {
+            "purpose": "Draft a short list of questions for client to clarify facts relevant to recovering deposit and design drive.",
+            "outcome": "Produce targeted questions that gather essential facts to support legal advice and potential claims regarding the deposit dispute and design drive retention.",
+            "sources": [
+              {
+                "source_id": "deposit_and_drive:advocate",
+                "turn_id": "deposit_and_drive",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "text": "Hello. We act for Vale Makers, based in Hyderabad. They leased a laser cutter and returned it on 3 September. The lessor is retaining the deposit, alleging damage; our client disputes causing it, and no joint inspection report has been supplied. Separately, the lessor's technician still has the client's design drive, which the client says was loaned only for setup. Identify legal routes for recovery of the deposit and return of the drive, and separately draft a short list of questions for our client. Do not send anything or treat the damage allegation as admitted.",
+                "start": 0,
+                "end": 570
+              }
+            ],
+            "account_source_ids": [
+              "deposit_and_drive:advocate:7:368"
+            ],
+            "constraints": [
+              "Questions must avoid implying admission of any damage.",
+              "Clients' perspective and statements only."
+            ],
+            "unresolved": [
+              "Specific lease terms and communications about damages and drive loan.",
+              "Any prior inspections, photos, or correspondence on equipment condition.",
+              "Details on the loan and use of the design drive during setup."
+            ],
+            "enquiries": [
+              {
+                "text": "Key factual questions to determine client's perspective on the alleged damage and deposit dispute.",
+                "purpose": "To gather client's account on condition of equipment at return and evidence supporting dispute of damage allegation.",
+                "basis": "reported"
+              },
+              {
+                "text": "Questions to clarify circumstances and terms of loaning the design drive to the lessor's technician.",
+                "purpose": "To understand nature and scope of the loan of the design drive for setup purposes.",
+                "basis": "reported"
+              },
+              {
+                "text": "Questions to identify any relevant documentary evidence or communications related to deposit or design drive issues.",
+                "purpose": "To collect any supporting documents or correspondence that could affect the legal strategy.",
+                "basis": "reported"
+              }
+            ],
+            "id": "deposit_and_drive:w3",
+            "resolved_account": [
+              {
+                "id": "deposit_and_drive:advocate:7:368",
+                "source_id": "deposit_and_drive:advocate",
+                "start": 7,
+                "end": 368,
+                "origin": "earlier_exact_selection",
+                "text": "We act for Vale Makers, based in Hyderabad. They leased a laser cutter and returned it on 3 September. The lessor is retaining the deposit, alleging damage; our client disputes causing it, and no joint inspection report has been supplied. Separately, the lessor's technician still has the client's design drive, which the client says was loaned only for setup. ",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "turn_id": "deposit_and_drive"
+              }
+            ]
+          }
+        ],
+        "semantic_review": "not_assessed"
+      }
+    },
+    {
+      "name": "actor_agency_and_explicit_alternative",
+      "prompt_input": {
+        "original_context": {
+          "position": "follow_up",
+          "conversation": [
+            {
+              "source_id": "authority_to_bind:advocate",
+              "turn_id": "authority_to_bind",
+              "speaker": "advocate",
+              "record_role": "original_account",
+              "text": "We act for Merin Diagnostics. A hospital owes fees for reported laboratory services. The hospital says a collection agency agreed on our client's behalf to extend payment by 90 days. Our client says the agency only collected specimens and denies authorising any change to payment terms. I have not examined the written service agreement. No email recording the extension has been forwarded to us. Identify the legal questions governing whether the agency could bind our client and whether the hospital could rely on that extension. Do not contact the hospital or agency."
+            }
+          ],
+          "latest": {
+            "source_id": "explicit_alternative:advocate",
+            "turn_id": "explicit_alternative",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "text": "For a separate alternative analysis only, assume the agency was expressly authorised to extend payment and that no email recording the extension was ever created. Identify how those assumed facts would change the legal questions. Keep both assumptions separate from our client's actual denial and from what we know about the unforwarded email. Do not change the matter record or contact anyone."
+          },
+          "current_records": {},
+          "saved_work": []
+        },
+        "interpretation_proposal": {
+          "contract": "synthetic_exact_spans_only",
+          "units": [
+            {
+              "id": "fixture:u1",
+              "kind": "unclassified_fixture",
+              "source": {
+                "source_id": "authority_to_bind:advocate",
+                "turn_id": "authority_to_bind",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "text": "We act for Merin Diagnostics. A hospital owes fees for reported laboratory services. The hospital says a collection agency agreed on our client's behalf to extend payment by 90 days. Our client says the agency only collected specimens and denies authorising any change to payment terms. I have not examined the written service agreement. No email recording the extension has been forwarded to us. ",
+                "start": 0,
+                "end": 397
+              },
+              "context": []
+            },
+            {
+              "id": "fixture:u2",
+              "kind": "unclassified_fixture",
+              "source": {
+                "source_id": "authority_to_bind:advocate",
+                "turn_id": "authority_to_bind",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "text": "Identify the legal questions governing whether the agency could bind our client and whether the hospital could rely on that extension. Do not contact the hospital or agency.",
+                "start": 397,
+                "end": 570
+              },
+              "context": []
+            },
+            {
+              "id": "fixture:u3",
+              "kind": "unclassified_fixture",
+              "source": {
+                "source_id": "explicit_alternative:advocate",
+                "turn_id": "explicit_alternative",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "text": "For a separate alternative analysis only, assume the agency was expressly authorised to extend payment and that no email recording the extension was ever created. ",
+                "start": 0,
+                "end": 163
+              },
+              "context": []
+            },
+            {
+              "id": "fixture:u4",
+              "kind": "unclassified_fixture",
+              "source": {
+                "source_id": "explicit_alternative:advocate",
+                "turn_id": "explicit_alternative",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "text": "Identify how those assumed facts would change the legal questions. Keep both assumptions separate from our client's actual denial and from what we know about the unforwarded email. Do not change the matter record or contact anyone.",
+                "start": 163,
+                "end": 394
+              },
+              "context": []
+            }
+          ],
+          "issues": [],
+          "semantic_review": "not_assessed"
+        },
+        "original_span_catalogue": [
+          {
+            "id": "authority_to_bind:advocate:0:397",
+            "source_id": "authority_to_bind:advocate",
+            "start": 0,
+            "end": 397,
+            "origin": "earlier_exact_selection",
+            "text": "We act for Merin Diagnostics. A hospital owes fees for reported laboratory services. The hospital says a collection agency agreed on our client's behalf to extend payment by 90 days. Our client says the agency only collected specimens and denies authorising any change to payment terms. I have not examined the written service agreement. No email recording the extension has been forwarded to us. ",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "turn_id": "authority_to_bind"
+          },
+          {
+            "id": "authority_to_bind:advocate",
+            "source_id": "authority_to_bind:advocate",
+            "start": 0,
+            "end": 570,
+            "origin": "complete_original",
+            "text": "We act for Merin Diagnostics. A hospital owes fees for reported laboratory services. The hospital says a collection agency agreed on our client's behalf to extend payment by 90 days. Our client says the agency only collected specimens and denies authorising any change to payment terms. I have not examined the written service agreement. No email recording the extension has been forwarded to us. Identify the legal questions governing whether the agency could bind our client and whether the hospital could rely on that extension. Do not contact the hospital or agency.",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "turn_id": "authority_to_bind"
+          },
+          {
+            "id": "authority_to_bind:advocate:397:570",
+            "source_id": "authority_to_bind:advocate",
+            "start": 397,
+            "end": 570,
+            "origin": "earlier_exact_selection",
+            "text": "Identify the legal questions governing whether the agency could bind our client and whether the hospital could rely on that extension. Do not contact the hospital or agency.",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "turn_id": "authority_to_bind"
+          },
+          {
+            "id": "explicit_alternative:advocate:0:163",
+            "source_id": "explicit_alternative:advocate",
+            "start": 0,
+            "end": 163,
+            "origin": "earlier_exact_selection",
+            "text": "For a separate alternative analysis only, assume the agency was expressly authorised to extend payment and that no email recording the extension was ever created. ",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "turn_id": "explicit_alternative"
+          },
+          {
+            "id": "explicit_alternative:advocate",
+            "source_id": "explicit_alternative:advocate",
+            "start": 0,
+            "end": 394,
+            "origin": "complete_original",
+            "text": "For a separate alternative analysis only, assume the agency was expressly authorised to extend payment and that no email recording the extension was ever created. Identify how those assumed facts would change the legal questions. Keep both assumptions separate from our client's actual denial and from what we know about the unforwarded email. Do not change the matter record or contact anyone.",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "turn_id": "explicit_alternative"
+          },
+          {
+            "id": "explicit_alternative:advocate:163:394",
+            "source_id": "explicit_alternative:advocate",
+            "start": 163,
+            "end": 394,
+            "origin": "earlier_exact_selection",
+            "text": "Identify how those assumed facts would change the legal questions. Keep both assumptions separate from our client's actual denial and from what we know about the unforwarded email. Do not change the matter record or contact anyone.",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "turn_id": "explicit_alternative"
+          }
+        ]
+      },
+      "response": {
+        "data": {
+          "work": [
+            {
+              "purpose": "Identify legal questions about agency authority and hospital reliance regarding payment extension.",
+              "outcome": "Legal questions governing whether the collection agency could bind Merin Diagnostics to a payment extension and whether the hospital can rely on that extension.",
+              "sources": [
+                {
+                  "source_id": "authority_to_bind:advocate",
+                  "quote": null
+                }
+              ],
+              "account_source_ids": [
+                "authority_to_bind:advocate:0:397",
+                "authority_to_bind:advocate:397:570"
+              ],
+              "constraints": [
+                "Do not contact the hospital or agency"
+              ],
+              "unresolved": [
+                "Authority of agency to extend payment terms",
+                "Reliance of hospital on agency agreement",
+                "Effect of absence of written service agreement review",
+                "Effect of no email recording of extension"
+              ],
+              "enquiries": [
+                {
+                  "text": "Scope of agency authority to change payment terms without explicit client authorization",
+                  "purpose": "To determine when an agent can bind a principal to contractual changes",
+                  "basis": "reported"
+                },
+                {
+                  "text": "Legal principles for hospital reliance on agency representations absent direct authorization",
+                  "purpose": "To evaluate if hospital can rely on the agency's promise for extension",
+                  "basis": "reported"
+                },
+                {
+                  "text": "Impact of absence of written service agreement and lack of email evidence on agency authority and hospital reliance",
+                  "purpose": "To understand evidentiary requirements and legal weight of communications in agency disputes",
+                  "basis": "reported"
+                }
+              ]
+            },
+            {
+              "purpose": "Analyze how assumed express agency authorization and no email recording affect legal questions.",
+              "outcome": "Identified changes in legal questions when assuming agency was expressly authorized to extend payment and email recording does not exist, separately from actual denial.",
+              "sources": [
+                {
+                  "source_id": "explicit_alternative:advocate",
+                  "quote": null
+                }
+              ],
+              "account_source_ids": [
+                "explicit_alternative:advocate:0:163",
+                "explicit_alternative:advocate:163:394"
+              ],
+              "constraints": [
+                "Keep assumptions separate from actual denial and unforwarded email facts",
+                "Do not contact any party",
+                "Do not change matter record"
+              ],
+              "unresolved": [
+                "Effect of express authorization to extend payment on the hospital's reliance and agency binding",
+                "Impact of absence of email confirmation on validity and enforceability of extension agreement",
+                "Comparative legal questions differing from the actual denial scenario"
+              ],
+              "enquiries": [
+                {
+                  "text": "Effect of express agency authorization on principal's binding to payment terms extension",
+                  "purpose": "To understand legal consequences when agent is explicitly authorized to negotiate or extend payment terms",
+                  "basis": "reported"
+                },
+                {
+                  "text": "Legal implications of absence of email evidence regarding extension agreement despite express agency authority",
+                  "purpose": "To assess evidentiary and enforceability issues when no written confirmation exists",
+                  "basis": "reported"
+                },
+                {
+                  "text": "Differences in hospital reliance and agency binding legal questions comparing express authorization assumption with actual denial scenario",
+                  "purpose": "To delineate changes in legal analysis triggered by different factual assumptions about agency authority",
+                  "basis": "reported"
+                }
+              ]
+            }
+          ]
+        },
+        "model": "gpt-4.1-mini-2025-04-14",
+        "usage": {
+          "tokens_in": 2471,
+          "tokens_out": 547,
+          "cost_usd": 0.0018636000000000002,
+          "cached_tokens": 0,
+          "provider_extra": {
+            "response_id": "chatcmpl-EXJrdOhHvODS1ROnTCnDz5m0YdV9w",
+            "usage_established": true
+          }
+        },
+        "latency_ms": 3584,
+        "retries": 0,
+        "completion": "complete"
+      },
+      "error_type": "ValueError",
+      "error": "Work did not select current instruction/contribution"
+    },
+    {
+      "name": "mixed_independent_requests_followup",
+      "prompt_input": {
+        "original_context": {
+          "position": "follow_up",
+          "conversation": [
+            {
+              "source_id": "p1:advocate",
+              "turn_id": "p1",
+              "speaker": "advocate",
+              "record_role": "original_account",
+              "text": "In a Hyderabad matter, our client granted a neighbour written permission to use a passage until 30 June. We have the permission letter, but not the deed plan. Do not assume ownership of the passage is settled."
+            },
+            {
+              "source_id": "p1:nm",
+              "turn_id": "p1",
+              "speaker": "nm",
+              "record_role": "nm_interpretation",
+              "text": "We can compare withdrawal of permission with any claimed independent access right when the deed plan is supplied."
+            },
+            {
+              "source_id": "p2:advocate",
+              "turn_id": "p2",
+              "speaker": "advocate",
+              "record_role": "original_account",
+              "text": "The neighbour claims an access right independent of permission; we deny that, but no court has decided it."
+            },
+            {
+              "source_id": "p2:nm",
+              "turn_id": "p2",
+              "speaker": "nm",
+              "record_role": "nm_interpretation",
+              "text": "The deed plan is still missing and no ownership determination has been made."
+            }
+          ],
+          "latest": {
+            "source_id": "permission_followup:advocate",
+            "turn_id": "permission_followup",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "text": "Before returning to the passage issue, give me a short explanation of interim relief. Then resume the work on whether use can continue after the permission ends, keeping the ownership question open. The plan is still unavailable. Do not draft a notice yet."
+          },
+          "current_records": {
+            "ownership": {
+              "state": "disputed"
+            }
+          },
+          "saved_work": [
+            {
+              "id": "passage-review",
+              "status": "waiting_for_deed_plan",
+              "purpose": "Examine continuing passage use"
+            }
+          ]
+        },
+        "interpretation_proposal": {
+          "contract": "synthetic_exact_spans_only",
+          "units": [
+            {
+              "id": "fixture:u1",
+              "kind": "unclassified_fixture",
+              "source": {
+                "source_id": "p1:advocate",
+                "turn_id": "p1",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "text": "In a Hyderabad matter, our client granted a neighbour written permission to use a passage until 30 June. We have the permission letter, but not the deed plan. Do not assume ownership of the passage is settled.",
+                "start": 0,
+                "end": 209
+              },
+              "context": []
+            },
+            {
+              "id": "fixture:u2",
+              "kind": "unclassified_fixture",
+              "source": {
+                "source_id": "p2:advocate",
+                "turn_id": "p2",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "text": "The neighbour claims an access right independent of permission; we deny that, but no court has decided it.",
+                "start": 0,
+                "end": 106
+              },
+              "context": []
+            },
+            {
+              "id": "fixture:u3",
+              "kind": "unclassified_fixture",
+              "source": {
+                "source_id": "permission_followup:advocate",
+                "turn_id": "permission_followup",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "text": "Before returning to the passage issue, give me a short explanation of interim relief.",
+                "start": 0,
+                "end": 85
+              },
+              "context": []
+            },
+            {
+              "id": "fixture:u4",
+              "kind": "unclassified_fixture",
+              "source": {
+                "source_id": "permission_followup:advocate",
+                "turn_id": "permission_followup",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "text": "Then resume the work on whether use can continue after the permission ends, keeping the ownership question open.",
+                "start": 86,
+                "end": 198
+              },
+              "context": []
+            },
+            {
+              "id": "fixture:u5",
+              "kind": "unclassified_fixture",
+              "source": {
+                "source_id": "permission_followup:advocate",
+                "turn_id": "permission_followup",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "text": "The plan is still unavailable.",
+                "start": 199,
+                "end": 229
+              },
+              "context": []
+            },
+            {
+              "id": "fixture:u6",
+              "kind": "unclassified_fixture",
+              "source": {
+                "source_id": "permission_followup:advocate",
+                "turn_id": "permission_followup",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "text": "Do not draft a notice yet.",
+                "start": 230,
+                "end": 256
+              },
+              "context": []
+            }
+          ],
+          "issues": [],
+          "semantic_review": "not_assessed"
+        },
+        "original_span_catalogue": [
+          {
+            "id": "p1:advocate",
+            "source_id": "p1:advocate",
+            "start": 0,
+            "end": 209,
+            "origin": "complete_original",
+            "text": "In a Hyderabad matter, our client granted a neighbour written permission to use a passage until 30 June. We have the permission letter, but not the deed plan. Do not assume ownership of the passage is settled.",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "turn_id": "p1"
+          },
+          {
+            "id": "p2:advocate",
+            "source_id": "p2:advocate",
+            "start": 0,
+            "end": 106,
+            "origin": "complete_original",
+            "text": "The neighbour claims an access right independent of permission; we deny that, but no court has decided it.",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "turn_id": "p2"
+          },
+          {
+            "id": "permission_followup:advocate:0:85",
+            "source_id": "permission_followup:advocate",
+            "start": 0,
+            "end": 85,
+            "origin": "earlier_exact_selection",
+            "text": "Before returning to the passage issue, give me a short explanation of interim relief.",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "turn_id": "permission_followup"
+          },
+          {
+            "id": "permission_followup:advocate",
+            "source_id": "permission_followup:advocate",
+            "start": 0,
+            "end": 256,
+            "origin": "complete_original",
+            "text": "Before returning to the passage issue, give me a short explanation of interim relief. Then resume the work on whether use can continue after the permission ends, keeping the ownership question open. The plan is still unavailable. Do not draft a notice yet.",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "turn_id": "permission_followup"
+          },
+          {
+            "id": "permission_followup:advocate:85:86",
+            "source_id": "permission_followup:advocate",
+            "start": 85,
+            "end": 86,
+            "origin": "uncovered_original_range",
+            "text": " ",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "turn_id": "permission_followup"
+          },
+          {
+            "id": "permission_followup:advocate:86:198",
+            "source_id": "permission_followup:advocate",
+            "start": 86,
+            "end": 198,
+            "origin": "earlier_exact_selection",
+            "text": "Then resume the work on whether use can continue after the permission ends, keeping the ownership question open.",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "turn_id": "permission_followup"
+          },
+          {
+            "id": "permission_followup:advocate:198:199",
+            "source_id": "permission_followup:advocate",
+            "start": 198,
+            "end": 199,
+            "origin": "uncovered_original_range",
+            "text": " ",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "turn_id": "permission_followup"
+          },
+          {
+            "id": "permission_followup:advocate:199:229",
+            "source_id": "permission_followup:advocate",
+            "start": 199,
+            "end": 229,
+            "origin": "earlier_exact_selection",
+            "text": "The plan is still unavailable.",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "turn_id": "permission_followup"
+          },
+          {
+            "id": "permission_followup:advocate:229:230",
+            "source_id": "permission_followup:advocate",
+            "start": 229,
+            "end": 230,
+            "origin": "uncovered_original_range",
+            "text": " ",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "turn_id": "permission_followup"
+          },
+          {
+            "id": "permission_followup:advocate:230:256",
+            "source_id": "permission_followup:advocate",
+            "start": 230,
+            "end": 256,
+            "origin": "earlier_exact_selection",
+            "text": "Do not draft a notice yet.",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "turn_id": "permission_followup"
+          }
+        ]
+      },
+      "response": {
+        "data": {
+          "work": [
+            {
+              "purpose": "Explain the concept of interim relief relevant to the passage use dispute",
+              "outcome": "Provide a concise legal explanation of interim relief in the context of property access disputes, without applying it to facts yet.",
+              "sources": [
+                {
+                  "source_id": "permission_followup:advocate:0:85",
+                  "quote": null
+                }
+              ],
+              "account_source_ids": [
+                "permission_followup:advocate:0:85"
+              ],
+              "constraints": [
+                "Do not apply to factual dispute facts yet"
+              ],
+              "unresolved": [],
+              "enquiries": [
+                {
+                  "text": "Legal principles and types of interim relief available in property or access right disputes in Hyderabad jurisdiction",
+                  "purpose": "To explain what interim relief means and how it may be relevant generally to disputes over passage use",
+                  "basis": "conditional"
+                }
+              ]
+            },
+            {
+              "purpose": "Investigate legal conditions under which use of a passage can continue after express permission expires, without assuming ownership is settled",
+              "outcome": "Identify legal bases and precedent for whether neighbour’s use may continue after 30 June absent deed plan or ownership determination",
+              "sources": [
+                {
+                  "source_id": "permission_followup:advocate:86:198",
+                  "quote": null
+                },
+                {
+                  "source_id": "p1:advocate",
+                  "quote": null
+                },
+                {
+                  "source_id": "p2:advocate",
+                  "quote": null
+                }
+              ],
+              "account_source_ids": [
+                "permission_followup:advocate:86:198",
+                "p1:advocate",
+                "p2:advocate"
+              ],
+              "constraints": [
+                "Ownership and deed plan remain undisclosed and unsettled",
+                "No drafting of notice yet"
+              ],
+              "unresolved": [
+                "Whether neighbour has independent legal right to continue use after permission ends without confirmed ownership"
+              ],
+              "enquiries": [
+                {
+                  "text": "Legal standards for continuation of use of a passage after expiry of license or permission",
+                  "purpose": "To determine if use can lawfully continue beyond permission end date absent ownership proof",
+                  "basis": "conditional"
+                },
+                {
+                  "text": "Effect of absence of deed plan and unresolved passage ownership on access rights and permission withdrawal",
+                  "purpose": "To understand impact of missing deed plan and unsettled ownership on permission expiry and usage rights",
+                  "basis": "conditional"
+                },
+                {
+                  "text": "Legal tests and dispute resolution approaches when neighbour claims an independent access right but ownership is undetermined",
+                  "purpose": "To advise on legal framework to analyze neighbour’s claimed independent access right in Hyderabad",
+                  "basis": "conditional"
+                }
+              ]
+            }
+          ]
+        },
+        "model": "gpt-4.1-mini-2025-04-14",
+        "usage": {
+          "tokens_in": 2795,
+          "tokens_out": 449,
+          "cost_usd": 0.0018364000000000002,
+          "cached_tokens": 0,
+          "provider_extra": {
+            "response_id": "chatcmpl-EXJrhn2wHVmE8ws98mte9uwJuoD4q",
+            "usage_established": true
+          }
+        },
+        "latency_ms": 3295,
+        "retries": 0,
+        "completion": "complete"
+      },
+      "error_type": "SchemaViolation",
+      "error": "Selected source_id 'permission_followup:advocate:0:85' is not in the supplied context"
+    },
+    {
+      "name": "correction_no_send_no_law",
+      "prompt_input": {
+        "original_context": {
+          "position": "follow_up",
+          "conversation": [
+            {
+              "source_id": "c1:advocate",
+              "turn_id": "c1",
+              "speaker": "advocate",
+              "record_role": "original_account",
+              "text": "The payment was made on 14 April. The amount is not yet checked."
+            },
+            {
+              "source_id": "c1:nm",
+              "turn_id": "c1",
+              "speaker": "nm",
+              "record_role": "nm_interpretation",
+              "text": "The reported payment was made on 14 May; the amount is unconfirmed."
+            }
+          ],
+          "latest": {
+            "source_id": "correction:advocate",
+            "turn_id": "correction",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "text": "Please correct your summary: I said 14 April, not 14 May. The amount remains uncertain; do not enter a confirmed payment figure. Do not send anything to anyone."
+          },
+          "current_records": {
+            "reported_payment_date": {
+              "value": "14 May",
+              "record_role": "nm_interpretation"
+            }
+          },
+          "saved_work": [
+            {
+              "id": "summary-1",
+              "status": "completed",
+              "kind": "summary"
+            }
+          ]
+        },
+        "interpretation_proposal": {
+          "contract": "synthetic_exact_spans_only",
+          "units": [
+            {
+              "id": "fixture:u1",
+              "kind": "unclassified_fixture",
+              "source": {
+                "source_id": "c1:advocate",
+                "turn_id": "c1",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "text": "The payment was made on 14 April. The amount is not yet checked.",
+                "start": 0,
+                "end": 64
+              },
+              "context": []
+            },
+            {
+              "id": "fixture:u2",
+              "kind": "unclassified_fixture",
+              "source": {
+                "source_id": "correction:advocate",
+                "turn_id": "correction",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "text": "Please correct your summary: I said 14 April, not 14 May. The amount remains uncertain; do not enter a confirmed payment figure. Do not send anything to anyone.",
+                "start": 0,
+                "end": 160
+              },
+              "context": []
+            }
+          ],
+          "issues": [],
+          "semantic_review": "not_assessed"
+        },
+        "original_span_catalogue": [
+          {
+            "id": "c1:advocate",
+            "source_id": "c1:advocate",
+            "start": 0,
+            "end": 64,
+            "origin": "complete_original",
+            "text": "The payment was made on 14 April. The amount is not yet checked.",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "turn_id": "c1"
+          },
+          {
+            "id": "correction:advocate",
+            "source_id": "correction:advocate",
+            "start": 0,
+            "end": 160,
+            "origin": "complete_original",
+            "text": "Please correct your summary: I said 14 April, not 14 May. The amount remains uncertain; do not enter a confirmed payment figure. Do not send anything to anyone.",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "turn_id": "correction"
+          }
+        ]
+      },
+      "response": {
+        "data": {
+          "work": [
+            {
+              "purpose": "Correct factual record of payment date and related obligations.",
+              "outcome": "Establish the correct payment date and clarify obligations regarding confirmation of payment amount and communication thereof.",
+              "sources": [
+                {
+                  "source_id": "c1:advocate",
+                  "quote": null
+                },
+                {
+                  "source_id": "correction:advocate",
+                  "quote": null
+                }
+              ],
+              "account_source_ids": [
+                "c1:advocate",
+                "correction:advocate"
+              ],
+              "constraints": [
+                "Do not assume the payment amount is confirmed.",
+                "Do not send any communication based on the interim interpretation.",
+                "Respect advocate's explicit correction of payment date."
+              ],
+              "unresolved": [
+                "Actual payment amount remains unknown and unconfirmed."
+              ],
+              "enquiries": [
+                {
+                  "text": "Legal requirements and implications of correcting a recorded payment date in professional communication or contract records.",
+                  "purpose": "Determine duties and risks in correcting a factual record about payment date in legal or professional context.",
+                  "basis": "conditional"
+                },
+                {
+                  "text": "Legal obligations regarding confirmation of payment amount before disclosure or communication to third parties.",
+                  "purpose": "Clarify rules governing confirmation and disclosure of payment amounts.",
+                  "basis": "conditional"
+                },
+                {
+                  "text": "Rules or best practices about communication restrictions when payment details are uncertain or being corrected.",
+                  "purpose": "Understand legal and professional limits on communicating payment status when there is uncertainty or correction requests.",
+                  "basis": "conditional"
+                }
+              ]
+            }
+          ]
+        },
+        "model": "gpt-4.1-mini-2025-04-14",
+        "usage": {
+          "tokens_in": 1561,
+          "tokens_out": 253,
+          "cost_usd": 0.0010292,
+          "cached_tokens": 0,
+          "provider_extra": {
+            "response_id": "chatcmpl-EXJrkgxnHJyIobV6aqjqopquUxTtR",
+            "usage_established": true
+          }
+        },
+        "latency_ms": 2009,
+        "retries": 0,
+        "completion": "complete"
+      },
+      "mechanically_admitted": {
+        "proposal": {
+          "work": [
+            {
+              "purpose": "Correct factual record of payment date and related obligations.",
+              "outcome": "Establish the correct payment date and clarify obligations regarding confirmation of payment amount and communication thereof.",
+              "sources": [
+                {
+                  "source_id": "c1:advocate",
+                  "quote": null
+                },
+                {
+                  "source_id": "correction:advocate",
+                  "quote": null
+                }
+              ],
+              "account_source_ids": [
+                "c1:advocate",
+                "correction:advocate"
+              ],
+              "constraints": [
+                "Do not assume the payment amount is confirmed.",
+                "Do not send any communication based on the interim interpretation.",
+                "Respect advocate's explicit correction of payment date."
+              ],
+              "unresolved": [
+                "Actual payment amount remains unknown and unconfirmed."
+              ],
+              "enquiries": [
+                {
+                  "text": "Legal requirements and implications of correcting a recorded payment date in professional communication or contract records.",
+                  "purpose": "Determine duties and risks in correcting a factual record about payment date in legal or professional context.",
+                  "basis": "conditional"
+                },
+                {
+                  "text": "Legal obligations regarding confirmation of payment amount before disclosure or communication to third parties.",
+                  "purpose": "Clarify rules governing confirmation and disclosure of payment amounts.",
+                  "basis": "conditional"
+                },
+                {
+                  "text": "Rules or best practices about communication restrictions when payment details are uncertain or being corrected.",
+                  "purpose": "Understand legal and professional limits on communicating payment status when there is uncertainty or correction requests.",
+                  "basis": "conditional"
+                }
+              ]
+            }
+          ]
+        },
+        "work": [
+          {
+            "purpose": "Correct factual record of payment date and related obligations.",
+            "outcome": "Establish the correct payment date and clarify obligations regarding confirmation of payment amount and communication thereof.",
+            "sources": [
+              {
+                "source_id": "c1:advocate",
+                "turn_id": "c1",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "text": "The payment was made on 14 April. The amount is not yet checked.",
+                "start": 0,
+                "end": 64
+              },
+              {
+                "source_id": "correction:advocate",
+                "turn_id": "correction",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "text": "Please correct your summary: I said 14 April, not 14 May. The amount remains uncertain; do not enter a confirmed payment figure. Do not send anything to anyone.",
+                "start": 0,
+                "end": 160
+              }
+            ],
+            "account_source_ids": [
+              "c1:advocate",
+              "correction:advocate"
+            ],
+            "constraints": [
+              "Do not assume the payment amount is confirmed.",
+              "Do not send any communication based on the interim interpretation.",
+              "Respect advocate's explicit correction of payment date."
+            ],
+            "unresolved": [
+              "Actual payment amount remains unknown and unconfirmed."
+            ],
+            "enquiries": [
+              {
+                "text": "Legal requirements and implications of correcting a recorded payment date in professional communication or contract records.",
+                "purpose": "Determine duties and risks in correcting a factual record about payment date in legal or professional context.",
+                "basis": "conditional"
+              },
+              {
+                "text": "Legal obligations regarding confirmation of payment amount before disclosure or communication to third parties.",
+                "purpose": "Clarify rules governing confirmation and disclosure of payment amounts.",
+                "basis": "conditional"
+              },
+              {
+                "text": "Rules or best practices about communication restrictions when payment details are uncertain or being corrected.",
+                "purpose": "Understand legal and professional limits on communicating payment status when there is uncertainty or correction requests.",
+                "basis": "conditional"
+              }
+            ],
+            "id": "correction:w1",
+            "resolved_account": [
+              {
+                "id": "c1:advocate",
+                "source_id": "c1:advocate",
+                "start": 0,
+                "end": 64,
+                "origin": "complete_original",
+                "text": "The payment was made on 14 April. The amount is not yet checked.",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "turn_id": "c1"
+              },
+              {
+                "id": "correction:advocate",
+                "source_id": "correction:advocate",
+                "start": 0,
+                "end": 160,
+                "origin": "complete_original",
+                "text": "Please correct your summary: I said 14 April, not 14 May. The amount remains uncertain; do not enter a confirmed payment figure. Do not send anything to anyone.",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "turn_id": "correction"
+              }
+            ]
+          }
+        ],
+        "semantic_review": "not_assessed"
+      }
+    },
+    {
+      "name": "greeting_social_close",
+      "prompt_input": {
+        "original_context": {
+          "position": "follow_up",
+          "conversation": [
+            {
+              "source_id": "s1:advocate",
+              "turn_id": "s1",
+              "speaker": "advocate",
+              "record_role": "original_account",
+              "text": "When I return with the tenancy papers, we can look at the rent demand."
+            },
+            {
+              "source_id": "s1:nm",
+              "turn_id": "s1",
+              "speaker": "nm",
+              "record_role": "nm_interpretation",
+              "text": "The papers have not been provided; that work remains pending."
+            }
+          ],
+          "latest": {
+            "source_id": "social_closing:advocate",
+            "turn_id": "social_closing",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "text": "Thanks, this is enough for today. Good night."
+          },
+          "current_records": {},
+          "saved_work": [
+            {
+              "id": "rent-review",
+              "status": "waiting_for_documents"
+            }
+          ]
+        },
+        "interpretation_proposal": {
+          "contract": "core_understanding_v2",
+          "status": "proposed",
+          "semantic_review": "pending",
+          "issues": [],
+          "units": [
+            {
+              "id": "social_closing:u1",
+              "kind": "courtesy",
+              "source": {
+                "source_id": "social_closing:advocate",
+                "turn_id": "social_closing",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "text": "Thanks, this is enough for today. Good night."
+              },
+              "context": [],
+              "meaning": "A social closing for today.",
+              "requested_work": null,
+              "desired_result": null,
+              "unresolved": []
+            }
+          ]
+        },
+        "original_span_catalogue": [
+          {
+            "id": "s1:advocate",
+            "source_id": "s1:advocate",
+            "start": 0,
+            "end": 70,
+            "origin": "complete_original",
+            "text": "When I return with the tenancy papers, we can look at the rent demand.",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "turn_id": "s1"
+          },
+          {
+            "id": "social_closing:advocate",
+            "source_id": "social_closing:advocate",
+            "start": 0,
+            "end": 45,
+            "origin": "complete_original",
+            "text": "Thanks, this is enough for today. Good night.",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "turn_id": "social_closing"
+          }
+        ]
+      },
+      "response": {
+        "data": {
+          "work": [
+            {
+              "purpose": "Plan legal research for rent demand review pending receipt of tenancy papers",
+              "outcome": "Identify applicable legal concepts for assessing rent demands once tenancy documents are available",
+              "sources": [
+                {
+                  "source_id": "s1:advocate",
+                  "quote": null
+                }
+              ],
+              "account_source_ids": [
+                "s1:advocate"
+              ],
+              "constraints": [
+                "Documents not yet received; review pending their delivery"
+              ],
+              "unresolved": [
+                "When tenancy papers will be provided",
+                "Actual terms of tenancy affecting rent demand"
+              ],
+              "enquiries": [
+                {
+                  "text": "Legal principles governing rent review upon presentation of tenancy papers",
+                  "purpose": "To determine the legal framework applicable to rent demands contingent on tenancy documents",
+                  "basis": "reported"
+                },
+                {
+                  "text": "Tenant rights and landlord obligations regarding rent demands and lease documentation",
+                  "purpose": "To understand protections and requirements before adjusting rent",
+                  "basis": "reported"
+                },
+                {
+                  "text": "Statutory provisions regulating timing and substantiation of rent demands in tenancy agreements",
+                  "purpose": "To identify relevant statutory rules on rent demand procedures tied to lease documentation",
+                  "basis": "reported"
+                }
+              ]
+            }
+          ]
+        },
+        "model": "gpt-4.1-mini-2025-04-14",
+        "usage": {
+          "tokens_in": 1394,
+          "tokens_out": 202,
+          "cost_usd": 0.0008808,
+          "cached_tokens": 0,
+          "provider_extra": {
+            "response_id": "chatcmpl-EXJrmAYvh4xyS5Sh88E32E3yvrjjY",
+            "usage_established": true
+          }
+        },
+        "latency_ms": 1989,
+        "retries": 0,
+        "completion": "complete"
+      },
+      "error_type": "ValueError",
+      "error": "Work did not select current instruction/contribution"
+    }
+  ],
+  "logical_calls": 6,
+  "budget_after": {
+    "maximum_usd": 5.0,
+    "charged_usd": 1.331962,
+    "measured_usd": 0.241962,
+    "reserved_or_unknown_usd": 1.09,
+    "attempts": 87,
+    "models": [
+      {
+        "model": "gpt-4.1-mini-2025-04-14",
+        "state": "measured",
+        "attempts": 86,
+        "charged_usd": 0.241962
+      },
+      {
+        "model": "text-embedding-3-large",
+        "state": "reserved_or_unknown",
+        "attempts": 1,
+        "charged_usd": 1.09
+      }
+    ]
+  },
+  "actual_cost_usd": 0.011176999999999992
+}

@@ -1,0 +1,114 @@
+{
+  "state": "prepared_without_neural_inference",
+  "created_utc": "2026-10-10T05:54:37.253476+00:00",
+  "input_sha256": "87ed35d5ca970580ea03e4da86218323e45756394fc32ee5e1316211c8e6694f",
+  "baseline_manifest_sha256": "405291a92c7081eae03c5a4638851688b4ce10a9223e192e893e66176f147b01",
+  "baseline_result_sha256": "96a6b12b02e26d8bad0aeab6912bfa91c0f46fe96e58bf85c57f06d0dcd83bd1",
+  "labels_sha256": "ed2f77251e807475c19bee732d9a62aa5d5d174ebd5a505b341e2d153643d0f8",
+  "script_sha256": "cc1858fd3e39a322865360ad100c8584e17521d99e76f6549a6d5339ef6f97c6",
+  "retrieval_sha256": "5e73d1e9e90eda80ac436376eba68cc3683a77ef9a4db1131143d946847ec2a0",
+  "model": "BAAI/bge-reranker-v2-m3",
+  "model_directory": "C:\\Users\\rahul\\Nyaymalaw\\.nm\\models\\BAAI__bge-reranker-v2-m3",
+  "model_files": {
+    "config.json": {
+      "bytes": 795,
+      "sha256": "13dcd6c31d9fec9d1d8e158702072f62d7fa7d312a64b9fe057bec9a08cfe41a"
+    },
+    "model.safetensors": {
+      "bytes": 2271071852,
+      "sha256": "d9e3e081faff1eefb84019509b2f5558fd74c1a05a2c7db22f74174fcedb5286"
+    },
+    "sentencepiece.bpe.model": {
+      "bytes": 5069051,
+      "sha256": "cfc8146abe2a0488e9e2a0c56de7952f7c11ab059eca145a0a727afce0db2865"
+    },
+    "special_tokens_map.json": {
+      "bytes": 964,
+      "sha256": "8c785abebea9ae3257b61681b4e6fd8365ceafde980c21970d001e834cf10835"
+    },
+    "tokenizer.json": {
+      "bytes": 17098273,
+      "sha256": "69564b696052886ed0ac63fa393e928384e0f8caada38c1f4864a9bfbf379c15"
+    },
+    "tokenizer_config.json": {
+      "bytes": 1173,
+      "sha256": "7e4c1cc848840aeccdd763458c18dd525eb0f795c992e00ebe9c28554e7db2d4"
+    }
+  },
+  "source_pool_manifest": {
+    "provision": {
+      "count": 91,
+      "ordered_manifest_sha256": "23024d8bdc3ac7ea4c6d85f2e27988d66b4dd12100c254a326b25bbf26ca2703",
+      "passage_characters": 143419
+    },
+    "judgment": {
+      "count": 165,
+      "ordered_manifest_sha256": "f41596e206c9b571ede4bcfb6ea29d3c29525678a25fc5ab07779ef89d5a5966",
+      "passage_characters": 211447
+    }
+  },
+  "queries": [
+    {
+      "query_id": "deposit_and_drive:w1:q1",
+      "original_enquiry": "What are the legal requirements and standard practices under Hyderabad jurisdiction for retention of a security deposit by a lessor when the lessee disputes damage claims and no joint inspection report exists?",
+      "ranking_input": "advocate:\nThey leased a laser cutter and returned it on 3 September. The lessor is retaining the deposit, alleging damage; our client disputes causing it, and no joint inspection report has been supplied.\n\nWhat are the legal requirements and standard practices under Hyderabad jurisdiction for retention of a security deposit by a lessor when the lessee disputes damage claims and no joint inspection report exists?",
+      "query_windows": [
+        {
+          "start": 0,
+          "end": 415,
+          "text": "advocate:\nThey leased a laser cutter and returned it on 3 September. The lessor is retaining the deposit, alleging damage; our client disputes causing it, and no joint inspection report has been supplied.\n\nWhat are the legal requirements and standard practices under Hyderabad jurisdiction for retention of a security deposit by a lessor when the lessee disputes damage claims and no joint inspection report exists?",
+          "tokens": 90
+        }
+      ],
+      "prepared_pairs": {
+        "provision": 127,
+        "judgment": 203
+      }
+    },
+    {
+      "query_id": "deposit_and_drive:w1:q2",
+      "original_enquiry": "What contractual terms typically govern deposit retention, inspection obligations, and dispute resolution in equipment lease agreements in Hyderabad?",
+      "ranking_input": "advocate:\nThey leased a laser cutter and returned it on 3 September. The lessor is retaining the deposit, alleging damage; our client disputes causing it, and no joint inspection report has been supplied.\n\nWhat contractual terms typically govern deposit retention, inspection obligations, and dispute resolution in equipment lease agreements in Hyderabad?",
+      "query_windows": [
+        {
+          "start": 0,
+          "end": 355,
+          "text": "advocate:\nThey leased a laser cutter and returned it on 3 September. The lessor is retaining the deposit, alleging damage; our client disputes causing it, and no joint inspection report has been supplied.\n\nWhat contractual terms typically govern deposit retention, inspection obligations, and dispute resolution in equipment lease agreements in Hyderabad?",
+          "tokens": 74
+        }
+      ],
+      "prepared_pairs": {
+        "provision": 125,
+        "judgment": 193
+      }
+    },
+    {
+      "query_id": "deposit_and_drive:w1:q3",
+      "original_enquiry": "What procedural remedies and evidentiary burdens exist for a lessee disputing damage to leased equipment and seeking deposit recovery in Hyderabad?",
+      "ranking_input": "advocate:\nThey leased a laser cutter and returned it on 3 September. The lessor is retaining the deposit, alleging damage; our client disputes causing it, and no joint inspection report has been supplied.\n\nWhat procedural remedies and evidentiary burdens exist for a lessee disputing damage to leased equipment and seeking deposit recovery in Hyderabad?",
+      "query_windows": [
+        {
+          "start": 0,
+          "end": 353,
+          "text": "advocate:\nThey leased a laser cutter and returned it on 3 September. The lessor is retaining the deposit, alleging damage; our client disputes causing it, and no joint inspection report has been supplied.\n\nWhat procedural remedies and evidentiary burdens exist for a lessee disputing damage to leased equipment and seeking deposit recovery in Hyderabad?",
+          "tokens": 80
+        }
+      ],
+      "prepared_pairs": {
+        "provision": 127,
+        "judgment": 197
+      }
+    }
+  ],
+  "maximum_seconds": 600,
+  "maximum_local_predict_calls": 6,
+  "provider_calls": 0,
+  "deduplication": "Owned source identity is corpus revision + kind + position. Identical wording at different positions remains distinct. Repeated identical input rows for one position must have agreeing scores before ranking.",
+  "round_robin": "Within each corpus, take the next unseen source from enquiry1,2,3 in supplied order, repeating until six unique source identities. Skip already selected identities within the active enquiry. No score threshold, relevance label, manual promotion or document-diversity rule participates.",
+  "limitations": [
+    "Older seen matter and14 prelabelled targeted sources, not a corpus-wide or unfamiliar accuracy estimate.",
+    "Queries remain unchanged, including the unsupported not-supplied to nonexistence premise; discovery output is not authority.",
+    "Same frozen pool for every query. Neither recall route nor actual product final selection is measured.",
+    "Combined-input baseline was measured in an earlier process against identical hashed weights; latency comparison is not a counterbalanced performance trial."
+  ]
+}

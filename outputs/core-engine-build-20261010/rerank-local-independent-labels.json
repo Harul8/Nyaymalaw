@@ -1,0 +1,404 @@
+{
+  "contract": "local_rerank_independent_labels_v1",
+  "packet_sha256": "b2e060022093d3f28691ea72eed734e811e32145d9a5834f6b8ebbe6eba206ed",
+  "labelled_utc": "2026-10-10T05:48:44.509708+00:00",
+  "prior_familiarity": "I have reviewed earlier Nyaymalaw retrieval reports and some related deposit/equipment sources, including broad scope/attribution problems. This is rank-blinded for the present comparison, not fully blind or independent of all prior project knowledge. No new arm/rank/score or experiment comparison was read before freezing these labels.",
+  "basis": "Exact original Vale account, the deposit-only scope, all14 primary passages and the available neighbouring texts in this packet. No outside law lookup, model inference or new corpus read was used.",
+  "assessment_unit": "Each primary passage together with its available saved context; reasons identify when useful content is only in a neighbour. Conditional lead is not a governing-law finding.",
+  "limitations": [
+    "Selected14-candidate packet is not full-corpus recall/precision gold. No corpus completeness or statutory currency assessment.",
+    "source11 and source12 share the same case and useful neighbour; do not treat them as independent authorities.",
+    "I found no directly useful dispositive deposit/damage rule in this packet; conditional analogies remain deliberately separate.",
+    "Unrelated repeated-section context does not become evidence of a coherent rule."
+  ],
+  "assessments": [
+    {
+      "id": "source-01",
+      "category": "conditional_or_evidentiary_lead",
+      "reason": "Weak evidentiary analogy: the court identifies competing lease instruments and contested expenditure as issues requiring evidence, rather than accepting either party's requested rent adjustment. This can guide careful examination of the equipment agreement and asserted deductions, but provides no equipment-damage/deposit rule.",
+      "source_role": "Primary: reproduced commercial-premises lease clause and procedural history. Neighbours: rival party submissions and deciding-court discussion of unresolved evidence.",
+      "limitations": [
+        "Immovable commercial-premises eviction/provisional rent, not returned equipment or deposit damage.",
+        "No basis to import the reproduced reimbursement clause into Vale's agreement; no broad evidentiary mandate inferred from a case-specific direction."
+      ],
+      "supporting_quotes": [
+        {
+          "origin": "primary_passage",
+          "position": null,
+          "start": 358,
+          "end": 400,
+          "text": "Clause\n\n1(c) of the same reads as follows:"
+        },
+        {
+          "origin": "available_saved_neighbour",
+          "position": 594190,
+          "start": 969,
+          "end": 1097,
+          "text": "all these\n\ncontentious issues cannot be decided at this stage. Evidence will\n\nhave to be led by the parties to prove their case."
+        }
+      ]
+    },
+    {
+      "id": "source-02",
+      "category": "wrong_relationship_or_scope",
+      "reason": "The committee and conditions concern tax orders/assessees, not a private equipment lease deposit or damage dispute. Generic dispute-resolution wording does not supply a route for this account.",
+      "source_role": "Statutory amendment text describing a tax-specific dispute-resolution scheme.",
+      "limitations": [
+        "No tax assessment, specified tax order or eligible assessee dispute is reported; no temporal currency assessment made."
+      ],
+      "supporting_quotes": [
+        {
+          "origin": "primary_passage",
+          "position": null,
+          "start": 501,
+          "end": 558,
+          "text": "dispute arising from any variation in the specified order"
+        },
+        {
+          "origin": "primary_passage",
+          "position": null,
+          "start": 1144,
+          "end": 1227,
+          "text": "eliminating the interface between the Dispute Resolution Committee and the assessee"
+        }
+      ]
+    },
+    {
+      "id": "source-03",
+      "category": "insufficient_held_context",
+      "reason": "The primary consists only of an ADR topic heading, with no operative test, procedure or remedy. Supplied section-17 neighbours address several unrelated Bar Council subjects and cannot establish a coherent arbitration rule for this deposit.",
+      "source_role": "Bare heading in a rules-labelled source; surrounding indexed rows are distinct rules/topics, not a shown operative ADR passage.",
+      "limitations": [
+        "Do not infer arbitration eligibility, agreement or procedure from the heading.",
+        "Repeated section number across different topics makes this context grouping ambiguous."
+      ],
+      "supporting_quotes": [
+        {
+          "origin": "primary_passage",
+          "position": null,
+          "start": 176,
+          "end": 247,
+          "text": "17. Arbitration, Conciliation and Alternate Dispute Resolution Systems."
+        },
+        {
+          "origin": "available_saved_neighbour",
+          "position": 176937,
+          "start": 59,
+          "end": 165,
+          "text": "All the permanent employees of the Council shall be entitled to the benefit of provident fund and gratuity"
+        }
+      ]
+    },
+    {
+      "id": "source-04",
+      "category": "conditional_or_evidentiary_lead",
+      "reason": "Potential deposit-return/handover analogy and contrary-position lead, but the primary is counsel relying on a specific agreement, not a general holding requiring every deposit to be refunded without deduction. The neighbour expressly rejects the bank's argument and examines evidence of actual handover.",
+      "source_role": "Primary: respondent-bank submission plus quoted Deposit Agreement clause. Neighbours: landlady submission, further contractual terms, bank position, then deciding court rejecting that position.",
+      "limitations": [
+        "Premises lease/rent dispute, not equipment damage; the contractual terms cannot be imported.",
+        "The court paragraph literally says the bank was liable to refund, conflicting with the party roles and quoted contract; do not silently correct or use that actor wording as a clean general rule.",
+        "No holding here that an inspection report is mandatory or Vale's damage allegation unproved."
+      ],
+      "supporting_quotes": [
+        {
+          "origin": "primary_passage",
+          "position": null,
+          "start": 40,
+          "end": 98,
+          "text": "Per contra, Mr. Sandeep P. Agarwal, learned Senior counsel"
+        },
+        {
+          "origin": "available_saved_neighbour",
+          "position": 799249,
+          "start": 19,
+          "end": 113,
+          "text": "the aforesaid argument advanced by learned counsel\n\nfor the respondent-Bank is not persuasive."
+        },
+        {
+          "origin": "available_saved_neighbour",
+          "position": 799249,
+          "start": 492,
+          "end": 583,
+          "text": "There is nothing on record to demonstrate\n\nthat any steps were taken by the respondent-Bank"
+        }
+      ]
+    },
+    {
+      "id": "source-05",
+      "category": "wrong_relationship_or_scope",
+      "reason": "This is a municipal building-site lease-cum-sale form and associated allotment conditions. A purchase-price deposit securing development obligations is not a useful substantive source for an equipment damage deduction merely because both are called security deposits.",
+      "source_role": "Quoted statutory/form agreement and building-allotment conditions; no supplied deciding-court equipment/deposit holding.",
+      "limitations": [
+        "Different transaction, property and statutory allocation scheme.",
+        "Do not convert the form's security clause into a general right to forfeit a deposit."
+      ],
+      "supporting_quotes": [
+        {
+          "origin": "primary_passage",
+          "position": null,
+          "start": 58,
+          "end": 96,
+          "text": "The Lessee/ Purchaser is hereby put in"
+        },
+        {
+          "origin": "available_saved_neighbour",
+          "position": 332877,
+          "start": 915,
+          "end": 972,
+          "text": "This lease \nagreement is called Lease-cum-sale agreement."
+        }
+      ]
+    },
+    {
+      "id": "source-06",
+      "category": "wrong_relationship_or_scope",
+      "reason": "The primary is respondents' jurisdiction argument in a mortgage suit. Adjacent reasoning expressly relies on immovable mortgaged property and distinguishes an ordinary contractual money suit. Vale's location alone cannot make this a Hyderabad forum rule for the deposit claim.",
+      "source_role": "Primary: respondents' counsel submission. Neighbours: appellants' contrary submission and deciding-court mortgage jurisdiction reasoning.",
+      "limitations": [
+        "No mortgage is reported in the equipment account.",
+        "Do not attribute counsel's assertion directly to the court or infer jurisdiction from the shared city name."
+      ],
+      "supporting_quotes": [
+        {
+          "origin": "primary_passage",
+          "position": null,
+          "start": 64,
+          "end": 116,
+          "text": "The reply of the learned counsel for the respondents"
+        },
+        {
+          "origin": "available_saved_neighbour",
+          "position": 1011004,
+          "start": 52,
+          "end": 187,
+          "text": "all suits\npertaining to a mortgage can only be instituted within the local\njurisdiction of the Court in which the property is situated."
+        }
+      ]
+    },
+    {
+      "id": "source-07",
+      "category": "wrong_relationship_or_scope",
+      "reason": "This refundable equipment-security rule applies to toll-payment transponders supplied through the specified road-fee scheme, not private laser-cutter hire. City/equipment/deposit overlap does not extend that scheme.",
+      "source_role": "Scheme-specific operative rule concerning road toll collection devices.",
+      "limitations": [
+        "No toll-device installation or fee-collecting agency relationship appears in the account."
+      ],
+      "supporting_quotes": [
+        {
+          "origin": "primary_passage",
+          "position": null,
+          "start": 970,
+          "end": 1057,
+          "text": "installation of on board unit (transponder) or any other such device for payment of fee"
+        },
+        {
+          "origin": "primary_passage",
+          "position": null,
+          "start": 1135,
+          "end": 1203,
+          "text": "with Hyderabad Growth Corridor Limited or user fee collecting agency"
+        }
+      ]
+    },
+    {
+      "id": "source-08",
+      "category": "wrong_relationship_or_scope",
+      "reason": "The Income-tax dispute committee resolves specified assessment-order variations and associated tax penalties. It is not an available deposit-recovery mechanism on the supplied private lease facts.",
+      "source_role": "Tax-specific statute provision, including assessment/recomputation machinery.",
+      "limitations": [
+        "Near-overlap with source-02 is not independent support for a private contractual route.",
+        "No current statutory currency or taxpayer eligibility conclusion is made."
+      ],
+      "supporting_quotes": [
+        {
+          "origin": "primary_passage",
+          "position": null,
+          "start": 1067,
+          "end": 1095,
+          "text": "the Assessing Officer shall,"
+        },
+        {
+          "origin": "primary_passage",
+          "position": null,
+          "start": 1223,
+          "end": 1282,
+          "text": "pass an order of assessment, reassessment or recomputation;"
+        }
+      ]
+    },
+    {
+      "id": "source-09",
+      "category": "wrong_relationship_or_scope",
+      "reason": "The deposit forfeiture is narrated as an earlier civil claim and compromise. The question being decided is whether the receipt is taxable revenue, not whether a lessor may retain Vale's deposit for contested equipment damage.",
+      "source_role": "Primary: narration of party plaint and settlement. Neighbours: tax reference question, tax authority decisions and tribunal positions, not adjudication of the underlying deposit entitlement.",
+      "limitations": [
+        "A compromise forfeiture is not a court holding that the forfeiture was legally required or valid in another dispute.",
+        "No tax issue is reported; do not transform similar monetary facts into matching legal scope."
+      ],
+      "supporting_quotes": [
+        {
+          "origin": "primary_passage",
+          "position": null,
+          "start": 890,
+          "end": 924,
+          "text": "Eventually, there was a compromise"
+        },
+        {
+          "origin": "available_saved_neighbour",
+          "position": 928387,
+          "start": 223,
+          "end": 329,
+          "text": "the amount of Rs. 40,000 received by the assessee as a forfeiture of security deposit is a revenue receipt"
+        }
+      ]
+    },
+    {
+      "id": "source-10",
+      "category": "conditional_or_evidentiary_lead",
+      "reason": "A conditional forum-selection/contrary-route lead: deciding-court discussion and quoted authority distinguish disputed contractual claims ordinarily requiring evidence from appropriate writ proceedings. The neighbours preserve discretion and exceptions, so a categorical no-writ rule would overstate the source.",
+      "source_role": "Primary: deciding court quotes an earlier case's reasoning; neighbours contain the deciding court's qualified framing and another quoted authority explaining exceptions.",
+      "limitations": [
+        "Public-law/writ setting; Vale reports private equipment actors and has not asked specifically to file a writ.",
+        "Does not decide deposit entitlement, damage proof, jurisdiction over these parties or whether a particular remedy is presently maintainable.",
+        "Earlier quoted authorities are not independently supplied in full."
+      ],
+      "supporting_quotes": [
+        {
+          "origin": "primary_passage",
+          "position": null,
+          "start": 904,
+          "end": 962,
+          "text": "The dispute in this case was regarding the\nterms of offer."
+        },
+        {
+          "origin": "available_saved_neighbour",
+          "position": 504011,
+          "start": 4,
+          "end": 64,
+          "text": "A writ court should ordinarily not entertain a writ petition"
+        },
+        {
+          "origin": "available_saved_neighbour",
+          "position": 504014,
+          "start": 606,
+          "end": 686,
+          "text": "The High Court is not deprived of its jurisdiction to entertain a\npetition under"
+        }
+      ]
+    },
+    {
+      "id": "source-11",
+      "category": "conditional_or_evidentiary_lead",
+      "reason": "The adjacent court paragraph identifies an equipment-hire transaction as bailment and discusses contractual delivery, duration and return. That is a useful conditional conceptual lead for Vale. The primary inspection/fault-allocation terms are somebody else's agreement and cannot establish Vale's duties or admit damage.",
+      "source_role": "Primary: court reproduces specific equipment-lease terms. Neighbour paragraph24: deciding-court classification and legal discussion, including quotation of earlier tax authority.",
+      "limitations": [
+        "Tax dispute context; no provided holding resolving security-deposit retention or subsequent damage in Vale's relationship.",
+        "Prior inspection declaration is a contract term in that case, not a fact reported by this user or a mandatory universal inspection rule.",
+        "Useful with neighbour951350; primary alone is not general bailment authority."
+      ],
+      "supporting_quotes": [
+        {
+          "origin": "primary_passage",
+          "position": null,
+          "start": 80,
+          "end": 138,
+          "text": "The lessee has declared that it has taken prior inspection"
+        },
+        {
+          "origin": "available_saved_neighbour",
+          "position": 951350,
+          "start": 69,
+          "end": 152,
+          "text": "the transaction is a bailment as defined by\nsection 148\nof the Indian Contract Act."
+        },
+        {
+          "origin": "available_saved_neighbour",
+          "position": 951350,
+          "start": 338,
+          "end": 413,
+          "text": "the duration and the obligation to return after the purpose is accomplished"
+        }
+      ]
+    },
+    {
+      "id": "source-12",
+      "category": "conditional_or_evidentiary_lead",
+      "reason": "Equipment-hire facts and the supplied adjacent bailment reasoning provide the same useful conditional conceptual lead as source-11. The court's statement about inspection and handover describes another transaction; it cannot prove return condition or agreed terms here.",
+      "source_role": "Primary: case-specific factual findings and reproduced agreement. Adjacent paragraph24: deciding-court bailment classification in a tax dispute.",
+      "limitations": [
+        "Same case and same decisive neighbour as source-11: do not count as independent corroborating authorities.",
+        "No security-deposit/damage holding or universal handover clause is supplied.",
+        "Primary reference to Companies Act is descriptive, not the governing rule for equipment damage."
+      ],
+      "supporting_quotes": [
+        {
+          "origin": "primary_passage",
+          "position": null,
+          "start": 78,
+          "end": 159,
+          "text": "The letter clearly shows that the equipment was already inspected by the customer"
+        },
+        {
+          "origin": "available_saved_neighbour",
+          "position": 951350,
+          "start": 69,
+          "end": 152,
+          "text": "the transaction is a bailment as defined by\nsection 148\nof the Indian Contract Act."
+        }
+      ]
+    },
+    {
+      "id": "source-13",
+      "category": "wrong_relationship_or_scope",
+      "reason": "This explains financial-statement substance for finance leases, not civil obligations to refund a damage deposit. Economic/accounting presentation does not establish ownership, breach or compensation rights in the supplied private hire dispute.",
+      "source_role": "Accounting-standard principle. Saved neighbours include numerous different paragraph12 accounting topics, not one continuous legal rule on deposits.",
+      "limitations": [
+        "No financial reporting/classification dispute is reported.",
+        "Repeated paragraph-number grouping supplies unrelated accounting standards and should not be read as adjacent qualifications to one paragraph.",
+        "Do not use financial reality as proof of Vale's contract terms or legal title."
+      ],
+      "supporting_quotes": [
+        {
+          "origin": "primary_passage",
+          "position": null,
+          "start": 154,
+          "end": 272,
+          "text": "Transactions and other events are accounted for and presented in accordance with their substance and financial reality"
+        },
+        {
+          "origin": "primary_passage",
+          "position": null,
+          "start": 420,
+          "end": 485,
+          "text": "in the case of finance leases the substance and financial reality"
+        }
+      ]
+    },
+    {
+      "id": "source-14",
+      "category": "wrong_relationship_or_scope",
+      "reason": "This is a notified Court-of-Wards claims procedure against a ward or ward property. There is no ward, court superintendence or notification in Vale's account; it cannot impose this six-month filing or discharge rule on the deposit claim.",
+      "source_role": "Special statutory procedure for wards/property under the specified scheme.",
+      "limitations": [
+        "Shared Telangana location and pecuniary-claim wording do not establish scheme applicability.",
+        "Do not infer a deadline for the matter from the isolated provision."
+      ],
+      "supporting_quotes": [
+        {
+          "origin": "primary_passage",
+          "position": null,
+          "start": 786,
+          "end": 818,
+          "text": "against the ward or his property"
+        },
+        {
+          "origin": "primary_passage",
+          "position": null,
+          "start": 887,
+          "end": 940,
+          "text": "within six months from the date of such notification."
+        }
+      ]
+    }
+  ]
+}

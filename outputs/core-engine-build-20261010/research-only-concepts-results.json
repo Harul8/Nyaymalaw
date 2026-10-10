@@ -1,0 +1,177 @@
+{
+  "started_utc": "2026-10-10T05:30:38.947684+00:00",
+  "preparation": {
+    "model": "gpt-4.1-mini-2025-04-14",
+    "script_sha256": "c87b0dbec526d26136118def3d900b4ba22490dcb6eb32b8ee2b6920190e68f1",
+    "inputs_sha256": "caf39312fe7d96b508184a18bd596a434c9d059a45c58e16477d60ab94272b89",
+    "oracle_sha256": "49d44d518c4a4e43c41115fcb27a7d34620ae3a0fda4eadab38f0e54a15129b3",
+    "baseline_inputs_sha256": "706b298b179b838ca5456941b89c10b428077eba75bfe837ad82c1dce589822c",
+    "baseline_oracle_sha256": "47c04570a06edc0164cdc6ef1feffc4eeaa09c71efe73effad006ee114ed7b05",
+    "prompt": "Message: You receive the exact latest advocate message, the complete\nattributed earlier conversation, current records, saved work, and original account\nspans with short owned IDs. Each ID selects unchanged words and their provenance.\nThe span catalogue includes earlier selections, uncovered ranges and full messages;\nthese describe available words, not their meaning or truth. NM interpretations\nare distinct from original accounts and cannot establish facts.\n\nPurpose: Prepare only the legal investigations needed now and their held-corpus\nsearches. Other stages handle replies, drafting, factual corrections and execution.\nDo not plan those activities, answer the legal questions or decide applicable law.\n\nLook for: Understand the latest message in the whole conversation. Identify current\nlegal questions and distinct disputes requiring legal investigation, including those\narising from supplied substantive material. Preserve separate investigations even\nwhen requested together. Earlier pending work is not automatically requested again.\nReturn no investigation where the current work needs no legal sources.\n\nFor each investigation, select the offered account IDs containing its relevant\noriginal account. Keep who says what, uncertainty, conditions, timing and negation.\nPrefer focused spans to a mixed full message. Do not select social words or task\ndirections as facts; retain words that establish an expressly hypothetical scope.\nA general legal question may have no factual account. Never recopy or paraphrase\nfacts into a search query: code uses the selected original words.\n\nThen propose normally two or three concise legal concept phrases likely to occur\nin provisions or judicial reasoning. Each should add a distinct search contribution,\nnot restate another phrase or instruct a model to perform work. Use fewer when\nsufficient. Concepts are investigation hypotheses; they cannot introduce new facts,\nestablish an entitlement or invent an authority, provision, citation or jurisdiction.\nThe original account and its qualifications remain the basis for later assessment.\n\nOutcome: Return work[]. Each item has issue, a neutral inquiry title;\naccount_source_ids, selected offered IDs; and concepts[], each with text and purpose\ndescribing its distinct search contribution. Use at most three concepts per\ninvestigation. Return work=[] when no legal investigation is needed now. No other\nwork plans, factual summaries, conclusions, status or completion claims.\n",
+    "prompt_word_count": 349,
+    "maximum_logical_calls": 6,
+    "semantic_retries": 0,
+    "actual_spend_stop_usd": 0.08,
+    "shared_ledger": "api-budget.sqlite",
+    "shared_hard_cap_usd": 5,
+    "max_output_tokens": 4000,
+    "model_input_change": "Complete original context unchanged. Earlier interpretation prose is omitted; its mechanically validated spans and uncovered ranges remain in the offered original catalogue.",
+    "call_impact": "One existing planner-responsibility candidate per input, no added stage. This experiment does not integrate or alter production call counts.",
+    "admission_scope": "Pilot whole-candidate schema/reference rejection; no production per-unit recovery or semantic acceptance claimed.",
+    "wire_capture": "Frozen model-port inputs plus SDK .create assertion/capture of exact system/user messages, dynamic on_the_wire(schema), pinned model, no-store and token bound. One actual dispatch per candidate and six total; no provider retries.",
+    "selfchecks": {
+      "cases": 6,
+      "complete_context_unchanged": true,
+      "held_drive_offered": true,
+      "all_aliases_bound_to_original_coordinates": true,
+      "unknown_alias_refused": true,
+      "exact_model_port_input_captured": true,
+      "sdk_payload_assertion_offline_stub_passed": true,
+      "second_dispatch_refused": true,
+      "changed_system_and_schema_refused": true,
+      "paid_calls": 0
+    }
+  },
+  "budget_before": {
+    "maximum_usd": 5.0,
+    "charged_usd": 1.331962,
+    "measured_usd": 0.241962,
+    "reserved_or_unknown_usd": 1.09,
+    "attempts": 87,
+    "models": [
+      {
+        "model": "gpt-4.1-mini-2025-04-14",
+        "state": "measured",
+        "attempts": 86,
+        "charged_usd": 0.241962
+      },
+      {
+        "model": "text-embedding-3-large",
+        "state": "reserved_or_unknown",
+        "attempts": 1,
+        "charged_usd": 1.09
+      }
+    ]
+  },
+  "calls": [
+    {
+      "name": "original_aster_held_drive",
+      "wire": {
+        "system": "Message: You receive the exact latest advocate message, the complete\nattributed earlier conversation, current records, saved work, and original account\nspans with short owned IDs. Each ID selects unchanged words and their provenance.\nThe span catalogue includes earlier selections, uncovered ranges and full messages;\nthese describe available words, not their meaning or truth. NM interpretations\nare distinct from original accounts and cannot establish facts.\n\nPurpose: Prepare only the legal investigations needed now and their held-corpus\nsearches. Other stages handle replies, drafting, factual corrections and execution.\nDo not plan those activities, answer the legal questions or decide applicable law.\n\nLook for: Understand the latest message in the whole conversation. Identify current\nlegal questions and distinct disputes requiring legal investigation, including those\narising from supplied substantive material. Preserve separate investigations even\nwhen requested together. Earlier pending work is not automatically requested again.\nReturn no investigation where the current work needs no legal sources.\n\nFor each investigation, select the offered account IDs containing its relevant\noriginal account. Keep who says what, uncertainty, conditions, timing and negation.\nPrefer focused spans to a mixed full message. Do not select social words or task\ndirections as facts; retain words that establish an expressly hypothetical scope.\nA general legal question may have no factual account. Never recopy or paraphrase\nfacts into a search query: code uses the selected original words.\n\nThen propose normally two or three concise legal concept phrases likely to occur\nin provisions or judicial reasoning. Each should add a distinct search contribution,\nnot restate another phrase or instruct a model to perform work. Use fewer when\nsufficient. Concepts are investigation hypotheses; they cannot introduce new facts,\nestablish an entitlement or invent an authority, provision, citation or jurisdiction.\nThe original account and its qualifications remain the basis for later assessment.\n\nOutcome: Return work[]. Each item has issue, a neutral inquiry title;\naccount_source_ids, selected offered IDs; and concepts[], each with text and purpose\ndescribing its distinct search contribution. Use at most three concepts per\ninvestigation. Return work=[] when no legal investigation is needed now. No other\nwork plans, factual summaries, conclusions, status or completion claims.\n",
+        "user": "{\"original_context\": {\"position\": \"first\", \"latest\": {\"source_id\": \"live-served-1:advocate\", \"turn_id\": \"live-served-1\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"text\": \"Good afternoon. This is a synthetic test matter. We act for Aster Fabrication in Hyderabad. Our client rented a precision cutter and says it returned the machine on 6 September 2026. The owner retains the Rs 1,20,000 security deposit, alleging damage to the cutting head; our client denies causing damage. The owner sent a technician's estimate but no joint inspection report. Our client reports having a signed hire agreement and a bank-transfer receipt, but I have not supplied or examined those documents here. Separately, the owner's technician still has our client's original design drive, which the client says was lent only for setup; the owner now says it can retain the drive until repair costs are paid. First give a source-backed, conditional analysis of the deposit and drive disputes, including any material contrary position. Separately, draft a brief list of questions for our client that would clarify the important gaps. Do not contact anyone, do not treat the damage allegation as admitted, and do not assume the reported documents have been checked.\"}, \"conversation\": [], \"current_records\": {}, \"saved_work\": []}, \"original_account_spans\": [{\"id\": \"a1\", \"source_id\": \"live-served-1:advocate\", \"start\": 0, \"end\": 15, \"available_range\": \"earlier_exact_selection\", \"text\": \"Good afternoon.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a2\", \"source_id\": \"live-served-1:advocate\", \"start\": 0, \"end\": 1068, \"available_range\": \"complete_original\", \"text\": \"Good afternoon. This is a synthetic test matter. We act for Aster Fabrication in Hyderabad. Our client rented a precision cutter and says it returned the machine on 6 September 2026. The owner retains the Rs 1,20,000 security deposit, alleging damage to the cutting head; our client denies causing damage. The owner sent a technician's estimate but no joint inspection report. Our client reports having a signed hire agreement and a bank-transfer receipt, but I have not supplied or examined those documents here. Separately, the owner's technician still has our client's original design drive, which the client says was lent only for setup; the owner now says it can retain the drive until repair costs are paid. First give a source-backed, conditional analysis of the deposit and drive disputes, including any material contrary position. Separately, draft a brief list of questions for our client that would clarify the important gaps. Do not contact anyone, do not treat the damage allegation as admitted, and do not assume the reported documents have been checked.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a3\", \"source_id\": \"live-served-1:advocate\", \"start\": 15, \"end\": 16, \"available_range\": \"uncovered_original_range\", \"text\": \" \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a4\", \"source_id\": \"live-served-1:advocate\", \"start\": 16, \"end\": 48, \"available_range\": \"earlier_exact_selection\", \"text\": \"This is a synthetic test matter.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a5\", \"source_id\": \"live-served-1:advocate\", \"start\": 48, \"end\": 49, \"available_range\": \"uncovered_original_range\", \"text\": \" \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a6\", \"source_id\": \"live-served-1:advocate\", \"start\": 49, \"end\": 91, \"available_range\": \"earlier_exact_selection\", \"text\": \"We act for Aster Fabrication in Hyderabad.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a7\", \"source_id\": \"live-served-1:advocate\", \"start\": 91, \"end\": 92, \"available_range\": \"uncovered_original_range\", \"text\": \" \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a8\", \"source_id\": \"live-served-1:advocate\", \"start\": 92, \"end\": 182, \"available_range\": \"earlier_exact_selection\", \"text\": \"Our client rented a precision cutter and says it returned the machine on 6 September 2026.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a9\", \"source_id\": \"live-served-1:advocate\", \"start\": 182, \"end\": 183, \"available_range\": \"uncovered_original_range\", \"text\": \" \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a10\", \"source_id\": \"live-served-1:advocate\", \"start\": 183, \"end\": 305, \"available_range\": \"earlier_exact_selection\", \"text\": \"The owner retains the Rs 1,20,000 security deposit, alleging damage to the cutting head; our client denies causing damage.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a11\", \"source_id\": \"live-served-1:advocate\", \"start\": 305, \"end\": 306, \"available_range\": \"uncovered_original_range\", \"text\": \" \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a12\", \"source_id\": \"live-served-1:advocate\", \"start\": 306, \"end\": 376, \"available_range\": \"earlier_exact_selection\", \"text\": \"The owner sent a technician's estimate but no joint inspection report.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a13\", \"source_id\": \"live-served-1:advocate\", \"start\": 376, \"end\": 377, \"available_range\": \"uncovered_original_range\", \"text\": \" \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a14\", \"source_id\": \"live-served-1:advocate\", \"start\": 377, \"end\": 513, \"available_range\": \"earlier_exact_selection\", \"text\": \"Our client reports having a signed hire agreement and a bank-transfer receipt, but I have not supplied or examined those documents here.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a15\", \"source_id\": \"live-served-1:advocate\", \"start\": 513, \"end\": 714, \"available_range\": \"uncovered_original_range\", \"text\": \" Separately, the owner's technician still has our client's original design drive, which the client says was lent only for setup; the owner now says it can retain the drive until repair costs are paid. \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a16\", \"source_id\": \"live-served-1:advocate\", \"start\": 714, \"end\": 839, \"available_range\": \"earlier_exact_selection\", \"text\": \"First give a source-backed, conditional analysis of the deposit and drive disputes, including any material contrary position.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a17\", \"source_id\": \"live-served-1:advocate\", \"start\": 839, \"end\": 840, \"available_range\": \"uncovered_original_range\", \"text\": \" \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a18\", \"source_id\": \"live-served-1:advocate\", \"start\": 840, \"end\": 937, \"available_range\": \"earlier_exact_selection\", \"text\": \"Separately, draft a brief list of questions for our client that would clarify the important gaps.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a19\", \"source_id\": \"live-served-1:advocate\", \"start\": 937, \"end\": 938, \"available_range\": \"uncovered_original_range\", \"text\": \" \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a20\", \"source_id\": \"live-served-1:advocate\", \"start\": 938, \"end\": 1068, \"available_range\": \"earlier_exact_selection\", \"text\": \"Do not contact anyone, do not treat the damage allegation as admitted, and do not assume the reported documents have been checked.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}]}",
+        "operation": "research_only_concepts_pilot",
+        "schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "work"
+          ],
+          "properties": {
+            "work": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "issue",
+                  "account_source_ids",
+                  "concepts"
+                ],
+                "properties": {
+                  "issue": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "account_source_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "a1",
+                        "a2",
+                        "a3",
+                        "a4",
+                        "a5",
+                        "a6",
+                        "a7",
+                        "a8",
+                        "a9",
+                        "a10",
+                        "a11",
+                        "a12",
+                        "a13",
+                        "a14",
+                        "a15",
+                        "a16",
+                        "a17",
+                        "a18",
+                        "a19",
+                        "a20"
+                      ]
+                    }
+                  },
+                  "concepts": {
+                    "type": "array",
+                    "maxItems": 3,
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "text",
+                        "purpose"
+                      ],
+                      "properties": {
+                        "text": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "purpose": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tier": "routine",
+        "max_tokens": 4000
+      },
+      "error_type": "AssertionError",
+      "error": "Actual-spend stop reached"
+    }
+  ],
+  "logical_calls": 1,
+  "budget_after": {
+    "maximum_usd": 5.0,
+    "charged_usd": 1.757393,
+    "measured_usd": 0.241962,
+    "reserved_or_unknown_usd": 1.515431,
+    "attempts": 88,
+    "models": [
+      {
+        "model": "gpt-4.1-mini-2025-04-14",
+        "state": "measured",
+        "attempts": 86,
+        "charged_usd": 0.241962
+      },
+      {
+        "model": "gpt-4.1-mini-2025-04-14",
+        "state": "reserved_or_unknown",
+        "attempts": 1,
+        "charged_usd": 0.425431
+      },
+      {
+        "model": "text-embedding-3-large",
+        "state": "reserved_or_unknown",
+        "attempts": 1,
+        "charged_usd": 1.09
+      }
+    ]
+  },
+  "actual_sdk_dispatches": 0,
+  "actual_cost_usd": 0.4254309999999999
+}

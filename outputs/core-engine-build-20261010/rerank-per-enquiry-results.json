@@ -1,0 +1,5447 @@
+{
+  "state": "completed",
+  "started_utc": "2026-10-10T05:54:54.466909+00:00",
+  "manifest_sha256": "32fcc75af1abfe8c4998d43765796be6dac8ff6469d84b118918d4db664cbd84",
+  "labels_sha256": "ed2f77251e807475c19bee732d9a62aa5d5d174ebd5a505b341e2d153643d0f8",
+  "runs": [
+    {
+      "query_id": "deposit_and_drive:w1:q1",
+      "kind": "provision",
+      "elapsed_seconds": 2.066561499959789,
+      "prepared_pair_count": 127,
+      "scores": [
+        {
+          "positions": [
+            87268
+          ],
+          "passage_sha256": "a92b215cd3b90fb3694911031f1c249092db4c645b696f429ba91cd1a7c81da2",
+          "score": 0.03753800690174103
+        },
+        {
+          "positions": [
+            4898
+          ],
+          "passage_sha256": "74dd94dd6db4a1e4da95d3c0f906be4e186fc2a6d3bb65df0084928316410e2a",
+          "score": 0.03934250399470329
+        },
+        {
+          "positions": [
+            375574
+          ],
+          "passage_sha256": "8b2310db8d2aa63b8f4b70b56f4eed50d4cc0e8fba60778702b85c60b092df63",
+          "score": 0.0017821963410824537
+        },
+        {
+          "positions": [
+            38377
+          ],
+          "passage_sha256": "f66a561672baef60f4da506cf10f6e89ba5ff18894360cd84de66f6504c40b22",
+          "score": 0.01024860143661499
+        },
+        {
+          "positions": [
+            2683
+          ],
+          "passage_sha256": "2c61736b531f7387143b6c978898b64a86612fe283ce701add237b39b6e34eee",
+          "score": 0.0015427322359755635
+        },
+        {
+          "positions": [
+            94114
+          ],
+          "passage_sha256": "62a3fd461a689dc68aafe46d4c419a5889263eebbc709832f9a9c633a4ebb6a2",
+          "score": 0.0028009270317852497
+        },
+        {
+          "positions": [
+            376481
+          ],
+          "passage_sha256": "6021e35e01405343d796dabd41db3d4738e64c681fa845f5d1ed8e4a8b38ffdb",
+          "score": 0.0042151594534516335
+        },
+        {
+          "positions": [
+            12559
+          ],
+          "passage_sha256": "563a9cbd7dc04aaa576a3641b821356dcf39013128834a999bf5b7764dd9d93c",
+          "score": 0.004281254485249519
+        },
+        {
+          "positions": [
+            38422
+          ],
+          "passage_sha256": "d2a3545778403413394b9eaa770951003994278bea94b9a698a893b077b9d6f5",
+          "score": 0.010986941866576672
+        },
+        {
+          "positions": [
+            68566
+          ],
+          "passage_sha256": "d451f91404f1888642722a0ffee08e56a3e78e31524c1e45b56ef63cbff0db5f",
+          "score": 0.0022872276604175568
+        },
+        {
+          "positions": [
+            383637
+          ],
+          "passage_sha256": "23df81a3e5b60fbc7158adb96f95efe04d406251ff84d4e0d8cdb6c3c4fc0018",
+          "score": 0.000661517377011478
+        },
+        {
+          "positions": [
+            12540
+          ],
+          "passage_sha256": "502150339192d2129f646b625d8d95ba4842dea69556885e150d3d394e6cee30",
+          "score": 0.007999754510819912
+        },
+        {
+          "positions": [
+            38401
+          ],
+          "passage_sha256": "13cd26ca3e6fe1f147a5ceb76526fb7e440deaf9b72175071ea295c71b5b3b1b",
+          "score": 0.008577484637498856
+        },
+        {
+          "positions": [
+            72337
+          ],
+          "passage_sha256": "9f351be4f0163894c2d6cd2f2dfea58476df9b6b62cb10e639b63f780db2ec51",
+          "score": 0.0011424495605751872
+        },
+        {
+          "positions": [
+            28839
+          ],
+          "passage_sha256": "137cd8cec2143787c4531bca400b634bd26f9d7c5950be6fee63a9412b000abc",
+          "score": 0.006003595422953367
+        },
+        {
+          "positions": [
+            88142
+          ],
+          "passage_sha256": "0a5b9c03f250d011661b686fadf6e83fc94c6bd32a05b3b8ba12238b4dede79c",
+          "score": 0.0007824140484444797
+        },
+        {
+          "positions": [
+            267645
+          ],
+          "passage_sha256": "5603dded72bd0e1292ef5dac46b3a554c8b2da8b985f0ca6dc664b89b50294e7",
+          "score": 0.0002824080875143409
+        },
+        {
+          "positions": [
+            251220
+          ],
+          "passage_sha256": "9687a2d18e6db04360959b1f9f07cd9825457bcaa6f3dc104f3b30b707de97ea",
+          "score": 0.007999754510819912
+        },
+        {
+          "positions": [
+            385097
+          ],
+          "passage_sha256": "75297f97b7756d74834471b770316ea4aee6bceca6d37e093b4146588d220cc5",
+          "score": 0.0009927261853590608
+        },
+        {
+          "positions": [
+            308
+          ],
+          "passage_sha256": "ef2bfda5c66931e51bbc713a87edaf47961fdbb9ac68c7ce92fd3e643cabc06d",
+          "score": 0.011823395267128944
+        },
+        {
+          "positions": [
+            377589
+          ],
+          "passage_sha256": "f61cc6163e7209548fa1b0f3e0797a44f6ad08844ad68be89d3295c233124bed",
+          "score": 0.0012065897462889552
+        },
+        {
+          "positions": [
+            393502
+          ],
+          "passage_sha256": "4e78fd8b0f895ff07bf19b91931ff81326c7479ba8c1a6844557662ac21ea30c",
+          "score": 0.0006000071880407631
+        },
+        {
+          "positions": [
+            46862
+          ],
+          "passage_sha256": "3d7642ae1aeb1200390d858eef5164e3fcb7c5601013149aaae56d5303b27c66",
+          "score": 0.02373468689620495
+        },
+        {
+          "positions": [
+            268259
+          ],
+          "passage_sha256": "28edf1fe577c89c367bcd6e2744ffe02a2714f4dbaffbeedbd583001259ab46c",
+          "score": 0.00020342698553577065
+        },
+        {
+          "positions": [
+            3603
+          ],
+          "passage_sha256": "565a0691ddddd5b93ea436a2af8631e9f8aadf3d37c1344a65b27e29a6793e39",
+          "score": 0.0002959570847451687
+        },
+        {
+          "positions": [
+            31248
+          ],
+          "passage_sha256": "26bd659a4afd54b94c015cc7bd2f9d08948630e3fca6ab7766c18dbbaaefb4f5",
+          "score": 0.002693914109840989
+        },
+        {
+          "positions": [
+            43511
+          ],
+          "passage_sha256": "76344e5eb3548b96b034f738146c4d42833f9775bb49a3e77a54c7ac04af1ff0",
+          "score": 0.009898064658045769
+        },
+        {
+          "positions": [
+            29681
+          ],
+          "passage_sha256": "bd0caf3ab4f6f61b416818d929e6f5c79edbda5d92b520a230a34e516a2d1802",
+          "score": 0.01652955636382103
+        },
+        {
+          "positions": [
+            49041
+          ],
+          "passage_sha256": "dbdb06d99fdc6e5b31d430883b5ebb8778a502026794dbe47b37125f4605de31",
+          "score": 0.006850480102002621
+        },
+        {
+          "positions": [
+            98645
+          ],
+          "passage_sha256": "64c49c238bc177659a0cbc8f5c97cd6ad5ca077eddb2d26dfb80c7273be19d7c",
+          "score": 0.0032986511941999197
+        },
+        {
+          "positions": [
+            267276
+          ],
+          "passage_sha256": "97a430a93f9920493881a608135b10d3aa088a33e88083ef36c5edac7be8dfc1",
+          "score": 0.0006693099858239293
+        },
+        {
+          "positions": [
+            268045
+          ],
+          "passage_sha256": "82d23df808fcd1daaaa60514bc33d16728017f912646828e476390baddf48464",
+          "score": 0.00628990214318037
+        },
+        {
+          "positions": [
+            330012
+          ],
+          "passage_sha256": "4b84819f8592cead5af98559382c586476f0ce58c3d3bb9f0e8b72146e9c1df1",
+          "score": 0.005281333811581135
+        },
+        {
+          "positions": [
+            11013
+          ],
+          "passage_sha256": "358eb8d85e86d131b227cfc976bf923ffaf8a6865563a6136f31d16f02ecb56c",
+          "score": 0.0020033332984894514
+        },
+        {
+          "positions": [
+            89469
+          ],
+          "passage_sha256": "96051945be2298d818eeae84a5359ac7bd6d97c4a1329952e0cd54b9887197c2",
+          "score": 0.01578456163406372
+        },
+        {
+          "positions": [
+            160356
+          ],
+          "passage_sha256": "c5bbf7d6353000f7c73fd051b1f411cf35fa35b24b79e4a85d2124d93a8665bb",
+          "score": 0.005641908384859562
+        },
+        {
+          "positions": [
+            269180
+          ],
+          "passage_sha256": "1ef1a032c87d1b7debea0021624fae512712e3edeaf65159bc69a3a4ae9f5b42",
+          "score": 0.0004655269149225205
+        },
+        {
+          "positions": [
+            16690
+          ],
+          "passage_sha256": "d60dc48696d633aad9afe74ec23f2d7f2de681bce9011fa11b9206009126396f",
+          "score": 0.015365341678261757
+        },
+        {
+          "positions": [
+            200049
+          ],
+          "passage_sha256": "3914df33987ca34556ba68d1fb01b0310e9a7607f5a2ba0c2490d05cec84d1ca",
+          "score": 0.024423090741038322
+        },
+        {
+          "positions": [
+            393501
+          ],
+          "passage_sha256": "17a157a728cbe5c05e2ed1989759e00330fb46a4aea50a07db6cc0a5f87319b9",
+          "score": 0.009633651934564114
+        },
+        {
+          "positions": [
+            267405
+          ],
+          "passage_sha256": "cf7dc2e48cde65730179d44c123c9962f3b20416276e0a6248d21ef59ace7e02",
+          "score": 0.00043393249507062137
+        },
+        {
+          "positions": [
+            376576
+          ],
+          "passage_sha256": "4cdd01bb9b735125c50e09cf09a62798a314ea6b8d5e70acdccce1b86e57c107",
+          "score": 0.0003150386910419911
+        },
+        {
+          "positions": [
+            394678
+          ],
+          "passage_sha256": "241210d8e7efef6bf40660b6930366aa97169c59ac94755f475a4c12ce780b82",
+          "score": 0.00020502213737927377
+        },
+        {
+          "positions": [
+            266868
+          ],
+          "passage_sha256": "5f71da9656310032da465a23755c58047495bedbc5da7f011e95becd6365d42a",
+          "score": 0.0022606407292187214
+        },
+        {
+          "positions": [
+            158769
+          ],
+          "passage_sha256": "c4c43db901594406e5bde6167e2df760c8f84cef646c09edd9a4c48f02c44f48",
+          "score": 0.003123648464679718
+        },
+        {
+          "positions": [
+            87337
+          ],
+          "passage_sha256": "d7cbbeb8f325029f29bda18123b1f36ab67e5922b612df120004efc4de42c8c4",
+          "score": 0.016277460381388664
+        },
+        {
+          "positions": [
+            90026
+          ],
+          "passage_sha256": "df40ca21c406e727f043fa31f148bcd37e0789339c1c579a17d95d666742d657",
+          "score": 0.0005233757547102869
+        },
+        {
+          "positions": [
+            145247
+          ],
+          "passage_sha256": "9930c96068a5101149b48ac86ca1b96508557473e36d0e70a43a808620d5d0e7",
+          "score": 0.0008393599418923259
+        },
+        {
+          "positions": [
+            90664
+          ],
+          "passage_sha256": "7a4049cccd4da95d279bfb45b0656adfbe07ff1aa22b2bbe2744d203b3bd09e5",
+          "score": 0.0020033332984894514
+        },
+        {
+          "positions": [
+            5632
+          ],
+          "passage_sha256": "9f1dcdaf72b92a7e075ec5549ba763989f537317acc376cc0d414e9e3ef6ff9a",
+          "score": 0.004736748989671469
+        },
+        {
+          "positions": [
+            46837
+          ],
+          "passage_sha256": "43dc9ab16414fa702b819927c30f9de631467f1ae5290aac65d06c7ef302610a",
+          "score": 0.0013993984321132302
+        },
+        {
+          "positions": [
+            394601
+          ],
+          "passage_sha256": "307b51bd7695188ff6f07fa9ffe640b211dc8b6b94552584a2ceedee2a6670c2",
+          "score": 0.002296159043908119
+        },
+        {
+          "positions": [
+            12556
+          ],
+          "passage_sha256": "4c8e5ecfb4726b718aed2b420422b0b96a27244080b271a3577278d92fc5dd99",
+          "score": 0.004736748989671469
+        },
+        {
+          "positions": [
+            90111
+          ],
+          "passage_sha256": "e6a991b77775967efa247db095fc93dd0c1e4a6b6ee6343fc845e1f21e47e7d8",
+          "score": 0.002693914109840989
+        },
+        {
+          "positions": [
+            92915
+          ],
+          "passage_sha256": "65b55771989a41ad4e54692fc7a99c56a1de28c5e0daddef4859b72c1c627f75",
+          "score": 0.0009510130621492863
+        },
+        {
+          "positions": [
+            268052
+          ],
+          "passage_sha256": "a626e6817cd37fb4d473edda66346a097d39b90d23bec8f5fc44fec9fa61ab94",
+          "score": 0.0020507434383034706
+        },
+        {
+          "positions": [
+            349
+          ],
+          "passage_sha256": "a687b157d33b449f9ce5e51aaa7c46666cf13fbaf540c983569efd981359f876",
+          "score": 0.0013617033837363124
+        },
+        {
+          "positions": [
+            38418
+          ],
+          "passage_sha256": "fa52ff7a606302fcea2fce767c468aee796dccb8c1b7994281e9bc8154b5131d",
+          "score": 0.011331753805279732
+        },
+        {
+          "positions": [
+            34308
+          ],
+          "passage_sha256": "bbf8e6571d4c0bdc0bea198addfc2de5e8cbce0fa56743d60153df369887d8c7",
+          "score": 0.006026951130479574
+        },
+        {
+          "positions": [
+            71738
+          ],
+          "passage_sha256": "27986f1cd9b4d34bc3a305467be428a820dd80e9b0fadf4a253a483caf914357",
+          "score": 0.0013993984321132302
+        },
+        {
+          "positions": [
+            200070
+          ],
+          "passage_sha256": "c687206059b7e33d698cae31a0b4ac24d428f0687d117db0a7a1b4d0da72d4d9",
+          "score": 0.010489090345799923
+        },
+        {
+          "positions": [
+            87343
+          ],
+          "passage_sha256": "8202d776bd671a5c7f9693c625be1843b0b1ebd9b7c1666305518ddd2ac93194",
+          "score": 0.0033766122069209814
+        },
+        {
+          "positions": [
+            89508
+          ],
+          "passage_sha256": "a1c3b045fdcad7a0d45a905b39e42fd8ea7ca3110349cebc8bc06f6296ff2179",
+          "score": 0.0013670255430042744
+        },
+        {
+          "positions": [
+            98667
+          ],
+          "passage_sha256": "c392f33bcae7d3722a22b0a3128b0edebac21669ed4898fa9b43bda003ce0404",
+          "score": 0.0019723358564078808
+        },
+        {
+          "positions": [
+            172745
+          ],
+          "passage_sha256": "0ae3e823065dbcf1441dece24a3bdf0bcf9f1c87eb1a3e449f96e857d0f8aea1",
+          "score": 0.0076066721230745316
+        },
+        {
+          "positions": [
+            200068
+          ],
+          "passage_sha256": "abac85c8c291798a25211bcf0710f630dd73cd4a914e3ebc2da04ba52b15997c",
+          "score": 0.010489090345799923
+        },
+        {
+          "positions": [
+            46850
+          ],
+          "passage_sha256": "ad0ff271aa04a11cc844c45951ad28a68d2ac5ab29ad937f16a63320334e6e65",
+          "score": 0.07211220264434814
+        },
+        {
+          "positions": [
+            88227
+          ],
+          "passage_sha256": "d072e785e2e811538cfc76ec239f67cc66e8f3e201c79ba7444f1f761f5d92d1",
+          "score": 0.022243669256567955
+        },
+        {
+          "positions": [
+            173350
+          ],
+          "passage_sha256": "25aaffc019abc6f02cb900df0d2c195809d11b49f62c8381142ba14cc87f56e6",
+          "score": 0.00025514140725135803
+        },
+        {
+          "positions": [
+            96138
+          ],
+          "passage_sha256": "cd1b31cf5b13f05dac6020db72e3db3a4950651bd396b00e9735c411220d5ad4",
+          "score": 0.0010362669127061963
+        },
+        {
+          "positions": [
+            268000
+          ],
+          "passage_sha256": "8241801cfc3807e4722367166fdc33473706aefacca92fad6d6aef68b5c03896",
+          "score": 0.0055333878844976425
+        },
+        {
+          "positions": [
+            268085
+          ],
+          "passage_sha256": "900993f1f8ef9b6de62852638168780337755b72a7068087c9777148b0668dcc",
+          "score": 0.002992665395140648
+        },
+        {
+          "positions": [
+            98637
+          ],
+          "passage_sha256": "1fd397cec2c256e42edafa243dbfee7c9c48d89925ef87d84bef2e76feaa87e1",
+          "score": 0.0008459375239908695
+        },
+        {
+          "positions": [
+            399279
+          ],
+          "passage_sha256": "b95bfae6169cbdc6a737af1b2c9d7de5dfcc3204e3385232c7811609cca010fe",
+          "score": 0.0026214411482214928
+        },
+        {
+          "positions": [
+            177128,
+            177238
+          ],
+          "passage_sha256": "584615fda0a7be0a0fc8f7ea10e67cf05dcaf50c3193082511f5754264261730",
+          "score": 0.0028560124337673187
+        },
+        {
+          "positions": [
+            386015
+          ],
+          "passage_sha256": "c833ef5a4e251c9f9eaebe55cd28369a00d0727b0f853786f0beb73315d48de6",
+          "score": 0.00043904531048610806
+        },
+        {
+          "positions": [
+            77351
+          ],
+          "passage_sha256": "b43ebd80cf384e31e3de57f93f6220b0384702f62a735f52f391749aab02568c",
+          "score": 0.12656909227371216
+        },
+        {
+          "positions": [
+            177128,
+            177238
+          ],
+          "passage_sha256": "584615fda0a7be0a0fc8f7ea10e67cf05dcaf50c3193082511f5754264261730",
+          "score": 0.0028560124337673187
+        },
+        {
+          "positions": [
+            269114
+          ],
+          "passage_sha256": "54e038b038bdc62f60e103831d7bae6b43d1972ed3996372cb012763dda1cc08",
+          "score": 0.0006719278171658516
+        },
+        {
+          "positions": [
+            19040
+          ],
+          "passage_sha256": "34eaf6e279163fbb5013f2cbadcc8afd7384125a79b3ca0d21c9e2a1a54229a2",
+          "score": 0.009340023621916771
+        },
+        {
+          "positions": [
+            83847
+          ],
+          "passage_sha256": "ca8145ba1242c82513c7124ebcd794043d5d1de722ff673d2fe3fadd08c8376a",
+          "score": 0.002323162741959095
+        },
+        {
+          "positions": [
+            302559
+          ],
+          "passage_sha256": "85f075ccc40aa7715028bfd8780e6e16e8fc356cbbeae177785fdb6a2f75decb",
+          "score": 0.0016484829830005765
+        },
+        {
+          "positions": [
+            304849
+          ],
+          "passage_sha256": "4656fc67490d1e71c2d2203d41ca9e848d20fc6a107280201f528316e9b18caf",
+          "score": 0.009898064658045769
+        },
+        {
+          "positions": [
+            200092
+          ],
+          "passage_sha256": "99c2fd575fc1169ebb59b65aa7dfd5a5a101b7e70f4a508145bef550349f2dfb",
+          "score": 0.0019342610612511635
+        },
+        {
+          "positions": [
+            281760
+          ],
+          "passage_sha256": "db97a6bf02fed85c2b64e86fc45e3d1f6b9f371cd3302dc595df914661a86648",
+          "score": 0.003389783203601837
+        },
+        {
+          "positions": [
+            287133
+          ],
+          "passage_sha256": "78511dd0845f604f07e3257843473ef17e48455331cea48e5cf49e3770b8e2e7",
+          "score": 0.002822832902893424
+        },
+        {
+          "positions": [
+            386758
+          ],
+          "passage_sha256": "0f0e7d171ac493bdf4a09cd8a927da5ba29237290bcc7b8af66c2b2b8b686920",
+          "score": 0.0002824080875143409
+        },
+        {
+          "positions": [
+            89398
+          ],
+          "passage_sha256": "8862b137fd0eb06e90494add62bcbfe6e70bd675f41b6f52a0152bb03a508857",
+          "score": 0.001269364496693015
+        },
+        {
+          "positions": [
+            266808
+          ],
+          "passage_sha256": "d907bbaba2d57c02251587ea1000fb38e4a8f1830186917113c14428a2bd4610",
+          "score": 0.0024822766426950693
+        },
+        {
+          "positions": [
+            381311
+          ],
+          "passage_sha256": "d29660f39181243f1baa919237cca623078a5be4bb1075ff30968d995493aacb",
+          "score": 0.019606182351708412
+        },
+        {
+          "positions": [
+            386427
+          ],
+          "passage_sha256": "a53f1aa0f510645955ad368885ad2bc13dd1999ad0476028e970f555fe5492a5",
+          "score": 0.001052568550221622
+        }
+      ]
+    },
+    {
+      "query_id": "deposit_and_drive:w1:q1",
+      "kind": "judgment",
+      "elapsed_seconds": 2.6567962000845,
+      "prepared_pair_count": 203,
+      "scores": [
+        {
+          "positions": [
+            799246
+          ],
+          "passage_sha256": "6d9959b89f90772d56c6f7a56df82e823d3946009c60ade207ffb4e1c418e2ac",
+          "score": 0.007518718484789133
+        },
+        {
+          "positions": [
+            928389
+          ],
+          "passage_sha256": "2841fba55751f7f28e48998d33167f1a8224405b2c7c953b3595b40e85442d2d",
+          "score": 0.20055769383907318
+        },
+        {
+          "positions": [
+            951349
+          ],
+          "passage_sha256": "333cf87707e8bdebe0671faf9d5f9fb7963bea1e594851e0fc7773240c1bc0db",
+          "score": 0.029986508190631866
+        },
+        {
+          "positions": [
+            799247
+          ],
+          "passage_sha256": "c9f41f8dcb86d459c65e5290c703ccbfd73bfb9235d0c27b5c1285960d697eb4",
+          "score": 0.04778006672859192
+        },
+        {
+          "positions": [
+            1012505
+          ],
+          "passage_sha256": "e6f97d9de6644437575b0a8dbfaff1a3041a340157650f95676cc25606203853",
+          "score": 0.022715754806995392
+        },
+        {
+          "positions": [
+            963652
+          ],
+          "passage_sha256": "da33f3c1250cfc5bba023c275f2dacd5ba958ed374cd8195b9f500c3ee1897d1",
+          "score": 0.009670992381870747
+        },
+        {
+          "positions": [
+            928392
+          ],
+          "passage_sha256": "f111e43ceb20a53cb4b0c242c3d479783a542fd13033232de468087130909e0d",
+          "score": 0.03853849694132805
+        },
+        {
+          "positions": [
+            976301
+          ],
+          "passage_sha256": "4b8920fa0878516f796e9ba046bfda42ceea9401711c5d160e2548e05f660b70",
+          "score": 0.0035518845543265343
+        },
+        {
+          "positions": [
+            802429
+          ],
+          "passage_sha256": "a6e2b348c5515c99a40be68273c65800dcd4ec16046ef016bb4bf72fe5484f8f",
+          "score": 0.012771867215633392
+        },
+        {
+          "positions": [
+            338762
+          ],
+          "passage_sha256": "f9f62fec20991d104c249d62fa478b75e2fda008e9a136088f0d14cfe5481352",
+          "score": 0.023241925984621048
+        },
+        {
+          "positions": [
+            970938
+          ],
+          "passage_sha256": "26786a67cbc322d679ce15af96aa21501dd420f136c6a1a4f2893926e75197f4",
+          "score": 0.01342825498431921
+        },
+        {
+          "positions": [
+            1013737
+          ],
+          "passage_sha256": "ef040850d4b8a10da26052638c25b71e941c9fed1bd57f9747d65ef6f0ddeca9",
+          "score": 0.007725534029304981
+        },
+        {
+          "positions": [
+            584477
+          ],
+          "passage_sha256": "9c8ccf00837d1fbf41d27e6f8eaeca7d7af98f4839af94775e08733c2a118a97",
+          "score": 0.003135835751891136
+        },
+        {
+          "positions": [
+            584478
+          ],
+          "passage_sha256": "0d1328f4faecf12f81c019fdcb2832c94a4acf08de1d93693f03e975e266d6ea",
+          "score": 0.0026730059180408716
+        },
+        {
+          "positions": [
+            787740
+          ],
+          "passage_sha256": "e7ab16d4f1b6c43af5c3e5006b6f1d08a3daaf869f5fc1551ec0603a8229c911",
+          "score": 0.0027149852830916643
+        },
+        {
+          "positions": [
+            900891
+          ],
+          "passage_sha256": "2c699735b7f9d44c5b3c273ff17169950eb1cb09cbcd893dfd18e4db25012b61",
+          "score": 0.0005112579092383385
+        },
+        {
+          "positions": [
+            217173
+          ],
+          "passage_sha256": "3d1e94075c069f36e667aca59dcb61a30e3cee9866a7470c6cd99f9581c2f8f2",
+          "score": 0.0948452427983284
+        },
+        {
+          "positions": [
+            332879
+          ],
+          "passage_sha256": "83bd106158ed6c5e8701d0bab38e6599d26db88cacbc2574fbee68fbce78ef86",
+          "score": 0.056756895035505295
+        },
+        {
+          "positions": [
+            544404
+          ],
+          "passage_sha256": "a2751dadff36d9fed533609cb9fa76aca2abb29625d20e66b2ba58e8b713bd6d",
+          "score": 0.0005838325014337897
+        },
+        {
+          "positions": [
+            919427
+          ],
+          "passage_sha256": "f0a37fd140fee08559b5c264acc8d5054e6feb1bdd856db8f2fed11a3af259f6",
+          "score": 0.026105914264917374
+        },
+        {
+          "positions": [
+            987773
+          ],
+          "passage_sha256": "f69186036f55997277a8fd54aef674af9d9298da990d6252750e8b6ea3072aa2",
+          "score": 0.0007763299508951604
+        },
+        {
+          "positions": [
+            339464
+          ],
+          "passage_sha256": "9024308d7f922855ab0f170fa38be114176facefd28b5f59d55249c46e154628",
+          "score": 0.0006462032906711102
+        },
+        {
+          "positions": [
+            455313
+          ],
+          "passage_sha256": "9a7e70ce2fce955056c8b04c09906d85abe81e57e557284df9c942a47852fd79",
+          "score": 0.19915220141410828
+        },
+        {
+          "positions": [
+            479226
+          ],
+          "passage_sha256": "215e11f256128532f92db49c6ae597f61533c7f5036667764d44ce46d905dc55",
+          "score": 0.01196109689772129
+        },
+        {
+          "positions": [
+            693508
+          ],
+          "passage_sha256": "6fc79e690a280e91782ce806556cf3921cef496afea40442f0f09ee6b0a2c16d",
+          "score": 0.017712298780679703
+        },
+        {
+          "positions": [
+            975187
+          ],
+          "passage_sha256": "6ed0c04219608e13cdad17afd1896adf3e52698ad318537e5af1486de9391771",
+          "score": 0.002934951800853014
+        },
+        {
+          "positions": [
+            558777
+          ],
+          "passage_sha256": "979ee44ee011a73eac9d816d2b7fa96e7c52947ed74c387178a6b526e7bb3c13",
+          "score": 0.0006851712241768837
+        },
+        {
+          "positions": [
+            696486
+          ],
+          "passage_sha256": "2dabe9ff33c94a71a633db49f60deb79ed60da9b45bc5a1deaf51fc91bc6533a",
+          "score": 0.026056302711367607
+        },
+        {
+          "positions": [
+            901136
+          ],
+          "passage_sha256": "929c043fe16a131d472570a20da9ac75556e25a60fa56cfcfaa3ab3e51071779",
+          "score": 0.0065388246439397335
+        },
+        {
+          "positions": [
+            1005717
+          ],
+          "passage_sha256": "dd79abe23887bd08614d3201ea6fa71dbae6dd0b8dd590f8eeb0b9f743a2245e",
+          "score": 0.0016166499117389321
+        },
+        {
+          "positions": [
+            403880
+          ],
+          "passage_sha256": "33e665fb50b8078e4aeb5de4e8dda24b1ab4753e42f5deff084c265149e96799",
+          "score": 0.001604089280590415
+        },
+        {
+          "positions": [
+            690656
+          ],
+          "passage_sha256": "1015ee2af76fb928055850282f89e96584f675e9b6135b090bc3a66c54adb4ea",
+          "score": 0.00048029719619080424
+        },
+        {
+          "positions": [
+            696319
+          ],
+          "passage_sha256": "cb7843f0077ee9f9446c42be0c995adecbbbb41c1405988178565755a42213bc",
+          "score": 0.01711088977754116
+        },
+        {
+          "positions": [
+            949572
+          ],
+          "passage_sha256": "44b040374ed9324c8a4ea571eaa76fc6b4bb03c9524c974051570b731897f148",
+          "score": 0.003809630172327161
+        },
+        {
+          "positions": [
+            951367
+          ],
+          "passage_sha256": "69627b9d2af5806c33aeee6895001fbf72cbe3dab6665f58216eb62330255e0f",
+          "score": 0.007937993854284286
+        },
+        {
+          "positions": [
+            960444
+          ],
+          "passage_sha256": "758a715f8a70ab673563b690045346f5b826d205994513564b4b3d2359787aac",
+          "score": 0.0026214411482214928
+        },
+        {
+          "positions": [
+            318584
+          ],
+          "passage_sha256": "d0642a489d045ee51049b701bedb1ff7c0857438edf45a45ba3f81e7467ee6aa",
+          "score": 0.0060975621454417706
+        },
+        {
+          "positions": [
+            397513
+          ],
+          "passage_sha256": "459a976d507ce20dc6c99a26c74d44aa021fe7b835306b04534296056d67dda7",
+          "score": 0.002889581024646759
+        },
+        {
+          "positions": [
+            544389
+          ],
+          "passage_sha256": "0d0f3597d52be7a2c4a31bc9aa2a464b705c5fcfa821d81bb016018784a64ed7",
+          "score": 0.000626334105618298
+        },
+        {
+          "positions": [
+            676256
+          ],
+          "passage_sha256": "23c5bf115fa0de40779f6820df5119d74ed833270364d036c149a7c56a1f84f4",
+          "score": 0.0016549242427572608
+        },
+        {
+          "positions": [
+            934816
+          ],
+          "passage_sha256": "8f7e35772196d192a69ca31bd9b5b1f813c6f1fbf723d2e860ae9e1026422330",
+          "score": 0.00524044968187809
+        },
+        {
+          "positions": [
+            949753
+          ],
+          "passage_sha256": "37f89bb729773ddfdb750cf13a9f35074d63a8dcc67d21d43a0902f15cd121ac",
+          "score": 0.004038591403514147
+        },
+        {
+          "positions": [
+            692863
+          ],
+          "passage_sha256": "771a7016391f87690bbc9d2b736550652d205beecb5f7e359498c41b7cf80cf4",
+          "score": 0.0024060888681560755
+        },
+        {
+          "positions": [
+            135257
+          ],
+          "passage_sha256": "d3844958def9a3c85cccdd1ad4cf91019f513af19e1d79138cf8c800348ba811",
+          "score": 0.00214894930832088
+        },
+        {
+          "positions": [
+            544369
+          ],
+          "passage_sha256": "a1f5a23085a95300080e23f133ca0cf73463e0cb87055419b5dd94486b8b5e68",
+          "score": 0.0003006163169629872
+        },
+        {
+          "positions": [
+            890023
+          ],
+          "passage_sha256": "952954a99b075646d04014c2bbb57af7d8bf80a72b3f27ba88c1adb2070e820c",
+          "score": 0.011552670039236546
+        },
+        {
+          "positions": [
+            1011003
+          ],
+          "passage_sha256": "64ed0416e6c4204453c0fa7d63dac59b0e686a7874ae255ae6d7a6745f267341",
+          "score": 0.02165667712688446
+        },
+        {
+          "positions": [
+            1012925
+          ],
+          "passage_sha256": "425c4ec5403aa8d9b2df8ac4d33b04621c123571dc0da30e40fc7528e1921778",
+          "score": 0.0011073390487581491
+        },
+        {
+          "positions": [
+            544363
+          ],
+          "passage_sha256": "173d5361dfb92b203b934ffa801789d4654e3c9a45cd0b766e5c298510cfbef1",
+          "score": 0.0006693099858239293
+        },
+        {
+          "positions": [
+            833047
+          ],
+          "passage_sha256": "b953e05f867dc5229e454f6c88cec8d7689396bb85fc5ca5c4d1c3368c7a3df8",
+          "score": 0.00044770087697543204
+        },
+        {
+          "positions": [
+            856664
+          ],
+          "passage_sha256": "4e0820d60f5fd63a8beb947bd23ced0c72a9943e52d05b015201909bae9006bc",
+          "score": 0.038610927760601044
+        },
+        {
+          "positions": [
+            921525
+          ],
+          "passage_sha256": "8a91519d644870d9d9f1f69cfe3d2d1afe56c4856e1e8948036c74a95d9ca9ca",
+          "score": 0.00838045310229063
+        },
+        {
+          "positions": [
+            349858
+          ],
+          "passage_sha256": "a14a7429ac590bfd795f2e54ea05d0684d9b860a03e42ecf8f409026636222b8",
+          "score": 0.023779986426234245
+        },
+        {
+          "positions": [
+            692869
+          ],
+          "passage_sha256": "67be5a98216f725c224db603a65203b9a7a038bb07c03d89df6dac896a642475",
+          "score": 0.024423090741038322
+        },
+        {
+          "positions": [
+            921212
+          ],
+          "passage_sha256": "dc62eadd2e3db8c3270bfc31b5b838e5194d6f480d835a6ea5b26877ca35e3c5",
+          "score": 0.0055333878844976425
+        },
+        {
+          "positions": [
+            927082
+          ],
+          "passage_sha256": "1c4edc6a3a0832adb12a982b9657033bc257570b7999efc70b8e9729c2e80a99",
+          "score": 0.0010162440594285727
+        },
+        {
+          "positions": [
+            217176
+          ],
+          "passage_sha256": "7844f7fa4b7b2f052e3b95d27ea2b4fa1b31f40141bddb089bafd6bd696804e3",
+          "score": 0.06754669547080994
+        },
+        {
+          "positions": [
+            799240
+          ],
+          "passage_sha256": "c6e6d170dd61bdcc66370374c28f7636681803cfc7ddc7065ef1928b107b3044",
+          "score": 0.00821969285607338
+        },
+        {
+          "positions": [
+            801735
+          ],
+          "passage_sha256": "3c57380cadbd0ef5f4f2ff4a6c4c5d8deb780e1d406c72535ee8b65e512159b3",
+          "score": 0.000337979436153546
+        },
+        {
+          "positions": [
+            952685
+          ],
+          "passage_sha256": "b84fe01215268c866530ec40afcc52b194a0d58c3af19e7775bdd6af94ec57b4",
+          "score": 0.0029235428664833307
+        },
+        {
+          "positions": [
+            983815
+          ],
+          "passage_sha256": "2cf90ea528f6126ed05cec60770045e5e76534c758b4b5cbd9c7d750b4c0cc4f",
+          "score": 0.00023050670279189944
+        },
+        {
+          "positions": [
+            263078
+          ],
+          "passage_sha256": "ed53fa9bcace9e935f8a72acaae732873cd688aeadd867850141c5c84e520688",
+          "score": 0.017242778092622757
+        },
+        {
+          "positions": [
+            752795
+          ],
+          "passage_sha256": "be9eb63b9d778b0ad1723cd36aed2e100bb378a4469f64221657ac3650bda96d",
+          "score": 0.0555151142179966
+        },
+        {
+          "positions": [
+            874659
+          ],
+          "passage_sha256": "0623b97cd345338574487836a66cbc002e90164f76f4b1437627af7a38a70646",
+          "score": 0.000570315751247108
+        },
+        {
+          "positions": [
+            904699
+          ],
+          "passage_sha256": "e80ab323fb14fe95389bf966bbfa5485a350afb7847d5d30758121377e5ee895",
+          "score": 0.0004655269149225205
+        },
+        {
+          "positions": [
+            951348
+          ],
+          "passage_sha256": "a2a631dbb21f930055cfff8c15436c73af125d2b4b6ef0ecb7539969664e18c0",
+          "score": 0.01678548939526081
+        },
+        {
+          "positions": [
+            158118
+          ],
+          "passage_sha256": "28bac9fb5b21799b8a93c8a69c1171fbef9353186ac5f15d5989d76880c6d313",
+          "score": 0.007204769179224968
+        },
+        {
+          "positions": [
+            544367
+          ],
+          "passage_sha256": "2b8d7bfd7af60f032949e8375a883806a7cdec2acbd99994e13215c42fe4f7e8",
+          "score": 0.0003889921063091606
+        },
+        {
+          "positions": [
+            752824
+          ],
+          "passage_sha256": "af8951021f772c4840f92a686e28f782568fe66be1ee4cbda592e2ce1a66aed8",
+          "score": 0.016850080341100693
+        },
+        {
+          "positions": [
+            806411
+          ],
+          "passage_sha256": "cd062426153a6920761ab80911152cf73e132bcc1a7fb0a14fb219feca7b42bb",
+          "score": 0.0001547666179249063
+        },
+        {
+          "positions": [
+            917142
+          ],
+          "passage_sha256": "d80d2a147e6aedac76b5920c07f189e08c625a448f540454da00a493cd855bed",
+          "score": 0.0023141263518482447
+        },
+        {
+          "positions": [
+            988631
+          ],
+          "passage_sha256": "7211509a8ddfa1f4c421f1f03b62553dfeb214cdb17bb2a0f0045b446c7f3995",
+          "score": 0.0031115086749196053
+        },
+        {
+          "positions": [
+            594188
+          ],
+          "passage_sha256": "66428ba2b8f6d534a7fca6807381cad389dcb5316999e9c966af1c735f9e43c1",
+          "score": 0.004281254485249519
+        },
+        {
+          "positions": [
+            696394
+          ],
+          "passage_sha256": "7b5765ad4ec518032c5bd408a28e3e615632e57afd9b30ffa8533fa4d35d5d4b",
+          "score": 7.782753527862951e-05
+        },
+        {
+          "positions": [
+            752828
+          ],
+          "passage_sha256": "36ba1d508be1bf0329622ee0faabc7eef421cde3652d906d65e832f2ae430a15",
+          "score": 0.022074386477470398
+        },
+        {
+          "positions": [
+            983803
+          ],
+          "passage_sha256": "7d290830b7b6df719cf4b4897cbf10bfd60cce2a8e2206eddb4f2c591995353b",
+          "score": 0.0008135565440170467
+        },
+        {
+          "positions": [
+            1006249
+          ],
+          "passage_sha256": "d3ca9b5e2b7f3a62af3a3d7af7aa861fae6af528ea885af51fe633328b9aec5f",
+          "score": 0.002034817123785615
+        },
+        {
+          "positions": [
+            71847
+          ],
+          "passage_sha256": "a2be2d672952d7a1b73f6c2bef73475b27ab43d8c1878b787540e85a00facab7",
+          "score": 0.007431773468852043
+        },
+        {
+          "positions": [
+            689051
+          ],
+          "passage_sha256": "304f58d6f6dd65e18a43b3de42870f50e190dbc49eb824de92326a1bcd2bb51c",
+          "score": 0.02182282693684101
+        },
+        {
+          "positions": [
+            899130
+          ],
+          "passage_sha256": "b55ea6a2d0e4de62b1d96ab78b2e95aaed26c96c8d97f9d9a7c4e22681af6b11",
+          "score": 0.0067449891939759254
+        },
+        {
+          "positions": [
+            998302
+          ],
+          "passage_sha256": "f4cd663518bb7e78beebe81cb3f0a063789928784ff8685f9f589cef2c965a9e",
+          "score": 0.004231587518006563
+        },
+        {
+          "positions": [
+            504013
+          ],
+          "passage_sha256": "80b8006b075ab8d9617935d82ad5e6505a33da3b11e9f9fa3b504b6deca52e1f",
+          "score": 0.07737810909748077
+        },
+        {
+          "positions": [
+            544362
+          ],
+          "passage_sha256": "0606e162b28c0a3765e7012bb9f27d94b4a8f79d9b0ef173f0f367b89efe1a81",
+          "score": 0.0015916259726509452
+        },
+        {
+          "positions": [
+            915267
+          ],
+          "passage_sha256": "843931b36c7c4626ed2358e2fcad053d88720a999ef3661716ad2cc4b067e02e",
+          "score": 0.004297939129173756
+        },
+        {
+          "positions": [
+            33875
+          ],
+          "passage_sha256": "07e275ddc920ad8dccf1b6ce5de176cce7f9a6aec061394f9183d6fa56863e93",
+          "score": 0.011915022507309914
+        },
+        {
+          "positions": [
+            323010
+          ],
+          "passage_sha256": "bb38f9781e08307dc83979c83c09d47f5f0d288f89dc9641fe88daa0a13db302",
+          "score": 0.011375600472092628
+        },
+        {
+          "positions": [
+            626027
+          ],
+          "passage_sha256": "2ab088669324d3264b55f7d8fe0c2d5bfbd620d96007e445d664c8c9f535d298",
+          "score": 0.014559517614543438
+        },
+        {
+          "positions": [
+            645005
+          ],
+          "passage_sha256": "5395c842412f69d94785dd10919c39f862dd15fec5ce8f75eec9f0b560beb5c4",
+          "score": 0.012007349170744419
+        },
+        {
+          "positions": [
+            942444
+          ],
+          "passage_sha256": "b67ebe5577cd92caea410e5fce594c5e1ab1cba2942013c44fa4e696ebab4209",
+          "score": 0.00043393249507062137
+        },
+        {
+          "positions": [
+            957619
+          ],
+          "passage_sha256": "c20a164baa2e9610f42f1db6a31b1a82b63f406dc2b1d91d046289f89164f616",
+          "score": 0.0021657671313732862
+        },
+        {
+          "positions": [
+            64521
+          ],
+          "passage_sha256": "ebc67cdb8de5b70851d81226ce3eb526afd3e02a6c1a55a87529835689d2136d",
+          "score": 0.0015669887652620673
+        },
+        {
+          "positions": [
+            473289
+          ],
+          "passage_sha256": "ebd817eb4adaca8e7a99d5128a653318d625a36c289cdd049b9f4d8dc3964d93",
+          "score": 0.0022170129232108593
+        },
+        {
+          "positions": [
+            491510
+          ],
+          "passage_sha256": "950b3b4a61eff937715abb7dd03a742354af637dd1b5c2e334d5f0d0d0eb0ca0",
+          "score": 0.00214894930832088
+        },
+        {
+          "positions": [
+            544374
+          ],
+          "passage_sha256": "84c06cc9fc1f2d8b4043fcebbb71eb9022947498283487a2fdf6abbfef333f4f",
+          "score": 0.0044683837331831455
+        },
+        {
+          "positions": [
+            851463
+          ],
+          "passage_sha256": "32f0c6f020d9c8f1d5886fe406718d7751d3bb3007a7cabd56a64117c9db5b77",
+          "score": 0.004297939129173756
+        },
+        {
+          "positions": [
+            296330
+          ],
+          "passage_sha256": "0adf606bc6e68d25a0f9ad9c0c3ca59c1547147e9386af725095a26f5a0e806c",
+          "score": 0.00415008096024394
+        },
+        {
+          "positions": [
+            377707
+          ],
+          "passage_sha256": "ddee32183fe33e07e37220628a9079f6421ef7f5818c8f3042f37ce8ea3e03e8",
+          "score": 0.001597845577634871
+        },
+        {
+          "positions": [
+            544379
+          ],
+          "passage_sha256": "5af6830acb33bee1a55815e5c4ba34dcd45ab7e1be23a91fffbc8ab8b9ad9c89",
+          "score": 0.010902374982833862
+        },
+        {
+          "positions": [
+            962558
+          ],
+          "passage_sha256": "ecff7e181a8859568eaa499860f0016e9f4212384538ba66284fed41fdbecfd8",
+          "score": 0.0011740821646526456
+        },
+        {
+          "positions": [
+            973810
+          ],
+          "passage_sha256": "e43a19fad3a3b448f7b63323b642bac61732e0c5b7691200b0ce8699e445fcd9",
+          "score": 0.006850480102002621
+        },
+        {
+          "positions": [
+            2525
+          ],
+          "passage_sha256": "e3b2cc28cae6d3a28df01af1fddc2cf537c3afb22a5c3012019bd6ecd7f12ca8",
+          "score": 0.0067449891939759254
+        },
+        {
+          "positions": [
+            59031
+          ],
+          "passage_sha256": "d668dfa15c573bce53a50debc603d2b13924631c676a2869b1cef04ee2bb0144",
+          "score": 0.02681019715964794
+        },
+        {
+          "positions": [
+            373136
+          ],
+          "passage_sha256": "ea6570b3e20cb892c53013691517059a693bc7ebe20fb948246123f6a13881ea",
+          "score": 0.000758359965402633
+        },
+        {
+          "positions": [
+            418064
+          ],
+          "passage_sha256": "ad7d787fc2ef11f03f3d38edb92f0f15ec9d85f9e2683522b1379ffb0e5f75db",
+          "score": 0.07107366621494293
+        },
+        {
+          "positions": [
+            966668
+          ],
+          "passage_sha256": "75233388d5644079ed2498f19c57c028712eecd6ba7fbdac36bb7fefa08216d3",
+          "score": 0.0002287133247591555
+        },
+        {
+          "positions": [
+            992198
+          ],
+          "passage_sha256": "9a99b9daf2a944c4292fce10c3a51dacc61dcaaa99e9ebe6fbe87f8298db1156",
+          "score": 0.0015070488443598151
+        },
+        {
+          "positions": [
+            398563
+          ],
+          "passage_sha256": "c3ba2f6b72e47158838d67943714e3fb1d313ce8cf07618a48d43ccf4a76aaec",
+          "score": 0.0007293288363143802
+        },
+        {
+          "positions": [
+            444732
+          ],
+          "passage_sha256": "4f74c4007831779464273221f3ecca06e0bd71c14ad9754c26ff038db9f15dc8",
+          "score": 0.019756916910409927
+        },
+        {
+          "positions": [
+            499731
+          ],
+          "passage_sha256": "c85914b745d997f784351c4d874db310ae7a234b10892bcb8906f0e5b56ed9d1",
+          "score": 0.011244560591876507
+        },
+        {
+          "positions": [
+            560548
+          ],
+          "passage_sha256": "247044bf96442fa87295ead3371992f1e90fd6732d85c3c64775c3027e83da0f",
+          "score": 0.0005792917218059301
+        },
+        {
+          "positions": [
+            974267
+          ],
+          "passage_sha256": "fe5c74a6130787426b02bb7b4e0b75e532953d1657771ec4006ae4599904fb1e",
+          "score": 0.001299427472986281
+        },
+        {
+          "positions": [
+            983838
+          ],
+          "passage_sha256": "a0cc0a04b7ba21f81a9366e94dce4f8035bd871fed7e04f49cac5f77ac7d0150",
+          "score": 0.0006641048239544034
+        },
+        {
+          "positions": [
+            3590
+          ],
+          "passage_sha256": "c0e1acc59f5e70621b967164c81025685fd8d275405e82e2d80455a7e853d46a",
+          "score": 0.007039045449346304
+        },
+        {
+          "positions": [
+            490739
+          ],
+          "passage_sha256": "e5a81988831fda7c2424d7d460f76aaa3c3d8bc65996f072dc908b2a119198c1",
+          "score": 0.0006337125087156892
+        },
+        {
+          "positions": [
+            689053
+          ],
+          "passage_sha256": "e464948e9034f73bea04b23b2addca969c3f90c1832b653eeed0b289d6d124bd",
+          "score": 0.0077555361203849316
+        },
+        {
+          "positions": [
+            785978
+          ],
+          "passage_sha256": "3e1cfc3898aaf0e009ac07022fd69f0b5bb417ed9334f96fc049270cd7822342",
+          "score": 6.868317723274231e-05
+        },
+        {
+          "positions": [
+            1003258
+          ],
+          "passage_sha256": "4211009bf910ba235f15ab568278b02ac05211511de2f0d6d72276f32b8428b2",
+          "score": 0.006984650157392025
+        },
+        {
+          "positions": [
+            202930
+          ],
+          "passage_sha256": "6143990214938c2ef555f3cd40ae55037617936f9d733c52bdb329d6600e8441",
+          "score": 0.00035557945375330746
+        },
+        {
+          "positions": [
+            544387
+          ],
+          "passage_sha256": "92dba7af9db4ae1528d07c60eb78fd2ca5c470b8923b7c6d7933a526adfe48fc",
+          "score": 0.0009039677679538727
+        },
+        {
+          "positions": [
+            693928
+          ],
+          "passage_sha256": "55cff3cd343bd2d3f365cb9fbdb1dc0a7d695cb757dca5956ad3fd7a0de2e19a",
+          "score": 0.004943688865751028
+        },
+        {
+          "positions": [
+            750894
+          ],
+          "passage_sha256": "c7d886794949c853629e0f9fb689df70a7faac18835d5f717aeaab13b627a62a",
+          "score": 0.004736748989671469
+        },
+        {
+          "positions": [
+            806438
+          ],
+          "passage_sha256": "71c97f6ef157a723a09666ec6a0c4063edc0cd8979f67eb54827fcbae3e43210",
+          "score": 0.0001837845629779622
+        },
+        {
+          "positions": [
+            891702
+          ],
+          "passage_sha256": "2fc0f889193595eb2fc669e6f407048419eef5ce94581004538aa4a40bb3a635",
+          "score": 0.0038244836032390594
+        },
+        {
+          "positions": [
+            133462
+          ],
+          "passage_sha256": "ba08a1a73df15cd1d187616ca115b6cae807ecc6d98212b1a9fcf619e8bc59fb",
+          "score": 0.0013723686570301652
+        },
+        {
+          "positions": [
+            690657
+          ],
+          "passage_sha256": "b9833e34f7c8cec616413df9cfc337d13daabd06048a3b6f04bd80b8d7fa9b16",
+          "score": 0.0001740054285619408
+        },
+        {
+          "positions": [
+            773145
+          ],
+          "passage_sha256": "914d65fa9ab44fe03b5730993eccf506aa25fd9ec4d954ffb24601a0d94ee2b9",
+          "score": 0.0060739340260624886
+        },
+        {
+          "positions": [
+            968134
+          ],
+          "passage_sha256": "b8a20c2ba2884a6e4dd15b1978e08a0fd2055aa80006e113c192b94923d52441",
+          "score": 0.0018530592788010836
+        },
+        {
+          "positions": [
+            982300
+          ],
+          "passage_sha256": "c7b61272388430f9b27cf8c88a843e6f0e6989ecb3eb72245f404c8cd43fecfd",
+          "score": 0.00570803415030241
+        },
+        {
+          "positions": [
+            96267
+          ],
+          "passage_sha256": "9c2194a24542e44398a5c9eb4948fe3773373a5c02aa65c06a2ee6c85beea80a",
+          "score": 0.009340023621916771
+        },
+        {
+          "positions": [
+            436844
+          ],
+          "passage_sha256": "312a4bf3d28698753a32ff3fa40dace7c7bde8ecd8f4cae136cda1b47f33a791",
+          "score": 0.0011203772155568004
+        },
+        {
+          "positions": [
+            847853
+          ],
+          "passage_sha256": "15f2356d1b812c81ae4a997c68697c090fe2499dde8aa11a53f262eefed8daec",
+          "score": 0.00041731575038284063
+        },
+        {
+          "positions": [
+            958794
+          ],
+          "passage_sha256": "89bd07d367dd9bc9984798b9674f35dcd52a06b4f509a775178efa0f444461b1",
+          "score": 0.0015792594058439136
+        },
+        {
+          "positions": [
+            1002978
+          ],
+          "passage_sha256": "d232bb46b126054edc0e5e9ebbc7d9ef2dfbcc13ae456bef6758eee0760c9267",
+          "score": 0.005469274241477251
+        },
+        {
+          "positions": [
+            63431
+          ],
+          "passage_sha256": "c33944db181a9d2b20fddcfd34d1de09e2273a3b5c46b9ddbb3801bfb13b8f82",
+          "score": 0.0008864988922141492
+        },
+        {
+          "positions": [
+            617434
+          ],
+          "passage_sha256": "08ab7bdd4fe3c732afc61572e8ae652612b9dd19693c400385ef362bb23c0611",
+          "score": 0.003123648464679718
+        },
+        {
+          "positions": [
+            633751
+          ],
+          "passage_sha256": "17a6fd9c0864a108202cd2362262b63c5cddfa6da3674d8ea5e911a73cec29a2",
+          "score": 0.012624948285520077
+        },
+        {
+          "positions": [
+            691794
+          ],
+          "passage_sha256": "a06c25b4977b81ddd5efa1b995958f450eb762da78c79d4ec6605e53fa889eae",
+          "score": 0.0025708682369440794
+        },
+        {
+          "positions": [
+            758089
+          ],
+          "passage_sha256": "84837d183fa844ca04e805177ddff3a04120f5980f929c1a437353fdcfbd8ba5",
+          "score": 0.005343256052583456
+        },
+        {
+          "positions": [
+            544378
+          ],
+          "passage_sha256": "567b361909630ec7b6f54fed206ed21d22382a3f634fa4e89b6e114e68806d68",
+          "score": 0.0003150386910419911
+        },
+        {
+          "positions": [
+            673697
+          ],
+          "passage_sha256": "f70abfaac9c0eaa180c518f38e84f3e73b64e94269401d9459c9a207965cf7e9",
+          "score": 0.0005658799782395363
+        },
+        {
+          "positions": [
+            752846
+          ],
+          "passage_sha256": "04ce640cf6f2fb5b55557984686e17a0ecd6c4e866e6f35c712000b6a62f5ada",
+          "score": 0.014447852037847042
+        },
+        {
+          "positions": [
+            969498
+          ],
+          "passage_sha256": "af9293f0cabff9b4bae082806fa1311b016282a84a7fd2004a1ff99ac9d26f7d",
+          "score": 0.00043224150431342423
+        },
+        {
+          "positions": [
+            969947
+          ],
+          "passage_sha256": "eacd71d65f267e2bbb3d344663d9012be24646967f2e754a4617bc1f91bf07af",
+          "score": 0.004905405919998884
+        },
+        {
+          "positions": [
+            1013887
+          ],
+          "passage_sha256": "2678a5042378958474055679467448639ac657081af030ee671a57910e2c86ac",
+          "score": 0.008061991073191166
+        },
+        {
+          "positions": [
+            321404
+          ],
+          "passage_sha256": "1afae5d28256c31700588ba5a27be4bf3d0a869e6c05e6a930754aae0cfd8be2",
+          "score": 0.00042223287164233625
+        },
+        {
+          "positions": [
+            676262
+          ],
+          "passage_sha256": "23fd5144c91750be3c859b875c0ce7961d093bbbae2928cfa521ed97255c2225",
+          "score": 0.0041179172694683075
+        },
+        {
+          "positions": [
+            742356
+          ],
+          "passage_sha256": "6bcff1c6091aedc9c0512b0c81fa9aea4366bb6c87429fce2f661593c5210ec4",
+          "score": 0.0006047102506272495
+        },
+        {
+          "positions": [
+            911359
+          ],
+          "passage_sha256": "6486b4b0b51df7322e66e43219ea4a76e9ab102c7bc39038b691cf09c28d9b56",
+          "score": 0.06584469974040985
+        },
+        {
+          "positions": [
+            954832
+          ],
+          "passage_sha256": "30a1b825aa404b4cfb3b3eaaedb2c104114c65e63562034ba389bd9170d177a7",
+          "score": 0.00020342698553577065
+        },
+        {
+          "positions": [
+            1013254
+          ],
+          "passage_sha256": "1b59e923a3f00afbe6bf530f4086e8901df71720f52336840eefd44eefb9c13f",
+          "score": 0.0008360903011634946
+        },
+        {
+          "positions": [
+            617737
+          ],
+          "passage_sha256": "b9112990211424a7a1339b80eace1160a6648140ceb6bfc2d3f0d56f0c0a44b4",
+          "score": 0.012673736549913883
+        },
+        {
+          "positions": [
+            636230
+          ],
+          "passage_sha256": "c8a975bb9531fd27d51bd8dcbf129f3c4a653aa1fc410ab7ef85400ee4520e70",
+          "score": 0.00042887922609224916
+        },
+        {
+          "positions": [
+            913277
+          ],
+          "passage_sha256": "3b047dd6d3d80f29a4d8f4d119e71c573a4ed84c82b6bcf6ebc7abe1583c18bc",
+          "score": 0.0014437558129429817
+        },
+        {
+          "positions": [
+            946103
+          ],
+          "passage_sha256": "238f15811a024d3cc0c74e61139b620ace1a78d3f5d0407edc6120e74437817f",
+          "score": 0.0028449096716940403
+        },
+        {
+          "positions": [
+            963660
+          ],
+          "passage_sha256": "ee82c1256d63a3d671e5addff74bb899b4b1e833d1a94aa04bda6715cb66fdf5",
+          "score": 0.007665874902158976
+        },
+        {
+          "positions": [
+            530827
+          ],
+          "passage_sha256": "f146e8564183d7e3150808ce7a16544e8235329e9d0fe7c692caee892c8242eb",
+          "score": 0.06187598779797554
+        },
+        {
+          "positions": [
+            637987
+          ],
+          "passage_sha256": "7c1930780d6f4ec32e03d1d0d5fd876f3d6d157760ecbb8d46262b826fc2419e",
+          "score": 0.0014381353976204991
+        },
+        {
+          "positions": [
+            689105
+          ],
+          "passage_sha256": "3dd8b80f5ce48583e3f0d17fe30d9e26139a257099435eec5d3c3537b81c9acc",
+          "score": 0.00025315635139122605
+        },
+        {
+          "positions": [
+            942447
+          ],
+          "passage_sha256": "5d0f98dff8cd8d7c0fd851b588f508fccf37799f381896061da8483fc52f03a4",
+          "score": 0.0013723686570301652
+        },
+        {
+          "positions": [
+            973825
+          ],
+          "passage_sha256": "f9b3ef8376d1d338eaca892f14f9bd2af4e99b6055b21866eae4679827337a52",
+          "score": 0.011288073845207691
+        },
+        {
+          "positions": [
+            787563
+          ],
+          "passage_sha256": "e92ed4aef09cfdf33316d3b8ca3fc1dda02bb4bbb813d194bc66709b0d27df35",
+          "score": 0.0046636550687253475
+        },
+        {
+          "positions": [
+            954429
+          ],
+          "passage_sha256": "54ec0872bd46436bff9408915e9ef9168f2665279dc2977c2ff7c5a9ed8524fe",
+          "score": 0.001747785834595561
+        },
+        {
+          "positions": [
+            966051
+          ],
+          "passage_sha256": "0890b589ab619c48743bdf69646e3c96152ec2fe0666384b95f4126164390e9f",
+          "score": 0.007204769179224968
+        },
+        {
+          "positions": [
+            980221
+          ],
+          "passage_sha256": "ecf1589ba444203dae3c9cb426a1ff9d5698f688c04d657db2006a39e3d08a43",
+          "score": 0.010489090345799923
+        },
+        {
+          "positions": [
+            511384
+          ],
+          "passage_sha256": "35898eb66862a3d5f35c798a99431ace1f6c11878278c7f65737e26db216369b",
+          "score": 0.005752544850111008
+        }
+      ]
+    },
+    {
+      "query_id": "deposit_and_drive:w1:q2",
+      "kind": "provision",
+      "elapsed_seconds": 1.6646526000695303,
+      "prepared_pair_count": 125,
+      "scores": [
+        {
+          "positions": [
+            87268
+          ],
+          "passage_sha256": "a92b215cd3b90fb3694911031f1c249092db4c645b696f429ba91cd1a7c81da2",
+          "score": 0.01861780323088169
+        },
+        {
+          "positions": [
+            4898
+          ],
+          "passage_sha256": "74dd94dd6db4a1e4da95d3c0f906be4e186fc2a6d3bb65df0084928316410e2a",
+          "score": 0.01572399213910103
+        },
+        {
+          "positions": [
+            375574
+          ],
+          "passage_sha256": "8b2310db8d2aa63b8f4b70b56f4eed50d4cc0e8fba60778702b85c60b092df63",
+          "score": 0.0006538155721500516
+        },
+        {
+          "positions": [
+            38377
+          ],
+          "passage_sha256": "f66a561672baef60f4da506cf10f6e89ba5ff18894360cd84de66f6504c40b22",
+          "score": 0.0015307451831176877
+        },
+        {
+          "positions": [
+            2683
+          ],
+          "passage_sha256": "2c61736b531f7387143b6c978898b64a86612fe283ce701add237b39b6e34eee",
+          "score": 0.0009326360304839909
+        },
+        {
+          "positions": [
+            94114
+          ],
+          "passage_sha256": "62a3fd461a689dc68aafe46d4c419a5889263eebbc709832f9a9c633a4ebb6a2",
+          "score": 0.0020033332984894514
+        },
+        {
+          "positions": [
+            376481
+          ],
+          "passage_sha256": "6021e35e01405343d796dabd41db3d4738e64c681fa845f5d1ed8e4a8b38ffdb",
+          "score": 0.000758359965402633
+        },
+        {
+          "positions": [
+            12559
+          ],
+          "passage_sha256": "563a9cbd7dc04aaa576a3641b821356dcf39013128834a999bf5b7764dd9d93c",
+          "score": 0.0013096056645736098
+        },
+        {
+          "positions": [
+            38422
+          ],
+          "passage_sha256": "d2a3545778403413394b9eaa770951003994278bea94b9a698a893b077b9d6f5",
+          "score": 0.0024249141570180655
+        },
+        {
+          "positions": [
+            68566
+          ],
+          "passage_sha256": "d451f91404f1888642722a0ffee08e56a3e78e31524c1e45b56ef63cbff0db5f",
+          "score": 0.0014437558129429817
+        },
+        {
+          "positions": [
+            383637
+          ],
+          "passage_sha256": "23df81a3e5b60fbc7158adb96f95efe04d406251ff84d4e0d8cdb6c3c4fc0018",
+          "score": 0.000317508791340515
+        },
+        {
+          "positions": [
+            12540
+          ],
+          "passage_sha256": "502150339192d2129f646b625d8d95ba4842dea69556885e150d3d394e6cee30",
+          "score": 0.001269364496693015
+        },
+        {
+          "positions": [
+            38401
+          ],
+          "passage_sha256": "13cd26ca3e6fe1f147a5ceb76526fb7e440deaf9b72175071ea295c71b5b3b1b",
+          "score": 0.0015307451831176877
+        },
+        {
+          "positions": [
+            72337
+          ],
+          "passage_sha256": "9f351be4f0163894c2d6cd2f2dfea58476df9b6b62cb10e639b63f780db2ec51",
+          "score": 0.0004859560285694897
+        },
+        {
+          "positions": [
+            28839
+          ],
+          "passage_sha256": "137cd8cec2143787c4531bca400b634bd26f9d7c5950be6fee63a9412b000abc",
+          "score": 0.0012113064294680953
+        },
+        {
+          "positions": [
+            88142
+          ],
+          "passage_sha256": "0a5b9c03f250d011661b686fadf6e83fc94c6bd32a05b3b8ba12238b4dede79c",
+          "score": 0.00036829791497439146
+        },
+        {
+          "positions": [
+            267645
+          ],
+          "passage_sha256": "5603dded72bd0e1292ef5dac46b3a554c8b2da8b985f0ca6dc664b89b50294e7",
+          "score": 0.0005658799782395363
+        },
+        {
+          "positions": [
+            251220
+          ],
+          "passage_sha256": "9687a2d18e6db04360959b1f9f07cd9825457bcaa6f3dc104f3b30b707de97ea",
+          "score": 0.001560889184474945
+        },
+        {
+          "positions": [
+            385097
+          ],
+          "passage_sha256": "75297f97b7756d74834471b770316ea4aee6bceca6d37e093b4146588d220cc5",
+          "score": 0.0003029734070878476
+        },
+        {
+          "positions": [
+            308
+          ],
+          "passage_sha256": "ef2bfda5c66931e51bbc713a87edaf47961fdbb9ac68c7ce92fd3e643cabc06d",
+          "score": 0.003403005190193653
+        },
+        {
+          "positions": [
+            377589
+          ],
+          "passage_sha256": "f61cc6163e7209548fa1b0f3e0797a44f6ad08844ad68be89d3295c233124bed",
+          "score": 0.0003569706459529698
+        },
+        {
+          "positions": [
+            393502
+          ],
+          "passage_sha256": "4e78fd8b0f895ff07bf19b91931ff81326c7479ba8c1a6844557662ac21ea30c",
+          "score": 0.00036829791497439146
+        },
+        {
+          "positions": [
+            46862
+          ],
+          "passage_sha256": "3d7642ae1aeb1200390d858eef5164e3fcb7c5601013149aaae56d5303b27c66",
+          "score": 0.0014269596431404352
+        },
+        {
+          "positions": [
+            268259
+          ],
+          "passage_sha256": "28edf1fe577c89c367bcd6e2744ffe02a2714f4dbaffbeedbd583001259ab46c",
+          "score": 0.0006142272031866014
+        },
+        {
+          "positions": [
+            3603
+          ],
+          "passage_sha256": "565a0691ddddd5b93ea436a2af8631e9f8aadf3d37c1344a65b27e29a6793e39",
+          "score": 0.00011591933434829116
+        },
+        {
+          "positions": [
+            31248
+          ],
+          "passage_sha256": "26bd659a4afd54b94c015cc7bd2f9d08948630e3fca6ab7766c18dbbaaefb4f5",
+          "score": 0.0013406204525381327
+        },
+        {
+          "positions": [
+            43511
+          ],
+          "passage_sha256": "76344e5eb3548b96b034f738146c4d42833f9775bb49a3e77a54c7ac04af1ff0",
+          "score": 0.0004936049808748066
+        },
+        {
+          "positions": [
+            29681
+          ],
+          "passage_sha256": "bd0caf3ab4f6f61b416818d929e6f5c79edbda5d92b520a230a34e516a2d1802",
+          "score": 0.0007321811863221228
+        },
+        {
+          "positions": [
+            49041
+          ],
+          "passage_sha256": "dbdb06d99fdc6e5b31d430883b5ebb8778a502026794dbe47b37125f4605de31",
+          "score": 0.002174225402995944
+        },
+        {
+          "positions": [
+            98645
+          ],
+          "passage_sha256": "64c49c238bc177659a0cbc8f5c97cd6ad5ca077eddb2d26dfb80c7273be19d7c",
+          "score": 0.0015854305820539594
+        },
+        {
+          "positions": [
+            267276
+          ],
+          "passage_sha256": "97a430a93f9920493881a608135b10d3aa088a33e88083ef36c5edac7be8dfc1",
+          "score": 0.00025714197545312345
+        },
+        {
+          "positions": [
+            268045
+          ],
+          "passage_sha256": "82d23df808fcd1daaaa60514bc33d16728017f912646828e476390baddf48464",
+          "score": 0.0029694451950490475
+        },
+        {
+          "positions": [
+            330012
+          ],
+          "passage_sha256": "4b84819f8592cead5af98559382c586476f0ce58c3d3bb9f0e8b72146e9c1df1",
+          "score": 0.003324436955153942
+        },
+        {
+          "positions": [
+            11013
+          ],
+          "passage_sha256": "358eb8d85e86d131b227cfc976bf923ffaf8a6865563a6136f31d16f02ecb56c",
+          "score": 0.0005442132824100554
+        },
+        {
+          "positions": [
+            89469
+          ],
+          "passage_sha256": "96051945be2298d818eeae84a5359ac7bd6d97c4a1329952e0cd54b9887197c2",
+          "score": 0.0030160662718117237
+        },
+        {
+          "positions": [
+            160356
+          ],
+          "passage_sha256": "c5bbf7d6353000f7c73fd051b1f411cf35fa35b24b79e4a85d2124d93a8665bb",
+          "score": 0.003285833168774843
+        },
+        {
+          "positions": [
+            269180
+          ],
+          "passage_sha256": "1ef1a032c87d1b7debea0021624fae512712e3edeaf65159bc69a3a4ae9f5b42",
+          "score": 0.00035557945375330746
+        },
+        {
+          "positions": [
+            16690
+          ],
+          "passage_sha256": "d60dc48696d633aad9afe74ec23f2d7f2de681bce9011fa11b9206009126396f",
+          "score": 0.0004974745097570121
+        },
+        {
+          "positions": [
+            200049
+          ],
+          "passage_sha256": "3914df33987ca34556ba68d1fb01b0310e9a7607f5a2ba0c2490d05cec84d1ca",
+          "score": 0.003930085338652134
+        },
+        {
+          "positions": [
+            393501
+          ],
+          "passage_sha256": "17a157a728cbe5c05e2ed1989759e00330fb46a4aea50a07db6cc0a5f87319b9",
+          "score": 0.001220795209519565
+        },
+        {
+          "positions": [
+            267405
+          ],
+          "passage_sha256": "cf7dc2e48cde65730179d44c123c9962f3b20416276e0a6248d21ef59ace7e02",
+          "score": 0.0003225071995984763
+        },
+        {
+          "positions": [
+            376576
+          ],
+          "passage_sha256": "4cdd01bb9b735125c50e09cf09a62798a314ea6b8d5e70acdccce1b86e57c107",
+          "score": 0.00020184421737212688
+        },
+        {
+          "positions": [
+            394678
+          ],
+          "passage_sha256": "241210d8e7efef6bf40660b6930366aa97169c59ac94755f475a4c12ce780b82",
+          "score": 0.00018522572645451874
+        },
+        {
+          "positions": [
+            266868
+          ],
+          "passage_sha256": "5f71da9656310032da465a23755c58047495bedbc5da7f011e95becd6365d42a",
+          "score": 0.002560870721936226
+        },
+        {
+          "positions": [
+            158769
+          ],
+          "passage_sha256": "c4c43db901594406e5bde6167e2df760c8f84cef646c09edd9a4c48f02c44f48",
+          "score": 0.001201891340315342
+        },
+        {
+          "positions": [
+            87337
+          ],
+          "passage_sha256": "d7cbbeb8f325029f29bda18123b1f36ab67e5922b612df120004efc4de42c8c4",
+          "score": 0.0064882696606218815
+        },
+        {
+          "positions": [
+            90026
+          ],
+          "passage_sha256": "df40ca21c406e727f043fa31f148bcd37e0789339c1c579a17d95d666742d657",
+          "score": 0.0002824080875143409
+        },
+        {
+          "positions": [
+            145247
+          ],
+          "passage_sha256": "9930c96068a5101149b48ac86ca1b96508557473e36d0e70a43a808620d5d0e7",
+          "score": 0.00020342698553577065
+        },
+        {
+          "positions": [
+            90664
+          ],
+          "passage_sha256": "7a4049cccd4da95d279bfb45b0656adfbe07ff1aa22b2bbe2744d203b3bd09e5",
+          "score": 0.0005484792054630816
+        },
+        {
+          "positions": [
+            5632
+          ],
+          "passage_sha256": "9f1dcdaf72b92a7e075ec5549ba763989f537317acc376cc0d414e9e3ef6ff9a",
+          "score": 0.0007916296017356217
+        },
+        {
+          "positions": [
+            46837
+          ],
+          "passage_sha256": "43dc9ab16414fa702b819927c30f9de631467f1ae5290aac65d06c7ef302610a",
+          "score": 0.0004108485300093889
+        },
+        {
+          "positions": [
+            394601
+          ],
+          "passage_sha256": "307b51bd7695188ff6f07fa9ffe640b211dc8b6b94552584a2ceedee2a6670c2",
+          "score": 0.0005193048855289817
+        },
+        {
+          "positions": [
+            12556
+          ],
+          "passage_sha256": "4c8e5ecfb4726b718aed2b420422b0b96a27244080b271a3577278d92fc5dd99",
+          "score": 0.0010775026166811585
+        },
+        {
+          "positions": [
+            90111
+          ],
+          "passage_sha256": "e6a991b77775967efa247db095fc93dd0c1e4a6b6ee6343fc845e1f21e47e7d8",
+          "score": 0.0005571116926148534
+        },
+        {
+          "positions": [
+            92915
+          ],
+          "passage_sha256": "65b55771989a41ad4e54692fc7a99c56a1de28c5e0daddef4859b72c1c627f75",
+          "score": 0.0005636750720441341
+        },
+        {
+          "positions": [
+            268052
+          ],
+          "passage_sha256": "a626e6817cd37fb4d473edda66346a097d39b90d23bec8f5fc44fec9fa61ab94",
+          "score": 0.001069126301445067
+        },
+        {
+          "positions": [
+            349
+          ],
+          "passage_sha256": "a687b157d33b449f9ce5e51aaa7c46666cf13fbaf540c983569efd981359f876",
+          "score": 0.0003406293108128011
+        },
+        {
+          "positions": [
+            38418
+          ],
+          "passage_sha256": "fa52ff7a606302fcea2fce767c468aee796dccb8c1b7994281e9bc8154b5131d",
+          "score": 0.0014437558129429817
+        },
+        {
+          "positions": [
+            34308
+          ],
+          "passage_sha256": "bbf8e6571d4c0bdc0bea198addfc2de5e8cbce0fa56743d60153df369887d8c7",
+          "score": 0.0014269596431404352
+        },
+        {
+          "positions": [
+            71738
+          ],
+          "passage_sha256": "27986f1cd9b4d34bc3a305467be428a820dd80e9b0fadf4a253a483caf914357",
+          "score": 0.0006667023408226669
+        },
+        {
+          "positions": [
+            200070
+          ],
+          "passage_sha256": "c687206059b7e33d698cae31a0b4ac24d428f0687d117db0a7a1b4d0da72d4d9",
+          "score": 0.0011972112115472555
+        },
+        {
+          "positions": [
+            87343
+          ],
+          "passage_sha256": "8202d776bd671a5c7f9693c625be1843b0b1ebd9b7c1666305518ddd2ac93194",
+          "score": 0.0012303582625463605
+        },
+        {
+          "positions": [
+            89508
+          ],
+          "passage_sha256": "a1c3b045fdcad7a0d45a905b39e42fd8ea7ca3110349cebc8bc06f6296ff2179",
+          "score": 0.00021152888075448573
+        },
+        {
+          "positions": [
+            98667
+          ],
+          "passage_sha256": "c392f33bcae7d3722a22b0a3128b0edebac21669ed4898fa9b43bda003ce0404",
+          "score": 0.0011740821646526456
+        },
+        {
+          "positions": [
+            172745
+          ],
+          "passage_sha256": "0ae3e823065dbcf1441dece24a3bdf0bcf9f1c87eb1a3e449f96e857d0f8aea1",
+          "score": 0.00049553596181795
+        },
+        {
+          "positions": [
+            200068
+          ],
+          "passage_sha256": "abac85c8c291798a25211bcf0710f630dd73cd4a914e3ebc2da04ba52b15997c",
+          "score": 0.0011972112115472555
+        },
+        {
+          "positions": [
+            46850
+          ],
+          "passage_sha256": "ad0ff271aa04a11cc844c45951ad28a68d2ac5ab29ad937f16a63320334e6e65",
+          "score": 0.0012399960542097688
+        },
+        {
+          "positions": [
+            88227
+          ],
+          "passage_sha256": "d072e785e2e811538cfc76ec239f67cc66e8f3e201c79ba7444f1f761f5d92d1",
+          "score": 0.005099818110466003
+        },
+        {
+          "positions": [
+            173350
+          ],
+          "passage_sha256": "25aaffc019abc6f02cb900df0d2c195809d11b49f62c8381142ba14cc87f56e6",
+          "score": 0.00012731103925034404
+        },
+        {
+          "positions": [
+            96138
+          ],
+          "passage_sha256": "cd1b31cf5b13f05dac6020db72e3db3a4950651bd396b00e9735c411220d5ad4",
+          "score": 0.00042223287164233625
+        },
+        {
+          "positions": [
+            268000
+          ],
+          "passage_sha256": "8241801cfc3807e4722367166fdc33473706aefacca92fad6d6aef68b5c03896",
+          "score": 0.0016420665197074413
+        },
+        {
+          "positions": [
+            268085
+          ],
+          "passage_sha256": "900993f1f8ef9b6de62852638168780337755b72a7068087c9777148b0668dcc",
+          "score": 0.0015247863484546542
+        },
+        {
+          "positions": [
+            98637
+          ],
+          "passage_sha256": "1fd397cec2c256e42edafa243dbfee7c9c48d89925ef87d84bef2e76feaa87e1",
+          "score": 0.0008559006964787841
+        },
+        {
+          "positions": [
+            399279
+          ],
+          "passage_sha256": "b95bfae6169cbdc6a737af1b2c9d7de5dfcc3204e3385232c7811609cca010fe",
+          "score": 0.0005072812782600522
+        },
+        {
+          "positions": [
+            177128,
+            177238
+          ],
+          "passage_sha256": "584615fda0a7be0a0fc8f7ea10e67cf05dcaf50c3193082511f5754264261730",
+          "score": 0.0009253848693333566
+        },
+        {
+          "positions": [
+            386015
+          ],
+          "passage_sha256": "c833ef5a4e251c9f9eaebe55cd28369a00d0727b0f853786f0beb73315d48de6",
+          "score": 0.00021995337738189846
+        },
+        {
+          "positions": [
+            77351
+          ],
+          "passage_sha256": "b43ebd80cf384e31e3de57f93f6220b0384702f62a735f52f391749aab02568c",
+          "score": 0.019160708412528038
+        },
+        {
+          "positions": [
+            177128,
+            177238
+          ],
+          "passage_sha256": "584615fda0a7be0a0fc8f7ea10e67cf05dcaf50c3193082511f5754264261730",
+          "score": 0.0009253848693333566
+        },
+        {
+          "positions": [
+            269114
+          ],
+          "passage_sha256": "54e038b038bdc62f60e103831d7bae6b43d1972ed3996372cb012763dda1cc08",
+          "score": 0.0017073675990104675
+        },
+        {
+          "positions": [
+            19040
+          ],
+          "passage_sha256": "34eaf6e279163fbb5013f2cbadcc8afd7384125a79b3ca0d21c9e2a1a54229a2",
+          "score": 0.0019723358564078808
+        },
+        {
+          "positions": [
+            83847
+          ],
+          "passage_sha256": "ca8145ba1242c82513c7124ebcd794043d5d1de722ff673d2fe3fadd08c8376a",
+          "score": 0.0007763299508951604
+        },
+        {
+          "positions": [
+            302559
+          ],
+          "passage_sha256": "85f075ccc40aa7715028bfd8780e6e16e8fc356cbbeae177785fdb6a2f75decb",
+          "score": 0.0005152657395228744
+        },
+        {
+          "positions": [
+            304849
+          ],
+          "passage_sha256": "4656fc67490d1e71c2d2203d41ca9e848d20fc6a107280201f528316e9b18caf",
+          "score": 0.0005658799782395363
+        },
+        {
+          "positions": [
+            200092
+          ],
+          "passage_sha256": "99c2fd575fc1169ebb59b65aa7dfd5a5a101b7e70f4a508145bef550349f2dfb",
+          "score": 0.0005233757547102869
+        },
+        {
+          "positions": [
+            281760
+          ],
+          "passage_sha256": "db97a6bf02fed85c2b64e86fc45e3d1f6b9f371cd3302dc595df914661a86648",
+          "score": 0.000810387369710952
+        },
+        {
+          "positions": [
+            287133
+          ],
+          "passage_sha256": "78511dd0845f604f07e3257843473ef17e48455331cea48e5cf49e3770b8e2e7",
+          "score": 0.0006986756343394518
+        },
+        {
+          "positions": [
+            386758
+          ],
+          "passage_sha256": "0f0e7d171ac493bdf4a09cd8a927da5ba29237290bcc7b8af66c2b2b8b686920",
+          "score": 0.00019716942915692925
+        },
+        {
+          "positions": [
+            89398
+          ],
+          "passage_sha256": "8862b137fd0eb06e90494add62bcbfe6e70bd675f41b6f52a0152bb03a508857",
+          "score": 0.0007180297398008406
+        },
+        {
+          "positions": [
+            266808
+          ],
+          "passage_sha256": "d907bbaba2d57c02251587ea1000fb38e4a8f1830186917113c14428a2bd4610",
+          "score": 0.0038244836032390594
+        },
+        {
+          "positions": [
+            381311
+          ],
+          "passage_sha256": "d29660f39181243f1baa919237cca623078a5be4bb1075ff30968d995493aacb",
+          "score": 0.0015307451831176877
+        },
+        {
+          "positions": [
+            386427
+          ],
+          "passage_sha256": "a53f1aa0f510645955ad368885ad2bc13dd1999ad0476028e970f555fe5492a5",
+          "score": 0.0010566838318482041
+        }
+      ]
+    },
+    {
+      "query_id": "deposit_and_drive:w1:q2",
+      "kind": "judgment",
+      "elapsed_seconds": 2.5278249999973923,
+      "prepared_pair_count": 193,
+      "scores": [
+        {
+          "positions": [
+            799246
+          ],
+          "passage_sha256": "6d9959b89f90772d56c6f7a56df82e823d3946009c60ade207ffb4e1c418e2ac",
+          "score": 0.008315778337419033
+        },
+        {
+          "positions": [
+            928389
+          ],
+          "passage_sha256": "2841fba55751f7f28e48998d33167f1a8224405b2c7c953b3595b40e85442d2d",
+          "score": 0.009303949773311615
+        },
+        {
+          "positions": [
+            951349
+          ],
+          "passage_sha256": "333cf87707e8bdebe0671faf9d5f9fb7963bea1e594851e0fc7773240c1bc0db",
+          "score": 0.027169233188033104
+        },
+        {
+          "positions": [
+            799247
+          ],
+          "passage_sha256": "c9f41f8dcb86d459c65e5290c703ccbfd73bfb9235d0c27b5c1285960d697eb4",
+          "score": 0.015845362097024918
+        },
+        {
+          "positions": [
+            1012505
+          ],
+          "passage_sha256": "e6f97d9de6644437575b0a8dbfaff1a3041a340157650f95676cc25606203853",
+          "score": 0.014337030239403248
+        },
+        {
+          "positions": [
+            963652
+          ],
+          "passage_sha256": "da33f3c1250cfc5bba023c275f2dacd5ba958ed374cd8195b9f500c3ee1897d1",
+          "score": 0.0004994205664843321
+        },
+        {
+          "positions": [
+            928392
+          ],
+          "passage_sha256": "f111e43ceb20a53cb4b0c242c3d479783a542fd13033232de468087130909e0d",
+          "score": 0.003635808825492859
+        },
+        {
+          "positions": [
+            976301
+          ],
+          "passage_sha256": "4b8920fa0878516f796e9ba046bfda42ceea9401711c5d160e2548e05f660b70",
+          "score": 0.00266261282376945
+        },
+        {
+          "positions": [
+            802429
+          ],
+          "passage_sha256": "a6e2b348c5515c99a40be68273c65800dcd4ec16046ef016bb4bf72fe5484f8f",
+          "score": 0.01784873753786087
+        },
+        {
+          "positions": [
+            338762
+          ],
+          "passage_sha256": "f9f62fec20991d104c249d62fa478b75e2fda008e9a136088f0d14cfe5481352",
+          "score": 0.00031258779927156866
+        },
+        {
+          "positions": [
+            970938
+          ],
+          "passage_sha256": "26786a67cbc322d679ce15af96aa21501dd420f136c6a1a4f2893926e75197f4",
+          "score": 0.007636216934770346
+        },
+        {
+          "positions": [
+            1013737
+          ],
+          "passage_sha256": "ef040850d4b8a10da26052638c25b71e941c9fed1bd57f9747d65ef6f0ddeca9",
+          "score": 0.04778006672859192
+        },
+        {
+          "positions": [
+            584477
+          ],
+          "passage_sha256": "9c8ccf00837d1fbf41d27e6f8eaeca7d7af98f4839af94775e08733c2a118a97",
+          "score": 0.0009436192340217531
+        },
+        {
+          "positions": [
+            584478
+          ],
+          "passage_sha256": "0d1328f4faecf12f81c019fdcb2832c94a4acf08de1d93693f03e975e266d6ea",
+          "score": 0.0008864988922141492
+        },
+        {
+          "positions": [
+            787740
+          ],
+          "passage_sha256": "e7ab16d4f1b6c43af5c3e5006b6f1d08a3daaf869f5fc1551ec0603a8229c911",
+          "score": 0.003273064736276865
+        },
+        {
+          "positions": [
+            900891
+          ],
+          "passage_sha256": "2c699735b7f9d44c5b3c273ff17169950eb1cb09cbcd893dfd18e4db25012b61",
+          "score": 0.0005420927773229778
+        },
+        {
+          "positions": [
+            217173
+          ],
+          "passage_sha256": "3d1e94075c069f36e667aca59dcb61a30e3cee9866a7470c6cd99f9581c2f8f2",
+          "score": 0.004399412777274847
+        },
+        {
+          "positions": [
+            332879
+          ],
+          "passage_sha256": "83bd106158ed6c5e8701d0bab38e6599d26db88cacbc2574fbee68fbce78ef86",
+          "score": 0.002082970691844821
+        },
+        {
+          "positions": [
+            544404
+          ],
+          "passage_sha256": "a2751dadff36d9fed533609cb9fa76aca2abb29625d20e66b2ba58e8b713bd6d",
+          "score": 0.00570803415030241
+        },
+        {
+          "positions": [
+            919427
+          ],
+          "passage_sha256": "f0a37fd140fee08559b5c264acc8d5054e6feb1bdd856db8f2fed11a3af259f6",
+          "score": 0.0019494021544232965
+        },
+        {
+          "positions": [
+            987773
+          ],
+          "passage_sha256": "f69186036f55997277a8fd54aef674af9d9298da990d6252750e8b6ea3072aa2",
+          "score": 0.0005725466180592775
+        },
+        {
+          "positions": [
+            339464
+          ],
+          "passage_sha256": "9024308d7f922855ab0f170fa38be114176facefd28b5f59d55249c46e154628",
+          "score": 0.0008492455235682428
+        },
+        {
+          "positions": [
+            455313
+          ],
+          "passage_sha256": "9a7e70ce2fce955056c8b04c09906d85abe81e57e557284df9c942a47852fd79",
+          "score": 0.014227046631276608
+        },
+        {
+          "positions": [
+            479226
+          ],
+          "passage_sha256": "215e11f256128532f92db49c6ae597f61533c7f5036667764d44ce46d905dc55",
+          "score": 0.0030753696337342262
+        },
+        {
+          "positions": [
+            693508
+          ],
+          "passage_sha256": "6fc79e690a280e91782ce806556cf3921cef496afea40442f0f09ee6b0a2c16d",
+          "score": 0.0025016965810209513
+        },
+        {
+          "positions": [
+            975187
+          ],
+          "passage_sha256": "6ed0c04219608e13cdad17afd1896adf3e52698ad318537e5af1486de9391771",
+          "score": 0.0013617033837363124
+        },
+        {
+          "positions": [
+            558777
+          ],
+          "passage_sha256": "979ee44ee011a73eac9d816d2b7fa96e7c52947ed74c387178a6b526e7bb3c13",
+          "score": 0.0028671587351709604
+        },
+        {
+          "positions": [
+            696486
+          ],
+          "passage_sha256": "2dabe9ff33c94a71a633db49f60deb79ed60da9b45bc5a1deaf51fc91bc6533a",
+          "score": 0.0018243826925754547
+        },
+        {
+          "positions": [
+            901136
+          ],
+          "passage_sha256": "929c043fe16a131d472570a20da9ac75556e25a60fa56cfcfaa3ab3e51071779",
+          "score": 0.011508148163557053
+        },
+        {
+          "positions": [
+            1005717
+          ],
+          "passage_sha256": "dd79abe23887bd08614d3201ea6fa71dbae6dd0b8dd590f8eeb0b9f743a2245e",
+          "score": 0.0010443859500810504
+        },
+        {
+          "positions": [
+            403880
+          ],
+          "passage_sha256": "33e665fb50b8078e4aeb5de4e8dda24b1ab4753e42f5deff084c265149e96799",
+          "score": 0.0007180297398008406
+        },
+        {
+          "positions": [
+            690656
+          ],
+          "passage_sha256": "1015ee2af76fb928055850282f89e96584f675e9b6135b090bc3a66c54adb4ea",
+          "score": 0.013795365579426289
+        },
+        {
+          "positions": [
+            696319
+          ],
+          "passage_sha256": "cb7843f0077ee9f9446c42be0c995adecbbbb41c1405988178565755a42213bc",
+          "score": 0.0010282108560204506
+        },
+        {
+          "positions": [
+            949572
+          ],
+          "passage_sha256": "44b040374ed9324c8a4ea571eaa76fc6b4bb03c9524c974051570b731897f148",
+          "score": 0.0017073675990104675
+        },
+        {
+          "positions": [
+            951367
+          ],
+          "passage_sha256": "69627b9d2af5806c33aeee6895001fbf72cbe3dab6665f58216eb62330255e0f",
+          "score": 0.006026951130479574
+        },
+        {
+          "positions": [
+            960444
+          ],
+          "passage_sha256": "758a715f8a70ab673563b690045346f5b826d205994513564b4b3d2359787aac",
+          "score": 0.0009510130621492863
+        },
+        {
+          "positions": [
+            318584
+          ],
+          "passage_sha256": "d0642a489d045ee51049b701bedb1ff7c0857438edf45a45ba3f81e7467ee6aa",
+          "score": 0.0018602986820042133
+        },
+        {
+          "positions": [
+            397513
+          ],
+          "passage_sha256": "459a976d507ce20dc6c99a26c74d44aa021fe7b835306b04534296056d67dda7",
+          "score": 0.0015854305820539594
+        },
+        {
+          "positions": [
+            544389
+          ],
+          "passage_sha256": "0d0f3597d52be7a2c4a31bc9aa2a464b705c5fcfa821d81bb016018784a64ed7",
+          "score": 0.0074030146934092045
+        },
+        {
+          "positions": [
+            676256
+          ],
+          "passage_sha256": "23c5bf115fa0de40779f6820df5119d74ed833270364d036c149a7c56a1f84f4",
+          "score": 0.0009075025445781648
+        },
+        {
+          "positions": [
+            934816
+          ],
+          "passage_sha256": "8f7e35772196d192a69ca31bd9b5b1f813c6f1fbf723d2e860ae9e1026422330",
+          "score": 0.002511463360860944
+        },
+        {
+          "positions": [
+            949753
+          ],
+          "passage_sha256": "37f89bb729773ddfdb750cf13a9f35074d63a8dcc67d21d43a0902f15cd121ac",
+          "score": 0.0017752605490386486
+        },
+        {
+          "positions": [
+            692863
+          ],
+          "passage_sha256": "771a7016391f87690bbc9d2b736550652d205beecb5f7e359498c41b7cf80cf4",
+          "score": 0.003692853031679988
+        },
+        {
+          "positions": [
+            135257
+          ],
+          "passage_sha256": "d3844958def9a3c85cccdd1ad4cf91019f513af19e1d79138cf8c800348ba811",
+          "score": 0.00043393249507062137
+        },
+        {
+          "positions": [
+            544369
+          ],
+          "passage_sha256": "a1f5a23085a95300080e23f133ca0cf73463e0cb87055419b5dd94486b8b5e68",
+          "score": 0.007518718484789133
+        },
+        {
+          "positions": [
+            890023
+          ],
+          "passage_sha256": "952954a99b075646d04014c2bbb57af7d8bf80a72b3f27ba88c1adb2070e820c",
+          "score": 0.008813166059553623
+        },
+        {
+          "positions": [
+            1011003
+          ],
+          "passage_sha256": "64ed0416e6c4204453c0fa7d63dac59b0e686a7874ae255ae6d7a6745f267341",
+          "score": 0.01024860143661499
+        },
+        {
+          "positions": [
+            1012925
+          ],
+          "passage_sha256": "425c4ec5403aa8d9b2df8ac4d33b04621c123571dc0da30e40fc7528e1921778",
+          "score": 0.0011832797899842262
+        },
+        {
+          "positions": [
+            544363
+          ],
+          "passage_sha256": "173d5361dfb92b203b934ffa801789d4654e3c9a45cd0b766e5c298510cfbef1",
+          "score": 0.021206120029091835
+        },
+        {
+          "positions": [
+            833047
+          ],
+          "passage_sha256": "b953e05f867dc5229e454f6c88cec8d7689396bb85fc5ca5c4d1c3368c7a3df8",
+          "score": 4.94715895911213e-05
+        },
+        {
+          "positions": [
+            856664
+          ],
+          "passage_sha256": "4e0820d60f5fd63a8beb947bd23ced0c72a9943e52d05b015201909bae9006bc",
+          "score": 0.0032224843744188547
+        },
+        {
+          "positions": [
+            921525
+          ],
+          "passage_sha256": "8a91519d644870d9d9f1f69cfe3d2d1afe56c4856e1e8948036c74a95d9ca9ca",
+          "score": 0.002540992572903633
+        },
+        {
+          "positions": [
+            349858
+          ],
+          "passage_sha256": "a14a7429ac590bfd795f2e54ea05d0684d9b860a03e42ecf8f409026636222b8",
+          "score": 0.0006462032906711102
+        },
+        {
+          "positions": [
+            692869
+          ],
+          "passage_sha256": "67be5a98216f725c224db603a65203b9a7a038bb07c03d89df6dac896a642475",
+          "score": 0.011288073845207691
+        },
+        {
+          "positions": [
+            921212
+          ],
+          "passage_sha256": "dc62eadd2e3db8c3270bfc31b5b838e5194d6f480d835a6ea5b26877ca35e3c5",
+          "score": 0.00821969285607338
+        },
+        {
+          "positions": [
+            927082
+          ],
+          "passage_sha256": "1c4edc6a3a0832adb12a982b9657033bc257570b7999efc70b8e9729c2e80a99",
+          "score": 0.0006070755189284682
+        },
+        {
+          "positions": [
+            217176
+          ],
+          "passage_sha256": "7844f7fa4b7b2f052e3b95d27ea2b4fa1b31f40141bddb089bafd6bd696804e3",
+          "score": 0.0025909794494509697
+        },
+        {
+          "positions": [
+            799240
+          ],
+          "passage_sha256": "c6e6d170dd61bdcc66370374c28f7636681803cfc7ddc7065ef1928b107b3044",
+          "score": 0.002378123812377453
+        },
+        {
+          "positions": [
+            801735
+          ],
+          "passage_sha256": "3c57380cadbd0ef5f4f2ff4a6c4c5d8deb780e1d406c72535ee8b65e512159b3",
+          "score": 0.000317508791340515
+        },
+        {
+          "positions": [
+            952685
+          ],
+          "passage_sha256": "b84fe01215268c866530ec40afcc52b194a0d58c3af19e7775bdd6af94ec57b4",
+          "score": 0.0013723686570301652
+        },
+        {
+          "positions": [
+            983815
+          ],
+          "passage_sha256": "2cf90ea528f6126ed05cec60770045e5e76534c758b4b5cbd9c7d750b4c0cc4f",
+          "score": 0.0007733057136647403
+        },
+        {
+          "positions": [
+            263078
+          ],
+          "passage_sha256": "ed53fa9bcace9e935f8a72acaae732873cd688aeadd867850141c5c84e520688",
+          "score": 0.003635808825492859
+        },
+        {
+          "positions": [
+            752795
+          ],
+          "passage_sha256": "be9eb63b9d778b0ad1723cd36aed2e100bb378a4469f64221657ac3650bda96d",
+          "score": 0.0015070488443598151
+        },
+        {
+          "positions": [
+            874659
+          ],
+          "passage_sha256": "0623b97cd345338574487836a66cbc002e90164f76f4b1437627af7a38a70646",
+          "score": 0.002746900776401162
+        },
+        {
+          "positions": [
+            904699
+          ],
+          "passage_sha256": "e80ab323fb14fe95389bf966bbfa5485a350afb7847d5d30758121377e5ee895",
+          "score": 0.0008263576892204583
+        },
+        {
+          "positions": [
+            951348
+          ],
+          "passage_sha256": "a2a631dbb21f930055cfff8c15436c73af125d2b4b6ef0ecb7539969664e18c0",
+          "score": 0.037467505782842636
+        },
+        {
+          "positions": [
+            158118
+          ],
+          "passage_sha256": "28bac9fb5b21799b8a93c8a69c1171fbef9353186ac5f15d5989d76880c6d313",
+          "score": 0.0013045065570622683
+        },
+        {
+          "positions": [
+            544367
+          ],
+          "passage_sha256": "2b8d7bfd7af60f032949e8375a883806a7cdec2acbd99994e13215c42fe4f7e8",
+          "score": 0.0046636550687253475
+        },
+        {
+          "positions": [
+            752824
+          ],
+          "passage_sha256": "af8951021f772c4840f92a686e28f782568fe66be1ee4cbda592e2ce1a66aed8",
+          "score": 0.0008426423300988972
+        },
+        {
+          "positions": [
+            806411
+          ],
+          "passage_sha256": "cd062426153a6920761ab80911152cf73e132bcc1a7fb0a14fb219feca7b42bb",
+          "score": 0.0001740054285619408
+        },
+        {
+          "positions": [
+            917142
+          ],
+          "passage_sha256": "d80d2a147e6aedac76b5920c07f189e08c625a448f540454da00a493cd855bed",
+          "score": 0.0012893283274024725
+        },
+        {
+          "positions": [
+            988631
+          ],
+          "passage_sha256": "7211509a8ddfa1f4c421f1f03b62553dfeb214cdb17bb2a0f0045b446c7f3995",
+          "score": 0.00220838887616992
+        },
+        {
+          "positions": [
+            594188
+          ],
+          "passage_sha256": "66428ba2b8f6d534a7fca6807381cad389dcb5316999e9c966af1c735f9e43c1",
+          "score": 0.002560870721936226
+        },
+        {
+          "positions": [
+            696394
+          ],
+          "passage_sha256": "7b5765ad4ec518032c5bd408a28e3e615632e57afd9b30ffa8533fa4d35d5d4b",
+          "score": 0.0007321811863221228
+        },
+        {
+          "positions": [
+            752828
+          ],
+          "passage_sha256": "36ba1d508be1bf0329622ee0faabc7eef421cde3652d906d65e832f2ae430a15",
+          "score": 0.0010403185151517391
+        },
+        {
+          "positions": [
+            983803
+          ],
+          "passage_sha256": "7d290830b7b6df719cf4b4897cbf10bfd60cce2a8e2206eddb4f2c591995353b",
+          "score": 0.0007916296017356217
+        },
+        {
+          "positions": [
+            1006249
+          ],
+          "passage_sha256": "d3ca9b5e2b7f3a62af3a3d7af7aa861fae6af528ea885af51fe633328b9aec5f",
+          "score": 0.002453428227454424
+        },
+        {
+          "positions": [
+            71847
+          ],
+          "passage_sha256": "a2be2d672952d7a1b73f6c2bef73475b27ab43d8c1878b787540e85a00facab7",
+          "score": 0.0009004466701298952
+        },
+        {
+          "positions": [
+            689051
+          ],
+          "passage_sha256": "304f58d6f6dd65e18a43b3de42870f50e190dbc49eb824de92326a1bcd2bb51c",
+          "score": 0.00482972152531147
+        },
+        {
+          "positions": [
+            899130
+          ],
+          "passage_sha256": "b55ea6a2d0e4de62b1d96ab78b2e95aaed26c96c8d97f9d9a7c4e22681af6b11",
+          "score": 0.0015669887652620673
+        },
+        {
+          "positions": [
+            998302
+          ],
+          "passage_sha256": "f4cd663518bb7e78beebe81cb3f0a063789928784ff8685f9f589cef2c965a9e",
+          "score": 0.004736748989671469
+        },
+        {
+          "positions": [
+            504013
+          ],
+          "passage_sha256": "80b8006b075ab8d9617935d82ad5e6505a33da3b11e9f9fa3b504b6deca52e1f",
+          "score": 0.02409944497048855
+        },
+        {
+          "positions": [
+            544362
+          ],
+          "passage_sha256": "0606e162b28c0a3765e7012bb9f27d94b4a8f79d9b0ef173f0f367b89efe1a81",
+          "score": 0.008093290030956268
+        },
+        {
+          "positions": [
+            915267
+          ],
+          "passage_sha256": "843931b36c7c4626ed2358e2fcad053d88720a999ef3661716ad2cc4b067e02e",
+          "score": 0.002387409098446369
+        },
+        {
+          "positions": [
+            33875
+          ],
+          "passage_sha256": "07e275ddc920ad8dccf1b6ce5de176cce7f9a6aec061394f9183d6fa56863e93",
+          "score": 0.001192549243569374
+        },
+        {
+          "positions": [
+            323010
+          ],
+          "passage_sha256": "bb38f9781e08307dc83979c83c09d47f5f0d288f89dc9641fe88daa0a13db302",
+          "score": 0.004399412777274847
+        },
+        {
+          "positions": [
+            626027
+          ],
+          "passage_sha256": "2ab088669324d3264b55f7d8fe0c2d5bfbd620d96007e445d664c8c9f535d298",
+          "score": 0.007066400721669197
+        },
+        {
+          "positions": [
+            645005
+          ],
+          "passage_sha256": "5395c842412f69d94785dd10919c39f862dd15fec5ce8f75eec9f0b560beb5c4",
+          "score": 0.0030753696337342262
+        },
+        {
+          "positions": [
+            942444
+          ],
+          "passage_sha256": "b67ebe5577cd92caea410e5fce594c5e1ab1cba2942013c44fa4e696ebab4209",
+          "score": 0.0004655269149225205
+        },
+        {
+          "positions": [
+            957619
+          ],
+          "passage_sha256": "c20a164baa2e9610f42f1db6a31b1a82b63f406dc2b1d91d046289f89164f616",
+          "score": 0.0010733063099905849
+        },
+        {
+          "positions": [
+            64521
+          ],
+          "passage_sha256": "ebc67cdb8de5b70851d81226ce3eb526afd3e02a6c1a55a87529835689d2136d",
+          "score": 0.0004821761976927519
+        },
+        {
+          "positions": [
+            473289
+          ],
+          "passage_sha256": "ebd817eb4adaca8e7a99d5128a653318d625a36c289cdd049b9f4d8dc3964d93",
+          "score": 0.005021149758249521
+        },
+        {
+          "positions": [
+            491510
+          ],
+          "passage_sha256": "950b3b4a61eff937715abb7dd03a742354af637dd1b5c2e334d5f0d0d0eb0ca0",
+          "score": 0.002123966347426176
+        },
+        {
+          "positions": [
+            544374
+          ],
+          "passage_sha256": "84c06cc9fc1f2d8b4043fcebbb71eb9022947498283487a2fdf6abbfef333f4f",
+          "score": 0.009936418384313583
+        },
+        {
+          "positions": [
+            851463
+          ],
+          "passage_sha256": "32f0c6f020d9c8f1d5886fe406718d7751d3bb3007a7cabd56a64117c9db5b77",
+          "score": 0.0010775026166811585
+        },
+        {
+          "positions": [
+            296330
+          ],
+          "passage_sha256": "0adf606bc6e68d25a0f9ad9c0c3ca59c1547147e9386af725095a26f5a0e806c",
+          "score": 0.0011879054363816977
+        },
+        {
+          "positions": [
+            377707
+          ],
+          "passage_sha256": "ddee32183fe33e07e37220628a9079f6421ef7f5818c8f3042f37ce8ea3e03e8",
+          "score": 0.0022872276604175568
+        },
+        {
+          "positions": [
+            544379
+          ],
+          "passage_sha256": "5af6830acb33bee1a55815e5c4ba34dcd45ab7e1be23a91fffbc8ab8b9ad9c89",
+          "score": 0.023962024599313736
+        },
+        {
+          "positions": [
+            962558
+          ],
+          "passage_sha256": "ecff7e181a8859568eaa499860f0016e9f4212384538ba66284fed41fdbecfd8",
+          "score": 0.001069126301445067
+        },
+        {
+          "positions": [
+            973810
+          ],
+          "passage_sha256": "e43a19fad3a3b448f7b63323b642bac61732e0c5b7691200b0ce8699e445fcd9",
+          "score": 0.005663865711539984
+        },
+        {
+          "positions": [
+            2525
+          ],
+          "passage_sha256": "e3b2cc28cae6d3a28df01af1fddc2cf537c3afb22a5c3012019bd6ecd7f12ca8",
+          "score": 0.003621685551479459
+        },
+        {
+          "positions": [
+            59031
+          ],
+          "passage_sha256": "d668dfa15c573bce53a50debc603d2b13924631c676a2869b1cef04ee2bb0144",
+          "score": 0.011331753805279732
+        },
+        {
+          "positions": [
+            373136
+          ],
+          "passage_sha256": "ea6570b3e20cb892c53013691517059a693bc7ebe20fb948246123f6a13881ea",
+          "score": 0.002790037775412202
+        },
+        {
+          "positions": [
+            418064
+          ],
+          "passage_sha256": "ad7d787fc2ef11f03f3d38edb92f0f15ec9d85f9e2683522b1379ffb0e5f75db",
+          "score": 0.00712142838165164
+        },
+        {
+          "positions": [
+            966668
+          ],
+          "passage_sha256": "75233388d5644079ed2498f19c57c028712eecd6ba7fbdac36bb7fefa08216d3",
+          "score": 0.00039821304380893707
+        },
+        {
+          "positions": [
+            992198
+          ],
+          "passage_sha256": "9a99b9daf2a944c4292fce10c3a51dacc61dcaaa99e9ebe6fbe87f8298db1156",
+          "score": 0.0009584648651070893
+        },
+        {
+          "positions": [
+            398563
+          ],
+          "passage_sha256": "c3ba2f6b72e47158838d67943714e3fb1d313ce8cf07618a48d43ccf4a76aaec",
+          "score": 0.000638679601252079
+        },
+        {
+          "positions": [
+            444732
+          ],
+          "passage_sha256": "4f74c4007831779464273221f3ecca06e0bd71c14ad9754c26ff038db9f15dc8",
+          "score": 0.00407013762742281
+        },
+        {
+          "positions": [
+            499731
+          ],
+          "passage_sha256": "c85914b745d997f784351c4d874db310ae7a234b10892bcb8906f0e5b56ed9d1",
+          "score": 0.007577241398394108
+        },
+        {
+          "positions": [
+            560548
+          ],
+          "passage_sha256": "247044bf96442fa87295ead3371992f1e90fd6732d85c3c64775c3027e83da0f",
+          "score": 0.0019342610612511635
+        },
+        {
+          "positions": [
+            974267
+          ],
+          "passage_sha256": "fe5c74a6130787426b02bb7b4e0b75e532953d1657771ec4006ae4599904fb1e",
+          "score": 0.0007041515782475471
+        },
+        {
+          "positions": [
+            983838
+          ],
+          "passage_sha256": "a0cc0a04b7ba21f81a9366e94dce4f8035bd871fed7e04f49cac5f77ac7d0150",
+          "score": 0.0006462032906711102
+        },
+        {
+          "positions": [
+            3590
+          ],
+          "passage_sha256": "c0e1acc59f5e70621b967164c81025685fd8d275405e82e2d80455a7e853d46a",
+          "score": 0.0030160662718117237
+        },
+        {
+          "positions": [
+            490739
+          ],
+          "passage_sha256": "e5a81988831fda7c2424d7d460f76aaa3c3d8bc65996f072dc908b2a119198c1",
+          "score": 0.0006118340534158051
+        },
+        {
+          "positions": [
+            689053
+          ],
+          "passage_sha256": "e464948e9034f73bea04b23b2addca969c3f90c1832b653eeed0b289d6d124bd",
+          "score": 0.003469890682026744
+        },
+        {
+          "positions": [
+            785978
+          ],
+          "passage_sha256": "3e1cfc3898aaf0e009ac07022fd69f0b5bb417ed9334f96fc049270cd7822342",
+          "score": 0.0002891032490879297
+        },
+        {
+          "positions": [
+            1003258
+          ],
+          "passage_sha256": "4211009bf910ba235f15ab568278b02ac05211511de2f0d6d72276f32b8428b2",
+          "score": 0.004943688865751028
+        },
+        {
+          "positions": [
+            202930
+          ],
+          "passage_sha256": "6143990214938c2ef555f3cd40ae55037617936f9d733c52bdb329d6600e8441",
+          "score": 0.0003225071995984763
+        },
+        {
+          "positions": [
+            544387
+          ],
+          "passage_sha256": "92dba7af9db4ae1528d07c60eb78fd2ca5c470b8923b7c6d7933a526adfe48fc",
+          "score": 0.00570803415030241
+        },
+        {
+          "positions": [
+            693928
+          ],
+          "passage_sha256": "55cff3cd343bd2d3f365cb9fbdb1dc0a7d695cb757dca5956ad3fd7a0de2e19a",
+          "score": 0.0027683854568749666
+        },
+        {
+          "positions": [
+            750894
+          ],
+          "passage_sha256": "c7d886794949c853629e0f9fb689df70a7faac18835d5f717aeaab13b627a62a",
+          "score": 0.0016941031208261847
+        },
+        {
+          "positions": [
+            806438
+          ],
+          "passage_sha256": "71c97f6ef157a723a09666ec6a0c4063edc0cd8979f67eb54827fcbae3e43210",
+          "score": 0.00013658353418577462
+        },
+        {
+          "positions": [
+            891702
+          ],
+          "passage_sha256": "2fc0f889193595eb2fc669e6f407048419eef5ce94581004538aa4a40bb3a635",
+          "score": 0.002491967985406518
+        },
+        {
+          "positions": [
+            133462
+          ],
+          "passage_sha256": "ba08a1a73df15cd1d187616ca115b6cae807ecc6d98212b1a9fcf619e8bc59fb",
+          "score": 0.0009004466701298952
+        },
+        {
+          "positions": [
+            690657
+          ],
+          "passage_sha256": "b9833e34f7c8cec616413df9cfc337d13daabd06048a3b6f04bd80b8d7fa9b16",
+          "score": 0.004591683857142925
+        },
+        {
+          "positions": [
+            773145
+          ],
+          "passage_sha256": "914d65fa9ab44fe03b5730993eccf506aa25fd9ec4d954ffb24601a0d94ee2b9",
+          "score": 0.0018675660248845816
+        },
+        {
+          "positions": [
+            968134
+          ],
+          "passage_sha256": "b8a20c2ba2884a6e4dd15b1978e08a0fd2055aa80006e113c192b94923d52441",
+          "score": 0.0005112579092383385
+        },
+        {
+          "positions": [
+            982300
+          ],
+          "passage_sha256": "c7b61272388430f9b27cf8c88a843e6f0e6989ecb3eb72245f404c8cd43fecfd",
+          "score": 0.008745181374251842
+        },
+        {
+          "positions": [
+            96267
+          ],
+          "passage_sha256": "9c2194a24542e44398a5c9eb4948fe3773373a5c02aa65c06a2ee6c85beea80a",
+          "score": 0.0017073675990104675
+        },
+        {
+          "positions": [
+            436844
+          ],
+          "passage_sha256": "312a4bf3d28698753a32ff3fa40dace7c7bde8ecd8f4cae136cda1b47f33a791",
+          "score": 0.00026323829661123455
+        },
+        {
+          "positions": [
+            847853
+          ],
+          "passage_sha256": "15f2356d1b812c81ae4a997c68697c090fe2499dde8aa11a53f262eefed8daec",
+          "score": 0.00024536947603337467
+        },
+        {
+          "positions": [
+            958794
+          ],
+          "passage_sha256": "89bd07d367dd9bc9984798b9674f35dcd52a06b4f509a775178efa0f444461b1",
+          "score": 0.0010083435336127877
+        },
+        {
+          "positions": [
+            1002978
+          ],
+          "passage_sha256": "d232bb46b126054edc0e5e9ebbc7d9ef2dfbcc13ae456bef6758eee0760c9267",
+          "score": 0.0023688741493970156
+        },
+        {
+          "positions": [
+            63431
+          ],
+          "passage_sha256": "c33944db181a9d2b20fddcfd34d1de09e2273a3b5c46b9ddbb3801bfb13b8f82",
+          "score": 0.0006142272031866014
+        },
+        {
+          "positions": [
+            617434
+          ],
+          "passage_sha256": "08ab7bdd4fe3c732afc61572e8ae652612b9dd19693c400385ef362bb23c0611",
+          "score": 0.00042887922609224916
+        },
+        {
+          "positions": [
+            633751
+          ],
+          "passage_sha256": "17a6fd9c0864a108202cd2362262b63c5cddfa6da3674d8ea5e911a73cec29a2",
+          "score": 0.00815624836832285
+        },
+        {
+          "positions": [
+            691794
+          ],
+          "passage_sha256": "a06c25b4977b81ddd5efa1b995958f450eb762da78c79d4ec6605e53fa889eae",
+          "score": 0.002099273493513465
+        },
+        {
+          "positions": [
+            758089
+          ],
+          "passage_sha256": "84837d183fa844ca04e805177ddff3a04120f5980f929c1a437353fdcfbd8ba5",
+          "score": 0.0018315099878236651
+        },
+        {
+          "positions": [
+            544378
+          ],
+          "passage_sha256": "567b361909630ec7b6f54fed206ed21d22382a3f634fa4e89b6e114e68806d68",
+          "score": 0.011687257327139378
+        },
+        {
+          "positions": [
+            673697
+          ],
+          "passage_sha256": "f70abfaac9c0eaa180c518f38e84f3e73b64e94269401d9459c9a207965cf7e9",
+          "score": 0.00034329999471083283
+        },
+        {
+          "positions": [
+            752846
+          ],
+          "passage_sha256": "04ce640cf6f2fb5b55557984686e17a0ecd6c4e866e6f35c712000b6a62f5ada",
+          "score": 0.0011160142021253705
+        },
+        {
+          "positions": [
+            969498
+          ],
+          "passage_sha256": "af9293f0cabff9b4bae082806fa1311b016282a84a7fd2004a1ff99ac9d26f7d",
+          "score": 0.0004821761976927519
+        },
+        {
+          "positions": [
+            969947
+          ],
+          "passage_sha256": "eacd71d65f267e2bbb3d344663d9012be24646967f2e754a4617bc1f91bf07af",
+          "score": 0.0023967307060956955
+        },
+        {
+          "positions": [
+            1013887
+          ],
+          "passage_sha256": "2678a5042378958474055679467448639ac657081af030ee671a57910e2c86ac",
+          "score": 0.008093290030956268
+        },
+        {
+          "positions": [
+            321404
+          ],
+          "passage_sha256": "1afae5d28256c31700588ba5a27be4bf3d0a869e6c05e6a930754aae0cfd8be2",
+          "score": 0.00029365462251007557
+        },
+        {
+          "positions": [
+            676262
+          ],
+          "passage_sha256": "23fd5144c91750be3c859b875c0ce7961d093bbbae2928cfa521ed97255c2225",
+          "score": 0.0018821860430762172
+        },
+        {
+          "positions": [
+            742356
+          ],
+          "passage_sha256": "6bcff1c6091aedc9c0512b0c81fa9aea4366bb6c87429fce2f661593c5210ec4",
+          "score": 0.0020111582707613707
+        },
+        {
+          "positions": [
+            911359
+          ],
+          "passage_sha256": "6486b4b0b51df7322e66e43219ea4a76e9ab102c7bc39038b691cf09c28d9b56",
+          "score": 0.015130727551877499
+        },
+        {
+          "positions": [
+            954832
+          ],
+          "passage_sha256": "30a1b825aa404b4cfb3b3eaaedb2c104114c65e63562034ba389bd9170d177a7",
+          "score": 0.00026530236937105656
+        },
+        {
+          "positions": [
+            1013254
+          ],
+          "passage_sha256": "1b59e923a3f00afbe6bf530f4086e8901df71720f52336840eefd44eefb9c13f",
+          "score": 0.00046917638974264264
+        },
+        {
+          "positions": [
+            617737
+          ],
+          "passage_sha256": "b9112990211424a7a1339b80eace1160a6648140ceb6bfc2d3f0d56f0c0a44b4",
+          "score": 0.0014103584690019488
+        },
+        {
+          "positions": [
+            636230
+          ],
+          "passage_sha256": "c8a975bb9531fd27d51bd8dcbf129f3c4a653aa1fc410ab7ef85400ee4520e70",
+          "score": 0.0008199321455322206
+        },
+        {
+          "positions": [
+            913277
+          ],
+          "passage_sha256": "3b047dd6d3d80f29a4d8f4d119e71c573a4ed84c82b6bcf6ebc7abe1583c18bc",
+          "score": 0.0006771942134946585
+        },
+        {
+          "positions": [
+            946103
+          ],
+          "passage_sha256": "238f15811a024d3cc0c74e61139b620ace1a78d3f5d0407edc6120e74437817f",
+          "score": 0.000682501879055053
+        },
+        {
+          "positions": [
+            963660
+          ],
+          "passage_sha256": "ee82c1256d63a3d671e5addff74bb899b4b1e833d1a94aa04bda6715cb66fdf5",
+          "score": 0.001314724562689662
+        },
+        {
+          "positions": [
+            530827
+          ],
+          "passage_sha256": "f146e8564183d7e3150808ce7a16544e8235329e9d0fe7c692caee892c8242eb",
+          "score": 0.002736221067607403
+        },
+        {
+          "positions": [
+            637987
+          ],
+          "passage_sha256": "7c1930780d6f4ec32e03d1d0d5fd876f3d6d157760ecbb8d46262b826fc2419e",
+          "score": 0.0017961491830646992
+        },
+        {
+          "positions": [
+            689105
+          ],
+          "passage_sha256": "3dd8b80f5ce48583e3f0d17fe30d9e26139a257099435eec5d3c3537b81c9acc",
+          "score": 0.00019871552649419755
+        },
+        {
+          "positions": [
+            942447
+          ],
+          "passage_sha256": "5d0f98dff8cd8d7c0fd851b588f508fccf37799f381896061da8483fc52f03a4",
+          "score": 0.00033930176869034767
+        },
+        {
+          "positions": [
+            973825
+          ],
+          "passage_sha256": "f9b3ef8376d1d338eaca892f14f9bd2af4e99b6055b21866eae4679827337a52",
+          "score": 0.005301894154399633
+        },
+        {
+          "positions": [
+            787563
+          ],
+          "passage_sha256": "e92ed4aef09cfdf33316d3b8ca3fc1dda02bb4bbb813d194bc66709b0d27df35",
+          "score": 0.007518718484789133
+        },
+        {
+          "positions": [
+            954429
+          ],
+          "passage_sha256": "54ec0872bd46436bff9408915e9ef9168f2665279dc2977c2ff7c5a9ed8524fe",
+          "score": 0.0005907104350626469
+        },
+        {
+          "positions": [
+            966051
+          ],
+          "passage_sha256": "0890b589ab619c48743bdf69646e3c96152ec2fe0666384b95f4126164390e9f",
+          "score": 0.0025509123224765062
+        },
+        {
+          "positions": [
+            980221
+          ],
+          "passage_sha256": "ecf1589ba444203dae3c9cb426a1ff9d5698f688c04d657db2006a39e3d08a43",
+          "score": 0.001081715221516788
+        },
+        {
+          "positions": [
+            511384
+          ],
+          "passage_sha256": "35898eb66862a3d5f35c798a99431ace1f6c11878278c7f65737e26db216369b",
+          "score": 0.0023967307060956955
+        }
+      ]
+    },
+    {
+      "query_id": "deposit_and_drive:w1:q3",
+      "kind": "provision",
+      "elapsed_seconds": 1.6716257999651134,
+      "prepared_pair_count": 127,
+      "scores": [
+        {
+          "positions": [
+            87268
+          ],
+          "passage_sha256": "a92b215cd3b90fb3694911031f1c249092db4c645b696f429ba91cd1a7c81da2",
+          "score": 0.024145424365997314
+        },
+        {
+          "positions": [
+            4898
+          ],
+          "passage_sha256": "74dd94dd6db4a1e4da95d3c0f906be4e186fc2a6d3bb65df0084928316410e2a",
+          "score": 0.016466174274683
+        },
+        {
+          "positions": [
+            375574
+          ],
+          "passage_sha256": "8b2310db8d2aa63b8f4b70b56f4eed50d4cc0e8fba60778702b85c60b092df63",
+          "score": 0.000682501879055053
+        },
+        {
+          "positions": [
+            38377
+          ],
+          "passage_sha256": "f66a561672baef60f4da506cf10f6e89ba5ff18894360cd84de66f6504c40b22",
+          "score": 0.003469890682026744
+        },
+        {
+          "positions": [
+            2683
+          ],
+          "passage_sha256": "2c61736b531f7387143b6c978898b64a86612fe283ce701add237b39b6e34eee",
+          "score": 0.0007554056355729699
+        },
+        {
+          "positions": [
+            94114
+          ],
+          "passage_sha256": "62a3fd461a689dc68aafe46d4c419a5889263eebbc709832f9a9c633a4ebb6a2",
+          "score": 0.005934066604822874
+        },
+        {
+          "positions": [
+            376481
+          ],
+          "passage_sha256": "6021e35e01405343d796dabd41db3d4738e64c681fa845f5d1ed8e4a8b38ffdb",
+          "score": 0.0031850608065724373
+        },
+        {
+          "positions": [
+            12559
+          ],
+          "passage_sha256": "563a9cbd7dc04aaa576a3641b821356dcf39013128834a999bf5b7764dd9d93c",
+          "score": 0.003324436955153942
+        },
+        {
+          "positions": [
+            38422
+          ],
+          "passage_sha256": "d2a3545778403413394b9eaa770951003994278bea94b9a698a893b077b9d6f5",
+          "score": 0.0060503981076180935
+        },
+        {
+          "positions": [
+            68566
+          ],
+          "passage_sha256": "d451f91404f1888642722a0ffee08e56a3e78e31524c1e45b56ef63cbff0db5f",
+          "score": 0.005384937860071659
+        },
+        {
+          "positions": [
+            383637
+          ],
+          "passage_sha256": "23df81a3e5b60fbc7158adb96f95efe04d406251ff84d4e0d8cdb6c3c4fc0018",
+          "score": 0.004520817659795284
+        },
+        {
+          "positions": [
+            12540
+          ],
+          "passage_sha256": "502150339192d2129f646b625d8d95ba4842dea69556885e150d3d394e6cee30",
+          "score": 0.0018602986820042133
+        },
+        {
+          "positions": [
+            38401
+          ],
+          "passage_sha256": "13cd26ca3e6fe1f147a5ceb76526fb7e440deaf9b72175071ea295c71b5b3b1b",
+          "score": 0.0027791904285550117
+        },
+        {
+          "positions": [
+            72337
+          ],
+          "passage_sha256": "9f351be4f0163894c2d6cd2f2dfea58476df9b6b62cb10e639b63f780db2ec51",
+          "score": 0.006797532085329294
+        },
+        {
+          "positions": [
+            28839
+          ],
+          "passage_sha256": "137cd8cec2143787c4531bca400b634bd26f9d7c5950be6fee63a9412b000abc",
+          "score": 0.0019342610612511635
+        },
+        {
+          "positions": [
+            88142
+          ],
+          "passage_sha256": "0a5b9c03f250d011661b686fadf6e83fc94c6bd32a05b3b8ba12238b4dede79c",
+          "score": 0.0007793660624884069
+        },
+        {
+          "positions": [
+            267645
+          ],
+          "passage_sha256": "5603dded72bd0e1292ef5dac46b3a554c8b2da8b985f0ca6dc664b89b50294e7",
+          "score": 9.028038039105013e-05
+        },
+        {
+          "positions": [
+            251220
+          ],
+          "passage_sha256": "9687a2d18e6db04360959b1f9f07cd9825457bcaa6f3dc104f3b30b707de97ea",
+          "score": 0.0005976693937554955
+        },
+        {
+          "positions": [
+            385097
+          ],
+          "passage_sha256": "75297f97b7756d74834471b770316ea4aee6bceca6d37e093b4146588d220cc5",
+          "score": 0.000954731716774404
+        },
+        {
+          "positions": [
+            308
+          ],
+          "passage_sha256": "ef2bfda5c66931e51bbc713a87edaf47961fdbb9ac68c7ce92fd3e643cabc06d",
+          "score": 0.003869391046464443
+        },
+        {
+          "positions": [
+            377589
+          ],
+          "passage_sha256": "f61cc6163e7209548fa1b0f3e0797a44f6ad08844ad68be89d3295c233124bed",
+          "score": 0.0002824080875143409
+        },
+        {
+          "positions": [
+            393502
+          ],
+          "passage_sha256": "4e78fd8b0f895ff07bf19b91931ff81326c7479ba8c1a6844557662ac21ea30c",
+          "score": 0.000471011851914227
+        },
+        {
+          "positions": [
+            46862
+          ],
+          "passage_sha256": "3d7642ae1aeb1200390d858eef5164e3fcb7c5601013149aaae56d5303b27c66",
+          "score": 0.0021573416888713837
+        },
+        {
+          "positions": [
+            268259
+          ],
+          "passage_sha256": "28edf1fe577c89c367bcd6e2744ffe02a2714f4dbaffbeedbd583001259ab46c",
+          "score": 9.17019642656669e-05
+        },
+        {
+          "positions": [
+            3603
+          ],
+          "passage_sha256": "565a0691ddddd5b93ea436a2af8631e9f8aadf3d37c1344a65b27e29a6793e39",
+          "score": 3.244481558795087e-05
+        },
+        {
+          "positions": [
+            31248
+          ],
+          "passage_sha256": "26bd659a4afd54b94c015cc7bd2f9d08948630e3fca6ab7766c18dbbaaefb4f5",
+          "score": 0.0007350447704084218
+        },
+        {
+          "positions": [
+            43511
+          ],
+          "passage_sha256": "76344e5eb3548b96b034f738146c4d42833f9775bb49a3e77a54c7ac04af1ff0",
+          "score": 0.0005378763889893889
+        },
+        {
+          "positions": [
+            29681
+          ],
+          "passage_sha256": "bd0caf3ab4f6f61b416818d929e6f5c79edbda5d92b520a230a34e516a2d1802",
+          "score": 0.0008360903011634946
+        },
+        {
+          "positions": [
+            49041
+          ],
+          "passage_sha256": "dbdb06d99fdc6e5b31d430883b5ebb8778a502026794dbe47b37125f4605de31",
+          "score": 0.0013045065570622683
+        },
+        {
+          "positions": [
+            98645
+          ],
+          "passage_sha256": "64c49c238bc177659a0cbc8f5c97cd6ad5ca077eddb2d26dfb80c7273be19d7c",
+          "score": 0.0012545944191515446
+        },
+        {
+          "positions": [
+            267276
+          ],
+          "passage_sha256": "97a430a93f9920493881a608135b10d3aa088a33e88083ef36c5edac7be8dfc1",
+          "score": 0.00011147904297104105
+        },
+        {
+          "positions": [
+            268045
+          ],
+          "passage_sha256": "82d23df808fcd1daaaa60514bc33d16728017f912646828e476390baddf48464",
+          "score": 0.0059110685251653194
+        },
+        {
+          "positions": [
+            330012
+          ],
+          "passage_sha256": "4b84819f8592cead5af98559382c586476f0ce58c3d3bb9f0e8b72146e9c1df1",
+          "score": 0.0016549242427572608
+        },
+        {
+          "positions": [
+            11013
+          ],
+          "passage_sha256": "358eb8d85e86d131b227cfc976bf923ffaf8a6865563a6136f31d16f02ecb56c",
+          "score": 0.0011604196624830365
+        },
+        {
+          "positions": [
+            89469
+          ],
+          "passage_sha256": "96051945be2298d818eeae84a5359ac7bd6d97c4a1329952e0cd54b9887197c2",
+          "score": 0.0035243413876742125
+        },
+        {
+          "positions": [
+            160356
+          ],
+          "passage_sha256": "c5bbf7d6353000f7c73fd051b1f411cf35fa35b24b79e4a85d2124d93a8665bb",
+          "score": 0.0016549242427572608
+        },
+        {
+          "positions": [
+            269180
+          ],
+          "passage_sha256": "1ef1a032c87d1b7debea0021624fae512712e3edeaf65159bc69a3a4ae9f5b42",
+          "score": 0.00012830943160224706
+        },
+        {
+          "positions": [
+            16690
+          ],
+          "passage_sha256": "d60dc48696d633aad9afe74ec23f2d7f2de681bce9011fa11b9206009126396f",
+          "score": 0.0003053489199373871
+        },
+        {
+          "positions": [
+            200049
+          ],
+          "passage_sha256": "3914df33987ca34556ba68d1fb01b0310e9a7607f5a2ba0c2490d05cec84d1ca",
+          "score": 0.06669065356254578
+        },
+        {
+          "positions": [
+            393501
+          ],
+          "passage_sha256": "17a157a728cbe5c05e2ed1989759e00330fb46a4aea50a07db6cc0a5f87319b9",
+          "score": 0.0005213363328948617
+        },
+        {
+          "positions": [
+            267405
+          ],
+          "passage_sha256": "cf7dc2e48cde65730179d44c123c9962f3b20416276e0a6248d21ef59ace7e02",
+          "score": 0.00017265156202483922
+        },
+        {
+          "positions": [
+            376576
+          ],
+          "passage_sha256": "4cdd01bb9b735125c50e09cf09a62798a314ea6b8d5e70acdccce1b86e57c107",
+          "score": 0.0002131875662598759
+        },
+        {
+          "positions": [
+            394678
+          ],
+          "passage_sha256": "241210d8e7efef6bf40660b6930366aa97169c59ac94755f475a4c12ce780b82",
+          "score": 0.00026738259475678205
+        },
+        {
+          "positions": [
+            266868
+          ],
+          "passage_sha256": "5f71da9656310032da465a23755c58047495bedbc5da7f011e95becd6365d42a",
+          "score": 0.0021657671313732862
+        },
+        {
+          "positions": [
+            158769
+          ],
+          "passage_sha256": "c4c43db901594406e5bde6167e2df760c8f84cef646c09edd9a4c48f02c44f48",
+          "score": 0.00064368563471362
+        },
+        {
+          "positions": [
+            87337
+          ],
+          "passage_sha256": "d7cbbeb8f325029f29bda18123b1f36ab67e5922b612df120004efc4de42c8c4",
+          "score": 0.0077555361203849316
+        },
+        {
+          "positions": [
+            90026
+          ],
+          "passage_sha256": "df40ca21c406e727f043fa31f148bcd37e0789339c1c579a17d95d666742d657",
+          "score": 0.0009659748757258058
+        },
+        {
+          "positions": [
+            145247
+          ],
+          "passage_sha256": "9930c96068a5101149b48ac86ca1b96508557473e36d0e70a43a808620d5d0e7",
+          "score": 0.0006667023408226669
+        },
+        {
+          "positions": [
+            90664
+          ],
+          "passage_sha256": "7a4049cccd4da95d279bfb45b0656adfbe07ff1aa22b2bbe2744d203b3bd09e5",
+          "score": 0.001356401713564992
+        },
+        {
+          "positions": [
+            5632
+          ],
+          "passage_sha256": "9f1dcdaf72b92a7e075ec5549ba763989f537317acc376cc0d414e9e3ef6ff9a",
+          "score": 0.0012399960542097688
+        },
+        {
+          "positions": [
+            46837
+          ],
+          "passage_sha256": "43dc9ab16414fa702b819927c30f9de631467f1ae5290aac65d06c7ef302610a",
+          "score": 0.00012533752305898815
+        },
+        {
+          "positions": [
+            394601
+          ],
+          "passage_sha256": "307b51bd7695188ff6f07fa9ffe640b211dc8b6b94552584a2ceedee2a6670c2",
+          "score": 0.0024438868276774883
+        },
+        {
+          "positions": [
+            12556
+          ],
+          "passage_sha256": "4c8e5ecfb4726b718aed2b420422b0b96a27244080b271a3577278d92fc5dd99",
+          "score": 0.0016875095898285508
+        },
+        {
+          "positions": [
+            90111
+          ],
+          "passage_sha256": "e6a991b77775967efa247db095fc93dd0c1e4a6b6ee6343fc845e1f21e47e7d8",
+          "score": 0.0019192374311387539
+        },
+        {
+          "positions": [
+            92915
+          ],
+          "passage_sha256": "65b55771989a41ad4e54692fc7a99c56a1de28c5e0daddef4859b72c1c627f75",
+          "score": 0.00037555923336185515
+        },
+        {
+          "positions": [
+            268052
+          ],
+          "passage_sha256": "a626e6817cd37fb4d473edda66346a097d39b90d23bec8f5fc44fec9fa61ab94",
+          "score": 0.0018895388348028064
+        },
+        {
+          "positions": [
+            349
+          ],
+          "passage_sha256": "a687b157d33b449f9ce5e51aaa7c46666cf13fbaf540c983569efd981359f876",
+          "score": 0.00017813112935982645
+        },
+        {
+          "positions": [
+            38418
+          ],
+          "passage_sha256": "fa52ff7a606302fcea2fce767c468aee796dccb8c1b7994281e9bc8154b5131d",
+          "score": 0.0022170129232108593
+        },
+        {
+          "positions": [
+            34308
+          ],
+          "passage_sha256": "bbf8e6571d4c0bdc0bea198addfc2de5e8cbce0fa56743d60153df369887d8c7",
+          "score": 0.0030160662718117237
+        },
+        {
+          "positions": [
+            71738
+          ],
+          "passage_sha256": "27986f1cd9b4d34bc3a305467be428a820dd80e9b0fadf4a253a483caf914357",
+          "score": 0.0003569706459529698
+        },
+        {
+          "positions": [
+            200070
+          ],
+          "passage_sha256": "c687206059b7e33d698cae31a0b4ac24d428f0687d117db0a7a1b4d0da72d4d9",
+          "score": 0.0035936026833951473
+        },
+        {
+          "positions": [
+            87343
+          ],
+          "passage_sha256": "8202d776bd671a5c7f9693c625be1843b0b1ebd9b7c1666305518ddd2ac93194",
+          "score": 0.0053640566766262054
+        },
+        {
+          "positions": [
+            89508
+          ],
+          "passage_sha256": "a1c3b045fdcad7a0d45a905b39e42fd8ea7ca3110349cebc8bc06f6296ff2179",
+          "score": 0.00016346470511052758
+        },
+        {
+          "positions": [
+            98667
+          ],
+          "passage_sha256": "c392f33bcae7d3722a22b0a3128b0edebac21669ed4898fa9b43bda003ce0404",
+          "score": 0.0010649627074599266
+        },
+        {
+          "positions": [
+            172745
+          ],
+          "passage_sha256": "0ae3e823065dbcf1441dece24a3bdf0bcf9f1c87eb1a3e449f96e857d0f8aea1",
+          "score": 0.002123966347426176
+        },
+        {
+          "positions": [
+            200068
+          ],
+          "passage_sha256": "abac85c8c291798a25211bcf0710f630dd73cd4a914e3ebc2da04ba52b15997c",
+          "score": 0.0035936026833951473
+        },
+        {
+          "positions": [
+            46850
+          ],
+          "passage_sha256": "ad0ff271aa04a11cc844c45951ad28a68d2ac5ab29ad937f16a63320334e6e65",
+          "score": 0.0010649627074599266
+        },
+        {
+          "positions": [
+            88227
+          ],
+          "passage_sha256": "d072e785e2e811538cfc76ec239f67cc66e8f3e201c79ba7444f1f761f5d92d1",
+          "score": 0.008711384609341621
+        },
+        {
+          "positions": [
+            173350
+          ],
+          "passage_sha256": "25aaffc019abc6f02cb900df0d2c195809d11b49f62c8381142ba14cc87f56e6",
+          "score": 0.00010637458035489544
+        },
+        {
+          "positions": [
+            96138
+          ],
+          "passage_sha256": "cd1b31cf5b13f05dac6020db72e3db3a4950651bd396b00e9735c411220d5ad4",
+          "score": 0.0017207354540005326
+        },
+        {
+          "positions": [
+            268000
+          ],
+          "passage_sha256": "8241801cfc3807e4722367166fdc33473706aefacca92fad6d6aef68b5c03896",
+          "score": 0.0006023541209287941
+        },
+        {
+          "positions": [
+            268085
+          ],
+          "passage_sha256": "900993f1f8ef9b6de62852638168780337755b72a7068087c9777148b0668dcc",
+          "score": 0.0005861161625944078
+        },
+        {
+          "positions": [
+            98637
+          ],
+          "passage_sha256": "1fd397cec2c256e42edafa243dbfee7c9c48d89925ef87d84bef2e76feaa87e1",
+          "score": 0.0003583672805689275
+        },
+        {
+          "positions": [
+            399279
+          ],
+          "passage_sha256": "b95bfae6169cbdc6a737af1b2c9d7de5dfcc3204e3385232c7811609cca010fe",
+          "score": 0.001052568550221622
+        },
+        {
+          "positions": [
+            177128,
+            177238
+          ],
+          "passage_sha256": "584615fda0a7be0a0fc8f7ea10e67cf05dcaf50c3193082511f5754264261730",
+          "score": 0.0005614787805825472
+        },
+        {
+          "positions": [
+            386015
+          ],
+          "passage_sha256": "c833ef5a4e251c9f9eaebe55cd28369a00d0727b0f853786f0beb73315d48de6",
+          "score": 0.0002824080875143409
+        },
+        {
+          "positions": [
+            77351
+          ],
+          "passage_sha256": "b43ebd80cf384e31e3de57f93f6220b0384702f62a735f52f391749aab02568c",
+          "score": 0.013376603834331036
+        },
+        {
+          "positions": [
+            177128,
+            177238
+          ],
+          "passage_sha256": "584615fda0a7be0a0fc8f7ea10e67cf05dcaf50c3193082511f5754264261730",
+          "score": 0.0005614787805825472
+        },
+        {
+          "positions": [
+            269114
+          ],
+          "passage_sha256": "54e038b038bdc62f60e103831d7bae6b43d1972ed3996372cb012763dda1cc08",
+          "score": 0.00020342698553577065
+        },
+        {
+          "positions": [
+            19040
+          ],
+          "passage_sha256": "34eaf6e279163fbb5013f2cbadcc8afd7384125a79b3ca0d21c9e2a1a54229a2",
+          "score": 0.0019570167642086744
+        },
+        {
+          "positions": [
+            83847
+          ],
+          "passage_sha256": "ca8145ba1242c82513c7124ebcd794043d5d1de722ff673d2fe3fadd08c8376a",
+          "score": 0.000503335555549711
+        },
+        {
+          "positions": [
+            302559
+          ],
+          "passage_sha256": "85f075ccc40aa7715028bfd8780e6e16e8fc356cbbeae177785fdb6a2f75decb",
+          "score": 0.00038446192047558725
+        },
+        {
+          "positions": [
+            304849
+          ],
+          "passage_sha256": "4656fc67490d1e71c2d2203d41ca9e848d20fc6a107280201f528316e9b18caf",
+          "score": 0.0019723358564078808
+        },
+        {
+          "positions": [
+            200092
+          ],
+          "passage_sha256": "99c2fd575fc1169ebb59b65aa7dfd5a5a101b7e70f4a508145bef550349f2dfb",
+          "score": 0.0007014083093963563
+        },
+        {
+          "positions": [
+            281760
+          ],
+          "passage_sha256": "db97a6bf02fed85c2b64e86fc45e3d1f6b9f371cd3302dc595df914661a86648",
+          "score": 0.006797532085329294
+        },
+        {
+          "positions": [
+            287133
+          ],
+          "passage_sha256": "78511dd0845f604f07e3257843473ef17e48455331cea48e5cf49e3770b8e2e7",
+          "score": 0.00014883848780300468
+        },
+        {
+          "positions": [
+            386758
+          ],
+          "passage_sha256": "0f0e7d171ac493bdf4a09cd8a927da5ba29237290bcc7b8af66c2b2b8b686920",
+          "score": 0.00021824207215104252
+        },
+        {
+          "positions": [
+            89398
+          ],
+          "passage_sha256": "8862b137fd0eb06e90494add62bcbfe6e70bd675f41b6f52a0152bb03a508857",
+          "score": 0.0012793075293302536
+        },
+        {
+          "positions": [
+            266808
+          ],
+          "passage_sha256": "d907bbaba2d57c02251587ea1000fb38e4a8f1830186917113c14428a2bd4610",
+          "score": 0.0036499870475381613
+        },
+        {
+          "positions": [
+            381311
+          ],
+          "passage_sha256": "d29660f39181243f1baa919237cca623078a5be4bb1075ff30968d995493aacb",
+          "score": 0.003991728648543358
+        },
+        {
+          "positions": [
+            386427
+          ],
+          "passage_sha256": "a53f1aa0f510645955ad368885ad2bc13dd1999ad0476028e970f555fe5492a5",
+          "score": 0.001004416379146278
+        }
+      ]
+    },
+    {
+      "query_id": "deposit_and_drive:w1:q3",
+      "kind": "judgment",
+      "elapsed_seconds": 2.640569799928926,
+      "prepared_pair_count": 197,
+      "scores": [
+        {
+          "positions": [
+            799246
+          ],
+          "passage_sha256": "6d9959b89f90772d56c6f7a56df82e823d3946009c60ade207ffb4e1c418e2ac",
+          "score": 0.015365341678261757
+        },
+        {
+          "positions": [
+            928389
+          ],
+          "passage_sha256": "2841fba55751f7f28e48998d33167f1a8224405b2c7c953b3595b40e85442d2d",
+          "score": 0.04248320683836937
+        },
+        {
+          "positions": [
+            951349
+          ],
+          "passage_sha256": "333cf87707e8bdebe0671faf9d5f9fb7963bea1e594851e0fc7773240c1bc0db",
+          "score": 0.10762491822242737
+        },
+        {
+          "positions": [
+            799247
+          ],
+          "passage_sha256": "c9f41f8dcb86d459c65e5290c703ccbfd73bfb9235d0c27b5c1285960d697eb4",
+          "score": 0.13061773777008057
+        },
+        {
+          "positions": [
+            1012505
+          ],
+          "passage_sha256": "e6f97d9de6644437575b0a8dbfaff1a3041a340157650f95676cc25606203853",
+          "score": 0.018124720081686974
+        },
+        {
+          "positions": [
+            963652
+          ],
+          "passage_sha256": "da33f3c1250cfc5bba023c275f2dacd5ba958ed374cd8195b9f500c3ee1897d1",
+          "score": 0.0010443859500810504
+        },
+        {
+          "positions": [
+            928392
+          ],
+          "passage_sha256": "f111e43ceb20a53cb4b0c242c3d479783a542fd13033232de468087130909e0d",
+          "score": 0.003538086311891675
+        },
+        {
+          "positions": [
+            976301
+          ],
+          "passage_sha256": "4b8920fa0878516f796e9ba046bfda42ceea9401711c5d160e2548e05f660b70",
+          "score": 0.0023688741493970156
+        },
+        {
+          "positions": [
+            802429
+          ],
+          "passage_sha256": "a6e2b348c5515c99a40be68273c65800dcd4ec16046ef016bb4bf72fe5484f8f",
+          "score": 0.03521113470196724
+        },
+        {
+          "positions": [
+            338762
+          ],
+          "passage_sha256": "f9f62fec20991d104c249d62fa478b75e2fda008e9a136088f0d14cfe5481352",
+          "score": 0.0005378763889893889
+        },
+        {
+          "positions": [
+            970938
+          ],
+          "passage_sha256": "26786a67cbc322d679ce15af96aa21501dd420f136c6a1a4f2893926e75197f4",
+          "score": 0.011642225086688995
+        },
+        {
+          "positions": [
+            1013737
+          ],
+          "passage_sha256": "ef040850d4b8a10da26052638c25b71e941c9fed1bd57f9747d65ef6f0ddeca9",
+          "score": 0.002693914109840989
+        },
+        {
+          "positions": [
+            584477
+          ],
+          "passage_sha256": "9c8ccf00837d1fbf41d27e6f8eaeca7d7af98f4839af94775e08733c2a118a97",
+          "score": 0.0030994154512882233
+        },
+        {
+          "positions": [
+            584478
+          ],
+          "passage_sha256": "0d1328f4faecf12f81c019fdcb2832c94a4acf08de1d93693f03e975e266d6ea",
+          "score": 0.0027683854568749666
+        },
+        {
+          "positions": [
+            787740
+          ],
+          "passage_sha256": "e7ab16d4f1b6c43af5c3e5006b6f1d08a3daaf869f5fc1551ec0603a8229c911",
+          "score": 0.0027791904285550117
+        },
+        {
+          "positions": [
+            900891
+          ],
+          "passage_sha256": "2c699735b7f9d44c5b3c273ff17169950eb1cb09cbcd893dfd18e4db25012b61",
+          "score": 0.00042887922609224916
+        },
+        {
+          "positions": [
+            217173
+          ],
+          "passage_sha256": "3d1e94075c069f36e667aca59dcb61a30e3cee9866a7470c6cd99f9581c2f8f2",
+          "score": 0.0025509123224765062
+        },
+        {
+          "positions": [
+            332879
+          ],
+          "passage_sha256": "83bd106158ed6c5e8701d0bab38e6599d26db88cacbc2574fbee68fbce78ef86",
+          "score": 0.0036499870475381613
+        },
+        {
+          "positions": [
+            544404
+          ],
+          "passage_sha256": "a2751dadff36d9fed533609cb9fa76aca2abb29625d20e66b2ba58e8b713bd6d",
+          "score": 0.0006512682302854955
+        },
+        {
+          "positions": [
+            919427
+          ],
+          "passage_sha256": "f0a37fd140fee08559b5c264acc8d5054e6feb1bdd856db8f2fed11a3af259f6",
+          "score": 0.007665874902158976
+        },
+        {
+          "positions": [
+            987773
+          ],
+          "passage_sha256": "f69186036f55997277a8fd54aef674af9d9298da990d6252750e8b6ea3072aa2",
+          "score": 0.0002715921145863831
+        },
+        {
+          "positions": [
+            339464
+          ],
+          "passage_sha256": "9024308d7f922855ab0f170fa38be114176facefd28b5f59d55249c46e154628",
+          "score": 0.00032503585680387914
+        },
+        {
+          "positions": [
+            455313
+          ],
+          "passage_sha256": "9a7e70ce2fce955056c8b04c09906d85abe81e57e557284df9c942a47852fd79",
+          "score": 0.049958519637584686
+        },
+        {
+          "positions": [
+            479226
+          ],
+          "passage_sha256": "215e11f256128532f92db49c6ae597f61533c7f5036667764d44ce46d905dc55",
+          "score": 0.01778038963675499
+        },
+        {
+          "positions": [
+            693508
+          ],
+          "passage_sha256": "6fc79e690a280e91782ce806556cf3921cef496afea40442f0f09ee6b0a2c16d",
+          "score": 0.001220795209519565
+        },
+        {
+          "positions": [
+            975187
+          ],
+          "passage_sha256": "6ed0c04219608e13cdad17afd1896adf3e52698ad318537e5af1486de9391771",
+          "score": 0.0014607495395466685
+        },
+        {
+          "positions": [
+            558777
+          ],
+          "passage_sha256": "979ee44ee011a73eac9d816d2b7fa96e7c52947ed74c387178a6b526e7bb3c13",
+          "score": 0.0003625900426413864
+        },
+        {
+          "positions": [
+            696486
+          ],
+          "passage_sha256": "2dabe9ff33c94a71a633db49f60deb79ed60da9b45bc5a1deaf51fc91bc6533a",
+          "score": 0.0023504828568547964
+        },
+        {
+          "positions": [
+            901136
+          ],
+          "passage_sha256": "929c043fe16a131d472570a20da9ac75556e25a60fa56cfcfaa3ab3e51071779",
+          "score": 0.005797401536256075
+        },
+        {
+          "positions": [
+            1005717
+          ],
+          "passage_sha256": "dd79abe23887bd08614d3201ea6fa71dbae6dd0b8dd590f8eeb0b9f743a2245e",
+          "score": 0.0009850083151832223
+        },
+        {
+          "positions": [
+            403880
+          ],
+          "passage_sha256": "33e665fb50b8078e4aeb5de4e8dda24b1ab4753e42f5deff084c265149e96799",
+          "score": 0.0009326360304839909
+        },
+        {
+          "positions": [
+            690656
+          ],
+          "passage_sha256": "1015ee2af76fb928055850282f89e96584f675e9b6135b090bc3a66c54adb4ea",
+          "score": 0.0004765612829942256
+        },
+        {
+          "positions": [
+            696319
+          ],
+          "passage_sha256": "cb7843f0077ee9f9446c42be0c995adecbbbb41c1405988178565755a42213bc",
+          "score": 0.000638679601252079
+        },
+        {
+          "positions": [
+            949572
+          ],
+          "passage_sha256": "44b040374ed9324c8a4ea571eaa76fc6b4bb03c9524c974051570b731897f148",
+          "score": 0.0060975621454417706
+        },
+        {
+          "positions": [
+            951367
+          ],
+          "passage_sha256": "69627b9d2af5806c33aeee6895001fbf72cbe3dab6665f58216eb62330255e0f",
+          "score": 0.008610767312347889
+        },
+        {
+          "positions": [
+            960444
+          ],
+          "passage_sha256": "758a715f8a70ab673563b690045346f5b826d205994513564b4b3d2359787aac",
+          "score": 0.0003799845289904624
+        },
+        {
+          "positions": [
+            318584
+          ],
+          "passage_sha256": "d0642a489d045ee51049b701bedb1ff7c0857438edf45a45ba3f81e7467ee6aa",
+          "score": 0.0032224843744188547
+        },
+        {
+          "positions": [
+            397513
+          ],
+          "passage_sha256": "459a976d507ce20dc6c99a26c74d44aa021fe7b835306b04534296056d67dda7",
+          "score": 0.00035557945375330746
+        },
+        {
+          "positions": [
+            544389
+          ],
+          "passage_sha256": "0d0f3597d52be7a2c4a31bc9aa2a464b705c5fcfa821d81bb016018784a64ed7",
+          "score": 0.001151399570517242
+        },
+        {
+          "positions": [
+            676256
+          ],
+          "passage_sha256": "23c5bf115fa0de40779f6820df5119d74ed833270364d036c149a7c56a1f84f4",
+          "score": 0.0019570167642086744
+        },
+        {
+          "positions": [
+            934816
+          ],
+          "passage_sha256": "8f7e35772196d192a69ca31bd9b5b1f813c6f1fbf723d2e860ae9e1026422330",
+          "score": 0.0037217086646705866
+        },
+        {
+          "positions": [
+            949753
+          ],
+          "passage_sha256": "37f89bb729773ddfdb750cf13a9f35074d63a8dcc67d21d43a0902f15cd121ac",
+          "score": 0.0017752605490386486
+        },
+        {
+          "positions": [
+            692863
+          ],
+          "passage_sha256": "771a7016391f87690bbc9d2b736550652d205beecb5f7e359498c41b7cf80cf4",
+          "score": 0.003869391046464443
+        },
+        {
+          "positions": [
+            135257
+          ],
+          "passage_sha256": "d3844958def9a3c85cccdd1ad4cf91019f513af19e1d79138cf8c800348ba811",
+          "score": 0.0021657671313732862
+        },
+        {
+          "positions": [
+            544369
+          ],
+          "passage_sha256": "a1f5a23085a95300080e23f133ca0cf73463e0cb87055419b5dd94486b8b5e68",
+          "score": 0.0006986756343394518
+        },
+        {
+          "positions": [
+            890023
+          ],
+          "passage_sha256": "952954a99b075646d04014c2bbb57af7d8bf80a72b3f27ba88c1adb2070e820c",
+          "score": 0.0030753696337342262
+        },
+        {
+          "positions": [
+            1011003
+          ],
+          "passage_sha256": "64ed0416e6c4204453c0fa7d63dac59b0e686a7874ae255ae6d7a6745f267341",
+          "score": 0.05242456495761871
+        },
+        {
+          "positions": [
+            1012925
+          ],
+          "passage_sha256": "425c4ec5403aa8d9b2df8ac4d33b04621c123571dc0da30e40fc7528e1921778",
+          "score": 0.0006142272031866014
+        },
+        {
+          "positions": [
+            544363
+          ],
+          "passage_sha256": "173d5361dfb92b203b934ffa801789d4654e3c9a45cd0b766e5c298510cfbef1",
+          "score": 0.001560889184474945
+        },
+        {
+          "positions": [
+            833047
+          ],
+          "passage_sha256": "b953e05f867dc5229e454f6c88cec8d7689396bb85fc5ca5c4d1c3368c7a3df8",
+          "score": 0.0030278346966952085
+        },
+        {
+          "positions": [
+            856664
+          ],
+          "passage_sha256": "4e0820d60f5fd63a8beb947bd23ced0c72a9943e52d05b015201909bae9006bc",
+          "score": 0.0022170129232108593
+        },
+        {
+          "positions": [
+            921525
+          ],
+          "passage_sha256": "8a91519d644870d9d9f1f69cfe3d2d1afe56c4856e1e8948036c74a95d9ca9ca",
+          "score": 0.002225670963525772
+        },
+        {
+          "positions": [
+            349858
+          ],
+          "passage_sha256": "a14a7429ac590bfd795f2e54ea05d0684d9b860a03e42ecf8f409026636222b8",
+          "score": 0.0005132579244673252
+        },
+        {
+          "positions": [
+            692869
+          ],
+          "passage_sha256": "67be5a98216f725c224db603a65203b9a7a038bb07c03d89df6dac896a642475",
+          "score": 0.028707079589366913
+        },
+        {
+          "positions": [
+            921212
+          ],
+          "passage_sha256": "dc62eadd2e3db8c3270bfc31b5b838e5194d6f480d835a6ea5b26877ca35e3c5",
+          "score": 0.014615669846534729
+        },
+        {
+          "positions": [
+            927082
+          ],
+          "passage_sha256": "1c4edc6a3a0832adb12a982b9657033bc257570b7999efc70b8e9729c2e80a99",
+          "score": 0.0002591582597233355
+        },
+        {
+          "positions": [
+            217176
+          ],
+          "passage_sha256": "7844f7fa4b7b2f052e3b95d27ea2b4fa1b31f40141bddb089bafd6bd696804e3",
+          "score": 0.00272558256983757
+        },
+        {
+          "positions": [
+            799240
+          ],
+          "passage_sha256": "c6e6d170dd61bdcc66370374c28f7636681803cfc7ddc7065ef1928b107b3044",
+          "score": 0.005554925184696913
+        },
+        {
+          "positions": [
+            801735
+          ],
+          "passage_sha256": "3c57380cadbd0ef5f4f2ff4a6c4c5d8deb780e1d406c72535ee8b65e512159b3",
+          "score": 0.0002982776495628059
+        },
+        {
+          "positions": [
+            952685
+          ],
+          "passage_sha256": "b84fe01215268c866530ec40afcc52b194a0d58c3af19e7775bdd6af94ec57b4",
+          "score": 0.0011424495605751872
+        },
+        {
+          "positions": [
+            983815
+          ],
+          "passage_sha256": "2cf90ea528f6126ed05cec60770045e5e76534c758b4b5cbd9c7d750b4c0cc4f",
+          "score": 0.00018667821132112294
+        },
+        {
+          "positions": [
+            263078
+          ],
+          "passage_sha256": "ed53fa9bcace9e935f8a72acaae732873cd688aeadd867850141c5c84e520688",
+          "score": 0.006589771714061499
+        },
+        {
+          "positions": [
+            752795
+          ],
+          "passage_sha256": "be9eb63b9d778b0ad1723cd36aed2e100bb378a4469f64221657ac3650bda96d",
+          "score": 0.0006641048239544034
+        },
+        {
+          "positions": [
+            874659
+          ],
+          "passage_sha256": "0623b97cd345338574487836a66cbc002e90164f76f4b1437627af7a38a70646",
+          "score": 0.0008969392511062324
+        },
+        {
+          "positions": [
+            904699
+          ],
+          "passage_sha256": "e80ab323fb14fe95389bf966bbfa5485a350afb7847d5d30758121377e5ee895",
+          "score": 0.00026323829661123455
+        },
+        {
+          "positions": [
+            951348
+          ],
+          "passage_sha256": "a2a631dbb21f930055cfff8c15436c73af125d2b4b6ef0ecb7539969664e18c0",
+          "score": 0.07477004081010818
+        },
+        {
+          "positions": [
+            158118
+          ],
+          "passage_sha256": "28bac9fb5b21799b8a93c8a69c1171fbef9353186ac5f15d5989d76880c6d313",
+          "score": 0.005511934403330088
+        },
+        {
+          "positions": [
+            544367
+          ],
+          "passage_sha256": "2b8d7bfd7af60f032949e8375a883806a7cdec2acbd99994e13215c42fe4f7e8",
+          "score": 0.0006190416170284152
+        },
+        {
+          "positions": [
+            752824
+          ],
+          "passage_sha256": "af8951021f772c4840f92a686e28f782568fe66be1ee4cbda592e2ce1a66aed8",
+          "score": 0.0005072812782600522
+        },
+        {
+          "positions": [
+            806411
+          ],
+          "passage_sha256": "cd062426153a6920761ab80911152cf73e132bcc1a7fb0a14fb219feca7b42bb",
+          "score": 0.0009039677679538727
+        },
+        {
+          "positions": [
+            917142
+          ],
+          "passage_sha256": "d80d2a147e6aedac76b5920c07f189e08c625a448f540454da00a493cd855bed",
+          "score": 0.0023504828568547964
+        },
+        {
+          "positions": [
+            988631
+          ],
+          "passage_sha256": "7211509a8ddfa1f4c421f1f03b62553dfeb214cdb17bb2a0f0045b446c7f3995",
+          "score": 0.0008492455235682428
+        },
+        {
+          "positions": [
+            594188
+          ],
+          "passage_sha256": "66428ba2b8f6d534a7fca6807381cad389dcb5316999e9c966af1c735f9e43c1",
+          "score": 0.006564249750226736
+        },
+        {
+          "positions": [
+            696394
+          ],
+          "passage_sha256": "7b5765ad4ec518032c5bd408a28e3e615632e57afd9b30ffa8533fa4d35d5d4b",
+          "score": 6.302758993115276e-05
+        },
+        {
+          "positions": [
+            752828
+          ],
+          "passage_sha256": "36ba1d508be1bf0329622ee0faabc7eef421cde3652d906d65e832f2ae430a15",
+          "score": 0.0009217804181389511
+        },
+        {
+          "positions": [
+            983803
+          ],
+          "passage_sha256": "7d290830b7b6df719cf4b4897cbf10bfd60cce2a8e2206eddb4f2c591995353b",
+          "score": 0.0005884087877348065
+        },
+        {
+          "positions": [
+            1006249
+          ],
+          "passage_sha256": "d3ca9b5e2b7f3a62af3a3d7af7aa861fae6af528ea885af51fe633328b9aec5f",
+          "score": 0.0016809417866170406
+        },
+        {
+          "positions": [
+            71847
+          ],
+          "passage_sha256": "a2be2d672952d7a1b73f6c2bef73475b27ab43d8c1878b787540e85a00facab7",
+          "score": 0.0006512682302854955
+        },
+        {
+          "positions": [
+            689051
+          ],
+          "passage_sha256": "304f58d6f6dd65e18a43b3de42870f50e190dbc49eb824de92326a1bcd2bb51c",
+          "score": 0.014503579586744308
+        },
+        {
+          "positions": [
+            899130
+          ],
+          "passage_sha256": "b55ea6a2d0e4de62b1d96ab78b2e95aaed26c96c8d97f9d9a7c4e22681af6b11",
+          "score": 0.002305125119164586
+        },
+        {
+          "positions": [
+            998302
+          ],
+          "passage_sha256": "f4cd663518bb7e78beebe81cb3f0a063789928784ff8685f9f589cef2c965a9e",
+          "score": 0.011777842417359352
+        },
+        {
+          "positions": [
+            504013
+          ],
+          "passage_sha256": "80b8006b075ab8d9617935d82ad5e6505a33da3b11e9f9fa3b504b6deca52e1f",
+          "score": 0.006388320587575436
+        },
+        {
+          "positions": [
+            544362
+          ],
+          "passage_sha256": "0606e162b28c0a3765e7012bb9f27d94b4a8f79d9b0ef173f0f367b89efe1a81",
+          "score": 0.0035936026833951473
+        },
+        {
+          "positions": [
+            915267
+          ],
+          "passage_sha256": "843931b36c7c4626ed2358e2fcad053d88720a999ef3661716ad2cc4b067e02e",
+          "score": 0.008610767312347889
+        },
+        {
+          "positions": [
+            33875
+          ],
+          "passage_sha256": "07e275ddc920ad8dccf1b6ce5de176cce7f9a6aec061394f9183d6fa56863e93",
+          "score": 0.0005378763889893889
+        },
+        {
+          "positions": [
+            323010
+          ],
+          "passage_sha256": "bb38f9781e08307dc83979c83c09d47f5f0d288f89dc9641fe88daa0a13db302",
+          "score": 0.11182181537151337
+        },
+        {
+          "positions": [
+            626027
+          ],
+          "passage_sha256": "2ab088669324d3264b55f7d8fe0c2d5bfbd620d96007e445d664c8c9f535d298",
+          "score": 0.0030753696337342262
+        },
+        {
+          "positions": [
+            645005
+          ],
+          "passage_sha256": "5395c842412f69d94785dd10919c39f862dd15fec5ce8f75eec9f0b560beb5c4",
+          "score": 0.012241275049746037
+        },
+        {
+          "positions": [
+            942444
+          ],
+          "passage_sha256": "b67ebe5577cd92caea410e5fce594c5e1ab1cba2942013c44fa4e696ebab4209",
+          "score": 0.00029137005913071334
+        },
+        {
+          "positions": [
+            957619
+          ],
+          "passage_sha256": "c20a164baa2e9610f42f1db6a31b1a82b63f406dc2b1d91d046289f89164f616",
+          "score": 0.0009436192340217531
+        },
+        {
+          "positions": [
+            64521
+          ],
+          "passage_sha256": "ebc67cdb8de5b70851d81226ce3eb526afd3e02a6c1a55a87529835689d2136d",
+          "score": 0.0017007222631946206
+        },
+        {
+          "positions": [
+            473289
+          ],
+          "passage_sha256": "ebd817eb4adaca8e7a99d5128a653318d625a36c289cdd049b9f4d8dc3964d93",
+          "score": 0.0020507434383034706
+        },
+        {
+          "positions": [
+            491510
+          ],
+          "passage_sha256": "950b3b4a61eff937715abb7dd03a742354af637dd1b5c2e334d5f0d0d0eb0ca0",
+          "score": 0.000638679601252079
+        },
+        {
+          "positions": [
+            544374
+          ],
+          "passage_sha256": "84c06cc9fc1f2d8b4043fcebbb71eb9022947498283487a2fdf6abbfef333f4f",
+          "score": 0.006217078305780888
+        },
+        {
+          "positions": [
+            851463
+          ],
+          "passage_sha256": "32f0c6f020d9c8f1d5886fe406718d7751d3bb3007a7cabd56a64117c9db5b77",
+          "score": 0.0009811719646677375
+        },
+        {
+          "positions": [
+            296330
+          ],
+          "passage_sha256": "0adf606bc6e68d25a0f9ad9c0c3ca59c1547147e9386af725095a26f5a0e806c",
+          "score": 0.0035243413876742125
+        },
+        {
+          "positions": [
+            377707
+          ],
+          "passage_sha256": "ddee32183fe33e07e37220628a9079f6421ef7f5818c8f3042f37ce8ea3e03e8",
+          "score": 0.000552778656128794
+        },
+        {
+          "positions": [
+            544379
+          ],
+          "passage_sha256": "5af6830acb33bee1a55815e5c4ba34dcd45ab7e1be23a91fffbc8ab8b9ad9c89",
+          "score": 0.01912403479218483
+        },
+        {
+          "positions": [
+            962558
+          ],
+          "passage_sha256": "ecff7e181a8859568eaa499860f0016e9f4212384538ba66284fed41fdbecfd8",
+          "score": 0.0008263576892204583
+        },
+        {
+          "positions": [
+            973810
+          ],
+          "passage_sha256": "e43a19fad3a3b448f7b63323b642bac61732e0c5b7691200b0ce8699e445fcd9",
+          "score": 0.01009131595492363
+        },
+        {
+          "positions": [
+            2525
+          ],
+          "passage_sha256": "e3b2cc28cae6d3a28df01af1fddc2cf537c3afb22a5c3012019bd6ecd7f12ca8",
+          "score": 0.010368157178163528
+        },
+        {
+          "positions": [
+            59031
+          ],
+          "passage_sha256": "d668dfa15c573bce53a50debc603d2b13924631c676a2869b1cef04ee2bb0144",
+          "score": 0.044514428824186325
+        },
+        {
+          "positions": [
+            373136
+          ],
+          "passage_sha256": "ea6570b3e20cb892c53013691517059a693bc7ebe20fb948246123f6a13881ea",
+          "score": 0.0004459562187548727
+        },
+        {
+          "positions": [
+            418064
+          ],
+          "passage_sha256": "ad7d787fc2ef11f03f3d38edb92f0f15ec9d85f9e2683522b1379ffb0e5f75db",
+          "score": 0.004810982849448919
+        },
+        {
+          "positions": [
+            966668
+          ],
+          "passage_sha256": "75233388d5644079ed2498f19c57c028712eecd6ba7fbdac36bb7fefa08216d3",
+          "score": 0.0001713081874186173
+        },
+        {
+          "positions": [
+            992198
+          ],
+          "passage_sha256": "9a99b9daf2a944c4292fce10c3a51dacc61dcaaa99e9ebe6fbe87f8298db1156",
+          "score": 0.0005152657395228744
+        },
+        {
+          "positions": [
+            398563
+          ],
+          "passage_sha256": "c3ba2f6b72e47158838d67943714e3fb1d313ce8cf07618a48d43ccf4a76aaec",
+          "score": 0.00048029719619080424
+        },
+        {
+          "positions": [
+            444732
+          ],
+          "passage_sha256": "4f74c4007831779464273221f3ecca06e0bd71c14ad9754c26ff038db9f15dc8",
+          "score": 0.03514484688639641
+        },
+        {
+          "positions": [
+            499731
+          ],
+          "passage_sha256": "c85914b745d997f784351c4d874db310ae7a234b10892bcb8906f0e5b56ed9d1",
+          "score": 0.0077555361203849316
+        },
+        {
+          "positions": [
+            560548
+          ],
+          "passage_sha256": "247044bf96442fa87295ead3371992f1e90fd6732d85c3c64775c3027e83da0f",
+          "score": 0.00025315635139122605
+        },
+        {
+          "positions": [
+            974267
+          ],
+          "passage_sha256": "fe5c74a6130787426b02bb7b4e0b75e532953d1657771ec4006ae4599904fb1e",
+          "score": 0.0005132579244673252
+        },
+        {
+          "positions": [
+            983838
+          ],
+          "passage_sha256": "a0cc0a04b7ba21f81a9366e94dce4f8035bd871fed7e04f49cac5f77ac7d0150",
+          "score": 0.00039357561036013067
+        },
+        {
+          "positions": [
+            3590
+          ],
+          "passage_sha256": "c0e1acc59f5e70621b967164c81025685fd8d275405e82e2d80455a7e853d46a",
+          "score": 0.009055263362824917
+        },
+        {
+          "positions": [
+            490739
+          ],
+          "passage_sha256": "e5a81988831fda7c2424d7d460f76aaa3c3d8bc65996f072dc908b2a119198c1",
+          "score": 0.00035281325108371675
+        },
+        {
+          "positions": [
+            689053
+          ],
+          "passage_sha256": "e464948e9034f73bea04b23b2addca969c3f90c1832b653eeed0b289d6d124bd",
+          "score": 0.003960787784308195
+        },
+        {
+          "positions": [
+            785978
+          ],
+          "passage_sha256": "3e1cfc3898aaf0e009ac07022fd69f0b5bb417ed9334f96fc049270cd7822342",
+          "score": 5.02506154589355e-05
+        },
+        {
+          "positions": [
+            1003258
+          ],
+          "passage_sha256": "4211009bf910ba235f15ab568278b02ac05211511de2f0d6d72276f32b8428b2",
+          "score": 0.005080036818981171
+        },
+        {
+          "positions": [
+            202930
+          ],
+          "passage_sha256": "6143990214938c2ef555f3cd40ae55037617936f9d733c52bdb329d6600e8441",
+          "score": 0.0001500056532677263
+        },
+        {
+          "positions": [
+            544387
+          ],
+          "passage_sha256": "92dba7af9db4ae1528d07c60eb78fd2ca5c470b8923b7c6d7933a526adfe48fc",
+          "score": 0.0005636750720441341
+        },
+        {
+          "positions": [
+            693928
+          ],
+          "passage_sha256": "55cff3cd343bd2d3f365cb9fbdb1dc0a7d695cb757dca5956ad3fd7a0de2e19a",
+          "score": 0.0012644219677895308
+        },
+        {
+          "positions": [
+            750894
+          ],
+          "passage_sha256": "c7d886794949c853629e0f9fb689df70a7faac18835d5f717aeaab13b627a62a",
+          "score": 0.0023141263518482447
+        },
+        {
+          "positions": [
+            806438
+          ],
+          "passage_sha256": "71c97f6ef157a723a09666ec6a0c4063edc0cd8979f67eb54827fcbae3e43210",
+          "score": 0.0016166499117389321
+        },
+        {
+          "positions": [
+            891702
+          ],
+          "passage_sha256": "2fc0f889193595eb2fc669e6f407048419eef5ce94581004538aa4a40bb3a635",
+          "score": 0.005819959100335836
+        },
+        {
+          "positions": [
+            133462
+          ],
+          "passage_sha256": "ba08a1a73df15cd1d187616ca115b6cae807ecc6d98212b1a9fcf619e8bc59fb",
+          "score": 0.00407013762742281
+        },
+        {
+          "positions": [
+            690657
+          ],
+          "passage_sha256": "b9833e34f7c8cec616413df9cfc337d13daabd06048a3b6f04bd80b8d7fa9b16",
+          "score": 0.0005592909292317927
+        },
+        {
+          "positions": [
+            773145
+          ],
+          "passage_sha256": "914d65fa9ab44fe03b5730993eccf506aa25fd9ec4d954ffb24601a0d94ee2b9",
+          "score": 0.011915022507309914
+        },
+        {
+          "positions": [
+            968134
+          ],
+          "passage_sha256": "b8a20c2ba2884a6e4dd15b1978e08a0fd2055aa80006e113c192b94923d52441",
+          "score": 0.0005770345451310277
+        },
+        {
+          "positions": [
+            982300
+          ],
+          "passage_sha256": "c7b61272388430f9b27cf8c88a843e6f0e6989ecb3eb72245f404c8cd43fecfd",
+          "score": 0.004591683857142925
+        },
+        {
+          "positions": [
+            96267
+          ],
+          "passage_sha256": "9c2194a24542e44398a5c9eb4948fe3773373a5c02aa65c06a2ee6c85beea80a",
+          "score": 0.0024154833517968655
+        },
+        {
+          "positions": [
+            436844
+          ],
+          "passage_sha256": "312a4bf3d28698753a32ff3fa40dace7c7bde8ecd8f4cae136cda1b47f33a791",
+          "score": 0.00028462239424698055
+        },
+        {
+          "positions": [
+            847853
+          ],
+          "passage_sha256": "15f2356d1b812c81ae4a997c68697c090fe2499dde8aa11a53f262eefed8daec",
+          "score": 0.003429603995755315
+        },
+        {
+          "positions": [
+            958794
+          ],
+          "passage_sha256": "89bd07d367dd9bc9984798b9674f35dcd52a06b4f509a775178efa0f444461b1",
+          "score": 0.0007208379684016109
+        },
+        {
+          "positions": [
+            1002978
+          ],
+          "passage_sha256": "d232bb46b126054edc0e5e9ebbc7d9ef2dfbcc13ae456bef6758eee0760c9267",
+          "score": 0.0024726230185478926
+        },
+        {
+          "positions": [
+            63431
+          ],
+          "passage_sha256": "c33944db181a9d2b20fddcfd34d1de09e2273a3b5c46b9ddbb3801bfb13b8f82",
+          "score": 0.0005792917218059301
+        },
+        {
+          "positions": [
+            617434
+          ],
+          "passage_sha256": "08ab7bdd4fe3c732afc61572e8ae652612b9dd19693c400385ef362bb23c0611",
+          "score": 0.0007885457598604262
+        },
+        {
+          "positions": [
+            633751
+          ],
+          "passage_sha256": "17a6fd9c0864a108202cd2362262b63c5cddfa6da3674d8ea5e911a73cec29a2",
+          "score": 0.010529711842536926
+        },
+        {
+          "positions": [
+            691794
+          ],
+          "passage_sha256": "a06c25b4977b81ddd5efa1b995958f450eb762da78c79d4ec6605e53fa889eae",
+          "score": 0.0004108485300093889
+        },
+        {
+          "positions": [
+            758089
+          ],
+          "passage_sha256": "84837d183fa844ca04e805177ddff3a04120f5980f929c1a437353fdcfbd8ba5",
+          "score": 0.0022872276604175568
+        },
+        {
+          "positions": [
+            544378
+          ],
+          "passage_sha256": "567b361909630ec7b6f54fed206ed21d22382a3f634fa4e89b6e114e68806d68",
+          "score": 0.001518850913271308
+        },
+        {
+          "positions": [
+            673697
+          ],
+          "passage_sha256": "f70abfaac9c0eaa180c518f38e84f3e73b64e94269401d9459c9a207965cf7e9",
+          "score": 0.00026947917649522424
+        },
+        {
+          "positions": [
+            752846
+          ],
+          "passage_sha256": "04ce640cf6f2fb5b55557984686e17a0ecd6c4e866e6f35c712000b6a62f5ada",
+          "score": 0.00042388474685139954
+        },
+        {
+          "positions": [
+            969498
+          ],
+          "passage_sha256": "af9293f0cabff9b4bae082806fa1311b016282a84a7fd2004a1ff99ac9d26f7d",
+          "score": 0.00025315635139122605
+        },
+        {
+          "positions": [
+            969947
+          ],
+          "passage_sha256": "eacd71d65f267e2bbb3d344663d9012be24646967f2e754a4617bc1f91bf07af",
+          "score": 0.004101929254829884
+        },
+        {
+          "positions": [
+            1013887
+          ],
+          "passage_sha256": "2678a5042378958474055679467448639ac657081af030ee671a57910e2c86ac",
+          "score": 0.004718369338661432
+        },
+        {
+          "positions": [
+            321404
+          ],
+          "passage_sha256": "1afae5d28256c31700588ba5a27be4bf3d0a869e6c05e6a930754aae0cfd8be2",
+          "score": 0.002305125119164586
+        },
+        {
+          "positions": [
+            676262
+          ],
+          "passage_sha256": "23fd5144c91750be3c859b875c0ce7961d093bbbae2928cfa521ed97255c2225",
+          "score": 0.0015792594058439136
+        },
+        {
+          "positions": [
+            742356
+          ],
+          "passage_sha256": "6bcff1c6091aedc9c0512b0c81fa9aea4366bb6c87429fce2f661593c5210ec4",
+          "score": 0.0002492325147613883
+        },
+        {
+          "positions": [
+            911359
+          ],
+          "passage_sha256": "6486b4b0b51df7322e66e43219ea4a76e9ab102c7bc39038b691cf09c28d9b56",
+          "score": 0.02161533385515213
+        },
+        {
+          "positions": [
+            954832
+          ],
+          "passage_sha256": "30a1b825aa404b4cfb3b3eaaedb2c104114c65e63562034ba389bd9170d177a7",
+          "score": 0.0006538155721500516
+        },
+        {
+          "positions": [
+            1013254
+          ],
+          "passage_sha256": "1b59e923a3f00afbe6bf530f4086e8901df71720f52336840eefd44eefb9c13f",
+          "score": 0.0005172813544049859
+        },
+        {
+          "positions": [
+            617737
+          ],
+          "passage_sha256": "b9112990211424a7a1339b80eace1160a6648140ceb6bfc2d3f0d56f0c0a44b4",
+          "score": 0.0046455576084554195
+        },
+        {
+          "positions": [
+            636230
+          ],
+          "passage_sha256": "c8a975bb9531fd27d51bd8dcbf129f3c4a653aa1fc410ab7ef85400ee4520e70",
+          "score": 0.00023782203788869083
+        },
+        {
+          "positions": [
+            913277
+          ],
+          "passage_sha256": "3b047dd6d3d80f29a4d8f4d119e71c573a4ed84c82b6bcf6ebc7abe1583c18bc",
+          "score": 0.030675802379846573
+        },
+        {
+          "positions": [
+            946103
+          ],
+          "passage_sha256": "238f15811a024d3cc0c74e61139b620ace1a78d3f5d0407edc6120e74437817f",
+          "score": 0.0004205874283798039
+        },
+        {
+          "positions": [
+            963660
+          ],
+          "passage_sha256": "ee82c1256d63a3d671e5addff74bb899b4b1e833d1a94aa04bda6715cb66fdf5",
+          "score": 0.0004565269045997411
+        },
+        {
+          "positions": [
+            530827
+          ],
+          "passage_sha256": "f146e8564183d7e3150808ce7a16544e8235329e9d0fe7c692caee892c8242eb",
+          "score": 0.002757622394710779
+        },
+        {
+          "positions": [
+            637987
+          ],
+          "passage_sha256": "7c1930780d6f4ec32e03d1d0d5fd876f3d6d157760ecbb8d46262b826fc2419e",
+          "score": 0.0005861161625944078
+        },
+        {
+          "positions": [
+            689105
+          ],
+          "passage_sha256": "3dd8b80f5ce48583e3f0d17fe30d9e26139a257099435eec5d3c3537b81c9acc",
+          "score": 0.00014091856428422034
+        },
+        {
+          "positions": [
+            942447
+          ],
+          "passage_sha256": "5d0f98dff8cd8d7c0fd851b588f508fccf37799f381896061da8483fc52f03a4",
+          "score": 0.0002269338583573699
+        },
+        {
+          "positions": [
+            973825
+          ],
+          "passage_sha256": "f9b3ef8376d1d338eaca892f14f9bd2af4e99b6055b21866eae4679827337a52",
+          "score": 0.007431773468852043
+        },
+        {
+          "positions": [
+            787563
+          ],
+          "passage_sha256": "e92ed4aef09cfdf33316d3b8ca3fc1dda02bb4bbb813d194bc66709b0d27df35",
+          "score": 0.002174225402995944
+        },
+        {
+          "positions": [
+            954429
+          ],
+          "passage_sha256": "54ec0872bd46436bff9408915e9ef9168f2665279dc2977c2ff7c5a9ed8524fe",
+          "score": 0.00043224150431342423
+        },
+        {
+          "positions": [
+            966051
+          ],
+          "passage_sha256": "0890b589ab619c48743bdf69646e3c96152ec2fe0666384b95f4126164390e9f",
+          "score": 0.0021573416888713837
+        },
+        {
+          "positions": [
+            980221
+          ],
+          "passage_sha256": "ecf1589ba444203dae3c9cb426a1ff9d5698f688c04d657db2006a39e3d08a43",
+          "score": 0.0005463420529849827
+        },
+        {
+          "positions": [
+            511384
+          ],
+          "passage_sha256": "35898eb66862a3d5f35c798a99431ace1f6c11878278c7f65737e26db216369b",
+          "score": 0.002058753278106451
+        }
+      ]
+    }
+  ],
+  "provider_calls": 0,
+  "maximum_seconds": 600,
+  "local_predict_calls": 6,
+  "model_load_seconds": 12.935926100006327,
+  "device": "cuda:0",
+  "dtype": "torch.float16",
+  "finished_utc": "2026-10-10T05:55:23.379791+00:00",
+  "labels_sha256_after": "ed2f77251e807475c19bee732d9a62aa5d5d174ebd5a505b341e2d153643d0f8",
+  "retrieval_sha256_after": "5e73d1e9e90eda80ac436376eba68cc3683a77ef9a4db1131143d946847ec2a0"
+}

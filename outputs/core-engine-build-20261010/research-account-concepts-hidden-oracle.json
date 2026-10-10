@@ -1,0 +1,126 @@
+{
+  "contract": "standalone_account_concepts_oracle_v1",
+  "label_owner": "Human-readable predeclared evaluator expectations; not visible to candidate model",
+  "limitations": "Six selected regression cases; not held-out accuracy, retrieval quality or browser acceptance.",
+  "search_routing_invariant": "Nonresearch work has account_source_ids=[] and enquiries=[]; either nonempty field requests legal search. Original context/work sources still support internal work.",
+  "cases": [
+    {
+      "name": "original_aster_held_drive",
+      "expected_before_run": {
+        "independent_legal_work": [
+          "Deposit retention and disputed damage",
+          "Retention/return of design drive"
+        ],
+        "other_work": [
+          "Draft useful client questions"
+        ],
+        "required_distinctions": [
+          "Drive holder is owner's technician; owner asserts retention entitlement",
+          "Damage remains alleged and denied",
+          "Report not sent, not known nonexistent",
+          "Reported documents neither supplied nor examined",
+          "Client location does not establish jurisdiction"
+        ],
+        "restrictions": [
+          "No contact",
+          "No damage admission",
+          "No verified-document claim"
+        ],
+        "account_selection": "Drive text held by interpretation must remain available through an uncovered original range; no greetings/task directions as factual query"
+      }
+    },
+    {
+      "name": "not_supplied_is_not_nonexistent",
+      "expected_before_run": {
+        "independent_legal_work": [
+          "Deposit recovery",
+          "Drive return"
+        ],
+        "other_work": [
+          "Client questions"
+        ],
+        "required_distinctions": [
+          "No joint inspection report supplied does not establish absence",
+          "Technician holds drive; no pleaded entitlement to retain it supplied",
+          "Client disputes damage"
+        ],
+        "forbidden": [
+          "Make a report nonexistent",
+          "Assert a technician/lessor lien, entitlement or admission as established",
+          "Invent jurisdiction"
+        ],
+        "allowed": [
+          "Investigate a lien or other retention concept conditionally without assuming its prerequisites or changing the actual holder"
+        ],
+        "upstream_limit": "Exact historical account; upstream segmentation is a frozen synthetic fixture, not observed model success"
+      }
+    },
+    {
+      "name": "actor_agency_and_explicit_alternative",
+      "expected_before_run": {
+        "legal_work": "Alternative legal analysis of express agency authority and effect of assumed absent email",
+        "required_distinctions": [
+          "Original client denies authority; hospital alleges extension",
+          "Specimen collection does not establish authority to alter fees",
+          "Original email unforwarded/existence unknown",
+          "Latest explicit assumptions are authorised hypothetical only; they must remain analysable"
+        ],
+        "forbidden": [
+          "Apply hypothetical as actual matter fact",
+          "Swap client, agency and hospital roles",
+          "Contact anyone or update record"
+        ]
+      }
+    },
+    {
+      "name": "mixed_independent_requests_followup",
+      "expected_before_run": {
+        "independent_work": [
+          "Explain interim relief",
+          "Resume continued passage use analysis"
+        ],
+        "required_distinctions": [
+          "Ownership remains unsettled",
+          "Neighbour claims independent right; client denies",
+          "No court determination",
+          "Deed plan unavailable",
+          "Earlier permission expiry retained"
+        ],
+        "restrictions": [
+          "No notice drafting"
+        ],
+        "forbidden": [
+          "Treat earlier NM interpretation as original proof",
+          "Drop either independent request"
+        ]
+      }
+    },
+    {
+      "name": "correction_no_send_no_law",
+      "expected_before_run": {
+        "required_work": "Correct NM summary date to earlier original 14 April, not 14 May",
+        "expected_enquiries": [],
+        "expected_account_source_ids": [],
+        "restrictions": [
+          "No confirmed payment figure",
+          "No sending"
+        ],
+        "forbidden": [
+          "Legal search for simple factual repair",
+          "Treat NM's erroneous date as evidence",
+          "Claim executed correction"
+        ]
+      }
+    },
+    {
+      "name": "greeting_social_close",
+      "expected_before_run": {
+        "expected_work": [],
+        "forbidden": [
+          "Restart pending work",
+          "Create legal research or material changes"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,199 @@
+{
+  "contract": "standalone_account_concepts_assessment_v1",
+  "results_sha256": "f0869b58e1f02b916df6700fd9e58dc0fe88486981e75fdc72c695829a1a26b0",
+  "oracle_sha256": "47c04570a06edc0164cdc6ef1feffc4eeaa09c71efe73effad006ee114ed7b05",
+  "assessment": "Do not promote. Source-selection IDs avoid copying words but candidate still fails routing and factual premise fidelity.",
+  "comparison_limits": [
+    "Candidate-only six selected regression inputs, no contemporaneous baseline or holdout rate",
+    "No retrieval run; useful concept labels are evaluator judgments, not retrieval results",
+    "Synthetic upstream spans in four cases; original Aster keeps actual held extraction",
+    "Whole-candidate mechanical admission differs from planned production per-unit isolation",
+    "No browser or end-to-end acceptance"
+  ],
+  "metrics": {
+    "logical_calls": 6,
+    "additional_model_calls_after_run": 0,
+    "semantic_retries": 0,
+    "mechanically_admitted_candidates": 3,
+    "mechanically_rejected_candidates": 3,
+    "fully_acceptable_candidates": 0,
+    "charge_delta_usd": 0.011176999999999992,
+    "provider_usage_cost_usd": 0.011174000000000002,
+    "tokens_in": 15255,
+    "tokens_out": 3170,
+    "latency_ms_by_case": {
+      "original_aster_held_drive": 6650,
+      "not_supplied_is_not_nonexistent": 5073,
+      "actor_agency_and_explicit_alternative": 3584,
+      "mixed_independent_requests_followup": 3295,
+      "correction_no_send_no_law": 2009,
+      "greeting_social_close": 1989
+    },
+    "provider_retry_counts": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  "findings": [
+    {
+      "name": "original_aster_held_drive",
+      "mechanical": "admitted",
+      "overall": "not_accepted",
+      "useful": [
+        "Two independent legal disputes and separate client-question deliverable retained",
+        "Conditional retention/lien and return-of-lent-property concepts are relevant discovery hypotheses",
+        "Held drive passage did not disappear"
+      ],
+      "factual_actor_errors": [
+        {
+          "field": "work[1].purpose",
+          "issue": "Attributes drive retention to owner; original holder is owner's technician and owner makes retention claim"
+        },
+        {
+          "field": "work[0].enquiries[1].purpose",
+          "issue": "Absence of joint inspection inferred from no report being sent; no report received does not establish no inspection occurred"
+        },
+        {
+          "field": "work[0].constraints[2]",
+          "issue": "Invents prohibition on document examination; advocate said documents have not been supplied/examined, not that examination is forbidden"
+        },
+        {
+          "field": "work[1].outcome",
+          "issue": "Presents owner as asserting a lien; source reports claimed retention until repair payment, while lien is a candidate legal interpretation"
+        }
+      ],
+      "unnecessary_search": [
+        "Question-drafting work has account selection and three client-facing questions incorrectly used as corpus queries"
+      ],
+      "span_selection": [
+        "All three work items select whole mixed original message despite offered focused spans, including courtesies, task directions and both disputes"
+      ],
+      "concept_quality": "Some useful concepts, but mostly verbose general legal/evidential questions; separate lien and restrictions-on-withholding queries substantially overlap"
+    },
+    {
+      "name": "not_supplied_is_not_nonexistent",
+      "mechanical": "admitted",
+      "overall": "not_accepted",
+      "useful": [
+        "Independent deposit, drive and question work retained",
+        "Factual span excludes greeting and task instructions",
+        "Technician remains identified as holder"
+      ],
+      "factual_actor_errors": [
+        {
+          "field": "work[0].enquiries[1]",
+          "issue": "Search loses not-supplied qualification and investigates absence of report"
+        },
+        {
+          "field": "work[1].unresolved[1],enquiries[2]",
+          "issue": "Lease termination is assumed although source reports return, not termination"
+        },
+        {
+          "field": "work[1].enquiries[2]",
+          "issue": "Wrongfully withheld appears as reported basis although lawfulness is what is being investigated"
+        }
+      ],
+      "unnecessary_search": [
+        "Question-drafting work emits three questions-about-questions as legal corpus queries"
+      ],
+      "span_selection": [
+        "Same broad factual span used for both disputes; exact and usable, but it contains both rather than focused separate spans"
+      ],
+      "concept_quality": "Return of loaned property and proof burden are useful; largely generic descriptions, reported/conditional labels misused",
+      "missing_work_or_limits": [
+        "No-send restriction absent from all work constraints, though still in original context"
+      ]
+    },
+    {
+      "name": "actor_agency_and_explicit_alternative",
+      "mechanical": "rejected_current_instruction_missing_in_first_work",
+      "overall": "not_accepted",
+      "useful": [
+        "Authorised hypothetical retained separately from actual denial",
+        "Agency, client and hospital roles remain distinguishable",
+        "Agency authority and third-party reliance are meaningfully related concepts"
+      ],
+      "factual_actor_errors": [
+        {
+          "field": "work[0].enquiries[2]",
+          "issue": "Unreviewed written agreement becomes absence of written agreement; unforwarded email becomes lack of email evidence"
+        },
+        {
+          "field": "work[1].enquiries[1].purpose",
+          "issue": "Assumed no email expands into no written confirmation; other written forms are not excluded by original hypothetical"
+        }
+      ],
+      "unnecessary_search": [
+        "Actual-account analysis made separate current work without citing latest comparative instruction; may support comparison but is not properly bound"
+      ],
+      "span_selection": [
+        "Account selection includes previous and current task directions as separate ranges; hypothetical introduction is legitimately needed to preserve assumption scope"
+      ],
+      "contract_friction": "First work omits latest original source; whole-candidate admission discards the second otherwise mechanically valid work",
+      "production_isolation_limit": "A production per-work admission boundary could preserve the second hypothetical work despite the first work missing current authority. That is potential recovery of an independent unit, not a successful pilot or semantic acceptance: the second work still broadens absent email into absent written confirmation."
+    },
+    {
+      "name": "mixed_independent_requests_followup",
+      "mechanical": "rejected_account_span_ID_in_whole_source_field",
+      "overall": "not_accepted",
+      "useful": [
+        "Both interim explanation and resumed permission/access inquiry retained",
+        "Earlier contrary access claim and open ownership preserved",
+        "Permission expiry and independent access right are useful distinct investigations"
+      ],
+      "factual_actor_errors": [],
+      "unnecessary_search": [
+        "No separate nonlegal work invented"
+      ],
+      "span_selection": [
+        "Instruction to explain interim relief selected as factual account; resume-task instruction also selected as account alongside original facts"
+      ],
+      "contract_friction": "Uses offered, owned span IDs in sources where schema expects whole-source IDs. This is a field/namespace distinction failure, not evidence that selected words were fabricated.",
+      "concept_quality": "Relevant concepts, but still verbose generic standards/effects; missing deed plan continues to be task context rather than a newly found legal fact"
+    },
+    {
+      "name": "correction_no_send_no_law",
+      "mechanical": "admitted",
+      "overall": "not_accepted",
+      "useful": [
+        "Correction, amount uncertainty and no-send limit remain recognised",
+        "Earlier original source selected rather than NM error as factual proof"
+      ],
+      "factual_actor_errors": [
+        {
+          "field": "work[0].purpose,outcome",
+          "issue": "Expands summary-date correction into unspecified record/obligation review; requested summary target not explicitly retained"
+        }
+      ],
+      "unnecessary_search": [
+        "Both account selection and three legal searches emitted for simple factual summary correction; introduces legal duties/disclosure questions not requested"
+      ],
+      "span_selection": [
+        "Includes correction instruction in supposed legal-search factual account"
+      ],
+      "concept_quality": "Searches are unnecessary; relevance cannot redeem wrong task routing"
+    },
+    {
+      "name": "greeting_social_close",
+      "mechanical": "rejected_current_instruction_missing",
+      "overall": "not_accepted",
+      "useful": [],
+      "factual_actor_errors": [],
+      "missing_work_or_limits": [
+        "Current social close ignored; pending rent work resumed despite current closure"
+      ],
+      "unnecessary_search": [
+        "Three tenancy enquiries and earlier account selected when expected work was empty"
+      ],
+      "span_selection": [
+        "Selects earlier account only, not latest closing instruction"
+      ],
+      "contract_friction": "Existing latest-source check catches stale work, but this is substantive wrong work selection, not harmless field formatting"
+    }
+  ],
+  "next_decision": "Retain production unchanged. Root is considering a research-only responsibility instead of all-work planning; no next candidate or additional paid run is authorised by this assessment. Do not add semantic keyword patches or silently clean returned queries."
+}

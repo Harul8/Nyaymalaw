@@ -1,0 +1,901 @@
+{
+  "task": "Independently assess source usefulness for the deposit investigation below before any new ranking results. No arm, score or expected verdict is supplied. State prior familiarity.",
+  "original_context": {
+    "position": "first",
+    "conversation": [],
+    "latest": {
+      "source_id": "deposit_and_drive:advocate",
+      "turn_id": "deposit_and_drive",
+      "speaker": "advocate",
+      "record_role": "original_account",
+      "text": "Hello. We act for Vale Makers, based in Hyderabad. They leased a laser cutter and returned it on 3 September. The lessor is retaining the deposit, alleging damage; our client disputes causing it, and no joint inspection report has been supplied. Separately, the lessor's technician still has the client's design drive, which the client says was loaned only for setup. Identify legal routes for recovery of the deposit and return of the drive, and separately draft a short list of questions for our client. Do not send anything or treat the damage allegation as admitted."
+    },
+    "current_records": {},
+    "saved_work": []
+  },
+  "scope": "The reported equipment-deposit dispute, including conditional recovery routes and evidentiary or contrary-position distinctions. The separate drive dispute is background, not this labelled investigation.",
+  "categories": [
+    "directly_useful",
+    "conditional_or_evidentiary_lead",
+    "wrong_relationship_or_scope",
+    "insufficient_held_context"
+  ],
+  "instructions": "Read exact passages and supplied neighbours. Preserve party submissions, reproduced contract terms, quoted authority and deciding-court treatment separately. A useful lead is not a governing legal conclusion. For each ID provide category, source-linked reason, exact supporting quote(s), source role and limitations. You may mark genuine uncertainty; do not infer missing judgment context. Do not read experiment artifacts containing ranks, arms or prior assessments.",
+  "sources": [
+    {
+      "id": "source-01",
+      "kind": "judgment",
+      "passage": "M/S Espire Infolabs Pvt Ltd vs Sadhana Foundati\n3. In the eviction petition the Rent Controller determined the\n\nprovisional rent @ Rs.7,50,000/­ per month. The Punjab and\n\nHaryana High Court confirmed the order of the Rent Controller\n\nand the SLP filed against the same was dismissed by this Court.\n\nAs far as the registered lease deed of 2015 is concerned, Clause\n\n1(c) of the same reads as follows:­\n\n “1(c) In order to avoid any dispute it is hereby agreed\n by and between the parties to these presents, that as\n mentioned hereinabove, the Lessor had handed over the\n said premises to the Lessee or bareshell basis and THE\n LESSEE has agreed to do all the internal work in the\n Demised Premises including furnitures and fixtures, air\n conditioning, lighting, flooring, false ceiling, bathroom\n etc. so as to bring it to the standard of and International\n Class IT Office. It has been agreed between the Lessor\n and the Lessee that the Lessee shall bear the cost of the\n same which shall be approximately 9 Crores. This\n amount will be payable by the Lessor to the Lessee and\n the Lessee shall adjust the same from the rent due to the\n Lessor till the entire amount is paid. Hence the Lessee\n will not be liable to pay any rent to the Lessor unless it\n\nhas recovered the entire amount of approximately 9\n Crores from the rent due to Lessor.”\n\nAfter the first petition was decided, the second petition was filed\n\nclaiming rent for the period, 01.11.2015 to 31.01.2017. The Rent\n\nController again fixed the provisional rent @ Rs.7.50 lakhs per\n\nmonth and the High Court relying upon the earlier orders has\n\nupheld the same. This order is in challenge before us.",
+      "available_saved_neighbours": [
+        {
+          "position": 594186,
+          "text": "CIVIL APPELLATE JURISDICTION\n\n CIVIL APPEAL NO(S). 9265 OF 2019\n (@ SPECIAL LEAVE PETITION (CIVIL) NO. 3885 OF 2018)\n\nM/S ESPIRE INFOLABS PVT LTD …APPELLANT(S)\n\n Versus\n\nSADHANA FOUNDATION …RESPONDENT(S)\n\n JUDGMENT\nDeepak Gupta, J.\nLeave granted.",
+          "title": "M/S Espire Infolabs Pvt Ltd vs Sadhana Foundati",
+          "document_id": "SC_2019_MS_ESPIRE_INFOLABS_PVT_LTD_VS_SADHANA_FOUNDATI",
+          "saved_scope": "adjacent_indexed_segments"
+        },
+        {
+          "position": 594187,
+          "text": "2. The present appeal arises from a claim of the landlord –\n\nrespondent herein, claiming rent for the period 01.11.2015 to\n\n31.01.2017. We may point out that another petition was filed by\n\nthe landlord claiming rent for the period 01.01.2013 to\n\n30.10.2015. The landlord claimed rent @ Rs.18,43,900/­ per\n\nmonth relying upon the lease deed dated 01.01.2013. The stand\n\nof the tenant – appellant herein, is that, in fact, there was a\n\nsubsequent registered lease deed dated 01.09.2015 which is\n\neffective from 01.03.2015 in which the rent is @ Rs.7,50,000/­\n\nper month. In addition thereto, it is claimed that as per Clause\n\n1(c) of the registered lease deed dated 01.09.2015, the tenant was\n\nentitled to spend an amount of Rs.9 crores for developing the\n\ninfrastructure in the tenanted premises and was entitled to\n\nadjust the same against the rent.",
+          "title": "M/S Espire Infolabs Pvt Ltd vs Sadhana Foundati",
+          "document_id": "SC_2019_MS_ESPIRE_INFOLABS_PVT_LTD_VS_SADHANA_FOUNDATI",
+          "saved_scope": "adjacent_indexed_segments"
+        },
+        {
+          "position": 594189,
+          "text": "4. Mr. Maninder Singh, learned senior counsel for the\n\nappellant submits that as per Clause 1(c), the tenant is entitled to\n\nadjust the amount payable to the landlord and that by now more\n\nthan Rs. 3 crores have been paid, and in case the entire amount\n\nis paid, the appellant will have no way of recovering this amount,\n\nif it is finally held that the tenant is entitled to adjust the rent\n\nagainst the amount spent. He also urged that in the earlier\n\npetition the tenant had not placed on record any material to show\n\nthe amount of money spent for developing the infrastructure but\n\nin this petition such material has been placed on record. He also\n\nmade various other submissions with regard to the relationship\n\nbetween the parties but we are not going into the same. On the\n\nother hand, Mr. Prashant Bhushan, learned counsel appearing\n\nfor the respondent submits that the lease deed of 2013 should be\n\nrelied upon and cannot be ignored at this stage. He further\n\nsubmits that even if rent of Rs.7.50 lakhs has to be paid, the\n\nrespondent Trust cannot be deprived of this rent. He also\n\nsubmits that the second lease deed was executed on behalf of the\n\nTrust by one Shri Ajay Sharma. According to him, Ajay Sharma\n\nis the same person who had signed the lease deed of 2013 and\n\nAjay Sharma was removed as the Trustee of the Trust much\n\nbefore the lease deed of 2015 was executed and registered. On\n\nthe other hand, Mr. Maninder Singh contends that, in fact, Ajay\n\nSharma’s removal is not proper and he is fully empowered to\n\nexecute and register the sale deed.",
+          "title": "M/S Espire Infolabs Pvt Ltd vs Sadhana Foundati",
+          "document_id": "SC_2019_MS_ESPIRE_INFOLABS_PVT_LTD_VS_SADHANA_FOUNDATI",
+          "saved_scope": "adjacent_indexed_segments"
+        },
+        {
+          "position": 594190,
+          "text": "5. There are various disputed issues involved. At the outset,\n\nwe may note that the lease deed of 2013 relied upon by the\n\nlandlord is an un­registered one, and we are not sure if it is\n\nproperly stamped and, therefore, at this stage the said lease deed\n\ncannot be relied upon, being inadmissible in evidence. The first\n\nissue is whether the lease deed of 2013 or the lease deed of 2015\n\nwill govern the rights of the parties. The second issue is whether\n\nShri Ajay Sharma was a trustee and entitled to execute the lease\n\ndeed of 2015. The third issue would be that even if the lease deed\n\nof 2015 governs the rights of the parties, what amount has been\n\nspent by the appellant. Here, it would be pertinent to add that\n\nwhereas in the first petition the appellant had led no evidence to\n\nshow that he had spent any amount, in this petition some\n\nmaterial has been placed on record. However, all this will have to\n\nbe tested by leading evidence. We are of the view that all these\n\ncontentious issues cannot be decided at this stage. Evidence will\n\nhave to be led by the parties to prove their case. Equities must be\n\nbalanced at this stage, and we feel that the equities must be\n\nbalanced in such a manner that when the final petition is decided\n\nboth the parties should not be put to loss.",
+          "title": "M/S Espire Infolabs Pvt Ltd vs Sadhana Foundati",
+          "document_id": "SC_2019_MS_ESPIRE_INFOLABS_PVT_LTD_VS_SADHANA_FOUNDATI",
+          "saved_scope": "adjacent_indexed_segments"
+        }
+      ]
+    },
+    {
+      "id": "source-02",
+      "kind": "provision",
+      "passage": "Union Of India 2021 0 The Finance Act, 2021\nUnion Of India 2021 0 The Finance Act, 2021,  — s.245MA: Dispute Resolution Committee.\n245MA.\nDispute Resolution Committee.\n(1)\nThe Central Government shall constitute, one or more Dispute Resolution Committees, as may be necessary, in accordance with the rules made under this Act, for dispute resolution in the case of such persons or class of persons, as may be specified by the Board, who may opt for dispute resolution under this Chapter in respect of dispute arising from any variation in the specified order in his case and who fulfils the specified conditions.\n(2)\nThe Dispute Resolution Committee, subject to such conditions, as may be prescribed, shall have the powers to reduce or waive any penalty imposable under this Act or grant immunity from prosecution for any offence punishable under this Act in case of a person whose dispute is resolved under this Chapter.\n(3)\nThe Central Government may make a scheme, by notification in the Official Gazette, for the purposes of dispute resolution under this Chapter, so as to impart greater efficiency, transparency and accountability by—\n(a)\neliminating the interface between the Dispute Resolution Committee and the assessee in the course of dispute resolution proceedings to the extent technologically feasible;\n(b)\noptimising utilisation of the resources through economies of scale and functional specialisation;\n(c)\nintroducing a dispute resolution system with dynamic jurisdiction.\n(4)\nThe Central Government may, for the purposes of giving effect to the scheme made under sub-section (3), by notification in the Official Gazette, direct that any of the provisions of this Act shall not apply or shall apply with such exceptions, modifications and adaptations as may be specified in the said notification:\nProvided that no such direction shall be issued after the 31st day of March, 2023.\n(5)\nEvery notification issued under sub-sections (3) and\n(4)\nshall, as soon as may be after the notification is issued, be laid before each House of Parliament.\nExplanation.— For the purposes of this section,—\n(a)\n“specified conditions” in relation to a person means a person who fulfils the following conditions, namely:—\n(I)\nwhere he is not a person,—\n(A)\nin respect of whom an order of detention has been made under the provisions of the Conservation of Foreign Exchange and Prevention of Smuggling Activities Act, 1974:\nProvided that—\n(i)\nsuch order of detention, being an order to which the provisions of section 9 or section 12A of the said Act do not apply, has been revoked on the report of the Advisory Board under section 8 of the said Act or before the receipt of the report of the Advisory Board; or\n(ii)\nsuch order of detention being an order to which the provisions of section 9 of the said Act apply, has not been revoked before the expiry of the time for, or on the basis of, the review under sub-section (3) of section 9, or on the report of the Advisory Board under section 8, read with sub-section (2) of section 9, of the said Act; or\n(iii)\nsuch order of detention, being an order to which the provisions of section 12A of the said Act apply, has not been revoked before the expiry of the time for, or on the basis of, the first review under sub-section (3) of the said section, or on the basis of the report of the Advisory Board under section 8, read with subsection (6) of section 12A, of the said Act; or\n(iv)\nsuch order of detention has not been set aside by a court of competent jurisdiction;\n(B)\nin respect of whom prosecution for any offence punishable under the provisions of the Indian Penal Code, the Unlawful Activities (Prevention) Act, 1967, the Narcotic Drugs and Psychotropic Substances Act, 1985, the Prohibition of Benami Transactions Act, 1988, the Prevention of Corruption Act, 1988 or the Prevention of Money Laundering Act, 2002 has been instituted and he has been convicted of any offence punishable under any of those Acts;\n(C)\nin respect of whom prosecution has been initiated by an income-tax authority for any offence punishable under the provisions of this Act or the Indian Penal Code or for the purpose of enforcement of any civil liability under any law for the time being in force, or such person has been convicted of any such offence consequent upon the prosecution initiated by an Income-tax authority;\n(D)\nwho is notified under section 3 of the Special Court (Trial of Offences Relating to Transactions in Securities) Act, 1992;\n(II)\nsuch other conditions, as may be prescribed.\n(b)\n“specified order” means such order, including draft order, as may be specified by the Board, and,—\n(i)\naggregate sum of variations proposed or made in such order does not exceed ten lakh rupees;\n(ii)\nsuch order is not based on search initiated under section 132 or requisition under section 132A in the case of assessee or any other person or survey under section 133A or information received under an agreement referred to in section 90 or section 90A;\n(iii)\nwhere return has been filed by the assessee for the assessment year relevant to such order, total income as per such return does not exceed fifty lakh rupees.’.",
+      "available_saved_neighbours": [
+        {
+          "position": 330013,
+          "text": "Union Of India 2021 0 The Finance Act, 2021,  — s.245MA(1): Dispute Resolution Committee.\n(1)\nThe Central Government shall constitute, one or more Dispute Resolution Committees, as may be necessary, in accordance with the rules made under this Act, for dispute resolution in the case of such persons or class of persons, as may be specified by the Board, who may opt for dispute resolution under this Chapter in respect of dispute arising from any variation in the specified order in his case and who fulfils the specified conditions.",
+          "title": "Union Of India 2021 0 The Finance Act, 2021",
+          "document_id": "UNION OF INDIA_2021_0_THE FINANCE ACT, 2021",
+          "saved_scope": "exact_parent_tree"
+        },
+        {
+          "position": 330015,
+          "text": "Union Of India 2021 0 The Finance Act, 2021,  — s.245MA(3): Dispute Resolution Committee.\n(3)\nThe Central Government may make a scheme, by notification in the Official Gazette, for the purposes of dispute resolution under this Chapter, so as to impart greater efficiency, transparency and accountability by—",
+          "title": "Union Of India 2021 0 The Finance Act, 2021",
+          "document_id": "UNION OF INDIA_2021_0_THE FINANCE ACT, 2021",
+          "saved_scope": "exact_parent_tree"
+        },
+        {
+          "position": 330016,
+          "text": "Union Of India 2021 0 The Finance Act, 2021,  — s.245MA(3)(a): Dispute Resolution Committee.\n(a)\neliminating the interface between the Dispute Resolution Committee and the assessee in the course of dispute resolution proceedings to the extent technologically feasible;",
+          "title": "Union Of India 2021 0 The Finance Act, 2021",
+          "document_id": "UNION OF INDIA_2021_0_THE FINANCE ACT, 2021",
+          "saved_scope": "exact_parent_tree"
+        },
+        {
+          "position": 330018,
+          "text": "Union Of India 2021 0 The Finance Act, 2021,  — s.245MA(3)(c): Dispute Resolution Committee.\n(c)\nintroducing a dispute resolution system with dynamic jurisdiction.",
+          "title": "Union Of India 2021 0 The Finance Act, 2021",
+          "document_id": "UNION OF INDIA_2021_0_THE FINANCE ACT, 2021",
+          "saved_scope": "exact_parent_tree"
+        }
+      ]
+    },
+    {
+      "id": "source-03",
+      "kind": "provision",
+      "passage": "Union Of India 1965 3 Bar Council Of India Rules\nUnion Of India 1965 3 Bar Council Of India Rules,  — s.17: Arbitration, Conciliation and Alternate Dispute Resolution Systems.\n17. Arbitration, Conciliation and Alternate Dispute Resolution Systems.",
+      "available_saved_neighbours": [
+        {
+          "position": 176937,
+          "text": "Union Of India 1965 3 Bar Council Of India Rules,  — s.17: All the permanent employees of the Council shall be entitled to the benefit of provident fund and gratuity in accordance with the rules framed by the Executive Committee and approved by the Bar Council of India.\n17.\nAll the permanent employees of the Council shall be entitled to the benefit of provident fund and gratuity in accordance with the rules framed by the Executive Committee and approved by the Bar Council of India.",
+          "title": "Union Of India 1965 3 Bar Council Of India Rules",
+          "document_id": "UNION OF INDIA_1965_3_BAR COUNCIL OF INDIA RULES",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 176968,
+          "text": "Union Of India 1965 3 Bar Council Of India Rules,  — s.17: (1)\n17.\n(1)\nAll cheques other than those mentioned in sub-rule (2) shall be signed or endorsed and all bills, notes or other negotiable instruments shall be drawn, accepted or made on behalf of the Council by two persons, viz ., (i) by the Chairman or the Vice-Chairman of the Council and in their absence by such other members as may be authorised by the Council in that behalf, and (ii) the Secretary, and in his absence the Joint or Assistant Secretary, if any, authorised by the Council.\n(2)\nNotwithstanding anything contained in rule 11, Chapter V, Part II, the Council may by resolution open a separate Savings Bank Account in any Bank specified by it or in a Post Office to be operated by the Secretary of the Council.",
+          "title": "Union Of India 1965 3 Bar Council Of India Rules",
+          "document_id": "UNION OF INDIA_1965_3_BAR COUNCIL OF INDIA RULES",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 176969,
+          "text": "Union Of India 1965 3 Bar Council Of India Rules,  — s.17(1): (1)\n(1)\nAll cheques other than those mentioned in sub-rule (2) shall be signed or endorsed and all bills, notes or other negotiable instruments shall be drawn, accepted or made on behalf of the Council by two persons, viz ., (i) by the Chairman or the Vice-Chairman of the Council and in their absence by such other members as may be authorised by the Council in that behalf, and (ii) the Secretary, and in his absence the Joint or Assistant Secretary, if any, authorised by the Council.",
+          "title": "Union Of India 1965 3 Bar Council Of India Rules",
+          "document_id": "UNION OF INDIA_1965_3_BAR COUNCIL OF INDIA RULES",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 176970,
+          "text": "Union Of India 1965 3 Bar Council Of India Rules,  — s.17(2): (1)\n(2)\nNotwithstanding anything contained in rule 11, Chapter V, Part II, the Council may by resolution open a separate Savings Bank Account in any Bank specified by it or in a Post Office to be operated by the Secretary of the Council.",
+          "title": "Union Of India 1965 3 Bar Council Of India Rules",
+          "document_id": "UNION OF INDIA_1965_3_BAR COUNCIL OF INDIA RULES",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 177174,
+          "text": "Union Of India 1965 3 Bar Council Of India Rules,  — s.17: (1)\n17.\n(1)\nNo College after the coming into force of these rules shall impart instruction in a course of study in law for enrolment as an Advocate unless its affiliation has been approved by the Bar Council of India.\n(2)\nAn existing Law College shall not be competent to impart instruction in a course of study in law for enrolment as an Advocate if the continuance of its affiliation is disapproved by the Bar Council of India.",
+          "title": "Union Of India 1965 3 Bar Council Of India Rules",
+          "document_id": "UNION OF INDIA_1965_3_BAR COUNCIL OF INDIA RULES",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 177175,
+          "text": "Union Of India 1965 3 Bar Council Of India Rules,  — s.17(1): (1)\n(1)\nNo College after the coming into force of these rules shall impart instruction in a course of study in law for enrolment as an Advocate unless its affiliation has been approved by the Bar Council of India.",
+          "title": "Union Of India 1965 3 Bar Council Of India Rules",
+          "document_id": "UNION OF INDIA_1965_3_BAR COUNCIL OF INDIA RULES",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 177176,
+          "text": "Union Of India 1965 3 Bar Council Of India Rules,  — s.17(2): (1)\n(2)\nAn existing Law College shall not be competent to impart instruction in a course of study in law for enrolment as an Advocate if the continuance of its affiliation is disapproved by the Bar Council of India.",
+          "title": "Union Of India 1965 3 Bar Council Of India Rules",
+          "document_id": "UNION OF INDIA_1965_3_BAR COUNCIL OF INDIA RULES",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 177383,
+          "text": "Union Of India 1965 3 Bar Council Of India Rules,  — s.17: An Advocate shall not, directly or indirectly, commit a breach of the obligations imposed by section 126 of the Indian Evidence Act.\n17. An Advocate shall not, directly or indirectly, commit a breach of the obligations imposed by section 126 of the Indian Evidence Act.",
+          "title": "Union Of India 1965 3 Bar Council Of India Rules",
+          "document_id": "UNION OF INDIA_1965_3_BAR COUNCIL OF INDIA RULES",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 177532,
+          "text": "Union Of India 1965 3 Bar Council Of India Rules,  — s.17: (1)\n17.\n(1)\nThe Secretary of every State Bar Council shall furnish such particulars and send such statements as may be considered necessary by the Secretary of the Bar Council of India for purposes of section 36-B of the Act and send all the records of proceedings that stand transferred under the said section.\n(2)\nThe date of receipt of the complaint or the date of the initiation of the proceedings at the instance of the State Bar Council shall be the date on which the State Bar Council refers the case for disposal to its Disciplinary Committee under section 35(1).\n(3)\nWhenever the records of proceedings are transferred under section 36-B of the Act to the Council, the requirements in rule 9(2) of this Chapter shall be followed by the Disciplinary Committee of the State Bar Council.\nB.Withdrawal of proceedings under section 36 of the Act",
+          "title": "Union Of India 1965 3 Bar Council Of India Rules",
+          "document_id": "UNION OF INDIA_1965_3_BAR COUNCIL OF INDIA RULES",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 177533,
+          "text": "Union Of India 1965 3 Bar Council Of India Rules,  — s.17(1): (1)\n(1)\nThe Secretary of every State Bar Council shall furnish such particulars and send such statements as may be considered necessary by the Secretary of the Bar Council of India for purposes of section 36-B of the Act and send all the records of proceedings that stand transferred under the said section.",
+          "title": "Union Of India 1965 3 Bar Council Of India Rules",
+          "document_id": "UNION OF INDIA_1965_3_BAR COUNCIL OF INDIA RULES",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 177534,
+          "text": "Union Of India 1965 3 Bar Council Of India Rules,  — s.17(2): (1)\n(2)\nThe date of receipt of the complaint or the date of the initiation of the proceedings at the instance of the State Bar Council shall be the date on which the State Bar Council refers the case for disposal to its Disciplinary Committee under section 35(1).",
+          "title": "Union Of India 1965 3 Bar Council Of India Rules",
+          "document_id": "UNION OF INDIA_1965_3_BAR COUNCIL OF INDIA RULES",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 177535,
+          "text": "Union Of India 1965 3 Bar Council Of India Rules,  — s.17(3): (1)\n(3)\nWhenever the records of proceedings are transferred under section 36-B of the Act to the Council, the requirements in rule 9(2) of this Chapter shall be followed by the Disciplinary Committee of the State Bar Council.\nB.Withdrawal of proceedings under section 36 of the Act",
+          "title": "Union Of India 1965 3 Bar Council Of India Rules",
+          "document_id": "UNION OF INDIA_1965_3_BAR COUNCIL OF INDIA RULES",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 177715,
+          "text": "Union Of India 1965 3 Bar Council Of India Rules,  — s.17: The State Councils shall, when so required, make such periodical returns or statements or furnish such information as may be prescribed or called for by the Council.\n17. The State Councils shall, when so required, make such periodical returns or statements or furnish such information as may be prescribed or called for by the Council.",
+          "title": "Union Of India 1965 3 Bar Council Of India Rules",
+          "document_id": "UNION OF INDIA_1965_3_BAR COUNCIL OF INDIA RULES",
+          "saved_scope": "indexed_section_segments"
+        }
+      ]
+    },
+    {
+      "id": "source-04",
+      "kind": "judgment",
+      "passage": "Mahendra Kaur Arora vs Hdfc Bank Ltd\n8. Per contra, Mr. Sandeep P. Agarwal, learned Senior counsel\n\nappearing for the respondent-Bank seeks to rely on the terms and conditions of\n\nthe lease agreement and, in particular clauses of the Deposit Agreement dated\n\n13th October, 2000. Clauses 6 and 8 of the Deposit Agreement read as follows :\n“6. It is agreed by and between the parties hereto that on the said\n Lease Agreement of any renewal thereof expiring by efflux of time or\n coming to an end for any reason whatsoever as provided in the said\n Lease Agreement the Lessor shall refund (without any deduction on\n any account and without interest) the said deposit to the Lessee\n simultaneously with the Lessee removing itself/ its officers /\n employees using the leased premises from and vacating the leased\n premises and giving charge thereof to the Lessor (reasonable wear\n and tear, damages/ Loss to / destruction of the leased premises by\n fire not caused by the willful neglect on the part of the Lessee, its\n officers /employees using the leased premises, Civil commotion,\n riots, air attack, act of God and anything else beyond the control of\n the Lessee excepted).”",
+      "available_saved_neighbours": [
+        {
+          "position": 799245,
+          "text": "7. Ms. Shobha Gupta, learned Senior counsel appearing for the\n\nappellant-landlady submits that the learned Single Judge has erred in upholding\n\nthe order passed by the Appellate Rent Tribunal whereby the decree passed in\n\nfavour of the appellant-landlady was set aside inasmuch as the Court failed to\n\nappreciate the fact that the notice dated 10 th May, 2004 issued by the\n\nrespondent-Bank referred to its proposal to handover possession of the subject\n\npremises on 16th August, 2004. It is urged that the security deposit could have\n\nbeen refunded to the respondent-Bank contemporaneous to handing over\n\nvacant and peaceful possession of the premises to the appellant-landlord,\n\nwhich in the instant case was not done. It is therefore, submitted that the\n\nobligation cast on the appellant-landlady to refund the security amount in terms\n\nof the lease agreement did not arise till the respondent-Bank actually vacated\n\nCIVIL APPEALS NO. 6096-6097/2017\n\nthe subject premises which admittedly remain in its possession till 18 th June,",
+          "title": "Mahendra Kaur Arora vs Hdfc Bank Ltd",
+          "document_id": "SC_2024_MAHENDRA_KAUR_ARORA_VS_HDFC_BANK_LTD",
+          "saved_scope": "adjacent_indexed_segments"
+        },
+        {
+          "position": 799247,
+          "text": "8. In the event the Lessor does not refund the said deposit to the\n Lessee in full, at the time of the said Lease Agreement or any\n renewal thereof comes to an end, as aforesaid, then the\n consequences mentioned in para nos. i) to iii) hereunder shall follow:\ni) The Lessee shall (without prejudice to its rights and remedies in\n law) , not be obliged or bound to vacate and give charge of the\n leased premises to the Lessor and the Lessee shall be entitled to\n use or permit , the leased premises to be used by any person of\n its choice without being liable to pay any rent, outgoings or\n damages to the Lessor until such time as the Lessor does not\n refund to the Lessee the said deposit in full ; and\nii) In addition, the Lessor shall be liable to pay to the Lessee\n interest @ 24% p. a. compounded quarterly, on the said deposit\n from the date of termination or expiry of the said Lessee\n Agreement or any renewal thereof till the date of refund of the\n said deposit by the Lessor to the Lessee; and\n\nCIVIL APPEALS NO. 6096-6097/2017\niii) In the event the Lessor is unable to return the deposit as\n aforesaid for a period of 30 days from the date it becomes due,\n the Lessee shall be liberty to further sub- let the leased premises\n for period of not less than 12 months at a time on such terms and\n conditions as the Lessee may in its absolute discretion may\n deem fit”",
+          "title": "Mahendra Kaur Arora vs Hdfc Bank Ltd",
+          "document_id": "SC_2024_MAHENDRA_KAUR_ARORA_VS_HDFC_BANK_LTD",
+          "saved_scope": "adjacent_indexed_segments"
+        },
+        {
+          "position": 799248,
+          "text": "9. It is the stand of the respondent-Bank that in terms of the aforesaid\n\nclauses of the Deposit Agreement, the appellant-landlady was under an\n\nobligation to refund the security deposit to the respondent-Bank at the time of\n\nhanding over vacant and peaceful possession of the leased premises, which\n\nshe failed to do and therefore, the aforesaid clauses entitle the respondent-\n\nBank to continue using the leased premises itself or by any other person of its\n\nchoice without any liability to pay any rent/outgoings/damages.",
+          "title": "Mahendra Kaur Arora vs Hdfc Bank Ltd",
+          "document_id": "SC_2024_MAHENDRA_KAUR_ARORA_VS_HDFC_BANK_LTD",
+          "saved_scope": "adjacent_indexed_segments"
+        },
+        {
+          "position": 799249,
+          "text": "10. We are afraid, the aforesaid argument advanced by learned counsel\n\nfor the respondent-Bank is not persuasive. The language of Clause 6 of the\n\nDeposit Agreement makes it abundantly clear that the respondent-Bank was\n\nliable to refund the deposit amount contemporaneous to the Bank removing\n\nitself from the leased premises and handing over vacant possession thereof to\n\nthe appellant-landlady and giving charge thereof to her, which procedure in the\n\ninstant case, had not been followed. There is nothing on record to demonstrate\n\nthat any steps were taken by the respondent-Bank calling upon the appellant-\n\nlandlady to remain present at the subject premises for purposes of handing\n\nover/taking over possession of the leased premises on a particular date and\n\ntime and giving charge thereof to her for her to refund the security deposit\n\nCIVIL APPEALS NO. 6096-6097/2017\n\n simultaneously to the respondent-Bank.",
+          "title": "Mahendra Kaur Arora vs Hdfc Bank Ltd",
+          "document_id": "SC_2024_MAHENDRA_KAUR_ARORA_VS_HDFC_BANK_LTD",
+          "saved_scope": "adjacent_indexed_segments"
+        }
+      ]
+    },
+    {
+      "id": "source-05",
+      "kind": "judgment",
+      "passage": "R & M Trust vs Koramangala Resi. Vigilance Group & Ors\n1. The Lessee/ Purchaser is hereby put in \npossession of the property and the Lessee/ Purchaser shall \noccupy the property as a tenant thereof for a period of ten \nyears from (Here enter the date of giving \npossession) or in the event of the lease being \ndetermined earlier till the date of such termination. The \namount deposited by the Lessee /Purchaser towards the \nvalue of the property shall, during the period of tenancy, \nbe held by the Lessor/ Vendor as security deposit for the \ndue performance of the terms and conditions of these \npresents.\n\" 2. The lessee /purchaser shall pay a sum of \nrupees..per year as rent on or \nbefore.commencing from\"",
+      "available_saved_neighbours": [
+        {
+          "position": 332877,
+          "text": "control of the said Corporation.\n(5) The allottee shall comply with the \nconditions on the agreement executed by him and the \nBuildings and other bye-laws of the Board for the \ntime being in force.\n(6) The allottee shall construct a building \nwithin a period of two years from the date of \nexecution of the agreement or such extended period \nas the Board may in any specified case by written \norder permit. If the building is not constructed within \nthe said period the allotment may be cancelled, the \nagreement revoked, the lease determined and the \nallottee evicted from the site by the Board, and after \nforfeiting twelve and a half per cent of the value of \nthe site paid by the allottee, the Board shall refund \nthe balance to the allottee.\n(7) The site or the building constructed thereon \nshall not be alienated during the period of the \ntenancy.\"\nThe lease agreement is required to be executed in Form II. This lease \nagreement is called Lease-cum-sale agreement. Form II of the lease \nagreement reads as under :\n\" FORM NO.II\n [See rule.]\n LEASE-cum-SALE AGREEMENT\nAn Agreement made this.day \nof. 196 \nBETWEEN the City of Bangalore Improvement\nTrust Board, Bangalore, hereinafter called the \nLessor/Vendor which term shall wherever the context so \npermits, mean and include its successors in interest and \nassigns of the ONE PART and..hereinafter \ncalled Lessee/Purchaser (which term shall wherever the \ncontext so permits mean and include his/ her heirs, \nexecutors, administrators and legal representatives) of the \nOther PART;\nWhereas the City of Bangalore Improvement \nTrust Board advertised for sale building sites \ninExtension;\nAnd Whereas one of such building site is Site \nNo more fully described in the Schedule hereunder \nand referred to as Property;",
+          "title": "R & M Trust vs Koramangala Resi. Vigilance Group & Ors",
+          "document_id": "SC_2005_R_M_TRUST_VS_KORAMANGALA_RESI_VIGILANCE_GROUP_ORS",
+          "saved_scope": "adjacent_indexed_segments"
+        },
+        {
+          "position": 332878,
+          "text": "And Whereas there were negotiation between \nthe Lessee/ Purchaser on the one and the Lessor/Vendor \non the other for allowing the Lessee/ Purchaser to occupy \nthe property as Lessee until the Payment in full of the \nprice of the aforesaid site as might be fixed by the Lesser/ \nVendor as hereinafter provided;\nAnd Whereas the Lessor/ Vendor agreed to do \nso subject to the terms and conditions specified in the City \nof Bangalore Improvement (Allotment of Sites) Rules, \n1964, and the terms and conditions hereinafter contained;\n And Whereas thus the Lessor/ Vendor has \nagreed to lease the property and the Lessee /Purchaser has \nagreed to take it on lease subject to the terms and \nconditions specified in the said Rules and the terms and \nconditions specified hereunder;\nNow this indenture witnesseth:",
+          "title": "R & M Trust vs Koramangala Resi. Vigilance Group & Ors",
+          "document_id": "SC_2005_R_M_TRUST_VS_KORAMANGALA_RESI_VIGILANCE_GROUP_ORS",
+          "saved_scope": "adjacent_indexed_segments"
+        },
+        {
+          "position": 332880,
+          "text": "3. The Lessee/ Purchaser shall construct a building \nin the property as per plans, designs and conditions to be \napproved by the Lessee/ Vendor and in conformity with \nthe provisions of the City of Bangalore Municipal \nCorporation Act, 1949, and the bye-laws made there under \nwithin two years from the date of this agreement:\nProvided that where the Lessor/ Vendor for \nsufficient reasons extends in any particular case the time \nfor construction of such building, the Lessee/ Purchaser \nshall construct the building within such extended period.",
+          "title": "R & M Trust vs Koramangala Resi. Vigilance Group & Ors",
+          "document_id": "SC_2005_R_M_TRUST_VS_KORAMANGALA_RESI_VIGILANCE_GROUP_ORS",
+          "saved_scope": "adjacent_indexed_segments"
+        },
+        {
+          "position": 332881,
+          "text": "4. The Lessee/ Purchaser shall not sub-divide the \nproperty or construct more than one dwelling house on it;\nThe expression \"dwelling house\" means a building \nconstructed to be used wholly for human habitation and \nshall not include any apartments to the building whether \nattached thereto or not, used as a shop or a building of \nwarehouse or building in which manufactory operations \nare conducted by mechanical power or otherwise.",
+          "title": "R & M Trust vs Koramangala Resi. Vigilance Group & Ors",
+          "document_id": "SC_2005_R_M_TRUST_VS_KORAMANGALA_RESI_VIGILANCE_GROUP_ORS",
+          "saved_scope": "adjacent_indexed_segments"
+        }
+      ]
+    },
+    {
+      "id": "source-06",
+      "kind": "judgment",
+      "passage": "Mrs. M. Pratima Reddy vs Nicco Uco Alliance Credit Ltd. ...\n10. The reply of the learned counsel for the respondents, Sri\nSrinivas Chitluru is that this lease agreement (Ex.A.1) on the\nbasis of which it is contended that the Hyderabad Court has no\njurisdiction is between the plaintiff and defendant No.1 alone\nand that none of the other defendants are a party to the suit.\nIn addition, it is also pointed out that the suit at Hyderabad is\nfiled for recovery of money based on a mortgage of immovable\nproperty situated at Hyderabad. Therefore, the learned counsel\nsubmitted that the suit is maintainable at Hyderabad.",
+      "available_saved_neighbours": [
+        {
+          "position": 1011001,
+          "text": "8. The first and foremost contention that raised by Sri T.\nRajendra Prasad, learned counsel for the appellants is that the\nCourt at Hyderabad, wherein the suit was presented has no\nterritorial jurisdiction at all (issue No.2). It is the argument of\nthe learned counsel for the appellants that as per clause 22 of\nthe lease agreement (Ex.A.1), it is the Court at Calcutta alone\nthat has exclusive jurisdiction. He also states that the entire\ntransaction took place at Calcutta and hence, the Hyderabad\nCourt has no jurisdiction.",
+          "title": "Mrs. M. Pratima Reddy vs Nicco Uco Alliance Credit Ltd. ...",
+          "document_id": "HC_2017_MRS_M_PRATIMA_REDDY_VS_NICCO_UCO_ALLIANCE_CREDIT_LTD",
+          "saved_scope": "adjacent_indexed_segments"
+        },
+        {
+          "position": 1011002,
+          "text": "9. The learned counsel for the appellants also drew the\nattention of this Court to the judgment reported in Angile\nInsulations v. Davy Ashmore India Ltd and another and\ncontends that the suit is not maintainable in the Hyderabad\nCourt. However, a reading of this judgment makes it clear that\nthe suit in which the Honble Supreme Court was dealing was\nnot a suit pertaining to enforcement of a mortgage and was a\nsuit for recovery of money based on a contract. Therefore, this\nCourt is of the opinion that the said judgment is not applicable\nto the facts of the case.",
+          "title": "Mrs. M. Pratima Reddy vs Nicco Uco Alliance Credit Ltd. ...",
+          "document_id": "HC_2017_MRS_M_PRATIMA_REDDY_VS_NICCO_UCO_ALLIANCE_CREDIT_LTD",
+          "saved_scope": "adjacent_indexed_segments"
+        },
+        {
+          "position": 1011004,
+          "text": "11. Besides,\nSection 16 (c)\nCPC makes it clear that all suits\npertaining to a mortgage can only be instituted within the local\njurisdiction of the Court in which the property is situated. In\nthis case, admittedly, the mortgaged property is situated within\nthe jurisdiction of the Court at Hyderabad and as such the\ncontention of the learned counsel for the appellants is not\ntenable. The learned counsel for the respondents relied upon\nHarshad Chiman Lal Modi v. DLF Universal Ltd. and another\nwhich very clearly supports his contentions. The lower Court\nhas also decided this issue after the analysis of facts and law\nand held that it has the jurisdiction and for all the above\nreasons, this Court holds that the suit is instituted in the\nproper Court only.",
+          "title": "Mrs. M. Pratima Reddy vs Nicco Uco Alliance Credit Ltd. ...",
+          "document_id": "HC_2017_MRS_M_PRATIMA_REDDY_VS_NICCO_UCO_ALLIANCE_CREDIT_LTD",
+          "saved_scope": "adjacent_indexed_segments"
+        },
+        {
+          "position": 1011005,
+          "text": "12. The second important contention urged by the learned\ncounsel for the appellants, Sri T. Rajendra Prasad is that the\nsuit is barred by the provisions of\nOrder II Rule 2 CPC\nas an\nearlier suit C.S.No.640 of 1999 was filed at Calcutta on the\nsame cause of action. The contention of the learned counsel is\nthat the petitioner was aware of the loan default/mortgage and\nthat therefore, the cause of action for mortgage suit arose\nbefore the suit C.S.No.640 of 1999 was filed before the High\nCourt of Calcutta. He also argued that an appropriate prayer\nwas not made for filing a fresh suit when the earlier suit was\nwithdrawn. The learned counsel for the respondents contended\non the other hand that both the suits are not identical and are\nbased on the different causes of action.\nHe also pleaded that he withdrew the suit and got the liberty to\nfile a fresh suit also.",
+          "title": "Mrs. M. Pratima Reddy vs Nicco Uco Alliance Credit Ltd. ...",
+          "document_id": "HC_2017_MRS_M_PRATIMA_REDDY_VS_NICCO_UCO_ALLIANCE_CREDIT_LTD",
+          "saved_scope": "adjacent_indexed_segments"
+        }
+      ]
+    },
+    {
+      "id": "source-07",
+      "kind": "provision",
+      "passage": "Telangana 2012 12 Nehru Outer Ring Road, Hyderabad (Toll) Rules, 2012\nTelangana 2012 12 Nehru Outer Ring Road, Hyderabad (Toll) Rules, 2012,  — s.6: Modalities of fee Collection.\n6.\nModalities of fee Collection.\n(1)\nFee levied under these rules shall be collected by the Hyderabad Growth Corridor Limited or user fee Collecting Agency, as the case may be, at the toll plaza.\n(2)\nEvery driver owner or person in charge of a mechanical vehicle shall for the use of the section of Outer Ring Road, before crossing the toll plaza, at Exit, pay the fee specified under these rules.\n(3)\nThe fee collected under these rules shall be paid either in cash or through smart card or on board unit (transponder) or any other like device.\nprovided that no additional charges shall be realized for making the payment of fee by use of smart card or on board unit (transponder) or any other such device.\n(4)\nAny driver, owner or person in charge of a mechanical vehicle who opts for the installation of on board unit (transponder) or any other such device for payment of fee, shall deposit a refundable security equivalent to the cost of the equipment with Hyderabad Growth Corridor Limited or user fee collecting agency, as the case may be, for such installation and no interest shall accrue on such security deposit.\n(5)\nThe person receiving such fee under sub-rule (2), shall issue to the driver, owner or person in charge of mechanical vehicle a receipt, specifying therein the date and time of such receipt of fee, total amount received and the class of vehicle for which the fee has been received.\nProvided that where were the fee is paid through smart card or on board unit (transponder) or any other device, a receipt shall be issued on demand only.\n(6)\nThe fee shall be collected in perpetuity by the Hyderabad Growth Corridor Limited and the user fee collecting agency, for the period mentioned in the agreement.",
+      "available_saved_neighbours": [
+        {
+          "position": 77356,
+          "text": "Telangana 2012 12 Nehru Outer Ring Road, Hyderabad (Toll) Rules, 2012,  — s.6(4): Modalities of fee Collection.\n(4)\nAny driver, owner or person in charge of a mechanical vehicle who opts for the installation of on board unit (transponder) or any other such device for payment of fee, shall deposit a refundable security equivalent to the cost of the equipment with Hyderabad Growth Corridor Limited or user fee collecting agency, as the case may be, for such installation and no interest shall accrue on such security deposit.",
+          "title": "Telangana 2012 12 Nehru Outer Ring Road, Hyderabad (Toll) Rules, 2012",
+          "document_id": "TELANGANA_2012_12_NEHRU OUTER RING ROAD, HYDERABAD (TOLL) RULES, 2012",
+          "saved_scope": "exact_parent_tree"
+        }
+      ]
+    },
+    {
+      "id": "source-08",
+      "kind": "provision",
+      "passage": "Union Of India 1961 0 The Income Tax Act, 1961\nUnion Of India 1961 0 The Income Tax Act, 1961,  — s.245MA: Dispute Resolution Committee.\n245MA.\nDispute Resolution Committee.\n(1)\nThe Central Government shall constitute, one or more Dispute Resolution Committees, as may be necessary, in accordance with the rules made under this Act, for dispute resolution in the case of such persons or class of persons, as may be specified by the Board, who may opt for dispute resolution under this Chapter in respect of dispute arising from any variation in the specified order in his case and who fulfils the specified conditions.\n(2)\nThe Dispute Resolution Committee, subject to such conditions, as may be prescribed, shall have the powers to reduce or waive any penalty imposable under this Act or grant immunity from prosecution for any offence punishable under this Act in case of a person whose dispute is resolved under this Chapter.\n(2A)\nNotwithstanding anything contained in section 144C, upon receipt of the order of the Dispute Resolution Committee under this section, the Assessing Officer shall,—\n(a)\nin a case where the specified order is a draft of the proposed order of assessment under sub-section (1) of section 144C, pass an order of assessment, reassessment or recomputation; or\n(b)\nin any other case, modify the order of assessment, reassessment or recomputation,\nin conformity with the directions contained in the order of the Dispute Resolution Committee within a period of one month from the end of the month in which such order is received.]\n(3)\nThe Central Government may make a scheme, by notification in the Official Gazette, for the purposes of dispute resolution under this Chapter, so as to impart greater efficiency, transparency and accountability by—\n(a)\neliminating the interface between the Dispute Resolution Committee and the assessee in the course of dispute resolution proceedings to the extent technologically feasible;\n(b)\noptimising utilisation of the resources through economies of scale and functional specialisation;\n(c)\nintroducing a dispute resolution system with dynamic jurisdiction.\n(4)\nThe Central Government may, for the purposes of giving effect to the scheme made under sub-section (3), by notification in the Official Gazette, direct that any of the provisions of this Act shall not apply or shall apply with such exceptions, modifications and adaptations as may be specified in the said notification:\nProvided that no such direction shall be issued after the 31st day of March, 2023.\n(5)\nEvery notification issued under sub-sections (3) and (4) shall, as soon as may be after the notification is issued, be laid before each House of Parliament.\nExplanation.— For the purposes of this section,—\n(a)\n\"specified conditions\" in relation to a person means a person who fulfils the following conditions, namely:—\n(I)\nwhere he is not a person,—\n(A)\nin respect of whom an order of detention has been made under the provisions of the Conservation of Foreign Exchange and Prevention of Smuggling Activities Act, 1974 (52 of 1974):\nProvided that—\n(i)\nsuch order of detention, being an order to which the provisions of section 9 or section 12A of the said Act do not apply, has been revoked on the report of the Advisory Board under section 8 of the said Act or before the receipt of the report of the Advisory Board; or\n(ii)\nsuch order of detention being an order to which the provisions of section 9 of the said Act apply, has not been revoked before the expiry of the time for, or on the basis of, the review under sub-section (3) of section 9, or on the report of the Advisory Board under section 8, read with sub-section (2) of section 9, of the said Act; or\n(iii)\nsuch order of detention, being an order to which the provisions of section 12A of the said Act apply, has not been revoked before the expiry of the time for, or on the basis of, the first review under sub-section (3) of the said section, or on the basis of the report of the Advisory Board under section 8, read with sub-section (6) of section 12A, of the said Act; or\n(iv)\nsuch order of detention has not been set aside by a court of competent jurisdiction;\n(B)\nin respect of whom prosecution for any offence punishable under the provisions of the Indian Penal Code (45 of 1860), the Unlawful Activities (Prevention) Act, 1967 (37 of 1967), the Narcotic Drugs and Psychotropic Substances Act, 1985 (61 of 1985), the Prohibition of Benami Transactions Act, 1988 (45 of 1988), the Prevention of Corruption Act, 1988 (49 of 1988) or the Prevention of Money-laundering Act, 2002 (15 of 2003) has been instituted and he has been convicted of any offence punishable under any of those Acts;\n(C)\nin respect of whom prosecution has been initiated by an income-tax authority for any offence punishable under the provisions of this Act or the Indian Penal Code (45 of 1860) or for the purpose of enforcement of any civil liability under any law for the time being in force, or such person has been convicted of any such offence consequent upon the prosecution initiated by an income-tax authority;\n(D)\nwho is notified under section 3 of the Special Court (Trial of Offences Relating to Transactions in Securities) Act, 1992 (27 of 1992);\n(II)\nsuch other conditions, as may be prescribed.\n(b)\n\"specified order\" means such order, including draft order, as may be specified by the Board, and,—\n(i)\naggregate sum of variations proposed or made in such order does not exceed ten lakh rupees;\n(ii)\nsuch order is not based on search initiated under section 132 or requisition under section 132A in the case of assessee or any other person or survey under section 133A or information received under an agreement referred to in section 90 or section 90A;\n(iii)\nwhere return has been filed by the assessee for the assessment year relevant to such order, total income as per such return does not exceed fifty lakh rupees.\nChapter XIX\nB\n[ Inserted by Act 38 of 1993, Section 31 (w.e.f. 1.6.1993).]\nAdvance Rulings",
+      "available_saved_neighbours": [
+        {
+          "position": 160357,
+          "text": "Union Of India 1961 0 The Income Tax Act, 1961,  — s.245MA(1): Dispute Resolution Committee.\n(1)\nThe Central Government shall constitute, one or more Dispute Resolution Committees, as may be necessary, in accordance with the rules made under this Act, for dispute resolution in the case of such persons or class of persons, as may be specified by the Board, who may opt for dispute resolution under this Chapter in respect of dispute arising from any variation in the specified order in his case and who fulfils the specified conditions.",
+          "title": "Union Of India 1961 0 The Income Tax Act, 1961",
+          "document_id": "UNION OF INDIA_1961_0_THE INCOME TAX ACT, 1961",
+          "saved_scope": "exact_parent_tree"
+        },
+        {
+          "position": 160361,
+          "text": "Union Of India 1961 0 The Income Tax Act, 1961,  — s.245MA(3): Dispute Resolution Committee.\n(3)\nThe Central Government may make a scheme, by notification in the Official Gazette, for the purposes of dispute resolution under this Chapter, so as to impart greater efficiency, transparency and accountability by—",
+          "title": "Union Of India 1961 0 The Income Tax Act, 1961",
+          "document_id": "UNION OF INDIA_1961_0_THE INCOME TAX ACT, 1961",
+          "saved_scope": "exact_parent_tree"
+        },
+        {
+          "position": 160362,
+          "text": "Union Of India 1961 0 The Income Tax Act, 1961,  — s.245MA(3)(a): Dispute Resolution Committee.\n(a)\neliminating the interface between the Dispute Resolution Committee and the assessee in the course of dispute resolution proceedings to the extent technologically feasible;",
+          "title": "Union Of India 1961 0 The Income Tax Act, 1961",
+          "document_id": "UNION OF INDIA_1961_0_THE INCOME TAX ACT, 1961",
+          "saved_scope": "exact_parent_tree"
+        },
+        {
+          "position": 160364,
+          "text": "Union Of India 1961 0 The Income Tax Act, 1961,  — s.245MA(3)(c): Dispute Resolution Committee.\n(c)\nintroducing a dispute resolution system with dynamic jurisdiction.",
+          "title": "Union Of India 1961 0 The Income Tax Act, 1961",
+          "document_id": "UNION OF INDIA_1961_0_THE INCOME TAX ACT, 1961",
+          "saved_scope": "exact_parent_tree"
+        }
+      ]
+    },
+    {
+      "id": "source-09",
+      "kind": "judgment",
+      "passage": "Commissioner Of Income-Tax, Andhra ... vs Balaji Chitra Mandir\nIt appears, later on, the assessee filed a suit before the Fourth Additional Judge, City Civil Court, Hyderabad, contending that the agreement, which should have been, in the normal course, continued for 132 weeks or more, was terminated on account of the default committed by the lessees and pursuant to such termination, the assessee suffered a loss of Rs. 1,25,000. It may be mentioned that, subsequent to the termination of the lease, the assessee leased the cinema hall to Usha Films on March 20, 1969. In the plaint, the assessee seems to have stated that, in view of the forfeiture of security deposited of Rs. 40,000, no claim for any damages was being made a part from the claim for reimbursement of loss of Rs. 1,25,000 said to have been suffered by the assessee on account of the premature termination of the lease. Eventually, there was a compromise as a result of which the assessee received from the lessee an amount of Rs. 7,771 on account of unpaid weekly hire charges and it was further agreed that the amount of Rs. 40,000 kept with the assessee by the lessee as security deposit shall be forfeited.",
+      "available_saved_neighbours": [
+        {
+          "position": 928387,
+          "text": "1. The Income-tax Appellate Tribunal referred the following question of law under\ns. 256(1)\nof the I.T. Act (for short \"the Act\") for the opinion of this court :\n\"Whether, on the facts and in the circumstances of the case, the amount of Rs. 40,000 received by the assessee as a forfeiture of security deposit is a revenue receipt ?\"",
+          "title": "Commissioner Of Income-Tax, Andhra ... vs Balaji Chitra Mandir",
+          "document_id": "HC_1984_COMMISSIONER_OF_INCOME-TAX_ANDHRA_VS_BALAJI_CHITRA_MANDIR",
+          "saved_scope": "adjacent_indexed_segments"
+        },
+        {
+          "position": 928388,
+          "text": "2. The assessee is a partnership firm and the assessment relates to the year 1973-74. The assessee was carrying on business in the exhibition of cinema films. On August 25, 1968, the assessee-firm leased the cinema hall to M/s. K. Bhakthavatsalam and another (hereinafter referred to as \"the lessee\") for a period of 151 weeks subject to the payment of weekly rent of Rs. 3,521. A sum of Rs. 40,000 was deposited by the lessee with the assessee as security under the agreement. Under clause 6 of the agreement, the amount of Rs. 40,000 shall be returned to the lessee one week before the date of termination of the agreement. If the assessee fails to repay the same, the lessee shall be entitled to continue the agreement till the amount of Rs. 40,000 is repaid. Clause 4 of the agreement provided that the less shall pay the weekly hire for each week in advance of the running week. Clause 18 of the agreement, which is relevant for the purpose of this reference, provides that, if the less should fail to pay the weekly hire, as agreed, for any week, the agreement shall stand cancelled and the advance (security deposit) of Rs. 40,000 shall be forfeited. It appears, the lessee committed a default in payment of the weekly lease amount for three weeks continuously commencing from February 7, 1969. The assessee served a notice on the lessee calling for payment of the weekly rent in arrear. The assessee also gave a notice to the lessee that, pursuant to the default committed in the payment of the weekly rent, the agreement stood cancelled the security deposit of Rs. 40,000 was forfeited.",
+          "title": "Commissioner Of Income-Tax, Andhra ... vs Balaji Chitra Mandir",
+          "document_id": "HC_1984_COMMISSIONER_OF_INCOME-TAX_ANDHRA_VS_BALAJI_CHITRA_MANDIR",
+          "saved_scope": "adjacent_indexed_segments"
+        },
+        {
+          "position": 928390,
+          "text": "3. In the income-tax return filed by the assessee for the assessment year 1973-74, the assessee included in its income the sum of Rs. 7,771 received from the lessee on account of the unpaid weekly hire charges under the compromise, but did not include in its income the sum of Rs. 40,000 being security deposited forfeited. The assessee claimed before the ITO that the sum of Rs. 40,000 did not represent income receipt in its hands but was a capital receipt not liable to be taxed under the Act. The ITO declined to accept the assessee's contention and held that the sum of Rs. 40,000 represented damages for breach of contract and, therefore, constituted income in the assessee's hands. In that view, he included the sum of Rs. 40,000 in the total income of the assessee. The assessee appealed against the assessment of Rs. 40,000 in its hands to the AAC. The AAC held that, since the termination of the lease agreement did not result in discontinuance of the assessee's business and the profit-making machinery of the assessee continued thereafter, the amount of Rs. 40,000 formed part of the income of the assessee. The AAC accordingly upheld the assessment of the sum of Rs. 40,000.",
+          "title": "Commissioner Of Income-Tax, Andhra ... vs Balaji Chitra Mandir",
+          "document_id": "HC_1984_COMMISSIONER_OF_INCOME-TAX_ANDHRA_VS_BALAJI_CHITRA_MANDIR",
+          "saved_scope": "adjacent_indexed_segments"
+        },
+        {
+          "position": 928391,
+          "text": "4. The assessee carried the matter in second appeal to the Income-tax Appellate Tribunal. The learned Accountant Members and the learned Judicial Member wrote separate but concurring judgments reversing the order of the AAC and accepting the assessee's contention that the sum of Rs. 40,000 was not income liable to be taxed under the Act. The learned Accountant Member observed that the security deposit of Rs. 40,000 learned Accountant Member observed that the security deposit of Rs. 40,000 has no relevance to the income which the assessee was receiving week after week in the form of the lease hire. He observed that the security deposit was made with the assessee with the sole idea of compelling the lessee to pay the weekly hire charges in time. Referring to the lease deed as well as the subsequent compromise between the assessee and the lessee, the learned Accountant Member held that there was element of profit on account of loss profit included in the sum of Rs. 40,000 forfeited by the assessee. It was, therefore, held that the sum of Rs. 40,000 representing the security deposit forfeited was not in the nature of income in the hands of the assessee liable to tax. The learned Judicial Member held that the forfeiture of the security deposit cannot be said to be compensation received by the assessee for loss of profit. In that view, it was held that the sum of Rs. 40,000 received by the assessee by forfeiting the security deposit did not under take the nature of income liable to be assessed under the Act. The assessee's appeal was accordingly allowed by the Tribunal. The Commissioner of Income-tax asked for and obtained the present reference under\ns. 256(1)\nof the Act.",
+          "title": "Commissioner Of Income-Tax, Andhra ... vs Balaji Chitra Mandir",
+          "document_id": "HC_1984_COMMISSIONER_OF_INCOME-TAX_ANDHRA_VS_BALAJI_CHITRA_MANDIR",
+          "saved_scope": "adjacent_indexed_segments"
+        }
+      ]
+    },
+    {
+      "id": "source-10",
+      "kind": "judgment",
+      "passage": "State Of Kerala & Ors vs M.K.Jose\n14. National Highways Authority of India v. Ganga Enterprises\n[2], the\nrespondent therein had filed a writ petition before the High Court for\nrefund of the amount. The High Court posed two questions, namely, (a)\nwhether the forfeiture of security deposit is without authority of law and\nwithout any binding contract between the parties and also contrary to\nSection 5\nof the Contract Act; and (b) whether the writ petition is\nmaintainable in a claim arising out of breach of contract. While dealing\nwith the said issue, this Court opined that:-\n“It is settled law that disputes relating to contracts cannot be agitated\nunder\nArticle 226\nof the Constitution of India. It has been so held in the\ncases of Kerala SEB v. Kurien E. Kalathil[3],\nState of U.P. v. Bridge &\nRoof Co. (India) Ltd.\n[4] and\nBareilly Development Authority v. Ajai Pal\nSingh\n[5]. This is settled law. The dispute in this case was regarding the\nterms of offer. They were thus contractual disputes in respect of which a\nwrit court was not the proper forum.\nMr Dave, however, relied upon the\ncases of\nVerigamto Naveen v. Govt. of A.P.\n[6] and\nHarminder Singh Arora v.\nUnion of India\n[7]. These, however, are cases where the writ court was\nenforcing a statutory right or duty. These cases do not lay down that a\nwrit court can interfere in a matter of contract only. Thus on the ground\nof maintainability the petition should have been dismissed”.",
+      "available_saved_neighbours": [
+        {
+          "position": 504011,
+          "text": "13. A writ court should ordinarily not entertain a writ petition, if\nthere is a breach of contract involving disputed questions of fact. The\npresent case clearly indicates that the factual disputes are involved.\nState of Bihar v. Jain Plastics and Chemicals Ltd.\n[1], a two-Judge Bench\nreiterating the exercise of power under\nArticle 226\nof the Constitution in\nrespect of enforcement of contractual obligations has stated:-\n“It is to be reiterated that writ petition under\nArticle 226\nis not the\nproper proceedings for adjudicating such disputes. Under the law, it was\nopen to the respondent to approach the court of competent jurisdiction for\nappropriate relief for breach of contract. It is settled law that when an\nalternative and equally efficacious remedy is open to the litigant, he\nshould be required to pursue that remedy and not invoke the writ\njurisdiction of the High Court. Equally, the existence of alternative\nremedy does not affect the jurisdiction of the court to issue writ, but\nordinarily that would be a good ground in refusing to exercise the\ndiscretion under Article 226.”\n\nIn the said case, it has been further observed:-\n“It is true that many matters could be decided after referring to the\ncontentions raised in the affidavits and counter-affidavits, but that would\nhardly be a ground for exercise of extraordinary jurisdiction under\nArticle\n\nof the Constitution in case of alleged breach of contract. Whether the\nalleged non-supply of road permits by the appellants would justify breach\nof contract by the respondent would depend upon facts and evidence and is\nnot required to be decided or dealt with in a writ petition. Such seriously\ndisputed questions or rival claims of the parties with regard to breach of",
+          "title": "State Of Kerala & Ors vs M.K.Jose",
+          "document_id": "SC_2015_STATE_OF_KERALA_ORS_VS_MKJOSE",
+          "saved_scope": "adjacent_indexed_segments"
+        },
+        {
+          "position": 504012,
+          "text": "contract are to be investigated and determined on the basis of evidence\nwhich may be led by the parties in a properly instituted civil suit rather\nthan by a court exercising prerogative of issuing writs.”",
+          "title": "State Of Kerala & Ors vs M.K.Jose",
+          "document_id": "SC_2015_STATE_OF_KERALA_ORS_VS_MKJOSE",
+          "saved_scope": "adjacent_indexed_segments"
+        },
+        {
+          "position": 504014,
+          "text": "15. Having referred to the aforesaid decisions, it is obligatory on our\npart to refer to two other authorities of this Court where it has been\nopined that under what circumstances a disputed question of fact can be\ngone into.\nGunwant Kaur v. Municipal Committee, Bhatinda\n[8], it has\nbeen held thus:-\n“14. The High Court observed that they will not determine disputed question\nof fact in a writ petition. But what facts were in dispute and what were\nadmitted could only be determined after an affidavit-in-reply was filed by\nthe State. The High Court, however, proceeded to dismiss the petition in\nlimine. The High Court is not deprived of its jurisdiction to entertain a\npetition under\nArticle 226\nmerely because in considering the petitioner’s\nright to relief questions of fact may fall to be determined. In a petition\nunder\nArticle 226\nthe High Court has jurisdiction to try issues both of\nfact and law. Exercise of the jurisdiction is, it is true, discretionary,\nbut the discretion must be exercised on sound judicial principles. When the\npetition raises questions of fact of a complex nature, which may for their\ndetermination require oral evidence to be taken, and on that account the\nHigh Court is of the view that the dispute may not appropriately be tried\nin a writ petition, the High Court may decline to try a petition. Rejection\nof a petition in limine will normally be justified, where the High Court is\nof the view that the petition is frivolous or because of the nature of the\nclaim made dispute sought to be agitated, or that the petition against the\nparty against whom relief is claimed is not maintainable or that the\ndispute raised thereby is such that it would be inappropriate to try it in\nthe writ jurisdiction, or for analogous reasons.",
+          "title": "State Of Kerala & Ors vs M.K.Jose",
+          "document_id": "SC_2015_STATE_OF_KERALA_ORS_VS_MKJOSE",
+          "saved_scope": "adjacent_indexed_segments"
+        },
+        {
+          "position": 504015,
+          "text": "15. From the averments made in the petition filed by the appellants it is\nclear that in proof of a large number of allegations the appellants relied\nupon documentary evidence and the only matter in respect of which conflict\nof facts may possibly arise related to the due publication of the\nnotification under\nSection 4\nby the Collector.",
+          "title": "State Of Kerala & Ors vs M.K.Jose",
+          "document_id": "SC_2015_STATE_OF_KERALA_ORS_VS_MKJOSE",
+          "saved_scope": "adjacent_indexed_segments"
+        }
+      ]
+    },
+    {
+      "id": "source-11",
+      "kind": "judgment",
+      "passage": "I. T. C. Classic Finance And Services vs Commissioner Of Commercial Taxes\n(iii) The lessee has declared that it has taken prior inspection of the said equipment and has satisfied itself that each piece of equipment is suitable for its use and the purpose for which it is being taken on lease and that the lease has been taken subject to any fault or defect which any piece of equipment may suffer and that the lessee will not hold the lessor responsible for any inadequacy in any piece of equipment. Notwithstanding the grant of lease of the equipment, the lessor shall continue to be the sole owner and the lessee would not have any right, title or interest in the same.\n(iv) The lessor shall have the right at all reasonable time to inspect any piece of equipment and for that purpose shall have access to any factory, building or other location at which the equipment may be installed.\n(v) The lessee is liable to pay any sales tax or purchase tax that may be imposed in respect of the lease. The details of the rentals mutually agreed are specified in column Nos. 5 and 6 of the first schedule. If the lease is not renewed, the lessee shall deliver possession at or before the expiry of the lease.",
+      "available_saved_neighbours": [
+        {
+          "position": 951346,
+          "text": "3. Minimum residual value :- per cent of the cost of the equipment.",
+          "title": "I. T. C. Classic Finance And Services vs Commissioner Of Commercial Taxes",
+          "document_id": "HC_1995_I_T_C_CLASSIC_FINANCE_AND_SERVICES_VS_COMMISSIONER_OF_COMMERCIAL_TAXES",
+          "saved_scope": "adjacent_indexed_segments"
+        },
+        {
+          "position": 951347,
+          "text": "4. We have placed an order on our supplier M/s. Modi Xerox Ltd.,\nRampur, which you may please confirm.\nWe look forward to have a mutually beneficial business relationship.\"",
+          "title": "I. T. C. Classic Finance And Services vs Commissioner Of Commercial Taxes",
+          "document_id": "HC_1995_I_T_C_CLASSIC_FINANCE_AND_SERVICES_VS_COMMISSIONER_OF_COMMERCIAL_TAXES",
+          "saved_scope": "adjacent_indexed_segments"
+        },
+        {
+          "position": 951348,
+          "text": "23. The letter clearly shows that the equipment was already inspected by the customer at the place of the manufacturer/supplier and also placed an order for supply in anticipation of confirmation by the assessee. The manufacturer - M/s. Modi Xerox-raised an invoice dated March 7, 1988, against the assessee showing the consignee's address as M/s. Rallis India Limited, the lessee of the assessee. The agreement for lease of the equipment between the assessee and the lessee-M/s. Rallis India Limited-concluded on April 6, 1988, was for a period of 60 months renewable with mutual consent. It was concluded at Calcutta where the head office of the assessee is located. The lessee is referred to as M/s. Rallis India Ltd., a company incorporated under the\nCompanies Act\nwith its registered office at 21, Damodardas Sukhadwala Marg, Bombay. The details of the equipment are mentioned in the first schedule to the agreement. It is mentioned in the agreement that the lessor (assessee) offered to give on lease and the lessee (M/s. Rallis-India Ltd.) offered to take one, lease the equipment mentioned in the first schedule. Both the parties declared that the lessor has handed and the lessee has taken over possession of the equipment. The agreement, inter alia, incorporates the following conditions\n(i) The lessor is the absolute owner of the equipment and will not assign the rights under the agreement in favour of any other person, than its bankers.\n(ii) The possession of the equipment will be with the lessee, who shall have control over the same at the locations indicated in column No. 3 - premises of M/s. Rallis India Ltd., at S.D. Road, Secunderabad-and the equipment could be shifted to any other place by giving 7 days advance notice in writing.",
+          "title": "I. T. C. Classic Finance And Services vs Commissioner Of Commercial Taxes",
+          "document_id": "HC_1995_I_T_C_CLASSIC_FINANCE_AND_SERVICES_VS_COMMISSIONER_OF_COMMERCIAL_TAXES",
+          "saved_scope": "adjacent_indexed_segments"
+        },
+        {
+          "position": 951350,
+          "text": "24. From a reading of the clauses in the agreement, it is clear that the transaction is a bailment as defined by\nsection 148\nof the Indian Contract Act. The assessee is the bailor and M/s. Rallis India Ltd., is the bailee under the contract. The delivery of the goods is under the contract. The purpose for which the goods are delivered 'the duration and the obligation to return after the purpose is accomplished and other details are incorporated in the agreement.\nSection 149\nof the Contract Act says that a delivery to the bailee may be made by doing anything effect of putting the goods in the possession of the intended bailee or of any person authorised to hold them on his behalf. Sub-section (2) of\nsection 23\nof the Sale of Goods Act lays down, inter alia, that if in pursuance of a contract, the seller delivers the goods to a common carrier for the purpose of transmission to the buyer, he is deemed to have unconditionally appropriated the goods to the contract. A Division Bench of this Court in Rashtriya ispat\nNigam Ltd. v. Commercial Tax Officer\n[1990] 77 STC 182 interpreting\nsection 5-E\nof the Act held that it incorporates one category of bailments as defined in Halsbury's Laws of England (Fourth Edition) at paragraph 1551 :\n\"It is a contract by which the hirer obtains a right to use the chattel hired in return for the payment to the owner of the price of the hiring\".\nand it is this category of bailments that is the tax base under\nsection 5-E\n. \"The taxable event under\nsection 5-E",
+          "title": "I. T. C. Classic Finance And Services vs Commissioner Of Commercial Taxes",
+          "document_id": "HC_1995_I_T_C_CLASSIC_FINANCE_AND_SERVICES_VS_COMMISSIONER_OF_COMMERCIAL_TAXES",
+          "saved_scope": "adjacent_indexed_segments"
+        },
+        {
+          "position": 951351,
+          "text": "is the transfer of the right to use any goods. What does this phrase connote ? This means that unless there is a transfer of the right to use the goods, no occasion for levying tax arises; providing a facility which involves the use of the goods nor even a right to use the goods is not enough, there must be a transfer of that right\".",
+          "title": "I. T. C. Classic Finance And Services vs Commissioner Of Commercial Taxes",
+          "document_id": "HC_1995_I_T_C_CLASSIC_FINANCE_AND_SERVICES_VS_COMMISSIONER_OF_COMMERCIAL_TAXES",
+          "saved_scope": "adjacent_indexed_segments"
+        }
+      ]
+    },
+    {
+      "id": "source-12",
+      "kind": "judgment",
+      "passage": "I. T. C. Classic Finance And Services vs Commissioner Of Commercial Taxes\n23. The letter clearly shows that the equipment was already inspected by the customer at the place of the manufacturer/supplier and also placed an order for supply in anticipation of confirmation by the assessee. The manufacturer - M/s. Modi Xerox-raised an invoice dated March 7, 1988, against the assessee showing the consignee's address as M/s. Rallis India Limited, the lessee of the assessee. The agreement for lease of the equipment between the assessee and the lessee-M/s. Rallis India Limited-concluded on April 6, 1988, was for a period of 60 months renewable with mutual consent. It was concluded at Calcutta where the head office of the assessee is located. The lessee is referred to as M/s. Rallis India Ltd., a company incorporated under the\nCompanies Act\nwith its registered office at 21, Damodardas Sukhadwala Marg, Bombay. The details of the equipment are mentioned in the first schedule to the agreement. It is mentioned in the agreement that the lessor (assessee) offered to give on lease and the lessee (M/s. Rallis-India Ltd.) offered to take one, lease the equipment mentioned in the first schedule. Both the parties declared that the lessor has handed and the lessee has taken over possession of the equipment. The agreement, inter alia, incorporates the following conditions\n(i) The lessor is the absolute owner of the equipment and will not assign the rights under the agreement in favour of any other person, than its bankers.\n(ii) The possession of the equipment will be with the lessee, who shall have control over the same at the locations indicated in column No. 3 - premises of M/s. Rallis India Ltd., at S.D. Road, Secunderabad-and the equipment could be shifted to any other place by giving 7 days advance notice in writing.",
+      "available_saved_neighbours": [
+        {
+          "position": 951346,
+          "text": "3. Minimum residual value :- per cent of the cost of the equipment.",
+          "title": "I. T. C. Classic Finance And Services vs Commissioner Of Commercial Taxes",
+          "document_id": "HC_1995_I_T_C_CLASSIC_FINANCE_AND_SERVICES_VS_COMMISSIONER_OF_COMMERCIAL_TAXES",
+          "saved_scope": "adjacent_indexed_segments"
+        },
+        {
+          "position": 951347,
+          "text": "4. We have placed an order on our supplier M/s. Modi Xerox Ltd.,\nRampur, which you may please confirm.\nWe look forward to have a mutually beneficial business relationship.\"",
+          "title": "I. T. C. Classic Finance And Services vs Commissioner Of Commercial Taxes",
+          "document_id": "HC_1995_I_T_C_CLASSIC_FINANCE_AND_SERVICES_VS_COMMISSIONER_OF_COMMERCIAL_TAXES",
+          "saved_scope": "adjacent_indexed_segments"
+        },
+        {
+          "position": 951349,
+          "text": "(iii) The lessee has declared that it has taken prior inspection of the said equipment and has satisfied itself that each piece of equipment is suitable for its use and the purpose for which it is being taken on lease and that the lease has been taken subject to any fault or defect which any piece of equipment may suffer and that the lessee will not hold the lessor responsible for any inadequacy in any piece of equipment. Notwithstanding the grant of lease of the equipment, the lessor shall continue to be the sole owner and the lessee would not have any right, title or interest in the same.\n(iv) The lessor shall have the right at all reasonable time to inspect any piece of equipment and for that purpose shall have access to any factory, building or other location at which the equipment may be installed.\n(v) The lessee is liable to pay any sales tax or purchase tax that may be imposed in respect of the lease. The details of the rentals mutually agreed are specified in column Nos. 5 and 6 of the first schedule. If the lease is not renewed, the lessee shall deliver possession at or before the expiry of the lease.",
+          "title": "I. T. C. Classic Finance And Services vs Commissioner Of Commercial Taxes",
+          "document_id": "HC_1995_I_T_C_CLASSIC_FINANCE_AND_SERVICES_VS_COMMISSIONER_OF_COMMERCIAL_TAXES",
+          "saved_scope": "adjacent_indexed_segments"
+        },
+        {
+          "position": 951350,
+          "text": "24. From a reading of the clauses in the agreement, it is clear that the transaction is a bailment as defined by\nsection 148\nof the Indian Contract Act. The assessee is the bailor and M/s. Rallis India Ltd., is the bailee under the contract. The delivery of the goods is under the contract. The purpose for which the goods are delivered 'the duration and the obligation to return after the purpose is accomplished and other details are incorporated in the agreement.\nSection 149\nof the Contract Act says that a delivery to the bailee may be made by doing anything effect of putting the goods in the possession of the intended bailee or of any person authorised to hold them on his behalf. Sub-section (2) of\nsection 23\nof the Sale of Goods Act lays down, inter alia, that if in pursuance of a contract, the seller delivers the goods to a common carrier for the purpose of transmission to the buyer, he is deemed to have unconditionally appropriated the goods to the contract. A Division Bench of this Court in Rashtriya ispat\nNigam Ltd. v. Commercial Tax Officer\n[1990] 77 STC 182 interpreting\nsection 5-E\nof the Act held that it incorporates one category of bailments as defined in Halsbury's Laws of England (Fourth Edition) at paragraph 1551 :\n\"It is a contract by which the hirer obtains a right to use the chattel hired in return for the payment to the owner of the price of the hiring\".\nand it is this category of bailments that is the tax base under\nsection 5-E\n. \"The taxable event under\nsection 5-E",
+          "title": "I. T. C. Classic Finance And Services vs Commissioner Of Commercial Taxes",
+          "document_id": "HC_1995_I_T_C_CLASSIC_FINANCE_AND_SERVICES_VS_COMMISSIONER_OF_COMMERCIAL_TAXES",
+          "saved_scope": "adjacent_indexed_segments"
+        },
+        {
+          "position": 951351,
+          "text": "is the transfer of the right to use any goods. What does this phrase connote ? This means that unless there is a transfer of the right to use the goods, no occasion for levying tax arises; providing a facility which involves the use of the goods nor even a right to use the goods is not enough, there must be a transfer of that right\".",
+          "title": "I. T. C. Classic Finance And Services vs Commissioner Of Commercial Taxes",
+          "document_id": "HC_1995_I_T_C_CLASSIC_FINANCE_AND_SERVICES_VS_COMMISSIONER_OF_COMMERCIAL_TAXES",
+          "saved_scope": "adjacent_indexed_segments"
+        }
+      ]
+    },
+    {
+      "id": "source-13",
+      "kind": "provision",
+      "passage": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006\nUnion Of India 2006 15 The Companies (Accounting Standards) Rules, 2006,  — s.12: Transactions and other events are accounted for and presented in accordance with their substance and financial reality and not merely with their legal form. While the legal form of a lease agreement is that the lessee may acquire no legal title to the leased asset, in the case of finance leases the substance and financial reality are that the lessee acquires the economic benefits of the use of the leased asset for the major part of its economic life in return for entering into an obligation to pay for that right an amount approximating to the fair value of the asset and the related finance charge.\n12. Transactions and other events are accounted for and presented in accordance with their substance and financial reality and not merely with their legal form. While the legal form of a lease agreement is that the lessee may acquire no legal title to the leased asset, in the case of finance leases the substance and financial reality are that the lessee acquires the economic benefits of the use of the leased asset for the major part of its economic life in return for entering into an obligation to pay for that right an amount approximating to the fair value of the asset and the related finance charge.",
+      "available_saved_neighbours": [
+        {
+          "position": 266259,
+          "text": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006,  — s.12: There is no single list of accounting policies which are applicable to all circumstances. The differing circumstances in which enterprises opera in a situation of diverse and complex economic activity make alternative accounting principles and methods of applying those principles acceptable. The choice of the appropriate accounting principles and the methods of applying those principles in the specific circumstances of each enterprise calls for considerable judgement by the management of the enterprise.\n12.\nThere is no single list of accounting policies which are applicable to all circumstances. The differing circumstances in which enterprises opera in a situation of diverse and complex economic activity make alternative accounting principles and methods of applying those principles acceptable. The choice of the appropriate accounting principles and the methods of applying those principles in the specific circumstances of each enterprise calls for considerable judgement by the management of the enterprise.",
+          "title": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006",
+          "document_id": "UNION OF INDIA_2006_15_THE COMPANIES (ACCOUNTING STANDARDS) RULES, 2006",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 266303,
+          "text": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006,  — s.12: Interest and other borrowing costs are usually considered as not relating to bringing the inventories to their present location and condition and are, therefore, usually not included in the cost of inventories.\n12. Interest and other borrowing costs are usually considered as not relating to bringing the inventories to their present location and condition and are, therefore, usually not included in the cost of inventories.\nExclusions from the Cost of Inventories",
+          "title": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006",
+          "document_id": "UNION OF INDIA_2006_15_THE COMPANIES (ACCOUNTING STANDARDS) RULES, 2006",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 266343,
+          "text": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006,  — s.12: Cash flows from operating activities are primarily derived from the principal revenue-producing activities of the enterprise. Therefore, they generally result from the transactions and other events that enter into the determination of net profit or loss. Examples of cash flows from operating activities are:\n12. Cash flows from operating activities are primarily derived from the principal revenue-producing activities of the enterprise. Therefore, they generally result from the transactions and other events that enter into the determination of net profit or loss. Examples of cash flows from operating activities are:\n(a)\ncash receipts from the sale of goods and the rendering of services;\n(b)\ncash receipts from royalties, fees, commissions and other revenue;\n(c)\ncash payments to suppliers for goods and services;\n(d)\ncash payments to and on behalf of employees;\n(e)\ncash receipts and cash payments of an insurance enterprise for premiums and claims, annuities and other policy benefits;\n(f)\ncash payments or refunds of income taxes unless they can be specifically identified with financing and investing activities; and\n(g)\ncash receipts and payments relating to futures contracts, forward contracts, option contracts and swap contracts when the contracts are held for dealing or trading purposes.",
+          "title": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006",
+          "document_id": "UNION OF INDIA_2006_15_THE COMPANIES (ACCOUNTING STANDARDS) RULES, 2006",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 266344,
+          "text": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006,  — s.12(a): Cash flows from operating activities are primarily derived from the principal revenue-producing activities of the enterprise. Therefore, they generally result from the transactions and other events that enter into the determination of net profit or loss. Examples of cash flows from operating activities are:\n(a)\ncash receipts from the sale of goods and the rendering of services;",
+          "title": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006",
+          "document_id": "UNION OF INDIA_2006_15_THE COMPANIES (ACCOUNTING STANDARDS) RULES, 2006",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 266345,
+          "text": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006,  — s.12(b): Cash flows from operating activities are primarily derived from the principal revenue-producing activities of the enterprise. Therefore, they generally result from the transactions and other events that enter into the determination of net profit or loss. Examples of cash flows from operating activities are:\n(b)\ncash receipts from royalties, fees, commissions and other revenue;",
+          "title": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006",
+          "document_id": "UNION OF INDIA_2006_15_THE COMPANIES (ACCOUNTING STANDARDS) RULES, 2006",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 266346,
+          "text": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006,  — s.12(c): Cash flows from operating activities are primarily derived from the principal revenue-producing activities of the enterprise. Therefore, they generally result from the transactions and other events that enter into the determination of net profit or loss. Examples of cash flows from operating activities are:\n(c)\ncash payments to suppliers for goods and services;",
+          "title": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006",
+          "document_id": "UNION OF INDIA_2006_15_THE COMPANIES (ACCOUNTING STANDARDS) RULES, 2006",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 266347,
+          "text": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006,  — s.12(d): Cash flows from operating activities are primarily derived from the principal revenue-producing activities of the enterprise. Therefore, they generally result from the transactions and other events that enter into the determination of net profit or loss. Examples of cash flows from operating activities are:\n(d)\ncash payments to and on behalf of employees;",
+          "title": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006",
+          "document_id": "UNION OF INDIA_2006_15_THE COMPANIES (ACCOUNTING STANDARDS) RULES, 2006",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 266348,
+          "text": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006,  — s.12(e): Cash flows from operating activities are primarily derived from the principal revenue-producing activities of the enterprise. Therefore, they generally result from the transactions and other events that enter into the determination of net profit or loss. Examples of cash flows from operating activities are:\n(e)\ncash receipts and cash payments of an insurance enterprise for premiums and claims, annuities and other policy benefits;",
+          "title": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006",
+          "document_id": "UNION OF INDIA_2006_15_THE COMPANIES (ACCOUNTING STANDARDS) RULES, 2006",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 266349,
+          "text": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006,  — s.12(f): Cash flows from operating activities are primarily derived from the principal revenue-producing activities of the enterprise. Therefore, they generally result from the transactions and other events that enter into the determination of net profit or loss. Examples of cash flows from operating activities are:\n(f)\ncash payments or refunds of income taxes unless they can be specifically identified with financing and investing activities; and",
+          "title": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006",
+          "document_id": "UNION OF INDIA_2006_15_THE COMPANIES (ACCOUNTING STANDARDS) RULES, 2006",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 266350,
+          "text": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006,  — s.12(g): Cash flows from operating activities are primarily derived from the principal revenue-producing activities of the enterprise. Therefore, they generally result from the transactions and other events that enter into the determination of net profit or loss. Examples of cash flows from operating activities are:\n(g)\ncash receipts and payments relating to futures contracts, forward contracts, option contracts and swap contracts when the contracts are held for dealing or trading purposes.",
+          "title": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006",
+          "document_id": "UNION OF INDIA_2006_15_THE COMPANIES (ACCOUNTING STANDARDS) RULES, 2006",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 266496,
+          "text": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006,  — s.12: Contingent gains should not be recognised in the financial statements.\n12. Contingent gains should not be recognised in the financial statements.\nEvents Occurring after the Balance Sheet Date",
+          "title": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006",
+          "document_id": "UNION OF INDIA_2006_15_THE COMPANIES (ACCOUNTING STANDARDS) RULES, 2006",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 266520,
+          "text": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006,  — s.12: When items of income and expense within profit or loss from ordinary activities are of such size, nature or incidence that their disclosure is relevant to explain the performance of the enterprise for the period, the nature and amount of such items should be disclosed separately.\n12. When items of income and expense within profit or loss from ordinary activities are of such size, nature or incidence that their disclosure is relevant to explain the performance of the enterprise for the period, the nature and amount of such items should be disclosed separately.",
+          "title": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006",
+          "document_id": "UNION OF INDIA_2006_15_THE COMPANIES (ACCOUNTING STANDARDS) RULES, 2006",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 266584,
+          "text": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006,  — s.12: There are several methods of allocating depreciation over the useful life of the assets. Those most commonly employed in industrial and commercial enterprises are the straight line method and the reducing balance method. The management of a business selects the most appropriate method(s) based on various important factors e.g., (i) type of asset, (ii) the nature of the use of such asset and (iii) circumstances prevailing in the business. A combination of more than one method is sometimes used. In respect of depreciable assets which do not have material value, depreciation is often allocated fully in the accounting period in which they are acquired.\n12. There are several methods of allocating depreciation over the useful life of the assets. Those most commonly employed in industrial and commercial enterprises are the straight line method and the reducing balance method. The management of a business selects the most appropriate method(s) based on various important factors e.g., (i) type of asset, (ii) the nature of the use of such asset and (iii) circumstances prevailing in the business. A combination of more than one method is sometimes used. In respect of depreciable assets which do not have material value, depreciation is often allocated fully in the accounting period in which they are acquired.",
+          "title": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006",
+          "document_id": "UNION OF INDIA_2006_15_THE COMPANIES (ACCOUNTING STANDARDS) RULES, 2006",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 266641,
+          "text": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006,  — s.12: A variation is an instruction by the customer for a change in the scope of the work to be performed under the contract. A variation may lead to an increase or a decrease in contract revenue. Examples of variations are changes in the specifications or design of the asset and changes in the duration of the contract. A variation is included in contract revenue when :\n12. A variation is an instruction by the customer for a change in the scope of the work to be performed under the contract. A variation may lead to an increase or a decrease in contract revenue. Examples of variations are changes in the specifications or design of the asset and changes in the duration of the contract. A variation is included in contract revenue when :\n(a)\nit is probable that the customer will approve the variation and the amount of revenue arising from the variation; and\n(b)\nthe amount of revenue can be reliably measured.",
+          "title": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006",
+          "document_id": "UNION OF INDIA_2006_15_THE COMPANIES (ACCOUNTING STANDARDS) RULES, 2006",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 266642,
+          "text": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006,  — s.12(a): A variation is an instruction by the customer for a change in the scope of the work to be performed under the contract. A variation may lead to an increase or a decrease in contract revenue. Examples of variations are changes in the specifications or design of the asset and changes in the duration of the contract. A variation is included in contract revenue when :\n(a)\nit is probable that the customer will approve the variation and the amount of revenue arising from the variation; and",
+          "title": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006",
+          "document_id": "UNION OF INDIA_2006_15_THE COMPANIES (ACCOUNTING STANDARDS) RULES, 2006",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 266643,
+          "text": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006,  — s.12(b): A variation is an instruction by the customer for a change in the scope of the work to be performed under the contract. A variation may lead to an increase or a decrease in contract revenue. Examples of variations are changes in the specifications or design of the asset and changes in the duration of the contract. A variation is included in contract revenue when :\n(b)\nthe amount of revenue can be reliably measured.",
+          "title": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006",
+          "document_id": "UNION OF INDIA_2006_15_THE COMPANIES (ACCOUNTING STANDARDS) RULES, 2006",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 266771,
+          "text": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006,  — s.12: In a transaction involving the rendering of services, performance should be measured either under the completed service contract method or under the proportionate completion method, whichever relates the revenue to the work accomplished. Such performance should be regarded as being achieved when no significant uncertainty exists regarding the amount of the consideration that will be derived from rendering the service.\n12. In a transaction involving the rendering of services, performance should be measured either under the completed service contract method or under the proportionate completion method, whichever relates the revenue to the work accomplished. Such performance should be regarded as being achieved when no significant uncertainty exists regarding the amount of the consideration that will be derived from rendering the service.",
+          "title": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006",
+          "document_id": "UNION OF INDIA_2006_15_THE COMPANIES (ACCOUNTING STANDARDS) RULES, 2006",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 266831,
+          "text": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006,  — s.12: Under the recognition principle in paragraph 7, an enterprise does not recognise in the carrying amount of an item of property, plant and equipment the costs of the day-to-day servicing of the item. Rather, these costs are recognised in the statement of profit and loss as incurred. Costs of day-to-day servicing are primarily the costs of labour and consumables, and may include the cost of small parts. The purpose of such expenditures is often described as for the `repairs and maintenance' of the item of property, plant and equipment.\n12. Under the recognition principle in paragraph 7, an enterprise does not recognise in the carrying amount of an item of property, plant and equipment the costs of the day-to-day servicing of the item. Rather, these costs are recognised in the statement of profit and loss as incurred. Costs of day-to-day servicing are primarily the costs of labour and consumables, and may include the cost of small parts. The purpose of such expenditures is often described as for the `repairs and maintenance' of the item of property, plant and equipment.",
+          "title": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006",
+          "document_id": "UNION OF INDIA_2006_15_THE COMPANIES (ACCOUNTING STANDARDS) RULES, 2006",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 267013,
+          "text": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006,  — s.12: Cash, receivables, and payables are examples of monetary items. Fixed assets, inventories, and investments in equity shares are examples of non-monetary items. The carrying amount of an item is determined in accordance with the relevant Accounting Standards. For example, certain assets may be measured at fair value or other similar valuation (e.g., net realisable value) or at historical cost. Whether the carrying amount is determined based on fair value or other similar valuation or at historical cost, the amounts so determined for foreign currency items are then reported in the reporting currency in accordance with this Standard. The contingent liability denominated in foreign currency at the balance sheet date is disclosed by using the dosing rate.\n12. Cash, receivables, and payables are examples of monetary items. Fixed assets, inventories, and investments in equity shares are examples of non-monetary items. The carrying amount of an item is determined in accordance with the relevant Accounting Standards. For example, certain assets may be measured at fair value or other similar valuation (e.g., net realisable value) or at historical cost. Whether the carrying amount is determined based on fair value or other similar valuation or at historical cost, the amounts so determined for foreign currency items are then reported in the reporting currency in accordance with this Standard. The contingent liability denominated in foreign currency at the balance sheet date is disclosed by using the dosing rate.\nRecognition of Exchange Differences5",
+          "title": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006",
+          "document_id": "UNION OF INDIA_2006_15_THE COMPANIES (ACCOUNTING STANDARDS) RULES, 2006",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 267095,
+          "text": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006,  — s.12: Disclosure\n12. Disclosure\n12.1\nThe following disclosures are appropriate:\n(i)\nthe accounting policy adopted for government grants, including the methods of presentation in the financial statements;\n(ii)\nthe nature and extent of government grants recognised in the financial statements, including grants of non-monetary assets given at a concessional rate or free of cost.\nMain Principles",
+          "title": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006",
+          "document_id": "UNION OF INDIA_2006_15_THE COMPANIES (ACCOUNTING STANDARDS) RULES, 2006",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 267096,
+          "text": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006,  — s.12(i): Disclosure\n(i)\nthe accounting policy adopted for government grants, including the methods of presentation in the financial statements;",
+          "title": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006",
+          "document_id": "UNION OF INDIA_2006_15_THE COMPANIES (ACCOUNTING STANDARDS) RULES, 2006",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 267097,
+          "text": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006,  — s.12(ii): Disclosure\n(ii)\nthe nature and extent of government grants recognised in the financial statements, including grants of non-monetary assets given at a concessional rate or free of cost.\nMain Principles",
+          "title": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006",
+          "document_id": "UNION OF INDIA_2006_15_THE COMPANIES (ACCOUNTING STANDARDS) RULES, 2006",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 267129,
+          "text": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006,  — s.12: Interest, dividends and rentals receivables in connection with an investment are generally regarded as income, being the return on the investment. However, in some circumstances, such inflows represent a recovery of cost and do not form part of income. For example, when unpaid interest has accrued before the acquisition of an interest-bearing investment and is therefore included in the price paid for the investment, the subsequent receipt of interest is allocated between pre-acquisition and post-acquisition periods; the preacquisition portion is deducted from cost. When dividends on equity are declared from pre-acquisition profits, a similar treatment may apply. If it is difficult to make such an allocation except on an arbitrary basis, the cost of investment is normally reduced by dividends receivable only if they clearly represent a recovery of a part of the cost.\n12. Interest, dividends and rentals receivables in connection with an investment are generally regarded as income, being the return on the investment. However, in some circumstances, such inflows represent a recovery of cost and do not form part of income. For example, when unpaid interest has accrued before the acquisition of an interest-bearing investment and is therefore included in the price paid for the investment, the subsequent receipt of interest is allocated between pre-acquisition and post-acquisition periods; the preacquisition portion is deducted from cost. When dividends on equity are declared from pre-acquisition profits, a similar treatment may apply. If it is difficult to make such an allocation except on an arbitrary basis, the cost of investment is normally reduced by dividends receivable only if they clearly represent a recovery of a part of the cost.",
+          "title": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006",
+          "document_id": "UNION OF INDIA_2006_15_THE COMPANIES (ACCOUNTING STANDARDS) RULES, 2006",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 267203,
+          "text": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006,  — s.12: Under the purchase method, the transferee company accounts for the amalgamation either by incorporating the assets and liabilities at their existing carrying amounts or by allocating the consideration to individual identifiable assets and liabilities of the transferor company on the basis of their fair values at the date of amalgamation. The identifiable assets and liabilities may include assets and liabilities not recorded in the financial statements of the transferor company.\n12. Under the purchase method, the transferee company accounts for the amalgamation either by incorporating the assets and liabilities at their existing carrying amounts or by allocating the consideration to individual identifiable assets and liabilities of the transferor company on the basis of their fair values at the date of amalgamation. The identifiable assets and liabilities may include assets and liabilities not recorded in the financial statements of the transferor company.",
+          "title": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006",
+          "document_id": "UNION OF INDIA_2006_15_THE COMPANIES (ACCOUNTING STANDARDS) RULES, 2006",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 267318,
+          "text": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006,  — s.12: An enterprise may compensate employees for absence for various reasons including vacation, sickness and short-term disability, and maternity or paternity. Entitlement to compensated absences falls into two categories:\n12. An enterprise may compensate employees for absence for various reasons including vacation, sickness and short-term disability, and maternity or paternity. Entitlement to compensated absences falls into two categories:\n(a)\naccumulating; and\n(b)\nnon-accumulating.",
+          "title": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006",
+          "document_id": "UNION OF INDIA_2006_15_THE COMPANIES (ACCOUNTING STANDARDS) RULES, 2006",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 267319,
+          "text": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006,  — s.12(a): An enterprise may compensate employees for absence for various reasons including vacation, sickness and short-term disability, and maternity or paternity. Entitlement to compensated absences falls into two categories:\n(a)\naccumulating; and",
+          "title": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006",
+          "document_id": "UNION OF INDIA_2006_15_THE COMPANIES (ACCOUNTING STANDARDS) RULES, 2006",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 267320,
+          "text": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006,  — s.12(b): An enterprise may compensate employees for absence for various reasons including vacation, sickness and short-term disability, and maternity or paternity. Entitlement to compensated absences falls into two categories:\n(b)\nnon-accumulating.",
+          "title": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006",
+          "document_id": "UNION OF INDIA_2006_15_THE COMPANIES (ACCOUNTING STANDARDS) RULES, 2006",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 267736,
+          "text": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006,  — s.12: To the extent that funds are borrowed generally and used for the purpose of obtaining a qualifying asset, the amount of borrowing costs eligible for capitalisation should be determined by applying a capitalisation rate to the expenditure on that asset. The capitalisation rate should be the weighted average of the borrowing costs applicable to the borrowings of the enterprise that are outstanding during the period, other than borrowings made specifically for the purpose of obtaining a qualifying asset. The amount of borrowing costs capitalised during a period should not exceed the amount of borrowing costs incurred during that period.\n12. To the extent that funds are borrowed generally and used for the purpose of obtaining a qualifying asset, the amount of borrowing costs eligible for capitalisation should be determined by applying a capitalisation rate to the expenditure on that asset. The capitalisation rate should be the weighted average of the borrowing costs applicable to the borrowings of the enterprise that are outstanding during the period, other than borrowings made specifically for the purpose of obtaining a qualifying asset. The amount of borrowing costs capitalised during a period should not exceed the amount of borrowing costs incurred during that period.\nExcess of the Carrying Amount of the Qualifying Asset over Recoverable Amount",
+          "title": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006",
+          "document_id": "UNION OF INDIA_2006_15_THE COMPANIES (ACCOUNTING STANDARDS) RULES, 2006",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 267799,
+          "text": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006,  — s.12: The predominant sources of risks affect how most enterprises are organised and managed. Therefore, the organisational structure of an enterprise and its internal financial, reporting system are normally the basis for identifying its segments.\n12. The predominant sources of risks affect how most enterprises are organised and managed. Therefore, the organisational structure of an enterprise and its internal financial, reporting system are normally the basis for identifying its segments.",
+          "title": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006",
+          "document_id": "UNION OF INDIA_2006_15_THE COMPANIES (ACCOUNTING STANDARDS) RULES, 2006",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 267954,
+          "text": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006,  — s.12: An enterprise is considered to have a substantial interest in another enterprise if that enterprise owns, directly or indirectly, 20 per cent or more interest in the voting power of the other enterprise. Similarly, an individual is considered to have a substantial interest in an enterprise, if that individual owns, directly or indirectly, 20 per cent or more interest in the voting power of the enterprise.\n12. An enterprise is considered to have a substantial interest in another enterprise if that enterprise owns, directly or indirectly, 20 per cent or more interest in the voting power of the other enterprise. Similarly, an individual is considered to have a substantial interest in an enterprise, if that individual owns, directly or indirectly, 20 per cent or more interest in the voting power of the enterprise.",
+          "title": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006",
+          "document_id": "UNION OF INDIA_2006_15_THE COMPANIES (ACCOUNTING STANDARDS) RULES, 2006",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 268160,
+          "text": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006,  — s.12: All items of income and expense which are recognised in a period, including tax expense and extra ordinary items, are included in the determination of the net profit or loss for the period unless an Accounting Standard requires or permits otherwise [see Accounting Standard (AS) 5, Net Profit or Loss for the Period, Prior Period Items and Changes in Accounting Policies]. The amount of preference dividends and any attributable tax thereto for the period is deducted from the net profit for the period (or added to the net-loss for the period) in order to calculate the net profit or loss for the period attributable to equity shareholders.\n12. All items of income and expense which are recognised in a period, including tax expense and extra ordinary items, are included in the determination of the net profit or loss for the period unless an Accounting Standard requires or permits otherwise [see Accounting Standard (AS) 5, Net Profit or Loss for the Period, Prior Period Items and Changes in Accounting Policies]. The amount of preference dividends and any attributable tax thereto for the period is deducted from the net profit for the period (or added to the net-loss for the period) in order to calculate the net profit or loss for the period attributable to equity shareholders.",
+          "title": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006",
+          "document_id": "UNION OF INDIA_2006_15_THE COMPANIES (ACCOUNTING STANDARDS) RULES, 2006",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 268289,
+          "text": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006,  — s.12: Exclusion of a subsidiary from consolidation on the ground that its business activities are dissimilar from those of the other enterprises within the group is not justified because better information is provided by consolidating such subsidiaries and disclosing additional information in the consolidated financial statements about the different business activities of subsidiaries. For example, the disclosures required by Accounting Standard (AS) 17, Segment Reporting, help to explain the significance of different business activities within the group.\n12. Exclusion of a subsidiary from consolidation on the ground that its business activities are dissimilar from those of the other enterprises within the group is not justified because better information is provided by consolidating such subsidiaries and disclosing additional information in the consolidated financial statements about the different business activities of subsidiaries. For example, the disclosures required by Accounting Standard (AS) 17, Segment Reporting, help to explain the significance of different business activities within the group.\nConsolidation Procedures",
+          "title": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006",
+          "document_id": "UNION OF INDIA_2006_15_THE COMPANIES (ACCOUNTING STANDARDS) RULES, 2006",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 268355,
+          "text": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006,  — s.12: Permanent differences do not result in deferred tax assets or deferred tax liabilities.\n12. Permanent differences do not result in deferred tax assets or deferred tax liabilities.",
+          "title": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006",
+          "document_id": "UNION OF INDIA_2006_15_THE COMPANIES (ACCOUNTING STANDARDS) RULES, 2006",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 268465,
+          "text": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006,  — s.12: Goodwill/capital reserve arising on the acquisition of an associate by an investor should be included in the carrying amount of investment in the associate but should be disclosed separately.\n12. Goodwill/capital reserve arising on the acquisition of an associate by an investor should be included in the carrying amount of investment in the associate but should be disclosed separately.",
+          "title": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006",
+          "document_id": "UNION OF INDIA_2006_15_THE COMPANIES (ACCOUNTING STANDARDS) RULES, 2006",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 268509,
+          "text": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006,  — s.12: Assets, liabilities, revenue, and expenses are directly attributable to a component if they would be eliminated when the component is sold, abandoned or otherwise disposed of. If debt is attributable to a component, the related interest and other financing costs are similarly attributed to it.\n12. Assets, liabilities, revenue, and expenses are directly attributable to a component if they would be eliminated when the component is sold, abandoned or otherwise disposed of. If debt is attributable to a component, the related interest and other financing costs are similarly attributed to it.",
+          "title": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006",
+          "document_id": "UNION OF INDIA_2006_15_THE COMPANIES (ACCOUNTING STANDARDS) RULES, 2006",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 268665,
+          "text": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006,  — s.12: If an enterprise presents basic and diluted earnings per share in its annual financial statements in accordance with Accounting Standard (AS) 20, Earnings Per Share, basic and diluted earnings per share should be presented in accordance with AS 20 on the face of the statement of profit and loss, complete or condensed, for an interim period.\n12. If an enterprise presents basic and diluted earnings per share in its annual financial statements in accordance with Accounting Standard (AS) 20, Earnings Per Share, basic and diluted earnings per share should be presented in accordance with AS 20 on the face of the statement of profit and loss, complete or condensed, for an interim period.",
+          "title": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006",
+          "document_id": "UNION OF INDIA_2006_15_THE COMPANIES (ACCOUNTING STANDARDS) RULES, 2006",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 268748,
+          "text": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006,  — s.12: Tax expense\n12. Tax expense",
+          "title": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006",
+          "document_id": "UNION OF INDIA_2006_15_THE COMPANIES (ACCOUNTING STANDARDS) RULES, 2006",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 268793,
+          "text": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006,  — s.12: Net profit or loss for the period\n12. Net profit or loss for the period\nEarnings Per Share",
+          "title": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006",
+          "document_id": "UNION OF INDIA_2006_15_THE COMPANIES (ACCOUNTING STANDARDS) RULES, 2006",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 268820,
+          "text": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006,  — s.12: If the financial reporting year and the income tax year differ, income tax expense for the interim periods of that financial reporting year is measured using separate weighted average estimated effective tax rates for each of the income tax years applied to the portion of pre-tax income earned in each of those income tax years.\n12. If the financial reporting year and the income tax year differ, income tax expense for the interim periods of that financial reporting year is measured using separate weighted average estimated effective tax rates for each of the income tax years applied to the portion of pre-tax income earned in each of those income tax years.",
+          "title": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006",
+          "document_id": "UNION OF INDIA_2006_15_THE COMPANIES (ACCOUNTING STANDARDS) RULES, 2006",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 268863,
+          "text": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006,  — s.12: An intangible asset can be clearly distinguished from goodwill if the asset is separable. An asset is separable if the enterprise could rent, sell, exchange or distribute the specific future economic benefits attributable to the asset without also disposing of future economic benefits that flow from other assets used in the same revenue earning activity.\n12. An intangible asset can be clearly distinguished from goodwill if the asset is separable. An asset is separable if the enterprise could rent, sell, exchange or distribute the specific future economic benefits attributable to the asset without also disposing of future economic benefits that flow from other assets used in the same revenue earning activity.",
+          "title": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006",
+          "document_id": "UNION OF INDIA_2006_15_THE COMPANIES (ACCOUNTING STANDARDS) RULES, 2006",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 269071,
+          "text": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006,  — s.12: Enterprises may incur considerable cost in modifying existing software systems. Subsequent expenditure on software after its purchase or its completion should be recognised as an expense when it is incurred unless:\n12. Enterprises may incur considerable cost in modifying existing software systems. Subsequent expenditure on software after its purchase or its completion should be recognised as an expense when it is incurred unless:\n(a)\nit is probable that the expenditure will enable the software to generate future economic benefits in excess of its originally assessed standards of performance; and\n(b)\nthe expenditure can be measured and attributed to the software reliably.\nIf these conditions are met, the subsequent expenditure should be added to the carrying amount of the software. Costs incurred in order to restore or maintain the future economic benefits that an enterprise can expect from the originally assessed standard of performance of existing software systems is recognised as an expense when, and only when, the restoration or maintenance work is carried out.\nAmortisation period",
+          "title": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006",
+          "document_id": "UNION OF INDIA_2006_15_THE COMPANIES (ACCOUNTING STANDARDS) RULES, 2006",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 269072,
+          "text": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006,  — s.12(a): Enterprises may incur considerable cost in modifying existing software systems. Subsequent expenditure on software after its purchase or its completion should be recognised as an expense when it is incurred unless:\n(a)\nit is probable that the expenditure will enable the software to generate future economic benefits in excess of its originally assessed standards of performance; and",
+          "title": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006",
+          "document_id": "UNION OF INDIA_2006_15_THE COMPANIES (ACCOUNTING STANDARDS) RULES, 2006",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 269073,
+          "text": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006,  — s.12(b): Enterprises may incur considerable cost in modifying existing software systems. Subsequent expenditure on software after its purchase or its completion should be recognised as an expense when it is incurred unless:\n(b)\nthe expenditure can be measured and attributed to the software reliably.\nIf these conditions are met, the subsequent expenditure should be added to the carrying amount of the software. Costs incurred in order to restore or maintain the future economic benefits that an enterprise can expect from the originally assessed standard of performance of existing software systems is recognised as an expense when, and only when, the restoration or maintenance work is carried out.\nAmortisation period",
+          "title": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006",
+          "document_id": "UNION OF INDIA_2006_15_THE COMPANIES (ACCOUNTING STANDARDS) RULES, 2006",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 269125,
+          "text": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006,  — s.12: In respect of its interests in jointly controlled operations, a venturer should recognise in its separate financial statements and consequently in its consolidated financial statements:\n12. In respect of its interests in jointly controlled operations, a venturer should recognise in its separate financial statements and consequently in its consolidated financial statements:\n(a)\nthe assets that it controls and the liabilities that it incurs; and\n(b)\nthe expenses that it incurs and its share of the income that it earns from the Joint venture.",
+          "title": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006",
+          "document_id": "UNION OF INDIA_2006_15_THE COMPANIES (ACCOUNTING STANDARDS) RULES, 2006",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 269126,
+          "text": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006,  — s.12(a): In respect of its interests in jointly controlled operations, a venturer should recognise in its separate financial statements and consequently in its consolidated financial statements:\n(a)\nthe assets that it controls and the liabilities that it incurs; and",
+          "title": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006",
+          "document_id": "UNION OF INDIA_2006_15_THE COMPANIES (ACCOUNTING STANDARDS) RULES, 2006",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 269127,
+          "text": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006,  — s.12(b): In respect of its interests in jointly controlled operations, a venturer should recognise in its separate financial statements and consequently in its consolidated financial statements:\n(b)\nthe expenses that it incurs and its share of the income that it earns from the Joint venture.",
+          "title": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006",
+          "document_id": "UNION OF INDIA_2006_15_THE COMPANIES (ACCOUNTING STANDARDS) RULES, 2006",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 269233,
+          "text": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006,  — s.12: As an illustration of paragraph 11, if market interest rates or other market rates of return on investments have increased during the period, an enterprise is not required to make a formal estimate of an asset's recoverable amount in the following cases:\n12. As an illustration of paragraph 11, if market interest rates or other market rates of return on investments have increased during the period, an enterprise is not required to make a formal estimate of an asset's recoverable amount in the following cases:\n(a)\nif the discount rate used in calculating the asset's value in use is unlikely to be affected by the increase in these market rates. For example, increases in short-term interest rates may not have a material effect on the discount rate used for an asset that has a long remaining useful life; or\n(b)\nif the discount rate used in calculating the asset's value in use is likely to be affected by the increase in these market rates but previous sensitivity analysis of recoverable amount shows that:\n(i)\nit is unlikely that there will be a material decrease in recoverable amount because future cash flows are also likely to increase. For example, in some cases, an enterprise may be able to demonstrate that it adjusts its revenues to compensate for any increase in market rates; or\n(ii)\nthe decrease in recoverable amount is unlikely to result in a material impairment loss.",
+          "title": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006",
+          "document_id": "UNION OF INDIA_2006_15_THE COMPANIES (ACCOUNTING STANDARDS) RULES, 2006",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 269234,
+          "text": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006,  — s.12(a): As an illustration of paragraph 11, if market interest rates or other market rates of return on investments have increased during the period, an enterprise is not required to make a formal estimate of an asset's recoverable amount in the following cases:\n(a)\nif the discount rate used in calculating the asset's value in use is unlikely to be affected by the increase in these market rates. For example, increases in short-term interest rates may not have a material effect on the discount rate used for an asset that has a long remaining useful life; or",
+          "title": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006",
+          "document_id": "UNION OF INDIA_2006_15_THE COMPANIES (ACCOUNTING STANDARDS) RULES, 2006",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 269235,
+          "text": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006,  — s.12(b): As an illustration of paragraph 11, if market interest rates or other market rates of return on investments have increased during the period, an enterprise is not required to make a formal estimate of an asset's recoverable amount in the following cases:\n(b)\nif the discount rate used in calculating the asset's value in use is likely to be affected by the increase in these market rates but previous sensitivity analysis of recoverable amount shows that:",
+          "title": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006",
+          "document_id": "UNION OF INDIA_2006_15_THE COMPANIES (ACCOUNTING STANDARDS) RULES, 2006",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 269236,
+          "text": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006,  — s.12(b)(i): As an illustration of paragraph 11, if market interest rates or other market rates of return on investments have increased during the period, an enterprise is not required to make a formal estimate of an asset's recoverable amount in the following cases:\n(i)\nit is unlikely that there will be a material decrease in recoverable amount because future cash flows are also likely to increase. For example, in some cases, an enterprise may be able to demonstrate that it adjusts its revenues to compensate for any increase in market rates; or",
+          "title": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006",
+          "document_id": "UNION OF INDIA_2006_15_THE COMPANIES (ACCOUNTING STANDARDS) RULES, 2006",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 269237,
+          "text": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006,  — s.12(b)(ii): As an illustration of paragraph 11, if market interest rates or other market rates of return on investments have increased during the period, an enterprise is not required to make a formal estimate of an asset's recoverable amount in the following cases:\n(ii)\nthe decrease in recoverable amount is unlikely to result in a material impairment loss.",
+          "title": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006",
+          "document_id": "UNION OF INDIA_2006_15_THE COMPANIES (ACCOUNTING STANDARDS) RULES, 2006",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 269553,
+          "text": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006,  — s.12: Provisions can be distinguished from other liabilities such as trade payables and accruals because in the measurement of provisions substantial degree of estimation is involved with regard to the future expenditure required in settlement. By contrast:\n12. Provisions can be distinguished from other liabilities such as trade payables and accruals because in the measurement of provisions substantial degree of estimation is involved with regard to the future expenditure required in settlement. By contrast:\n(a)\ntrade payables are liabilities to pay for goods or services that have been received or supplied and have been invoiced or formally agreed with the supplier; and\n(b)\naccruals are liabilities to pay for goods or services that have been received or supplied but have not been paid, invoiced or formally agreed with the supplier, including amounts due to employees. Although it is sometimes necessary to estimate the amount of accruals, the degree of estimation is generally much less than that for provisions.",
+          "title": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006",
+          "document_id": "UNION OF INDIA_2006_15_THE COMPANIES (ACCOUNTING STANDARDS) RULES, 2006",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 269554,
+          "text": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006,  — s.12(a): Provisions can be distinguished from other liabilities such as trade payables and accruals because in the measurement of provisions substantial degree of estimation is involved with regard to the future expenditure required in settlement. By contrast:\n(a)\ntrade payables are liabilities to pay for goods or services that have been received or supplied and have been invoiced or formally agreed with the supplier; and",
+          "title": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006",
+          "document_id": "UNION OF INDIA_2006_15_THE COMPANIES (ACCOUNTING STANDARDS) RULES, 2006",
+          "saved_scope": "indexed_section_segments"
+        },
+        {
+          "position": 269555,
+          "text": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006,  — s.12(b): Provisions can be distinguished from other liabilities such as trade payables and accruals because in the measurement of provisions substantial degree of estimation is involved with regard to the future expenditure required in settlement. By contrast:\n(b)\naccruals are liabilities to pay for goods or services that have been received or supplied but have not been paid, invoiced or formally agreed with the supplier, including amounts due to employees. Although it is sometimes necessary to estimate the amount of accruals, the degree of estimation is generally much less than that for provisions.",
+          "title": "Union Of India 2006 15 The Companies (Accounting Standards) Rules, 2006",
+          "document_id": "UNION OF INDIA_2006_15_THE COMPANIES (ACCOUNTING STANDARDS) RULES, 2006",
+          "saved_scope": "indexed_section_segments"
+        }
+      ]
+    },
+    {
+      "id": "source-14",
+      "kind": "provision",
+      "passage": "Telangana 2016 17 Telangana Court Of Wards Act, 1350 F\nTelangana 2016 17 Telangana Court Of Wards Act, 1350 F,  — s.35: Notice for filing claims.\n35.\nNotice for filing claims.\n(1)\nOn the publication of a notification under subsection (1) of section 14 the [Collector]\n[Substituted for the word 'Taluqdar' by the A.P.A.O. 1957.]\nor any other person appointed under sub-section (2) of the said section shall, as soon as possible, notify [XXX]\n[The words in 'in Urdu Language' were omitted by A.P.A.O. 1957.]\nin the [Official Gazette]\n[Substituted for the word 'Jarida' by the A.P.A.O. 1957.]\nand at such places and by such means as the Court, may, by a general or special order determine, that persons having any pecuniary claims whether immediately enforceable or enforceable in future, against the ward or his property, should furnish to him full particulars of their claims in writing, within six months from the date of such notification. A copy of the notification shall be sent by registered post to the person whom the person notifying knows to have a pecuniary claim against the ward or his property: Provided the person publishing the notification knows or can easily know the address of such person.\n(2)\nThe Government may at any stage of the proceedings under sections 35, 36 and 39, invest any person either by name or by virtue of his office with the powers of a [Collector]\n[Substituted for the word 'Taluqdar' by the A.P.A.O. 1957.]\nfor all or any of the purposes of the said sections.\nExplanation. - For purposes of this section and section 36 every claim shall be deemed to be a pecuniary claim, notwithstanding that a suit in respect thereof is pending or a dispute with regard to such claim has been referred to arbitration or a decree or an arbitration award has been passed in relation to such claim.\n(3)\nAny claim against the ward or his property, other than a claim by the Government, not filed before the [Collector]\n[Substituted for the word 'Taluqdar' by the A.P.A.O. 1957.]\nin accordance with the notice under sub-section (1), shall, save in the cases provided for in clause (d) of subsection (2) of section 43 of this Act or [section 7 of the [Indian Limitation Act, 1908.]\n[Substituted for 'section 7 of the Hyderabad Limitation Act No.II of 1322 F.' by the A.P.A.O. 1957.]\n] be deemed, to have been duly discharged, for all purposes and on all occasions whether during the continuance of the superintendence of the Court or afterwards, unless in any suit or proceeding instituted by the claimant, or his legal representative, it is proved to the satisfaction of the Civil Court that the plaintiff or his legal representative has, for good and sufficient reasons, failed to act in accordance with the notice published under subsection (1).",
+      "available_saved_neighbours": [
+        {
+          "position": 88231,
+          "text": "Telangana 2016 17 Telangana Court Of Wards Act, 1350 F,  — s.35(3): Notice for filing claims.\n(3)\nAny claim against the ward or his property, other than a claim by the Government, not filed before the [Collector]\n[Substituted for the word 'Taluqdar' by the A.P.A.O. 1957.]\nin accordance with the notice under sub-section (1), shall, save in the cases provided for in clause (d) of subsection (2) of section 43 of this Act or [section 7 of the [Indian Limitation Act, 1908.]\n[Substituted for 'section 7 of the Hyderabad Limitation Act No.II of 1322 F.' by the A.P.A.O. 1957.]\n] be deemed, to have been duly discharged, for all purposes and on all occasions whether during the continuance of the superintendence of the Court or afterwards, unless in any suit or proceeding instituted by the claimant, or his legal representative, it is proved to the satisfaction of the Civil Court that the plaintiff or his legal representative has, for good and sufficient reasons, failed to act in accordance with the notice published under subsection (1).",
+          "title": "Telangana 2016 17 Telangana Court Of Wards Act, 1350 F",
+          "document_id": "TELANGANA_2016_17_TELANGANA COURT OF WARDS ACT, 1350 F",
+          "saved_scope": "exact_parent_tree"
+        }
+      ]
+    }
+  ]
+}

@@ -2,9 +2,10 @@
 
 The Advocate build plan owns status and scope; this file records linked evidence.
 Owner resumed SEQ.1–SEQ.9, permits explicit nonblocking deferrals, and approved
-one fresh $5 API development allowance. All paid work will use the shared ledger
+one fresh $5 API development allowance. Paid work uses the shared ledger
 `outputs/core-engine-build-20261010/api-budget.sqlite` with a $5 cap, including
-restarts and repairs. No paid calls have been made for this build yet.
+restarts and repairs. Measured calls and conservative reservations are recorded
+in the successive evidence entries below.
 
 ## SEQ.1 — exact conversation and receipts
 
@@ -792,3 +793,237 @@ the existing held-unit and shared bounded recovery; unknown ownership, history o
 contract versions cannot pass. Normal call count remains four, at most six with
 the existing correction budget. Additional local searches do not add an OpenAI
 call, but their latency must be measured. No production v3 change has been made.
+
+## SEQ.3 — account/concept pilot rejected; research responsibility narrowed
+
+The six-case account/concept candidate was run once with the pinned mini model.
+Three outputs passed its mechanical checks; none met the complete declared
+behaviour. It recovered the previously held drive dispute and separated two
+investigations, but still changed non-supply into absence, compressed different
+actors, invented an examination restriction and treated client-question drafting
+as corpus searches. A simple summary correction generated legal enquiries; a
+social closing restarted pending tenancy work. Two offered ID namespaces also
+caused preventable selection friction. No production change was promoted.
+
+The comparison used actual saved upstream interpretation for the first case and
+explicitly synthetic exact-span fixtures in four others. It does not establish
+an unfamiliar-matter accuracy rate. Six calls, no retries, cost $0.011174 in
+provider usage and $0.011177 after ledger rounding. Exact frozen inputs, oracle,
+outputs and assessment are the research-account-concepts artifacts in the existing
+output folder.
+
+The next candidate gives this existing call only the research responsibility:
+neutral legal investigation, exact original-account IDs and distinct concepts.
+It removes model-written general outcomes, constraints and missing-fact summaries
+that duplicated and altered original material. Complete original context remains;
+the interpreter and writer still own nonresearch requests. This is a responsibility
+change, not another model stage or a keyword router. Short offered aliases use one
+namespace. A code link to the latest input establishes the trigger, not semantic
+authorisation. Zero-search corrections and social closings must actually be observed.
+
+The first attempted run of this narrower candidate stopped before provider dispatch:
+its experiment guard mistook the current request's conservative reservation for
+already incurred spending. Recorded SDK dispatches were zero and measured usage
+did not change. The failed receipt is preserved; the $0.425431 reservation remains
+charged because the existing ledger has no cancellation receipt contract. No fake
+provider response or manual ledger edit was used. The harness checks eligibility
+before reservation for the subsequent bounded run; production is unaffected.
+
+## SEQ.3 — research-only concept pilot completed; not promoted
+
+The second candidate was run once on the same six frozen synthetic contexts with
+pinned `gpt-4.1-mini-2025-04-14`. Its only responsibility was to propose current
+legal investigations, select exact original-account IDs and supply up to three
+concept phrases per investigation. General work outcomes, constraints and gap
+summaries were removed from this candidate output. Complete attributed context
+was unchanged; prior interpretation prose was omitted, while checked original
+spans, uncovered ranges and whole original messages remained selectable. This
+was an isolated replacement-prompt experiment, not a new production model stage.
+
+All six outputs passed schema/reference admission, but only the correction case
+met the complete declared research-only behaviour. Mechanical acceptance did not
+certify meaning or selection purpose:
+
+| Frozen case | Observed result |
+| --- | --- |
+| Deposit and held design drive | Both disputes preserved and the previously held drive passage selected. The issue title still attributes custody to the owner rather than distinguishing the technician holding the drive from the owner's retention claim. Whole mixed message and instruction text were also selected. |
+| Report not supplied | Both disputes preserved, but non-supply becomes an absent report and equipment return becomes lease termination. Task wording and overlapping whole-message account were selected. |
+| Actual agency account and authorised alternative | Both investigations preserved. The original unforwarded email becomes absent documentary material; the hypothetical absence of an email broadens to no written confirmation. One concept describes analysis instructions rather than legal discovery vocabulary. |
+| Interim relief and resumed passage work | Both requests and unsettled ownership preserved; permission and independent access concepts are distinct. However, the factual search selections include the explanation request and other task directions, even where no factual account is needed. |
+| Summary correction and no-send restriction | Correctly returns no legal investigation. This does not prove the separate correction or no-send handling was executed. |
+| Social closing | Incorrectly restarts earlier conditional rent work and generates three searches. An exact earlier source and a code link to the latest turn do not establish current research authority. |
+
+The strict full-contract assessment recorded **6/6 mechanical admissions and
+1/6 fully acceptable for this isolated responsibility**. That tally includes
+account-selection noise; it is not a semantic accuracy score. Its stricter reading
+flags consequential meaning risks in four cases and selection scope in another.
+All four substantive cases preserve independent investigations; all four also
+select mixed, task or overlapping text as factual search account.
+
+A second independent review is more permissive about discovery hypotheses and
+finds interim/passage work substantively useful. Lien, licence, easement, recovery
+and evidential-sufficiency concepts can be legitimate searches without establishing
+their prerequisites. Reviewers differ on whether some exploratory wording assumes
+a fact or investigates a possibility. The clearest shared failures are restarting
+paused work after closure and broadening the explicit no-email hypothetical into
+no written confirmation. These distinctions remain measurement findings, not new
+blocking rules that automatically discard potentially useful queries. Six selected
+regressions do not establish a population accuracy or false-positive rate.
+
+Exactly six SDK dispatches and zero retries consumed 9,534 input and 1,169 output
+tokens. Saved SDK arguments establish the exact frozen system/user text, dynamic
+schema, pinned model and `store=False`. Usage total was $0.005684; rounded ledger
+increase was **$0.005686**. Recorded model latency totalled 13.402 seconds, with a
+2.406-second median. At completion the shared ledger held $0.247648 measured
+usage plus $1.515431 conservative reservations, total $1.763079 against $5. The
+reservations comprise the earlier $1.09 embedding uncertainty and the $0.425431
+zero-dispatch harness failure; neither is reported as measured provider spending.
+The automatic approval-review block before this run dispatched nothing. Root
+verified unchanged synthetic-input hashes against prior saved provider receipts
+before the same command was permitted with that additional evidence.
+
+No production code, prompt, schema or call count changed. No corpus retrieval,
+reranking, independent semantic review, application save, response delivery or
+browser acceptance was exercised by this pilot. The owner subsequently approved
+a model-only GPT-4.1 comparison on these frozen inputs, within $0.10 of the shared
+$5 allowance, while noting that earlier model changes added little value. The
+comparison must preserve the prompt and payload and cannot promote its model.
+Production promotion remains unwarranted. Exact outputs and the independent
+frozen-oracle assessment are `research-only-concepts-guard-fixed-results.json` and
+`research-only-concepts-assessment.json` under `outputs/core-engine-build-20261010`;
+`research-only-concepts-egress-provenance.json` records the payload comparison.
+The exact executed script is retained separately; the human-facing harness
+header alone was updated afterward to identify this completed experiment.
+
+## SEQ.3 — reranker input fragmentation measured offline
+
+A separate preparation-only diagnostic uses the older Vale Makers investigation,
+not the new research-only candidate. All three presentations use the same frozen
+91 provision and 165 judgment candidates and the same three recorded enquiries.
+The current local reranker and cached tokenizer ran with a fake predictor, with
+no neural inference, corpus fetch, paid call or change to production.
+
+| Input presentation | Query tokens | Query windows | Prepared query/passage pairs |
+| --- | ---: | ---: | ---: |
+| Recorded work metadata | 722 | 6 | 2,232 |
+| Complete original message and the same enquiries once | 236 | 2 | 721 |
+| Exact saved account passage and the same enquiries once | 148 | 1 | 375 |
+
+In the first two presentations, no query window contains any complete enquiry
+together with the exact damage denial and document-supply qualification. The
+focused presentation keeps all three enquiries and those qualifications together.
+This demonstrates fragmentation and redundant preparation, not better relevance
+or measured inference latency. The old enquiry's altered report-existence premise
+was deliberately preserved and flagged so this comparison changes presentation
+only. Its repair remains a separate planning responsibility.
+
+Exact ordered pool, source, tokenizer and inquiry hashes and the actual window
+text are saved in `rerank-presentation-prepare-only.json`; the corresponding
+`compare-rerank-presentation.py` reproduces the diagnostic. Historical scores
+cannot supply a fair comparison because the saved complete pool's scores belong
+to a different compact input and its model-weight identity was not recorded.
+An actual relevance comparison therefore needs the same cached model and pool for
+each presentation, with source usefulness assessed before viewing the new scores.
+
+## SEQ.3 — model-only GPT-4.1 comparison; no promotion
+
+The owner authorised up to $0.10 within the shared $5 allowance for a focused
+comparison and cautioned that earlier model changes added little value. Six
+synthetic requests were copied from the actual mini SDK captures. Only the model
+changed to `gpt-4.1-2025-04-14`; complete messages, prompt, schema, output ceiling
+and no-store setting were identical. Prompt-token counts matched mini in all six
+cases. No production configuration was changed to register this experiment model.
+
+GPT-4.1 selects cleaner source spans and more concise legal vocabulary in the
+first two matters and correctly leaves the social closing without research.
+However, it turns the summary-only payment-date correction into legal research,
+where mini had correctly returned no investigation. The agency enquiry still
+broadens an assumed absence of email into missing written documentation, and a
+passage-use enquiry describes permission as owner-granted despite unsettled
+ownership. Search hypotheses remain permissible; changing their original factual
+premises or the current work scope remains consequential.
+
+A separate raw-output reading distinguishes ambiguous search framing from proved
+factual fabrication: absent-report language may refer to the held record, and
+contract-formality enquiries may be useful conditional discovery. Those phrases
+must not silently broaden the authorised hypothetical or settle disputed ownership.
+The two models' opposite mistakes on the correction and closing are the clearest
+current-work failures; no new keyword or semantic blocking gate follows from the
+ambiguous phrases.
+
+The strict combined acceptance tally stays 1/6, but this is not a semantic accuracy
+rate: both models can generate useful discovery terms while failing another
+contract condition. One known-case run per model establishes no general model
+ranking. The experiment does not justify promotion or another routine model stage.
+Production stays on mini; the isolated research-only candidate remains unpromoted.
+
+Six dispatches, zero retries, 9,534 input and 947 output tokens cost **$0.026644**.
+Recorded latency total was 11.576 seconds, median 1.6865 seconds. Measured cost was
+about 4.69 times the mini pilot for these requests, with no consistent behavioural
+gain. The shared ledger now records $0.274292 measured and $1.515431 reserved or
+unknown, total $1.789723 of $5. Published prices and snapshot were checked against
+[OpenAI's GPT-4.1 documentation](https://developers.openai.com/api/docs/models/gpt-4.1).
+
+The existing ledger reserved the full published input ceiling plus the unchanged
+4,000-token output cap before each call. A separate conservative exact-request
+envelope checked the $0.10 comparison allowance before each dispatch and stopped
+on unknown usage or any error; all six checks passed. Its framing allowance is an
+engineering bound, not a provider-certified token guarantee. There was no retry,
+refund, ledger reset, production price-table patch or incomplete-output salvage.
+The exact harness, prepared bounds, SDK requests, usage and separate assessment
+are the `research-only-concepts-gpt41-*` artifacts in the existing output folder.
+
+## SEQ.3 — local relevance comparisons do not support selection promotion
+
+Fourteen targeted source assessments were frozen before new scores were viewed.
+The labeler disclosed familiarity with earlier reports. Five sources supplied
+conditional or evidentiary leads, eight concerned the wrong relationship or scope,
+and one lacked sufficient held context. No source was labelled as a directly
+dispositive rule for this equipment matter. Labels preserve the distinction
+between the ranked primary passage and useful reasoning in saved neighbours.
+These deliberately selected sources do not represent the complete candidate pool.
+
+The first bounded neural comparison completed all six passes using the same cached
+BGE model, exact pool and source/model/tokenizer hashes. Model load took 14.01
+seconds; subsequent local reranking took 30.45 seconds for repeated metadata,
+10.11 seconds for whole original messages plus enquiries, and 5.31 seconds for
+the selected account plus enquiries. Fixed order and a single run do not provide
+a counterbalanced latency benchmark.
+
+The focused input lifted two equipment passages from ranks 16/5 to 1/2, but they
+share the same useful neighbouring reasoning. It also moved the Espire evidentiary
+lead from 3 to 97 and the Mahendra deposit/handover lead from 19 to 78. A wrong-scope
+mortgage submission moved from 17 to 3; an unrelated Court-of-Wards provision moved
+from 18 to 3. Lower preparation cost did not establish better relevance.
+
+A subsequent bounded diagnostic ranked each of the same three unchanged enquiries
+with the exact account separately. All six corpus passes completed, using 972
+prepared pairs and 13.23 seconds of reranking after a separate 12.94-second load.
+Espire's best individual-enquiry rank improved from 97 to 34, Mahendra's from 78
+to 17, and a qualified contractual/writ lead's from 12 to 4. None of those exact
+primary passages entered the disclosed source-identity-deduplicated round-robin
+top six. One equipment primary remained, the mortgage primary dropped out, and
+a prelabelled wrong-scope tax-background judgment entered. Unrelated toll and
+Court-of-Wards provisions remained. Another Mahendra passage entered but was
+outside the frozen primary labels; its usefulness is unassessed.
+
+Both runs used CUDA/FP16 and the identical cached weights, with no downloads,
+OpenAI calls, source edits or retries. These are pool ranks and an experimental
+round-robin selection, not the product's complete diversity/context-selection
+path. No claim of corpus recall, final answer accuracy or browser acceptance
+follows. The experiments preserve the old enquiry's known premise problem rather
+than silently repairing it while comparing ranking presentations.
+
+Decision: retain the owner's account-first, two-to-three-distinct-concepts design,
+but do not promote either the research-only routing candidate, a model upgrade or
+either ranking experiment as a relevance fix. Next implementation should isolate
+exact original-query construction from current-work interpretation, preserve old
+replay, and assess source scope against the qualified legal enquiry before final
+selection. Useful conditional or contrary-position leads must remain eligible;
+rank, legal vocabulary and a model's favourable label alone establish no legal
+support. No extra routine model stage is approved or introduced by these results.
+
+Exact inputs, labels, source/model hashes, per-arm scores, timings and limitations
+are the `rerank-local-*` and `rerank-per-enquiry-*` artifacts. The shared API totals
+remain unchanged after these local experiments. Production code and prompts remain
+unchanged at this evidence checkpoint; the SEQ.3 relevance gap is still open.

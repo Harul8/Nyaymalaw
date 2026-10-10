@@ -1,0 +1,358 @@
+{
+  "contract": "research_only_independent_discovery_assessment_v1",
+  "evidence": {
+    "raw_results": "research-only-concepts-guard-fixed-results.json",
+    "raw_results_sha256": "ca95c37842fe5457d0b270ac2865b45650b88f542b27e04c0e1b5c650723d84d",
+    "input_source": "Exact wire.user.original_context and original_account_spans for each call; not a reconstructed account",
+    "oracle": "research-only-concepts-hidden-oracle.json",
+    "earlier_assessment_preserved": "research-only-concepts-assessment.json"
+  },
+  "method": "Independent read of all six actual candidate objects, exact full attributed inputs and predeclared oracle. No model reviewer verdict was used as ground truth; no new inference or search was run.",
+  "decision": "Do not promote the research-only routing change on these six cases. Preserve useful discovery concepts and isolate deterministic source/query assembly from routing. Do not turn exploratory legal terminology into a false-fact rejection merely because the advocate did not supply that term.",
+  "count_interpretation": {
+    "earlier_strict_fully_acceptable_count": 1,
+    "denominator": 6,
+    "what_that_count_means": "One candidate met all combined intended conditions, including focused account selection and absence of semantic/relevance concerns, in six selected regression inputs.",
+    "what_it_does_not_mean": [
+      "Not five proven false legal answers out of six; no legal answer was delivered or evaluated here.",
+      "Not five clearly invalid sets of legal discovery hypotheses; several concerns are account noise, ambiguity or unmeasured relevance.",
+      "Not a held-out accuracy or false-positive rate; these six were known selected regressions.",
+      "Not retrieval failure or success; no candidate corpus retrieval or reranking was measured in this run."
+    ],
+    "independent_definite_failure_cases": [
+      "actor_agency_and_explicit_alternative",
+      "greeting_social_close"
+    ],
+    "independent_definite_failure_scope": "A changed explicitly assumed factual premise in the agency comparison, and renewed legal work despite the social close. This conservative count does not certify the other four as fully acceptable.",
+    "discovery_acceptable_with_selection_noise": "mixed_independent_requests_followup",
+    "correct_nonresearch_routing": "correction_no_send_no_law",
+    "needs_relevance_or_scope_observation_without_blanket_rejection": [
+      "original_aster_held_drive",
+      "not_supplied_is_not_nonexistent"
+    ]
+  },
+  "cases": [
+    {
+      "name": "original_aster_held_drive",
+      "assessment": "Both requested legal disputes retained; plausible discovery with account-selection noise and relationship-targeting risks. Do not classify every unprovided legal term as fabricated fact.",
+      "supported_discovery": [
+        {
+          "output": {
+            "output_path": "work[0].concepts[0].text",
+            "exact_output": "Contractual obligations and rights under equipment hire agreements"
+          },
+          "reason": "Equipment-hire contractual rights are a directly connected legal investigation."
+        },
+        {
+          "output": {
+            "output_path": "work[0].concepts[1].text",
+            "exact_output": "Requirements for evidence and documentation to validate damage claims"
+          },
+          "source": {
+            "source_id": "live-served-1:advocate",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "start": 306,
+            "end": 376,
+            "text": "The owner sent a technician's estimate but no joint inspection report."
+          },
+          "reason": "Checking evidential sufficiency of estimate/report material is useful. This particular output does not assert that no report or inspection exists."
+        },
+        {
+          "output": {
+            "output_path": "work[1].concepts[0].text",
+            "exact_output": "Possession and lien rights over client's property used in rented equipment setup"
+          },
+          "source": {
+            "source_id": "live-served-1:advocate",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "start": 526,
+            "end": 713,
+            "text": "the owner's technician still has our client's original design drive, which the client says was lent only for setup; the owner now says it can retain the drive until repair costs are paid."
+          },
+          "reason": "Lien and possession are legitimate candidate legal concepts for asserted retention pending repair costs. Their prerequisites are not thereby established."
+        },
+        {
+          "output": {
+            "output_path": "work[1].concepts[2].text",
+            "exact_output": "Legal remedies to recover property and challenging unlawful retention"
+          },
+          "reason": "A remedies search involving unlawful retention is a conditional legal route, not by itself an assertion that this retention has been adjudged unlawful."
+        }
+      ],
+      "scope_or_relevance_risks": [
+        {
+          "output": {
+            "output_path": "work[0].concepts[2].text",
+            "exact_output": "Tenant's rights and procedures concerning security deposit retention"
+          },
+          "reason": "Tenant terminology may draw immovable-property material into equipment hire. Treat as a relevance concern to inspect in actual results, not automatic proof that the planner found the wrong law."
+        },
+        {
+          "output": {
+            "output_path": "work[1].issue",
+            "exact_output": "Legal rights and obligations related to retention of client's original design drive by equipment owner"
+          },
+          "reason": "The title compresses technician possession and owner-asserted retention into owner retention. Preserve both roles downstream. Because the owner asserts the retention claim, this title alone is not conclusive proof of a changed material actor for discovery."
+        }
+      ],
+      "input_noise": "Both investigations select the whole mixed message plus contained ranges and task restrictions. Exactness is preserved, but factual focus and token efficiency are not. This should not itself become a semantic false-fact gate."
+    },
+    {
+      "name": "not_supplied_is_not_nonexistent",
+      "assessment": "Both disputes retained with plausible legal concepts. Several phrases lose qualifications; distinguish broad legal-hypothesis exploration from silently asserting that the underlying event occurred.",
+      "supported_discovery": [
+        {
+          "output": {
+            "output_path": "work[0].concepts[0].text",
+            "exact_output": "deposit recovery in equipment lease agreements"
+          },
+          "reason": "Equipment lease deposit recovery directly relates to the requested investigation."
+        },
+        {
+          "output": {
+            "output_path": "work[1].concepts[0].text",
+            "exact_output": "return of property loaned for limited purpose"
+          },
+          "reason": "Return of property loaned for a limited purpose is supported as discovery vocabulary by the reported setup-only loan."
+        }
+      ],
+      "ambiguous_or_conditionally_useful": [
+        {
+          "output": {
+            "output_path": "work[0].concepts[1].text",
+            "exact_output": "disputes over damage claims without joint inspection report"
+          },
+          "purpose": {
+            "output_path": "work[0].concepts[1].purpose",
+            "exact_output": "to explore legal weight of damage claims absent inspection report and possible remedies or defenses"
+          },
+          "source": {
+            "source_id": "deposit_and_drive:advocate",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "start": 200,
+            "end": 245,
+            "text": "no joint inspection report has been supplied."
+          },
+          "reason": "Without/absent report may refer to the current evidential record or imply nonexistence. The former is legitimate; the latter changes the account. The output does not resolve that scope, so flag the ambiguity without pretending a definite nonexistent-report assertion was proved."
+        },
+        {
+          "output": {
+            "output_path": "work[0].concepts[0].purpose",
+            "exact_output": "to find relevant laws and precedents about lessee's right to get security deposit back after lease termination and alleged damage"
+          },
+          "output_peer": {
+            "output_path": "work[1].concepts[2].text",
+            "exact_output": "remedies for retention of client's digital property after lease termination"
+          },
+          "source": {
+            "source_id": "deposit_and_drive:advocate",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "start": 51,
+            "end": 109,
+            "text": "They leased a laser cutter and returned it on 3 September."
+          },
+          "reason": "Termination was not reported. A post-termination recovery rule can be a useful alternative discovery branch, but cannot become the actual chronology. Do not reject the legal concept solely for exploring that branch; require its condition to remain separate when used or applied."
+        }
+      ],
+      "input_noise": "Both investigations include full mixed message and contained factual/task ranges. The same exact words recur; that is avoidable search-presentation noise, not invented original evidence."
+    },
+    {
+      "name": "actor_agency_and_explicit_alternative",
+      "assessment": "Agency authority and reliance concepts are useful, but the second investigation definitely expands the expressly authorised factual hypothetical.",
+      "definite_error": {
+        "output": {
+          "output_path": "work[1].issue",
+          "exact_output": "Legal questions assuming express agency authorization to extend payment without written confirmation"
+        },
+        "purpose": {
+          "output_path": "work[1].concepts[1].purpose",
+          "exact_output": "to understand legal effect when extension not recorded in writing or email"
+        },
+        "source": {
+          "source_id": "explicit_alternative:advocate",
+          "speaker": "advocate",
+          "record_role": "original_account",
+          "start": 42,
+          "end": 162,
+          "text": "assume the agency was expressly authorised to extend payment and that no email recording the extension was ever created."
+        },
+        "mismatch": "The original assumes no email. The issue assumes no written confirmation and the purpose describes no writing or email. Other written records are not excluded by the original. This is expansion of an explicit hypothetical premise, not merely different legal terminology.",
+        "scope": "Repair the investigation framing/conditional use; retain independently useful agency/reliance concepts and exact originals."
+      },
+      "supported_discovery": [
+        {
+          "output": {
+            "output_path": "work[0].concepts[0].text",
+            "exact_output": "agency authority to bind principal"
+          },
+          "reason": "Authority to bind the principal is responsive."
+        },
+        {
+          "output": {
+            "output_path": "work[0].concepts[1].text",
+            "exact_output": "hospital reliance on agent's representations or extensions"
+          },
+          "reason": "Third-party reliance is independently relevant to the allegation."
+        },
+        {
+          "output": {
+            "output_path": "work[1].concepts[0].text",
+            "exact_output": "express agency authorization and scope of authority"
+          },
+          "reason": "Express authority is expressly assumed for the requested alternative."
+        },
+        {
+          "output": {
+            "output_path": "work[1].concepts[1].text",
+            "exact_output": "oral modification of contract terms and evidentiary requirements"
+          },
+          "reason": "Oral-modification doctrine can be investigated conditionally. The term alone is not the error; the expanded actual/assumed non-writing premise is."
+        }
+      ],
+      "additional_limits": [
+        {
+          "output": {
+            "output_path": "work[0].concepts[2].text",
+            "exact_output": "effect of absence of written or emailed modification"
+          },
+          "source": {
+            "source_id": "authority_to_bind:advocate",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "start": 338,
+            "end": 396,
+            "text": "No email recording the extension has been forwarded to us."
+          },
+          "reason": "An unforwarded email is not a nonexistent modification or record. The selected original remains exact, but this unqualified absence phrase risks strengthening the premise."
+        },
+        {
+          "output": {
+            "output_path": "work[1].concepts[2].text",
+            "exact_output": "separation of assumptions from client denial and evidentiary gaps"
+          },
+          "reason": "Separating assumptions from actual account is an analysis instruction, not a distinct proposition likely to benefit from a corpus search. This is an ineffective-query concern, not a false legal holding."
+        }
+      ],
+      "input_noise": "Whole original messages and contained instructions overlap. Retaining the expressly hypothetical introduction is necessary qualification, not task-noise to strip."
+    },
+    {
+      "name": "mixed_independent_requests_followup",
+      "assessment": "Substantively acceptable for legal discovery, with avoidable account-selection noise. Both requested legal investigations and open ownership are retained.",
+      "source": {
+        "source_id": "permission_followup:advocate",
+        "speaker": "advocate",
+        "record_role": "original_account",
+        "start": 86,
+        "end": 198,
+        "text": "Then resume the work on whether use can continue after the permission ends, keeping the ownership question open."
+      },
+      "supported_discovery": [
+        {
+          "output": {
+            "output_path": "work[0].concepts[0].text",
+            "exact_output": "Interim relief criteria in civil disputes"
+          },
+          "reason": "Interim-relief criteria directly answer the current explanatory request."
+        },
+        {
+          "output": {
+            "output_path": "work[1].concepts[0].text",
+            "exact_output": "Licenses and permissions to use land"
+          },
+          "reason": "Permission/licence consequences are connected to the original arrangement without establishing a legal classification."
+        },
+        {
+          "output": {
+            "output_path": "work[1].concepts[1].text",
+            "exact_output": "Nature of easements or prescriptive rights of way"
+          },
+          "reason": "Easements/prescription are plausible hypotheses for a claimed independent access right. No duration or acquisition of that right is asserted; rejecting the concept because those prerequisites remain unknown would be a false rejection."
+        },
+        {
+          "output": {
+            "output_path": "work[1].concepts[2].text",
+            "exact_output": "Effect of unresolved ownership on access rights"
+          },
+          "reason": "The query expressly keeps ownership unresolved."
+        }
+      ],
+      "input_noise": "The interim-relief investigation selects the explanation request as account, although a general legal question needs no factual account query. Whole current message plus contained ranges repeats instructions. Improve focus mechanically where exact containment allows; this is not evidence of a fabricated fact."
+    },
+    {
+      "name": "correction_no_send_no_law",
+      "assessment": "Correct research-only decision: work=[]. It avoids unnecessary legal investigation for the factual correction.",
+      "source": {
+        "source_id": "correction:advocate",
+        "speaker": "advocate",
+        "record_role": "original_account",
+        "start": 0,
+        "end": 57,
+        "text": "Please correct your summary: I said 14 April, not 14 May."
+      },
+      "exact_output": {
+        "work": []
+      },
+      "limit": "Does not establish that the summary correction is applied, saved or usefully answered. Other owners must perform and evidence that requested work."
+    },
+    {
+      "name": "greeting_social_close",
+      "assessment": "Definite current-work routing failure, independent of the quality of the tenancy concepts.",
+      "definite_error": {
+        "output": {
+          "output_path": "work[0].issue",
+          "exact_output": "Legal investigation on rent review and tenancy papers requirements"
+        },
+        "latest_source": {
+          "source_id": "social_closing:advocate",
+          "speaker": "advocate",
+          "record_role": "original_account",
+          "start": 0,
+          "end": 45,
+          "text": "Thanks, this is enough for today. Good night."
+        },
+        "earlier_source": {
+          "source_id": "s1:advocate",
+          "speaker": "advocate",
+          "record_role": "original_account",
+          "start": 0,
+          "end": 70,
+          "text": "When I return with the tenancy papers, we can look at the rent demand."
+        },
+        "mismatch": "The earlier work was conditional on returning with papers; the latest message closes the conversation. The candidate renews that work and emits three searches. Automatically attaching latest as trigger proves input ownership, not current authorisation or necessity.",
+        "scope": "No investigation is needed for this message; preserve pending earlier work without executing it."
+      }
+    }
+  ],
+  "owning_boundary_recommendation": {
+    "owner": "nm/core_engine/research.py, at checked source-to-query construction and versioned search-contract validation; do not mix in research-only routing promotion.",
+    "independently_isolatable": "Yes, an exact original-account/context recall query before existing admitted legal enquiries can be tested independently of replacing the planner with a research-only router. Gate that mechanical prefix on existing planned search work, not merely on the presence of source words. This retains existing routing behavior and its known limitations; it does not solve routing.",
+    "minimal_mechanics": [
+      "Resolve only server-owned original-account source selections. Preserve coordinates, speaker and exact text. Do not turn NM-derived rows into factual recall.",
+      "Prefix the selected exact original words once, before up to three declared legal-concept/enquiry queries. Keep their source identities and boundaries; no paraphrasing or invented connecting facts.",
+      "Remove duplicate/contained copies only within the same source using exact coordinates in query presentation; preserve the full canonical source selections and proof. Do not merge equal words from different sources or offsets.",
+      "Use a versioned new-query contract so existing v2 saved query order/context/rendering is reproduced unchanged.",
+      "A max-three schema is a resource/shape invariant, not semantic ranking. Do not silently choose the first three from four or claim that three are distinct/relevant merely because the count fits.",
+      "Do not adopt the candidate code-attached latest trigger as proof of current legal-work permission. Keep routing assessment a separate semantic responsibility."
+    ],
+    "observable_pass": "For an already admitted current legal work item, the saved request to both lexical/vector legs begins with exact owned original words, followed by all admitted queries within the cap; query IDs, ordering, provenance and receipt remain stable on replay. No-search work produces no query. New construction changes neither matter facts nor requested deliverables.",
+    "consequential_counterexamples": [
+      "A social/no-law turn gets account search merely because historical facts exist.",
+      "An unknown or derived source becomes factual recall; a quote at one offset silently resolves to another identical occurrence.",
+      "A fourth enquiry is silently discarded or old v2 replay silently receives the new prefix/cap.",
+      "A plausible legal hypothesis is treated as an established matter fact, or a gate rejects it solely because the advocate did not name its terminology."
+    ],
+    "semantic_measurement_needed": "Inspect retrieved results and final supported use before claiming relevance or legal accuracy. Evaluate factual-scope changes separately from alternative legal hypotheses and presentation noise. The prefix may recover candidates but cannot make an altered concept premise safe or decide current research need.",
+    "model_calls": "No additional routine model stage for deterministic source/query assembly. Existing four routine stages remain; any correction still uses the turn-owned existing bound."
+  },
+  "execution_limits": {
+    "production_edits": false,
+    "additional_api_calls": 0,
+    "neural_or_corpus_calls": 0,
+    "new_semantic_accuracy_rate_claimed": false,
+    "browser_acceptance_claimed": false
+  }
+}

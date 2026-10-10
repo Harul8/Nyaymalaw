@@ -1,0 +1,2190 @@
+{
+  "started_utc": "2026-10-10T05:35:24.058719+00:00",
+  "preparation": {
+    "model": "gpt-4.1-mini-2025-04-14",
+    "script_sha256": "da8f6ebde336ebf35f17be487f24d536de6a86a0fc7aa89661e037ceb49a8532",
+    "inputs_sha256": "caf39312fe7d96b508184a18bd596a434c9d059a45c58e16477d60ab94272b89",
+    "oracle_sha256": "49d44d518c4a4e43c41115fcb27a7d34620ae3a0fda4eadab38f0e54a15129b3",
+    "baseline_inputs_sha256": "706b298b179b838ca5456941b89c10b428077eba75bfe837ad82c1dce589822c",
+    "baseline_oracle_sha256": "47c04570a06edc0164cdc6ef1feffc4eeaa09c71efe73effad006ee114ed7b05",
+    "prompt": "Message: You receive the exact latest advocate message, the complete\nattributed earlier conversation, current records, saved work, and original account\nspans with short owned IDs. Each ID selects unchanged words and their provenance.\nThe span catalogue includes earlier selections, uncovered ranges and full messages;\nthese describe available words, not their meaning or truth. NM interpretations\nare distinct from original accounts and cannot establish facts.\n\nPurpose: Prepare only the legal investigations needed now and their held-corpus\nsearches. Other stages handle replies, drafting, factual corrections and execution.\nDo not plan those activities, answer the legal questions or decide applicable law.\n\nLook for: Understand the latest message in the whole conversation. Identify current\nlegal questions and distinct disputes requiring legal investigation, including those\narising from supplied substantive material. Preserve separate investigations even\nwhen requested together. Earlier pending work is not automatically requested again.\nReturn no investigation where the current work needs no legal sources.\n\nFor each investigation, select the offered account IDs containing its relevant\noriginal account. Keep who says what, uncertainty, conditions, timing and negation.\nPrefer focused spans to a mixed full message. Do not select social words or task\ndirections as facts; retain words that establish an expressly hypothetical scope.\nA general legal question may have no factual account. Never recopy or paraphrase\nfacts into a search query: code uses the selected original words.\n\nThen propose normally two or three concise legal concept phrases likely to occur\nin provisions or judicial reasoning. Each should add a distinct search contribution,\nnot restate another phrase or instruct a model to perform work. Use fewer when\nsufficient. Concepts are investigation hypotheses; they cannot introduce new facts,\nestablish an entitlement or invent an authority, provision, citation or jurisdiction.\nThe original account and its qualifications remain the basis for later assessment.\n\nOutcome: Return work[]. Each item has issue, a neutral inquiry title;\naccount_source_ids, selected offered IDs; and concepts[], each with text and purpose\ndescribing its distinct search contribution. Use at most three concepts per\ninvestigation. Return work=[] when no legal investigation is needed now. No other\nwork plans, factual summaries, conclusions, status or completion claims.\n",
+    "prompt_word_count": 349,
+    "maximum_logical_calls": 6,
+    "semantic_retries": 0,
+    "actual_spend_stop_usd": 0.08,
+    "shared_ledger": "api-budget.sqlite",
+    "shared_hard_cap_usd": 5,
+    "max_output_tokens": 4000,
+    "model_input_change": "Complete original context unchanged. Earlier interpretation prose is omitted; its mechanically validated spans and uncovered ranges remain in the offered original catalogue.",
+    "call_impact": "One existing planner-responsibility candidate per input, no added stage. This experiment does not integrate or alter production call counts.",
+    "admission_scope": "Pilot whole-candidate schema/reference rejection; no production per-unit recovery or semantic acceptance claimed.",
+    "wire_capture": "Frozen model-port inputs plus SDK .create assertion/capture of exact system/user messages, dynamic on_the_wire(schema), pinned model, no-store and token bound. One actual dispatch per candidate and six total; no provider retries.",
+    "selfchecks": {
+      "cases": 6,
+      "complete_context_unchanged": true,
+      "held_drive_offered": true,
+      "all_aliases_bound_to_original_coordinates": true,
+      "unknown_alias_refused": true,
+      "exact_model_port_input_captured": true,
+      "sdk_payload_assertion_offline_stub_passed": true,
+      "second_dispatch_refused": true,
+      "changed_system_and_schema_refused": true,
+      "current_reservation_does_not_trip_spend_guard": true,
+      "prior_spend_stops_before_reservation": true,
+      "retry_stops_before_another_reservation": true,
+      "paid_calls": 0
+    }
+  },
+  "budget_before": {
+    "maximum_usd": 5.0,
+    "charged_usd": 1.757393,
+    "measured_usd": 0.241962,
+    "reserved_or_unknown_usd": 1.515431,
+    "attempts": 88,
+    "models": [
+      {
+        "model": "gpt-4.1-mini-2025-04-14",
+        "state": "measured",
+        "attempts": 86,
+        "charged_usd": 0.241962
+      },
+      {
+        "model": "gpt-4.1-mini-2025-04-14",
+        "state": "reserved_or_unknown",
+        "attempts": 1,
+        "charged_usd": 0.425431
+      },
+      {
+        "model": "text-embedding-3-large",
+        "state": "reserved_or_unknown",
+        "attempts": 1,
+        "charged_usd": 1.09
+      }
+    ]
+  },
+  "calls": [
+    {
+      "name": "original_aster_held_drive",
+      "wire": {
+        "system": "Message: You receive the exact latest advocate message, the complete\nattributed earlier conversation, current records, saved work, and original account\nspans with short owned IDs. Each ID selects unchanged words and their provenance.\nThe span catalogue includes earlier selections, uncovered ranges and full messages;\nthese describe available words, not their meaning or truth. NM interpretations\nare distinct from original accounts and cannot establish facts.\n\nPurpose: Prepare only the legal investigations needed now and their held-corpus\nsearches. Other stages handle replies, drafting, factual corrections and execution.\nDo not plan those activities, answer the legal questions or decide applicable law.\n\nLook for: Understand the latest message in the whole conversation. Identify current\nlegal questions and distinct disputes requiring legal investigation, including those\narising from supplied substantive material. Preserve separate investigations even\nwhen requested together. Earlier pending work is not automatically requested again.\nReturn no investigation where the current work needs no legal sources.\n\nFor each investigation, select the offered account IDs containing its relevant\noriginal account. Keep who says what, uncertainty, conditions, timing and negation.\nPrefer focused spans to a mixed full message. Do not select social words or task\ndirections as facts; retain words that establish an expressly hypothetical scope.\nA general legal question may have no factual account. Never recopy or paraphrase\nfacts into a search query: code uses the selected original words.\n\nThen propose normally two or three concise legal concept phrases likely to occur\nin provisions or judicial reasoning. Each should add a distinct search contribution,\nnot restate another phrase or instruct a model to perform work. Use fewer when\nsufficient. Concepts are investigation hypotheses; they cannot introduce new facts,\nestablish an entitlement or invent an authority, provision, citation or jurisdiction.\nThe original account and its qualifications remain the basis for later assessment.\n\nOutcome: Return work[]. Each item has issue, a neutral inquiry title;\naccount_source_ids, selected offered IDs; and concepts[], each with text and purpose\ndescribing its distinct search contribution. Use at most three concepts per\ninvestigation. Return work=[] when no legal investigation is needed now. No other\nwork plans, factual summaries, conclusions, status or completion claims.\n",
+        "user": "{\"original_context\": {\"position\": \"first\", \"latest\": {\"source_id\": \"live-served-1:advocate\", \"turn_id\": \"live-served-1\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"text\": \"Good afternoon. This is a synthetic test matter. We act for Aster Fabrication in Hyderabad. Our client rented a precision cutter and says it returned the machine on 6 September 2026. The owner retains the Rs 1,20,000 security deposit, alleging damage to the cutting head; our client denies causing damage. The owner sent a technician's estimate but no joint inspection report. Our client reports having a signed hire agreement and a bank-transfer receipt, but I have not supplied or examined those documents here. Separately, the owner's technician still has our client's original design drive, which the client says was lent only for setup; the owner now says it can retain the drive until repair costs are paid. First give a source-backed, conditional analysis of the deposit and drive disputes, including any material contrary position. Separately, draft a brief list of questions for our client that would clarify the important gaps. Do not contact anyone, do not treat the damage allegation as admitted, and do not assume the reported documents have been checked.\"}, \"conversation\": [], \"current_records\": {}, \"saved_work\": []}, \"original_account_spans\": [{\"id\": \"a1\", \"source_id\": \"live-served-1:advocate\", \"start\": 0, \"end\": 15, \"available_range\": \"earlier_exact_selection\", \"text\": \"Good afternoon.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a2\", \"source_id\": \"live-served-1:advocate\", \"start\": 0, \"end\": 1068, \"available_range\": \"complete_original\", \"text\": \"Good afternoon. This is a synthetic test matter. We act for Aster Fabrication in Hyderabad. Our client rented a precision cutter and says it returned the machine on 6 September 2026. The owner retains the Rs 1,20,000 security deposit, alleging damage to the cutting head; our client denies causing damage. The owner sent a technician's estimate but no joint inspection report. Our client reports having a signed hire agreement and a bank-transfer receipt, but I have not supplied or examined those documents here. Separately, the owner's technician still has our client's original design drive, which the client says was lent only for setup; the owner now says it can retain the drive until repair costs are paid. First give a source-backed, conditional analysis of the deposit and drive disputes, including any material contrary position. Separately, draft a brief list of questions for our client that would clarify the important gaps. Do not contact anyone, do not treat the damage allegation as admitted, and do not assume the reported documents have been checked.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a3\", \"source_id\": \"live-served-1:advocate\", \"start\": 15, \"end\": 16, \"available_range\": \"uncovered_original_range\", \"text\": \" \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a4\", \"source_id\": \"live-served-1:advocate\", \"start\": 16, \"end\": 48, \"available_range\": \"earlier_exact_selection\", \"text\": \"This is a synthetic test matter.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a5\", \"source_id\": \"live-served-1:advocate\", \"start\": 48, \"end\": 49, \"available_range\": \"uncovered_original_range\", \"text\": \" \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a6\", \"source_id\": \"live-served-1:advocate\", \"start\": 49, \"end\": 91, \"available_range\": \"earlier_exact_selection\", \"text\": \"We act for Aster Fabrication in Hyderabad.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a7\", \"source_id\": \"live-served-1:advocate\", \"start\": 91, \"end\": 92, \"available_range\": \"uncovered_original_range\", \"text\": \" \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a8\", \"source_id\": \"live-served-1:advocate\", \"start\": 92, \"end\": 182, \"available_range\": \"earlier_exact_selection\", \"text\": \"Our client rented a precision cutter and says it returned the machine on 6 September 2026.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a9\", \"source_id\": \"live-served-1:advocate\", \"start\": 182, \"end\": 183, \"available_range\": \"uncovered_original_range\", \"text\": \" \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a10\", \"source_id\": \"live-served-1:advocate\", \"start\": 183, \"end\": 305, \"available_range\": \"earlier_exact_selection\", \"text\": \"The owner retains the Rs 1,20,000 security deposit, alleging damage to the cutting head; our client denies causing damage.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a11\", \"source_id\": \"live-served-1:advocate\", \"start\": 305, \"end\": 306, \"available_range\": \"uncovered_original_range\", \"text\": \" \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a12\", \"source_id\": \"live-served-1:advocate\", \"start\": 306, \"end\": 376, \"available_range\": \"earlier_exact_selection\", \"text\": \"The owner sent a technician's estimate but no joint inspection report.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a13\", \"source_id\": \"live-served-1:advocate\", \"start\": 376, \"end\": 377, \"available_range\": \"uncovered_original_range\", \"text\": \" \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a14\", \"source_id\": \"live-served-1:advocate\", \"start\": 377, \"end\": 513, \"available_range\": \"earlier_exact_selection\", \"text\": \"Our client reports having a signed hire agreement and a bank-transfer receipt, but I have not supplied or examined those documents here.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a15\", \"source_id\": \"live-served-1:advocate\", \"start\": 513, \"end\": 714, \"available_range\": \"uncovered_original_range\", \"text\": \" Separately, the owner's technician still has our client's original design drive, which the client says was lent only for setup; the owner now says it can retain the drive until repair costs are paid. \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a16\", \"source_id\": \"live-served-1:advocate\", \"start\": 714, \"end\": 839, \"available_range\": \"earlier_exact_selection\", \"text\": \"First give a source-backed, conditional analysis of the deposit and drive disputes, including any material contrary position.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a17\", \"source_id\": \"live-served-1:advocate\", \"start\": 839, \"end\": 840, \"available_range\": \"uncovered_original_range\", \"text\": \" \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a18\", \"source_id\": \"live-served-1:advocate\", \"start\": 840, \"end\": 937, \"available_range\": \"earlier_exact_selection\", \"text\": \"Separately, draft a brief list of questions for our client that would clarify the important gaps.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a19\", \"source_id\": \"live-served-1:advocate\", \"start\": 937, \"end\": 938, \"available_range\": \"uncovered_original_range\", \"text\": \" \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a20\", \"source_id\": \"live-served-1:advocate\", \"start\": 938, \"end\": 1068, \"available_range\": \"earlier_exact_selection\", \"text\": \"Do not contact anyone, do not treat the damage allegation as admitted, and do not assume the reported documents have been checked.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}]}",
+        "operation": "research_only_concepts_pilot",
+        "schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "work"
+          ],
+          "properties": {
+            "work": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "issue",
+                  "account_source_ids",
+                  "concepts"
+                ],
+                "properties": {
+                  "issue": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "account_source_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "a1",
+                        "a2",
+                        "a3",
+                        "a4",
+                        "a5",
+                        "a6",
+                        "a7",
+                        "a8",
+                        "a9",
+                        "a10",
+                        "a11",
+                        "a12",
+                        "a13",
+                        "a14",
+                        "a15",
+                        "a16",
+                        "a17",
+                        "a18",
+                        "a19",
+                        "a20"
+                      ]
+                    }
+                  },
+                  "concepts": {
+                    "type": "array",
+                    "maxItems": 3,
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "text",
+                        "purpose"
+                      ],
+                      "properties": {
+                        "text": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "purpose": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tier": "routine",
+        "max_tokens": 4000
+      },
+      "pre_reservation_charged_usd": 1.757393,
+      "sdk_create_requests": [
+        {
+          "model": "gpt-4.1-mini-2025-04-14",
+          "messages": [
+            {
+              "role": "system",
+              "content": "Message: You receive the exact latest advocate message, the complete\nattributed earlier conversation, current records, saved work, and original account\nspans with short owned IDs. Each ID selects unchanged words and their provenance.\nThe span catalogue includes earlier selections, uncovered ranges and full messages;\nthese describe available words, not their meaning or truth. NM interpretations\nare distinct from original accounts and cannot establish facts.\n\nPurpose: Prepare only the legal investigations needed now and their held-corpus\nsearches. Other stages handle replies, drafting, factual corrections and execution.\nDo not plan those activities, answer the legal questions or decide applicable law.\n\nLook for: Understand the latest message in the whole conversation. Identify current\nlegal questions and distinct disputes requiring legal investigation, including those\narising from supplied substantive material. Preserve separate investigations even\nwhen requested together. Earlier pending work is not automatically requested again.\nReturn no investigation where the current work needs no legal sources.\n\nFor each investigation, select the offered account IDs containing its relevant\noriginal account. Keep who says what, uncertainty, conditions, timing and negation.\nPrefer focused spans to a mixed full message. Do not select social words or task\ndirections as facts; retain words that establish an expressly hypothetical scope.\nA general legal question may have no factual account. Never recopy or paraphrase\nfacts into a search query: code uses the selected original words.\n\nThen propose normally two or three concise legal concept phrases likely to occur\nin provisions or judicial reasoning. Each should add a distinct search contribution,\nnot restate another phrase or instruct a model to perform work. Use fewer when\nsufficient. Concepts are investigation hypotheses; they cannot introduce new facts,\nestablish an entitlement or invent an authority, provision, citation or jurisdiction.\nThe original account and its qualifications remain the basis for later assessment.\n\nOutcome: Return work[]. Each item has issue, a neutral inquiry title;\naccount_source_ids, selected offered IDs; and concepts[], each with text and purpose\ndescribing its distinct search contribution. Use at most three concepts per\ninvestigation. Return work=[] when no legal investigation is needed now. No other\nwork plans, factual summaries, conclusions, status or completion claims.\n"
+            },
+            {
+              "role": "user",
+              "content": "{\"original_context\": {\"position\": \"first\", \"latest\": {\"source_id\": \"live-served-1:advocate\", \"turn_id\": \"live-served-1\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"text\": \"Good afternoon. This is a synthetic test matter. We act for Aster Fabrication in Hyderabad. Our client rented a precision cutter and says it returned the machine on 6 September 2026. The owner retains the Rs 1,20,000 security deposit, alleging damage to the cutting head; our client denies causing damage. The owner sent a technician's estimate but no joint inspection report. Our client reports having a signed hire agreement and a bank-transfer receipt, but I have not supplied or examined those documents here. Separately, the owner's technician still has our client's original design drive, which the client says was lent only for setup; the owner now says it can retain the drive until repair costs are paid. First give a source-backed, conditional analysis of the deposit and drive disputes, including any material contrary position. Separately, draft a brief list of questions for our client that would clarify the important gaps. Do not contact anyone, do not treat the damage allegation as admitted, and do not assume the reported documents have been checked.\"}, \"conversation\": [], \"current_records\": {}, \"saved_work\": []}, \"original_account_spans\": [{\"id\": \"a1\", \"source_id\": \"live-served-1:advocate\", \"start\": 0, \"end\": 15, \"available_range\": \"earlier_exact_selection\", \"text\": \"Good afternoon.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a2\", \"source_id\": \"live-served-1:advocate\", \"start\": 0, \"end\": 1068, \"available_range\": \"complete_original\", \"text\": \"Good afternoon. This is a synthetic test matter. We act for Aster Fabrication in Hyderabad. Our client rented a precision cutter and says it returned the machine on 6 September 2026. The owner retains the Rs 1,20,000 security deposit, alleging damage to the cutting head; our client denies causing damage. The owner sent a technician's estimate but no joint inspection report. Our client reports having a signed hire agreement and a bank-transfer receipt, but I have not supplied or examined those documents here. Separately, the owner's technician still has our client's original design drive, which the client says was lent only for setup; the owner now says it can retain the drive until repair costs are paid. First give a source-backed, conditional analysis of the deposit and drive disputes, including any material contrary position. Separately, draft a brief list of questions for our client that would clarify the important gaps. Do not contact anyone, do not treat the damage allegation as admitted, and do not assume the reported documents have been checked.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a3\", \"source_id\": \"live-served-1:advocate\", \"start\": 15, \"end\": 16, \"available_range\": \"uncovered_original_range\", \"text\": \" \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a4\", \"source_id\": \"live-served-1:advocate\", \"start\": 16, \"end\": 48, \"available_range\": \"earlier_exact_selection\", \"text\": \"This is a synthetic test matter.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a5\", \"source_id\": \"live-served-1:advocate\", \"start\": 48, \"end\": 49, \"available_range\": \"uncovered_original_range\", \"text\": \" \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a6\", \"source_id\": \"live-served-1:advocate\", \"start\": 49, \"end\": 91, \"available_range\": \"earlier_exact_selection\", \"text\": \"We act for Aster Fabrication in Hyderabad.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a7\", \"source_id\": \"live-served-1:advocate\", \"start\": 91, \"end\": 92, \"available_range\": \"uncovered_original_range\", \"text\": \" \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a8\", \"source_id\": \"live-served-1:advocate\", \"start\": 92, \"end\": 182, \"available_range\": \"earlier_exact_selection\", \"text\": \"Our client rented a precision cutter and says it returned the machine on 6 September 2026.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a9\", \"source_id\": \"live-served-1:advocate\", \"start\": 182, \"end\": 183, \"available_range\": \"uncovered_original_range\", \"text\": \" \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a10\", \"source_id\": \"live-served-1:advocate\", \"start\": 183, \"end\": 305, \"available_range\": \"earlier_exact_selection\", \"text\": \"The owner retains the Rs 1,20,000 security deposit, alleging damage to the cutting head; our client denies causing damage.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a11\", \"source_id\": \"live-served-1:advocate\", \"start\": 305, \"end\": 306, \"available_range\": \"uncovered_original_range\", \"text\": \" \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a12\", \"source_id\": \"live-served-1:advocate\", \"start\": 306, \"end\": 376, \"available_range\": \"earlier_exact_selection\", \"text\": \"The owner sent a technician's estimate but no joint inspection report.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a13\", \"source_id\": \"live-served-1:advocate\", \"start\": 376, \"end\": 377, \"available_range\": \"uncovered_original_range\", \"text\": \" \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a14\", \"source_id\": \"live-served-1:advocate\", \"start\": 377, \"end\": 513, \"available_range\": \"earlier_exact_selection\", \"text\": \"Our client reports having a signed hire agreement and a bank-transfer receipt, but I have not supplied or examined those documents here.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a15\", \"source_id\": \"live-served-1:advocate\", \"start\": 513, \"end\": 714, \"available_range\": \"uncovered_original_range\", \"text\": \" Separately, the owner's technician still has our client's original design drive, which the client says was lent only for setup; the owner now says it can retain the drive until repair costs are paid. \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a16\", \"source_id\": \"live-served-1:advocate\", \"start\": 714, \"end\": 839, \"available_range\": \"earlier_exact_selection\", \"text\": \"First give a source-backed, conditional analysis of the deposit and drive disputes, including any material contrary position.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a17\", \"source_id\": \"live-served-1:advocate\", \"start\": 839, \"end\": 840, \"available_range\": \"uncovered_original_range\", \"text\": \" \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a18\", \"source_id\": \"live-served-1:advocate\", \"start\": 840, \"end\": 937, \"available_range\": \"earlier_exact_selection\", \"text\": \"Separately, draft a brief list of questions for our client that would clarify the important gaps.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a19\", \"source_id\": \"live-served-1:advocate\", \"start\": 937, \"end\": 938, \"available_range\": \"uncovered_original_range\", \"text\": \" \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}, {\"id\": \"a20\", \"source_id\": \"live-served-1:advocate\", \"start\": 938, \"end\": 1068, \"available_range\": \"earlier_exact_selection\", \"text\": \"Do not contact anyone, do not treat the damage allegation as admitted, and do not assume the reported documents have been checked.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"live-served-1\"}]}"
+            }
+          ],
+          "store": false,
+          "max_completion_tokens": 4000,
+          "response_format": {
+            "type": "json_schema",
+            "json_schema": {
+              "name": "nm_result",
+              "strict": true,
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "work"
+                ],
+                "properties": {
+                  "work": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "issue",
+                        "account_source_ids",
+                        "concepts"
+                      ],
+                      "properties": {
+                        "issue": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "account_source_ids": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "a1",
+                              "a2",
+                              "a3",
+                              "a4",
+                              "a5",
+                              "a6",
+                              "a7",
+                              "a8",
+                              "a9",
+                              "a10",
+                              "a11",
+                              "a12",
+                              "a13",
+                              "a14",
+                              "a15",
+                              "a16",
+                              "a17",
+                              "a18",
+                              "a19",
+                              "a20"
+                            ]
+                          }
+                        },
+                        "concepts": {
+                          "type": "array",
+                          "maxItems": 3,
+                          "items": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "text",
+                              "purpose"
+                            ],
+                            "properties": {
+                              "text": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "purpose": {
+                                "type": "string",
+                                "minLength": 1
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      "response": {
+        "data": {
+          "work": [
+            {
+              "issue": "Legal analysis of security deposit retention and damage dispute for rented equipment",
+              "account_source_ids": [
+                "a2",
+                "a10",
+                "a12",
+                "a14",
+                "a20"
+              ],
+              "concepts": [
+                {
+                  "text": "Contractual obligations and rights under equipment hire agreements",
+                  "purpose": "To understand the legal basis for withholding deposits and liability for damages under the hire agreement"
+                },
+                {
+                  "text": "Requirements for evidence and documentation to validate damage claims",
+                  "purpose": "To assess the sufficiency of evidence such as inspection reports and technician estimates in disputes over damage"
+                },
+                {
+                  "text": "Tenant's rights and procedures concerning security deposit retention",
+                  "purpose": "To determine what legal remedies or defenses the tenant has against improper deposit withholding"
+                }
+              ]
+            },
+            {
+              "issue": "Legal rights and obligations related to retention of client's original design drive by equipment owner",
+              "account_source_ids": [
+                "a2",
+                "a15",
+                "a20"
+              ],
+              "concepts": [
+                {
+                  "text": "Possession and lien rights over client's property used in rented equipment setup",
+                  "purpose": "To analyze the lawful basis for retaining the original design drive as security or for repair costs"
+                },
+                {
+                  "text": "Contractual terms governing temporary use and return of client's proprietary data or property",
+                  "purpose": "To determine if the owner's retention of the drive is consistent with any loan or license agreement"
+                },
+                {
+                  "text": "Legal remedies to recover property and challenging unlawful retention",
+                  "purpose": "To identify client's options to regain possession of the design drive pending dispute resolution"
+                }
+              ]
+            }
+          ]
+        },
+        "model": "gpt-4.1-mini-2025-04-14",
+        "usage": {
+          "tokens_in": 2781,
+          "tokens_out": 278,
+          "cost_usd": 0.0015572000000000001,
+          "cached_tokens": 0,
+          "provider_extra": {
+            "response_id": "chatcmpl-EXK1tgkZRiVpLfAgAekPVZ2XnwRQ7",
+            "usage_established": true
+          }
+        },
+        "latency_ms": 3159,
+        "retries": 0,
+        "completion": "complete"
+      },
+      "mechanically_admitted": {
+        "proposal": {
+          "work": [
+            {
+              "issue": "Legal analysis of security deposit retention and damage dispute for rented equipment",
+              "account_source_ids": [
+                "a2",
+                "a10",
+                "a12",
+                "a14",
+                "a20"
+              ],
+              "concepts": [
+                {
+                  "text": "Contractual obligations and rights under equipment hire agreements",
+                  "purpose": "To understand the legal basis for withholding deposits and liability for damages under the hire agreement"
+                },
+                {
+                  "text": "Requirements for evidence and documentation to validate damage claims",
+                  "purpose": "To assess the sufficiency of evidence such as inspection reports and technician estimates in disputes over damage"
+                },
+                {
+                  "text": "Tenant's rights and procedures concerning security deposit retention",
+                  "purpose": "To determine what legal remedies or defenses the tenant has against improper deposit withholding"
+                }
+              ]
+            },
+            {
+              "issue": "Legal rights and obligations related to retention of client's original design drive by equipment owner",
+              "account_source_ids": [
+                "a2",
+                "a15",
+                "a20"
+              ],
+              "concepts": [
+                {
+                  "text": "Possession and lien rights over client's property used in rented equipment setup",
+                  "purpose": "To analyze the lawful basis for retaining the original design drive as security or for repair costs"
+                },
+                {
+                  "text": "Contractual terms governing temporary use and return of client's proprietary data or property",
+                  "purpose": "To determine if the owner's retention of the drive is consistent with any loan or license agreement"
+                },
+                {
+                  "text": "Legal remedies to recover property and challenging unlawful retention",
+                  "purpose": "To identify client's options to regain possession of the design drive pending dispute resolution"
+                }
+              ]
+            }
+          ]
+        },
+        "work": [
+          {
+            "issue": "Legal analysis of security deposit retention and damage dispute for rented equipment",
+            "account_source_ids": [
+              "a2",
+              "a10",
+              "a12",
+              "a14",
+              "a20"
+            ],
+            "concepts": [
+              {
+                "text": "Contractual obligations and rights under equipment hire agreements",
+                "purpose": "To understand the legal basis for withholding deposits and liability for damages under the hire agreement"
+              },
+              {
+                "text": "Requirements for evidence and documentation to validate damage claims",
+                "purpose": "To assess the sufficiency of evidence such as inspection reports and technician estimates in disputes over damage"
+              },
+              {
+                "text": "Tenant's rights and procedures concerning security deposit retention",
+                "purpose": "To determine what legal remedies or defenses the tenant has against improper deposit withholding"
+              }
+            ],
+            "id": "live-served-1:r1",
+            "trigger_source_id": "live-served-1:advocate",
+            "resolved_account": [
+              {
+                "id": "live-served-1:advocate",
+                "source_id": "live-served-1:advocate",
+                "start": 0,
+                "end": 1068,
+                "selected_alias": "a2",
+                "text": "Good afternoon. This is a synthetic test matter. We act for Aster Fabrication in Hyderabad. Our client rented a precision cutter and says it returned the machine on 6 September 2026. The owner retains the Rs 1,20,000 security deposit, alleging damage to the cutting head; our client denies causing damage. The owner sent a technician's estimate but no joint inspection report. Our client reports having a signed hire agreement and a bank-transfer receipt, but I have not supplied or examined those documents here. Separately, the owner's technician still has our client's original design drive, which the client says was lent only for setup; the owner now says it can retain the drive until repair costs are paid. First give a source-backed, conditional analysis of the deposit and drive disputes, including any material contrary position. Separately, draft a brief list of questions for our client that would clarify the important gaps. Do not contact anyone, do not treat the damage allegation as admitted, and do not assume the reported documents have been checked.",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "turn_id": "live-served-1"
+              },
+              {
+                "id": "live-served-1:advocate:183:305",
+                "source_id": "live-served-1:advocate",
+                "start": 183,
+                "end": 305,
+                "selected_alias": "a10",
+                "text": "The owner retains the Rs 1,20,000 security deposit, alleging damage to the cutting head; our client denies causing damage.",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "turn_id": "live-served-1"
+              },
+              {
+                "id": "live-served-1:advocate:306:376",
+                "source_id": "live-served-1:advocate",
+                "start": 306,
+                "end": 376,
+                "selected_alias": "a12",
+                "text": "The owner sent a technician's estimate but no joint inspection report.",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "turn_id": "live-served-1"
+              },
+              {
+                "id": "live-served-1:advocate:377:513",
+                "source_id": "live-served-1:advocate",
+                "start": 377,
+                "end": 513,
+                "selected_alias": "a14",
+                "text": "Our client reports having a signed hire agreement and a bank-transfer receipt, but I have not supplied or examined those documents here.",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "turn_id": "live-served-1"
+              },
+              {
+                "id": "live-served-1:advocate:938:1068",
+                "source_id": "live-served-1:advocate",
+                "start": 938,
+                "end": 1068,
+                "selected_alias": "a20",
+                "text": "Do not contact anyone, do not treat the damage allegation as admitted, and do not assume the reported documents have been checked.",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "turn_id": "live-served-1"
+              }
+            ]
+          },
+          {
+            "issue": "Legal rights and obligations related to retention of client's original design drive by equipment owner",
+            "account_source_ids": [
+              "a2",
+              "a15",
+              "a20"
+            ],
+            "concepts": [
+              {
+                "text": "Possession and lien rights over client's property used in rented equipment setup",
+                "purpose": "To analyze the lawful basis for retaining the original design drive as security or for repair costs"
+              },
+              {
+                "text": "Contractual terms governing temporary use and return of client's proprietary data or property",
+                "purpose": "To determine if the owner's retention of the drive is consistent with any loan or license agreement"
+              },
+              {
+                "text": "Legal remedies to recover property and challenging unlawful retention",
+                "purpose": "To identify client's options to regain possession of the design drive pending dispute resolution"
+              }
+            ],
+            "id": "live-served-1:r2",
+            "trigger_source_id": "live-served-1:advocate",
+            "resolved_account": [
+              {
+                "id": "live-served-1:advocate",
+                "source_id": "live-served-1:advocate",
+                "start": 0,
+                "end": 1068,
+                "selected_alias": "a2",
+                "text": "Good afternoon. This is a synthetic test matter. We act for Aster Fabrication in Hyderabad. Our client rented a precision cutter and says it returned the machine on 6 September 2026. The owner retains the Rs 1,20,000 security deposit, alleging damage to the cutting head; our client denies causing damage. The owner sent a technician's estimate but no joint inspection report. Our client reports having a signed hire agreement and a bank-transfer receipt, but I have not supplied or examined those documents here. Separately, the owner's technician still has our client's original design drive, which the client says was lent only for setup; the owner now says it can retain the drive until repair costs are paid. First give a source-backed, conditional analysis of the deposit and drive disputes, including any material contrary position. Separately, draft a brief list of questions for our client that would clarify the important gaps. Do not contact anyone, do not treat the damage allegation as admitted, and do not assume the reported documents have been checked.",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "turn_id": "live-served-1"
+              },
+              {
+                "id": "live-served-1:advocate:513:714",
+                "source_id": "live-served-1:advocate",
+                "start": 513,
+                "end": 714,
+                "selected_alias": "a15",
+                "text": " Separately, the owner's technician still has our client's original design drive, which the client says was lent only for setup; the owner now says it can retain the drive until repair costs are paid. ",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "turn_id": "live-served-1"
+              },
+              {
+                "id": "live-served-1:advocate:938:1068",
+                "source_id": "live-served-1:advocate",
+                "start": 938,
+                "end": 1068,
+                "selected_alias": "a20",
+                "text": "Do not contact anyone, do not treat the damage allegation as admitted, and do not assume the reported documents have been checked.",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "turn_id": "live-served-1"
+              }
+            ]
+          }
+        ],
+        "semantic_review": "not_assessed"
+      }
+    },
+    {
+      "name": "not_supplied_is_not_nonexistent",
+      "wire": {
+        "system": "Message: You receive the exact latest advocate message, the complete\nattributed earlier conversation, current records, saved work, and original account\nspans with short owned IDs. Each ID selects unchanged words and their provenance.\nThe span catalogue includes earlier selections, uncovered ranges and full messages;\nthese describe available words, not their meaning or truth. NM interpretations\nare distinct from original accounts and cannot establish facts.\n\nPurpose: Prepare only the legal investigations needed now and their held-corpus\nsearches. Other stages handle replies, drafting, factual corrections and execution.\nDo not plan those activities, answer the legal questions or decide applicable law.\n\nLook for: Understand the latest message in the whole conversation. Identify current\nlegal questions and distinct disputes requiring legal investigation, including those\narising from supplied substantive material. Preserve separate investigations even\nwhen requested together. Earlier pending work is not automatically requested again.\nReturn no investigation where the current work needs no legal sources.\n\nFor each investigation, select the offered account IDs containing its relevant\noriginal account. Keep who says what, uncertainty, conditions, timing and negation.\nPrefer focused spans to a mixed full message. Do not select social words or task\ndirections as facts; retain words that establish an expressly hypothetical scope.\nA general legal question may have no factual account. Never recopy or paraphrase\nfacts into a search query: code uses the selected original words.\n\nThen propose normally two or three concise legal concept phrases likely to occur\nin provisions or judicial reasoning. Each should add a distinct search contribution,\nnot restate another phrase or instruct a model to perform work. Use fewer when\nsufficient. Concepts are investigation hypotheses; they cannot introduce new facts,\nestablish an entitlement or invent an authority, provision, citation or jurisdiction.\nThe original account and its qualifications remain the basis for later assessment.\n\nOutcome: Return work[]. Each item has issue, a neutral inquiry title;\naccount_source_ids, selected offered IDs; and concepts[], each with text and purpose\ndescribing its distinct search contribution. Use at most three concepts per\ninvestigation. Return work=[] when no legal investigation is needed now. No other\nwork plans, factual summaries, conclusions, status or completion claims.\n",
+        "user": "{\"original_context\": {\"position\": \"first\", \"conversation\": [], \"latest\": {\"source_id\": \"deposit_and_drive:advocate\", \"turn_id\": \"deposit_and_drive\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"text\": \"Hello. We act for Vale Makers, based in Hyderabad. They leased a laser cutter and returned it on 3 September. The lessor is retaining the deposit, alleging damage; our client disputes causing it, and no joint inspection report has been supplied. Separately, the lessor's technician still has the client's design drive, which the client says was loaned only for setup. Identify legal routes for recovery of the deposit and return of the drive, and separately draft a short list of questions for our client. Do not send anything or treat the damage allegation as admitted.\"}, \"current_records\": {}, \"saved_work\": []}, \"original_account_spans\": [{\"id\": \"a1\", \"source_id\": \"deposit_and_drive:advocate\", \"start\": 0, \"end\": 6, \"available_range\": \"earlier_exact_selection\", \"text\": \"Hello.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"deposit_and_drive\"}, {\"id\": \"a2\", \"source_id\": \"deposit_and_drive:advocate\", \"start\": 0, \"end\": 570, \"available_range\": \"complete_original\", \"text\": \"Hello. We act for Vale Makers, based in Hyderabad. They leased a laser cutter and returned it on 3 September. The lessor is retaining the deposit, alleging damage; our client disputes causing it, and no joint inspection report has been supplied. Separately, the lessor's technician still has the client's design drive, which the client says was loaned only for setup. Identify legal routes for recovery of the deposit and return of the drive, and separately draft a short list of questions for our client. Do not send anything or treat the damage allegation as admitted.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"deposit_and_drive\"}, {\"id\": \"a3\", \"source_id\": \"deposit_and_drive:advocate\", \"start\": 6, \"end\": 7, \"available_range\": \"uncovered_original_range\", \"text\": \" \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"deposit_and_drive\"}, {\"id\": \"a4\", \"source_id\": \"deposit_and_drive:advocate\", \"start\": 7, \"end\": 368, \"available_range\": \"earlier_exact_selection\", \"text\": \"We act for Vale Makers, based in Hyderabad. They leased a laser cutter and returned it on 3 September. The lessor is retaining the deposit, alleging damage; our client disputes causing it, and no joint inspection report has been supplied. Separately, the lessor's technician still has the client's design drive, which the client says was loaned only for setup. \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"deposit_and_drive\"}, {\"id\": \"a5\", \"source_id\": \"deposit_and_drive:advocate\", \"start\": 368, \"end\": 506, \"available_range\": \"earlier_exact_selection\", \"text\": \"Identify legal routes for recovery of the deposit and return of the drive, and separately draft a short list of questions for our client. \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"deposit_and_drive\"}, {\"id\": \"a6\", \"source_id\": \"deposit_and_drive:advocate\", \"start\": 506, \"end\": 570, \"available_range\": \"earlier_exact_selection\", \"text\": \"Do not send anything or treat the damage allegation as admitted.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"deposit_and_drive\"}]}",
+        "operation": "research_only_concepts_pilot",
+        "schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "work"
+          ],
+          "properties": {
+            "work": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "issue",
+                  "account_source_ids",
+                  "concepts"
+                ],
+                "properties": {
+                  "issue": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "account_source_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "a1",
+                        "a2",
+                        "a3",
+                        "a4",
+                        "a5",
+                        "a6"
+                      ]
+                    }
+                  },
+                  "concepts": {
+                    "type": "array",
+                    "maxItems": 3,
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "text",
+                        "purpose"
+                      ],
+                      "properties": {
+                        "text": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "purpose": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tier": "routine",
+        "max_tokens": 4000
+      },
+      "pre_reservation_charged_usd": 1.758951,
+      "sdk_create_requests": [
+        {
+          "model": "gpt-4.1-mini-2025-04-14",
+          "messages": [
+            {
+              "role": "system",
+              "content": "Message: You receive the exact latest advocate message, the complete\nattributed earlier conversation, current records, saved work, and original account\nspans with short owned IDs. Each ID selects unchanged words and their provenance.\nThe span catalogue includes earlier selections, uncovered ranges and full messages;\nthese describe available words, not their meaning or truth. NM interpretations\nare distinct from original accounts and cannot establish facts.\n\nPurpose: Prepare only the legal investigations needed now and their held-corpus\nsearches. Other stages handle replies, drafting, factual corrections and execution.\nDo not plan those activities, answer the legal questions or decide applicable law.\n\nLook for: Understand the latest message in the whole conversation. Identify current\nlegal questions and distinct disputes requiring legal investigation, including those\narising from supplied substantive material. Preserve separate investigations even\nwhen requested together. Earlier pending work is not automatically requested again.\nReturn no investigation where the current work needs no legal sources.\n\nFor each investigation, select the offered account IDs containing its relevant\noriginal account. Keep who says what, uncertainty, conditions, timing and negation.\nPrefer focused spans to a mixed full message. Do not select social words or task\ndirections as facts; retain words that establish an expressly hypothetical scope.\nA general legal question may have no factual account. Never recopy or paraphrase\nfacts into a search query: code uses the selected original words.\n\nThen propose normally two or three concise legal concept phrases likely to occur\nin provisions or judicial reasoning. Each should add a distinct search contribution,\nnot restate another phrase or instruct a model to perform work. Use fewer when\nsufficient. Concepts are investigation hypotheses; they cannot introduce new facts,\nestablish an entitlement or invent an authority, provision, citation or jurisdiction.\nThe original account and its qualifications remain the basis for later assessment.\n\nOutcome: Return work[]. Each item has issue, a neutral inquiry title;\naccount_source_ids, selected offered IDs; and concepts[], each with text and purpose\ndescribing its distinct search contribution. Use at most three concepts per\ninvestigation. Return work=[] when no legal investigation is needed now. No other\nwork plans, factual summaries, conclusions, status or completion claims.\n"
+            },
+            {
+              "role": "user",
+              "content": "{\"original_context\": {\"position\": \"first\", \"conversation\": [], \"latest\": {\"source_id\": \"deposit_and_drive:advocate\", \"turn_id\": \"deposit_and_drive\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"text\": \"Hello. We act for Vale Makers, based in Hyderabad. They leased a laser cutter and returned it on 3 September. The lessor is retaining the deposit, alleging damage; our client disputes causing it, and no joint inspection report has been supplied. Separately, the lessor's technician still has the client's design drive, which the client says was loaned only for setup. Identify legal routes for recovery of the deposit and return of the drive, and separately draft a short list of questions for our client. Do not send anything or treat the damage allegation as admitted.\"}, \"current_records\": {}, \"saved_work\": []}, \"original_account_spans\": [{\"id\": \"a1\", \"source_id\": \"deposit_and_drive:advocate\", \"start\": 0, \"end\": 6, \"available_range\": \"earlier_exact_selection\", \"text\": \"Hello.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"deposit_and_drive\"}, {\"id\": \"a2\", \"source_id\": \"deposit_and_drive:advocate\", \"start\": 0, \"end\": 570, \"available_range\": \"complete_original\", \"text\": \"Hello. We act for Vale Makers, based in Hyderabad. They leased a laser cutter and returned it on 3 September. The lessor is retaining the deposit, alleging damage; our client disputes causing it, and no joint inspection report has been supplied. Separately, the lessor's technician still has the client's design drive, which the client says was loaned only for setup. Identify legal routes for recovery of the deposit and return of the drive, and separately draft a short list of questions for our client. Do not send anything or treat the damage allegation as admitted.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"deposit_and_drive\"}, {\"id\": \"a3\", \"source_id\": \"deposit_and_drive:advocate\", \"start\": 6, \"end\": 7, \"available_range\": \"uncovered_original_range\", \"text\": \" \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"deposit_and_drive\"}, {\"id\": \"a4\", \"source_id\": \"deposit_and_drive:advocate\", \"start\": 7, \"end\": 368, \"available_range\": \"earlier_exact_selection\", \"text\": \"We act for Vale Makers, based in Hyderabad. They leased a laser cutter and returned it on 3 September. The lessor is retaining the deposit, alleging damage; our client disputes causing it, and no joint inspection report has been supplied. Separately, the lessor's technician still has the client's design drive, which the client says was loaned only for setup. \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"deposit_and_drive\"}, {\"id\": \"a5\", \"source_id\": \"deposit_and_drive:advocate\", \"start\": 368, \"end\": 506, \"available_range\": \"earlier_exact_selection\", \"text\": \"Identify legal routes for recovery of the deposit and return of the drive, and separately draft a short list of questions for our client. \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"deposit_and_drive\"}, {\"id\": \"a6\", \"source_id\": \"deposit_and_drive:advocate\", \"start\": 506, \"end\": 570, \"available_range\": \"earlier_exact_selection\", \"text\": \"Do not send anything or treat the damage allegation as admitted.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"deposit_and_drive\"}]}"
+            }
+          ],
+          "store": false,
+          "max_completion_tokens": 4000,
+          "response_format": {
+            "type": "json_schema",
+            "json_schema": {
+              "name": "nm_result",
+              "strict": true,
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "work"
+                ],
+                "properties": {
+                  "work": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "issue",
+                        "account_source_ids",
+                        "concepts"
+                      ],
+                      "properties": {
+                        "issue": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "account_source_ids": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "a1",
+                              "a2",
+                              "a3",
+                              "a4",
+                              "a5",
+                              "a6"
+                            ]
+                          }
+                        },
+                        "concepts": {
+                          "type": "array",
+                          "maxItems": 3,
+                          "items": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "text",
+                              "purpose"
+                            ],
+                            "properties": {
+                              "text": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "purpose": {
+                                "type": "string",
+                                "minLength": 1
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      "response": {
+        "data": {
+          "work": [
+            {
+              "issue": "Legal routes for recovery of deposit withheld after equipment return with disputed damage claim",
+              "account_source_ids": [
+                "a2",
+                "a4",
+                "a5",
+                "a6"
+              ],
+              "concepts": [
+                {
+                  "text": "deposit recovery in equipment lease agreements",
+                  "purpose": "to find relevant laws and precedents about lessee's right to get security deposit back after lease termination and alleged damage"
+                },
+                {
+                  "text": "disputes over damage claims without joint inspection report",
+                  "purpose": "to explore legal weight of damage claims absent inspection report and possible remedies or defenses"
+                },
+                {
+                  "text": "contractual and statutory provisions on damage allegations in lease returns",
+                  "purpose": "to identify governing contract terms and statutory protections related to damage claims on leased property"
+                }
+              ]
+            },
+            {
+              "issue": "Legal options for recovery of client's design drive held by lessor's technician beyond setup purpose",
+              "account_source_ids": [
+                "a2",
+                "a4",
+                "a5"
+              ],
+              "concepts": [
+                {
+                  "text": "return of property loaned for limited purpose",
+                  "purpose": "to investigate legal principles on return of property loaned only for specific use, here loaned design drive for setup"
+                },
+                {
+                  "text": "rights and duties concerning possession and return of leased or loaned equipment accessories",
+                  "purpose": "to clarify rights regarding possession and recovery of ancillary items related to leased equipment"
+                },
+                {
+                  "text": "remedies for retention of client's digital property after lease termination",
+                  "purpose": "to determine how to enforce return of digital property retained without client's consent"
+                }
+              ]
+            }
+          ]
+        },
+        "model": "gpt-4.1-mini-2025-04-14",
+        "usage": {
+          "tokens_in": 1399,
+          "tokens_out": 282,
+          "cost_usd": 0.0010108,
+          "cached_tokens": 0,
+          "provider_extra": {
+            "response_id": "chatcmpl-EXK1vYq61zRCb5OPPCUHZHAcvGx6X",
+            "usage_established": true
+          }
+        },
+        "latency_ms": 2154,
+        "retries": 0,
+        "completion": "complete"
+      },
+      "mechanically_admitted": {
+        "proposal": {
+          "work": [
+            {
+              "issue": "Legal routes for recovery of deposit withheld after equipment return with disputed damage claim",
+              "account_source_ids": [
+                "a2",
+                "a4",
+                "a5",
+                "a6"
+              ],
+              "concepts": [
+                {
+                  "text": "deposit recovery in equipment lease agreements",
+                  "purpose": "to find relevant laws and precedents about lessee's right to get security deposit back after lease termination and alleged damage"
+                },
+                {
+                  "text": "disputes over damage claims without joint inspection report",
+                  "purpose": "to explore legal weight of damage claims absent inspection report and possible remedies or defenses"
+                },
+                {
+                  "text": "contractual and statutory provisions on damage allegations in lease returns",
+                  "purpose": "to identify governing contract terms and statutory protections related to damage claims on leased property"
+                }
+              ]
+            },
+            {
+              "issue": "Legal options for recovery of client's design drive held by lessor's technician beyond setup purpose",
+              "account_source_ids": [
+                "a2",
+                "a4",
+                "a5"
+              ],
+              "concepts": [
+                {
+                  "text": "return of property loaned for limited purpose",
+                  "purpose": "to investigate legal principles on return of property loaned only for specific use, here loaned design drive for setup"
+                },
+                {
+                  "text": "rights and duties concerning possession and return of leased or loaned equipment accessories",
+                  "purpose": "to clarify rights regarding possession and recovery of ancillary items related to leased equipment"
+                },
+                {
+                  "text": "remedies for retention of client's digital property after lease termination",
+                  "purpose": "to determine how to enforce return of digital property retained without client's consent"
+                }
+              ]
+            }
+          ]
+        },
+        "work": [
+          {
+            "issue": "Legal routes for recovery of deposit withheld after equipment return with disputed damage claim",
+            "account_source_ids": [
+              "a2",
+              "a4",
+              "a5",
+              "a6"
+            ],
+            "concepts": [
+              {
+                "text": "deposit recovery in equipment lease agreements",
+                "purpose": "to find relevant laws and precedents about lessee's right to get security deposit back after lease termination and alleged damage"
+              },
+              {
+                "text": "disputes over damage claims without joint inspection report",
+                "purpose": "to explore legal weight of damage claims absent inspection report and possible remedies or defenses"
+              },
+              {
+                "text": "contractual and statutory provisions on damage allegations in lease returns",
+                "purpose": "to identify governing contract terms and statutory protections related to damage claims on leased property"
+              }
+            ],
+            "id": "deposit_and_drive:r1",
+            "trigger_source_id": "deposit_and_drive:advocate",
+            "resolved_account": [
+              {
+                "id": "deposit_and_drive:advocate",
+                "source_id": "deposit_and_drive:advocate",
+                "start": 0,
+                "end": 570,
+                "selected_alias": "a2",
+                "text": "Hello. We act for Vale Makers, based in Hyderabad. They leased a laser cutter and returned it on 3 September. The lessor is retaining the deposit, alleging damage; our client disputes causing it, and no joint inspection report has been supplied. Separately, the lessor's technician still has the client's design drive, which the client says was loaned only for setup. Identify legal routes for recovery of the deposit and return of the drive, and separately draft a short list of questions for our client. Do not send anything or treat the damage allegation as admitted.",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "turn_id": "deposit_and_drive"
+              },
+              {
+                "id": "deposit_and_drive:advocate:7:368",
+                "source_id": "deposit_and_drive:advocate",
+                "start": 7,
+                "end": 368,
+                "selected_alias": "a4",
+                "text": "We act for Vale Makers, based in Hyderabad. They leased a laser cutter and returned it on 3 September. The lessor is retaining the deposit, alleging damage; our client disputes causing it, and no joint inspection report has been supplied. Separately, the lessor's technician still has the client's design drive, which the client says was loaned only for setup. ",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "turn_id": "deposit_and_drive"
+              },
+              {
+                "id": "deposit_and_drive:advocate:368:506",
+                "source_id": "deposit_and_drive:advocate",
+                "start": 368,
+                "end": 506,
+                "selected_alias": "a5",
+                "text": "Identify legal routes for recovery of the deposit and return of the drive, and separately draft a short list of questions for our client. ",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "turn_id": "deposit_and_drive"
+              },
+              {
+                "id": "deposit_and_drive:advocate:506:570",
+                "source_id": "deposit_and_drive:advocate",
+                "start": 506,
+                "end": 570,
+                "selected_alias": "a6",
+                "text": "Do not send anything or treat the damage allegation as admitted.",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "turn_id": "deposit_and_drive"
+              }
+            ]
+          },
+          {
+            "issue": "Legal options for recovery of client's design drive held by lessor's technician beyond setup purpose",
+            "account_source_ids": [
+              "a2",
+              "a4",
+              "a5"
+            ],
+            "concepts": [
+              {
+                "text": "return of property loaned for limited purpose",
+                "purpose": "to investigate legal principles on return of property loaned only for specific use, here loaned design drive for setup"
+              },
+              {
+                "text": "rights and duties concerning possession and return of leased or loaned equipment accessories",
+                "purpose": "to clarify rights regarding possession and recovery of ancillary items related to leased equipment"
+              },
+              {
+                "text": "remedies for retention of client's digital property after lease termination",
+                "purpose": "to determine how to enforce return of digital property retained without client's consent"
+              }
+            ],
+            "id": "deposit_and_drive:r2",
+            "trigger_source_id": "deposit_and_drive:advocate",
+            "resolved_account": [
+              {
+                "id": "deposit_and_drive:advocate",
+                "source_id": "deposit_and_drive:advocate",
+                "start": 0,
+                "end": 570,
+                "selected_alias": "a2",
+                "text": "Hello. We act for Vale Makers, based in Hyderabad. They leased a laser cutter and returned it on 3 September. The lessor is retaining the deposit, alleging damage; our client disputes causing it, and no joint inspection report has been supplied. Separately, the lessor's technician still has the client's design drive, which the client says was loaned only for setup. Identify legal routes for recovery of the deposit and return of the drive, and separately draft a short list of questions for our client. Do not send anything or treat the damage allegation as admitted.",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "turn_id": "deposit_and_drive"
+              },
+              {
+                "id": "deposit_and_drive:advocate:7:368",
+                "source_id": "deposit_and_drive:advocate",
+                "start": 7,
+                "end": 368,
+                "selected_alias": "a4",
+                "text": "We act for Vale Makers, based in Hyderabad. They leased a laser cutter and returned it on 3 September. The lessor is retaining the deposit, alleging damage; our client disputes causing it, and no joint inspection report has been supplied. Separately, the lessor's technician still has the client's design drive, which the client says was loaned only for setup. ",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "turn_id": "deposit_and_drive"
+              },
+              {
+                "id": "deposit_and_drive:advocate:368:506",
+                "source_id": "deposit_and_drive:advocate",
+                "start": 368,
+                "end": 506,
+                "selected_alias": "a5",
+                "text": "Identify legal routes for recovery of the deposit and return of the drive, and separately draft a short list of questions for our client. ",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "turn_id": "deposit_and_drive"
+              }
+            ]
+          }
+        ],
+        "semantic_review": "not_assessed"
+      }
+    },
+    {
+      "name": "actor_agency_and_explicit_alternative",
+      "wire": {
+        "system": "Message: You receive the exact latest advocate message, the complete\nattributed earlier conversation, current records, saved work, and original account\nspans with short owned IDs. Each ID selects unchanged words and their provenance.\nThe span catalogue includes earlier selections, uncovered ranges and full messages;\nthese describe available words, not their meaning or truth. NM interpretations\nare distinct from original accounts and cannot establish facts.\n\nPurpose: Prepare only the legal investigations needed now and their held-corpus\nsearches. Other stages handle replies, drafting, factual corrections and execution.\nDo not plan those activities, answer the legal questions or decide applicable law.\n\nLook for: Understand the latest message in the whole conversation. Identify current\nlegal questions and distinct disputes requiring legal investigation, including those\narising from supplied substantive material. Preserve separate investigations even\nwhen requested together. Earlier pending work is not automatically requested again.\nReturn no investigation where the current work needs no legal sources.\n\nFor each investigation, select the offered account IDs containing its relevant\noriginal account. Keep who says what, uncertainty, conditions, timing and negation.\nPrefer focused spans to a mixed full message. Do not select social words or task\ndirections as facts; retain words that establish an expressly hypothetical scope.\nA general legal question may have no factual account. Never recopy or paraphrase\nfacts into a search query: code uses the selected original words.\n\nThen propose normally two or three concise legal concept phrases likely to occur\nin provisions or judicial reasoning. Each should add a distinct search contribution,\nnot restate another phrase or instruct a model to perform work. Use fewer when\nsufficient. Concepts are investigation hypotheses; they cannot introduce new facts,\nestablish an entitlement or invent an authority, provision, citation or jurisdiction.\nThe original account and its qualifications remain the basis for later assessment.\n\nOutcome: Return work[]. Each item has issue, a neutral inquiry title;\naccount_source_ids, selected offered IDs; and concepts[], each with text and purpose\ndescribing its distinct search contribution. Use at most three concepts per\ninvestigation. Return work=[] when no legal investigation is needed now. No other\nwork plans, factual summaries, conclusions, status or completion claims.\n",
+        "user": "{\"original_context\": {\"position\": \"follow_up\", \"conversation\": [{\"source_id\": \"authority_to_bind:advocate\", \"turn_id\": \"authority_to_bind\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"text\": \"We act for Merin Diagnostics. A hospital owes fees for reported laboratory services. The hospital says a collection agency agreed on our client's behalf to extend payment by 90 days. Our client says the agency only collected specimens and denies authorising any change to payment terms. I have not examined the written service agreement. No email recording the extension has been forwarded to us. Identify the legal questions governing whether the agency could bind our client and whether the hospital could rely on that extension. Do not contact the hospital or agency.\"}], \"latest\": {\"source_id\": \"explicit_alternative:advocate\", \"turn_id\": \"explicit_alternative\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"text\": \"For a separate alternative analysis only, assume the agency was expressly authorised to extend payment and that no email recording the extension was ever created. Identify how those assumed facts would change the legal questions. Keep both assumptions separate from our client's actual denial and from what we know about the unforwarded email. Do not change the matter record or contact anyone.\"}, \"current_records\": {}, \"saved_work\": []}, \"original_account_spans\": [{\"id\": \"a1\", \"source_id\": \"authority_to_bind:advocate\", \"start\": 0, \"end\": 397, \"available_range\": \"earlier_exact_selection\", \"text\": \"We act for Merin Diagnostics. A hospital owes fees for reported laboratory services. The hospital says a collection agency agreed on our client's behalf to extend payment by 90 days. Our client says the agency only collected specimens and denies authorising any change to payment terms. I have not examined the written service agreement. No email recording the extension has been forwarded to us. \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"authority_to_bind\"}, {\"id\": \"a2\", \"source_id\": \"authority_to_bind:advocate\", \"start\": 0, \"end\": 570, \"available_range\": \"complete_original\", \"text\": \"We act for Merin Diagnostics. A hospital owes fees for reported laboratory services. The hospital says a collection agency agreed on our client's behalf to extend payment by 90 days. Our client says the agency only collected specimens and denies authorising any change to payment terms. I have not examined the written service agreement. No email recording the extension has been forwarded to us. Identify the legal questions governing whether the agency could bind our client and whether the hospital could rely on that extension. Do not contact the hospital or agency.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"authority_to_bind\"}, {\"id\": \"a3\", \"source_id\": \"authority_to_bind:advocate\", \"start\": 397, \"end\": 570, \"available_range\": \"earlier_exact_selection\", \"text\": \"Identify the legal questions governing whether the agency could bind our client and whether the hospital could rely on that extension. Do not contact the hospital or agency.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"authority_to_bind\"}, {\"id\": \"a4\", \"source_id\": \"explicit_alternative:advocate\", \"start\": 0, \"end\": 163, \"available_range\": \"earlier_exact_selection\", \"text\": \"For a separate alternative analysis only, assume the agency was expressly authorised to extend payment and that no email recording the extension was ever created. \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"explicit_alternative\"}, {\"id\": \"a5\", \"source_id\": \"explicit_alternative:advocate\", \"start\": 0, \"end\": 394, \"available_range\": \"complete_original\", \"text\": \"For a separate alternative analysis only, assume the agency was expressly authorised to extend payment and that no email recording the extension was ever created. Identify how those assumed facts would change the legal questions. Keep both assumptions separate from our client's actual denial and from what we know about the unforwarded email. Do not change the matter record or contact anyone.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"explicit_alternative\"}, {\"id\": \"a6\", \"source_id\": \"explicit_alternative:advocate\", \"start\": 163, \"end\": 394, \"available_range\": \"earlier_exact_selection\", \"text\": \"Identify how those assumed facts would change the legal questions. Keep both assumptions separate from our client's actual denial and from what we know about the unforwarded email. Do not change the matter record or contact anyone.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"explicit_alternative\"}]}",
+        "operation": "research_only_concepts_pilot",
+        "schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "work"
+          ],
+          "properties": {
+            "work": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "issue",
+                  "account_source_ids",
+                  "concepts"
+                ],
+                "properties": {
+                  "issue": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "account_source_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "a1",
+                        "a2",
+                        "a3",
+                        "a4",
+                        "a5",
+                        "a6"
+                      ]
+                    }
+                  },
+                  "concepts": {
+                    "type": "array",
+                    "maxItems": 3,
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "text",
+                        "purpose"
+                      ],
+                      "properties": {
+                        "text": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "purpose": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tier": "routine",
+        "max_tokens": 4000
+      },
+      "pre_reservation_charged_usd": 1.759962,
+      "sdk_create_requests": [
+        {
+          "model": "gpt-4.1-mini-2025-04-14",
+          "messages": [
+            {
+              "role": "system",
+              "content": "Message: You receive the exact latest advocate message, the complete\nattributed earlier conversation, current records, saved work, and original account\nspans with short owned IDs. Each ID selects unchanged words and their provenance.\nThe span catalogue includes earlier selections, uncovered ranges and full messages;\nthese describe available words, not their meaning or truth. NM interpretations\nare distinct from original accounts and cannot establish facts.\n\nPurpose: Prepare only the legal investigations needed now and their held-corpus\nsearches. Other stages handle replies, drafting, factual corrections and execution.\nDo not plan those activities, answer the legal questions or decide applicable law.\n\nLook for: Understand the latest message in the whole conversation. Identify current\nlegal questions and distinct disputes requiring legal investigation, including those\narising from supplied substantive material. Preserve separate investigations even\nwhen requested together. Earlier pending work is not automatically requested again.\nReturn no investigation where the current work needs no legal sources.\n\nFor each investigation, select the offered account IDs containing its relevant\noriginal account. Keep who says what, uncertainty, conditions, timing and negation.\nPrefer focused spans to a mixed full message. Do not select social words or task\ndirections as facts; retain words that establish an expressly hypothetical scope.\nA general legal question may have no factual account. Never recopy or paraphrase\nfacts into a search query: code uses the selected original words.\n\nThen propose normally two or three concise legal concept phrases likely to occur\nin provisions or judicial reasoning. Each should add a distinct search contribution,\nnot restate another phrase or instruct a model to perform work. Use fewer when\nsufficient. Concepts are investigation hypotheses; they cannot introduce new facts,\nestablish an entitlement or invent an authority, provision, citation or jurisdiction.\nThe original account and its qualifications remain the basis for later assessment.\n\nOutcome: Return work[]. Each item has issue, a neutral inquiry title;\naccount_source_ids, selected offered IDs; and concepts[], each with text and purpose\ndescribing its distinct search contribution. Use at most three concepts per\ninvestigation. Return work=[] when no legal investigation is needed now. No other\nwork plans, factual summaries, conclusions, status or completion claims.\n"
+            },
+            {
+              "role": "user",
+              "content": "{\"original_context\": {\"position\": \"follow_up\", \"conversation\": [{\"source_id\": \"authority_to_bind:advocate\", \"turn_id\": \"authority_to_bind\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"text\": \"We act for Merin Diagnostics. A hospital owes fees for reported laboratory services. The hospital says a collection agency agreed on our client's behalf to extend payment by 90 days. Our client says the agency only collected specimens and denies authorising any change to payment terms. I have not examined the written service agreement. No email recording the extension has been forwarded to us. Identify the legal questions governing whether the agency could bind our client and whether the hospital could rely on that extension. Do not contact the hospital or agency.\"}], \"latest\": {\"source_id\": \"explicit_alternative:advocate\", \"turn_id\": \"explicit_alternative\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"text\": \"For a separate alternative analysis only, assume the agency was expressly authorised to extend payment and that no email recording the extension was ever created. Identify how those assumed facts would change the legal questions. Keep both assumptions separate from our client's actual denial and from what we know about the unforwarded email. Do not change the matter record or contact anyone.\"}, \"current_records\": {}, \"saved_work\": []}, \"original_account_spans\": [{\"id\": \"a1\", \"source_id\": \"authority_to_bind:advocate\", \"start\": 0, \"end\": 397, \"available_range\": \"earlier_exact_selection\", \"text\": \"We act for Merin Diagnostics. A hospital owes fees for reported laboratory services. The hospital says a collection agency agreed on our client's behalf to extend payment by 90 days. Our client says the agency only collected specimens and denies authorising any change to payment terms. I have not examined the written service agreement. No email recording the extension has been forwarded to us. \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"authority_to_bind\"}, {\"id\": \"a2\", \"source_id\": \"authority_to_bind:advocate\", \"start\": 0, \"end\": 570, \"available_range\": \"complete_original\", \"text\": \"We act for Merin Diagnostics. A hospital owes fees for reported laboratory services. The hospital says a collection agency agreed on our client's behalf to extend payment by 90 days. Our client says the agency only collected specimens and denies authorising any change to payment terms. I have not examined the written service agreement. No email recording the extension has been forwarded to us. Identify the legal questions governing whether the agency could bind our client and whether the hospital could rely on that extension. Do not contact the hospital or agency.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"authority_to_bind\"}, {\"id\": \"a3\", \"source_id\": \"authority_to_bind:advocate\", \"start\": 397, \"end\": 570, \"available_range\": \"earlier_exact_selection\", \"text\": \"Identify the legal questions governing whether the agency could bind our client and whether the hospital could rely on that extension. Do not contact the hospital or agency.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"authority_to_bind\"}, {\"id\": \"a4\", \"source_id\": \"explicit_alternative:advocate\", \"start\": 0, \"end\": 163, \"available_range\": \"earlier_exact_selection\", \"text\": \"For a separate alternative analysis only, assume the agency was expressly authorised to extend payment and that no email recording the extension was ever created. \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"explicit_alternative\"}, {\"id\": \"a5\", \"source_id\": \"explicit_alternative:advocate\", \"start\": 0, \"end\": 394, \"available_range\": \"complete_original\", \"text\": \"For a separate alternative analysis only, assume the agency was expressly authorised to extend payment and that no email recording the extension was ever created. Identify how those assumed facts would change the legal questions. Keep both assumptions separate from our client's actual denial and from what we know about the unforwarded email. Do not change the matter record or contact anyone.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"explicit_alternative\"}, {\"id\": \"a6\", \"source_id\": \"explicit_alternative:advocate\", \"start\": 163, \"end\": 394, \"available_range\": \"earlier_exact_selection\", \"text\": \"Identify how those assumed facts would change the legal questions. Keep both assumptions separate from our client's actual denial and from what we know about the unforwarded email. Do not change the matter record or contact anyone.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"explicit_alternative\"}]}"
+            }
+          ],
+          "store": false,
+          "max_completion_tokens": 4000,
+          "response_format": {
+            "type": "json_schema",
+            "json_schema": {
+              "name": "nm_result",
+              "strict": true,
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "work"
+                ],
+                "properties": {
+                  "work": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "issue",
+                        "account_source_ids",
+                        "concepts"
+                      ],
+                      "properties": {
+                        "issue": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "account_source_ids": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "a1",
+                              "a2",
+                              "a3",
+                              "a4",
+                              "a5",
+                              "a6"
+                            ]
+                          }
+                        },
+                        "concepts": {
+                          "type": "array",
+                          "maxItems": 3,
+                          "items": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "text",
+                              "purpose"
+                            ],
+                            "properties": {
+                              "text": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "purpose": {
+                                "type": "string",
+                                "minLength": 1
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      "response": {
+        "data": {
+          "work": [
+            {
+              "issue": "Legal questions on agency authority to bind client and hospital reliance on payment extension",
+              "account_source_ids": [
+                "a2",
+                "a3"
+              ],
+              "concepts": [
+                {
+                  "text": "agency authority to bind principal",
+                  "purpose": "to identify legal principles governing when an agency can obligate the client"
+                },
+                {
+                  "text": "hospital reliance on agent's representations or extensions",
+                  "purpose": "to determine whether the hospital can rely on alleged extension by agency"
+                },
+                {
+                  "text": "effect of absence of written or emailed modification",
+                  "purpose": "to assess impact of lack of documentary evidence on enforceability of extension"
+                }
+              ]
+            },
+            {
+              "issue": "Legal questions assuming express agency authorization to extend payment without written confirmation",
+              "account_source_ids": [
+                "a5",
+                "a6"
+              ],
+              "concepts": [
+                {
+                  "text": "express agency authorization and scope of authority",
+                  "purpose": "to explore how express authorization affects agency binding capacity"
+                },
+                {
+                  "text": "oral modification of contract terms and evidentiary requirements",
+                  "purpose": "to understand legal effect when extension not recorded in writing or email"
+                },
+                {
+                  "text": "separation of assumptions from client denial and evidentiary gaps",
+                  "purpose": "to clarify how assumed facts affect legal analysis distinct from actual client position and missing email"
+                }
+              ]
+            }
+          ]
+        },
+        "model": "gpt-4.1-mini-2025-04-14",
+        "usage": {
+          "tokens_in": 1608,
+          "tokens_out": 231,
+          "cost_usd": 0.0010128000000000001,
+          "cached_tokens": 0,
+          "provider_extra": {
+            "response_id": "chatcmpl-EXK1xwe98Of1YifErqQc8L0dGTxnm",
+            "usage_established": true
+          }
+        },
+        "latency_ms": 2716,
+        "retries": 0,
+        "completion": "complete"
+      },
+      "mechanically_admitted": {
+        "proposal": {
+          "work": [
+            {
+              "issue": "Legal questions on agency authority to bind client and hospital reliance on payment extension",
+              "account_source_ids": [
+                "a2",
+                "a3"
+              ],
+              "concepts": [
+                {
+                  "text": "agency authority to bind principal",
+                  "purpose": "to identify legal principles governing when an agency can obligate the client"
+                },
+                {
+                  "text": "hospital reliance on agent's representations or extensions",
+                  "purpose": "to determine whether the hospital can rely on alleged extension by agency"
+                },
+                {
+                  "text": "effect of absence of written or emailed modification",
+                  "purpose": "to assess impact of lack of documentary evidence on enforceability of extension"
+                }
+              ]
+            },
+            {
+              "issue": "Legal questions assuming express agency authorization to extend payment without written confirmation",
+              "account_source_ids": [
+                "a5",
+                "a6"
+              ],
+              "concepts": [
+                {
+                  "text": "express agency authorization and scope of authority",
+                  "purpose": "to explore how express authorization affects agency binding capacity"
+                },
+                {
+                  "text": "oral modification of contract terms and evidentiary requirements",
+                  "purpose": "to understand legal effect when extension not recorded in writing or email"
+                },
+                {
+                  "text": "separation of assumptions from client denial and evidentiary gaps",
+                  "purpose": "to clarify how assumed facts affect legal analysis distinct from actual client position and missing email"
+                }
+              ]
+            }
+          ]
+        },
+        "work": [
+          {
+            "issue": "Legal questions on agency authority to bind client and hospital reliance on payment extension",
+            "account_source_ids": [
+              "a2",
+              "a3"
+            ],
+            "concepts": [
+              {
+                "text": "agency authority to bind principal",
+                "purpose": "to identify legal principles governing when an agency can obligate the client"
+              },
+              {
+                "text": "hospital reliance on agent's representations or extensions",
+                "purpose": "to determine whether the hospital can rely on alleged extension by agency"
+              },
+              {
+                "text": "effect of absence of written or emailed modification",
+                "purpose": "to assess impact of lack of documentary evidence on enforceability of extension"
+              }
+            ],
+            "id": "explicit_alternative:r1",
+            "trigger_source_id": "explicit_alternative:advocate",
+            "resolved_account": [
+              {
+                "id": "authority_to_bind:advocate",
+                "source_id": "authority_to_bind:advocate",
+                "start": 0,
+                "end": 570,
+                "selected_alias": "a2",
+                "text": "We act for Merin Diagnostics. A hospital owes fees for reported laboratory services. The hospital says a collection agency agreed on our client's behalf to extend payment by 90 days. Our client says the agency only collected specimens and denies authorising any change to payment terms. I have not examined the written service agreement. No email recording the extension has been forwarded to us. Identify the legal questions governing whether the agency could bind our client and whether the hospital could rely on that extension. Do not contact the hospital or agency.",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "turn_id": "authority_to_bind"
+              },
+              {
+                "id": "authority_to_bind:advocate:397:570",
+                "source_id": "authority_to_bind:advocate",
+                "start": 397,
+                "end": 570,
+                "selected_alias": "a3",
+                "text": "Identify the legal questions governing whether the agency could bind our client and whether the hospital could rely on that extension. Do not contact the hospital or agency.",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "turn_id": "authority_to_bind"
+              }
+            ]
+          },
+          {
+            "issue": "Legal questions assuming express agency authorization to extend payment without written confirmation",
+            "account_source_ids": [
+              "a5",
+              "a6"
+            ],
+            "concepts": [
+              {
+                "text": "express agency authorization and scope of authority",
+                "purpose": "to explore how express authorization affects agency binding capacity"
+              },
+              {
+                "text": "oral modification of contract terms and evidentiary requirements",
+                "purpose": "to understand legal effect when extension not recorded in writing or email"
+              },
+              {
+                "text": "separation of assumptions from client denial and evidentiary gaps",
+                "purpose": "to clarify how assumed facts affect legal analysis distinct from actual client position and missing email"
+              }
+            ],
+            "id": "explicit_alternative:r2",
+            "trigger_source_id": "explicit_alternative:advocate",
+            "resolved_account": [
+              {
+                "id": "explicit_alternative:advocate",
+                "source_id": "explicit_alternative:advocate",
+                "start": 0,
+                "end": 394,
+                "selected_alias": "a5",
+                "text": "For a separate alternative analysis only, assume the agency was expressly authorised to extend payment and that no email recording the extension was ever created. Identify how those assumed facts would change the legal questions. Keep both assumptions separate from our client's actual denial and from what we know about the unforwarded email. Do not change the matter record or contact anyone.",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "turn_id": "explicit_alternative"
+              },
+              {
+                "id": "explicit_alternative:advocate:163:394",
+                "source_id": "explicit_alternative:advocate",
+                "start": 163,
+                "end": 394,
+                "selected_alias": "a6",
+                "text": "Identify how those assumed facts would change the legal questions. Keep both assumptions separate from our client's actual denial and from what we know about the unforwarded email. Do not change the matter record or contact anyone.",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "turn_id": "explicit_alternative"
+              }
+            ]
+          }
+        ],
+        "semantic_review": "not_assessed"
+      }
+    },
+    {
+      "name": "mixed_independent_requests_followup",
+      "wire": {
+        "system": "Message: You receive the exact latest advocate message, the complete\nattributed earlier conversation, current records, saved work, and original account\nspans with short owned IDs. Each ID selects unchanged words and their provenance.\nThe span catalogue includes earlier selections, uncovered ranges and full messages;\nthese describe available words, not their meaning or truth. NM interpretations\nare distinct from original accounts and cannot establish facts.\n\nPurpose: Prepare only the legal investigations needed now and their held-corpus\nsearches. Other stages handle replies, drafting, factual corrections and execution.\nDo not plan those activities, answer the legal questions or decide applicable law.\n\nLook for: Understand the latest message in the whole conversation. Identify current\nlegal questions and distinct disputes requiring legal investigation, including those\narising from supplied substantive material. Preserve separate investigations even\nwhen requested together. Earlier pending work is not automatically requested again.\nReturn no investigation where the current work needs no legal sources.\n\nFor each investigation, select the offered account IDs containing its relevant\noriginal account. Keep who says what, uncertainty, conditions, timing and negation.\nPrefer focused spans to a mixed full message. Do not select social words or task\ndirections as facts; retain words that establish an expressly hypothetical scope.\nA general legal question may have no factual account. Never recopy or paraphrase\nfacts into a search query: code uses the selected original words.\n\nThen propose normally two or three concise legal concept phrases likely to occur\nin provisions or judicial reasoning. Each should add a distinct search contribution,\nnot restate another phrase or instruct a model to perform work. Use fewer when\nsufficient. Concepts are investigation hypotheses; they cannot introduce new facts,\nestablish an entitlement or invent an authority, provision, citation or jurisdiction.\nThe original account and its qualifications remain the basis for later assessment.\n\nOutcome: Return work[]. Each item has issue, a neutral inquiry title;\naccount_source_ids, selected offered IDs; and concepts[], each with text and purpose\ndescribing its distinct search contribution. Use at most three concepts per\ninvestigation. Return work=[] when no legal investigation is needed now. No other\nwork plans, factual summaries, conclusions, status or completion claims.\n",
+        "user": "{\"original_context\": {\"position\": \"follow_up\", \"conversation\": [{\"source_id\": \"p1:advocate\", \"turn_id\": \"p1\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"text\": \"In a Hyderabad matter, our client granted a neighbour written permission to use a passage until 30 June. We have the permission letter, but not the deed plan. Do not assume ownership of the passage is settled.\"}, {\"source_id\": \"p1:nm\", \"turn_id\": \"p1\", \"speaker\": \"nm\", \"record_role\": \"nm_interpretation\", \"text\": \"We can compare withdrawal of permission with any claimed independent access right when the deed plan is supplied.\"}, {\"source_id\": \"p2:advocate\", \"turn_id\": \"p2\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"text\": \"The neighbour claims an access right independent of permission; we deny that, but no court has decided it.\"}, {\"source_id\": \"p2:nm\", \"turn_id\": \"p2\", \"speaker\": \"nm\", \"record_role\": \"nm_interpretation\", \"text\": \"The deed plan is still missing and no ownership determination has been made.\"}], \"latest\": {\"source_id\": \"permission_followup:advocate\", \"turn_id\": \"permission_followup\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"text\": \"Before returning to the passage issue, give me a short explanation of interim relief. Then resume the work on whether use can continue after the permission ends, keeping the ownership question open. The plan is still unavailable. Do not draft a notice yet.\"}, \"current_records\": {\"ownership\": {\"state\": \"disputed\"}}, \"saved_work\": [{\"id\": \"passage-review\", \"status\": \"waiting_for_deed_plan\", \"purpose\": \"Examine continuing passage use\"}]}, \"original_account_spans\": [{\"id\": \"a1\", \"source_id\": \"p1:advocate\", \"start\": 0, \"end\": 209, \"available_range\": \"complete_original\", \"text\": \"In a Hyderabad matter, our client granted a neighbour written permission to use a passage until 30 June. We have the permission letter, but not the deed plan. Do not assume ownership of the passage is settled.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"p1\"}, {\"id\": \"a2\", \"source_id\": \"p2:advocate\", \"start\": 0, \"end\": 106, \"available_range\": \"complete_original\", \"text\": \"The neighbour claims an access right independent of permission; we deny that, but no court has decided it.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"p2\"}, {\"id\": \"a3\", \"source_id\": \"permission_followup:advocate\", \"start\": 0, \"end\": 85, \"available_range\": \"earlier_exact_selection\", \"text\": \"Before returning to the passage issue, give me a short explanation of interim relief.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"permission_followup\"}, {\"id\": \"a4\", \"source_id\": \"permission_followup:advocate\", \"start\": 0, \"end\": 256, \"available_range\": \"complete_original\", \"text\": \"Before returning to the passage issue, give me a short explanation of interim relief. Then resume the work on whether use can continue after the permission ends, keeping the ownership question open. The plan is still unavailable. Do not draft a notice yet.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"permission_followup\"}, {\"id\": \"a5\", \"source_id\": \"permission_followup:advocate\", \"start\": 85, \"end\": 86, \"available_range\": \"uncovered_original_range\", \"text\": \" \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"permission_followup\"}, {\"id\": \"a6\", \"source_id\": \"permission_followup:advocate\", \"start\": 86, \"end\": 198, \"available_range\": \"earlier_exact_selection\", \"text\": \"Then resume the work on whether use can continue after the permission ends, keeping the ownership question open.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"permission_followup\"}, {\"id\": \"a7\", \"source_id\": \"permission_followup:advocate\", \"start\": 198, \"end\": 199, \"available_range\": \"uncovered_original_range\", \"text\": \" \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"permission_followup\"}, {\"id\": \"a8\", \"source_id\": \"permission_followup:advocate\", \"start\": 199, \"end\": 229, \"available_range\": \"earlier_exact_selection\", \"text\": \"The plan is still unavailable.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"permission_followup\"}, {\"id\": \"a9\", \"source_id\": \"permission_followup:advocate\", \"start\": 229, \"end\": 230, \"available_range\": \"uncovered_original_range\", \"text\": \" \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"permission_followup\"}, {\"id\": \"a10\", \"source_id\": \"permission_followup:advocate\", \"start\": 230, \"end\": 256, \"available_range\": \"earlier_exact_selection\", \"text\": \"Do not draft a notice yet.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"permission_followup\"}]}",
+        "operation": "research_only_concepts_pilot",
+        "schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "work"
+          ],
+          "properties": {
+            "work": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "issue",
+                  "account_source_ids",
+                  "concepts"
+                ],
+                "properties": {
+                  "issue": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "account_source_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "a1",
+                        "a2",
+                        "a3",
+                        "a4",
+                        "a5",
+                        "a6",
+                        "a7",
+                        "a8",
+                        "a9",
+                        "a10"
+                      ]
+                    }
+                  },
+                  "concepts": {
+                    "type": "array",
+                    "maxItems": 3,
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "text",
+                        "purpose"
+                      ],
+                      "properties": {
+                        "text": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "purpose": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tier": "routine",
+        "max_tokens": 4000
+      },
+      "pre_reservation_charged_usd": 1.760975,
+      "sdk_create_requests": [
+        {
+          "model": "gpt-4.1-mini-2025-04-14",
+          "messages": [
+            {
+              "role": "system",
+              "content": "Message: You receive the exact latest advocate message, the complete\nattributed earlier conversation, current records, saved work, and original account\nspans with short owned IDs. Each ID selects unchanged words and their provenance.\nThe span catalogue includes earlier selections, uncovered ranges and full messages;\nthese describe available words, not their meaning or truth. NM interpretations\nare distinct from original accounts and cannot establish facts.\n\nPurpose: Prepare only the legal investigations needed now and their held-corpus\nsearches. Other stages handle replies, drafting, factual corrections and execution.\nDo not plan those activities, answer the legal questions or decide applicable law.\n\nLook for: Understand the latest message in the whole conversation. Identify current\nlegal questions and distinct disputes requiring legal investigation, including those\narising from supplied substantive material. Preserve separate investigations even\nwhen requested together. Earlier pending work is not automatically requested again.\nReturn no investigation where the current work needs no legal sources.\n\nFor each investigation, select the offered account IDs containing its relevant\noriginal account. Keep who says what, uncertainty, conditions, timing and negation.\nPrefer focused spans to a mixed full message. Do not select social words or task\ndirections as facts; retain words that establish an expressly hypothetical scope.\nA general legal question may have no factual account. Never recopy or paraphrase\nfacts into a search query: code uses the selected original words.\n\nThen propose normally two or three concise legal concept phrases likely to occur\nin provisions or judicial reasoning. Each should add a distinct search contribution,\nnot restate another phrase or instruct a model to perform work. Use fewer when\nsufficient. Concepts are investigation hypotheses; they cannot introduce new facts,\nestablish an entitlement or invent an authority, provision, citation or jurisdiction.\nThe original account and its qualifications remain the basis for later assessment.\n\nOutcome: Return work[]. Each item has issue, a neutral inquiry title;\naccount_source_ids, selected offered IDs; and concepts[], each with text and purpose\ndescribing its distinct search contribution. Use at most three concepts per\ninvestigation. Return work=[] when no legal investigation is needed now. No other\nwork plans, factual summaries, conclusions, status or completion claims.\n"
+            },
+            {
+              "role": "user",
+              "content": "{\"original_context\": {\"position\": \"follow_up\", \"conversation\": [{\"source_id\": \"p1:advocate\", \"turn_id\": \"p1\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"text\": \"In a Hyderabad matter, our client granted a neighbour written permission to use a passage until 30 June. We have the permission letter, but not the deed plan. Do not assume ownership of the passage is settled.\"}, {\"source_id\": \"p1:nm\", \"turn_id\": \"p1\", \"speaker\": \"nm\", \"record_role\": \"nm_interpretation\", \"text\": \"We can compare withdrawal of permission with any claimed independent access right when the deed plan is supplied.\"}, {\"source_id\": \"p2:advocate\", \"turn_id\": \"p2\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"text\": \"The neighbour claims an access right independent of permission; we deny that, but no court has decided it.\"}, {\"source_id\": \"p2:nm\", \"turn_id\": \"p2\", \"speaker\": \"nm\", \"record_role\": \"nm_interpretation\", \"text\": \"The deed plan is still missing and no ownership determination has been made.\"}], \"latest\": {\"source_id\": \"permission_followup:advocate\", \"turn_id\": \"permission_followup\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"text\": \"Before returning to the passage issue, give me a short explanation of interim relief. Then resume the work on whether use can continue after the permission ends, keeping the ownership question open. The plan is still unavailable. Do not draft a notice yet.\"}, \"current_records\": {\"ownership\": {\"state\": \"disputed\"}}, \"saved_work\": [{\"id\": \"passage-review\", \"status\": \"waiting_for_deed_plan\", \"purpose\": \"Examine continuing passage use\"}]}, \"original_account_spans\": [{\"id\": \"a1\", \"source_id\": \"p1:advocate\", \"start\": 0, \"end\": 209, \"available_range\": \"complete_original\", \"text\": \"In a Hyderabad matter, our client granted a neighbour written permission to use a passage until 30 June. We have the permission letter, but not the deed plan. Do not assume ownership of the passage is settled.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"p1\"}, {\"id\": \"a2\", \"source_id\": \"p2:advocate\", \"start\": 0, \"end\": 106, \"available_range\": \"complete_original\", \"text\": \"The neighbour claims an access right independent of permission; we deny that, but no court has decided it.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"p2\"}, {\"id\": \"a3\", \"source_id\": \"permission_followup:advocate\", \"start\": 0, \"end\": 85, \"available_range\": \"earlier_exact_selection\", \"text\": \"Before returning to the passage issue, give me a short explanation of interim relief.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"permission_followup\"}, {\"id\": \"a4\", \"source_id\": \"permission_followup:advocate\", \"start\": 0, \"end\": 256, \"available_range\": \"complete_original\", \"text\": \"Before returning to the passage issue, give me a short explanation of interim relief. Then resume the work on whether use can continue after the permission ends, keeping the ownership question open. The plan is still unavailable. Do not draft a notice yet.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"permission_followup\"}, {\"id\": \"a5\", \"source_id\": \"permission_followup:advocate\", \"start\": 85, \"end\": 86, \"available_range\": \"uncovered_original_range\", \"text\": \" \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"permission_followup\"}, {\"id\": \"a6\", \"source_id\": \"permission_followup:advocate\", \"start\": 86, \"end\": 198, \"available_range\": \"earlier_exact_selection\", \"text\": \"Then resume the work on whether use can continue after the permission ends, keeping the ownership question open.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"permission_followup\"}, {\"id\": \"a7\", \"source_id\": \"permission_followup:advocate\", \"start\": 198, \"end\": 199, \"available_range\": \"uncovered_original_range\", \"text\": \" \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"permission_followup\"}, {\"id\": \"a8\", \"source_id\": \"permission_followup:advocate\", \"start\": 199, \"end\": 229, \"available_range\": \"earlier_exact_selection\", \"text\": \"The plan is still unavailable.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"permission_followup\"}, {\"id\": \"a9\", \"source_id\": \"permission_followup:advocate\", \"start\": 229, \"end\": 230, \"available_range\": \"uncovered_original_range\", \"text\": \" \", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"permission_followup\"}, {\"id\": \"a10\", \"source_id\": \"permission_followup:advocate\", \"start\": 230, \"end\": 256, \"available_range\": \"earlier_exact_selection\", \"text\": \"Do not draft a notice yet.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"permission_followup\"}]}"
+            }
+          ],
+          "store": false,
+          "max_completion_tokens": 4000,
+          "response_format": {
+            "type": "json_schema",
+            "json_schema": {
+              "name": "nm_result",
+              "strict": true,
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "work"
+                ],
+                "properties": {
+                  "work": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "issue",
+                        "account_source_ids",
+                        "concepts"
+                      ],
+                      "properties": {
+                        "issue": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "account_source_ids": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "a1",
+                              "a2",
+                              "a3",
+                              "a4",
+                              "a5",
+                              "a6",
+                              "a7",
+                              "a8",
+                              "a9",
+                              "a10"
+                            ]
+                          }
+                        },
+                        "concepts": {
+                          "type": "array",
+                          "maxItems": 3,
+                          "items": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "text",
+                              "purpose"
+                            ],
+                            "properties": {
+                              "text": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "purpose": {
+                                "type": "string",
+                                "minLength": 1
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      "response": {
+        "data": {
+          "work": [
+            {
+              "issue": "Legal principles and requirements for obtaining interim relief prior to court determination",
+              "account_source_ids": [
+                "a4",
+                "a3"
+              ],
+              "concepts": [
+                {
+                  "text": "Interim relief criteria in civil disputes",
+                  "purpose": "Clarify conditions and procedures for obtaining interim court orders before final judgment"
+                },
+                {
+                  "text": "Types of interim relief available",
+                  "purpose": "Identify specific remedies such as injunctions or restraining orders relevant to passage use"
+                },
+                {
+                  "text": "Impact of interim relief on disputed rights",
+                  "purpose": "Understand how interim relief preserves status quo or restricts conduct pending court decision"
+                }
+              ]
+            },
+            {
+              "issue": "Legal basis for continuation of passage use after permission expiry with ownership unsettled",
+              "account_source_ids": [
+                "a4",
+                "a6",
+                "a1",
+                "a2",
+                "a8"
+              ],
+              "concepts": [
+                {
+                  "text": "Licenses and permissions to use land",
+                  "purpose": "Explore how permission to use passage affects rights and obligations upon expiry"
+                },
+                {
+                  "text": "Nature of easements or prescriptive rights of way",
+                  "purpose": "Investigate conditions for independent access rights without permission"
+                },
+                {
+                  "text": "Effect of unresolved ownership on access rights",
+                  "purpose": "Assess how disputed ownership influences ability to use or restrict passage after permission ends"
+                }
+              ]
+            }
+          ]
+        },
+        "model": "gpt-4.1-mini-2025-04-14",
+        "usage": {
+          "tokens_in": 1835,
+          "tokens_out": 235,
+          "cost_usd": 0.00111,
+          "cached_tokens": 0,
+          "provider_extra": {
+            "response_id": "chatcmpl-EXK21NuWob59hWVZRIuZM8qPnYJvd",
+            "usage_established": true
+          }
+        },
+        "latency_ms": 2658,
+        "retries": 0,
+        "completion": "complete"
+      },
+      "mechanically_admitted": {
+        "proposal": {
+          "work": [
+            {
+              "issue": "Legal principles and requirements for obtaining interim relief prior to court determination",
+              "account_source_ids": [
+                "a4",
+                "a3"
+              ],
+              "concepts": [
+                {
+                  "text": "Interim relief criteria in civil disputes",
+                  "purpose": "Clarify conditions and procedures for obtaining interim court orders before final judgment"
+                },
+                {
+                  "text": "Types of interim relief available",
+                  "purpose": "Identify specific remedies such as injunctions or restraining orders relevant to passage use"
+                },
+                {
+                  "text": "Impact of interim relief on disputed rights",
+                  "purpose": "Understand how interim relief preserves status quo or restricts conduct pending court decision"
+                }
+              ]
+            },
+            {
+              "issue": "Legal basis for continuation of passage use after permission expiry with ownership unsettled",
+              "account_source_ids": [
+                "a4",
+                "a6",
+                "a1",
+                "a2",
+                "a8"
+              ],
+              "concepts": [
+                {
+                  "text": "Licenses and permissions to use land",
+                  "purpose": "Explore how permission to use passage affects rights and obligations upon expiry"
+                },
+                {
+                  "text": "Nature of easements or prescriptive rights of way",
+                  "purpose": "Investigate conditions for independent access rights without permission"
+                },
+                {
+                  "text": "Effect of unresolved ownership on access rights",
+                  "purpose": "Assess how disputed ownership influences ability to use or restrict passage after permission ends"
+                }
+              ]
+            }
+          ]
+        },
+        "work": [
+          {
+            "issue": "Legal principles and requirements for obtaining interim relief prior to court determination",
+            "account_source_ids": [
+              "a4",
+              "a3"
+            ],
+            "concepts": [
+              {
+                "text": "Interim relief criteria in civil disputes",
+                "purpose": "Clarify conditions and procedures for obtaining interim court orders before final judgment"
+              },
+              {
+                "text": "Types of interim relief available",
+                "purpose": "Identify specific remedies such as injunctions or restraining orders relevant to passage use"
+              },
+              {
+                "text": "Impact of interim relief on disputed rights",
+                "purpose": "Understand how interim relief preserves status quo or restricts conduct pending court decision"
+              }
+            ],
+            "id": "permission_followup:r1",
+            "trigger_source_id": "permission_followup:advocate",
+            "resolved_account": [
+              {
+                "id": "permission_followup:advocate",
+                "source_id": "permission_followup:advocate",
+                "start": 0,
+                "end": 256,
+                "selected_alias": "a4",
+                "text": "Before returning to the passage issue, give me a short explanation of interim relief. Then resume the work on whether use can continue after the permission ends, keeping the ownership question open. The plan is still unavailable. Do not draft a notice yet.",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "turn_id": "permission_followup"
+              },
+              {
+                "id": "permission_followup:advocate:0:85",
+                "source_id": "permission_followup:advocate",
+                "start": 0,
+                "end": 85,
+                "selected_alias": "a3",
+                "text": "Before returning to the passage issue, give me a short explanation of interim relief.",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "turn_id": "permission_followup"
+              }
+            ]
+          },
+          {
+            "issue": "Legal basis for continuation of passage use after permission expiry with ownership unsettled",
+            "account_source_ids": [
+              "a4",
+              "a6",
+              "a1",
+              "a2",
+              "a8"
+            ],
+            "concepts": [
+              {
+                "text": "Licenses and permissions to use land",
+                "purpose": "Explore how permission to use passage affects rights and obligations upon expiry"
+              },
+              {
+                "text": "Nature of easements or prescriptive rights of way",
+                "purpose": "Investigate conditions for independent access rights without permission"
+              },
+              {
+                "text": "Effect of unresolved ownership on access rights",
+                "purpose": "Assess how disputed ownership influences ability to use or restrict passage after permission ends"
+              }
+            ],
+            "id": "permission_followup:r2",
+            "trigger_source_id": "permission_followup:advocate",
+            "resolved_account": [
+              {
+                "id": "permission_followup:advocate",
+                "source_id": "permission_followup:advocate",
+                "start": 0,
+                "end": 256,
+                "selected_alias": "a4",
+                "text": "Before returning to the passage issue, give me a short explanation of interim relief. Then resume the work on whether use can continue after the permission ends, keeping the ownership question open. The plan is still unavailable. Do not draft a notice yet.",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "turn_id": "permission_followup"
+              },
+              {
+                "id": "permission_followup:advocate:86:198",
+                "source_id": "permission_followup:advocate",
+                "start": 86,
+                "end": 198,
+                "selected_alias": "a6",
+                "text": "Then resume the work on whether use can continue after the permission ends, keeping the ownership question open.",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "turn_id": "permission_followup"
+              },
+              {
+                "id": "p1:advocate",
+                "source_id": "p1:advocate",
+                "start": 0,
+                "end": 209,
+                "selected_alias": "a1",
+                "text": "In a Hyderabad matter, our client granted a neighbour written permission to use a passage until 30 June. We have the permission letter, but not the deed plan. Do not assume ownership of the passage is settled.",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "turn_id": "p1"
+              },
+              {
+                "id": "p2:advocate",
+                "source_id": "p2:advocate",
+                "start": 0,
+                "end": 106,
+                "selected_alias": "a2",
+                "text": "The neighbour claims an access right independent of permission; we deny that, but no court has decided it.",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "turn_id": "p2"
+              },
+              {
+                "id": "permission_followup:advocate:199:229",
+                "source_id": "permission_followup:advocate",
+                "start": 199,
+                "end": 229,
+                "selected_alias": "a8",
+                "text": "The plan is still unavailable.",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "turn_id": "permission_followup"
+              }
+            ]
+          }
+        ],
+        "semantic_review": "not_assessed"
+      }
+    },
+    {
+      "name": "correction_no_send_no_law",
+      "wire": {
+        "system": "Message: You receive the exact latest advocate message, the complete\nattributed earlier conversation, current records, saved work, and original account\nspans with short owned IDs. Each ID selects unchanged words and their provenance.\nThe span catalogue includes earlier selections, uncovered ranges and full messages;\nthese describe available words, not their meaning or truth. NM interpretations\nare distinct from original accounts and cannot establish facts.\n\nPurpose: Prepare only the legal investigations needed now and their held-corpus\nsearches. Other stages handle replies, drafting, factual corrections and execution.\nDo not plan those activities, answer the legal questions or decide applicable law.\n\nLook for: Understand the latest message in the whole conversation. Identify current\nlegal questions and distinct disputes requiring legal investigation, including those\narising from supplied substantive material. Preserve separate investigations even\nwhen requested together. Earlier pending work is not automatically requested again.\nReturn no investigation where the current work needs no legal sources.\n\nFor each investigation, select the offered account IDs containing its relevant\noriginal account. Keep who says what, uncertainty, conditions, timing and negation.\nPrefer focused spans to a mixed full message. Do not select social words or task\ndirections as facts; retain words that establish an expressly hypothetical scope.\nA general legal question may have no factual account. Never recopy or paraphrase\nfacts into a search query: code uses the selected original words.\n\nThen propose normally two or three concise legal concept phrases likely to occur\nin provisions or judicial reasoning. Each should add a distinct search contribution,\nnot restate another phrase or instruct a model to perform work. Use fewer when\nsufficient. Concepts are investigation hypotheses; they cannot introduce new facts,\nestablish an entitlement or invent an authority, provision, citation or jurisdiction.\nThe original account and its qualifications remain the basis for later assessment.\n\nOutcome: Return work[]. Each item has issue, a neutral inquiry title;\naccount_source_ids, selected offered IDs; and concepts[], each with text and purpose\ndescribing its distinct search contribution. Use at most three concepts per\ninvestigation. Return work=[] when no legal investigation is needed now. No other\nwork plans, factual summaries, conclusions, status or completion claims.\n",
+        "user": "{\"original_context\": {\"position\": \"follow_up\", \"conversation\": [{\"source_id\": \"c1:advocate\", \"turn_id\": \"c1\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"text\": \"The payment was made on 14 April. The amount is not yet checked.\"}, {\"source_id\": \"c1:nm\", \"turn_id\": \"c1\", \"speaker\": \"nm\", \"record_role\": \"nm_interpretation\", \"text\": \"The reported payment was made on 14 May; the amount is unconfirmed.\"}], \"latest\": {\"source_id\": \"correction:advocate\", \"turn_id\": \"correction\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"text\": \"Please correct your summary: I said 14 April, not 14 May. The amount remains uncertain; do not enter a confirmed payment figure. Do not send anything to anyone.\"}, \"current_records\": {\"reported_payment_date\": {\"value\": \"14 May\", \"record_role\": \"nm_interpretation\"}}, \"saved_work\": [{\"id\": \"summary-1\", \"status\": \"completed\", \"kind\": \"summary\"}]}, \"original_account_spans\": [{\"id\": \"a1\", \"source_id\": \"c1:advocate\", \"start\": 0, \"end\": 64, \"available_range\": \"complete_original\", \"text\": \"The payment was made on 14 April. The amount is not yet checked.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"c1\"}, {\"id\": \"a2\", \"source_id\": \"correction:advocate\", \"start\": 0, \"end\": 160, \"available_range\": \"complete_original\", \"text\": \"Please correct your summary: I said 14 April, not 14 May. The amount remains uncertain; do not enter a confirmed payment figure. Do not send anything to anyone.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"correction\"}]}",
+        "operation": "research_only_concepts_pilot",
+        "schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "work"
+          ],
+          "properties": {
+            "work": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "issue",
+                  "account_source_ids",
+                  "concepts"
+                ],
+                "properties": {
+                  "issue": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "account_source_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "a1",
+                        "a2"
+                      ]
+                    }
+                  },
+                  "concepts": {
+                    "type": "array",
+                    "maxItems": 3,
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "text",
+                        "purpose"
+                      ],
+                      "properties": {
+                        "text": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "purpose": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tier": "routine",
+        "max_tokens": 4000
+      },
+      "pre_reservation_charged_usd": 1.762085,
+      "sdk_create_requests": [
+        {
+          "model": "gpt-4.1-mini-2025-04-14",
+          "messages": [
+            {
+              "role": "system",
+              "content": "Message: You receive the exact latest advocate message, the complete\nattributed earlier conversation, current records, saved work, and original account\nspans with short owned IDs. Each ID selects unchanged words and their provenance.\nThe span catalogue includes earlier selections, uncovered ranges and full messages;\nthese describe available words, not their meaning or truth. NM interpretations\nare distinct from original accounts and cannot establish facts.\n\nPurpose: Prepare only the legal investigations needed now and their held-corpus\nsearches. Other stages handle replies, drafting, factual corrections and execution.\nDo not plan those activities, answer the legal questions or decide applicable law.\n\nLook for: Understand the latest message in the whole conversation. Identify current\nlegal questions and distinct disputes requiring legal investigation, including those\narising from supplied substantive material. Preserve separate investigations even\nwhen requested together. Earlier pending work is not automatically requested again.\nReturn no investigation where the current work needs no legal sources.\n\nFor each investigation, select the offered account IDs containing its relevant\noriginal account. Keep who says what, uncertainty, conditions, timing and negation.\nPrefer focused spans to a mixed full message. Do not select social words or task\ndirections as facts; retain words that establish an expressly hypothetical scope.\nA general legal question may have no factual account. Never recopy or paraphrase\nfacts into a search query: code uses the selected original words.\n\nThen propose normally two or three concise legal concept phrases likely to occur\nin provisions or judicial reasoning. Each should add a distinct search contribution,\nnot restate another phrase or instruct a model to perform work. Use fewer when\nsufficient. Concepts are investigation hypotheses; they cannot introduce new facts,\nestablish an entitlement or invent an authority, provision, citation or jurisdiction.\nThe original account and its qualifications remain the basis for later assessment.\n\nOutcome: Return work[]. Each item has issue, a neutral inquiry title;\naccount_source_ids, selected offered IDs; and concepts[], each with text and purpose\ndescribing its distinct search contribution. Use at most three concepts per\ninvestigation. Return work=[] when no legal investigation is needed now. No other\nwork plans, factual summaries, conclusions, status or completion claims.\n"
+            },
+            {
+              "role": "user",
+              "content": "{\"original_context\": {\"position\": \"follow_up\", \"conversation\": [{\"source_id\": \"c1:advocate\", \"turn_id\": \"c1\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"text\": \"The payment was made on 14 April. The amount is not yet checked.\"}, {\"source_id\": \"c1:nm\", \"turn_id\": \"c1\", \"speaker\": \"nm\", \"record_role\": \"nm_interpretation\", \"text\": \"The reported payment was made on 14 May; the amount is unconfirmed.\"}], \"latest\": {\"source_id\": \"correction:advocate\", \"turn_id\": \"correction\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"text\": \"Please correct your summary: I said 14 April, not 14 May. The amount remains uncertain; do not enter a confirmed payment figure. Do not send anything to anyone.\"}, \"current_records\": {\"reported_payment_date\": {\"value\": \"14 May\", \"record_role\": \"nm_interpretation\"}}, \"saved_work\": [{\"id\": \"summary-1\", \"status\": \"completed\", \"kind\": \"summary\"}]}, \"original_account_spans\": [{\"id\": \"a1\", \"source_id\": \"c1:advocate\", \"start\": 0, \"end\": 64, \"available_range\": \"complete_original\", \"text\": \"The payment was made on 14 April. The amount is not yet checked.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"c1\"}, {\"id\": \"a2\", \"source_id\": \"correction:advocate\", \"start\": 0, \"end\": 160, \"available_range\": \"complete_original\", \"text\": \"Please correct your summary: I said 14 April, not 14 May. The amount remains uncertain; do not enter a confirmed payment figure. Do not send anything to anyone.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"correction\"}]}"
+            }
+          ],
+          "store": false,
+          "max_completion_tokens": 4000,
+          "response_format": {
+            "type": "json_schema",
+            "json_schema": {
+              "name": "nm_result",
+              "strict": true,
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "work"
+                ],
+                "properties": {
+                  "work": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "issue",
+                        "account_source_ids",
+                        "concepts"
+                      ],
+                      "properties": {
+                        "issue": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "account_source_ids": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "a1",
+                              "a2"
+                            ]
+                          }
+                        },
+                        "concepts": {
+                          "type": "array",
+                          "maxItems": 3,
+                          "items": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "text",
+                              "purpose"
+                            ],
+                            "properties": {
+                              "text": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "purpose": {
+                                "type": "string",
+                                "minLength": 1
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      "response": {
+        "data": {
+          "work": []
+        },
+        "model": "gpt-4.1-mini-2025-04-14",
+        "usage": {
+          "tokens_in": 994,
+          "tokens_out": 4,
+          "cost_usd": 0.000404,
+          "cached_tokens": 0,
+          "provider_extra": {
+            "response_id": "chatcmpl-EXK23cRE7ApMyflkg1f33lInb3iCO",
+            "usage_established": true
+          }
+        },
+        "latency_ms": 943,
+        "retries": 0,
+        "completion": "complete"
+      },
+      "mechanically_admitted": {
+        "proposal": {
+          "work": []
+        },
+        "work": [],
+        "semantic_review": "not_assessed"
+      }
+    },
+    {
+      "name": "greeting_social_close",
+      "wire": {
+        "system": "Message: You receive the exact latest advocate message, the complete\nattributed earlier conversation, current records, saved work, and original account\nspans with short owned IDs. Each ID selects unchanged words and their provenance.\nThe span catalogue includes earlier selections, uncovered ranges and full messages;\nthese describe available words, not their meaning or truth. NM interpretations\nare distinct from original accounts and cannot establish facts.\n\nPurpose: Prepare only the legal investigations needed now and their held-corpus\nsearches. Other stages handle replies, drafting, factual corrections and execution.\nDo not plan those activities, answer the legal questions or decide applicable law.\n\nLook for: Understand the latest message in the whole conversation. Identify current\nlegal questions and distinct disputes requiring legal investigation, including those\narising from supplied substantive material. Preserve separate investigations even\nwhen requested together. Earlier pending work is not automatically requested again.\nReturn no investigation where the current work needs no legal sources.\n\nFor each investigation, select the offered account IDs containing its relevant\noriginal account. Keep who says what, uncertainty, conditions, timing and negation.\nPrefer focused spans to a mixed full message. Do not select social words or task\ndirections as facts; retain words that establish an expressly hypothetical scope.\nA general legal question may have no factual account. Never recopy or paraphrase\nfacts into a search query: code uses the selected original words.\n\nThen propose normally two or three concise legal concept phrases likely to occur\nin provisions or judicial reasoning. Each should add a distinct search contribution,\nnot restate another phrase or instruct a model to perform work. Use fewer when\nsufficient. Concepts are investigation hypotheses; they cannot introduce new facts,\nestablish an entitlement or invent an authority, provision, citation or jurisdiction.\nThe original account and its qualifications remain the basis for later assessment.\n\nOutcome: Return work[]. Each item has issue, a neutral inquiry title;\naccount_source_ids, selected offered IDs; and concepts[], each with text and purpose\ndescribing its distinct search contribution. Use at most three concepts per\ninvestigation. Return work=[] when no legal investigation is needed now. No other\nwork plans, factual summaries, conclusions, status or completion claims.\n",
+        "user": "{\"original_context\": {\"position\": \"follow_up\", \"conversation\": [{\"source_id\": \"s1:advocate\", \"turn_id\": \"s1\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"text\": \"When I return with the tenancy papers, we can look at the rent demand.\"}, {\"source_id\": \"s1:nm\", \"turn_id\": \"s1\", \"speaker\": \"nm\", \"record_role\": \"nm_interpretation\", \"text\": \"The papers have not been provided; that work remains pending.\"}], \"latest\": {\"source_id\": \"social_closing:advocate\", \"turn_id\": \"social_closing\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"text\": \"Thanks, this is enough for today. Good night.\"}, \"current_records\": {}, \"saved_work\": [{\"id\": \"rent-review\", \"status\": \"waiting_for_documents\"}]}, \"original_account_spans\": [{\"id\": \"a1\", \"source_id\": \"s1:advocate\", \"start\": 0, \"end\": 70, \"available_range\": \"complete_original\", \"text\": \"When I return with the tenancy papers, we can look at the rent demand.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"s1\"}, {\"id\": \"a2\", \"source_id\": \"social_closing:advocate\", \"start\": 0, \"end\": 45, \"available_range\": \"complete_original\", \"text\": \"Thanks, this is enough for today. Good night.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"social_closing\"}]}",
+        "operation": "research_only_concepts_pilot",
+        "schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "work"
+          ],
+          "properties": {
+            "work": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "issue",
+                  "account_source_ids",
+                  "concepts"
+                ],
+                "properties": {
+                  "issue": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "account_source_ids": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "a1",
+                        "a2"
+                      ]
+                    }
+                  },
+                  "concepts": {
+                    "type": "array",
+                    "maxItems": 3,
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "text",
+                        "purpose"
+                      ],
+                      "properties": {
+                        "text": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "purpose": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tier": "routine",
+        "max_tokens": 4000
+      },
+      "pre_reservation_charged_usd": 1.762489,
+      "sdk_create_requests": [
+        {
+          "model": "gpt-4.1-mini-2025-04-14",
+          "messages": [
+            {
+              "role": "system",
+              "content": "Message: You receive the exact latest advocate message, the complete\nattributed earlier conversation, current records, saved work, and original account\nspans with short owned IDs. Each ID selects unchanged words and their provenance.\nThe span catalogue includes earlier selections, uncovered ranges and full messages;\nthese describe available words, not their meaning or truth. NM interpretations\nare distinct from original accounts and cannot establish facts.\n\nPurpose: Prepare only the legal investigations needed now and their held-corpus\nsearches. Other stages handle replies, drafting, factual corrections and execution.\nDo not plan those activities, answer the legal questions or decide applicable law.\n\nLook for: Understand the latest message in the whole conversation. Identify current\nlegal questions and distinct disputes requiring legal investigation, including those\narising from supplied substantive material. Preserve separate investigations even\nwhen requested together. Earlier pending work is not automatically requested again.\nReturn no investigation where the current work needs no legal sources.\n\nFor each investigation, select the offered account IDs containing its relevant\noriginal account. Keep who says what, uncertainty, conditions, timing and negation.\nPrefer focused spans to a mixed full message. Do not select social words or task\ndirections as facts; retain words that establish an expressly hypothetical scope.\nA general legal question may have no factual account. Never recopy or paraphrase\nfacts into a search query: code uses the selected original words.\n\nThen propose normally two or three concise legal concept phrases likely to occur\nin provisions or judicial reasoning. Each should add a distinct search contribution,\nnot restate another phrase or instruct a model to perform work. Use fewer when\nsufficient. Concepts are investigation hypotheses; they cannot introduce new facts,\nestablish an entitlement or invent an authority, provision, citation or jurisdiction.\nThe original account and its qualifications remain the basis for later assessment.\n\nOutcome: Return work[]. Each item has issue, a neutral inquiry title;\naccount_source_ids, selected offered IDs; and concepts[], each with text and purpose\ndescribing its distinct search contribution. Use at most three concepts per\ninvestigation. Return work=[] when no legal investigation is needed now. No other\nwork plans, factual summaries, conclusions, status or completion claims.\n"
+            },
+            {
+              "role": "user",
+              "content": "{\"original_context\": {\"position\": \"follow_up\", \"conversation\": [{\"source_id\": \"s1:advocate\", \"turn_id\": \"s1\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"text\": \"When I return with the tenancy papers, we can look at the rent demand.\"}, {\"source_id\": \"s1:nm\", \"turn_id\": \"s1\", \"speaker\": \"nm\", \"record_role\": \"nm_interpretation\", \"text\": \"The papers have not been provided; that work remains pending.\"}], \"latest\": {\"source_id\": \"social_closing:advocate\", \"turn_id\": \"social_closing\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"text\": \"Thanks, this is enough for today. Good night.\"}, \"current_records\": {}, \"saved_work\": [{\"id\": \"rent-review\", \"status\": \"waiting_for_documents\"}]}, \"original_account_spans\": [{\"id\": \"a1\", \"source_id\": \"s1:advocate\", \"start\": 0, \"end\": 70, \"available_range\": \"complete_original\", \"text\": \"When I return with the tenancy papers, we can look at the rent demand.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"s1\"}, {\"id\": \"a2\", \"source_id\": \"social_closing:advocate\", \"start\": 0, \"end\": 45, \"available_range\": \"complete_original\", \"text\": \"Thanks, this is enough for today. Good night.\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"turn_id\": \"social_closing\"}]}"
+            }
+          ],
+          "store": false,
+          "max_completion_tokens": 4000,
+          "response_format": {
+            "type": "json_schema",
+            "json_schema": {
+              "name": "nm_result",
+              "strict": true,
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "work"
+                ],
+                "properties": {
+                  "work": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "issue",
+                        "account_source_ids",
+                        "concepts"
+                      ],
+                      "properties": {
+                        "issue": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "account_source_ids": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "a1",
+                              "a2"
+                            ]
+                          }
+                        },
+                        "concepts": {
+                          "type": "array",
+                          "maxItems": 3,
+                          "items": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "text",
+                              "purpose"
+                            ],
+                            "properties": {
+                              "text": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "purpose": {
+                                "type": "string",
+                                "minLength": 1
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      "response": {
+        "data": {
+          "work": [
+            {
+              "issue": "Legal investigation on rent review and tenancy papers requirements",
+              "account_source_ids": [
+                "a1"
+              ],
+              "concepts": [
+                {
+                  "text": "Conditions for valid rent demand review",
+                  "purpose": "To identify what legal conditions or documents, such as tenancy papers, are required to validate and proceed with a rent demand review."
+                },
+                {
+                  "text": "Tenant's rights to documentation in tenancy disputes",
+                  "purpose": "To determine the tenant's entitlement to receive tenancy papers and evidence before rent demands can be examined or challenged."
+                },
+                {
+                  "text": "Procedural requirements for rent adjustments under tenancy law",
+                  "purpose": "To understand the legal procedure and timing for reviewing or disputing rent demands once the necessary tenancy documents are supplied."
+                }
+              ]
+            }
+          ]
+        },
+        "model": "gpt-4.1-mini-2025-04-14",
+        "usage": {
+          "tokens_in": 917,
+          "tokens_out": 139,
+          "cost_usd": 0.0005892,
+          "cached_tokens": 0,
+          "provider_extra": {
+            "response_id": "chatcmpl-EXK24CunNcoKZcK39fvEYmYi64R8e",
+            "usage_established": true
+          }
+        },
+        "latency_ms": 1772,
+        "retries": 0,
+        "completion": "complete"
+      },
+      "mechanically_admitted": {
+        "proposal": {
+          "work": [
+            {
+              "issue": "Legal investigation on rent review and tenancy papers requirements",
+              "account_source_ids": [
+                "a1"
+              ],
+              "concepts": [
+                {
+                  "text": "Conditions for valid rent demand review",
+                  "purpose": "To identify what legal conditions or documents, such as tenancy papers, are required to validate and proceed with a rent demand review."
+                },
+                {
+                  "text": "Tenant's rights to documentation in tenancy disputes",
+                  "purpose": "To determine the tenant's entitlement to receive tenancy papers and evidence before rent demands can be examined or challenged."
+                },
+                {
+                  "text": "Procedural requirements for rent adjustments under tenancy law",
+                  "purpose": "To understand the legal procedure and timing for reviewing or disputing rent demands once the necessary tenancy documents are supplied."
+                }
+              ]
+            }
+          ]
+        },
+        "work": [
+          {
+            "issue": "Legal investigation on rent review and tenancy papers requirements",
+            "account_source_ids": [
+              "a1"
+            ],
+            "concepts": [
+              {
+                "text": "Conditions for valid rent demand review",
+                "purpose": "To identify what legal conditions or documents, such as tenancy papers, are required to validate and proceed with a rent demand review."
+              },
+              {
+                "text": "Tenant's rights to documentation in tenancy disputes",
+                "purpose": "To determine the tenant's entitlement to receive tenancy papers and evidence before rent demands can be examined or challenged."
+              },
+              {
+                "text": "Procedural requirements for rent adjustments under tenancy law",
+                "purpose": "To understand the legal procedure and timing for reviewing or disputing rent demands once the necessary tenancy documents are supplied."
+              }
+            ],
+            "id": "social_closing:r1",
+            "trigger_source_id": "social_closing:advocate",
+            "resolved_account": [
+              {
+                "id": "s1:advocate",
+                "source_id": "s1:advocate",
+                "start": 0,
+                "end": 70,
+                "selected_alias": "a1",
+                "text": "When I return with the tenancy papers, we can look at the rent demand.",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "turn_id": "s1"
+              }
+            ]
+          }
+        ],
+        "semantic_review": "not_assessed"
+      }
+    }
+  ],
+  "logical_calls": 6,
+  "prior_harness_failure": {
+    "path": "research-only-concepts-results.json",
+    "logical_attempts": 1,
+    "actual_sdk_dispatches": 0,
+    "conservative_reservation_retained_usd": 0.425431,
+    "note": "No provider dispatch; no ledger cancellation contract. Reservation remains charged, not established spending."
+  },
+  "budget_after": {
+    "maximum_usd": 5.0,
+    "charged_usd": 1.763079,
+    "measured_usd": 0.247648,
+    "reserved_or_unknown_usd": 1.515431,
+    "attempts": 94,
+    "models": [
+      {
+        "model": "gpt-4.1-mini-2025-04-14",
+        "state": "measured",
+        "attempts": 92,
+        "charged_usd": 0.247648
+      },
+      {
+        "model": "gpt-4.1-mini-2025-04-14",
+        "state": "reserved_or_unknown",
+        "attempts": 1,
+        "charged_usd": 0.425431
+      },
+      {
+        "model": "text-embedding-3-large",
+        "state": "reserved_or_unknown",
+        "attempts": 1,
+        "charged_usd": 1.09
+      }
+    ]
+  },
+  "actual_sdk_dispatches": 6,
+  "charged_delta_usd": 0.00568600000000008,
+  "measured_delta_usd": 0.005685999999999997,
+  "usage_cost_usd": 0.005684000000000001
+}

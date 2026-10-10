@@ -1,0 +1,206 @@
+{
+  "contract": "research_only_concepts_assessment_v1",
+  "evidence": {
+    "results": "research-only-concepts-guard-fixed-results.json",
+    "inputs": "research-only-concepts-inputs.json",
+    "frozen_oracle": "research-only-concepts-hidden-oracle.json",
+    "preparation": "research-only-concepts-guard-fixed-prepared.json",
+    "actual_sdk_wire_assertions": [
+      {
+        "case": "original_aster_held_drive",
+        "one_sdk_dispatch": true,
+        "frozen_system_and_user_exact": true,
+        "model_pinned": true
+      },
+      {
+        "case": "not_supplied_is_not_nonexistent",
+        "one_sdk_dispatch": true,
+        "frozen_system_and_user_exact": true,
+        "model_pinned": true
+      },
+      {
+        "case": "actor_agency_and_explicit_alternative",
+        "one_sdk_dispatch": true,
+        "frozen_system_and_user_exact": true,
+        "model_pinned": true
+      },
+      {
+        "case": "mixed_independent_requests_followup",
+        "one_sdk_dispatch": true,
+        "frozen_system_and_user_exact": true,
+        "model_pinned": true
+      },
+      {
+        "case": "correction_no_send_no_law",
+        "one_sdk_dispatch": true,
+        "frozen_system_and_user_exact": true,
+        "model_pinned": true
+      },
+      {
+        "case": "greeting_social_close",
+        "one_sdk_dispatch": true,
+        "frozen_system_and_user_exact": true,
+        "model_pinned": true
+      }
+    ]
+  },
+  "decision": "Do not promote. Narrowing responsibility and source-ID selection improved schema reliability and eliminated correction research, but five of six cases still fail an intended semantic or account-selection condition. No production changes.",
+  "score_scope": {
+    "mechanically_admitted": 6,
+    "logical_calls": 6,
+    "actual_sdk_dispatches": 6,
+    "provider_retries": 0,
+    "fully_acceptable_for_isolated_research_responsibility": 1,
+    "meaning_preserved_with_material_selection_noise": 1,
+    "consequential_semantic_errors": 4,
+    "unnecessary_pending_work_restart": 1,
+    "current_legal_investigations_preserved_on_four_substantive_cases": 4,
+    "substantive_cases_with_mixed_or_task_wording_in_account_selection": 4,
+    "independent_semantic_reviewer_exercised": false,
+    "note": "Counts concern six selected regressions, not accuracy estimates; semantic categories can overlap. No source retrieval, reranking, final response, save or browser acceptance was tested."
+  },
+  "measurement": {
+    "model": "gpt-4.1-mini-2025-04-14",
+    "measured_ledger_delta_usd": 0.005686,
+    "usage_sum_usd": 0.005684000000000001,
+    "input_tokens": 9534,
+    "output_tokens": 1169,
+    "latency_ms_each": [
+      3159,
+      2154,
+      2716,
+      2658,
+      943,
+      1772
+    ],
+    "latency_ms_total": 13402,
+    "latency_ms_median": 2406.0,
+    "prior_broader_pilot_usage_usd": 0.011176999999999992,
+    "shared_ledger_after": {
+      "maximum_usd": 5.0,
+      "charged_usd": 1.763079,
+      "measured_usd": 0.247648,
+      "reserved_or_unknown_usd": 1.515431,
+      "attempts": 94,
+      "models": [
+        {
+          "model": "gpt-4.1-mini-2025-04-14",
+          "state": "measured",
+          "attempts": 92,
+          "charged_usd": 0.247648
+        },
+        {
+          "model": "gpt-4.1-mini-2025-04-14",
+          "state": "reserved_or_unknown",
+          "attempts": 1,
+          "charged_usd": 0.425431
+        },
+        {
+          "model": "text-embedding-3-large",
+          "state": "reserved_or_unknown",
+          "attempts": 1,
+          "charged_usd": 1.09
+        }
+      ]
+    },
+    "cost_note": "Ledger rounds per call. Prior zero-dispatch harness reservation $0.425431 remains conservatively charged and is not represented as measured provider spend. Separate earlier embedding uncertainty $1.09 also remains reserved. Initial auto-review rejection dispatched nothing."
+  },
+  "cases": [
+    {
+      "name": "original_aster_held_drive",
+      "disposition": "not_acceptable",
+      "requested_legal_coverage": "Both independent deposit and drive investigations retained. Client-question drafting correctly excluded from research-only output.",
+      "improvement": "The previously held drive range a15 is selectable and selected; no exact-quote fabrication or extra client-question search work.",
+      "consequential_errors": [
+        {
+          "output": "retention of client's original design drive by equipment owner",
+          "source": "the owner's technician still has our client's original design drive; the owner now says it can retain the drive",
+          "finding": "Neutral issue title collapses the reported custodian (technician) and the party asserting retention entitlement (owner). This can change the relationship presented to retrieval."
+        }
+      ],
+      "source_selection": "Both work items select full mixed message a2 plus overlapping spans; a20 is a restriction rather than factual narrative. First item includes the entire unrelated drive request and client-question instructions via a2.",
+      "concept_quality": "Deposit concepts remain broad conversational topics rather than sharply distinct vocabulary; tenant terminology may steer movable-equipment hire toward immovable tenancy. Lien, temporary purpose and return remedies add potentially distinct investigation concepts, but no applicable lien is established.",
+      "not_counted_as_error": "Conditional enquiry into lien/loan/license concepts is allowed; it is not an assertion that an entitlement exists. No new missing-report nonexistence assertion observed here."
+    },
+    {
+      "name": "not_supplied_is_not_nonexistent",
+      "disposition": "not_acceptable",
+      "requested_legal_coverage": "Deposit and drive work both preserved; client-question drafting correctly not emitted as a separate investigation.",
+      "consequential_errors": [
+        {
+          "output": "damage claims without joint inspection report / damage claims absent inspection report",
+          "source": "no joint inspection report has been supplied",
+          "finding": "Turns absence from the supplied record into absence of the report."
+        },
+        {
+          "output": "after lease termination",
+          "source": "leased a laser cutter and returned it on 3 September",
+          "finding": "Adds termination, which returning the cutter does not itself establish."
+        }
+      ],
+      "source_selection": "Selects full mixed a2 plus overlapping a4; a5 is the request to research/draft and a6 is a restriction. Both work items therefore search task wording and the other dispute.",
+      "concept_quality": "Limited-purpose return is useful distinct vocabulary. Deposit queries overlap heavily. Calling the separate client design drive equipment accessories/digital property risks expanding or changing the identified object; the source gives possession of a drive, not a data-only dispute.",
+      "not_counted_as_error": "No assertion of a proved lien or an admission was required for failure; the report and termination errors independently fail the frozen oracle."
+    },
+    {
+      "name": "actor_agency_and_explicit_alternative",
+      "disposition": "not_acceptable",
+      "requested_legal_coverage": "Actual and expressly authorised hypothetical investigations are separately represented; no actual record change/contact claimed.",
+      "consequential_errors": [
+        {
+          "output": "effect of absence of written or emailed modification / lack of documentary evidence",
+          "source": "written service agreement not examined; no email recording extension forwarded",
+          "finding": "Actual-account enquiry does not preserve unavailable versus absent documentary material."
+        },
+        {
+          "output": "assuming express agency authorization ... without written confirmation / extension not recorded in writing or email",
+          "source": "assume ... no email recording the extension was ever created",
+          "finding": "Authorised no-email hypothetical is broadened to no written confirmation of any kind."
+        }
+      ],
+      "source_selection": "Actual work selects full prior a2 plus duplicated task a3; alternative selects full latest a5 plus duplicated task a6. Hypothetical framing is correctly retained and is not treated as selection noise.",
+      "concept_quality": "Agency authority and reliance are useful distinct concepts. The third hypothetical phrase, separation of assumptions from client denial, is an analysis instruction instead of a legal concept likely to improve corpus discovery.",
+      "not_counted_as_error": "Reviewing actual account for a comparison is allowed. Investigating authority under the explicit alternative is legitimate even though the actual client denies authority."
+    },
+    {
+      "name": "mixed_independent_requests_followup",
+      "disposition": "meaning_preserved_but_selection_not_acceptable",
+      "requested_legal_coverage": "Both interim-relief explanation and resumed passage-use investigation preserved. Ownership remains unsettled; independent-access-right denial and no court determination remain in selected original account.",
+      "consequential_errors": [],
+      "source_selection": "Interim-relief investigation selects a4 (entire latest task message) and a3 (request to explain), neither a focused factual account; a general legal explanation could select no account. Passage work selects a4/a6 task directions along with useful prior a1/a2 and current missing-plan a8. Direct account search would include the task itself and duplicate words.",
+      "concept_quality": "Permission/license, independent easement/prescriptive right and unresolved ownership are distinct, useful investigation topics. Interim-relief concepts are broad but responsive; they are hypotheses, not assertions that a right is established.",
+      "not_counted_as_error": "No notice was drafted, no source said ownership was proved, and no independent legal request was dropped. This is the strongest substantive research case; failure is selected-account scope, not an invented factual finding."
+    },
+    {
+      "name": "correction_no_send_no_law",
+      "disposition": "acceptable_for_this_isolated_research_responsibility",
+      "requested_legal_coverage": "work=[] correctly leaves summary repair and no-send restriction to interpreter/record/writer owners.",
+      "consequential_errors": [],
+      "source_selection": "No unnecessary account search or concept search.",
+      "concept_quality": "No legal research was needed.",
+      "limit": "Does not prove actual correction, persistent no-send handling or useful reply; those stages were not exercised."
+    },
+    {
+      "name": "greeting_social_close",
+      "disposition": "not_acceptable",
+      "requested_legal_coverage": "False research work created despite explicit close for today.",
+      "consequential_errors": [
+        {
+          "output": "Legal investigation on rent review and tenancy papers requirements",
+          "source": "Thanks, this is enough for today. Good night. Earlier: When I return with tenancy papers, we can look at the rent demand.",
+          "finding": "Restarts earlier conditional pending work without current request; adds paperwork-rights and rent-adjustment enquiries not requested by the close."
+        }
+      ],
+      "source_selection": "Selects only earlier a1 and ignores latest close as a control on current research. Trigger_source_id would mechanically link latest turn but cannot prove research is authorised.",
+      "concept_quality": "Search topics do not cure the absent current research need.",
+      "not_counted_as_error": "Earlier account is valid original text; failure is current-work interpretation, not unowned source identity."
+    }
+  ],
+  "general_findings": [
+    "Short ID selection removes copied-quote failures, but an exact owned source is not necessarily the relevant account; model still chooses whole mixed messages and instructions. Code must not infer semantic account purpose from IDs.",
+    "Removing general work planning helps role focus, shown by the correction control; latest-message current-work interpretation remains necessary because social closure still restarts earlier work.",
+    "Concept purposes still paraphrase factual premises, reintroducing nonexistent-report, ended-lease and absent-writing assertions despite an exact underlying account. Redundant generated factual premises remain a measured problem.",
+    "Two-three concepts per independent dispute preserves coverage but does not ensure concise formal vocabulary or distinct discovery contribution. Only a held-corpus comparison can establish relevance/recall improvement."
+  ],
+  "next_review_only": "Before another experiment, decide the narrow responsibility boundary for current research need and whether concepts need any factual-purpose paraphrase. Preserve the existing failed cases and positive correction/interim/passage distinctions. No new prompt/model call is authorised by this assessment."
+}
