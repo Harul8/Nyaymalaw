@@ -19,7 +19,7 @@ listed as history.
 
 | Folder | State |
 |---|---|
-| `nm/core_engine/` | The new engine. Holds E1, the citation engine (`citations.py`), and E2, the hybrid search (`retrieval.py`), moved in as they were. The turn, understanding, research and reply (milestone M1) are written but paused by the owner; they are not in the tree yet |
+| `nm/core_engine/` | The new engine under active SEQ.1–SEQ.9 construction. Retains citation and retrieval helpers; `conversation.py` owns the new exact transcript and atomic receipt contract. No turn is served yet. The private M1 candidate supplies reviewed reference ideas only. |
 | `nm/Archives/brain/` | The brain served until 10 October 2026. Not the current turn engine; preserved for historical work |
 | `nm/Archives/legal_brain/` | The earlier brain. Not the current turn engine; retained corpus tools and application modules still import some helpers |
 | `development_environment/archives/tests-for-archived-brains/` | Tests that guarded the archived brains, kept for reference; not collected |
@@ -38,7 +38,8 @@ ownership/context/persistence, exact case and statute identity, retrieval,
 grounded response preparation and source reading, sustained matter work,
 documents/summaries, checked computations/drafting, audio transcription, then
 later practice and closure. The earlier M1 checkpoint remains private reference
-work; this order does not resume the paused implementation.
+work. The owner resumed implementation on 10 October, with a shared $5 API
+development cap; this does not by itself activate the served turn.
 
 `work_the_file/projections_api.py` retains historical independent read helpers.
 Its former board function is explicitly retired and cannot return an empty

@@ -3,8 +3,10 @@
 ## Authority and work queue
 
 Read AGENTS.md for standing build and release safeguards. The owner's current
-instruction determines authorised scope. Core-engine implementation is paused;
-planning and cleanup do not themselves authorise resuming M1 or paid runs.
+instruction determines authorised scope. On 10 October 2026 the owner resumed
+SEQ.1–SEQ.9 implementation and approved a fresh, shared $5 API development cap.
+Build one subactivity at a time; record nonblocking deferrals. The served turn
+remains paused until the new integrated boundary is verified.
 
 Owner decisions P7 and P12 of 10 October 2026 establish these roles:
 
