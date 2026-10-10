@@ -5,7 +5,7 @@ import json
 import pytest
 
 from nm.core_engine import response_authorities
-from nm.core_engine.answer_sources import build
+from nm.core_engine.answer_sources import build, select
 from nm.core_engine.research import accept as accept_plan, retrieve
 from nm.core_engine.response_review import (
     CONTRACT, LEGACY_CONTRACT, MAX_OUTPUT, SCHEMA, _digest,
@@ -125,7 +125,9 @@ def test_whole_originals_adjacent_legal_text_and_execution_are_separate_inputs()
     payload = json.loads(prompt.user)
     assert payload["original_context"] == ctx
     assert payload["owned_execution_evidence"] == execution
-    assert payload["complete_draft_proposal"]["units"] == draft["units"]
+    shown = payload["complete_draft_proposal"]["units"]
+    assert [row["text"] for row in shown] == [row["text"] for row in draft["units"]]
+    assert [select(ref, sources) for ref in shown[0]["addresses"]] == draft["units"][0]["addresses"]
     assert "proposal" not in payload["complete_draft_proposal"]  # No duplicate draft text.
     assert payload["research_proposal_and_results"]["plan_proposal"] == record["plan"]["proposal"]
     assert {s["id"] for s in payload["legal_sources"]["passages"]} == {
@@ -135,6 +137,36 @@ def test_whole_originals_adjacent_legal_text_and_execution_are_separate_inputs()
     assert tier is Tier.ROUTINE and schema == SCHEMA and kwargs == {"max_tokens": MAX_OUTPUT}
     assert prompt.operation == "core_response_review"
     assert validate(reviewed, ctx, record, sources, draft, execution) == reviewed
+
+
+def test_review_selectors_reconstruct_full_and_short_sources_without_repeated_proof():
+    from nm.core_engine.response_review import _draft_presentation
+
+    ctx, record, sources, _ = setup(legal=True)
+    legal = next(row for row in sources.values() if row["kind"] == "judgment")
+    proposal = {"units": [{"kind": "analysis", "text": "The reported position remains conditional.",
+        "addresses": [{"source_id": ctx["latest"]["source_id"], "quote": None}],
+        "uses": [{"source_id": legal["id"], "quote": None, "role": "party_submission",
+            "speaker": "the submitting party", "treatment": "qualified",
+            "treatment_source": {"source_id": legal["id"], "quote": legal["text"][:12]}}]}]}
+    draft = accept_draft(proposal, ctx, sources)
+    originals = deepcopy((draft, sources))
+    shown = _draft_presentation(draft, sources)
+    unit, actual = shown["units"][0], draft["units"][0]
+    assert (draft, sources) == originals
+    assert (unit["id"], unit["kind"], unit["text"]) == (actual["id"], actual["kind"], actual["text"])
+    assert unit["uses"][0]["quote"] is None
+    assert unit["uses"][0]["treatment_source"]["quote"] == legal["text"][:12]
+    for projected, original in zip(unit["uses"], actual["uses"]):
+        resolved = select({k: projected[k] for k in ("source_id", "quote")}, sources)
+        assert resolved["text"] == original["text"]
+        assert (resolved["start"], resolved["end"]) == (original["start"], original["end"])
+        assert all(projected[k] == original[k] for k in ("role", "speaker", "treatment"))
+        assert select(projected["treatment_source"], sources) == original["treatment_source"]
+    model = Model(positive(draft))
+    result = review(model, ctx, record, sources, draft)
+    assert json.loads(model.calls[0][0].user)["complete_draft_proposal"] == shown
+    assert validate(result, ctx, record, sources, draft) == result
 
 
 @pytest.mark.parametrize("damage", ["omitted", "duplicate", "unknown"])

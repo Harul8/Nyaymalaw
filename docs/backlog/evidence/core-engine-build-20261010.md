@@ -563,3 +563,19 @@ reranking or semantic acceptance. An extreme repeated-source draft still overflo
 and motivates separate model-only draft deduplication. The twelve provision context
 reads took 0.722 seconds. Evidence: connected-saved-scope-remeasurement.json and
 saved-provision-groups-diagnosis.json in outputs/core-engine-build-20261010.
+
+## SEQ.4 — independent review without repeated source copies
+
+The reviewer now receives complete draft text with checked source selectors rather
+than a full repeated source record inside every address, use and treatment. Whole
+source selections use quote=null; shorter selections retain their exact words.
+The complete original conversation and legal catalogue remain separately supplied.
+All selectors reconstruct the same exact ranges, roles, speakers and treatment.
+Durable draft, authority proof and review binding are unchanged. No added call.
+
+115 focused reviewer/turn/served checks pass. Independent no-model measurement on
+the correctly scoped saved source bundle reduces the eight-unit review estimate
+from 81,572 to 69,526 tokens. An extreme 47-unit repeated-source fixture reduces
+from 241,456 to 100,206 and still properly refuses the 100,000 limit. It is a stated
+stress limit, not a passed live result. No source or draft text was shortened.
+Evidence: outputs/core-engine-build-20261010/review-presentation-remeasurement.json.
