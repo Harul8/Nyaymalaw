@@ -97,3 +97,26 @@ unrun, not replaced by the synthetic or live API evidence.
 
 Commits skip only the optional paid embedding-graph refresh via the existing
 offline hooks directory; focused source/layout/test checks are run explicitly.
+
+## SEQ.1 — shared correction and accounting
+
+Start READY: `calls.py` owns one draft correction across all stages of a turn.
+Existing transport owns its bounded physical retries; SessionCallBudget owns the
+durable dollar cap. Reuse of M1's accounting/feedback approach disclosed before
+implementation. Pass: two stages cannot each obtain a fresh correction; unknown
+usage remains unknown; feedback preserves original sources and is sent only to
+the failed operation. Counterexample: relabelling terminal withholding as a draft
+error must not reopen release or obtain another call.
+
+Build/evidence: eight focused tests pass; 51 combined context, interpretation,
+ledger and source-layout checks pass. Correction context is checked before
+dispatch without trimming. A rejected completed model object retains usage and
+cannot donate its feedback to independent review. No new routine call: normal
+interpretation is one, with one conditional repair shared with subsequent stages.
+Terminal release records block both new calls and correction. Outages do not
+consume a semantic repair or produce invented results.
+
+Conformance: isolated recovery/accounting invariant verified. The served turn
+still stays paused while the source and grounded-response prerequisites are
+connected; no temporary reply path bypasses independent review. SEQ.1 end-to-end
+acceptance remains open and will be exercised with SEQ.4's first useful answer.
