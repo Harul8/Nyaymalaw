@@ -140,3 +140,21 @@ Evidence/conformance: 41 citation and shared-pattern checks pass; changed logic
 passes focused static checks. Reader still needs collision-preserving rows/coverage,
 quote fragments still need integrity repair, and statute identity/readback plus
 chat integration remain open. No model calls or held-corpus/index mutation.
+
+## SEQ.2 — collision-preserving reader
+
+Start READY: exact lookup must retain every available case owner; legacy key
+uniqueness cannot certify that collisions were preserved upstream. Selected
+dangling relationships are unreadable, not absent. Readback must stay inside the
+held corpus. Those are deterministic reader boundaries, without a model call.
+
+Build/evidence: `citations.py` reads all rows per key, groups only by case ID and
+keeps the exact matching keys. Coverage is all_indexed_owners only for the declared
+all-pairs contract and corresponding composite-key schema. Other indexes remain
+useful with collision coverage unassessed. Seven new focused tests join existing
+checks: 48 pass. They cover multiple owners, legacy/unmarked/falsely marked schema,
+dangling references with a surviving peer, source-path escape and a missing table.
+
+Conformance: reader invariant verified offline. The producer still loses owners;
+it must be changed separately. The held index was neither rebuilt nor relabelled.
+No measured legacy match is being upgraded to complete identity or legal validity.

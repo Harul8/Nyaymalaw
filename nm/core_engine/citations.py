@@ -65,11 +65,14 @@ class CaseIdentityIndex:
     def _connect(self) -> sqlite3.Connection:
         if not self.database.is_file():
             raise IndexUnavailable(f"the case index is absent ({self.database.name})")
+        con = None
         try:
             con = sqlite3.connect(f"file:{self.database.as_posix()}?mode=ro", uri=True)
             identity = dict(con.execute("select key, value from identity"))
             held = con.execute("select count(*) from cases").fetchone()[0]
         except sqlite3.Error as exc:
+            if con is not None:
+                con.close()
             raise IndexUnavailable(f"the case index could not be opened ({exc})") from exc
         if identity.get("partial") != "no":
             con.close()
@@ -83,31 +86,48 @@ class CaseIdentityIndex:
         """What the index holds, measured from the index each time it is asked."""
         con = self._connect()
         try:
-            built = dict(con.execute("select key, value from identity")).get("built_at")
+            metadata = dict(con.execute("select key, value from identity"))
+            built = metadata.get("built_at")
+            primary = [row[1] for row in sorted(con.execute("pragma table_info(citations)"),
+                                               key=lambda row: row[5]) if row[5]]
+            coverage = ("all_indexed_owners" if metadata.get("citation_ownership") == "all_pairs_v2"
+                        and primary == ["citation_key", "case_id"] else "unassessed")
             courts = [{"court": court, "judgments": count, "from": first, "to": last}
                       for court, count, first, last in con.execute(
                           "select court, count(*), min(year), max(year) from cases "
                           "group by court order by count(*) desc")]
+        except sqlite3.Error as exc:
+            raise IndexUnavailable("the case index scope could not be read") from exc
         finally:
             con.close()
-        return {"built_at": built, "judgments": sum(c["judgments"] for c in courts), "courts": courts}
+        return {"built_at": built, "judgments": sum(c["judgments"] for c in courts),
+                "courts": courts, "collision_coverage": coverage}
 
     def judgments_for(self, keys: tuple[str, ...]) -> dict[str, dict]:
-        """Every held judgment carrying one of these exact keys, by key."""
+        """Every indexed owner of an exact key, grouped only by owned case ID."""
         con = self._connect()
         try:
             found = {}
             for key in keys:
-                row = con.execute(
+                rows = con.execute(
                     "select c.case_id, c.source_file, c.court, c.year, c.title, c.decided_on, c.bench, "
-                    "c.petitioner, c.respondent from citations x join cases c using (case_id) "
-                    "where x.citation_key = ?", (key,)).fetchone()
-                if row:
-                    found[key] = dict(zip(("case_id", "source_file", "court", "year", "title",
-                                           "decided_on", "bench", "petitioner", "respondent"), row))
-                    found[key]["held_keys"] = [k for (k,) in con.execute(
-                        "select citation_key from citations where case_id = ? order by citation_key",
-                        (row[0],))]
+                    "c.petitioner, c.respondent from citations x left join cases c using (case_id) "
+                    "where x.citation_key = ? order by c.case_id", (key,)).fetchall()
+                for row in rows:
+                    if row[0] is None:
+                        raise IndexUnavailable("a citation points to an unavailable case record")
+                    identity = row[0]
+                    if identity not in found:
+                        found[identity] = dict(zip(("case_id", "source_file", "court", "year", "title",
+                                                   "decided_on", "bench", "petitioner", "respondent"), row))
+                        found[identity]["held_keys"] = [k for (k,) in con.execute(
+                            "select distinct citation_key from citations where case_id = ? order by citation_key",
+                            (identity,))]
+                        found[identity]["matched_keys"] = []
+                    if key not in found[identity]["matched_keys"]:
+                        found[identity]["matched_keys"].append(key)
+        except sqlite3.Error as exc:
+            raise IndexUnavailable("the exact citation lookup could not be completed") from exc
         finally:
             con.close()
         return found
@@ -126,6 +146,8 @@ class CaseIdentityIndex:
 
     def text(self, judgment: dict) -> str:
         path = self.judgments.joinpath(*str(judgment["source_file"]).replace("\\", "/").split("/"))
+        if not path.resolve().is_relative_to(self.judgments.resolve()):
+            raise TextUnavailable("the judgment's source location is outside the held corpus")
         try:
             raw = path.read_bytes()
         except OSError as exc:
@@ -340,13 +362,16 @@ def _scope_statement(scope: dict) -> str:
     telangana = any("telangana" in c["court"].lower() and "pre-telangana" not in c["court"].lower()
                     for c in scope["courts"])
     missing = "" if telangana else " No Telangana High Court judgments are held."
+    collision = (" The existing index does not establish that all owners of a citation key were retained."
+                 if scope["collision_coverage"] == "unassessed" else "")
     return (f"Checked against {scope['judgments']:,} judgments: {courts}.{missing} "
-            "A citation from any other court or reporter reads as not held.")
+            "A citation from any other court or reporter reads as not held." + collision)
 
 
 def _public(judgment: dict) -> dict:
-    return {key: judgment[key] for key in ("case_id", "title", "court", "decided_on", "bench",
-                                          "held_keys", "also_held_as")}
+    return {**{key: judgment[key] for key in ("case_id", "title", "court", "decided_on", "bench",
+                                            "held_keys", "also_held_as")},
+            "matched_keys": list(judgment.get("matched_keys", []))}
 
 
 def check_citations(text: str, index: CaseIdentityIndex) -> dict:
