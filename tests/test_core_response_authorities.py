@@ -4,6 +4,7 @@ from copy import deepcopy
 import pytest
 
 from nm.core_engine import answer_sources, research, response_authorities, response_writer
+from nm.core_engine.calls import ReleaseWithheld
 from nm.core_engine.citations import CaseIdentityIndex
 from nm.core_engine.retrieval import HybridSearcher, _candidate
 from tests.test_citation_check import JUDGMENTS, _build
@@ -195,8 +196,29 @@ def test_newer_or_different_provision_text_cannot_certify_selected_snapshot(chan
     ctx, record, sources = setup()
     chosen = next(s for s in sources.values() if s["kind"] == "provision")
     draft = draft_for(ctx, sources, "The selected provision contains a qualification.", [chosen])
-    evidence = response_authorities.check(ctx, record, sources, draft, provision_reader=Reader(record, change=change))
-    assert evidence["units"][0]["selected_provisions"][0]["state"] == "different_snapshot"
+    with pytest.raises(ReleaseWithheld, match="G-GROUND"):
+        response_authorities.check(ctx, record, sources, draft,
+                                  provision_reader=Reader(record, change=change))
+
+
+def test_saved_pre_guard_mismatch_evidence_replays_without_fresh_admission_or_lookup():
+    ctx, record, sources = setup()
+    chosen = next(s for s in sources.values() if s["kind"] == "provision")
+    draft = draft_for(ctx, sources, "The selected provision contains a qualification.", [chosen])
+    saved = response_authorities.check(ctx, record, sources, draft,
+                                      provision_reader=Reader(record))
+    # Reconstruct the exact former evidence shape, which recorded this mismatch
+    # before the fresh-admission guard existed. Replay must not rewrite history.
+    reader = Reader(record, change="text")
+    saved["readbacks"] = {key: reader.read_provision(row["act_id"], row["reference"])
+                         for key, row in saved["readbacks"].items()}
+    reports = {unit["unit_id"]: unit["case_lookup"] for unit in saved["units"]}
+    saved["units"] = response_authorities._assemble(draft, sources,
+        response_authorities._raw_sources(record), reports, saved["readbacks"])
+    saved["bound_digest"] = response_authorities._digest(
+        {key: value for key, value in saved.items() if key != "bound_digest"})
+    assert saved["units"][0]["selected_provisions"][0]["state"] == "different_snapshot"
+    assert response_authorities.validate(saved, ctx, record, sources, draft) == saved
 
 
 def test_unavailable_provision_read_is_explicit_and_peers_are_kept():

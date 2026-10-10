@@ -9,12 +9,14 @@ from __future__ import annotations
 from copy import deepcopy
 
 from nm.core_engine import answer_sources, response_writer
+from nm.core_engine.calls import ReleaseWithheld
 from nm.core_engine.citations import CONTRACT as CITATION_CONTRACT
 from nm.core_engine.citations import IndexUnavailable, check_citations
 from nm.core_engine.retrieval import SearchUnavailable, _candidate, _digest
 from nm.shared.citation_contracts import (
     ANY_PROVISION, ProvisionKeyState, bind_provision_key, find_reporter_citations,
 )
+from nm.shared.gates_contracts import Recovery, Response, Scope, gate
 
 CONTRACT = "core_response_authorities_v1"
 
@@ -241,6 +243,16 @@ def check(context, research_record, sources, draft, *, case_index=None, provisio
     record = {"contract": CONTRACT, "dependency_digest": binding,
               "units": _assemble(draft, sources, raw, reports, readbacks), "readbacks": readbacks}
     record["bound_digest"] = _digest(record)
+    # Fresh admission cannot use a positive semantic verdict to override an
+    # exact selected-source/readback mismatch. A prose repair cannot fix the
+    # source identity; unresolved lookups are not positive mismatches.
+    if any(source["state"] == "different_snapshot"
+           for unit in record["units"] for source in unit["selected_provisions"]):
+        owned = gate("G-GROUND")
+        if (owned.response, owned.scope, owned.recovery) != (
+                Response.WITHHOLD, Scope.TURN, Recovery.NONE):
+            raise RuntimeError("Authority admission no longer matches its grounding gate")
+        raise ReleaseWithheld("G-GROUND: Selected provision differs from its exact source readback")
     return record
 
 

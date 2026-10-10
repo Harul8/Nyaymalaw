@@ -505,3 +505,19 @@ version. Ten focused UI checks pass, including the real serialized send envelope
 The rendering fixture also uses the current inline-link module and checks that no
 source footer reappears. No model call or server contract changed. Actual controlled
 browser acceptance remains unavailable because the browser-control runtime fails.
+
+## SEQ.2/4 — fresh source-readback admission
+
+An exact provision readback that positively differs from the selected source now
+fires G-GROUND before semantic review or saving. A positive model verdict cannot
+override that source-identity mismatch. The owning change is confined to fresh
+authority checking; saved v1/v2 evidence still replays under its original contract.
+Unavailable, ambiguous and not-held lookups are not treated as proven mismatches,
+and a judgment mentioning a different authority remains a distinct review question.
+
+26 authority/admission checks plus 136 dependent review/render/turn/served checks
+pass. The served counterexample returns not_committed, refuses a same-ID retry
+without another dispatch, and never calls the scripted positive reviewer. These
+tests establish the mechanical boundary, not real-model accuracy. No extra model
+call; the mismatch stops after understanding, planning and drafting. Visible
+citation-check statuses and actual browser acceptance remain open.
