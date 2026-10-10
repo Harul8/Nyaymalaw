@@ -104,13 +104,24 @@ unsupported additions, omissions and contradictions. Fixed code-authored status
 notices require mechanical truth checks, not an additional model call.
 Code separately enforces ownership, references, relevant effect evidence and
 persistence; reviewer acceptance cannot bypass those controls.
-Every fresh public response block selects a closed evidence expression. The
+Written answers and summaries are the exception, by owner decision P10
+(10 October 2026): the model writes them fluently in good professional language,
+using only retrieved law and material the advocate supplied. Every sentence that
+states law, a holding or a sourced fact carries the tag of the passage it rests
+on; code refuses unknown tags, renders tags as citations that open the saved
+passage, checks every quotation verbatim and runs every citation through the
+citation and statute checks; an independent call confirms each tagged sentence
+against its passage; a flagged sentence is rewritten once within the bounded
+correction or withheld. The writer never supplies citation anchors, review fields
+or rendering seals. The specification is S3 on the Advocate build plan.
+
+Every other fresh public response block selects a closed evidence expression. The
 writer supplies owned selectors and applicable metadata, never response text,
 altered quotations, citation anchors, independent review fields or rendering
-seals. This applies equally to accounts, assessments, questions, next steps,
-limitations, acknowledgements and completion blocks; a different kind, linked
-follow-up or delivery mode cannot reopen authored prose. Reject forbidden fields
-within the existing bounded correction, preserving valid independent peers.
+seals. This applies equally to accounts, questions, next steps, limitations,
+acknowledgements and completion blocks; a different kind, linked follow-up or
+delivery mode cannot reopen authored prose. Reject forbidden fields within the
+existing bounded correction, preserving valid independent peers.
 
 Code renders complete selected original words with their speaker, checked legal
 propositions and passages with their conditions, and fixed questions, proposed
