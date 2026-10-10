@@ -1277,3 +1277,14 @@ used. Cache buckets must be complete and disjoint. Measured token-bound breaches
 are recorded even when discounts keep dollars below reservation, then block new
 spending. 72 focused new/legacy budget tests pass on the applied source. No paid
 request or live ledger mutation was used to establish these mechanics.
+
+Migration piece 5 uses the Responses API for the two approved releases, with Luna
+reasoning=none and Sol reasoning=low. Exact counting sends the same full model
+input/schema under the existing permission check when the development cap is
+enabled; this adds a non-generative HTTP request, not a model generation. Automatic
+prefix caching remains enabled. Cached reads/writes and actual model usage settle
+before output admission; incomplete, refused or ambiguous output cannot erase cost
+or become an accepted response. 125 focused adapter, quarantine and ledger checks
+pass against the applied files. A provider-count or pricing failure preserves the
+existing fail-closed spending contract. No comparison or browser generation has
+yet used this new transport.

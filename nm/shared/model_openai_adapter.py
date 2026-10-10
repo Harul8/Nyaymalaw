@@ -18,6 +18,7 @@ import sys
 import time
 from collections.abc import Callable, Mapping
 from typing import Any
+from types import SimpleNamespace
 
 from nm.shared.budget_contracts import Completion
 from nm.shared.external_ai_contracts import ModelPermissionRefused
@@ -28,6 +29,7 @@ from nm.shared.model_config import (
     ModelConfig,
     TierConfig,
     require_priced_snapshot,
+    token_pricing,
 )
 from nm.shared.model_port import (
     ConfigurationError,
@@ -49,7 +51,7 @@ from nm.shared.model_port import (
     require_schema,
     require_tool_calls,
 )
-from nm.shared.model_transport import request_with_retries
+from nm.shared.model_transport import normalise_error, request_with_retries
 from nm.shared.text_contracts import blank
 
 #: HOW A PROVIDER SAYS IT STOPPED, mapped to what that means for legal work.
@@ -61,6 +63,10 @@ from nm.shared.text_contracts import blank
 #: AN UNRECOGNISED REASON IS NOT ESTABLISHED, never complete. A provider that
 #: adds a stop reason tomorrow must not have it read as "finished" by a table
 #: written today.
+# These checked releases use Responses for exact input accounting and explicit
+# reasoning settings. Other model transports retain their existing contract.
+_RESPONSES_EFFORT = {"gpt-6-luna": "none", "gpt-6.1-sol": "low"}
+
 _FINISH_REASONS: dict[str, Completion] = {
     "stop": Completion.COMPLETE,
     "end_turn": Completion.COMPLETE,
@@ -176,6 +182,8 @@ class OpenAIModelAdapter:
                   max_tokens: int | None = None) -> ToolCallResult:
         guard_tool_budget(prompt, tools, tier, messages, max_tokens)
         cfg = self._cfg(tier)
+        if cfg.model == "gpt-6.1-sol":
+            raise ConfigurationError("This model does not support Chat Completions tool calling")
         request_budget, max_tokens = self._budget_for(cfg.model, max_tokens)
         started = time.perf_counter()
         wire = []
@@ -203,6 +211,8 @@ class OpenAIModelAdapter:
                   "tool_choice": "required", "parallel_tool_calls": False}
         if max_tokens is not None:
             kwargs["max_completion_tokens"] = max_tokens
+        if cfg.model == "gpt-6-luna":
+            kwargs["reasoning_effort"] = "none"
         response, retries = self._retrying_counted(
             lambda: self._client.chat.completions.create(**kwargs), model=cfg.model,
             call_budget=request_budget)
@@ -257,17 +267,28 @@ class OpenAIModelAdapter:
             raise ProviderUnavailable(
                 "The provider did not establish request usage; cost is unknown")
         details = getattr(usage, "prompt_tokens_details", None)
-        cached = getattr(details, "cached_tokens", 0)
-        if type(cached) is not int or not 0 <= cached <= incoming:
+        pricing = token_pricing(cfg.model)
+        write_priced = pricing.write_rate is not None
+        cached = getattr(details, "cached_tokens", None if write_priced else 0)
+        written = getattr(details, "cache_write_tokens", None if write_priced else 0)
+        if (type(cached) is not int or type(written) is not int
+                or min(cached, written) < 0 or cached + written > incoming
+                or (written and not write_priced)):
+            # New write-priced models cannot establish actual spend without
+            # both disjoint counters. The durable ledger keeps its reservation.
+            if write_priced or written:
+                raise ProviderUnavailable(
+                    "The provider did not establish cache read/write usage; cost is unknown")
             raise ProviderUnavailable(
                 "The provider returned invalid cached-token accounting",
                 usage=Usage(incoming, outgoing, cfg.cost(incoming, outgoing),
                             provider_extra={"response_id": str(getattr(response, "id", "")),
                                             "cache_accounting_invalid": True}))
-        return Usage(incoming, outgoing, cfg.cost(incoming, outgoing),
-                     cached,
+        return Usage(incoming, outgoing,
+                     cfg.cost(incoming, outgoing, cached_tokens=cached,
+                              cache_write_tokens=written), cached,
                      {"response_id": str(getattr(response, "id", "")),
-                      "usage_established": usage is not None})
+                      "cache_write_tokens": written, "usage_established": True})
 
     def embed(self, texts: tuple[str, ...]) -> EmbeddingResult:
         if self._before_dispatch is not None or self._call_budget is not None:
@@ -299,7 +320,9 @@ class OpenAIModelAdapter:
         # the budget a provider concept and let a prompt that does not port
         # pass locally.
         guard_budget(prompt, tier)
-        request_budget, max_tokens = self._budget_for(cfg.model, max_tokens)
+        request_budget = None
+        if cfg.model not in _RESPONSES_EFFORT:
+            request_budget, max_tokens = self._budget_for(cfg.model, max_tokens)
         started = time.perf_counter()
 
         messages = []
@@ -333,9 +356,12 @@ class OpenAIModelAdapter:
                                 "schema": on_the_wire(schema)},
             }
 
-        resp, retries = self._retrying_counted(
-            lambda: self._client.chat.completions.create(**kwargs), model=cfg.model,
-            call_budget=request_budget)
+        if cfg.model in _RESPONSES_EFFORT:
+            resp, retries = self._responses_request(messages, cfg, schema, max_tokens)
+        else:
+            resp, retries = self._retrying_counted(
+                lambda: self._client.chat.completions.create(**kwargs), model=cfg.model,
+                call_budget=request_budget)
 
         receipt = self._usage(resp, cfg)
 
@@ -345,6 +371,9 @@ class OpenAIModelAdapter:
             error.retries = retries
             return error
 
+        response_error = getattr(resp, "normalization_error", None)
+        if response_error is not None:
+            raise fail(response_error)
         choice = resp.choices[0]
         completion = _completion_of(getattr(choice, "finish_reason", None))
         if completion is Completion.FILTERED:
@@ -416,6 +445,104 @@ class OpenAIModelAdapter:
             completion=completion,
         )
 
+    @staticmethod
+    def _responses_receipt(response):
+        """Map provider-owned accounting only; output cannot affect settlement."""
+        usage = getattr(response, "usage", None)
+        return SimpleNamespace(
+            id=getattr(response, "id", None), model=getattr(response, "model", None),
+            usage=SimpleNamespace(
+                prompt_tokens=getattr(usage, "input_tokens", None),
+                completion_tokens=getattr(usage, "output_tokens", None),
+                prompt_tokens_details=getattr(usage, "input_tokens_details", None)))
+
+    @classmethod
+    def _responses_as_chat(cls, response):
+        """Retain the existing admission/quarantine boundary after settlement."""
+        receipt = cls._responses_receipt(response)
+        receipt.normalization_error = None
+        status = getattr(response, "status", None)
+        incomplete = getattr(response, "incomplete_details", None)
+        reason = getattr(incomplete, "reason", None)
+        finish = None
+        text = ""
+        refusal = None
+        if status == "incomplete" and reason == "max_output_tokens":
+            finish = "length"
+        elif status == "incomplete" and reason == "content_filter":
+            finish = "content_filter"
+        elif status == "failed" or getattr(response, "error", None) is not None:
+            receipt.normalization_error = ProviderUnavailable("The provider response failed")
+        elif status != "completed" or incomplete is not None:
+            receipt.normalization_error = SchemaViolation(
+                "The provider did not establish a completed response")
+        else:
+            output = getattr(response, "output", None)
+            messages = []
+            if isinstance(output, list):
+                messages = [item for item in output if getattr(item, "type", None) == "message"]
+            if (not isinstance(output, list) or len(messages) != 1
+                    or any(getattr(item, "type", None) not in {"message", "reasoning"}
+                           for item in output)
+                    or getattr(messages[0], "role", None) != "assistant"
+                    or getattr(messages[0], "status", None) != "completed"):
+                receipt.normalization_error = SchemaViolation(
+                    "The provider response has an ambiguous or unsupported output shape")
+            else:
+                content = getattr(messages[0], "content", None)
+                if (not isinstance(content, list) or not content
+                        or any(getattr(part, "type", None) not in {"output_text", "refusal"}
+                               for part in content)):
+                    receipt.normalization_error = SchemaViolation(
+                        "The provider response did not establish text output")
+                elif any(getattr(part, "type", None) == "refusal" for part in content):
+                    finish, refusal = "content_filter", "Provider refused the response"
+                elif any(not isinstance(getattr(part, "text", None), str) for part in content):
+                    receipt.normalization_error = SchemaViolation(
+                        "The provider response text is malformed")
+                else:
+                    text = "".join(part.text for part in content)
+                    finish = "stop"
+        receipt.choices = [SimpleNamespace(
+            finish_reason=finish,
+            message=SimpleNamespace(content=text, refusal=refusal, tool_calls=None))]
+        return receipt
+
+    def _responses_request(self, messages, cfg, schema, max_tokens):
+        kwargs = {"model": cfg.model, "input": messages, "store": False,
+                  "reasoning": {"effort": _RESPONSES_EFFORT[cfg.model]},
+                  "truncation": "disabled"}
+        if schema is not None:
+            kwargs["text"] = {"format": {"type": "json_schema", "name": "nm_result",
+                                         "strict": True, "schema": on_the_wire(schema)}}
+        request_budget = self._call_budget
+        if isinstance(request_budget, SessionCallBudget):
+            # This is a non-generative provider request, with the identical
+            # model input/format. It transmits matter text, so permission is
+            # checked before counting and again before every generation attempt.
+            count_payload = {key: value for key, value in kwargs.items() if key != "store"}
+            if self._before_dispatch is not None:
+                self._before_dispatch()
+            try:
+                counted = self._client.responses.input_tokens.count(**count_payload)
+            except Exception as exc:
+                normalised = normalise_error(exc)
+                if normalised is exc:
+                    raise
+                raise normalised from exc
+            incoming = getattr(counted, "input_tokens", None)
+            if (getattr(counted, "object", None) != "response.input_tokens"
+                    or type(incoming) is not int or incoming <= 0):
+                raise ProviderUnavailable("The provider did not establish input token count")
+            request_budget, max_tokens = request_budget.for_request(
+                cfg.model, max_tokens, input_upper_bound=incoming)
+        if max_tokens is not None:
+            kwargs["max_output_tokens"] = max_tokens
+        response, retries = self._retrying_counted(
+            lambda: self._client.responses.create(**kwargs), model=cfg.model,
+            call_budget=request_budget, ledger_response=self._responses_receipt)
+        return self._responses_as_chat(response), retries
+
     def _retrying(self, fn):
         return self._retrying_counted(fn)[0]
 
@@ -424,9 +551,11 @@ class OpenAIModelAdapter:
             return self._call_budget.for_request(model, max_tokens)
         return self._call_budget, max_tokens
 
-    def _retrying_counted(self, fn, *, model: str = "", call_budget=None) -> tuple[Any, int]:
+    def _retrying_counted(self, fn, *, model: str = "", call_budget=None,
+                          ledger_response=lambda response: response) -> tuple[Any, int]:
         """Bounded retry with backoff. Retries are COUNTED and returned --
         an invisible retry is an invisible cost."""
         return request_with_retries(fn, model=model, before_dispatch=self._before_dispatch,
                                     call_budget=call_budget if call_budget is not None
-                                    else self._call_budget)
+                                    else self._call_budget,
+                                    ledger_response=ledger_response)
