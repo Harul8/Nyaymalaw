@@ -127,6 +127,63 @@ def test_oversized_identity_never_silently_truncates_body_or_escapes_search(tmp_
     assert retrieval.validate_search(result, QUERIES) == result
 
 
+def previous_anchored_windows(text, tokenizer, capacity, anchor):
+    """Frozen pre-repair preparation, for parity wherever the complete anchor fitted."""
+    room = capacity - len(tokenizer.encode(anchor, add_special_tokens=False)) - 8
+    while True:
+        pieces = [anchor + part for _, _, part in retrieval.token_windows(text, tokenizer, room)]
+        overflow = max(0, max(len(tokenizer.encode(p, add_special_tokens=False)) - capacity
+                              for p in pieces))
+        if not overflow:
+            return pieces
+        room -= overflow
+
+
+@pytest.mark.parametrize("anchor", ["Owner\n", "Exact Document Name\n4\nExact Section Heading\n",
+                                    "Act\n4\nHeading with\n\nblank line\n", "Act\n4\nHeading\n\n"])
+@pytest.mark.parametrize("capacity", [348, 383, 508])
+def test_anchors_that_fit_keep_exactly_their_previous_windows(anchor, capacity):
+    tokenizer = Predictor().tokenizer
+    body = "\n  " + " ".join(f"word_{i}" for i in range(900)) + " last words  "
+    assert (retrieval._anchored_windows(body, tokenizer, capacity, anchor)
+            == previous_anchored_windows(body, tokenizer, capacity, anchor))
+
+
+def test_a_whole_provision_in_the_heading_keeps_identity_and_every_body_word():
+    """Measured 10 Oct 2026: a 1,570-character heading left no room and unranked every peer."""
+    tokenizer = Predictor().tokenizer
+    heading = "Short first heading line\n" + " ".join(f"heading_{i}" for i in range(400))
+    anchor = f"Exact Document Name\n18\n{heading}\n"
+    kept = "Exact Document Name\n18\nShort first heading line\n"
+    body = "\n  " + " ".join(f"source_{i}" for i in range(803)) + "\nచివరి షరతు  "
+    with pytest.raises(retrieval.SearchUnavailable, match="no room"):
+        previous_anchored_windows(body, tokenizer, 383, anchor)
+    windows = retrieval._anchored_windows(body, tokenizer, 383, anchor)
+    covered = set()
+    for window in windows:
+        assert window.startswith(kept) and "heading_0" not in window
+        assert len(tokenizer.encode(window, add_special_tokens=False)) <= 383
+        start = body.index(window[len(kept):])
+        covered.update(range(start, start + len(window) - len(kept)))
+    assert covered == set(range(len(body)))
+
+
+def test_one_overlong_heading_no_longer_unranks_its_peers(tmp_path):
+    model = Predictor()
+    collection = Collection()
+    collection.rows[0]["section_title"] = " ".join(f"heading_{i}" for i in range(600))
+    collection.rerank = local(tmp_path, model).rerank
+    result = retrieval.HybridSearcher({"provision": collection, "judgment": Collection("judgment")}).search(QUERIES)
+    assert result["state"] == "ready" and len(model.calls) == 1
+    provisions = [c for c in result["candidates"] if c["kind"] == "provision"]
+    assert len(provisions) == 2 and all(c["score"] is not None for c in provisions)
+    long_windows = [p for _, p in model.calls[0][0] if p.startswith("Act\n4\n")]
+    assert long_windows and not any("heading_0" in p for p in long_windows)
+    original = next(c for c in provisions if c["position"] == 0)
+    assert original["source"]["section_title"] == collection.rows[0]["section_title"]
+    assert retrieval.validate_search(result, QUERIES) == result
+
+
 def test_anchored_prediction_bound_still_counts_every_repeated_source(tmp_path, monkeypatch):
     monkeypatch.setattr(retrieval, "MAX_RERANK_PAIRS", 2)
     model = Predictor()

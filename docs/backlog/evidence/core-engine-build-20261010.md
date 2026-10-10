@@ -1674,3 +1674,37 @@ Ten new focused tests state the rule (`tests/test_search_failures_are_diagnosabl
 and would fail without the change; all 200 tests in the 14 files that import the
 retrieval module pass. No live search, model call or browser check was run. The
 next failure on the served path will name its cause in the server log.
+
+### SEQ.3 overlong provision headings no longer unrank a whole search
+
+A local ranking experiment on the 22 frozen post-repair searches stopped on a
+real search-stage failure: `bare_act reranking failed: The local model has no
+room for attributable windows`. Measured cause: 708 of 414,710 held provision
+rows (228 documents; 554 India Code-style copies, 154 other copies) carry the
+provision's own opening words in the heading field, so title plus heading exceeds
+1,000 characters; 203 exceed 1,300. In every one of the 708 the heading words also
+appear in the stored provision text. The reproduced unit was the Companies
+(Accounting Standards) Rules, 2006 s.18: a 1,570-character heading gave a
+372-token rerank anchor against 383 tokens of room. Because rerank scores one
+batch per corpus kind, the single failure returned every provision in that search
+unranked in pool order. Other affected documents include the Andhra Pradesh Civil
+Services (CCA) Rules, the Banking Regulation Act, the Motor Vehicles Act and the
+Board of Revenue Standing Orders.
+
+Invariant: an optional heading cannot make ranking impossible for its source or
+its peers. Only `nm/core_engine/retrieval.py` changes: when the complete anchor
+leaves no attributable room, it gives up trailing lines (the optional heading
+first) and keeps its leading identity lines; body words are never cut. Every
+anchor that fitted before produces byte-identical windows, so searches that
+succeeded before, saved records and replay do not change. An oversized document
+title still fails explicitly as before. The stored corpus is unchanged; repairing
+the heading field would need a separately authorised re-ingestion.
+
+Checks run: 14 new focused tests (byte parity with the frozen previous preparation
+for fitting anchors at three capacities, the measured overlong-heading shape, and
+a search where one overlong heading previously unranked its peers); all 214 tests
+in the 14 files that import the retrieval module pass; undefined-name check clean;
+the failing real search re-prepared with the real tokenizer now has zero
+no-room units. Not run: the full suite, live search, model calls or browser checks.
+The intermittent DC01 reranking failure reported earlier had 92 prepared windows
+and no no-room unit, so this repair does not explain it; it remains unresolved.

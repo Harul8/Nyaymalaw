@@ -34,6 +34,7 @@ PREVIOUS_CONTRACT = "hybrid_retrieval_v3"
 PARENT_TREE_CONTRACT = "hybrid_retrieval_v2"
 LEGACY_CONTRACT = "hybrid_retrieval_v1"
 MAX_RERANK_PAIRS = 4096
+WINDOW_OVERLAP = 32
 MAX_CONTEXT_SEGMENTS = 500
 log = logging.getLogger(__name__)
 
@@ -616,7 +617,7 @@ class LocalCollection:
                              for p in positions if p in rows]}
 
 
-def token_windows(text, tokenizer, capacity, overlap=32):
+def token_windows(text, tokenizer, capacity, overlap=WINDOW_OVERLAP):
     """Cover the entire original text, including tails, with exact character offsets."""
     if capacity <= overlap:
         raise SearchUnavailable("The local model has no room for attributable windows")
@@ -646,17 +647,28 @@ def token_windows(text, tokenizer, capacity, overlap=32):
 
 
 def _anchored_windows(text, tokenizer, capacity, anchor):
-    """Keep owned document identity on every exact body window without truncation."""
+    """Keep owned document identity on every exact body window without truncation.
+
+    Some held rows carry a whole provision in their heading field. An anchor that
+    leaves no attributable room gives up trailing lines, the optional heading first,
+    and keeps its leading identity lines; body words are never cut. Anchors that
+    already fitted produce exactly the same windows as before.
+    """
     if not anchor:
         return [part for _, _, part in token_windows(text, tokenizer, capacity)]
-    room = capacity - len(tokenizer.encode(anchor, add_special_tokens=False)) - 8
-    while True:
-        pieces = [anchor + part for _, _, part in token_windows(text, tokenizer, room)]
-        overflow = max(0, max(len(tokenizer.encode(part, add_special_tokens=False)) - capacity
-                              for part in pieces))
-        if not overflow:
-            return pieces
-        room -= overflow
+    lines = anchor.removesuffix("\n").split("\n")
+    while lines:
+        shortened = "\n".join(lines) + "\n" if anchor.endswith("\n") else "\n".join(lines)
+        room = capacity - len(tokenizer.encode(shortened, add_special_tokens=False)) - 8
+        while room > WINDOW_OVERLAP:
+            pieces = [shortened + part for _, _, part in token_windows(text, tokenizer, room)]
+            overflow = max(0, max(len(tokenizer.encode(part, add_special_tokens=False)) - capacity
+                                  for part in pieces))
+            if not overflow:
+                return pieces
+            room -= overflow
+        lines.pop()
+    raise SearchUnavailable("The local model has no room for attributable windows")
 
 
 def _rerank_anchor(checked_source):
