@@ -60,9 +60,9 @@ def test_complete_context_and_all_neighbouring_legal_words_reach_one_routine_cal
     assert payload["original_context"] == ctx
     assert payload["execution_evidence"] == {"operations": []}
     assert payload["interpretation_proposal"] == {"units": []}
-    assert {s["id"] for s in payload["held_passages"]} == {
+    assert {s["id"] for s in payload["held_passages"]["passages"]} == {
         s["id"] for s in sources.values() if s["kind"] in {"provision", "judgment"}}
-    assert any("Court rejected" in s["text"] for s in payload["held_passages"])
+    assert any("Court rejected" in s["text"] for s in payload["held_passages"]["passages"])
     assert payload["research"]["plan_proposal"] == record["plan"]["proposal"]
     assert tier is Tier.ROUTINE and kwargs == {"max_tokens": MAX_OUTPUT} and schema == SCHEMA
     assert prompt.operation == "core_response_writer"

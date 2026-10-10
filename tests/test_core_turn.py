@@ -48,9 +48,9 @@ class ScriptedModel:
             uses = []
             text = "Hello. How can I help?"
             if self.legal:
-                source = next(s for s in data["held_passages"] if s["kind"] == "judgment"
+                source = next(s for s in data["held_passages"]["passages"] if s["kind"] == "judgment"
                               and "Counsel submitted" in s["text"])
-                treatment = next(s for s in data["held_passages"] if "Court rejected" in s["text"])
+                treatment = next(s for s in data["held_passages"]["passages"] if "Court rejected" in s["text"])
                 uses = [{"source_id": source["id"], "quote": source["text"],
                     "role": "party_submission", "speaker": "Counsel", "treatment": "rejected",
                     "treatment_source": {"source_id": treatment["id"], "quote": treatment["text"]}}]

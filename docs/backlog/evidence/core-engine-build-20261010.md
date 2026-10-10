@@ -432,3 +432,11 @@ Unknown sources, damaged quotations, unrelated rejected units and verdict mismat
 remain refused. This admits a negative review for bounded repair, never an answer.
 54 focused checks pass; the saved nonexistence probe now reconstructs a valid rejected
 review without another API call. Semantic improvement still needs remeasurement.
+
+Model presentation now lists identical coverage evidence once and references it from
+each exact passage. Complete canonical sources, admission dependencies and historical
+replay stay unchanged. On the saved held-corpus probe, 56 passages and all 56,630 text
+characters remain; catalogue JSON falls from 260,531 to 157,196 characters (39.66%).
+Estimated writer input plus output allowance falls from 75,593 to 49,759 tokens.
+107 source/writer/reviewer and 50 turn/served checks pass. No source text was removed,
+no model call was added, and this is not a fresh semantic or latency measurement.

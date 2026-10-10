@@ -110,10 +110,10 @@ def test_whole_originals_adjacent_legal_text_and_execution_are_separate_inputs()
     assert payload["complete_draft_proposal"]["units"] == draft["units"]
     assert "proposal" not in payload["complete_draft_proposal"]  # No duplicate draft text.
     assert payload["research_proposal_and_results"]["plan_proposal"] == record["plan"]["proposal"]
-    assert {s["id"] for s in payload["legal_sources"]} == {
+    assert {s["id"] for s in payload["legal_sources"]["passages"]} == {
         s["id"] for s in sources.values() if s["kind"] in {"provision", "judgment"}}
-    assert any("Court rejected" in s["text"] for s in payload["legal_sources"])
-    assert all(s["kind"] in {"provision", "judgment"} for s in payload["legal_sources"])
+    assert any("Court rejected" in s["text"] for s in payload["legal_sources"]["passages"])
+    assert all(s["kind"] in {"provision", "judgment"} for s in payload["legal_sources"]["passages"])
     assert tier is Tier.ROUTINE and schema == SCHEMA and kwargs == {"max_tokens": MAX_OUTPUT}
     assert prompt.operation == "core_response_review"
     assert validate(reviewed, ctx, record, sources, draft, execution) == reviewed

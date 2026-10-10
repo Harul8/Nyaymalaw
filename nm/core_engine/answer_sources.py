@@ -7,6 +7,7 @@ evidence about what a court decided.
 from __future__ import annotations
 
 from copy import deepcopy
+import json
 
 from nm.core_engine import research
 from nm.core_engine.retrieval import _candidate, _digest
@@ -109,5 +110,27 @@ def select(reference, sources):
 
 
 def presentation(sources):
-    """Only legal candidates: the complete original conversation is supplied apart."""
-    return [deepcopy(row) for row in sources.values() if row["kind"] in _LEGAL]
+    """Model-only catalogue; exact passages share coverage without copying its proof.
+
+    Original conversation is supplied apart. Complete canonical sources remain the
+    admission and replay owner; these local coverage IDs never replace source tags.
+    """
+    passages, coverage_by_id, coverage_keys = [], {}, {}
+    for row in sources.values():
+        if row["kind"] not in _LEGAL:
+            continue
+        passage = deepcopy(row)
+        coverage = passage.pop("coverage")
+        passage["coverage_ids"] = []
+        for entry in coverage:
+            # Compare every field, including gaps and their full explanations. No
+            # partial key or digest collision may merge distinct coverage evidence.
+            key = json.dumps(entry, sort_keys=True, ensure_ascii=False,
+                             separators=(",", ":"), allow_nan=False)
+            if key not in coverage_keys:
+                identity = f"coverage:{len(coverage_by_id) + 1}"
+                coverage_keys[key] = identity
+                coverage_by_id[identity] = entry
+            passage["coverage_ids"].append(coverage_keys[key])
+        passages.append(passage)
+    return {"passages": passages, "coverage_by_id": coverage_by_id}

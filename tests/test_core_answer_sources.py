@@ -86,7 +86,8 @@ def test_presentation_preserves_exact_provenance_but_does_not_promote_parser_rol
     assert CONTRACT == "core_answer_sources_v1"
     assert [sources[r["source_id"]]["kind"] for r in history] == ["account", "nm_context", "service"]
     assert sources["t1:advocate"]["digest"] == _digest(history[0])
-    legal = presentation(sources)
+    displayed = presentation(sources)
+    legal = displayed["passages"]
     assert len(legal) == 4 and {r["kind"] for r in legal} == {"provision", "judgment"}
     assert all(r["record_role"] == "retrieved_candidate" and r["speaker"] is None for r in legal)
     assert "paragraph_type" not in json.dumps(legal) and "court_holding" not in json.dumps(legal)
@@ -157,8 +158,9 @@ def test_partial_context_keeps_readable_sources_and_explicit_coverage_gaps():
     ctx, record = fixture(judgment=AdjacentJudgment(bounded=True))
     sources = build(ctx, record)
     assert record["state"] == "partial"
-    for row in presentation(sources):
-        coverage = row["coverage"][0]
+    displayed = presentation(sources)
+    for row in displayed["passages"]:
+        coverage = displayed["coverage_by_id"][row["coverage_ids"][0]]
         if row["kind"] == "judgment":
             assert coverage["bounded"] is True and coverage["unread_positions"] == [2]
             assert coverage["gaps"] and coverage["selected_source_id"] in sources
@@ -172,7 +174,59 @@ def test_search_failure_preserves_original_sources_without_inventing_legal_cover
     record = retrieve(plan, None, ctx)
     sources = build(ctx, record)
     assert list(sources) == [ctx["latest"]["source_id"]]
-    assert presentation(sources) == [] and record["failures"]
+    assert presentation(sources) == {"passages": [], "coverage_by_id": {}}
+    assert record["failures"]
+
+
+def test_presentation_deduplicates_full_coverage_without_changing_canonical_proof():
+    ctx, record = fixture(work_count=2, judgment=AdjacentJudgment(bounded=True))
+    sources = build(ctx, record)
+    original, proof = deepcopy(sources), _digest(sources)
+    displayed = presentation(sources)
+    rows, catalogue = displayed["passages"], displayed["coverage_by_id"]
+    originals = [row for row in sources.values() if row["kind"] in {"provision", "judgment"}]
+    assert {row["id"] for row in rows} == {row["id"] for row in originals}
+    assert len(catalogue) < sum(len(row["coverage"]) for row in originals)
+    assert len(catalogue) == len({json.dumps(entry, sort_keys=True) for entry in catalogue.values()})
+    for row in rows:
+        reconstructed = deepcopy(row)
+        reconstructed["coverage"] = [deepcopy(catalogue[identity])
+                                      for identity in reconstructed.pop("coverage_ids")]
+        assert reconstructed == sources[row["id"]]
+    assert sources == original and _digest(sources) == proof
+    rows[0]["context_ids"].append("presentation-only")
+    next(iter(catalogue.values()))["gaps"].append({"detail": "presentation-only"})
+    assert sources == original and _digest(sources) == proof
+
+
+def test_coverage_dedup_keeps_distinct_missing_fields_gaps_and_work_associations():
+    ctx, record = fixture(judgment=AdjacentJudgment(bounded=True))
+    sources = build(ctx, record)
+    legal = next(row for row in sources.values() if row["kind"] == "judgment")
+    original = deepcopy(legal["coverage"][0])
+    variants = [deepcopy(original) for _ in range(5)]
+    variants[0].pop("gaps")
+    variants[1]["gaps"] = []
+    variants[2]["unread_positions"] = [3]
+    variants[3]["work_id"] = "other-owned-work"
+    variants[4]["gaps"][0]["detail"] = "A distinct unread-context explanation."
+    legal["coverage"] = [original, *variants, dict(reversed(list(original.items())))]
+    saved = deepcopy(sources)
+    displayed = presentation(sources)
+    row = next(row for row in displayed["passages"] if row["id"] == legal["id"])
+    assert len(set(row["coverage_ids"])) == 6
+    assert row["coverage_ids"][0] == row["coverage_ids"][-1]
+    assert [displayed["coverage_by_id"][identity] for identity in row["coverage_ids"]] == legal["coverage"]
+    assert sources == saved
+
+
+def test_missing_passage_coverage_is_not_silently_replaced_with_empty_coverage():
+    ctx, record = fixture()
+    sources = build(ctx, record)
+    legal = next(row for row in sources.values() if row["kind"] == "judgment")
+    del legal["coverage"]
+    with pytest.raises(KeyError):
+        presentation(sources)
 
 
 @pytest.mark.parametrize("field,value", [("record_role", "unknown"), ("speaker", None), ("turn_id", "")])
