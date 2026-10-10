@@ -35,6 +35,16 @@ window.NmBrainSources = (() => {
     return read;
   }
 
+  function coreInspection(source, inspection) {
+    return source?.brain === true && legal(source)
+      && inspection?.contract === 'core_source_authority_view_v1'
+      && ['core_turn_v1', 'core_turn_v2'].includes(inspection.activity_contract)
+      && inspection.source_id === source.id
+      && ['recorded', 'not_assessed'].includes(inspection.state)
+      && ['case_checks', 'provision_checks', 'provision_mentions']
+        .every(key => Array.isArray(inspection[key]));
+  }
+
   function authorityDetails(source, inspection) {
     if (!legal(source)) return [];
     const section = document.createElement('section');
@@ -48,12 +58,7 @@ window.NmBrainSources = (() => {
       detail.className = 'brain-source-excerpt'; detail.textContent = `${label}: ${text}`;
       section.appendChild(detail);
     };
-    if (inspection?.contract !== 'core_source_authority_view_v1'
-        || !['core_turn_v1', 'core_turn_v2'].includes(inspection.activity_contract)
-        || inspection.source_id !== source.id
-        || !['recorded', 'not_assessed'].includes(inspection.state)
-        || !['case_checks', 'provision_checks', 'provision_mentions']
-          .every(key => Array.isArray(inspection[key]))) {
+    if (!coreInspection(source, inspection)) {
       line('Source checks', 'Not assessed — saved check evidence is unavailable for this passage.');
       return [section];
     }
@@ -110,13 +115,21 @@ window.NmBrainSources = (() => {
     return [section];
   }
 
-  function populate(source, choices = null, inspection = null) {
+  function populate(source, choices = null, inspection = null, responseText = null) {
+    const coreResponse = coreInspection(source, inspection) && words(responseText);
     const locator = document.createElement('p');
     locator.className = 'hint'; locator.textContent = source.locator;
     const qualification = document.createElement('p');
     qualification.className = 'hint'; qualification.textContent = source.qualification;
-    const details = [...(choices ? [choices] : []), locator, qualification,
-      ...authorityDetails(source, inspection)];
+    const details = [...(choices ? [choices] : [])];
+    if (coreResponse) {
+      const response = document.createElement('p');
+      response.className = 'brain-source-excerpt'; response.textContent = `NM response: ${responseText}`;
+      const sourceHeading = document.createElement('p');
+      sourceHeading.className = 'hint'; sourceHeading.textContent = 'Selected source passage';
+      details.push(response, sourceHeading);
+    }
+    details.push(locator, qualification, ...authorityDetails(source, inspection));
     const roles = {legislative_text:'Legislative text', court_conclusion:'Court conclusion',
       court_reasoning:'Court reasoning', party_submission:'Party submission',
       quoted_authority:'Quoted authority', case_background:'Case background', unclear:'Unclear',
@@ -137,10 +150,10 @@ window.NmBrainSources = (() => {
       details.push(missing);
     }
     for (const [label, text] of [
-      ['Statement used', source.verification?.assertion_statement],
-      ['Statement role', roleLabel(source.verification)],
+      ...(coreResponse ? [] : [['Statement used', source.verification?.assertion_statement]]),
+      [coreResponse ? 'Source passage role' : 'Statement role', roleLabel(source.verification)],
       ['Support check', source.verification?.reason],
-      ['Supporting words', source.verification?.support_excerpt],
+      [coreResponse ? 'Supporting source words' : 'Supporting words', source.verification?.support_excerpt],
       ['Limiting condition', source.verification?.scope_excerpt],
       ['Who states the proposition', source.verification?.owner_label],
       ['Attribution words', source.verification?.owner_excerpt],
@@ -156,8 +169,12 @@ window.NmBrainSources = (() => {
       const role = roleLabel(statement) || 'Related statement';
       const treatment = treatmentLabel(statement);
       for (const [label, text] of [
-        ['Related statement', `${role}${treatment ? ` · ${treatment}` : ''}: ${statement.assertion_statement}`],
-        ['Speaker', statement.owner_label], ['Statement words', statement.support_excerpt],
+        ...(coreResponse
+          ? [['Related source passage', [statement.title, statement.locator].filter(words).join(' · ')],
+             ['Related source role', `${role}${treatment ? ` · ${treatment}` : ''}`]]
+          : [['Related statement', `${role}${treatment ? ` · ${treatment}` : ''}: ${statement.assertion_statement}`]]),
+        ['Speaker', statement.owner_label],
+        [coreResponse ? 'Related source words' : 'Statement words', statement.support_excerpt],
         ['Attribution words', statement.owner_excerpt], ['Treatment words', statement.treatment_excerpt],
       ]) {
         if (!text) continue;
@@ -196,7 +213,7 @@ window.NmBrainSources = (() => {
         + (saved.verification_current === false
           ? ' This historical check predates the current source review.' : '')},
         sourceChoices(answer, element, elementIndex, sourceIndex, opener, owns),
-        saved.authority_inspection);
+        saved.authority_inspection, element.text);
     } catch (error) {
       if (owns()) node('brain-source-status').textContent =
         `The saved passage could not be read. ${error.message}`;

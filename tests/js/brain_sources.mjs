@@ -474,3 +474,71 @@ assert.match(nodes.get('brain-source-body').textContent, /Source checks: Not ass
 assert.doesNotMatch(nodes.get('brain-source-body').textContent, /Citation lookup: Found/,
   'Historical direct record metadata is not an authenticated authority read receipt');
 console.log('PASS separate saved authority checks, unresolved neighbors, legacy and exact passage preservation');
+// Append to tests/js/brain_sources.mjs after review. These are presentation checks,
+// not an assertion that a model's source classification or legal analysis is right.
+const mixedResponse = 'NM applies the stated condition to a reported, disputed account.';
+const exactSourceWords = 'The stated requirement applies only when its condition is met.';
+const coreMixedSource = {...legalSource, text:exactSourceWords, verification:{
+  assertion_statement:mixedResponse, assertion_role:'legislative_text', source_role:'provision',
+  support_excerpt:exactSourceWords, owner_label:null, source_treatment:'not applicable',
+  context_statements:[{title:'Related judgment', locator:'Paragraph 4',
+    assertion_statement:`Related judgment: ${mixedResponse}`, assertion_role:'court_reasoning',
+    source_role:'court_reasoning', support_excerpt:'The court explains the limited reasoning.',
+    owner_label:'Court', source_treatment:'not shown'},
+  {title:'Treatment judgment', locator:'Paragraph 5', assertion_role:'unclear',
+    source_role:'treatment_support', assertion_statement:'The court rejected that argument.',
+    support_excerpt:'The court rejected that argument.', source_treatment:'not applicable'}]}};
+const mixedElement = {kind:'ANALYSIS', text:mixedResponse, source:coreMixedSource,
+  sources:[coreMixedSource], refs:[coreMixedSource.locator]};
+const mixedAnswer = {...answer, elements:[mixedElement]};
+const immutableMixedAnswer = JSON.stringify(mixedAnswer);
+const immutableMixedSource = JSON.stringify(coreMixedSource);
+
+for (const activity_contract of ['core_turn_v1', 'core_turn_v2']) {
+  const opening = reader.open(mixedAnswer, mixedElement, 0, 0, opener);
+  const inspected = {...coreMixedSource,
+    authority_inspection:authorityView(coreMixedSource, {activity_contract})};
+  const immutableInspected = JSON.stringify(inspected);
+  reads.at(-1).resolve(inspected); await opening;
+  const pane = nodes.get('brain-source-body');
+  const paragraphs = descendants(pane, 'p').map(item => item.textContent);
+  assert.ok(paragraphs.includes(`NM response: ${mixedResponse}`));
+  assert.ok(paragraphs.includes('Source passage role: Legislative text'));
+  assert.ok(paragraphs.includes(`Supporting source words: ${exactSourceWords}`));
+  assert.ok(paragraphs.includes('Related source passage: Related judgment · Paragraph 4'));
+  assert.ok(paragraphs.includes('Related source role: Court reasoning · Not shown'));
+  assert.ok(paragraphs.includes('Related source words: The court explains the limited reasoning.'));
+  assert.ok(paragraphs.includes('Related source words: The court rejected that argument.'));
+  assert.equal(pane.textContent.split(mixedResponse).length - 1, 1,
+    'The NM paragraph is separate; a source role must not be prefixed to the same paragraph again');
+  assert.equal(pane.children.at(-1).textContent, exactSourceWords);
+  assert.equal(JSON.stringify(inspected), immutableInspected);
+  assert.equal(JSON.stringify(mixedAnswer), immutableMixedAnswer);
+  assert.equal(JSON.stringify(coreMixedSource), immutableMixedSource);
+  reader.close();
+}
+
+// A role genuinely attached to a historical source statement stays a source
+// statement. Neither brain:true alone nor unbound metadata certifies core origin.
+const archivalStatement = 'The source itself states its limited conclusion.';
+const archivalSource = {...coreMixedSource, kind:'judgment', label:'Earlier judgment',
+  locator:'Paragraph 8', verification:{...coreMixedSource.verification,
+  assertion_statement:archivalStatement, assertion_role:'court_conclusion',
+  source_role:'court_disposition', context_statements:[]}};
+const archivalElement = {...mixedElement, source:archivalSource, sources:[archivalSource]};
+const archivalAnswer = {...answer, elements:[archivalElement]};
+for (const inspection of [undefined,
+  authorityView(archivalSource, {source_id:'different-source'}),
+  authorityView(archivalSource, {activity_contract:'unknown-turn'}),
+  {...authorityView(archivalSource), contract:'unknown-view'},
+]) {
+  const opening = reader.open(archivalAnswer, archivalElement, 0, 0, opener);
+  reads.at(-1).resolve({...archivalSource, ...(inspection ? {authority_inspection:inspection} : {})});
+  await opening;
+  const text = nodes.get('brain-source-body').textContent;
+  assert.ok(text.includes(`Statement used: ${archivalStatement}`));
+  assert.ok(text.includes('Statement role: Court conclusion'));
+  assert.ok(!text.includes(`NM response: ${mixedResponse}`));
+}
+console.log('PASS NM response versus source role, related source words, known-core and archival distinction');
+

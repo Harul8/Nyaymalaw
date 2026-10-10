@@ -1297,3 +1297,13 @@ seven focused receipt/replay checks pass. Earlier saved metrics replay exactly;
 new metrics are additive. The initial promoted replay fixture incorrectly created
 its supposed old row with the new implementation; it was corrected to produce the
 earlier metric shape before saving, without rewriting any saved fixture afterward.
+
+The source-pane presentation piece separates NM's authored response from the role
+and exact words of each supporting passage. Known core authority metadata must
+bind to that selected source; archival assertion presentation is unchanged. This
+fixes the observed pane labelling an entire analysis paragraph as legislative text.
+Canonical sources, authority records and replay seals are unchanged. The existing
+source-reader JavaScript suite plus new core/archive/nonmutation checks passes.
+An offline Playwright fixture opened both captured source panes before/after replay,
+verified exact text/right alignment/frozen header and made zero network/model calls;
+root inspected the screenshot. This establishes presentation, not semantic accuracy.
