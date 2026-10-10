@@ -1,0 +1,49 @@
+{
+  "scope": "Offline model-presentation measurement of existing local-retrieval snapshot; no semantic, retrieval-relevance or live-browser acceptance claim",
+  "measured_utc": "2026-10-10T04:31:20.174077+00:00",
+  "snapshot": "offline-retrieval-capacity-snapshot.json",
+  "snapshot_sha256": "594ee65cc7bb9a1964d44650ca19af5195e9330e5d016667bafb63db65c16ee3",
+  "source_owner_sha256": "134d57f6851fcf01972c3f927fdc20b99809b191092875996bc40e95098b59d7",
+  "canonical_source_digest_before": "c705e9c2d3e7452c9fcee12913a0b9a0124c0eb25ddb654a74cd71d1d6a8f0d5",
+  "canonical_source_digest_after": "c705e9c2d3e7452c9fcee12913a0b9a0124c0eb25ddb654a74cd71d1d6a8f0d5",
+  "canonical_proof_unchanged": true,
+  "legal_projection_exactly_reconstructed": true,
+  "retained_passages": 241,
+  "source_text_characters": 247595,
+  "joined_text_characters_in_diagnostic": 247835,
+  "omitted_model_only_storage_fields": [
+    "digest",
+    "source_identity.chunk_id",
+    "source_identity.corpus_revision"
+  ],
+  "retained_fields": "Every other canonical legal-row field, including exact text, ID, title, locator, speaker/status, case or Act identity, source position, work membership, ordered context neighbours and full distinct coverage/gaps",
+  "presentation_chars_before": 1353179,
+  "presentation_chars_after": 421280,
+  "shared_context_groups": 24,
+  "shared_context_members": 241,
+  "shared_coverage_records": 24,
+  "distinct_gap_records": 120,
+  "writer_payload_chars_before": 1386439,
+  "writer_payload_chars_after": 454540,
+  "writer_total_token_estimate_before": 354707,
+  "writer_total_token_estimate_after": 121732,
+  "output_reserve": 6500,
+  "production_capacity": 100000,
+  "capacity_solved": false,
+  "production_would_refuse": true,
+  "remaining_work": "Reduce irrelevant or duplicated retrieval enquiries at their owning stage without dropping requested work; legitimately large relevant source sets still need explicit scoped processing. No truncation, aliases or document-sharing contract applied.",
+  "provider_calls": 0,
+  "new_retrieval_runs": 0,
+  "offline_tests": {
+    "command": "python -m pytest tests/test_core_answer_sources.py tests/test_core_response_writer.py tests/test_core_response_review.py tests/test_core_turn.py tests/test_core_served.py -q",
+    "passed": 170,
+    "exit_code": 0,
+    "counts": {
+      "sources": 23,
+      "writer": 33,
+      "reviewer": 62,
+      "turn": 16,
+      "served": 36
+    }
+  }
+}

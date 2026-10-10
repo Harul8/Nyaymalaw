@@ -42,6 +42,30 @@ def fixture(*, work_count=1, history=None, judgment=None):
     return ctx, retrieve(plan, searcher, ctx)
 
 
+def presented_coverage(displayed, identity):
+    row = deepcopy(displayed["coverage_by_id"][identity])
+    if "gap_ids" in row:
+        row["gaps"] = [deepcopy(displayed["gaps_by_id"][gap]) for gap in row.pop("gap_ids")]
+    return row
+
+
+def reconstruct_passage(displayed, row):
+    restored = deepcopy(row)
+    restored["context_ids"] = [identity for identity in displayed["context_groups"][
+        restored.pop("context_group_id")] if identity != row["id"]]
+    restored["coverage"] = [presented_coverage(displayed, identity)
+                            for identity in restored.pop("coverage_ids")]
+    return restored
+
+
+def without_storage_proof(row):
+    retained = deepcopy(row)
+    retained.pop("digest")
+    retained["source_identity"] = {key: value for key, value in retained["source_identity"].items()
+                                   if key not in {"chunk_id", "corpus_revision"}}
+    return retained
+
+
 def test_each_adjacent_passage_has_its_own_exact_selectable_tag_and_shared_context():
     ctx, record = fixture()
     original = deepcopy(record)
@@ -160,7 +184,7 @@ def test_partial_context_keeps_readable_sources_and_explicit_coverage_gaps():
     assert record["state"] == "partial"
     displayed = presentation(sources)
     for row in displayed["passages"]:
-        coverage = displayed["coverage_by_id"][row["coverage_ids"][0]]
+        coverage = presented_coverage(displayed, row["coverage_ids"][0])
         if row["kind"] == "judgment":
             assert coverage["bounded"] is True and coverage["unread_positions"] == [2]
             assert coverage["gaps"] and coverage["selected_source_id"] in sources
@@ -174,7 +198,8 @@ def test_search_failure_preserves_original_sources_without_inventing_legal_cover
     record = retrieve(plan, None, ctx)
     sources = build(ctx, record)
     assert list(sources) == [ctx["latest"]["source_id"]]
-    assert presentation(sources) == {"passages": [], "coverage_by_id": {}}
+    assert presentation(sources) == {"passages": [], "coverage_by_id": {},
+                                     "gaps_by_id": {}, "context_groups": {}}
     assert record["failures"]
 
 
@@ -189,13 +214,10 @@ def test_presentation_deduplicates_full_coverage_without_changing_canonical_proo
     assert len(catalogue) < sum(len(row["coverage"]) for row in originals)
     assert len(catalogue) == len({json.dumps(entry, sort_keys=True) for entry in catalogue.values()})
     for row in rows:
-        reconstructed = deepcopy(row)
-        reconstructed["coverage"] = [deepcopy(catalogue[identity])
-                                      for identity in reconstructed.pop("coverage_ids")]
-        assert reconstructed == sources[row["id"]]
+        assert reconstruct_passage(displayed, row) == without_storage_proof(sources[row["id"]])
     assert sources == original and _digest(sources) == proof
-    rows[0]["context_ids"].append("presentation-only")
-    next(iter(catalogue.values()))["gaps"].append({"detail": "presentation-only"})
+    next(iter(displayed["context_groups"].values())).append("presentation-only")
+    next(iter(displayed["gaps_by_id"].values()))["detail"] = "presentation-only"
     assert sources == original and _digest(sources) == proof
 
 
@@ -216,8 +238,63 @@ def test_coverage_dedup_keeps_distinct_missing_fields_gaps_and_work_associations
     row = next(row for row in displayed["passages"] if row["id"] == legal["id"])
     assert len(set(row["coverage_ids"])) == 6
     assert row["coverage_ids"][0] == row["coverage_ids"][-1]
-    assert [displayed["coverage_by_id"][identity] for identity in row["coverage_ids"]] == legal["coverage"]
+    assert [presented_coverage(displayed, identity) for identity in row["coverage_ids"]] == legal["coverage"]
     assert sources == saved
+
+
+def test_shared_context_reconstructs_neighbours_without_merging_order_or_partial_overlap():
+    ctx, record = fixture()
+    sources = build(ctx, record)
+    legal = [row for row in sources.values() if row["kind"] in {"provision", "judgment"}]
+    a, b, c, d = [row["id"] for row in legal]
+    legal[0]["context_ids"] = [b, c]
+    legal[1]["context_ids"] = [a, c]
+    legal[2]["context_ids"] = [b, a]
+    legal[3]["context_ids"] = [a]
+    original = deepcopy(sources)
+    displayed = presentation(sources)
+    rows = displayed["passages"]
+    assert rows[0]["context_group_id"] == rows[1]["context_group_id"]
+    assert len(displayed["context_groups"]) == 3
+    for row in rows:
+        assert reconstruct_passage(displayed, row) == without_storage_proof(sources[row["id"]])
+    assert sources == original
+
+
+def test_empty_context_and_distinct_same_text_sources_keep_their_identity_and_provenance():
+    ctx, record = fixture(work_count=2)
+    sources = build(ctx, record)
+    legal = [row for row in sources.values() if row["kind"] == "provision"]
+    legal[1]["text"] = legal[0]["text"]
+    legal[1]["locator"] = legal[0]["locator"]
+    legal[1]["source_identity"]["act_id"] = "another-owned-act"
+    for row in legal:
+        row["context_ids"] = []
+    displayed = presentation(sources)
+    shown = [row for row in displayed["passages"] if row["kind"] == "provision"]
+    assert len(shown) == 2 and shown[0]["id"] != shown[1]["id"]
+    assert shown[0]["source_identity"]["act_id"] != shown[1]["source_identity"]["act_id"]
+    for row in shown:
+        assert reconstruct_passage(displayed, row) == without_storage_proof(sources[row["id"]])
+        assert row["work_ids"] == ["t2:w1", "t2:w2"]
+        assert set(row["source_identity"]) == {"position", "act_id"}
+
+
+def test_shared_gaps_preserve_distinct_reasons_missing_fields_and_original_order():
+    ctx, record = fixture()
+    sources = build(ctx, record)
+    legal = next(row for row in sources.values() if row["kind"] == "judgment")
+    base = deepcopy(legal["coverage"][0])
+    one = {"kind": "judgment", "reason": "A source is unread", "positions": [4, 5]}
+    changed = {**one, "reason": "A different source is unread"}
+    absent = {"kind": "judgment", "positions": [4, 5]}
+    empty = {**absent, "reason": ""}
+    legal["coverage"] = [{**base, "gaps": [one, changed, absent, empty, one]},
+                         {**base, "gaps": [changed, one]}]
+    displayed = presentation(sources)
+    row = next(row for row in displayed["passages"] if row["id"] == legal["id"])
+    assert len(displayed["gaps_by_id"]) == 4
+    assert reconstruct_passage(displayed, row) == without_storage_proof(legal)
 
 
 def test_missing_passage_coverage_is_not_silently_replaced_with_empty_coverage():

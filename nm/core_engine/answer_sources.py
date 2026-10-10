@@ -110,27 +110,54 @@ def select(reference, sources):
 
 
 def presentation(sources):
-    """Model-only catalogue; exact passages share coverage without copying its proof.
+    """Model-only catalogue; share exact context and gaps, not their repeated proof.
 
     Original conversation is supplied apart. Complete canonical sources remain the
-    admission and replay owner; these local coverage IDs never replace source tags.
+    admission and replay owner; local presentation IDs never replace source tags.
+    A passage's neighbours are its ordered context group with that passage removed.
     """
     passages, coverage_by_id, coverage_keys = [], {}, {}
+    gaps_by_id, gap_keys, context_groups = {}, {}, {}
+
+    def key(value):
+        # All fields participate; absent metadata, differing gaps and ordered lists
+        # must remain distinct. Full strings avoid a digest collision as well.
+        return json.dumps(value, sort_keys=True, ensure_ascii=False,
+                          separators=(",", ":"), allow_nan=False)
+
     for row in sources.values():
         if row["kind"] not in _LEGAL:
             continue
         passage = deepcopy(row)
+        passage.pop("digest")
+        passage["source_identity"] = {field: value for field, value in passage["source_identity"].items()
+                                      if field not in {"chunk_id", "corpus_revision"}}
+        neighbours = passage.pop("context_ids")
+        context_id = next((identity for identity, members in context_groups.items()
+            if row["id"] in members and [m for m in members if m != row["id"]] == neighbours), None)
+        if context_id is None:
+            context_id = f"context:{len(context_groups) + 1}"
+            context_groups[context_id] = [row["id"], *neighbours]
+        passage["context_group_id"] = context_id
         coverage = passage.pop("coverage")
         passage["coverage_ids"] = []
         for entry in coverage:
-            # Compare every field, including gaps and their full explanations. No
-            # partial key or digest collision may merge distinct coverage evidence.
-            key = json.dumps(entry, sort_keys=True, ensure_ascii=False,
-                             separators=(",", ":"), allow_nan=False)
-            if key not in coverage_keys:
+            coverage_key = key(entry)
+            if coverage_key not in coverage_keys:
                 identity = f"coverage:{len(coverage_by_id) + 1}"
-                coverage_keys[key] = identity
-                coverage_by_id[identity] = entry
-            passage["coverage_ids"].append(coverage_keys[key])
+                coverage_keys[coverage_key] = identity
+                shared = deepcopy(entry)
+                if "gaps" in shared:
+                    shared["gap_ids"] = []
+                    for gap in shared.pop("gaps"):
+                        gap_key = key(gap)
+                        if gap_key not in gap_keys:
+                            gap_id = f"gap:{len(gaps_by_id) + 1}"
+                            gap_keys[gap_key] = gap_id
+                            gaps_by_id[gap_id] = gap
+                        shared["gap_ids"].append(gap_keys[gap_key])
+                coverage_by_id[identity] = shared
+            passage["coverage_ids"].append(coverage_keys[coverage_key])
         passages.append(passage)
-    return {"passages": passages, "coverage_by_id": coverage_by_id}
+    return {"passages": passages, "coverage_by_id": coverage_by_id,
+            "gaps_by_id": gaps_by_id, "context_groups": context_groups}

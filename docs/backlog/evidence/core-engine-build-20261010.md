@@ -476,3 +476,20 @@ This is an inseparable four-owner integration; no additional routine model call.
 and no-lookup replay. Semantic acceptance and browser acceptance remain open. Focused
 Ruff F correctness checks pass; broader style lint reported formatting issues and is
 not reported as passing. Formatting cleanup is deferred behind useful live delivery.
+
+## SEQ.4 — lossless source presentation checkpoint
+
+The source catalogue now lists each exact context group and complete coverage gap
+once. Passages retain their original IDs and text; ordered neighbours reconstruct
+exactly by removing the passage itself from its group. Only model-facing storage
+digests, chunk IDs and revision hashes are omitted. Admission and durable replay
+still retain the complete canonical proof. No additional model call.
+
+170 focused source, writer, reviewer, turn and served checks pass. On the saved
+offline retrieval snapshot, all 241 legal passages and 247,595 text characters
+reconstruct unchanged. Estimated writer tokens including output reserve fall from
+354,707 to 121,732, still above the 100,000 capacity. This is a verified reduction,
+not a completed capacity fix or semantic acceptance. The next retrieval repair
+addresses unrelated roots joined by repeated section numbers, and planning will
+avoid treating each requested deliverable as a fresh legal research question.
+Measurement: outputs/core-engine-build-20261010/compact-presentation-capacity.json.
