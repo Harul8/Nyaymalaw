@@ -5,7 +5,7 @@ import json
 import time
 from copy import deepcopy
 
-from nm.shared.model_port import ContextOverflow, ModelError, Prompt, SchemaViolation, estimate_tokens
+from nm.shared.model_port import ContextOverflow, ModelError, ModelResult, Prompt, SchemaViolation, estimate_tokens
 
 
 class CorrectionUnavailable(ModelError):
@@ -65,7 +65,20 @@ class TurnCalls:
             raise
         finally:
             usage = getattr(receipt, "usage", None)
+            # Report an actual port receipt, including a quarantined completed
+            # result. A requested tier or configured default is not a receipt
+            # for a failed request whose provider/model remains unknown.
+            result = receipt if isinstance(receipt, ModelResult) else getattr(
+                receipt, "rejected_result", None)
+            identity = result if isinstance(result, ModelResult) else None
             self.calls.append({"operation": prompt.operation, "error": error,
+                "provider": identity.provider if identity else None,
+                "model": identity.model if identity else None,
+                "tier": identity.tier.value if identity else None,
+                "cached_tokens": usage.cached_tokens if usage else None,
+                # Opaque adapter diagnostics, never authority for a decision or
+                # cost calculation here. Absent metadata stays unestablished.
+                "provider_usage": deepcopy(dict(usage.provider_extra)) if usage else None,
                 "latency_ms": round((time.monotonic() - started) * 1000),
                 "tokens_in": usage.tokens_in if usage else None,
                 "tokens_out": usage.tokens_out if usage else None,
@@ -118,4 +131,5 @@ class TurnCalls:
                 "cost_usd": sum(c["cost_usd"] or 0 for c in self.calls),
                 "tokens_in": sum(c["tokens_in"] or 0 for c in self.calls),
                 "tokens_out": sum(c["tokens_out"] or 0 for c in self.calls),
+                "cached_tokens": sum(c["cached_tokens"] or 0 for c in self.calls),
                 "draft_corrections": int(self.correction_used)}

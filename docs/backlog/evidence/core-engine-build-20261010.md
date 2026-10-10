@@ -1288,3 +1288,12 @@ or become an accepted response. 125 focused adapter, quarantine and ledger check
 pass against the applied files. A provider-count or pricing failure preserves the
 existing fail-closed spending contract. No comparison or browser generation has
 yet used this new transport.
+
+Migration piece 6 records actual returned provider/model/tier and cache accounting
+in fresh turn metrics. Failed calls without a provider receipt retain null identity;
+the requested tier cannot invent a returned model. Diagnostics remain opaque and
+never decide legal admission. 78 existing call/conversation/turn/HTTP checks and
+seven focused receipt/replay checks pass. Earlier saved metrics replay exactly;
+new metrics are additive. The initial promoted replay fixture incorrectly created
+its supposed old row with the new implementation; it was corrected to produce the
+earlier metric shape before saving, without rewriting any saved fixture afterward.
