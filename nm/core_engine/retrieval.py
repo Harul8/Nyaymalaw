@@ -61,7 +61,7 @@ class Collection(Protocol):
 
     def read(self, positions: list[int]) -> dict[int, dict]: ...
 
-    def rerank(self, pairs: list[tuple[str, str]]) -> list[float]: ...
+    def rerank(self, pairs: list[tuple[str, str]], *, anchors: list[str] | None = None) -> list[float]: ...
 
 
 def _rrf(lists: list[list[int]]) -> dict[int, float]:
@@ -370,24 +370,26 @@ class LocalCollection:
             result.update(state="unavailable", reason=str(exc), sources=[], provision_key=None)
         return result
 
-    def rerank(self, pairs: list[tuple[str, str]]) -> list[float]:
+    def rerank(self, pairs: list[tuple[str, str]], *, anchors: list[str] | None = None) -> list[float]:
+        anchors = [""] * len(pairs) if anchors is None else anchors
+        if len(anchors) != len(pairs) or any(not isinstance(anchor, str) for anchor in anchors):
+            raise SearchUnavailable("Rerank document anchors do not match their source pairs")
         if not pairs:
             return []
         model = self.models._model("reranking")
         try:
             windows, groups = [], []
             query_windows, passage_windows = {}, {}
-            for query, passage in pairs:
+            for (query, passage), anchor in zip(pairs, anchors, strict=True):
                 first = len(windows)
                 if query not in query_windows:
                     query_windows[query] = [(text, 512 - len(model.tokenizer.encode(
                         text, add_special_tokens=False)) - model.tokenizer.num_special_tokens_to_add(pair=True))
                         for _, _, text in token_windows(query, model.tokenizer, 160)]
                 for query_window, room in query_windows[query]:
-                    key = passage, room
+                    key = passage, room, anchor
                     if key not in passage_windows:
-                        passage_windows[key] = [text for _, _, text in token_windows(
-                            passage, model.tokenizer, room)]
+                        passage_windows[key] = _anchored_windows(passage, model.tokenizer, room, anchor)
                     # Reuse preparation only inside this call. Repeated prediction
                     # pairs retain their original order, count and score ownership.
                     windows.extend((query_window, text) for text in passage_windows[key])
@@ -528,6 +530,29 @@ def token_windows(text, tokenizer, capacity, overlap=32):
     return windows
 
 
+def _anchored_windows(text, tokenizer, capacity, anchor):
+    """Keep owned document identity on every exact body window without truncation."""
+    if not anchor:
+        return [part for _, _, part in token_windows(text, tokenizer, capacity)]
+    room = capacity - len(tokenizer.encode(anchor, add_special_tokens=False)) - 8
+    while True:
+        pieces = [anchor + part for _, _, part in token_windows(text, tokenizer, room)]
+        overflow = max(0, max(len(tokenizer.encode(part, add_special_tokens=False)) - capacity
+                              for part in pieces))
+        if not overflow:
+            return pieces
+        room -= overflow
+
+
+def _rerank_anchor(checked_source):
+    """Reuse the exact identity and locator already admitted by _candidate."""
+    heading = (checked_source["source"].get("section_title")
+               if checked_source["kind"] == "provision" else None)
+    parts = (checked_source["title"], checked_source["locator"],
+             heading if isinstance(heading, str) else "")
+    return "\n".join(part for part in parts if part) + "\n"
+
+
 def _digest(value):
     return hashlib.sha256(json.dumps(value, ensure_ascii=False, sort_keys=True,
         separators=(",", ":"), allow_nan=False).encode()).hexdigest()
@@ -638,7 +663,7 @@ class HybridSearcher:
                 issues.append({"kind": kind, "query_id": None, "stage": "read", "reason": type(exc).__name__})
                 continue
             usable, pairs, rank_contexts, unranked = [], [], {}, []
-            rank_rows, rank_associations = {}, {}
+            rank_rows, rank_associations, rank_anchors = {}, {}, {}
             # Variants broaden recall; ranking examines their common dispute once.
             # Retain every formulation and the original account, including long tails.
             inquiry = "\n".join(dict.fromkeys(
@@ -647,7 +672,7 @@ class HybridSearcher:
             for position in positions:
                 row = rows.get(position)
                 try:
-                    _candidate(kind, position, row, revision, None, associations[position], {})
+                    checked_source = _candidate(kind, position, row, revision, None, associations[position], {})
                 except SearchUnavailable as exc:
                     issues.append({"kind": kind, "query_id": None, "stage": "read", "reason": str(exc), "position": position})
                     continue
@@ -657,7 +682,7 @@ class HybridSearcher:
                         context = collection.rank_context(position, row)
                         root = context["segments"][0]
                         target, row = root["position"], root["row"]
-                        _candidate(kind, target, row, revision, None, associations[position], context)
+                        checked_source = _candidate(kind, target, row, revision, None, associations[position], context)
                     except Exception as exc:
                         # Keep unread ancestry explicit without discarding readable peers.
                         rank_contexts[position] = {"scope": "selected_indexed_segment", "bounded": True,
@@ -668,6 +693,7 @@ class HybridSearcher:
                             "position": position})
                         continue
                 rank_rows[target] = row
+                rank_anchors[target] = _rerank_anchor(checked_source)
                 rank_associations.setdefault(target, []).extend(associations[position])
                 if context is not None:
                     prior = rank_contexts.get(target, {}).get("segments", [])
@@ -675,14 +701,15 @@ class HybridSearcher:
                     rank_contexts[target] = {**context, "segments": list(segments.values())}
             # Score and return the same source unit. A sibling's relevance must not
             # be transferred from a parent window to an unrelated selected child.
+            anchors = []
             for position, row in rank_rows.items():
                 usable.append(position)
-                title = row.get("act_name") or row.get("case_name") or ""
-                pairs.append((inquiry, title + "\n" + row["full_text"]))
+                pairs.append((inquiry, row["full_text"]))
+                anchors.append(rank_anchors[position])
             rows.update(rank_rows)
             associations.update({p: list(dict.fromkeys(ids)) for p, ids in rank_associations.items()})
             try:
-                scores = collection.rerank(pairs)
+                scores = collection.rerank(pairs, anchors=anchors)
                 if len(scores) != len(pairs) or any(not math.isfinite(float(score)) for score in scores):
                     raise SearchUnavailable("Invalid rerank scores")
                 scored, offset = [], 0

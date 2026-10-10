@@ -40,7 +40,7 @@ class Collection:
     def read(self, positions):
         if self.fail == "read": raise SearchUnavailable("Unread store")
         return {p: deepcopy(self.rows[p]) for p in positions if p in self.rows}
-    def rerank(self, pairs):
+    def rerank(self, pairs, *, anchors=None):
         if self.fail == "rerank": raise SearchUnavailable("Unavailable reranker")
         return [float(i) for i in range(len(pairs))]
     def context(self, position, source):
@@ -89,14 +89,18 @@ def test_judgment_role_metadata_is_preserved_without_becoming_a_holding_verdict(
 def test_query_variants_share_one_complete_dispute_rerank_inquiry():
     collection = Collection()
     received = []
-    collection.rerank = lambda pairs: received.extend(pairs) or [0.5] * len(pairs)
+    def rerank(pairs, *, anchors):
+        received.extend(zip(deepcopy(pairs), deepcopy(anchors), strict=True))
+        return [0.5] * len(pairs)
+    collection.rerank = rerank
     queries = [dict(q, context="Original account with limiting condition.") for q in QUERIES]
     HybridSearcher({"provision": collection}).search(queries)
     assert len(received) == len(collection.rows)
-    for inquiry, passage in received:
+    for ((inquiry, passage), anchor), source in zip(received, collection.rows.values(), strict=True):
         assert inquiry.count("Original account with limiting condition.") == 1
         assert all(q["text"] in inquiry for q in queries)
-        assert passage.startswith("Act\n")
+        assert passage == source["full_text"]
+        assert anchor == f"Act\n{source['section_number']}\n"
 
 
 def test_missing_row_does_not_remove_readable_peers():

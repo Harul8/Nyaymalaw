@@ -62,6 +62,24 @@ def reference_rerank(pairs, model):
     return [max(float(score) for score in scores[start:end]) for start, end in groups]
 
 
+def reference_anchored_rerank(pairs, anchors, model):
+    """Independent ordered preparation for the explicit owned-header contract."""
+    windows, groups = [], []
+    for (query, body), anchor in zip(pairs, anchors, strict=True):
+        start = len(windows)
+        for _, _, question in retrieval.token_windows(query, model.tokenizer, 160):
+            room = (512 - len(model.tokenizer.encode(question, add_special_tokens=False))
+                    - model.tokenizer.num_special_tokens_to_add(pair=True)
+                    - len(model.tokenizer.encode(anchor, add_special_tokens=False)) - 8)
+            for _, _, part in retrieval.token_windows(body, model.tokenizer, room):
+                assert len(model.tokenizer.encode(question, add_special_tokens=False)) + len(
+                    model.tokenizer.encode(anchor + part, add_special_tokens=False)) + 3 <= 512
+                windows.append((question, anchor + part))
+        groups.append((start, len(windows)))
+    scores = model.predict(windows, batch_size=16, show_progress_bar=False)
+    return [max(float(score) for score in scores[start:end]) for start, end in groups]
+
+
 def local(tmp_path, predictor):
     models = SimpleNamespace(_model=lambda _: predictor, lock=threading.RLock())
     return retrieval.LocalCollection(corpus_dir=tmp_path, lineage=tmp_path / "unused.json",
@@ -140,7 +158,7 @@ def test_equal_text_different_source_identities_preserve_selection_and_gaps(tmp_
         for position in collection.rows:
             collection.rows[position]["full_text"] = "Identical source words with final condition."
         collection.rows[1]["chunk_id"] = "different-owned-chunk"
-    old.rerank = lambda pairs: reference_rerank(pairs, baseline)
+    old.rerank = lambda pairs, *, anchors: reference_anchored_rerank(pairs, anchors, baseline)
     new.rerank = local(tmp_path, current).rerank
     expected = retrieval.HybridSearcher({"judgment": old}).search(QUERIES)
     actual = retrieval.HybridSearcher({"judgment": new}).search(QUERIES)

@@ -13,7 +13,7 @@ from tests.test_current_brain_retrieval import Collection, QUERIES
 def _search(collection, monkeypatch, positions):
     monkeypatch.setattr(collection, "lexical", lambda query, depth: positions)
     monkeypatch.setattr(collection, "semantic", lambda query, depth: positions)
-    monkeypatch.setattr(collection, "rerank", lambda pairs: [1.0] * len(pairs))
+    monkeypatch.setattr(collection, "rerank", lambda pairs, *, anchors=None: [1.0] * len(pairs))
     return HybridSearcher({"provision": collection, "judgment": Collection("judgment")}).search(QUERIES[:1])
 
 

@@ -1174,3 +1174,75 @@ source-kind/ID-only contract proved above.
 
 Shared budget at this evidence checkpoint: $0.827958 measured plus $1.515431
 reserved/unknown = $2.343389 of $5. Unknown reservations remain charged.
+
+## SEQ.3 — preserve document identity throughout local reranking
+
+Owning boundary: `LocalCollection.rerank` and its `HybridSearcher` caller in
+`nm/core_engine/retrieval.py`. The observed defect was a high score from a short
+amendment footnote after windowing removed its document heading. Every exact body
+window now receives the same owned title, locator and optional section heading.
+The existing candidate owner supplies canonical identity fallbacks. Unusable
+optional headings are omitted only from ranking presentation; durable source rows
+are unchanged. Missing required identity still rejects the individual source.
+There is no keyword filter, source blacklist, score cutoff or new model prompt.
+
+Observable pass condition: every dispatched window retains its source identity,
+the complete original body remains covered inside the token bound, and anchors
+never cross source owners. Oversized anchors fail explicitly before prediction;
+valid peers survive unread source rows. Historical search snapshots validate
+without reranking or rewriting. The 161 focused tests passed on applied code;
+the candidate also reproduced all 96 previously measured anchored pairs exactly.
+
+Production E2 replay used the two exact saved four-query searches and unchanged
+corpus revisions. It finished in 47.63 seconds with no OpenAI calls. All 14 retained
+primary passages keep their source IDs and exact words. Income Tax and Foreign
+Trade provisions dropped out; useful deposit-forfeiture and qualified agent-lien
+passages entered. Legal text fell from 115,748 to 87,538 characters through selection,
+not truncation. The 24 final sources and all 709 scored pairs are recorded in
+`rerank-anchor-production-replay.json` and independently assessed in
+`rerank-anchor-production-assessment.json`. Medical inspection, company/insurance
+and other wrong-relationship candidates still remain. Relevant Contract Act text
+not entering these read pools is a retrieval gap, not evidence of corpus absence.
+
+The new browser run is `browser-rerank-v1`: normal sign-in, first message, two
+inline source links, right-side panes and exact reopened response all worked.
+The turn took 82.04 seconds, four calls, $0.069562 reported usage (ledger rounding
+$0.069563); opening sources and reopening made no additional calls. Root inspected
+the reply and both panes. Semantic acceptance failed again: hire became hire-purchase
+applicability, agreement/payment-information duties became an inspection-report
+obligation, and an unpaid-seller lien became a right for owners and repair charges.
+The reviewer accepted all eight units. Root stopped the planned social closing;
+one message was sent, with no automatic retry. The retrieval control is verified;
+overall relevance and SEQ.1–4 legal-answer acceptance remain open.
+
+The owner subsequently approved a $1 comparison allocation within the shared $5
+development cap, including GPT-4.1 and GPT-5.1 at comparable cost. Six identical
+narrow-support cases on GPT-4.1 cost $0.030218: it rejected account-only legal claims
+and stale selected dates, admitted valid neighbours, but still admitted the wrong
+legal relationship. It is not promoted. GPT-5.1 with reasoning set to none ran the
+same six exact inputs/schema and correctly distinguished the tested wrong-law,
+account-only-law and stale-date examples from their valid neighbours. It cost
+$0.028844, bringing these comparisons to $0.059062 of the $1 allocation. This small
+set does not establish full-review or unfamiliar-conversation reliability; neither
+model is promoted. Production remains pinned to mini. Prices and support were verified against
+the official model pages; GPT-5.1 is scheduled for shutdown on 1 April 2027. Model
+selection must address lifecycle as well as measured accuracy, latency and cost.
+
+The subsequent GPT-5.1 whole-context review cost $0.123295 and rejected the central
+wrong-law applications but still accepted an account-only report-production duty.
+Its reviewer rationale also overgeneralised. Comparison spending totals $0.182357;
+the shared ledger is $2.595309 charged ($1.079878 measured, $1.515431 unknown).
+These are measured limitations, not semantic acceptance.
+
+The owner then stopped further comparisons and explicitly authorised direct
+deployment of GPT-6 Luna and GPT-6.1 Sol, superseding the mini-only default. The
+next atomic pieces will register the published model IDs and prices, account for
+cache reads/writes, route understanding/planning to Luna and writing/review to Sol,
+then verify the integrated browser flow. No extra routine stage is proposed.
+Official model pages publish these exact release IDs without dated snapshots.
+Observable migration pass conditions: each served stage reports the intended
+model, unsupported provider settings never dispatch, all input remains complete,
+cache billing reconciles to the receipt, spending remains bounded and saved replay
+is unchanged. Wrong-model routing, stale cache data or an understated reservation
+are consequential failures. Existing semantic/release checks remain mandatory;
+switching models alone does not close the outstanding legal-answer defects.
