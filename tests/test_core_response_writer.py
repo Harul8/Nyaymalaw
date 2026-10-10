@@ -70,7 +70,8 @@ def test_complete_context_and_all_neighbouring_legal_words_reach_one_routine_cal
     assert draft["units"][0]["id"] == "t2:b1"
 
 
-def test_adjacent_court_treatment_is_bound_separately_to_the_same_owned_judgment():
+@pytest.mark.parametrize("whole_source", [False, True])
+def test_adjacent_court_treatment_is_bound_separately_to_the_same_owned_judgment(whole_source):
     ctx, record = fixture()
     sources = build(ctx, record)
     submission = next(s for s in sources.values() if s["kind"] == "judgment" and "Counsel" in s["text"])
@@ -78,13 +79,58 @@ def test_adjacent_court_treatment_is_bound_separately_to_the_same_owned_judgment
     use = source_use(submission, role="party_submission", speaker="Counsel",
                      treatment="rejected", treatment_source=reference(treatment))
     proposal = {"units": [unit(sources, kind="law", text="The submission was rejected.", uses=[use])]}
+    if whole_source:
+        proposal["units"][0]["addresses"][0]["quote"] = None
+        use["quote"] = None
+        use["treatment_source"]["quote"] = None
     draft = accept(proposal, ctx, sources)
     resolved = draft["units"][0]["uses"][0]
     assert resolved["source_id"] == submission["id"]
+    assert resolved["text"] == submission["text"]
+    assert resolved["start"] == 0 and resolved["end"] == len(submission["text"])
     assert resolved["treatment_source"]["source_id"] == treatment["id"]
     assert resolved["treatment_source"]["text"] == treatment["text"]
     assert resolved["role"] == "party_submission"  # Adoption/rejection never changes its role.
     assert "review" not in draft and "review" not in resolved
+    assert validate(draft, ctx, sources) == draft
+
+
+def test_whole_source_ids_resolve_full_attributed_accounts_without_recopied_words():
+    history = [{"source_id": "t1:advocate", "turn_id": "t1", "speaker": "advocate",
+                "record_role": "original_account", "text": "First yes. Second yes."}]
+    ctx, record = fixture(history=history)
+    sources = build(ctx, record)
+    item = unit(sources, kind="account", text="The earlier account contains two affirmations.",
+                uses=[source_use(sources["t1:advocate"], quote=None)])
+    item["addresses"][0]["quote"] = None
+    model = Model({"units": [item]})
+    draft = write(model, ctx, record, sources)
+    assert len(model.calls) == 1
+    accepted = draft["units"][0]
+    assert accepted["addresses"][0] == {
+        "source_id": "t2:advocate", "start": 0, "end": len(ctx["latest"]["text"]),
+        "text": ctx["latest"]["text"]}
+    assert accepted["uses"][0]["text"] == history[0]["text"]
+    assert accepted["uses"][0]["start"] == 0
+    assert accepted["uses"][0]["end"] == len(history[0]["text"])
+    assert draft["proposal"]["units"][0]["uses"][0]["quote"] is None
+    assert validate(draft, ctx, sources) == draft
+
+
+@pytest.mark.parametrize("target", ["address", "source", "treatment"])
+def test_explicit_paraphrase_is_not_silently_replaced_with_whole_source(target):
+    ctx, record = fixture()
+    sources = build(ctx, record)
+    submission = next(s for s in sources.values() if s["kind"] == "judgment" and "Counsel" in s["text"])
+    treatment = next(s for s in sources.values() if s["kind"] == "judgment" and "Court rejected" in s["text"])
+    use = source_use(submission, quote=None, role="party_submission", treatment="rejected",
+                     treatment_source={"source_id": treatment["id"], "quote": None})
+    item = unit(sources, kind="law", uses=[use])
+    item["addresses"][0]["quote"] = None
+    if target == "address": item["addresses"][0]["quote"] = "Locate the applicable law."
+    elif target == "source": use["quote"] = "Counsel argued that payment was due."
+    else: use["treatment_source"]["quote"] = "The court disagreed with counsel."
+    with pytest.raises(SchemaViolation): accept({"units": [item]}, ctx, sources)
 
 
 @pytest.mark.parametrize("damage", ["foreign_source", "wrong_quote", "ambiguous_quote", "wrong_address"])

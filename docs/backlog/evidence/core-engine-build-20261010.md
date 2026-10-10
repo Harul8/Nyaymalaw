@@ -415,3 +415,10 @@ when useful. Source selection does not establish truth, relevance or legal effec
 16 planner checks pass, including a damaged explicit quote held independently of a
 valid whole-source peer. No runtime logic or call count changed. Live acceptance is
 still pending the integrated remeasurement.
+
+Writer handoff: addresses, source uses and court-treatment references default to
+whole-source selection, while absent treatment evidence remains a distinct null field.
+The prompt states that an empty relevant legal catalogue permits supported account
+and question work with an explicit source gap, never a legal standard from memory.
+50 writer/catalogue checks pass, including adjacent treatment and still-rejected
+paraphrases. This changes one prompt, not release logic, and adds no model calls.
