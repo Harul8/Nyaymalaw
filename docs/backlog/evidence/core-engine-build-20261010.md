@@ -1246,3 +1246,12 @@ cache billing reconciles to the receipt, spending remains bounded and saved repl
 is unchanged. Wrong-model routing, stale cache data or an understated reservation
 are consequential failures. Existing semantic/release checks remain mandatory;
 switching models alone does not close the outstanding legal-answer defects.
+
+Migration piece 1 registers only the two official release names in
+`nm/shared/model_config.py`, with their output/context ceilings and immutable
+standard/cache-read/cache-write/long-context pricing terms. Cache buckets must be
+disjoint, writes replace ordinary input charges, and reservations assume no hit.
+Unknown release names, overlapping usage and unpriced cache writes fail explicitly.
+67 focused configuration, pricing, provider-port and session-budget checks pass.
+This is a prerequisite; deployment routing and provider accounting follow before
+any new paid call. Existing prompt text and call counts are unchanged.

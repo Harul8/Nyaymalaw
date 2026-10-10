@@ -19,6 +19,7 @@ import math
 import os
 import re
 from dataclasses import dataclass
+from decimal import Decimal, ROUND_CEILING
 from pathlib import Path
 
 from nm.shared.model_port import ConfigurationError, Tier, TierUnavailable
@@ -40,6 +41,10 @@ CONTEXT_BUDGET: dict[Tier, int] = {
 # USD per 1M tokens. Configuration, versioned with the pins, so a cost figure in
 # the baseline is auditable rather than a number nobody can reconstruct.
 PRICES: dict[str, tuple[float, float]] = {
+    # Owner-directed deployment, 10 October 2026. Official model pages publish
+    # these release IDs without dated snapshots. Standard processing prices.
+    "gpt-6-luna": (0.10, 0.50),
+    "gpt-6.1-sol": (2.00, 10.00),
     "gpt-4o-mini-2024-07-18": (0.15, 0.60),
     # THE OWNER'S MODEL FROM 29 SEPTEMBER 2026 ("from here on use 4.1 mini only"),
     # checked that day against the official model page: $0.40 input, $0.10 cached
@@ -63,6 +68,8 @@ PRICES: dict[str, tuple[float, float]] = {
 #: The most output one call can return, per pinned model: with the context budget
 #: above, what a spending reservation must cover so it can never under-count.
 MAX_OUTPUT: dict[str, int] = {
+    "gpt-6-luna": 128_000,
+    "gpt-6.1-sol": 128_000,
     "gpt-4o-mini-2024-07-18": 16_384,
     "gpt-4.1-mini-2025-04-14": 32_768,
     "gpt-5.1": 128_000,
@@ -73,6 +80,8 @@ MAX_OUTPUT: dict[str, int] = {
 # provider's full context ceiling, including schema/framing, rather than the
 # port's approximate prompt guard. No transcript estimate proves a dollar cap.
 BILLING_CONTEXT: dict[str, int] = {
+    "gpt-6-luna": 1_050_000,
+    "gpt-6.1-sol": 1_050_000,
     "gpt-4o-mini-2024-07-18": 128_000,
     "gpt-4.1-mini-2025-04-14": 1_047_576,
     "gpt-5.1": 400_000,
@@ -85,6 +94,77 @@ RETURNED_MODEL_ALIASES: dict[str, tuple[str, ...]] = {
     "gpt-5.1": ("gpt-5.1-2025-11-13",),
 }
 
+# Exact published release IDs, not permission to accept arbitrary family aliases.
+PUBLISHED_RELEASES = frozenset({"gpt-6-luna", "gpt-6.1-sol"})
+
+
+@dataclass(frozen=True)
+class TokenPricing:
+    """Captured billing terms; cached reads and writes partition input tokens."""
+
+    input_rate: Decimal
+    output_rate: Decimal
+    cached_rate: Decimal | None = None
+    write_rate: Decimal | None = None
+    long_context_threshold: int | None = None
+    input_multiplier: Decimal = Decimal(1)
+    output_multiplier: Decimal = Decimal(1)
+
+    def __post_init__(self):
+        values = (self.input_rate, self.output_rate, self.cached_rate, self.write_rate,
+                  self.input_multiplier, self.output_multiplier)
+        if any(value is not None and (not isinstance(value, Decimal)
+                or not value.is_finite() or value < 0) for value in values):
+            raise ConfigurationError("Token prices must be finite nonnegative decimals")
+        if (self.long_context_threshold is not None and
+                (type(self.long_context_threshold) is not int or self.long_context_threshold <= 0)):
+            raise ConfigurationError("Long-context pricing needs a positive token threshold")
+
+    def as_dict(self):
+        return {name: (str(value) if isinstance(value, Decimal) else value)
+                for name, value in vars(self).items()}
+
+    def _micro_cost(self, tokens_in, tokens_out, cached_tokens, cache_write_tokens):
+        if any(type(value) is not int or value < 0 for value in
+               (tokens_in, tokens_out, cached_tokens, cache_write_tokens)):
+            raise ConfigurationError("Token usage must be nonnegative integers")
+        if cached_tokens + cache_write_tokens > tokens_in:
+            raise ConfigurationError("Cache read/write tokens exceed total input")
+        if cache_write_tokens and self.write_rate is None:
+            raise ConfigurationError("Cache writes require established pricing")
+        long = self.long_context_threshold is not None and tokens_in > self.long_context_threshold
+        ordinary = tokens_in - cached_tokens - cache_write_tokens
+        incoming = (ordinary * self.input_rate
+                    + cached_tokens * (self.cached_rate if self.cached_rate is not None else self.input_rate)
+                    + cache_write_tokens * (self.write_rate or Decimal(0)))
+        return (incoming * (self.input_multiplier if long else 1)
+                + tokens_out * self.output_rate * (self.output_multiplier if long else 1))
+
+    def cost_micro_usd(self, tokens_in, tokens_out, *, cached_tokens=0, cache_write_tokens=0):
+        return int(self._micro_cost(tokens_in, tokens_out, cached_tokens, cache_write_tokens)
+                   .to_integral_value(rounding=ROUND_CEILING))
+
+    def cost_usd(self, tokens_in, tokens_out, *, cached_tokens=0, cache_write_tokens=0):
+        return float(self._micro_cost(tokens_in, tokens_out, cached_tokens, cache_write_tokens)
+                     / Decimal(1_000_000))
+
+    def reserve_micro_usd(self, input_upper_bound, output_tokens):
+        # Never assume a cache hit before the provider returns usage.
+        writes = input_upper_bound if self.write_rate is not None and self.write_rate > self.input_rate else 0
+        return self.cost_micro_usd(input_upper_bound, output_tokens, cache_write_tokens=writes)
+
+
+def token_pricing(model: str) -> TokenPricing:
+    if model not in PRICES:
+        raise ConfigurationError("The selected model has no established token pricing")
+    incoming, outgoing = (Decimal(str(value)) for value in PRICES[model])
+    if model in PUBLISHED_RELEASES:
+        cached, write = {"gpt-6-luna": ("0.01", "0.125"),
+                         "gpt-6.1-sol": ("0.10", "2.50")}[model]
+        return TokenPricing(incoming, outgoing, Decimal(cached), Decimal(write),
+                            272_000, Decimal(2), Decimal("1.5"))
+    return TokenPricing(incoming, outgoing)
+
 
 def reservation_micro_usd(model: str, tier: Tier | None = None) -> int:
     """The worst charge one call on `model` can make, in micro-USD: a full context
@@ -93,9 +173,8 @@ def reservation_micro_usd(model: str, tier: Tier | None = None) -> int:
     output ceiling is not recorded here."""
     if model not in PRICES or model not in MAX_OUTPUT:
         raise ConfigurationError(f"no recorded price and output ceiling for {model!r}")
-    price_in, price_out = PRICES[model]
     budget = CONTEXT_BUDGET[tier or Tier.ROUTINE]
-    return math.ceil(budget * price_in + MAX_OUTPUT[model] * price_out)
+    return token_pricing(model).reserve_micro_usd(budget, MAX_OUTPUT[model])
 
 
 # A pin must name a version. These are the shapes a real dated snapshot takes;
@@ -150,8 +229,9 @@ class TierConfig:
     def price_out(self) -> float:
         return PRICES.get(self.model, (0.0, 0.0))[1]
 
-    def cost(self, tokens_in: int, tokens_out: int) -> float:
-        return (tokens_in * self.price_in + tokens_out * self.price_out) / 1_000_000
+    def cost(self, tokens_in: int, tokens_out: int, *, cached_tokens=0, cache_write_tokens=0) -> float:
+        return token_pricing(self.model).cost_usd(tokens_in, tokens_out,
+            cached_tokens=cached_tokens, cache_write_tokens=cache_write_tokens)
 
 
 def require_priced_snapshot(cfg: TierConfig, *, provider: str) -> TierConfig:
@@ -198,7 +278,7 @@ class ModelConfig:
 
 
 def _require_pinned(tier: Tier, model: str) -> None:
-    if not _PINNED.search(model):
+    if model not in PUBLISHED_RELEASES and not _PINNED.search(model):
         raise ConfigurationError(
             f"{_ENV_TIER[tier]}={model!r} is a floating alias, not a pinned snapshot. "
             "Providers move aliases, which makes a moved metric indistinguishable "
