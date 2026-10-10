@@ -1824,3 +1824,25 @@ tenancy category and used more statutory vocabulary (secondary evidence, bailmen
 lien, wrongful detention, interim maintenance, guardianship), but discovery is
 level within noise. Not promoted. A multi-sample comparison (several samples per
 arm; Luna cost about $0.004 per 18-call sample) is the valid next measurement.
+
+### SEQ.3 four-sample decision on the terms-of-art candidate (owner-approved)
+
+Two more samples of the served prompt and three more of terms-of-art round 2 (90
+Luna calls, $0.017819) brought each arm to four samples on the same 18 frozen
+cases; every sample was scored by the same local v5 search and strict anchors.
+
+| Arm | Provision anchors per sample (of 34) | Mean (sd) | Judgment mean (of 14) | Named authority | DC11 "non-party" | DC12 "residential" |
+|---|---|---|---|---|---|---|
+| served prompt | 10, 7, 10, 9 | 9.00 (1.41) | 0.25 | 2 of 4 samples | 3 of 4 | 4 of 4 |
+| terms of art | 9, 6, 7, 9 | 7.75 (1.50) | 0.50 | 1 of 4 | 4 of 4 | 1 of 4 |
+
+Decision: terms of art is rejected; it does not find more held law and finds
+Registration Act s.17 and NI Act s.142 less often. The served planning prompt
+stays. The multi-sample measurement also shows recurring defects of the served
+prompt itself: it invents the "residential" tenancy category in DC12 in every
+sample and turns the custodian into a "non-party" in DC11 in three of four.
+These are qualification errors in search phrasing; the writer and independent
+review remain responsible for the delivered answer, but planning-qualification
+repair stays open. All five no-research cases returned no work in all eight
+samples. Approved paid spend this session: $0.098732; shared ledger $3.780929 of
+$5 ($1.515431 of it reserved or unknown).
