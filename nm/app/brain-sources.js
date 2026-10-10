@@ -35,19 +35,25 @@ window.NmBrainSources = (() => {
     return read;
   }
 
-  function populate(source) {
+  function populate(source, choices = null) {
     const locator = document.createElement('p');
     locator.className = 'hint'; locator.textContent = source.locator;
     const qualification = document.createElement('p');
     qualification.className = 'hint'; qualification.textContent = source.qualification;
-    const details = [locator, qualification];
+    const details = [...(choices ? [choices] : []), locator, qualification];
     const roles = {legislative_text:'Legislative text', court_conclusion:'Court conclusion',
       court_reasoning:'Court reasoning', party_submission:'Party submission',
-      quoted_authority:'Quoted authority', case_background:'Case background', unclear:'Unclear'};
-    const treatmentLabel = (statement) => source.kind === 'judgment'
-      && statement?.assertion_role === 'party_submission'
-      && ['adopted', 'rejected'].includes(statement.source_treatment)
-      ? `Court ${statement.source_treatment}` : statement?.source_treatment;
+      quoted_authority:'Quoted authority', case_background:'Case background', unclear:'Unclear',
+      contract:'Quoted contract terms', original_account:'Original account',
+      opposing_account:'Opposing account', treatment_support:'Passage used to assess court treatment'};
+    const roleLabel = (statement) => roles[statement?.source_role] || roles[statement?.assertion_role];
+    const treatmentLabel = (statement) => {
+      const treatment = statement?.source_treatment;
+      if (statement?.assertion_role === 'party_submission'
+          && ['adopted', 'rejected', 'qualified'].includes(treatment)) return `Court ${treatment}`;
+      return ({not_shown:'Not shown', 'not shown':'Not shown',
+        not_applicable:'Not applicable', 'not applicable':'Not applicable'})[treatment] || treatment;
+    };
     if (source.provenance_status === 'not_recorded') {
       const missing = document.createElement('p');
       missing.className = 'hint';
@@ -56,7 +62,7 @@ window.NmBrainSources = (() => {
     }
     for (const [label, text] of [
       ['Statement used', source.verification?.assertion_statement],
-      ['Statement role', roles[source.verification?.assertion_role]],
+      ['Statement role', roleLabel(source.verification)],
       ['Support check', source.verification?.reason],
       ['Supporting words', source.verification?.support_excerpt],
       ['Limiting condition', source.verification?.scope_excerpt],
@@ -71,7 +77,7 @@ window.NmBrainSources = (() => {
       details.push(detail);
     }
     for (const statement of source.verification?.context_statements || []) {
-      const role = roles[statement.assertion_role] || 'Related statement';
+      const role = roleLabel(statement) || 'Related statement';
       const treatment = treatmentLabel(statement);
       for (const [label, text] of [
         ['Related statement', `${role}${treatment ? ` · ${treatment}` : ''}: ${statement.assertion_statement}`],
@@ -112,7 +118,8 @@ window.NmBrainSources = (() => {
       }
       populate({...saved, qualification: saved.qualification
         + (saved.verification_current === false
-          ? ' This historical check predates the current source review.' : '')});
+          ? ' This historical check predates the current source review.' : '')},
+        sourceChoices(answer, element, elementIndex, sourceIndex, opener, owns));
     } catch (error) {
       if (owns()) node('brain-source-status').textContent =
         `The saved passage could not be read. ${error.message}`;
@@ -149,6 +156,35 @@ window.NmBrainSources = (() => {
       && answer.turn_id && (answer.matter_id || answer.chat_id)
       && Array.isArray(answer.elements) && answer.elements.indexOf(element) >= 0
       && Array.isArray(element.refs) && element.refs.includes(source.locator);
+  }
+
+  function sourceChoices(answer, element, elementIndex, sourceIndex, opener, owns) {
+    const sources = Array.isArray(element.sources) ? element.sources : [element.source];
+    const choices = sources.flatMap((source, index) => legal(source) && bound(answer, element, source)
+      ? [{source, index}] : []);
+    if (choices.length < 2) return null;
+    const nav = document.createElement('nav');
+    nav.className = 'brain-source-links';
+    nav.setAttribute('aria-label', 'Sources supporting this response paragraph');
+    const heading = document.createElement('p');
+    heading.className = 'hint'; heading.textContent = 'Supporting passages';
+    nav.appendChild(heading);
+    for (const [offset, entry] of choices.entries()) {
+      if (offset) nav.appendChild(document.createTextNode(' · '));
+      const button = document.createElement('button');
+      button.type = 'button'; button.className = 'citation-link';
+      button.textContent = labelFor(entry.source);
+      button.disabled = entry.index === sourceIndex;
+      button.setAttribute('aria-current', entry.index === sourceIndex ? 'true' : 'false');
+      button.setAttribute('aria-label', `Open saved passage: ${labelFor(entry.source)}`);
+      button.addEventListener('click', () => {
+        if (!owns() || entry.index === sourceIndex) return;
+        // Re-enter the saved-source boundary; related client metadata is not a read receipt.
+        return open(answer, element, elementIndex, entry.index, opener);
+      });
+      nav.appendChild(button);
+    }
+    return nav;
   }
 
   function responseLink(answer, element, entry, label) {

@@ -373,3 +373,15 @@ Browser control still fails before attachment (Windows sandbox deny-read ACL err
 No alternative browser or user session was opened. Browser acceptance is unrun.
 The next bounded live integration uses the actual authenticated API, a synthetic
 account and isolated sealed records; it must be labelled API evidence.
+
+## SEQ.4 — related saved passages in the right-side reader
+
+The source reader now offers related supporting passages inside the reading pane,
+without adding a source list below the response. Each choice fetches its own saved
+source and matches exact identity/digest/text/locator/label/kind before displaying it.
+Changing sessions or matters invalidates pending reads and stale controls. Original
+citation focus and existing frozen title/close layout are preserved. Dedicated labels
+distinguish quoted contract terms, reported accounts and court-treatment support.
+
+Focused Node DOM fixtures pass for selection, ownership and invalidation; this is
+not browser acceptance. No model calls or changes to canonical saved source rows.

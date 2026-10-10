@@ -255,3 +255,114 @@ for (const treatment of ['adopted', 'rejected']) {
   assert.match(nodes.get('brain-source-body').textContent, /Speaker: The applicant/);
 }
 console.log('PASS exact inline legal links and checked dispute-source reading');
+
+// Related passages stay inside the reader and each selection reads its own saved row.
+const submissionSource = {...firstParagraph, id:'submission-source', digest:'submission-digest',
+  text:'Counsel submitted a proposition.', qualification:'Party submission.', verification:{
+    assertion_role:'party_submission', source_role:'party_submission', owner_label:'Respondent',
+    assertion_statement:'The court rejected this submission.', support_excerpt:'Counsel submitted a proposition.',
+    source_treatment:'rejected', treatment_excerpt:'The court rejected the submission.'}};
+const treatmentSource = {...secondParagraph, id:'treatment-source', digest:'treatment-digest',
+  text:'The court rejected the submission.', qualification:'Passage selected for court treatment.',
+  verification:{assertion_role:'unclear', source_role:'treatment_support',
+    assertion_statement:'The court rejected the submission.', support_excerpt:'The court rejected the submission.',
+    source_treatment:'not applicable'}};
+const relatedElement = {text:'The court rejected the submission; the statutory exception remains material.',
+  source:submissionSource, sources:[submissionSource, treatmentSource, legalSource],
+  refs:[submissionSource.locator, treatmentSource.locator, legalSource.locator],
+  inline_citations:[{text:'The court rejected the submission', source_id:submissionSource.id, source_index:0}]};
+const relatedAnswer = {...answer, elements:[relatedElement]};
+const relatedOpener = new Node('button');
+const unchangedRelated = JSON.stringify(relatedElement);
+const titleNode = nodes.get('brain-source-title');
+const closeNode = nodes.get('brain-source-close');
+
+async function openRelated() {
+  const opening = reader.open(relatedAnswer, relatedElement, 0, 0, relatedOpener);
+  reads.at(-1).resolve(submissionSource); await opening;
+  const nav = descendants(nodes.get('brain-source-body'), 'nav');
+  assert.equal(nav.length, 1);
+  assert.equal(nav[0].attributes.get('aria-label'), 'Sources supporting this response paragraph');
+  return descendants(nav[0], 'button');
+}
+
+let choices = await openRelated();
+assert.equal(choices.length, 3);
+assert.equal(choices[0].disabled, true);
+assert.equal(choices[0].attributes.get('aria-current'), 'true');
+assert.equal(choices[1].disabled, false);
+assert.match(nodes.get('brain-source-body').textContent, /Court rejected/);
+const beforeCurrentClick = reads.length;
+choices[0].handlers.get('click')();
+assert.equal(reads.length, beforeCurrentClick);
+const readTreatment = choices[1].handlers.get('click')();
+assert.match(reads.at(-1).url, /brain-sources\/0\/1$/);
+assert.equal(nodes.get('brain-source-body').children.length, 0,
+  'Client-side related text is not displayed while the saved read is pending');
+const afterTreatmentClick = reads.length;
+choices[2].handlers.get('click')();
+assert.equal(reads.length, afterTreatmentClick, 'A superseded selector cannot start a new read');
+reads.at(-1).resolve(treatmentSource); await readTreatment;
+assert.equal(nodes.get('brain-source-body').children.at(-1).textContent, treatmentSource.text);
+assert.match(nodes.get('brain-source-body').textContent, /Passage used to assess court treatment/);
+assert.match(nodes.get('brain-source-body').textContent, /Not applicable/);
+choices = descendants(descendants(nodes.get('brain-source-body'), 'nav')[0], 'button');
+assert.equal(choices[1].disabled, true);
+const readStatute = choices[2].handlers.get('click')();
+assert.match(reads.at(-1).url, /brain-sources\/0\/2$/);
+reads.at(-1).resolve(legalSource); await readStatute;
+assert.equal(nodes.get('brain-source-body').children.at(-1).textContent, legalSource.text);
+assert.equal(nodes.get('brain-source-title'), titleNode);
+assert.equal(nodes.get('brain-source-close'), closeNode);
+assert.equal(JSON.stringify(relatedElement), unchangedRelated);
+reader.close();
+assert.equal(relatedOpener.focused, true, 'Closing after a switch restores the original citation focus');
+
+for (const field of ['id', 'digest', 'text', 'locator', 'label', 'kind']) {
+  choices = await openRelated();
+  const pending = choices[1].handlers.get('click')();
+  reads.at(-1).resolve({...treatmentSource, [field]:`changed-${field}`}); await pending;
+  assert.equal(nodes.get('brain-source-body').children.length, 0);
+  assert.match(nodes.get('brain-source-status').textContent, /could not be matched/);
+}
+
+choices = await openRelated();
+const beforeScopeChange = reads.length;
+session += 1;
+choices[1].handlers.get('click')();
+assert.equal(reads.length, beforeScopeChange, 'A selector from another session cannot read a source');
+reader.close(false);
+choices = await openRelated();
+const lateRelated = choices[1].handlers.get('click')();
+events.get('nm:matter-changed')();
+reads.at(-1).resolve(treatmentSource); await lateRelated;
+assert.equal(nodes.get('brain-source-reader').open, false);
+assert.equal(nodes.get('brain-source-body').children.length, 0);
+assert.equal(nodes.get('brain-source-status').textContent, '');
+const beforeClosedClick = reads.length;
+choices[2].handlers.get('click')();
+assert.equal(reads.length, beforeClosedClick);
+
+const incompleteRefs = {...relatedElement, refs:[submissionSource.locator]};
+const incompleteAnswer = {...answer, elements:[incompleteRefs]};
+const incompleteOpen = reader.open(incompleteAnswer, incompleteRefs, 0, 0, relatedOpener);
+reads.at(-1).resolve(submissionSource); await incompleteOpen;
+assert.equal(descendants(nodes.get('brain-source-body'), 'nav').length, 0,
+  'Unbound related references never become selectable');
+
+for (const [role, label] of [
+  ['contract', 'Quoted contract terms'], ['original_account', 'Original account'],
+  ['opposing_account', 'Opposing account'],
+]) {
+  const labeled = {...checkedBoard, verification:{...checkedBoard.verification,
+    assertion_role:role, source_role:role, source_treatment:'not_shown'}};
+  assert.equal(reader.openRecordSource(labeled, boardOpener), true);
+  assert.ok(nodes.get('brain-source-body').textContent.includes(`Statement role: ${label}`));
+  assert.match(nodes.get('brain-source-body').textContent, /Treatment in the source: Not shown/);
+}
+const crossKindRelated = {...checkedBoard, verification:{...checkedBoard.verification,
+  context_statements:[{assertion_role:'party_submission', assertion_statement:'A related submission.',
+    source_treatment:'qualified', treatment_excerpt:'The court limited that submission.'}]}};
+reader.openRecordSource(crossKindRelated, boardOpener);
+assert.match(nodes.get('brain-source-body').textContent, /Party submission · Court qualified/);
+console.log('PASS related saved-source selection, identity checks, invalidation and readable roles');
