@@ -279,3 +279,19 @@ changed ownership, conflicting snapshots, repeated exact words and misleading ro
 metadata. This verifies a prerequisite, not semantic source use or browser acceptance.
 On the owner's instruction, disjoint writer/reviewer/source files are now developed
 in parallel against agreed interfaces; one root owns integration, workbook and commits.
+
+## SEQ.4 — source-backed writer prerequisite
+
+Start READY: response_writer.py owns one focused natural-response proposal. It must
+address original advocate words and preserve attribution, conditions and independent
+asks while grounding material assertions in exact owned sources. A quoted contract,
+party submission and court treatment remain distinct. No writer text may announce
+execution, saving or completion; the final reviewer examines every unit regardless
+of kind. The writer is not a release boundary or an execution owner.
+
+Build/evidence: 28 focused writer checks pass (45 with the source catalogue). They
+exercise full conversation and adjacent-source handoff, exact references, separate
+court-treatment support, harmless empty speaker metadata, changed replay dependency,
+overflow and incomplete provider output. These scripted checks prove ownership and
+wiring, not that the model correctly labels law or notices every request. One routine
+mini call; no internal retry. Draft repair belongs to the shared turn ledger.
