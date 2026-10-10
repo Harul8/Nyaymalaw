@@ -120,3 +120,23 @@ Conformance: isolated recovery/accounting invariant verified. The served turn
 still stays paused while the source and grounded-response prerequisites are
 connected; no temporary reply path bypasses independent review. SEQ.1 end-to-end
 acceptance remains open and will be exercised with SEQ.4's first useful answer.
+
+## SEQ.2 — lookup and recorded-name semantics
+
+Start READY: retained `citations.py` owns exact-key lookup and distinct name/quote
+results, not semantic identity, treatment or legal validity. Found must never be
+called verified law. Counterexamples: one matching party hiding another opponent;
+same court/date/shared surname collapsing two cases; truncated parser suffix
+certifying the full written name. General fix at this owner, no new model stage.
+
+Build: output version 2 separates lookup and legal-validity status. Only complete
+recorded-name agreement (formatting normalization) earns that narrow name result.
+Different written forms stay not_assessed and expose both written and held names;
+the checker cannot safely determine that an abbreviation/spelling variant denotes
+another case. Fuzzy logic remains solely for explicitly unconfirmed suggestions.
+Only identical case IDs deduplicate; parser boundaries cannot certify a suffix.
+
+Evidence/conformance: 41 citation and shared-pattern checks pass; changed logic
+passes focused static checks. Reader still needs collision-preserving rows/coverage,
+quote fragments still need integrity repair, and statute identity/readback plus
+chat integration remain open. No model calls or held-corpus/index mutation.

@@ -7,8 +7,8 @@ held rather than "probably" another case.
 
 Four outcomes, and each says what it does not mean:
 
-    verified          held, one judgment, and nothing written beside it
-                      disagrees with that judgment
+    found             exact indexed key found for one held case ID; name,
+                      quotation and legal use remain separate checks
     check             held, but the case name written beside it is a
                       different case, the citation leads to more than one
                       held judgment, or quoted words are not in the text
@@ -18,9 +18,9 @@ Four outcomes, and each says what it does not mean:
                       because an unread index and an absent citation look
                       identical and mean opposite things
 
-The case name beside a citation can only DOWNGRADE: it turns a held citation
-into `check`, never makes a citation verified (fuzzy may rank, never
-identify). Quoted words found in a judgment are words in the judgment, not
+Name comparison certifies only complete recorded-name agreement. Variations or
+incomplete parsing stay unassessed; fuzzy matching may suggest, never identify.
+Quoted words found in a judgment are words in the judgment, not
 the court's holding -- they may be a party's submission or an earlier
 judgment quoted -- and the result says so.
 
@@ -36,7 +36,7 @@ from pathlib import Path
 from nm.shared.citation_contracts import CASE, READ_FORMATS, find_reporter_citations
 from nm.shared.text_contracts import fold_spacing, words
 
-CONTRACT = "citation_check_v1"
+CONTRACT = "citation_check_v2"
 ROOT = Path(__file__).resolve().parents[2]
 _EXCERPT = 280
 _QUOTE_WORDS = 4  # a fragment shorter than this is a phrase, not a checkable quotation
@@ -174,7 +174,14 @@ def _name_beside(text: str, start: int, floor: int) -> str | None:
         found = match
     if found is None or len(window) - found.end() > _NAME_GAP:
         return None
-    return _SIGNAL.sub("", " ".join(found.group(0).split()))
+    # CASE may stop at a lowercase particle in the second party. Preserve the
+    # rest of the written name; extra prose makes comparison unassessed, never
+    # a reason to certify a truncated match.
+    start = found.start()
+    prefix = window[:start].strip()
+    if prefix and _SIGNAL.sub("", prefix + " ").strip():
+        start = 0  # Possible truncated first party: retain it, do not certify a suffix.
+    return _SIGNAL.sub("", fold_spacing(window[start:].strip(" ,:;([\n")))
 
 
 #: Words that introduce a citation rather than name a party: `In X v. Y`, `See X v. Y`.
@@ -234,9 +241,18 @@ def _party_words(judgment: dict) -> str:
 def _name_check(given: str | None, judgment: dict) -> str:
     if given is None:
         return "not_given"
-    if not _distinctive(given):
-        return "too_general"
-    return "matches" if _names_agree(given, _party_words(judgment)) else "differs"
+    def normalized(value):
+        return tuple("v" if token in {"v", "vs", "versus"} else token
+                     for token in words(value or ""))
+    supplied = normalized(given)
+    alternatives = [judgment["title"]]
+    if judgment.get("petitioner") and judgment.get("respondent"):
+        alternatives.append(judgment["petitioner"] + " v " + judgment["respondent"])
+    # This proves textual agreement only. It does not establish a correct
+    # citation-to-case linkage or decide that a spelling variant is another case.
+    if "v" in supplied and any(supplied == normalized(name) for name in alternatives):
+        return "matches_recorded_name"
+    return "not_assessed"
 
 
 def _suggestions(given: str | None, citation, index: "CaseIdentityIndex") -> list[dict]:
@@ -303,12 +319,8 @@ def _quotations(text: str) -> list[dict]:
 # --------------------------------------------------------------- check ----
 
 def _held_twice(one: dict, other: dict) -> bool:
-    """The corpus holds some judgments under two file names. Same court, same
-    decision date and a shared party word is one judgment; anything less is two."""
-    return (one["case_id"] == other["case_id"]
-            or (one["decided_on"] is not None and one["decided_on"] == other["decided_on"]
-                and one["court"] == other["court"]
-                and bool(_distinctive(one["title"]) & _distinctive(other["title"]))))
+    """Only the same owned case ID. Similar names/date/court are not identity."""
+    return one["case_id"] == other["case_id"]
 
 
 def _distinct(judgments: dict[str, dict]) -> list[dict]:
@@ -342,7 +354,7 @@ def check_citations(text: str, index: CaseIdentityIndex) -> dict:
     text = text or ""
     citations = find_reporter_citations(text)
     result = {"contract": CONTRACT, "citations": [], "formats": list(READ_FORMATS),
-              "summary": {"verified": 0, "check": 0, "not_held": 0, "could_not_check": 0}}
+              "summary": {"found": 0, "check": 0, "not_held": 0, "could_not_check": 0}}
     try:
         scope = index.scope()
         result["index"] = {"state": "readable", "reason": None, "scope": scope,
@@ -371,7 +383,8 @@ def check_citations(text: str, index: CaseIdentityIndex) -> dict:
         row = {"id": f"c{number}", "text": citation.text, "start": citation.start, "end": citation.end,
                "reporter": citation.reporter, "keys": list(citation.keys),
                "paragraph": paragraph_of(citation.start), "name_given": given, "name_check": None,
-               "judgments": [], "suggestions": [], "quotes": [], "reasons": [], "status": None}
+               "judgments": [], "suggestions": [], "quotes": [], "reasons": [], "status": None,
+               "lookup": "unavailable", "legal_validity": "not_assessed"}
         rows.append(row)
         previous = row
         if result["index"]["state"] != "readable":
@@ -386,6 +399,7 @@ def check_citations(text: str, index: CaseIdentityIndex) -> dict:
             row["reasons"].append(f"The case index could not be read ({exc}), so this citation was not checked.")
             continue
         row["judgments"] = held
+        row["lookup"] = "not_held" if not held else "ambiguous" if len(held) > 1 else "found"
         if not held:
             row["status"] = "not_held"
             row["reasons"].append("Nyaymalaw holds no judgment under this citation. That does not make it "
@@ -408,17 +422,13 @@ def check_citations(text: str, index: CaseIdentityIndex) -> dict:
         else:
             judgment = held[0]
             row["name_check"] = _name_check(given, judgment)
-            if row["name_check"] == "differs":
-                row["status"] = "check"
-                row["reasons"].append(f"The name written beside this citation, {given}, does not match the "
-                                      f"judgment held under it: {judgment['title']}. Check that the name and "
-                                      "the citation belong together.")
-            elif row["name_check"] == "not_given":
+            if row["name_check"] == "not_given":
                 row["reasons"].append(f"Held: {judgment['title']}. No case name is written beside this "
                                       "citation; confirm this is the case meant.")
-            elif row["name_check"] == "too_general":
-                row["reasons"].append(f"Held: {judgment['title']}. The name written beside it, {given}, is too "
-                                      "general to compare; confirm this is the case meant.")
+            elif row["name_check"] == "not_assessed":
+                row["reasons"].append(f"Written name: {given}. Recorded name: {judgment['title']}. "
+                    "Complete name agreement was not established; check that the name and citation "
+                    "belong together. A spelling variation or shortened name does not establish a different case.")
             else:
                 row["reasons"].append(f"Held: {judgment['title']}, {judgment['court']}, {judgment['decided_on']}.")
 
@@ -474,14 +484,14 @@ def check_citations(text: str, index: CaseIdentityIndex) -> dict:
 
     for row in rows:
         if row["status"] is None:
-            row["status"] = "verified"
+            row["status"] = "found"
         row["judgments"] = [_public(j) for j in row["judgments"]]
         row["suggestions"] = [_public({**j, "also_held_as": []}) for j in row["suggestions"]]
         result["summary"][row["status"]] += 1
         result["citations"].append(row)
     counts = result["summary"]
     result["statement"] = (f"{len(rows)} citation{'s' if len(rows) != 1 else ''} recognised: "
-                           f"{counts['verified']} verified, {counts['check']} to check, "
+                           f"{counts['found']} found, {counts['check']} to check, "
                            f"{counts['not_held']} not held by Nyaymalaw, "
                            f"{counts['could_not_check']} could not be checked.")
     return result

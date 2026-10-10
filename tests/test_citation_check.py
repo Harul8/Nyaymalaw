@@ -95,19 +95,21 @@ def test_an_unreadable_index_checks_nothing_and_reports_nothing_as_not_held(tmp_
     result = check_citations("(1973) 4 SCC 225 and (1990) 2 SCC 999", index)
     assert result["index"]["state"] == "unavailable"
     assert [r["status"] for r in result["citations"]] == ["could_not_check", "could_not_check"]
-    assert result["summary"]["not_held"] == result["summary"]["verified"] == 0
+    assert result["summary"]["not_held"] == result["summary"]["found"] == 0
 
 
-def test_a_case_name_that_is_a_different_case_is_never_verified(index):
+def test_a_different_written_name_never_gains_name_agreement(index):
     row = _only(check_citations("Rumpelstiltskin v. State of Testland, (1973) 4 SCC 225", index))
-    assert row["status"] == "check" and row["name_check"] == "differs"
+    assert row["lookup"] == "found" and row["name_check"] == "not_assessed"
+    assert "Rumpelstiltskin" in " ".join(row["reasons"])
+    assert row["legal_validity"] == "not_assessed"
 
 
-def test_the_case_name_can_only_downgrade_and_never_upgrades(index):
+def test_found_and_complete_recorded_name_agreement_remain_distinct(index):
     matched = _only(check_citations("Alphonse Quartermain v. State of Testland, (1973) 4 SCC 225", index))
-    assert matched["status"] == "verified" and matched["name_check"] == "matches"
+    assert matched["status"] == "found" and matched["name_check"] == "matches_recorded_name"
     unnamed = _only(check_citations("Relied on (1973) 4 SCC 225.", index))
-    assert unnamed["status"] == "verified" and unnamed["name_check"] == "not_given"
+    assert unnamed["status"] == "found" and unnamed["name_check"] == "not_given"
     assert any("confirm this is the case meant" in r for r in unnamed["reasons"])
     named_but_absent = _only(check_citations("Alphonse Quartermain v. State, (1973) 4 SCC 999", index))
     assert named_but_absent["status"] == "not_held"
@@ -115,12 +117,12 @@ def test_the_case_name_can_only_downgrade_and_never_upgrades(index):
 
 def test_a_name_of_generic_words_is_not_compared_and_not_counted_as_a_match(index):
     row = _only(check_citations("State of Kerala v. Union of India, (1973) 4 SCC 225", index))
-    assert row["name_check"] == "too_general"
+    assert row["name_check"] == "not_assessed"
 
 
 def test_an_advocate_writing_sc_reads_the_citation_held_as_supreme_court(index):
     row = _only(check_citations("Alphonse Quartermain v. State, AIR 1973 SC 1461", index))
-    assert row["status"] == "verified"
+    assert row["status"] == "found"
     assert row["judgments"][0]["case_id"] == "SYN_1973_ALPHA"
 
 
@@ -130,14 +132,14 @@ def test_a_citation_leading_to_two_judgments_is_never_resolved_to_one(index):
     assert {j["case_id"] for j in row["judgments"]} == {"SYN_1980_BETA", "SYN_1980_GAMMA"}
 
 
-def test_one_judgment_held_under_two_files_is_one_judgment(index):
+def test_two_separate_citations_keep_their_separate_indexed_case_ids(index):
     result = check_citations("Delphine Achterberg v. State, (1985) 2 SCC 10 : AIR 1985 SC 50", index)
-    assert [r["status"] for r in result["citations"]] == ["verified", "verified"]
+    assert [r["status"] for r in result["citations"]] == ["found", "found"]
 
 
 def test_parallel_citations_share_the_name_written_before_them(index):
     result = check_citations("Rumpelstiltskin v. State, (1973) 4 SCC 225 : AIR 1973 SC 1461", index)
-    assert [r["name_check"] for r in result["citations"]] == ["differs", "differs"]
+    assert [r["name_check"] for r in result["citations"]] == ["not_assessed", "not_assessed"]
 
 
 def test_quoted_words_found_are_words_in_the_judgment_not_its_holding(index):
@@ -145,7 +147,7 @@ def test_quoted_words_found_are_words_in_the_judgment_not_its_holding(index):
         'In Alphonse Quartermain v. State, (1973) 4 SCC 225, it was said that "the rule of law is '
         'paramount in every case".', index))
     (quote,) = row["quotes"]
-    assert quote["result"] == "found" and row["status"] == "verified"
+    assert quote["result"] == "found" and row["status"] == "found"
     assert "submission" in quote["detail"]
     assert quote["excerpt"]["words"] == "the rule of law is paramount in every case"
 
@@ -175,7 +177,7 @@ def test_an_unreadable_judgment_leaves_its_quotation_not_assessed_and_does_not_d
     row = _only(check_citations(
         'Ursula Pennyworth v. Registrar, 1999 (3) ALT 10 held "the registrar may not refuse the '
         'application without notice".', index))
-    assert row["quotes"][0]["result"] == "not_assessed" and row["status"] == "verified"
+    assert row["quotes"][0]["result"] == "not_assessed" and row["status"] == "found"
 
 
 def test_no_citation_says_so_and_lists_the_formats_it_reads(index):
@@ -202,12 +204,12 @@ def test_the_engine_has_no_door_to_a_model_or_a_store():
 
 def test_the_same_case_spelt_another_way_is_not_flagged_as_a_different_case(index):
     row = _only(check_citations("Alfonse Quartermane v. State, (1973) 4 SCC 225", index))
-    assert row["name_check"] == "matches" and row["status"] == "verified"
+    assert row["name_check"] == "not_assessed" and row["status"] == "found"
 
 
 def test_a_case_known_by_its_initials_is_not_flagged(index):
     row = _only(check_citations("BSNL v. Union of India, (2006) 3 SCC 1", index))
-    assert row["name_check"] == "matches"
+    assert row["name_check"] == "not_assessed"
 
 
 def test_a_disagreeing_name_is_put_to_the_advocate_never_declared_another_case(index):
@@ -226,3 +228,34 @@ def test_a_name_and_year_suggestion_never_verifies_a_citation_the_index_does_not
 def test_no_suggestion_from_a_name_of_generic_words(index):
     row = _only(check_citations("State of Kerala v. Union of India, (1980) 2 SCC 777", index))
     assert row["suggestions"] == []
+
+
+def test_same_first_party_cannot_hide_a_different_opponent(index):
+    row = _only(check_citations("Alphonse Quartermain v. Fixture Authority, (1973) 4 SCC 225", index))
+    assert row["name_check"] == "not_assessed"
+    assert any("Fixture Authority" in reason and "State Of Testland" in reason for reason in row["reasons"])
+
+
+def test_shared_party_date_and_court_never_merge_distinct_owned_cases(index):
+    from nm.core_engine.citations import _distinct
+    held = index.judgments_for(("19852SCC10", "AIR1985SC50"))
+    distinct = _distinct(held)
+    assert {r["case_id"] for r in distinct} == {"SYN_1985_DELTA_A", "SYN_1985_DELTA_B"}
+    same = _distinct(index.judgments_for(("19734SCC225", "AIR1973SUPREMECOURT1461")))
+    assert len(same) == 1
+
+
+def test_complete_name_formatting_does_not_create_false_uncertainty(index):
+    row = _only(check_citations("Alphonse  Quartermain versus State of Testland, (1973) 4 SCC 225", index))
+    assert row["name_check"] == "matches_recorded_name"
+    assert row["lookup"] == row["status"] == "found"
+    assert row["legal_validity"] == "not_assessed"
+
+
+def test_parser_truncation_cannot_certify_a_matching_suffix_as_the_full_name():
+    from nm.core_engine.citations import _name_beside, _name_check
+    written = "Unrelated First Second Third Fourth Fifth Sixth Seventh v. Respondent, "
+    given = _name_beside(written, len(written), 0)
+    shorter = {"title": "Second Third Fourth Fifth Sixth Seventh vs Respondent"}
+    assert "Unrelated" in given
+    assert _name_check(given, shorter) == "not_assessed"
