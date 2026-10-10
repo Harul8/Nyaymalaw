@@ -63,7 +63,7 @@ class Model:
         return result
 
 
-def test_complete_context_and_all_neighbouring_legal_words_reach_one_routine_call():
+def test_complete_context_and_all_neighbouring_legal_words_reach_one_writer_call():
     history = [{"source_id": "t1:advocate", "turn_id": "t1", "speaker": "advocate",
                 "record_role": "original_account", "text": "No external contact. The allegation is disputed."}]
     ctx, record = fixture(history=history)
@@ -83,7 +83,7 @@ def test_complete_context_and_all_neighbouring_legal_words_reach_one_routine_cal
         s["id"] for s in sources.values() if s["kind"] in {"provision", "judgment"}}
     assert any("Court rejected" in s["text"] for s in payload["held_passages"]["passages"])
     assert payload["research"]["plan_proposal"] == record["plan"]["proposal"]
-    assert tier is Tier.ROUTINE and kwargs == {"max_tokens": MAX_OUTPUT} and schema == SCHEMA
+    assert tier is Tier.HARD and kwargs == {"max_tokens": MAX_OUTPUT} and schema == SCHEMA
     assert prompt.operation == "core_response_writer"
     assert draft["contract"] == CONTRACT and draft["proposal"] == proposed
     assert draft["units"][0]["id"] == "t2:b1"

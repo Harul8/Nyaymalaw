@@ -1255,3 +1255,9 @@ Unknown release names, overlapping usage and unpriced cache writes fail explicit
 67 focused configuration, pricing, provider-port and session-budget checks pass.
 This is a prerequisite; deployment routing and provider accounting follow before
 any new paid call. Existing prompt text and call counts are unchanged.
+
+Migration piece 2 routes both the writer's context check and its single generation
+call through the HARD tier. No prompt, source selector or replay contract changes.
+The owner subsequently reinstated Luna-versus-Sol comparisons within $1 while
+retaining direct deployment authority, and requested pushes every 10–15 minutes.
+Comparisons remain separate from browser acceptance and do not delay wiring.

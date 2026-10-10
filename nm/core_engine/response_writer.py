@@ -246,7 +246,7 @@ def validate(draft, context, sources):
 
 
 def write(model, context, research_record, sources, interpretation=None, execution=None):
-    """One routine call. TurnCalls, not this stage, owns any conditional correction."""
+    """One writer-tier call. TurnCalls owns any conditional correction."""
     if answer_sources.build(context, research_record) != sources:
         raise ValueError("Writer sources differ from their owned context and research snapshot")
     # Exact legal text occurs once here. Full durable candidate/query proofs remain
@@ -267,10 +267,10 @@ def write(model, context, research_record, sources, interpretation=None, executi
     prompt = Prompt(system=SYSTEM, user=json.dumps(payload, ensure_ascii=False),
                     operation="core_response_writer")
     if (estimate_tokens(SYSTEM + prompt.user + json.dumps(SCHEMA)) + MAX_OUTPUT
-            > model.context_budget(Tier.ROUTINE)):
+            > model.context_budget(Tier.HARD)):
         raise ContextOverflow("Complete response context exceeds the model budget")
     try:
-        result = model.structured(prompt, SCHEMA, Tier.ROUTINE, max_tokens=MAX_OUTPUT)
+        result = model.structured(prompt, SCHEMA, Tier.HARD, max_tokens=MAX_OUTPUT)
     except SchemaViolation as exc:
         if exc.rejected_result is None:
             raise
