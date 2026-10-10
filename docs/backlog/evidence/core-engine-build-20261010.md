@@ -1795,3 +1795,32 @@ existing bounded repair remains the recovery path.
 Shared ledger after both runs: $3.751980 of $5 ($2.236549 measured, $1.515431
 reserved or unknown). Main instance 8175 was restarted with the current code on the
 same ledger; `/api/health` reports code current, serving `54ad9598123545d8`.
+
+### SEQ.3 terms-of-art planning candidate and run-to-run variation (owner-approved)
+
+Candidate: one sentence after "Seek legally related concepts rather than narrative
+synonyms" asking enquiries to use the terms of art statutes and judgments use (the
+legal name of a remedy, proceeding, right, duty or status). Round 1 (18 Luna calls,
+$0.003196) also said the phrasing is search vocabulary, not a claim about law; in
+DC05 it named the NI Act 1881 and sections 138/142, against the existing rule, so
+round 2 (18 calls, $0.003316) instead adds "without naming an Act, section, case or
+other authority". A second sample of the served prompt on the same frozen inputs
+(18 calls, $0.004618) measured run-to-run variation. Local search used the same v5
+queries and production ranking for every arm.
+
+| Arm | Provision anchors selected (of 34) | Judgment anchors (of 14) | Named Act/section | DC11 "non-party" premise | DC12 invented "residential" |
+|---|---|---|---|---|---|
+| served prompt, sample 1 | 10 | 0 | no | no | yes |
+| served prompt, sample 2 | 7 | 1 | Act named once | yes | yes |
+| focused qualifications | 9 | 1 | no | yes | yes |
+| terms of art, round 1 | 11 | 0 | yes (DC05) | yes | no |
+| terms of art, round 2 | 9 | 1 | no | yes | no |
+
+The served prompt's own samples differ by three provision anchors, as much as any
+candidate difference, so single-sample comparisons on these 18 cases cannot detect
+prompt effects of this size. The DC11 premise and Act naming also occur in the
+served prompt's second sample. Terms of art consistently removed the invented
+tenancy category and used more statutory vocabulary (secondary evidence, bailment,
+lien, wrongful detention, interim maintenance, guardianship), but discovery is
+level within noise. Not promoted. A multi-sample comparison (several samples per
+arm; Luna cost about $0.004 per 18-call sample) is the valid next measurement.
