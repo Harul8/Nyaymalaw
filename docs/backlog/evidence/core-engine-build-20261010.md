@@ -611,3 +611,34 @@ outputs/core-engine-build-20261010/research-premise-fidelity-six.json. Further p
 edits are paused while the verified retrieval/presentation changes receive an
 integrated real-model API test. A separate independent planner review is only an
 unimplemented hypothesis and must be measured before adding latency or a new stage.
+
+## SEQ.2/4 — visible saved source checks
+
+The existing right-side passage reader now displays the authenticated saved check
+view. Citation lookup, recorded-name comparison, quotation wording and association,
+and provision readback are labelled separately. A found citation is not a holding
+or a combined verification verdict. A secondary citation remains a mention; a match
+to another source used in the paragraph is distinguished from this passage's case.
+Unresolved and unavailable checks keep those outcomes, and legal validity/version
+remain explicitly unassessed by the identity checks. Missing, unknown or misbound
+check views display not assessed. Account passages receive no legal-status panel.
+
+Only the matching saved-source endpoint response supplies this display evidence;
+client-side or direct historical-record metadata cannot certify it. Existing source
+identity and session/generation checks remain intact. The original passage and
+canonical response are unchanged. The new section uses the existing scrolling pane
+body and typography, so the right-side heading and close control remain fixed.
+Inline citations remain in the response, without a source footer or new stylesheet.
+
+Ten focused offline UI tests pass via test_dispute_board_ui.py and
+test_the_screen_never_folds_a_disclosure.py. The DOM fixture covers the actual status
+enums, their unresolved neighbours, separate source associations, no-check legacy
+responses, source text preservation and unconfirmed metadata. These checks establish
+display wiring, not browser acceptance or semantic accuracy. No model calls, fresh
+corpus lookups, API/core changes or durable rendering-version change were added.
+Controlled browser review remains pending.
+
+Commit-hook deviation: the initial commit attempt invoked the default graph refresh,
+which launched an embedding subprocess. The commit was interrupted and the verified
+subprocess tree stopped; provider dispatch/cost was not confirmed. The scoped commit
+uses the explicit offline hook path instead. The UI tests themselves made no calls.

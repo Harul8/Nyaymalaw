@@ -366,3 +366,111 @@ const crossKindRelated = {...checkedBoard, verification:{...checkedBoard.verific
 reader.openRecordSource(crossKindRelated, boardOpener);
 assert.match(nodes.get('brain-source-body').textContent, /Party submission · Court qualified/);
 console.log('PASS related saved-source selection, identity checks, invalidation and readable roles');
+
+const authorityView = (selected, changes = {}) => ({contract:'core_source_authority_view_v1',
+  activity_contract:'core_turn_v2', unit_id:'source-turn:b1', source_id:selected.id,
+  state:'recorded', reason:null, case_checks:[], provision_checks:[], provision_mentions:[],
+  limits:[], ...changes});
+async function inspectAuthority(selected, inspection, clientInspection = null) {
+  const canonical = {...selected, ...(clientInspection ? {authority_inspection:clientInspection} : {})};
+  const item = {text:'The supported response.', source:canonical, sources:[canonical], refs:[selected.locator]};
+  const response = {...answer, elements:[item]};
+  const before = JSON.stringify(item);
+  const pending = reader.open(response, item, 0, 0, opener);
+  assert.equal(nodes.get('brain-source-body').children.length, 0);
+  reads.at(-1).resolve({...selected, authority_inspection:inspection}); await pending;
+  assert.equal(nodes.get('brain-source-body').children.at(-1).textContent, selected.text);
+  assert.equal(JSON.stringify(item), before, 'Display evidence must not mutate canonical response sources');
+  assert.equal(nodes.get('brain-source-title'), titleNode);
+  assert.equal(nodes.get('brain-source-close'), closeNode);
+  return nodes.get('brain-source-body').textContent;
+}
+
+const caseEvidence = {citation_id:'c1', text:'(2000) 1 SCC 10', lookup:'found',
+  name_given:'First Party v Second Party', name_check:'matches_recorded_name',
+  judgments:[{case_id:'case-1', title:'First Party v Second Party', court:'Example Court', decided_on:'2000-01-02'}],
+  association:'matched', matching_source_ids:[secondParagraph.id], selected_support_mentions:[],
+  association_scope:'Identity comparison only; speaker, reliance and legal effect require review',
+  legal_validity:'not_assessed', quotes:[{quote:'<em>Exact reported words</em>', result:'not_found',
+    detail:'These words are not in the held text.', attribution:'single_candidate'}]};
+let authorityText = await inspectAuthority(secondParagraph,
+  authorityView(secondParagraph, {case_checks:[caseEvidence]}));
+assert.match(authorityText, /Citation lookup: Found in the held corpus/);
+assert.match(authorityText, /Name comparison: Matches the recorded name/);
+assert.match(authorityText, /Citation resolves to this passage’s judgment/);
+assert.match(authorityText, /Quotation wording: Words not found in the held judgment text/);
+assert.match(authorityText, /Legal validity: Not assessed/);
+assert.ok(authorityText.includes('<em>Exact reported words</em>'));
+assert.equal(descendants(nodes.get('brain-source-body'), 'em').length, 0);
+assert.equal(descendants(nodes.get('brain-source-body'), 'section').length, 1);
+assert.equal(descendants(nodes.get('brain-source-body'), 'section')[0].attributes.get('aria-label'),
+  'Saved source checks');
+assert.doesNotMatch(authorityText, /Source checks: Found|Verified authority|Citation verified/);
+
+for (const [lookup, label] of [['ambiguous','More than one held judgment'],
+  ['unavailable','Could not be checked'], ['not_held','Not held by Nyaymalaw'], ['future_state','Not assessed']]) {
+  authorityText = await inspectAuthority(secondParagraph, authorityView(secondParagraph,
+    {case_checks:[{...caseEvidence, lookup, name_check:null, quotes:[], association:'unresolved_association'}]}));
+  assert.ok(authorityText.includes(`Citation lookup: ${label}`));
+  assert.match(authorityText, /Name comparison: Not assessed/);
+  assert.match(authorityText, /Quotation check: Not assessed/);
+}
+
+authorityText = await inspectAuthority(secondParagraph, authorityView(secondParagraph, {
+  case_checks:[{...caseEvidence, association:'different_used_identity', name_check:'not_given',
+    selected_support_mentions:[{source_id:secondParagraph.id, text:'(2000) 1 SCC 10',
+      source_role_proposal:'quoted_authority'}], quotes:[{quote:'Exact reported words', result:'found',
+      attribution:'unresolved', detail:'These words occur in the held text; read their context.'}]}]}));
+assert.match(authorityText, /Citation resolves to a different judgment from the passage used/);
+assert.match(authorityText, /Citation mentioned in this passage: \(2000\) 1 SCC 10/);
+assert.match(authorityText, /Quotation wording: Words found in the held judgment text/);
+assert.match(authorityText, /Quotation association: Candidate judgment unresolved/);
+assert.match(authorityText, /Name comparison: No name supplied/);
+assert.doesNotMatch(authorityText, /False citation|Court adopted/);
+
+authorityText = await inspectAuthority(secondParagraph, authorityView(secondParagraph,
+  {case_checks:[{...caseEvidence, matching_source_ids:['other-used-source']}]}));
+assert.match(authorityText, /Citation resolves to another judgment used in this response paragraph/);
+assert.doesNotMatch(authorityText, /Citation resolves to this passage’s judgment/);
+
+for (const [state, label] of [['matched','Matches the selected saved passage'],
+  ['different_snapshot','Readback differs from the selected saved passage'],
+  ['unavailable','Could not be checked'], ['ambiguous','More than one provision matches'],
+  ['not_held','Not held under the selected Act and reference'], ['future_state','Not assessed']]) {
+  authorityText = await inspectAuthority(legalSource, authorityView(legalSource,
+    {provision_checks:[{source_id:legalSource.id, state, reason:'Saved exact readback detail.',
+                       legal_version:'not_assessed'}],
+     provision_mentions:[{text:'Section 7', act_name_association:'not_assessed',
+                          reason:'The wording alone does not resolve which Act is meant.'}]}));
+  assert.ok(authorityText.includes(`Provision readback: ${label}`));
+  assert.match(authorityText, /Legal version and applicability: Not assessed/);
+  assert.match(authorityText, /Act-name association: Not assessed/);
+  assert.doesNotMatch(authorityText, /Citation lookup:/);
+}
+
+for (const evidence of [undefined, {contract:'future_view'},
+  authorityView(legalSource, {source_id:'another-source'}),
+  authorityView(legalSource, {activity_contract:'future_turn'}),
+  authorityView(legalSource, {provision_checks:undefined})]) {
+  authorityText = await inspectAuthority(legalSource, evidence,
+    authorityView(legalSource, {provision_checks:[{state:'matched'}]}));
+  assert.match(authorityText, /Source checks: Not assessed/);
+  assert.doesNotMatch(authorityText, /Provision readback: Matches/,
+    'Unconfirmed client evidence cannot replace missing saved evidence');
+}
+authorityText = await inspectAuthority(legalSource, authorityView(legalSource,
+  {activity_contract:'core_turn_v1', state:'not_assessed',
+   reason:'Authority checks were not recorded for this earlier response.'}));
+assert.match(authorityText, /Source checks: Not assessed/);
+assert.match(authorityText, /earlier response/);
+
+authorityText = await inspectAuthority(conversationSource, authorityView(conversationSource,
+  {case_checks:[caseEvidence]}));
+assert.doesNotMatch(authorityText, /Saved source checks|Citation lookup|Legal validity/,
+  'An account passage must not acquire a legal-status panel');
+reader.openRecordSource({...checkedBoard, authority_inspection:authorityView(checkedBoard,
+  {case_checks:[caseEvidence]})}, boardOpener);
+assert.match(nodes.get('brain-source-body').textContent, /Source checks: Not assessed/);
+assert.doesNotMatch(nodes.get('brain-source-body').textContent, /Citation lookup: Found/,
+  'Historical direct record metadata is not an authenticated authority read receipt');
+console.log('PASS separate saved authority checks, unresolved neighbors, legacy and exact passage preservation');

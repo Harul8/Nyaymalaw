@@ -35,12 +35,88 @@ window.NmBrainSources = (() => {
     return read;
   }
 
-  function populate(source, choices = null) {
+  function authorityDetails(source, inspection) {
+    if (!legal(source)) return [];
+    const section = document.createElement('section');
+    section.setAttribute('aria-label', 'Saved source checks');
+    const heading = document.createElement('p');
+    heading.className = 'hint'; heading.textContent = 'Saved source checks';
+    section.appendChild(heading);
+    const line = (label, text) => {
+      if (!words(text)) return;
+      const detail = document.createElement('p');
+      detail.className = 'brain-source-excerpt'; detail.textContent = `${label}: ${text}`;
+      section.appendChild(detail);
+    };
+    if (inspection?.contract !== 'core_source_authority_view_v1'
+        || !['core_turn_v1', 'core_turn_v2'].includes(inspection.activity_contract)
+        || inspection.source_id !== source.id
+        || !['recorded', 'not_assessed'].includes(inspection.state)
+        || !['case_checks', 'provision_checks', 'provision_mentions']
+          .every(key => Array.isArray(inspection[key]))) {
+      line('Source checks', 'Not assessed — saved check evidence is unavailable for this passage.');
+      return [section];
+    }
+    if (inspection.state === 'not_assessed') {
+      line('Source checks', 'Not assessed');
+      line('Scope', inspection.reason);
+    }
+    for (const check of inspection.case_checks || []) {
+      line('Citation', check.text);
+      line('Citation lookup', ({found:'Found in the held corpus', not_held:'Not held by Nyaymalaw',
+        ambiguous:'More than one held judgment — identity unresolved',
+        unavailable:'Could not be checked'})[check.lookup] || 'Not assessed');
+      line('Name in the response', check.name_given);
+      line('Name comparison', ({matches_recorded_name:'Matches the recorded name',
+        not_given:'No name supplied beside this citation'})[check.name_check] || 'Not assessed');
+      for (const judgment of check.judgments || []) {
+        line('Held record', [judgment.title, judgment.court, judgment.decided_on].filter(words).join(' · '));
+      }
+      line('Relation to this passage', ({matched:check.matching_source_ids?.includes(source.id)
+          ? 'Citation resolves to this passage’s judgment'
+          : 'Citation resolves to another judgment used in this response paragraph',
+        different_used_identity:'Citation resolves to a different judgment from the passage used',
+        unresolved_association:'Not resolved'})[check.association] || 'Not assessed');
+      for (const mention of check.selected_support_mentions || []) {
+        line('Citation mentioned in this passage', mention.text);
+      }
+      line('Identity-check scope', check.association_scope);
+      if (!check.quotes?.length) line('Quotation check', 'Not assessed — no quotation check is recorded.');
+      for (const quote of check.quotes || []) {
+        line('Quotation', quote.quote);
+        line('Quotation wording', ({found:'Words found in the held judgment text',
+          not_found:'Words not found in the held judgment text'})[quote.result] || 'Not assessed');
+        line('Quotation association', quote.attribution === 'single_candidate'
+          ? 'One candidate judgment; the speaker and legal effect require context'
+          : 'Candidate judgment unresolved');
+        line('Quotation-check scope', quote.detail);
+      }
+      line('Legal validity', 'Not assessed by these identity and wording checks');
+    }
+    for (const check of inspection.provision_checks || []) {
+      line('Provision readback', ({matched:'Matches the selected saved passage',
+        different_snapshot:'Readback differs from the selected saved passage',
+        not_held:'Not held under the selected Act and reference',
+        ambiguous:'More than one provision matches — reference unresolved',
+        unavailable:'Could not be checked'})[check.state] || 'Not assessed');
+      line('Readback detail', check.reason);
+      line('Legal version and applicability', 'Not assessed by this source-identity check');
+    }
+    for (const mention of inspection.provision_mentions || []) {
+      line('Provision reference in the response', mention.text);
+      line('Act-name association', 'Not assessed');
+      line('Reference detail', mention.reason);
+    }
+    return [section];
+  }
+
+  function populate(source, choices = null, inspection = null) {
     const locator = document.createElement('p');
     locator.className = 'hint'; locator.textContent = source.locator;
     const qualification = document.createElement('p');
     qualification.className = 'hint'; qualification.textContent = source.qualification;
-    const details = [...(choices ? [choices] : []), locator, qualification];
+    const details = [...(choices ? [choices] : []), locator, qualification,
+      ...authorityDetails(source, inspection)];
     const roles = {legislative_text:'Legislative text', court_conclusion:'Court conclusion',
       court_reasoning:'Court reasoning', party_submission:'Party submission',
       quoted_authority:'Quoted authority', case_background:'Case background', unclear:'Unclear',
@@ -119,7 +195,8 @@ window.NmBrainSources = (() => {
       populate({...saved, qualification: saved.qualification
         + (saved.verification_current === false
           ? ' This historical check predates the current source review.' : '')},
-        sourceChoices(answer, element, elementIndex, sourceIndex, opener, owns));
+        sourceChoices(answer, element, elementIndex, sourceIndex, opener, owns),
+        saved.authority_inspection);
     } catch (error) {
       if (owns()) node('brain-source-status').textContent =
         `The saved passage could not be read. ${error.message}`;
