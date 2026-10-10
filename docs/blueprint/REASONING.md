@@ -1,6 +1,7 @@
 # Reasoning principles
 
-Owner-authorised refinement, 22 September 2026. Before Build owns requirements;
+Owner-authorised refinement, 22 September 2026. Requirements and decisions are now on the Advocate
+build plan and legal brain sheets (owner decision, 10 October 2026);
 this is their technical behaviour view, not a certification of conformance.
 Runtime guidance lives in core/conversation.py; existing domain controls retain
 ownership of permissions, calculation, provenance and release. The paired

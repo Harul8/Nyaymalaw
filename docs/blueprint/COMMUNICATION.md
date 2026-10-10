@@ -1,6 +1,7 @@
 # Communication and presentation principles
 
-Owner-authorised refinement, 22 September 2026. Before Build owns requirements;
+Owner-authorised refinement, 22 September 2026. Requirements and decisions are now on the Advocate
+build plan and legal brain sheets (owner decision, 10 October 2026);
 this view explains behaviour and proof. Runtime language has one owner:
 domain/register.py::PEER. Communication presents the checked assessment; it is not
 an independent generator authorised to alter conclusions or permissions.

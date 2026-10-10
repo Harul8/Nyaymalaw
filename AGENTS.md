@@ -269,8 +269,11 @@ account is sufficient, carry out the authorised work. Repair malformed internal
 steps within their recovery bound, preserving independently valid decisions and
 results; do not make the advocate restart accepted work.
 
-Use the legal brain sheet as the work queue and take one feature or slice at a time.
-Before Build is historical; do not update it for new legal-brain work.
+Use the Advocate build plan sheet of `docs/Nyaymalaw_Implementation_Plan.xlsx`
+as the work queue (owner decision, 10 October 2026) and take one slice at a time:
+record each agreed decision and its true status there before building. The legal
+brain sheet keeps capability intent and detail; Before Build and the Implementation
+Plan sheet's LB rows are historical; do not update them for new work.
 Keep each repair atomic: change at most one model prompt and one production
 code file in a piece, with only the focused tests and documentation needed to
 prove it. Name the observable pass condition before editing. Do not move to

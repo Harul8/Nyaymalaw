@@ -165,9 +165,11 @@ full, and the gate then correctly withheld the turn. Two correct components,
 one useless answer, and the defect living in the gap between them. Every unit
 test passed.
 
-`nm/Archives/legal_brain/common/citation_contracts.py` is now the only module permitted to define such a
-pattern, and `tests/test_citation_patterns.py` scans `nm/` and fails the build
-on a second one.
+`nm/shared/citation_contracts.py` (moved from `nm/Archives/legal_brain/common/` on
+9 October 2026) is now the only module permitted to define such a pattern -- provision
+references, case citations and the search indexes' frozen legal tokens -- and
+`tests/test_citation_patterns.py` scans `nm/` and `pipeline/`, judging each pattern
+by what it matches, and fails the build on a second one.
 
 ### 5. Fuzzy matching may RANK, never IDENTIFY — and never an Act
 
@@ -328,6 +330,15 @@ sitting on disk.
 - Routine model calls use the cheap tier; reserve the expensive one for where it
   changes the answer.
 - Do not summarise at the end of a response, and do not narrate before acting.
+- **The work queue is the Advocate build plan sheet** of
+  `docs/Nyaymalaw_Implementation_Plan.xlsx` (owner decision, 10 October 2026).
+  Record each agreed decision and its true status there before building. The
+  legal brain sheet keeps capability intent; Before Build and the Implementation
+  Plan sheet's LB rows are historical.
+- **The agent commits and pushes each verified milestone** to `s0-foundations`
+  without waiting to be asked (owner decision, 10 October 2026): only its own
+  changes, never another session's uncommitted work, never a force-push, and the
+  commit message says which checks ran and which did not.
 
 ---
 

@@ -8,7 +8,8 @@ authoring these files.
 
 ## 0. The executable unit is a packet, not a whole module
 
-[packets.json](packets.json) is the finite work queue. Each row names exact
+[packets.json](packets.json) was the earlier brain's finite work queue; the work queue is now the
+Advocate build plan sheet (owner decision, 10 October 2026). Each row names exact
 registered acceptance criteria, predecessor **outputs**, decision gates,
 command contracts, existing source boundaries, implementation steps, scenario
 specifications, expected results and rollback. It owns no completion status.

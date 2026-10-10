@@ -28,18 +28,20 @@ outcome without inventing a matter, forum or client instruction.
 
 ## 1. Find the registered work
 
-Start from a `BK-` or `J-` item in `docs/backlog/status.yaml`.
+Start from a slice, specification or scenario row on the **Advocate build plan**
+sheet of `docs/Nyaymalaw_Implementation_Plan.xlsx`, the work queue (owner
+decision, 10 October 2026), and read the legal brain capabilities it names.
 
-- Read its reason and observations in `docs/BACKLOG.md`.
-- Confirm its wave in `docs/backlog/plan.json`.
-- Confirm dependencies, priority, affected journey phases and current evidence.
-- Find the linked feature in `assurance/specification/features.yaml` and journey step in
-  `docs/backlog/steps.yaml`.
-- Find applicable PA, EW, AM and ROLE objects in
-  `docs/backlog/professional.json`.
+- Read the owner's decisions it depends on, and any open question (`Q` rows)
+  that blocks it.
+- For earlier evidence, read the backlog registries (`docs/backlog/status.yaml`,
+  `docs/BACKLOG.md`, `plan.json`, `steps.yaml`, `professional.json`) and
+  `assurance/specification/features.yaml`. They no longer decide what is built
+  next; whether they remain planning owners at all is open decision Q11. Tests
+  that run against them keep running.
 
-If no registered item owns deliverable work, register or expand one before
-implementation. Do not leave work owned only by a chat, workbook cell, commit
+If no row owns deliverable work, add one on that sheet before implementation, with
+its change contract (section 4). Do not leave work owned only by a chat, commit
 message or issue title.
 
 ## 2. State the user and professional outcome

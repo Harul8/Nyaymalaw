@@ -260,7 +260,8 @@ All rehearsals below are specifications, initially `NOT_RUN`. Each requires a de
 
 ## 9. Experience checklists for the registered execution packets
 
-The finite work queue and predecessor outputs are in [packets.json](packets.json).
+The earlier brain's work queue and predecessor outputs are in [packets.json](packets.json); the
+current work queue is the Advocate build plan sheet (owner decision, 10 October 2026).
 The A–F checklists below supply interaction detail; they are not a second
 dependency graph or delivery-status ledger. A maps to P02/P08/P09, B to
 P10/P13/P14, C to P15/P16/P25, D to P17/P18/P24/P28, E to P29–P31 and F to
