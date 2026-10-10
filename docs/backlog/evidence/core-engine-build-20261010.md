@@ -1653,3 +1653,24 @@ The read-only check against the real corpus matches its configured parent hash.
 The expensive full vector-lineage job was not rerun; its unchanged verification
 steps were stubbed only in the focused writer tests. No corpus words, vectors,
 prompts or model-call counts change. Live retrieval/relevance assessment continues.
+
+### SEQ.3 search failures made diagnosable
+
+The owner reported one reranking attempt that failed while its exact replay
+succeeded. It remains an unresolved runtime failure; no speculative fix is made.
+The measured gap is diagnostic: search saved only the exception type for lexical,
+semantic, read and rerank failures, and silently discarded a failed batch
+embedding, so the cause of the failed attempt could not be recovered afterwards.
+
+Only `nm/core_engine/retrieval.py` changes. Every degraded search stage now logs
+its cause to the server log: an expected source-unavailable failure with its
+code-authored message (which names the underlying cause, for example a reranker
+error); any other exception at ERROR with its traceback frames but without its
+message, so advocate words in a query or passage cannot reach the log. The saved
+issue reasons are unchanged, so search records, replay and the writer's and
+reviewer's inputs are byte-identical. No prompt, model call or corpus change.
+
+Ten new focused tests state the rule (`tests/test_search_failures_are_diagnosable.py`)
+and would fail without the change; all 200 tests in the 14 files that import the
+retrieval module pass. No live search, model call or browser check was run. The
+next failure on the served path will name its cause in the server log.

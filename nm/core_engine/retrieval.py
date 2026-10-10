@@ -14,6 +14,7 @@ import os
 import sqlite3
 import struct
 import threading
+import traceback
 from copy import deepcopy
 from contextlib import closing
 from functools import lru_cache
@@ -35,6 +36,26 @@ LEGACY_CONTRACT = "hybrid_retrieval_v1"
 MAX_RERANK_PAIRS = 4096
 MAX_CONTEXT_SEGMENTS = 500
 log = logging.getLogger(__name__)
+
+
+def _log_stage_failure(kind, stage, exc, query_id=None):
+    """Make a degraded search stage diagnosable without changing what is saved.
+
+    The saved issue keeps its existing reason, so search records, replay and the
+    writer's and reviewer's inputs are unchanged. A failure that leaves only an
+    exception type in the record cannot be diagnosed afterwards: on 10 October 2026
+    a reranking attempt failed and its exact replay succeeded, with nothing left to
+    say why. An expected SearchUnavailable is logged with its code-authored message,
+    which names the underlying cause. Anything else may be a programming error and
+    is logged at ERROR with its traceback frames but without its message, so an
+    advocate's words in a query or passage cannot reach the log.
+    """
+    where = f"{kind} {stage}" + (f" for {query_id}" if query_id else "")
+    if isinstance(exc, SearchUnavailable):
+        log.warning("Search stage degraded: %s: %s", where, exc)
+    else:
+        log.error("Search stage failed unexpectedly: %s: %s\n%s", where, type(exc).__name__,
+                  "".join(traceback.format_tb(exc.__traceback__)))
 
 # The index's own tokenisation has one owner, shared with the index builds: a
 # query cut differently from the built index silently stops meeting its words.
@@ -746,7 +767,8 @@ class HybridSearcher:
                     semantic = semantic_many(tuple(q["text"] for q in queries), LEG_DEPTH)
                     if len(semantic) != len(queries):
                         raise SearchUnavailable("Incomplete semantic query batch")
-                except Exception:
+                except Exception as exc:
+                    _log_stage_failure(kind, "semantic batch", exc)
                     semantic = None  # Independent calls retain any surviving query routes.
             for index, query in enumerate(queries):
                 legs = []
@@ -760,6 +782,7 @@ class HybridSearcher:
                         stages.append({"kind": kind, "query_id": query["query_id"], "stage": leg,
                                        "state": "evaluated", "hits": len(ranked)})
                     except Exception as exc:
+                        _log_stage_failure(kind, leg, exc, query["query_id"])
                         issues.append({"kind": kind, "query_id": query["query_id"], "stage": leg,
                                        "reason": type(exc).__name__})
                 for position, score in sorted(_rrf(legs).items(), key=lambda x: (-x[1], x[0]))[:PER_QUERY_POOL]:
@@ -769,6 +792,7 @@ class HybridSearcher:
             try:
                 rows = collection.read(positions)
             except Exception as exc:
+                _log_stage_failure(kind, "read", exc)
                 issues.append({"kind": kind, "query_id": None, "stage": "read", "reason": type(exc).__name__})
                 continue
             usable, pairs, rank_contexts = [], [], {}
@@ -793,6 +817,7 @@ class HybridSearcher:
                         target, row = root["position"], root["row"]
                         checked_source = _candidate(kind, target, row, revision, None, associations[position], context)
                     except Exception as exc:
+                        _log_stage_failure(kind, "context", exc)
                         # Keep unread ancestry explicit without discarding readable peers.
                         rank_contexts[position] = {"scope": "selected_indexed_segment", "bounded": True,
                             "unread_positions": [], "segments": [{"position": position, "row": rows[position]}]}
@@ -830,6 +855,7 @@ class HybridSearcher:
                 scored.sort(key=lambda x: (-x[1], _location_order(x[0])))
                 stages.append({"kind": kind, "query_id": None, "stage": "rerank", "state": "evaluated", "hits": len(usable)})
             except Exception as exc:
+                _log_stage_failure(kind, "rerank", exc)
                 issues.append({"kind": kind, "query_id": None, "stage": "rerank", "reason": type(exc).__name__})
                 scored = [(position, None) for position in usable]
             selected, groups = [], {}
@@ -856,6 +882,7 @@ class HybridSearcher:
                     issues.append({"kind": kind, "query_id": None, "stage": "context",
                                    "reason": str(exc), "position": position})
                 except Exception as exc:
+                    _log_stage_failure(kind, "context", exc)
                     context = {"scope": "selected_indexed_segment", "bounded": True, "unread_positions": [],
                                "segments": [{"position": position, "row": rows[position]}]}
                     issues.append({"kind": kind, "query_id": None, "stage": "context",
