@@ -11,6 +11,18 @@ from nm.shared.model_port import ContextOverflow, ModelError, ModelResult, Schem
 pytestmark = pytest.mark.class_a
 
 
+def test_owned_full_source_selection_cannot_introduce_copying_errors_or_normalize_words():
+    original = {"source_id": "s1", "text": "the owner's words;\nunchanged wording. Again unchanged wording."}
+    selected = select({"source_id": "s1", "quote": None}, {"s1": original})
+    assert selected["text"] == original["text"]
+    assert (selected["start"], selected["end"]) == (0, len(original["text"]))
+    from nm.shared.model_port import SchemaViolation
+    for quote in ("The owner's words", "unchanged wording."):
+        with pytest.raises(SchemaViolation): select({"source_id": "s1", "quote": quote}, {"s1": original})
+    with pytest.raises(SchemaViolation): select({"source_id": "foreign", "quote": None}, {"s1": original})
+    with pytest.raises(SchemaViolation): select({"source_id": "s1", "quote": None}, {"s1": {**original, "text": ""}})
+
+
 def context(text="Hello.", history=None):
     rows = history or []
     return {"position": "follow_up" if rows else "first", "conversation": rows,

@@ -385,3 +385,26 @@ distinguish quoted contract terms, reported accounts and court-treatment support
 
 Focused Node DOM fixtures pass for selection, ownership and invalidation; this is
 not browser acceptance. No model calls or changes to canonical saved source rows.
+
+## SEQ.3/4 — copying-free owned source selection
+
+The first live authenticated API message failed safely but delivered no useful
+answer: one inexact context quote held the legal-analysis work, while the independent
+question-drafting work survived. No retrieval ran. Both writer drafts then spliced
+an account quotation and introduced unsupported legal propositions; quotation
+admission exhausted the shared correction before final review. Four calls took
+39.1 seconds and cost $0.014597; shared ledger total was $0.050700 of $5. Nothing was
+saved or released; no second message was sent. Exact live-served-probe* evidence
+distinguishes this API failure from browser testing.
+
+General repair at the original-reference owner: quote=null explicitly selects the
+complete exact source by its owned ID. Code supplies its original words and endpoints.
+An explicit shorter quote is still exact, unique and unchanged; an unknown or empty
+source refuses. Precise mismatch feedback now names the actual selected source and
+quote instead of only the enclosing interpretation unit. No semantic or legal status
+is inferred from selecting a full source. Existing explicit references and their
+durable resolved forms remain unchanged, including replay bindings.
+
+76 focused selector/source/planner/writer checks pass. This is a mechanical repair,
+with zero additional calls. Prompt handoffs and a bounded integrated remeasurement
+remain necessary; live improvement has not yet been claimed.

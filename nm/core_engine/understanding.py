@@ -38,8 +38,11 @@ do not extend the requested scope to other records or work products.
 Outcome: Return four arrays: courtesies, information, requests and restrictions.
 Every item selects exact latest-message words and briefly explains its function.
 Each request item represents one independently completable result with its work
-type and desired result. Select earlier source IDs and exact words when needed
-to support contextual meaning or limits; do not substitute latest-message echoes.
+type and desired result. Select earlier sources when needed to support contextual
+meaning or limits; do not substitute latest-message echoes. A source reference
+with quote=null selects that source's complete exact text by ID. Use this when
+the full source supplies the needed context; use a quoted string only to select
+a shorter exact continuous passage, without rewriting or joining its words.
 Use empty arrays when a function is absent. Empty context is valid when no earlier
 context is needed. Quotes may overlap across functions. A restriction embedded in
 a request also belongs in restrictions. No invented facts, permissions, IDs,
@@ -47,9 +50,11 @@ completion claims or additional work. Proposals never establish an executed effe
 """
 
 TEXT = {"type": "string", "minLength": 1}
+SOURCE_SELECTION = {"anyOf": [TEXT, {"type": "null"}], "description":
+    "Null selects the complete exact source by its owned ID. A string selects a shorter exact continuous passage; never paraphrase or join separated words."}
 REFERENCE = {"type": "object", "additionalProperties": False,
              "required": ["source_id", "quote"],
-             "properties": {"source_id": TEXT, "quote": TEXT}}
+             "properties": {"source_id": TEXT, "quote": SOURCE_SELECTION}}
 COMMON = {
     "quote": {**TEXT, "description": "Exact latest-message words for this function; overlapping quotes are allowed."},
     "meaning": {**TEXT, "description": "Concise interpretation preserving original speaker, conditions, timing and certainty."},
@@ -99,13 +104,17 @@ def select(reference, sources):
     require_schema(reference, REFERENCE)
     source = sources.get(reference["source_id"])
     if source is None:
-        raise SchemaViolation("Selected source_id is not in the supplied context")
+        raise SchemaViolation(f"Selected source_id {reference['source_id']!r} is not in the supplied context")
     quote, text = reference["quote"], source["text"]
+    if quote is None:
+        if not text:
+            raise SchemaViolation(f"Selected source {reference['source_id']!r} has no words")
+        return {**deepcopy(source), "start": 0, "end": len(text), "text": text}
     start = text.find(quote)
     if start < 0:
-        raise SchemaViolation("Selected quote is not exact original source text")
+        raise SchemaViolation(f"Selected quote is not exact original source text: source_id={reference['source_id']!r}, quote={quote!r}")
     if text.find(quote, start + 1) >= 0:
-        raise SchemaViolation("Selected quote has multiple occurrences; select a longer unique passage")
+        raise SchemaViolation(f"Selected quote has multiple occurrences in {reference['source_id']!r}: {quote!r}; select a longer unique passage or the whole source")
     return {**deepcopy(source), "start": start, "end": start + len(quote), "text": quote}
 
 
