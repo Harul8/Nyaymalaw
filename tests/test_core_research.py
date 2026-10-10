@@ -60,6 +60,34 @@ def test_invalid_source_is_held_without_losing_independent_work():
     assert admitted["work"][0]["id"] == "t2:w2"
 
 
+def test_complete_source_selection_preserves_original_words_and_attribution_without_copying():
+    earlier = {"source_id": "t1:advocate", "turn_id": "t1", "speaker": "advocate",
+               "record_role": "original_account",
+               "text": "The other party alleges authorisation; our client denies it.\nThe original record is not supplied."}
+    ctx = context("Examine the position conditionally. Keep the allegation disputed; do not contact anyone.",
+                  [earlier])
+    item = work(None)
+    item["sources"].append({"source_id": earlier["source_id"], "quote": None})
+    admitted = accept({"work": [item]}, ctx)
+    assert admitted["issues"] == [] and admitted["semantic_review"] == "pending"
+    assert admitted["proposal"]["work"][0]["sources"] == item["sources"]
+    for selected, original in zip(admitted["work"][0]["sources"], [ctx["latest"], earlier], strict=True):
+        assert selected == {**original, "start": 0, "end": len(original["text"])}
+    query_context = json.loads(search_queries(admitted["work"][0])[0]["context"])
+    assert query_context["original_sources"] == admitted["work"][0]["sources"]
+
+
+def test_explicit_changed_quote_is_held_while_complete_source_peer_survives():
+    ctx = context("the requested review remains conditional; the allegation is disputed.")
+    damaged = work("The requested review remains conditional")
+    admitted = accept({"work": [damaged, work(None)]}, ctx)
+    assert [item["id"] for item in admitted["work"]] == ["t2:w2"]
+    assert admitted["work"][0]["sources"][0]["text"] == ctx["latest"]["text"]
+    assert admitted["issues"][0]["work_id"] == "t2:w1"
+    assert "exact" in admitted["issues"][0]["mismatch"]
+    assert admitted["issues"][0]["proposal"]["sources"][0]["quote"] == damaged["sources"][0]["quote"]
+
+
 def test_empty_work_remains_a_proposal_not_proof_of_coverage():
     assert accept({"work": []}, context())["semantic_review"] == "pending"
 

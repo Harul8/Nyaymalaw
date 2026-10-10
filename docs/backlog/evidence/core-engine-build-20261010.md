@@ -408,3 +408,10 @@ durable resolved forms remain unchanged, including replay bindings.
 76 focused selector/source/planner/writer checks pass. This is a mechanical repair,
 with zero additional calls. Prompt handoffs and a bounded integrated remeasurement
 remain necessary; live improvement has not yet been claimed.
+
+Research handoff: the planning prompt now prefers whole-source IDs where the complete
+message carries the relevant qualifications, with exact shorter selections available
+when useful. Source selection does not establish truth, relevance or legal effect.
+16 planner checks pass, including a damaged explicit quote held independently of a
+valid whole-source peer. No runtime logic or call count changed. Live acceptance is
+still pending the integrated remeasurement.

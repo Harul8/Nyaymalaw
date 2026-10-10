@@ -28,8 +28,12 @@ conditions, missing inputs and the scope of any correction. A diversion does not
 cancel earlier work, and earlier pending work does not override today's instruction.
 For supplied matter information, examine the legal questions arising from it without
 inventing a dispute or forcing a legal task onto a social message.
-2. Select the exact original passages supporting each work item, including passages
-needed to preserve attribution, timing, uncertainty, negation and qualifications.
+2. Select supporting original sources by source_id. Prefer quote=null when the
+complete saved message supplies the relevant context; code selects its unchanged
+text. Supply a quote only when a smaller continuous exact passage usefully separates
+the relevant content. Preserve attribution, timing, uncertainty, negation and
+qualifications. Selecting words identifies their source; it does not establish
+their truth, relevance or legal effect.
 An NM statement may be the object of review but cannot prove its own factual content.
 Keep an account, a reported opposing position and an authorised instruction distinct.
 3. For work needing law, formulate distinct enquiries about the relationships,
