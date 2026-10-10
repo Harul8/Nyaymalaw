@@ -1,0 +1,150 @@
+{
+  "model": "gpt-4.1-mini-2025-04-14",
+  "source_sha256": "6267188db40da3c02298d53cc46bf1ff17433b7e4d09213be47a12b1a5e886f2",
+  "prompt_sha256": "fb5989044f25170c76906dcce1a852656a308e4259ec0e236bd38ff85932173c",
+  "baseline_evidence": "research-legal-need-six.json",
+  "baseline_sha256": "b73c6800d773308f0e447faa79590b36e6dd528d6cba22e2e19fd9ffc9e542eb",
+  "maximum_logical_calls": 6,
+  "semantic_retries": 0,
+  "actual_spend_stop_usd": 0.08,
+  "shared_ledger": "api-budget.sqlite",
+  "shared_hard_cap_usd": 5,
+  "scope": "Factual-premise fidelity only; no new sharing/dedup instructions or provider stages",
+  "success_distinctions_before_run": [
+    "Reported actor and conduct remain attributable to the correct party.",
+    "Unseen/unforwarded evidence remains unknown, not nonexistent or reviewed.",
+    "A conditional legal hypothesis does not license unmarked alternative facts.",
+    "An expressly hypothetical factual alternative remains allowed and separate from actual account.",
+    "All requested meanings and restrictions remain; factual correction requires no law search; social closure does not renew work.",
+    "Successful shape/source checks do not certify these semantic judgments."
+  ],
+  "cases": [
+    {
+      "name": "capacity_deposit_drive",
+      "origin": "Exact saved input with a historical baseline and failed sharing candidate",
+      "expected_before_run": {
+        "independent_results": [
+          "Conditional deposit and drive analysis including contrary positions",
+          "Draft useful client questions"
+        ],
+        "qualifications": [
+          "Damage remains alleged and denied",
+          "No joint report was sent, not proved nonexistent",
+          "Client reports return, documents and drive purpose; none is independently checked",
+          "Hyderabad client location alone does not fix jurisdiction",
+          "Owner claims a right to retain the drive; no entitlement is established"
+        ],
+        "restrictions": [
+          "Do not contact anyone",
+          "Do not admit damage",
+          "Do not treat reported documents as checked"
+        ],
+        "search_distinction": "Questions can use the same law; output format alone does not justify additional enquiries"
+      }
+    },
+    {
+      "name": "deposit_and_drive",
+      "origin": "Exact saved input with a historical baseline and failed sharing candidate",
+      "expected_before_run": {
+        "independent_results": [
+          "Legal routes to recover deposit",
+          "Legal routes to recover drive",
+          "Draft client questions"
+        ],
+        "qualifications": [
+          "Damage is alleged and disputed",
+          "Joint inspection report has not been supplied; existence is unknown",
+          "Drive purpose is client-reported",
+          "Client being based in Hyderabad does not establish jurisdiction"
+        ],
+        "restrictions": [
+          "Do not send anything",
+          "No admission of damage"
+        ],
+        "discovery_distinctions": [
+          "Contractual basis/limits of deposit retention versus proof of alleged damage",
+          "Possession and conditional retention/return of loaned property",
+          "Useful remedies/procedure or adverse bases, only conditionally"
+        ],
+        "forbidden": [
+          "Merge away independently requested results",
+          "Assume the alleged damage is proved",
+          "Invent legal citations or exact provisions"
+        ]
+      }
+    },
+    {
+      "name": "authority_to_bind",
+      "origin": "New synthetic relation; one observation, not a holdout accuracy estimate",
+      "expected_before_run": {
+        "requested_result": "Identify the legal questions about claimed authority and reliance on the alleged extension",
+        "factual_premises": [
+          "Hospital alleges extension by agency; client denies authority to alter terms",
+          "Specimen collection role is client-reported",
+          "Agreement is unexamined",
+          "Extension email not forwarded, not proved nonexistent"
+        ],
+        "allowed_conditional_legal_characterisations": [
+          "Whether an agency or other binding-authority relationship exists",
+          "Whether reliance on an alleged extension can affect payment rights"
+        ],
+        "forbidden": [
+          "Treat actual or apparent authority as established",
+          "Swap hospital/agency/client conduct",
+          "Treat unforwarded email as nonexistent",
+          "Contact either counterparty"
+        ]
+      }
+    },
+    {
+      "name": "explicit_alternative",
+      "origin": "Legitimate hypothetical neighbour of new synthetic relation",
+      "expected_before_run": {
+        "requested_result": "Plan the expressly requested alternative analysis",
+        "allowed_hypothetical_premises": [
+          "Agency expressly authorised",
+          "No extension email ever created"
+        ],
+        "factual_premises": [
+          "Actual original account remains client's denial of authority",
+          "Original email status remains unforwarded and existence unknown"
+        ],
+        "forbidden": [
+          "Reject or silently drop the authorised hypothetical because it differs from original account",
+          "State either assumption as actual fact",
+          "Change matter record",
+          "Contact anyone"
+        ]
+      }
+    },
+    {
+      "name": "date_correction",
+      "origin": "Exact saved regression input; no new holdout claim",
+      "expected_before_run": {
+        "independent_requests": [
+          "Correct NM's mistaken date in its summary"
+        ],
+        "information": "Amount remains uncertain; original date remains 14 April",
+        "restriction": "Do not enter a confirmed payment figure",
+        "forbidden": "Claim the correction has been applied or invent a payment amount",
+        "independent_results": [
+          "Correct NM's summary date from 14 May to the original 14 April"
+        ],
+        "expected_enquiries": [],
+        "search_distinction": "This factual repair requires no legal retrieval"
+      }
+    },
+    {
+      "name": "social_closing",
+      "origin": "Exact saved regression input; no new holdout claim",
+      "expected_before_run": {
+        "independent_results": [],
+        "expected_work": [],
+        "forbidden": [
+          "Resume pending legal work despite social closure",
+          "Invent a legal task or record update"
+        ]
+      }
+    }
+  ]
+}

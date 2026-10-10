@@ -593,3 +593,21 @@ or historical seal change occurs when opening the pane.
 unknown saved versions, exact unit filtering, legacy replay, secondary citations and
 unchanged saved rows. The browser rendering of this new presentation is the next
 separate piece; this API checkpoint does not claim visible delivery.
+
+## Enquiry-premise prompt experiment — not promoted
+
+A separate six-call mini comparison tested a narrower definition: a conditional
+legal hypothesis must preserve the reported actor, conduct, attribution and scope
+of uncertainty. It still strengthened non-supply into nonexistence and altered the
+reported legal relationship. Independent work was omitted in another matter; an
+allowed factual hypothetical was broadened beyond its stated assumption. One
+correction restriction improved, but this did not offset the regressions. Production
+research.py was restored without changes. No new model stage was added.
+
+This experiment cost $0.007407. Total measured spend is $0.068946/$5, with no unknown
+reservations or transport retries. Eighteen focused mechanical checks still pass;
+semantic planning remains open. Exact inputs, candidate prompts and outputs are in
+outputs/core-engine-build-20261010/research-premise-fidelity-six.json. Further prompt
+edits are paused while the verified retrieval/presentation changes receive an
+integrated real-model API test. A separate independent planner review is only an
+unimplemented hypothesis and must be measured before adding latency or a new stage.
