@@ -1,0 +1,81 @@
+{
+  "evidence": "live-served-probe.json",
+  "assessment_type": "Independent inspection of exact live synthetic API evidence, not browser acceptance or an independent-model review result",
+  "outcome": {
+    "user_messages_sent": 1,
+    "user_messages_saved": 0,
+    "http_status": 503,
+    "code": "answer_withheld",
+    "committed": "not_committed",
+    "retryable": false,
+    "useful_deliverable_released": false,
+    "unsafe_draft_released": false,
+    "second_message": "Not sent because the first turn did not complete",
+    "browser_acceptance": "Not tested"
+  },
+  "measured": {
+    "logical_model_calls": 4,
+    "operations": ["core_understanding", "core_research_plan", "core_response_writer", "core_response_writer"],
+    "conditional_corrections": 1,
+    "independent_final_review_calls": 0,
+    "retrieval_searches_executed": 0,
+    "held_passages_supplied_to_writer": 0,
+    "latency_seconds": 39.066,
+    "input_tokens": 14525,
+    "output_tokens": 5491,
+    "provider_usage_cost_usd": 0.0145956,
+    "rounded_ledger_increment_usd": 0.014597,
+    "shared_ledger_total_usd": 0.0507,
+    "shared_ledger_maximum_usd": 5,
+    "shared_ledger_attempts": 40,
+    "reserved_or_unknown_usd": 0,
+    "production_source_hashes_unchanged_during_run": true,
+    "sealed_synthetic_matter_envelopes_after_run": 0
+  },
+  "findings": [
+    {
+      "boundary": "Understanding proposal",
+      "finding": "Raw output recognized the courtesy, supplied information, both independent requested results, and no-contact/no-admission/unexamined-document restrictions. The admitted proposal lost the drive-information unit and the legal-analysis request because a selected context quote changed the original lower-case 'the' after 'Separately,' to upper-case 'The'.",
+      "consequence": "The request's own quote was exact, but its bad context dependency caused the request unit to be held. The issue reports the primary request quote rather than naming the failing context selection, making that diagnostic imprecise. Full original context remained available downstream.",
+      "classification": "Attribution/coverage friction; no semantic acceptance claim"
+    },
+    {
+      "boundary": "Research-plan admission and retrieval",
+      "finding": "The raw plan preserved conditional analysis of both disputes and a separate client-question result. It produced four distinct legal enquiries. The same inexact capitalized source quote invalidated the complete legal-analysis work unit; only the question work remained, with no enquiries.",
+      "consequence": "No corpus search actually ran and the writer received zero held legal passages. The real held HybridSearcher was configured, but retrieval relevance was not exercised in this run. The code explicitly recorded the planning issue and did not label the search complete.",
+      "classification": "Entire independent research unit withheld for a source-copy mismatch; recovery/useful delivery gap"
+    },
+    {
+      "boundary": "Writer source selectors and bounded correction",
+      "finding": "The writer spliced the user's continuous text into a long purported quotation, removing 'Separately,' and changing 'the' to 'The'. It reused the same nonexact selection after correction.",
+      "consequence": "Mechanical admission rejected both drafts. Correction feedback said only 'Selected quote is not exact original source text', without identifying unit, field, source words, or mismatched segment. The final reviewer was never reached.",
+      "classification": "Grounding gate worked; recovery feedback was insufficiently precise"
+    },
+    {
+      "boundary": "Writer substantive grounding",
+      "finding": "Both rejected drafts asserted general legal standards despite an empty legal catalogue. Examples include an asserted joint-inspection opportunity, contractual/legal conditions for retaining another's property, and conversion/lien propositions. These selected only user-account tags.",
+      "consequence": "Conditional phrasing did not provide a retrieved legal basis. These drafts were not releasable. Because mechanical source admission stopped the turn, this test does not show whether the independent final reviewer would reject those assertions.",
+      "classification": "Unsupported legal knowledge in withheld draft"
+    },
+    {
+      "boundary": "Writer attribution and factual scope",
+      "finding": "The response preserved the disputed damage allegation, original reported return date, and unexamined agreement/receipt in broad terms. However, it wrote that documents had not been 'supplied or allowed examination', although the advocate said only not supplied or examined; it referred to a lack of documentation and a client denial of the drive-retention right that were not expressly stated. It also described the loan purpose as a fact within an account paragraph rather than retaining the specific client-report qualification there.",
+      "consequence": "These are additional source-scope/attribution defects in the rejected draft, separate from the quotation-format mismatch.",
+      "classification": "Unsupported or strengthened factual premises in withheld draft"
+    },
+    {
+      "boundary": "Public release and persistence",
+      "finding": "The API returned a truthful code-owned reliability failure, not a substantive answer. It claimed neither a saved brief nor completed analysis. No synthetic matter envelope was saved, no external contact occurred, and no retry was performed after the terminal response.",
+      "consequence": "Unsafe release was prevented, but useful task completion, source-pane reopening, follow-up correction behavior, and browser acceptance remain unverified by this live probe.",
+      "classification": "Safe withholding; end-to-end acceptance failed"
+    }
+  ],
+  "general_next_fix_candidates_not_implemented": [
+    "Reduce repeated source-copying burden using server-owned selectable source units, while keeping exact canonical words and refusing ambiguous selections; do not normalize changed substance or disable grounding.",
+    "At the selecting owner, return the exact failing unit/field, selected source and difference as bounded correction feedback.",
+    "Review how a valid independent work request survives a failed secondary attribution dependency; unresolved dependencies must remain explicit and cannot certify completed coverage.",
+    "Keep the empty-legal-catalogue boundary explicit to the writer, and measure that the whole-context final reviewer rejects legal claims supported solely by account tags once source admission allows it to run.",
+    "Retest the integrated public path after an approved general correction; do not promote this failed run as retrieval, response-quality, or browser acceptance."
+  ],
+  "changes_during_probe": "No production code, prompts or schemas were edited. Exact original requests, prompts, provider receipts and rejected drafts remain in live-served-probe.json."
+}

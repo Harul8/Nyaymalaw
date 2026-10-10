@@ -1,0 +1,53 @@
+{
+  "evidence": "review-semantic-probe.json",
+  "model": "gpt-4.1-mini-2025-04-14",
+  "source_hashes_unchanged": true,
+  "scope": "Four explicitly synthetic planted-error / legitimate-neighbor pairs; actual reviewer only, no writer generation, browser or corpus accuracy evaluation.",
+  "calls": 8,
+  "provider_dispatches": 8,
+  "retries": 0,
+  "recorded_usage_cost_usd": 0.0100072,
+  "shared_ledger_increment_usd": 0.010011,
+  "counts": {
+    "correct_acceptance": 4,
+    "correct_rejection": 3,
+    "wrong_acceptance": 0,
+    "false_rejection": 0,
+    "terminal_or_shape_failure_not_semantic_verdict": 1
+  },
+  "latency_seconds": {
+    "minimum": 1.8246884000254795,
+    "maximum": 3.9248420000076294,
+    "median": 2.7065420499420725,
+    "total": 23.11486710002646
+  },
+  "terminal_contract_failure": {
+    "pair": "not_supplied_vs_nonexistence",
+    "exception_reproduced_without_API": "SchemaViolation: Rejected units and missing requests need corresponding precise findings",
+    "diagnosis": "Reviewer correctly detected nonexistence overstatement, marked current request missing, but its finding cited only earlier factual evidence. The required matching original request reference was absent. No repair or salvage was attempted."
+  },
+  "remaining_observations": [
+    {
+      "severity": "consequential unit-scope error",
+      "pair": "independent_ask_coverage",
+      "observation": "Reviewer expressly says the payment-summary unit is correct, but labels that unit rejected because the separate deadline ask is absent. The whole-answer reject is warranted; the independent valid unit should remain supported and the omission finding should target the omitted original request. This may unnecessarily discard valid work."
+    },
+    {
+      "severity": "semantic precision in rejection feedback",
+      "pair": "contract_term_vs_universal_law",
+      "observation": "Rejection mismatch says the judgment explicitly denies a universal entitlement, whereas the passage expressly leaves a general statutory entitlement undecided. Overall rejection is correct, but this wording strengthens silence/reservation into a contrary holding and could misdirect a repair."
+    },
+    {
+      "severity": "request granularity",
+      "pair": "independent_ask_coverage",
+      "observation": "Both variants use one coverage entry for the entire two-ask message. In the legitimate version both units deliver useful work and are accepted, but addressed versus justified_limit is not separated per independent request."
+    }
+  ],
+  "limits": [
+    "Only one output per variant; no false-positive-rate estimate from four valid neighbors.",
+    "All passages/matters artificial; no conclusion about authentic court passage difficulty or retrieval relevance.",
+    "No conditional corrections exercised.",
+    "No effect/completion, persistence, browser pane or end-to-end delivery validation.",
+    "No production prompt, schema, code or test edits."
+  ]
+}
