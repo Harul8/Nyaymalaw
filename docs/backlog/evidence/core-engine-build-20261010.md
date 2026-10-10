@@ -211,3 +211,41 @@ include long tails, cross-Act numbering, article/order-rule syntax, equivalent-k
 ambiguity and changed snapshots. Static cleanup removed unused imports only.
 No model calls. Applicable legal version still needs source-backed analysis; corpus
 metadata does not establish it. Source UI/served integration acceptance remains open.
+
+## SEQ.3 — source-linked work and enquiry planning prerequisite
+
+Start READY: `research.py` owns one batched planning call and independent read-only
+search outcomes. Reuse M1's batch/per-work disposition ideas (disclosed beforehand),
+not its question-only context or fallback restatement. Full original conversation,
+current records and saved work reach planning separately from interpretation proposals.
+Selected attributed words, qualifications, constraints and enquiries reach reranking.
+No plan or successful search certifies legal relevance, request coverage or completion.
+
+Build/evidence: 14 focused tests cover exact source selection, whole-context handoff,
+empty proposals, overflow/incomplete output, query/snapshot ownership and independent
+adapter failures. Replay reconstructs source selections from original context and
+validates every required success/failure disposition. Registered actual source layout
+loads with 55 core modules. Plans remain semantic_review=pending; no public route added.
+
+Pinned mini measurement: eight calls on four synthetic conversations, before/after one
+general prompt revision. Original candidate recovered all seven independently requested
+results, but altered evidential status/attribution, omitted restrictions, assumed scope
+of an unreviewed agreement and proposed prior work on a closing message (mechanically
+rejected for lacking a current anchor). The extra instruction revision fixed the closing
+and agreement examples but regressed to omitted/merged requests. Decision: restore the
+original measured prompt, preserve both evidence sets, and do not promote either into
+an execution/completion authority. The independent full-context response review and
+source-backed writer are the next required dependency, not another isolated word tweak.
+
+Shared measured spend: $0.026092 / $5, 28 attempts, no retries. Planner adds one routine
+model call for all work; local lexical/vector/reranking adds zero OpenAI calls. Any
+correction remains turn-owned. Exact probe outputs/assessments live under
+`outputs/core-engine-build-20261010/research-probe*`. Semantic acceptance, actual final
+answer usefulness, served integration and browser acceptance remain open. One actual
+held-corpus search is being measured separately; it cannot establish legal applicability.
+
+Project memory reviewed: current work queue, single-branch milestones, proportionate
+tests, generalized repair and graph-first dependency review. The structural graph was
+refreshed without paid embeddings. Its current-file/new-file queries returned not-indexed,
+so source reads remain necessary; empty graph results are not absence evidence. Older
+memory asking per-call approval is superseded by the owner's current shared $5 authority.
