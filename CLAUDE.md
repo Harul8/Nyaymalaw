@@ -97,9 +97,13 @@ sentence/passage matches. Substantive rewrites are mechanically checked and
 independently reviewed again. Owned IDs, exact quotations, permission, source
 identity and confirmed persistence remain code checks.
 
-The standing model default is GPT-4.1 mini unless a scoped comparison or change is
-approved. Record normal/conditional calls, inputs, outputs, tokens, latency and
-actual cost. Do not add calls merely to repeat a control. P16 imposes no product
+The owner approved GPT-6 Luna for understanding/research planning and GPT-6.1 Sol
+for grounded writing/independent review on 10 October 2026, superseding mini-only.
+Separate Sol calls do not imply model diversity. Record normal/conditional calls,
+actual model IDs, cache reads/writes, tokens, latency and cost. Luna-versus-Sol
+comparisons have a $1 allocation inside the shared $5 development cap. Push
+verified checkpoints every 10–15 minutes and at logical milestones. Do not add
+calls merely to repeat a control. P16 imposes no product
 spending cap; recovery remains bounded and development experiments retain their
 explicitly authorised spend/run limits. A comparison does not promote its model.
 
