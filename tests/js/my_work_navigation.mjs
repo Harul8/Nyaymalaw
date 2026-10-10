@@ -10,7 +10,10 @@ function between(start, end) {
   return app.slice(first, last);
 }
 const source = between('async function restorePendingChat(', 'async function showMatterList(')
-  + between('function selectMatterRow(', 'function requirementsFor(');
+  + between('function selectMatterRow(', 'function requirementsFor(')
+  + between('function closeOpenMatter()', 'async function restorePendingChat(')
+  + between('function startMatter(', '// F-A-18,')
+  + between('async function send(', 'async function deliver(');
 
 class Element {
   constructor() {
@@ -29,6 +32,7 @@ class Element {
   setAttribute(name, value) { this.attributes[name] = String(value); }
   removeAttribute(name) { delete this.attributes[name]; }
   addEventListener() {}
+  focus() {}
   querySelectorAll() { return this.children.filter(child => child.dataset.matterId); }
   querySelector() { return this.children.find(child => child.className === 'r-title'); }
 }
@@ -39,23 +43,22 @@ function fixture() {
     if (!elements.has(id)) elements.set(id, new Element());
     return elements.get(id);
   };
-  const requests = [], starts = [], boardToggles = [];
+  const requests = [], starts = [], boardToggles = [], sent = [];
   const state = { railGeneration: 0, matterListGeneration: 0, sessionGeneration: 1,
-    matterId: null, turns: [] };
-  const context = { state, activeIntent: null, $: get,
+    matterId: null, matterVersion: null, turns: [] };
+  const context = { state, activeIntent: null, activeDelivery: null, $: get,
     document: { createElement: () => new Element() },
     window: { dispatchEvent() {} }, Event: class {},
     api: url => new Promise((resolve, reject) => requests.push({ url, resolve, reject })),
     stateBlock: (_kind, text) => { const block = new Element(); block.textContent = text; return block; },
-    startMatter: chatId => {
-      starts.push(chatId);
-      state.railGeneration += 1;
-      state.matterId = null;
-      context.activeIntent = { chatId };
-    },
     restoredTurn: turn => turn,
     reconcileIntent() {}, repaint() {}, closeDisputeReader() {},
-    selectIntent: matterId => { context.activeIntent = { matterId }; },
+    selectIntent: (matterId, { chatId = null } = {}) => {
+      context.activeIntent = { matterId, chatId, pending: [] };
+    },
+    showTab() {}, showIntake() {}, snapshotIntent() {}, consumeComposer() {},
+    matchesIntake: () => false, newTurnId: () => 'new-turn',
+    deliver: async entry => { sent.push(JSON.parse(entry.envelope)); },
     toggleMatters() {}, toggleMatterBoard: open => boardToggles.push(open),
     setWorkView: view => { get('pane-advise').dataset.view = view; },
     updateWorkspace() {}, closeFilesMenu() {},
@@ -63,7 +66,9 @@ function fixture() {
     renderDisputeBoard: body => { body.textContent = 'Current dispute board'; },
   };
   vm.runInNewContext(source, context, { filename: 'nm/app/app.js' });
-  return { context, state, get, requests, starts, boardToggles };
+  const startMatter = context.startMatter;
+  context.startMatter = (chatId = null) => { starts.push(chatId); startMatter(chatId); };
+  return { context, state, get, requests, starts, boardToggles, sent };
 }
 
 const matter = { matter_id: 'matter-current', matter: 'Saved matter heading' };
@@ -73,9 +78,10 @@ function resolveList(f, offset, matters = [matter], pending = chats) {
   f.requests[offset].resolve({ state: 'ok', row_count: matters.length, matters,
     chat_count: pending.length, chats: pending });
 }
-function resolveChat(request, chatId) {
+function resolveChat(request, chatId, version = 3) {
   assert.equal(request.url, `/api/chats/${chatId}`);
-  request.resolve({ state: 'ok', chat_id: chatId, turns: [{ brief: chatId }] });
+  request.resolve({ state: 'ok', chat_id: chatId, matter_version: version,
+    turns: [{ brief: chatId }] });
 }
 async function loaded() {
   const f = fixture();
@@ -90,13 +96,23 @@ async function loaded() {
   const [first, latest] = f.get('rail-body').children;
   const earlier = first.onclick();
   const current = latest.onclick();
-  resolveChat(f.requests[2], 'chat-latest');
+  resolveChat(f.requests[2], 'chat-latest', 7);
   await current;
-  resolveChat(f.requests[1], 'chat-first');
+  resolveChat(f.requests[1], 'chat-first', 2);
   await earlier;
   assert.deepEqual(f.starts, ['chat-latest']);
   assert.equal(f.context.activeIntent.chatId, 'chat-latest');
   assert.equal(f.state.turns[0].brief, 'chat-latest');
+  assert.equal(f.state.matterVersion, 7);
+  await f.context.send('A follow-up on the reopened conversation.');
+  assert.equal(f.sent[0].chat_id, 'chat-latest');
+  assert.equal(f.sent[0].expected_version, 7);
+  f.context.startMatter();
+  assert.equal(f.state.matterVersion, null);
+  assert.equal(f.context.activeIntent.chatId, null);
+  await f.context.send('A new unrelated conversation.');
+  assert.equal(f.sent[1].chat_id, null);
+  assert.equal(f.sent[1].expected_version, null);
 }
 
 {
@@ -113,6 +129,7 @@ async function loaded() {
   await current;
   assert.equal(f.context.activeIntent.matterId, matter.matter_id);
   assert.equal(f.state.turns[0].matterId, matter.matter_id);
+  assert.equal(f.state.matterVersion, 1);
   assert.equal(row.attributes['aria-pressed'], 'true');
   assert.equal(f.get('matter-heading').textContent, matter.matter);
   const toggles = f.boardToggles.length;
@@ -131,6 +148,27 @@ async function loaded() {
   assert.deepEqual(f.starts, []);
   assert.equal(f.context.activeIntent, null);
   assert.equal(f.state.turns.length, 0);
+  assert.equal(f.state.matterVersion, null);
+}
+
+for (const version of [null, -1, 1.5, '3']) {
+  const f = fixture();
+  f.context.startMatter('current-chat');
+  f.state.matterVersion = 4;
+  const pending = f.context.restorePendingChat('chat-first');
+  resolveChat(f.requests[0], 'chat-first', version);
+  await assert.rejects(pending, /conversation version could not be established/);
+  assert.equal(f.context.activeIntent.chatId, 'current-chat');
+  assert.equal(f.state.matterVersion, 4);
+}
+
+{
+  const f = fixture();
+  const pending = f.context.restorePendingChat('chat-first');
+  f.requests[0].resolve({state:'ok', chat_id:'chat-first', turns:[]});
+  await assert.rejects(pending, /conversation version could not be established/);
+  assert.equal(f.context.activeIntent, null);
+  assert.equal(f.state.matterVersion, null);
 }
 
 for (const failure of [false, true]) {

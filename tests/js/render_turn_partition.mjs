@@ -116,6 +116,8 @@ const context = {
 };
 context.globalThis = context;
 vm.createContext(context);
+vm.runInContext(readFileSync(join(here, '..', '..', 'nm', 'app', 'brain-sources.js'), 'utf8'),
+  context, { filename: 'nm/app/brain-sources.js' });
 vm.runInContext(rendererSource, context, { filename: "nm/app/app.js" });
 
 // ------------------------------------------------------------- the facts ---
@@ -280,7 +282,7 @@ context.fetch = async () => ({ ok: false, status: 503, json: async () => ({
     committed: 'not_committed', internal_id: 'private-receipt' }
 }) });
 vm.runInContext('const UNSAFE = new Set(["POST"]);\n'
-  + between('async function api(', 'advocatePreferences ='), context);
+  + between('async function api(', 'async function loadHealth('), context);
 let failedTurn;
 try { await context.api('/api/turn', {method: 'POST'}, {sessionBound: false}); }
 catch (error) { failedTurn = error; }
@@ -317,8 +319,8 @@ if (!withoutReason?.message.includes('The server could not complete this request
   fails.push('an unlabelled structured failure leaked metadata instead of readable fallback');
 }
 
-// A source label embedded in prose is linked in place and copied once. History
-// uses the same restored-turn projection and renderer as the open conversation.
+// Retired source labels remain readable and copied once without links to a
+// retired reader. History uses the same restored-turn projection and renderer.
 const label = 'Specific Relief Act s.6';
 const locator = 'synthetic::sra::6::';
 const prose = `**Eastern gate**: The passage is ${label}.`;
@@ -337,9 +339,8 @@ for (const entry of [{ brief: saved.message, answer: saved }, context.restoredTu
   const body = flat(rendered).find(node => node.className === 'body');
   const links = flat(body).filter(node => node.className === 'citation-link');
   const copy = flat(rendered).find(node => typeof node.copyText === 'function')?.copyText();
-  if (body?.textContent !== prose.replaceAll('**', '') || links.length !== 1
-      || links[0]?.textContent !== label) {
-    fails.push('the saved inline citation was not rendered in the reply as served');
+  if (body?.textContent !== prose.replaceAll('**', '') || links.length !== 0) {
+    fails.push('a retired source changed saved prose or acquired a source link');
   }
   if (!copy?.includes(label) || copy.includes(locator) || copy.includes('**')) {
     fails.push('the copied reply differs from its visible inline citation');
@@ -353,9 +354,9 @@ const boldEntry = { brief: saved.message, answer: { ...saved, composed: [{
 }] } };
 const boldReply = context.renderTurn(boldEntry);
 const strong = flat(boldReply).find(node => node.tagName === 'STRONG');
-if (strong?.textContent !== label || !flat(strong).some(node => node.className === 'citation-link')
+if (strong?.textContent !== label || flat(strong).some(node => node.className === 'citation-link')
     || boldReply.textContent.includes('**')) {
-  fails.push('a citation inside bold prose broke the saved text or its link');
+  fails.push('a retired citation inside bold prose changed text or acquired a source link');
 }
 const damaged = { brief: saved.message, answer: { ...saved, composed: [{
   text: prose, passage: null, carries: null, cites: [[-1, 500, 0], null],
@@ -368,11 +369,14 @@ if (damagedBody?.textContent !== prose.replaceAll('**', '')
 }
 
 const brainSources = [
-  {brain:true, id:'record-one', label:'Your saved words', locator:'turn_a'},
-  {brain:true, id:'legal-one', label:'Retrieved authority', locator:'synthetic::authority'},
+  {brain:true, id:'legal-one', kind:'provision', label:'First held authority',
+    locator:'Section 1', text:'The stated condition applies.', digest:'held-first'},
+  {brain:true, id:'legal-two', kind:'judgment', label:'Second held authority',
+    locator:'Paragraph 2', text:'The condition was addressed.', digest:'held-second'},
 ];
-const brainElement = mk('finding', 'The account remains reported.', {
+const brainElement = mk('SUMMARY', 'The conclusion depends on the stated condition.', {
   source:brainSources[0], sources:brainSources, refs:brainSources.map(item => item.locator),
+  inline_citations:[{text:'the stated condition', source_id:'legal-one', source_index:0}],
 });
 const brainSaved = {...saved, matter_id:null, chat_id:'pending_chat',
   elements:[brainElement], composed:[]};
@@ -380,10 +384,11 @@ for (const entry of [{brief:saved.message, answer:brainSaved}, context.restoredT
   const rendered = context.renderTurn(entry);
   const groups = flat(rendered).filter(node => node.className === 'brain-source-links');
   const links = flat(rendered).filter(node => node.className === 'citation-link');
-  if (groups.length !== 1 || groups[0].open
-      || groups[0].children[0]?.textContent !== 'Sources (2)'
-      || links.length !== 2 || flat(groups[0]).filter(node => node.className === 'citation-link').length !== 2) {
-    fails.push('saved brain references were lost or displayed outside their closed source group');
+  if (groups.length !== 0 || links.length !== 1
+      || links[0].textContent !== 'the stated condition'
+      || !rendered.textContent.includes(brainElement.text)
+      || entry.answer.elements[0].sources.length !== 2) {
+    fails.push('saved inline brain citation changed prose, lost related sources or added a source footer');
   }
 }
 

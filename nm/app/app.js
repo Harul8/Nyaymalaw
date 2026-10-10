@@ -846,8 +846,12 @@ async function restorePendingChat(chatId) {
   if (restored.state !== 'ok' || restored.chat_id !== chatId) {
     throw new Error('The saved conversation is incomplete.');
   }
+  if (!Number.isInteger(restored.matter_version) || restored.matter_version < 0) {
+    throw new Error('The saved conversation version could not be established. Please reopen it.');
+  }
   startMatter(chatId);
   if (session !== state.sessionGeneration || !activeIntent || activeIntent.chatId !== chatId) return;
+  state.matterVersion = restored.matter_version;
   state.turns = restored.turns.map(restoredTurn);
   reconcileIntent(restored.turns);
   repaint();

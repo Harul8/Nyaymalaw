@@ -493,3 +493,15 @@ not a completed capacity fix or semantic acceptance. The next retrieval repair
 addresses unrelated roots joined by repeated section numbers, and planning will
 avoid treating each requested deliverable as a fresh legal research question.
 Measurement: outputs/core-engine-build-20261010/compact-presentation-capacity.json.
+
+## Reopened conversation version checkpoint
+
+The browser now restores the API's owned conversation version before a follow-up
+is sent. Previously the first request after reopening used a null expected version,
+losing protection against changes made after the displayed conversation was read.
+The server's atomic commit protection remained intact. Invalid versions and late
+reads cannot replace the current conversation; a genuinely new chat resets the
+version. Ten focused UI checks pass, including the real serialized send envelope.
+The rendering fixture also uses the current inline-link module and checks that no
+source footer reappears. No model call or server contract changed. Actual controlled
+browser acceptance remains unavailable because the browser-control runtime fails.
