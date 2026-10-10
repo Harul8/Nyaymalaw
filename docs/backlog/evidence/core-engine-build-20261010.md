@@ -1441,3 +1441,33 @@ The nine provider receipts report 180,747 input tokens, 10,116 output tokens, 10
 The comparison allocation remains $0.475895/$1. Shared development charges are $3.673921/$5: $2.158490 measured and $1.515431 unknown reservations. The workbook now records scoped useful delivery; broader request coverage, relevance, current-law and citation identity, whole-paragraph links, source-alias recovery, legitimate-constraint review friction and latency remain open. These browser observations do not establish production readiness.
 
 Main instance `http://127.0.0.2:8175/` was restarted with the tested model/cache code. Its `/api/health` reports runtime ready, code current and serving/tree fingerprint `83b5e504472054c3`. Existing accounts and stored conversations remain in the same store.
+
+### SEQ.3 decomposition comparison started
+
+The owner prioritised decomposition/retrieval and requested comparison before
+adopting a cleaner prompt. The selected model is GPT-6 Luna, corrected by the
+owner from the initially mentioned GPT-4.1 mini. Production remains unchanged.
+The experiment freezes 18 synthetic golden-set-derived contexts and a separate
+pre-run oracle, then compares the current and candidate prompts using the same
+payload and schema: at most 36 generations, one per case/arm, no retries, with
+a $0.25 subcap inside the existing shared $5 ledger. Starting shared charges are
+$3.673921. Code rechecks source selections and separately measures a prospective
+one-to-three-enquiries requirement. A future adoption requires a new research
+version preserving v2/v3/v4 replay; the experiment itself creates no saved turns.
+
+The observable pass concerns correct current work, complete qualified source
+selection, distinct legal concepts, no factual strengthening or invented source
+identities, low false rejection and useful held-source retrieval. A pause, a
+factual correction needing no law, or a pure transcription request must not
+restart research. A new substantive account can warrant research without an
+express search request. Supporting raw results and scripts remain under
+`outputs/core-engine-build-20261010/decomposition-clean-comparison/`.
+
+A separate no-API paired retrieval experiment freezes the existing browser
+decomposition and changes only generated `Advocate passage N:` query headings to
+neutral whitespace. The invariant is that retrieval text carries selected original
+words, not presentation labels; genuine advocate-related words remain untouched.
+Discovery pools, rerank scores and final selections are observed separately.
+Missing held corpus material is recorded independently from candidate loss.
+No production prompt, query serialization, ranking or corpus changes have yet
+been made for these experiments.
