@@ -191,3 +191,23 @@ Evidence: 61 focused citation/parser checks pass, including legitimate short quo
 missing negations, word substrings, brackets, multiple/unreadable candidate sources
 and parallel citations. No model calls; no legal holding/adoption inference added.
 Statute identity/readback and integrated source display remain pending.
+
+## SEQ.2 — exact provision identity and readback
+
+Start READY: retained `LocalCollection` owns explicit provision lookup within an
+already selected Act. Reuse the live shared provision binder and passage snapshots,
+not archived keyword routing or unqualified commencement metadata. Pass: every
+indexed segment, complete qualification and declared ancestor can be read under
+the selected owner; technical revision never becomes current-law proof.
+
+Build: `read_provision` returns found, not-held, ambiguous or unavailable with exact
+owned snapshots and legal_version=not_assessed. Readback checks indexed Act/section/
+parent or case against the blob; invalid rows cannot misroute identity. Missing
+segments/foreign parents/corpus changes prevent a complete read, without erasing
+independent sources. Read-only connections now close explicitly on Windows.
+
+Evidence: 47 statute, retained retrieval and provision-rendering checks pass. They
+include long tails, cross-Act numbering, article/order-rule syntax, equivalent-key
+ambiguity and changed snapshots. Static cleanup removed unused imports only.
+No model calls. Applicable legal version still needs source-backed analysis; corpus
+metadata does not establish it. Source UI/served integration acceptance remains open.

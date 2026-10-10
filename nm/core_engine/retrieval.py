@@ -11,15 +11,14 @@ import json
 import logging
 import math
 import os
-import re
 import sqlite3
 import struct
 import threading
 from copy import deepcopy
-from datetime import date
+from contextlib import closing
 from functools import lru_cache
 from pathlib import Path
-from typing import Mapping, Protocol
+from typing import Protocol
 
 EMBED_MODEL = "BAAI/bge-large-en-v1.5"
 RERANK_MODEL = "BAAI/bge-reranker-v2-m3"
@@ -36,7 +35,7 @@ log = logging.getLogger(__name__)
 
 # The index's own tokenisation has one owner, shared with the index builds: a
 # query cut differently from the built index silently stops meeting its words.
-from nm.shared.citation_contracts import bm25_tokens  # noqa: E402
+from nm.shared.citation_contracts import bm25_tokens, bind_provision_key, ProvisionKeyState  # noqa: E402
 
 
 class SearchUnavailable(RuntimeError):
@@ -181,7 +180,7 @@ class LocalCollection:
                         or record["model"] != EMBED_MODEL or record["dimensions"] != DIMENSIONS
                         or type(count) is not int or count < 1 or not revision):
                     raise SearchUnavailable("Corpus manifest has no coherent passage identity")
-                with sqlite3.connect(f"file:{db_path}?mode=ro", uri=True) as db:
+                with closing(sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)) as db:
                     stored, last = db.execute("select count(*), max(pos) from chunks where doc_type=?",
                         (self.doc_type,)).fetchone()
                 if stored != count or last != count - 1:
@@ -279,15 +278,22 @@ class LocalCollection:
                 batch = selected[start:start + 500]
                 marks = ",".join("?" for _ in batch)
                 rows = connection.execute(
-                    f"select pos, chunk_id, blob from chunks where doc_type=? and pos in ({marks})",
+                    f"select pos, chunk_id, blob, act_id, case_id, section_number, parent_chunk_id "
+                    f"from chunks where doc_type=? and pos in ({marks})",
                     (self.doc_type, *batch),
                 )
-                for pos, chunk_id, blob in rows:
+                for pos, chunk_id, blob, act_id, case_id, section, parent in rows:
                     try:
                         item = json.loads(blob)
                     except ValueError:
                         continue
-                    if (isinstance(item, dict)
+                    indexed = {"act_id": act_id, "section_number": section, "parent_chunk_id": parent}
+                    if self.doc_type == "case_law":
+                        indexed = {"case_id": case_id}
+                    owner = act_id if self.doc_type == "bare_act" else case_id
+                    if (isinstance(item, dict) and isinstance(owner, str) and owner.strip()
+                            and all(str(item.get(key) or "") == str(value or "")
+                                    for key, value in indexed.items())
                             and item.get("doc_type", self.doc_type) == self.doc_type
                             and item.get("chunk_id") == chunk_id
                             and isinstance(item.get("full_text"), str)
@@ -297,7 +303,51 @@ class LocalCollection:
             raise SearchUnavailable(f"{self.doc_type} passages cannot be read") from exc
         finally:
             connection.close()
+        self._check_snapshot()
         return found
+
+    def read_provision(self, act_id: str, reference: str) -> dict:
+        """Read an explicit provision inside one already selected held Act.
+
+        Corpus revision identifies stored artifacts, never legal currency.
+        Missing/unread source words cannot become a successful complete read.
+        """
+        if (self.doc_type != "bare_act" or not isinstance(act_id, str) or not act_id.strip()
+                or not isinstance(reference, str) or not reference.strip()):
+            raise ValueError("Exact provision readback needs one owned Act and explicit reference")
+        result = {"state": "unavailable", "act_id": act_id, "reference": reference,
+                  "provision_key": None, "candidates": [], "sources": [],
+                  "legal_version": "not_assessed", "reason": None}
+        try:
+            _, db_path, _ = self._open()
+            with closing(sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)) as db:
+                keys = tuple(row[0] for row in db.execute(
+                    "select distinct section_number from chunks where doc_type=? and act_id=?",
+                    (self.doc_type, act_id)))
+                binding = bind_provision_key(reference, keys)
+                result.update(candidates=list(binding.candidate_keys), reason=binding.reason)
+                if binding.state != ProvisionKeyState.BOUND:
+                    self._check_snapshot()
+                    result["state"] = "ambiguous" if binding.state == ProvisionKeyState.AMBIGUOUS else "not_held"
+                    return result
+                positions = [row[0] for row in db.execute(
+                    "select pos from chunks where doc_type=? and act_id=? and section_number=? order by pos",
+                    (self.doc_type, act_id, binding.key))]
+            rows = self.read(positions)
+            if not positions or set(rows) != set(positions):
+                raise SearchUnavailable("Some indexed words of this provision cannot be read")
+            context = {"scope": "indexed_section_segments", "bounded": False, "unread_positions": [],
+                       "segments": [{"position": p, "row": rows[p], "content_digest": _digest(rows[p])}
+                                    for p in positions]}
+            sources = []
+            for position, row in rows.items():
+                self.rank_context(position, row)  # Check ownership and cycles of declared ancestry.
+                sources.append(_candidate("provision", position, row, self._revision, None, [], context))
+            self._check_snapshot()
+            result.update(state="found", provision_key=binding.key, sources=sources)
+        except (SearchUnavailable, sqlite3.Error, ValueError) as exc:
+            result.update(state="unavailable", reason=str(exc), sources=[], provision_key=None)
+        return result
 
     def rerank(self, pairs: list[tuple[str, str]]) -> list[float]:
         if not pairs:
@@ -326,7 +376,7 @@ class LocalCollection:
         _, db_path, _ = self._open()
         segments = [{"position": position, "row": row, "content_digest": _digest(row)}]
         seen, child = {position}, row
-        with sqlite3.connect(f"file:{db_path}?mode=ro", uri=True) as connection:
+        with closing(sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)) as connection:
             while child.get("parent_chunk_id"):
                 identity = child["parent_chunk_id"]
                 if self.doc_type != "bare_act" or not isinstance(identity, str) or not row.get("act_id"):

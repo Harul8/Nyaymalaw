@@ -164,8 +164,12 @@ def local(tmp_path, monkeypatch, missing="vector"):
     import numpy as np
     db = tmp_path / "chunks.db"
     with sqlite3.connect(db) as connection:
-        connection.execute("create table chunks(doc_type text,pos integer,chunk_id text,blob text)")
-        connection.execute("insert into chunks values (?,?,?,?)",("bare_act",0,"repeated",json.dumps(row())))
+        connection.execute("create table chunks(doc_type text,pos integer,chunk_id text,blob text, "
+                           "act_id text,case_id text,section_number text,parent_chunk_id text)")
+        item = row()
+        connection.execute("insert into chunks values (?,?,?,?,?,?,?,?)",
+                           ("bare_act",0,"repeated",json.dumps(item),item["act_id"],None,
+                            item["section_number"],item.get("parent_chunk_id")))
     words = tmp_path / "words"
     words.mkdir()
     params = json.dumps({"num_docs":1}).encode()
