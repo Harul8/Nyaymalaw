@@ -74,11 +74,11 @@ def test_exact_responses_payload_is_counted_without_trimming(model, effort):
     prompt = Prompt(user="Exact original account — with qualifications.", system="Stable instructions")
     result = port.structured(prompt, SCHEMA, Tier.ROUTINE, max_tokens=200)
     generated = client.calls[0]
-    assert generated["input"] == [{"role": "system", "content": prompt.system}, {"role": "user", "content": prompt.user}]
+    assert generated["input"] == [{"role": "system", "content": [{"type": "input_text", "text": prompt.system, "prompt_cache_breakpoint": {"mode": "explicit"}}]}, {"role": "user", "content": prompt.user}]
     assert generated["reasoning"] == {"effort": effort}
     assert generated["store"] is False and generated["truncation"] == "disabled"
     assert generated["text"]["format"] == {"type": "json_schema", "name": "nm_result", "strict": True, "schema": SCHEMA}
-    assert client.counts == [{k:v for k,v in generated.items() if k not in {"store", "max_output_tokens"}}]
+    assert client.counts == [{k:v for k,v in generated.items() if k not in {"store", "max_output_tokens", "prompt_cache_options"}}]
     assert session.requests == [(model, 200, 100)]
     assert permissions == ["checked", "checked"]
     settled = session.ledger.settled[0][1]

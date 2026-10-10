@@ -327,9 +327,8 @@ class OpenAIModelAdapter:
 
         messages = []
         if prompt.system:
-            # The cacheable prefix. This provider caches long stable prefixes
-            # automatically, so the port's contract is honoured by keeping the
-            # system message first and stable rather than by an explicit flag.
+            # Preserve the stable instruction and its authority role. The
+            # Responses transport marks this exact prefix for cache reuse.
             messages.append({"role": "system", "content": prompt.system})
         messages.append({"role": "user", "content": prompt.user})
 
@@ -509,7 +508,14 @@ class OpenAIModelAdapter:
         return receipt
 
     def _responses_request(self, messages, cfg, schema, max_tokens):
-        kwargs = {"model": cfg.model, "input": messages, "store": False,
+        # A changing user suffix must not replace the reusable instruction
+        # boundary. Mark its exact words without elevating any matter content.
+        inputs = [{**message, "content": [{"type": "input_text",
+                    "text": message["content"],
+                    "prompt_cache_breakpoint": {"mode": "explicit"}}]}
+                  if message["role"] == "system" else dict(message)
+                  for message in messages]
+        kwargs = {"model": cfg.model, "input": inputs, "store": False,
                   "reasoning": {"effort": _RESPONSES_EFFORT[cfg.model]},
                   "truncation": "disabled"}
         if schema is not None:
@@ -536,6 +542,9 @@ class OpenAIModelAdapter:
                 raise ProviderUnavailable("The provider did not establish input token count")
             request_budget, max_tokens = request_budget.for_request(
                 cfg.model, max_tokens, input_upper_bound=incoming)
+        # This transport policy changes cache placement, not counted content.
+        # The count endpoint accepts marked input but has no cache-policy arg.
+        kwargs["prompt_cache_options"] = {"mode": "explicit"}
         if max_tokens is not None:
             kwargs["max_output_tokens"] = max_tokens
         response, retries = self._retrying_counted(

@@ -1384,3 +1384,50 @@ Comparisons now total $0.475895/$1; the shared ledger is $2.888847/$5, including
 $1.515431 retained unknown reservations. No retry of the rejected Luna result was
 made. Evidence: `review-browser-rerank-v1-sol-production-continuation-results.json`.
 
+## GPT-6 browser checkpoint
+
+`browser-gpt6-v1` exercised the genuine page interface on the diagnostic instance
+at 8176 with no stage overrides. Root inspected the actual saved/reopened answer
+and all eight source selections. The answer conditionally covered both disputes
+and adverse positions, preserved reported facts, retained source qualifications
+and explicitly identified missing technician-lien law. The panes separated NM's
+analysis from exact supporting words. No consequential unsupported assertion was
+found in this scoped turn. The planned closing produced a courtesy reply and an
+empty research plan; both saved turns reopened unchanged. This accepts the tested
+journey, not general legal reliability or current-law coverage.
+
+The initial answer took 125.898 seconds and four generations, with returned cost
+$0.369920475. The closing took 21.179 seconds and four generations, costing
+$0.0189614. Actual receipts identify Luna for understanding/planning and Sol for
+writing/review. There was no corrective retry. Cache reads were 1,605 then 2,888
+tokens, 4,493 in total; writes still outweighed the read savings. The earlier narrow
+experiment's zero-hit observation remains true for that experiment. These browser
+hits do not establish a net saving. Four calls for a courtesy closing and the
+125.898-second legal-answer latency remain explicit optimisation work.
+
+The separate Sol full-review continuation admitted rejection of the old faulty
+draft's b3-b6, preserving the supported units, at a cost of $0.221071. Comparison
+spending totals $0.475895 of its $1 allowance. After both browser turns the shared
+ledger stood at $3.277732 of $5: $1.762301 measured and $1.515431 still reserved or
+unknown. Per-call rounding explains the difference from summed returned costs.
+
+Main instance 8175 was restarted with Luna/Sol as PID 34800; health confirmed ready/current at serving fingerprint
+`becce8e8a24a5a1c`. The browser acceptance above belongs to the observed 8176 instance.
+Evidence: `browser-gpt6-v1/evidence.json`, its source-pane/reopened screenshots,
+`browser-gpt6-v1.closing-review.json` and the Sol continuation results. Broad retrieval
+relevance, omitted useful authority, law currency, comprehensive citation identity,
+sustained unfamiliar conversations and latency remain open. SEQ.1-4 is not closed
+as generally production ready by this checkpoint.
+
+The next atomic cache piece changes only `_responses_request` in the OpenAI
+adapter. A breakpoint marks the unchanged system instruction; explicit-only mode
+avoids writing the changing matter suffix. No text, role, schema or legal prompt
+changes, trimming, shared customer key or extra generation is introduced. Exact
+counting includes the marked content; cache policy is generation-only because the
+installed count endpoint does not accept that option. Official prompt-caching
+documentation supports this boundary. The invariant is identical counted/generated
+content with truthful billing, including cold or ineligible prefixes. 77 focused
+installed-SDK transport, legacy-response, quarantine and cache-ledger tests pass.
+Actual reuse and savings under this policy require the following browser run;
+the earlier two-turn implicit-policy baseline incurred a $0.059910175 net cache
+surcharge at identical token volumes despite 4,493 cache-read tokens.
