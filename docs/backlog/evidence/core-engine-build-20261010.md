@@ -1431,3 +1431,13 @@ installed-SDK transport, legacy-response, quarantine and cache-ledger tests pass
 Actual reuse and savings under this policy require the following browser run;
 the earlier two-turn implicit-policy baseline incurred a $0.059910175 net cache
 surcharge at identical token volumes despite 4,493 cache-read tokens.
+
+### Explicit-cache browser checkpoint
+
+`browser-gpt6-cache-v1` saved and reopened both turns. The first delivered a conditional answer with seven source links in 130.108 seconds, four generations and $0.31656384. The second used the corrected date in two attributed paragraphs and relevant questions, made no new search or claim of a record edit, and took 66.696 seconds, five generations and $0.07962038. Its first review marked a legitimate negative constraint addressed with no unit IDs; one internal shape repair succeeded within the existing bound. That friction remains open; no semantic check was bypassed.
+
+The nine provider receipts report 180,747 input tokens, 10,116 output tokens, 10,043 cached reads and zero cache writes. Actual cost was $0.39618422; the rounded ledger recorded $0.396189. Pricing the same observed tokens without cache gives $0.410449, so the measured discount was $0.014260 (about 3.5%). Changed passages, reply lengths, follow-up content and cache warmth prevent attributing whole-run cost or latency differences to caching alone. See `outputs/core-engine-build-20261010/cache-usage-comparison-final.json`.
+
+The comparison allocation remains $0.475895/$1. Shared development charges are $3.673921/$5: $2.158490 measured and $1.515431 unknown reservations. The workbook now records scoped useful delivery; broader request coverage, relevance, current-law and citation identity, whole-paragraph links, source-alias recovery, legitimate-constraint review friction and latency remain open. These browser observations do not establish production readiness.
+
+Main instance `http://127.0.0.2:8175/` was restarted with the tested model/cache code. Its `/api/health` reports runtime ready, code current and serving/tree fingerprint `83b5e504472054c3`. Existing accounts and stored conversations remain in the same store.
