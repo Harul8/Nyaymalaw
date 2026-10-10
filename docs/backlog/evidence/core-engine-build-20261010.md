@@ -642,3 +642,59 @@ Commit-hook deviation: the initial commit attempt invoked the default graph refr
 which launched an embedding subprocess. The commit was interrupted and the verified
 subprocess tree stopped; provider dispatch/cost was not confirmed. The scoped commit
 uses the explicit offline hook path instead. The UI tests themselves made no calls.
+## SEQ.4 — live capacity cleared; semantic release failed
+
+The next authenticated real-mini API run committed and reopened two turns exactly,
+with the complete prior conversation reaching all four second-turn calls. Neither
+turn exceeded context capacity. This was FastAPI TestClient, not browser acceptance.
+Both responses were semantically unacceptable: the first delivered only a greeting
+while review excused missing analysis and client questions as partial research; the
+second supported a corrected date with superseded words and authored a negative
+saved-effect status. The latter status happened to match state, but the writer does
+not own execution reporting. No legal citation was delivered, so source-pane and
+court/party interpretation acceptance were not exercised. Records/work stayed empty.
+
+Owning repair: response_review.py. A justified limit must actually be delivered,
+supported by a consequential gap for that independent requested result, and preserve
+useful supported work. Addresses identify a request; uses must support its assertions.
+The existing correction owner can repair a negative omission verdict once and review
+again; a repeated failure withholds under the existing gate. No routine model stage
+is added. Six new offline regressions exercise those relationships, not real semantic
+detection. A paired pinned-mini comparison is the next evidence requirement.
+
+The live run made eight calls, cost $0.0551244, and took 97.782 and 21.859 seconds;
+79.106 seconds of the first turn were retrieval. Measured legal-brain spend reached
+$0.124074. Browser control still exits during Windows sandbox initialization.
+Compact assessment: outputs/core-engine-build-20261010/live-served-capacity-assessment.json;
+the raw saved run and exact source hashes remain in the same directory.
+
+During the source-pane commit, an ordinary hook unexpectedly started graph embeddings.
+The process tree was stopped; usage cannot be measured from its local cache. The
+full graph, billed on all three possible attempts, gives a conservative $1.09 bound
+at the verified [$0.13 per million input tokens](https://developers.openai.com/api/docs/models/text-embedding-3-large).
+That uncertainty is now reserved in the same $5 ledger through its existing owner,
+not recorded as measured usage or a new provider call. Audit and reservation proofs:
+graph-hook-usage-audit.json and graph-hook-budget-reservation.json. All subsequent
+commits use the explicit offline hook path.
+
+## SEQ.4 — response-review clarification not promoted
+
+The twelve-call baseline/revised comparison used six independently labelled cases
+and unchanged evidence. Baseline admitted all three faulty replies. The revised
+prompt still admitted the stale support and negative saved-effect claims. It noticed
+the missing-work reply, but its negative receipt contained an inexact reference and
+incorrectly rejected the otherwise supported greeting. All three legitimate replies
+received semantic acceptance, but one valid correction's receipt contained an invented
+ellipsis and failed mechanical admission. The explicit document limit and independent
+questions were also incorrectly merged into one addressed result under both prompts.
+
+The revised SYSTEM was restored to the committed baseline; no production prompt or
+extra stage was promoted. The six mechanical relationship regressions remain useful:
+they prove bounded correction, terminal withholding, preserved supported peers and
+valid no-write/limited responses once a correctly formed semantic decision is supplied.
+They do not prove the model makes that decision. The comparison cost $0.071359;
+measured usage is now $0.195433 plus the $1.09 unknown hook reserve, total $1.285433
+against $5. No repeated or extended comparison was run. Exact candidate prompts,
+inputs, separate oracle and outputs use the reviewer-release-*-v2 artifacts under
+outputs/core-engine-build-20261010. The response remains unaccepted; more prompt
+warnings alone have not resolved the observed semantic boundary.

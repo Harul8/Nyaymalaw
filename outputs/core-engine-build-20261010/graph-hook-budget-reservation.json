@@ -1,0 +1,31 @@
+{
+  "purpose": "Conservative aggregate reservation for interrupted graph hook; NOT an API call and NOT measured usage",
+  "reservation_id": "35fce8da-644f-4ab3-bcc0-01c35e433fc8",
+  "reserved_usd": 1.09,
+  "bound_evidence": "graph-hook-usage-audit.json",
+  "pricing_source": "https://developers.openai.com/api/docs/models/text-embedding-3-large",
+  "rate_usd_per_million_input_tokens": 0.13,
+  "bound_input_tokens": 8328639,
+  "new_network_calls": 0,
+  "ledger_after": {
+    "maximum_usd": 5.0,
+    "charged_usd": 1.214074,
+    "measured_usd": 0.124074,
+    "reserved_or_unknown_usd": 1.09,
+    "attempts": 63,
+    "models": [
+      {
+        "model": "gpt-4.1-mini-2025-04-14",
+        "state": "measured",
+        "attempts": 62,
+        "charged_usd": 0.124074
+      },
+      {
+        "model": "text-embedding-3-large",
+        "state": "reserved_or_unknown",
+        "attempts": 1,
+        "charged_usd": 1.09
+      }
+    ]
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "state": "possible_out_of_ledger_usage_not_zero",
+  "attempted_model": "text-embedding-3-large",
+  "provider": "openai:text-embedding-3-large@https://api.openai.com/v1",
+  "actual_requests": "unknown; provider discards usage and no per-request ledger exists",
+  "actual_tokens": "unknown",
+  "confirmed_completed_usage": "none found; does not establish no dispatch or no charge",
+  "embedding_cache_rows": 11357,
+  "cache_has_usage_or_timestamp_columns": false,
+  "current_graph": {
+    "nodes": 17986,
+    "bytes": 2776213,
+    "cache_matching": 11337,
+    "cache_missing_or_changed": 6649,
+    "pending_bytes": 1100859,
+    "max_node_bytes": 1055
+  },
+  "outer_batch_inputs": 64,
+  "inner_batch_inputs": 100,
+  "provider_attempts_maximum_per_batch": 3,
+  "conservative_all_nodes_request_attempts_ceiling": 846,
+  "conservative_all_nodes_input_token_ceiling_utf8_bytes_times_three": 8328639,
+  "app_configured_rate_usd_per_million": 0.13,
+  "conservative_usd_ceiling_at_configured_rate": 1.08272307,
+  "bound_scope": "All current non-file graph nodes, ignoring incremental cache and assuming every input was billed on all three attempts; UTF-8 bytes upper-bound byte-tokenizer input tokens. Not a measured charge.",
+  "limits": [
+    "No pre-hook cache snapshot; completed new writes cannot be distinguished from older cache rows.",
+    "No retained provider usage; the interrupted capture-output subprocess did not return its stdout/stderr.",
+    "Rate is repository model_config.py configuration, not a newly queried provider bill."
+  ],
+  "processes": "Confirmed interrupted refresh-graph and embedding descendants stopped; no matching embedding process remained.",
+  "code_paths": {
+    "hook": "assurance/hooks/refresh-graph",
+    "launcher": "development_environment/developer_tooling/graph_vectors.py",
+    "provider": "C:\\Users\\rahul\\AppData\\Roaming\\uv\\tools\\code-review-graph\\Lib\\site-packages\\code_review_graph\\embeddings.py",
+    "price": "nm/shared/model_config.py"
+  },
+  "new_network_or_model_calls_in_audit": 0
+}

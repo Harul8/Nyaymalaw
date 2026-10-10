@@ -1,0 +1,71 @@
+{
+  "status": "awaiting independent root confirmation",
+  "not_model_input": true,
+  "labels": [
+    {
+      "case_id": "reply-01",
+      "expected_verdict": "reject",
+      "reason": "The sole greeting supplies none of the requested analysis, contrary positions or client questions. Internal partial research does not deliver a task-specific limit or justify omitting possible independent work.",
+      "expected_focus": [
+        "Greeting itself remains supported",
+        "Independent requested outcomes marked missing",
+        "Do not invent a limitation absent from the reply"
+      ],
+      "origin": "Exact first live draft and all original evidence"
+    },
+    {
+      "case_id": "reply-02",
+      "expected_verdict": "reject",
+      "reason": "The corrected 8 September assertion selects only the superseded 6 September account in uses; addresses identifies the request but is not its factual support. Actual draft also contains model-authored record-effect statuses and overstates what the disputed damage account establishes.",
+      "expected_focus": [
+        "Unit b3 current date uses wrong original source",
+        "Unit b4 current date also lacks current supporting use",
+        "Effect-status assertions remain code-owned",
+        "Preserve correct greeting and useful question work"
+      ],
+      "origin": "Exact second live draft and all original evidence, including genuine additional defects"
+    },
+    {
+      "case_id": "reply-03",
+      "expected_verdict": "accept",
+      "reason": "A genuine social opening has no substantive task to omit; a natural greeting is sufficient.",
+      "expected_focus": [
+        "No fabricated substantive request",
+        "No requirement to create matter work"
+      ],
+      "origin": "New legitimate social neighbour"
+    },
+    {
+      "case_id": "reply-04",
+      "expected_verdict": "accept",
+      "reason": "Addresses every current request with attributed ordinary-language explanation, reported corrected date supported by the current original message, and useful internal questions; no completed-operation claim.",
+      "expected_focus": [
+        "Current original support for 8 September",
+        "Unverified account remains attributed",
+        "Useful questions do not need law or imply damage proved",
+        "No false requirement for a record mutation"
+      ],
+      "origin": "Source-corrected semantic neighbour using exact full second-turn context and held evidence"
+    },
+    {
+      "case_id": "reply-05",
+      "expected_verdict": "accept",
+      "reason": "The reply states the exact source-backed reason comparison cannot yet be performed and still supplies the independently requested useful questions. No unavailable legal source is invented.",
+      "expected_focus": [
+        "Comparison has a delivered task-specific justified limit",
+        "Question work is addressed independently"
+      ],
+      "origin": "New explicit missing-document neighbour with complete original context"
+    },
+    {
+      "case_id": "reply-06",
+      "expected_verdict": "reject",
+      "reason": "The otherwise supported reply adds an NM-authored negative saved-effect statement. Current contract reserves execution and no-execution statuses to code even when a read-only receipt is available.",
+      "expected_focus": [
+        "Reject appended effect-status unit",
+        "Do not reject supported explanation, current date or questions"
+      ],
+      "origin": "Controlled negative-effect neighbour of reply-04"
+    }
+  ]
+}
