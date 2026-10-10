@@ -159,7 +159,8 @@ create table cases (
     petitioner text, respondent text,
     cites integer, cited_by integer
 );
-create table citations (citation_key text primary key, case_id text);
+create table citations (citation_key text, case_id text,
+                        primary key(citation_key, case_id));
 create table treatment (
     target_case_id text, treating_case_id text, treating_year integer,
     verb text, grade text, span text
@@ -358,7 +359,7 @@ def extract_treatment(text: str, case_id: str, year: int | None,
         # Every exact key the citation may be held under; two different
         # judgments mean the citation names neither for certain, so neither
         # receives a treatment it may not have had.
-        targets = {t for t in map(resolve, m.keys) if t is not None}
+        targets = {target for key in m.keys for target in (resolve(key) or ())}
         if len(targets) != 1:
             continue
         target = targets.pop()
@@ -422,7 +423,7 @@ def main() -> int:
 
     # ---- pass 1: headers, so every citation is resolvable before pass 2 ----
     t0 = time.time()
-    by_key: dict[str, tuple[str, int | None]] = {}
+    by_key: dict[str, set[tuple[str, int | None]]] = {}
     years: dict[str, int | None] = {}
     rows = []
     rejects: list[tuple] = []
@@ -476,7 +477,7 @@ def main() -> int:
             with_cits += 1
         for k in rec["_citations"]:
             if len(k) > 7:
-                by_key.setdefault(k, (rec["case_id"], rec["year"]))
+                by_key.setdefault(k, set()).add((rec["case_id"], rec["year"]))
         if i % 5000 == 0:
             print(f"  headers {i:>7,}/{len(files):,}  ({time.time() - t0:.0f}s)",
                   flush=True)
@@ -485,7 +486,7 @@ def main() -> int:
         "insert or replace into cases values (?,?,?,?,?,?,?,?,?,?,?,?,?,?)", rows)
     dst.executemany("insert into rejects values (?,?,?,?,?)", rejects)
     dst.executemany("insert or replace into citations values (?,?)",
-                    [(k, v[0]) for k, v in by_key.items()])
+                    [(key, owner[0]) for key, owners in by_key.items() for owner in owners])
     dst.commit()
     print(f"  pass 1 done in {time.time() - t0:.0f}s")
 
@@ -522,6 +523,8 @@ def main() -> int:
         ("with_citations", str(with_cits)),
         ("with_parties", str(with_parties)),
         ("citation_keys", str(len(by_key))),
+        ("citation_ownership", "all_pairs_v2"),
+        ("citation_owner_pairs", str(sum(len(owners) for owners in by_key.values()))),
         ("treatment_records", str(found)),
         ("targets_reached", str(targets)),
         ("targets_adverse", str(adverse)),

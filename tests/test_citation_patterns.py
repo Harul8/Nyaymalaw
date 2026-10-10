@@ -231,10 +231,10 @@ def test_the_identity_build_links_a_citation_the_way_the_check_reads_it():
     gives neither a treatment it may not have had."""
     from pipeline.build_identity_index import extract_treatment
     text = "The decision in Somebody v. State, AIR 1973 SC 1461 was overruled by a larger bench."
-    held = {"AIR1973SUPREMECOURT1461": ("TARGET", 1973)}
+    held = {"AIR1973SUPREMECOURT1461": {("TARGET", 1973)}}
     (record,) = extract_treatment(text, "TREATING", 1990, held.get)
     assert record[:2] == ("TARGET", "TREATING") and record[4] == "adverse"
-    two = {"AIR1973SC1461": ("ONE", 1973), "AIR1973SUPREMECOURT1461": ("OTHER", 1973)}
+    two = {"AIR1973SC1461": {("ONE", 1973)}, "AIR1973SUPREMECOURT1461": {("OTHER", 1973)}}
     assert extract_treatment(text, "TREATING", 1990, two.get) == []
 
 

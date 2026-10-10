@@ -158,3 +158,17 @@ dangling references with a surviving peer, source-path escape and a missing tabl
 Conformance: reader invariant verified offline. The producer still loses owners;
 it must be changed separately. The held index was neither rebuilt nor relabelled.
 No measured legacy match is being upgraded to complete identity or legal validity.
+
+## SEQ.2 — collision-preserving producer
+
+Start READY: the index producer must retain every distinct citation-key/case pair;
+all reporter-equivalent keys must resolve to one owner before recording a treatment
+target. A colliding key cannot disappear behind another uniquely mapped equivalent.
+`pipeline/build_identity_index.py` owns this invariant; no model call is involved.
+
+Build/evidence: composite primary key, complete owner sets and all_pairs_v2 metadata.
+A real temporary four-file synthetic index preserves both colliding owners and
+records treatment only for the independent unique target. Existing-index overwrite
+still refuses. 21 producer/shared-parser/reader checks pass; static checks pass.
+The held index was not rebuilt: its collision coverage remains unassessed. Existing
+keyword-derived treatment rows are discovery hints, not checked court treatment.
