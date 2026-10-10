@@ -47,6 +47,7 @@
     "nm.core_engine.citations": "core",
     "nm.core_engine.conversation": "core",
     "nm.core_engine.retrieval": "core",
+    "nm.core_engine.understanding": "core",
     "nm.carry": "domain",
     "nm.carry.handover": "core",
     "nm.carry.handover_contracts": "domain",
@@ -177,7 +178,7 @@
   "expected_roles": {
     "adapters": 27,
     "bootstrap": 5,
-    "core": 52,
+    "core": 53,
     "domain": 69,
     "edge": 8,
     "infrastructure": 1,

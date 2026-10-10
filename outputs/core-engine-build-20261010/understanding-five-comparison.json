@@ -1,0 +1,31 @@
+{
+  "baseline_file": "understanding-five-live.json",
+  "baseline_sha256": "568168dab1ce439e97b4ddb1bc0e617385f480fb418d6935fb0f68d070124fd2",
+  "revised_file": "understanding-five-revised-live.json",
+  "baseline_source_sha256": "5b50c920303b5483a9aef387d4dbb411440ac544d7599491e2c9e7199dd1cd46",
+  "revised_source_sha256": "c728a966fc68e0479ec214de391eca225674fb6496e05ac35c49c23008865423",
+  "same_cases": true,
+  "summary": {
+    "requests": {
+      "expected": 5,
+      "baseline_units": 4,
+      "revised_units": 4
+    },
+    "restrictions": {
+      "expected": 3,
+      "baseline_units": 1,
+      "revised_units": 2
+    },
+    "earlier_context_selection_gap": "Still present in resumed comparison",
+    "social_closing_misclassified": "Present in both",
+    "quoted_instruction_misattributed_to_NM": "Absent in both",
+    "false_completion": "Absent in both",
+    "new_issue": "Harmless style preferences become unresolved fields in mixed request",
+    "cost_usd": {
+      "baseline": 0.003456,
+      "revised": 0.003671,
+      "shared_total": 0.007127
+    }
+  },
+  "recommendation": "Do not claim semantic acceptance. Before expanding the flow, preserve independent function ownership in the output design and verify context dependence; do not add sentence- or case-specific rules."
+}

@@ -1,0 +1,2571 @@
+{
+  "prototype_only": true,
+  "started_utc": "2026-10-10T02:57:43.209952+00:00",
+  "model": "gpt-4.1-mini-2025-04-14",
+  "script_sha256": "c29b2dd298a0c3f45a295249fe9f213ebcbb07602771a21b09c9f57001b344e8",
+  "budget_before": {
+    "maximum_usd": 5.0,
+    "charged_usd": 0.007127,
+    "measured_usd": 0.007127,
+    "reserved_or_unknown_usd": 0.0,
+    "attempts": 10,
+    "models": [
+      {
+        "model": "gpt-4.1-mini-2025-04-14",
+        "state": "measured",
+        "attempts": 10,
+        "charged_usd": 0.007127
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "mixed",
+      "expected_before_run": {
+        "courtesy": true,
+        "information": "Client identity and conflicting attributed accounts",
+        "independent_requests": [
+          "Summarise conflicting accounts",
+          "Draft questions for client"
+        ],
+        "restriction": "No contact with the customer",
+        "forbidden": "Treat collection as proved"
+      },
+      "context": {
+        "position": "first",
+        "conversation": [],
+        "latest": {
+          "source_id": "mixed:advocate",
+          "turn_id": "mixed",
+          "speaker": "advocate",
+          "record_role": "original_account",
+          "text": "Good morning. We act for Lumen Workshop. The customer says the equipment was never collected; our dispatch register records collection on 12 August. Summarise the conflicting accounts and draft questions for our client. Do not contact the customer."
+        },
+        "current_records": {},
+        "saved_work": []
+      },
+      "existing_source_checks": {
+        "contract": "core_understanding_v2",
+        "units": [
+          {
+            "id": "mixed:u1",
+            "kind": "courtesy",
+            "source": {
+              "source_id": "mixed:advocate",
+              "turn_id": "mixed",
+              "speaker": "advocate",
+              "record_role": "original_account",
+              "text": "Good morning.",
+              "start": 0,
+              "end": 13
+            },
+            "meaning": "The advocate offers a polite morning greeting at the start of the message.",
+            "context": [],
+            "requested_work": null,
+            "desired_result": null,
+            "unresolved": []
+          },
+          {
+            "id": "mixed:u2",
+            "kind": "information",
+            "source": {
+              "source_id": "mixed:advocate",
+              "turn_id": "mixed",
+              "speaker": "advocate",
+              "record_role": "original_account",
+              "text": "We act for Lumen Workshop.",
+              "start": 14,
+              "end": 40
+            },
+            "meaning": "The advocate represents a client named Lumen Workshop.",
+            "context": [],
+            "requested_work": null,
+            "desired_result": null,
+            "unresolved": []
+          },
+          {
+            "id": "mixed:u3",
+            "kind": "information",
+            "source": {
+              "source_id": "mixed:advocate",
+              "turn_id": "mixed",
+              "speaker": "advocate",
+              "record_role": "original_account",
+              "text": "The customer says the equipment was never collected; our dispatch register records collection on 12 August.",
+              "start": 41,
+              "end": 148
+            },
+            "meaning": "There is a conflict between the customer's claim that equipment was never collected and the dispatch register showing the equipment was collected on 12 August.",
+            "context": [],
+            "requested_work": null,
+            "desired_result": null,
+            "unresolved": []
+          },
+          {
+            "id": "mixed:u4",
+            "kind": "request",
+            "source": {
+              "source_id": "mixed:advocate",
+              "turn_id": "mixed",
+              "speaker": "advocate",
+              "record_role": "original_account",
+              "text": "Summarise the conflicting accounts",
+              "start": 149,
+              "end": 183
+            },
+            "meaning": "The advocate requests a summary of the conflicting statements from the customer and the dispatch register about equipment collection.",
+            "context": [],
+            "requested_work": "drafting",
+            "desired_result": "A summary of the conflicting accounts regarding equipment collection between the customer and the dispatch register.",
+            "unresolved": []
+          },
+          {
+            "id": "mixed:u5",
+            "kind": "request",
+            "source": {
+              "source_id": "mixed:advocate",
+              "turn_id": "mixed",
+              "speaker": "advocate",
+              "record_role": "original_account",
+              "text": "draft questions for our client",
+              "start": 188,
+              "end": 218
+            },
+            "meaning": "The advocate requests a draft of questions directed to their client, presumably to clarify the situation about equipment collection.",
+            "context": [],
+            "requested_work": "drafting",
+            "desired_result": "A list of questions for the client Lumen Workshop to clarify details about the equipment collection.",
+            "unresolved": []
+          },
+          {
+            "id": "mixed:u6",
+            "kind": "restriction",
+            "source": {
+              "source_id": "mixed:advocate",
+              "turn_id": "mixed",
+              "speaker": "advocate",
+              "record_role": "original_account",
+              "text": "Do not contact the customer.",
+              "start": 220,
+              "end": 248
+            },
+            "meaning": "The advocate instructs that no direct contact should be made with the customer at this time.",
+            "context": [],
+            "requested_work": null,
+            "desired_result": null,
+            "unresolved": []
+          }
+        ],
+        "issues": [],
+        "status": "proposed",
+        "semantic_review": "pending"
+      },
+      "prototype_output": {
+        "courtesies": [
+          {
+            "quote": "Good morning.",
+            "meaning": "The advocate offers a polite morning greeting at the start of the message.",
+            "context": [],
+            "unresolved": []
+          }
+        ],
+        "information": [
+          {
+            "quote": "We act for Lumen Workshop.",
+            "meaning": "The advocate represents a client named Lumen Workshop.",
+            "context": [],
+            "unresolved": []
+          },
+          {
+            "quote": "The customer says the equipment was never collected; our dispatch register records collection on 12 August.",
+            "meaning": "There is a conflict between the customer's claim that equipment was never collected and the dispatch register showing the equipment was collected on 12 August.",
+            "context": [],
+            "unresolved": []
+          }
+        ],
+        "requests": [
+          {
+            "quote": "Summarise the conflicting accounts",
+            "meaning": "The advocate requests a summary of the conflicting statements from the customer and the dispatch register about equipment collection.",
+            "context": [],
+            "unresolved": [],
+            "requested_work": "drafting",
+            "desired_result": "A summary of the conflicting accounts regarding equipment collection between the customer and the dispatch register."
+          },
+          {
+            "quote": "draft questions for our client",
+            "meaning": "The advocate requests a draft of questions directed to their client, presumably to clarify the situation about equipment collection.",
+            "context": [],
+            "unresolved": [],
+            "requested_work": "drafting",
+            "desired_result": "A list of questions for the client Lumen Workshop to clarify details about the equipment collection."
+          }
+        ],
+        "restrictions": [
+          {
+            "quote": "Do not contact the customer.",
+            "meaning": "The advocate instructs that no direct contact should be made with the customer at this time.",
+            "context": [],
+            "unresolved": []
+          }
+        ]
+      },
+      "calls": [
+        {
+          "system": "Message: This is the advocate's opening message; no earlier conversation exists.\n\nPurpose: Interpret what the advocate communicates and wants now. Produce proposals\nfor subsequent work; do not answer, research, execute work or change records.\n\nLook for: Read the whole latest message in its complete conversation and saved\nwork context. Independently identify social courtesies, substantive information,\nrequested results, and instructions limiting work. Several functions may apply\nto the same words. Separate requested results whenever one can be completed,\nwithheld or cancelled independently. Retain limiting instructions separately.\nQuoted instructions remain attributed to their original speaker; they become\nrequests to NM only when the advocate authorises them. Preserve reported speech,\nuncertainty, timing, conditions and negation. NM interpretations are not original\nevidence; saved work does not grant new consent. A temporary diversion does not\ncancel earlier work. Resolve references from supplied original context and retain\napplicable limits or missing inputs. State only ambiguities or missing inputs that\nmaterially obstruct understanding or execution, not optional style preferences.\n\nOutcome: Return four arrays: courtesies, information, requests and restrictions.\nEvery item selects exact latest-message words and briefly explains its function.\nEach request item represents one independently completable result with its work\ntype and desired result. Select earlier source IDs and exact words when needed\nto support contextual meaning or limits; do not substitute latest-message echoes.\nUse empty arrays when a function is absent. Empty context is valid when no earlier\ncontext is needed. Quotes may overlap across functions. No invented facts,\npermissions, IDs, completion claims or additional work.\n",
+          "user": "{\"conversation\": [], \"latest\": {\"source_id\": \"mixed:advocate\", \"turn_id\": \"mixed\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"text\": \"Good morning. We act for Lumen Workshop. The customer says the equipment was never collected; our dispatch register records collection on 12 August. Summarise the conflicting accounts and draft questions for our client. Do not contact the customer.\"}, \"current_records\": {}, \"saved_work\": []}",
+          "operation": "prototype_understanding_arrays",
+          "schema": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "courtesies",
+              "information",
+              "requests",
+              "restrictions"
+            ],
+            "properties": {
+              "courtesies": {
+                "type": "array",
+                "description": "Social contact, thanks and social closing; empty if absent.",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "quote",
+                    "meaning",
+                    "context",
+                    "unresolved"
+                  ],
+                  "properties": {
+                    "quote": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Exact latest-message words for this function; overlapping quotes are allowed."
+                    },
+                    "meaning": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Concise interpretation preserving original speaker, conditions, timing and certainty."
+                    },
+                    "context": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "source_id",
+                          "quote"
+                        ],
+                        "properties": {
+                          "source_id": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "An earlier supplied source ID supporting contextual meaning or a limiting condition."
+                          },
+                          "quote": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "Exact continuous original words, long enough to be unambiguous."
+                          }
+                        }
+                      },
+                      "description": "Earlier original references needed for contextual meaning and applicable limits; empty when none is needed."
+                    },
+                    "unresolved": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "description": "Only ambiguities or missing inputs materially blocking understanding or execution; no optional stylistic preferences."
+                    }
+                  }
+                }
+              },
+              "information": {
+                "type": "array",
+                "description": "Substantive non-social accounts or supplied content, including information accompanying requests or restrictions.",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "quote",
+                    "meaning",
+                    "context",
+                    "unresolved"
+                  ],
+                  "properties": {
+                    "quote": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Exact latest-message words for this function; overlapping quotes are allowed."
+                    },
+                    "meaning": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Concise interpretation preserving original speaker, conditions, timing and certainty."
+                    },
+                    "context": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "source_id",
+                          "quote"
+                        ],
+                        "properties": {
+                          "source_id": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "An earlier supplied source ID supporting contextual meaning or a limiting condition."
+                          },
+                          "quote": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "Exact continuous original words, long enough to be unambiguous."
+                          }
+                        }
+                      },
+                      "description": "Earlier original references needed for contextual meaning and applicable limits; empty when none is needed."
+                    },
+                    "unresolved": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "description": "Only ambiguities or missing inputs materially blocking understanding or execution; no optional stylistic preferences."
+                    }
+                  }
+                }
+              },
+              "requests": {
+                "type": "array",
+                "description": "One item for EACH independently completable result the advocate asks NM to deliver, even within a shared sentence.",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "quote",
+                    "meaning",
+                    "context",
+                    "unresolved",
+                    "requested_work",
+                    "desired_result"
+                  ],
+                  "properties": {
+                    "quote": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Exact latest-message words for this function; overlapping quotes are allowed."
+                    },
+                    "meaning": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Concise interpretation preserving original speaker, conditions, timing and certainty."
+                    },
+                    "context": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "source_id",
+                          "quote"
+                        ],
+                        "properties": {
+                          "source_id": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "An earlier supplied source ID supporting contextual meaning or a limiting condition."
+                          },
+                          "quote": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "Exact continuous original words, long enough to be unambiguous."
+                          }
+                        }
+                      },
+                      "description": "Earlier original references needed for contextual meaning and applicable limits; empty when none is needed."
+                    },
+                    "unresolved": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "description": "Only ambiguities or missing inputs materially blocking understanding or execution; no optional stylistic preferences."
+                    },
+                    "requested_work": {
+                      "type": "string",
+                      "enum": [
+                        "research",
+                        "citation_check",
+                        "analysis",
+                        "drafting",
+                        "document_work",
+                        "record_update",
+                        "conversation",
+                        "other"
+                      ]
+                    },
+                    "desired_result": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "One independently completable result, preserving the target and limits of the advocate's instruction."
+                    }
+                  }
+                }
+              },
+              "restrictions": {
+                "type": "array",
+                "description": "One item for EACH instruction limiting, suspending or cancelling work, even when embedded in another function.",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "quote",
+                    "meaning",
+                    "context",
+                    "unresolved"
+                  ],
+                  "properties": {
+                    "quote": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Exact latest-message words for this function; overlapping quotes are allowed."
+                    },
+                    "meaning": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Concise interpretation preserving original speaker, conditions, timing and certainty."
+                    },
+                    "context": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "source_id",
+                          "quote"
+                        ],
+                        "properties": {
+                          "source_id": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "An earlier supplied source ID supporting contextual meaning or a limiting condition."
+                          },
+                          "quote": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "Exact continuous original words, long enough to be unambiguous."
+                          }
+                        }
+                      },
+                      "description": "Earlier original references needed for contextual meaning and applicable limits; empty when none is needed."
+                    },
+                    "unresolved": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "description": "Only ambiguities or missing inputs materially blocking understanding or execution; no optional stylistic preferences."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "kwargs": {
+            "max_tokens": 6000
+          },
+          "result": {
+            "data": {
+              "courtesies": [
+                {
+                  "quote": "Good morning.",
+                  "meaning": "The advocate offers a polite morning greeting at the start of the message.",
+                  "context": [],
+                  "unresolved": []
+                }
+              ],
+              "information": [
+                {
+                  "quote": "We act for Lumen Workshop.",
+                  "meaning": "The advocate represents a client named Lumen Workshop.",
+                  "context": [],
+                  "unresolved": []
+                },
+                {
+                  "quote": "The customer says the equipment was never collected; our dispatch register records collection on 12 August.",
+                  "meaning": "There is a conflict between the customer's claim that equipment was never collected and the dispatch register showing the equipment was collected on 12 August.",
+                  "context": [],
+                  "unresolved": []
+                }
+              ],
+              "requests": [
+                {
+                  "quote": "Summarise the conflicting accounts",
+                  "meaning": "The advocate requests a summary of the conflicting statements from the customer and the dispatch register about equipment collection.",
+                  "context": [],
+                  "unresolved": [],
+                  "requested_work": "drafting",
+                  "desired_result": "A summary of the conflicting accounts regarding equipment collection between the customer and the dispatch register."
+                },
+                {
+                  "quote": "draft questions for our client",
+                  "meaning": "The advocate requests a draft of questions directed to their client, presumably to clarify the situation about equipment collection.",
+                  "context": [],
+                  "unresolved": [],
+                  "requested_work": "drafting",
+                  "desired_result": "A list of questions for the client Lumen Workshop to clarify details about the equipment collection."
+                }
+              ],
+              "restrictions": [
+                {
+                  "quote": "Do not contact the customer.",
+                  "meaning": "The advocate instructs that no direct contact should be made with the customer at this time.",
+                  "context": [],
+                  "unresolved": []
+                }
+              ]
+            },
+            "model": "gpt-4.1-mini-2025-04-14",
+            "usage": {
+              "tokens_in": 1298,
+              "tokens_out": 299,
+              "cost_usd": 0.0009976000000000002,
+              "cached_tokens": 0,
+              "provider_extra": {
+                "response_id": "chatcmpl-EXHZIDVLE9ElUF0secYPTgMdLMMwN",
+                "usage_established": true
+              }
+            },
+            "latency_ms": 2953,
+            "retries": 0,
+            "completion": "complete"
+          }
+        }
+      ],
+      "independent_manual_assessment": {
+        "verdict": "meets_target_distinctions",
+        "improvements": [
+          "Two independently requested results have separate request items.",
+          "Courtesy, supplied identity, conflicting attributed accounts and no-contact restriction all retained.",
+          "No harmless style preferences in unresolved."
+        ],
+        "issues": []
+      }
+    },
+    {
+      "name": "quoted",
+      "expected_before_run": {
+        "information": "Seller's reported demand",
+        "independent_requests": [],
+        "forbidden": "Treat the quoted repair/refund demand as the advocate's request to NM"
+      },
+      "context": {
+        "position": "first",
+        "conversation": [],
+        "latest": {
+          "source_id": "quoted:advocate",
+          "turn_id": "quoted",
+          "speaker": "advocate",
+          "record_role": "original_account",
+          "text": "For the record, the seller emailed: 'Stop the repair and refund me today.' This is their demand, not an instruction from us."
+        },
+        "current_records": {},
+        "saved_work": []
+      },
+      "existing_source_checks": {
+        "contract": "core_understanding_v2",
+        "units": [
+          {
+            "id": "quoted:u1",
+            "kind": "information",
+            "source": {
+              "source_id": "quoted:advocate",
+              "turn_id": "quoted",
+              "speaker": "advocate",
+              "record_role": "original_account",
+              "text": "For the record, the seller emailed: 'Stop the repair and refund me today.'",
+              "start": 0,
+              "end": 74
+            },
+            "meaning": "The seller sent an email demanding to stop the repair and get a refund immediately.",
+            "context": [],
+            "requested_work": null,
+            "desired_result": null,
+            "unresolved": []
+          },
+          {
+            "id": "quoted:u2",
+            "kind": "request",
+            "source": {
+              "source_id": "quoted:advocate",
+              "turn_id": "quoted",
+              "speaker": "advocate",
+              "record_role": "original_account",
+              "text": "This is their demand, not an instruction from us.",
+              "start": 75,
+              "end": 124
+            },
+            "meaning": "Clarify that the seller's email is a demand and should not be treated as an instruction from the advocate or represented party.",
+            "context": [],
+            "requested_work": "analysis",
+            "desired_result": "Clarify the distinction between the seller's demand and the advocate's instructions in the record.",
+            "unresolved": []
+          }
+        ],
+        "issues": [],
+        "status": "proposed",
+        "semantic_review": "pending"
+      },
+      "prototype_output": {
+        "courtesies": [],
+        "information": [
+          {
+            "quote": "For the record, the seller emailed: 'Stop the repair and refund me today.'",
+            "meaning": "The seller sent an email demanding to stop the repair and get a refund immediately.",
+            "context": [],
+            "unresolved": []
+          }
+        ],
+        "requests": [
+          {
+            "quote": "This is their demand, not an instruction from us.",
+            "meaning": "Clarify that the seller's email is a demand and should not be treated as an instruction from the advocate or represented party.",
+            "context": [],
+            "unresolved": [],
+            "requested_work": "analysis",
+            "desired_result": "Clarify the distinction between the seller's demand and the advocate's instructions in the record."
+          }
+        ],
+        "restrictions": []
+      },
+      "calls": [
+        {
+          "system": "Message: This is the advocate's opening message; no earlier conversation exists.\n\nPurpose: Interpret what the advocate communicates and wants now. Produce proposals\nfor subsequent work; do not answer, research, execute work or change records.\n\nLook for: Read the whole latest message in its complete conversation and saved\nwork context. Independently identify social courtesies, substantive information,\nrequested results, and instructions limiting work. Several functions may apply\nto the same words. Separate requested results whenever one can be completed,\nwithheld or cancelled independently. Retain limiting instructions separately.\nQuoted instructions remain attributed to their original speaker; they become\nrequests to NM only when the advocate authorises them. Preserve reported speech,\nuncertainty, timing, conditions and negation. NM interpretations are not original\nevidence; saved work does not grant new consent. A temporary diversion does not\ncancel earlier work. Resolve references from supplied original context and retain\napplicable limits or missing inputs. State only ambiguities or missing inputs that\nmaterially obstruct understanding or execution, not optional style preferences.\n\nOutcome: Return four arrays: courtesies, information, requests and restrictions.\nEvery item selects exact latest-message words and briefly explains its function.\nEach request item represents one independently completable result with its work\ntype and desired result. Select earlier source IDs and exact words when needed\nto support contextual meaning or limits; do not substitute latest-message echoes.\nUse empty arrays when a function is absent. Empty context is valid when no earlier\ncontext is needed. Quotes may overlap across functions. No invented facts,\npermissions, IDs, completion claims or additional work.\n",
+          "user": "{\"conversation\": [], \"latest\": {\"source_id\": \"quoted:advocate\", \"turn_id\": \"quoted\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"text\": \"For the record, the seller emailed: 'Stop the repair and refund me today.' This is their demand, not an instruction from us.\"}, \"current_records\": {}, \"saved_work\": []}",
+          "operation": "prototype_understanding_arrays",
+          "schema": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "courtesies",
+              "information",
+              "requests",
+              "restrictions"
+            ],
+            "properties": {
+              "courtesies": {
+                "type": "array",
+                "description": "Social contact, thanks and social closing; empty if absent.",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "quote",
+                    "meaning",
+                    "context",
+                    "unresolved"
+                  ],
+                  "properties": {
+                    "quote": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Exact latest-message words for this function; overlapping quotes are allowed."
+                    },
+                    "meaning": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Concise interpretation preserving original speaker, conditions, timing and certainty."
+                    },
+                    "context": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "source_id",
+                          "quote"
+                        ],
+                        "properties": {
+                          "source_id": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "An earlier supplied source ID supporting contextual meaning or a limiting condition."
+                          },
+                          "quote": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "Exact continuous original words, long enough to be unambiguous."
+                          }
+                        }
+                      },
+                      "description": "Earlier original references needed for contextual meaning and applicable limits; empty when none is needed."
+                    },
+                    "unresolved": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "description": "Only ambiguities or missing inputs materially blocking understanding or execution; no optional stylistic preferences."
+                    }
+                  }
+                }
+              },
+              "information": {
+                "type": "array",
+                "description": "Substantive non-social accounts or supplied content, including information accompanying requests or restrictions.",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "quote",
+                    "meaning",
+                    "context",
+                    "unresolved"
+                  ],
+                  "properties": {
+                    "quote": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Exact latest-message words for this function; overlapping quotes are allowed."
+                    },
+                    "meaning": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Concise interpretation preserving original speaker, conditions, timing and certainty."
+                    },
+                    "context": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "source_id",
+                          "quote"
+                        ],
+                        "properties": {
+                          "source_id": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "An earlier supplied source ID supporting contextual meaning or a limiting condition."
+                          },
+                          "quote": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "Exact continuous original words, long enough to be unambiguous."
+                          }
+                        }
+                      },
+                      "description": "Earlier original references needed for contextual meaning and applicable limits; empty when none is needed."
+                    },
+                    "unresolved": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "description": "Only ambiguities or missing inputs materially blocking understanding or execution; no optional stylistic preferences."
+                    }
+                  }
+                }
+              },
+              "requests": {
+                "type": "array",
+                "description": "One item for EACH independently completable result the advocate asks NM to deliver, even within a shared sentence.",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "quote",
+                    "meaning",
+                    "context",
+                    "unresolved",
+                    "requested_work",
+                    "desired_result"
+                  ],
+                  "properties": {
+                    "quote": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Exact latest-message words for this function; overlapping quotes are allowed."
+                    },
+                    "meaning": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Concise interpretation preserving original speaker, conditions, timing and certainty."
+                    },
+                    "context": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "source_id",
+                          "quote"
+                        ],
+                        "properties": {
+                          "source_id": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "An earlier supplied source ID supporting contextual meaning or a limiting condition."
+                          },
+                          "quote": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "Exact continuous original words, long enough to be unambiguous."
+                          }
+                        }
+                      },
+                      "description": "Earlier original references needed for contextual meaning and applicable limits; empty when none is needed."
+                    },
+                    "unresolved": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "description": "Only ambiguities or missing inputs materially blocking understanding or execution; no optional stylistic preferences."
+                    },
+                    "requested_work": {
+                      "type": "string",
+                      "enum": [
+                        "research",
+                        "citation_check",
+                        "analysis",
+                        "drafting",
+                        "document_work",
+                        "record_update",
+                        "conversation",
+                        "other"
+                      ]
+                    },
+                    "desired_result": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "One independently completable result, preserving the target and limits of the advocate's instruction."
+                    }
+                  }
+                }
+              },
+              "restrictions": {
+                "type": "array",
+                "description": "One item for EACH instruction limiting, suspending or cancelling work, even when embedded in another function.",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "quote",
+                    "meaning",
+                    "context",
+                    "unresolved"
+                  ],
+                  "properties": {
+                    "quote": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Exact latest-message words for this function; overlapping quotes are allowed."
+                    },
+                    "meaning": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Concise interpretation preserving original speaker, conditions, timing and certainty."
+                    },
+                    "context": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "source_id",
+                          "quote"
+                        ],
+                        "properties": {
+                          "source_id": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "An earlier supplied source ID supporting contextual meaning or a limiting condition."
+                          },
+                          "quote": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "Exact continuous original words, long enough to be unambiguous."
+                          }
+                        }
+                      },
+                      "description": "Earlier original references needed for contextual meaning and applicable limits; empty when none is needed."
+                    },
+                    "unresolved": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "description": "Only ambiguities or missing inputs materially blocking understanding or execution; no optional stylistic preferences."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "kwargs": {
+            "max_tokens": 6000
+          },
+          "result": {
+            "data": {
+              "courtesies": [],
+              "information": [
+                {
+                  "quote": "For the record, the seller emailed: 'Stop the repair and refund me today.'",
+                  "meaning": "The seller sent an email demanding to stop the repair and get a refund immediately.",
+                  "context": [],
+                  "unresolved": []
+                }
+              ],
+              "requests": [
+                {
+                  "quote": "This is their demand, not an instruction from us.",
+                  "meaning": "Clarify that the seller's email is a demand and should not be treated as an instruction from the advocate or represented party.",
+                  "context": [],
+                  "unresolved": [],
+                  "requested_work": "analysis",
+                  "desired_result": "Clarify the distinction between the seller's demand and the advocate's instructions in the record."
+                }
+              ],
+              "restrictions": []
+            },
+            "model": "gpt-4.1-mini-2025-04-14",
+            "usage": {
+              "tokens_in": 1278,
+              "tokens_out": 138,
+              "cost_usd": 0.000732,
+              "cached_tokens": 0,
+              "provider_extra": {
+                "response_id": "chatcmpl-EXHZKf86lK40EBroS5DkwNw186vsR",
+                "usage_established": true
+              }
+            },
+            "latency_ms": 1543,
+            "retries": 0,
+            "completion": "complete"
+          }
+        }
+      ],
+      "independent_manual_assessment": {
+        "verdict": "false_request_added",
+        "improvements": [
+          "The seller demand itself remains information, not a stop-repair or refund action to NM."
+        ],
+        "issues": [
+          {
+            "severity": "consequential",
+            "owner": "requests[0]",
+            "observed": "A declarative clarification that the demand is not ours is promoted into an analysis task to clarify the record.",
+            "invariant": "A statement explaining source purpose does not itself request a separate deliverable."
+          },
+          {
+            "severity": "minor",
+            "owner": "information[0]",
+            "observed": "Today is still paraphrased as immediately."
+          }
+        ]
+      }
+    },
+    {
+      "name": "correction",
+      "expected_before_run": {
+        "independent_requests": [
+          "Correct NM's mistaken date in its summary"
+        ],
+        "information": "Amount remains uncertain; original date remains 14 April",
+        "restriction": "Do not enter a confirmed payment figure",
+        "forbidden": "Claim the correction has been applied or invent a payment amount"
+      },
+      "context": {
+        "position": "follow_up",
+        "conversation": [
+          {
+            "source_id": "c1:advocate",
+            "turn_id": "c1",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "text": "The payment was made on 14 April. The amount is not yet checked."
+          },
+          {
+            "source_id": "c1:nm",
+            "turn_id": "c1",
+            "speaker": "nm",
+            "record_role": "nm_interpretation",
+            "text": "The reported payment was made on 14 May; the amount is unconfirmed."
+          }
+        ],
+        "latest": {
+          "source_id": "correction:advocate",
+          "turn_id": "correction",
+          "speaker": "advocate",
+          "record_role": "original_account",
+          "text": "Please correct your summary: I said 14 April, not 14 May. The amount remains uncertain; do not enter a confirmed payment figure."
+        },
+        "current_records": {
+          "reported_payment_date": {
+            "value": "14 May",
+            "record_role": "nm_interpretation"
+          }
+        },
+        "saved_work": [
+          {
+            "id": "summary-1",
+            "status": "completed",
+            "kind": "summary"
+          }
+        ]
+      },
+      "existing_source_checks": {
+        "contract": "core_understanding_v2",
+        "units": [
+          {
+            "id": "correction:u1",
+            "kind": "information",
+            "source": {
+              "source_id": "correction:advocate",
+              "turn_id": "correction",
+              "speaker": "advocate",
+              "record_role": "original_account",
+              "text": "The amount remains uncertain",
+              "start": 58,
+              "end": 86
+            },
+            "meaning": "The payment amount has not been confirmed and should be treated as unknown.",
+            "context": [
+              {
+                "source_id": "c1:advocate",
+                "turn_id": "c1",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "text": "The amount is not yet checked.",
+                "start": 34,
+                "end": 64
+              },
+              {
+                "source_id": "correction:advocate",
+                "turn_id": "correction",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "text": "The amount remains uncertain; do not enter a confirmed payment figure.",
+                "start": 58,
+                "end": 128
+              }
+            ],
+            "requested_work": null,
+            "desired_result": null,
+            "unresolved": []
+          },
+          {
+            "id": "correction:u2",
+            "kind": "request",
+            "source": {
+              "source_id": "correction:advocate",
+              "turn_id": "correction",
+              "speaker": "advocate",
+              "record_role": "original_account",
+              "text": "Please correct your summary: I said 14 April, not 14 May.",
+              "start": 0,
+              "end": 57
+            },
+            "meaning": "The advocate requests that the previous summary misrepresenting the payment date as 14 May be corrected to the accurate date of 14 April.",
+            "context": [
+              {
+                "source_id": "c1:advocate",
+                "turn_id": "c1",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "text": "The payment was made on 14 April.",
+                "start": 0,
+                "end": 33
+              },
+              {
+                "source_id": "c1:nm",
+                "turn_id": "c1",
+                "speaker": "nm",
+                "record_role": "nm_interpretation",
+                "text": "The reported payment was made on 14 May; the amount is unconfirmed.",
+                "start": 0,
+                "end": 67
+              },
+              {
+                "source_id": "correction:advocate",
+                "turn_id": "correction",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "text": "Please correct your summary: I said 14 April, not 14 May.",
+                "start": 0,
+                "end": 57
+              }
+            ],
+            "requested_work": "record_update",
+            "desired_result": "Correct the payment date in the record from 14 May to 14 April and reflect the advocate's correction in all summaries.",
+            "unresolved": []
+          },
+          {
+            "id": "correction:u3",
+            "kind": "restriction",
+            "source": {
+              "source_id": "correction:advocate",
+              "turn_id": "correction",
+              "speaker": "advocate",
+              "record_role": "original_account",
+              "text": "do not enter a confirmed payment figure",
+              "start": 88,
+              "end": 127
+            },
+            "meaning": "The advocate forbids recording any confirmed payment amount since it remains uncertain.",
+            "context": [
+              {
+                "source_id": "correction:advocate",
+                "turn_id": "correction",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "text": "The amount remains uncertain; do not enter a confirmed payment figure.",
+                "start": 58,
+                "end": 128
+              }
+            ],
+            "requested_work": null,
+            "desired_result": null,
+            "unresolved": []
+          }
+        ],
+        "issues": [],
+        "status": "proposed",
+        "semantic_review": "pending"
+      },
+      "prototype_output": {
+        "courtesies": [],
+        "information": [
+          {
+            "quote": "The amount remains uncertain",
+            "meaning": "The payment amount has not been confirmed and should be treated as unknown.",
+            "context": [
+              {
+                "source_id": "c1:advocate",
+                "quote": "The amount is not yet checked."
+              },
+              {
+                "source_id": "correction:advocate",
+                "quote": "The amount remains uncertain; do not enter a confirmed payment figure."
+              }
+            ],
+            "unresolved": []
+          }
+        ],
+        "requests": [
+          {
+            "quote": "Please correct your summary: I said 14 April, not 14 May.",
+            "meaning": "The advocate requests that the previous summary misrepresenting the payment date as 14 May be corrected to the accurate date of 14 April.",
+            "context": [
+              {
+                "source_id": "c1:advocate",
+                "quote": "The payment was made on 14 April."
+              },
+              {
+                "source_id": "c1:nm",
+                "quote": "The reported payment was made on 14 May; the amount is unconfirmed."
+              },
+              {
+                "source_id": "correction:advocate",
+                "quote": "Please correct your summary: I said 14 April, not 14 May."
+              }
+            ],
+            "unresolved": [],
+            "requested_work": "record_update",
+            "desired_result": "Correct the payment date in the record from 14 May to 14 April and reflect the advocate's correction in all summaries."
+          }
+        ],
+        "restrictions": [
+          {
+            "quote": "do not enter a confirmed payment figure",
+            "meaning": "The advocate forbids recording any confirmed payment amount since it remains uncertain.",
+            "context": [
+              {
+                "source_id": "correction:advocate",
+                "quote": "The amount remains uncertain; do not enter a confirmed payment figure."
+              }
+            ],
+            "unresolved": []
+          }
+        ]
+      },
+      "calls": [
+        {
+          "system": "Message: This is the advocate's next message, with the complete ordered attributed conversation, current records and saved work.\n\nPurpose: Interpret what the advocate communicates and wants now. Produce proposals\nfor subsequent work; do not answer, research, execute work or change records.\n\nLook for: Read the whole latest message in its complete conversation and saved\nwork context. Independently identify social courtesies, substantive information,\nrequested results, and instructions limiting work. Several functions may apply\nto the same words. Separate requested results whenever one can be completed,\nwithheld or cancelled independently. Retain limiting instructions separately.\nQuoted instructions remain attributed to their original speaker; they become\nrequests to NM only when the advocate authorises them. Preserve reported speech,\nuncertainty, timing, conditions and negation. NM interpretations are not original\nevidence; saved work does not grant new consent. A temporary diversion does not\ncancel earlier work. Resolve references from supplied original context and retain\napplicable limits or missing inputs. State only ambiguities or missing inputs that\nmaterially obstruct understanding or execution, not optional style preferences.\n\nOutcome: Return four arrays: courtesies, information, requests and restrictions.\nEvery item selects exact latest-message words and briefly explains its function.\nEach request item represents one independently completable result with its work\ntype and desired result. Select earlier source IDs and exact words when needed\nto support contextual meaning or limits; do not substitute latest-message echoes.\nUse empty arrays when a function is absent. Empty context is valid when no earlier\ncontext is needed. Quotes may overlap across functions. No invented facts,\npermissions, IDs, completion claims or additional work.\n",
+          "user": "{\"conversation\": [{\"source_id\": \"c1:advocate\", \"turn_id\": \"c1\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"text\": \"The payment was made on 14 April. The amount is not yet checked.\"}, {\"source_id\": \"c1:nm\", \"turn_id\": \"c1\", \"speaker\": \"nm\", \"record_role\": \"nm_interpretation\", \"text\": \"The reported payment was made on 14 May; the amount is unconfirmed.\"}], \"latest\": {\"source_id\": \"correction:advocate\", \"turn_id\": \"correction\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"text\": \"Please correct your summary: I said 14 April, not 14 May. The amount remains uncertain; do not enter a confirmed payment figure.\"}, \"current_records\": {\"reported_payment_date\": {\"value\": \"14 May\", \"record_role\": \"nm_interpretation\"}}, \"saved_work\": [{\"id\": \"summary-1\", \"status\": \"completed\", \"kind\": \"summary\"}]}",
+          "operation": "prototype_understanding_arrays",
+          "schema": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "courtesies",
+              "information",
+              "requests",
+              "restrictions"
+            ],
+            "properties": {
+              "courtesies": {
+                "type": "array",
+                "description": "Social contact, thanks and social closing; empty if absent.",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "quote",
+                    "meaning",
+                    "context",
+                    "unresolved"
+                  ],
+                  "properties": {
+                    "quote": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Exact latest-message words for this function; overlapping quotes are allowed."
+                    },
+                    "meaning": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Concise interpretation preserving original speaker, conditions, timing and certainty."
+                    },
+                    "context": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "source_id",
+                          "quote"
+                        ],
+                        "properties": {
+                          "source_id": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "An earlier supplied source ID supporting contextual meaning or a limiting condition."
+                          },
+                          "quote": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "Exact continuous original words, long enough to be unambiguous."
+                          }
+                        }
+                      },
+                      "description": "Earlier original references needed for contextual meaning and applicable limits; empty when none is needed."
+                    },
+                    "unresolved": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "description": "Only ambiguities or missing inputs materially blocking understanding or execution; no optional stylistic preferences."
+                    }
+                  }
+                }
+              },
+              "information": {
+                "type": "array",
+                "description": "Substantive non-social accounts or supplied content, including information accompanying requests or restrictions.",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "quote",
+                    "meaning",
+                    "context",
+                    "unresolved"
+                  ],
+                  "properties": {
+                    "quote": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Exact latest-message words for this function; overlapping quotes are allowed."
+                    },
+                    "meaning": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Concise interpretation preserving original speaker, conditions, timing and certainty."
+                    },
+                    "context": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "source_id",
+                          "quote"
+                        ],
+                        "properties": {
+                          "source_id": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "An earlier supplied source ID supporting contextual meaning or a limiting condition."
+                          },
+                          "quote": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "Exact continuous original words, long enough to be unambiguous."
+                          }
+                        }
+                      },
+                      "description": "Earlier original references needed for contextual meaning and applicable limits; empty when none is needed."
+                    },
+                    "unresolved": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "description": "Only ambiguities or missing inputs materially blocking understanding or execution; no optional stylistic preferences."
+                    }
+                  }
+                }
+              },
+              "requests": {
+                "type": "array",
+                "description": "One item for EACH independently completable result the advocate asks NM to deliver, even within a shared sentence.",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "quote",
+                    "meaning",
+                    "context",
+                    "unresolved",
+                    "requested_work",
+                    "desired_result"
+                  ],
+                  "properties": {
+                    "quote": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Exact latest-message words for this function; overlapping quotes are allowed."
+                    },
+                    "meaning": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Concise interpretation preserving original speaker, conditions, timing and certainty."
+                    },
+                    "context": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "source_id",
+                          "quote"
+                        ],
+                        "properties": {
+                          "source_id": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "An earlier supplied source ID supporting contextual meaning or a limiting condition."
+                          },
+                          "quote": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "Exact continuous original words, long enough to be unambiguous."
+                          }
+                        }
+                      },
+                      "description": "Earlier original references needed for contextual meaning and applicable limits; empty when none is needed."
+                    },
+                    "unresolved": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "description": "Only ambiguities or missing inputs materially blocking understanding or execution; no optional stylistic preferences."
+                    },
+                    "requested_work": {
+                      "type": "string",
+                      "enum": [
+                        "research",
+                        "citation_check",
+                        "analysis",
+                        "drafting",
+                        "document_work",
+                        "record_update",
+                        "conversation",
+                        "other"
+                      ]
+                    },
+                    "desired_result": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "One independently completable result, preserving the target and limits of the advocate's instruction."
+                    }
+                  }
+                }
+              },
+              "restrictions": {
+                "type": "array",
+                "description": "One item for EACH instruction limiting, suspending or cancelling work, even when embedded in another function.",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "quote",
+                    "meaning",
+                    "context",
+                    "unresolved"
+                  ],
+                  "properties": {
+                    "quote": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Exact latest-message words for this function; overlapping quotes are allowed."
+                    },
+                    "meaning": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Concise interpretation preserving original speaker, conditions, timing and certainty."
+                    },
+                    "context": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "source_id",
+                          "quote"
+                        ],
+                        "properties": {
+                          "source_id": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "An earlier supplied source ID supporting contextual meaning or a limiting condition."
+                          },
+                          "quote": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "Exact continuous original words, long enough to be unambiguous."
+                          }
+                        }
+                      },
+                      "description": "Earlier original references needed for contextual meaning and applicable limits; empty when none is needed."
+                    },
+                    "unresolved": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "description": "Only ambiguities or missing inputs materially blocking understanding or execution; no optional stylistic preferences."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "kwargs": {
+            "max_tokens": 6000
+          },
+          "result": {
+            "data": {
+              "courtesies": [],
+              "information": [
+                {
+                  "quote": "The amount remains uncertain",
+                  "meaning": "The payment amount has not been confirmed and should be treated as unknown.",
+                  "context": [
+                    {
+                      "source_id": "c1:advocate",
+                      "quote": "The amount is not yet checked."
+                    },
+                    {
+                      "source_id": "correction:advocate",
+                      "quote": "The amount remains uncertain; do not enter a confirmed payment figure."
+                    }
+                  ],
+                  "unresolved": []
+                }
+              ],
+              "requests": [
+                {
+                  "quote": "Please correct your summary: I said 14 April, not 14 May.",
+                  "meaning": "The advocate requests that the previous summary misrepresenting the payment date as 14 May be corrected to the accurate date of 14 April.",
+                  "context": [
+                    {
+                      "source_id": "c1:advocate",
+                      "quote": "The payment was made on 14 April."
+                    },
+                    {
+                      "source_id": "c1:nm",
+                      "quote": "The reported payment was made on 14 May; the amount is unconfirmed."
+                    },
+                    {
+                      "source_id": "correction:advocate",
+                      "quote": "Please correct your summary: I said 14 April, not 14 May."
+                    }
+                  ],
+                  "unresolved": [],
+                  "requested_work": "record_update",
+                  "desired_result": "Correct the payment date in the record from 14 May to 14 April and reflect the advocate's correction in all summaries."
+                }
+              ],
+              "restrictions": [
+                {
+                  "quote": "do not enter a confirmed payment figure",
+                  "meaning": "The advocate forbids recording any confirmed payment amount since it remains uncertain.",
+                  "context": [
+                    {
+                      "source_id": "correction:advocate",
+                      "quote": "The amount remains uncertain; do not enter a confirmed payment figure."
+                    }
+                  ],
+                  "unresolved": []
+                }
+              ]
+            },
+            "model": "gpt-4.1-mini-2025-04-14",
+            "usage": {
+              "tokens_in": 1439,
+              "tokens_out": 321,
+              "cost_usd": 0.0010892,
+              "cached_tokens": 0,
+              "provider_extra": {
+                "response_id": "chatcmpl-EXHZMkcat4XjFCNFT0bKB7nlDMJ2G",
+                "usage_established": true
+              }
+            },
+            "latency_ms": 2749,
+            "retries": 0,
+            "completion": "complete"
+          }
+        }
+      ],
+      "independent_manual_assessment": {
+        "verdict": "improved_with_scope_expansion",
+        "improvements": [
+          "Payment uncertainty and prohibition on recording a confirmed amount now have separate information and restriction items.",
+          "Earlier original date and NM mistaken summary are both selected."
+        ],
+        "issues": [
+          {
+            "severity": "consequential_scope_expansion",
+            "owner": "requests[0]",
+            "observed": "Desired result expands correct your summary into correcting payment date in the record and all summaries.",
+            "invariant": "Each requested result preserves its authorised target; deriving a proposal is not permission to broaden mutation scope."
+          },
+          {
+            "severity": "minor_redundancy",
+            "owner": "context selections",
+            "observed": "Several latest-message references remain even though earlier-context-only is requested; selected words are valid."
+          }
+        ]
+      }
+    },
+    {
+      "name": "diversion",
+      "expected_before_run": {
+        "independent_requests": [
+          "Explain without prejudice",
+          "Resume existing lease comparison"
+        ],
+        "restriction": "Keep draft unsent",
+        "forbidden": "Abandon prior comparison or send draft"
+      },
+      "context": {
+        "position": "follow_up",
+        "conversation": [
+          {
+            "source_id": "d1:advocate",
+            "turn_id": "d1",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "text": "Compare the two lease versions. Prepare an internal note only; do not send it."
+          },
+          {
+            "source_id": "d1:nm",
+            "turn_id": "d1",
+            "speaker": "nm",
+            "record_role": "nm_interpretation",
+            "text": "I can compare the versions once the second document is provided."
+          },
+          {
+            "source_id": "d2:advocate",
+            "turn_id": "d2",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "text": "The second version is not available yet. We will return to this."
+          }
+        ],
+        "latest": {
+          "source_id": "diversion:advocate",
+          "turn_id": "diversion",
+          "speaker": "advocate",
+          "record_role": "original_account",
+          "text": "Before we return to the lease review, explain what 'without prejudice' means in ordinary language. Then resume the comparison. Keep the draft unsent."
+        },
+        "current_records": {},
+        "saved_work": [
+          {
+            "id": "lease-review",
+            "kind": "comparison",
+            "status": "waiting_for_second_document"
+          }
+        ]
+      },
+      "existing_source_checks": {
+        "contract": "core_understanding_v2",
+        "units": [
+          {
+            "id": "diversion:u1",
+            "kind": "information",
+            "source": {
+              "source_id": "diversion:advocate",
+              "turn_id": "diversion",
+              "speaker": "advocate",
+              "record_role": "original_account",
+              "text": "Before we return to the lease review, explain what 'without prejudice' means in ordinary language.",
+              "start": 0,
+              "end": 98
+            },
+            "meaning": "The advocate asks to explain the phrase 'without prejudice' using everyday language before resuming the lease comparison.",
+            "context": [],
+            "requested_work": null,
+            "desired_result": null,
+            "unresolved": []
+          },
+          {
+            "id": "diversion:u2",
+            "kind": "request",
+            "source": {
+              "source_id": "diversion:advocate",
+              "turn_id": "diversion",
+              "speaker": "advocate",
+              "record_role": "original_account",
+              "text": "explain what 'without prejudice' means in ordinary language",
+              "start": 38,
+              "end": 97
+            },
+            "meaning": "Provide a plain-language explanation of the legal term 'without prejudice'.",
+            "context": [],
+            "requested_work": "other",
+            "desired_result": "A clear, simple explanation of the phrase 'without prejudice' in common language.",
+            "unresolved": []
+          },
+          {
+            "id": "diversion:u3",
+            "kind": "request",
+            "source": {
+              "source_id": "diversion:advocate",
+              "turn_id": "diversion",
+              "speaker": "advocate",
+              "record_role": "original_account",
+              "text": "Then resume the comparison. Keep the draft unsent.",
+              "start": 99,
+              "end": 149
+            },
+            "meaning": "Continue the comparison of the two lease versions once the second document is available, keeping the note internal and not sending it externally.",
+            "context": [
+              {
+                "source_id": "d1:advocate",
+                "turn_id": "d1",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "text": "Compare the two lease versions. Prepare an internal note only; do not send it.",
+                "start": 0,
+                "end": 78
+              },
+              {
+                "source_id": "d2:advocate",
+                "turn_id": "d2",
+                "speaker": "advocate",
+                "record_role": "original_account",
+                "text": "The second version is not available yet. We will return to this.",
+                "start": 0,
+                "end": 64
+              }
+            ],
+            "requested_work": "analysis",
+            "desired_result": "An internal comparison note of the two lease versions, kept as a draft and not sent externally.",
+            "unresolved": [
+              "The second lease version is still not provided, so the comparison cannot be resumed now."
+            ]
+          }
+        ],
+        "issues": [],
+        "status": "proposed",
+        "semantic_review": "pending"
+      },
+      "prototype_output": {
+        "courtesies": [],
+        "information": [
+          {
+            "quote": "Before we return to the lease review, explain what 'without prejudice' means in ordinary language.",
+            "meaning": "The advocate asks to explain the phrase 'without prejudice' using everyday language before resuming the lease comparison.",
+            "context": [],
+            "unresolved": []
+          }
+        ],
+        "requests": [
+          {
+            "quote": "explain what 'without prejudice' means in ordinary language",
+            "meaning": "Provide a plain-language explanation of the legal term 'without prejudice'.",
+            "context": [],
+            "unresolved": [],
+            "requested_work": "other",
+            "desired_result": "A clear, simple explanation of the phrase 'without prejudice' in common language."
+          },
+          {
+            "quote": "Then resume the comparison. Keep the draft unsent.",
+            "meaning": "Continue the comparison of the two lease versions once the second document is available, keeping the note internal and not sending it externally.",
+            "context": [
+              {
+                "source_id": "d1:advocate",
+                "quote": "Compare the two lease versions. Prepare an internal note only; do not send it."
+              },
+              {
+                "source_id": "d2:advocate",
+                "quote": "The second version is not available yet. We will return to this."
+              }
+            ],
+            "unresolved": [
+              "The second lease version is still not provided, so the comparison cannot be resumed now."
+            ],
+            "requested_work": "analysis",
+            "desired_result": "An internal comparison note of the two lease versions, kept as a draft and not sent externally."
+          }
+        ],
+        "restrictions": []
+      },
+      "calls": [
+        {
+          "system": "Message: This is the advocate's next message, with the complete ordered attributed conversation, current records and saved work.\n\nPurpose: Interpret what the advocate communicates and wants now. Produce proposals\nfor subsequent work; do not answer, research, execute work or change records.\n\nLook for: Read the whole latest message in its complete conversation and saved\nwork context. Independently identify social courtesies, substantive information,\nrequested results, and instructions limiting work. Several functions may apply\nto the same words. Separate requested results whenever one can be completed,\nwithheld or cancelled independently. Retain limiting instructions separately.\nQuoted instructions remain attributed to their original speaker; they become\nrequests to NM only when the advocate authorises them. Preserve reported speech,\nuncertainty, timing, conditions and negation. NM interpretations are not original\nevidence; saved work does not grant new consent. A temporary diversion does not\ncancel earlier work. Resolve references from supplied original context and retain\napplicable limits or missing inputs. State only ambiguities or missing inputs that\nmaterially obstruct understanding or execution, not optional style preferences.\n\nOutcome: Return four arrays: courtesies, information, requests and restrictions.\nEvery item selects exact latest-message words and briefly explains its function.\nEach request item represents one independently completable result with its work\ntype and desired result. Select earlier source IDs and exact words when needed\nto support contextual meaning or limits; do not substitute latest-message echoes.\nUse empty arrays when a function is absent. Empty context is valid when no earlier\ncontext is needed. Quotes may overlap across functions. No invented facts,\npermissions, IDs, completion claims or additional work.\n",
+          "user": "{\"conversation\": [{\"source_id\": \"d1:advocate\", \"turn_id\": \"d1\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"text\": \"Compare the two lease versions. Prepare an internal note only; do not send it.\"}, {\"source_id\": \"d1:nm\", \"turn_id\": \"d1\", \"speaker\": \"nm\", \"record_role\": \"nm_interpretation\", \"text\": \"I can compare the versions once the second document is provided.\"}, {\"source_id\": \"d2:advocate\", \"turn_id\": \"d2\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"text\": \"The second version is not available yet. We will return to this.\"}], \"latest\": {\"source_id\": \"diversion:advocate\", \"turn_id\": \"diversion\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"text\": \"Before we return to the lease review, explain what 'without prejudice' means in ordinary language. Then resume the comparison. Keep the draft unsent.\"}, \"current_records\": {}, \"saved_work\": [{\"id\": \"lease-review\", \"kind\": \"comparison\", \"status\": \"waiting_for_second_document\"}]}",
+          "operation": "prototype_understanding_arrays",
+          "schema": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "courtesies",
+              "information",
+              "requests",
+              "restrictions"
+            ],
+            "properties": {
+              "courtesies": {
+                "type": "array",
+                "description": "Social contact, thanks and social closing; empty if absent.",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "quote",
+                    "meaning",
+                    "context",
+                    "unresolved"
+                  ],
+                  "properties": {
+                    "quote": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Exact latest-message words for this function; overlapping quotes are allowed."
+                    },
+                    "meaning": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Concise interpretation preserving original speaker, conditions, timing and certainty."
+                    },
+                    "context": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "source_id",
+                          "quote"
+                        ],
+                        "properties": {
+                          "source_id": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "An earlier supplied source ID supporting contextual meaning or a limiting condition."
+                          },
+                          "quote": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "Exact continuous original words, long enough to be unambiguous."
+                          }
+                        }
+                      },
+                      "description": "Earlier original references needed for contextual meaning and applicable limits; empty when none is needed."
+                    },
+                    "unresolved": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "description": "Only ambiguities or missing inputs materially blocking understanding or execution; no optional stylistic preferences."
+                    }
+                  }
+                }
+              },
+              "information": {
+                "type": "array",
+                "description": "Substantive non-social accounts or supplied content, including information accompanying requests or restrictions.",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "quote",
+                    "meaning",
+                    "context",
+                    "unresolved"
+                  ],
+                  "properties": {
+                    "quote": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Exact latest-message words for this function; overlapping quotes are allowed."
+                    },
+                    "meaning": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Concise interpretation preserving original speaker, conditions, timing and certainty."
+                    },
+                    "context": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "source_id",
+                          "quote"
+                        ],
+                        "properties": {
+                          "source_id": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "An earlier supplied source ID supporting contextual meaning or a limiting condition."
+                          },
+                          "quote": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "Exact continuous original words, long enough to be unambiguous."
+                          }
+                        }
+                      },
+                      "description": "Earlier original references needed for contextual meaning and applicable limits; empty when none is needed."
+                    },
+                    "unresolved": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "description": "Only ambiguities or missing inputs materially blocking understanding or execution; no optional stylistic preferences."
+                    }
+                  }
+                }
+              },
+              "requests": {
+                "type": "array",
+                "description": "One item for EACH independently completable result the advocate asks NM to deliver, even within a shared sentence.",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "quote",
+                    "meaning",
+                    "context",
+                    "unresolved",
+                    "requested_work",
+                    "desired_result"
+                  ],
+                  "properties": {
+                    "quote": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Exact latest-message words for this function; overlapping quotes are allowed."
+                    },
+                    "meaning": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Concise interpretation preserving original speaker, conditions, timing and certainty."
+                    },
+                    "context": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "source_id",
+                          "quote"
+                        ],
+                        "properties": {
+                          "source_id": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "An earlier supplied source ID supporting contextual meaning or a limiting condition."
+                          },
+                          "quote": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "Exact continuous original words, long enough to be unambiguous."
+                          }
+                        }
+                      },
+                      "description": "Earlier original references needed for contextual meaning and applicable limits; empty when none is needed."
+                    },
+                    "unresolved": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "description": "Only ambiguities or missing inputs materially blocking understanding or execution; no optional stylistic preferences."
+                    },
+                    "requested_work": {
+                      "type": "string",
+                      "enum": [
+                        "research",
+                        "citation_check",
+                        "analysis",
+                        "drafting",
+                        "document_work",
+                        "record_update",
+                        "conversation",
+                        "other"
+                      ]
+                    },
+                    "desired_result": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "One independently completable result, preserving the target and limits of the advocate's instruction."
+                    }
+                  }
+                }
+              },
+              "restrictions": {
+                "type": "array",
+                "description": "One item for EACH instruction limiting, suspending or cancelling work, even when embedded in another function.",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "quote",
+                    "meaning",
+                    "context",
+                    "unresolved"
+                  ],
+                  "properties": {
+                    "quote": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Exact latest-message words for this function; overlapping quotes are allowed."
+                    },
+                    "meaning": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Concise interpretation preserving original speaker, conditions, timing and certainty."
+                    },
+                    "context": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "source_id",
+                          "quote"
+                        ],
+                        "properties": {
+                          "source_id": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "An earlier supplied source ID supporting contextual meaning or a limiting condition."
+                          },
+                          "quote": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "Exact continuous original words, long enough to be unambiguous."
+                          }
+                        }
+                      },
+                      "description": "Earlier original references needed for contextual meaning and applicable limits; empty when none is needed."
+                    },
+                    "unresolved": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "description": "Only ambiguities or missing inputs materially blocking understanding or execution; no optional stylistic preferences."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "kwargs": {
+            "max_tokens": 6000
+          },
+          "result": {
+            "data": {
+              "courtesies": [],
+              "information": [
+                {
+                  "quote": "Before we return to the lease review, explain what 'without prejudice' means in ordinary language.",
+                  "meaning": "The advocate asks to explain the phrase 'without prejudice' using everyday language before resuming the lease comparison.",
+                  "context": [],
+                  "unresolved": []
+                }
+              ],
+              "requests": [
+                {
+                  "quote": "explain what 'without prejudice' means in ordinary language",
+                  "meaning": "Provide a plain-language explanation of the legal term 'without prejudice'.",
+                  "context": [],
+                  "unresolved": [],
+                  "requested_work": "other",
+                  "desired_result": "A clear, simple explanation of the phrase 'without prejudice' in common language."
+                },
+                {
+                  "quote": "Then resume the comparison. Keep the draft unsent.",
+                  "meaning": "Continue the comparison of the two lease versions once the second document is available, keeping the note internal and not sending it externally.",
+                  "context": [
+                    {
+                      "source_id": "d1:advocate",
+                      "quote": "Compare the two lease versions. Prepare an internal note only; do not send it."
+                    },
+                    {
+                      "source_id": "d2:advocate",
+                      "quote": "The second version is not available yet. We will return to this."
+                    }
+                  ],
+                  "unresolved": [
+                    "The second lease version is still not provided, so the comparison cannot be resumed now."
+                  ],
+                  "requested_work": "analysis",
+                  "desired_result": "An internal comparison note of the two lease versions, kept as a draft and not sent externally."
+                }
+              ],
+              "restrictions": []
+            },
+            "model": "gpt-4.1-mini-2025-04-14",
+            "usage": {
+              "tokens_in": 1470,
+              "tokens_out": 279,
+              "cost_usd": 0.0010344,
+              "cached_tokens": 0,
+              "provider_extra": {
+                "response_id": "chatcmpl-EXHZOij8QPeF7vwLPWLy4wDz5RKxO",
+                "usage_established": true
+              }
+            },
+            "latency_ms": 2383,
+            "retries": 0,
+            "completion": "complete"
+          }
+        }
+      ],
+      "independent_manual_assessment": {
+        "verdict": "improved_but_restriction_missing",
+        "improvements": [
+          "Prior original two-version request and unavailable second document are selected.",
+          "Meaning now preserves the missing-input condition and unresolved correctly names it.",
+          "Explanation and resumed comparison have separate request items."
+        ],
+        "issues": [
+          {
+            "severity": "consequential",
+            "owner": "restrictions",
+            "observed": "Keep the draft unsent remains folded into comparison request, leaving restrictions empty.",
+            "invariant": "Separately preserve each limiting instruction, including when attached to a requested result."
+          },
+          {
+            "severity": "classification_overlap",
+            "owner": "information[0]",
+            "observed": "Pure explanation request is also labelled information without identifying distinct supplied substantive content."
+          }
+        ]
+      }
+    },
+    {
+      "name": "closing",
+      "expected_before_run": {
+        "courtesy": "Greeting, thanks and social closing",
+        "independent_requests": [],
+        "forbidden": "Invent a legal task or an instruction to change matter records"
+      },
+      "context": {
+        "position": "follow_up",
+        "conversation": [
+          {
+            "source_id": "g1:advocate",
+            "turn_id": "g1",
+            "speaker": "advocate",
+            "record_role": "original_account",
+            "text": "I will bring the agreement tomorrow."
+          },
+          {
+            "source_id": "g1:nm",
+            "turn_id": "g1",
+            "speaker": "nm",
+            "record_role": "nm_interpretation",
+            "text": "Understood. We can continue when you have it."
+          }
+        ],
+        "latest": {
+          "source_id": "closing:advocate",
+          "turn_id": "closing",
+          "speaker": "advocate",
+          "record_role": "original_account",
+          "text": "Hello again, and thank you. That's all for today."
+        },
+        "current_records": {},
+        "saved_work": []
+      },
+      "existing_source_checks": {
+        "contract": "core_understanding_v2",
+        "units": [
+          {
+            "id": "closing:u1",
+            "kind": "courtesy",
+            "source": {
+              "source_id": "closing:advocate",
+              "turn_id": "closing",
+              "speaker": "advocate",
+              "record_role": "original_account",
+              "text": "Hello again, and thank you.",
+              "start": 0,
+              "end": 27
+            },
+            "meaning": "The advocate is greeting again and expressing gratitude, indicating polite social contact at the close of interaction.",
+            "context": [],
+            "requested_work": null,
+            "desired_result": null,
+            "unresolved": []
+          },
+          {
+            "id": "closing:u2",
+            "kind": "request",
+            "source": {
+              "source_id": "closing:advocate",
+              "turn_id": "closing",
+              "speaker": "advocate",
+              "record_role": "original_account",
+              "text": "That's all for today.",
+              "start": 28,
+              "end": 49
+            },
+            "meaning": "The advocate indicates no further requests or tasks remain for now, closing today's activities.",
+            "context": [],
+            "requested_work": "other",
+            "desired_result": "Acknowledge that no further work or interaction is requested today.",
+            "unresolved": []
+          }
+        ],
+        "issues": [],
+        "status": "proposed",
+        "semantic_review": "pending"
+      },
+      "prototype_output": {
+        "courtesies": [
+          {
+            "quote": "Hello again, and thank you.",
+            "meaning": "The advocate is greeting again and expressing gratitude, indicating polite social contact at the close of interaction.",
+            "context": [],
+            "unresolved": []
+          }
+        ],
+        "information": [],
+        "requests": [
+          {
+            "quote": "That's all for today.",
+            "meaning": "The advocate indicates no further requests or tasks remain for now, closing today's activities.",
+            "context": [],
+            "unresolved": [],
+            "requested_work": "other",
+            "desired_result": "Acknowledge that no further work or interaction is requested today."
+          }
+        ],
+        "restrictions": []
+      },
+      "calls": [
+        {
+          "system": "Message: This is the advocate's next message, with the complete ordered attributed conversation, current records and saved work.\n\nPurpose: Interpret what the advocate communicates and wants now. Produce proposals\nfor subsequent work; do not answer, research, execute work or change records.\n\nLook for: Read the whole latest message in its complete conversation and saved\nwork context. Independently identify social courtesies, substantive information,\nrequested results, and instructions limiting work. Several functions may apply\nto the same words. Separate requested results whenever one can be completed,\nwithheld or cancelled independently. Retain limiting instructions separately.\nQuoted instructions remain attributed to their original speaker; they become\nrequests to NM only when the advocate authorises them. Preserve reported speech,\nuncertainty, timing, conditions and negation. NM interpretations are not original\nevidence; saved work does not grant new consent. A temporary diversion does not\ncancel earlier work. Resolve references from supplied original context and retain\napplicable limits or missing inputs. State only ambiguities or missing inputs that\nmaterially obstruct understanding or execution, not optional style preferences.\n\nOutcome: Return four arrays: courtesies, information, requests and restrictions.\nEvery item selects exact latest-message words and briefly explains its function.\nEach request item represents one independently completable result with its work\ntype and desired result. Select earlier source IDs and exact words when needed\nto support contextual meaning or limits; do not substitute latest-message echoes.\nUse empty arrays when a function is absent. Empty context is valid when no earlier\ncontext is needed. Quotes may overlap across functions. No invented facts,\npermissions, IDs, completion claims or additional work.\n",
+          "user": "{\"conversation\": [{\"source_id\": \"g1:advocate\", \"turn_id\": \"g1\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"text\": \"I will bring the agreement tomorrow.\"}, {\"source_id\": \"g1:nm\", \"turn_id\": \"g1\", \"speaker\": \"nm\", \"record_role\": \"nm_interpretation\", \"text\": \"Understood. We can continue when you have it.\"}], \"latest\": {\"source_id\": \"closing:advocate\", \"turn_id\": \"closing\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"text\": \"Hello again, and thank you. That's all for today.\"}, \"current_records\": {}, \"saved_work\": []}",
+          "operation": "prototype_understanding_arrays",
+          "schema": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "courtesies",
+              "information",
+              "requests",
+              "restrictions"
+            ],
+            "properties": {
+              "courtesies": {
+                "type": "array",
+                "description": "Social contact, thanks and social closing; empty if absent.",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "quote",
+                    "meaning",
+                    "context",
+                    "unresolved"
+                  ],
+                  "properties": {
+                    "quote": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Exact latest-message words for this function; overlapping quotes are allowed."
+                    },
+                    "meaning": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Concise interpretation preserving original speaker, conditions, timing and certainty."
+                    },
+                    "context": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "source_id",
+                          "quote"
+                        ],
+                        "properties": {
+                          "source_id": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "An earlier supplied source ID supporting contextual meaning or a limiting condition."
+                          },
+                          "quote": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "Exact continuous original words, long enough to be unambiguous."
+                          }
+                        }
+                      },
+                      "description": "Earlier original references needed for contextual meaning and applicable limits; empty when none is needed."
+                    },
+                    "unresolved": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "description": "Only ambiguities or missing inputs materially blocking understanding or execution; no optional stylistic preferences."
+                    }
+                  }
+                }
+              },
+              "information": {
+                "type": "array",
+                "description": "Substantive non-social accounts or supplied content, including information accompanying requests or restrictions.",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "quote",
+                    "meaning",
+                    "context",
+                    "unresolved"
+                  ],
+                  "properties": {
+                    "quote": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Exact latest-message words for this function; overlapping quotes are allowed."
+                    },
+                    "meaning": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Concise interpretation preserving original speaker, conditions, timing and certainty."
+                    },
+                    "context": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "source_id",
+                          "quote"
+                        ],
+                        "properties": {
+                          "source_id": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "An earlier supplied source ID supporting contextual meaning or a limiting condition."
+                          },
+                          "quote": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "Exact continuous original words, long enough to be unambiguous."
+                          }
+                        }
+                      },
+                      "description": "Earlier original references needed for contextual meaning and applicable limits; empty when none is needed."
+                    },
+                    "unresolved": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "description": "Only ambiguities or missing inputs materially blocking understanding or execution; no optional stylistic preferences."
+                    }
+                  }
+                }
+              },
+              "requests": {
+                "type": "array",
+                "description": "One item for EACH independently completable result the advocate asks NM to deliver, even within a shared sentence.",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "quote",
+                    "meaning",
+                    "context",
+                    "unresolved",
+                    "requested_work",
+                    "desired_result"
+                  ],
+                  "properties": {
+                    "quote": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Exact latest-message words for this function; overlapping quotes are allowed."
+                    },
+                    "meaning": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Concise interpretation preserving original speaker, conditions, timing and certainty."
+                    },
+                    "context": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "source_id",
+                          "quote"
+                        ],
+                        "properties": {
+                          "source_id": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "An earlier supplied source ID supporting contextual meaning or a limiting condition."
+                          },
+                          "quote": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "Exact continuous original words, long enough to be unambiguous."
+                          }
+                        }
+                      },
+                      "description": "Earlier original references needed for contextual meaning and applicable limits; empty when none is needed."
+                    },
+                    "unresolved": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "description": "Only ambiguities or missing inputs materially blocking understanding or execution; no optional stylistic preferences."
+                    },
+                    "requested_work": {
+                      "type": "string",
+                      "enum": [
+                        "research",
+                        "citation_check",
+                        "analysis",
+                        "drafting",
+                        "document_work",
+                        "record_update",
+                        "conversation",
+                        "other"
+                      ]
+                    },
+                    "desired_result": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "One independently completable result, preserving the target and limits of the advocate's instruction."
+                    }
+                  }
+                }
+              },
+              "restrictions": {
+                "type": "array",
+                "description": "One item for EACH instruction limiting, suspending or cancelling work, even when embedded in another function.",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "quote",
+                    "meaning",
+                    "context",
+                    "unresolved"
+                  ],
+                  "properties": {
+                    "quote": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Exact latest-message words for this function; overlapping quotes are allowed."
+                    },
+                    "meaning": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Concise interpretation preserving original speaker, conditions, timing and certainty."
+                    },
+                    "context": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "source_id",
+                          "quote"
+                        ],
+                        "properties": {
+                          "source_id": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "An earlier supplied source ID supporting contextual meaning or a limiting condition."
+                          },
+                          "quote": {
+                            "type": "string",
+                            "minLength": 1,
+                            "description": "Exact continuous original words, long enough to be unambiguous."
+                          }
+                        }
+                      },
+                      "description": "Earlier original references needed for contextual meaning and applicable limits; empty when none is needed."
+                    },
+                    "unresolved": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "description": "Only ambiguities or missing inputs materially blocking understanding or execution; no optional stylistic preferences."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "kwargs": {
+            "max_tokens": 6000
+          },
+          "result": {
+            "data": {
+              "courtesies": [
+                {
+                  "quote": "Hello again, and thank you.",
+                  "meaning": "The advocate is greeting again and expressing gratitude, indicating polite social contact at the close of interaction.",
+                  "context": [],
+                  "unresolved": []
+                }
+              ],
+              "information": [],
+              "requests": [
+                {
+                  "quote": "That's all for today.",
+                  "meaning": "The advocate indicates no further requests or tasks remain for now, closing today's activities.",
+                  "context": [],
+                  "unresolved": [],
+                  "requested_work": "other",
+                  "desired_result": "Acknowledge that no further work or interaction is requested today."
+                }
+              ],
+              "restrictions": []
+            },
+            "model": "gpt-4.1-mini-2025-04-14",
+            "usage": {
+              "tokens_in": 1365,
+              "tokens_out": 110,
+              "cost_usd": 0.000722,
+              "cached_tokens": 0,
+              "provider_extra": {
+                "response_id": "chatcmpl-EXHZRWfKxIkhMeHpkXZhkPVHjXwY6",
+                "usage_established": true
+              }
+            },
+            "latency_ms": 1493,
+            "retries": 0,
+            "completion": "complete"
+          }
+        }
+      ],
+      "independent_manual_assessment": {
+        "verdict": "false_request_added",
+        "improvements": [
+          "No social closing is entered as substantive information."
+        ],
+        "issues": [
+          {
+            "severity": "routing_friction",
+            "owner": "requests[0]",
+            "observed": "That's all for today becomes an other/acknowledgement task, although the declared category for social closing is courtesy.",
+            "invariant": "Social closure is not an independent work result unless the advocate actually requests work."
+          }
+        ]
+      }
+    }
+  ],
+  "logical_calls": 5,
+  "budget_after": {
+    "maximum_usd": 5.0,
+    "charged_usd": 0.011704,
+    "measured_usd": 0.011704,
+    "reserved_or_unknown_usd": 0.0,
+    "attempts": 15,
+    "models": [
+      {
+        "model": "gpt-4.1-mini-2025-04-14",
+        "state": "measured",
+        "attempts": 15,
+        "charged_usd": 0.011704
+      }
+    ]
+  },
+  "assessment_summary": {
+    "method": "Manual against unchanged predeclared cases, full original contexts and exact prototype output. No model reviewer.",
+    "mechanical_source_checks": "All five outputs passed existing schema/source checks; those checks do not validate semantic classification.",
+    "genuine_request_results_expected": 5,
+    "genuine_results_separately_represented": 5,
+    "total_request_items": 7,
+    "false_additional_request_items": 2,
+    "restrictions_expected": 3,
+    "restriction_items_returned": 2,
+    "required_earlier_context_improved": true,
+    "false_completion_claims": 0,
+    "unauthorised_external_execution": 0,
+    "scope_expansion_case": "Correction desired_result broadens named summary target to record and all summaries.",
+    "calls": 5,
+    "retries": 0,
+    "run_measured_cost_usd": 0.004577,
+    "shared_budget_measured_usd": 0.011704,
+    "latency_ms": {
+      "min": 1493,
+      "max": 2953,
+      "median": 2383,
+      "total": 11121
+    },
+    "decision": "Prototype shows useful structural improvement but should not be promoted unchanged. It trades omissions for two false requests and still loses one restriction as a distinct unit.",
+    "limits": "One five-case pass per variant; small direct-call evaluation, no saved effects, browser or independent real-model reviewer. Production unchanged."
+  }
+}

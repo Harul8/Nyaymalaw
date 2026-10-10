@@ -50,3 +50,50 @@ SEQ.2 findings to resolve before promoting citation certainty: fuzzy one-party
 name agreement; same-date/court merging; unassessed short quotations coexisting
 with verified status; identity-index first-owner collision loss. No index rebuild
 or changes to corpus content have occurred.
+
+## SEQ.1 — request interpretation candidate
+
+Start READY: one focused model owner interprets the whole message in complete
+context. The output is a proposal, with independently identified functions,
+owned exact source selections, requested results, restrictions and unresolved
+distinctions. Neither classifications nor rewritten meanings can admit facts,
+grant permission, mutate records or certify execution. Code derives first/follow-up
+and supplies only that introduction. Shared correction belongs to the turn owner.
+Pass for this prerequisite: all original context reaches the call, original words
+resolve mechanically, invalid independent units remain explicit, and admitted
+source selections retain speaker/role. Counterexamples: altered quote, foreign
+source, ambiguous repeated phrase, incomplete provider result, overflow and
+empty interpretation. No keyword/situation-specific production branches.
+
+Build: `understanding.py`, source-layout registration and focused fixtures.
+16 focused tests pass. Completed provider shape quarantine is checked per unit;
+incomplete/refused/ambiguous provider output is never salvaged. Valid peers stay
+proposals and still need semantic review. Prompt makes one routine model call;
+conditional correction is not implemented in this file.
+
+Live evidence: four five-call evaluations, pinned GPT-4.1 mini, shared ledger;
+20 physical attempts, no provider retries, $0.016841 charged of $5. See the exact
+contexts, prompts, responses and independent assessments under
+`outputs/core-engine-build-20261010/`. Separate function lists improved independent
+result and earlier-context capture over an exclusive per-piece label. General
+definition changes improved closing/quoted-instruction handling on new controls.
+The final candidate still merged one pair of independently requested results;
+one contextual source was omitted and one earlier quotation proposed as latest
+was mechanically held while valid peers survived. Quoted instructions remained
+unapproved; no model claimed execution.
+
+Conformance: a measured interpretation prerequisite, **not semantic acceptance
+or SEQ.1 completion**. In accordance with the owner's faster-build instruction,
+retain the candidate and build the missing end-to-end checks next. Routing or
+completion cannot rely only on its labels/unit count. Work planning and final
+independent review must examine the complete original request and actual effects,
+including these observed gaps. Keep this consequential integrated obligation open.
+Further isolated wording changes are deferred until the complete flow can be
+measured; no acceptance is inferred from schema validity.
+
+Browser tool initialization failed with a Windows sandbox setup error; resetting
+and retrying did not attach. No new browser was opened. Browser acceptance is
+unrun, not replaced by the synthetic or live API evidence.
+
+Commits skip only the optional paid embedding-graph refresh via the existing
+offline hooks directory; focused source/layout/test checks are run explicitly.
