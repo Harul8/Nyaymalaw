@@ -33,6 +33,18 @@ The old PRD, registry and generated-plan paths remain where compatibility tools
 still read them; they no longer own new work. Archived prompt experiments are
 reference files, not supported launch commands for the current engine.
 
+Current implementation priority is SEQ.1-SEQ.9 on Advocate build plan: core turn
+ownership/context/persistence, exact case and statute identity, retrieval,
+grounded response preparation and source reading, sustained matter work,
+documents/summaries, checked computations/drafting, audio transcription, then
+later practice and closure. The earlier M1 checkpoint remains private reference
+work; this order does not resume the paused implementation.
+
+`work_the_file/projections_api.py` retains historical independent read helpers.
+Its former board function is explicitly retired and cannot return an empty
+success. A new matter-board contract belongs to SEQ.5; restoring removed brain
+imports is not an activation path.
+
 ## Start here
 
 ```text
@@ -43,7 +55,7 @@ Nyaymalaw/
     open_matter/      opening, screens, intake and media admission
     core_engine/      the new engine, being built: citations (E1) and retrieval (E2) so far
     Archives/brain/   the brain served until 10 Oct 2026, reference only
-    Archives/legal_brain/   the earlier brain, reference only (not on the served path)
+    Archives/legal_brain/   earlier brain; some corpus/application helpers remain dependencies
       understand/     message intent, context, party/posture and dispute binding
       retrieve/       held law, sources, searches, citations and legal coverage
       reason/         proof, theories, adverse material and source-backed needs

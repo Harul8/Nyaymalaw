@@ -23,3 +23,9 @@ and interpretation modules; their original contents were not rewritten.
 The 10 October cleanup comparison, retained checks and remaining failures are in
 `outputs/clean-slate-20261010/test-cleanup.md`. A clean pytest collection is not a
 claim that every collected test passes or that the new core engine is complete.
+
+Final-review follow-up: `test_opening_conversation_context.py` preserves only the
+retired TurnEngine prompt/context test formerly in
+`tests/test_opening_brief_is_durable.py`; that file's other safeguards remain.
+The browser internal-ID assertion remains active through the shared neutral
+`tests/_ui_assertions.py` helper and no longer imports an archived engine test.

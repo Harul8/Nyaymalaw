@@ -68,15 +68,39 @@ No ingest, acquisition, index build, model run or corpus amendment was performed
 
 ## Meaning of the import count
 
-The manifest counts AST `Import` and `ImportFrom` references in six repository
-roots, excluding archive directories and caches. It separates retained
-application dependencies, corpus tooling and tests. It does not count dynamic
-imports or textual mentions and is therefore not interchangeable with an earlier
-grep count of 102 references. A static dependency is not proof that a module is
-on the currently served request path.
+The manifest's original snapshot contains 93 consumer files and 222 listed
+module references found through AST `Import` and `ImportFrom` nodes in six
+repository roots, excluding archive directories and caches. Consumer categories
+are 37 application files, 12 corpus/source-fixture tools and 44 test files.
+It does not count dynamic imports or textual mentions and is therefore not
+interchangeable with an earlier grep count of 102 references. A static dependency
+is not proof that a module is on the currently served request path.
 
 The application and test owners decide whether their remaining imports are
 needed. Removing an archived helper while a retained consumer still needs it is
 a code migration with its own checks, not documentation cleanup. The manifest
 captures this cleanup checkpoint; subsequent changes must be assessed against
 their own source tree rather than treated as a discrepancy with historical bytes.
+
+## Follow-up dependency disposition
+
+The owner authorised closing the final review gaps after this snapshot:
+
+- `assurance/journeys/run_goldens.py` now explicitly imports the retained
+  read-only corpus adapter/coverage/manifest contracts from their archive paths.
+  It is a historical corpus check, not a new-engine acceptance test. Unavailable
+  or unassessed version evidence still fails the check; no model is invoked.
+- `nm/work_the_file/projections_api.py` keeps independent read helpers, but its
+  former board function explicitly refuses use. The removed dispute/material/
+  requirement-state modules are no longer imported. Before a new board is wired,
+  SEQ.5 must supply owned state projections, source/readback and versioned replay
+  contracts, including truthful deadline assessment and browser verification.
+- The one old-engine opening-context test is preserved as
+  `tests-for-archived-brains/test_opening_conversation_context.py`. Its live
+  file's other storage, privacy and input-integrity expectations remain. The
+  retained browser privacy assertion imports the neutral shared test helper
+  `tests/_ui_assertions.py`, not an archived engine test.
+
+These repairs do not alter the original snapshot population or imply that the
+remaining dormant journeys pass. Current evidence is linked from P12 on the
+Advocate build plan and the cleanup evidence report.

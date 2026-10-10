@@ -165,3 +165,51 @@ answered result proves count and Act/section/date forwarding only.
 The attached corpus was not scanned. Its version readiness is unverified; this
 repair deliberately does not opt into unchecked current-text coverage. No model
 calls, ingestion or corpus writes occurred. App conversations remain paused.
+
+## Final-review closure and priority order
+
+The old `board_projection` boundary is now explicitly retired. Its imports of
+three missing `nm.brain` state modules and unused delegator are removed. The
+function refuses before reading or mutating a matter; it cannot return an empty
+success. Independent deadline/list/cover helpers remain available. This is an
+explicit retirement of an already unserved projection, not a replacement board.
+SEQ.5 requires owned projection, source and replay contracts before activation.
+
+Only the retired TurnEngine opening-context test was moved out of the active
+mixed test file. The browser privacy assertion still exists and now uses the
+neutral `tests/_ui_assertions.py` pattern rather than importing an archived
+engine test. The old test body is preserved with its helper location corrected.
+
+Focused verification: 31 Class-A tests passed across `test_goldens.py`,
+`test_retired_board_boundary.py`, `test_ui_assertions.py` and
+`test_core_engine_pause.py`. These cover read-only corpus harness wiring,
+unavailable/unassessed coverage, explicit board retirement without state access,
+unknown deadline status, current/historical identifier detection, authenticated
+paused HTTP replies, no model/save attempt and owned historical visibility.
+Ruff undefined-name/import checks and diff whitespace checks pass. Browser
+journeys, live models and attached-corpus version acceptance were not run.
+
+Plan and docs now align current status ownership, citation status axes and
+draft repair versus terminal TURN/NONE grounding/attribution/quotation gates.
+No gate code or prompt changed. All 19 original custody hashes are preserved;
+the original inventory is labelled as 93 consumer files / 222 module references,
+with subsequent dependency dispositions separately explained.
+
+The requested E7/S7 audio slice is planned with original-byte custody, permission,
+timestamped transcription, uncertain speaker/readability states, playback,
+correction lineage, partial recovery, deletion and call accounting. It is not
+implemented. The current build sequence puts the turn boundary, citation/statute
+identity, retrieval and grounded response first, followed by sustained matter
+work, documents/summaries, checked computations/drafting, voice, and later
+practice/closure. These replace ambiguous build-order notes, not the paused
+implementation status. The private M1 candidate remains untouched.
+
+Workbook edits use the documented openpyxl fallback because bundled artifact-tool
+is absent. Changed ranges were rendered and inspected; other sheets and unrelated
+cell values, formulas, styles, comments and hyperlinks were checked unchanged.
+Only affected row heights and the new voice/sequence rows receive layout changes.
+The optional paid graph-embedding hook is bypassed for these offline commits.
+This cleanup adds zero model calls. The future S3 baseline remains four calls,
+or six with rewrite and independent recheck, with extra source/audio batches
+counted separately. These call counts and future quality thresholds require
+measurement when the corresponding implementation is authorised.

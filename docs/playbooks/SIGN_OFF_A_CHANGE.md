@@ -211,7 +211,9 @@ planned wave or the next release.
 - a professional standard requiring qualified review lacks that review;
 - the served and persisted outcomes disagree;
 - a P0 or mandatory gate remains open;
-- a status or workbook value conflicts with its authoritative registry;
+- the selected Advocate build plan row conflicts with its agreed contract or
+  current evidence, or an applicable owned gate/schema check fails; historical
+  registry checks verify retained compatibility inputs, not current build status;
 - an exception lacks owner, compensation or expiry;
 - rollback, recovery or monitoring is not credible;
 - the requested claim is stronger than the evidence.

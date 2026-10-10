@@ -249,12 +249,6 @@
       "reason": "Corpus source candidate curation; retained historical source-selection utility and pyproject entry, not product logic."
     }
   ],
-  "static_import_count": 93,
-  "static_import_counts_by_category": {
-    "retained_application_dependency": 37,
-    "retained_corpus_tool": 12,
-    "retained_test_dependency": 44
-  },
   "static_imports": [
     {
       "path": "development_environment/one_off_tools/find_goldens2.py",
@@ -1137,5 +1131,13 @@
     "Preserved documents may contain former authority statements; current navigation marks them historical.",
     "Moving all old import targets would break retained application and corpus contracts and was deliberately not attempted."
   ],
-  "related_test_disposition": "outputs/clean-slate-20261010/test-cleanup.md"
+  "related_test_disposition": "outputs/clean-slate-20261010/test-cleanup.md",
+  "static_consumer_file_count": 93,
+  "static_consumer_file_counts_by_category": {
+    "retained_application_dependency": 37,
+    "retained_corpus_tool": 12,
+    "retained_test_dependency": 44
+  },
+  "static_listed_module_reference_count": 222,
+  "snapshot_note": "Original cleanup inventory, not recomputed after follow-up repairs; see README follow-up dependency disposition."
 }

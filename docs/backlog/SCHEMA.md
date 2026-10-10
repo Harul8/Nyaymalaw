@@ -1,5 +1,12 @@
 # The backlog control plane — what each field means
 
+**Historical planning schema.** Owner decision P12 (10 October 2026) makes
+Advocate build plan in `docs/Nyaymalaw_Implementation_Plan.xlsx` the owner of
+current decisions, build status and evidence. The authority claims below describe
+the earlier control plane. Retained tools still validate its compatibility
+inputs; do not add new core-engine status here or retire an applicable gate or
+schema check because its planning inputs are historical.
+
 Opened 9 September 2026.
 
 ```

@@ -98,32 +98,6 @@ def test_opening_context_never_becomes_a_fact_or_a_quotable_source(client):
     assert not memory.advocate_words and not memory.established and not matter.facts
 
 
-def test_every_conversational_call_uses_principles_and_the_saved_opening(client, tmp_path):
-    from nm.Archives.legal_brain.common.conversation import PRINCIPLES
-    from nm.Archives.legal_brain.orchestrate.turn import TurnInput
-    from tests.test_matter_memory import _engine, _Recorder
-
-    result = client.post('/api/matters/intake', json=offer(brief={
-        'objective': 'Synthetic opening context marker; no proceedings are reported.'}))
-    matter = _application().store.load(result.json()['matter_id'])
-    recorder = _Recorder()
-    engine, store = _engine(tmp_path, model=recorder)
-    assert store.load(matter.id) is not None
-    first = engine.run(TurnInput(advocate_id='adv_demo', matter_id=matter.id,
-                                message='Good evening.', expected_version=matter.version))
-    assert len(recorder.prompts) == 2, 'Route and conversational reply must both be exercised'
-    for prompt in recorder.prompts:
-        assert prompt.system.startswith(PRINCIPLES)
-        assert 'Synthetic opening context marker' in prompt.user
-    assert first.matter is not None and not first.matter.facts and not first.matter.screens
-    assert len(first.matter.turn_receipts) == 1
-    assert first.matter.turn_receipts[0].message == 'Good evening.'
-    replay = engine.run(TurnInput(advocate_id='adv_demo', matter_id=matter.id,
-                                 message='Good evening.', turn_id=first.turn_id,
-                                 expected_version=matter.version))
-    assert replay.replayed and len(recorder.prompts) == 2
-
-
 def test_route_does_not_discard_the_tail_of_the_current_instruction():
     from nm.Archives.legal_brain.understand.route import build_prompt
 

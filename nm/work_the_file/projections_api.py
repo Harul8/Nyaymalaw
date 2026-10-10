@@ -1,4 +1,8 @@
-"""The two boards. PRD §6.2A.
+"""Historical projection helpers. The former matter board is explicitly retired.
+
+No current HTTP route uses these projections. Do not reconnect the board until
+its owned state, source and replay contracts are implemented and verified.
+The following notes describe the earlier PRD §6.2A projection design.
 
 THERE ARE TWO OF THEM, AND CONFLATING THEM IS A REAL DEFECT
 -----------------------------------------------------------
@@ -20,11 +24,7 @@ is worse than either alone: the advocate cannot tell which is stale.
 """
 from __future__ import annotations
 
-from nm.advise.turn_receipt_contracts import release_index
 from nm.Archives.legal_brain.understand import briefing as _briefing
-from nm.brain.dispute_state import proposed_disputes as _project_proposed_disputes
-from nm.brain.material_state import material_record as _project_material_record
-from nm.brain.requirements_state import requirements_record as _project_requirements_record
 from nm.close import retention as _retention
 from nm.shared.clock_contracts import today as forum_today
 from nm.shared.traceability_contracts import implements
@@ -326,76 +326,18 @@ def _thread_row(thread, deadlines, today=None, currency=None) -> dict:
     }
 
 
-@implements("A2")
 def board_projection(matter: Matter, deadlines, today=None, *, source_current=None,
                      checklist_projections=None, prior_conversation=()) -> dict:
-    """`deadlines` HAS NO DEFAULT, deliberately.
+    """Retired board boundary; current owned projections must be built before reuse.
 
-    It had one -- `()` -- and the served board never passed a register, so
-    every row said the file had no deadlines. A default here is a decision
-    taken on behalf of every call site that forgets one, and the decision it
-    took was to report a gap as a clean sheet. `None` is the honest value for
-    a view that did not compute the register, and it now has to be written.
+    Removed brain state modules cannot safely reconstruct saved disputes,
+    material or requirements. Refuse explicitly without reading or mutating the
+    matter instead of returning an empty board that looks successfully assessed.
+    The retained deadline/list/cover helpers remain independently importable.
     """
-    # D3 — THE NEAREST WINDOW LEADS, regardless of which thread is legally the
-    # most interesting. The interesting one will still be there next week.
-    if not matter.brain_ready:
-        raise ValueError("the matter board is not ready")
-    currency = _current_dependencies(matter).as_dict()
-    rows = nearest_first([_thread_row(t, deadlines, today,
-                                      currency=currency)
-                          for t in matter.threads])
-    agenda = _briefing.dispute_agenda.project(matter, source_current=source_current,
-                                            checklist_projections=checklist_projections)
-    receipts, problems = release_index(matter)
-    sources = []
-    if not problems:
-        for receipt in receipts.values():
-            for index, element in enumerate(receipt.validated_answer().elements):
-                if element.source is not None:
-                    sources.append((receipt.turn_id, index, element.source))
-    for dispute in agenda["disputes"]:
-        for need in dispute.get("requirements", ()):
-            # Only a saved, released exact source grants a reader link. A
-            # similar title or a fresh search result is never a substitute.
-            match = next(((turn_id, index, source) for turn_id, index, source in sources
-                          if source.locator == need["locator"]
-                          and need["span"] in " ".join(source.text.split())), None)
-            if match:
-                turn_id, index, source = match
-                need["citation"] = {"matter_id": matter.id, "turn_id": turn_id,
-                                    "element_index": index,
-                                    "source": {"digest": source.digest, "label": source.label}}
-    proposed = _proposed_disputes(
-        matter, prior_conversation=prior_conversation)
-    material = _project_material_record(
-        matter, disputes=proposed, prior_conversation=prior_conversation)
-    return {
-        "state": "ok",
-        "matter_id": matter.id,
-        "title": matter.title,
-        "version": matter.version,
-        "opening_summary": _opening_summary(matter),
-        "threads": rows,
-        "agenda": agenda,
-        # Conversation extraction is a proposal, not a worked thread. Keep it
-        # beside the agenda so it can be read without acquiring thread status,
-        # checklist results, or a selectable thread ID.
-        "proposed_disputes": proposed,
-        "material_record": material,
-        "requirements_record": _project_requirements_record(
-            matter, disputes=proposed, material=material,
-            prior_conversation=prior_conversation),
-        # The regression to watch: this must be a function of thread count
-        # alone, never of turns, facts, issues or authorities.
-        "row_count": len(rows),
-        "bounded_by": "thread_count",
-    }
-
-
-def _proposed_disputes(matter: Matter, *, prior_conversation=()) -> dict:
-    return _project_proposed_disputes(
-        matter, prior_conversation=prior_conversation)
+    raise NotImplementedError(
+        "The historical matter board is retired; owned projection and replay "
+        "contracts must be implemented before reopening it.")
 
 
 def _opening_summary(matter: Matter) -> dict | None:
@@ -580,9 +522,8 @@ def cover_projection(matter: Matter, deadlines=None, today=None, *, source_curre
         `nobody has worked out the deadline` are different sentences
       * `matter_id` is present and is never offered as the title
 
-    `deadlines=None` is honoured rather than defaulted, for the reason
-    `board_projection` gives directly above: a default here would report an
-    uncomputed register as a clean sheet on every call site that forgot one.
+    `deadlines=None` means the register has not been assessed. Defaulting it
+    to an empty assessed register would incorrectly report a clean sheet.
     """
     if not matter.brain_ready:
         raise ValueError("the matter cover is not ready")

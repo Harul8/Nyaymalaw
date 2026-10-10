@@ -583,12 +583,11 @@ def test_phase_5_no_internal_identifier_or_raw_trace_reaches_the_screen(
         page, journey):
     """TWO OF BK-30'S NAMED FAILURES, checked on the rendered page.
 
-    `tests/test_no_internal_id_reaches_the_advocate.py` owns the pattern and
-    drives ONE scripted conversation through the engine. This is the same rule
-    at the outer boundary, over everything actually painted -- which is the
-    population J-5 says that sweep is missing.
+    `tests/_ui_assertions.py` owns the neutral identifier pattern. This check
+    exercises it at the outer boundary, over everything actually painted;
+    it does not import or restore an archived engine test.
     """
-    from tests.test_no_internal_id_reaches_the_advocate import INTERNAL_ID
+    from tests._ui_assertions import INTERNAL_ID
 
     _open_matter(page, journey)
     _advise(page, BRIEF)
