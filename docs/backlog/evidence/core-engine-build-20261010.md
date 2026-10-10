@@ -1483,3 +1483,112 @@ oracle, both prompt texts, admitted proposals and actual model receipts are reta
 in [the comparison evidence](core-engine-decomposition-comparison-20261010.json).
 Independent semantic assessment and the same-engine local retrieval comparison
 remain in progress at this checkpoint. Production research v4 is unchanged.
+
+### Decomposition and retrieval comparison completed
+
+Both prompt arms used GPT-6 Luna, as the owner corrected. The 36 generations
+cost $0.008276 in the shared ledger. On these 18 fixed cases, both chose
+research versus no research correctly and had zero source/shape rejections.
+Independent semantic assessment found 14 acceptable current outputs, three with
+nonblocking concerns and one material-error case. The candidate had 11 acceptable
+outputs, four with concerns, two material-error cases and one material coverage
+gap. Neither mechanical admission nor fewer enquiries establishes accuracy.
+The cleaner candidate is not promoted. Production research v4 is unchanged.
+
+All 43 paired local searches completed, with no additional API spending. Their
+source-context failures remain explicit. The strict historical-anchor assessment
+separates document identity, exact locator, connected text and final selection;
+these diagnostic counts are not precision, recall or applicability scores. Of 26
+unique expected provisions, 11 have at least one valid connected readback, ten
+fail ancestry and five have ambiguous roots. The candidate's two selected NI Act
+section 138 hits are the same 190-character heading, not the operative conditions.
+They must not be counted as two substantive retrieval successes.
+
+The frozen-pool experiments established that generated `Advocate passage` headers
+pollute discovery and ranking. Removing them also moved useful judgments from
+ranks 3/4/5 to 9/14/20 although discovery still found them. The current reranker
+concatenates the account and all enquiries, windows that string arbitrarily and
+uses the maximum window score. A separate account-only rerank also regressed,
+moving useful passages to ranks 131 and 143. Neither simple alternative is ready
+for promotion. Exact prompts, results, final sources, strict anchor assessment and
+experiment decisions are retained in
+[the completed evidence](core-engine-decomposition-comparison-20261010.json).
+
+### Agentified source-reader trace and corrected diagnosis
+
+The owner recalled that Agentified NM's inline source links and right-hand reader
+worked well. Read-only inspection of reference commit
+`c81677f163798e10c3a0b0447a78f0809990685d` confirms the route:
+`frontend/src/App.jsx:562-864` maps response citations to chunk records;
+`App.jsx:2538-2587` opens `/retrieval/document/{chunk_id}` and falls back to the
+exact authority excerpt; `api/retrieval_routes.py:142-173` delegates to
+`retrieval/retriever.py:1149-1424`. The pane highlights and scrolls to the target
+and offers fuller context. Current Agentified HEAD has retired this backend;
+this is historical source inspection, not a fresh runtime test.
+
+Its `_section_children` at historical `retriever.py:267-298` explicitly bypasses
+parent IDs because section-head and clause occurrence IDs differed. It groups by
+Act and printed section number instead. `get_document_for_chunk` uses similar
+grouping and removes section heads when leaf rows exist. This could show fuller
+text, but does not prove unique parentage, complete words or legal version.
+Repeated numbering and duplicate roots remain consequential counterexamples.
+Do not copy that fallback, section-only citation binding, successor-law
+substitution or unverified removal of overlapping source text.
+
+The more specific source inspection corrects the earlier suggestion that a corpus
+rebuild was necessarily required. NI Act section 138's missing indexed parent,
+`the_negotiable_instruments_act_1881_SECTION_138_OCC2`, is present in the existing
+`bareacts_v3_parents.json` with 1,898 characters of operative text and is also
+retained in the canonical raw source. It is missing from active `chunks.db`,
+the only store consulted by current `rank_context`. Limitation Article 65 is a
+different failure: its text is indexed, but its synthetic SCHEDULE parent is
+absent from both stores. These are source-store integration/structure-contract
+failures to diagnose individually under a general resolver contract, not evidence
+that all original legal content is missing.
+
+Proposed reuse is limited to the design: stable source identity from linked phrase
+to exact passage, explicit section/document context, target highlighting and an
+honest excerpt-only state. No archived snippets have been copied. Current saved
+source ID/digest/text checks remain mandatory. Parent-source integration must bind
+the original artifact and revision, preserve ownership, resolve unique identities
+and distinguish complete text from partial context without inventing indexed
+positions or merging equal section numbers.
+
+### Proposed repair order
+
+1. Verify the canonical-source/index/parent-store contract and fix source
+   reconstruction first. Observe exact missing parents, synthetic containers,
+   competing occurrences and unchanged valid neighbours. Reopening a source must
+   return its owned text; a heading cannot certify operative law. No new model
+   call is needed.
+2. Preserve qualified disputes in research planning: exact original account and
+   earlier antecedents, denials and unknown relationships, plus distinct legal
+   enquiries kept separate from facts. Ordinarily use two or three useful legal
+   investigations, not mandatory paraphrase counts. Measure a versioned candidate
+   before adoption; preserve v2-v4 saved replay.
+3. Keep original-account and legal-enquiry discovery separate across both corpora.
+   Remove generated labels from search words only as part of a verified coherent
+   change. Record which query discovered each candidate and where useful sources
+   disappear; ranking cannot recover material that never entered its pool.
+4. Test source-by-enquiry ranking with account relevance retained separately.
+   Preserve complete legal questions instead of flattening every question into
+   accidental windows. The aggregation and coverage policy is an untested
+   proposal. Do not treat an account mismatch as an automatic bar to useful
+   general law, conditional analogies or contrary authority.
+5. Select a useful, nonduplicated packet covering the investigations, with exact
+   passages, necessary context and explicit gaps. Source interpretation must
+   distinguish submissions, adoption/rejection, holdings and NM's analysis.
+   Evaluate any additional assessment call separately before adding it routinely;
+   a high rank is not a legal-admission decision.
+6. Verify unfamiliar multi-dispute conversations through the served browser,
+   clicked source panes and reopened saved output. Measure unsupported additions,
+   useful omissions, partial work, retries, latency and cost. Do not use a handful
+   of named historical sources as the entire relevance target.
+
+These are repair proposals, not implemented safeguards. Current calls remain four
+normal generations and up to six within existing bounded recovery. Corpus access,
+query serialization and local reranking repairs add no API stage. A distinct
+source-assessment model call would change the count and requires its own measured
+justification. Shared charges remain $3.682197/$5, including $1.515431 reserved or
+unknown; no further API calls were made for this diagnosis. Broad retrieval and
+browser acceptance remain open.
