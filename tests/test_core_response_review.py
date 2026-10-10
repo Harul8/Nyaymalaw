@@ -133,7 +133,7 @@ def test_whole_originals_adjacent_legal_text_and_execution_are_separate_inputs()
         s["id"] for s in sources.values() if s["kind"] in {"provision", "judgment"}}
     assert any("Court rejected" in s["text"] for s in payload["legal_sources"]["passages"])
     assert all(s["kind"] in {"provision", "judgment"} for s in payload["legal_sources"]["passages"])
-    assert tier is Tier.ROUTINE and schema == SCHEMA and kwargs == {"max_tokens": MAX_OUTPUT}
+    assert tier is Tier.JUDGE and schema == SCHEMA and kwargs == {"max_tokens": MAX_OUTPUT}
     assert prompt.operation == "core_response_review"
     assert validate(reviewed, ctx, record, sources, draft, execution) == reviewed
 

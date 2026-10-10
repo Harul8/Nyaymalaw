@@ -269,9 +269,9 @@ def review(model, context, research_record, sources, draft, execution=None, *,
     prompt = Prompt(system=SYSTEM, user=json.dumps(payload, ensure_ascii=False),
                     operation="core_response_review")
     if (estimate_tokens(SYSTEM + prompt.user + json.dumps(SCHEMA)) + MAX_OUTPUT
-            > model.context_budget(Tier.ROUTINE)):
+            > model.context_budget(Tier.JUDGE)):
         raise ContextOverflow("Complete independent response review exceeds the model budget")
-    result = model.structured(prompt, SCHEMA, Tier.ROUTINE, max_tokens=MAX_OUTPUT)
+    result = model.structured(prompt, SCHEMA, Tier.JUDGE, max_tokens=MAX_OUTPUT)
     if not result.usable or result.data is None:
         raise ModelError("Independent response review did not complete", usage=result.usage,
                          latency_ms=result.latency_ms, retries=result.retries)

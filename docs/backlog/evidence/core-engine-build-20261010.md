@@ -1261,3 +1261,10 @@ call through the HARD tier. No prompt, source selector or replay contract change
 The owner subsequently reinstated Luna-versus-Sol comparisons within $1 while
 retaining direct deployment authority, and requested pushes every 10–15 minutes.
 Comparisons remain separate from browser acceptance and do not delay wiring.
+
+Migration piece 3 routes the independent review's context guard and call through
+JUDGE. 99 focused reviewer, turn and authority tests pass. The preceding writer
+piece passed 123 focused writer/source-kind/turn checks. Prompts and four-normal,
+six-maximum call accounting are unchanged. Sol on both writer/reviewer tiers is
+an explicit same-model policy: separate evidence review does not imply model
+diversity or eliminate correlated mistakes.
