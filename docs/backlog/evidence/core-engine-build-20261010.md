@@ -422,3 +422,13 @@ The prompt states that an empty relevant legal catalogue permits supported accou
 and question work with an explicit source gap, never a legal standard from memory.
 50 writer/catalogue checks pass, including adjacent treatment and still-rejected
 paraphrases. This changes one prompt, not release logic, and adds no model calls.
+
+Review handoff: correctness of a delivered unit is now explicitly separate from an
+omitted independent requested result. Reasons must preserve the source's uncertainty
+and attribution, and coverage separates independent outcomes. A missing-request
+finding may bind through that row's explicitly named rejected unit when the mismatch
+is proved by earlier evidence; absent work still selects its omitted instruction.
+Unknown sources, damaged quotations, unrelated rejected units and verdict mismatches
+remain refused. This admits a negative review for bounded repair, never an answer.
+54 focused checks pass; the saved nonexistence probe now reconstructs a valid rejected
+review without another API call. Semantic improvement still needs remeasurement.

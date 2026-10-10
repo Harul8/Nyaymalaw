@@ -150,6 +150,118 @@ def test_multiple_requests_can_share_original_words_without_false_rejection():
     assert review(Model(positive(draft, requests=requests)), *args)["accepted"]
 
 
+def test_independent_omission_does_not_require_rejecting_a_supported_unit():
+    args = setup(text="Summarise the account. Identify what remains unknown.")
+    ctx, _, _, draft = args
+    identity = ctx["latest"]["source_id"]
+    answered = {"source_id": identity, "quote": "Summarise the account."}
+    omitted = {"source_id": identity, "quote": "Identify what remains unknown."}
+    data = positive(draft, requests=[request(ctx, draft, request=answered),
+        request(ctx, draft, request=omitted, disposition="missing", unit_ids=[])])
+    data.update(verdict="reject", findings=[{"category": "omission", "unit_ids": [],
+        "sources": [omitted], "mismatch": "The independent uncertainty assessment is absent."}])
+    reviewed = review(Model(data), *args)
+    assert not reviewed["accepted"]
+    assert reviewed["proposal"]["units"][0]["verdict"] == "supported"
+    assert len(reviewed["proposal"]["request_coverage"]) == 2
+    assert validate(reviewed, *args) == reviewed
+    # These fixture verdicts demonstrate separate accounting, not semantic detection.
+
+
+def earlier_evidence_rejection(*, count=1):
+    earlier = {"source_id": "t1:advocate", "turn_id": "t1", "speaker": "advocate",
+        "record_role": "original_account", "text": "The destination of the transfer is unknown."}
+    args = setup(text="Summarise the reported transfer. Assess the remaining uncertainties.",
+                 history=[earlier], count=count)
+    ctx, _, _, draft = args
+    data = negative(draft, ctx, category="grounding", sources=[ref(earlier)])
+    data["findings"][0]["mismatch"] = "The unit strengthens the original account's certainty."
+    data["request_coverage"] = [request(ctx, draft, disposition="missing")]
+    return args, data
+
+
+def test_missing_request_links_to_rejected_unit_finding_on_earlier_evidence():
+    args, data = earlier_evidence_rejection()
+    reviewed = review(Model(data), *args)
+    assert reviewed["accepted"] is False
+    assert reviewed["proposal"]["findings"][0]["sources"][0]["source_id"] == "t1:advocate"
+    assert validate(reviewed, *args) == reviewed
+    # This admits precise negative feedback for repair, never the rejected answer.
+
+
+def test_unrelated_rejected_unit_does_not_cover_a_missing_request():
+    args, data = earlier_evidence_rejection(count=2)
+    data["request_coverage"][0]["unit_ids"] = [args[-1]["units"][1]["id"]]
+    with pytest.raises(SchemaViolation):
+        review(Model(data), *args)
+
+
+def test_each_missing_row_needs_its_own_finding_relationship():
+    args, data = earlier_evidence_rejection(count=2)
+    other = deepcopy(data["request_coverage"][0])
+    other.update(unit_ids=[args[-1]["units"][1]["id"]],
+                 reason="A separate requested result is not delivered.")
+    data["request_coverage"].append(other)
+    with pytest.raises(SchemaViolation):
+        review(Model(data), *args)
+
+
+def test_omission_without_a_rejected_unit_still_needs_original_request_evidence():
+    args, data = earlier_evidence_rejection()
+    data["request_coverage"][0]["unit_ids"] = []
+    with pytest.raises(SchemaViolation):
+        review(Model(data), *args)
+    data["findings"].append({"category": "omission", "unit_ids": [],
+        "sources": [ref(args[0]["latest"])], "mismatch": "The requested assessment is missing."})
+    reviewed = review(Model(data), *args)
+    assert not reviewed["accepted"]
+    assert validate(reviewed, *args) == reviewed
+
+
+@pytest.mark.parametrize("damage", ["unowned_source", "changed_quote", "unowned_unit"])
+def test_shared_rejected_unit_does_not_bypass_reference_ownership(damage):
+    args, data = earlier_evidence_rejection()
+    if damage == "unowned_source":
+        data["findings"][0]["sources"][0]["source_id"] = "another-matter:advocate"
+    elif damage == "changed_quote":
+        data["findings"][0]["sources"][0]["quote"] = "The destination is known."
+    else:
+        data["request_coverage"][0]["unit_ids"] = ["another-turn:b1"]
+    with pytest.raises(SchemaViolation):
+        review(Model(data), *args)
+
+
+def test_request_can_select_complete_original_source_without_copying_its_words():
+    args = setup(text="Summarise this account without changing its uncertainty.")
+    ctx, _, _, draft = args
+    complete = {"source_id": ctx["latest"]["source_id"], "quote": None}
+    data = positive(draft, requests=[request(ctx, draft, request=complete)])
+    reviewed = review(Model(data), *args)
+    assert reviewed["accepted"]
+    assert reviewed["proposal"]["request_coverage"][0]["request"] == complete
+    assert validate(reviewed, *args) == reviewed
+
+
+@pytest.mark.parametrize("kind", ["account", "judgment"])
+def test_negative_finding_can_select_complete_owned_evidence(kind):
+    args = setup(legal=True)
+    ctx, _, sources, draft = args
+    row = next(row for row in sources.values() if row["kind"] == kind)
+    complete = {"source_id": row["id"], "quote": None}
+    data = negative(draft, ctx, category="grounding", sources=[complete])
+    reviewed = review(Model(data), *args)
+    assert not reviewed["accepted"]
+    assert reviewed["proposal"]["findings"][0]["sources"] == [complete]
+    assert validate(reviewed, *args) == reviewed
+
+
+def test_whole_source_selection_does_not_admit_an_unowned_source():
+    args = setup()
+    data = negative(args[-1], args[0], sources=[{"source_id": "unowned", "quote": None}])
+    with pytest.raises(SchemaViolation):
+        review(Model(data), *args)
+
+
 def test_earlier_original_request_is_reviewable_without_being_in_latest_plan():
     earlier = {"source_id": "t1:advocate", "turn_id": "t1", "speaker": "advocate",
                "record_role": "original_account", "text": "Summarise the account."}

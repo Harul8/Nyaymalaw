@@ -42,6 +42,9 @@ and retrieved evidence. Preserve speaker, source purpose, chronology, uncertaint
 negation and conditions. An NM interpretation cannot substantiate itself. A reported
 document or account is not verified fact. Distinguish text actually held from a
 statute's applicability and a judgment's legal effect; retrieval rank proves neither.
+Your reasons and correction findings must preserve the source's own factual status
+and degree of certainty. Explain the precise unsupported change without strengthening
+the source or substituting a different assertion of your own.
 3. Read legal passages in their available context. Distinguish the parties' arguments,
 quoted authorities, findings, reasoning and disposition. Check who made each submission
 and exactly which proposition the court adopted, rejected, qualified or left unresolved.
@@ -62,19 +65,33 @@ from the supplied evidence. A genuine consequential missing input or source limi
 may justify a narrower answer; internal processing failures are not missing facts the
 advocate must resend. Preserve independently supported work. Do not reject harmless
 wording, optional metadata, concise paraphrase or a correct answer needing no new write.
+Judge a unit's own content separately from completeness of the whole reply. A correct
+unit remains supported when another independent requested result is missing. Record
+that omission against the unmet request, without marking an unrelated correct unit
+rejected. Reject a unit when its own content or treatment of its request is defective.
 Raise findings only for consequential defects, with exact sources and a precise mismatch.
 
 Outcome: Return accept or reject; one supported or rejected verdict with a reason for
-every supplied draft unit ID; and independent request_coverage. Each request selects
-its exact original advocate words, names the reply units addressing it, explains its
-disposition as addressed, justified_limit or missing, and preserves its actual scope.
+every supplied draft unit ID; and one request_coverage entry per independent requested
+result. Select the original advocate words identifying that result, name only its
+relevant reply units, and explain its disposition as addressed, justified_limit or
+missing. Keep separate outcomes separate even when requested in one message. Do not
+merge them into a broad message-level verdict or duplicate the broad message as a
+substitute for identifying each result. When the same words genuinely express several
+results in context, distinguish their scope in the reasons and relevant unit IDs.
 Use an empty request list only when the original context contains no current request.
 Return findings with category grounding, attribution, quotation, omission, framing or
-effect, affected unit_ids, exact source references and mismatch. An omission may have
-no unit ID but must select the omitted original request. Every rejected unit and missing
-request needs a corresponding finding. Accept only when every unit is supported, every
+effect, affected unit_ids, exact source references and mismatch. For absent work, use
+no unit ID and select the omitted original request. A request unmet because its reply
+unit is defective may link to the finding through that rejected unit, while the finding
+selects the evidence establishing the defect. Every rejected unit and missing request
+needs a corresponding finding. Accept only when every unit is supported, every
 current request is addressed or has a justified limit, and no consequential finding
 remains. A positive verdict is a semantic review proposal, never an effect receipt.
+For every reference, use an owned source_id with quote=null to select that source's
+complete exact text, or quote a shorter exact continuous passage. Never paraphrase or
+join separated words in a reference. Whole-source selection does not broaden the
+requested result or the proposition the source supports.
 """
 
 
@@ -139,7 +156,7 @@ def _accept(proposal, dependencies):
         if not text.strip():
             raise SchemaViolation("Review needs a meaningful reason or precise mismatch")
 
-    requests, missing = set(), set()
+    requests, missing = set(), []
     for item in data["request_coverage"]:
         _ids(item["unit_ids"], known)
         key = _selection_key(item["request"], sources)
@@ -147,7 +164,7 @@ def _accept(proposal, dependencies):
             raise SchemaViolation("Request coverage must select original advocate words")
         requests.add(key)
         if item["disposition"] == "missing":
-            missing.add(key)
+            missing.append((key, set(item["unit_ids"])))
         elif not item["unit_ids"]:
             raise SchemaViolation("An addressed request or justified limit must identify reply units")
 
@@ -161,8 +178,11 @@ def _accept(proposal, dependencies):
         affected.update(finding["unit_ids"])
         selected_findings.update(selections)
     rejected = {unit["unit_id"] for unit in data["units"] if unit["verdict"] == "rejected"}
-    if not rejected <= affected or any(not any(
-            _overlaps(request, source) for source in selected_findings) for request in missing):
+    if not rejected <= affected or any(not (
+            any(_overlaps(request, source) for source in selected_findings)
+            or any(unit_ids & rejected & set(finding["unit_ids"])
+                   for finding in data["findings"]))
+            for request, unit_ids in missing):
         raise SchemaViolation("Rejected units and missing requests need corresponding precise findings")
     if affected - rejected:
         raise SchemaViolation("A consequential finding cannot label its affected reply unit supported")
