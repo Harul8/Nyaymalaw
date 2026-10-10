@@ -698,3 +698,19 @@ against $5. No repeated or extended comparison was run. Exact candidate prompts,
 inputs, separate oracle and outputs use the reviewer-release-*-v2 artifacts under
 outputs/core-engine-build-20261010. The response remains unaccepted; more prompt
 warnings alone have not resolved the observed semantic boundary.
+## SEQ.3 — identical reranking windows with less preprocessing
+
+LocalCollection.rerank now prepares each distinct enquiry once and reuses passage
+windows for the same exact text and remaining token capacity within that invocation.
+All prediction pairs, including duplicates, keep their original order. Batch size,
+resource bound, max-score aggregation, source identities and coverage gaps are
+unchanged. No cross-conversation cache, new model call or new source decision exists.
+
+50 focused tests pass, including nine parity/work-count cases. In the repeated-query
+fixture, tokenizer calls fall from 75 to 22 and encoding calls from 15 to 3; all 37
+ordered prediction pairs and scores remain identical. Tests cover final qualifications,
+Unicode, empty-token text, varying query-tail capacities, source identity collisions,
+context gaps and resource failure. Real end-to-end latency savings are unmeasured;
+the local neural inference workload itself is unchanged. Targeted Ruff F checks pass.
+Optional code-graph refresh was declined by automatic approval review over potential
+embedding egress; direct source/caller inspection remains the verification fallback.

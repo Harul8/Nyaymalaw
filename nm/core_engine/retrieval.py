@@ -376,12 +376,21 @@ class LocalCollection:
         model = self.models._model("reranking")
         try:
             windows, groups = [], []
+            query_windows, passage_windows = {}, {}
             for query, passage in pairs:
                 first = len(windows)
-                for _, _, query_window in token_windows(query, model.tokenizer, 160):
-                    room = 512 - len(model.tokenizer.encode(query_window, add_special_tokens=False)) - model.tokenizer.num_special_tokens_to_add(pair=True)
-                    windows.extend((query_window, text) for _, _, text in token_windows(
-                        passage, model.tokenizer, room))
+                if query not in query_windows:
+                    query_windows[query] = [(text, 512 - len(model.tokenizer.encode(
+                        text, add_special_tokens=False)) - model.tokenizer.num_special_tokens_to_add(pair=True))
+                        for _, _, text in token_windows(query, model.tokenizer, 160)]
+                for query_window, room in query_windows[query]:
+                    key = passage, room
+                    if key not in passage_windows:
+                        passage_windows[key] = [text for _, _, text in token_windows(
+                            passage, model.tokenizer, room)]
+                    # Reuse preparation only inside this call. Repeated prediction
+                    # pairs retain their original order, count and score ownership.
+                    windows.extend((query_window, text) for text in passage_windows[key])
                 groups.append((first, len(windows)))
             if len(windows) > MAX_RERANK_PAIRS:
                 raise SearchUnavailable("The complete passage windows exceed the local rerank budget")
