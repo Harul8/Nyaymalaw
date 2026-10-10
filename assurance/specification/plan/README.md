@@ -1,4 +1,17 @@
-# Current plan workbook
+# Retained historical plan generators
+
+Owner decision P12 (10 October 2026) retired these generated plans as planning
+owners. New work is maintained in the **Advocate build plan** sheet of
+`docs/Nyaymalaw_Implementation_Plan.xlsx`. Do not regenerate an old plan or alter
+its registries to record a new core-engine slice.
+
+These files remain because retained evidence, gate and projection checks still
+consume their paths and outputs. That compatibility role is not current product
+authority. The instructions below describe the historical generators. The exact
+pre-cleanup README and dependency inventory are in
+`development_environment/archives/planning-20261010/`.
+
+## Earlier generation instructions
 
 `docs/Nyaymalaw_End_to_End_Project_Plan.xlsx` is a generated reader view.
 `docs/Nyaymalaw_Project_Plan.xlsx` is the preserved original slice plan. The

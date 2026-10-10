@@ -5,8 +5,9 @@ tool, recovery path and completion claim. For the affected flow, identify the
 owning boundary, observable pass condition and consequential counterexample
 before implementation. Record any unmet requirement as remaining work; these
 instructions are obligations, not evidence that the current code implements
-them. Use the existing build guide, gate contracts and legal brain sheet records
-rather than creating competing policy or status owners.
+them. Use the Advocate build plan for current work and evidence, the legal brain
+sheet for capability detail, and the existing build method and applicable gate
+contracts rather than creating competing policy or status owners.
 
 The advocate's latest message is interpreted in the context of the whole saved
 conversation and the current authorised work. Preserve the complete transcript.
@@ -98,38 +99,45 @@ changed it additionally needs saved historical evidence that remains applicable.
 
 Every public reply route must use the same trusted release boundary, including
 answers, clarifications, legal work and recovery notices. Independent semantic
-review of substantive model-generated content compares the requested work,
-complete original evidence and actual results with the response, checking
-unsupported additions, omissions and contradictions. Fixed code-authored status
-notices require mechanical truth checks, not an additional model call.
-Code separately enforces ownership, references, relevant effect evidence and
-persistence; reviewer acceptance cannot bypass those controls.
-Written answers and summaries are the exception, by owner decision P10
-(10 October 2026): the model writes them fluently in good professional language,
-using only retrieved law and material the advocate supplied. Every sentence that
-states law, a holding or a sourced fact carries the tag of the passage it rests
-on; code refuses unknown tags, renders tags as citations that open the saved
-passage, checks every quotation verbatim and runs every citation through the
-citation and statute checks; an independent call confirms each tagged sentence
-against its passage; a flagged sentence is rewritten once within the bounded
-correction or withheld. The writer never supplies citation anchors, review fields
-or rendering seals. The specification is S3 on the Advocate build plan.
+review of substantive model-generated content compares the whole requested work,
+complete original conversation, all admitted relevant evidence and actual results
+with the complete draft. Check support, attribution, source purpose, conditions,
+legal applicability, omissions, contradictions and whether the reply does useful
+work responsive to the request. Reviewing only the writer's chosen tags or its
+explanation is insufficient. Code separately enforces ownership, references,
+relevant effect evidence and persistence; reviewer acceptance cannot bypass them.
 
-Every other fresh public response block selects a closed evidence expression. The
-writer supplies owned selectors and applicable metadata, never response text,
-altered quotations, citation anchors, independent review fields or rendering
-seals. This applies equally to accounts, questions, next steps, limitations,
-acknowledgements and completion blocks; a different kind, linked follow-up or
-delivery mode cannot reopen authored prose. Reject forbidden fields within the
-existing bounded correction, preserving valid independent peers.
+By owner decision P10 (10 October 2026), written answers and summaries may use
+natural professional language. This includes attributed summaries, source-backed
+analysis, task-relevant limits and proposed questions or next steps. The factual
+basis comes from the advocate's supplied material; the legal basis comes from
+retrieved law. Preserve who says what, uncertainty and the distinction between
+source content and NM's inference. Every sentence stating law, a holding or a
+sourced fact selects the owned passage tags supporting its material assertions;
+an analytical conclusion must identify its factual and legal dependencies. A
+proposal or question cannot introduce an unsupported factual or legal premise.
 
-Code renders complete selected original words with their speaker, checked legal
-propositions and passages with their conditions, and fixed questions, proposed
-work and status templates. Record effects and completion use the relevant owned
-checked outcome and confirmed persistence. Independent semantic review still
-checks relevance, omissions, framing, requested sufficiency and legal use against
-the complete original conversation. Literal rendering and a positive semantic
-label do not establish that a source classification or legal judgment is correct.
+Code refuses unknown or unowned tags, renders citations that open the saved
+passage, checks quotations verbatim and applies the relevant citation and statute
+checks. The independent reviewer checks the complete draft as described above.
+A flagged unit may be rewritten once within the shared bounded correction and
+must pass the required checks and independent review again before release.
+Preserve independently supported units and withhold unresolved units and their
+dependent conclusions according to the applicable gate scope. The writer never
+supplies citation anchors, review fields or rendering seals. S3 on the Advocate
+build plan owns the detailed contract; this permission is not proof of delivery.
+
+Execution, saved-effect and completion claims, effect-only acknowledgements and
+service statuses remain code-owned, including when embedded in a natural answer.
+They select the relevant owned checked result and confirmed persistence where
+required. The model cannot author or certify them by calling the block an answer,
+summary, limitation or next step. Code-authored status notices require mechanical
+truth checks, not an additional model call. Other closed response blocks use
+owned selectors and applicable metadata; reject forbidden prose or proof fields
+within the existing correction bound. Code renders exact selected source words
+with attribution and preserves the conditions of checked legal propositions.
+Literal rendering and a positive review label do not establish that a source
+classification or legal judgment is correct.
 
 Declare effect-only acknowledgements explicitly; preserve independent requested
 substantive work and follow-ups. Compose their status from owned checked results,
@@ -281,10 +289,15 @@ steps within their recovery bound, preserving independently valid decisions and
 results; do not make the advocate restart accepted work.
 
 Use the Advocate build plan sheet of `docs/Nyaymalaw_Implementation_Plan.xlsx`
-as the work queue (owner decision, 10 October 2026) and take one slice at a time:
-record each agreed decision and its true status there before building. The legal
-brain sheet keeps capability intent and detail; Before Build and the Implementation
-Plan sheet's LB rows are historical; do not update them for new work.
+as the current work queue and owner of decisions, status, evidence, call impact
+and remaining work (owner decisions, 10 October 2026, including P12). Take one
+slice at a time and record its agreed contract before building. The legal brain
+sheet keeps capability intent and detail; link execution records to it rather
+than maintaining another status record. Before Build, the Implementation Plan
+sheet's LB rows, the earlier PRD, backlog registries, PLAN.md and earlier plan
+workbooks are historical planning references, not competing build queues. Their
+existing checks remain until an explicit replacement or retirement is agreed;
+historical planning status does not prove current runtime behaviour.
 Keep each repair atomic: change at most one model prompt and one production
 code file in a piece, with only the focused tests and documentation needed to
 prove it. Name the observable pass condition before editing. Do not move to
@@ -307,7 +320,7 @@ browser-observed behaviour as the primary acceptance evidence: judge the actual
 reply, source panes and saved matter against the complete conversation and
 requested work. Keep automated checks focused on regression protection; passing
 counts are not a completion criterion and must not displace browser evaluation.
-Record the evidence, call impact and remaining limits in legal brain. At each logical
-milestone, complete the relevant checks and browser review, then commit and
+Record evidence, call impact and remaining limits on the owning Advocate build
+plan row. At each logical milestone, complete the relevant checks and browser review, then commit and
 push that coherent change to the working branch before moving to the next
 milestone. Report the commit and any remaining limitations.

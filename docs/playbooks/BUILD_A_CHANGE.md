@@ -1,6 +1,8 @@
 # Build a change
 
-Use this playbook after Start is closed. Implementation will reveal details:
+Use this playbook after Start is closed. The selected Advocate build plan row
+owns the contract and status; retained historical registry inputs do not select
+new work. Implementation will reveal details:
 resolve routine choices within the contract and record them. Reopen Start when
 a discovery materially changes the outcome, contract, policy, authority or
 required acceptance evidence.

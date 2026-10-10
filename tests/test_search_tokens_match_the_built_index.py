@@ -58,7 +58,7 @@ def test_the_tokenisation_is_frozen_with_the_indexes_it_built():
 @pytest.mark.class_a
 def test_the_live_search_and_the_index_builds_cut_with_one_function():
     from nm.Archives.legal_brain.retrieve import hybrid_sections
-    from nm.brain import retrieval
+    from nm.core_engine import retrieval
     assert retrieval.bm25_tokens is bm25_tokens
     assert hybrid_sections.bm25_tokens is bm25_tokens
 

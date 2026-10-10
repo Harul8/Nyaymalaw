@@ -1,4 +1,16 @@
-# The current delivery plan
+# Historical delivery plan
+
+Superseded for planning by owner decisions P7/P12 on 10 October 2026. The
+**Advocate build plan** sheet in
+[`Nyaymalaw_Implementation_Plan.xlsx`](Nyaymalaw_Implementation_Plan.xlsx) is the
+current work queue. The material below preserves the earlier plan and its former
+ownership statements; it does not override the workbook or select new work.
+
+This path remains because retained projection and evidence tools read it.
+Exact earlier text and the retained-consumer inventory are in the
+[planning archive](../development_environment/archives/planning-20261010/README.md).
+
+## Earlier delivery plan
 
 Build NM around the advocate's work: **Take the Brief → Work the File →
 Advise**, with return loops whenever a new fact, instruction, authority or

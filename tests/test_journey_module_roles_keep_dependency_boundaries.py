@@ -192,7 +192,7 @@ def test_real_tree_reconciles_all_current_files_and_historical_owners():
     assert set(layout.paths.values()) == observed
     assert not any(name == "nm.Archives" or name.startswith("nm.Archives.")
                    for name in layout.roles)
-    assert layout.role("nm.brain.message_labels") == "core"
-    assert layout.role("nm.brain.response_preparation") == "core"
-    assert layout.role("nm.brain.turn") == "core"
-    assert layout.role("nm.brain.release") == "core"
+    # The served brain is the core engine (owner decision P9, 10 October 2026);
+    # the earlier brain is archived outside the active product.
+    for module in ("citations", "retrieval"):
+        assert layout.role(f"nm.core_engine.{module}") == "core"

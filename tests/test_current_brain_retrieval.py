@@ -9,7 +9,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from nm.brain.retrieval import (
+from nm.core_engine.retrieval import (
     DIMENSIONS, EMBED_MODEL, HybridSearcher, LocalCollection, SearchUnavailable,
     _digest, bm25_tokens, token_windows, validate_search,
 )

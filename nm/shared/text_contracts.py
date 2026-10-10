@@ -234,7 +234,7 @@ def speaks_of_the_representation(text: str | None) -> bool:
 
 
 #: WHERE A SENTENCE ENDS. ONE DEFINITION, used to cut an advocate's words into
-#: the passages that ground disputes and objectives (`nm.brain.disputes_objectives`)
+#: the passages that ground disputes and objectives (the archived `nm.Archives.brain.disputes_objectives`)
 #: and to separate the sentences that speak of the representation
 #: (`representation_only` below). A boundary missed keeps two sentences together,
 #: which is visible; a boundary invented cuts an amount, a section, a case number

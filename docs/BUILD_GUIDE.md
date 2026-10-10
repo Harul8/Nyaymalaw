@@ -1,8 +1,9 @@
 # Nyaymalaw build guide
 
 Use this page as the front door for build work. It is a method, not a delivery
-plan. The current project plan says which journey step, feature and work item
-belongs in each wave. These playbooks say how to take one item safely from an
+plan. The **Advocate build plan** sheet in `Nyaymalaw_Implementation_Plan.xlsx`
+owns decisions, build order, slice contracts and current status. The legal brain
+sheet supplies capability intent. These playbooks say how to take one item from an
 idea to a signed-off result.
 
 ## Open only the playbook for the stage you are in
@@ -90,8 +91,9 @@ finite test suite guarantees every future scenario or zero future regressions.
 
 ## The professional test
 
-Every stage must preserve the applicable PA-01 to PA-20 standards in
-`docs/backlog/professional.json`. In practical terms, NM must:
+Every stage must preserve the applicable decisions and capability intent in the
+current workbook. The older PA-01 to PA-20 registry is retained as historical
+evidence and a compatibility input, not a second planning owner. In practical terms, NM must:
 
 - understand the commission, role, decision-maker, objective and authority;
 - listen faithfully through typed, spoken and uploaded material;
@@ -102,7 +104,8 @@ Every stage must preserve the applicable PA-01 to PA-20 standards in
 - test remedy, enforceability, cost, time, disruption and practical recovery;
 - label advice at the maturity the current record permits;
 - state uncertainty, disagreement and reservations candidly;
-- preserve the user's agency and act only within recorded authority;
+- preserve the advocate's agency; prepare work within scope and never file,
+  send, sign, appear or contact anyone;
 - remember, recover, verify and follow work through to truthful closure.
 
 The relevant playbook turns these qualities into a decision, implementation,
@@ -113,29 +116,30 @@ remains unproved.
 
 | Question | Owner |
 |---|---|
-| What must the product do, never do, produce and evaluate? | `assurance/specification/prd/` authors the PRD; `docs/Nyaymalaw_PRD.docx` and `assurance/specification/features.yaml` are generated views |
-| What is the user journey? | `docs/backlog/steps.yaml` |
-| What is built in which order? | `docs/backlog/plan.json` |
-| What is true now and what evidence supports it? | `docs/backlog/status.yaml` |
-| Why does the work exist and what was observed? | `docs/BACKLOG.md` |
-| What defines expert advocacy, working states, advice maturity and roles? | `docs/backlog/professional.json` |
+| What must the product do, never do, produce and evaluate? | Advocate build plan: agreed P decisions and the selected S/CE change contract |
+| What is the user journey and capability intent? | legal brain: the stable capability IDs referenced by the selected slice |
+| What is built in which order? | Advocate build plan: engine slices, milestones and explicit prerequisites |
+| What is true now and what evidence supports it? | Advocate build plan: current status and linked evidence for the exact contract |
+| Why does the work exist and what was observed? | The selected workbook row and its linked dated evidence; older BACKLOG records remain historical |
+| What defines the professional behaviour? | Agreed workbook decisions and the referenced legal brain capability descriptions |
 | Which condition blocks, withholds or discloses? | `nm/shared/gates_contracts.py`, exported to `assurance/specification/gates.yaml` |
-| Which typed object must be produced? | PRD Appendix E and `assurance/specification/prd/schemas.js` |
+| Which typed object must be produced? | The agreed slice contract and its owning live code schema; archived PRD schemas apply only to retained compatibility checks |
 | Which release thresholds bind? | `assurance/specification/release.yaml`; measured results are in `assurance/specification/coverage.yaml` |
 | What does the corpus actually hold? | `docs/BASELINE.md` |
 | Which recurring failure mechanisms must be considered? | `docs/DEFECT_SHAPES.md` |
 | Which representative conversations prove behaviour? | `docs/GOLDEN_SET.md` |
 
-`docs/Nyaymalaw_End_to_End_Project_Plan.xlsx` is the current reader view.
-`docs/Nyaymalaw_Project_Plan.xlsx` preserves the original slice baseline.
-The current workbook's Delivery Plan, Journey
-Steps, Features, Work Items, Traceability, Build Assurance and Release Gates
-sheets contain the stage-specific execution plan. It must reconcile to the
-registries above and does not own current status or wave assignment.
+The old PRD, backlog registries, PLAN.md and original/end-to-end workbooks are
+historical planning inputs under P12. Some remain at their original paths because
+retained assurance or corpus tools consume them. Their presence does not restore
+their former planning authority. The archive's
+[custody and dependency map](../development_environment/archives/planning-20261010/README.md)
+records what moved and why other inputs remain. Do not regenerate the older plans
+or update their status to record new core-engine work.
 
 If two sources disagree, stop the affected work, classify the disagreement,
-resolve it in the owner above, regenerate downstream views and add a control
-that makes the same drift detectable next time.
+resolve it in the owner above and reconcile affected documentation. An unchanged
+historical input need not be rewritten merely because the product plan changed.
 
 ## How the four records fit together
 
@@ -173,11 +177,12 @@ and evidence artifacts are excluded from the claim they judge so recording a
 result reaches a fixed point. A skipped, failed, malformed, duplicate, partial
 or stale Class-A population cannot be published as complete.
 
-That closes P01's local control-plane scope; it does not close BK-80. Structured
+The following is historical evidence about the retained control plane, not a
+current core-engine completion claim. It closed P01's local scope; it did not close BK-80. Structured
 counsel/model/production records still need P03's reviewer-authority,
 configuration, population and continuing-validity enforcement. Browser reports
 still need P03's complete expected-population contract. Record those additional
-facts manually until their controls exist. A clean local or scoped result is not
+facts in the selected current slice until its controls exist. A clean local or scoped result is not
 professional acceptance, operated-service proof or release permission. Keep
 volatile results and literal fingerprints in the excluded evidence artifacts,
 not in an identity-covered guide or completion narrative that would invalidate
@@ -201,8 +206,8 @@ into PASS.
 
 ## Maintaining this guide
 
-Put feature behaviour in the PRD, journey contracts in `steps.yaml`, delivery
-order in `plan.json`, current truth in `status.yaml`, professional mappings in
-`professional.json`, and observed history in `BACKLOG.md`. Change this index or
-its playbooks only for a method that applies across multiple items. Do not copy
-volatile counts, waves or status into them.
+Put agreed decisions, selected contracts, delivery order, current status and
+evidence links in Advocate build plan. Keep capability intent in legal brain.
+Do not update historical planning registries for new work. Change this index or
+its playbooks only for a method that applies across multiple items; keep
+volatile counts and implementation status in the work queue.

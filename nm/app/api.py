@@ -7,7 +7,6 @@ from __future__ import annotations
 import hmac
 import logging
 import os
-import uuid
 from datetime import date
 from math import ceil
 from pathlib import Path
@@ -21,7 +20,10 @@ from nm.arrive import attempts_contracts as attempts
 from nm.arrive.advocate_contracts import PASSWORD_RESET_MINUTES, SESSION_IDLE_MINUTES, csrf_token, utcnow
 from nm.arrive.directory_port import AccountBusy, AuthenticationUnavailable
 from nm.arrive.professional_access import read_professional_status
-from nm.brain.turn import BrainRefused, BrainService, BrainTurn, chat_matter_id, saved_rows
+# No brain is served while the core engine's turn is built (owner, 10 October 2026:
+# Advocate build plan, P9 and CE). The earlier brains are archived; their saved
+# conversations are kept and listed as history.
+ENGINE_PAUSED = "Nyaymalaw's new core engine is being built, so conversations are paused. Nothing you send now is saved; your earlier conversations are kept."
 from nm.shared.clock_contracts import FORUM
 from nm.shared.identity_contracts import source_fingerprint
 from nm.shared.traceability_contracts import implements
@@ -1212,44 +1214,21 @@ def _session_current(request, advocate_id):
 
 @app.post('/api/turn', dependencies=[CsrfProtected])
 def turn(req: TurnRequest, advocate_id: Advocate, request: Request) -> _Released:
-    from nm.shared.external_ai_contracts import ModelPermissionRefused
-    payload = BrainTurn(advocate_id=advocate_id, message=req.message,
-        turn_id=req.turn_id or uuid.uuid4().hex, matter_id=req.matter_id,
-        chat_id=req.chat_id, expected_version=req.expected_version)
-    current = lambda: _session_current(request, advocate_id)
-    try:
-        # Lazy model acquisition permits durable receipt replay without requiring
-        # provider access or spending a second time after a lost acknowledgement.
-        output = BrainService(store=application().store,
-            model_factory=lambda: application()._model_for(advocate_id, session_current=current),
-            session_current=current, legal_search=application().legal_search).run(payload)
-        if not current():
-            raise HTTPException(401, 'Sign in again to read the saved response.')
-        return _release(output)
-    except ModelPermissionRefused as exc:
-        raise HTTPException(403, str(exc)) from None
-    except BrainRefused as exc:
-        raise HTTPException(exc.status, {'why': exc.why, 'code': exc.code,
-            'committed': exc.committed, 'turn_id': payload.turn_id,
-            'chat_id': payload.chat_id, 'retryable': exc.retryable}) from None
+    if not _session_current(request, advocate_id):
+        raise HTTPException(401, 'not signed in')
+    raise HTTPException(503, {'why': ENGINE_PAUSED, 'code': 'engine_paused',
+        'committed': 'not_committed', 'turn_id': req.turn_id, 'chat_id': req.chat_id,
+        'retryable': False})
 
 @app.get('/api/work')
 def work(advocate_id: Advocate, request: Request):
     listing = application().store.list_for(advocate_id)
     chats, matters, unavailable = [], [], list(listing.unreadable)
     for matter in sorted(listing.matters, key=lambda m: listing.saved(m.id), reverse=True):
-        if not matter.brain_ready and matter.brain_chat:
-            try:
-                rows = saved_rows(matter, advocate_id)
-            except BrainRefused:
-                unavailable.append(str(matter.id))
-                continue
-            chats.append({'chat_id': rows[0]['chat_id'], 'preview': rows[0]['message'][:160],
-                          'last_at': rows[-1]['at'], 'turn_count': len(rows), 'state': 'ok'})
-        else:
-            # Historical files remain visible but cannot enter the new writer.
-            matters.append({'matter_id': matter.id, 'matter': matter.title,
-                'last_updated': listing.saved(matter.id), 'state': 'historical'})
+        # Every saved file and conversation was made by an archived brain: kept,
+        # listed as history, and not opened until the core engine can read it.
+        matters.append({'matter_id': matter.id, 'matter': matter.title,
+            'last_updated': listing.saved(matter.id), 'state': 'historical'})
     if not _session_current(request, advocate_id):
         raise HTTPException(401, 'not signed in')
     return {'state': 'partial' if unavailable else 'ok', 'chats': chats, 'matters': matters,
@@ -1262,19 +1241,10 @@ def chats(advocate_id: Advocate, request: Request):
 
 @app.get('/api/chats/{chat_id}')
 def chat(chat_id: str, advocate_id: Advocate, request: Request):
-    matter = application().store.load(chat_matter_id(advocate_id, chat_id))
-    if matter is None or matter.advocate_id != advocate_id or matter.brain_ready:
-        raise HTTPException(404, 'Conversation not available.')
-    try:
-        rows = saved_rows(matter, advocate_id)
-    except BrainRefused as exc:
-        raise HTTPException(exc.status, exc.why) from None
     if not _session_current(request, advocate_id):
         raise HTTPException(401, 'not signed in')
-    public_rows = [{**row['response'], 'message': row['message'],
-                    'committed': True, 'release_state': 'released'} for row in rows]
-    return {'state': 'ok', 'chat_id': chat_id, 'matter_id': None, 'turns': public_rows,
-            'turn_count': len(rows), 'release_problems': [], 'version': matter.version}
+    raise HTTPException(409, 'This conversation was made by an earlier brain. It is kept, but it '
+                             'cannot be opened until the new core engine is ready.')
 
 @app.get('/api/matters/{matter_id}')
 @app.get('/api/matters/{matter_id}/transcript')

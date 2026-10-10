@@ -1,4 +1,16 @@
-# Build NM in inspectable, reversible increments
+# Historical execution queue
+
+Retired for planning by owner decision P12 on 10 October 2026. The P01-P49/BK
+queue and completion statements below describe the earlier build. Do not select
+new work, approve a release or change current scope from this document.
+
+Use **Advocate build plan** in
+[`Nyaymalaw_Implementation_Plan.xlsx`](../Nyaymalaw_Implementation_Plan.xlsx) and
+the [build guide](../BUILD_GUIDE.md). This path remains readable for historical
+packet references; its exact earlier text is preserved in the
+[planning archive](../../development_environment/archives/planning-20261010/README.md).
+
+## Earlier execution plan
 
 Read [the short introduction](README.md) first. This guide is an ordered
 execution plan, not a record of implemented functionality. Specialist chapters

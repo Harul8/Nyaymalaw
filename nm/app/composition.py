@@ -1,4 +1,4 @@
-"""Compose the current brain with the existing authenticated, sealed adapters."""
+"""Compose the served application with the existing authenticated, sealed adapters."""
 from __future__ import annotations
 import os
 import re
@@ -22,7 +22,7 @@ from nm.shared.policed_port_adapter import PolicedPort
 from nm.shared.source_layout import browser_assets
 from nm.shared.store_file_store import FileMatterStore
 from nm.shared.store_port import StorePort
-from nm.brain.retrieval import HybridSearcher
+from nm.core_engine.retrieval import HybridSearcher
 
 ROOT = Path(__file__).resolve().parents[2]
 _CREDENTIAL_NAME = re.compile(r'KEY|SECRET|TOKEN|PASSWORD|CREDENTIAL', re.I)
@@ -105,8 +105,7 @@ class Application:
         routine = self.config.for_tier(Tier.ROUTINE)
         return {'runtime': 'ready', 'provider': routine.provider, 'model': routine.model,
                 'corpus': 'configured_unverified' if self.legal_search is not None else 'not_connected',
-                'brain': {'stages': ['message_labelling', 'disputes_objectives', 'response_review']
-                    + (['dispute_decomposition', 'hybrid_retrieval'] if self.legal_search is not None else [])}}
+                'brain': {'engine': 'core_engine', 'state': 'paused', 'stages': []}}
 
 def _require_session(check):
     from nm.app.model_permission import ModelPermissionRefused

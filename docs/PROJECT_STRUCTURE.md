@@ -1,9 +1,37 @@
 # Journey-first project structure
 
 This is a navigation and ownership map, not an implementation or acceptance
-verdict. Before Build in `Nyaymalaw_Implementation_Plan.xlsx` still owns the
-requirements. Existing code is arranged for review in journey order; an empty or
-small phase does not prove its requirements are complete.
+verdict. The **Advocate build plan** sheet of `Nyaymalaw_Implementation_Plan.xlsx`
+is the work queue and holds the owner's decisions; the **legal brain** sheet holds
+capability intent (owner decision, 10 October 2026). Before Build and the
+Implementation Plan sheet's LB rows are history. Existing code is arranged for
+review in journey order; an empty or small phase does not prove its requirements
+are complete.
+
+## The served brain today: none, while the core engine is built
+
+On 10 October 2026 the owner archived the brain that was being served and asked for
+a clean-slate core engine built from the Advocate build plan (decision P9). Until
+the core engine's turn ships, the application serves accounts, sessions and the
+workspace, and **conversations are paused**: `POST /api/turn` answers with a plain
+notice and saves nothing, and every earlier conversation and matter is kept and
+listed as history.
+
+| Folder | State |
+|---|---|
+| `nm/core_engine/` | The new engine. Holds E1, the citation engine (`citations.py`), and E2, the hybrid search (`retrieval.py`), moved in as they were. The turn, understanding, research and reply (milestone M1) are written but paused by the owner; they are not in the tree yet |
+| `nm/Archives/brain/` | The brain served until 10 October 2026. Not the current turn engine; preserved for historical work |
+| `nm/Archives/legal_brain/` | The earlier brain. Not the current turn engine; retained corpus tools and application modules still import some helpers |
+| `development_environment/archives/tests-for-archived-brains/` | Tests that guarded the archived brains, kept for reference; not collected |
+
+Citation, provision and search-token patterns have one owner,
+`nm/shared/citation_contracts.py`.
+
+Planning custody and the exact retained/moved tooling inventory are recorded in
+[the 10 October archive map](../development_environment/archives/planning-20261010/README.md).
+The old PRD, registry and generated-plan paths remain where compatibility tools
+still read them; they no longer own new work. Archived prompt experiments are
+reference files, not supported launch commands for the current engine.
 
 ## Start here
 
@@ -13,7 +41,9 @@ Nyaymalaw/
     app/              compose, serve and launch the application
     arrive/           account, registration, identity and access
     open_matter/      opening, screens, intake and media admission
-    legal_brain/
+    core_engine/      the new engine, being built: citations (E1) and retrieval (E2) so far
+    Archives/brain/   the brain served until 10 Oct 2026, reference only
+    Archives/legal_brain/   the earlier brain, reference only (not on the served path)
       understand/     message intent, context, party/posture and dispute binding
       retrieve/       held law, sources, searches, citations and legal coverage
       reason/         proof, theories, adverse material and source-backed needs
@@ -41,9 +71,9 @@ Nyaymalaw/
   .nm/                private runtime data and local evaluation records
 ```
 
-Smaller journey folders are flat. Legal brain is the bounded exception: eight
-shallow capability folders plus `common/`, all flat inside. Each README indexes
-the real files by responsibility.
+Journey folders, including `core_engine/`, are flat. The archived earlier
+brain is the one exception: eight shallow capability folders plus `common/`, all
+flat inside. Each README indexes the real files by responsibility.
 There is no second application under `backend/` and no separate UI code tree.
 Assurance keeps its existing purposeful gate/journey/control-plane homes: those
 are build controls, not user-journey stages. Tests remain shared so existing
@@ -58,7 +88,7 @@ An advocate can revisit earlier stages, and legal reasoning itself is iterative.
 |---|---|
 | 01 — [Arrive](../nm/arrive/README.md) | `store_directory.py`, `store_pending_accounts.py`, `professional_access.py`; account routes currently remain in `app/api.py` |
 | 02 — [Open a matter](../nm/open_matter/README.md) | `opening_contracts.py`, `commission_contracts.py`, `screens.py`, `intake.py`, `quarantine.py`, `document_permission.py` |
-| 03 — [Legal brain](../nm/Archives/legal_brain/README.md) | `understand/route.py`, `retrieve/search_authority.py`, `reason/proof.py`, `procedure/limitation.py`, `verify/verifier.py`, `communicate/preview_display.py`, `orchestrate/controlled_brain.py` |
+| 03 — Legal brain (being rebuilt in `nm/core_engine/`) | `citations.py`, `retrieval.py`; `nm/Archives/brain/` and the [earlier brain](../nm/Archives/legal_brain/README.md) are reference only |
 | 04 — [Work the file](../nm/work_the_file/README.md) | `casefile.py`, `file_mutation.py`, `dispute_agenda.py`, `deadlines.py`, `summary.py` |
 | 05 — [Advise](../nm/advise/README.md) | `advice_contracts.py`, `options.py`, `reassessment.py`, `relief.py` |
 | 06 — [Act](../nm/act/README.md) | `action.py`, `drafting.py`, `hearing.py` |
@@ -66,7 +96,8 @@ An advocate can revisit earlier stages, and legal reasoning itself is iterative.
 | 08 — [Close](../nm/close/README.md) | `closure_contracts.py`, `retention.py`, `retention_contracts.py` |
 | 09 — [Leave](../nm/leave/README.md) | `sign_out.py`; served logout and cookie removal remain in `app/api.py` |
 
-The legal brain is grouped by responsibility, not by a fixed cognitive sequence.
+The rest of this section describes the EARLIER brain, kept for reference. It is
+grouped by responsibility, not by a fixed cognitive sequence.
 Its [03.00–03.08 reading map](../nm/Archives/legal_brain/README.md) begins with shared
 guidance, then follows understanding, retrieval, reasoning, procedure,
 verification, communication, orchestration and evaluation. The index gives
@@ -77,9 +108,9 @@ native source owners, reasoning services and actual tool entry points.
 Common files stay in [legal_brain/common](../nm/Archives/legal_brain/common/README.md) only
 when they genuinely serve multiple capabilities. Capability-specific contracts
 are not moved into a generic contracts folder, and there is no parallel tool dump.
-The legacy turn path remains `legal_brain/orchestrate/turn.py`;
-`legal_brain/orchestrate/controlled_brain.py` is not silently substituted for every
-client path by reorganising source.
+The historical turn lives at `nm/Archives/legal_brain/orchestrate/turn.py`;
+`controlled_brain.py` beside it is also historical. Neither is a replacement for
+the current core-engine turn merely because an old tool still imports a helper.
 
 ## Naming and boundaries
 
@@ -127,7 +158,7 @@ budget, data-sharing grant or legal sign-off is created by reorganisation.
 The pre-move source checkpoint is local at `.nm/reorganisation/originals/`.
 Its initial evidence-directory filter accidentally omitted the original
 `adapters/evidence/corpus.py`; that implementation was moved intact and remains
-in `legal_brain/retrieve/corpus_evidence.py`, but its original raw bytes are not in the
+in `nm/Archives/legal_brain/retrieve/corpus_evidence.py`, but its original raw bytes are not in the
 checkpoint. Do not describe the checkpoint as a complete original-source backup
 or silently reconstruct that file to certify baseline tests. Retired empty
 package shells and caches are kept

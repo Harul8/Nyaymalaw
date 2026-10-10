@@ -1,0 +1,1141 @@
+{
+  "kind": "historical_custody_and_static_dependency_inventory",
+  "date": "2026-10-10",
+  "work_queue": "docs/Nyaymalaw_Implementation_Plan.xlsx#Advocate build plan",
+  "scope": "P12 offline documentation/tooling cleanup. No corpus jobs, runtime migration or semantic acceptance claimed.",
+  "method": "AST Import/ImportFrom inventory of six repository roots, excluding nm/Archives, development_environment/archives and caches. Dynamic imports and string references are not counted. Counts are this snapshot, not the earlier 102-reference grep population.",
+  "archived": [
+    {
+      "original_path": "development_environment/one_off_tools/independence_classifier_20260922.py",
+      "archive_path": "development_environment/archives/planning-20261010/development_environment/one_off_tools/independence_classifier_20260922.py",
+      "disposition": "moved_reference_only",
+      "sha256": "abbb139c8758fd183db1e34bcd0e69102afd444d07395ab73be29b7595595242"
+    },
+    {
+      "original_path": "development_environment/one_off_tools/consistency_check_20260923.py",
+      "archive_path": "development_environment/archives/planning-20261010/development_environment/one_off_tools/consistency_check_20260923.py",
+      "disposition": "moved_reference_only",
+      "sha256": "0aa69a79237944a69e7494e196a2cfdce1a48c1b0be145831fbdf73f0ffa4496"
+    },
+    {
+      "original_path": "development_environment/one_off_tools/dispute_separation_measure_20260929.py",
+      "archive_path": "development_environment/archives/planning-20261010/development_environment/one_off_tools/dispute_separation_measure_20260929.py",
+      "disposition": "moved_reference_only",
+      "sha256": "c86f27b98069a1c3fed13bbd40240f0186d303f8aad2433d83de7bbf456f5576"
+    },
+    {
+      "original_path": "development_environment/developer_tooling/launch_fictional_brain.py",
+      "archive_path": "development_environment/archives/planning-20261010/development_environment/developer_tooling/launch_fictional_brain.py",
+      "disposition": "moved_reference_only",
+      "sha256": "6be593f01c8f2ee888ceb147be81b3c4434b604913383eb0648b7265a823e5fe"
+    },
+    {
+      "original_path": "pipeline/read_stability.py",
+      "archive_path": "development_environment/archives/planning-20261010/pipeline/read_stability.py",
+      "disposition": "moved_reference_only",
+      "sha256": "4fdd787b8a2f2dac9a757efdb6142a538991595a8c928f51d1107bd030e22b36"
+    },
+    {
+      "original_path": "pipeline/recall.py",
+      "archive_path": "development_environment/archives/planning-20261010/pipeline/recall.py",
+      "disposition": "moved_reference_only",
+      "sha256": "89543645aa9e67b127cb198bf5a60cc17a6f62a1340c0a91310b7843b5171edc"
+    },
+    {
+      "original_path": "docs/BUILD_GUIDE.md",
+      "archive_path": "development_environment/archives/planning-20261010/docs/BUILD_GUIDE.md",
+      "disposition": "exact_pre_cleanup_document",
+      "sha256": "826a968d3fe16268c075a66525357be9658170bac2d33c40bda48ddfb9ed91b4"
+    },
+    {
+      "original_path": "docs/playbooks/START_A_CHANGE.md",
+      "archive_path": "development_environment/archives/planning-20261010/docs/playbooks/START_A_CHANGE.md",
+      "disposition": "exact_pre_cleanup_document",
+      "sha256": "337a5e879cce924cffed990a7642d4b2f269b37e0abc137b339a2f688f32cd6f"
+    },
+    {
+      "original_path": "docs/playbooks/BUILD_A_CHANGE.md",
+      "archive_path": "development_environment/archives/planning-20261010/docs/playbooks/BUILD_A_CHANGE.md",
+      "disposition": "exact_pre_cleanup_document",
+      "sha256": "a1d982dae5bb8978826a7e1afeb3937b1d2105ee25a78e4793dbb5bc9dbacbdf"
+    },
+    {
+      "original_path": "docs/playbooks/TEST_A_CHANGE.md",
+      "archive_path": "development_environment/archives/planning-20261010/docs/playbooks/TEST_A_CHANGE.md",
+      "disposition": "exact_pre_cleanup_document",
+      "sha256": "751069548883d27143d1ddaaa03554fd13f230540c8870ea1700e209ab63deb2"
+    },
+    {
+      "original_path": "docs/playbooks/SIGN_OFF_A_CHANGE.md",
+      "archive_path": "development_environment/archives/planning-20261010/docs/playbooks/SIGN_OFF_A_CHANGE.md",
+      "disposition": "exact_pre_cleanup_document",
+      "sha256": "1fcdc0e8143f923cc73577c32ae09952b4c3a3d50abf3391c248e12fad816163"
+    },
+    {
+      "original_path": "docs/blueprint/README.md",
+      "archive_path": "development_environment/archives/planning-20261010/docs/blueprint/README.md",
+      "disposition": "exact_pre_cleanup_document",
+      "sha256": "fcca471bd4c151ef1350025af74817c0f25cc684e787790f6f8559215c66e7b0"
+    },
+    {
+      "original_path": "docs/blueprint/EXECUTION.md",
+      "archive_path": "development_environment/archives/planning-20261010/docs/blueprint/EXECUTION.md",
+      "disposition": "exact_pre_cleanup_document",
+      "sha256": "b3325ca8dbb262b49deb202a0aa44340a46c214caced20dfb2ff832b21a8a838"
+    },
+    {
+      "original_path": "docs/blueprint/COMMUNICATION.md",
+      "archive_path": "development_environment/archives/planning-20261010/docs/blueprint/COMMUNICATION.md",
+      "disposition": "exact_pre_cleanup_document",
+      "sha256": "9c0f83ee2907f1c3cdb1a351a324990f141967dac80ec5c443493cf4c6f4ffdc"
+    },
+    {
+      "original_path": "nm/README.md",
+      "archive_path": "development_environment/archives/planning-20261010/nm/README.md",
+      "disposition": "exact_pre_cleanup_document",
+      "sha256": "e2029440c7a3f367d7296065441e4ed7bc8bed6537e034cce8d8d4c4fb49e837"
+    },
+    {
+      "original_path": "docs/PROJECT_STRUCTURE.md",
+      "archive_path": "development_environment/archives/planning-20261010/docs/PROJECT_STRUCTURE.md",
+      "disposition": "exact_pre_cleanup_document",
+      "sha256": "7860ed4df28f55c8937244cfc0015e78cbd2848efcbb816b679ec21dfdcf2b9d"
+    },
+    {
+      "original_path": "docs/PLAN.md",
+      "archive_path": "development_environment/archives/planning-20261010/docs/PLAN.md",
+      "disposition": "exact_pre_cleanup_document",
+      "sha256": "c48eba74dd888148f832bd4eaf7ed3410da133660af2b944e009271275f66a2d"
+    },
+    {
+      "original_path": "docs/BACKLOG.md",
+      "archive_path": "development_environment/archives/planning-20261010/docs/BACKLOG.md",
+      "disposition": "exact_pre_cleanup_document",
+      "sha256": "a84a80904a9db065f42c3ac9b9ed84cbf03130054d73299aa718a41b3626e695"
+    },
+    {
+      "original_path": "assurance/specification/plan/README.md",
+      "archive_path": "development_environment/archives/planning-20261010/assurance/specification/plan/README.md",
+      "disposition": "exact_pre_cleanup_document",
+      "sha256": "ec88e3c9c09d7a4cdce06c38b2636279cebc98da4771aef4c98891276671fbe3"
+    }
+  ],
+  "retained_planning_inputs": [
+    {
+      "paths": [
+        "docs/Nyaymalaw_PRD.docx",
+        "assurance/specification/prd/",
+        "assurance/specification/features.yaml"
+      ],
+      "reason": "Historical planning requirements preserved for retained specification/evidence consumers, not new-engine requirements.",
+      "consumers": [
+        "assurance/gate/speccheck.py",
+        "assurance/gate/export_spec.py",
+        "assurance/control_plane/evidence.py"
+      ]
+    },
+    {
+      "paths": [
+        "docs/backlog/status.yaml",
+        "docs/backlog/steps.yaml",
+        "docs/backlog/plan.json",
+        "docs/backlog/professional.json",
+        "docs/backlog/*.schema.json",
+        "docs/BACKLOG.md"
+      ],
+      "reason": "Historical registry inputs remain at established paths so compatibility evidence and corpus measurements do not break.",
+      "consumers": [
+        "assurance/control_plane/backlog.py",
+        "assurance/control_plane/evidence.py",
+        "assurance/control_plane/blueprint.py",
+        "assurance/control_plane/plan_view.py",
+        "pipeline/measure.py"
+      ]
+    },
+    {
+      "paths": [
+        "docs/PLAN.md",
+        "docs/Nyaymalaw_Project_Plan.xlsx",
+        "docs/Nyaymalaw_End_to_End_Project_Plan.xlsx",
+        "assurance/specification/plan/"
+      ],
+      "reason": "Historical projections, generators and defect/golden populations retained for current readers; never regenerated to record new-engine status.",
+      "consumers": [
+        "assurance/gate/export_spec.py",
+        "assurance/control_plane/plan_view.py",
+        "assurance/control_plane/evidence.py",
+        "tests/test_defect_register.py",
+        "tests/test_the_golden_set_has_one_owner.py"
+      ]
+    },
+    {
+      "paths": [
+        "docs/blueprint/EXECUTION.md",
+        "docs/blueprint/packets.json",
+        "docs/blueprint/legal_brain_execution.json"
+      ],
+      "reason": "Earlier execution queue is explicitly historical; paths retained for historical packet/requirement resolution.",
+      "consumers": [
+        "assurance/control_plane/blueprint.py",
+        "assurance/control_plane/brain_scope.py",
+        "assurance/control_plane/requirement_owners.py"
+      ]
+    },
+    {
+      "paths": [
+        "docs/backlog/build_rules.json",
+        "assurance/control_plane/evidence.py",
+        "assurance/control_plane/evidence_verification.py",
+        "assurance/control_plane/structured_evidence.py"
+      ],
+      "reason": "Live method and evidence helpers, not safe to archive with old planning tools.",
+      "consumers": [
+        "assurance/gate/check.py",
+        "assurance/gate/gatestamp.py",
+        "assurance/gate/mutate.py",
+        "assurance/journeys/journey.py",
+        "pipeline/measure.py",
+        "tests/conftest.py"
+      ]
+    }
+  ],
+  "retained_tooling": [
+    {
+      "path": "pipeline/append_bare_acts.py",
+      "reason": "Corpus maintenance uses shared embedding/index identity and lexical token contracts; keep helper imports."
+    },
+    {
+      "path": "pipeline/build_authority_index.py",
+      "reason": "Builds held authority index using source attribution labels; keep with existing corpus."
+    },
+    {
+      "path": "pipeline/classify_paragraphs.py",
+      "reason": "Corpus paragraph labelling contract; not a retired turn evaluator."
+    },
+    {
+      "path": "pipeline/fetch_judgments.py",
+      "reason": "Held acquisition command and acquisition receipt contracts; retained, no acquisition run authorised."
+    },
+    {
+      "path": "pipeline/inventory_legal_sources.py",
+      "reason": "Read-only source/rights inventory and measured provenance contract."
+    },
+    {
+      "path": "pipeline/label_eval_documents.py",
+      "reason": "Labels source documents for corpus evaluation inputs with exact Act identity and court normalisation."
+    },
+    {
+      "path": "pipeline/reconcile_acquisition.py",
+      "reason": "Reconciles existing acquisition receipts; retained with its source contracts."
+    },
+    {
+      "path": "pipeline/record_retrieval_lineage.py",
+      "reason": "Records held index lineage against embedding and token contracts; no rebuild run authorised."
+    },
+    {
+      "path": "pipeline/releasegate.py",
+      "reason": "Retained corpus measurement and release criteria tool; its measurements do not certify new core-engine semantic accuracy."
+    },
+    {
+      "path": "pipeline/scrape_judgments.py",
+      "reason": "Existing acquisition command uses receipt/scope contracts; retention is not a decision to acquire more corpus."
+    },
+    {
+      "path": "pipeline/verify_set.py",
+      "reason": "Readback of existing golden source anchors and provisions; source-fixture verification, not new-engine answer acceptance."
+    },
+    {
+      "path": "development_environment/one_off_tools/find_goldens2.py",
+      "reason": "Corpus source candidate curation; retained historical source-selection utility and pyproject entry, not product logic."
+    }
+  ],
+  "static_import_count": 93,
+  "static_import_counts_by_category": {
+    "retained_application_dependency": 37,
+    "retained_corpus_tool": 12,
+    "retained_test_dependency": 44
+  },
+  "static_imports": [
+    {
+      "path": "development_environment/one_off_tools/find_goldens2.py",
+      "category": "retained_corpus_tool",
+      "imports": [
+        "nm.Archives.legal_brain.retrieve.evidence_port"
+      ],
+      "reason": "Corpus source candidate curation; retained historical source-selection utility and pyproject entry, not product logic."
+    },
+    {
+      "path": "nm/act/action_proposal_tool.py",
+      "category": "retained_application_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.orchestrate.loop_contracts",
+        "nm.Archives.legal_brain.orchestrate.tools",
+        "nm.Archives.legal_brain.reason.source_writes"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "nm/act/drafting.py",
+      "category": "retained_application_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.retrieve.research"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "nm/act/tool_propose_action.py",
+      "category": "retained_application_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.orchestrate.tools"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "nm/advise/relief.py",
+      "category": "retained_application_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.procedure.interim_relief_port",
+        "nm.Archives.legal_brain.reason.premise"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "nm/open_matter/documents_api.py",
+      "category": "retained_application_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.orchestrate.loop_contracts"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "nm/open_matter/uploads_api.py",
+      "category": "retained_application_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.orchestrate.turn"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "nm/shared/model_replay.py",
+      "category": "retained_application_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.orchestrate.loop_contracts",
+        "nm.Archives.legal_brain.orchestrate.tool_offers",
+        "nm.Archives.legal_brain.orchestrate.tools"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "nm/shared/model_scripted.py",
+      "category": "retained_application_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.common.quotable_contracts"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "nm/shared/store_loop_log.py",
+      "category": "retained_application_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.orchestrate.loop_contracts",
+        "nm.Archives.legal_brain.reason.grounded_file_tools",
+        "nm.Archives.legal_brain.reason.source_writes"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "nm/work_the_file/chronology.py",
+      "category": "retained_application_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.common.quotable_contracts"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "nm/work_the_file/deadline_proposals.py",
+      "category": "retained_application_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.orchestrate.loop_contracts",
+        "nm.Archives.legal_brain.orchestrate.tools",
+        "nm.Archives.legal_brain.procedure",
+        "nm.Archives.legal_brain.procedure.procedural_calculation",
+        "nm.Archives.legal_brain.reason.source_writes",
+        "nm.Archives.legal_brain.reason.working_record",
+        "nm.Archives.legal_brain.reason.working_record_contracts",
+        "nm.Archives.legal_brain.retrieve.evidence_port",
+        "nm.Archives.legal_brain.verify.brain_release"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "nm/work_the_file/deadlines.py",
+      "category": "retained_application_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.reason.requirements"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "nm/work_the_file/dependency.py",
+      "category": "retained_application_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.orchestrate.loop_contracts",
+        "nm.Archives.legal_brain.reason.premise"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "nm/work_the_file/dispute_agenda.py",
+      "category": "retained_application_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.reason"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "nm/work_the_file/event_observation_contracts.py",
+      "category": "retained_application_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.orchestrate.loop_contracts"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "nm/work_the_file/evidence_item.py",
+      "category": "retained_application_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.common.quotable_contracts"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "nm/work_the_file/file_mutation.py",
+      "category": "retained_application_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.common.quotable_contracts",
+        "nm.Archives.legal_brain.orchestrate.loop_contracts",
+        "nm.Archives.legal_brain.reason",
+        "nm.Archives.legal_brain.reason.issue_contracts"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "nm/work_the_file/file_mutation_contracts.py",
+      "category": "retained_application_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.orchestrate.loop_contracts",
+        "nm.Archives.legal_brain.reason.requirements_contracts"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "nm/work_the_file/original_instruction.py",
+      "category": "retained_application_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.orchestrate.loop_contracts"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "nm/work_the_file/private_file_tools.py",
+      "category": "retained_application_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.orchestrate.loop_contracts",
+        "nm.Archives.legal_brain.orchestrate.tools",
+        "nm.Archives.legal_brain.procedure.reviewed_limitation_selection",
+        "nm.Archives.legal_brain.reason",
+        "nm.Archives.legal_brain.reason.source_writes",
+        "nm.Archives.legal_brain.retrieve.evidence_port",
+        "nm.Archives.legal_brain.verify.brain_release"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "nm/work_the_file/projections_api.py",
+      "category": "retained_application_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.reason.premise",
+        "nm.Archives.legal_brain.understand"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "nm/work_the_file/summary.py",
+      "category": "retained_application_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.reason.requirements"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "nm/work_the_file/summary_contracts.py",
+      "category": "retained_application_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.reason.requirements_contracts"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "nm/work_the_file/tool_add_issue.py",
+      "category": "retained_application_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.orchestrate.tools",
+        "nm.Archives.legal_brain.reason.issue_contracts"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "nm/work_the_file/tool_correct_fact.py",
+      "category": "retained_application_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.orchestrate.tools"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "nm/work_the_file/tool_create_dispute.py",
+      "category": "retained_application_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.orchestrate.tools"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "nm/work_the_file/tool_propose_legal_premise.py",
+      "category": "retained_application_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.orchestrate.tools"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "nm/work_the_file/tool_propose_product_decision.py",
+      "category": "retained_application_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.orchestrate.tools"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "nm/work_the_file/tool_propose_source_calendar.py",
+      "category": "retained_application_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.orchestrate.tools"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "nm/work_the_file/tool_propose_source_deadline.py",
+      "category": "retained_application_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.orchestrate.tools"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "nm/work_the_file/tool_read_private_file_inputs.py",
+      "category": "retained_application_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.orchestrate.tools"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "nm/work_the_file/tool_record_existing_requirement_answer.py",
+      "category": "retained_application_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.orchestrate.tools",
+        "nm.Archives.legal_brain.reason.requirements_contracts"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "nm/work_the_file/tool_record_prior_instruction.py",
+      "category": "retained_application_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.orchestrate.tools"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "nm/work_the_file/tool_record_requirement_answer.py",
+      "category": "retained_application_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.orchestrate.tools",
+        "nm.Archives.legal_brain.reason.requirements_contracts"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "nm/work_the_file/tool_withdraw_private_premise.py",
+      "category": "retained_application_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.orchestrate.tools"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "nm/work_the_file/tool_write_fact.py",
+      "category": "retained_application_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.orchestrate.tools"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "nm/work_the_file/write_tools.py",
+      "category": "retained_application_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.orchestrate.loop_contracts",
+        "nm.Archives.legal_brain.orchestrate.tools"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "pipeline/append_bare_acts.py",
+      "category": "retained_corpus_tool",
+      "imports": [
+        "nm.Archives.legal_brain.retrieve.hybrid_sections"
+      ],
+      "reason": "Corpus maintenance uses shared embedding/index identity and lexical token contracts; keep helper imports."
+    },
+    {
+      "path": "pipeline/build_authority_index.py",
+      "category": "retained_corpus_tool",
+      "imports": [
+        "nm.Archives.legal_brain.retrieve.evidence_port"
+      ],
+      "reason": "Builds held authority index using source attribution labels; keep with existing corpus."
+    },
+    {
+      "path": "pipeline/classify_paragraphs.py",
+      "category": "retained_corpus_tool",
+      "imports": [
+        "nm.Archives.legal_brain.retrieve.evidence_port"
+      ],
+      "reason": "Corpus paragraph labelling contract; not a retired turn evaluator."
+    },
+    {
+      "path": "pipeline/fetch_judgments.py",
+      "category": "retained_corpus_tool",
+      "imports": [
+        "nm.Archives.legal_brain.retrieve.acquisition_sources",
+        "nm.Archives.legal_brain.retrieve.source_registry_sources"
+      ],
+      "reason": "Held acquisition command and acquisition receipt contracts; retained, no acquisition run authorised."
+    },
+    {
+      "path": "pipeline/inventory_legal_sources.py",
+      "category": "retained_corpus_tool",
+      "imports": [
+        "nm.Archives.legal_brain.retrieve.source_registry_sources"
+      ],
+      "reason": "Read-only source/rights inventory and measured provenance contract."
+    },
+    {
+      "path": "pipeline/label_eval_documents.py",
+      "category": "retained_corpus_tool",
+      "imports": [
+        "nm.Archives.legal_brain.common.citation_contracts",
+        "nm.Archives.legal_brain.retrieve.jurisdiction_sources",
+        "nm.Archives.legal_brain.retrieve.manifest_sources",
+        "nm.Archives.legal_brain.retrieve.resolution_sources"
+      ],
+      "reason": "Labels source documents for corpus evaluation inputs with exact Act identity and court normalisation."
+    },
+    {
+      "path": "pipeline/reconcile_acquisition.py",
+      "category": "retained_corpus_tool",
+      "imports": [
+        "nm.Archives.legal_brain.retrieve.acquisition_sources"
+      ],
+      "reason": "Reconciles existing acquisition receipts; retained with its source contracts."
+    },
+    {
+      "path": "pipeline/record_retrieval_lineage.py",
+      "category": "retained_corpus_tool",
+      "imports": [
+        "nm.Archives.legal_brain.retrieve.hybrid_sections"
+      ],
+      "reason": "Records held index lineage against embedding and token contracts; no rebuild run authorised."
+    },
+    {
+      "path": "pipeline/releasegate.py",
+      "category": "retained_corpus_tool",
+      "imports": [
+        "nm.Archives.legal_brain.retrieve.citator_sources",
+        "nm.Archives.legal_brain.retrieve.evidence_port",
+        "nm.Archives.legal_brain.retrieve.jurisdiction_sources",
+        "nm.Archives.legal_brain.retrieve.manifest_sources"
+      ],
+      "reason": "Retained corpus measurement and release criteria tool; its measurements do not certify new core-engine semantic accuracy."
+    },
+    {
+      "path": "pipeline/scrape_judgments.py",
+      "category": "retained_corpus_tool",
+      "imports": [
+        "nm.Archives.legal_brain.retrieve.acquisition_sources",
+        "nm.Archives.legal_brain.retrieve.source_registry_sources"
+      ],
+      "reason": "Existing acquisition command uses receipt/scope contracts; retention is not a decision to acquire more corpus."
+    },
+    {
+      "path": "pipeline/verify_set.py",
+      "category": "retained_corpus_tool",
+      "imports": [
+        "nm.Archives.legal_brain.retrieve.evidence_port"
+      ],
+      "reason": "Readback of existing golden source anchors and provisions; source-fixture verification, not new-engine answer acceptance."
+    },
+    {
+      "path": "tests/test_a_new_party_stales_the_clearance.py",
+      "category": "retained_test_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.orchestrate.turn"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "tests/test_a_reopened_conversation_is_whole.py",
+      "category": "retained_test_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.orchestrate.turn"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "tests/test_acquisition_receipts.py",
+      "category": "retained_test_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.retrieve.acquisition_sources",
+        "nm.Archives.legal_brain.retrieve.source_registry_sources"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "tests/test_admitted_documents_are_owned_exact_and_sealed.py",
+      "category": "retained_test_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.orchestrate.loop_contracts",
+        "nm.Archives.legal_brain.orchestrate.tool_catalogue",
+        "nm.Archives.legal_brain.orchestrate.tools"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "tests/test_adversarial_on_a_served_turn.py",
+      "category": "retained_test_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.orchestrate.turn",
+        "nm.Archives.legal_brain.reason"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "tests/test_advice_is_released_at_its_real_maturity.py",
+      "category": "retained_test_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.orchestrate.turn"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "tests/test_advocate_memory.py",
+      "category": "retained_test_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.understand.advocate_memory",
+        "nm.Archives.legal_brain.understand.advocate_memory_contracts",
+        "nm.Archives.legal_brain.understand.advocate_memory_routes_api"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "tests/test_an_unfinished_answer_is_never_a_short_one.py",
+      "category": "retained_test_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.common",
+        "nm.Archives.legal_brain.orchestrate.turn"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "tests/test_appending_bare_acts_never_mismaps.py",
+      "category": "retained_test_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.retrieve"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "tests/test_brain_context_is_a_checked_file_projection.py",
+      "category": "retained_test_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.common.conversation",
+        "nm.Archives.legal_brain.common.principles_file_adapter",
+        "nm.Archives.legal_brain.common.principles_port",
+        "nm.Archives.legal_brain.orchestrate.loop_contracts",
+        "nm.Archives.legal_brain.understand.brain_context"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "tests/test_chronology.py",
+      "category": "retained_test_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.common.quotable_contracts",
+        "nm.Archives.legal_brain.orchestrate.turn"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "tests/test_document_words_reach_review_without_becoming_facts_or_law.py",
+      "category": "retained_test_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.common.principles_file_adapter",
+        "nm.Archives.legal_brain.orchestrate.controlled_brain",
+        "nm.Archives.legal_brain.orchestrate.loop_contracts",
+        "nm.Archives.legal_brain.orchestrate.tool_catalogue",
+        "nm.Archives.legal_brain.orchestrate.tools",
+        "nm.Archives.legal_brain.reason.matter_support",
+        "nm.Archives.legal_brain.verify",
+        "nm.Archives.legal_brain.verify.brain_assessment",
+        "nm.Archives.legal_brain.verify.brain_finalization",
+        "nm.Archives.legal_brain.verify.brain_publication",
+        "nm.Archives.legal_brain.verify.brain_release",
+        "nm.Archives.legal_brain.verify.verifier"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "tests/test_every_advocate_facing_renderer_speaks_english.py",
+      "category": "retained_test_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.verify.grounding"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "tests/test_every_live_destination_is_policed.py",
+      "category": "retained_test_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.retrieve.evidence_port",
+        "nm.Archives.legal_brain.retrieve.search_policed"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "tests/test_every_message_is_understood_as_a_whole.py",
+      "category": "retained_test_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.orchestrate.turn",
+        "nm.Archives.legal_brain.understand"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "tests/test_factors.py",
+      "category": "retained_test_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.common.quotable_contracts",
+        "nm.Archives.legal_brain.orchestrate.turn",
+        "nm.Archives.legal_brain.procedure.limitation",
+        "nm.Archives.legal_brain.reason"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "tests/test_how_an_answer_was_made_is_kept_not_shown.py",
+      "category": "retained_test_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.orchestrate.turn"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "tests/test_independent_claim_verifier.py",
+      "category": "retained_test_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.retrieve.evidence_port",
+        "nm.Archives.legal_brain.verify.verifier"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "tests/test_interaction_words_require_an_independent_exact_review.py",
+      "category": "retained_test_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.common.principles_file_adapter",
+        "nm.Archives.legal_brain.orchestrate.controlled_brain",
+        "nm.Archives.legal_brain.orchestrate.loop_contracts",
+        "nm.Archives.legal_brain.orchestrate.tools",
+        "nm.Archives.legal_brain.reason.matter_support",
+        "nm.Archives.legal_brain.retrieve.evidence_port",
+        "nm.Archives.legal_brain.retrieve.tool_sources",
+        "nm.Archives.legal_brain.verify.brain_finalization",
+        "nm.Archives.legal_brain.verify.brain_release",
+        "nm.Archives.legal_brain.verify.interaction_review",
+        "nm.Archives.legal_brain.verify.interaction_subject"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "tests/test_judgment_acquisition.py",
+      "category": "retained_test_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.retrieve.acquisition_sources",
+        "nm.Archives.legal_brain.retrieve.source_registry_sources"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "tests/test_legal_source_inventory.py",
+      "category": "retained_test_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.retrieve.source_registry_sources"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "tests/test_manifest_covers_what_it_declares.py",
+      "category": "retained_test_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.retrieve.corpus_evidence",
+        "nm.Archives.legal_brain.retrieve.evidence_port",
+        "nm.Archives.legal_brain.retrieve.manifest_sources"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "tests/test_model_calls_are_kept.py",
+      "category": "retained_test_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.orchestrate.turn"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "tests/test_nested_research_has_one_budget_and_one_writer.py",
+      "category": "retained_test_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.orchestrate.loop",
+        "nm.Archives.legal_brain.orchestrate.loop_contracts",
+        "nm.Archives.legal_brain.orchestrate.nested_research",
+        "nm.Archives.legal_brain.orchestrate.tools",
+        "nm.Archives.legal_brain.retrieve.research_context",
+        "nm.Archives.legal_brain.understand.brain_context",
+        "nm.Archives.legal_brain.verify.brain_release",
+        "nm.Archives.legal_brain.verify.verifier"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "tests/test_one_fold.py",
+      "category": "retained_test_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.verify.grounding"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "tests/test_one_quotable.py",
+      "category": "retained_test_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.common.quotable_contracts"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "tests/test_opening_brief_is_durable.py",
+      "category": "retained_test_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.common.conversation",
+        "nm.Archives.legal_brain.orchestrate.turn",
+        "nm.Archives.legal_brain.understand.route"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "tests/test_opposition_work_is_three_distinct_private_source_tasks.py",
+      "category": "retained_test_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.orchestrate.loop_contracts",
+        "nm.Archives.legal_brain.orchestrate.tools",
+        "nm.Archives.legal_brain.reason.opposition_work"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "tests/test_premises_come_before_arithmetic.py",
+      "category": "retained_test_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.procedure.limitation",
+        "nm.Archives.legal_brain.reason"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "tests/test_professional_approval_is_separate_from_account_access.py",
+      "category": "retained_test_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.orchestrate.turn"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "tests/test_prompt_consistency.py",
+      "category": "retained_test_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.common.conversation",
+        "nm.Archives.legal_brain.common.quotable_contracts",
+        "nm.Archives.legal_brain.communicate.register_contracts",
+        "nm.Archives.legal_brain.orchestrate.loop_contracts",
+        "nm.Archives.legal_brain.orchestrate.turn",
+        "nm.Archives.legal_brain.reason",
+        "nm.Archives.legal_brain.reason.opposition_work",
+        "nm.Archives.legal_brain.understand",
+        "nm.Archives.legal_brain.understand.brain_context",
+        "nm.Archives.legal_brain.verify.consistency",
+        "nm.Archives.legal_brain.verify.interaction_review",
+        "nm.Archives.legal_brain.verify.verifier"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "tests/test_research_context_starts_from_sources_not_a_chat_summary.py",
+      "category": "retained_test_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.orchestrate.loop_contracts",
+        "nm.Archives.legal_brain.retrieve.research_context",
+        "nm.Archives.legal_brain.understand.brain_context",
+        "nm.Archives.legal_brain.verify.verifier"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "tests/test_search_result_presentation.py",
+      "category": "retained_test_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.retrieve.evidence_port",
+        "nm.Archives.legal_brain.retrieve.search_port"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "tests/test_search_tokens_match_the_built_index.py",
+      "category": "retained_test_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.retrieve"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "tests/test_the_controlled_brain_is_actually_wired.py",
+      "category": "retained_test_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.common.principles_file_adapter",
+        "nm.Archives.legal_brain.common.principles_port",
+        "nm.Archives.legal_brain.orchestrate.controlled_brain",
+        "nm.Archives.legal_brain.orchestrate.loop_contracts"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "tests/test_the_emergency_route_admits_only_protection.py",
+      "category": "retained_test_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.orchestrate.turn"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "tests/test_the_journey_login_to_logout.py",
+      "category": "retained_test_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.retrieve.source_excerpt_contracts"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "tests/test_the_journey_of_a_search.py",
+      "category": "retained_test_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.retrieve.search_authority"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "tests/test_the_loop_records_work_before_using_it.py",
+      "category": "retained_test_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.orchestrate.loop",
+        "nm.Archives.legal_brain.orchestrate.loop_contracts",
+        "nm.Archives.legal_brain.orchestrate.tools",
+        "nm.Archives.legal_brain.retrieve.evidence_port"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "tests/test_the_product_does_not_speak_in_identifiers.py",
+      "category": "retained_test_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.reason.issue_contracts",
+        "nm.Archives.legal_brain.reason.proof_contracts",
+        "nm.Archives.legal_brain.retrieve.evidence_port"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "tests/test_the_research_workflow_is_served.py",
+      "category": "retained_test_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.retrieve.evidence_port",
+        "nm.Archives.legal_brain.retrieve.search_authority",
+        "nm.Archives.legal_brain.retrieve.search_policed",
+        "nm.Archives.legal_brain.retrieve.search_port"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "tests/test_three_states.py",
+      "category": "retained_test_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.retrieve.manifest_sources"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "tests/test_turn_contract.py",
+      "category": "retained_test_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.common.quotable_contracts",
+        "nm.Archives.legal_brain.orchestrate.turn",
+        "nm.Archives.legal_brain.procedure.filing_requirement_adapter",
+        "nm.Archives.legal_brain.procedure.institution_adapter",
+        "nm.Archives.legal_brain.procedure.interim_relief_adapter",
+        "nm.Archives.legal_brain.procedure.procedural_period_adapter",
+        "nm.Archives.legal_brain.retrieve.coverage_sources",
+        "nm.Archives.legal_brain.retrieve.evidence_port",
+        "nm.Archives.legal_brain.retrieve.resolution_sources",
+        "nm.Archives.legal_brain.understand.posture"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    },
+    {
+      "path": "tests/test_what_the_model_is_told.py",
+      "category": "retained_test_dependency",
+      "imports": [
+        "nm.Archives.legal_brain.understand",
+        "nm.Archives.legal_brain.understand.posture"
+      ],
+      "reason": "Retained application or mixed live-safety test dependency. See outputs/clean-slate-20261010/test-cleanup.md for active/dormant test scope. Static import presence does not establish a served route."
+    }
+  ],
+  "limits": [
+    "This is a custody snapshot, not a competing status owner.",
+    "The archived scripts retain their original path assumptions and CLI examples; they are reference only, not executable current commands.",
+    "Retained acquisition scripts are not permission to run acquisition or amend the held corpus.",
+    "Preserved documents may contain former authority statements; current navigation marks them historical.",
+    "Moving all old import targets would break retained application and corpus contracts and was deliberately not attempted."
+  ],
+  "related_test_disposition": "outputs/clean-slate-20261010/test-cleanup.md"
+}

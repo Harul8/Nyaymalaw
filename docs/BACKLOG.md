@@ -1,5 +1,12 @@
 # Backlog
 
+Historical planning and evidence record under owner decision P12, 10 October
+2026. New work is recorded only in **Advocate build plan** in
+`docs/Nyaymalaw_Implementation_Plan.xlsx`. Earlier claims below retain their
+original scope and dates; they do not establish current core-engine status.
+This path remains an input to retained compatibility tools. The exact pre-label
+document is preserved in `development_environment/archives/planning-20261010/`.
+
 What is known, not done, and not yet a defect row. Opened 6 September 2026.
 
 ## Legal Brain sub-stage organisation — 27 September 2026

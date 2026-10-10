@@ -287,7 +287,7 @@ def client(tmp_path, monkeypatch, scripted_application_environment):
     from nm.shared.model_port import Tier
     from nm.shared.model_scripted import ScriptedModelAdapter
     from nm.shared.store_file_store import FileMatterStore
-    from tests.test_turn_contract import KEY, _Evidence
+    from tests.test_turn_contract import KEY
 
     # Long enough for `enrol`, which refuses under twelve characters.
     # Satisfies every clause `advocate.enrol` enforces. It read
@@ -324,7 +324,7 @@ def client(tmp_path, monkeypatch, scripted_application_environment):
     # would land beside the operator's real data.
     outbox = FileOutbox(tmp_path, key=KEY)
     application = Application(
-        store=FileMatterStore(tmp_path, key=KEY), evidence=_Evidence(),
+        store=FileMatterStore(tmp_path, key=KEY),
         directory=directory, mail=outbox, legal_search=None,
         model=ScriptedModelAdapter(config, responses={
             "__default__": "Issue the statutory notice and diarise the window."}))

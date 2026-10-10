@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pytest
 
-from nm.brain.citation_check import CONTRACT, CaseIdentityIndex, check_citations
+from nm.core_engine.citations import CONTRACT, CaseIdentityIndex, check_citations
 from tests.synthetic_index import IDENTITY_SCHEMA
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -193,7 +193,7 @@ def test_the_scope_is_measured_from_the_index_and_names_what_is_not_held(index):
 
 def test_the_engine_has_no_door_to_a_model_or_a_store():
     """Nothing the advocate pastes for checking is stored or sent to a model."""
-    source = (ROOT / "nm/brain/citation_check.py").read_text(encoding="utf8")
+    source = (ROOT / "nm/core_engine/citations.py").read_text(encoding="utf8")
     imported = {node.module for node in ast.walk(ast.parse(source))
                 if isinstance(node, ast.ImportFrom) and node.module}
     assert not {m for m in imported if "model" in m or "store" in m}, imported

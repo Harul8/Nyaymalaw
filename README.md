@@ -6,34 +6,39 @@ considered view, and the responsible advocate reviews it. NM does not replace
 professional responsibility or acquire authority to act by recommending a step.
 
 **The original baseline started with documents and no code.** The repository
-now contains an implementation; current coverage and proof are recorded in
-the backlog, not inferred from this introduction. A previous
+now contains an implementation; current scope and evidence are recorded in the
+Advocate build plan worksheet, not inferred from this introduction. A previous
 build reached 217 stories and 28 behavioural tenets and produced conversations
 that were mechanically correct and professionally poor — asking a client who had
 said *"yesterday"* for the date twice, dropping an assault into a possession
 cause, and analysing a twelve-year limitation on a trespass a day old. Every
 structural gate passed on that transcript. The specifications survive; the code
 is being developed against a definition of done that the transcript would
-have failed. Start with the [current delivery plan](docs/PLAN.md).
+have failed. Start with **Advocate build plan** in the
+[implementation workbook](docs/Nyaymalaw_Implementation_Plan.xlsx).
+The application currently starts with conversations paused. Citation and retrieval
+helpers are retained in `nm/core_engine`; the unfinished M1 candidate is preserved
+privately and is not served.
 
 ---
 
 ## The authority chain
 
-Read in this order. Each is bound by the one above it.
+The owner's current instructions govern scope. These records have distinct roles.
 
 | | |
 |---|---|
-| [PRD](docs/Nyaymalaw_PRD.docx), authored in `assurance/specification/prd/` | Intended features and professional behaviour; regenerate the document and machine-readable feature contracts together |
-| [Current plan](docs/PLAN.md) and [`docs/backlog/`](docs/backlog/) | Journey contracts, professional standards, waves, release profiles, current implementation and evidence |
-| [End-to-end workbook](docs/Nyaymalaw_End_to_End_Project_Plan.xlsx) | Generated reader view; never an independent status editor |
+| [Implementation workbook](docs/Nyaymalaw_Implementation_Plan.xlsx), Advocate build plan | Current decisions, work queue, slice contracts, status, evidence and remaining work |
+| Same workbook, legal brain | Linked capability intent and detail; older implementation notes are historical |
+| [AGENTS.md](AGENTS.md) and [CLAUDE.md](CLAUDE.md) | Standing safeguards and current working instructions |
 | [Build guide](docs/BUILD_GUIDE.md) | Four proportionate playbooks: Start, Build, Test and Sign-off |
 | [Baseline](docs/BASELINE.md), [defect shapes](docs/DEFECT_SHAPES.md), [golden set](docs/GOLDEN_SET.md) | Measured coverage, known failure mechanisms and evaluation design; check the stated date and scope |
 
 `development_environment/archives/` preserves the previous specification, journey, architecture,
 defect register and plan as historical evidence, not current authority.
-`docs/Nyaymalaw_Project_Plan.xlsx` similarly preserves the original slice
-baseline; the current W0–W7 plan is maintained in the registries.
+The earlier PRD, PLAN.md, backlog registries and older workbooks are historical
+planning inputs under P12. Some stay at their original paths because live tooling
+still reads them. They do not decide the current build or certify the new engine.
 
 ---
 
@@ -55,7 +60,7 @@ Structural checks — layering, exception discipline, dead-guard detection — a
 **linter**. They are necessary and they are not the bar. Every one of them passed
 on the transcript that caused this rewrite.
 
-See the [current plan](docs/PLAN.md) and [sign-off playbook](docs/playbooks/SIGN_OFF_A_CHANGE.md).
+See the Advocate build plan and [sign-off playbook](docs/playbooks/SIGN_OFF_A_CHANGE.md).
 
 ---
 
@@ -67,8 +72,8 @@ See the [current plan](docs/PLAN.md) and [sign-off playbook](docs/playbooks/SIGN
 | `operations/` | Human-run administration commands: enrolment, invitation, professional approval, outbox, store migration and re-keying; these are not model tools |
 | `pipeline/` | Flat, named offline legal-source acquisition, indexing and quality jobs, plus the curated Act manifest |
 | `assurance/` | How production is proven and permitted: `gate/` (the per-task gate), `journeys/` (served and browser runs), `control_plane/` (backlog, evidence, release obligations, the plan view), `hooks/`, `specification/` (PRD source and generated specs) and `common/`, which declares these homes once |
-| `docs/` | Live documents and the delivery registries |
-| `tests/` | The whole verification suite |
+| `docs/` | Current workbook and guidance, plus explicitly historical planning inputs retained for compatibility |
+| `tests/` | Retained live safeguards; archived-brain tests are preserved separately and not collected |
 | `development_environment/` | Archives, dated reviews, one-off and developer tooling, earlier worktrees — kept, not shipped. See its README |
 
 Start with [the journey-first project map](docs/PROJECT_STRUCTURE.md), then the
@@ -87,10 +92,10 @@ put the repository root on the path themselves; `start.ps1` sets
 
 ## The corpus
 
-`legal_database/` is **22GB and gitignored**. Twelve files exceed GitHub's 100MB
-limit; `caselaws_v2.index` is 3.9GB on its own. It holds 33,791 judgements
-(29,510 Supreme Court, 4,280 Andhra Pradesh High Court) and 1,600+ bare Acts,
-scoped to **Telangana and the Union of India**.
+`legal_database/` is gitignored and contains large original and derived corpus
+files. Use the dated [baseline](docs/BASELINE.md) and current source manifests
+for measured counts and coverage; an older count or corpus label does not prove
+legal applicability or currency. The product scope is Telangana and central law.
 
 Attach it as a directory junction rather than copying it:
 

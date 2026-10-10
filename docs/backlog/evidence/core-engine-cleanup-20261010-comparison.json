@@ -1,0 +1,477 @@
+{
+  "baseline": "3f34ecb",
+  "identity": {
+    "nm/app/api.py": {
+      "matches_HEAD": false,
+      "baseline_sha256": "3d8e5cda3369254fee1bb0c6d0e9a826b0f90d656b9a525fa1b0ec36a8348e0b",
+      "matches_HEAD_normalized_newlines": true
+    },
+    "nm/app/main.py": {
+      "matches_HEAD": false,
+      "baseline_sha256": "5f5fea423c1b2f6d23c9ea21f5696b1bf8631fd36a193b5ed494d65e3a473026",
+      "matches_HEAD_normalized_newlines": true
+    },
+    "tests/conftest.py": {
+      "matches_HEAD": false,
+      "baseline_sha256": "b40e890489233f98a6eb3b780d9b8b36d7cdba680ad57436aa43c6d3a36c5f3c",
+      "matches_HEAD_normalized_newlines": true
+    },
+    "pyproject.toml": {
+      "matches_HEAD": false,
+      "baseline_sha256": "4015e95f4a129791a8b06f88afc8b0c9d62312893aed1a5130bde8530da0de09",
+      "matches_HEAD_normalized_newlines": true
+    }
+  },
+  "method": "first failure per file, 45-second bound, offline",
+  "results": {
+    "test_an_unfinished_answer_is_never_a_short_one": {
+      "now": {
+        "code": 1,
+        "first_failure": [
+          "tests/test_an_unfinished_answer_is_never_a_short_one.py::test_the_adapter_refuses_a_length_limited_response_that_parses"
+        ],
+        "summary": [
+          "1 failed, 10 passed in 0.30s"
+        ]
+      },
+      "before": {
+        "code": 1,
+        "first_failure": [
+          "tests/test_an_unfinished_answer_is_never_a_short_one.py::test_the_adapter_refuses_a_length_limited_response_that_parses"
+        ],
+        "summary": [
+          "1 failed, 10 passed in 0.55s"
+        ]
+      }
+    },
+    "test_arrive_sign_in_features": {
+      "now": {
+        "code": 1,
+        "first_failure": [
+          "tests/test_arrive_sign_in_features.py::test_a_correct_email_and_password_opens_the_advocates_own_workspace"
+        ],
+        "summary": [
+          "1 failed, 2 passed, 5 warnings in 2.64s"
+        ]
+      },
+      "before": {
+        "code": 1,
+        "first_failure": [
+          "tests/test_arrive_sign_in_features.py::test_a_correct_email_and_password_opens_the_advocates_own_workspace"
+        ],
+        "summary": [
+          "1 failed, 2 passed, 5 warnings in 3.61s"
+        ]
+      }
+    },
+    "test_capacity_admission_uses_a_record_not_prose": {
+      "now": {
+        "code": 1,
+        "first_failure": [
+          "tests/test_capacity_admission_uses_a_record_not_prose.py::test_each_explicit_state_reaches_the_actual_served_admission[not_in_doubt]"
+        ],
+        "summary": [
+          "1 warning, 1 error in 2.16s"
+        ]
+      },
+      "before": {
+        "code": 1,
+        "first_failure": [
+          "tests/test_capacity_admission_uses_a_record_not_prose.py::test_each_explicit_state_reaches_the_actual_served_admission[not_in_doubt]"
+        ],
+        "summary": [
+          "1 warning, 1 error in 2.74s"
+        ]
+      }
+    },
+    "test_deadline_readback_never_manufactures_an_all_clear": {
+      "before": {
+        "code": 1,
+        "first_failure": [
+          "tests/test_deadline_readback_never_manufactures_an_all_clear.py::test_default_empty_is_not_the_same_as_a_recorded_empty_assessment[False]"
+        ],
+        "summary": [
+          "1 warning, 1 error in 2.38s"
+        ]
+      },
+      "now": {
+        "code": 1,
+        "first_failure": [
+          "tests/test_deadline_readback_never_manufactures_an_all_clear.py::test_default_empty_is_not_the_same_as_a_recorded_empty_assessment[False]"
+        ],
+        "summary": [
+          "1 warning, 1 error in 2.17s"
+        ]
+      }
+    },
+    "test_every_advocate_facing_renderer_speaks_english": {
+      "before": {
+        "code": 1,
+        "first_failure": [
+          "tests/test_every_advocate_facing_renderer_speaks_english.py::test_no_advocate_facing_renderer_prints_one_of_our_keys"
+        ],
+        "summary": [
+          "1 failed in 3.13s"
+        ]
+      },
+      "now": {
+        "code": 1,
+        "first_failure": [
+          "tests/test_every_advocate_facing_renderer_speaks_english.py::test_the_population_is_the_whole_product_and_is_not_empty"
+        ],
+        "summary": [
+          "1 failed, 1 passed in 3.82s"
+        ]
+      }
+    },
+    "test_manifest_covers_what_it_declares": {
+      "before": {
+        "code": "timeout",
+        "first_failure": [],
+        "summary": []
+      },
+      "now": {
+        "code": "timeout",
+        "first_failure": [],
+        "summary": []
+      }
+    },
+    "test_one_fold": {
+      "before": {
+        "code": 1,
+        "first_failure": [
+          "tests/test_one_fold.py::test_only_one_module_defines_the_base_fold - A..."
+        ],
+        "summary": [
+          "1 failed in 2.50s"
+        ]
+      },
+      "now": {
+        "code": 1,
+        "first_failure": [
+          "tests/test_one_fold.py::test_only_one_module_defines_the_base_fold - A..."
+        ],
+        "summary": [
+          "1 failed in 1.91s"
+        ]
+      }
+    },
+    "test_one_quotable": {
+      "before": {
+        "code": 1,
+        "first_failure": [
+          "tests/test_one_quotable.py::test_the_six_reads_are_actually_covered - ..."
+        ],
+        "summary": [
+          "1 failed, 2 passed in 5.83s"
+        ]
+      },
+      "now": {
+        "code": 1,
+        "first_failure": [
+          "tests/test_one_quotable.py::test_the_six_reads_are_actually_covered - ..."
+        ],
+        "summary": [
+          "1 failed, 2 passed in 4.65s"
+        ]
+      }
+    },
+    "test_opening_brief_is_durable": {
+      "before": {
+        "code": 1,
+        "first_failure": [
+          "tests/test_opening_brief_is_durable.py::test_unknown_opening_is_a_saved_matter_without_a_clearance"
+        ],
+        "summary": [
+          "1 warning, 1 error in 2.36s"
+        ]
+      },
+      "now": {
+        "code": 1,
+        "first_failure": [
+          "tests/test_opening_brief_is_durable.py::test_unknown_opening_is_a_saved_matter_without_a_clearance"
+        ],
+        "summary": [
+          "1 warning, 1 error in 2.09s"
+        ]
+      }
+    },
+    "test_original_intake_is_sealed_resumable_and_unread": {
+      "before": {
+        "code": 1,
+        "first_failure": [
+          "tests/test_original_intake_is_sealed_resumable_and_unread.py::test_upload_first_is_real_without_a_placeholder_brief_or_a_model_call"
+        ],
+        "summary": [
+          "1 warning, 1 error in 2.28s"
+        ]
+      },
+      "now": {
+        "code": 1,
+        "first_failure": [
+          "tests/test_original_intake_is_sealed_resumable_and_unread.py::test_upload_first_is_real_without_a_placeholder_brief_or_a_model_call"
+        ],
+        "summary": [
+          "1 warning, 1 error in 1.99s"
+        ]
+      }
+    },
+    "test_premises_come_before_arithmetic": {
+      "before": {
+        "code": 1,
+        "first_failure": [
+          "tests/test_premises_come_before_arithmetic.py::test_an_unknown_premise_kind_is_refused"
+        ],
+        "summary": [
+          "1 failed, 5 passed, 2 skipped, 1 warning in 2.23s"
+        ]
+      },
+      "now": {
+        "code": 1,
+        "first_failure": [
+          "tests/test_premises_come_before_arithmetic.py::test_an_unknown_premise_kind_is_refused"
+        ],
+        "summary": [
+          "1 failed, 5 passed, 2 skipped, 1 warning in 1.96s"
+        ]
+      }
+    },
+    "test_professional_approval_is_separate_from_account_access": {
+      "now": {
+        "code": 1,
+        "first_failure": [
+          "tests/test_professional_approval_is_separate_from_account_access.py::test_professional_approval_is_durable_attributed_and_compare_and_set"
+        ],
+        "summary": [
+          "1 warning, 1 error in 2.01s"
+        ]
+      },
+      "before": {
+        "code": 1,
+        "first_failure": [
+          "tests/test_professional_approval_is_separate_from_account_access.py::test_professional_approval_is_durable_attributed_and_compare_and_set"
+        ],
+        "summary": [
+          "1 warning, 1 error in 2.28s"
+        ]
+      }
+    },
+    "test_protected_arrive_drafts": {
+      "now": {
+        "code": 1,
+        "first_failure": [
+          "tests/test_protected_arrive_drafts.py::test_draft_key_requires_a_current_device_bound_session"
+        ],
+        "summary": [
+          "1 warning, 1 error in 1.91s"
+        ]
+      },
+      "before": {
+        "code": 1,
+        "first_failure": [
+          "tests/test_protected_arrive_drafts.py::test_draft_key_requires_a_current_device_bound_session"
+        ],
+        "summary": [
+          "1 warning, 1 error in 2.18s"
+        ]
+      }
+    },
+    "test_public_email_registration": {
+      "now": {
+        "code": 1,
+        "first_failure": [
+          "tests/test_public_email_registration.py::test_email_and_password_create_a_private_account_without_an_invitation"
+        ],
+        "summary": [
+          "1 warning, 1 error in 2.07s"
+        ]
+      },
+      "before": {
+        "code": 1,
+        "first_failure": [
+          "tests/test_public_email_registration.py::test_email_and_password_create_a_private_account_without_an_invitation"
+        ],
+        "summary": [
+          "1 warning, 1 error in 2.31s"
+        ]
+      }
+    },
+    "test_recorded_dangers_require_explicit_resolution": {
+      "now": {
+        "code": 1,
+        "first_failure": [
+          "tests/test_recorded_dangers_require_explicit_resolution.py::test_manual_urgency_is_visible_without_granting_a_protective_permission"
+        ],
+        "summary": [
+          "1 passed, 1 warning, 1 error in 2.18s"
+        ]
+      },
+      "before": {
+        "code": 1,
+        "first_failure": [
+          "tests/test_recorded_dangers_require_explicit_resolution.py::test_manual_urgency_is_visible_without_granting_a_protective_permission"
+        ],
+        "summary": [
+          "1 passed, 1 warning, 1 error in 2.26s"
+        ]
+      }
+    },
+    "test_search_result_presentation": {
+      "now": {
+        "code": 1,
+        "first_failure": [
+          "tests/test_search_result_presentation.py::test_served_case_discovery_uses_actual_position_not_score_bands"
+        ],
+        "summary": [
+          "1 failed, 1 passed in 1.43s"
+        ]
+      },
+      "before": {
+        "code": 1,
+        "first_failure": [
+          "tests/test_search_result_presentation.py::test_served_case_discovery_uses_actual_position_not_score_bands"
+        ],
+        "summary": [
+          "1 failed, 1 passed in 1.68s"
+        ]
+      }
+    },
+    "test_the_emergency_route_admits_only_protection": {
+      "now": {
+        "code": 1,
+        "first_failure": [
+          "tests/test_the_emergency_route_admits_only_protection.py::test_unreadable_emergency_history_is_reported_incomplete_through_the_wire"
+        ],
+        "summary": [
+          "6 passed, 1 warning, 1 error in 2.01s"
+        ]
+      },
+      "before": {
+        "code": 1,
+        "first_failure": [
+          "tests/test_the_emergency_route_admits_only_protection.py::test_unreadable_emergency_history_is_reported_incomplete_through_the_wire"
+        ],
+        "summary": [
+          "6 passed, 1 warning, 1 error in 2.35s"
+        ]
+      }
+    },
+    "test_the_product_does_not_speak_in_identifiers": {
+      "before": {
+        "code": 1,
+        "first_failure": [
+          "tests/test_the_product_does_not_speak_in_identifiers.py::test_no_enum_value_reaches_the_advocate"
+        ],
+        "summary": [
+          "1 failed in 2.78s"
+        ]
+      },
+      "now": {
+        "code": 1,
+        "first_failure": [
+          "tests/test_the_product_does_not_speak_in_identifiers.py::test_no_enum_value_reaches_the_advocate"
+        ],
+        "summary": [
+          "1 failed in 2.32s"
+        ]
+      }
+    },
+    "test_the_research_workflow_is_served": {
+      "now": {
+        "code": 1,
+        "first_failure": [
+          "tests/test_the_research_workflow_is_served.py::test_a_holding_spread_across_paragraphs_surfaces_as_one_case"
+        ],
+        "summary": [
+          "1 failed, 1 warning in 2.27s"
+        ]
+      },
+      "before": {
+        "code": 1,
+        "first_failure": [
+          "tests/test_the_research_workflow_is_served.py::test_a_holding_spread_across_paragraphs_surfaces_as_one_case"
+        ],
+        "summary": [
+          "1 failed, 1 warning in 2.58s"
+        ]
+      }
+    },
+    "test_the_runtime_inventory_cannot_self_approve": {
+      "now": {
+        "code": 1,
+        "first_failure": [
+          "tests/test_the_runtime_inventory_cannot_self_approve.py::test_recorded_local_composition_remains_usable"
+        ],
+        "summary": [
+          "1 failed in 1.24s"
+        ]
+      },
+      "before": {
+        "code": 1,
+        "first_failure": [
+          "tests/test_the_runtime_inventory_cannot_self_approve.py::test_recorded_local_composition_remains_usable"
+        ],
+        "summary": [
+          "1 failed in 1.42s"
+        ]
+      }
+    },
+    "test_three_states": {
+      "now": {
+        "code": 1,
+        "first_failure": [
+          "tests/test_three_states.py::test_every_outcome_enum_can_say_that_nothing_was_established"
+        ],
+        "summary": [
+          "1 failed, 1 passed in 2.99s"
+        ]
+      },
+      "before": {
+        "code": 1,
+        "first_failure": [
+          "tests/test_three_states.py::test_every_outcome_enum_can_say_that_nothing_was_established"
+        ],
+        "summary": [
+          "1 failed, 1 passed in 4.29s"
+        ]
+      }
+    },
+    "test_what_the_model_is_told": {
+      "now": {
+        "code": 1,
+        "first_failure": [
+          "tests/test_what_the_model_is_told.py::test_every_field_is_told_or_declared"
+        ],
+        "summary": [
+          "1 failed, 1 passed in 0.27s"
+        ]
+      },
+      "before": {
+        "code": 1,
+        "first_failure": [
+          "tests/test_what_the_model_is_told.py::test_every_field_is_told_or_declared"
+        ],
+        "summary": [
+          "1 failed, 1 passed in 0.44s"
+        ]
+      }
+    }
+  },
+  "baseline_scope": {
+    "kind": "partial source snapshot",
+    "tracked_entries_at_base": 2031,
+    "present": 1908,
+    "byte_identical": 189,
+    "newline_only": 1719,
+    "substantive_mismatch": 0,
+    "absent": 123,
+    "complete_roots": [
+      "nm",
+      "tests",
+      "assurance",
+      "pipeline",
+      "operations"
+    ],
+    "limitation": "Missing documentation, configuration, tooling and golden metadata prevent full-checkout or metadata-dependent equivalence claims."
+  }
+}

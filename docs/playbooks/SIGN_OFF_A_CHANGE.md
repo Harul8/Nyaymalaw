@@ -13,7 +13,7 @@ control plane and, where applicable, records the release or return decision.
 1. Name the exact item, feature or deployment claim being requested.
 2. Inspect current evidence and unresolved failures against that claim.
 3. Check substantive professional behaviour with the required qualified reviewer.
-4. Reconcile the owning registry, forensic record and generated views.
+4. Reconcile the Advocate build plan row, its evidence and affected navigation.
 5. For deployment only, verify release authority, operational gates, recovery and
    controlled exceptions for the named environment.
 6. Record the earned decision and its decision-maker; never promote a weaker
@@ -43,12 +43,12 @@ Keep these statements separate:
 | Implemented | The code or document exists in the mapped layers |
 | Verified | Required named evidence ran and currently passes |
 | Feature conformant | The feature contract and every blocking item affecting it pass |
-| Done | All acceptance evidence required by the item passes and the registry derives completion |
+| Done | All acceptance evidence required by the selected contract passes and supports its recorded completion |
 | Releasable | All cumulative release gates for the intended deployment pass |
 | Released | An authorised release decision was made and deployed with monitoring and recovery |
 
 Do not promote one claim into another. Never author `done`; it is derived from
-the acceptance evidence in `docs/backlog/status.yaml`.
+the acceptance evidence linked by the selected Advocate build plan contract.
 
 Technical sign-off records an implementation/evidence judgment within the
 reviewer's authority. Counsel acceptance records a qualified professional's
@@ -81,23 +81,15 @@ defect or earn a permanent-fix claim.
 
 ## 3. Reconcile the control plane
 
-Update the authoritative records:
+Update the selected Advocate build plan row with the actual implementation
+state, evidence, limitations and next action. Update an agreed decision or
+dependency only when the current task authorises that change. Keep capability
+intent in legal brain and change a live gate or schema only at its owning source.
 
-- `status.yaml`: implementation, verification, evidence references and next
-  action;
-- `BACKLOG.md`: forensic explanation, observations, decisions and how the work
-  was proved;
-- `plan.json`: only if authorised delivery order or dependencies changed;
-- `steps.yaml`: only if the authoritative journey mapping or contract changed;
-- `professional.json`: only if PA/EW/AM/ROLE/GC mappings changed;
-- feature, gate, schema or release source: only when its owned rule changed.
-
-Regenerate the board and workbook views. Check unique IDs, valid states,
-non-zero populations, bidirectional references, wave coverage, dependency
-order, stage order and proof links.
-
-Do not edit a generated view to make it agree. Correct its source and
-regenerate it.
+Check stable IDs, dependencies and evidence links. Do not regenerate the old
+PRD, backlog board or end-to-end plan to record current core-engine work; P12
+made those planning artifacts historical. Retained tooling may still check their
+unchanged compatibility inputs. Such a result is not new-engine acceptance.
 
 ## 4. Apply the cumulative release ladder
 

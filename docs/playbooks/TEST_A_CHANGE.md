@@ -1,6 +1,8 @@
 # Test a change
 
 Use this playbook during Start and Build to design proof and record results.
+Link results to the selected Advocate build plan contract. Historical registries
+remain inputs only where a retained check still needs them.
 Its Evidence Pack closes only against the complete reviewable implementation.
 
 **Entry:** named acceptance criteria and a known source boundary. Build may be
@@ -260,8 +262,10 @@ served end-to-end scenario and Class-D judged runs require explicit approval
 for the named bounded run. Long ingest, index, training or similar jobs are
 prepared and reported, not started automatically.
 
-Routine repository commands are documented in `CLAUDE.md`. The ordinary gate
-is:
+Routine repository commands are documented in `CLAUDE.md`. Select the checks for
+the changed contract there. The retained legacy control-plane commands below
+verify their historical inputs; they neither own the current work queue nor
+certify the new engine:
 
 ```text
 python assurance/control_plane/backlog.py check

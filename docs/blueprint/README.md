@@ -1,4 +1,21 @@
-# NM: the India-only build blueprint
+# Historical blueprint and current navigation
+
+The blueprint below is the September design record. Under owner decision P12
+(10 October 2026), its execution queue and backlog mappings no longer choose
+new work. Use **Advocate build plan** in
+[`Nyaymalaw_Implementation_Plan.xlsx`](../Nyaymalaw_Implementation_Plan.xlsx) for
+current decisions, scope, sequence and status, and [BUILD_GUIDE](../BUILD_GUIDE.md)
+for the build method. The legal brain sheet holds capability intent.
+
+Read the remaining sections as historical proposals, including their former
+claims of authority, external-action possibilities and broad architecture.
+Current decisions govern: advocates only, held-corpus law, owner-only data and
+no external acts by NM. The retained contracts may still be compatibility inputs
+for existing tools; that does not grant them planning authority. Exact pre-cleanup
+text and consumer reasons are in the
+[archive map](../../development_environment/archives/planning-20261010/README.md).
+
+## September design record
 
 Design baseline: 10 September 2026. Design work: BK-81; execution-readiness pass: BK-87;
 bounded autonomy and build-discipline amendment: BK-90.

@@ -9,7 +9,7 @@ change.
 
 **Exit:** a Start Record supports a `READY` decision. `READY` is derived from
 the checklist below; it is not a feeling and not a substitute for delivery
-status in `docs/backlog/status.yaml`.
+status on the Advocate build plan sheet.
 
 ## Quick card
 
@@ -37,8 +37,8 @@ decision, 10 October 2026), and read the legal brain capabilities it names.
 - For earlier evidence, read the backlog registries (`docs/backlog/status.yaml`,
   `docs/BACKLOG.md`, `plan.json`, `steps.yaml`, `professional.json`) and
   `assurance/specification/features.yaml`. They no longer decide what is built
-  next; whether they remain planning owners at all is open decision Q11. Tests
-  that run against them keep running.
+  next and are historical under P12. Retained checks may still consume their
+  original paths; that compatibility use does not make them planning owners.
 
 If no row owns deliverable work, add one on that sheet before implementation, with
 its change contract (section 4). Do not leave work owned only by a chat, commit
@@ -67,7 +67,7 @@ Read only the sources needed for the change, following the ownership table in
 
 Confirm:
 
-- the PRD's DOES, NEVER, PRODUCES and EVAL obligations;
+- the selected workbook contract's DOES, NEVER, PRODUCES and EVAL obligations;
 - the journey entry, action, exit and permitted return transition;
 - the typed output contract;
 - applicable gate behaviour and scope;
