@@ -1,0 +1,252 @@
+{
+  "provenance": "Read-only revalidation of previously selected positions; NOT a new search, rerank or live run",
+  "respect_saved_parent_trees": true,
+  "baseline": "offline-retrieval-capacity-snapshot.json",
+  "baseline_sha256": "594ee65cc7bb9a1964d44650ca19af5195e9330e5d016667bafb63db65c16ee3",
+  "model_calls": 0,
+  "retrieval_calls": 0,
+  "local_rerank_calls": 0,
+  "retrieval_contract": "hybrid_retrieval_v3",
+  "source_hashes_before": {
+    "nm\\core_engine\\answer_sources.py": "134d57f6851fcf01972c3f927fdc20b99809b191092875996bc40e95098b59d7",
+    "nm\\core_engine\\calls.py": "02f4d47ae36fa4a136b85c951b9346c30ab5129b944e96bb9323f98f021050d1",
+    "nm\\core_engine\\citations.py": "8ea89c6980fc6208166df0310e3132fdd62d87ee3e076540703de638f2069e09",
+    "nm\\core_engine\\conversation.py": "1dbd8fe1cfe61c2ce4587c63972d2a1a7a47c8e28f353182553727672aec9d59",
+    "nm\\core_engine\\research.py": "998be8eb4aa8e48729a39c2093c4c1a09ca33c00f98076d002fefcaaecc6d335",
+    "nm\\core_engine\\response_authorities.py": "0924bbf14d50d3b9e1fef9518d82766fd40fe1f511f7089ad7452c4999da2e81",
+    "nm\\core_engine\\response_rendering.py": "0de66e91291c25febe214873afe8d7029253eff04e3805a9675aa2e26125b826",
+    "nm\\core_engine\\response_review.py": "e9ae77e947ad598070bece9ef3eca756eb9fea0f0029cf0384e75dc56f5c0d61",
+    "nm\\core_engine\\response_writer.py": "c6154a05c57c7aafbdbfcb49df4cad2b1231eab187ec7298b729816cbdb6635c",
+    "nm\\core_engine\\retrieval.py": "11b61f48705de83e6ad10fb9d357360882af8cc1589088569c47353de9b240a9",
+    "nm\\core_engine\\turn.py": "b820470138a98cd7807493265c3aa7b5e4056f5e62c8c48035876f7040a75b60",
+    "nm\\core_engine\\understanding.py": "16e366874e1260c7d7b6aa3b0144a03d11a5c14da83337020c8e3e81d75d8091"
+  },
+  "source_hashes_after": {
+    "nm\\core_engine\\answer_sources.py": "134d57f6851fcf01972c3f927fdc20b99809b191092875996bc40e95098b59d7",
+    "nm\\core_engine\\calls.py": "02f4d47ae36fa4a136b85c951b9346c30ab5129b944e96bb9323f98f021050d1",
+    "nm\\core_engine\\citations.py": "8ea89c6980fc6208166df0310e3132fdd62d87ee3e076540703de638f2069e09",
+    "nm\\core_engine\\conversation.py": "1dbd8fe1cfe61c2ce4587c63972d2a1a7a47c8e28f353182553727672aec9d59",
+    "nm\\core_engine\\research.py": "998be8eb4aa8e48729a39c2093c4c1a09ca33c00f98076d002fefcaaecc6d335",
+    "nm\\core_engine\\response_authorities.py": "0924bbf14d50d3b9e1fef9518d82766fd40fe1f511f7089ad7452c4999da2e81",
+    "nm\\core_engine\\response_rendering.py": "0de66e91291c25febe214873afe8d7029253eff04e3805a9675aa2e26125b826",
+    "nm\\core_engine\\response_review.py": "e9ae77e947ad598070bece9ef3eca756eb9fea0f0029cf0384e75dc56f5c0d61",
+    "nm\\core_engine\\response_writer.py": "c6154a05c57c7aafbdbfcb49df4cad2b1231eab187ec7298b729816cbdb6635c",
+    "nm\\core_engine\\retrieval.py": "11b61f48705de83e6ad10fb9d357360882af8cc1589088569c47353de9b240a9",
+    "nm\\core_engine\\turn.py": "b820470138a98cd7807493265c3aa7b5e4056f5e62c8c48035876f7040a75b60",
+    "nm\\core_engine\\understanding.py": "16e366874e1260c7d7b6aa3b0144a03d11a5c14da83337020c8e3e81d75d8091"
+  },
+  "source_hashes_changed": [],
+  "context_reads": [
+    {
+      "work_id": "live-served-1:w1",
+      "position": 242353,
+      "title": "Union Of India 1995 2 The National Legal Services Authority Rules, 1995",
+      "locator": "3",
+      "old_segments": 42,
+      "new_segments": 1,
+      "scope": "selected_indexed_segment",
+      "bounded": true,
+      "reason": "Source chunk identity is missing or ambiguous within its Act",
+      "read_seconds": 0.076963
+    },
+    {
+      "work_id": "live-served-1:w1",
+      "position": 172678,
+      "title": "Union Of India 1963 10 Compulsory Deposit Scheme Act, 1963",
+      "locator": "4",
+      "old_segments": 4,
+      "new_segments": 4,
+      "scope": "exact_parent_tree",
+      "bounded": false,
+      "reason": null,
+      "read_seconds": 0.132358
+    },
+    {
+      "work_id": "live-served-1:w1",
+      "position": 16288,
+      "title": "Telangana 1971 3 The Andhra Pradesh Contract Labour (Regulation And Abolition) Rules, 1971",
+      "locator": "24",
+      "old_segments": 2,
+      "new_segments": 2,
+      "scope": "exact_parent_tree",
+      "bounded": false,
+      "reason": null,
+      "read_seconds": 0.056209
+    },
+    {
+      "work_id": "live-served-1:w1",
+      "position": 77351,
+      "title": "Telangana 2012 12 Nehru Outer Ring Road, Hyderabad (Toll) Rules, 2012",
+      "locator": "6",
+      "old_segments": 2,
+      "new_segments": 2,
+      "scope": "exact_parent_tree",
+      "bounded": false,
+      "reason": null,
+      "read_seconds": 0.058567
+    },
+    {
+      "work_id": "live-served-1:w1",
+      "position": 308,
+      "title": "Telangana 1950 0 Andhra Pradesh (Telangana Area) Tenancy & Agricultural Lands Act, 1950",
+      "locator": "28",
+      "old_segments": 2,
+      "new_segments": 2,
+      "scope": "exact_parent_tree",
+      "bounded": false,
+      "reason": null,
+      "read_seconds": 0.059339
+    },
+    {
+      "work_id": "live-served-1:w1",
+      "position": 391484,
+      "title": "The Companies Act",
+      "locator": "632",
+      "old_segments": 1,
+      "new_segments": 1,
+      "scope": "indexed_section_segments",
+      "bounded": false,
+      "reason": null,
+      "read_seconds": 0.049203
+    },
+    {
+      "work_id": "live-served-1:w2",
+      "position": 25091,
+      "title": "Telangana 1991 1 Criminal Rules Of Practice And Circular Orders, 1990",
+      "locator": "1",
+      "old_segments": 86,
+      "new_segments": 1,
+      "scope": "selected_indexed_segment",
+      "bounded": true,
+      "reason": "Source chunk identity is missing or ambiguous within its Act",
+      "read_seconds": 0.023609
+    },
+    {
+      "work_id": "live-served-1:w2",
+      "position": 234213,
+      "title": "Union Of India 1989 3 The Railways Act, 1989",
+      "locator": "95",
+      "old_segments": 1,
+      "new_segments": 1,
+      "scope": "indexed_section_segments",
+      "bounded": false,
+      "reason": null,
+      "read_seconds": 0.046074
+    },
+    {
+      "work_id": "live-served-1:w2",
+      "position": 252613,
+      "title": "Union Of India 2001 1 The Designs Act, 2000",
+      "locator": "30",
+      "old_segments": 2,
+      "new_segments": 2,
+      "scope": "exact_parent_tree",
+      "bounded": false,
+      "reason": null,
+      "read_seconds": 0.058588
+    },
+    {
+      "work_id": "live-served-1:w2",
+      "position": 252558,
+      "title": "Union Of India 2001 1 The Designs Act, 2000",
+      "locator": "12",
+      "old_segments": 3,
+      "new_segments": 3,
+      "scope": "exact_parent_tree",
+      "bounded": false,
+      "reason": null,
+      "read_seconds": 0.080689
+    },
+    {
+      "work_id": "live-served-1:w2",
+      "position": 219161,
+      "title": "Union Of India 1984 4 The Industrial Reconstruction Bank Of India Act, 1984",
+      "locator": "40",
+      "old_segments": 2,
+      "new_segments": 2,
+      "scope": "exact_parent_tree",
+      "bounded": false,
+      "reason": null,
+      "read_seconds": 0.056466
+    },
+    {
+      "work_id": "live-served-1:w2",
+      "position": 63218,
+      "title": "Telangana 2007 3 Andhra Pradesh Allopathic Private Medical Care Establishments (Registration And Regulation) Rules, 2007",
+      "locator": "5",
+      "old_segments": 34,
+      "new_segments": 1,
+      "scope": "selected_indexed_segment",
+      "bounded": true,
+      "reason": "Source chunk identity is missing or ambiguous within its Act",
+      "read_seconds": 0.023622
+    }
+  ],
+  "source_counts": {
+    "account": 1,
+    "provision": 22,
+    "judgment": 60
+  },
+  "exact_legal_text": {
+    "characters": 113145,
+    "estimated_tokens": 28286
+  },
+  "writer": {
+    "input_estimate": 57949,
+    "output_reserve": 6500,
+    "total_estimate": 64449,
+    "capacity": 100000,
+    "would_refuse": false,
+    "payload_field_estimates": {
+      "original_context": 324,
+      "interpretation_proposal": 1543,
+      "research": 6470,
+      "held_passages": 47921,
+      "execution_evidence": 65
+    }
+  },
+  "reviewer_capacity_fixtures": {
+    "one_each_largest_eight": {
+      "provenance": "Synthetic mechanically accepted capacity fixture; not model output or semantically accepted answer",
+      "proposal_estimated_tokens": 1094,
+      "units": 8,
+      "input_estimate": 75072,
+      "output_reserve": 6500,
+      "total_estimate": 81572,
+      "capacity": 100000,
+      "would_refuse": false,
+      "payload_field_estimates": {
+        "original_context": 324,
+        "research_proposal_and_results": 6470,
+        "legal_sources": 47921,
+        "complete_draft_proposal": 13257,
+        "owned_execution_evidence": 65,
+        "owned_authority_checks": 4763
+      }
+    },
+    "near_output_ceiling_repeated_whole_source": {
+      "provenance": "Synthetic mechanically accepted capacity fixture; not model output or semantically accepted answer",
+      "proposal_estimated_tokens": 6418,
+      "units": 47,
+      "input_estimate": 234956,
+      "output_reserve": 6500,
+      "total_estimate": 241456,
+      "capacity": 100000,
+      "would_refuse": true,
+      "payload_field_estimates": {
+        "original_context": 324,
+        "research_proposal_and_results": 6470,
+        "legal_sources": 47921,
+        "complete_draft_proposal": 148048,
+        "owned_execution_evidence": 65,
+        "owned_authority_checks": 29856
+      }
+    }
+  },
+  "limits": [
+    "Selected source relevance and rerank scores are inherited, not remeasured",
+    "Original retrieval execution issues are retained; new context gaps are added",
+    "No semantic answer or final-review quality claim follows from capture-only capacity estimates",
+    "Stress fixture uses current token estimator and writer output allowance, not actual provider tokenization"
+  ]
+}

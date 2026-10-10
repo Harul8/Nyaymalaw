@@ -28,9 +28,11 @@ LEG_DEPTH = 80
 PER_QUERY_POOL = 60
 RESULTS_PER_KIND = 6
 RRF_K = 60
-CONTRACT = "hybrid_retrieval_v2"
+CONTRACT = "hybrid_retrieval_v3"
+PREVIOUS_CONTRACT = "hybrid_retrieval_v2"
 LEGACY_CONTRACT = "hybrid_retrieval_v1"
 MAX_RERANK_PAIRS = 4096
+MAX_CONTEXT_SEGMENTS = 500
 log = logging.getLogger(__name__)
 
 # The index's own tokenisation has one owner, shared with the index builds: a
@@ -40,6 +42,14 @@ from nm.shared.citation_contracts import bm25_tokens, bind_provision_key, Provis
 
 class SearchUnavailable(RuntimeError):
     """The local collection cannot be searched reliably."""
+
+
+class _ContextGap(SearchUnavailable):
+    """A readable, connected source survives incomplete or ambiguous neighbours."""
+
+    def __init__(self, reason, context):
+        super().__init__(reason)
+        self.context = context
 
 
 class Collection(Protocol):
@@ -331,17 +341,28 @@ class LocalCollection:
                     result["state"] = "ambiguous" if binding.state == ProvisionKeyState.AMBIGUOUS else "not_held"
                     return result
                 positions = [row[0] for row in db.execute(
-                    "select pos from chunks where doc_type=? and act_id=? and section_number=? order by pos",
-                    (self.doc_type, act_id, binding.key))]
+                    "select pos from chunks where doc_type=? and act_id=? and section_number=? order by pos limit ?",
+                    (self.doc_type, act_id, binding.key, MAX_CONTEXT_SEGMENTS + 1))]
+            if len(positions) > MAX_CONTEXT_SEGMENTS:
+                raise SearchUnavailable("Complete provision readback exceeds the indexed-segment resource bound")
             rows = self.read(positions)
             if not positions or set(rows) != set(positions):
                 raise SearchUnavailable("Some indexed words of this provision cannot be read")
+            identities = [row["chunk_id"] for row in rows.values()]
+            roots = [position for position, row in rows.items() if not row.get("parent_chunk_id")]
+            if len(set(identities)) != len(identities) or len(roots) > 1:
+                self._check_snapshot()
+                result.update(state="ambiguous", reason="The provision locator identifies distinct or repeated source roots")
+                return result
+            checked_roots = {self.rank_context(position, row)["segments"][0]["position"]
+                             for position, row in rows.items()}
+            if len(checked_roots) != 1:
+                raise SearchUnavailable("The indexed provision has no single connected source root")
             context = {"scope": "indexed_section_segments", "bounded": False, "unread_positions": [],
                        "segments": [{"position": p, "row": rows[p], "content_digest": _digest(rows[p])}
                                     for p in positions]}
             sources = []
             for position, row in rows.items():
-                self.rank_context(position, row)  # Check ownership and cycles of declared ancestry.
                 sources.append(_candidate("provision", position, row, self._revision, None, [], context))
             self._check_snapshot()
             result.update(state="found", provision_key=binding.key, sources=sources)
@@ -375,9 +396,18 @@ class LocalCollection:
         """Resolve exact parents; section numbers alone do not identify a parent."""
         _, db_path, _ = self._open()
         segments = [{"position": position, "row": row, "content_digest": _digest(row)}]
-        seen, child = {position}, row
+        seen, child, child_position = {position}, row, position
         with closing(sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)) as connection:
-            while child.get("parent_chunk_id"):
+            while True:
+                if self.doc_type != "bare_act" or not row.get("act_id") or not child.get("chunk_id"):
+                    raise SearchUnavailable("Source ancestry has no owned provision identity")
+                own_matches = connection.execute(
+                    "select pos from chunks where doc_type=? and act_id=? and chunk_id=? limit 2",
+                    (self.doc_type, row["act_id"], child["chunk_id"])).fetchall()
+                if own_matches != [(child_position,)]:
+                    raise SearchUnavailable("Source chunk identity is missing or ambiguous within its Act")
+                if not child.get("parent_chunk_id"):
+                    break
                 identity = child["parent_chunk_id"]
                 if self.doc_type != "bare_act" or not isinstance(identity, str) or not row.get("act_id"):
                     raise SearchUnavailable("Parent source identity is invalid")
@@ -397,23 +427,51 @@ class LocalCollection:
                 segments.append({"position": parent_position, "row": parent,
                                  "content_digest": _digest(parent)})
                 seen.add(parent_position)
-                child = parent
+                child, child_position = parent, parent_position
         return {"scope": "exact_parent_tree", "bounded": False, "unread_positions": [],
                 "segments": list(reversed(segments))}
 
     def context(self, position: int, row: dict) -> dict:
         """Exact indexed segments; no claim that these form a complete judgment."""
         _, db_path, _ = self._open()
+        if self.doc_type == "bare_act" and row.get("act_id") and row.get("section_number"):
+            # A printed provision number is a discovery key, not a relationship.
+            # Repeated numbering in annexures/forms must not create neighbours.
+            ancestry = self.rank_context(position, row)
+            root = ancestry["segments"][0]["position"]
+            with closing(sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)) as connection:
+                positions = [p[0] for p in connection.execute(
+                    "select pos from chunks where doc_type=? and act_id=? and section_number=? order by pos limit ?",
+                    (self.doc_type, row["act_id"], str(row["section_number"]), MAX_CONTEXT_SEGMENTS + 1)) ]
+            limited = len(positions) > MAX_CONTEXT_SEGMENTS
+            positions = positions[:MAX_CONTEXT_SEGMENTS]
+            rows = self.read(positions)
+            unread = [p for p in positions if p not in rows]
+            connected = {s["position"]: s for s in ancestry["segments"]}
+            ambiguous, other_roots = [], set()
+            for other_position, other in rows.items():
+                try:
+                    path = self.rank_context(other_position, other)
+                except SearchUnavailable:
+                    ambiguous.append(other_position)
+                    continue
+                other_root = path["segments"][0]["position"]
+                if other_root == root:
+                    connected.update((s["position"], s) for s in path["segments"])
+                else:
+                    other_roots.add(other_root)
+            context = {"scope": "indexed_section_segments", "bounded": bool(limited or unread or ambiguous or other_roots),
+                "unread_positions": unread, "segments": [connected[p] for p in sorted(connected)]}
+            if context["bounded"]:
+                raise _ContextGap(
+                    f"Provision context retains its connected source; {len(unread)} unread positions, "
+                    f"{len(ambiguous)} ambiguous source links and {len(other_roots)} unrelated roots share its locator; "
+                    f"indexed-segment resource bound reached: {limited}",
+                    context)
+            return context
         connection = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
         try:
-            if self.doc_type == "bare_act" and row.get("act_id") and row.get("section_number"):
-                positions = [p[0] for p in connection.execute(
-                    "select pos from chunks where doc_type=? and act_id=? and section_number=? order by pos limit 501",
-                    (self.doc_type, row["act_id"], str(row["section_number"]))) ]
-                scope = "indexed_section_segments"
-                bounded = len(positions) > 500
-                positions = positions[:500]
-            elif self.doc_type == "case_law" and row.get("case_id"):
+            if self.doc_type == "case_law" and row.get("case_id"):
                 earlier = [p[0] for p in connection.execute(
                     "select pos from chunks where doc_type=? and case_id=? and pos<? order by pos desc limit 2",
                     (self.doc_type, row["case_id"], position))]
@@ -632,7 +690,9 @@ class HybridSearcher:
             selected, groups = [], {}
             for position, score in scored:
                 row = rows[position]
-                group = (row.get("act_id"), row.get("section_number")) if kind == "provision" else (row.get("case_id"),)
+                # Unique ancestry already maps connected hits to their root
+                # position. Equal printed section numbers cannot suppress peers.
+                group = (position,) if kind == "provision" else (row.get("case_id"),)
                 if not all(group):
                     group = (position,)
                 if groups.get(group, 0) >= (1 if kind == "provision" else 2):
@@ -646,11 +706,19 @@ class HybridSearcher:
                     context = rank_contexts.get(position)
                     if context is None:
                         context = collection.context(position, rows[position])
+                except _ContextGap as exc:
+                    context = exc.context
+                    issues.append({"kind": kind, "query_id": None, "stage": "context",
+                                   "reason": str(exc), "position": position})
                 except Exception as exc:
                     context = {"scope": "selected_indexed_segment", "bounded": True, "unread_positions": [],
                                "segments": [{"position": position, "row": rows[position]}]}
-                    issues.append({"kind": kind, "query_id": None, "stage": "context", "reason": type(exc).__name__})
-                if context["bounded"] or context["unread_positions"]:
+                    issues.append({"kind": kind, "query_id": None, "stage": "context",
+                        "reason": str(exc) if isinstance(exc, SearchUnavailable) else type(exc).__name__,
+                        "position": position})
+                if (context["bounded"] or context["unread_positions"]) and not any(
+                        issue["kind"] == kind and issue["stage"] == "context"
+                        and issue.get("position") == position for issue in issues):
                     issues.append({"kind": kind, "query_id": None, "stage": "context", "reason": "Context has an explicit gap", "position": position})
                 candidates.append(_candidate(kind, position, rows[position], revision, score, associations[position], context))
             if collection.revision() != revision:
@@ -664,7 +732,7 @@ class HybridSearcher:
 def validate_search(record, queries):
     """Replay validates the saved exact snapshot, never reads a changed corpus."""
     if (not isinstance(record, dict) or set(record) != {"contract", "state", "queries", "corpus_revisions", "stages", "candidates", "issues"}
-            or record["contract"] not in (LEGACY_CONTRACT, CONTRACT) or record["queries"] != queries
+            or record["contract"] not in (LEGACY_CONTRACT, PREVIOUS_CONTRACT, CONTRACT) or record["queries"] != queries
             or record["state"] != ("partial" if record["issues"] else "ready")
             or set(record["corpus_revisions"]) != {"provision", "judgment"}):
         raise ValueError("Search snapshot differs from its owned query contract")
@@ -739,7 +807,7 @@ def validate_search(record, queries):
             for segment in segments:
                 by_id.setdefault(segment["row"]["chunk_id"], []).append(segment["row"])
             root = candidate["source"]
-            if (record["contract"] != CONTRACT or candidate["kind"] != "provision" or len(segments) < 2
+            if (record["contract"] not in (PREVIOUS_CONTRACT, CONTRACT) or candidate["kind"] != "provision" or len(segments) < 2
                     or root.get("parent_chunk_id") or len(by_id[root["chunk_id"]]) != 1
                     or len({s["position"] for s in segments}) != len(segments)):
                 raise ValueError("Ranking context has no unique owned root")
@@ -752,6 +820,27 @@ def validate_search(record, queries):
                         raise ValueError("Ranking context has a detached or cyclic source")
                     seen.add(identity)
                     child = parents[0]
+        if record["contract"] == CONTRACT and candidate["kind"] == "provision":
+            segments = context["segments"]
+            if context["scope"] == "selected_indexed_segment":
+                if len(segments) != 1:
+                    raise ValueError("A selected source cannot certify disconnected neighbours")
+            elif context["scope"] in ("indexed_section_segments", "exact_parent_tree"):
+                by_id = {s["row"]["chunk_id"]: s["row"] for s in segments}
+                roots = [s["row"] for s in segments if not s["row"].get("parent_chunk_id")]
+                if (len(by_id) != len(segments) or len(roots) != 1
+                        or len({s["position"] for s in segments}) != len(segments)):
+                    raise ValueError("Provision context has no unique connected root")
+                for segment in segments:
+                    child, seen = segment["row"], set()
+                    while child["chunk_id"] != roots[0]["chunk_id"]:
+                        identity, parent = child["chunk_id"], child.get("parent_chunk_id")
+                        if identity in seen or parent not in by_id:
+                            raise ValueError("Provision context is detached or cyclic")
+                        seen.add(identity)
+                        child = by_id[parent]
+            else:
+                raise ValueError("A provision cannot use unrelated adjacent source positions")
         identities.add(candidate["id"])
     return deepcopy(record)
 

@@ -539,3 +539,27 @@ authority needs. These establish that an independent output can use another work
 item's held catalogue without inventing its own search receipt; they do not prove
 semantic quality. Next focused hypothesis: preserve factual premises while allowing
 conditional legal characterisations. Query sharing remains unresolved.
+
+## SEQ.3 — connected provision context
+
+Observed invariant failure: Act plus printed section number was treated as a unique
+provision. In the held index, different headings/forms can repeat both numbering
+and chunk IDs. Three such groups supplied 162 of 181 provision rows in the oversized
+bundle. Their words were exact, but the claimed context relationship was false.
+
+Fresh retrieval v3 now connects source rows through unique owned parent identities.
+Distinct roots remain distinct candidates. Ambiguous ancestry retains the readable
+selected passage with an explicit context gap. Exact named-provision readback reports
+ambiguity instead of a false found result. A 500-segment resource bound remains
+explicit; reaching it cannot certify a complete source. Legacy v1/v2 snapshots keep
+their previous replay rules. No model calls or corpus mutation.
+
+130 focused and consumer checks pass, including unchanged replay of the complete
+saved v2 research snapshot. A read-only recheck of the same candidate positions and
+saved parent scopes reduced provision rows from 181 to 22, retaining all 60 judgment
+rows. Writer estimate: 64,449 tokens. Reviewer with eight synthetic source-linked
+units: 81,572 tokens, both below 100,000. These are capacity measurements, not new
+reranking or semantic acceptance. An extreme repeated-source draft still overflows
+and motivates separate model-only draft deduplication. The twelve provision context
+reads took 0.722 seconds. Evidence: connected-saved-scope-remeasurement.json and
+saved-provision-groups-diagnosis.json in outputs/core-engine-build-20261010.
