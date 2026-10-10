@@ -1635,3 +1635,21 @@ Windows sandbox initialization before tab attachment; browser acceptance is not
 claimed. The next prerequisite is preserving the context-store declaration when
 the existing lineage producer runs. Decomposition, relevance/coverage, live model
 and browser verification remain open; this checkpoint does not close SEQ.3.
+
+### SEQ.3 lineage producer preservation
+
+The next atomic owner is `pipeline/record_retrieval_lineage.py`. Regeneration
+previously rebuilt its manifest without retaining contextual source declarations,
+which would undo the source-store repair. The observable condition is preservation
+of the declared parent store and its actual artifact hash, independently of vector
+positions. A missing declared store, foreign path, unknown format or artifact
+changing during verification must leave the existing manifest untouched.
+
+The producer now retains an existing declaration, discovers the existing standard
+bare-Act parent artifact for a new manifest, and rechecks its identity before
+writing. Collections without contextual stores remain supported. Ten focused tests
+pass, including the producer write/check-only boundary and a mid-run mutation.
+The read-only check against the real corpus matches its configured parent hash.
+The expensive full vector-lineage job was not rerun; its unchanged verification
+steps were stubbed only in the focused writer tests. No corpus words, vectors,
+prompts or model-call counts change. Live retrieval/relevance assessment continues.

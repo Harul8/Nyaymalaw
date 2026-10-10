@@ -25,7 +25,10 @@ neighbours (defect shape S11). So before a search may use a collection, this job
      rarest indexed words must list the passage's own position. Measured 30 September
      2026: 42 of 42 in each collection;
   4. writes `.nm/retrieval/<collection>.lineage.json`: the model, the dimensions, the
-     counts, the index's size and sha256, and the verification.
+     counts, the index's size and sha256, and the verification. Retained contextual
+     parent records are declared separately by path, format and SHA-256; they are
+     not searchable vector positions. Existing declarations survive regeneration,
+     and a missing or changing declared store prevents overwriting its manifest.
 
 The search refuses to run on a set that no longer agrees with its record. After a
 bare-act append (`pipeline/append_bare_acts.py`) the append job rewrites that record.
@@ -75,6 +78,7 @@ class Collection:
     #: The lengths, in tokens, the builder cut passages at before encoding. `None` is
     #: the model's own default.
     cut_at: tuple[int | None, ...]
+    context_store: str | None = None
 
     @property
     def out(self) -> Path:
@@ -83,7 +87,7 @@ class Collection:
 
 COLLECTIONS = {
     "bare_acts": Collection("bare_acts", "bare_act", "bareacts_v3.index", "bareacts_v3_bm25s",
-                            (None,)),
+                            (None,), "bareacts_v3_parents.json"),
     "judgments": Collection("judgments", "case_law", "caselaws_v2.index", "caselaws_bm25s",
                             (256, 512)),
 }
@@ -95,6 +99,29 @@ def sha256(path: Path) -> str:
         for block in iter(lambda: fh.read(1 << 22), b""):
             digest.update(block)
     return digest.hexdigest()
+
+
+def context_store(collection: Collection) -> dict | None:
+    """Bind retained parent words separately from searchable vector positions."""
+    previous = json.loads(collection.out.read_text(encoding="utf-8")) if collection.out.exists() else {}
+    declared = previous.get("context_store")
+    if declared is not None:
+        if (not isinstance(declared, dict) or declared.get("format") != "parent_map_v1"
+                or not isinstance(declared.get("path"), str) or not declared["path"]):
+            raise ValueError("Existing contextual store has an unknown format or path")
+        name = declared["path"]
+    else:
+        name = collection.context_store
+    if name is None:
+        return None
+    path = (VECTOR_STORE / name).resolve()
+    if not path.is_relative_to(VECTOR_STORE.resolve()):
+        raise ValueError("Contextual source store is outside this corpus")
+    if not path.is_file():
+        if declared is not None:
+            raise ValueError("Previously declared contextual source store is missing")
+        return None
+    return {"path": name, "format": "parent_map_v1", "sha256": sha256(path)}
 
 
 #: How close a fresh encoding must be to the stored vector at the same position.
@@ -184,6 +211,11 @@ def verify_words(collection: Collection, passages: int, samples: int) -> dict:
 
 def record_one(collection: Collection, *, samples: int, check: bool) -> int:
     print(f"\n== {collection.name}")
+    try:
+        context = context_store(collection)
+    except (OSError, ValueError) as exc:
+        print(f"REFUSED: contextual source identity cannot be recorded: {exc}")
+        return 1
     index = VECTOR_STORE / collection.index
     _, dims, vectors = faiss_header(index)
     docs = json.loads((VECTOR_STORE / collection.bm25 / "params.index.json")
@@ -234,6 +266,14 @@ def record_one(collection: Collection, *, samples: int, check: bool) -> int:
         "recorded_by": "pipeline/record_retrieval_lineage.py",
         "recorded_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
     }
+    if context is not None:
+        record["context_store"] = context
+    try:
+        if context_store(collection) != context:
+            raise ValueError("Contextual source store changed during verification")
+    except (OSError, ValueError) as exc:
+        print(f"REFUSED: {exc}; nothing written.")
+        return 1
     problems = check_lineage(record, VECTOR_STORE, doc_type=collection.doc_type)
     if problems:
         print("REFUSED: " + "; ".join(problems))
