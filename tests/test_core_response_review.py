@@ -4,9 +4,13 @@ import json
 
 import pytest
 
+from nm.core_engine import response_authorities
 from nm.core_engine.answer_sources import build
 from nm.core_engine.research import accept as accept_plan, retrieve
-from nm.core_engine.response_review import CONTRACT, MAX_OUTPUT, SCHEMA, review, validate
+from nm.core_engine.response_review import (
+    CONTRACT, LEGACY_CONTRACT, MAX_OUTPUT, SCHEMA, _digest,
+    review as review_checked, validate as validate_checked,
+)
 from nm.core_engine.response_writer import accept as accept_draft
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import ContextOverflow, ModelError, ModelResult, SchemaViolation, Tier, Usage
@@ -27,6 +31,20 @@ class Model:
         self.calls.append((prompt, schema, tier, kwargs))
         return ModelResult(None, deepcopy(self.proposal), tier, "synthetic", "fixture",
                            Usage(1, 1, 0), 0, completion=self.completion)
+
+
+def review(model, context, research_record, sources, draft, execution=None):
+    # Existing fixture tests exercise the current public boundary with owned,
+    # offline authority evidence; no provider or corpus lookup is configured.
+    authority = response_authorities.check(context, research_record, sources, draft)
+    return review_checked(model, context, research_record, sources, draft, execution,
+                          authority_evidence=authority)
+
+
+def validate(record, context, research_record, sources, draft, execution=None):
+    authority = response_authorities.check(context, research_record, sources, draft)
+    return validate_checked(record, context, research_record, sources, draft, execution,
+                            authority_evidence=authority)
 
 
 def ref(row):
@@ -380,3 +398,92 @@ def test_negative_effect_verdict_is_wiring_evidence_not_real_model_detection():
     assert reviewed["accepted"] is False
     # The fixture deliberately rejects this sentence. Only a real-model evaluation
     # can show whether the reviewer reliably detects it or over-rejects safe prose.
+
+
+
+def authority_setup():
+    from tests.test_core_response_authorities import Reader
+    ctx, research_record, sources, _ = setup(legal=True)
+    selected = next(row for row in sources.values() if row["kind"] == "provision")
+    draft = accept_draft({"units": [{"kind": "law", "text": "The selected text contains a qualification.",
+        "addresses": [ref(ctx["latest"])], "uses": [{"source_id": selected["id"], "quote": None,
+        "role": "provision", "speaker": None, "treatment": "not_applicable",
+        "treatment_source": None}]}]}, ctx, sources)
+    args = (ctx, research_record, sources, draft)
+    return args, response_authorities.check(*args, provision_reader=Reader(research_record))
+
+
+def test_fresh_review_requires_authority_evidence_even_when_no_legal_claim_is_made():
+    args = setup()
+    model = Model(positive(args[-1]))
+    with pytest.raises(ValueError, match="requires bound authority"):
+        review_checked(model, *args)
+    assert model.calls == []
+
+
+def test_authority_checks_are_separate_compact_model_input_and_full_bound_evidence():
+    args, authority = authority_setup()
+    execution = {"operations": [], "persistence": "not_yet_committed"}
+    model = Model(positive(args[-1]))
+    receipt = review_checked(model, *args, execution, authority_evidence=authority)
+    payload = json.loads(model.calls[0][0].user)
+    assert receipt["contract"] == CONTRACT == "core_response_review_v2"
+    assert authority["readbacks"]
+    assert payload["owned_authority_checks"] == {
+        "contract": authority["contract"], "units": authority["units"]}
+    assert "readbacks" not in payload["owned_authority_checks"]
+    assert payload["owned_execution_evidence"] == execution
+    assert validate_checked(receipt, *args, execution, authority_evidence=authority) == receipt
+    assert len(model.calls) == 1
+
+
+def test_valid_but_different_authority_snapshot_does_not_reuse_positive_review():
+    args, authority = authority_setup()
+    receipt = review_checked(Model(positive(args[-1])), *args, authority_evidence=authority)
+    unavailable = response_authorities.check(*args)
+    assert response_authorities.validate(unavailable, *args) == unavailable
+    assert unavailable != authority
+    with pytest.raises(ValueError, match="exact draft and evidence"):
+        validate_checked(receipt, *args, authority_evidence=unavailable)
+
+
+@pytest.mark.parametrize("damage", ["contract", "source_binding", "check_status"])
+def test_altered_authority_evidence_is_refused_before_review_call(damage):
+    args, authority = authority_setup()
+    if damage == "contract": authority["contract"] = "future_authority_version"
+    elif damage == "source_binding": authority["dependency_digest"] = "unowned"
+    else: authority["units"][0]["selected_provisions"][0]["state"] = "unavailable"
+    model = Model(positive(args[-1]))
+    with pytest.raises(ValueError):
+        review_checked(model, *args, authority_evidence=authority)
+    assert model.calls == []
+
+
+def test_saved_v1_review_reconstructs_exact_old_shape_without_fresh_authority(monkeypatch):
+    args = setup()
+    ctx, research_record, sources, draft = args
+    proposal = positive(draft)
+    execution = {"operations": [], "persistence": "not_yet_committed"}
+    original_dependencies = {"original_context": deepcopy(ctx),
+        "research_record": deepcopy(research_record), "sources": deepcopy(sources),
+        "draft": deepcopy(draft), "execution": deepcopy(execution)}
+    saved = {"contract": "core_response_review_v1", "proposal": proposal, "accepted": True,
+        "bound_digest": _digest({"evidence": original_dependencies, "review_proposal": proposal})}
+    def no_authority(*args, **kwargs):
+        raise AssertionError("Legacy replay must not fetch or invent authority checks")
+    monkeypatch.setattr(response_authorities, "check", no_authority)
+    monkeypatch.setattr(response_authorities, "validate", no_authority)
+    assert LEGACY_CONTRACT == saved["contract"]
+    assert validate_checked(saved, *args, execution) == saved
+    with pytest.raises(ValueError, match="Legacy review"):
+        validate_checked(saved, *args, execution, authority_evidence={"contract": "invented"})
+
+
+def test_v2_review_does_not_fall_back_to_legacy_when_authority_is_missing():
+    args, authority = authority_setup()
+    saved = review_checked(Model(positive(args[-1])), *args, authority_evidence=authority)
+    with pytest.raises(ValueError, match="requires bound authority"):
+        validate_checked(saved, *args)
+    saved["contract"] = "future_review_version"
+    with pytest.raises(ValueError, match="Unknown or malformed"):
+        validate_checked(saved, *args, authority_evidence=authority)

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 
-from nm.core_engine import answer_sources, research, response_rendering, response_review
+from nm.core_engine import answer_sources, research, response_authorities, response_rendering, response_review
 from nm.core_engine import response_writer, understanding
 from nm.core_engine.calls import CorrectionUnavailable, ReleaseWithheld, TurnCalls
 from nm.core_engine.conversation import (
@@ -21,7 +21,8 @@ from nm.shared.egress_contracts import EgressRefused
 from nm.shared.model_port import ContextOverflow, ModelError, SchemaViolation
 from nm.shared.turn_attempt_port import AttemptRefused, TurnAttemptPort
 
-CONTRACT = "core_turn_v1"
+LEGACY_CONTRACT = "core_turn_v1"
+CONTRACT = "core_turn_v2"
 EXECUTION = "core_read_only_execution_v1"
 _ACTIVITY_FIELDS = {"contract", "interpretation", "research", "sources", "draft",
                     "review", "execution", "rendering_contract"}
@@ -54,7 +55,7 @@ def _withhold(calls, findings):
     calls.withhold(identity)
 
 
-def prepare(model, context, searcher):
+def prepare(model, context, searcher, *, case_index=None, provision_reader=None):
     """Prepare and admit one response. No persistence or external action occurs here."""
     calls = model if isinstance(model, TurnCalls) else TurnCalls(model)
     interpreted = calls.checked("core_understanding", lambda: understanding.understand(calls, context))
@@ -68,9 +69,12 @@ def prepare(model, context, searcher):
                                      interpretation=interpreted, execution=execution)
 
     draft = calls.checked("core_response_writer", write)
+    authorities = response_authorities.check(context, record, sources, draft,
+        case_index=case_index, provision_reader=provision_reader)
 
     def review():
-        return response_review.review(calls, context, record, sources, draft, execution=execution)
+        return response_review.review(calls, context, record, sources, draft, execution=execution,
+                                      authority_evidence=authorities)
 
     reviewed = calls.checked("core_response_review", review)
     if not reviewed["accepted"]:
@@ -78,29 +82,39 @@ def prepare(model, context, searcher):
             draft = calls.correct("core_response_writer", write,
                                   mismatch=reviewed["proposal"]["findings"],
                                   rejected=draft["proposal"])
+            authorities = response_authorities.check(context, record, sources, draft,
+                case_index=case_index, provision_reader=provision_reader)
             reviewed = calls.checked("core_response_review", review)
         except (CorrectionUnavailable, SchemaViolation):
             _withhold(calls, reviewed["proposal"]["findings"])
         if not reviewed["accepted"]:
             _withhold(calls, reviewed["proposal"]["findings"])
-    elements = response_rendering.render(context, record, sources, draft, reviewed, execution=execution)
+    elements = response_rendering.render(context, record, sources, draft, reviewed,
+        execution=execution, authority_evidence=authorities)
     activity = {"contract": CONTRACT, "interpretation": interpreted, "research": record,
                 "sources": sources, "draft": draft, "review": reviewed, "execution": execution,
-                "rendering_contract": response_rendering.CONTRACT}
+                "rendering_contract": response_rendering.CONTRACT,
+                "authority_evidence": authorities}
     return elements, activity, calls.metrics()
 
 
 def validate_activity(activity, context, elements):
     """Replay uses the saved contract and snapshots; it never fetches newer law."""
-    if (set(activity) != _ACTIVITY_FIELDS or activity["contract"] != CONTRACT
-            or activity["rendering_contract"] != response_rendering.CONTRACT):
+    version = activity.get("contract")
+    expected_fields = (_ACTIVITY_FIELDS if version == LEGACY_CONTRACT else
+                       _ACTIVITY_FIELDS | {"authority_evidence"})
+    rendering = (response_rendering.LEGACY_CONTRACT if version == LEGACY_CONTRACT else
+                 response_rendering.CONTRACT)
+    if (version not in {LEGACY_CONTRACT, CONTRACT} or set(activity) != expected_fields
+            or activity["rendering_contract"] != rendering):
         raise ValueError("Unknown saved turn or rendering contract")
     record = research.validate(activity["research"], activity["research"]["plan"], context)
     sources = answer_sources.build(context, record)
     if sources != activity["sources"] or execution_record(record) != activity["execution"]:
         raise ValueError("Saved sources or operation evidence changed")
     rebuilt = response_rendering.render(context, record, sources, activity["draft"],
-        activity["review"], execution=activity["execution"])
+        activity["review"], execution=activity["execution"],
+        authority_evidence=activity.get("authority_evidence"), contract=rendering)
     if rebuilt != elements:
         raise ValueError("Saved response differs from its admitted rendering")
     return deepcopy(activity)
@@ -121,7 +135,7 @@ def saved_rows(matter, advocate_id):
 
 def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=None,
             matter_id=None, expected_version=None, session_current=lambda: False,
-            attempts: TurnAttemptPort | None = None):
+            attempts: TurnAttemptPort | None = None, case_index=None, provision_reader=None):
     if not session_current():
         raise ConversationRefused("Sign in again before continuing.", status=401)
     context = open_turn(store, advocate_id=advocate_id, message=message, turn_id=turn_id,
@@ -151,7 +165,8 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
     calls = TurnCalls(model, correction_used=claim["correction_used"],
                       reserve_correction=lambda: attempts.consume_correction(identity, token))
     try:
-        elements, activity, metrics = prepare(calls, context.payload(), searcher)
+        elements, activity, metrics = prepare(calls, context.payload(), searcher,
+            case_index=case_index, provision_reader=provision_reader)
         validate_activity(activity, context.payload(), elements)
     except AttemptRefused as exc:
         raise _attempt_refusal(exc) from exc

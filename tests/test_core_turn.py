@@ -99,6 +99,9 @@ def test_four_actual_stage_calls_save_reopen_and_replay_without_reexecution(stor
                                                 "core_response_writer", "core_response_review"]
     stored = store.load(chat_matter_id("owner", response["chat_id"]))
     rows = saved_rows(stored, "owner")
+    assert rows[0]["activities"]["contract"] == "core_turn_v2"
+    assert rows[0]["activities"]["review"]["contract"] == "core_response_review_v2"
+    assert rows[0]["activities"]["authority_evidence"]["contract"] == "core_response_authorities_v1"
     assert rows[0]["response"] == response
     source = response["elements"][0]["source"]
     assert source["verification"]["source_treatment"] == "rejected"
@@ -106,6 +109,58 @@ def test_four_actual_stage_calls_save_reopen_and_replay_without_reexecution(stor
     assert len(response["elements"][0]["sources"]) == 2
     assert run(store, model) == {**response, "replayed": True}
     assert len(model.calls) == 4
+
+
+def test_mixed_legacy_and_current_history_reopens_without_fresh_authority_checks(store, monkeypatch):
+    from nm.core_engine import response_authorities, response_rendering, response_review, turn
+    from nm.core_engine.conversation import commit_turn, open_turn
+
+    context = open_turn(store, advocate_id="owner", message="Earlier account.", turn_id="old")
+    _, activity, metrics = turn.prepare(ScriptedModel(), context.payload(), searcher())
+    original = context.payload()
+    activity.pop("authority_evidence")
+    activity["contract"] = turn.LEGACY_CONTRACT
+    activity["rendering_contract"] = response_rendering.LEGACY_CONTRACT
+    dependencies = response_review._dependencies(original, activity["research"],
+        activity["sources"], activity["draft"], activity["execution"],
+        contract=response_review.LEGACY_CONTRACT)
+    activity["review"] = response_review._accept(activity["review"]["proposal"], dependencies,
+        contract=response_review.LEGACY_CONTRACT)
+    elements = response_rendering.render(original, activity["research"], activity["sources"],
+        activity["draft"], activity["review"], execution=activity["execution"],
+        contract=response_rendering.LEGACY_CONTRACT)
+    first = commit_turn(store, context, elements=elements, activities=activity, metrics=metrics,
+                        session_current=lambda: True)
+    model = ScriptedModel()
+    second = run(store, model, chat_id=first["chat_id"], turn_id="new", message="Continue.")
+    assert second["committed"] == "committed" and len(model.calls) == 4
+
+    def no_new_check(*args, **kwargs):
+        raise AssertionError("Saved readback cannot consult current authority indexes")
+    monkeypatch.setattr(response_authorities, "check", no_new_check)
+    rows = saved_rows(store.load(chat_matter_id("owner", first["chat_id"])), "owner")
+    assert [row["activities"]["contract"] for row in rows] == ["core_turn_v1", "core_turn_v2"]
+    assert rows[0]["response"]["elements"] == elements
+    assert run(store, model, chat_id=first["chat_id"], turn_id="new", message="Continue.")["replayed"]
+    assert len(model.calls) == 4
+
+
+def test_rewritten_draft_recomputes_its_authority_evidence_before_review(store, monkeypatch):
+    from nm.core_engine import response_authorities
+    original = response_authorities.check
+    checked = []
+
+    def record(*args, **kwargs):
+        evidence = original(*args, **kwargs)
+        checked.append(evidence)
+        return evidence
+    monkeypatch.setattr(response_authorities, "check", record)
+    model = ScriptedModel(reject=1)
+    result = run(store, model)
+    reviews = [payload["owned_authority_checks"] for name, payload in model.calls
+               if name == "core_response_review"]
+    assert result["metrics"]["llm_calls"] == 6 and len(checked) == len(reviews) == 2
+    assert [row["units"] for row in checked] == [row["units"] for row in reviews]
 
 
 def test_complete_conversation_survives_followup_and_restriction_words(store):

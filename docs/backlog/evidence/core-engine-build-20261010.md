@@ -440,3 +440,39 @@ characters remain; catalogue JSON falls from 260,531 to 157,196 characters (39.6
 Estimated writer input plus output allowance falls from 75,593 to 49,759 tokens.
 107 source/writer/reviewer and 50 turn/served checks pass. No source text was removed,
 no model call was added, and this is not a fresh semantic or latency measurement.
+
+The frozen remeasurement then admitted both requested work items and ran held-corpus
+retrieval, but refused the writer's context size before dispatch. One message, two
+model calls, 160.289 seconds, $0.003926 ledger increment; cumulative $0.054626 of $5,
+42 measured attempts and no unknown reservations. No answer or matter record was
+saved, and no follow-up was sent. Source hashes stayed unchanged. This clears the
+observed copying failure, not end-to-end acceptance. A separate no-model replay of
+that exact planner output is capturing the oversized payload for a measured repair.
+
+## SEQ.2/4 — authority checks bound into fresh review and saved replay
+
+Observable pass: a fresh draft's actual selected sources and citation/provision checks
+must be the exact evidence examined by review and rendering; stale proof cannot be
+reused after a rewrite. Legacy replies must reconstruct their earlier contract without
+consulting today's corpus. Consequential counterexamples are a reporter resolving to
+another selected case, a reused provision number under another Act, and authority
+evidence from a different draft. A judgment quoting another authority is a legitimate
+neighbor, not automatically a wrong citation.
+
+The new authority owner reuses live citation lookup and exact provision readback;
+it separates case identity, names, quotations, selected-support mentions, statutory
+reference candidates, source revision and legal-version limits. Act syntax alone
+never resolves the intended owner. A found passage does not certify its holding or
+applicability. Unknown and unavailable checks remain explicit evidence for review.
+
+Fresh turn/review/render contracts are v2, with separate authority evidence rather
+than an execution receipt. A writer rewrite reruns mechanical checks before review.
+Saved v1 contracts retain their original dependency shape and output. Saved v2 checks
+rebind their original evidence; reopening performs no fresh citation or statute read.
+Composition supplies the configured case index and the same searched statute store.
+This is an inseparable four-owner integration; no additional routine model call.
+
+19 authority unit checks and 52 turn/served checks pass, including mixed v1/v2 history
+and no-lookup replay. Semantic acceptance and browser acceptance remain open. Focused
+Ruff F correctness checks pass; broader style lint reported formatting issues and is
+not reported as passing. Formatting cleanup is deferred behind useful live delivery.

@@ -3,9 +3,10 @@ from __future__ import annotations
 
 from copy import deepcopy
 
-from nm.core_engine import response_review, response_writer
+from nm.core_engine import response_authorities, response_review, response_writer
 
-CONTRACT = "core_response_rendering_v1"
+LEGACY_CONTRACT = "core_response_rendering_v1"
+CONTRACT = "core_response_rendering_v2"
 _LEGAL = {"provision", "judgment"}
 _ROLES = {"provision": "legislative_text", "court_disposition": "court_conclusion",
           "court_reasoning": "court_reasoning", "party_submission": "party_submission",
@@ -112,11 +113,24 @@ def _anchors(text, sources):
             for _, _, phrase, index in sorted(chosen)]
 
 
-def render(context, research_record, sources, draft, review, execution=None):
-    """No new prose: release only the exact draft bound to accepted review."""
+def render(context, research_record, sources, draft, review, execution=None, *,
+           authority_evidence=None, contract=CONTRACT):
+    """No new prose; the declared version owns its exact reviewed dependencies."""
+    if contract not in {LEGACY_CONTRACT, CONTRACT}:
+        raise ValueError("Unknown response rendering contract")
     checked_draft = response_writer.validate(draft, context, sources)
-    checked_review = response_review.validate(review, context, research_record,
-        sources, checked_draft, execution=execution)
+    if contract == LEGACY_CONTRACT:
+        if authority_evidence is not None or review.get("contract") != response_review.LEGACY_CONTRACT:
+            raise ValueError("Legacy rendering requires its original review without authority enrichment")
+        checked_review = response_review.validate(review, context, research_record,
+            sources, checked_draft, execution=execution)
+    else:
+        if authority_evidence is None or review.get("contract") != response_review.CONTRACT:
+            raise ValueError("Current rendering requires an authority-bound current review")
+        checked_authorities = response_authorities.validate(authority_evidence, context,
+            research_record, sources, checked_draft)
+        checked_review = response_review.validate(review, context, research_record,
+            sources, checked_draft, execution=execution, authority_evidence=checked_authorities)
     if not checked_review["accepted"]:
         raise ValueError("A response without accepted independent review cannot be rendered")
     elements = []

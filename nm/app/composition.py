@@ -25,6 +25,7 @@ from nm.shared.store_port import StorePort
 from nm.shared.turn_attempt_port import TurnAttemptPort
 from nm.shared.turn_attempt_store import FileTurnAttempts
 from nm.core_engine.retrieval import HybridSearcher
+from nm.core_engine.citations import CaseIdentityIndex
 
 ROOT = Path(__file__).resolve().parents[2]
 _CREDENTIAL_NAME = re.compile(r'KEY|SECRET|TOKEN|PASSWORD|CREDENTIAL', re.I)
@@ -83,6 +84,7 @@ class Application:
         # Explicit None supports isolated flows without making provider-specific choices.
         self.legal_search = (HybridSearcher.local(root=self.root,
             corpus_dir=settings.get('NM_CORPUS_DIR')) if legal_search is _DEFAULT_SEARCH else legal_search)
+        self.case_index = _DeferredAdapter(lambda: CaseIdentityIndex.local(self.root))
 
     def _model_for(self, advocate_id, *, session_current):
         if isinstance(self._model_adapter, OpenAIModelAdapter):
@@ -102,7 +104,10 @@ class Application:
         # belongs to the first fresh model operation, not to receipt readback.
         model = _DeferredAdapter(lambda: self._model_for(advocate_id, session_current=session_current))
         return process(model, self.store, self.legal_search, advocate_id=advocate_id,
-                       session_current=session_current, attempts=self.turn_attempts, **request)
+                       session_current=session_current, attempts=self.turn_attempts,
+                       case_index=self.case_index,
+                       provision_reader=getattr(self.legal_search, 'collections', {}).get('provision'),
+                       **request)
 
     def browser_asset_paths(self):
         return browser_assets(root=ROOT)
@@ -122,7 +127,7 @@ class Application:
                 'corpus': 'configured_unverified' if self.legal_search is not None else 'not_connected',
                 'brain': {'engine': 'core_engine', 'state': 'development', 'stages': [
                     'understanding', 'research_planning', 'held_retrieval',
-                    'response_writing', 'independent_review', 'atomic_release']}}
+                    'response_writing', 'authority_checks', 'independent_review', 'atomic_release']}}
 
 
 class _DeferredAdapter:

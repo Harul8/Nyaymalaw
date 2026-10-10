@@ -11,6 +11,17 @@ from tests.test_core_research import Model
 pytestmark = pytest.mark.class_a
 
 
+def legacy_review(model, context, research_record, sources, draft, execution=None):
+    # This fixture reconstructs the original saved v1 proof; no new review call.
+    dependencies = response_review._dependencies(context, research_record, sources,
+        draft, execution, contract=response_review.LEGACY_CONTRACT)
+    return response_review._accept(model.value, dependencies, contract=response_review.LEGACY_CONTRACT)
+
+
+def legacy_render(*args, **kwargs):
+    return response_rendering.render(*args, **kwargs, contract=response_rendering.LEGACY_CONTRACT)
+
+
 def ready(text="The submitted position was rejected; the statutory exception remains material."):
     ctx, research = fixture()
     sources = answer_sources.build(ctx, research)
@@ -31,7 +42,7 @@ def ready(text="The submitted position was rejected; the statutory exception rem
         "request_coverage": [{"request": proposal["units"][0]["addresses"][0],
             "disposition": "addressed", "unit_ids": [draft["units"][0]["id"]],
             "reason": "Fixture response covers the supplied request."}], "findings": []}
-    review = response_review.review(Model(verdict), ctx, research, sources, draft, execution=execution)
+    review = legacy_review(Model(verdict), ctx, research, sources, draft, execution=execution)
     return ctx, research, sources, draft, review, execution
 
 
@@ -39,9 +50,9 @@ def test_multisource_paragraph_keeps_adjacent_treatment_owned_and_accessible_in_
     args = ready()
     ctx, research, sources, draft, review, execution = args
     before = deepcopy(args)
-    elements = response_rendering.render(*args)
+    elements = legacy_render(*args)
     assert args == before
-    assert response_rendering.CONTRACT == "core_response_rendering_v1"
+    assert response_rendering.LEGACY_CONTRACT == "core_response_rendering_v1"
     element = elements[0]
     assert element["text"] == draft["units"][0]["text"]
     assert len(element["sources"]) == 3 and element["source"] == element["sources"][0]
@@ -65,7 +76,7 @@ def test_multisource_paragraph_keeps_adjacent_treatment_owned_and_accessible_in_
 
 def test_unique_literal_titles_and_locators_link_without_changing_prose():
     args = ready("Judgment 12 records a submission; Judgment 13 rejects it. Act Article 64 includes an exception.")
-    element = response_rendering.render(*args)[0]
+    element = legacy_render(*args)[0]
     assert [a["text"] for a in element["inline_citations"]] == ["Judgment 12", "Judgment 13", "Act Article 64"]
     for anchor in element["inline_citations"]:
         source = element["sources"][anchor["source_index"]]
@@ -76,7 +87,7 @@ def test_unique_literal_titles_and_locators_link_without_changing_prose():
 
 def test_repeated_names_and_bare_numbers_do_not_receive_ambiguous_anchors():
     args = ready("Judgment and Judgment concern the stated position. It mentions 12 and 13, without adopting either position.")
-    element = response_rendering.render(*args)[0]
+    element = legacy_render(*args)[0]
     assert element["inline_citations"] == [{"text": element["text"],
         "source_id": element["source"]["id"], "source_index": 0}]
 
@@ -90,9 +101,9 @@ def test_unsupported_review_cannot_release_even_a_mechanically_valid_draft():
         "sources": [{"source_id": draft["units"][0]["uses"][0]["source_id"],
                      "quote": draft["units"][0]["uses"][0]["text"]}],
         "mismatch": "Synthetic rejection tests the release boundary, not reviewer accuracy."}]
-    refused = response_review.review(Model(proposal), ctx, research, sources, draft, execution=execution)
+    refused = legacy_review(Model(proposal), ctx, research, sources, draft, execution=execution)
     with pytest.raises(ValueError, match="without accepted independent review"):
-        response_rendering.render(ctx, research, sources, draft, refused, execution)
+        legacy_render(ctx, research, sources, draft, refused, execution)
 
 
 @pytest.mark.parametrize("change", ["draft_text", "draft_reference", "source", "context", "execution", "review"])
@@ -110,19 +121,19 @@ def test_positive_review_cannot_bless_changed_text_dependencies_or_evidence(chan
     elif change == "execution": execution["operations"] = [{"outcome": "changed"}]
     else: review["proposal"]["units"][0]["reason"] = "Altered reviewer evidence"
     with pytest.raises(ValueError):
-        response_rendering.render(ctx, research, sources, draft, review, execution)
+        legacy_render(ctx, research, sources, draft, review, execution)
 
 
 @pytest.mark.parametrize("change", ["text", "refs", "source_text", "anchor"])
 def test_saved_rendering_replay_rejects_changed_text_or_references(change):
     ctx, research, sources, draft, review, execution = ready()
-    elements = response_rendering.render(ctx, research, sources, draft, review, execution)
+    elements = legacy_render(ctx, research, sources, draft, review, execution)
     interpretation = understanding.accept({"courtesies": [], "information": [], "restrictions": [],
         "requests": [{"quote": ctx["latest"]["text"], "meaning": "Research the requested law.",
             "context": [], "unresolved": [], "requested_work": "research", "desired_result": "Relevant law."}]}, ctx)
-    activity = {"contract": turn.CONTRACT, "interpretation": interpretation, "research": research,
+    activity = {"contract": "core_turn_v1", "interpretation": interpretation, "research": research,
         "sources": sources, "draft": draft, "review": review, "execution": execution,
-        "rendering_contract": response_rendering.CONTRACT}
+        "rendering_contract": response_rendering.LEGACY_CONTRACT}
     assert turn.validate_activity(activity, ctx, elements) == activity
     if change == "text": elements[0]["text"] += " Unreviewed addition."
     elif change == "refs": elements[0]["refs"] = []
