@@ -1471,3 +1471,15 @@ Discovery pools, rerank scores and final selections are observed separately.
 Missing held corpus material is recorded independently from candidate loss.
 No production prompt, query serialization, ranking or corpus changes have yet
 been made for these experiments.
+
+The 18 paired Luna cases completed: 36 generations, no source-contract rejections
+and no prospective minimum-enquiry shape failures. Both arms returned no research
+for the five prelabelled no-research cases. Current versus candidate produced
+22/21 investigations and 38/27 enquiries. The measured ledger delta was $0.008276,
+leaving shared charges at $3.682197, including unchanged unknown reservations.
+These mechanical observations do not measure semantic correctness or establish
+that fewer enquiries improve coverage. Exact synthetic contexts, the pre-run
+oracle, both prompt texts, admitted proposals and actual model receipts are retained
+in [the comparison evidence](core-engine-decomposition-comparison-20261010.json).
+Independent semantic assessment and the same-engine local retrieval comparison
+remain in progress at this checkpoint. Production research v4 is unchanged.
