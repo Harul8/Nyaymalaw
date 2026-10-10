@@ -144,3 +144,24 @@ No production code was changed by the test or planning slices. Existing engine/A
 was the candidate under test; the caller must commit it together with its own
 review and current build-plan status rather than treating this report as approval
 of unexamined changes.
+
+## Follow-up: retained authority checker
+
+The final consistency review found three obsolete `nm.legal_brain` imports in
+`assurance/journeys/run_goldens.py`. The owner authorised closing these gaps.
+The import-only repair explicitly reuses the retained read-only
+`CorpusEvidenceAdapter`, `Coverage`/`EvidenceNeed` and `Manifest` contracts from
+`nm/Archives/legal_brain/retrieve`; no conversation engine is reactivated.
+
+Owner: `check_authority`. Pass condition: the historical corpus-check boundary
+loads its actual dependencies and keeps unavailable, absent and unassessed
+coverage distinct from answered results. Counterexample: readable text without
+revision evidence must not count as checked authority. Eight Class-A tests in
+`tests/test_goldens.py` pass, including four new focused cases. Real temporary
+SQLite/manifest fixtures cover missing corpus, missing provision and readable
+text without a revision registry, preserving database bytes. A controlled
+answered result proves count and Act/section/date forwarding only.
+
+The attached corpus was not scanned. Its version readiness is unverified; this
+repair deliberately does not opt into unchecked current-text coverage. No model
+calls, ingestion or corpus writes occurred. App conversations remain paused.

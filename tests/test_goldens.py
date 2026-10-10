@@ -143,3 +143,100 @@ def test_the_authority_table_covers_every_act_the_scenarios_name():
     assert len(rows) >= 15, f"only {len(rows)} Act groups parsed from §6"
     for act, provs in rows:
         assert provs.strip(), f"{act} lists no provisions"
+
+
+@pytest.fixture
+def offline_authority_root(tmp_path, monkeypatch):
+    """An isolated readback fixture, never the attached legal corpus."""
+    import json
+    import sqlite3
+
+    from assurance.journeys import run_goldens
+
+    manifest = tmp_path / "pipeline" / "manifest.yaml"
+    manifest.parent.mkdir()
+    manifest.write_text(json.dumps({"acts": [{
+        "act_name": "Negotiable Instruments Act, 1881",
+        "act_patterns": ["offline_fixture_act"],
+        "intended_sections": ["138"],
+        "in_force_from": "1882-03-01",
+    }]}), encoding="utf8")
+    database = tmp_path / "legal_database" / "vector_store" / "chunks.db"
+    monkeypatch.setattr(run_goldens, "ROOT", tmp_path)
+    monkeypatch.setattr(run_goldens, "load_provisions",
+                        lambda: [("NI Act 1881", "s.138")])
+
+    def create_corpus(*, with_passage=False):
+        database.parent.mkdir(parents=True)
+        with sqlite3.connect(database) as connection:
+            connection.execute(
+                "create table chunks (doc_type text, act_id text, section_number text, "
+                "atom_type text, chunk_id text, blob text, pos integer)")
+            if with_passage:
+                connection.execute("insert into chunks values (?, ?, ?, ?, ?, ?, ?)", (
+                    "bare_act", "offline_fixture_act", "138", "section",
+                    "offline_fixture_chunk", json.dumps({
+                        "full_text": "Synthetic fixture wording, not legal authority."}), 0))
+        return database
+
+    return create_corpus, database
+
+
+@pytest.mark.class_a
+def test_offline_authority_unavailable_corpus_is_not_success(offline_authority_root):
+    _, database = offline_authority_root
+    failures, checked, total = check_authority()
+    assert failures == ["the corpus is not attached -- authority cannot be verified"]
+    assert (checked, total) == (0, 0)
+    assert not database.exists(), "readback must not create a missing corpus"
+
+
+@pytest.mark.class_a
+def test_offline_authority_declared_but_absent_provision_is_not_counted(
+        offline_authority_root):
+    create_corpus, database = offline_authority_root
+    create_corpus()
+    before = database.read_bytes()
+    failures, checked, total = check_authority()
+    assert (checked, total) == (0, 1)
+    assert len(failures) == 1 and "held_not_found" in failures[0]
+    assert database.read_bytes() == before
+
+
+@pytest.mark.class_a
+def test_offline_authority_readable_without_version_evidence_is_unassessed(
+        offline_authority_root):
+    create_corpus, database = offline_authority_root
+    create_corpus(with_passage=True)
+    before = database.read_bytes()
+    failures, checked, total = check_authority()
+    assert (checked, total) == (0, 1)
+    assert len(failures) == 1 and "not_assessed" in failures[0]
+    assert "revision registry" in failures[0]
+    assert database.read_bytes() == before
+
+
+@pytest.mark.class_a
+def test_offline_authority_counts_only_answered_result_and_preserves_request(
+        offline_authority_root, monkeypatch):
+    """Count wiring only: this scripted verdict does not prove real version coverage."""
+    from datetime import date
+
+    from nm.Archives.legal_brain.retrieve import corpus_evidence
+    from nm.Archives.legal_brain.retrieve.evidence_port import Coverage, EvidenceResult
+
+    create_corpus, _ = offline_authority_root
+    create_corpus()
+    requests = []
+
+    class AnsweredFixture(corpus_evidence.CorpusEvidenceAdapter):
+        def fetch(self, need):
+            requests.append(need)
+            return EvidenceResult(Coverage.ANSWERED)
+
+    monkeypatch.setattr(corpus_evidence, "CorpusEvidenceAdapter", AnsweredFixture)
+    assert check_authority() == ([], 1, 1)
+    assert len(requests) == 1
+    assert requests[0].question == "Negotiable Instruments Act, 1881 138"
+    assert requests[0].provision_hint == "138"
+    assert requests[0].governing_date == date(1882, 3, 1)

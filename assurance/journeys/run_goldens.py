@@ -209,9 +209,9 @@ def check_authority() -> tuple[list[str], int, int]:
     authority that is not there — which is what the previous build did, and
     what struck three scenarios for a defect that was in the lookup.
     """
-    from nm.legal_brain.retrieve.corpus_evidence import CorpusEvidenceAdapter
-    from nm.legal_brain.retrieve.evidence_port import Coverage, EvidenceNeed
-    from nm.legal_brain.retrieve.manifest_sources import Manifest
+    from nm.Archives.legal_brain.retrieve.corpus_evidence import CorpusEvidenceAdapter
+    from nm.Archives.legal_brain.retrieve.evidence_port import Coverage, EvidenceNeed
+    from nm.Archives.legal_brain.retrieve.manifest_sources import Manifest
 
     adapter = CorpusEvidenceAdapter(ROOT / "legal_database" / "vector_store",
                                     Manifest.load(ROOT / "pipeline" / "manifest.yaml"))
