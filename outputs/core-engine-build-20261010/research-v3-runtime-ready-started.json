@@ -1,0 +1,27 @@
+{
+  "started_utc": "2026-10-10T06:31:03.420302+00:00",
+  "manifest": {
+    "contract": "actual_research_v3_live_check_v1",
+    "research_contract": "core_research_v3",
+    "script_sha256": "acba0a690a55fc179773260aa4a3f35210684bce04341dfe6465ed59991c4806",
+    "production_research_sha256": "fe467cd5c92066c9da8e999978d42a52b40276c998b70f20ea860c924239350d",
+    "frozen_inputs_sha256": "caf39312fe7d96b508184a18bd596a434c9d059a45c58e16477d60ab94272b89",
+    "earlier_inputs_sha256": "706b298b179b838ca5456941b89c10b428077eba75bfe837ad82c1dce589822c",
+    "model": "gpt-4.1-mini-2025-04-14",
+    "maximum_calls": 8,
+    "transport_retries": 0,
+    "shared_ledger": "api-budget.sqlite",
+    "shared_cap_usd": 5,
+    "slice_cap_usd": 0.2,
+    "per_call_planning_cap_usd": 0.05,
+    "bound_note": "Twice complete SDK JSON UTF-8 bytes plus 8192 input tokens, uncached configured prices and production output cap. This is an engineering planning envelope; SessionCallBudget separately reserves the full verified model input ceiling before every dispatch.",
+    "scope": "Actual research.plan only, with full original context and recorded interpretation where available; no synthetic success output, artificial source bank, retrieval, answer generation, save, or browser acceptance.",
+    "offline_checks": {
+      "actual_production_prompt_capture": true,
+      "complete_context_unchanged": true,
+      "case_count": 8,
+      "new_holdouts": 2,
+      "sdk_dispatches": 0
+    }
+  }
+}

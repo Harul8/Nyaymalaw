@@ -1,0 +1,153 @@
+{
+  "contract": "research_v3_independent_assessment_v1",
+  "decision": "Not semantically accepted. Exact original-account query construction works for admitted selected spans, but the broader planner still confuses legal discovery with client fact gathering, widens a hypothetical premise, performs unnecessary research on a summary correction, and loses independent work to quote-selection errors.",
+  "review_scope": "Independent reading of complete original contexts, raw model responses, admitted plans and constructed queries. Assessor helped design the harness and had prior familiarity with the six regressions and two holdouts; this is not a blinded or population accuracy assessment. No new calls, production edits, corpus search, response generation or browser acceptance were performed by this review.",
+  "evidence": {
+    "inputs": "research-v3-runtime-ready-inputs.json",
+    "inputs_sha256": "514869728f9d948361cde809ca8b63ed7f9d27e20381391a67bb164406584fd4",
+    "results": "research-v3-runtime-ready-results.json",
+    "results_sha256": "fb7a9d17f16e36da9ef239b5b9a3c9284be79ad29aa361bc53c558ffa4db1b6b"
+  },
+  "descriptive_counts_not_accuracy": {
+    "cases": 8,
+    "actual_sdk_dispatches": 8,
+    "retries": 0,
+    "proposed_work_units": 16,
+    "admitted_work_units": 12,
+    "held_work_units": 4,
+    "proposed_enquiries": 37,
+    "admitted_enquiries": 29,
+    "constructed_queries_including_original_account_queries": 40,
+    "corpus_queries_executed": 0,
+    "input_tokens": 12416,
+    "output_tokens": 5722,
+    "usage_cost_usd": 0.0141216,
+    "rounded_ledger_increase_usd": 0.014123,
+    "model_latency_total_ms": 45172
+  },
+  "cases": [
+    {
+      "name": "original_aster_held_drive",
+      "assessment": "Needs correction",
+      "preserved": [
+        "Raw plan separates deposit, drive and client questions.",
+        "Admitted deposit account preserves the client's denial and unexamined reported documents.",
+        "Bailment, lien and conversion are legitimate conditional discovery concepts, not findings that their prerequisites are proved."
+      ],
+      "defects": [
+        "Several enquiry texts ask for actual agreement terms, actual demands and the client's documents. Held Acts and judgments cannot establish these private facts; the client-question unit is incorrectly turned into a further corpus search.",
+        "The drive unit is held because the original begins 'Separately, the owner's technician' while the selected passage starts with capitalized 'The owner's technician'. The semantic subject is present, but the strict exact-selection contract is not satisfied.",
+        "Outcome prose compresses reported documents into existence and uses 'lack of' a report. In light of the preserved account, these are scope risks, not proof that the model asserted nonexistence in a delivered answer."
+      ],
+      "admission_note": "The quote gate correctly enforces the declared source contract; its work omission is still a real useful-delivery gap. No correction loop was exercised by this isolated planner run."
+    },
+    {
+      "name": "not_supplied_is_not_nonexistent",
+      "assessment": "Needs correction",
+      "preserved": [
+        "All three independent requested outputs are represented and admitted.",
+        "The deposit account and first deposit enquiry expressly retain 'not supplied/provided'; the phrase 'lack of' elsewhere is not independently enough to classify a fabricated nonexistence claim.",
+        "Deposit remedies, burden of proof and procedural conditions seek distinct potentially useful legal material."
+      ],
+      "defects": [
+        "The client-question unit again generates three corpus enquiries seeking private agreement terms, actual notice and the client's ownership evidence.",
+        "A drive enquiry says 'when there is no dispute over ownership' with basis 'reported'. The original calls it the client's drive but does not establish that no one contests ownership. The enquiry remains potentially useful as an explicitly conditional alternative, not as the reported premise it presently declares.",
+        "The client-question search_account selects an instruction, not the substantive account underpinning that proposed search."
+      ]
+    },
+    {
+      "name": "actor_agency_and_explicit_alternative",
+      "assessment": "Consequential premise change",
+      "preserved": [
+        "Raw plan distinguishes actual-account and alternative-analysis work.",
+        "Express and apparent authority, reliance and evidential requirements are legitimate legal discovery topics.",
+        "The admitted original query preserves the exact user-authorized assumption and the instructions distinguishing it from the actual account."
+      ],
+      "defects": [
+        "The admitted alternative enquiry broadens 'no email recording the extension was ever created' into 'no written or electronic record of the agreement is created'. Absence of one medium does not establish absence of all written or electronic evidence. This is a consequential changed factual premise, not merely unfamiliar legal vocabulary.",
+        "The hypothetical enquiries are labelled reported, and outcome/unresolved prose similarly broadens the absence premise.",
+        "The actual-account unit, held for lacking a latest-message source, separately changes 'no email ... forwarded to us' into 'no email confirmation exists'. The ownership gate prevents its execution here but does not detect that semantic error.",
+        "No-contact and no-record-change directions are present in source words but omitted from the empty constraints arrays, illustrating why duplicate paraphrase fields are unreliable."
+      ],
+      "admission_note": "The latest-source guard preserves the declared current-work binding. Because the current request legitimately compares the alternative with the actual position, holding the actual-account proposal is not proof that examining the actual account would itself be unauthorised."
+    },
+    {
+      "name": "mixed_independent_requests_followup",
+      "assessment": "Usable planning in this observation",
+      "preserved": [
+        "Separates the interim-relief explanation from explicitly resumed passage work.",
+        "Keeps original permission, the disputed independent access claim, unsettled ownership and missing deed plan.",
+        "Uses earlier original account plus the current resumption request without relying on NM's interpretation as evidence.",
+        "The two passage enquiries examine continuation of permissive use and an independent right separately."
+      ],
+      "limits": [
+        "The legal enquiries are still lengthy natural-language questions rather than consistently compact formal legal concepts.",
+        "Useful planning does not establish retrieval relevance, answer quality or applicable law."
+      ]
+    },
+    {
+      "name": "correction_no_send_no_law",
+      "assessment": "Unnecessary admitted research and target broadening",
+      "preserved": [
+        "Keeps the correct April date, uncertain amount and no-send restriction in the original source selections."
+      ],
+      "defects": [
+        "The requested summary correction creates three admitted legal enquiries about correcting records, uncertain amounts and confidentiality. The saved original account already establishes the required factual correction; no such legal search was requested or needed for it.",
+        "Purpose changes the requested summary correction into correcting the record. The current flow executes no record change, but the proposal should not silently broaden the target.",
+        "Unresolved asks for the correct amount even though uncertainty is to be preserved and does not block the requested correction."
+      ]
+    },
+    {
+      "name": "greeting_social_close",
+      "assessment": "Wrong research proposal held by existing ownership check",
+      "preserved": [
+        "No search queries are constructed because the proposed work lacks a current-message source and is held."
+      ],
+      "defects": [
+        "The model proposes monitoring documents and researching earlier rent work despite the closing and its own stated lack of an instruction to resume.",
+        "Safe nonexecution in this observation is mechanical containment, not correct understanding of the closing or evidence that a useful greeting reply will be delivered."
+      ]
+    },
+    {
+      "name": "holdout_temporary_sport_restriction_and_fee",
+      "assessment": "Useful legal topics with omissions and a held independent request",
+      "preserved": [
+        "Separates eligibility restriction, sponsor payment and client questions.",
+        "The admitted eligibility account preserves temporary status, no final finding, denied tampering and unknown existence of the unprovided record.",
+        "The sponsor account preserves the unprovided agreement.",
+        "Natural justice, sports disciplinary rules, contract conditions and payment remedies are distinct useful discovery topics. Conditional doping-regulation and morality-clause searches are not assertions that the sample was a doping sample or that this contract contains such a clause."
+      ],
+      "defects": [
+        "The six-day selection deadline is omitted from the selected accounts and the planned enquiry scope. No enquiry addresses the time-sensitive protective need; that is a material planning omission even though the complete original context remains available downstream.",
+        "The questions unit combines two noncontiguous original passages into one quotation, so that independently requested unit is mechanically held.",
+        "The sponsor's own original query lacks the no-final-finding qualification found in the other work unit, although one of its enquiries uses that qualification. The wider original context supports it, but focused search selections should retain the material dependency."
+      ]
+    },
+    {
+      "name": "holdout_correct_reported_actor_without_research",
+      "assessment": "Usable planning in this observation",
+      "preserved": [
+        "Plans only the requested factual-summary correction, with no legal enquiries or search queries.",
+        "Preserves the reported possibility about the conservator, unknown current possession, unchecked agreement and no-contact/pause restrictions.",
+        "Does not use the incorrect earlier NM sentence as factual support."
+      ],
+      "limits": [
+        "Selection includes the whole latest instruction, but it creates no search and does not add a substantive unsupported premise.",
+        "This tests planning only, not whether the summary was corrected and delivered."
+      ]
+    }
+  ],
+  "recommended_next_atomic_change": {
+    "owner": "nm/core_engine/research.py",
+    "invariant": "This call proposes only current legal investigations whose answers can be sought in the held Acts and judgments; private facts and nonlegal requested work cannot be transformed into legal corpus enquiries.",
+    "change": "Narrow fresh planning output to explicit current-source links, exact original search account and distinct legal enquiries. Remove paraphrased general purpose/outcome/constraints/unresolved fields from this owner; complete original context and the understanding/writer/reviewer still own all other requested work. Keep saved v2 reconstruction unchanged.",
+    "safety_conditions": [
+      "Empty research output means no current legal investigation, never proof that the message contains no other requested work.",
+      "A request to correct NM's representation using supplied evidence does not itself require a new rule search; current work controls resumption.",
+      "Conditional legal exploration is allowed, but the original hypothetical's factual extent must not be broadened.",
+      "Quote selection and correction remain separately observed gaps; do not weaken exact source checking or silently change words.",
+      "Earlier research-only pilots also failed current-work scope, so narrowing is a testable structural change, not an assurance of accuracy."
+    ],
+    "model_call_impact": "Replacement of the existing planning responsibility; zero additional routine calls."
+  }
+}

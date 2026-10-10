@@ -1,0 +1,91 @@
+{
+  "contract": "research_v4_handles_independent_assessment_v1",
+  "decision": "Bounded mechanical checkpoint supported; semantic acceptance remains open. Exact window handles remove the observed copied-quote rejection on the drive investigation, while changed premises and missing independently requested research still occur.",
+  "scope": "Independent reading of complete original contexts, raw proposals, admitted selections and current research.py resolver. Assessor had prior case familiarity and prepared the original harness; not blinded or a population accuracy study. No provider calls, production changes, retrieval or browser testing in this review.",
+  "evidence": {
+    "inputs": "research-v4-handles-inputs.json",
+    "inputs_sha256": "c01b972ea12f21b40bb6b7d5a2297277b34110115082c9881c52fb6672bd4840",
+    "results": "research-v4-handles-results.json",
+    "results_sha256": "1da4dd145d644db89e220bc53fac1a6e051bb9f67d4e496e53a9ff9ae3888158",
+    "all_eight_original_contexts_equal_prior_focused_run": true
+  },
+  "mechanical_checkpoint": {
+    "review": "No concrete source-ownership, offset or contract-dispatch defect found by inspection in the v4 window selector. Generated aliases preserve the canonical original source ID; selection resolves against the exact window then adds its original offset; coordinate-based deduplication and canonical ordering preserve distinct sources. Current-source binding remains explicit. Saved v2 and broad v3 have their own admission schemas and query construction.",
+    "saved_account_spans_independently_checked": 16,
+    "span_text_or_speaker_role_turn_mismatches": 0,
+    "copy_error_rejections_observed_in_this_run": 0,
+    "remaining_hold": "One agency actual-account proposal lacks a selected current-message source. This is the existing work-ownership contract, not a copied-text error.",
+    "limits": [
+      "Window boundaries are mechanical presentation, not meaning boundaries. The model can still omit a denial, condition, deadline or another investigation.",
+      "Selecting a latest-message handle identifies its source; it does not mechanically prove that the words authorise this investigation.",
+      "Overlapping nonidentical ranges can still repeat some words in a query. They remain exact; this is an efficiency/ranking concern rather than a demonstrated ownership violation.",
+      "Keep window generation and query rendering stable for saved v4 replay. A later changed splitter or representation requires version-aware reconstruction, not regeneration of earlier seals.",
+      "This inspection and saved-span check do not replace negative mechanical tests or full authenticated saved-turn replay."
+    ]
+  },
+  "descriptive_counts_not_accuracy": {
+    "cases": 8,
+    "actual_sdk_dispatches": 8,
+    "proposed_investigations": 9,
+    "admitted_investigations": 8,
+    "held_investigations": 1,
+    "proposed_enquiries": 22,
+    "correct_no_research_controls": 3,
+    "input_tokens": 17149,
+    "output_tokens": 1988,
+    "usage_cost_usd": 0.0100404
+  },
+  "wrong_admissions": [
+    {
+      "case": "actor_agency_and_explicit_alternative",
+      "unit": "explicit_alternative:w2",
+      "mismatch": "The authorised assumption is only that no email recording the extension was ever created. Admitted enquiries and purposes widen this to absence of written confirmation, documentation or documentary evidence, and to oral/non-written agreements.",
+      "why_consequential": "Conditional status allows the authorised hypothetical, not a stronger hypothetical with fewer possible forms of evidence. The exact original account remains available, but the query can retrieve a materially different legal problem."
+    },
+    {
+      "case": "not_supplied_is_not_nonexistent",
+      "unit": "deposit_and_drive:w1",
+      "mismatch": "The first enquiry purpose explicitly says 'no joint inspection report exists' although the original says no report has been supplied.",
+      "why_consequential": "This converts non-supply into nonexistence in an admitted reported premise. Separately, the third enquiry's conditional exploration of report absence can be a legitimate alternative; that ambiguous discovery wording alone is not counted as fabrication."
+    }
+  ],
+  "omissions_and_coverage_gaps": [
+    {
+      "case": "holdout_temporary_sport_restriction_and_fee",
+      "mismatch": "The independent sponsor-fee investigation is entirely absent. Eligibility search_account also omits the swimmer's denial and the six-day selection deadline, and the enquiries do not recover that urgent protective need.",
+      "preserved": "Temporary status, no final finding and unknown existence of the unprovided chain-of-custody record are retained exactly. Full original context still includes the omitted material downstream; that does not establish the missing research occurred."
+    },
+    {
+      "case": "actor_agency_and_explicit_alternative",
+      "mismatch": "The actual-account comparison proposal is held because it cites only earlier work. The admitted alternative's search_account contains the explicit assumption without the earlier principal/agent/third-party factual relationship.",
+      "qualification": "The current request does permit comparison with the actual account. The hold correctly enforces the selected-current-source contract but cannot prove that the comparison itself is unauthorised. The held proposal also contains a broadened absence-of-record premise."
+    },
+    {
+      "case": "mixed_independent_requests_followup",
+      "mismatch": "Earlier permission, the independent-right claim and unknown ownership now reach the search account, but the missing deed plan is omitted. Only one broad continuing-use concept is proposed.",
+      "qualification": "Fewer than two concepts is allowed when sufficient. The original independent-right words remain searchable, so this is a limited-coverage concern, not proof that all independent-right sources would be missed."
+    }
+  ],
+  "useful_observations": [
+    {
+      "case": "original_aster_held_drive",
+      "observed": "Both independent disputes survive admission. Deposit search receives hire/return, disputed damage, no supplied inspection report, and the reported unexamined agreement/receipt. The drive retains technician possession, limited loan purpose and the owner's separate retention claim. Exact handles solved the earlier initial-capital copying defect in this observation."
+    },
+    {
+      "case": "not_supplied_is_not_nonexistent",
+      "observed": "Deposit and drive are separate again. Exact accounts preserve the source wording and useful legal topics cover retention conditions, remedies and property-possession relationships. The admitted wrong purpose remains separately identified above."
+    },
+    {
+      "case": "mixed_independent_requests_followup",
+      "observed": "Interim-relief explanation and expressly resumed passage work remain separate. Original earlier relationship facts now replace the earlier instruction-only search basis; no ownership conclusion is invented."
+    }
+  ],
+  "no_research_controls": [
+    {"case": "correction_no_send_no_law", "result": "work=[]; correct for legal-search planning, not proof that the summary correction was performed"},
+    {"case": "greeting_social_close", "result": "work=[]; paused tenancy work is not restarted in this observation"},
+    {"case": "holdout_correct_reported_actor_without_research", "result": "work=[]; corrected-summary work remains for downstream execution"}
+  ],
+  "permissible_exploration": "Bailment, security/retention, legal protections for original technical material, procedure and contrary positions may be investigated conditionally without the user naming those legal categories. Such searches do not establish an intellectual-property right, lien, legal classification or applicable rule. The consequential problems above concern changed original factual premises or omitted work, not legal vocabulary alone.",
+  "remaining_general_invariant": "Every current independent legal investigation and its material factual qualifications must survive from the original conversation to the search plan; discovery concepts must not strengthen or broaden their factual premise. Exact-source handles certify where selected words came from, not whether the selection is complete or the legal interpretation is faithful.",
+  "completion_boundary": "May record the exact-handle and versioned original-account query mechanics as a verified prerequisite once focused negative tests and replay pass. Do not mark decomposition, retrieval relevance, whole-context response review, SEQ.1-4 or browser acceptance complete on these results. No additional routine model call is established by this assessment."
+}

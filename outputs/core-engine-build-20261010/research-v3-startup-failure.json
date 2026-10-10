@@ -1,0 +1,8 @@
+{
+  "attempt": "research-v3-live",
+  "stage": "construct provider adapter",
+  "reason": "Global Python lacked the required truststore package; provider was not constructed.",
+  "sdk_dispatches": 0,
+  "new_budget_attempts": 0,
+  "recovery": "Use existing .venv-arrive containing application, provider and browser dependencies. Preserve original started/input files; use a new evidence prefix."
+}

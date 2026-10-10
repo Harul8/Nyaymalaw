@@ -1027,3 +1027,68 @@ Exact inputs, labels, source/model hashes, per-arm scores, timings and limitatio
 are the `rerank-local-*` and `rerank-per-enquiry-*` artifacts. The shared API totals
 remain unchanged after these local experiments. Production code and prompts remain
 unchanged at this evidence checkpoint; the SEQ.3 relevance gap is still open.
+
+## SEQ.3 — exact original-query construction and narrow research responsibility
+
+The owner is `research.py`. The mechanical pass condition is that each admitted
+original query contains unchanged advocate words in conversation order, with
+canonical coordinates; the current instruction authorises the investigation but
+need not supply its factual account. NM interpretations cannot become original
+evidence. Tests reject altered quotations, another speaker's account, unknown
+passage IDs and changed historical queries. Legitimate neighbours include earlier
+accounts, repeated words on distinct turns, adjacent windows, abstract legal
+questions and empty research.
+
+V4 offers exact passage IDs to avoid copying errors. Windows are mechanical
+conveniences, not classifications; whole messages and exact cross-window spans
+remain available. Code resolves IDs, preserves ownership/offsets, deduplicates
+selections and searches the account before at most three proposed legal concepts.
+Query order adds no ranking bonus. V2 serialization and the briefly served broad
+v3 contract remain reconstructible; unknown versions fail. Full original context
+remains available, without transcript shortening.
+
+The prompt/output now only choose current legal investigations, original accounts
+and concepts. They no longer also plan summaries, private-document review or client
+questions. Those outputs remain the understanding/writing/review responsibility.
+Exact source selection does not certify semantic sufficiency.
+
+Three eight-case actual pinned-mini pilots were run sequentially. Broad v3
+proposed 16 investigations, admitted 12 and held four; it converted private client
+questions into searches and mishandled current work. Narrow v3 admitted seven of
+nine, correctly left research off for two correction controls and a social closing,
+but still had quote-copy failures. V4 admitted eight of nine, with all three
+controls correct and no quote-copy holds. All 16 admitted account spans match
+their original text and provenance. One earlier-side agency proposal still fails
+the current-instruction guard, preserving its independent peer.
+
+Semantic gaps remain: assumed absence of email becomes absence of documentary
+evidence; nonsupply of a report becomes nonexistence in an enquiry purpose; the
+swimmer's independent sponsor investigation disappears. Some selected accounts
+omit denial or urgency. Conditional discovery questions are not established facts;
+the independent assessment distinguishes ambiguous hypotheses from definite
+premise changes. These cases supply evidence, never production exceptions.
+
+The pilots cost $0.014123, $0.008503 and $0.010043: 24 calls, $0.032669 total,
+zero retries. They exercise actual planning/admission, not retrieval, answer
+release, saving or browser acceptance. Exact synthetic contexts, requests, outputs
+and assessments are in `research-v3-runtime-ready-*`, `research-v3-focused-*` and
+`research-v4-handles-*`. A first startup failed before dispatch; its zero-call
+evidence remains separate.
+
+Focused research, source, authority, turn and served-boundary tests pass. They
+prove exercised mechanics and replay, not live legal accuracy. No routine stage
+was added: one planning call, four normal turn calls, at most six with existing
+writer/reviewer recovery. Production remains mini. No relevance experiment or
+uncertain semantic gate was promoted.
+
+The listener was found serving stale archived code from 8 October. It was
+restarted using the current engine, existing storage/key and shared ledger; it
+needs another restart after this source checkpoint. Native browser control fails
+before attaching. An isolated genuine-page harness is prepared using normal
+sign-in/UI interactions, without injected authentication or direct turn POSTs.
+It has not yet supplied browser acceptance.
+
+Budget: $0.306961 measured plus $1.515431 reserved/unknown = $1.822392 of $5.
+Unknown reservations remain charged. This is a mechanical prerequisite checkpoint,
+not SEQ.3 or SEQ.1–4 completion. Next: selected-support and requested-coverage
+review, followed by complete served answers, source panes and saved replay.

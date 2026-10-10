@@ -158,6 +158,7 @@ def test_original_source_id_cannot_overwrite_a_legal_source_tag():
     ctx["latest"]["source_id"] = legal_id
     item = work()
     item["sources"][0]["source_id"] = legal_id
+    item["search_account"][0]["source_id"] = legal_id
     plan = accept({"work": [item]}, ctx)
     statute = Collection()
     statute.rows[0]["section_number"] = "Article_64"

@@ -40,8 +40,7 @@ class ScriptedModel:
             out = {"courtesies": [{"quote": latest["text"], "meaning": "A social message",
                 "context": [], "unresolved": []}], "information": [], "requests": [], "restrictions": []}
         elif prompt.operation == "core_research_plan":
-            out = {"work": [{"purpose": "Inspect held law", "outcome": "Supported account",
-                "sources": [ref], "constraints": [], "unresolved": [], "enquiries": [{
+            out = {"work": [{"sources": [ref], "search_account": [ref], "enquiries": [{
                     "text": "conditions and contrary authority", "purpose": "Identify scope",
                     "basis": "conditional"}]}] if self.legal else []}
         elif prompt.operation == "core_response_writer":

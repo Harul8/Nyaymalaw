@@ -16,9 +16,9 @@ pytestmark = pytest.mark.class_a
 
 
 def work(quote="Find the applicable law."):
-    return {"purpose": "Find relevant authority", "outcome": "Source-backed analysis",
-            "sources": [{"source_id": "t2:advocate", "quote": quote}],
-            "constraints": ["No external contact"], "unresolved": [], "enquiries": [
+    return {"sources": [{"source_id": "t2:advocate", "quote": quote}],
+            "search_account": [{"source_id": "t2:advocate", "quote": quote}],
+            "enquiries": [
                 {"text": "legal prerequisites and exceptions", "purpose": "Locate elements",
                  "basis": "conditional"},
                 {"text": "available relief and contrary positions", "purpose": "Test remedies",
@@ -44,6 +44,7 @@ def test_planner_sees_original_history_and_does_not_route_only_from_interpretati
     ctx["current_records"] = {"restriction": "No external contact"}
     proposal = work()
     proposal["sources"].append({"source_id": earlier["source_id"], "quote": earlier["text"]})
+    proposal["search_account"] = [{"source_id": earlier["source_id"], "quote": None}]
     model = Model({"work": [proposal]})
     admitted = plan(model, ctx, {"units": [], "issues": ["missed request"]})
     assert len(model.calls) == 1
@@ -69,13 +70,15 @@ def test_complete_source_selection_preserves_original_words_and_attribution_with
                   [earlier])
     item = work(None)
     item["sources"].append({"source_id": earlier["source_id"], "quote": None})
+    item["search_account"] = [{"source_id": earlier["source_id"], "quote": None}]
     admitted = accept({"work": [item]}, ctx)
     assert admitted["issues"] == [] and admitted["semantic_review"] == "pending"
     assert admitted["proposal"]["work"][0]["sources"] == item["sources"]
     for selected, original in zip(admitted["work"][0]["sources"], [ctx["latest"], earlier], strict=True):
         assert selected == {**original, "start": 0, "end": len(original["text"])}
-    query_context = json.loads(search_queries(admitted["work"][0])[0]["context"])
-    assert query_context["original_sources"] == admitted["work"][0]["sources"]
+    queries = search_queries(admitted["work"][0])
+    assert queries[0]["text"] == queries[0]["context"] == earlier["text"]
+    assert ctx["latest"]["text"] not in queries[0]["text"]
 
 
 def test_explicit_changed_quote_is_held_while_complete_source_peer_survives():
@@ -136,8 +139,7 @@ def test_independent_results_survive_shared_or_distinct_authority_plans(distinct
     ctx = context("Assess the reported position and prepare internal questions. Do not contact anyone.")
     analysis = work(None)
     questions = work(None)
-    questions.update(purpose="Clarify material gaps using this turn's applicable research",
-                     outcome="Internal questions for the client", enquiries=[])
+    questions.update(enquiries=[])
     if distinct_authority_needed:
         questions["enquiries"] = [{"text": "legal requirements for disclosure of relevant records",
                                   "purpose": "Find the separately needed disclosure conditions",
@@ -145,8 +147,6 @@ def test_independent_results_survive_shared_or_distinct_authority_plans(distinct
     model = Model({"work": [analysis, questions]})
     admitted = plan(model, ctx, {"units": []})
     assert len(model.calls) == 1 and len(admitted["work"]) == 2
-    assert admitted["work"][1]["outcome"] == questions["outcome"]
-    assert admitted["work"][1]["constraints"] == questions["constraints"]
     assert admitted["work"][1]["sources"][0]["text"] == ctx["latest"]["text"]
 
     searcher = HybridSearcher({"provision": Collection(), "judgment": Collection("judgment")})
@@ -213,3 +213,90 @@ def test_malformed_failed_work_receipt_cannot_pass_replay(failure):
     record = retrieve(admitted, None, ctx)
     record["failures"]["t2:w1"] = failure
     with pytest.raises(ValueError): validate(record, admitted, ctx)
+
+
+def test_original_queries_preserve_order_boundaries_and_repeated_words_across_turns():
+    earlier = {"source_id": "t1:advocate", "turn_id": "t1", "speaker": "advocate",
+               "record_role": "original_account", "text": "The account remains disputed."}
+    ctx = context("The account remains disputed.", [earlier])
+    item = work(None)
+    item["search_account"] = [item["sources"][0],
+        {"source_id": "t1:advocate", "quote": None}, item["sources"][0]]
+    admitted = accept({"work": [item]}, ctx)
+    account = admitted["work"][0]["search_account"]
+    assert [s["turn_id"] for s in account] == ["t1", "t2"]
+    query = search_queries(admitted["work"][0])[0]
+    assert query["text"].count(earlier["text"]) == 2
+    assert "Advocate passage 1:" in query["text"] and "Advocate passage 2:" in query["text"]
+    assert query["text"] == query["context"]
+
+
+@pytest.mark.parametrize("role,speaker", [("nm_interpretation", "nm"), ("service", "service")])
+def test_nonoriginal_search_basis_cannot_hide_independent_valid_work(role, speaker):
+    previous = {"source_id": "old", "turn_id": "t1", "speaker": speaker,
+                "record_role": role, "text": "A prior derived explanation."}
+    ctx = context("Review this explanation against my account.", [previous])
+    bad, good = work(None), work(None)
+    bad["search_account"] = [{"source_id": "old", "quote": None}]
+    admitted = accept({"work": [bad, good]}, ctx)
+    assert [w["id"] for w in admitted["work"]] == ["t2:w2"]
+    assert "original advocate" in admitted["issues"][0]["mismatch"]
+
+
+def test_concepts_are_not_silently_truncated_and_empty_search_account_is_not_invented():
+    ctx = context("Explain the legal relationship in general.")
+    item = work(None)
+    item["search_account"] = []
+    admitted = accept({"work": [item]}, ctx)
+    queries = search_queries(admitted["work"][0])
+    assert len(queries) == 2 and all(q["context"] == "" for q in queries)
+    item["enquiries"] *= 2
+    rejected = accept({"work": [item]}, ctx)
+    assert rejected["work"] == [] and rejected["issues"]
+    assert len(rejected["proposal"]["work"][0]["enquiries"]) == 4
+
+
+def test_real_frozen_v2_search_replays_without_new_query_construction():
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[1] / "outputs/core-engine-build-20261010"
+    captured = json.loads((root / "live-served-capacity-remeasurement-writer-1-input.json").read_text(encoding="utf-8"))
+    record = captured["research"]
+    assert record["contract"] == "core_research_v2"
+    assert validate(record, record["plan"], captured["context"]) == record
+    unknown = {**record, "contract": "unknown_research_version"}
+    with pytest.raises(ValueError, match="Unknown"): validate(unknown, record["plan"], captured["context"])
+    changed = deepcopy(record)
+    first = next(iter(changed["searches"].values()))
+    first["queries"][0]["text"] += " unowned addition"
+    with pytest.raises(ValueError): validate(changed, changed["plan"], captured["context"])
+
+
+def test_offered_passage_id_resolves_original_spelling_offsets_and_ownership():
+    from nm.core_engine.research import _source_windows
+    ctx = context("Hello. Separately, the technician retains the drive. The client disputes a right to retain it.")
+    _, _, offered = _source_windows(ctx)
+    item = work(None)
+    item["search_account"] = [{"source_id": p["source_id"], "quote": None} for p in offered[1:]]
+    admitted = accept({"work": [item]}, ctx)
+    assert admitted["issues"] == []
+    for source in admitted["work"][0]["search_account"]:
+        assert source["source_id"] == ctx["latest"]["source_id"]
+        assert source["text"] == ctx["latest"]["text"][source["start"]:source["end"]]
+        assert source["speaker"] == "advocate" and source["record_role"] == "original_account"
+    query = search_queries(admitted["work"][0])[0]["text"]
+    assert "Hello." not in query and "Separately, the technician" in query
+    assert "The client disputes" in query
+    item["search_account"][0]["source_id"] += ":unknown"
+    assert accept({"work": [item]}, ctx)["issues"]
+
+
+def test_briefly_served_v3_broad_plan_preserves_captured_query_serialization():
+    from pathlib import Path
+    from nm.core_engine.research import PREVIOUS_CONTRACT
+    root = Path(__file__).resolve().parents[1] / "outputs/core-engine-build-20261010"
+    inputs = json.loads((root / "research-v3-runtime-ready-inputs.json").read_text(encoding="utf-8"))
+    outputs = json.loads((root / "research-v3-runtime-ready-results.json").read_text(encoding="utf-8"))
+    case, result = inputs["cases"][1], outputs["calls"][1]
+    plan = result["admitted_plan"]
+    assert accept(plan["proposal"], case["context"], contract=PREVIOUS_CONTRACT) == plan
+    assert {w["id"]: search_queries(w, contract=PREVIOUS_CONTRACT) for w in plan["work"]} == result["constructed_queries"]

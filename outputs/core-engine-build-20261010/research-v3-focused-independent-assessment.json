@@ -1,0 +1,97 @@
+{
+  "contract": "research_focused_independent_assessment_v1",
+  "decision": "A useful responsibility improvement, not complete semantic acceptance. Current-work controls and corpus-answerable enquiries improve, while source selection, changed factual premises and independent investigation scope remain unresolved.",
+  "scope": "Independent read of complete original contexts and raw model proposals, checked against admitted plans. The eight contexts are byte-equivalent as JSON values to the prior broad-planner run. Assessor knew the cases and helped prepare their harness; this is not blinded or a population accuracy measurement. No new model calls, production edits, retrieval, answer delivery or browser testing in this review.",
+  "evidence": {
+    "inputs": "research-v3-focused-inputs.json",
+    "inputs_sha256": "0afbf2bb1d55880077ddabe001055511e579beb388b9a645efde23b7255b8559",
+    "results": "research-v3-focused-results.json",
+    "results_sha256": "6845c1e8dbd139583fc49a6fc62bc29de20241eda6c3796c7896c0436d98992b"
+  },
+  "observations": {
+    "cases": 8,
+    "no_research_controls_correct": 3,
+    "private_fact_questions_as_legal_queries_observed": false,
+    "proposed_investigations": 9,
+    "admitted_investigations": 7,
+    "held_investigations": 2,
+    "proposed_enquiries": 24,
+    "input_tokens": 12840,
+    "output_tokens": 2102,
+    "provider_usage_cost_usd": 0.0084992,
+    "rounded_ledger_cost_usd": 0.008503,
+    "note": "Counts describe these observations, not semantic accuracy or production acceptance."
+  },
+  "cases": [
+    {
+      "name": "original_aster_held_drive",
+      "improved": "Both legal disputes proposed separately; enquiries now seek legal grounds, proof standards and remedies rather than private agreement facts. Client questions correctly remain outside this call.",
+      "remaining": [
+        "Drive investigation is still held because capitalized 'The owner's technician' is not the original lowercase continuation after 'Separately,'. Exact source checking correctly refuses the altered selection, but useful coverage is lost.",
+        "Deposit search_account omits the hire/return event and the reported, unexamined agreement and receipt. The complete conversation still exists downstream, but focused retrieval does not receive those original qualifications.",
+        "One enquiry purpose says 'especially absent joint inspection'. The source establishes no joint inspection report was sent, not that no inspection occurred. The legal concept itself is useful; that factual qualification should not be strengthened."
+      ]
+    },
+    {
+      "name": "not_supplied_is_not_nonexistent",
+      "improved": "Original search words retain denied damage, report non-supply and the technician's possession. Both deposit and drive have distinct legal enquiries; no private client questions are searched.",
+      "remaining": [
+        "Both independently researchable disputes are combined in one investigation. Neither topic is omitted, but they now share a factual query, candidate selection and failure scope; the intended per-dispute focus is not established.",
+        "The corpus enquiries remain long descriptions in this case, though they seek distinct contributions and are not merely synonyms."
+      ]
+    },
+    {
+      "name": "actor_agency_and_explicit_alternative",
+      "improved": "The admitted alternative preserves the exact authorised assumption in search_account and marks its concepts conditional. Conditional agency/reliance concepts are legitimate.",
+      "remaining": [
+        "Third alternative enquiry broadens no email ever created into 'no written confirmation'; its purpose broadens further to 'absence of written evidence'. Conditional status does not authorise changing the hypothesis's factual extent.",
+        "First and second alternative enquiries substantially overlap the authority-plus-no-email question instead of contributing fully distinct discovery routes.",
+        "The separate actual-account proposal lacks a current-message source and is held. Its first purpose incorrectly calls the client the hospital, reversing the reported relationship. The ownership gate contains execution here, not semantic correctness.",
+        "The admitted alternative account omits the earlier substantive principal/agent/third-party relationship; the full conversation supports it, but the first search has mostly hypothetical instruction text."
+      ]
+    },
+    {
+      "name": "mixed_independent_requests_followup",
+      "improved": "Interim-relief explanation and expressly resumed access work remain separate; concepts concern permission expiry, independent rights and unsettled ownership.",
+      "remaining": [
+        "Resumed work's search_account contains only the instruction to resume. Exact earlier permission, expiry, opposing independent-right claim and missing deed-plan passages appear in sources but do not reach the original-account search or reranker context. A current authority link cannot replace the original evidence basis."
+      ]
+    },
+    {
+      "name": "correction_no_send_no_law",
+      "improved": "Returns work=[] with no enquiries, correctly leaving the factual-summary correction and restrictions to downstream work.",
+      "remaining": ["This does not establish that the correction is actually performed or delivered."]
+    },
+    {
+      "name": "greeting_social_close",
+      "improved": "Returns work=[] rather than restarting or monitoring paused tenancy work.",
+      "remaining": ["One observed closing does not establish general current-work accuracy or delivered courtesy quality."]
+    },
+    {
+      "name": "holdout_temporary_sport_restriction_and_fee",
+      "improved": "Separate eligibility and fee investigations with distinct legal topics; selection timing is now explicitly researched. Temporary status, denied tampering and uncertainty about the unprovided record remain in the eligibility account. No client questions are misrouted to the corpus.",
+      "remaining": [
+        "Eligibility search_account omits the actual six-day deadline although sources include it and a legal enquiry addresses timing.",
+        "Sponsor search_account omits the reported unprovided agreement and does not include the original allegation/finality context needed to understand what triggered withholding. Some of that context appears only in the other work unit or in proposed purpose text."
+      ],
+      "permissible_exploration": "Doping-or-tampering rules, reputational conditions and contractual payment clauses are useful discovery possibilities, not automatic inventions that those particular facts or clauses are established."
+    },
+    {
+      "name": "holdout_correct_reported_actor_without_research",
+      "improved": "Returns work=[] and leaves the authorised summary correction and paused research distinct.",
+      "remaining": ["Downstream correction and response execution remain untested by this planner-only observation."]
+    }
+  ],
+  "next_mechanical_slice": {
+    "recommendation": "Offer server-owned exact passage handles to select instead of asking the model to recopy source text. Preserve full original messages, canonical speaker/turn/offset metadata and source-coordinate ordering. Do not classify sentence meaning mechanically.",
+    "safeguards": [
+      "Mechanical punctuation spans are presentation conveniences, not semantic units or factual admissions; abbreviations, multilingual punctuation and quoted content can cross boundaries.",
+      "Permit exact contiguous ranges across offered spans within one original source, or whole-message selection. Never silently concatenate noncontiguous selections into one quotation.",
+      "Reject unknown handles, foreign owners and altered coordinates; normalize only exact duplicate source ranges.",
+      "Current-request handles and original account handles retain different purposes. Earlier original facts may be selected without making earlier pending work currently authorised.",
+      "Handles remove copying errors; they do not prove that all necessary qualifications were selected or that discovery hypotheses preserve their factual scope."
+    ],
+    "model_call_impact": "Zero additional routine calls; change presentation and deterministic reference resolution within the same planning owner."
+  },
+  "replay_requirement": "Retain the broad served core_research_v3 schema/admission/query decoder exactly and retain v2. Give the narrowed handle-based contract a new version (v4). Verify whether any narrow plan was saved under the transient v3 identity; do not silently infer or upgrade old contracts or regenerate their seals."
+}
