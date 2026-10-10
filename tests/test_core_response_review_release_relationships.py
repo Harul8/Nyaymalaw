@@ -16,9 +16,9 @@ from tests.test_core_turn import ScriptedModel, run
 pytestmark = pytest.mark.class_a
 
 
-def use(reference):
-    return {**reference, "role": "original_account", "speaker": "advocate",
-            "treatment": "not_applicable", "treatment_source": None}
+def use(source_id):
+    assert isinstance(source_id, str)
+    return {"source_id": source_id, "source_kind": "account"}
 
 
 class MissingWorkModel(ScriptedModel):
@@ -46,17 +46,18 @@ class MissingWorkModel(ScriptedModel):
         questions = ref("List the unanswered questions.")
         if prompt.operation == "core_response_writer":
             self.writes += 1
+            address = {"source_id": latest["source_id"]}
             out = {"units": [
                 {"kind": "greeting", "text": "Hello.",
-                 "addresses": [ref("Hello.")], "uses": []},
+                 "addresses": [deepcopy(address)], "uses": []},
                 {"kind": "account", "text": "You report that the delivery date is unknown.",
-                 "addresses": [summary], "uses": [use(ref("The delivery date is unknown."))]},
+                 "addresses": [deepcopy(address)], "uses": [use(latest["source_id"])]},
             ]}
             if self.consume_shape_correction and self.writes == 1:
                 out["units"][0]["addresses"][0]["quote"] = "Words absent from the source"
             elif self.writes > 1 and not (self.reject_repair or self.consume_shape_correction):
                 out["units"].append({"kind": "question", "text": "When was the delivery?",
-                                     "addresses": [questions], "uses": []})
+                                     "addresses": [deepcopy(address)], "uses": []})
         else:
             units = data["complete_draft_proposal"]["units"]
             missing = len(units) == 2  # A fixture decision, never the production meaning check.
@@ -123,9 +124,9 @@ def test_address_and_support_stay_distinct_for_review_and_correction_binding():
         text="The corrected reported quantity is five crates. Summarise the correction.",
         history=[earlier])
     latest = {"source_id": ctx["latest"]["source_id"], "quote": None}
-    old = {"source_id": earlier["source_id"], "quote": None}
     proposal = {"units": [{"kind": "account", "text": "Your corrected reported quantity is five crates.",
-                           "addresses": [latest], "uses": [use(old)]}]}
+                           "addresses": [{"source_id": latest["source_id"]}],
+                           "uses": [use(earlier["source_id"])]}]}
     draft = accept_draft(proposal, ctx, sources)
     rejection = positive(draft, requests=[request(ctx, draft, disposition="missing")])
     rejection["verdict"] = "reject"
@@ -139,7 +140,7 @@ def test_address_and_support_stay_distinct_for_review_and_correction_binding():
     assert shown["addresses"] == [latest] and shown["uses"][0]["source_id"] == earlier["source_id"]
     assert not rejected["accepted"] and validate(rejected, ctx, record, sources, draft) == rejected
     corrected = deepcopy(proposal)
-    corrected["units"][0]["uses"] = [use(latest)]
+    corrected["units"][0]["uses"] = [use(latest["source_id"])]
     repaired = accept_draft(corrected, ctx, sources)
     accepted = review(Model(positive(repaired, requests=[request(ctx, repaired)])),
                       ctx, record, sources, repaired)
@@ -155,10 +156,10 @@ def test_explicit_supported_limit_can_coexist_with_independent_read_only_result(
     information = {"source_id": identity, "quote": "list what information I should provide."}
     draft = accept_draft({"units": [
         {"kind": "limitation", "text": "The record has not been supplied here, so its contents "
-         "cannot be assessed from this conversation.", "addresses": [assess],
-         "uses": [use({"source_id": identity, "quote": "I have not supplied the record."})]},
+         "cannot be assessed from this conversation.", "addresses": [{"source_id": identity}],
+         "uses": [use(identity)]},
         {"kind": "next_step", "text": "Please provide the record and explain what you want its assessment to resolve.",
-         "addresses": [information], "uses": []}]}, ctx, sources)
+         "addresses": [{"source_id": identity}], "uses": []}]}, ctx, sources)
     expected = positive(draft, requests=[
         request(ctx, draft, request=assess, disposition="justified_limit",
                 reason="The delivered unit explains the actual missing supplied source."),
@@ -176,7 +177,7 @@ def test_paused_earlier_work_does_not_mechanically_require_resumption_for_a_soci
     ctx, record, sources, _ = setup(text="Thank you, goodbye.", history=[earlier])
     ctx["saved_work"] = [{"id": "pending-review", "state": "pending"}]
     draft = accept_draft({"units": [{"kind": "greeting", "text": "You're welcome. Goodbye.",
-        "addresses": [{"source_id": ctx["latest"]["source_id"], "quote": None}], "uses": []}]}, ctx, sources)
+        "addresses": [{"source_id": ctx["latest"]["source_id"]}], "uses": []}]}, ctx, sources)
     model = Model(positive(draft))
     accepted = review(model, ctx, record, sources, draft)
     payload = json.loads(model.calls[0][0].user)

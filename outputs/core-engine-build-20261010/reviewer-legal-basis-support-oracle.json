@@ -1,0 +1,40 @@
+{
+  "not_model_input": true,
+  "labels": [
+    {
+      "case_id": "selection-11",
+      "expected": "unsupported",
+      "reason": "Selected earlier account gives 6 September; it does not support the reported correction to 8 September."
+    },
+    {
+      "case_id": "selection-28",
+      "expected": "supported",
+      "reason": "Selected clarification supplies 8 September, expressly correcting 6 September, while the draft preserves reported status."
+    },
+    {
+      "case_id": "selection-46",
+      "expected": "supported",
+      "reason": "The selected account and synthetic legal passage jointly support a conditional possibility while preserving unavailable terms, disputed authorisation and no established entitlement."
+    },
+    {
+      "case_id": "held-scope-01",
+      "expected": "unsupported",
+      "reason": "The selected provision's unpaid seller, goods sold and price relationship does not support retaining the separate lent item for repair charges or the asserted converse."
+    },
+    {
+      "case_id": "held-scope-02",
+      "expected": "supported",
+      "reason": "The unit accurately limits this selected provision to its stated relationship without excluding a different legal or contractual basis."
+    }
+  ],
+  "actual_answer_minimum_expectation": {
+    "case_id": "actual-writer-five-units",
+    "scope_pass": false,
+    "required_unsupported_unit_ids": [
+      "turn_88979706-2beb-49cc-b038-71313855e357:b1",
+      "turn_88979706-2beb-49cc-b038-71313855e357:b2"
+    ],
+    "reason": "The first two units state legal rules and consequences using only an original-account source.",
+    "other_unit_policy": "Other units require separate content judgment; mentioning a legal topic in a factual question is not itself an unsupported legal rule. Do not require rejection of useful source-based factual limits or questions merely because the preceding analysis fails."
+  }
+}

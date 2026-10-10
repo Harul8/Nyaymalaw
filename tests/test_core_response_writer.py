@@ -5,7 +5,7 @@ import json
 import pytest
 
 from nm.core_engine.answer_sources import build
-from nm.core_engine.response_writer import CONTRACT, MAX_OUTPUT, SCHEMA, accept, validate, write
+from nm.core_engine.response_writer import CONTRACT, LEGACY_CONTRACT, MAX_OUTPUT, SCHEMA, accept, validate, write
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import (
     ContextOverflow, ModelError, ModelResult, SchemaViolation, Tier, Usage,
@@ -16,17 +16,36 @@ pytestmark = pytest.mark.class_a
 
 
 def reference(source):
+    return {"source_id": source["id"]}
+
+
+def reference_v1(source):
     return {"source_id": source["id"], "quote": source["text"]}
 
 
-def source_use(source, **changes):
-    return {**reference(source), "role": "original_account", "speaker": None,
+def source_use_v1(source, **changes):
+    return {**reference_v1(source), "role": "original_account", "speaker": None,
             "treatment": "not_applicable", "treatment_source": None, **changes}
+
+
+def source_use_v2(source, **changes):
+    result = {"source_id": source["id"], "source_kind": source["kind"]}
+    if source["kind"] == "judgment":
+        result.update(role="court_reasoning", speaker=None,
+                      court_treatment={"status": "not_applicable"})
+    result.update(changes)
+    return result
 
 
 def unit(sources, *, kind="question", text="Which part would you like clarified?", uses=None):
     return {"kind": kind, "text": text, "addresses": [reference(sources["t2:advocate"])],
             "uses": uses or []}
+
+
+def unit_v1(sources, **kwargs):
+    result = unit(sources, **kwargs)
+    result["addresses"] = [reference_v1(sources["t2:advocate"])]
+    return result
 
 
 class Model:
@@ -71,19 +90,19 @@ def test_complete_context_and_all_neighbouring_legal_words_reach_one_routine_cal
 
 
 @pytest.mark.parametrize("whole_source", [False, True])
-def test_adjacent_court_treatment_is_bound_separately_to_the_same_owned_judgment(whole_source):
+def test_legacy_adjacent_court_treatment_is_bound_separately_to_same_owned_judgment(whole_source):
     ctx, record = fixture()
     sources = build(ctx, record)
     submission = next(s for s in sources.values() if s["kind"] == "judgment" and "Counsel" in s["text"])
     treatment = next(s for s in sources.values() if s["kind"] == "judgment" and "Court rejected" in s["text"])
-    use = source_use(submission, role="party_submission", speaker="Counsel",
-                     treatment="rejected", treatment_source=reference(treatment))
-    proposal = {"units": [unit(sources, kind="law", text="The submission was rejected.", uses=[use])]}
+    use = source_use_v1(submission, role="party_submission", speaker="Counsel",
+                     treatment="rejected", treatment_source=reference_v1(treatment))
+    proposal = {"units": [unit_v1(sources, kind="law", text="The submission was rejected.", uses=[use])]}
     if whole_source:
         proposal["units"][0]["addresses"][0]["quote"] = None
         use["quote"] = None
         use["treatment_source"]["quote"] = None
-    draft = accept(proposal, ctx, sources)
+    draft = accept(proposal, ctx, sources, contract=LEGACY_CONTRACT)
     resolved = draft["units"][0]["uses"][0]
     assert resolved["source_id"] == submission["id"]
     assert resolved["text"] == submission["text"]
@@ -101,8 +120,7 @@ def test_whole_source_ids_resolve_full_attributed_accounts_without_recopied_word
     ctx, record = fixture(history=history)
     sources = build(ctx, record)
     item = unit(sources, kind="account", text="The earlier account contains two affirmations.",
-                uses=[source_use(sources["t1:advocate"], quote=None)])
-    item["addresses"][0]["quote"] = None
+                uses=[source_use_v2(sources["t1:advocate"])])
     model = Model({"units": [item]})
     draft = write(model, ctx, record, sources)
     assert len(model.calls) == 1
@@ -113,39 +131,40 @@ def test_whole_source_ids_resolve_full_attributed_accounts_without_recopied_word
     assert accepted["uses"][0]["text"] == history[0]["text"]
     assert accepted["uses"][0]["start"] == 0
     assert accepted["uses"][0]["end"] == len(history[0]["text"])
-    assert draft["proposal"]["units"][0]["uses"][0]["quote"] is None
+    assert draft["proposal"]["units"][0]["uses"][0] == {
+        "source_id": "t1:advocate", "source_kind": "account"}
     assert validate(draft, ctx, sources) == draft
 
 
 @pytest.mark.parametrize("target", ["address", "source", "treatment"])
-def test_explicit_paraphrase_is_not_silently_replaced_with_whole_source(target):
+def test_legacy_explicit_paraphrase_is_not_silently_replaced_with_whole_source(target):
     ctx, record = fixture()
     sources = build(ctx, record)
     submission = next(s for s in sources.values() if s["kind"] == "judgment" and "Counsel" in s["text"])
     treatment = next(s for s in sources.values() if s["kind"] == "judgment" and "Court rejected" in s["text"])
-    use = source_use(submission, quote=None, role="party_submission", treatment="rejected",
+    use = source_use_v1(submission, quote=None, role="party_submission", treatment="rejected",
                      treatment_source={"source_id": treatment["id"], "quote": None})
-    item = unit(sources, kind="law", uses=[use])
+    item = unit_v1(sources, kind="law", uses=[use])
     item["addresses"][0]["quote"] = None
     if target == "address": item["addresses"][0]["quote"] = "Locate the applicable law."
     elif target == "source": use["quote"] = "Counsel argued that payment was due."
     else: use["treatment_source"]["quote"] = "The court disagreed with counsel."
-    with pytest.raises(SchemaViolation): accept({"units": [item]}, ctx, sources)
+    with pytest.raises(SchemaViolation): accept({"units": [item]}, ctx, sources, contract=LEGACY_CONTRACT)
 
 
 @pytest.mark.parametrize("damage", ["foreign_source", "wrong_quote", "ambiguous_quote", "wrong_address"])
-def test_invalid_or_ambiguous_reference_refuses_draft_without_silent_partial_salvage(damage):
+def test_legacy_invalid_or_ambiguous_reference_refuses_draft_without_silent_partial_salvage(damage):
     history = [{"source_id": "t1:advocate", "turn_id": "t1", "speaker": "advocate",
                 "record_role": "original_account", "text": "First yes. Second yes."}]
     ctx, record = fixture(history=history)
     sources = build(ctx, record)
-    use = source_use(sources["t1:advocate"])
-    broken = unit(sources, kind="account", uses=[use])
+    use = source_use_v1(sources["t1:advocate"])
+    broken = unit_v1(sources, kind="account", uses=[use])
     if damage == "foreign_source": use["source_id"] = "other-matter:advocate"
     elif damage == "wrong_quote": use["quote"] = "First  yes."
     elif damage == "ambiguous_quote": use["quote"] = "yes."
-    else: broken["addresses"] = [reference(next(s for s in sources.values() if s["kind"] == "judgment"))]
-    with pytest.raises(SchemaViolation): accept({"units": [unit(sources), broken]}, ctx, sources)
+    else: broken["addresses"] = [reference_v1(next(s for s in sources.values() if s["kind"] == "judgment"))]
+    with pytest.raises(SchemaViolation): accept({"units": [unit_v1(sources), broken]}, ctx, sources, contract=LEGACY_CONTRACT)
 
 
 def test_earlier_original_request_can_be_addressed_without_losing_latest_binding():
@@ -161,12 +180,12 @@ def test_earlier_original_request_can_be_addressed_without_losing_latest_binding
         accept({"units": [prior]}, ctx, sources)
 
 
-def test_factual_analysis_does_not_require_invented_legal_dependency_or_speaker():
+def test_legacy_factual_analysis_preserves_empty_optional_speaker_metadata():
     ctx, record = fixture()
     sources = build(ctx, record)
-    use = source_use(sources["t2:advocate"], speaker="  ")
-    proposal = {"units": [unit(sources, kind="analysis", text="Your request concerns the applicable law.", uses=[use])]}
-    draft = accept(proposal, ctx, sources)
+    use = source_use_v1(sources["t2:advocate"], speaker="  ")
+    proposal = {"units": [unit_v1(sources, kind="analysis", text="Your request concerns the applicable law.", uses=[use])]}
+    draft = accept(proposal, ctx, sources, contract=LEGACY_CONTRACT)
     assert draft["units"][0]["uses"][0]["speaker"] is None
     assert draft["units"][0]["uses"][0]["treatment_source"] is None
     assert proposal["units"][0]["uses"][0]["speaker"] == "  "
@@ -177,11 +196,11 @@ def test_claimed_court_treatment_needs_exact_owned_judgment_dependency(damage):
     ctx, record = fixture()
     sources = build(ctx, record)
     judgments = [s for s in sources.values() if s["kind"] == "judgment"]
-    use = source_use(judgments[0], role="party_submission", treatment="adopted",
-                     treatment_source=reference(judgments[1]))
-    if damage == "no_source": use["treatment_source"] = None
+    use = source_use_v2(judgments[0], role="party_submission",
+                     court_treatment={"status": "adopted", "source": reference(judgments[1])})
+    if damage == "no_source": use["court_treatment"]["source"] = None
     elif damage == "different_case": sources[judgments[1]["id"]]["source_identity"]["case_id"] = "other-case"
-    else: use["treatment_source"] = reference(next(s for s in sources.values() if s["kind"] == "provision"))
+    else: use["court_treatment"]["source"] = reference(next(s for s in sources.values() if s["kind"] == "provision"))
     with pytest.raises(SchemaViolation):
         accept({"units": [unit(sources, kind="law", uses=[use])]}, ctx, sources)
 
@@ -198,7 +217,7 @@ def test_reported_legal_opinion_is_not_held_legal_material():
     ctx, record = fixture()
     sources = build(ctx, record)
     with pytest.raises(SchemaViolation, match="held legal"):
-        accept({"units": [unit(sources, kind="law", uses=[source_use(sources["t2:advocate"])])]}, ctx, sources)
+        accept({"units": [unit(sources, kind="law", uses=[source_use_v2(sources["t2:advocate"])])]}, ctx, sources)
 
 
 @pytest.mark.parametrize("addition", ["id", "url", "review", "status", "seal"])

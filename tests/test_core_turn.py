@@ -50,12 +50,12 @@ class ScriptedModel:
                 source = next(s for s in data["held_passages"]["passages"] if s["kind"] == "judgment"
                               and "Counsel submitted" in s["text"])
                 treatment = next(s for s in data["held_passages"]["passages"] if "Court rejected" in s["text"])
-                uses = [{"source_id": source["id"], "quote": source["text"],
-                    "role": "party_submission", "speaker": "Counsel", "treatment": "rejected",
-                    "treatment_source": {"source_id": treatment["id"], "quote": treatment["text"]}}]
+                uses = [{"source_id": source["id"], "source_kind": "judgment",
+                    "role": "party_submission", "speaker": "Counsel",
+                    "court_treatment": {"status": "rejected", "source": {"source_id": treatment["id"]}}}]
                 text = "The court rejected counsel's submission because its condition was unmet."
             out = {"units": [{"kind": "law" if uses else "greeting", "text": text,
-                              "addresses": [ref], "uses": uses}]}
+                              "addresses": [{"source_id": latest["source_id"]}], "uses": uses}]}
             if self.malformed_writer:
                 self.malformed_writer -= 1
                 out["units"][0]["addresses"][0]["quote"] = "Absent quotation"

@@ -56,7 +56,9 @@ account or question work and explain the legal-source gap; never fill it with a 
 standard from memory.
 
 Outcome: Return an ordered units array with natural text, kind, original-message
-addresses and source uses. Separate independently assessable assertions; retain all
+addresses and source uses. For each unit, select the addressed message and supporting
+factual and legal passages first, then choose the kind and write only what those sources
+support. Separate independently assessable assertions; retain all
 conditions without an arbitrary length limit. Each unit addresses original advocate
 material; the draft must address the latest message. Each reference selects only an
 owned source_id. Code supplies the complete exact saved passage and its attribution;
@@ -122,16 +124,19 @@ USE = {"anyOf": [
 ]}
 
 
-def _schema(use, reference):
-    unit = _object({
+def _schema(use, reference, *, source_first=False):
+    fields = {
         "kind": {"type": "string", "enum": list(KINDS)}, "text": TEXT,
         "addresses": {"type": "array", "minItems": 1, "items": reference},
         "uses": {"type": "array", "items": use},
-    })
+    }
+    if source_first:
+        fields = {key: fields[key] for key in ("addresses", "uses", "kind", "text")}
+    unit = _object(fields)
     return _object({"units": {"type": "array", "minItems": 1, "items": unit}})
 
 
-LEGACY_SCHEMA, SCHEMA = _schema(LEGACY_USE, REFERENCE), _schema(USE, SOURCE_REFERENCE)
+LEGACY_SCHEMA, SCHEMA = _schema(LEGACY_USE, REFERENCE), _schema(USE, SOURCE_REFERENCE, source_first=True)
 
 
 def _legacy_use(use, sources):

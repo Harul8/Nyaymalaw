@@ -58,18 +58,18 @@ standard from memory.
 Outcome: Return an ordered units array with natural text, kind, original-message
 addresses and source uses. Separate independently assessable assertions; retain all
 conditions without an arbitrary length limit. Each unit addresses original advocate
-material; the draft must address the latest message. Each reference selects only an
-owned source_id. Code supplies the complete exact saved passage and its attribution;
-do not retype, paraphrase or shorten source text in a reference. The full passage and
-neighbouring context remain the basis for checking each assertion and its conditions.
+material; the draft must address the latest message. Each reference selects an owned
+source_id and quote=null by default: code supplies that source's complete exact text.
+Select a shorter quoted string only to identify particular continuous words; copy them
+exactly without paraphrasing, changing punctuation or joining separate passages.
 Account, law and analysis units need source uses; law needs held legal material.
 Analysis selects its factual and legal premises. Questions and next steps select any
 premises they assert; greetings need no source use.
 For every use, copy source_kind from the supplied source_kinds catalogue:
-- account, nm_context and service: give only source_kind and source_id. Code
+- account, nm_context and service: give only source_kind, source_id and quote. Code
   preserves the original speaker and provenance. NM interpretations and service notices
   may explain earlier conversation; they cannot prove the underlying matter account.
-- provision: give only source_kind and source_id. Court treatment does not apply
+- provision: give only source_kind, source_id and quote. Court treatment does not apply
   to this source selector. Support a court's interpretation separately with its judgment.
 - judgment: also give the passage's role, speaker (null if unidentified) and
   court_treatment. Role describes whose statement and what type of statement it is;
@@ -103,35 +103,34 @@ LEGACY_USE = _object({
 })
 JUDGMENT_ROLES = ("party_submission", "court_reasoning", "court_disposition",
                   "quoted_authority", "contract", "uncertain")
-SOURCE_REFERENCE = _object({"source_id": TEXT})
 COURT_TREATMENT = {"anyOf": [
     _object({"status": {"type": "string", "enum": ["not_shown", "not_applicable"]}}),
     _object({"status": {"type": "string", "enum": ["adopted", "rejected", "qualified"]},
-             "source": SOURCE_REFERENCE}),
+             "source": REFERENCE}),
 ]}
 USE = {"anyOf": [
     _object({"source_kind": {"type": "string", "enum": ["account", "nm_context", "service"]},
-             **SOURCE_REFERENCE["properties"]}),
+             **REFERENCE["properties"]}),
     _object({"source_kind": {"type": "string", "enum": ["provision"]},
-             **SOURCE_REFERENCE["properties"]}),
+             **REFERENCE["properties"]}),
     _object({"source_kind": {"type": "string", "enum": ["judgment"]},
-             **SOURCE_REFERENCE["properties"],
+             **REFERENCE["properties"],
              "role": {"type": "string", "enum": list(JUDGMENT_ROLES)},
              "speaker": {"type": ["string", "null"]},
              "court_treatment": COURT_TREATMENT}),
 ]}
 
 
-def _schema(use, reference):
+def _schema(use):
     unit = _object({
         "kind": {"type": "string", "enum": list(KINDS)}, "text": TEXT,
-        "addresses": {"type": "array", "minItems": 1, "items": reference},
+        "addresses": {"type": "array", "minItems": 1, "items": REFERENCE},
         "uses": {"type": "array", "items": use},
     })
     return _object({"units": {"type": "array", "minItems": 1, "items": unit}})
 
 
-LEGACY_SCHEMA, SCHEMA = _schema(LEGACY_USE, REFERENCE), _schema(USE, SOURCE_REFERENCE)
+LEGACY_SCHEMA, SCHEMA = _schema(LEGACY_USE), _schema(USE)
 
 
 def _legacy_use(use, sources):
@@ -156,7 +155,7 @@ def _legacy_use(use, sources):
 
 
 def _owned_use(use, sources, originals):
-    support = answer_sources.select({"source_id": use["source_id"], "quote": None}, sources)
+    support = answer_sources.select({key: use[key] for key in ("source_id", "quote")}, sources)
     primary = sources[support["source_id"]]
     kind = primary["kind"]
     if use["source_kind"] != kind:
@@ -181,10 +180,9 @@ def _owned_use(use, sources, originals):
     treatment = use["court_treatment"]
     # V2's closed alternatives forbid missing support or contradictory empty support.
     # Reuse the existing canonical shape and same-judgment binding for downstream owners.
-    return _legacy_use({"source_id": use["source_id"], "quote": None,
+    return _legacy_use({"source_id": use["source_id"], "quote": use["quote"],
         "role": use["role"], "speaker": use["speaker"], "treatment": treatment["status"],
-        "treatment_source": ({**treatment["source"], "quote": None}
-                             if "source" in treatment else None)}, sources)
+        "treatment_source": treatment.get("source")}, sources)
 
 
 
@@ -218,8 +216,7 @@ def accept(proposal, context, sources, *, contract=CONTRACT):
                     or source.get("source_identity") != {
                         "source_id": original["source_id"], "turn_id": original["turn_id"]}):
                 raise ValueError("Address catalogue differs from the original conversation")
-            reference = ref if contract == LEGACY_CONTRACT else {**ref, "quote": None}
-            addresses.append(answer_sources.select(reference, sources))
+            addresses.append(answer_sources.select(ref, sources))
             addresses_latest |= ref["source_id"] == latest_id
         uses = [(_legacy_use(use, sources) if contract == LEGACY_CONTRACT
                  else _owned_use(use, sources, originals)) for use in item["uses"]]

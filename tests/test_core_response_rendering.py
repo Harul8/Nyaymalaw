@@ -35,7 +35,7 @@ def ready(text="The submitted position was rejected; the statutory exception rem
         "uses": [use(argument, role="party_submission", speaker="Respondent", treatment="rejected",
                      treatment_source={"source_id": treatment["id"], "quote": treatment["text"]}),
                  use(statute)]}]}
-    draft = response_writer.accept(proposal, ctx, sources)
+    draft = response_writer.accept(proposal, ctx, sources, contract=response_writer.LEGACY_CONTRACT)
     execution = turn.execution_record(research)
     verdict = {"verdict": "accept", "units": [{"unit_id": draft["units"][0]["id"],
         "verdict": "supported", "reason": "Synthetic acceptance for exercising rendering ownership."}],
@@ -115,7 +115,7 @@ def test_positive_review_cannot_bless_changed_text_dependencies_or_evidence(chan
         else:
             other = next(s for s in sources.values() if s["kind"] == "provision" and s["locator"] == "s.5")
             proposal["units"][0]["uses"][1].update(source_id=other["id"], quote=other["text"])
-        draft = response_writer.accept(proposal, ctx, sources)
+        draft = response_writer.accept(proposal, ctx, sources, contract=response_writer.LEGACY_CONTRACT)
     elif change == "source": sources[next(s for s in sources if sources[s]["kind"] == "judgment")]["text"] += " Forged words."
     elif change == "context": ctx["current_records"] = {"new_authority": "Different current state"}
     elif change == "execution": execution["operations"] = [{"outcome": "changed"}]

@@ -1,0 +1,105 @@
+{
+  "manifest": {
+    "contract": "writer_ordering_experiment_v1",
+    "model": "gpt-4.1-mini-2025-04-14",
+    "script_sha256": "adc3ad85d541a762637085c4e15d5e4cedef5345268ec226466cede8697fbc13",
+    "candidate_sha256": "cf6c9cab3403669c4dd162c9d903aef4021be61fe09f62f0e82c431c012b845c",
+    "baseline_sha256": "02bfca2cc80a97d1689ac0313ab2dc0af776aafce94269f3df999b7da48a62ea",
+    "input_sha256": "de23816a778e5f2cb1af800270484d2c908b72f3c5618df8b5b34cbe164b0a6d",
+    "support_script_sha256": "e152b9a04cfeb6db01b9f81ce14d85fa1fb469d7d9a262f2337030888e8392d8",
+    "frozen_input": "C:\\Users\\rahul\\Nyaymalaw\\outputs\\core-engine-build-20261010\\browser-core-v4-diagnostics\\cd29f5e8fc1645489e685354e1046535\\010-response_writer-write-input.json",
+    "maximum_calls": 1,
+    "corrections": 0,
+    "transport_retries": 0,
+    "maximum_slice_usd": 0.3,
+    "shared_cap_usd": 5,
+    "shared_ledger": "C:\\Users\\rahul\\Nyaymalaw\\outputs\\core-engine-build-20261010\\api-budget.sqlite",
+    "next_request_bound": {
+      "serialized_sdk_bytes": 256510,
+      "planning_input_tokens": 521212,
+      "output_hard_cap": 6500,
+      "next_request_micro_usd": 218885
+    },
+    "changed_decision_order": "addresses, uses, kind, text",
+    "new_instruction": "For each unit, select the addressed message and supporting\nfactual and legal passages first, then choose the kind and write only what those sources\nsupport.",
+    "acceptance_limit": "A source-ordering experiment, not a guarantee of grounded reasoning. Root must compare legal assertions with the selected held law. Mechanical admission is not semantic or browser acceptance.",
+    "offline_checks": {
+      "provider_calls": 0,
+      "identical_full_variable_input": true,
+      "same_schema_meaning": true,
+      "unchanged_legacy_schema": true,
+      "one_added_prompt_sentence": true,
+      "production_changes": 0
+    }
+  },
+  "budget_before": {
+    "maximum_usd": 5.0,
+    "charged_usd": 2.306327,
+    "measured_usd": 0.790896,
+    "reserved_or_unknown_usd": 1.515431,
+    "attempts": 189,
+    "models": [
+      {
+        "model": "gpt-4.1-2025-04-14",
+        "state": "measured",
+        "attempts": 6,
+        "charged_usd": 0.026644
+      },
+      {
+        "model": "gpt-4.1-mini-2025-04-14",
+        "state": "measured",
+        "attempts": 181,
+        "charged_usd": 0.764252
+      },
+      {
+        "model": "gpt-4.1-mini-2025-04-14",
+        "state": "reserved_or_unknown",
+        "attempts": 1,
+        "charged_usd": 0.425431
+      },
+      {
+        "model": "text-embedding-3-large",
+        "state": "reserved_or_unknown",
+        "attempts": 1,
+        "charged_usd": 1.09
+      }
+    ]
+  },
+  "error_type": "AssertionError",
+  "error": "Next call exceeds slice allowance",
+  "budget_after": {
+    "maximum_usd": 5.0,
+    "charged_usd": 2.729358,
+    "measured_usd": 0.790896,
+    "reserved_or_unknown_usd": 1.938462,
+    "attempts": 190,
+    "models": [
+      {
+        "model": "gpt-4.1-2025-04-14",
+        "state": "measured",
+        "attempts": 6,
+        "charged_usd": 0.026644
+      },
+      {
+        "model": "gpt-4.1-mini-2025-04-14",
+        "state": "measured",
+        "attempts": 181,
+        "charged_usd": 0.764252
+      },
+      {
+        "model": "gpt-4.1-mini-2025-04-14",
+        "state": "reserved_or_unknown",
+        "attempts": 2,
+        "charged_usd": 0.848462
+      },
+      {
+        "model": "text-embedding-3-large",
+        "state": "reserved_or_unknown",
+        "attempts": 1,
+        "charged_usd": 1.09
+      }
+    ]
+  },
+  "actual_sdk_dispatches": 0,
+  "finished_utc": "2026-10-10T07:24:31.519731+00:00"
+}

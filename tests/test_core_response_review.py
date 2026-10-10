@@ -11,7 +11,7 @@ from nm.core_engine.response_review import (
     CONTRACT, LEGACY_CONTRACT, MAX_OUTPUT, SCHEMA, _digest,
     review as review_checked, validate as validate_checked,
 )
-from nm.core_engine.response_writer import accept as accept_draft
+from nm.core_engine.response_writer import LEGACY_CONTRACT as WRITER_LEGACY_CONTRACT, accept as accept_draft
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import ContextOverflow, ModelError, ModelResult, SchemaViolation, Tier, Usage
 from tests.test_core_answer_sources import fixture as legal_fixture
@@ -59,7 +59,7 @@ def setup(*, legal=False, text="Hello.", history=None, count=1):
         record = retrieve(accept_plan({"work": []}, ctx), None, ctx)
     sources = build(ctx, record)
     proposal = {"units": [{"kind": "greeting", "text": "Hello. How can I help?",
-        "addresses": [ref(ctx["latest"])], "uses": []} for _ in range(count)]}
+        "addresses": [{"source_id": ctx["latest"]["source_id"]}], "uses": []} for _ in range(count)]}
     return ctx, record, sources, accept_draft(proposal, ctx, sources)
 
 
@@ -95,12 +95,11 @@ def test_greeting_accepts_without_inventing_request_or_effect():
 
 def test_supported_attributed_summary_needs_no_fresh_write_receipt():
     ctx, record, sources, _ = setup(text="The meeting was on Tuesday. Summarise that.")
-    original = {"source_id": ctx["latest"]["source_id"], "quote": "The meeting was on Tuesday."}
+    original = {"source_id": ctx["latest"]["source_id"], "source_kind": "account"}
     draft = accept_draft({"units": [{"kind": "account",
         "text": "You report that the meeting was on Tuesday.",
-        "addresses": [{"source_id": ctx["latest"]["source_id"], "quote": "Summarise that."}],
-        "uses": [{**original, "role": "original_account", "speaker": "advocate",
-            "treatment": "not_applicable", "treatment_source": None}]}]}, ctx, sources)
+        "addresses": [{"source_id": ctx["latest"]["source_id"]}],
+        "uses": [original]}]}, ctx, sources)
     data = positive(draft, requests=[request(ctx, draft,
         request={"source_id": ctx["latest"]["source_id"], "quote": "Summarise that."})])
     result = review(Model(data), ctx, record, sources, draft,
@@ -139,7 +138,7 @@ def test_whole_originals_adjacent_legal_text_and_execution_are_separate_inputs()
     assert validate(reviewed, ctx, record, sources, draft, execution) == reviewed
 
 
-def test_review_selectors_reconstruct_full_and_short_sources_without_repeated_proof():
+def test_review_selectors_reconstruct_legacy_full_and_short_sources_without_repeated_proof():
     from nm.core_engine.response_review import _draft_presentation
 
     ctx, record, sources, _ = setup(legal=True)
@@ -149,7 +148,7 @@ def test_review_selectors_reconstruct_full_and_short_sources_without_repeated_pr
         "uses": [{"source_id": legal["id"], "quote": None, "role": "party_submission",
             "speaker": "the submitting party", "treatment": "qualified",
             "treatment_source": {"source_id": legal["id"], "quote": legal["text"][:12]}}]}]}
-    draft = accept_draft(proposal, ctx, sources)
+    draft = accept_draft(proposal, ctx, sources, contract=WRITER_LEGACY_CONTRACT)
     originals = deepcopy((draft, sources))
     shown = _draft_presentation(draft, sources)
     unit, actual = shown["units"][0], draft["units"][0]
@@ -438,9 +437,8 @@ def authority_setup():
     ctx, research_record, sources, _ = setup(legal=True)
     selected = next(row for row in sources.values() if row["kind"] == "provision")
     draft = accept_draft({"units": [{"kind": "law", "text": "The selected text contains a qualification.",
-        "addresses": [ref(ctx["latest"])], "uses": [{"source_id": selected["id"], "quote": None,
-        "role": "provision", "speaker": None, "treatment": "not_applicable",
-        "treatment_source": None}]}]}, ctx, sources)
+        "addresses": [{"source_id": ctx["latest"]["source_id"]}],
+        "uses": [{"source_id": selected["id"], "source_kind": "provision"}]}]}, ctx, sources)
     args = (ctx, research_record, sources, draft)
     return args, response_authorities.check(*args, provision_reader=Reader(research_record))
 

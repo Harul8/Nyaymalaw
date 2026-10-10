@@ -1,0 +1,1670 @@
+{
+  "started_utc": "2026-10-10T07:24:31.185235+00:00",
+  "mode": "legal_support_definition",
+  "preparation": {
+    "mode": "legal_support_definition",
+    "model": "gpt-4.1-mini-2025-04-14",
+    "status": "Offline; root must explicitly dispatch",
+    "maximum_calls": 6,
+    "maximum_output_tokens": 2500,
+    "transport_retries": 0,
+    "semantic_retries": 0,
+    "slice_cap_usd": "0.10",
+    "shared_cap_usd": "5",
+    "shared_ledger": "api-budget.sqlite",
+    "shared_reservation_micro_usd_each": 423031,
+    "source_hashes": {
+      "outputs/core-engine-build-20261010/reviewer-legal-basis-support-runner.py": "9d5a14715bf3bd4387af5afd8a5815bbd3b58229a29874193f82b6ef656c7365",
+      "outputs/core-engine-build-20261010/reviewer-split-audit-runner.py": "68011c20cc2c1125bbddd9bf7844c4a30d866470f573bdef4f5bcc8d0e60a7da",
+      "outputs/core-engine-build-20261010/reviewer-legal-basis-support-candidate.py": "5c52d0a5ee083a91bbbcc7b616a912e7582fe7b2bd344bfa952ab57531d22f3f",
+      "outputs/core-engine-build-20261010/reviewer-legal-basis-support-prepared.json": "78795c4e7664f1181ac48c55b181676ea4eda02134acff632b2ccb0d24d65635",
+      "nm/core_engine/response_review.py": "c7674889214014bb51713d17ddc167aab7e48a8e2742008728003526ad27f622",
+      "nm/shared/model_call_budget.py": "b0679c27638442a698c5f32e9c79f903f1298b6c12fc21a8833b4599fefdd7e3",
+      "nm/shared/model_config.py": "2f1fc48db2f80bee1dfc212ff31aef42f2b1ac548aa5ea968078bf50d3f869c7",
+      "nm/shared/model_port.py": "c0508908a92740eb85dabedc635f7a3a438ec09b5d1e6a775ec846569582c49c",
+      "outputs/core-engine-build-20261010/reviewer-selected-support-contrast.py": "7ae3362395958b155c265c5388acab67ca09830452f43bdba89e3a7a9e6489ff",
+      "outputs/core-engine-build-20261010/reviewer-selected-support-five-prepared.json": "5d39ab7116356c4d05114963c2eda285e5ef84509eecca9df0cb8c4146d29b3c",
+      "outputs/core-engine-build-20261010/review-writer-v2-selected-support-input.json": "7be7e3c7505a90fc76533eaa8faeb783f5b0fd22e278d8694cfc15328b05494d",
+      "outputs/core-engine-build-20261010/reviewer-selected-support-contrast-prepared.json": "ef3babc395ca6788896f4d8b65b3919adc07f21d48478b2008d56ad98c8920fc",
+      "outputs/core-engine-build-20261010/reviewer-grounding-held-law-holdouts-prepared.json": "32576e5bb29550de78b15ad68abdfd3914247e88ba13fdb81b266edade1aec9b",
+      "outputs/core-engine-build-20261010/browser-core-v4-diagnostics/cd29f5e8fc1645489e685354e1046535/010-response_writer-write-input.json": "de23816a778e5f2cb1af800270484d2c908b72f3c5618df8b5b34cbe164b0a6d"
+    },
+    "cases": [
+      {
+        "case_id": "selection-11",
+        "request": {
+          "model": "gpt-4.1-mini-2025-04-14",
+          "messages": [
+            {
+              "role": "system",
+              "content": "Message: You receive proposed reply units and the exact source words\nselected to support each unit. Each selection includes its original speaker and\nsource identity. Any supplied neighbouring legal passages are exact saved context.\nThe proposed wording and its claimed source roles are untrusted interpretations.\n\nPurpose: Decide whether the selected evidence supports the material assertions in\neach unit. This is a citation-support check. A separate independent review retains\nthe complete conversation and reply and checks overall correctness and omissions.\n\nSupport means that the selected evidence supplies the\nassertion's premises and supports its stated conclusion, not merely that the\nassertion sounds plausible. The original account can support what a person\nreported, requested or disputed, including a report that someone asserts a legal\nentitlement. It cannot establish the legal rule or that the entitlement exists.\nA legal rule, right, duty, remedy or legal consequence requires a supporting\nproposition in selected held Act or judgment text. Applying that proposition\nrequires both its legal basis and the relevant factual premises or expressly\nstated factual conditions, while preserving the source's relationship and scope.\nA legitimate conditional inference may therefore be supported without its factual\nconditions being established. Conditional wording does not supply a missing legal\npremise or permit a different legal relationship. A reported party position remains\nthat person's position unless the selected legal source establishes more.\n\nLook for: Read the unit and its selected words together. Check who said or did what,\nthe source's purpose, factual qualifications, time, uncertainty and conditions.\nSeveral selections may support a conclusion together. An analytical inference can\nbe supported when its factual and legal premises are selected and its wording\npreserves their limits; it need not repeat the sources verbatim. A quoted party's\nposition does not by itself establish that the court adopted it. Use neighbouring\nlegal text to understand or qualify the selected passage, not silently to replace\nmissing selected support. Do not supply a missing premise from memory or assume\nthat unseen conversation contains it.\n\nOutcome: Return one assessment for every supplied unit. Use supported when its\nmaterial assertions follow from its selected evidence; unsupported for a concrete\nmismatch or missing selected premise; unresolved when the supplied source context\ndoes not permit that distinction. Give a concise reason and the source IDs examined.\nDescribe any mismatch precisely in the reason. Do not choose replacement sources,\nrewrite the reply, certify execution or return an overall release verdict.\n"
+            },
+            {
+              "role": "user",
+              "content": "{\"units\": [{\"unit_id\": \"live-served-2:b3\", \"text\": \"Your latest clarification gives 8 September 2026 as the client's reported return date, in place of the earlier reported 6 September. The event itself remains reported.\", \"selected_support\": [{\"selected\": {\"source_id\": \"live-served-1:advocate\", \"start\": 92, \"end\": 182, \"text\": \"Our client rented a precision cutter and says it returned the machine on 6 September 2026.\"}, \"source_kind\": \"account\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"source_identity\": {\"source_id\": \"live-served-1:advocate\", \"turn_id\": \"live-served-1\"}, \"writer_claimed_role\": \"original_account\", \"writer_claimed_treatment\": \"not_applicable\"}], \"adjacent_legal_context\": []}]}"
+            }
+          ],
+          "store": false,
+          "max_completion_tokens": 2500,
+          "response_format": {
+            "type": "json_schema",
+            "json_schema": {
+              "name": "nm_result",
+              "strict": true,
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "units"
+                ],
+                "properties": {
+                  "units": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "unit_id",
+                        "assessment",
+                        "reason",
+                        "source_ids"
+                      ],
+                      "properties": {
+                        "unit_id": {
+                          "type": "string"
+                        },
+                        "assessment": {
+                          "type": "string",
+                          "enum": [
+                            "supported",
+                            "unsupported",
+                            "unresolved"
+                          ]
+                        },
+                        "reason": {
+                          "type": "string"
+                        },
+                        "source_ids": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "request_sha256": "276cc689dd6247858e5caa69a944b665c83e97651d3098e3978276f395d09217",
+        "bound": {
+          "serialized_sdk_bytes": 4293,
+          "wire_byte_multiplier": 2,
+          "framing_margin_tokens": 8192,
+          "input_token_planning_bound": 16778,
+          "output_token_hard_cap": 2500,
+          "next_request_micro_usd": 10712
+        }
+      },
+      {
+        "case_id": "selection-28",
+        "request": {
+          "model": "gpt-4.1-mini-2025-04-14",
+          "messages": [
+            {
+              "role": "system",
+              "content": "Message: You receive proposed reply units and the exact source words\nselected to support each unit. Each selection includes its original speaker and\nsource identity. Any supplied neighbouring legal passages are exact saved context.\nThe proposed wording and its claimed source roles are untrusted interpretations.\n\nPurpose: Decide whether the selected evidence supports the material assertions in\neach unit. This is a citation-support check. A separate independent review retains\nthe complete conversation and reply and checks overall correctness and omissions.\n\nSupport means that the selected evidence supplies the\nassertion's premises and supports its stated conclusion, not merely that the\nassertion sounds plausible. The original account can support what a person\nreported, requested or disputed, including a report that someone asserts a legal\nentitlement. It cannot establish the legal rule or that the entitlement exists.\nA legal rule, right, duty, remedy or legal consequence requires a supporting\nproposition in selected held Act or judgment text. Applying that proposition\nrequires both its legal basis and the relevant factual premises or expressly\nstated factual conditions, while preserving the source's relationship and scope.\nA legitimate conditional inference may therefore be supported without its factual\nconditions being established. Conditional wording does not supply a missing legal\npremise or permit a different legal relationship. A reported party position remains\nthat person's position unless the selected legal source establishes more.\n\nLook for: Read the unit and its selected words together. Check who said or did what,\nthe source's purpose, factual qualifications, time, uncertainty and conditions.\nSeveral selections may support a conclusion together. An analytical inference can\nbe supported when its factual and legal premises are selected and its wording\npreserves their limits; it need not repeat the sources verbatim. A quoted party's\nposition does not by itself establish that the court adopted it. Use neighbouring\nlegal text to understand or qualify the selected passage, not silently to replace\nmissing selected support. Do not supply a missing premise from memory or assume\nthat unseen conversation contains it.\n\nOutcome: Return one assessment for every supplied unit. Use supported when its\nmaterial assertions follow from its selected evidence; unsupported for a concrete\nmismatch or missing selected premise; unresolved when the supplied source context\ndoes not permit that distinction. Give a concise reason and the source IDs examined.\nDescribe any mismatch precisely in the reason. Do not choose replacement sources,\nrewrite the reply, certify execution or return an overall release verdict.\n"
+            },
+            {
+              "role": "user",
+              "content": "{\"units\": [{\"unit_id\": \"live-served-2:b3\", \"text\": \"Your latest clarification gives 8 September 2026 as the client's reported return date, in place of the earlier reported 6 September. The event itself remains reported.\", \"selected_support\": [{\"selected\": {\"source_id\": \"live-served-2:advocate\", \"start\": 180, \"end\": 287, \"text\": \"I gave the return date incorrectly: our client's reported return date is 8 September 2026, not 6 September.\"}, \"source_kind\": \"account\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"source_identity\": {\"source_id\": \"live-served-2:advocate\", \"turn_id\": \"live-served-2\"}, \"writer_claimed_role\": \"original_account\", \"writer_claimed_treatment\": \"not_applicable\"}], \"adjacent_legal_context\": []}]}"
+            }
+          ],
+          "store": false,
+          "max_completion_tokens": 2500,
+          "response_format": {
+            "type": "json_schema",
+            "json_schema": {
+              "name": "nm_result",
+              "strict": true,
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "units"
+                ],
+                "properties": {
+                  "units": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "unit_id",
+                        "assessment",
+                        "reason",
+                        "source_ids"
+                      ],
+                      "properties": {
+                        "unit_id": {
+                          "type": "string"
+                        },
+                        "assessment": {
+                          "type": "string",
+                          "enum": [
+                            "supported",
+                            "unsupported",
+                            "unresolved"
+                          ]
+                        },
+                        "reason": {
+                          "type": "string"
+                        },
+                        "source_ids": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "request_sha256": "8920729eff4ca59bb8a01b8f1ff646ecd9ebab800fefdc284103bfb087f75cb9",
+        "bound": {
+          "serialized_sdk_bytes": 4311,
+          "wire_byte_multiplier": 2,
+          "framing_margin_tokens": 8192,
+          "input_token_planning_bound": 16814,
+          "output_token_hard_cap": 2500,
+          "next_request_micro_usd": 10726
+        }
+      },
+      {
+        "case_id": "selection-46",
+        "request": {
+          "model": "gpt-4.1-mini-2025-04-14",
+          "messages": [
+            {
+              "role": "system",
+              "content": "Message: You receive proposed reply units and the exact source words\nselected to support each unit. Each selection includes its original speaker and\nsource identity. Any supplied neighbouring legal passages are exact saved context.\nThe proposed wording and its claimed source roles are untrusted interpretations.\n\nPurpose: Decide whether the selected evidence supports the material assertions in\neach unit. This is a citation-support check. A separate independent review retains\nthe complete conversation and reply and checks overall correctness and omissions.\n\nSupport means that the selected evidence supplies the\nassertion's premises and supports its stated conclusion, not merely that the\nassertion sounds plausible. The original account can support what a person\nreported, requested or disputed, including a report that someone asserts a legal\nentitlement. It cannot establish the legal rule or that the entitlement exists.\nA legal rule, right, duty, remedy or legal consequence requires a supporting\nproposition in selected held Act or judgment text. Applying that proposition\nrequires both its legal basis and the relevant factual premises or expressly\nstated factual conditions, while preserving the source's relationship and scope.\nA legitimate conditional inference may therefore be supported without its factual\nconditions being established. Conditional wording does not supply a missing legal\npremise or permit a different legal relationship. A reported party position remains\nthat person's position unless the selected legal source establishes more.\n\nLook for: Read the unit and its selected words together. Check who said or did what,\nthe source's purpose, factual qualifications, time, uncertainty and conditions.\nSeveral selections may support a conclusion together. An analytical inference can\nbe supported when its factual and legal premises are selected and its wording\npreserves their limits; it need not repeat the sources verbatim. A quoted party's\nposition does not by itself establish that the court adopted it. Use neighbouring\nlegal text to understand or qualify the selected passage, not silently to replace\nmissing selected support. Do not supply a missing premise from memory or assume\nthat unseen conversation contains it.\n\nOutcome: Return one assessment for every supplied unit. Use supported when its\nmaterial assertions follow from its selected evidence; unsupported for a concrete\nmismatch or missing selected premise; unresolved when the supplied source context\ndoes not permit that distinction. Give a concise reason and the source IDs examined.\nDescribe any mismatch precisely in the reason. Do not choose replacement sources,\nrewrite the reply, certify execution or return an overall release verdict.\n"
+            },
+            {
+              "role": "user",
+              "content": "{\"units\": [{\"unit_id\": \"t2:b1\", \"text\": \"Seeking supporting accounts is a conditional possibility under the supplied passage if the agreement requires them and the client's contractual capacity is established. The unavailable clause and disputed authorisation prevent a conclusion here that the client has that entitlement, the expenditure was unauthorised, or repayment is due.\", \"selected_support\": [{\"selected\": {\"source_id\": \"t2:advocate\", \"start\": 0, \"end\": 287, \"text\": \"Our agreement's expense clause is not available yet, and whether the expenditure was authorised remains disputed. Using only the supplied passage, explain whether seeking supporting accounts is a possibility, without saying a legal entitlement or unauthorised expenditure is established.\"}, \"source_kind\": \"account\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"source_identity\": {\"source_id\": \"t2:advocate\", \"turn_id\": \"t2\"}, \"writer_claimed_role\": \"original_account\", \"writer_claimed_treatment\": \"not_applicable\"}, {\"selected\": {\"source_id\": \"judgment:4d033cb448128ba9ef0279a7cf9c15ec52d6d2897c4981eb1be3c1af78752ba5\", \"start\": 0, \"end\": 316, \"text\": \"Where an agreement requires supporting accounts for expenditure, a contracting party may request those accounts according to the agreement. The terms and the party's contractual capacity must be established. This conclusion alone establishes neither that particular spending was authorised nor that repayment is due.\"}, \"source_kind\": \"judgment\", \"speaker\": null, \"record_role\": \"retrieved_candidate\", \"source_identity\": {\"position\": 0, \"corpus_revision\": \"checked-corpus\", \"case_id\": \"case\", \"chunk_id\": \"repeated\"}, \"writer_claimed_role\": \"court_reasoning\", \"writer_claimed_treatment\": \"not_applicable\"}], \"adjacent_legal_context\": []}]}"
+            }
+          ],
+          "store": false,
+          "max_completion_tokens": 2500,
+          "response_format": {
+            "type": "json_schema",
+            "json_schema": {
+              "name": "nm_result",
+              "strict": true,
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "units"
+                ],
+                "properties": {
+                  "units": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "unit_id",
+                        "assessment",
+                        "reason",
+                        "source_ids"
+                      ],
+                      "properties": {
+                        "unit_id": {
+                          "type": "string"
+                        },
+                        "assessment": {
+                          "type": "string",
+                          "enum": [
+                            "supported",
+                            "unsupported",
+                            "unresolved"
+                          ]
+                        },
+                        "reason": {
+                          "type": "string"
+                        },
+                        "source_ids": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "request_sha256": "8b67bfa43eaea7765b44258abb3ad30644e5101f29700b6591b9067077c6cfda",
+        "bound": {
+          "serialized_sdk_bytes": 5407,
+          "wire_byte_multiplier": 2,
+          "framing_margin_tokens": 8192,
+          "input_token_planning_bound": 19006,
+          "output_token_hard_cap": 2500,
+          "next_request_micro_usd": 11603
+        }
+      },
+      {
+        "case_id": "held-scope-01",
+        "request": {
+          "model": "gpt-4.1-mini-2025-04-14",
+          "messages": [
+            {
+              "role": "system",
+              "content": "Message: You receive proposed reply units and the exact source words\nselected to support each unit. Each selection includes its original speaker and\nsource identity. Any supplied neighbouring legal passages are exact saved context.\nThe proposed wording and its claimed source roles are untrusted interpretations.\n\nPurpose: Decide whether the selected evidence supports the material assertions in\neach unit. This is a citation-support check. A separate independent review retains\nthe complete conversation and reply and checks overall correctness and omissions.\n\nSupport means that the selected evidence supplies the\nassertion's premises and supports its stated conclusion, not merely that the\nassertion sounds plausible. The original account can support what a person\nreported, requested or disputed, including a report that someone asserts a legal\nentitlement. It cannot establish the legal rule or that the entitlement exists.\nA legal rule, right, duty, remedy or legal consequence requires a supporting\nproposition in selected held Act or judgment text. Applying that proposition\nrequires both its legal basis and the relevant factual premises or expressly\nstated factual conditions, while preserving the source's relationship and scope.\nA legitimate conditional inference may therefore be supported without its factual\nconditions being established. Conditional wording does not supply a missing legal\npremise or permit a different legal relationship. A reported party position remains\nthat person's position unless the selected legal source establishes more.\n\nLook for: Read the unit and its selected words together. Check who said or did what,\nthe source's purpose, factual qualifications, time, uncertainty and conditions.\nSeveral selections may support a conclusion together. An analytical inference can\nbe supported when its factual and legal premises are selected and its wording\npreserves their limits; it need not repeat the sources verbatim. A quoted party's\nposition does not by itself establish that the court adopted it. Use neighbouring\nlegal text to understand or qualify the selected passage, not silently to replace\nmissing selected support. Do not supply a missing premise from memory or assume\nthat unseen conversation contains it.\n\nOutcome: Return one assessment for every supplied unit. Use supported when its\nmaterial assertions follow from its selected evidence; unsupported for a concrete\nmismatch or missing selected premise; unresolved when the supplied source context\ndoes not permit that distinction. Give a concise reason and the source IDs examined.\nDescribe any mismatch precisely in the reason. Do not choose replacement sources,\nrewrite the reply, certify execution or return an overall release verdict.\n"
+            },
+            {
+              "role": "user",
+              "content": "{\"units\": [{\"unit_id\": \"turn_88979706-2beb-49cc-b038-71313855e357:b1\", \"text\": \"Conditionally, if repair charges are validly due under the hire agreement or relevant contract, the owner may have a lawful lien or right to retain the drive until payment. If the charges are disputed or unsubstantiated, retention may be unlawful, constituting wrongful detention of the client's property.\", \"selected_support\": [{\"selected\": {\"source_id\": \"turn_88979706-2beb-49cc-b038-71313855e357:advocate\", \"start\": 0, \"end\": 918, \"text\": \"SYNTHETIC BROWSER ACCEPTANCE MATTER. We act for Cedar Workshop in Hyderabad. The client says it hired a laser cutter and returned it on 12 September 2026. The owner retains the Rs 90,000 deposit and alleges damage to the lens; our client denies causing damage. The owner says an inspection report exists but has not supplied it to our client. The client reports having a signed hire agreement and the bank transfer receipt, but neither document has been supplied or checked here. Separately, the owner's technician still holds the client's original design drive, said to have been lent for setup only. The owner claims it may keep that drive until repair charges are paid. Give a conditional analysis of both disputes using the held legal sources, including the material opposing position. Then list the important questions for our client. Do not contact anyone, do not admit damage, and do not invent agreement terms.\"}, \"source_kind\": \"account\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"source_identity\": {\"source_id\": \"turn_88979706-2beb-49cc-b038-71313855e357:advocate\", \"turn_id\": \"turn_88979706-2beb-49cc-b038-71313855e357\"}, \"writer_claimed_role\": \"original_account\", \"writer_claimed_treatment\": \"not_applicable\"}, {\"selected\": {\"source_id\": \"provision:c18a0a396903af2aa31bf90e4848a53c4c948c6686ab8fa15f4d03a94f60f0c7\", \"start\": 0, \"end\": 634, \"text\": \"Union Of India 1980 10 The Sale Of Goods Act, 1930,  — s.47: Seller’s lien.—\\n47.\\nSeller’s lien.—\\n(1)\\nSubject to the provisions of this Act, the unpaid seller of goods who is in possession of them is entitled to retain possession of them until payment or tender of the price in the following cases, namely:—\\n(a)\\nwhere the goods have been sold without any stipulation as to credit;\\n(b)\\nwhere the goods have been sold on credit, but the term of credit has expired;\\n(c)\\nwhere the buyer becomes insolvent.\\n(2)\\nThe seller may exercise his right of lien notwithstanding that he is in possession of the goods as agent or bailee for the buyer.\"}, \"source_kind\": \"provision\", \"speaker\": null, \"record_role\": \"retrieved_candidate\", \"source_identity\": {\"position\": 200305, \"corpus_revision\": \"6cb8d631cbc251f5fe248a14e8eadd119bf1f170d05ce3c0faa05cb1b3b75a2b\", \"act_id\": \"UNION OF INDIA_1980_10_THE SALE OF GOODS ACT, 1930\", \"chunk_id\": \"UNION OF INDIA_1980_10_THE SALE OF GOODS ACT, 1930_SECTION_47\"}, \"writer_claimed_role\": \"provision\", \"writer_claimed_treatment\": \"not_applicable\", \"source_context_availability\": [{\"scope\": \"selected_indexed_segment\", \"bounded\": true, \"unread_positions\": [], \"source_position_gaps\": [{\"kind\": \"provision\", \"query_id\": null, \"stage\": \"context\", \"reason\": \"Source chunk identity is missing or ambiguous within its Act\", \"position\": 200305}]}]}], \"adjacent_legal_context\": []}]}"
+            }
+          ],
+          "store": false,
+          "max_completion_tokens": 2500,
+          "response_format": {
+            "type": "json_schema",
+            "json_schema": {
+              "name": "nm_result",
+              "strict": true,
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "units"
+                ],
+                "properties": {
+                  "units": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "unit_id",
+                        "assessment",
+                        "reason",
+                        "source_ids"
+                      ],
+                      "properties": {
+                        "unit_id": {
+                          "type": "string"
+                        },
+                        "assessment": {
+                          "type": "string",
+                          "enum": [
+                            "supported",
+                            "unsupported",
+                            "unresolved"
+                          ]
+                        },
+                        "reason": {
+                          "type": "string"
+                        },
+                        "source_ids": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "request_sha256": "bfd2e926eaa27bcb4300985b910ffb70e7fbd041826bdf20b15a77c6d7424b23",
+        "bound": {
+          "serialized_sdk_bytes": 6987,
+          "wire_byte_multiplier": 2,
+          "framing_margin_tokens": 8192,
+          "input_token_planning_bound": 22166,
+          "output_token_hard_cap": 2500,
+          "next_request_micro_usd": 12867
+        }
+      },
+      {
+        "case_id": "held-scope-02",
+        "request": {
+          "model": "gpt-4.1-mini-2025-04-14",
+          "messages": [
+            {
+              "role": "system",
+              "content": "Message: You receive proposed reply units and the exact source words\nselected to support each unit. Each selection includes its original speaker and\nsource identity. Any supplied neighbouring legal passages are exact saved context.\nThe proposed wording and its claimed source roles are untrusted interpretations.\n\nPurpose: Decide whether the selected evidence supports the material assertions in\neach unit. This is a citation-support check. A separate independent review retains\nthe complete conversation and reply and checks overall correctness and omissions.\n\nSupport means that the selected evidence supplies the\nassertion's premises and supports its stated conclusion, not merely that the\nassertion sounds plausible. The original account can support what a person\nreported, requested or disputed, including a report that someone asserts a legal\nentitlement. It cannot establish the legal rule or that the entitlement exists.\nA legal rule, right, duty, remedy or legal consequence requires a supporting\nproposition in selected held Act or judgment text. Applying that proposition\nrequires both its legal basis and the relevant factual premises or expressly\nstated factual conditions, while preserving the source's relationship and scope.\nA legitimate conditional inference may therefore be supported without its factual\nconditions being established. Conditional wording does not supply a missing legal\npremise or permit a different legal relationship. A reported party position remains\nthat person's position unless the selected legal source establishes more.\n\nLook for: Read the unit and its selected words together. Check who said or did what,\nthe source's purpose, factual qualifications, time, uncertainty and conditions.\nSeveral selections may support a conclusion together. An analytical inference can\nbe supported when its factual and legal premises are selected and its wording\npreserves their limits; it need not repeat the sources verbatim. A quoted party's\nposition does not by itself establish that the court adopted it. Use neighbouring\nlegal text to understand or qualify the selected passage, not silently to replace\nmissing selected support. Do not supply a missing premise from memory or assume\nthat unseen conversation contains it.\n\nOutcome: Return one assessment for every supplied unit. Use supported when its\nmaterial assertions follow from its selected evidence; unsupported for a concrete\nmismatch or missing selected premise; unresolved when the supplied source context\ndoes not permit that distinction. Give a concise reason and the source IDs examined.\nDescribe any mismatch precisely in the reason. Do not choose replacement sources,\nrewrite the reply, certify execution or return an overall release verdict.\n"
+            },
+            {
+              "role": "user",
+              "content": "{\"units\": [{\"unit_id\": \"turn_88979706-2beb-49cc-b038-71313855e357:b1\", \"text\": \"The selected section 47 passage concerns an unpaid seller retaining possession of the goods sold for their price, subject to its stated conditions. Its reference to possession as agent or bailee still concerns that seller; it does not establish a general right to retain another item for a repair debt. Your account reports a hired cutter and a drive lent for setup, with disputed repair charges; it does not describe a sale of the drive with an unpaid price. This passage alone therefore does not establish the owner's claimed right to keep the drive. That limit does not itself decide whether a different contractual or legal basis could support retention.\", \"selected_support\": [{\"selected\": {\"source_id\": \"turn_88979706-2beb-49cc-b038-71313855e357:advocate\", \"start\": 0, \"end\": 918, \"text\": \"SYNTHETIC BROWSER ACCEPTANCE MATTER. We act for Cedar Workshop in Hyderabad. The client says it hired a laser cutter and returned it on 12 September 2026. The owner retains the Rs 90,000 deposit and alleges damage to the lens; our client denies causing damage. The owner says an inspection report exists but has not supplied it to our client. The client reports having a signed hire agreement and the bank transfer receipt, but neither document has been supplied or checked here. Separately, the owner's technician still holds the client's original design drive, said to have been lent for setup only. The owner claims it may keep that drive until repair charges are paid. Give a conditional analysis of both disputes using the held legal sources, including the material opposing position. Then list the important questions for our client. Do not contact anyone, do not admit damage, and do not invent agreement terms.\"}, \"source_kind\": \"account\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"source_identity\": {\"source_id\": \"turn_88979706-2beb-49cc-b038-71313855e357:advocate\", \"turn_id\": \"turn_88979706-2beb-49cc-b038-71313855e357\"}, \"writer_claimed_role\": \"original_account\", \"writer_claimed_treatment\": \"not_applicable\"}, {\"selected\": {\"source_id\": \"provision:c18a0a396903af2aa31bf90e4848a53c4c948c6686ab8fa15f4d03a94f60f0c7\", \"start\": 0, \"end\": 634, \"text\": \"Union Of India 1980 10 The Sale Of Goods Act, 1930,  — s.47: Seller’s lien.—\\n47.\\nSeller’s lien.—\\n(1)\\nSubject to the provisions of this Act, the unpaid seller of goods who is in possession of them is entitled to retain possession of them until payment or tender of the price in the following cases, namely:—\\n(a)\\nwhere the goods have been sold without any stipulation as to credit;\\n(b)\\nwhere the goods have been sold on credit, but the term of credit has expired;\\n(c)\\nwhere the buyer becomes insolvent.\\n(2)\\nThe seller may exercise his right of lien notwithstanding that he is in possession of the goods as agent or bailee for the buyer.\"}, \"source_kind\": \"provision\", \"speaker\": null, \"record_role\": \"retrieved_candidate\", \"source_identity\": {\"position\": 200305, \"corpus_revision\": \"6cb8d631cbc251f5fe248a14e8eadd119bf1f170d05ce3c0faa05cb1b3b75a2b\", \"act_id\": \"UNION OF INDIA_1980_10_THE SALE OF GOODS ACT, 1930\", \"chunk_id\": \"UNION OF INDIA_1980_10_THE SALE OF GOODS ACT, 1930_SECTION_47\"}, \"writer_claimed_role\": \"provision\", \"writer_claimed_treatment\": \"not_applicable\", \"source_context_availability\": [{\"scope\": \"selected_indexed_segment\", \"bounded\": true, \"unread_positions\": [], \"source_position_gaps\": [{\"kind\": \"provision\", \"query_id\": null, \"stage\": \"context\", \"reason\": \"Source chunk identity is missing or ambiguous within its Act\", \"position\": 200305}]}]}], \"adjacent_legal_context\": []}]}"
+            }
+          ],
+          "store": false,
+          "max_completion_tokens": 2500,
+          "response_format": {
+            "type": "json_schema",
+            "json_schema": {
+              "name": "nm_result",
+              "strict": true,
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "units"
+                ],
+                "properties": {
+                  "units": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "unit_id",
+                        "assessment",
+                        "reason",
+                        "source_ids"
+                      ],
+                      "properties": {
+                        "unit_id": {
+                          "type": "string"
+                        },
+                        "assessment": {
+                          "type": "string",
+                          "enum": [
+                            "supported",
+                            "unsupported",
+                            "unresolved"
+                          ]
+                        },
+                        "reason": {
+                          "type": "string"
+                        },
+                        "source_ids": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "request_sha256": "ae03cb91d65f45ce5385d9e53d7f46949ed97bd306a8e6bec696c37611267e91",
+        "bound": {
+          "serialized_sdk_bytes": 7340,
+          "wire_byte_multiplier": 2,
+          "framing_margin_tokens": 8192,
+          "input_token_planning_bound": 22872,
+          "output_token_hard_cap": 2500,
+          "next_request_micro_usd": 13149
+        }
+      },
+      {
+        "case_id": "actual-writer-five-units",
+        "request": {
+          "model": "gpt-4.1-mini-2025-04-14",
+          "messages": [
+            {
+              "role": "system",
+              "content": "Message: You receive proposed reply units and the exact source words\nselected to support each unit. Each selection includes its original speaker and\nsource identity. Any supplied neighbouring legal passages are exact saved context.\nThe proposed wording and its claimed source roles are untrusted interpretations.\n\nPurpose: Decide whether the selected evidence supports the material assertions in\neach unit. This is a citation-support check. A separate independent review retains\nthe complete conversation and reply and checks overall correctness and omissions.\n\nSupport means that the selected evidence supplies the\nassertion's premises and supports its stated conclusion, not merely that the\nassertion sounds plausible. The original account can support what a person\nreported, requested or disputed, including a report that someone asserts a legal\nentitlement. It cannot establish the legal rule or that the entitlement exists.\nA legal rule, right, duty, remedy or legal consequence requires a supporting\nproposition in selected held Act or judgment text. Applying that proposition\nrequires both its legal basis and the relevant factual premises or expressly\nstated factual conditions, while preserving the source's relationship and scope.\nA legitimate conditional inference may therefore be supported without its factual\nconditions being established. Conditional wording does not supply a missing legal\npremise or permit a different legal relationship. A reported party position remains\nthat person's position unless the selected legal source establishes more.\n\nLook for: Read the unit and its selected words together. Check who said or did what,\nthe source's purpose, factual qualifications, time, uncertainty and conditions.\nSeveral selections may support a conclusion together. An analytical inference can\nbe supported when its factual and legal premises are selected and its wording\npreserves their limits; it need not repeat the sources verbatim. A quoted party's\nposition does not by itself establish that the court adopted it. Use neighbouring\nlegal text to understand or qualify the selected passage, not silently to replace\nmissing selected support. Do not supply a missing premise from memory or assume\nthat unseen conversation contains it.\n\nOutcome: Return one assessment for every supplied unit. Use supported when its\nmaterial assertions follow from its selected evidence; unsupported for a concrete\nmismatch or missing selected premise; unresolved when the supplied source context\ndoes not permit that distinction. Give a concise reason and the source IDs examined.\nDescribe any mismatch precisely in the reason. Do not choose replacement sources,\nrewrite the reply, certify execution or return an overall release verdict.\n"
+            },
+            {
+              "role": "user",
+              "content": "{\"units\": [{\"unit_id\": \"turn_88979706-2beb-49cc-b038-71313855e357:b1\", \"text\": \"Regarding the dispute over the laser cutter deposit and alleged damage: Assuming a hire agreement validly exists and governs the transaction, the owner’s retention of the Rs 90,000 deposit as security for due performance or damages is generally permissible under contract and hire law. However, the client's denial of damage and the owner's failure to supply the inspection report alleging lens damage weakens the owner's position, as the evidence to substantiate the damage claim is lacking or not disclosed. The client's possession of a signed hire agreement and proof of payment (bank transfer receipt), if consistent with the terms, supports the client's legitimacy in the rental and return on 12 September 2026. Without admission of damage by the client and in absence of the inspection report, the owner's claim to forfeit the deposit is contested and may be challenged on grounds such as insufficient proof or procedural irregularities in inspection and damage assessment. Relevant legal principles include the requirement to establish damage with proper evidence to justify withholding deposits, and that the deposit's forfeiture must be reasonable and in accordance with the contract terms. Precedents recognize the function of deposits as security but require the party withholding it to substantiate the claim for damages. Additionally, the obligation on the hirer to pay for damage only arises where damage is proven to be caused by them; denial of damage by the client is a key defense.\", \"selected_support\": [{\"selected\": {\"source_id\": \"turn_88979706-2beb-49cc-b038-71313855e357:advocate\", \"start\": 0, \"end\": 918, \"text\": \"SYNTHETIC BROWSER ACCEPTANCE MATTER. We act for Cedar Workshop in Hyderabad. The client says it hired a laser cutter and returned it on 12 September 2026. The owner retains the Rs 90,000 deposit and alleges damage to the lens; our client denies causing damage. The owner says an inspection report exists but has not supplied it to our client. The client reports having a signed hire agreement and the bank transfer receipt, but neither document has been supplied or checked here. Separately, the owner's technician still holds the client's original design drive, said to have been lent for setup only. The owner claims it may keep that drive until repair charges are paid. Give a conditional analysis of both disputes using the held legal sources, including the material opposing position. Then list the important questions for our client. Do not contact anyone, do not admit damage, and do not invent agreement terms.\"}, \"source_kind\": \"account\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"source_identity\": {\"source_id\": \"turn_88979706-2beb-49cc-b038-71313855e357:advocate\", \"turn_id\": \"turn_88979706-2beb-49cc-b038-71313855e357\"}, \"writer_claimed_role\": \"original_account\", \"writer_claimed_treatment\": \"not_applicable\"}], \"adjacent_legal_context\": []}, {\"unit_id\": \"turn_88979706-2beb-49cc-b038-71313855e357:b2\", \"text\": \"Concerning the owner's technician retaining the client's original design drive allegedly lent for setup only: The retention of the client’s property as security for repair charges may constitute a lien or possessory security depending on applicable law governing sale of goods or bailment. However, the owner’s right to withhold the design drive until repair charges are paid is conditional and not automatic. If the drive was lent solely for setup purposes with an obligation to return it, the owner's retention pending repair charges is legally questionable without express contractual lien or statutory authority. The law generally requires that if an owner's technician holds property belonging to another party, it must be returned unless a legitimate lien or lawful right to retain exists. Any withholding must be reasonable, lawful, and proportionate. Further, the nature of the drive as electronic storage with client data complicates lawful retention, given fiduciary duties and potential liabilities. Client's original properties are to be safeguarded, and retention against repair claims typically demands clear contractual authorization or lawful lien.\", \"selected_support\": [{\"selected\": {\"source_id\": \"turn_88979706-2beb-49cc-b038-71313855e357:advocate\", \"start\": 0, \"end\": 918, \"text\": \"SYNTHETIC BROWSER ACCEPTANCE MATTER. We act for Cedar Workshop in Hyderabad. The client says it hired a laser cutter and returned it on 12 September 2026. The owner retains the Rs 90,000 deposit and alleges damage to the lens; our client denies causing damage. The owner says an inspection report exists but has not supplied it to our client. The client reports having a signed hire agreement and the bank transfer receipt, but neither document has been supplied or checked here. Separately, the owner's technician still holds the client's original design drive, said to have been lent for setup only. The owner claims it may keep that drive until repair charges are paid. Give a conditional analysis of both disputes using the held legal sources, including the material opposing position. Then list the important questions for our client. Do not contact anyone, do not admit damage, and do not invent agreement terms.\"}, \"source_kind\": \"account\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"source_identity\": {\"source_id\": \"turn_88979706-2beb-49cc-b038-71313855e357:advocate\", \"turn_id\": \"turn_88979706-2beb-49cc-b038-71313855e357\"}, \"writer_claimed_role\": \"original_account\", \"writer_claimed_treatment\": \"not_applicable\"}], \"adjacent_legal_context\": []}, {\"unit_id\": \"turn_88979706-2beb-49cc-b038-71313855e357:b3\", \"text\": \"Opposing positions: The owner insists on forfeiture of the deposit alleging damage substantiated by an inspection report not yet disclosed, and asserts right to retain the client’s design drive pending payment of repair charges. The client denies causing any damage and possesses the hire agreement and payment proof but lacks documentation in this context. The lack of inspection report disclosure weighs against the owner's claim, and the right to retain property is conditional and must be legally justified.\", \"selected_support\": [{\"selected\": {\"source_id\": \"turn_88979706-2beb-49cc-b038-71313855e357:advocate\", \"start\": 0, \"end\": 918, \"text\": \"SYNTHETIC BROWSER ACCEPTANCE MATTER. We act for Cedar Workshop in Hyderabad. The client says it hired a laser cutter and returned it on 12 September 2026. The owner retains the Rs 90,000 deposit and alleges damage to the lens; our client denies causing damage. The owner says an inspection report exists but has not supplied it to our client. The client reports having a signed hire agreement and the bank transfer receipt, but neither document has been supplied or checked here. Separately, the owner's technician still holds the client's original design drive, said to have been lent for setup only. The owner claims it may keep that drive until repair charges are paid. Give a conditional analysis of both disputes using the held legal sources, including the material opposing position. Then list the important questions for our client. Do not contact anyone, do not admit damage, and do not invent agreement terms.\"}, \"source_kind\": \"account\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"source_identity\": {\"source_id\": \"turn_88979706-2beb-49cc-b038-71313855e357:advocate\", \"turn_id\": \"turn_88979706-2beb-49cc-b038-71313855e357\"}, \"writer_claimed_role\": \"original_account\", \"writer_claimed_treatment\": \"not_applicable\"}], \"adjacent_legal_context\": []}, {\"unit_id\": \"turn_88979706-2beb-49cc-b038-71313855e357:b4\", \"text\": \"The foregoing analysis is conditional on the verification of the hire agreement terms and bank receipt, which have not yet been provided or examined. This absence constitutes a gap that limits legal certainty regarding the validity of claims or rights of retention. Further, the owner's inspection report, if provided, may bear on the analysis of damage and deposit forfeiture. Without these, this analysis cannot conclusively determine legal rights or outcomes.\", \"selected_support\": [{\"selected\": {\"source_id\": \"turn_88979706-2beb-49cc-b038-71313855e357:advocate\", \"start\": 0, \"end\": 918, \"text\": \"SYNTHETIC BROWSER ACCEPTANCE MATTER. We act for Cedar Workshop in Hyderabad. The client says it hired a laser cutter and returned it on 12 September 2026. The owner retains the Rs 90,000 deposit and alleges damage to the lens; our client denies causing damage. The owner says an inspection report exists but has not supplied it to our client. The client reports having a signed hire agreement and the bank transfer receipt, but neither document has been supplied or checked here. Separately, the owner's technician still holds the client's original design drive, said to have been lent for setup only. The owner claims it may keep that drive until repair charges are paid. Give a conditional analysis of both disputes using the held legal sources, including the material opposing position. Then list the important questions for our client. Do not contact anyone, do not admit damage, and do not invent agreement terms.\"}, \"source_kind\": \"account\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"source_identity\": {\"source_id\": \"turn_88979706-2beb-49cc-b038-71313855e357:advocate\", \"turn_id\": \"turn_88979706-2beb-49cc-b038-71313855e357\"}, \"writer_claimed_role\": \"original_account\", \"writer_claimed_treatment\": \"not_applicable\"}], \"adjacent_legal_context\": []}, {\"unit_id\": \"turn_88979706-2beb-49cc-b038-71313855e357:b5\", \"text\": \"Important questions for the client to address include:\\n1. Can your client supply the signed hire agreement and bank transfer receipt to verify terms and payment?\\n2. Did your client receive any communication or opportunity to inspect the alleged damage or the inspection report?\\n3. What exact condition was the laser cutter in upon return and was any damage contested immediately or formally?\\n4. What are the terms in the hire agreement regarding deposit forfeiture, damage claims, inspection, and dispute resolution?\\n5. Regarding the design drive, were there any express terms about its retention or return post-setup?\\n6. What communications exist with the owner’s technician regarding the drive’s retention and repayment demand?\\n7. Are there any contractual or statutory provisions supporting or prohibiting the retention of the design drive as security?\\n8. Has your client considered demand or formal notice for the release of the drive if retained unlawfully?\\nAnswering these will clarify risks, rights, and possible legal strategies.\", \"selected_support\": [{\"selected\": {\"source_id\": \"turn_88979706-2beb-49cc-b038-71313855e357:advocate\", \"start\": 0, \"end\": 918, \"text\": \"SYNTHETIC BROWSER ACCEPTANCE MATTER. We act for Cedar Workshop in Hyderabad. The client says it hired a laser cutter and returned it on 12 September 2026. The owner retains the Rs 90,000 deposit and alleges damage to the lens; our client denies causing damage. The owner says an inspection report exists but has not supplied it to our client. The client reports having a signed hire agreement and the bank transfer receipt, but neither document has been supplied or checked here. Separately, the owner's technician still holds the client's original design drive, said to have been lent for setup only. The owner claims it may keep that drive until repair charges are paid. Give a conditional analysis of both disputes using the held legal sources, including the material opposing position. Then list the important questions for our client. Do not contact anyone, do not admit damage, and do not invent agreement terms.\"}, \"source_kind\": \"account\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"source_identity\": {\"source_id\": \"turn_88979706-2beb-49cc-b038-71313855e357:advocate\", \"turn_id\": \"turn_88979706-2beb-49cc-b038-71313855e357\"}, \"writer_claimed_role\": \"original_account\", \"writer_claimed_treatment\": \"not_applicable\"}], \"adjacent_legal_context\": []}]}"
+            }
+          ],
+          "store": false,
+          "max_completion_tokens": 2500,
+          "response_format": {
+            "type": "json_schema",
+            "json_schema": {
+              "name": "nm_result",
+              "strict": true,
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "units"
+                ],
+                "properties": {
+                  "units": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "unit_id",
+                        "assessment",
+                        "reason",
+                        "source_ids"
+                      ],
+                      "properties": {
+                        "unit_id": {
+                          "type": "string"
+                        },
+                        "assessment": {
+                          "type": "string",
+                          "enum": [
+                            "supported",
+                            "unsupported",
+                            "unresolved"
+                          ]
+                        },
+                        "reason": {
+                          "type": "string"
+                        },
+                        "source_ids": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "request_sha256": "84377de18cb30f51cdd468f3caa93f291396d403bff2643fc2ab99a3fb49eb8b",
+        "bound": {
+          "serialized_sdk_bytes": 15908,
+          "wire_byte_multiplier": 2,
+          "framing_margin_tokens": 8192,
+          "input_token_planning_bound": 40008,
+          "output_token_hard_cap": 2500,
+          "next_request_micro_usd": 20004
+        }
+      }
+    ],
+    "checks": {
+      "six_unchanged_user_payloads": true,
+      "same_original_schema": true,
+      "only_one_definition_inserted": true,
+      "oracle_not_opened": true,
+      "cost_guard_boundaries": true,
+      "model_calls": 0
+    },
+    "scope_note": "Experimental evidence-support judgment only. No writer repair, production change, stronger-model dispatch or saved/released matter."
+  },
+  "slice_cap_usd": "0.10",
+  "budget_before": {
+    "maximum_usd": 5.0,
+    "charged_usd": 2.306327,
+    "measured_usd": 0.790896,
+    "reserved_or_unknown_usd": 1.515431,
+    "attempts": 189,
+    "models": [
+      {
+        "model": "gpt-4.1-2025-04-14",
+        "state": "measured",
+        "attempts": 6,
+        "charged_usd": 0.026644
+      },
+      {
+        "model": "gpt-4.1-mini-2025-04-14",
+        "state": "measured",
+        "attempts": 181,
+        "charged_usd": 0.764252
+      },
+      {
+        "model": "gpt-4.1-mini-2025-04-14",
+        "state": "reserved_or_unknown",
+        "attempts": 1,
+        "charged_usd": 0.425431
+      },
+      {
+        "model": "text-embedding-3-large",
+        "state": "reserved_or_unknown",
+        "attempts": 1,
+        "charged_usd": 1.09
+      }
+    ]
+  },
+  "reviews": [
+    {
+      "case_id": "selection-11",
+      "bound": {
+        "serialized_sdk_bytes": 4293,
+        "wire_byte_multiplier": 2,
+        "framing_margin_tokens": 8192,
+        "input_token_planning_bound": 16778,
+        "output_token_hard_cap": 2500,
+        "next_request_micro_usd": 10712
+      },
+      "pre_dispatch_comparison_micro_usd": 0,
+      "provider_dispatched": true,
+      "reservation_id": "5c4cf3ae-cfa3-415b-9306-b772b6945580",
+      "sdk_create_requests": [
+        {
+          "model": "gpt-4.1-mini-2025-04-14",
+          "messages": [
+            {
+              "role": "system",
+              "content": "Message: You receive proposed reply units and the exact source words\nselected to support each unit. Each selection includes its original speaker and\nsource identity. Any supplied neighbouring legal passages are exact saved context.\nThe proposed wording and its claimed source roles are untrusted interpretations.\n\nPurpose: Decide whether the selected evidence supports the material assertions in\neach unit. This is a citation-support check. A separate independent review retains\nthe complete conversation and reply and checks overall correctness and omissions.\n\nSupport means that the selected evidence supplies the\nassertion's premises and supports its stated conclusion, not merely that the\nassertion sounds plausible. The original account can support what a person\nreported, requested or disputed, including a report that someone asserts a legal\nentitlement. It cannot establish the legal rule or that the entitlement exists.\nA legal rule, right, duty, remedy or legal consequence requires a supporting\nproposition in selected held Act or judgment text. Applying that proposition\nrequires both its legal basis and the relevant factual premises or expressly\nstated factual conditions, while preserving the source's relationship and scope.\nA legitimate conditional inference may therefore be supported without its factual\nconditions being established. Conditional wording does not supply a missing legal\npremise or permit a different legal relationship. A reported party position remains\nthat person's position unless the selected legal source establishes more.\n\nLook for: Read the unit and its selected words together. Check who said or did what,\nthe source's purpose, factual qualifications, time, uncertainty and conditions.\nSeveral selections may support a conclusion together. An analytical inference can\nbe supported when its factual and legal premises are selected and its wording\npreserves their limits; it need not repeat the sources verbatim. A quoted party's\nposition does not by itself establish that the court adopted it. Use neighbouring\nlegal text to understand or qualify the selected passage, not silently to replace\nmissing selected support. Do not supply a missing premise from memory or assume\nthat unseen conversation contains it.\n\nOutcome: Return one assessment for every supplied unit. Use supported when its\nmaterial assertions follow from its selected evidence; unsupported for a concrete\nmismatch or missing selected premise; unresolved when the supplied source context\ndoes not permit that distinction. Give a concise reason and the source IDs examined.\nDescribe any mismatch precisely in the reason. Do not choose replacement sources,\nrewrite the reply, certify execution or return an overall release verdict.\n"
+            },
+            {
+              "role": "user",
+              "content": "{\"units\": [{\"unit_id\": \"live-served-2:b3\", \"text\": \"Your latest clarification gives 8 September 2026 as the client's reported return date, in place of the earlier reported 6 September. The event itself remains reported.\", \"selected_support\": [{\"selected\": {\"source_id\": \"live-served-1:advocate\", \"start\": 92, \"end\": 182, \"text\": \"Our client rented a precision cutter and says it returned the machine on 6 September 2026.\"}, \"source_kind\": \"account\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"source_identity\": {\"source_id\": \"live-served-1:advocate\", \"turn_id\": \"live-served-1\"}, \"writer_claimed_role\": \"original_account\", \"writer_claimed_treatment\": \"not_applicable\"}], \"adjacent_legal_context\": []}]}"
+            }
+          ],
+          "store": false,
+          "max_completion_tokens": 2500,
+          "response_format": {
+            "type": "json_schema",
+            "json_schema": {
+              "name": "nm_result",
+              "strict": true,
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "units"
+                ],
+                "properties": {
+                  "units": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "unit_id",
+                        "assessment",
+                        "reason",
+                        "source_ids"
+                      ],
+                      "properties": {
+                        "unit_id": {
+                          "type": "string"
+                        },
+                        "assessment": {
+                          "type": "string",
+                          "enum": [
+                            "supported",
+                            "unsupported",
+                            "unresolved"
+                          ]
+                        },
+                        "reason": {
+                          "type": "string"
+                        },
+                        "source_ids": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      "provider_response": {
+        "id": "chatcmpl-EXLjUSyejrm2k2QFPqxxA464DpGnf",
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "logprobs": null,
+            "message": {
+              "content": "{\"units\":[{\"unit_id\":\"live-served-2:b3\",\"assessment\":\"unsupported\",\"reason\":\"The selected support states the client says it returned the machine on 6 September 2026, not 8 September 2026 as claimed in the unit. Thus, the change in the reported return date to 8 September is not supported by the selected text.\",\"source_ids\":[\"live-served-1:advocate\"]}]}",
+              "refusal": null,
+              "role": "assistant",
+              "annotations": [],
+              "audio": null,
+              "function_call": null,
+              "tool_calls": null
+            }
+          }
+        ],
+        "created": 1791617072,
+        "model": "gpt-4.1-mini-2025-04-14",
+        "object": "chat.completion",
+        "metadata": null,
+        "moderation": null,
+        "service_tier": "default",
+        "system_fingerprint": "fp_b767c6a371",
+        "usage": {
+          "completion_tokens": 88,
+          "prompt_tokens": 771,
+          "total_tokens": 859,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          },
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": null,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          }
+        }
+      },
+      "measured_micro_usd": 450,
+      "response_data": {
+        "units": [
+          {
+            "unit_id": "live-served-2:b3",
+            "assessment": "unsupported",
+            "reason": "The selected support states the client says it returned the machine on 6 September 2026, not 8 September 2026 as claimed in the unit. Thus, the change in the reported return date to 8 September is not supported by the selected text.",
+            "source_ids": [
+              "live-served-1:advocate"
+            ]
+          }
+        ]
+      },
+      "experimental_audit": {
+        "contract": "experimental_selected_support_v1",
+        "evaluation_only": true,
+        "raw_audit": {
+          "units": [
+            {
+              "unit_id": "live-served-2:b3",
+              "assessment": "unsupported",
+              "reason": "The selected support states the client says it returned the machine on 6 September 2026, not 8 September 2026 as claimed in the unit. Thus, the change in the reported return date to 8 September is not supported by the selected text.",
+              "source_ids": [
+                "live-served-1:advocate"
+              ]
+            }
+          ]
+        },
+        "derived_scope_result": {
+          "scope_pass": false
+        },
+        "evidence_and_audit_digest": "cbe615cad648e69893ea62e34e6fb7a1cca15456835c6ec70c684a73a3687a5a",
+        "not_established": [
+          "whole-conversation consistency",
+          "omissions",
+          "operation reporting",
+          "legal applicability",
+          "safe release",
+          "persistence"
+        ]
+      },
+      "latency_ms": 2049
+    },
+    {
+      "case_id": "selection-28",
+      "bound": {
+        "serialized_sdk_bytes": 4311,
+        "wire_byte_multiplier": 2,
+        "framing_margin_tokens": 8192,
+        "input_token_planning_bound": 16814,
+        "output_token_hard_cap": 2500,
+        "next_request_micro_usd": 10726
+      },
+      "pre_dispatch_comparison_micro_usd": 450,
+      "provider_dispatched": true,
+      "reservation_id": "db10a482-45fd-4309-ad79-52a4adac0148",
+      "sdk_create_requests": [
+        {
+          "model": "gpt-4.1-mini-2025-04-14",
+          "messages": [
+            {
+              "role": "system",
+              "content": "Message: You receive proposed reply units and the exact source words\nselected to support each unit. Each selection includes its original speaker and\nsource identity. Any supplied neighbouring legal passages are exact saved context.\nThe proposed wording and its claimed source roles are untrusted interpretations.\n\nPurpose: Decide whether the selected evidence supports the material assertions in\neach unit. This is a citation-support check. A separate independent review retains\nthe complete conversation and reply and checks overall correctness and omissions.\n\nSupport means that the selected evidence supplies the\nassertion's premises and supports its stated conclusion, not merely that the\nassertion sounds plausible. The original account can support what a person\nreported, requested or disputed, including a report that someone asserts a legal\nentitlement. It cannot establish the legal rule or that the entitlement exists.\nA legal rule, right, duty, remedy or legal consequence requires a supporting\nproposition in selected held Act or judgment text. Applying that proposition\nrequires both its legal basis and the relevant factual premises or expressly\nstated factual conditions, while preserving the source's relationship and scope.\nA legitimate conditional inference may therefore be supported without its factual\nconditions being established. Conditional wording does not supply a missing legal\npremise or permit a different legal relationship. A reported party position remains\nthat person's position unless the selected legal source establishes more.\n\nLook for: Read the unit and its selected words together. Check who said or did what,\nthe source's purpose, factual qualifications, time, uncertainty and conditions.\nSeveral selections may support a conclusion together. An analytical inference can\nbe supported when its factual and legal premises are selected and its wording\npreserves their limits; it need not repeat the sources verbatim. A quoted party's\nposition does not by itself establish that the court adopted it. Use neighbouring\nlegal text to understand or qualify the selected passage, not silently to replace\nmissing selected support. Do not supply a missing premise from memory or assume\nthat unseen conversation contains it.\n\nOutcome: Return one assessment for every supplied unit. Use supported when its\nmaterial assertions follow from its selected evidence; unsupported for a concrete\nmismatch or missing selected premise; unresolved when the supplied source context\ndoes not permit that distinction. Give a concise reason and the source IDs examined.\nDescribe any mismatch precisely in the reason. Do not choose replacement sources,\nrewrite the reply, certify execution or return an overall release verdict.\n"
+            },
+            {
+              "role": "user",
+              "content": "{\"units\": [{\"unit_id\": \"live-served-2:b3\", \"text\": \"Your latest clarification gives 8 September 2026 as the client's reported return date, in place of the earlier reported 6 September. The event itself remains reported.\", \"selected_support\": [{\"selected\": {\"source_id\": \"live-served-2:advocate\", \"start\": 180, \"end\": 287, \"text\": \"I gave the return date incorrectly: our client's reported return date is 8 September 2026, not 6 September.\"}, \"source_kind\": \"account\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"source_identity\": {\"source_id\": \"live-served-2:advocate\", \"turn_id\": \"live-served-2\"}, \"writer_claimed_role\": \"original_account\", \"writer_claimed_treatment\": \"not_applicable\"}], \"adjacent_legal_context\": []}]}"
+            }
+          ],
+          "store": false,
+          "max_completion_tokens": 2500,
+          "response_format": {
+            "type": "json_schema",
+            "json_schema": {
+              "name": "nm_result",
+              "strict": true,
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "units"
+                ],
+                "properties": {
+                  "units": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "unit_id",
+                        "assessment",
+                        "reason",
+                        "source_ids"
+                      ],
+                      "properties": {
+                        "unit_id": {
+                          "type": "string"
+                        },
+                        "assessment": {
+                          "type": "string",
+                          "enum": [
+                            "supported",
+                            "unsupported",
+                            "unresolved"
+                          ]
+                        },
+                        "reason": {
+                          "type": "string"
+                        },
+                        "source_ids": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      "provider_response": {
+        "id": "chatcmpl-EXLjVgmToOUUJMwMxCaL6AnQQOnGp",
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "logprobs": null,
+            "message": {
+              "content": "{\"units\":[{\"unit_id\":\"live-served-2:b3\",\"assessment\":\"supported\",\"reason\":\"The selected source is the advocate's own clarification stating that the client's reported return date is 8 September 2026, corrected from 6 September. This directly supports the assertion about the updated return date and that the event remains reported.\",\"source_ids\":[\"live-served-2:advocate\"]}]}",
+              "refusal": null,
+              "role": "assistant",
+              "annotations": [],
+              "audio": null,
+              "function_call": null,
+              "tool_calls": null
+            }
+          }
+        ],
+        "created": 1791617073,
+        "model": "gpt-4.1-mini-2025-04-14",
+        "object": "chat.completion",
+        "metadata": null,
+        "moderation": null,
+        "service_tier": "default",
+        "system_fingerprint": "fp_b767c6a371",
+        "usage": {
+          "completion_tokens": 82,
+          "prompt_tokens": 776,
+          "total_tokens": 858,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          },
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": null,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          }
+        }
+      },
+      "measured_micro_usd": 442,
+      "response_data": {
+        "units": [
+          {
+            "unit_id": "live-served-2:b3",
+            "assessment": "supported",
+            "reason": "The selected source is the advocate's own clarification stating that the client's reported return date is 8 September 2026, corrected from 6 September. This directly supports the assertion about the updated return date and that the event remains reported.",
+            "source_ids": [
+              "live-served-2:advocate"
+            ]
+          }
+        ]
+      },
+      "experimental_audit": {
+        "contract": "experimental_selected_support_v1",
+        "evaluation_only": true,
+        "raw_audit": {
+          "units": [
+            {
+              "unit_id": "live-served-2:b3",
+              "assessment": "supported",
+              "reason": "The selected source is the advocate's own clarification stating that the client's reported return date is 8 September 2026, corrected from 6 September. This directly supports the assertion about the updated return date and that the event remains reported.",
+              "source_ids": [
+                "live-served-2:advocate"
+              ]
+            }
+          ]
+        },
+        "derived_scope_result": {
+          "scope_pass": true
+        },
+        "evidence_and_audit_digest": "55d880d60c4efbbcd73b67f7945be27aacb79461fa4c025d8ef20bd81d16429d",
+        "not_established": [
+          "whole-conversation consistency",
+          "omissions",
+          "operation reporting",
+          "legal applicability",
+          "safe release",
+          "persistence"
+        ]
+      },
+      "latency_ms": 1390
+    },
+    {
+      "case_id": "selection-46",
+      "bound": {
+        "serialized_sdk_bytes": 5407,
+        "wire_byte_multiplier": 2,
+        "framing_margin_tokens": 8192,
+        "input_token_planning_bound": 19006,
+        "output_token_hard_cap": 2500,
+        "next_request_micro_usd": 11603
+      },
+      "pre_dispatch_comparison_micro_usd": 892,
+      "provider_dispatched": true,
+      "reservation_id": "342ff5c4-6959-47f6-9fa0-ec0fd1d25cc4",
+      "sdk_create_requests": [
+        {
+          "model": "gpt-4.1-mini-2025-04-14",
+          "messages": [
+            {
+              "role": "system",
+              "content": "Message: You receive proposed reply units and the exact source words\nselected to support each unit. Each selection includes its original speaker and\nsource identity. Any supplied neighbouring legal passages are exact saved context.\nThe proposed wording and its claimed source roles are untrusted interpretations.\n\nPurpose: Decide whether the selected evidence supports the material assertions in\neach unit. This is a citation-support check. A separate independent review retains\nthe complete conversation and reply and checks overall correctness and omissions.\n\nSupport means that the selected evidence supplies the\nassertion's premises and supports its stated conclusion, not merely that the\nassertion sounds plausible. The original account can support what a person\nreported, requested or disputed, including a report that someone asserts a legal\nentitlement. It cannot establish the legal rule or that the entitlement exists.\nA legal rule, right, duty, remedy or legal consequence requires a supporting\nproposition in selected held Act or judgment text. Applying that proposition\nrequires both its legal basis and the relevant factual premises or expressly\nstated factual conditions, while preserving the source's relationship and scope.\nA legitimate conditional inference may therefore be supported without its factual\nconditions being established. Conditional wording does not supply a missing legal\npremise or permit a different legal relationship. A reported party position remains\nthat person's position unless the selected legal source establishes more.\n\nLook for: Read the unit and its selected words together. Check who said or did what,\nthe source's purpose, factual qualifications, time, uncertainty and conditions.\nSeveral selections may support a conclusion together. An analytical inference can\nbe supported when its factual and legal premises are selected and its wording\npreserves their limits; it need not repeat the sources verbatim. A quoted party's\nposition does not by itself establish that the court adopted it. Use neighbouring\nlegal text to understand or qualify the selected passage, not silently to replace\nmissing selected support. Do not supply a missing premise from memory or assume\nthat unseen conversation contains it.\n\nOutcome: Return one assessment for every supplied unit. Use supported when its\nmaterial assertions follow from its selected evidence; unsupported for a concrete\nmismatch or missing selected premise; unresolved when the supplied source context\ndoes not permit that distinction. Give a concise reason and the source IDs examined.\nDescribe any mismatch precisely in the reason. Do not choose replacement sources,\nrewrite the reply, certify execution or return an overall release verdict.\n"
+            },
+            {
+              "role": "user",
+              "content": "{\"units\": [{\"unit_id\": \"t2:b1\", \"text\": \"Seeking supporting accounts is a conditional possibility under the supplied passage if the agreement requires them and the client's contractual capacity is established. The unavailable clause and disputed authorisation prevent a conclusion here that the client has that entitlement, the expenditure was unauthorised, or repayment is due.\", \"selected_support\": [{\"selected\": {\"source_id\": \"t2:advocate\", \"start\": 0, \"end\": 287, \"text\": \"Our agreement's expense clause is not available yet, and whether the expenditure was authorised remains disputed. Using only the supplied passage, explain whether seeking supporting accounts is a possibility, without saying a legal entitlement or unauthorised expenditure is established.\"}, \"source_kind\": \"account\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"source_identity\": {\"source_id\": \"t2:advocate\", \"turn_id\": \"t2\"}, \"writer_claimed_role\": \"original_account\", \"writer_claimed_treatment\": \"not_applicable\"}, {\"selected\": {\"source_id\": \"judgment:4d033cb448128ba9ef0279a7cf9c15ec52d6d2897c4981eb1be3c1af78752ba5\", \"start\": 0, \"end\": 316, \"text\": \"Where an agreement requires supporting accounts for expenditure, a contracting party may request those accounts according to the agreement. The terms and the party's contractual capacity must be established. This conclusion alone establishes neither that particular spending was authorised nor that repayment is due.\"}, \"source_kind\": \"judgment\", \"speaker\": null, \"record_role\": \"retrieved_candidate\", \"source_identity\": {\"position\": 0, \"corpus_revision\": \"checked-corpus\", \"case_id\": \"case\", \"chunk_id\": \"repeated\"}, \"writer_claimed_role\": \"court_reasoning\", \"writer_claimed_treatment\": \"not_applicable\"}], \"adjacent_legal_context\": []}]}"
+            }
+          ],
+          "store": false,
+          "max_completion_tokens": 2500,
+          "response_format": {
+            "type": "json_schema",
+            "json_schema": {
+              "name": "nm_result",
+              "strict": true,
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "units"
+                ],
+                "properties": {
+                  "units": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "unit_id",
+                        "assessment",
+                        "reason",
+                        "source_ids"
+                      ],
+                      "properties": {
+                        "unit_id": {
+                          "type": "string"
+                        },
+                        "assessment": {
+                          "type": "string",
+                          "enum": [
+                            "supported",
+                            "unsupported",
+                            "unresolved"
+                          ]
+                        },
+                        "reason": {
+                          "type": "string"
+                        },
+                        "source_ids": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      "provider_response": {
+        "id": "chatcmpl-EXLjWTmmWO8gn8kn5Uav5mzcM6ucA",
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "logprobs": null,
+            "message": {
+              "content": "{\"units\":[{\"unit_id\":\"t2:b1\",\"assessment\":\"supported\",\"reason\":\"The selected advocate account indicates that the expense clause is not yet available and that whether the expenditure was authorised remains disputed, which aligns with the statement that those facts prevent concluding the client has the entitlement or that the expenditure was authorised or repayment is due. The judgment source explicitly states that where the agreement requires supporting accounts, a party may request them, conditional on the agreement terms and contractual capacity being established; it also says this alone does not establish authorisation or repayment. This supports the assertion that seeking supporting accounts is a conditional possibility under the passage but does not establish entitlement or authorised expenditure here due to the unavailability and dispute about the clause and authorisation. Thus, the assertions correctly reflect the combined evidence without unsupported leaps.\",\"source_ids\":[\"t2:advocate\",\"judgment:4d033cb448128ba9ef0279a7cf9c15ec52d6d2897c4981eb1be3c1af78752ba5\"]}]}",
+              "refusal": null,
+              "role": "assistant",
+              "annotations": [],
+              "audio": null,
+              "function_call": null,
+              "tool_calls": null
+            }
+          }
+        ],
+        "created": 1791617074,
+        "model": "gpt-4.1-mini-2025-04-14",
+        "object": "chat.completion",
+        "metadata": null,
+        "moderation": null,
+        "service_tier": "default",
+        "system_fingerprint": "fp_b767c6a371",
+        "usage": {
+          "completion_tokens": 214,
+          "prompt_tokens": 1003,
+          "total_tokens": 1217,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          },
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": null,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          }
+        }
+      },
+      "measured_micro_usd": 744,
+      "response_data": {
+        "units": [
+          {
+            "unit_id": "t2:b1",
+            "assessment": "supported",
+            "reason": "The selected advocate account indicates that the expense clause is not yet available and that whether the expenditure was authorised remains disputed, which aligns with the statement that those facts prevent concluding the client has the entitlement or that the expenditure was authorised or repayment is due. The judgment source explicitly states that where the agreement requires supporting accounts, a party may request them, conditional on the agreement terms and contractual capacity being established; it also says this alone does not establish authorisation or repayment. This supports the assertion that seeking supporting accounts is a conditional possibility under the passage but does not establish entitlement or authorised expenditure here due to the unavailability and dispute about the clause and authorisation. Thus, the assertions correctly reflect the combined evidence without unsupported leaps.",
+            "source_ids": [
+              "t2:advocate",
+              "judgment:4d033cb448128ba9ef0279a7cf9c15ec52d6d2897c4981eb1be3c1af78752ba5"
+            ]
+          }
+        ]
+      },
+      "experimental_audit": {
+        "contract": "experimental_selected_support_v1",
+        "evaluation_only": true,
+        "raw_audit": {
+          "units": [
+            {
+              "unit_id": "t2:b1",
+              "assessment": "supported",
+              "reason": "The selected advocate account indicates that the expense clause is not yet available and that whether the expenditure was authorised remains disputed, which aligns with the statement that those facts prevent concluding the client has the entitlement or that the expenditure was authorised or repayment is due. The judgment source explicitly states that where the agreement requires supporting accounts, a party may request them, conditional on the agreement terms and contractual capacity being established; it also says this alone does not establish authorisation or repayment. This supports the assertion that seeking supporting accounts is a conditional possibility under the passage but does not establish entitlement or authorised expenditure here due to the unavailability and dispute about the clause and authorisation. Thus, the assertions correctly reflect the combined evidence without unsupported leaps.",
+              "source_ids": [
+                "t2:advocate",
+                "judgment:4d033cb448128ba9ef0279a7cf9c15ec52d6d2897c4981eb1be3c1af78752ba5"
+              ]
+            }
+          ]
+        },
+        "derived_scope_result": {
+          "scope_pass": true
+        },
+        "evidence_and_audit_digest": "83a825e21331585b0bb3cbec064a93bcd61e1a9a87932756472be71191fafe98",
+        "not_established": [
+          "whole-conversation consistency",
+          "omissions",
+          "operation reporting",
+          "legal applicability",
+          "safe release",
+          "persistence"
+        ]
+      },
+      "latency_ms": 1948
+    },
+    {
+      "case_id": "held-scope-01",
+      "bound": {
+        "serialized_sdk_bytes": 6987,
+        "wire_byte_multiplier": 2,
+        "framing_margin_tokens": 8192,
+        "input_token_planning_bound": 22166,
+        "output_token_hard_cap": 2500,
+        "next_request_micro_usd": 12867
+      },
+      "pre_dispatch_comparison_micro_usd": 1636,
+      "provider_dispatched": true,
+      "reservation_id": "f6a03f41-681c-4e57-9c59-de7e842aff7c",
+      "sdk_create_requests": [
+        {
+          "model": "gpt-4.1-mini-2025-04-14",
+          "messages": [
+            {
+              "role": "system",
+              "content": "Message: You receive proposed reply units and the exact source words\nselected to support each unit. Each selection includes its original speaker and\nsource identity. Any supplied neighbouring legal passages are exact saved context.\nThe proposed wording and its claimed source roles are untrusted interpretations.\n\nPurpose: Decide whether the selected evidence supports the material assertions in\neach unit. This is a citation-support check. A separate independent review retains\nthe complete conversation and reply and checks overall correctness and omissions.\n\nSupport means that the selected evidence supplies the\nassertion's premises and supports its stated conclusion, not merely that the\nassertion sounds plausible. The original account can support what a person\nreported, requested or disputed, including a report that someone asserts a legal\nentitlement. It cannot establish the legal rule or that the entitlement exists.\nA legal rule, right, duty, remedy or legal consequence requires a supporting\nproposition in selected held Act or judgment text. Applying that proposition\nrequires both its legal basis and the relevant factual premises or expressly\nstated factual conditions, while preserving the source's relationship and scope.\nA legitimate conditional inference may therefore be supported without its factual\nconditions being established. Conditional wording does not supply a missing legal\npremise or permit a different legal relationship. A reported party position remains\nthat person's position unless the selected legal source establishes more.\n\nLook for: Read the unit and its selected words together. Check who said or did what,\nthe source's purpose, factual qualifications, time, uncertainty and conditions.\nSeveral selections may support a conclusion together. An analytical inference can\nbe supported when its factual and legal premises are selected and its wording\npreserves their limits; it need not repeat the sources verbatim. A quoted party's\nposition does not by itself establish that the court adopted it. Use neighbouring\nlegal text to understand or qualify the selected passage, not silently to replace\nmissing selected support. Do not supply a missing premise from memory or assume\nthat unseen conversation contains it.\n\nOutcome: Return one assessment for every supplied unit. Use supported when its\nmaterial assertions follow from its selected evidence; unsupported for a concrete\nmismatch or missing selected premise; unresolved when the supplied source context\ndoes not permit that distinction. Give a concise reason and the source IDs examined.\nDescribe any mismatch precisely in the reason. Do not choose replacement sources,\nrewrite the reply, certify execution or return an overall release verdict.\n"
+            },
+            {
+              "role": "user",
+              "content": "{\"units\": [{\"unit_id\": \"turn_88979706-2beb-49cc-b038-71313855e357:b1\", \"text\": \"Conditionally, if repair charges are validly due under the hire agreement or relevant contract, the owner may have a lawful lien or right to retain the drive until payment. If the charges are disputed or unsubstantiated, retention may be unlawful, constituting wrongful detention of the client's property.\", \"selected_support\": [{\"selected\": {\"source_id\": \"turn_88979706-2beb-49cc-b038-71313855e357:advocate\", \"start\": 0, \"end\": 918, \"text\": \"SYNTHETIC BROWSER ACCEPTANCE MATTER. We act for Cedar Workshop in Hyderabad. The client says it hired a laser cutter and returned it on 12 September 2026. The owner retains the Rs 90,000 deposit and alleges damage to the lens; our client denies causing damage. The owner says an inspection report exists but has not supplied it to our client. The client reports having a signed hire agreement and the bank transfer receipt, but neither document has been supplied or checked here. Separately, the owner's technician still holds the client's original design drive, said to have been lent for setup only. The owner claims it may keep that drive until repair charges are paid. Give a conditional analysis of both disputes using the held legal sources, including the material opposing position. Then list the important questions for our client. Do not contact anyone, do not admit damage, and do not invent agreement terms.\"}, \"source_kind\": \"account\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"source_identity\": {\"source_id\": \"turn_88979706-2beb-49cc-b038-71313855e357:advocate\", \"turn_id\": \"turn_88979706-2beb-49cc-b038-71313855e357\"}, \"writer_claimed_role\": \"original_account\", \"writer_claimed_treatment\": \"not_applicable\"}, {\"selected\": {\"source_id\": \"provision:c18a0a396903af2aa31bf90e4848a53c4c948c6686ab8fa15f4d03a94f60f0c7\", \"start\": 0, \"end\": 634, \"text\": \"Union Of India 1980 10 The Sale Of Goods Act, 1930,  — s.47: Seller’s lien.—\\n47.\\nSeller’s lien.—\\n(1)\\nSubject to the provisions of this Act, the unpaid seller of goods who is in possession of them is entitled to retain possession of them until payment or tender of the price in the following cases, namely:—\\n(a)\\nwhere the goods have been sold without any stipulation as to credit;\\n(b)\\nwhere the goods have been sold on credit, but the term of credit has expired;\\n(c)\\nwhere the buyer becomes insolvent.\\n(2)\\nThe seller may exercise his right of lien notwithstanding that he is in possession of the goods as agent or bailee for the buyer.\"}, \"source_kind\": \"provision\", \"speaker\": null, \"record_role\": \"retrieved_candidate\", \"source_identity\": {\"position\": 200305, \"corpus_revision\": \"6cb8d631cbc251f5fe248a14e8eadd119bf1f170d05ce3c0faa05cb1b3b75a2b\", \"act_id\": \"UNION OF INDIA_1980_10_THE SALE OF GOODS ACT, 1930\", \"chunk_id\": \"UNION OF INDIA_1980_10_THE SALE OF GOODS ACT, 1930_SECTION_47\"}, \"writer_claimed_role\": \"provision\", \"writer_claimed_treatment\": \"not_applicable\", \"source_context_availability\": [{\"scope\": \"selected_indexed_segment\", \"bounded\": true, \"unread_positions\": [], \"source_position_gaps\": [{\"kind\": \"provision\", \"query_id\": null, \"stage\": \"context\", \"reason\": \"Source chunk identity is missing or ambiguous within its Act\", \"position\": 200305}]}]}], \"adjacent_legal_context\": []}]}"
+            }
+          ],
+          "store": false,
+          "max_completion_tokens": 2500,
+          "response_format": {
+            "type": "json_schema",
+            "json_schema": {
+              "name": "nm_result",
+              "strict": true,
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "units"
+                ],
+                "properties": {
+                  "units": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "unit_id",
+                        "assessment",
+                        "reason",
+                        "source_ids"
+                      ],
+                      "properties": {
+                        "unit_id": {
+                          "type": "string"
+                        },
+                        "assessment": {
+                          "type": "string",
+                          "enum": [
+                            "supported",
+                            "unsupported",
+                            "unresolved"
+                          ]
+                        },
+                        "reason": {
+                          "type": "string"
+                        },
+                        "source_ids": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      "provider_response": {
+        "id": "chatcmpl-EXLjYyOlxwE82S1qzMicSOxgLyHqT",
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "logprobs": null,
+            "message": {
+              "content": "{\"units\":[{\"unit_id\":\"turn_88979706-2beb-49cc-b038-71313855e357:b1\",\"assessment\":\"supported\",\"reason\":\"The unit accurately presents a conditional and qualified summary of the owner's purported lien or right to retain the drive, depending on the validity of the repair charges. This reflects the conditional retention right in the Sale of Goods Act, 1930 s.47, which permits a seller to retain goods until payment in certain situations. The unit also captures the opposing position that if charges are disputed or unsubstantiated, retention may be unlawful and constitute wrongful detention. This aligns with the advocate's statement describing the dispute and the conflicting claims regarding the drive and repair charges. Therefore, the selected sources support the unit's conditional legal analysis.\",\"source_ids\":[\"turn_88979706-2beb-49cc-b038-71313855e357:advocate\",\"provision:c18a0a396903af2aa31bf90e4848a53c4c948c6686ab8fa15f4d03a94f60f0c7\"]}]}",
+              "refusal": null,
+              "role": "assistant",
+              "annotations": [],
+              "audio": null,
+              "function_call": null,
+              "tool_calls": null
+            }
+          }
+        ],
+        "created": 1791617076,
+        "model": "gpt-4.1-mini-2025-04-14",
+        "object": "chat.completion",
+        "metadata": null,
+        "moderation": null,
+        "service_tier": "default",
+        "system_fingerprint": "fp_b767c6a371",
+        "usage": {
+          "completion_tokens": 230,
+          "prompt_tokens": 1478,
+          "total_tokens": 1708,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          },
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": null,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          }
+        }
+      },
+      "measured_micro_usd": 960,
+      "response_data": {
+        "units": [
+          {
+            "unit_id": "turn_88979706-2beb-49cc-b038-71313855e357:b1",
+            "assessment": "supported",
+            "reason": "The unit accurately presents a conditional and qualified summary of the owner's purported lien or right to retain the drive, depending on the validity of the repair charges. This reflects the conditional retention right in the Sale of Goods Act, 1930 s.47, which permits a seller to retain goods until payment in certain situations. The unit also captures the opposing position that if charges are disputed or unsubstantiated, retention may be unlawful and constitute wrongful detention. This aligns with the advocate's statement describing the dispute and the conflicting claims regarding the drive and repair charges. Therefore, the selected sources support the unit's conditional legal analysis.",
+            "source_ids": [
+              "turn_88979706-2beb-49cc-b038-71313855e357:advocate",
+              "provision:c18a0a396903af2aa31bf90e4848a53c4c948c6686ab8fa15f4d03a94f60f0c7"
+            ]
+          }
+        ]
+      },
+      "experimental_audit": {
+        "contract": "experimental_selected_support_v1",
+        "evaluation_only": true,
+        "raw_audit": {
+          "units": [
+            {
+              "unit_id": "turn_88979706-2beb-49cc-b038-71313855e357:b1",
+              "assessment": "supported",
+              "reason": "The unit accurately presents a conditional and qualified summary of the owner's purported lien or right to retain the drive, depending on the validity of the repair charges. This reflects the conditional retention right in the Sale of Goods Act, 1930 s.47, which permits a seller to retain goods until payment in certain situations. The unit also captures the opposing position that if charges are disputed or unsubstantiated, retention may be unlawful and constitute wrongful detention. This aligns with the advocate's statement describing the dispute and the conflicting claims regarding the drive and repair charges. Therefore, the selected sources support the unit's conditional legal analysis.",
+              "source_ids": [
+                "turn_88979706-2beb-49cc-b038-71313855e357:advocate",
+                "provision:c18a0a396903af2aa31bf90e4848a53c4c948c6686ab8fa15f4d03a94f60f0c7"
+              ]
+            }
+          ]
+        },
+        "derived_scope_result": {
+          "scope_pass": true
+        },
+        "evidence_and_audit_digest": "f5b83062f7aef10adcfc47c779eeabe650433f34df9edff8f294e8a4656de260",
+        "not_established": [
+          "whole-conversation consistency",
+          "omissions",
+          "operation reporting",
+          "legal applicability",
+          "safe release",
+          "persistence"
+        ]
+      },
+      "latency_ms": 2136
+    },
+    {
+      "case_id": "held-scope-02",
+      "bound": {
+        "serialized_sdk_bytes": 7340,
+        "wire_byte_multiplier": 2,
+        "framing_margin_tokens": 8192,
+        "input_token_planning_bound": 22872,
+        "output_token_hard_cap": 2500,
+        "next_request_micro_usd": 13149
+      },
+      "pre_dispatch_comparison_micro_usd": 2596,
+      "provider_dispatched": true,
+      "reservation_id": "a91defcd-2d52-4700-96c1-a630a2fa934d",
+      "sdk_create_requests": [
+        {
+          "model": "gpt-4.1-mini-2025-04-14",
+          "messages": [
+            {
+              "role": "system",
+              "content": "Message: You receive proposed reply units and the exact source words\nselected to support each unit. Each selection includes its original speaker and\nsource identity. Any supplied neighbouring legal passages are exact saved context.\nThe proposed wording and its claimed source roles are untrusted interpretations.\n\nPurpose: Decide whether the selected evidence supports the material assertions in\neach unit. This is a citation-support check. A separate independent review retains\nthe complete conversation and reply and checks overall correctness and omissions.\n\nSupport means that the selected evidence supplies the\nassertion's premises and supports its stated conclusion, not merely that the\nassertion sounds plausible. The original account can support what a person\nreported, requested or disputed, including a report that someone asserts a legal\nentitlement. It cannot establish the legal rule or that the entitlement exists.\nA legal rule, right, duty, remedy or legal consequence requires a supporting\nproposition in selected held Act or judgment text. Applying that proposition\nrequires both its legal basis and the relevant factual premises or expressly\nstated factual conditions, while preserving the source's relationship and scope.\nA legitimate conditional inference may therefore be supported without its factual\nconditions being established. Conditional wording does not supply a missing legal\npremise or permit a different legal relationship. A reported party position remains\nthat person's position unless the selected legal source establishes more.\n\nLook for: Read the unit and its selected words together. Check who said or did what,\nthe source's purpose, factual qualifications, time, uncertainty and conditions.\nSeveral selections may support a conclusion together. An analytical inference can\nbe supported when its factual and legal premises are selected and its wording\npreserves their limits; it need not repeat the sources verbatim. A quoted party's\nposition does not by itself establish that the court adopted it. Use neighbouring\nlegal text to understand or qualify the selected passage, not silently to replace\nmissing selected support. Do not supply a missing premise from memory or assume\nthat unseen conversation contains it.\n\nOutcome: Return one assessment for every supplied unit. Use supported when its\nmaterial assertions follow from its selected evidence; unsupported for a concrete\nmismatch or missing selected premise; unresolved when the supplied source context\ndoes not permit that distinction. Give a concise reason and the source IDs examined.\nDescribe any mismatch precisely in the reason. Do not choose replacement sources,\nrewrite the reply, certify execution or return an overall release verdict.\n"
+            },
+            {
+              "role": "user",
+              "content": "{\"units\": [{\"unit_id\": \"turn_88979706-2beb-49cc-b038-71313855e357:b1\", \"text\": \"The selected section 47 passage concerns an unpaid seller retaining possession of the goods sold for their price, subject to its stated conditions. Its reference to possession as agent or bailee still concerns that seller; it does not establish a general right to retain another item for a repair debt. Your account reports a hired cutter and a drive lent for setup, with disputed repair charges; it does not describe a sale of the drive with an unpaid price. This passage alone therefore does not establish the owner's claimed right to keep the drive. That limit does not itself decide whether a different contractual or legal basis could support retention.\", \"selected_support\": [{\"selected\": {\"source_id\": \"turn_88979706-2beb-49cc-b038-71313855e357:advocate\", \"start\": 0, \"end\": 918, \"text\": \"SYNTHETIC BROWSER ACCEPTANCE MATTER. We act for Cedar Workshop in Hyderabad. The client says it hired a laser cutter and returned it on 12 September 2026. The owner retains the Rs 90,000 deposit and alleges damage to the lens; our client denies causing damage. The owner says an inspection report exists but has not supplied it to our client. The client reports having a signed hire agreement and the bank transfer receipt, but neither document has been supplied or checked here. Separately, the owner's technician still holds the client's original design drive, said to have been lent for setup only. The owner claims it may keep that drive until repair charges are paid. Give a conditional analysis of both disputes using the held legal sources, including the material opposing position. Then list the important questions for our client. Do not contact anyone, do not admit damage, and do not invent agreement terms.\"}, \"source_kind\": \"account\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"source_identity\": {\"source_id\": \"turn_88979706-2beb-49cc-b038-71313855e357:advocate\", \"turn_id\": \"turn_88979706-2beb-49cc-b038-71313855e357\"}, \"writer_claimed_role\": \"original_account\", \"writer_claimed_treatment\": \"not_applicable\"}, {\"selected\": {\"source_id\": \"provision:c18a0a396903af2aa31bf90e4848a53c4c948c6686ab8fa15f4d03a94f60f0c7\", \"start\": 0, \"end\": 634, \"text\": \"Union Of India 1980 10 The Sale Of Goods Act, 1930,  — s.47: Seller’s lien.—\\n47.\\nSeller’s lien.—\\n(1)\\nSubject to the provisions of this Act, the unpaid seller of goods who is in possession of them is entitled to retain possession of them until payment or tender of the price in the following cases, namely:—\\n(a)\\nwhere the goods have been sold without any stipulation as to credit;\\n(b)\\nwhere the goods have been sold on credit, but the term of credit has expired;\\n(c)\\nwhere the buyer becomes insolvent.\\n(2)\\nThe seller may exercise his right of lien notwithstanding that he is in possession of the goods as agent or bailee for the buyer.\"}, \"source_kind\": \"provision\", \"speaker\": null, \"record_role\": \"retrieved_candidate\", \"source_identity\": {\"position\": 200305, \"corpus_revision\": \"6cb8d631cbc251f5fe248a14e8eadd119bf1f170d05ce3c0faa05cb1b3b75a2b\", \"act_id\": \"UNION OF INDIA_1980_10_THE SALE OF GOODS ACT, 1930\", \"chunk_id\": \"UNION OF INDIA_1980_10_THE SALE OF GOODS ACT, 1930_SECTION_47\"}, \"writer_claimed_role\": \"provision\", \"writer_claimed_treatment\": \"not_applicable\", \"source_context_availability\": [{\"scope\": \"selected_indexed_segment\", \"bounded\": true, \"unread_positions\": [], \"source_position_gaps\": [{\"kind\": \"provision\", \"query_id\": null, \"stage\": \"context\", \"reason\": \"Source chunk identity is missing or ambiguous within its Act\", \"position\": 200305}]}]}], \"adjacent_legal_context\": []}]}"
+            }
+          ],
+          "store": false,
+          "max_completion_tokens": 2500,
+          "response_format": {
+            "type": "json_schema",
+            "json_schema": {
+              "name": "nm_result",
+              "strict": true,
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "units"
+                ],
+                "properties": {
+                  "units": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "unit_id",
+                        "assessment",
+                        "reason",
+                        "source_ids"
+                      ],
+                      "properties": {
+                        "unit_id": {
+                          "type": "string"
+                        },
+                        "assessment": {
+                          "type": "string",
+                          "enum": [
+                            "supported",
+                            "unsupported",
+                            "unresolved"
+                          ]
+                        },
+                        "reason": {
+                          "type": "string"
+                        },
+                        "source_ids": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      "provider_response": {
+        "id": "chatcmpl-EXLjbXHFsyxpAxnxzH3rWOQxVBJlw",
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "logprobs": null,
+            "message": {
+              "content": "{\"units\":[{\"unit_id\":\"turn_88979706-2beb-49cc-b038-71313855e357:b1\",\"assessment\":\"supported\",\"reason\":\"The selected text from the Sale of Goods Act, 1930 section 47 specifically addresses the seller's lien in relation to goods sold and possessed by the unpaid seller, including when possession is as agent or bailee. The advocate's account describes a hired laser cutter returned and a lent setup drive with disputed repair charges, not a sold item with unpaid price. Thus, the cited section does not support a general right to retain the drive for repair charges. The evidence supports the assertion that this section alone does not establish the owner's claimed right to retain the drive and does not decide on other possible bases.\",\"source_ids\":[\"turn_88979706-2beb-49cc-b038-71313855e357:advocate\",\"provision:c18a0a396903af2aa31bf90e4848a53c4c948c6686ab8fa15f4d03a94f60f0c7\"]}]}",
+              "refusal": null,
+              "role": "assistant",
+              "annotations": [],
+              "audio": null,
+              "function_call": null,
+              "tool_calls": null
+            }
+          }
+        ],
+        "created": 1791617079,
+        "model": "gpt-4.1-mini-2025-04-14",
+        "object": "chat.completion",
+        "metadata": null,
+        "moderation": null,
+        "service_tier": "default",
+        "system_fingerprint": "fp_b767c6a371",
+        "usage": {
+          "completion_tokens": 227,
+          "prompt_tokens": 1541,
+          "total_tokens": 1768,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          },
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": null,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          }
+        }
+      },
+      "measured_micro_usd": 980,
+      "response_data": {
+        "units": [
+          {
+            "unit_id": "turn_88979706-2beb-49cc-b038-71313855e357:b1",
+            "assessment": "supported",
+            "reason": "The selected text from the Sale of Goods Act, 1930 section 47 specifically addresses the seller's lien in relation to goods sold and possessed by the unpaid seller, including when possession is as agent or bailee. The advocate's account describes a hired laser cutter returned and a lent setup drive with disputed repair charges, not a sold item with unpaid price. Thus, the cited section does not support a general right to retain the drive for repair charges. The evidence supports the assertion that this section alone does not establish the owner's claimed right to retain the drive and does not decide on other possible bases.",
+            "source_ids": [
+              "turn_88979706-2beb-49cc-b038-71313855e357:advocate",
+              "provision:c18a0a396903af2aa31bf90e4848a53c4c948c6686ab8fa15f4d03a94f60f0c7"
+            ]
+          }
+        ]
+      },
+      "experimental_audit": {
+        "contract": "experimental_selected_support_v1",
+        "evaluation_only": true,
+        "raw_audit": {
+          "units": [
+            {
+              "unit_id": "turn_88979706-2beb-49cc-b038-71313855e357:b1",
+              "assessment": "supported",
+              "reason": "The selected text from the Sale of Goods Act, 1930 section 47 specifically addresses the seller's lien in relation to goods sold and possessed by the unpaid seller, including when possession is as agent or bailee. The advocate's account describes a hired laser cutter returned and a lent setup drive with disputed repair charges, not a sold item with unpaid price. Thus, the cited section does not support a general right to retain the drive for repair charges. The evidence supports the assertion that this section alone does not establish the owner's claimed right to retain the drive and does not decide on other possible bases.",
+              "source_ids": [
+                "turn_88979706-2beb-49cc-b038-71313855e357:advocate",
+                "provision:c18a0a396903af2aa31bf90e4848a53c4c948c6686ab8fa15f4d03a94f60f0c7"
+              ]
+            }
+          ]
+        },
+        "derived_scope_result": {
+          "scope_pass": true
+        },
+        "evidence_and_audit_digest": "b693474d166383fe4833151b3da4b6586df07cc4a9c478cffb59fd3443e5ef68",
+        "not_established": [
+          "whole-conversation consistency",
+          "omissions",
+          "operation reporting",
+          "legal applicability",
+          "safe release",
+          "persistence"
+        ]
+      },
+      "latency_ms": 2299
+    },
+    {
+      "case_id": "actual-writer-five-units",
+      "bound": {
+        "serialized_sdk_bytes": 15908,
+        "wire_byte_multiplier": 2,
+        "framing_margin_tokens": 8192,
+        "input_token_planning_bound": 40008,
+        "output_token_hard_cap": 2500,
+        "next_request_micro_usd": 20004
+      },
+      "pre_dispatch_comparison_micro_usd": 3576,
+      "provider_dispatched": true,
+      "reservation_id": "e0ffbb0d-ed9e-4b46-a843-21a49304f3b9",
+      "sdk_create_requests": [
+        {
+          "model": "gpt-4.1-mini-2025-04-14",
+          "messages": [
+            {
+              "role": "system",
+              "content": "Message: You receive proposed reply units and the exact source words\nselected to support each unit. Each selection includes its original speaker and\nsource identity. Any supplied neighbouring legal passages are exact saved context.\nThe proposed wording and its claimed source roles are untrusted interpretations.\n\nPurpose: Decide whether the selected evidence supports the material assertions in\neach unit. This is a citation-support check. A separate independent review retains\nthe complete conversation and reply and checks overall correctness and omissions.\n\nSupport means that the selected evidence supplies the\nassertion's premises and supports its stated conclusion, not merely that the\nassertion sounds plausible. The original account can support what a person\nreported, requested or disputed, including a report that someone asserts a legal\nentitlement. It cannot establish the legal rule or that the entitlement exists.\nA legal rule, right, duty, remedy or legal consequence requires a supporting\nproposition in selected held Act or judgment text. Applying that proposition\nrequires both its legal basis and the relevant factual premises or expressly\nstated factual conditions, while preserving the source's relationship and scope.\nA legitimate conditional inference may therefore be supported without its factual\nconditions being established. Conditional wording does not supply a missing legal\npremise or permit a different legal relationship. A reported party position remains\nthat person's position unless the selected legal source establishes more.\n\nLook for: Read the unit and its selected words together. Check who said or did what,\nthe source's purpose, factual qualifications, time, uncertainty and conditions.\nSeveral selections may support a conclusion together. An analytical inference can\nbe supported when its factual and legal premises are selected and its wording\npreserves their limits; it need not repeat the sources verbatim. A quoted party's\nposition does not by itself establish that the court adopted it. Use neighbouring\nlegal text to understand or qualify the selected passage, not silently to replace\nmissing selected support. Do not supply a missing premise from memory or assume\nthat unseen conversation contains it.\n\nOutcome: Return one assessment for every supplied unit. Use supported when its\nmaterial assertions follow from its selected evidence; unsupported for a concrete\nmismatch or missing selected premise; unresolved when the supplied source context\ndoes not permit that distinction. Give a concise reason and the source IDs examined.\nDescribe any mismatch precisely in the reason. Do not choose replacement sources,\nrewrite the reply, certify execution or return an overall release verdict.\n"
+            },
+            {
+              "role": "user",
+              "content": "{\"units\": [{\"unit_id\": \"turn_88979706-2beb-49cc-b038-71313855e357:b1\", \"text\": \"Regarding the dispute over the laser cutter deposit and alleged damage: Assuming a hire agreement validly exists and governs the transaction, the owner’s retention of the Rs 90,000 deposit as security for due performance or damages is generally permissible under contract and hire law. However, the client's denial of damage and the owner's failure to supply the inspection report alleging lens damage weakens the owner's position, as the evidence to substantiate the damage claim is lacking or not disclosed. The client's possession of a signed hire agreement and proof of payment (bank transfer receipt), if consistent with the terms, supports the client's legitimacy in the rental and return on 12 September 2026. Without admission of damage by the client and in absence of the inspection report, the owner's claim to forfeit the deposit is contested and may be challenged on grounds such as insufficient proof or procedural irregularities in inspection and damage assessment. Relevant legal principles include the requirement to establish damage with proper evidence to justify withholding deposits, and that the deposit's forfeiture must be reasonable and in accordance with the contract terms. Precedents recognize the function of deposits as security but require the party withholding it to substantiate the claim for damages. Additionally, the obligation on the hirer to pay for damage only arises where damage is proven to be caused by them; denial of damage by the client is a key defense.\", \"selected_support\": [{\"selected\": {\"source_id\": \"turn_88979706-2beb-49cc-b038-71313855e357:advocate\", \"start\": 0, \"end\": 918, \"text\": \"SYNTHETIC BROWSER ACCEPTANCE MATTER. We act for Cedar Workshop in Hyderabad. The client says it hired a laser cutter and returned it on 12 September 2026. The owner retains the Rs 90,000 deposit and alleges damage to the lens; our client denies causing damage. The owner says an inspection report exists but has not supplied it to our client. The client reports having a signed hire agreement and the bank transfer receipt, but neither document has been supplied or checked here. Separately, the owner's technician still holds the client's original design drive, said to have been lent for setup only. The owner claims it may keep that drive until repair charges are paid. Give a conditional analysis of both disputes using the held legal sources, including the material opposing position. Then list the important questions for our client. Do not contact anyone, do not admit damage, and do not invent agreement terms.\"}, \"source_kind\": \"account\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"source_identity\": {\"source_id\": \"turn_88979706-2beb-49cc-b038-71313855e357:advocate\", \"turn_id\": \"turn_88979706-2beb-49cc-b038-71313855e357\"}, \"writer_claimed_role\": \"original_account\", \"writer_claimed_treatment\": \"not_applicable\"}], \"adjacent_legal_context\": []}, {\"unit_id\": \"turn_88979706-2beb-49cc-b038-71313855e357:b2\", \"text\": \"Concerning the owner's technician retaining the client's original design drive allegedly lent for setup only: The retention of the client’s property as security for repair charges may constitute a lien or possessory security depending on applicable law governing sale of goods or bailment. However, the owner’s right to withhold the design drive until repair charges are paid is conditional and not automatic. If the drive was lent solely for setup purposes with an obligation to return it, the owner's retention pending repair charges is legally questionable without express contractual lien or statutory authority. The law generally requires that if an owner's technician holds property belonging to another party, it must be returned unless a legitimate lien or lawful right to retain exists. Any withholding must be reasonable, lawful, and proportionate. Further, the nature of the drive as electronic storage with client data complicates lawful retention, given fiduciary duties and potential liabilities. Client's original properties are to be safeguarded, and retention against repair claims typically demands clear contractual authorization or lawful lien.\", \"selected_support\": [{\"selected\": {\"source_id\": \"turn_88979706-2beb-49cc-b038-71313855e357:advocate\", \"start\": 0, \"end\": 918, \"text\": \"SYNTHETIC BROWSER ACCEPTANCE MATTER. We act for Cedar Workshop in Hyderabad. The client says it hired a laser cutter and returned it on 12 September 2026. The owner retains the Rs 90,000 deposit and alleges damage to the lens; our client denies causing damage. The owner says an inspection report exists but has not supplied it to our client. The client reports having a signed hire agreement and the bank transfer receipt, but neither document has been supplied or checked here. Separately, the owner's technician still holds the client's original design drive, said to have been lent for setup only. The owner claims it may keep that drive until repair charges are paid. Give a conditional analysis of both disputes using the held legal sources, including the material opposing position. Then list the important questions for our client. Do not contact anyone, do not admit damage, and do not invent agreement terms.\"}, \"source_kind\": \"account\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"source_identity\": {\"source_id\": \"turn_88979706-2beb-49cc-b038-71313855e357:advocate\", \"turn_id\": \"turn_88979706-2beb-49cc-b038-71313855e357\"}, \"writer_claimed_role\": \"original_account\", \"writer_claimed_treatment\": \"not_applicable\"}], \"adjacent_legal_context\": []}, {\"unit_id\": \"turn_88979706-2beb-49cc-b038-71313855e357:b3\", \"text\": \"Opposing positions: The owner insists on forfeiture of the deposit alleging damage substantiated by an inspection report not yet disclosed, and asserts right to retain the client’s design drive pending payment of repair charges. The client denies causing any damage and possesses the hire agreement and payment proof but lacks documentation in this context. The lack of inspection report disclosure weighs against the owner's claim, and the right to retain property is conditional and must be legally justified.\", \"selected_support\": [{\"selected\": {\"source_id\": \"turn_88979706-2beb-49cc-b038-71313855e357:advocate\", \"start\": 0, \"end\": 918, \"text\": \"SYNTHETIC BROWSER ACCEPTANCE MATTER. We act for Cedar Workshop in Hyderabad. The client says it hired a laser cutter and returned it on 12 September 2026. The owner retains the Rs 90,000 deposit and alleges damage to the lens; our client denies causing damage. The owner says an inspection report exists but has not supplied it to our client. The client reports having a signed hire agreement and the bank transfer receipt, but neither document has been supplied or checked here. Separately, the owner's technician still holds the client's original design drive, said to have been lent for setup only. The owner claims it may keep that drive until repair charges are paid. Give a conditional analysis of both disputes using the held legal sources, including the material opposing position. Then list the important questions for our client. Do not contact anyone, do not admit damage, and do not invent agreement terms.\"}, \"source_kind\": \"account\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"source_identity\": {\"source_id\": \"turn_88979706-2beb-49cc-b038-71313855e357:advocate\", \"turn_id\": \"turn_88979706-2beb-49cc-b038-71313855e357\"}, \"writer_claimed_role\": \"original_account\", \"writer_claimed_treatment\": \"not_applicable\"}], \"adjacent_legal_context\": []}, {\"unit_id\": \"turn_88979706-2beb-49cc-b038-71313855e357:b4\", \"text\": \"The foregoing analysis is conditional on the verification of the hire agreement terms and bank receipt, which have not yet been provided or examined. This absence constitutes a gap that limits legal certainty regarding the validity of claims or rights of retention. Further, the owner's inspection report, if provided, may bear on the analysis of damage and deposit forfeiture. Without these, this analysis cannot conclusively determine legal rights or outcomes.\", \"selected_support\": [{\"selected\": {\"source_id\": \"turn_88979706-2beb-49cc-b038-71313855e357:advocate\", \"start\": 0, \"end\": 918, \"text\": \"SYNTHETIC BROWSER ACCEPTANCE MATTER. We act for Cedar Workshop in Hyderabad. The client says it hired a laser cutter and returned it on 12 September 2026. The owner retains the Rs 90,000 deposit and alleges damage to the lens; our client denies causing damage. The owner says an inspection report exists but has not supplied it to our client. The client reports having a signed hire agreement and the bank transfer receipt, but neither document has been supplied or checked here. Separately, the owner's technician still holds the client's original design drive, said to have been lent for setup only. The owner claims it may keep that drive until repair charges are paid. Give a conditional analysis of both disputes using the held legal sources, including the material opposing position. Then list the important questions for our client. Do not contact anyone, do not admit damage, and do not invent agreement terms.\"}, \"source_kind\": \"account\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"source_identity\": {\"source_id\": \"turn_88979706-2beb-49cc-b038-71313855e357:advocate\", \"turn_id\": \"turn_88979706-2beb-49cc-b038-71313855e357\"}, \"writer_claimed_role\": \"original_account\", \"writer_claimed_treatment\": \"not_applicable\"}], \"adjacent_legal_context\": []}, {\"unit_id\": \"turn_88979706-2beb-49cc-b038-71313855e357:b5\", \"text\": \"Important questions for the client to address include:\\n1. Can your client supply the signed hire agreement and bank transfer receipt to verify terms and payment?\\n2. Did your client receive any communication or opportunity to inspect the alleged damage or the inspection report?\\n3. What exact condition was the laser cutter in upon return and was any damage contested immediately or formally?\\n4. What are the terms in the hire agreement regarding deposit forfeiture, damage claims, inspection, and dispute resolution?\\n5. Regarding the design drive, were there any express terms about its retention or return post-setup?\\n6. What communications exist with the owner’s technician regarding the drive’s retention and repayment demand?\\n7. Are there any contractual or statutory provisions supporting or prohibiting the retention of the design drive as security?\\n8. Has your client considered demand or formal notice for the release of the drive if retained unlawfully?\\nAnswering these will clarify risks, rights, and possible legal strategies.\", \"selected_support\": [{\"selected\": {\"source_id\": \"turn_88979706-2beb-49cc-b038-71313855e357:advocate\", \"start\": 0, \"end\": 918, \"text\": \"SYNTHETIC BROWSER ACCEPTANCE MATTER. We act for Cedar Workshop in Hyderabad. The client says it hired a laser cutter and returned it on 12 September 2026. The owner retains the Rs 90,000 deposit and alleges damage to the lens; our client denies causing damage. The owner says an inspection report exists but has not supplied it to our client. The client reports having a signed hire agreement and the bank transfer receipt, but neither document has been supplied or checked here. Separately, the owner's technician still holds the client's original design drive, said to have been lent for setup only. The owner claims it may keep that drive until repair charges are paid. Give a conditional analysis of both disputes using the held legal sources, including the material opposing position. Then list the important questions for our client. Do not contact anyone, do not admit damage, and do not invent agreement terms.\"}, \"source_kind\": \"account\", \"speaker\": \"advocate\", \"record_role\": \"original_account\", \"source_identity\": {\"source_id\": \"turn_88979706-2beb-49cc-b038-71313855e357:advocate\", \"turn_id\": \"turn_88979706-2beb-49cc-b038-71313855e357\"}, \"writer_claimed_role\": \"original_account\", \"writer_claimed_treatment\": \"not_applicable\"}], \"adjacent_legal_context\": []}]}"
+            }
+          ],
+          "store": false,
+          "max_completion_tokens": 2500,
+          "response_format": {
+            "type": "json_schema",
+            "json_schema": {
+              "name": "nm_result",
+              "strict": true,
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "units"
+                ],
+                "properties": {
+                  "units": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "unit_id",
+                        "assessment",
+                        "reason",
+                        "source_ids"
+                      ],
+                      "properties": {
+                        "unit_id": {
+                          "type": "string"
+                        },
+                        "assessment": {
+                          "type": "string",
+                          "enum": [
+                            "supported",
+                            "unsupported",
+                            "unresolved"
+                          ]
+                        },
+                        "reason": {
+                          "type": "string"
+                        },
+                        "source_ids": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      "provider_response": {
+        "id": "chatcmpl-EXLjdZfXkwl9aNhWg8dw3icbvwTWt",
+        "choices": [
+          {
+            "finish_reason": "stop",
+            "index": 0,
+            "logprobs": null,
+            "message": {
+              "content": "{\"units\":[{\"unit_id\":\"turn_88979706-2beb-49cc-b038-71313855e357:b1\",\"assessment\":\"supported\",\"reason\":\"The unit’s assertions about the dispute over the laser cutter deposit, the client denying damage, lack of inspection report disclosure, and the conditional analysis of the owner’s position are explicitly supported by the advocate’s original account detailing these facts and the contested nature of the damage claim and deposit retention. The assertions correctly reflect the content and the conditional stance of the source.\",\"source_ids\":[\"turn_88979706-2beb-49cc-b038-71313855e357:advocate\"]},{\"unit_id\":\"turn_88979706-2beb-49cc-b038-71313855e357:b2\",\"assessment\":\"supported\",\"reason\":\"The unit’s discussion on the owner’s technician retaining the client’s design drive as possible lien or possessory security, legal conditions for withholding, and fiduciary concerns is a reasoned inference consistent with the advocate’s statement that the drive was lent for setup only, retained by the owner, and the owner claims to keep it until repair charges are paid. The unit reflects a conditional legal analysis based on these facts, supported by the source which provides the factual premise.\",\"source_ids\":[\"turn_88979706-2beb-49cc-b038-71313855e357:advocate\"]},{\"unit_id\":\"turn_88979706-2beb-49cc-b038-71313855e357:b3\",\"assessment\":\"supported\",\"reason\":\"The unit accurately summarizes the opposing positions: owner alleges damage with inspection report not disclosed and seeks deposit forfeiture and retention of the client’s design drive, client denies damage and holds hire agreement and payment proof. These facts and positions are contained fully in the advocate’s source, matching the unit’s account and conditional legal observations.\",\"source_ids\":[\"turn_88979706-2beb-49cc-b038-71313855e357:advocate\"]},{\"unit_id\":\"turn_88979706-2beb-49cc-b038-71313855e357:b4\",\"assessment\":\"supported\",\"reason\":\"The unit notes the analysis is conditional on absent documents (hire agreement, bank receipt, inspection report), which limits legal certainty. This is directly supported by the advocate’s source statement that the client reports having these documents but none have been supplied or checked here, and that the inspection report is not provided. The source supports the conditional nature and evidentiary gaps acknowledged by the unit.\",\"source_ids\":[\"turn_88979706-2beb-49cc-b038-71313855e357:advocate\"]},{\"unit_id\":\"turn_88979706-2beb-49cc-b038-71313855e357:b5\",\"assessment\":\"supported\",\"reason\":\"The unit lists important factual and contractual questions for the client to address, derived logically from the advocate’s account that the client has hire agreement and payment receipt not checked, that damage and inspection report are alleged but undisclosed, and that retention of design drive is contested. The advocate’s source calls for important questions for the client, which supports the unit’s detailed enumerated questions.\",\"source_ids\":[\"turn_88979706-2beb-49cc-b038-71313855e357:advocate\"]}]}",
+              "refusal": null,
+              "role": "assistant",
+              "annotations": [],
+              "audio": null,
+              "function_call": null,
+              "tool_calls": null
+            }
+          }
+        ],
+        "created": 1791617081,
+        "model": "gpt-4.1-mini-2025-04-14",
+        "object": "chat.completion",
+        "metadata": null,
+        "moderation": null,
+        "service_tier": "default",
+        "system_fingerprint": "fp_b767c6a371",
+        "usage": {
+          "completion_tokens": 673,
+          "prompt_tokens": 3308,
+          "total_tokens": 3981,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          },
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": null,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          }
+        }
+      },
+      "measured_micro_usd": 2400,
+      "response_data": {
+        "units": [
+          {
+            "unit_id": "turn_88979706-2beb-49cc-b038-71313855e357:b1",
+            "assessment": "supported",
+            "reason": "The unit’s assertions about the dispute over the laser cutter deposit, the client denying damage, lack of inspection report disclosure, and the conditional analysis of the owner’s position are explicitly supported by the advocate’s original account detailing these facts and the contested nature of the damage claim and deposit retention. The assertions correctly reflect the content and the conditional stance of the source.",
+            "source_ids": [
+              "turn_88979706-2beb-49cc-b038-71313855e357:advocate"
+            ]
+          },
+          {
+            "unit_id": "turn_88979706-2beb-49cc-b038-71313855e357:b2",
+            "assessment": "supported",
+            "reason": "The unit’s discussion on the owner’s technician retaining the client’s design drive as possible lien or possessory security, legal conditions for withholding, and fiduciary concerns is a reasoned inference consistent with the advocate’s statement that the drive was lent for setup only, retained by the owner, and the owner claims to keep it until repair charges are paid. The unit reflects a conditional legal analysis based on these facts, supported by the source which provides the factual premise.",
+            "source_ids": [
+              "turn_88979706-2beb-49cc-b038-71313855e357:advocate"
+            ]
+          },
+          {
+            "unit_id": "turn_88979706-2beb-49cc-b038-71313855e357:b3",
+            "assessment": "supported",
+            "reason": "The unit accurately summarizes the opposing positions: owner alleges damage with inspection report not disclosed and seeks deposit forfeiture and retention of the client’s design drive, client denies damage and holds hire agreement and payment proof. These facts and positions are contained fully in the advocate’s source, matching the unit’s account and conditional legal observations.",
+            "source_ids": [
+              "turn_88979706-2beb-49cc-b038-71313855e357:advocate"
+            ]
+          },
+          {
+            "unit_id": "turn_88979706-2beb-49cc-b038-71313855e357:b4",
+            "assessment": "supported",
+            "reason": "The unit notes the analysis is conditional on absent documents (hire agreement, bank receipt, inspection report), which limits legal certainty. This is directly supported by the advocate’s source statement that the client reports having these documents but none have been supplied or checked here, and that the inspection report is not provided. The source supports the conditional nature and evidentiary gaps acknowledged by the unit.",
+            "source_ids": [
+              "turn_88979706-2beb-49cc-b038-71313855e357:advocate"
+            ]
+          },
+          {
+            "unit_id": "turn_88979706-2beb-49cc-b038-71313855e357:b5",
+            "assessment": "supported",
+            "reason": "The unit lists important factual and contractual questions for the client to address, derived logically from the advocate’s account that the client has hire agreement and payment receipt not checked, that damage and inspection report are alleged but undisclosed, and that retention of design drive is contested. The advocate’s source calls for important questions for the client, which supports the unit’s detailed enumerated questions.",
+            "source_ids": [
+              "turn_88979706-2beb-49cc-b038-71313855e357:advocate"
+            ]
+          }
+        ]
+      },
+      "experimental_audit": {
+        "contract": "experimental_selected_support_v1",
+        "evaluation_only": true,
+        "raw_audit": {
+          "units": [
+            {
+              "unit_id": "turn_88979706-2beb-49cc-b038-71313855e357:b1",
+              "assessment": "supported",
+              "reason": "The unit’s assertions about the dispute over the laser cutter deposit, the client denying damage, lack of inspection report disclosure, and the conditional analysis of the owner’s position are explicitly supported by the advocate’s original account detailing these facts and the contested nature of the damage claim and deposit retention. The assertions correctly reflect the content and the conditional stance of the source.",
+              "source_ids": [
+                "turn_88979706-2beb-49cc-b038-71313855e357:advocate"
+              ]
+            },
+            {
+              "unit_id": "turn_88979706-2beb-49cc-b038-71313855e357:b2",
+              "assessment": "supported",
+              "reason": "The unit’s discussion on the owner’s technician retaining the client’s design drive as possible lien or possessory security, legal conditions for withholding, and fiduciary concerns is a reasoned inference consistent with the advocate’s statement that the drive was lent for setup only, retained by the owner, and the owner claims to keep it until repair charges are paid. The unit reflects a conditional legal analysis based on these facts, supported by the source which provides the factual premise.",
+              "source_ids": [
+                "turn_88979706-2beb-49cc-b038-71313855e357:advocate"
+              ]
+            },
+            {
+              "unit_id": "turn_88979706-2beb-49cc-b038-71313855e357:b3",
+              "assessment": "supported",
+              "reason": "The unit accurately summarizes the opposing positions: owner alleges damage with inspection report not disclosed and seeks deposit forfeiture and retention of the client’s design drive, client denies damage and holds hire agreement and payment proof. These facts and positions are contained fully in the advocate’s source, matching the unit’s account and conditional legal observations.",
+              "source_ids": [
+                "turn_88979706-2beb-49cc-b038-71313855e357:advocate"
+              ]
+            },
+            {
+              "unit_id": "turn_88979706-2beb-49cc-b038-71313855e357:b4",
+              "assessment": "supported",
+              "reason": "The unit notes the analysis is conditional on absent documents (hire agreement, bank receipt, inspection report), which limits legal certainty. This is directly supported by the advocate’s source statement that the client reports having these documents but none have been supplied or checked here, and that the inspection report is not provided. The source supports the conditional nature and evidentiary gaps acknowledged by the unit.",
+              "source_ids": [
+                "turn_88979706-2beb-49cc-b038-71313855e357:advocate"
+              ]
+            },
+            {
+              "unit_id": "turn_88979706-2beb-49cc-b038-71313855e357:b5",
+              "assessment": "supported",
+              "reason": "The unit lists important factual and contractual questions for the client to address, derived logically from the advocate’s account that the client has hire agreement and payment receipt not checked, that damage and inspection report are alleged but undisclosed, and that retention of design drive is contested. The advocate’s source calls for important questions for the client, which supports the unit’s detailed enumerated questions.",
+              "source_ids": [
+                "turn_88979706-2beb-49cc-b038-71313855e357:advocate"
+              ]
+            }
+          ]
+        },
+        "derived_scope_result": {
+          "scope_pass": true
+        },
+        "evidence_and_audit_digest": "bba749b988e356469fa51699c95ffa29162197d7428d28add6a22d0eb2c78167",
+        "not_established": [
+          "whole-conversation consistency",
+          "omissions",
+          "operation reporting",
+          "legal applicability",
+          "safe release",
+          "persistence"
+        ]
+      },
+      "latency_ms": 5240
+    }
+  ],
+  "actual_sdk_dispatches": 6,
+  "comparison_measured_micro_usd": 5976,
+  "comparison_unknown_planning_micro_usd": 0,
+  "budget_after": {
+    "maximum_usd": 5.0,
+    "charged_usd": 2.312303,
+    "measured_usd": 0.796872,
+    "reserved_or_unknown_usd": 1.515431,
+    "attempts": 195,
+    "models": [
+      {
+        "model": "gpt-4.1-2025-04-14",
+        "state": "measured",
+        "attempts": 6,
+        "charged_usd": 0.026644
+      },
+      {
+        "model": "gpt-4.1-mini-2025-04-14",
+        "state": "measured",
+        "attempts": 187,
+        "charged_usd": 0.770228
+      },
+      {
+        "model": "gpt-4.1-mini-2025-04-14",
+        "state": "reserved_or_unknown",
+        "attempts": 1,
+        "charged_usd": 0.425431
+      },
+      {
+        "model": "text-embedding-3-large",
+        "state": "reserved_or_unknown",
+        "attempts": 1,
+        "charged_usd": 1.09
+      }
+    ]
+  },
+  "finished_utc": "2026-10-10T07:24:46.314602+00:00",
+  "production_changed": false
+}

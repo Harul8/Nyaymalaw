@@ -1,0 +1,129 @@
+{
+  "contract": "writer_support_ordering_independent_assessment_v1",
+  "assessed_utc": "2026-10-10T07:31:24.286378+00:00",
+  "method": "Independent manual comparison of the complete saved advocate message, exact returned units and their selected owned source passages. No additional model, browser, retrieval or test calls.",
+  "result_file": "outputs\\core-engine-build-20261010\\writer-v2-support-first-sequential-result.json",
+  "result_sha256": "fdf4e07c93bdc4f96c6c04f102fd06acde9e37fd9cb58fa9e99143b439ddc3b8",
+  "original_input": "outputs\\core-engine-build-20261010\\browser-core-v4-diagnostics\\cd29f5e8fc1645489e685354e1046535\\010-response_writer-write-input.json",
+  "original_input_sha256": "de23816a778e5f2cb1af800270484d2c908b72f3c5618df8b5b34cbe164b0a6d",
+  "decision": "do_not_promote_ordering_experiment",
+  "production_decision": "Keep the already tested source-ID writer v2 unchanged; this experiment does not establish semantic readiness.",
+  "mechanical": {
+    "dispatches": 1,
+    "completion": "complete",
+    "retries": 0,
+    "usage": {
+      "tokens_in": 71057,
+      "tokens_out": 1664,
+      "cost_usd": 0.031085200000000004,
+      "cached_tokens": 0,
+      "provider_extra": {
+        "response_id": "chatcmpl-EXLnLtj6cFajnIXiT75ft4TQfoRaz",
+        "usage_established": true
+      }
+    },
+    "error_type": "SchemaViolation",
+    "error": "A substantive response unit needs exact source dependencies",
+    "unsupported_analysis_units": [
+      4,
+      5
+    ],
+    "admitted_draft": false,
+    "saved_or_released_by_experiment": false
+  },
+  "positive_observation": {
+    "law_units": [
+      2,
+      3
+    ],
+    "legal_source_uses": 5,
+    "observation": "Unlike the account-only baseline, the two law units select actual legal passages. The draft preserves the damage denial and does not claim the reported documents were supplied to or examined by NM. These limited improvements do not cure support or applicability errors."
+  },
+  "findings": [
+    {
+      "id": "WRITER-ORDER-1",
+      "unit_numbers": [
+        4,
+        5
+      ],
+      "kind": "missing_declared_dependencies",
+      "severity": "blocking",
+      "observation": "Both independent analysis units have empty uses arrays. Addresses do not provide their factual and legal dependencies. The existing writer guard correctly rejected the draft; no conditional correction was requested for this one-call experiment."
+    },
+    {
+      "id": "WRITER-ORDER-2",
+      "unit_numbers": [
+        3
+      ],
+      "kind": "changed_legal_actor_and_relationship",
+      "severity": "high",
+      "assertion_excerpt": "a seller (or person in possession as agent or bailee) has a lien",
+      "source_id": "provision:c18a0a396903af2aa31bf90e4848a53c4c948c6686ab8fa15f4d03a94f60f0c7",
+      "source_title": "Union Of India 1980 10 The Sale Of Goods Act, 1930",
+      "locator": "s.47",
+      "exact_source": "Union Of India 1980 10 The Sale Of Goods Act, 1930,  — s.47: Seller’s lien.—\n47.\nSeller’s lien.—\n(1)\nSubject to the provisions of this Act, the unpaid seller of goods who is in possession of them is entitled to retain possession of them until payment or tender of the price in the following cases, namely:—\n(a)\nwhere the goods have been sold without any stipulation as to credit;\n(b)\nwhere the goods have been sold on credit, but the term of credit has expired;\n(c)\nwhere the buyer becomes insolvent.\n(2)\nThe seller may exercise his right of lien notwithstanding that he is in possession of the goods as agent or bailee for the buyer.",
+      "observation": "The passage gives the unpaid seller a right and preserves that seller's right when holding as agent or bailee. The draft broadens this to a seller OR a person holding as agent/bailee. The original account does not establish an unpaid sale of the separately lent drive or a price due for that drive. A discoverable lien concept has been treated as an applicable rule without the required relationship."
+    },
+    {
+      "id": "WRITER-ORDER-3",
+      "unit_numbers": [
+        2
+      ],
+      "kind": "irrelevant_statutory_support",
+      "severity": "high",
+      "source_id": "provision:b7da4dc9d8b5d23a66a2f4eb5825073df2dfa2d63ff8a2abdae5e660ad969e94",
+      "source_title": "Telangana 2007 6 Andhra Pradesh Brewery Rules, 2006",
+      "locator": "s.3",
+      "exact_source": "Telangana 2007 6 Andhra Pradesh Brewery Rules, 2006,  — s.3: The licensee shall keep intact a security deposit of Rs Lakhs as laid down in Rule 5(3) for due performance of this agreement.\n3. The licensee shall keep intact a security deposit of Rs Lakhs as laid down in Rule 5(3) for due performance of this agreement.",
+      "observation": "A brewery-licensing security-deposit term does not support a general equipment-hire damages rule. The separate Maula Bux passage does discuss reasonable compensation; this does not make the unrelated provision applicable or support every factual/application assertion in the unit."
+    },
+    {
+      "id": "WRITER-ORDER-4",
+      "unit_numbers": [
+        2,
+        3
+      ],
+      "kind": "factual_premises_not_selected",
+      "severity": "high",
+      "observation": "The law units also apply law to the deposit, documents and drive account, but their uses contain only legal passages. The account appears only in addresses. Selecting relevant law first has not established the factual dependencies of the application."
+    },
+    {
+      "id": "WRITER-ORDER-5",
+      "unit_numbers": [
+        1
+      ],
+      "kind": "reported_possession_asserted_without_attribution",
+      "severity": "medium",
+      "assertion_excerpt": "The client has a signed hire agreement and bank transfer receipt",
+      "original_excerpt": "The client reports having a signed hire agreement and the bank transfer receipt, but neither document has been supplied or checked here.",
+      "observation": "The formulation loses reported-possession qualification. It still explicitly states that the documents were not provided for review; this is NOT evidence that the draft claimed NM held or examined them."
+    },
+    {
+      "id": "WRITER-ORDER-6",
+      "unit_numbers": [
+        2,
+        4
+      ],
+      "kind": "nonsupply_broadened_into_evidentiary_absence",
+      "severity": "high",
+      "assertion_excerpt": "Without the inspection report, the owner’s claim lacks critical evidence",
+      "original_excerpt": "The owner says an inspection report exists but has not supplied it to our client.",
+      "observation": "Nonsupply to this client does not establish nonexistence, lack of the owner's possession, or absence of other supporting material. The analysis needs to distinguish what NM/client can presently assess from what evidence the owner may hold."
+    },
+    {
+      "id": "WRITER-ORDER-7",
+      "unit_numbers": [
+        3
+      ],
+      "kind": "scope_and_attribution_unresolved",
+      "severity": "high",
+      "observation": "The selected judgment passages include a treatise/quoted-authority discussion of lien and a separate priority-of-government-debts discussion. They do not establish the draft's mediate-possession characterization or a right over this separately lent drive. Proposed court_reasoning/adopted labels and self-selected treatment passages are not proof of those assertions."
+    }
+  ],
+  "limits": [
+    "One repeated frozen matter, not an unfamiliar holdout or statistical evaluation.",
+    "Only the first structural rejection is returned by admission; the further semantic findings are independent assessment, not additional runtime verdicts.",
+    "The source passages may remain useful research leads; rejection of the draft does not establish that no legally valid lien or compensation analysis is possible."
+  ],
+  "general_next_owner": "Semantic admission must compare each application with the source's actor, transaction, object, entitlement and qualifications, and preserve original account certainty. No matter-specific branch or weakened source guard is justified."
+}

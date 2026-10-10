@@ -11,8 +11,7 @@ from nm.shared.model_port import (
     estimate_tokens, require_schema,
 )
 
-LEGACY_CONTRACT = "core_response_writer_v1"
-CONTRACT = "core_response_writer_v2"
+CONTRACT = "core_response_writer_v1"
 MAX_OUTPUT = 6500
 SYSTEM = """Message: You receive the exact latest advocate message, complete attributed
 conversation, current authorised records and saved work. Interpretation and research
@@ -33,15 +32,11 @@ where appropriate, without turning acknowledgement into an intake questionnaire.
 Preserve speaker, negation, chronology, uncertainty and conditions. Reported, supplied,
 examined, accepted and proved are different states. An NM interpretation cannot prove
 itself. Do not invent facts, legal rules, citations, jurisdiction or document contents.
-3. Read each legal source with its neighbouring context. For judgment passages,
-distinguish a party's submission, quoted contract or authority, the deciding court's
-reasoning and its operative result. Source labels and ranking do not establish those
-roles. Court treatment means the deciding court's response to the selected proposition:
-adopted, rejected, qualified, not shown, or not applicable. It never means NM accepts
-a source or considers it relevant. Adoption, rejection or qualification needs an exact
-passage from the same judgment showing that treatment. Missing treatment is not
-acceptance. Keep an advocate's reported account separate from proved facts; quoting an
-opponent in that account does not make it a submission in a retrieved judgment.
+3. Read each source with its neighbouring context. Distinguish a party's submission,
+quoted contract or authority, the deciding court's reasoning and its operative result.
+Source labels and ranking do not establish those roles. Keep the source's speaker and
+the court's treatment separate: adopted, rejected, qualified or not shown. An adoption
+or rejection needs its own exact court passage; missing treatment is not acceptance.
 Check legal relationship, scope, procedural stage and qualifications before applying
 a proposition. A rule for another relationship is not applicable merely because words
 match. Do not silently repair contradictory source words or infer current validity or
@@ -55,32 +50,24 @@ to solve an internal processing failure. Without relevant held law, do the suppo
 account or question work and explain the legal-source gap; never fill it with a legal
 standard from memory.
 
-Outcome: Return an ordered units array with natural text, kind, original-message
+Outcome: Return an ordered units array, with natural text, kind, original-message
 addresses and source uses. Separate independently assessable assertions; retain all
 conditions without an arbitrary length limit. Each unit addresses original advocate
-material; the draft must address the latest message. Each reference selects only an
-owned source_id. Code supplies the complete exact saved passage and its attribution;
-do not retype, paraphrase or shorten source text in a reference. The full passage and
-neighbouring context remain the basis for checking each assertion and its conditions.
+material; the draft must address the latest message. For every reference in addresses,
+uses or treatment_source, select the owned source_id with quote=null by default: code
+supplies that source's complete exact text. Select a shorter quoted string only when
+needed to identify a particular passage; copy continuous words exactly, without
+paraphrasing, changing punctuation or joining separate passages.
 Account, law and analysis units need source uses; law needs held legal material.
 Analysis selects its factual and legal premises. Questions and next steps select any
-premises they assert; greetings need no source use.
-For every use, copy source_kind from the supplied source_kinds catalogue:
-- account, nm_context and service: give only source_kind and source_id. Code
-  preserves the original speaker and provenance. NM interpretations and service notices
-  may explain earlier conversation; they cannot prove the underlying matter account.
-- provision: give only source_kind and source_id. Court treatment does not apply
-  to this source selector. Support a court's interpretation separately with its judgment.
-- judgment: also give the passage's role, speaker (null if unidentified) and
-  court_treatment. Role describes whose statement and what type of statement it is;
-  treatment separately describes what the deciding court did with that proposition.
-  For adopted, rejected or qualified, court_treatment includes a source reference from
-  the same judgment. For not_shown or not_applicable it contains only status. A court's
-  own reasoning or disposition does not need to be labelled adopted simply to use it.
-Do not supply URLs, citation markup, unit IDs, verdicts or status seals. Code supplies
-citations and all execution, saving, correction, completion, effect-only acknowledgement
-and service status claims; do not author them inside an answer, limit or next step.
-Judgment roles and treatment remain proposals until independently reviewed.
+premises they assert; greetings need no source use. Each use also gives its role,
+speaker (null when unidentified), treatment and supporting court treatment_source.
+Use null treatment_source when treatment is not shown or applicable; this differs
+from quote=null within a reference to an available treatment source. Do not supply URLs,
+citation markup, unit IDs, verdicts or status seals. Code supplies citations and all
+execution, saving, correction, completion, effect-only acknowledgement and service
+status claims; do not author them, including inside an answer, limit or next step.
+Source roles and treatment remain proposals until independently reviewed.
 """
 
 
@@ -94,111 +81,30 @@ ROLES = ("original_account", "opposing_account", "contract", "provision",
          "party_submission", "court_reasoning", "court_disposition", "quoted_authority",
          "uncertain")
 TREATMENTS = ("adopted", "rejected", "qualified", "not_shown", "not_applicable")
-LEGACY_USE = _object({
+USE = _object({
     **REFERENCE["properties"],
     "role": {"type": "string", "enum": list(ROLES)},
     "speaker": {"type": ["string", "null"]},
     "treatment": {"type": "string", "enum": list(TREATMENTS)},
     "treatment_source": {"anyOf": [REFERENCE, {"type": "null"}]},
 })
-JUDGMENT_ROLES = ("party_submission", "court_reasoning", "court_disposition",
-                  "quoted_authority", "contract", "uncertain")
-SOURCE_REFERENCE = _object({"source_id": TEXT})
-COURT_TREATMENT = {"anyOf": [
-    _object({"status": {"type": "string", "enum": ["not_shown", "not_applicable"]}}),
-    _object({"status": {"type": "string", "enum": ["adopted", "rejected", "qualified"]},
-             "source": SOURCE_REFERENCE}),
-]}
-USE = {"anyOf": [
-    _object({"source_kind": {"type": "string", "enum": ["account", "nm_context", "service"]},
-             **SOURCE_REFERENCE["properties"]}),
-    _object({"source_kind": {"type": "string", "enum": ["provision"]},
-             **SOURCE_REFERENCE["properties"]}),
-    _object({"source_kind": {"type": "string", "enum": ["judgment"]},
-             **SOURCE_REFERENCE["properties"],
-             "role": {"type": "string", "enum": list(JUDGMENT_ROLES)},
-             "speaker": {"type": ["string", "null"]},
-             "court_treatment": COURT_TREATMENT}),
-]}
+UNIT = _object({
+    "kind": {"type": "string", "enum": list(KINDS)},
+    "text": TEXT,
+    "addresses": {"type": "array", "minItems": 1, "items": REFERENCE},
+    "uses": {"type": "array", "items": USE},
+})
+SCHEMA = _object({"units": {"type": "array", "minItems": 1, "items": UNIT}})
 
 
-def _schema(use, reference):
-    unit = _object({
-        "kind": {"type": "string", "enum": list(KINDS)}, "text": TEXT,
-        "addresses": {"type": "array", "minItems": 1, "items": reference},
-        "uses": {"type": "array", "items": use},
-    })
-    return _object({"units": {"type": "array", "minItems": 1, "items": unit}})
-
-
-LEGACY_SCHEMA, SCHEMA = _schema(LEGACY_USE, REFERENCE), _schema(USE, SOURCE_REFERENCE)
-
-
-def _legacy_use(use, sources):
-    """Reconstruct saved v1 metadata exactly; never use this shape for a new call."""
-    support = answer_sources.select({key: use[key] for key in ("source_id", "quote")}, sources)
-    treatment = (answer_sources.select(use["treatment_source"], sources)
-                 if use["treatment_source"] is not None else None)
-    if use["treatment"] in {"adopted", "rejected", "qualified"}:
-        if treatment is None:
-            raise SchemaViolation("Court treatment needs its exact supporting passage")
-        primary, court = sources[support["source_id"]], sources[treatment["source_id"]]
-        if court["kind"] != "judgment":
-            raise SchemaViolation("Court treatment must select held judgment text")
-        if (primary["kind"] == "judgment" and
-                primary["source_identity"]["case_id"] != court["source_identity"]["case_id"]):
-            raise SchemaViolation("Treatment belongs to a different judgment")
-    speaker = use["speaker"]
-    if isinstance(speaker, str) and not speaker.strip():
-        speaker = None
-    return {**support, "role": use["role"], "speaker": speaker,
-            "treatment": use["treatment"], "treatment_source": treatment}
-
-
-def _owned_use(use, sources, originals):
-    support = answer_sources.select({"source_id": use["source_id"], "quote": None}, sources)
-    primary = sources[support["source_id"]]
-    kind = primary["kind"]
-    if use["source_kind"] != kind:
-        raise SchemaViolation("Selected source_kind differs from its owned catalogue kind")
-    if kind in {"account", "nm_context", "service"}:
-        original = originals.get(primary["id"])
-        expected = {"account": "original_account", "nm_context": "nm_interpretation",
-                    "service": "service_status"}[kind]
-        if (original is None or original.get("record_role") != expected
-                or primary.get("record_role") != expected
-                or primary.get("text") != original["text"]
-                or primary.get("speaker") != original["speaker"]
-                or primary.get("source_identity") != {
-                    "source_id": original["source_id"], "turn_id": original["turn_id"]}):
-            raise ValueError("Response support differs from its original conversation source")
-        return {**support, "role": "original_account" if kind == "account" else "uncertain",
-                "speaker": original["speaker"], "treatment": "not_applicable",
-                "treatment_source": None}
-    if kind == "provision":
-        return {**support, "role": "provision", "speaker": None,
-                "treatment": "not_applicable", "treatment_source": None}
-    treatment = use["court_treatment"]
-    # V2's closed alternatives forbid missing support or contradictory empty support.
-    # Reuse the existing canonical shape and same-judgment binding for downstream owners.
-    return _legacy_use({"source_id": use["source_id"], "quote": None,
-        "role": use["role"], "speaker": use["speaker"], "treatment": treatment["status"],
-        "treatment_source": ({**treatment["source"], "quote": None}
-                             if "source" in treatment else None)}, sources)
-
-
-
-def accept(proposal, context, sources, *, contract=CONTRACT):
+def accept(proposal, context, sources):
     """Check exact dependencies only; no keyword-based semantic certification.
 
     A malformed unit rejects the draft for the turn owner's bounded correction.
     Nothing is silently salvaged or described as reviewed by this boundary.
     """
-    if contract not in {LEGACY_CONTRACT, CONTRACT}:
-        raise ValueError("Unknown response writer contract")
-    schema = LEGACY_SCHEMA if contract == LEGACY_CONTRACT else SCHEMA
-    data = canonical_schema_data(proposal, schema)
-    require_schema(data, schema)
+    data = canonical_schema_data(proposal, SCHEMA)
+    require_schema(data, SCHEMA)
     originals = source_catalogue(context)
     latest_id = context["latest"]["source_id"]
     units, addresses_latest = [], False
@@ -218,11 +124,27 @@ def accept(proposal, context, sources, *, contract=CONTRACT):
                     or source.get("source_identity") != {
                         "source_id": original["source_id"], "turn_id": original["turn_id"]}):
                 raise ValueError("Address catalogue differs from the original conversation")
-            reference = ref if contract == LEGACY_CONTRACT else {**ref, "quote": None}
-            addresses.append(answer_sources.select(reference, sources))
+            addresses.append(answer_sources.select(ref, sources))
             addresses_latest |= ref["source_id"] == latest_id
-        uses = [(_legacy_use(use, sources) if contract == LEGACY_CONTRACT
-                 else _owned_use(use, sources, originals)) for use in item["uses"]]
+        uses = []
+        for use in item["uses"]:
+            support = answer_sources.select({key: use[key] for key in ("source_id", "quote")}, sources)
+            treatment = (answer_sources.select(use["treatment_source"], sources)
+                         if use["treatment_source"] is not None else None)
+            if use["treatment"] in {"adopted", "rejected", "qualified"}:
+                if treatment is None:
+                    raise SchemaViolation("Court treatment needs its exact supporting passage")
+                primary, court = sources[support["source_id"]], sources[treatment["source_id"]]
+                if court["kind"] != "judgment":
+                    raise SchemaViolation("Court treatment must select held judgment text")
+                if (primary["kind"] == "judgment" and
+                        primary["source_identity"]["case_id"] != court["source_identity"]["case_id"]):
+                    raise SchemaViolation("Treatment belongs to a different judgment")
+            speaker = use["speaker"]
+            if isinstance(speaker, str) and not speaker.strip():
+                speaker = None  # Empty optional attribution metadata conveys no speaker.
+            uses.append({**support, "role": use["role"], "speaker": speaker,
+                         "treatment": use["treatment"], "treatment_source": treatment})
         if item["kind"] in {"account", "law", "analysis"} and not uses:
             raise SchemaViolation("A substantive response unit needs exact source dependencies")
         if item["kind"] == "law" and not any(
@@ -233,14 +155,14 @@ def accept(proposal, context, sources, *, contract=CONTRACT):
                       "addresses": addresses, "uses": uses})
     if not addresses_latest:
         raise SchemaViolation("The response must address the latest advocate message")
-    return {"contract": contract, "proposal": deepcopy(data), "units": units}
+    return {"contract": CONTRACT, "proposal": deepcopy(data), "units": units}
 
 
 def validate(draft, context, sources):
     """Rebind a draft to its exact original selectors before review or replay."""
     if (not isinstance(draft, dict) or set(draft) != {"contract", "proposal", "units"}
-            or draft.get("contract") not in {LEGACY_CONTRACT, CONTRACT}
-            or accept(draft["proposal"], context, sources, contract=draft["contract"]) != draft):
+            or draft.get("contract") != CONTRACT
+            or accept(draft["proposal"], context, sources) != draft):
         raise ValueError("Response draft differs from its checked source selections")
     return deepcopy(draft)
 
@@ -262,8 +184,7 @@ def write(model, context, research_record, sources, interpretation=None, executi
     }
     payload = {"original_context": context, "interpretation_proposal": interpretation,
                "research": research_context, "held_passages": answer_sources.presentation(sources),
-               "execution_evidence": execution,
-               "source_kinds": {identity: row["kind"] for identity, row in sources.items()}}
+               "execution_evidence": execution}
     prompt = Prompt(system=SYSTEM, user=json.dumps(payload, ensure_ascii=False),
                     operation="core_response_writer")
     if (estimate_tokens(SYSTEM + prompt.user + json.dumps(SCHEMA)) + MAX_OUTPUT

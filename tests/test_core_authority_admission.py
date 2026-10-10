@@ -52,8 +52,7 @@ def use_statute(served, outcome):
             text="The applicable provision remains unresolved in the available material."
                  if outcome in {"unavailable", "ambiguous", "not_held"}
                  else "The selected provision includes a condition.",
-            uses=[{"source_id": source["id"], "quote": None, "role": "provision",
-                   "speaker": None, "treatment": "not_applicable", "treatment_source": None}])
+            uses=[{"source_id": source["id"], "source_kind": "provision"}])
         return replace(result, data=output)
 
     served.model.structured = structured

@@ -1,0 +1,17 @@
+[
+  {
+    "original": "outputs\\core-engine-build-20261010\\response-writer-v2-candidate.py",
+    "snapshot": "outputs\\core-engine-build-20261010\\writer-v2-copy-experiment-response-writer-v2-candidate.py",
+    "sha256": "76059eac5c1ebcb6d5c17f6ddb48e566c82e8a8bf10d94a6b8285535d89728af"
+  },
+  {
+    "original": "outputs\\core-engine-build-20261010\\compare-writer-v2-frozen.py",
+    "snapshot": "outputs\\core-engine-build-20261010\\writer-v2-copy-experiment-compare-writer-v2-frozen.py",
+    "sha256": "e152b9a04cfeb6db01b9f81ce14d85fa1fb469d7d9a262f2337030888e8392d8"
+  },
+  {
+    "original": "outputs\\core-engine-build-20261010\\test_response_writer_v2_candidate.py",
+    "snapshot": "outputs\\core-engine-build-20261010\\writer-v2-copy-experiment-test_response_writer_v2_candidate.py",
+    "sha256": "557d5ffee1e4e1f37bef5a0e76ae8c3275e7cd6aa98d2e68388615b1598ead06"
+  }
+]

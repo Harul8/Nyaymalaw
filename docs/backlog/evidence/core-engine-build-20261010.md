@@ -1092,3 +1092,85 @@ Budget: $0.306961 measured plus $1.515431 reserved/unknown = $1.822392 of $5.
 Unknown reservations remain charged. This is a mechanical prerequisite checkpoint,
 not SEQ.3 or SEQ.1–4 completion. Next: selected-support and requested-coverage
 review, followed by complete served answers, source panes and saved replay.
+
+## SEQ.4 — source-specific writer contract; semantic release still fails
+
+The writer is the owner of fresh source selectors. Two actual browser attempts
+failed before independent review: ordinary advocate accounts and provisions were
+labelled as court-adopted without a supporting judgment passage. The single
+bounded correction repeated that mistake. The exact-text check also rejected
+retyped quotations with changed line breaks. Both are general contract defects,
+not exceptions for the synthetic matter.
+
+Writer v2 therefore takes owned passage IDs, with code resolving complete exact
+words. Owned source kind controls the applicable fields. Accounts preserve their
+original speaker and provenance; provisions have no court-treatment fields.
+Judgments retain a proposed role and separately supported adoption, rejection or
+qualification from the same judgment. Unshown treatment remains explicit. V1
+saved quotation selectors, metadata, rendering and replay reconstruct unchanged;
+fresh calls cannot silently choose that older schema.
+
+Observable contract proof: the source-ID writer passed its first actual mini
+call, without correction, using the unchanged frozen complete context and source
+catalogue. It cost $0.030334. The preceding fresh v1/v2 copying comparison rejected
+both outputs for changed quotations. The eight affected suites and new source-kind
+suite pass 243 focused tests, including actual turn/release handoffs, exact text,
+wrong source kind, foreign treatment, unknown versions and legacy replay.
+
+Browser evidence is `outputs/core-engine-build-20261010/browser-writer-v2/` with
+account-scoped diagnostics in `browser-writer-v2-diagnostics/`. A normal UI
+sign-in and send produced a committed answer in 65.219 seconds, four model calls,
+$0.0372652; reload/reopening preserved the exact response without another turn.
+Root inspected the displayed reply. This confirms the selector/save path, **not
+legal-answer acceptance**: there were zero source links because all uses selected
+the account. Legal rules were nevertheless asserted; reported information became
+stronger statements, including language that an inspection report was produced.
+The independent reviewer accepted the whole answer. No source pane was available
+to test. SEQ.1–4 remains unaccepted; the normal user server stayed separate from
+the diagnostic server and synthetic accounts.
+
+Independent reviewer experiments remain unpromoted. Splitting coverage/effects
+from grounding removed some false rejections but missed both negative saved-effect
+claims and accepted outdated selected support. A narrower selected-support check
+distinguished the old/correct date pair, yet still treated a seller-lien provision
+as support for retaining separately lent property for a repair debt. The valid
+conditional neighbour was admitted. Making source propositions explicit in the
+output did not fix this relationship error and added structural failures. On the
+actual five-unit account-only writer draft, both the current production review and
+the narrow check accepted unsourced legal principles. Their positive verdicts are
+recorded as false admissions, never accuracy evidence.
+
+The evidence families are `writer-v2-*`, `reviewer-split-*`,
+`reviewer-grounding-held-law-*`, `reviewer-selected-support-five-*`,
+`reviewer-source-propositions-*`, `review-writer-v2-production-*` and
+`review-writer-v2-selected-support-*`. Frozen inputs, exact SDK responses, separate
+oracles and measured spending are retained. Browser diagnostic records contain
+synthetic data only. Experimental runners are not production dependencies.
+
+This checkpoint adds no model stage: understanding, research planning, writing and
+independent review remain four normal calls, at most six with existing recovery.
+Production remains pinned mini. A stronger independent-support comparison has
+been requested but is not authorised or executed yet. Remaining work: prevent
+unsupported legal application and invented account details; distinguish supported
+conditional analysis from ungrounded possibility; check operation-status claims;
+improve retrieval relevance; repeat complete browser/source-pane/saved-state
+acceptance on sustained unfamiliar matters. A successful JSON shape, save or
+reopen does not close those gaps.
+
+A subsequent six-case narrow-support test made the factual/legal source distinction
+explicit, without changing its inputs or schema. Mini still accepted the wrong legal
+relationship and the actual account-only legal claims. It cost $0.005976. This
+candidate is not promoted; repeated positive verdicts on those cases remain false
+admissions.
+
+The source-selection-before-prose ordering experiment used identical full input
+and schema meaning. Its first attempt dispatched no call because another
+experiment's temporary reservation tripped the slice guard; that evidence is kept.
+A separate sequential attempt made one call ($0.0310852). It selected legal sources
+but still changed their legal relationship and omitted all support from two analysis
+units, so mechanical admission rejected it. Ordering alone is not a demonstrated
+fix and is not promoted. No retry was made and the production writer stays on the
+source-kind/ID-only contract proved above.
+
+Shared budget at this evidence checkpoint: $0.827958 measured plus $1.515431
+reserved/unknown = $2.343389 of $5. Unknown reservations remain charged.

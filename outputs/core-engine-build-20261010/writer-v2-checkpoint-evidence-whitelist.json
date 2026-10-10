@@ -1,0 +1,233 @@
+{
+  "purpose": "Minimal evidence selection for the writer-v2 checkpoint; no staging or production edits performed.",
+  "minimum_core_writer_evidence": [
+    {
+      "path": "writer-v2-source-ids-input.json",
+      "sha256": "b25b09c5680cb14cd2d3a4332e5ba676c4cac8a25c48011cff296307cb7cd7c9",
+      "bytes": 1318798
+    },
+    {
+      "path": "writer-v2-source-ids-results.json",
+      "sha256": "dc09649b7dbd323b68ce190c4ef752545f47d082a9f28f595cf19850b26026d2",
+      "bytes": 594766
+    },
+    {
+      "path": "writer-v2-frozen-comparison-inputs.json",
+      "sha256": "a0e0ad441bdd30b8365bd159552d7682449f0e60d6e496894db57aede7caf923",
+      "bytes": 1574947
+    },
+    {
+      "path": "writer-v2-frozen-comparison-results.json",
+      "sha256": "ece83b98c9570b767b258fc38fe7b57b07d282e183f115102ca8f1dbbff78693",
+      "bytes": 562651
+    },
+    {
+      "path": "browser-writer-v2/evidence.json",
+      "sha256": "ddbf41b3434654b3ed77a7b4de003d5330b8ac5378774de396bc21a16eeeca6b",
+      "bytes": 34846
+    },
+    {
+      "path": "browser-writer-v2/turn-1.png",
+      "sha256": "bc169196fa1c76b333f6b30fbad7ed014e0edeea8c5bf568a2ce47ad44481db4",
+      "bytes": 96703
+    },
+    {
+      "path": "browser-writer-v2/turn-1-reopened.png",
+      "sha256": "752063a4585ccba77dc24a54caa1c99041af61e88ca464137e87aff5a8fe7f05",
+      "bytes": 97884
+    },
+    {
+      "path": "browser-writer-v2-diagnostics/f7a6dd8141a64073b22f447b6370649b/010-response_writer-write-input.json",
+      "sha256": "9ffd66922aacd1c462aafed0c3201fad23ff9e4424877ea0401eadd879eb610f",
+      "bytes": 359178
+    },
+    {
+      "path": "browser-writer-v2-diagnostics/f7a6dd8141a64073b22f447b6370649b/011-model-input.json",
+      "sha256": "60e4c6ca94cb426e65a5e5139cef09ee566e95eb1a523a63ed21bfea02a5c0d4",
+      "bytes": 129898
+    },
+    {
+      "path": "browser-writer-v2-diagnostics/f7a6dd8141a64073b22f447b6370649b/012-model-output.json",
+      "sha256": "3e2b16e825d0f37a55467a967dfacf9ce7ad55ed74e24b716590ad3c9f2f5945",
+      "bytes": 5410
+    },
+    {
+      "path": "browser-writer-v2-diagnostics/f7a6dd8141a64073b22f447b6370649b/015-response_authorities-check-output.json",
+      "sha256": "5cfb6a4e854880eeac2578e08e44837640d6e11eab0f2b8b25943ffa06365a41",
+      "bytes": 14806
+    },
+    {
+      "path": "browser-writer-v2-diagnostics/f7a6dd8141a64073b22f447b6370649b/017-model-input.json",
+      "sha256": "a9d0776a04bafd4e0dd036bc48e6369f8dcf2eff29058bbda57f3008e3161e16",
+      "bytes": 144153
+    },
+    {
+      "path": "browser-writer-v2-diagnostics/f7a6dd8141a64073b22f447b6370649b/018-model-output.json",
+      "sha256": "7ee3be70e0e07cef6ad6e73318c7d55a70f8d9544ce3f6580db4b0c811fa1373",
+      "bytes": 3354
+    },
+    {
+      "path": "browser-writer-v2-diagnostics/f7a6dd8141a64073b22f447b6370649b/020-turn-output.json",
+      "sha256": "5e065e3f2f3a895378168deebc16769e2bf1922802b24fecdfd7fc99806780b9",
+      "bytes": 5889
+    }
+  ],
+  "ordering_experiment_appendix_if_documented": [
+    {
+      "path": "writer-v2-support-first-result.json",
+      "sha256": "11fa68e1a0c313bf6e355ff84d197131bc2d56a19d51d5cb647e4c7ca0cb2611",
+      "bytes": 3627
+    },
+    {
+      "path": "writer-v2-support-first-sequential-input.json",
+      "sha256": "a336a141af1bdccf612c98fabd57e6a633955c9bdb923060b1cb3f87328d0fa7",
+      "bytes": 1318469
+    },
+    {
+      "path": "writer-v2-support-first-sequential-result.json",
+      "sha256": "fdf4e07c93bdc4f96c6c04f102fd06acde9e37fd9cb58fa9e99143b439ddc3b8",
+      "bytes": 283428
+    },
+    {
+      "path": "writer-v2-support-first-sequential-independent-assessment.json",
+      "sha256": "657aa266398fcd418c9d9aed6b4606ee6fcdd91b27292740b6170457cfb855eb",
+      "bytes": 8027
+    }
+  ],
+  "optional_reproduction_scripts_and_frozen_dependencies": [
+    {
+      "path": "evaluate-writer-v2-source-ids.py",
+      "sha256": "3790875da2d80e37a8de5247d2ad290ee6750198778e4acc37ef06d9d6994175",
+      "bytes": 9208
+    },
+    {
+      "path": "compare-writer-v2-frozen.py",
+      "sha256": "e152b9a04cfeb6db01b9f81ce14d85fa1fb469d7d9a262f2337030888e8392d8",
+      "bytes": 12732
+    },
+    {
+      "path": "response-writer-v2-candidate.py",
+      "sha256": "02bfca2cc80a97d1689ac0313ab2dc0af776aafce94269f3df999b7da48a62ea",
+      "bytes": 16753
+    },
+    {
+      "path": "response-writer-v1-baseline.py",
+      "sha256": "c6154a05c57c7aafbdbfcb49df4cad2b1231eab187ec7298b729816cbdb6635c",
+      "bytes": 12122
+    },
+    {
+      "path": "writer-v2-copy-experiment-response-writer-v2-candidate.py",
+      "sha256": "76059eac5c1ebcb6d5c17f6ddb48e566c82e8a8bf10d94a6b8285535d89728af",
+      "bytes": 16486
+    },
+    {
+      "path": "writer-v2-copy-experiment-compare-writer-v2-frozen.py",
+      "sha256": "e152b9a04cfeb6db01b9f81ce14d85fa1fb469d7d9a262f2337030888e8392d8",
+      "bytes": 12732
+    },
+    {
+      "path": "writer-v2-copy-experiment-test_response_writer_v2_candidate.py",
+      "sha256": "557d5ffee1e4e1f37bef5a0e76ae8c3275e7cd6aa98d2e68388615b1598ead06",
+      "bytes": 14196
+    },
+    {
+      "path": "writer-v2-copy-experiment-snapshots.json",
+      "sha256": "807ee275b2f97ce9dc339c2a33a6ba22e542b9d9cce5bd4f8a15d8e00a0618e9",
+      "bytes": 896
+    },
+    {
+      "path": "browser-core-readiness.py",
+      "sha256": "30add8d367392221302324fd56f805537a1eb9cce03e0ab917861474f9123b4f",
+      "bytes": 19672
+    },
+    {
+      "path": "run-browser-core-readiness.py",
+      "sha256": "af3dc787f122880537f635104cd843c3dd292888610895b3f81aebafd8f6e6e3",
+      "bytes": 7731
+    },
+    {
+      "path": "serve-core-observed.py",
+      "sha256": "726aeb1f35348577bae841bbe902334976f08a6e417edc9dbafdade1d247f6d2",
+      "bytes": 13206
+    },
+    {
+      "path": "browser-core-v4-diagnostics/cd29f5e8fc1645489e685354e1046535/010-response_writer-write-input.json",
+      "sha256": "de23816a778e5f2cb1af800270484d2c908b72f3c5618df8b5b34cbe164b0a6d",
+      "bytes": 787413
+    },
+    {
+      "path": "evaluate-writer-support-first.py",
+      "sha256": "adc3ad85d541a762637085c4e15d5e4cedef5345268ec226466cede8697fbc13",
+      "bytes": 7885
+    },
+    {
+      "path": "evaluate-writer-support-first-sequential.py",
+      "sha256": "6d9494892ce74b6de40726b784be586ad33f460a05a4d6038805308fd1bd4b78",
+      "bytes": 8694
+    },
+    {
+      "path": "response-writer-v2-support-first-candidate.py",
+      "sha256": "cf6c9cab3403669c4dd162c9d903aef4021be61fe09f62f0e82c431c012b845c",
+      "bytes": 17078
+    },
+    {
+      "path": "writer-v2-source-ids-tested-baseline.py",
+      "sha256": "02bfca2cc80a97d1689ac0313ab2dc0af776aafce94269f3df999b7da48a62ea",
+      "bytes": 16753
+    },
+    {
+      "path": "writer-v2-source-ids-tested-baseline.json",
+      "sha256": "435fd3b41ac9eaa221a89bd4c9dbac451bc97295e2f3c2b21a2f0d9236fce412",
+      "bytes": 264
+    }
+  ],
+  "exclusions": [
+    "api-budget.sqlite and its journal/WAL files; use the content-free saved budget receipts",
+    "*.account.json, credentials, auth/session stores, .env, server stderr/stdout and PID launch receipts",
+    "duplicate per-attempt/result/start artifacts already embedded in the selected aggregate results",
+    "unrelated reviewer candidate implementations; no reviewer change is part of this writer checkpoint",
+    "docs/WIP.docx and other user work"
+  ],
+  "attributes_file": "outputs/core-engine-build-20261010/.gitattributes",
+  "attribute_action": "For each staged textual evidence path in this list, append its exact path relative to this .gitattributes file with -text and the existing whitespace attribute. New writer/browser files currently have text unspecified; core.autocrlf=true would otherwise change captured bytes. PNGs are binary but may use the same explicit line for consistency.",
+  "attribute_lines_for_core_and_ordering": [
+    "writer-v2-source-ids-input.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol",
+    "writer-v2-source-ids-results.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol",
+    "writer-v2-frozen-comparison-inputs.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol",
+    "writer-v2-frozen-comparison-results.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol",
+    "browser-writer-v2/evidence.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol",
+    "browser-writer-v2/turn-1.png -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol",
+    "browser-writer-v2/turn-1-reopened.png -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol",
+    "browser-writer-v2-diagnostics/f7a6dd8141a64073b22f447b6370649b/010-response_writer-write-input.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol",
+    "browser-writer-v2-diagnostics/f7a6dd8141a64073b22f447b6370649b/011-model-input.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol",
+    "browser-writer-v2-diagnostics/f7a6dd8141a64073b22f447b6370649b/012-model-output.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol",
+    "browser-writer-v2-diagnostics/f7a6dd8141a64073b22f447b6370649b/015-response_authorities-check-output.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol",
+    "browser-writer-v2-diagnostics/f7a6dd8141a64073b22f447b6370649b/017-model-input.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol",
+    "browser-writer-v2-diagnostics/f7a6dd8141a64073b22f447b6370649b/018-model-output.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol",
+    "browser-writer-v2-diagnostics/f7a6dd8141a64073b22f447b6370649b/020-turn-output.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol",
+    "writer-v2-support-first-result.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol",
+    "writer-v2-support-first-sequential-input.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol",
+    "writer-v2-support-first-sequential-result.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol",
+    "writer-v2-support-first-sequential-independent-assessment.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol"
+  ],
+  "attribute_lines_for_optional_reproduction": [
+    "evaluate-writer-v2-source-ids.py -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol",
+    "compare-writer-v2-frozen.py -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol",
+    "response-writer-v2-candidate.py -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol",
+    "response-writer-v1-baseline.py -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol",
+    "writer-v2-copy-experiment-response-writer-v2-candidate.py -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol",
+    "writer-v2-copy-experiment-compare-writer-v2-frozen.py -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol",
+    "writer-v2-copy-experiment-test_response_writer_v2_candidate.py -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol",
+    "writer-v2-copy-experiment-snapshots.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol",
+    "browser-core-readiness.py -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol",
+    "run-browser-core-readiness.py -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol",
+    "serve-core-observed.py -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol",
+    "browser-core-v4-diagnostics/cd29f5e8fc1645489e685354e1046535/010-response_writer-write-input.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol",
+    "evaluate-writer-support-first.py -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol",
+    "evaluate-writer-support-first-sequential.py -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol",
+    "response-writer-v2-support-first-candidate.py -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol",
+    "writer-v2-source-ids-tested-baseline.py -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol",
+    "writer-v2-source-ids-tested-baseline.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol"
+  ],
+  "verification": "After staging, compare each staged blob SHA-256 against these worktree hashes; do not regenerate captured manifests or normalize their text. The ordering candidate remains unpromoted."
+}
