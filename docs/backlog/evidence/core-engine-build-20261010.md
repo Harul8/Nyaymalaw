@@ -1268,3 +1268,12 @@ piece passed 123 focused writer/source-kind/turn checks. Prompts and four-normal
 six-maximum call accounting are unchanged. Sol on both writer/reviewer tiers is
 an explicit same-model policy: separate evidence review does not imply model
 diversity or eliminate correlated mistakes.
+
+Migration piece 4 upgrades the existing session ledger, retaining all historical
+reservations. It captures immutable cache/long-context prices and input/output
+bounds with each request. Only the provider's exact count of the complete final
+input may narrow the full-context reservation; no byte or character estimate is
+used. Cache buckets must be complete and disjoint. Measured token-bound breaches
+are recorded even when discounts keep dollars below reservation, then block new
+spending. 72 focused new/legacy budget tests pass on the applied source. No paid
+request or live ledger mutation was used to establish these mechanics.

@@ -14,6 +14,10 @@ from datetime import datetime, timezone
 from decimal import ROUND_CEILING, Decimal, InvalidOperation
 from pathlib import Path
 from types import MappingProxyType
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from nm.shared.model_config import TokenPricing
 
 from nm.shared.model_port import ConfigurationError, ProviderUnavailable, Usage
 
@@ -29,7 +33,10 @@ class CallBudget:
                  price_per_million: tuple[str, str] = ("0.15", "0.60"),
                  reservation_micro_usd: int = RESERVATION_MICRO_USD,
                  returned_model_aliases: tuple[str, ...] = (),
-                 require_returned_model: bool = False):
+                 require_returned_model: bool = False,
+                 pricing: TokenPricing | None = None,
+                 input_token_bound: int | None = None,
+                 output_token_bound: int | None = None):
         """A bounded evaluation, pinned to ONE owner-approved model.
 
         THE DEFAULT IS THE PIN, and every server path relies on it: nothing
@@ -66,6 +73,21 @@ class CallBudget:
             raise ConfigurationError("Evaluation prices and budget must be numeric.") from exc
         if any(not price.is_finite() or price < 0 for price in (self.price_in, self.price_out)):
             raise ConfigurationError("Evaluation prices must be finite and nonnegative.")
+        self.pricing = pricing
+        self.pricing_policy = None
+        if pricing is not None:
+            from nm.shared.model_config import TokenPricing
+            if (not isinstance(pricing, TokenPricing)
+                    or pricing.input_rate != self.price_in or pricing.output_rate != self.price_out):
+                raise ConfigurationError("Captured pricing must match the declared input/output rates.")
+            self.pricing_policy = json.dumps(pricing.as_dict(), sort_keys=True, separators=(",", ":"))
+        if ((input_token_bound is None) != (output_token_bound is None)
+                or input_token_bound is not None and (
+                    type(input_token_bound) is not int or input_token_bound < 0
+                    or type(output_token_bound) is not int or output_token_bound <= 0)):
+            raise ConfigurationError("Request token bounds need a nonnegative input and positive output ceiling.")
+        self.input_token_bound = input_token_bound
+        self.output_token_bound = output_token_bound
         self.reservation = reservation_micro_usd
         if type(self.reservation) is not int or self.reservation <= 0:
             raise ConfigurationError("A per-call reservation must be positive.")
@@ -95,7 +117,10 @@ class CallBudget:
             # cannot be retrospectively treated as authority to release money.
             columns = {row[1] for row in db.execute("PRAGMA table_info(attempts)")}
             for name, kind in (("price_in", "TEXT"), ("price_out", "TEXT"),
-                               ("reservation", "INTEGER"), ("identity_policy", "TEXT")):
+                               ("reservation", "INTEGER"), ("identity_policy", "TEXT"),
+                               ("pricing_policy", "TEXT"), ("input_token_bound", "INTEGER"),
+                               ("output_token_bound", "INTEGER"), ("cached_tokens", "INTEGER"),
+                               ("cache_write_tokens", "INTEGER"), ("bound_violation", "TEXT")):
                 if name not in columns:
                     db.execute(f"ALTER TABLE attempts ADD COLUMN {name} {kind}")
 
@@ -122,8 +147,9 @@ class CallBudget:
                 )
             db.execute(
                 "INSERT INTO attempts "
-                "(id,at,charge,state,model,price_in,price_out,reservation,identity_policy) "
-                "VALUES (?,?,?,?,?,?,?,?,?)",
+                "(id,at,charge,state,model,price_in,price_out,reservation,identity_policy,"
+                "pricing_policy,input_token_bound,output_token_bound) "
+                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
                 (
                     token,
                     datetime.now(timezone.utc).isoformat(),
@@ -134,6 +160,9 @@ class CallBudget:
                     str(self.price_out),
                     self.reservation,
                     self.identity_policy,
+                    self.pricing_policy,
+                    self.input_token_bound,
+                    self.output_token_bound,
                 ),
             )
         return token
@@ -161,13 +190,15 @@ class CallBudget:
     def settle(self, token: str, response) -> None:
         with self._connect() as db:
             db.execute("BEGIN IMMEDIATE")
-            held = db.execute("SELECT model,price_in,price_out,reservation,state,identity_policy "
+            held = db.execute("SELECT model,price_in,price_out,reservation,state,identity_policy,"
+                              "pricing_policy,input_token_bound,output_token_bound "
                               "FROM attempts "
                               "WHERE id=?", (token,)).fetchone()
             if held is None or held[4] != "reserved_or_unknown":
                 raise ProviderUnavailable("Evaluation reservation was absent or already settled.")
             if (held[:4] != (self.model, str(self.price_in), str(self.price_out), self.reservation)
-                    or held[5] != self.identity_policy):
+                    or held[5:] != (self.identity_policy, self.pricing_policy,
+                                     self.input_token_bound, self.output_token_bound)):
                 raise ConfigurationError(
                     "A reservation can be settled only under its captured model/prices.")
             returned_model = getattr(response, "model", None)
@@ -180,14 +211,35 @@ class CallBudget:
             outgoing = getattr(usage, "completion_tokens", None)
             if any(type(x) is not int or x < 0 for x in (incoming, outgoing)):
                 return  # Unknown usage retains the whole reservation.
-            cost = int((Decimal(incoming) * self.price_in + Decimal(outgoing) * self.price_out
-                        ).to_integral_value(rounding=ROUND_CEILING))
-            state = "measured_over_bound" if cost > held[3] else "measured"
+            cached = written = None
+            if self.pricing is None:
+                # Legacy explicitly priced evaluations retain their original accounting contract.
+                cost = int((Decimal(incoming) * self.price_in + Decimal(outgoing) * self.price_out
+                            ).to_integral_value(rounding=ROUND_CEILING))
+            else:
+                details = getattr(usage, "prompt_tokens_details", None)
+                missing = None if self.pricing.write_rate is not None else 0
+                cached = getattr(details, "cached_tokens", missing)
+                written = getattr(details, "cache_write_tokens", missing)
+                if (any(type(value) is not int or value < 0 for value in (cached, written))
+                        or cached + written > incoming):
+                    return  # Incomplete/invalid billing buckets retain the whole reservation.
+                cost = self.pricing.cost_micro_usd(incoming, outgoing,
+                    cached_tokens=cached, cache_write_tokens=written)
+            violations = []
+            if cost > held[3]:
+                violations.append("price_reservation")
+            if held[7] is not None and incoming > held[7]:
+                violations.append("input_token_bound")
+            if held[8] is not None and outgoing > held[8]:
+                violations.append("output_token_bound")
+            state = "measured_over_bound" if violations else "measured"
             changed = db.execute(
                 "UPDATE attempts SET charge=?,state=?,response_id=?,"
-                "tokens_in=?,tokens_out=? "
+                "tokens_in=?,tokens_out=?,cached_tokens=?,cache_write_tokens=?,bound_violation=? "
                 "WHERE id=? AND state='reserved_or_unknown'",
-                (cost, state, str(getattr(response, "id", "")), incoming, outgoing, token),
+                (cost, state, str(getattr(response, "id", "")), incoming, outgoing,
+                 cached, written, json.dumps(violations) if violations else None, token),
             )
             if changed.rowcount != 1:
                 raise ProviderUnavailable("Evaluation reservation was absent or already settled.")
@@ -195,7 +247,7 @@ class CallBudget:
             # Commit measured spending before refusing. Rolling back here would
             # leave the smaller reservation as a false statement of actual cost.
             raise ProviderUnavailable(
-                "Provider usage exceeded the evaluation model's reserved bound.",
+                "Provider usage exceeded the captured request cost or token bound.",
                 usage=Usage(incoming, outgoing, cost / 1_000_000))
 
 
@@ -203,12 +255,7 @@ class SessionCallBudget:
     """Request-bound model terms sharing one existing durable session ledger."""
 
     def __init__(self, path: Path, maximum_usd: str, *, models: tuple[str, ...]):
-        from nm.shared.model_config import (
-            BILLING_CONTEXT,
-            MAX_OUTPUT,
-            PRICES,
-            RETURNED_MODEL_ALIASES,
-        )
+        from nm.shared.model_config import BILLING_CONTEXT, MAX_OUTPUT, RETURNED_MODEL_ALIASES, token_pricing
 
         if (not isinstance(models, tuple) or not models
                 or any(not isinstance(model, str) or not model.strip() for model in models)
@@ -216,21 +263,15 @@ class SessionCallBudget:
             raise ConfigurationError("A bounded session needs distinct configured models.")
         terms = {}
         for model in models:
-            if model not in PRICES or model not in BILLING_CONTEXT or model not in MAX_OUTPUT:
+            if model not in BILLING_CONTEXT or model not in MAX_OUTPUT:
                 raise ConfigurationError("Every bounded model needs verified prices and ceilings.")
             incoming, outgoing = BILLING_CONTEXT[model], MAX_OUTPUT[model]
-            prices = tuple(str(price) for price in PRICES[model])
-            try:
-                decimal_prices = tuple(Decimal(price) for price in prices)
-            except InvalidOperation as exc:
-                raise ConfigurationError(
-                    "Every bounded model needs verified prices and ceilings.") from exc
-            if (any(type(value) is not int or value <= 0 for value in (incoming, outgoing))
-                    or len(decimal_prices) != 2
-                    or any(not price.is_finite() or price < 0 for price in decimal_prices)
-                    or not any(decimal_prices)):
+            if any(type(value) is not int or value <= 0 for value in (incoming, outgoing)):
                 raise ConfigurationError("Every bounded model needs verified prices and ceilings.")
-            terms[model] = (prices, incoming, outgoing, RETURNED_MODEL_ALIASES.get(model, ()))
+            pricing = token_pricing(model)
+            if not any((pricing.input_rate, pricing.output_rate)):
+                raise ConfigurationError("Every bounded model needs verified prices and ceilings.")
+            terms[model] = (pricing, incoming, outgoing, RETURNED_MODEL_ALIASES.get(model, ()))
         self.models = models
         self._terms = MappingProxyType(terms)
         self.path = Path(path)
@@ -238,20 +279,30 @@ class SessionCallBudget:
         # Establish the shared maximum at startup without reserving or dispatching.
         self._ledger, _ = self.for_request(models[0], None)
 
-    def for_request(self, model: str, output_tokens: int | None) -> tuple[CallBudget, int]:
+    def for_request(self, model: str, output_tokens: int | None, *,
+                    input_upper_bound: int | None = None) -> tuple[CallBudget, int]:
+        """Exact provider-counted input may narrow a request, never an estimate.
+
+        The adapter owns the count of the final complete provider payload and
+        preserves it unchanged for generation. Omission retains the full verified
+        context ceiling. This method never trims source text or predicts cache hits.
+        """
         if model not in self._terms:
             raise ConfigurationError("This bounded session does not authorise the selected model.")
-        prices, context_ceiling, output_ceiling, aliases = self._terms[model]
+        pricing, context_ceiling, output_ceiling, aliases = self._terms[model]
         limit = output_ceiling if output_tokens is None else output_tokens
         if type(limit) is not int or not 0 < limit <= output_ceiling:
             raise ConfigurationError(
                 "The request output ceiling is not within the verified model bound.")
-        reserve = int((Decimal(context_ceiling) * Decimal(prices[0])
-                       + Decimal(limit) * Decimal(prices[1]))
-                      .to_integral_value(rounding=ROUND_CEILING))
+        incoming = context_ceiling if input_upper_bound is None else input_upper_bound
+        if type(incoming) is not int or not 0 <= incoming <= context_ceiling:
+            raise ConfigurationError("The counted input bound is not within the verified model context.")
+        reserve = pricing.reserve_micro_usd(incoming, limit)
         return CallBudget(self.path, self.maximum_usd, model=model,
-                          price_per_million=prices, reservation_micro_usd=reserve,
-                          returned_model_aliases=aliases, require_returned_model=True), limit
+                          price_per_million=(str(pricing.input_rate), str(pricing.output_rate)),
+                          reservation_micro_usd=reserve, returned_model_aliases=aliases,
+                          require_returned_model=True, pricing=pricing,
+                          input_token_bound=incoming, output_token_bound=limit), limit
 
     def status(self) -> dict:
         return self._ledger.status()
