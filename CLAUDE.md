@@ -5,8 +5,9 @@
 Read AGENTS.md for standing build and release safeguards. The owner's current
 instruction determines authorised scope. On 10 October 2026 the owner resumed
 SEQ.1–SEQ.9 implementation and approved a fresh, shared $5 API development cap.
-Build one subactivity at a time; record nonblocking deferrals. The served turn
-remains paused until the new integrated boundary is verified.
+Build coherent subactivities; the owner approved parallel agents on 10 October.
+Record nonblocking deferrals. The integrated turn is in development verification;
+live semantic and browser acceptance remain open.
 
 Owner decisions P7 and P12 of 10 October 2026 establish these roles:
 
@@ -32,10 +33,10 @@ outcome. Reuse fitting contracts explicitly. Create no parallel tracker.
 
 ## Current code and archive dependencies
 
-The app starts with conversations paused. nm/app/api.py owns the authenticated
+The app serves the new engine in development verification. nm/app/api.py owns the authenticated
 HTTP boundary, nm/app/composition.py composes services and nm/app/main.py
-launches it. nm/core_engine/ currently holds citation and retrieval helpers;
-no brain processes the served turn. Earlier conversations remain preserved.
+launches it. nm/core_engine/ owns context, interpretation, research, grounded response
+writing, independent review, rendering and exact saved replay. Earlier conversations remain preserved.
 M1's unfinished candidate is kept in the private checkpoint named in the plan.
 
 nm/Archives/brain/ and nm/Archives/legal_brain/ contain reference engines.

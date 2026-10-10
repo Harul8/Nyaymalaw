@@ -330,3 +330,46 @@ Evidence: 26 adapter checks and 10 shared-call checks pass, including concurrent
 claim/consumption, restart, exact idempotence and lost acknowledgement. The port,
 adapter, call hook and turn composition are an inseparable integration dependency;
 each has focused checks before the served test. Zero new model calls.
+
+## SEQ.4 — integrated turn, versioned rendering and authenticated routes
+
+Start READY: the new turn owner must deliver only a mechanically bound draft with
+accepted full-context review, save that exact response and dependencies atomically,
+and replay without another provider call. Terminal primary-source gates retain their
+TURN/NONE scope. The writer, reviewer, renderer, turn owner and HTTP composition are
+one handoff: isolated component counts do not establish its useful completion.
+
+Build: normal turns make four calls (understand, plan, write, review); local retrieval
+and rendering add none. One writer correction plus fresh review gives six calls when
+the shared allowance is still available. This implementation does not yet regenerate
+search from reviewer feedback; missing authority stays a supported limitation or a
+withheld turn, never invented law. Requests with earlier shape repair cannot get an
+additional semantic repair. Same-request retries retain terminal/correction ownership.
+
+The versioned renderer preserves natural reviewed text and complete exact selected
+and adjacent support. API routes enforce account/session/CSRF ownership and expose
+saved chat/source records. Historical engine data stays historical. UI-only boolean
+commitment enrichment is outside canonical receipts. Reopening checks saved contracts,
+original dependencies and review binding; unknown versions are refused, not upgraded.
+
+Evidence: 14 turn integration and 14 rendering checks pass; 36 authenticated served
+checks pass. They exercise exact save/reopen/source reads, same-ID replay, rejected
+drafts, one shared correction, terminal replay refusal, lost acknowledgements,
+permission/session recovery, changed snapshots and corrupt sidecar independence.
+These are scripted provider outputs, not semantic acceptance. A known pre-save refusal
+can retry; an unconfirmed save permits receipt lookup but never repeats the effect.
+Confirmed save remains authoritative if auxiliary bookkeeping cannot close.
+
+Live reviewer measurement: eight pinned-mini calls cost $0.010011. Four correct
+neighbors passed; three faulty answers obtained valid rejection receipts. The fourth
+was detected but failed the review's reference contract. No wrong whole-answer
+acceptance was observed in this small controlled synthetic set. Remaining defects:
+inconsistent missing-request evidence, rejecting an independently correct unit for
+an omitted peer, overstating one rejection reason, and merging independent asks in
+coverage. Exact evidence is review-semantic-probe*. These are not corpus accuracy
+measurements or proof of a general false-positive rate.
+
+Browser control still fails before attachment (Windows sandbox deny-read ACL error).
+No alternative browser or user session was opened. Browser acceptance is unrun.
+The next bounded live integration uses the actual authenticated API, a synthetic
+account and isolated sealed records; it must be labelled API evidence.

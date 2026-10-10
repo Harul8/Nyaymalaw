@@ -8,18 +8,18 @@ Implementation Plan sheet's LB rows are history. Existing code is arranged for
 review in journey order; an empty or small phase does not prove its requirements
 are complete.
 
-## The served brain today: none, while the core engine is built
+## The served brain today: core engine in development verification
 
 On 10 October 2026 the owner archived the brain that was being served and asked for
-a clean-slate core engine built from the Advocate build plan (decision P9). Until
-the core engine's turn ships, the application serves accounts, sessions and the
-workspace, and **conversations are paused**: `POST /api/turn` answers with a plain
-notice and saves nothing, and every earlier conversation and matter is kept and
-listed as history.
+a clean-slate core engine built from the Advocate build plan (decision P9). The
+authenticated turn now connects interpretation, research, natural response writing,
+independent review and atomic saved replay. Integrated synthetic checks pass; live
+semantic and browser acceptance remain open. Earlier engine conversations remain
+preserved and listed as history.
 
 | Folder | State |
 |---|---|
-| `nm/core_engine/` | The new engine under active SEQ.1–SEQ.9 construction. Retains citation and retrieval helpers; `conversation.py` owns the new exact transcript and atomic receipt contract. No turn is served yet. The private M1 candidate supplies reviewed reference ideas only. |
+| `nm/core_engine/` | The new engine under active SEQ.1–SEQ.9 construction. `turn.py` integrates complete context, research, writing, review and versioned source rendering; `conversation.py` owns exact transcript and atomic receipts. Shared attempt storage preserves correction/terminal ownership. Production readiness is not established. The private M1 candidate supplies reviewed reference ideas only. |
 | `nm/Archives/brain/` | The brain served until 10 October 2026. Not the current turn engine; preserved for historical work |
 | `nm/Archives/legal_brain/` | The earlier brain. Not the current turn engine; retained corpus tools and application modules still import some helpers |
 | `development_environment/archives/tests-for-archived-brains/` | Tests that guarded the archived brains, kept for reference; not collected |

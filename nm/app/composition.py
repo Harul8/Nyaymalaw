@@ -22,6 +22,8 @@ from nm.shared.policed_port_adapter import PolicedPort
 from nm.shared.source_layout import browser_assets
 from nm.shared.store_file_store import FileMatterStore
 from nm.shared.store_port import StorePort
+from nm.shared.turn_attempt_port import TurnAttemptPort
+from nm.shared.turn_attempt_store import FileTurnAttempts
 from nm.core_engine.retrieval import HybridSearcher
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -56,6 +58,10 @@ class Application:
         storage_root = settings.get('NM_MATTER_STORE') or self.root / '.nm'
         self.store = PolicedPort(inner=store or FileMatterStore(storage_root, key=key),
             gate=self._gate, port=StorePort, sink=Sink.STORAGE, processor_id=STORAGE_PROCESSOR)
+        self.turn_attempts = PolicedPort(inner=_DeferredAdapter(
+            lambda: FileTurnAttempts(Path(storage_root) / 'turn-attempts.sqlite')),
+            gate=self._gate, port=TurnAttemptPort, sink=Sink.STORAGE, processor_id=STORAGE_PROCESSOR,
+            data_classes=(DataClass.OPERATIONAL,))
         self.directory = PolicedPort(inner=directory or FileDirectory(storage_root, key=key),
             gate=self._gate, port=DirectoryPort, sink=Sink.STORAGE, processor_id=STORAGE_PROCESSOR,
             data_classes=(DataClass.OPERATIONAL, DataClass.RESTRICTED))
@@ -89,6 +95,15 @@ class Application:
             policy=self._gate.policy, audit=self._egress_audit,
             authorize=lambda: _require_session(session_current))
 
+    def run_turn(self, *, advocate_id, session_current, **request):
+        from nm.core_engine.turn import process
+
+        # Saved replay performs no provider work. Permission/model construction
+        # belongs to the first fresh model operation, not to receipt readback.
+        model = _DeferredAdapter(lambda: self._model_for(advocate_id, session_current=session_current))
+        return process(model, self.store, self.legal_search, advocate_id=advocate_id,
+                       session_current=session_current, attempts=self.turn_attempts, **request)
+
     def browser_asset_paths(self):
         return browser_assets(root=ROOT)
 
@@ -105,7 +120,22 @@ class Application:
         routine = self.config.for_tier(Tier.ROUTINE)
         return {'runtime': 'ready', 'provider': routine.provider, 'model': routine.model,
                 'corpus': 'configured_unverified' if self.legal_search is not None else 'not_connected',
-                'brain': {'engine': 'core_engine', 'state': 'paused', 'stages': []}}
+                'brain': {'engine': 'core_engine', 'state': 'development', 'stages': [
+                    'understanding', 'research_planning', 'held_retrieval',
+                    'response_writing', 'independent_review', 'atomic_release']}}
+
+
+class _DeferredAdapter:
+    def __init__(self, factory):
+        self.factory, self.inner = factory, None
+
+    def _resolve(self):
+        if self.inner is None:
+            self.inner = self.factory()
+        return self.inner
+
+    def __getattr__(self, name):
+        return getattr(self._resolve(), name)
 
 def _require_session(check):
     from nm.app.model_permission import ModelPermissionRefused

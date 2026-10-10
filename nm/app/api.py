@@ -1,4 +1,4 @@
-"""Authenticated HTTP edge for the current two-stage brain.
+"""Authenticated HTTP edge for the checked core engine.
 
 Account boundaries are retained from the previous active API. Retired legal
 engine routes are deliberately absent; their saved files are not modified.
@@ -20,10 +20,9 @@ from nm.arrive import attempts_contracts as attempts
 from nm.arrive.advocate_contracts import PASSWORD_RESET_MINUTES, SESSION_IDLE_MINUTES, csrf_token, utcnow
 from nm.arrive.directory_port import AccountBusy, AuthenticationUnavailable
 from nm.arrive.professional_access import read_professional_status
-# No brain is served while the core engine's turn is built (owner, 10 October 2026:
-# Advocate build plan, P9 and CE). The earlier brains are archived; their saved
-# conversations are kept and listed as history.
-ENGINE_PAUSED = "Nyaymalaw's new core engine is being built, so conversations are paused. Nothing you send now is saved; your earlier conversations are kept."
+from nm.core_engine.conversation import HEADER, ConversationRefused, chat_matter_id
+from nm.core_engine.turn import saved_rows
+from nm.shared.external_ai_contracts import ModelPermissionRefused
 from nm.shared.clock_contracts import FORUM
 from nm.shared.identity_contracts import source_fingerprint
 from nm.shared.traceability_contracts import implements
@@ -150,8 +149,8 @@ class _Released(BaseModel):
 
 
 def _release(output) -> _Released:
-    """Validate the new brain's served response at the HTTP byte boundary."""
-    return _Released.model_validate(output.as_dict())
+    """Validate the checked core's response at the HTTP byte boundary."""
+    return _Released.model_validate(output)
 
 
 def _not_blank(value: str) -> str:
@@ -1216,17 +1215,78 @@ def _session_current(request, advocate_id):
 def turn(req: TurnRequest, advocate_id: Advocate, request: Request) -> _Released:
     if not _session_current(request, advocate_id):
         raise HTTPException(401, 'not signed in')
-    raise HTTPException(503, {'why': ENGINE_PAUSED, 'code': 'engine_paused',
-        'committed': 'not_committed', 'turn_id': req.turn_id, 'chat_id': req.chat_id,
-        'retryable': False})
+    legacy = (req.thread_id, req.today, req.work_product, req.parties,
+              req.release, req.capacity, req.keep_in_matter)
+    if any(value not in (None, '', {}, False) for value in legacy) or req.jurisdiction != FORUM:
+        raise HTTPException(422, {'why': 'These action settings are not available in this conversation. '
+            'Describe the requested work in your message instead.', 'code': 'unsupported_action_settings',
+            'committed': 'unconfirmed', 'turn_id': req.turn_id, 'chat_id': req.chat_id,
+            'retryable': False})
+    try:
+        output = application().run_turn(advocate_id=advocate_id,
+            message=req.message, turn_id=req.turn_id, chat_id=req.chat_id,
+            matter_id=req.matter_id, expected_version=req.expected_version,
+            session_current=lambda: _session_current(request, advocate_id))
+    except ConversationRefused as exc:
+        raise HTTPException(exc.status, _conversation_error(exc, req)) from exc
+    except ModelPermissionRefused as exc:
+        if not _session_current(request, advocate_id):
+            raise HTTPException(401, 'not signed in') from exc
+        # No receipt lookup is implied by permission refusal: an earlier attempt
+        # with this request identity may already be saved.
+        raise HTTPException(403, {'why': str(exc), 'code': 'model_permission_required',
+            'committed': 'unconfirmed', 'turn_id': req.turn_id, 'chat_id': req.chat_id,
+            'retryable': False}) from exc
+    if not _session_current(request, advocate_id):
+        raise HTTPException(401, 'not signed in')
+    return _release(output)
+
+
+def _conversation_error(exc, req=None):
+    """Owned service facts only; no rejected drafts or internal model feedback."""
+    detail = {'why': exc.why, 'code': exc.code, 'committed': exc.committed,
+              'retryable': exc.retryable}
+    if req is not None:
+        detail.update(turn_id=req.turn_id, chat_id=req.chat_id)
+    return detail
+
+
+def _read_chat(chat_id, advocate_id, request):
+    """One account-derived lookup and checked replay for both chat and sources."""
+    try:
+        matter = application().store.load(chat_matter_id(advocate_id, chat_id))
+    except (OSError, ValueError) as exc:
+        raise HTTPException(503, 'This conversation could not be read reliably.') from exc
+    if not _session_current(request, advocate_id):
+        raise HTTPException(401, 'not signed in')
+    if matter is None or matter.advocate_id != advocate_id:
+        raise HTTPException(404, 'Conversation not available.')
+    try:
+        rows = saved_rows(matter, advocate_id)
+    except ConversationRefused as exc:
+        raise HTTPException(exc.status, _conversation_error(exc)) from exc
+    if not _session_current(request, advocate_id):
+        raise HTTPException(401, 'not signed in')
+    return matter, rows
 
 @app.get('/api/work')
 def work(advocate_id: Advocate, request: Request):
     listing = application().store.list_for(advocate_id)
     chats, matters, unavailable = [], [], list(listing.unreadable)
     for matter in sorted(listing.matters, key=lambda m: listing.saved(m.id), reverse=True):
-        # Every saved file and conversation was made by an archived brain: kept,
-        # listed as history, and not opened until the core engine can read it.
+        if matter.advocate_id != advocate_id:
+            raise HTTPException(503, 'Your work list could not be read reliably.')
+        if HEADER in matter.intake_answers:
+            try:
+                rows = saved_rows(matter, advocate_id)
+            except ConversationRefused:
+                unavailable.append(matter.id)
+                continue
+            if rows:
+                chats.append({'chat_id': rows[0]['chat_id'], 'preview': rows[0]['message'],
+                    'turn_count': len(rows), 'last_updated': listing.saved(matter.id)})
+            continue
+        # Old records remain history; current replay never upgrades their contracts.
         matters.append({'matter_id': matter.id, 'matter': matter.title,
             'last_updated': listing.saved(matter.id), 'state': 'historical'})
     if not _session_current(request, advocate_id):
@@ -1240,16 +1300,41 @@ def chats(advocate_id: Advocate, request: Request):
     return work(advocate_id, request)
 
 @app.get('/api/chats/{chat_id}')
-def chat(chat_id: str, advocate_id: Advocate, request: Request):
+def chat(chat_id: str, advocate_id: Advocate, request: Request, response: Response):
+    matter, rows = _read_chat(chat_id, advocate_id, request)
+    # The existing UI expects a boolean release projection. Do not change the
+    # canonical saved receipt's string commitment or its original snapshot.
+    turns = [{**row['response'], 'message': row['message'], 'message_source': 'held',
+              'committed': True, 'release_state': 'released'} for row in rows]
     if not _session_current(request, advocate_id):
         raise HTTPException(401, 'not signed in')
-    raise HTTPException(409, 'This conversation was made by an earlier brain. It is kept, but it '
-                             'cannot be opened until the new core engine is ready.')
+    response.headers['Cache-Control'] = 'no-store'
+    return {'state': 'ok', 'chat_id': chat_id, 'matter_id': None,
+            'matter_version': matter.version, 'turns': turns}
+
+
+@app.get('/api/chats/{chat_id}/turns/{turn_id}/brain-sources/{element}/{source}')
+def chat_source(chat_id: str, turn_id: str, element: int, source: int,
+                advocate_id: Advocate, request: Request, response: Response):
+    _, rows = _read_chat(chat_id, advocate_id, request)
+    row = next((item for item in rows if item['turn_id'] == turn_id), None)
+    if row is None or element < 0 or source < 0:
+        raise HTTPException(404, 'Saved passage not available.')
+    elements = row['response']['elements']
+    if element >= len(elements) or source >= len(elements[element]['sources']):
+        raise HTTPException(404, 'Saved passage not available.')
+    selected = elements[element]['sources'][source]
+    if not _session_current(request, advocate_id):
+        raise HTTPException(401, 'not signed in')
+    response.headers['Cache-Control'] = 'no-store'
+    return selected
 
 @app.get('/api/matters/{matter_id}')
 @app.get('/api/matters/{matter_id}/transcript')
-def historical_matter(matter_id: str, advocate_id: Advocate):
+def historical_matter(matter_id: str, advocate_id: Advocate, request: Request):
     matter = application().store.load(matter_id)
+    if not _session_current(request, advocate_id):
+        raise HTTPException(401, 'not signed in')
     if matter is None or matter.advocate_id != advocate_id:
         raise HTTPException(404, 'Matter not available.')
     raise HTTPException(409, 'This matter belongs to the earlier brain. Its saved data is retained; opening it in the rebuilt brain is not available yet.')
