@@ -249,3 +249,33 @@ tests, generalized repair and graph-first dependency review. The structural grap
 refreshed without paid embeddings. Its current-file/new-file queries returned not-indexed,
 so source reads remain necessary; empty graph results are not absence evidence. Older
 memory asking per-call approval is superseded by the owner's current shared $5 authority.
+
+## SEQ.3–4 — retrieved source observations and owned answer catalogue
+
+The actual held-corpus probe took 70.85 seconds cold and selected six provisions
+and six judgment passages from 256 reranked candidates. None of its six provisions
+directly addressed the equipment/deposit relationship. Some useful judgment material
+was in adjacent passages, including a party submission followed by its rejection.
+Parser role metadata was inverted for those two passages. Thirty-six missing or
+ambiguous parent links made the search partial. These are measured relevance/context
+limits, not legal conclusions or evidence of complete recall.
+
+A controlled local comparison shortened reranker context from 2,279 to 755 characters
+without changing its enquiries. It did not demonstrate a relevance gain: useful
+judgments were displaced and irrelevant provisions remained. The comparison was
+not promoted. Both runs used local retrieval with no OpenAI calls; cache/loading
+differences prevent a latency conclusion. Exact ignored probe snapshots are under
+outputs/core-engine-build-20261010/retrieval-probe* and retrieval-context-comparison*.
+
+Start READY for answer_sources.py: each selected and adjacent segment must have its
+own selectable identity, preserve exact original words/provenance, and never acquire
+legal status from parser labels. It validates the research snapshot, merges repeated
+sources across work, preserves context gaps and refuses conflicting source identities.
+Original conversation remains separate in model presentation. Exact quote selection
+reuses the live original-source selector; no archived engine or extra model call.
+
+Evidence: 17 focused source-catalogue checks pass (31 with its research owner), including adjacent rejection,
+changed ownership, conflicting snapshots, repeated exact words and misleading role
+metadata. This verifies a prerequisite, not semantic source use or browser acceptance.
+On the owner's instruction, disjoint writer/reviewer/source files are now developed
+in parallel against agreed interfaces; one root owns integration, workbook and commits.
