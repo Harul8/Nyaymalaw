@@ -110,22 +110,24 @@ _COUNTS = re.compile(r"\[Cites\s*\n?(\d+)\s*\n?,\s*Cited by\s*\n?(\d+)", re.S)
 # 49% of those rejects carry one, so this recovers ~2,973 judgments in exactly
 # the era an advocate is most likely to be citing. An undifferentiated NULL
 # would never have shown that; an enumerated reject list did, on its first run.
-_REPORTER = re.compile(
-    r"\b(?:AIR\s*\d{4}\s*[A-Z]{2,8}\s*\d+"
-    r"|\(?\d{4}\)?\s*\(?\d+\)?\s*S\.?C\.?C\.?\s*\d+"
-    r"|\(?\d{4}\)?\s*\d*\s*S\.?C\.?R\.?\s*\d+"
-    r"|\d{4}\s*CRI\.?\s*L\.?J\.?\s*\d+"
-    r"|\d{4}\s*INSC\s*\d+)", re.I)
+# CASE CITATIONS ARE READ BY THE ONE OWNER, at build and at read (P21, and
+# 9 October 2026 for the citations in text). Two private patterns lived here --
+# one for citations in judgment bodies, one for the neutral citation a
+# judgment stamps on itself -- while the advocate-facing check read citations
+# its own way. A citation this build linked must be one that check can find,
+# and the reverse, so both now read with `find_reporter_citations`, and its
+# measured reporter equivalents (AIR `SC` = `Supreme Court`) reach treatment
+# targets the old pattern's written key missed.
+from nm.shared.citation_contracts import (  # noqa: E402
+    find_reporter_citations, reporter_key as _reporter_key,
+)
 
-#: The neutral citation a judgment stamps on ITSELF, used where the header
-#: carries no `Equivalent citations:` line at all.
-_NEUTRAL_SELF = re.compile(r"\b(\d{4}\s*INSC\s*\d+)", re.I)
 
-# THE KEY IS OWNED BY `nm.Archives.legal_brain.common.citation_contracts.reporter_key` (P21). It was a
-# private regex here, and the runtime lookup would have needed a second copy
-# -- the shape CLAUDE.md §4 records against provision patterns. One owner, at
-# build and at read.
-from nm.Archives.legal_brain.common.citation_contracts import reporter_key as _reporter_key  # noqa: E402
+def _neutral_self(head: str):
+    """The neutral citation a judgment stamps on ITSELF, where the header
+    carries no `Equivalent citations:` line at all."""
+    return next((c for c in find_reporter_citations(head) if c.reporter == "INSC"), None)
+
 
 # Verbs, graded. `distinguished` is NOT negative -- it limits scope, it does not
 # doubt correctness, and grading it as adverse would flag half the corpus.
@@ -333,9 +335,9 @@ def parse_header(text: str, path: pathlib.Path) -> dict:
         # an `Equivalent citations:` line, so 5,300 of the 2020s were
         # unresolvable as treatment targets — exactly the era an advocate is
         # most likely to be citing.
-        neutral = _NEUTRAL_SELF.search(head)
+        neutral = _neutral_self(head)
         if neutral:
-            keys = [citation_key(neutral.group(1))]
+            keys = [neutral.keys[0]]
             source = "neutral"
     rec["citation_source"] = source
     rec["_citations"] = keys
@@ -352,10 +354,15 @@ def extract_treatment(text: str, case_id: str, year: int | None,
     """
     out: list[tuple] = []
     seen: set[tuple[str, str]] = set()
-    for m in _REPORTER.finditer(text):
-        key = citation_key(m.group(0))
-        target = resolve(key)
-        if target is None or target[0] == case_id:
+    for m in find_reporter_citations(text):
+        # Every exact key the citation may be held under; two different
+        # judgments mean the citation names neither for certain, so neither
+        # receives a treatment it may not have had.
+        targets = {t for t in map(resolve, m.keys) if t is not None}
+        if len(targets) != 1:
+            continue
+        target = targets.pop()
+        if target[0] == case_id:
             continue
         target_id, target_year = target
         if year and target_year and target_year > year:
@@ -376,7 +383,7 @@ def extract_treatment(text: str, case_id: str, year: int | None,
         # taken: THE CITATION MUST PRECEDE THE VERB, as in "Ram Lal v. State
         # ... was overruled". Recall suffers and every surviving record points
         # the right way.
-        window = text[m.end():m.end() + _WINDOW]
+        window = text[m.end:m.end + _WINDOW]
         verb = _VERB_RE.search(window)
         if not verb:
             continue
@@ -384,7 +391,7 @@ def extract_treatment(text: str, case_id: str, year: int | None,
         if re.search(r"\b(?:by|in)\b\s*$", between.strip()[-30:] or " "):
             continue          # "...overruled by <cite>" read backwards
         v = verb.group(0).lower()
-        window = text[max(0, m.start() - 120):m.end() + _WINDOW]
+        window = text[max(0, m.start - 120):m.end + _WINDOW]
         if (target_id, v) in seen:
             continue
         seen.add((target_id, v))

@@ -102,16 +102,9 @@ COURTS = {
 #: The cause title names the provision the matter was FILED under. It survives
 #: dirty OCR better than anything else in the row, and it is the only free
 #: subject signal in the metadata, so it is the second stratification axis.
-#: A TRAILING LETTER IS A SUB-SECTION ONLY WHEN IT IS ATTACHED. An earlier
-#: form allowed whitespace before it and captured the first letter of the
-#: NEXT word: "under Section 482 of Cr.P.C" became `482O`, "under Section 151
-#: CPC" became `151C`, and 282 of 1,000 gold labels were wrong in a way that
-#: reads exactly like the real sub-section suffixes (138A, 437A) it must be
-#: able to tell them from. The letter must touch the digits and must not be
-#: the start of a word.
-FILED_UNDER = re.compile(
-    r"\bunder\s+(?:sec(?:tion)?s?\.?|s\.|u/s\.?)\s*([0-9]+[A-Za-z]?)(?![A-Za-z])",
-    re.I)
+#: The pattern, and why a trailing letter must touch the digits, is owned with
+#: every other provision reader in `nm.shared.citation_contracts`.
+from nm.shared.citation_contracts import FILED_UNDER  # noqa: E402
 
 #: The court that actually decided, read off the document header.
 DECIDING_COURT = re.compile(

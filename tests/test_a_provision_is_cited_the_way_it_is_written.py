@@ -23,7 +23,7 @@ and Rules, a constitution is Articles throughout. A unit that NAMES its own
 kind is rendered as it names itself; only a bare designation — `53A`, `138` —
 is a section and takes `s.`.
 
-OWNED BY `nm.Archives.legal_brain.common.citation_contracts`, because CLAUDE.md section 4 puts every
+OWNED BY `nm.shared.citation_contracts`, because CLAUDE.md section 4 puts every
 provision-reference pattern in that module and `test_citation_patterns.py`
 fails the build on a second one. `SECTION` and `ARTICLE` there already know the
 two are different; a renderer elsewhere that did not would be that second
@@ -36,7 +36,7 @@ import pathlib
 
 import pytest
 
-from nm.Archives.legal_brain.common.citation_contracts import provision_label
+from nm.shared.citation_contracts import provision_label
 
 pytestmark = pytest.mark.class_a
 
@@ -140,7 +140,7 @@ def test_nothing_else_in_the_package_builds_a_provision_reference():
     #: that is the whole job. Exempting it is the same line `test_one_fold.py`
     #: draws around `nm.shared.text_contracts.fold`: the rule is ONE definition, not
     #: none.
-    owner = "nm/Archives/legal_brain/common/citation_contracts.py"
+    owner = "nm/shared/citation_contracts.py"
 
     found: list[str] = []
     for path in sorted((ROOT / "nm").rglob("*.py")):
@@ -158,4 +158,4 @@ def test_nothing_else_in_the_package_builds_a_provision_reference():
         "prefix belongs to the unit's KIND -- an Act is not made only of "
         "sections, and `s.Article_64` was served to an advocate as the "
         "authority an answer rested on.\n\n"
-        "Use `nm.Archives.legal_brain.common.citation_contracts.provision_label`:\n  " + "\n  ".join(found))
+        "Use `nm.shared.citation_contracts.provision_label`:\n  " + "\n  ".join(found))

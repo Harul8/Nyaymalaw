@@ -79,29 +79,13 @@ _BATCH = 900
 
 #: The legal tokens the BM25 index was built with, beside the lowercase whitespace
 #: split: "Section 138" is also `section_138`. A query must be cut the same way as the
-#: passages were, or its words and the index's never meet.
-_NGRAMS = (
-    re.compile(r"\bsection\s+\d+[a-z]{0,3}\b", re.I),
-    re.compile(r"\bart(?:icle)?\.?\s+\d+[a-z]{0,3}\b", re.I),
-    re.compile(r"\border\s+[ivx]+\s+rule\s+\d+\b", re.I),
-    re.compile(r"\bair\s+\d{4}\s+(?:sc|hc|all|bom|cal|del|mad|kar|ker|gau|p&h)\s+\d+\b", re.I),
-    re.compile(r"\(?\d{4}\)?\s+\(?\d+\)?\s+scc\s+\d+\b", re.I),
-    re.compile(r"\b(?:ipc|crpc|cpc|ibc|sarfaesi|fema|cgst|sgst|igst|gst|ni\s+act|hma|hindu\s+marriage"
-               r"|special\s+marriage|companies\s+act|negotiable\s+instruments|consumer\s+protection"
-               r"|arbitration(?:\s+and\s+conciliation)?)\b", re.I),
-)
+#: passages were, or its words and the index's never meet -- so the index builds that
+#: import this and the live search share one owner of the tokenisation.
+from nm.shared.citation_contracts import bm25_tokens  # noqa: E402,F401
 
 
 class Unavailable(RuntimeError):
     """The search cannot run: a library, a model or a consistent artefact set is missing."""
-
-
-def bm25_tokens(text: str) -> list[str]:
-    """The index's own tokenisation: lowercase whitespace split plus legal n-grams."""
-    text = text or ""
-    return text.lower().split() + [
-        m.group(0).lower().replace(" ", "_").replace(".", "")
-        for pattern in _NGRAMS for m in pattern.finditer(text)]
 
 
 def like(pattern: str, value: str) -> bool:

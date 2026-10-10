@@ -34,24 +34,9 @@ LEGACY_CONTRACT = "hybrid_retrieval_v1"
 MAX_RERANK_PAIRS = 4096
 log = logging.getLogger(__name__)
 
-
-_NGRAMS = (
-    re.compile(r"\bsection\s+\d+[a-z]{0,3}\b", re.I),
-    re.compile(r"\bart(?:icle)?\.?\s+\d+[a-z]{0,3}\b", re.I),
-    re.compile(r"\border\s+[ivx]+\s+rule\s+\d+\b", re.I),
-    re.compile(r"\bair\s+\d{4}\s+(?:sc|hc|all|bom|cal|del|mad|kar|ker|gau|p&h)\s+\d+\b", re.I),
-    re.compile(r"\(?\d{4}\)?\s+\(?\d+\)?\s+scc\s+\d+\b", re.I),
-    re.compile(r"\b(?:ipc|crpc|cpc|ibc|sarfaesi|fema|cgst|sgst|igst|gst|ni\s+act|hma|hindu\s+marriage"
-               r"|special\s+marriage|companies\s+act|negotiable\s+instruments|consumer\s+protection"
-               r"|arbitration(?:\s+and\s+conciliation)?)\b", re.I),
-)
-
-def bm25_tokens(text: str) -> list[str]:
-    """The index's own tokenisation: lowercase whitespace split plus legal n-grams."""
-    text = text or ""
-    return text.lower().split() + [
-        m.group(0).lower().replace(" ", "_").replace(".", "")
-        for pattern in _NGRAMS for m in pattern.finditer(text)]
+# The index's own tokenisation has one owner, shared with the index builds: a
+# query cut differently from the built index silently stops meeting its words.
+from nm.shared.citation_contracts import bm25_tokens  # noqa: E402
 
 
 class SearchUnavailable(RuntimeError):
