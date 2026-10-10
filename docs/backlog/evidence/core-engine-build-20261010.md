@@ -714,3 +714,81 @@ context gaps and resource failure. Real end-to-end latency savings are unmeasure
 the local neural inference workload itself is unchanged. Targeted Ruff F checks pass.
 Optional code-graph refresh was declined by automatic approval review over potential
 embedding egress; direct source/caller inspection remains the verification fallback.
+## SEQ.3 — historical Agentified baseline and original-account route
+
+Owner direction: search the original factual account first, then two or three
+focused expanded legal concepts, not synonymous rewordings. The historical served
+Agentified path was traced at c81677f163798e10c3a0b0447a78f0809990685d through
+api_server.py, api/agent_routes.py, agents/orchestrator.py,
+agents/legal_analysis.py::retrieve_for_matter and retrieval/retriever.py. Today's
+Agentified checkout instead serves a provision-only dense implementation; its old
+README is not a reliable map of the current route.
+
+The historical ideas worth testing are original-account recall, formal legal search
+vocabulary and focused per-issue ranking. No historical code or prompt was copied.
+Do not borrow arbitrary score boosts, scenario rules, passage truncation, inferred
+legal certainty or summary-derived holdings. Reported historical recall on twenty
+draft cases lacked verified case-law expectations, precision and stable artifact
+identity; it is not the acceptance target.
+
+A new local diagnostic reconstructed the latest live matter's three admitted
+enquiry pools under matching corpus revisions and added one exact full-account
+query. No GPT, new decomposition or reranking ran. In 20.174 seconds, that query
+added 52 provision and 53 judgment positions within the sixty-result fused pools.
+Fourteen exact sources were read. It found additional qualified leads, but many
+new results were unrelated rules, forms and source commentary. A general-evidence
+provision found by the additional lexical leg was itself lost at the existing fusion
+cutoff. Added positions are neither usable legal support nor a measured recall rate.
+Evidence: original-account-recall-diagnostic.json and
+original-account-recall-assessment.json in outputs/core-engine-build-20261010.
+
+Next measured candidate separates factual account selections from requested-work
+instructions. Code offers exact original spans, including untouched ranges omitted
+by the interpreter, and full original references; selecting an ID copies no words.
+The model chooses relevant account and up to three legal-concept phrases in the
+existing planning call. Complete conversation and durable original sources remain
+unchanged. Proposed legal concepts remain hypotheses, not findings. A versioned
+research contract must preserve existing v2 query reconstruction and replay. This
+design is not yet implemented or semantically accepted.
+
+## SEQ.4 — reviewer schema-order experiment not promoted
+
+Six recorded reviewer cases were rerun with only schema field order changed:
+reasons before verdicts and the overall verdict last. Actual outgoing schema
+order was verified; original context, draft, source evidence, field types and
+validation were unchanged. All three faulty replies were still admitted. All
+three valid replies were accepted with valid receipts. The disappearance of
+malformed receipts does not correct semantic judgment. No production change
+was retained and no additional routine stage was added.
+
+The six calls cost $0.035350 (ledger rounding $0.035352), bringing measured
+usage to $0.230785 plus the existing $1.09 unknown embedding-hook reservation,
+or $1.320785 charged against the shared $5 cap. One sample per previously seen
+case does not establish a population accuracy or false-positive rate. See
+reviewer-schema-order-assessment.json and the matching prepared/results artifacts
+under outputs/core-engine-build-20261010. Browser acceptance remains untested.
+
+## SEQ.3 — account-first planner pilot contract
+
+The next bounded experiment changes the existing planner only. It will offer
+code-owned exact original spans, including uncovered ranges, and request account
+span IDs separately from work-authorising source selections. Work needing law
+receives the unchanged selected account as its first query and up to three
+distinct legal-concept queries. No law query is required for purely conversational
+or internal account work. The cap applies per independent legal investigation,
+not across unrelated disputes. Complete attributed context remains available.
+
+Owner: research.py. Observable pass: exact account fidelity, useful distinct
+legal concepts, preserved independent requests and limits, and no invented
+factual premises in the six prepared cases. Consequential counterexamples include
+changing non-supply into nonexistence, treating an opposing allegation as admitted,
+changing the actors' relationship or dropping one dispute to meet a phrase cap.
+Source IDs certify identity, not factual truth or relevance. A successful planner
+pilot alone will not certify retrieval relevance or legal applicability.
+
+If promoted, a nested research v3 contract will bind the sparse span catalogue
+and preserve existing research v2 reconstruction. Invalid independent work uses
+the existing held-unit and shared bounded recovery; unknown ownership, history or
+contract versions cannot pass. Normal call count remains four, at most six with
+the existing correction budget. Additional local searches do not add an OpenAI
+call, but their latency must be measured. No production v3 change has been made.

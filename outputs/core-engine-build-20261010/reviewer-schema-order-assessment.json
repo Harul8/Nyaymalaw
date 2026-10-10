@@ -1,0 +1,159 @@
+{
+  "decision": "Do not promote: changing schema field order alone did not correct the known semantic admissions.",
+  "experiment": "Same recorded revised SYSTEM and six original v2 payloads; field types, validation and output ceiling unchanged. Unit reason before verdict, request reason before disposition, overall verdict last.",
+  "actual_wire_order_verified": true,
+  "production_source_unchanged": true,
+  "baseline_revised": {
+    "cases": 6,
+    "incorrect_reply_candidates": 3,
+    "wrong_admissions": 2,
+    "raw_correct_rejections": 1,
+    "usable_correct_negative_receipts": 0,
+    "correct_reply_candidates": 3,
+    "raw_semantic_false_rejections": 0,
+    "valid_reply_receipt_failures": 1,
+    "malformed_review_receipts": 2
+  },
+  "reordered": {
+    "cases": 6,
+    "incorrect_candidates": 3,
+    "wrong_admissions": 3,
+    "usable_correct_rejections": 0,
+    "correct_candidates": 3,
+    "valid_correct_acceptances": 3,
+    "semantic_false_rejections": 0,
+    "malformed_review_receipts": 0
+  },
+  "cases": [
+    {
+      "case_id": "reply-01",
+      "expected_verdict_confirmed_before_run": "reject",
+      "prior_revised_raw_verdict": "reject",
+      "prior_revised_receipt_valid": false,
+      "new_raw_verdict": "accept",
+      "new_receipt_valid": true,
+      "wrong_admission": true,
+      "semantic_false_rejection": false,
+      "invalid_review_reference_or_shape": false,
+      "unit_independence": "Greeting itself now correctly remains supported.",
+      "requests": "All substantive requested outcomes remain merged into one whole-message justified_limit. The reviewer recognises omissions but treats partial research/preparation as permission to release a greeting with no delivered limitation.",
+      "comparison": "Previously raw reject with malformed references and a wrongly rejected greeting; now valid wrong admission."
+    },
+    {
+      "case_id": "reply-02",
+      "expected_verdict_confirmed_before_run": "reject",
+      "prior_revised_raw_verdict": "accept",
+      "prior_revised_receipt_valid": true,
+      "new_raw_verdict": "accept",
+      "new_receipt_valid": true,
+      "wrong_admission": true,
+      "semantic_false_rejection": false,
+      "invalid_review_reference_or_shape": false,
+      "unit_independence": "All units are supported, including faulty selected source dependencies and generated saved-effect statements.",
+      "requests": "Independent outcomes are mostly separated, but current original context is used to excuse uses selecting the superseded account. A prohibition against writing is again treated as evidence that no write happened.",
+      "comparison": "Known wrong admission persists; no labelled consequential defect detected."
+    },
+    {
+      "case_id": "reply-03",
+      "expected_verdict_confirmed_before_run": "accept",
+      "prior_revised_raw_verdict": "accept",
+      "prior_revised_receipt_valid": true,
+      "new_raw_verdict": "accept",
+      "new_receipt_valid": true,
+      "wrong_admission": false,
+      "semantic_false_rejection": false,
+      "invalid_review_reference_or_shape": false,
+      "unit_independence": "Appropriate greeting admitted without invented substantive work.",
+      "requests": "Social greeting is labelled an addressed request; this does not create a consequential omission or extra work in the tested reply.",
+      "comparison": "Legitimate neighbour remains accepted."
+    },
+    {
+      "case_id": "reply-04",
+      "expected_verdict_confirmed_before_run": "accept",
+      "prior_revised_raw_verdict": "accept",
+      "prior_revised_receipt_valid": false,
+      "new_raw_verdict": "accept",
+      "new_receipt_valid": true,
+      "wrong_admission": false,
+      "semantic_false_rejection": false,
+      "invalid_review_reference_or_shape": false,
+      "unit_independence": "All independently valid corrected-source units accepted.",
+      "requests": "Explanation, correction and client questions are now separately accounted with exact references. No fresh record write is demanded.",
+      "comparison": "Previously raw accept but unusable joined-quote receipt; now valid correct acceptance."
+    },
+    {
+      "case_id": "reply-05",
+      "expected_verdict_confirmed_before_run": "accept",
+      "prior_revised_raw_verdict": "accept",
+      "prior_revised_receipt_valid": true,
+      "new_raw_verdict": "accept",
+      "new_receipt_valid": true,
+      "wrong_admission": false,
+      "semantic_false_rejection": false,
+      "invalid_review_reference_or_shape": false,
+      "unit_independence": "Actual missing-document limitation and independently useful questions are both accepted.",
+      "requests": "Still merges comparison and question work into one addressed message-level row instead of distinct justified_limit and addressed dispositions.",
+      "comparison": "Overall correct acceptance persists, while outcome accounting remains inaccurate."
+    },
+    {
+      "case_id": "reply-06",
+      "expected_verdict_confirmed_before_run": "reject",
+      "prior_revised_raw_verdict": "accept",
+      "prior_revised_receipt_valid": true,
+      "new_raw_verdict": "accept",
+      "new_receipt_valid": true,
+      "wrong_admission": true,
+      "semantic_false_rejection": false,
+      "invalid_review_reference_or_shape": false,
+      "unit_independence": "Correct peer units remain accepted, but the appended model-authored no-write status is also accepted.",
+      "requests": "The restriction against changing records is treated as confirming an execution-history status, despite the unchanged code-owned status contract.",
+      "comparison": "Known wrong admission persists; negative effect assertion still missed."
+    }
+  ],
+  "logical_calls": 6,
+  "provider_dispatches": 6,
+  "semantic_retries": 0,
+  "transport_retries": 0,
+  "tokens_in": 79383,
+  "tokens_out": 2248,
+  "latency_ms": [
+    4120,
+    4410,
+    1798,
+    3903,
+    1874,
+    4179
+  ],
+  "measured_provider_cost_usd": 0.035350000000000006,
+  "ledger_increment_usd": 0.035352,
+  "budget_after": {
+    "maximum_usd": 5.0,
+    "charged_usd": 1.320785,
+    "measured_usd": 0.230785,
+    "reserved_or_unknown_usd": 1.09,
+    "attempts": 81,
+    "models": [
+      {
+        "model": "gpt-4.1-mini-2025-04-14",
+        "state": "measured",
+        "attempts": 80,
+        "charged_usd": 0.230785
+      },
+      {
+        "model": "text-embedding-3-large",
+        "state": "reserved_or_unknown",
+        "attempts": 1,
+        "charged_usd": 1.09
+      }
+    ]
+  },
+  "limits": [
+    "One stochastic sample per previously seen candidate; this is not an accuracy or false-positive population estimate.",
+    "No writer, retrieval, browser, saved-matter operation or semantic repair was run.",
+    "The prior baseline/revised samples were interleaved; this six-call run used case order 01 through 06. Caching and timing were not controlled.",
+    "Valid source references demonstrate receipt reliability, not whether the referenced evidence supports the semantic judgment."
+  ],
+  "input_sha256": "1d852f023caac99c1ec0cc3d5b205b0601453330d3a72417e5d173d9c40f0bb5",
+  "baseline_sha256": "943fa1ce4a7bcdc347609b50404e8531199f5fe45b0d7585bce190fcb239ca58",
+  "results_sha256": "7e1b4963b7758531cfc0526b79ba1b4c4400cbbcc5485784487f1f5cdc34e93f"
+}
