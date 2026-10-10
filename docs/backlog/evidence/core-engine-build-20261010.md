@@ -1307,3 +1307,80 @@ source-reader JavaScript suite plus new core/archive/nonmutation checks passes.
 An offline Playwright fixture opened both captured source panes before/after replay,
 verified exact text/right alignment/frozen header and made zero network/model calls;
 root inspected the screenshot. This establishes presentation, not semantic accuracy.
+
+## GPT-6 deployment wiring and eight paired selected-support cases
+
+The deployment migration is committed through `1502c25`: published model/pricing
+terms (`afffaa2`), writer/reviewer tier owners (`b622948`, `1289995`), captured
+cache-aware spending (`aa04e8a`), counted Responses transport (`dc11cfd`), the SDK
+capability requirement (`def7256`), deployment routing (`e74c62d`) and fresh
+receipt-derived metrics (`1502c25`). Understanding and planning use GPT-6 Luna
+with reasoning none; writing and review use GPT-6.1 Sol with reasoning low. The
+writer/reviewer share a model by explicit policy, so independent review still
+has correlated-error risk. The separate source-pane display checkpoint is
+`36a6889`. None of these changes establishes legal-answer acceptance.
+
+After the owner reinstated comparisons within the existing $1 allocation, eight
+frozen selected-support cases were sent once to each model through the current
+Responses adapter and bounded ledger. Exact prompts, source text, schema,
+provider counts, responses and cache receipts are retained in
+`reviewer-gpt6-paired-results.json`; the separate reading is
+`reviewer-gpt6-paired-independent-assessment.json`. This uses an experimental
+narrow support reviewer, not the production whole-context release reviewer.
+
+Both models gave correct dispositions for the twelve authored units in this
+limited sample: no observed wrong admission, false rejection, provider failure
+or mechanical rejection. This is not twelve wholly pre-labelled oracle decisions:
+three actual-answer units were left to independent content judgment. Both caught
+the tested wrong legal relationship, stale selected date, account-only legal claim
+and counsel-versus-court error while accepting the corresponding valid neighbours.
+Their rationale still sometimes compressed reported claims, and one explanation
+treated questions too broadly as harmless. Those reasons must not become facts.
+
+The sixteen generations cost $0.061348 on the rounded ledger: Luna $0.002979 and
+Sol $0.058369. Each model used 17,745 input tokens and wrote 15,195 cache tokens,
+with zero cache reads. This run incurred write charges and demonstrates no cache
+saving. Mean elapsed time was 4.60 seconds for Luna and 5.14 seconds for Sol,
+including exact input counting, generation and local evidence handling. One run
+per case cannot establish stable speed differences. Sol supplied more precise
+reasons in places, but did not improve unit dispositions on this sample.
+
+At completion of this comparison, cumulative comparison spending was
+$0.243705 of $1. Shared ledger charges were $2.656657 of $5: $1.141226 measured
+and $1.515431 reserved/unknown. These are that comparison's checkpoint balances;
+subsequent browser or whole-context measurements must be added separately.
+
+Normal application call count remains four model generations, at most six after
+the existing shared correction and independent recheck. Bounded GPT-6 calls add
+one exact non-generative input-count request per attempted stage. Cache accounting
+does not remove or add a legal-analysis stage. Whole-context review, writer repair,
+retrieval relevance and safe useful browser delivery remain open.
+
+The next measurement used the unchanged production whole-context review boundary.
+Luna identified the key wrong-law uses in units b4/b5/b6, but one finding mistyped
+the long owned source ID. Mechanical admission rejected the result, with no public
+release or automatic retry. Its reasons also incorrectly said technician possession was absent
+although the reviewed unit explicitly included it and overstated an opposing-position
+omission. This call cost $0.011119 on the ledger. At that point, comparisons totalled
+$0.254824 and shared charges $2.667776; Sol-only continuation remained pending.
+Evidence: `review-browser-rerank-v1-gpt6-production-pair-results.json`. Narrow-check
+success therefore has not yet translated into an admitted full-review result.
+
+The new diagnostic server on port 8176 reports the intended Luna/Sol tier mapping.
+At this documentation checkpoint the main browser instance on 8175 still needed
+restart and direct verification. Configuration, a diagnostic model listing and
+offline checks do not establish that the normal browser is using the new route.
+The next browser evidence must identify the served instance and actual per-stage
+model receipts before making that claim.
+
+The separate Sol continuation completed through the unchanged full-review admission
+boundary. It rejected b3/b4/b5/b6 and preserved the four supported units, including
+the client questions. It identified the unsupported report-production duty,
+wrong legal relationships and the difference between denying damage and denying
+causing damage. Its rejection was mechanically admitted; this is evidence about
+review of the old faulty draft, not a new delivered legal answer. The single call
+cost $0.221071, with 78,697 input tokens, zero cache reads and 78,694 cache writes.
+Comparisons now total $0.475895/$1; the shared ledger is $2.888847/$5, including
+$1.515431 retained unknown reservations. No retry of the rejected Luna result was
+made. Evidence: `review-browser-rerank-v1-sol-production-continuation-results.json`.
+
