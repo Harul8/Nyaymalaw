@@ -5,6 +5,7 @@ import json
 import pytest
 
 from nm.core_engine.research import accept, plan, retrieve, search_queries, validate
+from nm.core_engine import answer_sources
 from nm.core_engine.retrieval import HybridSearcher, SearchUnavailable
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import ContextOverflow, ModelError, ModelResult, Usage
@@ -127,6 +128,53 @@ def test_not_needed_search_does_not_load_corpus_or_invent_execution():
     record = retrieve(admitted, None, context())
     assert record["searches"] == record["failures"] == {}
     assert record["state"] == "evaluated" and record["plan"]["semantic_review"] == "pending"
+
+
+@pytest.mark.parametrize("distinct_authority_needed", [False, True])
+def test_independent_results_survive_shared_or_distinct_authority_plans(distinct_authority_needed):
+    """Supplied proposals prove handoffs, not the model's judgment of legal need."""
+    ctx = context("Assess the reported position and prepare internal questions. Do not contact anyone.")
+    analysis = work(None)
+    questions = work(None)
+    questions.update(purpose="Clarify material gaps using this turn's applicable research",
+                     outcome="Internal questions for the client", enquiries=[])
+    if distinct_authority_needed:
+        questions["enquiries"] = [{"text": "legal requirements for disclosure of relevant records",
+                                  "purpose": "Find the separately needed disclosure conditions",
+                                  "basis": "conditional"}]
+    model = Model({"work": [analysis, questions]})
+    admitted = plan(model, ctx, {"units": []})
+    assert len(model.calls) == 1 and len(admitted["work"]) == 2
+    assert admitted["work"][1]["outcome"] == questions["outcome"]
+    assert admitted["work"][1]["constraints"] == questions["constraints"]
+    assert admitted["work"][1]["sources"][0]["text"] == ctx["latest"]["text"]
+
+    searcher = HybridSearcher({"provision": Collection(), "judgment": Collection("judgment")})
+    search = searcher.search
+    requests = []
+
+    def capture(queries):
+        requests.append(queries)
+        return search(queries)
+
+    searcher.search = capture
+    record = retrieve(admitted, searcher, ctx)
+    assert validate(record, admitted, ctx) == record
+    assert len(requests) == (2 if distinct_authority_needed else 1)
+    assert record["plan"]["work"] == admitted["work"]
+    assert record["plan"]["semantic_review"] == "pending"
+    assert ("t2:w2" in record["searches"]) == distinct_authority_needed
+    assert record["failures"] == {}
+
+    sources = answer_sources.build(ctx, record)
+    assert sources[ctx["latest"]["source_id"]]["work_ids"] == ["t2:w1", "t2:w2"]
+    legal = [row for row in sources.values() if row["kind"] in {"provision", "judgment"}]
+    assert legal
+    # The same turn's checked catalogue remains selectable by later requested work.
+    # No new search or completion is invented for a work item with empty enquiries.
+    assert answer_sources.select({"source_id": legal[0]["id"], "quote": None}, sources)["text"] == legal[0]["text"]
+    if not distinct_authority_needed:
+        assert all(row["work_ids"] == ["t2:w1"] for row in legal)
 
 
 def test_unconfigured_search_is_a_gap_and_not_empty_success():

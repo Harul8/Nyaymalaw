@@ -1,0 +1,172 @@
+{
+  "model": "gpt-4.1-mini-2025-04-14",
+  "source_sha256": "998be8eb4aa8e48729a39c2093c4c1a09ca33c00f98076d002fefcaaecc6d335",
+  "prompt_sha256": "8ad2886c560936aaaadef45f853143bb0e1ecdf6008b292531a7d71ab9fadce4",
+  "baseline_sha256": {
+    "research-probe.json": "38d173acadf99cf7830a134469a79fde7507cc5a0eced7fd858048d498152497",
+    "offline-retrieval-capacity-snapshot.json": "594ee65cc7bb9a1964d44650ca19af5195e9330e5d016667bafb63db65c16ee3",
+    "understanding-five-live.json": "568168dab1ce439e97b4ddb1bc0e617385f480fb418d6935fb0f68d070124fd2"
+  },
+  "maximum_logical_calls": 6,
+  "semantic_retries": 0,
+  "actual_spend_stop_usd": 0.08,
+  "shared_ledger": "api-budget.sqlite",
+  "shared_hard_cap_usd": 5,
+  "scope": "Fixed saved samples; historical baseline is not contemporaneous A/B or a fresh holdout estimate",
+  "expectation_correction": "Historical report-absent label corrected only in this new assessment to not supplied/existence unknown",
+  "success_distinctions_before_run": [
+    "Preserve every independent requested result, restrictions and factual qualifications.",
+    "Queries seek distinct legal relationships/propositions, not instructions to draft outputs.",
+    "Shared research can leave an independent work item's enquiries empty without dropping that work.",
+    "Materially different legal needs still receive distinct enquiries; fewer queries alone is not success.",
+    "Plans and source selections remain unadmitted semantic proposals; schema does not certify coverage.",
+    "No source retrieval or writer capacity claim follows from this planner-only comparison."
+  ],
+  "cases": [
+    {
+      "name": "deposit_and_drive",
+      "expected_before_run": {
+        "independent_results": [
+          "Legal routes to recover deposit",
+          "Legal routes to recover drive",
+          "Draft client questions"
+        ],
+        "qualifications": [
+          "Damage is alleged and disputed",
+          "Joint inspection report has not been supplied; existence is unknown",
+          "Drive purpose is client-reported",
+          "Client being based in Hyderabad does not establish jurisdiction"
+        ],
+        "restrictions": [
+          "Do not send anything",
+          "No admission of damage"
+        ],
+        "discovery_distinctions": [
+          "Contractual basis/limits of deposit retention versus proof of alleged damage",
+          "Possession and conditional retention/return of loaned property",
+          "Useful remedies/procedure or adverse bases, only conditionally"
+        ],
+        "forbidden": [
+          "Merge away independently requested results",
+          "Assume the alleged damage is proved",
+          "Invent legal citations or exact provisions"
+        ]
+      },
+      "input_origin": "exact saved original call",
+      "baseline_origin": "research-probe.json"
+    },
+    {
+      "name": "permission_followup",
+      "expected_before_run": {
+        "independent_results": [
+          "Explain interim relief",
+          "Examine continued passage use after permission ends"
+        ],
+        "qualifications": [
+          "Ownership unsettled",
+          "Neighbour claims independent right and client denies it",
+          "No judicial determination",
+          "Deed plan unavailable",
+          "Permission end date from prior account"
+        ],
+        "restrictions": [
+          "Do not draft notice",
+          "Do not equate permission with settled ownership"
+        ],
+        "forbidden": [
+          "Treat earlier NM ownership interpretation as proof",
+          "Abandon passage work due to diversion",
+          "Pretend missing deed plan is available"
+        ]
+      },
+      "input_origin": "exact saved original call",
+      "baseline_origin": "research-probe.json"
+    },
+    {
+      "name": "social_closing",
+      "expected_before_run": {
+        "independent_results": [],
+        "expected_work": [],
+        "forbidden": [
+          "Resume pending legal work despite social closure",
+          "Invent a legal task or record update"
+        ]
+      },
+      "input_origin": "exact saved original call",
+      "baseline_origin": "research-probe.json"
+    },
+    {
+      "name": "opponent_allegation",
+      "expected_before_run": {
+        "independent_results": [
+          "Explain legal questions relevant to opposing allegation",
+          "List agreement checks"
+        ],
+        "qualifications": [
+          "Concealment is opposing allegation",
+          "Client denies knowledge",
+          "Sale agreement unreviewed",
+          "No asset type or transaction terms supplied"
+        ],
+        "restrictions": [
+          "No admission",
+          "No authority to pay"
+        ],
+        "discovery_distinctions": [
+          "Whether a duty of disclosure/knowledge requirement applies",
+          "Relevance of agreement terms and allocation of risk",
+          "Conditional entitlement to claimed inspection costs and contrary positions"
+        ],
+        "forbidden": [
+          "Admit concealment",
+          "Assume seller/buyer roles or asset type without qualification",
+          "Invent contract terms, legal citations or exact provisions"
+        ]
+      },
+      "input_origin": "exact saved original call",
+      "baseline_origin": "research-probe.json"
+    },
+    {
+      "name": "capacity_deposit_drive",
+      "expected_before_run": {
+        "independent_results": [
+          "Conditional deposit and drive analysis including contrary positions",
+          "Draft useful client questions"
+        ],
+        "qualifications": [
+          "Damage remains alleged and denied",
+          "No joint report was sent, not proved nonexistent",
+          "Client reports return, documents and drive purpose; none is independently checked",
+          "Hyderabad client location alone does not fix jurisdiction",
+          "Owner claims a right to retain the drive; no entitlement is established"
+        ],
+        "restrictions": [
+          "Do not contact anyone",
+          "Do not admit damage",
+          "Do not treat reported documents as checked"
+        ],
+        "search_distinction": "Questions can use the same law; output format alone does not justify additional enquiries"
+      },
+      "input_origin": "exact saved capacity case; no retrieval rerun",
+      "baseline_origin": "offline-retrieval-capacity-snapshot.json"
+    },
+    {
+      "name": "date_correction",
+      "expected_before_run": {
+        "independent_requests": [
+          "Correct NM's mistaken date in its summary"
+        ],
+        "information": "Amount remains uncertain; original date remains 14 April",
+        "restriction": "Do not enter a confirmed payment figure",
+        "forbidden": "Claim the correction has been applied or invent a payment amount",
+        "independent_results": [
+          "Correct NM's summary date from 14 May to the original 14 April"
+        ],
+        "expected_enquiries": [],
+        "search_distinction": "This factual repair requires no legal retrieval"
+      },
+      "input_origin": "saved understanding case, not previously measured by this planner",
+      "baseline_origin": null
+    }
+  ]
+}

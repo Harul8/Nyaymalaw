@@ -521,3 +521,21 @@ without another dispatch, and never calls the scripted positive reviewer. These
 tests establish the mechanical boundary, not real-model accuracy. No extra model
 call; the mismatch stops after understanding, planning and drafting. Visible
 citation-check statuses and actual browser acceptance remain open.
+
+## Research sharing experiment — not promoted
+
+The six-case GPT-4.1 mini comparison cost $0.006913, with no semantic retries.
+Total measured spend is $0.061539/$5. The revised prompt reduced seven enquiries to
+two on the capacity case while preserving analysis and client questions, but it
+reversed a party's role and strengthened a report not being supplied into absence.
+Other cases bundled independent outputs, retained a drafting-instruction search,
+attempted work after social closing, or dropped a restriction from the selected
+scope. Fewer enquiries did not establish better planning. The production prompt
+was restored unchanged; the candidate and exact outputs remain in
+outputs/core-engine-build-20261010/research-legal-need-six.json.
+
+18 focused research checks pass after restoration, including shared versus distinct
+authority needs. These establish that an independent output can use another work
+item's held catalogue without inventing its own search receipt; they do not prove
+semantic quality. Next focused hypothesis: preserve factual premises while allowing
+conditional legal characterisations. Query sharing remains unresolved.
