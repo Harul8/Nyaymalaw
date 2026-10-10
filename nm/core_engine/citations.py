@@ -36,10 +36,9 @@ from pathlib import Path
 from nm.shared.citation_contracts import CASE, READ_FORMATS, find_reporter_citations
 from nm.shared.text_contracts import fold_spacing, words
 
-CONTRACT = "citation_check_v2"
+CONTRACT = "citation_check_v3"
 ROOT = Path(__file__).resolve().parents[2]
 _EXCERPT = 280
-_QUOTE_WORDS = 4  # a fragment shorter than this is a phrase, not a checkable quotation
 _NAME_GAP = 60    # characters allowed between a case name and its citation
 
 
@@ -300,7 +299,7 @@ def _suggestions(given: str | None, citation, index: "CaseIdentityIndex") -> lis
 
 _QUOTATION = re.compile(r"“([^”]+)”|\"([^\"]+)\"")
 _PARAGRAPH = re.compile(r"\n[ \t]*\n")
-_FRAGMENT_BREAK = re.compile(r"\.\s?\.\s?\.|…|\[[^\]]*\]")
+_FRAGMENT_BREAK = re.compile(r"\.\s?\.\s?\.|…")
 _TYPOGRAPHY = str.maketrans({"“": '"', "”": '"', "‘": "'", "’": "'", "–": "-", "—": "-",
                              " ": " "})
 
@@ -312,18 +311,23 @@ def _plain(text: str) -> str:
 
 def _fragments(quote: str) -> list[str]:
     parts = [_plain(part).strip(" ,;:.'\"") for part in _FRAGMENT_BREAK.split(quote)]
-    return [part for part in parts if len(part.split()) >= _QUOTE_WORDS]
+    return [part for part in parts if part]
 
 
 def _find_in_order(fragments: list[str], text: str) -> tuple[int, int] | None:
     """Where the quotation sits, every fragment found in order; the first letter may differ in case."""
+    if not fragments:
+        return None
     at, first = 0, None
     for fragment in fragments:
-        hits = [i for i in (text.find(fragment, at), text.find(fragment[0].swapcase() + fragment[1:], at))
-                if i >= 0]
-        if not hits:
+        variants = (fragment, fragment[0].swapcase() + fragment[1:])
+        pattern = (r"(?<!\w)" if fragment[0].isalnum() else "") + (
+            "(?:" + "|".join(re.escape(v) for v in variants) + ")"
+        ) + (r"(?!\w)" if fragment[-1].isalnum() else "")
+        hit = re.compile(pattern).search(text, at)
+        if hit is None:
             return None
-        found = min(hits)
+        found = hit.start()
         first = found if first is None else first
         at = found + len(fragment)
     return first, at
@@ -467,16 +471,22 @@ def check_citations(text: str, index: CaseIdentityIndex) -> dict:
         owners = by_paragraph.get(paragraph)
         if not owners and paragraph > 0 and text[paragraph_starts[paragraph - 1]:paragraph_starts[paragraph]].rstrip().endswith(":"):
             owners = by_paragraph.get(paragraph - 1)
-        owners = [row for row in owners or () if len(row["judgments"]) == 1]
+        owners = owners or []
         if not owners:
             continue
+        candidates = sorted({j["case_id"] for row in owners for j in row["judgments"]})
+        sole = len(candidates) == 1 and all(row["lookup"] == "found" for row in owners)
         fragments = _fragments(quotation["quote"])
         outcomes = {}
         for row in owners:
+            if row["lookup"] != "found":
+                outcomes[row["id"]] = {"result": "not_assessed",
+                    "detail": "This candidate citation has no uniquely resolved held judgment."}
+                continue
             judgment = row["judgments"][0]
             if not fragments:
                 outcomes[row["id"]] = {"result": "not_assessed",
-                                       "detail": "Too short to check as a quotation."}
+                                       "detail": "No quotation content remains after omission marks."}
                 continue
             try:
                 source = texts.get(judgment["case_id"]) or _plain(index.text(judgment))
@@ -484,7 +494,8 @@ def check_citations(text: str, index: CaseIdentityIndex) -> dict:
                 outcomes[row["id"]] = {"result": "not_assessed", "detail": f"Not checked: {exc}."}
                 continue
             texts[judgment["case_id"]] = source
-            span = _find_in_order(fragments, source)
+            span = (_find_in_order([_plain(quotation["quote"])], source)
+                    or _find_in_order(fragments, source))
             if span:
                 outcomes[row["id"]] = {"result": "found", "detail": (
                     "These words are in the judgment's text. Read them in context: they may be the court's "
@@ -492,17 +503,19 @@ def check_citations(text: str, index: CaseIdentityIndex) -> dict:
                     "excerpt": {"before": source[max(0, span[0] - _EXCERPT):span[0]],
                                 "words": source[span[0]:span[1]],
                                 "after": source[span[1]:span[1] + _EXCERPT]}}
+            elif "[" in quotation["quote"] or "]" in quotation["quote"]:
+                outcomes[row["id"]] = {"result": "not_assessed", "detail":
+                    "The complete wording, including bracketed text, was not found. "
+                    "Any editorial addition needs separate assessment; it has not been omitted."}
             else:
                 outcomes[row["id"]] = {"result": "not_found",
                                        "detail": "These words are not in the held text of this judgment."}
-        found_in = [row for row in owners if outcomes[row["id"]]["result"] == "found"]
         for row in owners:
             outcome = outcomes[row["id"]]
-            if outcome["result"] == "not_found" and found_in:
-                outcome = {"result": "found_elsewhere", "detail": "Found in another judgment cited here: "
-                           + "; ".join(r["judgments"][0]["title"] for r in found_in) + "."}
-            row["quotes"].append({"quote": quotation["quote"], **outcome})
-            if outcome["result"] == "not_found":
+            row["quotes"].append({"quote": quotation["quote"], **outcome,
+                                  "candidate_case_ids": candidates,
+                                  "attribution": "single_candidate" if sole else "unresolved"})
+            if outcome["result"] == "not_found" and sole:
                 row["status"] = "check"
                 row["reasons"].append("A quotation beside this citation is not in the held text of the "
                                       "judgment it leads to.")

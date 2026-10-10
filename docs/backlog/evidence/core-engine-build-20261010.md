@@ -172,3 +172,22 @@ records treatment only for the independent unique target. Existing-index overwri
 still refuses. 21 producer/shared-parser/reader checks pass; static checks pass.
 The held index was not rebuilt: its collision coverage remains unassessed. Existing
 keyword-derived treatment rows are discovery hints, not checked court treatment.
+
+## SEQ.2 — complete quotation fragments and attribution
+
+Start READY: `citations.py` must check every quoted substantive fragment. Missing
+short words cannot disappear during normalization; nearby unresolved citations
+cannot disappear when deciding possible source ownership. Counterexamples include
+a dropped negation and a readable neighbouring case falsely becoming sole owner.
+
+Build: v3 quote results preserve short fragments, word boundaries and bracketed
+words. Exact bracketed source text can match; unmatched editorial wording remains
+visible and unassessed. Presence in a judgment and intended attribution are separate.
+Parallel keys for one owner remain a single candidate. Multiple or unresolved
+candidate sources remain unresolved; their unmatched neighbours are not falsely
+declared misquoted. Whitespace/typography and explicit omissions still work.
+
+Evidence: 61 focused citation/parser checks pass, including legitimate short quotes,
+missing negations, word substrings, brackets, multiple/unreadable candidate sources
+and parallel citations. No model calls; no legal holding/adoption inference added.
+Statute identity/readback and integrated source display remain pending.
