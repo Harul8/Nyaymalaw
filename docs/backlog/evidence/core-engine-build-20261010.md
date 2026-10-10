@@ -1592,3 +1592,46 @@ source-assessment model call would change the count and requires its own measure
 justification. Shared charges remain $3.682197/$5, including $1.515431 reserved or
 unknown; no further API calls were made for this diagnosis. Broad retrieval and
 browser acceptance remain open.
+
+### SEQ.3 source-store repair checkpoint
+
+Owner authority: resolve the pending retrieval issues and remove harmful additions
+relative to AgentifiedNM. The first invariant is that a retained, exactly owned
+parent passage can reach research, authority checking and saved source delivery;
+missing surrounding structure alone must not make readable text unrankable.
+Counterexamples remain duplicate source IDs, another Act's parent, cycles, changed
+artifacts and unrelated occurrences sharing a printed number. Start is closed for
+this source-resolution prerequisite, not for overall legal-answer quality.
+
+Only `nm/core_engine/retrieval.py` changes in this production piece. Retrieval v4
+accepts an explicit `parent:<chunk_id>` source address alongside indexed integer
+positions. The declared parent-map path, format and SHA-256 bind the source artifact
+to the corpus revision. Exact parent keys and original words are preserved. A
+duplicate or malformed record cannot supply a parent, while independent valid
+parent records survive. The indexed source store owns indexed identities; the
+declared contextual store supplies missing indexed parents, never vector positions.
+Historical v1-v3 reject parent addresses and preserve their integer projections.
+
+The earlier rule relegating every readable source with unavailable ancestry to an
+unranked tail is removed. Such passages now receive a score for their own exact
+text and retain a bounded context gap. No synthetic container or complete ancestry
+is invented. Readback also includes checked contextual parents. Without that
+handoff, a parent selected by search was falsely rejected as a different snapshot
+by the existing authority boundary. No new model call or prompt was introduced.
+
+164 focused tests pass, including parent ownership counterexamples, authenticated
+`/api/turn`, authority matching, atomic save, source-pane payload, reopen and
+idempotent replay. These use scripted model responses and do not prove semantic
+accuracy. All 43 retained v3 search snapshots replay without change. Against the
+existing corpus, six inspected NI138 chains resolve; the separately inspected
+article remains readable with an explicit structural-container gap. No corpus
+words or vector positions were edited. Exact evidence is in
+[the source-store record](core-retrieval-parent-store-20261010.json).
+
+Main instance 8175 was restarted with the verified source code and the shared $5
+development ledger. Health reports current fingerprint `0ab47e3690d1d684`, Luna
+routine planning and unchanged configured Sol writing/review. CUA fails during
+Windows sandbox initialization before tab attachment; browser acceptance is not
+claimed. The next prerequisite is preserving the context-store declaration when
+the existing lineage producer runs. Decomposition, relevance/coverage, live model
+and browser verification remain open; this checkpoint does not close SEQ.3.

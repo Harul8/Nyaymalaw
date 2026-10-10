@@ -1,0 +1,421 @@
+{
+  "contract": "hybrid_retrieval_v4",
+  "production_file": "nm/core_engine/retrieval.py",
+  "production_sha256": "05f86134553be18c8a286cb512aa07a53ecb5acfcd101511835ec754f3dad7ce",
+  "corpus_revision": "3e803675ef23aa81c6b7638a7689b07ce5dc3ccdc6a7e5396857667f94ca25aa",
+  "context_store": {
+    "path": "bareacts_v3_parents.json",
+    "format": "parent_map_v1",
+    "sha256": "aaa3736a1dab9b76f4f1ca44f5bcee345a40c14cab26fc2232a9e02f5549080b"
+  },
+  "api_calls": 0,
+  "corpus_text_changed": false,
+  "results": [
+    {
+      "act_id": "the_limitation_act_1963",
+      "position": 339559,
+      "state": "readable_with_context_gap",
+      "reason": "Parent source is missing or has conflicting ownership",
+      "context": null
+    },
+    {
+      "act_id": "the_negotiable_instruments_act_1881",
+      "position": 339730,
+      "state": "connected",
+      "reason": null,
+      "context": {
+        "scope": "exact_parent_tree",
+        "bounded": false,
+        "unread_positions": [],
+        "segments": [
+          {
+            "position": "parent:the_negotiable_instruments_act_1881_SECTION_138_OCC2",
+            "row": {
+              "chunk_id": "the_negotiable_instruments_act_1881_SECTION_138_OCC2",
+              "doc_type": "bare_act",
+              "act_id": "the_negotiable_instruments_act_1881",
+              "act_name": "The Negotiable Instruments Act",
+              "year": "1881",
+              "chapter": "",
+              "section_number": "138",
+              "section_title": "Dishonour of cheque for insufficiency, etc., of funds in the account. —Where any cheque",
+              "sub_section": "",
+              "clause": "",
+              "sub_clause": "",
+              "atom_type": "section_head",
+              "parent_chunk_id": "",
+              "parent_chain": [
+                "section_138"
+              ],
+              "full_text": "The Negotiable Instruments Act, 1881 — s.138: Dishonour of cheque for insufficiency, etc., of funds in the account. —Where any cheque\n138. Dishonour of cheque for insufficiency, etc., of funds in the account. —Where any cheque \ndrawn by a person on an account maintained by him with a banker for payment of any amount of money \nto another person from out of that account for the discharge, in whole or in part, of any debt  or other \nliability, is returned by the bank unpaid, either because of the amount of money standing to the credit of \nthat account is insufficient to honour the cheque or that it exceeds the amount arranged to be paid from \nthat account by an agreement made with that bank, such person shall be deemed to have committed an \noffence and shall, without prejudice to any other provision of this Act, be punished with imprisonment for \n4[a term which may be extended to two years’], or with fine which may extend to twic e the amount of the \ncheque, or with both: \nProvided that nothing contained in this section shall apply unless— \n(a) thecheque has been presented to the bank within a period of six months from the date on \nwhich it is drawn or within the period of its validity, whichever is earlier; \n(b) the payee or the holder in due course of the cheque, as the case may be, makes a demand for \nthe payment of the said amount of money by giving a notice; in writing, to the drawer of the cheque, \n5[within thirty days] of the receipt of information by him from the bank regarding the return of the \ncheque as unpaid; and \n(c) the drawer of such cheque fails to make the payment of the said amount of money to the payee \nor, as the case may be, to the holder in due course of the cheque, within fifteen days of the receipt of \nthe said notice. \nExplanation.—For the purposes of this section, “debt of other liability” means a legally enforceable debt \nor other liability.",
+              "keywords": []
+            },
+            "content_digest": "b89580807c1a9a02c4e2d5a81a54dadc5490c19e3f3b6f05fa484dbab44199da"
+          },
+          {
+            "position": 339730,
+            "row": {
+              "chunk_id": "the_negotiable_instruments_act_1881_SECTION_138_OCC2_PROVISO_1",
+              "doc_type": "bare_act",
+              "act_id": "the_negotiable_instruments_act_1881",
+              "act_name": "The Negotiable Instruments Act",
+              "year": "1881",
+              "chapter": "",
+              "section_number": "138",
+              "section_title": "Dishonour of cheque for insufficiency, etc., of funds in the account. —Where any cheque",
+              "sub_section": "",
+              "clause": "",
+              "sub_clause": "",
+              "atom_type": "proviso",
+              "parent_chunk_id": "the_negotiable_instruments_act_1881_SECTION_138_OCC2",
+              "parent_chain": [
+                "section_138",
+                "proviso_1"
+              ],
+              "full_text": "The Negotiable Instruments Act, 1881 — s.138 [proviso]: Dishonour of cheque for insufficiency, etc., of funds in the account. —Where any cheque\nProvided that nothing contained in this section shall apply unless—",
+              "keywords": []
+            },
+            "content_digest": "9367da1806d875cba09e56fafd31872a4ab9d2717eb599ef689bee48cb3d6131"
+          }
+        ]
+      }
+    },
+    {
+      "act_id": "the_negotiable_instruments_act_1881",
+      "position": 339731,
+      "state": "connected",
+      "reason": null,
+      "context": {
+        "scope": "exact_parent_tree",
+        "bounded": false,
+        "unread_positions": [],
+        "segments": [
+          {
+            "position": "parent:the_negotiable_instruments_act_1881_SECTION_138_OCC2",
+            "row": {
+              "chunk_id": "the_negotiable_instruments_act_1881_SECTION_138_OCC2",
+              "doc_type": "bare_act",
+              "act_id": "the_negotiable_instruments_act_1881",
+              "act_name": "The Negotiable Instruments Act",
+              "year": "1881",
+              "chapter": "",
+              "section_number": "138",
+              "section_title": "Dishonour of cheque for insufficiency, etc., of funds in the account. —Where any cheque",
+              "sub_section": "",
+              "clause": "",
+              "sub_clause": "",
+              "atom_type": "section_head",
+              "parent_chunk_id": "",
+              "parent_chain": [
+                "section_138"
+              ],
+              "full_text": "The Negotiable Instruments Act, 1881 — s.138: Dishonour of cheque for insufficiency, etc., of funds in the account. —Where any cheque\n138. Dishonour of cheque for insufficiency, etc., of funds in the account. —Where any cheque \ndrawn by a person on an account maintained by him with a banker for payment of any amount of money \nto another person from out of that account for the discharge, in whole or in part, of any debt  or other \nliability, is returned by the bank unpaid, either because of the amount of money standing to the credit of \nthat account is insufficient to honour the cheque or that it exceeds the amount arranged to be paid from \nthat account by an agreement made with that bank, such person shall be deemed to have committed an \noffence and shall, without prejudice to any other provision of this Act, be punished with imprisonment for \n4[a term which may be extended to two years’], or with fine which may extend to twic e the amount of the \ncheque, or with both: \nProvided that nothing contained in this section shall apply unless— \n(a) thecheque has been presented to the bank within a period of six months from the date on \nwhich it is drawn or within the period of its validity, whichever is earlier; \n(b) the payee or the holder in due course of the cheque, as the case may be, makes a demand for \nthe payment of the said amount of money by giving a notice; in writing, to the drawer of the cheque, \n5[within thirty days] of the receipt of information by him from the bank regarding the return of the \ncheque as unpaid; and \n(c) the drawer of such cheque fails to make the payment of the said amount of money to the payee \nor, as the case may be, to the holder in due course of the cheque, within fifteen days of the receipt of \nthe said notice. \nExplanation.—For the purposes of this section, “debt of other liability” means a legally enforceable debt \nor other liability.",
+              "keywords": []
+            },
+            "content_digest": "b89580807c1a9a02c4e2d5a81a54dadc5490c19e3f3b6f05fa484dbab44199da"
+          },
+          {
+            "position": 339731,
+            "row": {
+              "chunk_id": "the_negotiable_instruments_act_1881_SECTION_138_OCC2_CLAUSE_a",
+              "doc_type": "bare_act",
+              "act_id": "the_negotiable_instruments_act_1881",
+              "act_name": "The Negotiable Instruments Act",
+              "year": "1881",
+              "chapter": "",
+              "section_number": "138",
+              "section_title": "Dishonour of cheque for insufficiency, etc., of funds in the account. —Where any cheque",
+              "sub_section": "",
+              "clause": "(a)",
+              "sub_clause": "",
+              "atom_type": "clause",
+              "parent_chunk_id": "the_negotiable_instruments_act_1881_SECTION_138_OCC2",
+              "parent_chain": [
+                "section_138",
+                "clause_a"
+              ],
+              "full_text": "The Negotiable Instruments Act, 1881 — s.138(a): Dishonour of cheque for insufficiency, etc., of funds in the account. —Where any cheque\n(a) thecheque has been presented to the bank within a period of six months from the date on \nwhich it is drawn or within the period of its validity, whichever is earlier;",
+              "keywords": []
+            },
+            "content_digest": "343fea84622090d3b79408a4d3727affdbc45ce958f4860beaf9eb698a4baadc"
+          }
+        ]
+      }
+    },
+    {
+      "act_id": "the_negotiable_instruments_act_1881",
+      "position": 339732,
+      "state": "connected",
+      "reason": null,
+      "context": {
+        "scope": "exact_parent_tree",
+        "bounded": false,
+        "unread_positions": [],
+        "segments": [
+          {
+            "position": "parent:the_negotiable_instruments_act_1881_SECTION_138_OCC2",
+            "row": {
+              "chunk_id": "the_negotiable_instruments_act_1881_SECTION_138_OCC2",
+              "doc_type": "bare_act",
+              "act_id": "the_negotiable_instruments_act_1881",
+              "act_name": "The Negotiable Instruments Act",
+              "year": "1881",
+              "chapter": "",
+              "section_number": "138",
+              "section_title": "Dishonour of cheque for insufficiency, etc., of funds in the account. —Where any cheque",
+              "sub_section": "",
+              "clause": "",
+              "sub_clause": "",
+              "atom_type": "section_head",
+              "parent_chunk_id": "",
+              "parent_chain": [
+                "section_138"
+              ],
+              "full_text": "The Negotiable Instruments Act, 1881 — s.138: Dishonour of cheque for insufficiency, etc., of funds in the account. —Where any cheque\n138. Dishonour of cheque for insufficiency, etc., of funds in the account. —Where any cheque \ndrawn by a person on an account maintained by him with a banker for payment of any amount of money \nto another person from out of that account for the discharge, in whole or in part, of any debt  or other \nliability, is returned by the bank unpaid, either because of the amount of money standing to the credit of \nthat account is insufficient to honour the cheque or that it exceeds the amount arranged to be paid from \nthat account by an agreement made with that bank, such person shall be deemed to have committed an \noffence and shall, without prejudice to any other provision of this Act, be punished with imprisonment for \n4[a term which may be extended to two years’], or with fine which may extend to twic e the amount of the \ncheque, or with both: \nProvided that nothing contained in this section shall apply unless— \n(a) thecheque has been presented to the bank within a period of six months from the date on \nwhich it is drawn or within the period of its validity, whichever is earlier; \n(b) the payee or the holder in due course of the cheque, as the case may be, makes a demand for \nthe payment of the said amount of money by giving a notice; in writing, to the drawer of the cheque, \n5[within thirty days] of the receipt of information by him from the bank regarding the return of the \ncheque as unpaid; and \n(c) the drawer of such cheque fails to make the payment of the said amount of money to the payee \nor, as the case may be, to the holder in due course of the cheque, within fifteen days of the receipt of \nthe said notice. \nExplanation.—For the purposes of this section, “debt of other liability” means a legally enforceable debt \nor other liability.",
+              "keywords": []
+            },
+            "content_digest": "b89580807c1a9a02c4e2d5a81a54dadc5490c19e3f3b6f05fa484dbab44199da"
+          },
+          {
+            "position": 339732,
+            "row": {
+              "chunk_id": "the_negotiable_instruments_act_1881_SECTION_138_OCC2_CLAUSE_b",
+              "doc_type": "bare_act",
+              "act_id": "the_negotiable_instruments_act_1881",
+              "act_name": "The Negotiable Instruments Act",
+              "year": "1881",
+              "chapter": "",
+              "section_number": "138",
+              "section_title": "Dishonour of cheque for insufficiency, etc., of funds in the account. —Where any cheque",
+              "sub_section": "",
+              "clause": "(b)",
+              "sub_clause": "",
+              "atom_type": "clause",
+              "parent_chunk_id": "the_negotiable_instruments_act_1881_SECTION_138_OCC2",
+              "parent_chain": [
+                "section_138",
+                "clause_b"
+              ],
+              "full_text": "The Negotiable Instruments Act, 1881 — s.138(b): Dishonour of cheque for insufficiency, etc., of funds in the account. —Where any cheque\n(b) the payee or the holder in due course of the cheque, as the case may be, makes a demand for \nthe payment of the said amount of money by giving a notice; in writing, to the drawer of the cheque, \n5[within thirty days] of the receipt of information by him from the bank regarding the return of the \ncheque as unpaid; and",
+              "keywords": []
+            },
+            "content_digest": "5833de1fc91782ebdeb4a1ed87bae7a8fc57700cb933d4c7a481d30ff198a2fa"
+          }
+        ]
+      }
+    },
+    {
+      "act_id": "the_negotiable_instruments_act_1881",
+      "position": 339733,
+      "state": "connected",
+      "reason": null,
+      "context": {
+        "scope": "exact_parent_tree",
+        "bounded": false,
+        "unread_positions": [],
+        "segments": [
+          {
+            "position": "parent:the_negotiable_instruments_act_1881_SECTION_138_OCC2",
+            "row": {
+              "chunk_id": "the_negotiable_instruments_act_1881_SECTION_138_OCC2",
+              "doc_type": "bare_act",
+              "act_id": "the_negotiable_instruments_act_1881",
+              "act_name": "The Negotiable Instruments Act",
+              "year": "1881",
+              "chapter": "",
+              "section_number": "138",
+              "section_title": "Dishonour of cheque for insufficiency, etc., of funds in the account. —Where any cheque",
+              "sub_section": "",
+              "clause": "",
+              "sub_clause": "",
+              "atom_type": "section_head",
+              "parent_chunk_id": "",
+              "parent_chain": [
+                "section_138"
+              ],
+              "full_text": "The Negotiable Instruments Act, 1881 — s.138: Dishonour of cheque for insufficiency, etc., of funds in the account. —Where any cheque\n138. Dishonour of cheque for insufficiency, etc., of funds in the account. —Where any cheque \ndrawn by a person on an account maintained by him with a banker for payment of any amount of money \nto another person from out of that account for the discharge, in whole or in part, of any debt  or other \nliability, is returned by the bank unpaid, either because of the amount of money standing to the credit of \nthat account is insufficient to honour the cheque or that it exceeds the amount arranged to be paid from \nthat account by an agreement made with that bank, such person shall be deemed to have committed an \noffence and shall, without prejudice to any other provision of this Act, be punished with imprisonment for \n4[a term which may be extended to two years’], or with fine which may extend to twic e the amount of the \ncheque, or with both: \nProvided that nothing contained in this section shall apply unless— \n(a) thecheque has been presented to the bank within a period of six months from the date on \nwhich it is drawn or within the period of its validity, whichever is earlier; \n(b) the payee or the holder in due course of the cheque, as the case may be, makes a demand for \nthe payment of the said amount of money by giving a notice; in writing, to the drawer of the cheque, \n5[within thirty days] of the receipt of information by him from the bank regarding the return of the \ncheque as unpaid; and \n(c) the drawer of such cheque fails to make the payment of the said amount of money to the payee \nor, as the case may be, to the holder in due course of the cheque, within fifteen days of the receipt of \nthe said notice. \nExplanation.—For the purposes of this section, “debt of other liability” means a legally enforceable debt \nor other liability.",
+              "keywords": []
+            },
+            "content_digest": "b89580807c1a9a02c4e2d5a81a54dadc5490c19e3f3b6f05fa484dbab44199da"
+          },
+          {
+            "position": 339733,
+            "row": {
+              "chunk_id": "the_negotiable_instruments_act_1881_SECTION_138_OCC2_CLAUSE_c",
+              "doc_type": "bare_act",
+              "act_id": "the_negotiable_instruments_act_1881",
+              "act_name": "The Negotiable Instruments Act",
+              "year": "1881",
+              "chapter": "",
+              "section_number": "138",
+              "section_title": "Dishonour of cheque for insufficiency, etc., of funds in the account. —Where any cheque",
+              "sub_section": "",
+              "clause": "(c)",
+              "sub_clause": "",
+              "atom_type": "clause",
+              "parent_chunk_id": "the_negotiable_instruments_act_1881_SECTION_138_OCC2",
+              "parent_chain": [
+                "section_138",
+                "clause_c"
+              ],
+              "full_text": "The Negotiable Instruments Act, 1881 — s.138(c): Dishonour of cheque for insufficiency, etc., of funds in the account. —Where any cheque\n(c) the drawer of such cheque fails to make the payment of the said amount of money to the payee \nor, as the case may be, to the holder in due course of the cheque, within fifteen days of the receipt of \nthe said notice.",
+              "keywords": []
+            },
+            "content_digest": "4099caa10c9444b609812689359425f65c39c800168336050703c884cca4adfd"
+          }
+        ]
+      }
+    },
+    {
+      "act_id": "the_negotiable_instruments_act_1881",
+      "position": 339734,
+      "state": "connected",
+      "reason": null,
+      "context": {
+        "scope": "exact_parent_tree",
+        "bounded": false,
+        "unread_positions": [],
+        "segments": [
+          {
+            "position": "parent:the_negotiable_instruments_act_1881_SECTION_138_OCC2",
+            "row": {
+              "chunk_id": "the_negotiable_instruments_act_1881_SECTION_138_OCC2",
+              "doc_type": "bare_act",
+              "act_id": "the_negotiable_instruments_act_1881",
+              "act_name": "The Negotiable Instruments Act",
+              "year": "1881",
+              "chapter": "",
+              "section_number": "138",
+              "section_title": "Dishonour of cheque for insufficiency, etc., of funds in the account. —Where any cheque",
+              "sub_section": "",
+              "clause": "",
+              "sub_clause": "",
+              "atom_type": "section_head",
+              "parent_chunk_id": "",
+              "parent_chain": [
+                "section_138"
+              ],
+              "full_text": "The Negotiable Instruments Act, 1881 — s.138: Dishonour of cheque for insufficiency, etc., of funds in the account. —Where any cheque\n138. Dishonour of cheque for insufficiency, etc., of funds in the account. —Where any cheque \ndrawn by a person on an account maintained by him with a banker for payment of any amount of money \nto another person from out of that account for the discharge, in whole or in part, of any debt  or other \nliability, is returned by the bank unpaid, either because of the amount of money standing to the credit of \nthat account is insufficient to honour the cheque or that it exceeds the amount arranged to be paid from \nthat account by an agreement made with that bank, such person shall be deemed to have committed an \noffence and shall, without prejudice to any other provision of this Act, be punished with imprisonment for \n4[a term which may be extended to two years’], or with fine which may extend to twic e the amount of the \ncheque, or with both: \nProvided that nothing contained in this section shall apply unless— \n(a) thecheque has been presented to the bank within a period of six months from the date on \nwhich it is drawn or within the period of its validity, whichever is earlier; \n(b) the payee or the holder in due course of the cheque, as the case may be, makes a demand for \nthe payment of the said amount of money by giving a notice; in writing, to the drawer of the cheque, \n5[within thirty days] of the receipt of information by him from the bank regarding the return of the \ncheque as unpaid; and \n(c) the drawer of such cheque fails to make the payment of the said amount of money to the payee \nor, as the case may be, to the holder in due course of the cheque, within fifteen days of the receipt of \nthe said notice. \nExplanation.—For the purposes of this section, “debt of other liability” means a legally enforceable debt \nor other liability.",
+              "keywords": []
+            },
+            "content_digest": "b89580807c1a9a02c4e2d5a81a54dadc5490c19e3f3b6f05fa484dbab44199da"
+          },
+          {
+            "position": 339733,
+            "row": {
+              "chunk_id": "the_negotiable_instruments_act_1881_SECTION_138_OCC2_CLAUSE_c",
+              "doc_type": "bare_act",
+              "act_id": "the_negotiable_instruments_act_1881",
+              "act_name": "The Negotiable Instruments Act",
+              "year": "1881",
+              "chapter": "",
+              "section_number": "138",
+              "section_title": "Dishonour of cheque for insufficiency, etc., of funds in the account. —Where any cheque",
+              "sub_section": "",
+              "clause": "(c)",
+              "sub_clause": "",
+              "atom_type": "clause",
+              "parent_chunk_id": "the_negotiable_instruments_act_1881_SECTION_138_OCC2",
+              "parent_chain": [
+                "section_138",
+                "clause_c"
+              ],
+              "full_text": "The Negotiable Instruments Act, 1881 — s.138(c): Dishonour of cheque for insufficiency, etc., of funds in the account. —Where any cheque\n(c) the drawer of such cheque fails to make the payment of the said amount of money to the payee \nor, as the case may be, to the holder in due course of the cheque, within fifteen days of the receipt of \nthe said notice.",
+              "keywords": []
+            },
+            "content_digest": "4099caa10c9444b609812689359425f65c39c800168336050703c884cca4adfd"
+          },
+          {
+            "position": 339734,
+            "row": {
+              "chunk_id": "the_negotiable_instruments_act_1881_SECTION_138_OCC2_CLAUSE_c_EXPLANATION_1",
+              "doc_type": "bare_act",
+              "act_id": "the_negotiable_instruments_act_1881",
+              "act_name": "The Negotiable Instruments Act",
+              "year": "1881",
+              "chapter": "",
+              "section_number": "138",
+              "section_title": "Dishonour of cheque for insufficiency, etc., of funds in the account. —Where any cheque",
+              "sub_section": "",
+              "clause": "(c)",
+              "sub_clause": "",
+              "atom_type": "explanation",
+              "parent_chunk_id": "the_negotiable_instruments_act_1881_SECTION_138_OCC2_CLAUSE_c",
+              "parent_chain": [
+                "section_138",
+                "clause_c",
+                "explanation_1"
+              ],
+              "full_text": "The Negotiable Instruments Act, 1881 — s.138(c) [explanation]: Dishonour of cheque for insufficiency, etc., of funds in the account. —Where any cheque\nExplanation.—For the purposes of this section, “debt of other liability” means a legally enforceable debt \nor other liability.",
+              "keywords": []
+            },
+            "content_digest": "395d8c0edeffc38f0178c5c81ce5e0cc981a5ba2ec7cfc530eb698c40e7eb08b"
+          }
+        ]
+      }
+    },
+    {
+      "act_id": "the_negotiable_instruments_act_1881",
+      "position": 386917,
+      "state": "connected",
+      "reason": null,
+      "context": {
+        "scope": "exact_parent_tree",
+        "bounded": false,
+        "unread_positions": [],
+        "segments": [
+          {
+            "position": 386917,
+            "row": {
+              "chunk_id": "the_negotiable_instruments_act_1881_SECTION_138",
+              "doc_type": "bare_act",
+              "act_id": "the_negotiable_instruments_act_1881",
+              "act_name": "The Negotiable Instruments Act",
+              "year": "1881",
+              "chapter": "XVII",
+              "section_number": "138",
+              "section_title": "Dishonour of cheque for insufficiency, etc., of funds in the account.",
+              "sub_section": "",
+              "clause": "",
+              "sub_clause": "",
+              "atom_type": "section_head",
+              "parent_chunk_id": "",
+              "parent_chain": [
+                "section_138"
+              ],
+              "full_text": "The Negotiable Instruments Act, 1881 — s.138: Dishonour of cheque for insufficiency, etc., of funds in the account.\n138. Dishonour of cheque for insufficiency, etc., of funds in the account.",
+              "keywords": []
+            },
+            "content_digest": "2e9bd2755b0bc0fcf75815cfbd57266cca0e74f6b4e1f51aa17faee255da2e47"
+          }
+        ]
+      }
+    }
+  ],
+  "limits": "Exact parent resolution only. Ranking, source interpretation and browser acceptance are assessed separately.",
+  "focused_tests": {
+    "passed": 164,
+    "api_calls": 0,
+    "public_boundary": "Authenticated /api/turn, source authority match, atomic save, saved source-pane read and idempotent replay with scripted model outputs.",
+    "not_proven": "Real-model interpretation and rendered browser acceptance."
+  },
+  "historical_retrieval_snapshots_replayed_unchanged": 43,
+  "server": {
+    "model": "gpt-6-luna",
+    "base_url": "http://127.0.0.2:8175",
+    "code_state": "current",
+    "pid": 36120,
+    "serving": "0ab47e3690d1d684",
+    "budget_maximum_usd": 5
+  },
+  "browser": {
+    "state": "unavailable",
+    "reason": "CUA node kernel exits during Windows sandbox setup before tab attachment"
+  },
+  "remaining": [
+    "Persist context-store declaration in the lineage producer",
+    "Dispute planning semantic gaps",
+    "Discovery/reranking relevance and source-selection omissions",
+    "Real-model and browser acceptance"
+  ]
+}

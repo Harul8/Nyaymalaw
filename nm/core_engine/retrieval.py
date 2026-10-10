@@ -28,8 +28,9 @@ LEG_DEPTH = 80
 PER_QUERY_POOL = 60
 RESULTS_PER_KIND = 6
 RRF_K = 60
-CONTRACT = "hybrid_retrieval_v3"
-PREVIOUS_CONTRACT = "hybrid_retrieval_v2"
+CONTRACT = "hybrid_retrieval_v4"
+PREVIOUS_CONTRACT = "hybrid_retrieval_v3"
+PARENT_TREE_CONTRACT = "hybrid_retrieval_v2"
 LEGACY_CONTRACT = "hybrid_retrieval_v1"
 MAX_RERANK_PAIRS = 4096
 MAX_CONTEXT_SEGMENTS = 500
@@ -50,6 +51,19 @@ class _ContextGap(SearchUnavailable):
     def __init__(self, reason, context):
         super().__init__(reason)
         self.context = context
+
+
+class _ParentObject(dict):
+    """Preserve ambiguous JSON fields without disabling independent records."""
+
+    def __init__(self, pairs=()):
+        super().__init__()
+        self.duplicates = set()
+        for key, value in pairs:
+            if key in self:
+                self.duplicates.add(key)
+            else:
+                self[key] = value
 
 
 class Collection(Protocol):
@@ -147,6 +161,70 @@ class LocalCollection:
         self._words = None
         self._revision: str | None = None
         self._lock = threading.Lock()
+        self._parent_stamp = None
+        self._parent_hash = None
+        self._parents = None
+
+    def _parent_path(self, record):
+        # Contextual records have declared source keys, not vector positions.
+        store = record.get("context_store")
+        if self.doc_type != "bare_act" or store is None:
+            return None
+        if (not isinstance(store, dict) or store.get("format") != "parent_map_v1"
+                or not isinstance(store.get("path"), str) or not store["path"]
+                or not isinstance(store.get("sha256"), str) or len(store["sha256"]) != 64):
+            raise ValueError("Parent source store has no declared artifact identity")
+        name = store["path"]
+        path = (self.corpus_dir / name).resolve()
+        if not path.is_relative_to(self.corpus_dir.resolve()):
+            raise ValueError("Parent source path leaves its corpus")
+        return path
+
+    def _parent_identity(self, record):
+        path = self._parent_path(record)
+        if path is None:
+            return None
+        if not path.is_file():
+            return (str(path), None)
+        stat = path.stat()
+        stamp = (str(path), stat.st_size, stat.st_mtime_ns)
+        if stamp != self._parent_stamp:
+            digest = hashlib.sha256()
+            with path.open("rb") as stream:
+                for block in iter(lambda: stream.read(1024 * 1024), b""):
+                    digest.update(block)
+            after = path.stat()
+            if (after.st_size, after.st_mtime_ns) != stamp[1:]:
+                raise ValueError("Parent source store changed while reading")
+            self._parent_stamp, self._parent_hash = stamp, digest.hexdigest()
+            self._parents = None
+        return (*stamp, self._parent_hash)
+
+    def _read_parent(self, identity, act_id):
+        record, _, _ = self._open()
+        path = self._parent_path(record)
+        if path is None or not path.is_file():
+            raise SearchUnavailable("Contextual parent source store is unavailable")
+        if self._parents is None:
+            try:
+                raw = path.read_bytes()
+                if (hashlib.sha256(raw).hexdigest() != self._parent_hash
+                        or self._parent_hash != record["context_store"]["sha256"]):
+                    raise ValueError("Parent source store differs from its corpus revision")
+                self._parents = json.loads(raw, object_pairs_hook=_ParentObject)
+                if not isinstance(self._parents, dict):
+                    raise ValueError("Parent source store is not an identity map")
+            except (OSError, ValueError) as exc:
+                self._parents = None
+                raise SearchUnavailable("Contextual parent source store cannot be checked") from exc
+        row = self._parents.get(identity)
+        if (identity in self._parents.duplicates or not isinstance(row, _ParentObject)
+                or row.duplicates or row.get("chunk_id") != identity
+                or row.get("act_id") != act_id or row.get("doc_type") != "bare_act"
+                or not isinstance(row.get("full_text"), str) or not row["full_text"].strip()):
+            raise SearchUnavailable("Parent source is missing or has conflicting ownership")
+        self._check_snapshot()
+        return deepcopy(row)
 
     def revision(self) -> str | None:
         """Identify the actual corpus artifacts, without hashing large indices."""
@@ -161,7 +239,7 @@ class LocalCollection:
             paths.extend((bm_path / "params.index.json", Path(str(paths[2]) + "-wal")))
             identity = [(str(path.resolve()), path.stat().st_size if path.exists() else None,
                          path.stat().st_mtime_ns if path.exists() else None) for path in paths]
-            raw = json.dumps(identity, separators=(",", ":")).encode() + lineage
+            raw = json.dumps([identity, self._parent_identity(record)], separators=(",", ":")).encode() + lineage
             return hashlib.sha256(raw).hexdigest()
         except (OSError, ValueError, KeyError, TypeError):
             return None
@@ -354,16 +432,24 @@ class LocalCollection:
                 self._check_snapshot()
                 result.update(state="ambiguous", reason="The provision locator identifies distinct or repeated source roots")
                 return result
-            checked_roots = {self.rank_context(position, row)["segments"][0]["position"]
-                             for position, row in rows.items()}
+            paths = [self.rank_context(position, row) for position, row in rows.items()]
+            checked_roots = {path["segments"][0]["position"] for path in paths}
             if len(checked_roots) != 1:
-                raise SearchUnavailable("The indexed provision has no single connected source root")
+                result.update(state="ambiguous", reason="The provision has distinct connected source occurrences")
+                return result
+            connected = {}
+            for path in paths:
+                for segment in path["segments"]:
+                    address = segment["position"]
+                    if address in connected and connected[address] != segment:
+                        raise SearchUnavailable("Provision readback has conflicting source records")
+                    connected[address] = segment
             context = {"scope": "indexed_section_segments", "bounded": False, "unread_positions": [],
-                       "segments": [{"position": p, "row": rows[p], "content_digest": _digest(rows[p])}
-                                    for p in positions]}
+                       "segments": [connected[p] for p in sorted(connected, key=_location_order)]}
             sources = []
-            for position, row in rows.items():
-                sources.append(_candidate("provision", position, row, self._revision, None, [], context))
+            for segment in context["segments"]:
+                sources.append(_candidate("provision", segment["position"], segment["row"],
+                                          self._revision, None, [], context))
             self._check_snapshot()
             result.update(state="found", provision_key=binding.key, sources=sources)
         except (SearchUnavailable, sqlite3.Error, ValueError) as exc:
@@ -403,7 +489,7 @@ class LocalCollection:
         except (OSError, RuntimeError, ValueError) as exc:
             raise SearchUnavailable(f"{self.doc_type} reranking failed: {exc}") from exc
 
-    def rank_context(self, position: int, row: dict) -> dict:
+    def rank_context(self, position: int | str, row: dict) -> dict:
         """Resolve exact parents; section numbers alone do not identify a parent."""
         _, db_path, _ = self._open()
         segments = [{"position": position, "row": row, "content_digest": _digest(row)}]
@@ -415,7 +501,11 @@ class LocalCollection:
                 own_matches = connection.execute(
                     "select pos from chunks where doc_type=? and act_id=? and chunk_id=? limit 2",
                     (self.doc_type, row["act_id"], child["chunk_id"])).fetchall()
-                if own_matches != [(child_position,)]:
+                if isinstance(child_position, str):
+                    if (child_position != _parent_address(child) or own_matches
+                            or self._read_parent(child["chunk_id"], row["act_id"]) != child):
+                        raise SearchUnavailable("Contextual source identity is ambiguous or changed")
+                elif own_matches != [(child_position,)]:
                     raise SearchUnavailable("Source chunk identity is missing or ambiguous within its Act")
                 if not child.get("parent_chunk_id"):
                     break
@@ -425,12 +515,16 @@ class LocalCollection:
                 matches = connection.execute(
                     "select pos from chunks where doc_type=? and act_id=? and chunk_id=? limit 2",
                     (self.doc_type, row["act_id"], identity)).fetchall()
-                if len(matches) != 1:
-                    raise SearchUnavailable("Parent source is missing or ambiguous")
-                parent_position = matches[0][0]
+                if len(matches) > 1:
+                    raise SearchUnavailable("Parent source identity is ambiguous")
+                if matches:
+                    parent_position = matches[0][0]
+                    parent = self.read([parent_position]).get(parent_position)
+                else:
+                    parent = self._read_parent(identity, row["act_id"])
+                    parent_position = _parent_address(parent)
                 if parent_position in seen:
                     raise SearchUnavailable("Parent source links contain a cycle")
-                parent = self.read([parent_position]).get(parent_position)
                 if (parent is None or parent.get("chunk_id") != identity
                         or parent.get("act_id") != row["act_id"]
                         or parent.get("section_number") != row.get("section_number")):
@@ -472,7 +566,7 @@ class LocalCollection:
                 else:
                     other_roots.add(other_root)
             context = {"scope": "indexed_section_segments", "bounded": bool(limited or unread or ambiguous or other_roots),
-                "unread_positions": unread, "segments": [connected[p] for p in sorted(connected)]}
+                "unread_positions": unread, "segments": [connected[p] for p in sorted(connected, key=_location_order)]}
             if context["bounded"]:
                 raise _ContextGap(
                     f"Provision context retains its connected source; {len(unread)} unread positions, "
@@ -558,12 +652,27 @@ def _digest(value):
         separators=(",", ":"), allow_nan=False).encode()).hexdigest()
 
 
+def _parent_address(row):
+    return "parent:" + row["chunk_id"]
+
+
+def _valid_location(kind, position, row):
+    return ((type(position) is int and position >= 0)
+            or (kind == "provision" and isinstance(position, str)
+                and isinstance(row, dict) and isinstance(row.get("chunk_id"), str)
+                and bool(row["chunk_id"]) and position == _parent_address(row)))
+
+
+def _location_order(position):
+    return (0, position) if type(position) is int else (1, position)
+
+
 def _candidate(kind, position, row, revision, score, query_ids, context):
     if (not isinstance(row, dict) or not isinstance(row.get("full_text"), str)
             or not row["full_text"].strip() or not isinstance(row.get("chunk_id"), str)
             or not row["chunk_id"].strip()):
         raise SearchUnavailable("Candidate has no exact stored words or chunk identity")
-    if (type(position) is not int or position < 0 or not isinstance(revision, str) or not revision
+    if (not _valid_location(kind, position, row) or not isinstance(revision, str) or not revision
             or row.get("doc_type", "bare_act" if kind == "provision" else "case_law") != (
                 "bare_act" if kind == "provision" else "case_law")
             or score is not None and (type(score) not in (int, float) or not math.isfinite(score))):
@@ -662,7 +771,7 @@ class HybridSearcher:
             except Exception as exc:
                 issues.append({"kind": kind, "query_id": None, "stage": "read", "reason": type(exc).__name__})
                 continue
-            usable, pairs, rank_contexts, unranked = [], [], {}, []
+            usable, pairs, rank_contexts = [], [], {}
             rank_rows, rank_associations, rank_anchors = {}, {}, {}
             # Variants broaden recall; ranking examines their common dispute once.
             # Retain every formulation and the original account, including long tails.
@@ -687,11 +796,12 @@ class HybridSearcher:
                         # Keep unread ancestry explicit without discarding readable peers.
                         rank_contexts[position] = {"scope": "selected_indexed_segment", "bounded": True,
                             "unread_positions": [], "segments": [{"position": position, "row": rows[position]}]}
-                        unranked.append((position, None))
                         issues.append({"kind": kind, "query_id": None, "stage": "context",
                             "reason": str(exc) if isinstance(exc, SearchUnavailable) else type(exc).__name__,
                             "position": position})
-                        continue
+                        # Score readable words even when their context is missing.
+                        # The exact selected source keeps its explicit coverage gap.
+                        target, row, context = position, rows[position], rank_contexts[position]
                 rank_rows[target] = row
                 rank_anchors[target] = _rerank_anchor(checked_source)
                 rank_associations.setdefault(target, []).extend(associations[position])
@@ -717,12 +827,11 @@ class HybridSearcher:
                     width = 1
                     scored.append((position, max(float(s) for s in scores[offset:offset+width])))
                     offset += width
-                scored.sort(key=lambda x: (-x[1], x[0]))
+                scored.sort(key=lambda x: (-x[1], _location_order(x[0])))
                 stages.append({"kind": kind, "query_id": None, "stage": "rerank", "state": "evaluated", "hits": len(usable)})
             except Exception as exc:
                 issues.append({"kind": kind, "query_id": None, "stage": "rerank", "reason": type(exc).__name__})
                 scored = [(position, None) for position in usable]
-            scored.extend(unranked)
             selected, groups = [], {}
             for position, score in scored:
                 row = rows[position]
@@ -768,7 +877,7 @@ class HybridSearcher:
 def validate_search(record, queries):
     """Replay validates the saved exact snapshot, never reads a changed corpus."""
     if (not isinstance(record, dict) or set(record) != {"contract", "state", "queries", "corpus_revisions", "stages", "candidates", "issues"}
-            or record["contract"] not in (LEGACY_CONTRACT, PREVIOUS_CONTRACT, CONTRACT) or record["queries"] != queries
+            or record["contract"] not in (LEGACY_CONTRACT, PARENT_TREE_CONTRACT, PREVIOUS_CONTRACT, CONTRACT) or record["queries"] != queries
             or record["state"] != ("partial" if record["issues"] else "ready")
             or set(record["corpus_revisions"]) != {"provision", "judgment"}):
         raise ValueError("Search snapshot differs from its owned query contract")
@@ -812,6 +921,9 @@ def validate_search(record, queries):
             raise ValueError("Reranking has no execution disposition")
     identities = set()
     for candidate in record["candidates"]:
+        if record["contract"] != CONTRACT and any(type(p) is not int for p in (
+                candidate["position"], *(s["position"] for s in candidate["context"]["segments"]))):
+            raise ValueError("Historical search cannot contain contextual parent addresses")
         if (candidate["kind"] not in record["corpus_revisions"]
                 or candidate["corpus_revision"] != record["corpus_revisions"][candidate["kind"]]
                 or not set(candidate["query_ids"]) <= {q["query_id"] for q in queries}
@@ -826,7 +938,7 @@ def validate_search(record, queries):
             document_field = "act_id" if candidate["kind"] == "provision" else "case_id"
             if (row.get(document_field) != candidate["source"].get(document_field)
                     or not row.get("full_text") or segment.get("content_digest") != _digest(row)
-                    or type(segment.get("position")) is not int or segment["position"] < 0):
+                    or not _valid_location(candidate["kind"], segment.get("position"), row)):
                 raise ValueError("Context crossed source-document ownership")
             if candidate["context"]["scope"] in ("indexed_section_segments", "exact_parent_tree") and row.get("section_number") != candidate["source"].get("section_number"):
                 raise ValueError("Context crossed the selected section")
@@ -843,7 +955,7 @@ def validate_search(record, queries):
             for segment in segments:
                 by_id.setdefault(segment["row"]["chunk_id"], []).append(segment["row"])
             root = candidate["source"]
-            if (record["contract"] not in (PREVIOUS_CONTRACT, CONTRACT) or candidate["kind"] != "provision" or len(segments) < 2
+            if (record["contract"] not in (PARENT_TREE_CONTRACT, PREVIOUS_CONTRACT, CONTRACT) or candidate["kind"] != "provision" or len(segments) < 2
                     or root.get("parent_chunk_id") or len(by_id[root["chunk_id"]]) != 1
                     or len({s["position"] for s in segments}) != len(segments)):
                 raise ValueError("Ranking context has no unique owned root")
@@ -856,7 +968,7 @@ def validate_search(record, queries):
                         raise ValueError("Ranking context has a detached or cyclic source")
                     seen.add(identity)
                     child = parents[0]
-        if record["contract"] == CONTRACT and candidate["kind"] == "provision":
+        if record["contract"] in (PREVIOUS_CONTRACT, CONTRACT) and candidate["kind"] == "provision":
             segments = context["segments"]
             if context["scope"] == "selected_indexed_segment":
                 if len(segments) != 1:
