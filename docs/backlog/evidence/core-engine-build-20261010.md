@@ -1764,3 +1764,34 @@ queries); all 424 tests in the 21 files that import the research, turn,
 source-catalogue or retrieval modules pass; undefined-name check clean. Not run:
 full suite, live search on the served instance, model calls or browser checks.
 Evidence: `outputs/core-engine-build-20261010/seq3-ranking-experiment/`.
+
+### SEQ.3/SEQ.4 approved paid comparisons (owner-approved 10 Oct 2026)
+
+**Planning prompt (focused qualifications candidate), 18 Luna calls, $0.003219.**
+Exact frozen inputs (same hash as the original preparation; runner re-pointed in
+`research-focused-comparison-v2/` after research v5 changed the pinned file). All 18
+outputs were admitted; all five no-research cases returned no work under both
+prompts. Independent reading against the frozen focused checks: candidate better
+in DC02 (searches the advocate's own question), DC04 (adds the criminal side of the
+strike and long-use rights) and DC18 (no duplicated searches; each incident's date
+in its own enquiry); control better in DC01 (keeps the separate commencement
+dimension) and DC11 (the candidate asserts the custodian is a "non-party" as a
+reported premise, the shape the candidate was meant to prevent); both equally miss
+DC12's checks (invented "residential"; rent dispute absent from the deed account).
+Local search on the candidate plans' v5 queries against the matched control arm:
+provision anchors selected 9 versus 10 of 34, judgment anchors 1 versus 0 of 14
+(gained Limitation Act Art. 65 and one Golden Set judgment; lost Registration Act
+s.17 and NI Act s.142). Decision: not promoted. The prompt's qualification changes
+do not move the dominant discovery loss; that needs a different lever (remedy and
+procedural-route coverage, or corpus completion) and remains open.
+
+**Review restriction-coverage candidate, 2 Sol calls, $0.066564.** The harness cap
+refused the third call before dispatch, as designed. Both the baseline and the
+candidate review were admitted and accepted on the first pass; the baseline simply
+omitted the restriction from coverage this time, the candidate listed it against
+all four units. Two samples cannot show a lower friction rate. Not promoted; the
+existing bounded repair remains the recovery path.
+
+Shared ledger after both runs: $3.751980 of $5 ($2.236549 measured, $1.515431
+reserved or unknown). Main instance 8175 was restarted with the current code on the
+same ledger; `/api/health` reports code current, serving `54ad9598123545d8`.
