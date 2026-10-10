@@ -579,3 +579,17 @@ from 81,572 to 69,526 tokens. An extreme 47-unit repeated-source fixture reduces
 from 241,456 to 100,206 and still properly refuses the 100,000 limit. It is a stated
 stress limit, not a passed live result. No source or draft text was shortened.
 Evidence: outputs/core-engine-build-20261010/review-presentation-remeasurement.json.
+
+## SEQ.2/4 — saved source-check presentation seam
+
+The authenticated source endpoint now returns a separate authority-inspection view
+for that exact saved reply unit and source. Case lookup, name comparison, quotation
+checking and source association remain separate. Provision readback states retain
+their limits. A retrieved title does not become a Found verdict. Earlier v1 responses
+explicitly lack these checks. No new lookup, model call, canonical-source mutation
+or historical seal change occurs when opening the pane.
+
+47 focused source-view and served checks pass, including owner/index protections,
+unknown saved versions, exact unit filtering, legacy replay, secondary citations and
+unchanged saved rows. The browser rendering of this new presentation is the next
+separate piece; this API checkpoint does not claim visible delivery.

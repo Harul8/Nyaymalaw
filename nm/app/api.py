@@ -7,6 +7,7 @@ from __future__ import annotations
 import hmac
 import logging
 import os
+from copy import deepcopy
 from datetime import date
 from math import ceil
 from pathlib import Path
@@ -21,7 +22,7 @@ from nm.arrive.advocate_contracts import PASSWORD_RESET_MINUTES, SESSION_IDLE_MI
 from nm.arrive.directory_port import AccountBusy, AuthenticationUnavailable
 from nm.arrive.professional_access import read_professional_status
 from nm.core_engine.conversation import HEADER, ConversationRefused, chat_matter_id
-from nm.core_engine.turn import saved_rows
+from nm.core_engine.turn import CONTRACT as CORE_TURN, LEGACY_CONTRACT as LEGACY_CORE_TURN, saved_rows
 from nm.shared.external_ai_contracts import ModelPermissionRefused
 from nm.shared.clock_contracts import FORUM
 from nm.shared.identity_contracts import source_fingerprint
@@ -1313,6 +1314,53 @@ def chat(chat_id: str, advocate_id: Advocate, request: Request, response: Respon
             'matter_version': matter.version, 'turns': turns}
 
 
+def _source_authority_inspection(row, element, selected):
+    """Presentation of this saved unit's checks, after complete replay validation."""
+    activity = row['activities']
+    unit_id = activity['draft']['units'][element]['id']
+    view = {'contract': 'core_source_authority_view_v1',
+            'activity_contract': activity['contract'], 'unit_id': unit_id,
+            'source_id': selected['id'], 'state': 'not_assessed', 'reason': None,
+            'case_checks': [], 'provision_checks': [], 'provision_mentions': [], 'limits': []}
+    if activity['contract'] == LEGACY_CORE_TURN:
+        view['reason'] = 'Authority checks were not recorded for this earlier response.'
+        return view
+    if activity['contract'] != CORE_TURN:
+        raise ValueError('Unknown saved source authority contract')
+    checked = next(unit for unit in activity['authority_evidence']['units']
+                   if unit['unit_id'] == unit_id)
+    view['limits'] = deepcopy(checked['limits'])
+    view['provision_checks'] = deepcopy([check for check in checked['selected_provisions']
+                                        if check['source_id'] == selected['id']])
+    if selected['kind'] == 'provision':
+        view['provision_mentions'] = deepcopy([mention for mention in checked['prose_provisions']
+            if not mention['candidate_source_ids'] or selected['id'] in mention['candidate_source_ids']])
+    citations = {check['id']: check for check in checked['case_lookup']['citations']}
+    for association in checked['case_associations']:
+        mentions = [mention for mention in association['selected_support_mentions']
+                    if mention['source_id'] == selected['id']]
+        if selected['id'] not in association['used_judgment_source_ids'] and not mentions:
+            continue
+        citation = citations[association['citation_id']]
+        view['case_checks'].append({
+            **{key: deepcopy(citation[key]) for key in (
+                'text', 'lookup', 'name_given', 'name_check', 'legal_validity')},
+            'citation_id': citation['id'],
+            'judgments': [{key: deepcopy(judgment[key]) for key in (
+                'case_id', 'title', 'court', 'decided_on')} for judgment in citation['judgments']],
+            'quotes': [{key: deepcopy(value) for key, value in quote.items() if key != 'excerpt'}
+                       for quote in citation['quotes']],
+            'association': association['association'],
+            'matching_source_ids': deepcopy(association['matching_source_ids']),
+            'selected_support_mentions': deepcopy(mentions),
+            'association_scope': association['association_scope']})
+    if view['case_checks'] or view['provision_checks']:
+        view['state'] = 'recorded'
+    else:
+        view['reason'] = 'No recognised citation identity check was recorded for this passage in this response.'
+    return view
+
+
 @app.get('/api/chats/{chat_id}/turns/{turn_id}/brain-sources/{element}/{source}')
 def chat_source(chat_id: str, turn_id: str, element: int, source: int,
                 advocate_id: Advocate, request: Request, response: Response):
@@ -1327,7 +1375,9 @@ def chat_source(chat_id: str, turn_id: str, element: int, source: int,
     if not _session_current(request, advocate_id):
         raise HTTPException(401, 'not signed in')
     response.headers['Cache-Control'] = 'no-store'
-    return selected
+    # Keep display enrichment outside canonical saved source rows and their seals.
+    return {**deepcopy(selected),
+            'authority_inspection': _source_authority_inspection(row, element, selected)}
 
 @app.get('/api/matters/{matter_id}')
 @app.get('/api/matters/{matter_id}/transcript')

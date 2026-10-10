@@ -95,7 +95,10 @@ def test_public_turn_saves_exact_input_reopens_and_reads_exact_sources_without_c
     assert turn["committed"] is True and turn["release_state"] == "released"
     for index, source in enumerate(reply["elements"][0]["sources"]):
         read = served.client.get(source_url(reply, source=index))
-        assert read.status_code == 200 and read.json() == source
+        assert read.status_code == 200
+        viewed = read.json()
+        inspection = viewed.pop('authority_inspection')
+        assert viewed == source and inspection['source_id'] == source['id']
         assert read.headers["cache-control"] == "no-store"
     work = served.client.get("/api/work").json()
     assert work["state"] == "ok" and work["chat_count"] == 1 and not work["matters"]
@@ -363,7 +366,9 @@ def test_saved_chat_replay_survives_unavailable_attempt_sidecar_after_restart(se
         environment=served.app.environment)
     monkeypatch.setattr(api, "_application", restarted)
     assert served.client.get(f"/api/chats/{reply['chat_id']}").status_code == 200
-    assert served.client.get(source_url(reply)).json() == reply["elements"][0]["source"]
+    viewed = served.client.get(source_url(reply)).json()
+    viewed.pop('authority_inspection')
+    assert viewed == reply["elements"][0]["source"]
     assert successful(served)["replayed"] and len(served.model.calls) == 4
     fresh = send(served, turn_id="turn-2", chat_id=reply["chat_id"])
     assert fresh.status_code == 503 and fresh.json()["detail"]["code"] == "attempt_unconfirmed"
