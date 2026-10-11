@@ -2025,3 +2025,37 @@ The short phrases drop the anchoring legal vocabulary that the longer ones carry
 - Main instance 8175 was restarted on the current code (serving 01c8e831c97113a9, code current).
 - The served page now says NM researches the held statutes and judgments for legal questions. The Legal library and Preparation tabs keep their not-connected labels. Checked over HTTP.
 - Not run: the test suite (no production code changed in this step), the gate, journeys, golden or served end-to-end evaluations.
+
+### SEQ.3 word-search punctuation defect measured; query-time fix neutral, not adopted (11 Oct 2026)
+
+**Measured defect.** Both word indexes split text on whitespace only. Every word glued to punctuation is therefore a separate term.
+- In the provision index, 213,144 of 304,006 terms are punctuated forms of 56,540 plain words. The judgments index has 964,980 such forms out of 1,649,054 terms.
+- In s.170, "lien" occurs only as "lien.—" and the heading word as "bailee's". A query for "lien" or "bailee's lien" could never match them.
+
+**Prototype** (outputs only, no index written). A query word is matched to every indexed form that differs only by surrounding punctuation or a possessive ending.
+- With the index's Robertson weights, the merged word can be scored exactly from the stored weights. Each form's weight gives tf/K as c/(1−c), where c is the weight divided by the form's idf. Summing those gives the merged saturation, and the merged word takes the idf of the union of documents.
+- Exactness checks:
+  - A single form reproduces the stored weights (largest error about 1e-15).
+  - On a toy corpus, folding over a punctuation-glued index equals plain search over an index built from clean words (largest difference 3e-9).
+- A form present in at least half the documents gives the merged word zero idf. This rule was added after a first run let rare forms of common words ("the.") add score; that run was discarded.
+
+**Paired result** (same four served plans; only the word leg differs).
+
+| | Per sample | Mean |
+|---|---|---|
+| Provisions, plain word leg | 10, 8, 10, 10 | 9.5 |
+| Provisions, folded word leg | 10, 7, 11, 9 | 9.25 |
+
+- Judgments were unchanged.
+- The changes are one NI Act s.142 flip in each direction and BNSS s.187 lost once.
+- The browser question's selection was unchanged.
+
+**Trace of s.170 for the served phrase**
+- Word leg: rank 1,020 plain, 44 folded.
+- Meaning leg: rank 449.
+- Combined: rank 88 folded (not ranked when plain), just outside the 60 kept per query.
+- For comparison, "bailee lien to retain goods until repair charges are paid" ranks s.170 1st in both legs.
+
+**Conclusion.** The defect is real and general, but correcting it at query time is neutral on the measured cases and adds per-query work, so it is not adopted. The clean fix is tokenising whole words when the indexes are next rebuilt. That rebuild is already an owner decision for chunk identity and heading fields. The lien miss remains a vocabulary and length problem in the planner's phrases.
+
+Evidence: `outputs/core-engine-build-20261010/seq3-word-folding/`. No provider calls; ledger unchanged at $4.071423.
