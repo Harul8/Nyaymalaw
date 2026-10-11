@@ -323,3 +323,21 @@ def test_document_title_alone_cannot_supply_legal_document_ownership():
     ctx, record = fixture(judgment=judgment)
     assert validate(record, record["plan"], ctx) == record
     with pytest.raises(ValueError, match="owned document identity"): build(ctx, record)
+
+
+def test_statutes_are_presented_under_their_shown_name_while_the_catalogue_keeps_the_stored_one():
+    """Owner decisions, 10-11 Oct 2026: AP State laws are shown as Telangana laws; words unchanged."""
+    ctx = context("Find the applicable law.")
+    plan = accept({"work": [work()]}, ctx)
+    statute = Collection()
+    stored = "Telangana 1960 0 Andhra Pradesh Buildings (Lease, Rent And Eviction) Control Act, 1960"
+    for row in statute.rows.values():
+        row.update(act_name=stored,
+                   act_id="TELANGANA_1960_0_ANDHRA PRADESH BUILDINGS (LEASE, RENT AND EVICTION) CONTROL ACT, 1960")
+    record = retrieve(plan, HybridSearcher({"provision": statute, "judgment": AdjacentJudgment()}), ctx)
+    sources = build(ctx, record)
+    provisions = [row for row in sources.values() if row["kind"] == "provision"]
+    assert provisions and all(row["title"] == stored for row in provisions)
+    shown = [row for row in presentation(sources)["passages"] if row["kind"] == "provision"]
+    assert {row["title"] for row in shown} == {"Telangana Buildings (Lease, Rent And Eviction) Control Act, 1960"}
+    assert [row["text"] for row in shown] == [sources[row["id"]]["text"] for row in shown]

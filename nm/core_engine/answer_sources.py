@@ -14,7 +14,7 @@ from nm.core_engine.retrieval import _candidate, _digest
 from nm.core_engine.understanding import (
     REFERENCE, select as select_original, source_catalogue,
 )
-from nm.shared.citation_contracts import provision_label
+from nm.shared.citation_contracts import provision_label, statute_title
 from nm.shared.model_port import SchemaViolation, require_schema
 
 CONTRACT = "core_answer_sources_v1"
@@ -130,6 +130,10 @@ def presentation(sources):
             continue
         passage = deepcopy(row)
         passage.pop("digest")
+        if row["kind"] == "provision":
+            # The name the statute is shown under (owner decisions, 10-11 Oct 2026);
+            # its words and the durable catalogue keep what the store holds.
+            passage["title"] = statute_title(row["title"], row["source_identity"].get("act_id", ""))
         passage["source_identity"] = {field: value for field, value in passage["source_identity"].items()
                                       if field not in {"chunk_id", "corpus_revision"}}
         neighbours = passage.pop("context_ids")
