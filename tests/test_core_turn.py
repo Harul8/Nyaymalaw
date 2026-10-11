@@ -144,27 +144,28 @@ def test_mixed_legacy_and_current_history_reopens_without_fresh_authority_checks
     assert len(model.calls) == 4
 
 
-def test_a_turn_saved_under_rendering_v2_reopens_unchanged_beside_a_v3_turn(store):
-    """Shown statute names (rendering v3) never rewrite a response saved under v2."""
+@pytest.mark.parametrize("saved", ["core_response_rendering_v2", "core_response_rendering_v3"])
+def test_a_turn_saved_under_an_earlier_rendering_reopens_unchanged_beside_a_current_turn(store, saved):
+    """Shown names (v3) and cited-word links (v4) never rewrite an earlier saved response."""
     from nm.core_engine import response_rendering, turn
     from nm.core_engine.conversation import commit_turn, open_turn
 
     context = open_turn(store, advocate_id="owner", message="Earlier account.", turn_id="old")
     _, activity, metrics = turn.prepare(ScriptedModel(), context.payload(), searcher())
     original = context.payload()
-    activity["rendering_contract"] = response_rendering.STORED_TITLE_CONTRACT
+    activity["rendering_contract"] = saved
     elements = response_rendering.render(original, activity["research"], activity["sources"],
         activity["draft"], activity["review"], execution=activity["execution"],
-        authority_evidence=activity["authority_evidence"],
-        contract=response_rendering.STORED_TITLE_CONTRACT)
+        authority_evidence=activity["authority_evidence"], contract=saved)
     first = commit_turn(store, context, elements=elements, activities=activity, metrics=metrics,
                         session_current=lambda: True)
     second = run(store, ScriptedModel(), chat_id=first["chat_id"], turn_id="new", message="Continue.")
     assert second["committed"] == "committed"
     rows = saved_rows(store.load(chat_matter_id("owner", first["chat_id"])), "owner")
     assert [row["activities"]["rendering_contract"] for row in rows] == [
-        "core_response_rendering_v2", "core_response_rendering_v3"]
+        saved, "core_response_rendering_v4"]
     assert rows[0]["response"]["elements"] == elements
+    assert all("citation_markers" not in element for element in rows[0]["response"]["elements"])
 
 
 def test_rewritten_draft_recomputes_its_authority_evidence_before_review(store, monkeypatch):

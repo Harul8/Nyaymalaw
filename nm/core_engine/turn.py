@@ -106,7 +106,8 @@ def validate_activity(activity, context, elements):
     # A saved response re-renders under the version it was admitted with: names a
     # later rendering shows differently never rewrite an earlier turn.
     renderings = ({response_rendering.LEGACY_CONTRACT} if version == LEGACY_CONTRACT else
-                  {response_rendering.STORED_TITLE_CONTRACT, response_rendering.CONTRACT})
+                  {response_rendering.STORED_TITLE_CONTRACT, response_rendering.SHOWN_NAME_CONTRACT,
+                   response_rendering.CONTRACT})
     rendering = activity.get("rendering_contract") if isinstance(activity, dict) else None
     if (version not in {LEGACY_CONTRACT, CONTRACT} or set(activity) != expected_fields
             or rendering not in renderings):

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+import re
 
 from nm.core_engine import response_authorities, response_review, response_writer
 from nm.shared.citation_contracts import statute_title
@@ -10,7 +11,10 @@ LEGACY_CONTRACT = "core_response_rendering_v1"
 #: Authority-bound rendering with each source under its stored title.
 STORED_TITLE_CONTRACT = "core_response_rendering_v2"
 #: v2 with statutes under their shown names (owner decisions, 10-11 Oct 2026).
-CONTRACT = "core_response_rendering_v3"
+SHOWN_NAME_CONTRACT = "core_response_rendering_v3"
+#: v3 linking each source at the words that cite it, never a whole paragraph;
+#: sources not cited by name follow the paragraph as markers (11 Oct 2026).
+CONTRACT = "core_response_rendering_v4"
 _LEGAL = {"provision", "judgment"}
 _ROLES = {"provision": "legislative_text", "court_disposition": "court_conclusion",
           "court_reasoning": "court_reasoning", "party_submission": "party_submission",
@@ -126,10 +130,89 @@ def _anchors(text, sources):
             for _, _, phrase, index in sorted(chosen)]
 
 
+def _span(text, phrase):
+    """The one place a phrase occurs, ignoring case, on word boundaries."""
+    if not phrase or not phrase.strip():
+        return None
+    found = [m.span() for m in re.finditer(r"(?<![\w])" + re.escape(phrase) + r"(?![\w])", text, re.I)]
+    return found[0] if len(found) == 1 else None
+
+
+def _names(source):
+    title = source["title"]
+    names = {title}
+    if title[:4].casefold() == "the ":
+        names.add(title[4:])
+    return {name for name in names if name.strip()}
+
+
+# A sentence ends at terminal punctuation followed by space and a capital letter;
+# "s. 170", "No. 5" and "Rs. 50,000" therefore stay inside their sentence.
+_SENTENCE_END = re.compile(r"[.!?](?=\s+[A-Z(\"'“])")
+
+
+def _sentence(text, start, end):
+    begin = max((m.end() for m in _SENTENCE_END.finditer(text, 0, start)), default=0)
+    after = _SENTENCE_END.search(text, end)
+    return text[begin:after.start() + 1 if after else len(text)]
+
+
+def _cited_words(text, sources, authority):
+    """v4: link a source at the words that cite it and list the rest as markers.
+
+    Words come from the authority checks (a case citation matched to one used
+    judgment; a provision reference binding one used provision whose Act is
+    named in the same sentence) and from a source's own name or locator found
+    once, ignoring case. A name shared by several used sources, a bare number or
+    the whole paragraph never becomes a link.
+    """
+    index = {source["id"]: number for number, source in enumerate(sources)}
+    candidates = []
+    for row in authority["case_associations"]:
+        matched = {index[i] for i in row["matching_source_ids"] if i in index}
+        if row["association"] == "matched" and len(matched) == 1:
+            candidates.append((row["start"], row["end"], matched.pop(), 0))
+    for row in authority["prose_provisions"]:
+        matched = sorted(index[i] for i in row["candidate_source_ids"] if i in index)
+        if row["key_match"] != "one_used_identity" or not matched:
+            continue
+        sentence = _sentence(text, row["start"], row["end"])
+        if any(re.search(r"(?<![\w])" + re.escape(name) + r"(?![\w])", sentence, re.I)
+               for name in _names(sources[matched[0]])):
+            candidates.append((row["start"], row["end"], matched[0], 0))
+    owners = {}
+    for number, source in enumerate(sources):
+        locator = source["locator"]
+        phrases = set(_names(source))
+        if locator and locator != "Saved passage":
+            phrases |= {f"{name}{joint}{locator}" for name in _names(source) for joint in (" ", " · ")}
+            if not locator.isdecimal():
+                phrases.add(locator)
+        for phrase in phrases:
+            owners.setdefault(phrase.casefold(), (phrase, set()))[1].add(number)
+    for phrase, numbers in owners.values():
+        span = _span(text, phrase)
+        if len(numbers) == 1 and span is not None:
+            candidates.append((span[0], span[1], next(iter(numbers)), 1))
+    chosen, linked = [], set()
+    for start, end, number, rank in sorted(candidates, key=lambda c: (c[3], -(c[1] - c[0]), c[0], c[2])):
+        if (number in linked or (start, end) == (0, len(text))
+                or any(start < prior[1] and end > prior[0] for prior in chosen)):
+            continue
+        chosen.append((start, end, number))
+        linked.add(number)
+    anchors = [{"text": text[start:end], "source_id": sources[number]["id"],
+                "source_index": number, "start": start, "end": end}
+               for start, end, number in sorted(chosen)]
+    markers = [{"source_id": source["id"], "source_index": number}
+               for number, source in enumerate(sources) if number not in linked]
+    return anchors, markers
+
+
 def render(context, research_record, sources, draft, review, execution=None, *,
            authority_evidence=None, contract=CONTRACT):
     """No new prose; the declared version owns its exact reviewed dependencies."""
-    if contract not in {LEGACY_CONTRACT, STORED_TITLE_CONTRACT, CONTRACT}:
+    if contract not in {LEGACY_CONTRACT, STORED_TITLE_CONTRACT, SHOWN_NAME_CONTRACT, CONTRACT}:
         raise ValueError("Unknown response rendering contract")
     checked_draft = response_writer.validate(draft, context, sources)
     if contract == LEGACY_CONTRACT:
@@ -146,12 +229,19 @@ def render(context, research_record, sources, draft, review, execution=None, *,
             sources, checked_draft, execution=execution, authority_evidence=checked_authorities)
     if not checked_review["accepted"]:
         raise ValueError("A response without accepted independent review cannot be rendered")
+    authorities = ({row["unit_id"]: row for row in checked_authorities["units"]}
+                   if contract == CONTRACT else {})
     elements = []
     for unit in checked_draft["units"]:
-        legal_sources = _sources(unit, sources, shown_names=contract == CONTRACT)
-        elements.append({"kind": unit["kind"].upper(), "text": unit["text"],
+        legal_sources = _sources(unit, sources, shown_names=contract in {SHOWN_NAME_CONTRACT, CONTRACT})
+        element = {"kind": unit["kind"].upper(), "text": unit["text"],
             "source": deepcopy(legal_sources[0]) if legal_sources else None,
             "sources": legal_sources,
-            "refs": list(dict.fromkeys(source["locator"] for source in legal_sources)),
-            "inline_citations": _anchors(unit["text"], legal_sources)})
+            "refs": list(dict.fromkeys(source["locator"] for source in legal_sources))}
+        if contract == CONTRACT:
+            element["inline_citations"], element["citation_markers"] = _cited_words(
+                unit["text"], legal_sources, authorities[unit["id"]])
+        else:
+            element["inline_citations"] = _anchors(unit["text"], legal_sources)
+        elements.append(element)
     return elements

@@ -27,10 +27,12 @@ def test_v1_replay_and_v2_authority_review_render_identical_unchanged_source_row
     old = response_rendering.render(*legacy, contract=response_rendering.LEGACY_CONTRACT)
     stored = response_rendering.render(*fresh, authority_evidence=authorities,
                                        contract=response_rendering.STORED_TITLE_CONTRACT)
-    new = response_rendering.render(*fresh, authority_evidence=authorities)
+    new = response_rendering.render(*fresh, authority_evidence=authorities,
+                                    contract=response_rendering.SHOWN_NAME_CONTRACT)
     assert response_rendering.STORED_TITLE_CONTRACT == "core_response_rendering_v2"
-    assert response_rendering.CONTRACT == "core_response_rendering_v3"
-    assert old == stored == new, "names needing no change render identically in every version"
+    assert response_rendering.SHOWN_NAME_CONTRACT == "core_response_rendering_v3"
+    assert response_rendering.CONTRACT == "core_response_rendering_v4"
+    assert old == stored == new, "names needing no change render identically in v1-v3"
     assert (legacy, fresh, authorities) == before
     assert all("authority_evidence" not in source for e in new for source in e["sources"])
 
