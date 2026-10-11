@@ -1960,3 +1960,68 @@ planning candidate is the proposed next measurement. Also observed: stale interf
 copy on the home page ("Legal research and action execution are not connected in
 this build") and two tabs labelled "Not connected to the rebuilt brain yet";
 citations remain whole-paragraph links. Evidence: `outputs/core-engine-build-20261010/browser-test-20261011/`.
+
+### SEQ.3 focused-enquiry planning candidate measured and rejected (11 Oct 2026)
+
+Owner approval: measure a planning-prompt candidate for short, single-concept
+enquiries without place names. Adopt it only if it clearly found more held law
+without new premise errors, then confirm with one browser turn. The candidate added
+one sentence pair to research instruction 3: "Keep each enquiry short: one legal
+concept in at most about ten words. Leave out the names of places, such as the
+country, State or city; they dilute the search rather than narrowing it."
+
+Run: 4 Luna samples on the 18 frozen comparison cases (72 calls), plus 4 Luna
+samples on the browser question, rebuilt exactly from the saved test turn. The
+saved plan's proposal re-admits to the saved plan, which proves the rebuilt
+context. Cost $0.012702; ledger $4.071423 of $5. One provider token-count request
+hung for 600 s and failed without charge. The three remaining approved calls were
+resumed under the same count and cost bounds. No served-prompt control calls were
+repeated.
+
+Fair comparison: the served prompt's four saved samples had been scored before the
+11 Oct corpus changes (four Acts appended, duplicate copies hidden). Every sample of
+both arms was re-scored locally on today's corpus, copy register and production
+ranking (v5 queries), on one corpus revision. Every anchor that hiding copies
+affects still lists its kept copy, so no expectation became unreachable.
+
+| Measure (34 provision, 14 judgment expectations) | Served prompt | Candidate |
+|---|---|---|
+| Provisions selected, per sample | 10, 8, 10, 10 (mean 9.5, sd 1.0) | 8, 6, 8, 6 (mean 7.0, sd 1.2) |
+| Judgments selected, per sample | 0, 1, 0, 0 | 0, 1, 1, 1 |
+| Words per enquiry (mean) | 15.7 to 18.3 | 6.2 to 6.5 |
+| Enquiries with place names | 5 to 14 | 0 to 2 |
+| DC11 non-party / DC12 residential premises | 3 of 4 / 4 of 4 | 3 of 4 / 4 of 4 |
+| Named authority in enquiries; errors | 2; 0 | 2; 0 |
+
+(On the old corpus the served samples scored 10, 7, 10, 9.)
+
+**Expected sources (samples selecting them, served vs candidate)**
+- Lost by the candidate:
+  - Registration Act s.17 (3 vs 1) and s.49 (4 vs 1), DC02.
+  - BNSS s.187, 4 vs 1, DC03.
+  - NI Act s.142, 3 vs 0, DC15.
+  - CrPC s.125, 1 vs 0, DC13.
+- Gained by the candidate: Limitation Act Article 65 (0 vs 2) and one DC02 judgment.
+
+The short phrases drop the anchoring legal vocabulary that the longer ones carry.
+
+**Browser question**
+- Contract Act s.170 was selected in 1 of 4 candidate plans (the served plan: 0 of 1). It was 5th of 6, at rerank score 0.007.
+- All 4 candidate plans lost the Telangana Buildings (Lease, Rent and Eviction) Control Act ss.9 and 11 for the deposit question. The served phrase found them through the word "Telangana".
+
+**Lien trace** (legs of 80, pool of 60 per query)
+- The lien phrases ("repairer's possessory lien over repaired goods", "common-law possessory lien for repair charges") bring s.170 into neither leg.
+- "Bailment duties and return of goods" brings it in by meaning (semantic rank 16 to 18, fused 33 to 37). The joined inquiry then scores it 0.005 to 0.007.
+- The served joined inquiry, which contains "bailee", scores s.170 at 0.239, but the served plan never brings it into the pool.
+
+**Conclusion: rejected, served prompt retained (research v5)**
+- The earlier cause was half right. Place names in long phrases dilute meaning search, but they find State Acts by title.
+- Held provisions are discovered when a phrase carries the statute's own words. For s.170 these are bailee, retaining goods and particular lien. Neither prompt produces them reliably.
+- Two wording candidates (terms of art, focused phrases) have now lost to the served prompt. The next lever is therefore not more prompt wording. It needs an owner decision.
+- The confirming browser turn was not run, and nothing in production changed.
+- Evidence: `outputs/core-engine-build-20261010/research-focused-enquiry-pooled/` (scores, summary, browser case, trace).
+
+**Home page**
+- Main instance 8175 was restarted on the current code (serving 01c8e831c97113a9, code current).
+- The served page now says NM researches the held statutes and judgments for legal questions. The Legal library and Preparation tabs keep their not-connected labels. Checked over HTTP.
+- Not run: the test suite (no production code changed in this step), the gate, journeys, golden or served end-to-end evaluations.
