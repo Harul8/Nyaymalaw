@@ -252,6 +252,13 @@ main { display: grid; grid-template-columns: 19rem minmax(0, 1fr); flex: 1; min-
   text-decoration: underline; text-underline-offset: .2em; overflow-wrap: anywhere;
 }
 .citation-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+/* A source the paragraph does not name, shown after it (rendering v4). */
+.citation-link.citation-marker {
+  font-family: var(--f-sans); font-size: 0.8rem; line-height: 1.5; text-decoration: none;
+  padding: 0 .45rem; margin: .1rem 0; border: 1px solid var(--rule); border-radius: 999px;
+  background: var(--accent-w);
+}
+.citation-link.citation-marker:hover { border-color: var(--accent); }
 #source-reader {
   position: fixed; inset: 0 0 0 auto; margin: 0; padding: 0;
   width: min(40rem, 100vw); height: 100dvh; max-width: 100vw; max-height: 100dvh;

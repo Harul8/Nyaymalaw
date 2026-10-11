@@ -290,6 +290,24 @@ window.NmBrainSources = (() => {
     return link;
   }
 
+  // Rendering v4: each used source the paragraph does not name follows it as
+  // a small marker that opens the same saved passage.
+  function appendMarkers(host, answer, element, sources) {
+    if (!Array.isArray(element.citation_markers)) return 0;
+    let count = 0;
+    for (const marker of element.citation_markers) {
+      const index = marker?.source_index;
+      const source = Number.isInteger(index) ? sources[index] : null;
+      if (!legal(source) || source.id !== marker?.source_id || !bound(answer, element, source)) continue;
+      host.appendChild(document.createTextNode(' '));
+      const chip = responseLink(answer, element, {source, index}, labelFor(source));
+      chip.className = 'citation-link citation-marker';
+      host.appendChild(chip);
+      count += 1;
+    }
+    return count;
+  }
+
   function appendBody(host, answer, element) {
     const text = typeof element.text === 'string' ? element.text : '';
     if (Array.isArray(element.inline_citations)) {
@@ -299,8 +317,13 @@ window.NmBrainSources = (() => {
         const phrase = citation?.text;
         const index = citation?.source_index;
         const source = Number.isInteger(index) ? sources[index] : null;
-        const start = words(phrase) ? text.indexOf(phrase) : -1;
-        if (start < 0 || text.indexOf(phrase, start + 1) >= 0 || !legal(source)
+        // Rendering v4 places each link at its exact saved offsets; earlier
+        // versions name a phrase that must occur once in the paragraph.
+        const placed = Number.isInteger(citation?.start) && Number.isInteger(citation?.end);
+        const start = !words(phrase) ? -1 : placed
+          ? (text.slice(citation.start, citation.end) === phrase ? citation.start : -1)
+          : text.indexOf(phrase);
+        if (start < 0 || (!placed && text.indexOf(phrase, start + 1) >= 0) || !legal(source)
             || source.id !== citation.source_id || !bound(answer, element, source)) continue;
         anchors.push({start, end:start + phrase.length, phrase, source, index});
       }
@@ -314,7 +337,7 @@ window.NmBrainSources = (() => {
         offset = anchor.end; linked += 1;
       }
       host.appendChild(document.createTextNode(text.slice(offset)));
-      return linked;
+      return linked + appendMarkers(host, answer, element, sources);
     }
     const tokens = new Map();
     for (const entry of entries(element).filter(({source}) => legal(source))) {
