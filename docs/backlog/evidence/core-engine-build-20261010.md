@@ -1884,3 +1884,47 @@ including the 22 committed before this change, because the archived evidence
 adapter returns NOT_ASSESSED (no provision revision registry); verified against
 the committed manifest, so the failure is pre-existing and unrelated. Not run:
 full suite, gate, journeys, model calls or browser checks.
+
+### SEQ.3/SEQ.4 one copy per instrument and Telangana-facing statute names (owner decisions, 11 Oct 2026)
+
+Owner decisions: keep one copy of each instrument via a search-time list, and show
+every Andhra Pradesh State law as a Telangana law with no exceptions. Four pieces,
+each committed with focused tests:
+
+1. `pipeline/instrument_copies.py` builds the reviewed register
+   `pipeline/instrument_copies.json` read-only from the stored words: 3,211 documents
+   form 1,633 instruments; the Telangana-adapted copy is kept, else the most complete;
+   1,578 copies are hidden section by section (113 keep sections only they hold);
+   1,492 copies hold the same words as the kept copy and 86 differ (listed for owner
+   review in `instrument-copies-review-20261011.md`).
+2. Retrieval v5 removes hidden copies' 42,977 positions from both search legs before
+   pooling, each leg looking twice as deep so 80 kept positions per leg remain; the
+   register is part of the collection identity (changing it requires a restart); a
+   missing register suppresses nothing and logs why; saved v1-v4 records replay.
+3. One naming rule in `nm/shared/citation_contracts.statute_title`: listing prefix
+   dropped; year from a dated identifier; Andhra Pradesh / A.P. State-law titles shown
+   as Telangana and '(Telangana Area)' dropped (522 titles); Telangana-led titles keep
+   the AP bodies they name; central Acts named after the State keep their names
+   (AP and Madras boundaries 1959, AP and Mysore territory 1968, AP Legislative
+   Council 2005, Andhra State 1953). India Code's Telangana collection holds central
+   Acts too, so a central Act is known by its Union copy, its stored enacting formula
+   or the reviewed list, and the builder refuses to write a register the rule would
+   misname. The writer and reviewer see these names; the durable catalogue keeps the
+   stored title and exact words.
+4. Rendering v3 shows these names in the source pane and inline citation anchors; a
+   saved turn re-renders under the version it was saved with (v2 or v3), so no
+   reopened response changes.
+
+Real-collection check: the four copies of the Advocates' Fee Rules r.10 and the two
+copies of Specific Relief Act s.9 each return once; a rent-default query returns the
+Telangana-adapted Buildings (Lease, Rent and Eviction) Control Act first. Known
+limit by owner choice: the eight Andhra-area laws are shown as "Telangana (Andhra
+Area) ..." although they applied to the Andhra region; listed for review.
+
+Checks: register (8), naming (11), copy search (8) and rendering/turn tests pass;
+all 475 tests in the 24 files touching the core engine's search, sources and answers
+pass. A wider 60-file run shows 327 failures confined to suites for the older app
+surface (removed endpoints, action settings, a stale prompt-site register, layering
+checks), unrelated to these changes. Main instance 8175 restarted on this code
+(serving 90568535d4525fdd, health current). Not run: full suite, gate, model calls
+or browser checks.
