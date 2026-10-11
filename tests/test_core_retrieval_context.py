@@ -117,9 +117,13 @@ def test_v3_rejects_disconnected_context_but_replays_unchanged_v1_v2_snapshots()
     replacement = _candidate(source["kind"], source["position"], source["source"],
         source["corpus_revision"], source["score"], source["query_ids"], invalid_window)
     result["candidates"][result["candidates"].index(source)] = replacement
-    assert result["contract"] == CONTRACT == "hybrid_retrieval_v4"
+    assert result["contract"] == CONTRACT == "hybrid_retrieval_v5"
     with pytest.raises(ValueError, match="unique|connected|root"):
         validate_search(result, QUERIES)
+    saved_v4 = deepcopy(result)
+    saved_v4["contract"] = "hybrid_retrieval_v4"
+    with pytest.raises(ValueError, match="unique|connected|root"):
+        validate_search(saved_v4, QUERIES)
     for version in ("hybrid_retrieval_v1", "hybrid_retrieval_v2"):
         old = deepcopy(result)
         old["contract"] = version

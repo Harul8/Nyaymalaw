@@ -29,12 +29,14 @@ LEG_DEPTH = 80
 PER_QUERY_POOL = 60
 RESULTS_PER_KIND = 6
 RRF_K = 60
-CONTRACT = "hybrid_retrieval_v4"
+CONTRACT = "hybrid_retrieval_v5"
+PARENT_STORE_CONTRACT = "hybrid_retrieval_v4"
 PREVIOUS_CONTRACT = "hybrid_retrieval_v3"
 PARENT_TREE_CONTRACT = "hybrid_retrieval_v2"
 LEGACY_CONTRACT = "hybrid_retrieval_v1"
 MAX_RERANK_PAIRS = 4096
 WINDOW_OVERLAP = 32
+COPY_REGISTER_SCHEMA = 1
 MAX_CONTEXT_SEGMENTS = 500
 log = logging.getLogger(__name__)
 
@@ -173,11 +175,12 @@ class LocalCollection:
     """One coherent vector, word, and exact-passage collection."""
 
     def __init__(self, *, corpus_dir: Path, lineage: Path, doc_type: str,
-                 models: _Models) -> None:
+                 models: _Models, copies: Path | None = None) -> None:
         self.corpus_dir = corpus_dir
         self.lineage = lineage
         self.doc_type = doc_type
         self.models = models
+        self.copies = copies
         self._loaded: tuple[dict, Path, int] | None = None
         self._vectors = None
         self._words = None
@@ -186,6 +189,10 @@ class LocalCollection:
         self._parent_stamp = None
         self._parent_hash = None
         self._parents = None
+        self._copies_stamp = None
+        self._copies_hash = None
+        self._hidden = None
+        self._hidden_key = None
 
     def _parent_path(self, record):
         # Contextual records have declared source keys, not vector positions.
@@ -261,10 +268,67 @@ class LocalCollection:
             paths.extend((bm_path / "params.index.json", Path(str(paths[2]) + "-wal")))
             identity = [(str(path.resolve()), path.stat().st_size if path.exists() else None,
                          path.stat().st_mtime_ns if path.exists() else None) for path in paths]
-            raw = json.dumps([identity, self._parent_identity(record)], separators=(",", ":")).encode() + lineage
+            parts = [identity, self._parent_identity(record)]
+            if self.copies is not None:
+                # Which copies search keeps is part of what this collection serves.
+                parts.append(self._copies_identity())
+            raw = json.dumps(parts, separators=(",", ":")).encode() + lineage
             return hashlib.sha256(raw).hexdigest()
         except (OSError, ValueError, KeyError, TypeError):
             return None
+
+    def _copies_identity(self):
+        path = Path(self.copies)
+        if not path.is_file():
+            return (str(path), None)
+        stat = path.stat()
+        stamp = (str(path), stat.st_size, stat.st_mtime_ns)
+        if stamp != self._copies_stamp:
+            self._copies_stamp, self._copies_hash = stamp, hashlib.sha256(path.read_bytes()).hexdigest()
+        return (*stamp, self._copies_hash)
+
+    def suppressed_positions(self) -> frozenset:
+        """Stored positions of copies the owner's register does not keep.
+
+        Owner decision, 10-11 October 2026: keep one copy of each instrument
+        (pipeline/instrument_copies.json). A section that only a copy holds stays
+        searchable there. A missing or unusable register suppresses nothing: every
+        stored copy stays searchable and the cause is logged.
+        """
+        if self.copies is None or self.doc_type != "bare_act":
+            return frozenset()
+        _, db_path, _ = self._open()
+        key = (self._revision, self._copies_identity())
+        if self._hidden is not None and self._hidden_key == key:
+            return self._hidden
+        hidden = frozenset()
+        try:
+            register = json.loads(Path(self.copies).read_text(encoding="utf-8"))
+            documents = register.get("documents") if register.get("schema") == COPY_REGISTER_SCHEMA else None
+            if not isinstance(documents, dict):
+                raise ValueError("The copy register has no supported document map")
+            kept = {act_id: {str(section) for section in entry.get("kept_sections", ())}
+                    for act_id, entry in documents.items()
+                    if isinstance(entry, dict) and entry.get("role") == "copy"}
+            found = set()
+            names = sorted(kept)
+            with closing(sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)) as db:
+                for start in range(0, len(names), 500):
+                    batch = names[start:start + 500]
+                    marks = ",".join("?" for _ in batch)
+                    for position, act_id, section in db.execute(
+                            f"select pos, act_id, section_number from chunks where doc_type=? and act_id in ({marks})",
+                            (self.doc_type, *batch)):
+                        if str(section or "") not in kept[act_id]:
+                            found.add(int(position))
+            hidden = frozenset(found)
+        except FileNotFoundError:
+            log.warning("The one-copy register is absent; every stored copy stays searchable")
+        except (OSError, ValueError, KeyError, TypeError, AttributeError, sqlite3.Error) as exc:
+            log.error("The one-copy register cannot be applied (%s); every stored copy stays searchable",
+                      type(exc).__name__)
+        self._hidden, self._hidden_key = hidden, key
+        return hidden
 
     def _check_snapshot(self) -> None:
         if self._revision is None or self.revision() != self._revision:
@@ -738,8 +802,9 @@ class HybridSearcher:
         if not corpus.is_absolute():
             corpus = root / corpus
         models = _Models(root / ".nm/models")
+        copies = {"provision": root / "pipeline" / "instrument_copies.json"}
         return cls({kind: LocalCollection(corpus_dir=corpus, lineage=root / ".nm/retrieval" / file,
-            doc_type=doc_type, models=models) for kind, file, doc_type in (
+            doc_type=doc_type, models=models, copies=copies.get(kind)) for kind, file, doc_type in (
                 ("provision", "bare_acts.lineage.json", "bare_act"),
                 ("judgment", "judgments.lineage.json", "case_law"))})
 
@@ -771,12 +836,22 @@ class HybridSearcher:
                 issues.append({"kind": kind, "query_id": None, "stage": "identity", "reason": "Corpus identity unavailable"})
                 continue
             pool, associations = {}, {}
+            # A copy the owner's register does not keep never takes a slot: each leg looks
+            # twice as deep and keeps its first LEG_DEPTH positions that are not such copies.
+            hidden = frozenset()
+            suppressed = getattr(collection, "suppressed_positions", None)
+            if callable(suppressed):
+                try:
+                    hidden = suppressed()
+                except SearchUnavailable as exc:
+                    _log_stage_failure(kind, "copy register", exc)
+            depth = LEG_DEPTH * 2 if hidden else LEG_DEPTH
             # A batch embeds every formulation once and searches each corpus in one operation.
             semantic = None
             semantic_many = getattr(collection, "semantic_many", None)
             if callable(semantic_many):
                 try:
-                    semantic = semantic_many(tuple(q["text"] for q in queries), LEG_DEPTH)
+                    semantic = semantic_many(tuple(q["text"] for q in queries), depth)
                     if len(semantic) != len(queries):
                         raise SearchUnavailable("Incomplete semantic query batch")
                 except Exception as exc:
@@ -786,10 +861,12 @@ class HybridSearcher:
                 legs = []
                 for leg in ("lexical", "semantic"):
                     try:
-                        values = semantic[index] if leg == "semantic" and semantic is not None else getattr(collection, leg)(query["text"], LEG_DEPTH)
+                        values = semantic[index] if leg == "semantic" and semantic is not None else getattr(collection, leg)(query["text"], depth)
                         ranked, invalid = _ranked_positions(values)
                         if invalid:
                             raise SearchUnavailable("Ranked positions are malformed")
+                        if hidden:
+                            ranked = [position for position in ranked if position not in hidden][:LEG_DEPTH]
                         legs.append(ranked)
                         stages.append({"kind": kind, "query_id": query["query_id"], "stage": leg,
                                        "state": "evaluated", "hits": len(ranked)})
@@ -916,7 +993,7 @@ class HybridSearcher:
 def validate_search(record, queries):
     """Replay validates the saved exact snapshot, never reads a changed corpus."""
     if (not isinstance(record, dict) or set(record) != {"contract", "state", "queries", "corpus_revisions", "stages", "candidates", "issues"}
-            or record["contract"] not in (LEGACY_CONTRACT, PARENT_TREE_CONTRACT, PREVIOUS_CONTRACT, CONTRACT) or record["queries"] != queries
+            or record["contract"] not in (LEGACY_CONTRACT, PARENT_TREE_CONTRACT, PREVIOUS_CONTRACT, PARENT_STORE_CONTRACT, CONTRACT) or record["queries"] != queries
             or record["state"] != ("partial" if record["issues"] else "ready")
             or set(record["corpus_revisions"]) != {"provision", "judgment"}):
         raise ValueError("Search snapshot differs from its owned query contract")
@@ -960,7 +1037,7 @@ def validate_search(record, queries):
             raise ValueError("Reranking has no execution disposition")
     identities = set()
     for candidate in record["candidates"]:
-        if record["contract"] != CONTRACT and any(type(p) is not int for p in (
+        if record["contract"] not in (PARENT_STORE_CONTRACT, CONTRACT) and any(type(p) is not int for p in (
                 candidate["position"], *(s["position"] for s in candidate["context"]["segments"]))):
             raise ValueError("Historical search cannot contain contextual parent addresses")
         if (candidate["kind"] not in record["corpus_revisions"]
@@ -994,7 +1071,7 @@ def validate_search(record, queries):
             for segment in segments:
                 by_id.setdefault(segment["row"]["chunk_id"], []).append(segment["row"])
             root = candidate["source"]
-            if (record["contract"] not in (PARENT_TREE_CONTRACT, PREVIOUS_CONTRACT, CONTRACT) or candidate["kind"] != "provision" or len(segments) < 2
+            if (record["contract"] not in (PARENT_TREE_CONTRACT, PREVIOUS_CONTRACT, PARENT_STORE_CONTRACT, CONTRACT) or candidate["kind"] != "provision" or len(segments) < 2
                     or root.get("parent_chunk_id") or len(by_id[root["chunk_id"]]) != 1
                     or len({s["position"] for s in segments}) != len(segments)):
                 raise ValueError("Ranking context has no unique owned root")
@@ -1007,7 +1084,7 @@ def validate_search(record, queries):
                         raise ValueError("Ranking context has a detached or cyclic source")
                     seen.add(identity)
                     child = parents[0]
-        if record["contract"] in (PREVIOUS_CONTRACT, CONTRACT) and candidate["kind"] == "provision":
+        if record["contract"] in (PREVIOUS_CONTRACT, PARENT_STORE_CONTRACT, CONTRACT) and candidate["kind"] == "provision":
             segments = context["segments"]
             if context["scope"] == "selected_indexed_segment":
                 if len(segments) != 1:

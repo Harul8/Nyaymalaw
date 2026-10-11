@@ -24,6 +24,10 @@ This job reads the passage store (never writes it) and, with --write, writes
 
     .venv-arrive\\Scripts\\python.exe pipeline\\instrument_copies.py           (summary only)
     .venv-arrive\\Scripts\\python.exe pipeline\\instrument_copies.py --write   (writes the register)
+
+Search reads the register as part of what it serves (nm/core_engine/retrieval.py): after
+--write, restart the server; a running server refuses the changed set rather than switch
+copies mid-session. Rebuild after every append so new documents are grouped.
 """
 from __future__ import annotations
 
