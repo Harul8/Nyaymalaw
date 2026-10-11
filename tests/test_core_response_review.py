@@ -431,6 +431,18 @@ def test_negative_effect_verdict_is_wiring_evidence_not_real_model_detection():
     # can show whether the reviewer reliably detects it or over-rejects safe prose.
 
 
+def test_gap_scope_rule_reaches_the_review_call():
+    # An 11 Oct answer said the held material lacked a lien provision the corpus
+    # holds, and review accepted it. This proves only that the rule is delivered;
+    # a pinned-model replay measures detection and over-rejection.
+    args = setup()
+    model = Model(positive(args[-1]))
+    review(model, *args)
+    system = " ".join(model.calls[0][0].system.split())
+    assert "no such source is held nor that no such law exists" in system
+    assert "a gap stated as what this research returned is supported" in system
+
+
 
 def authority_setup():
     from tests.test_core_response_authorities import Reader

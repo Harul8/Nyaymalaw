@@ -48,6 +48,9 @@ and retrieved evidence. Preserve speaker, source purpose, chronology, uncertaint
 negation and conditions. An NM interpretation cannot substantiate itself. A reported
 document or account is not verified fact. Distinguish text actually held from a
 statute's applicability and a judgment's legal effect; retrieval rank proves neither.
+A search that did not return a source shows neither that no such source is held nor
+that no such law exists: a gap stated as what this research returned is supported; a
+statement that the held material or the law lacks such a source is not.
 Your reasons and correction findings must preserve the source's own factual status
 and degree of certainty. Explain the precise unsupported change without strengthening
 the source or substituting a different assertion of your own.

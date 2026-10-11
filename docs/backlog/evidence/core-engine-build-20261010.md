@@ -2071,8 +2071,26 @@ Owner decision (11 Oct): accept current search quality for now and record its kn
 
 **Piece 1, writer instruction** (`response_writer.py`; contract unchanged, as with earlier wording changes).
 - Instruction 4 now says to describe a legal-source gap only as what this research returned, and states the invariant above.
-- Focused test: the rule reaches the writer's model call, and shape acceptance adds no keyword filter (109 writer tests pass).
+- Focused test: the rule reaches the writer's model call, and shape acceptance adds no keyword filter (108 writer tests pass; the first commit message said 109 in error).
 - Replay: one Sol writer call on the saved turn's exact context, research, sources and execution evidence, $0.134232. Seven units.
 - The lien unit now reads: "this research did not return a provision or judgment establishing a repairer's possessory lien or its conditions". The deposit analysis likewise says "the returned passages do not establish…". The next step names the repairer's lien as the next research priority.
 - Residual imprecision: the following sentence says "I therefore cannot conclude from the held material that the shop may retain the laptop…". "Returned material" would be exact, but this is not an absence claim.
 - Pass condition met. Evidence: `outputs/core-engine-build-20261010/seq4-gap-wording/writer-draft.json`.
+
+**Piece 2, review instruction** (`response_review.py`; contract unchanged).
+- Instruction 2 now states the same invariant. A gap stated as what this research returned is supported; a statement that the held material or the law lacks such a source is not.
+- Focused test: the rule reaches the review call (70 review tests pass).
+- Replay of the original saved draft (labelled negative), $0.145375:
+  - Rejected, with one grounding finding on the lien unit only: "improperly expands a retrieval limitation into a categorical statement about held material".
+  - The other six units were supported.
+- Replay of the new piece-1 draft with fresh authority checks (labelled positive), $0.139898: accepted, with no findings and no rejected units.
+- Both pass conditions met: the false claim is caught, and correctly scoped wording is not over-rejected.
+
+**Calls and limits**
+- 3 Sol calls ($0.419505; ledger $4.490928 of $5).
+- One labelled pair is regression evidence, not a false-acceptance or false-rejection rate.
+- The replay used the production writer, authority checks and review functions on the saved turn's exact inputs. It did not go through the HTTP boundary.
+- Main instance 8175 restarted to serve both changes (serving 847cc932472b6297, code current); browser confirmation remains the owner's.
+- Not run: full suite, gate, journeys, golden or served end-to-end runs.
+
+Evidence: `outputs/core-engine-build-20261010/seq4-gap-wording/` (replay script, writer draft, both reviews).
