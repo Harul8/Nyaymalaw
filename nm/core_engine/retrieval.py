@@ -307,9 +307,11 @@ class LocalCollection:
             documents = register.get("documents") if register.get("schema") == COPY_REGISTER_SCHEMA else None
             if not isinstance(documents, dict):
                 raise ValueError("The copy register has no supported document map")
+            # A copy keeps only the sections the register lists for it; every copy of an
+            # instrument the owner excluded from search (11 Oct 2026) keeps none.
             kept = {act_id: {str(section) for section in entry.get("kept_sections", ())}
                     for act_id, entry in documents.items()
-                    if isinstance(entry, dict) and entry.get("role") == "copy"}
+                    if isinstance(entry, dict) and entry.get("role") in ("copy", "excluded")}
             found = set()
             names = sorted(kept)
             with closing(sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)) as db:

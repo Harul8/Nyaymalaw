@@ -39,13 +39,53 @@ def test_the_adapted_copy_is_kept_and_copies_keep_only_their_unique_sections():
     assert group["kept"] == "TELANGANA_2016_10_TELANGANA COURT-FEES ACT, 1956"
     assert group["shown_title"] == "Telangana Court-Fees Act, 1956" and group["jurisdiction"] == "state"
     original = register["documents"]["TELANGANA_1956_1_ANDHRA PRADESH COURT-FEES ACT, 1956"]
-    assert original["role"] == "copy" and original["kept_sections"] == ["4"]
+    assert original["role"] == "copy" and original["kept_sections"] == [], "a different version keeps none"
+    assert next(m for m in group["members"] if m["act_id"].startswith("TELANGANA_1956"))["unique_sections"] == 1
     second = register["documents"]["andhra_pradesh_court_fees_act_1956"]
     assert second["kept_sections"] == [] and second["shown_title"] == "Telangana Court-Fees Act, 1956"
     verdicts = {m["act_id"]: m.get("verdict") for m in group["members"]}
     assert verdicts["andhra_pradesh_court_fees_act_1956"] == "same_words"
     assert verdicts["TELANGANA_1956_1_ANDHRA PRADESH COURT-FEES ACT, 1956"] == "different_version"
-    assert register["summary"]["copies_with_unique_sections"] == 1
+    assert register["summary"]["copies_with_unique_sections"] == 0
+
+
+def test_a_same_words_copy_keeps_its_unique_sections_but_a_different_version_keeps_none():
+    """Owner decision, 11 Oct 2026: different versions are removed completely."""
+    register = build({
+        "UNION OF INDIA_1963_1_THE SPECIFIC RELIEF ACT, 1963": doc(
+            "Union Of India 1963 1 The Specific Relief Act, 1963", {"1": "a", "2": "b", "3": "c"}),
+        "the_specific_relief_act_1963": doc("The Specific Relief Act", {"1": "a", "2": "b", "3": "c", "4": "d"}, "1963"),
+    })
+    copy = register["documents"]["the_specific_relief_act_1963"]
+    assert copy["role"] == "kept" or copy["kept_sections"] == ["4"]
+    different = build({
+        "TELANGANA_2016_10_TELANGANA COURT-FEES ACT, 1956": doc(
+            "Telangana 2016 10 Telangana Court-Fees Act, 1956", {"1": "a", "2": "b"}),
+        "TELANGANA_1956_1_ANDHRA PRADESH COURT-FEES ACT, 1956": doc(
+            "Telangana 1956 1 Andhra Pradesh Court-Fees Act, 1956", {"1": "x", "2": "y", "9": "z"}),
+    })
+    original = different["documents"]["TELANGANA_1956_1_ANDHRA PRADESH COURT-FEES ACT, 1956"]
+    assert original["role"] == "copy" and original["kept_sections"] == []
+
+
+def test_andhra_area_laws_and_owner_removed_acts_are_excluded_in_every_copy():
+    register = build({
+        "TELANGANA_1956_0_ANDHRA PRADESH (ANDHRA AREA) TENANCY ACT, 1956": doc(
+            "Telangana 1956 0 Andhra Pradesh (Andhra Area) Tenancy Act, 1956", {"1": "a"}),
+        "andhra_pradesh_andhra_area_tenancy_act_1956": doc(
+            "Andhra Pradesh (Andhra Area) Tenancy Act", {"1": "a"}, "1956"),
+        "TELANGANA_1968_2_THE ANDHRA PRADESH AND MYSORE (TRANSFER OF TERRITORY) ACT, 1968": doc(
+            "Telangana 1968 2 The Andhra Pradesh And Mysore (Transfer Of Territory) Act, 1968", {"1": "b"}),
+        "TELANGANA_2016_11_TELANGANA BUILDINGS ACT, 1960": doc(
+            "Telangana 2016 11 Telangana Buildings Act, 1960", {"1": "c"}),
+    })
+    roles = {act_id: entry["role"] for act_id, entry in register["documents"].items()}
+    assert roles == {"TELANGANA_1956_0_ANDHRA PRADESH (ANDHRA AREA) TENANCY ACT, 1956": "excluded",
+                     "andhra_pradesh_andhra_area_tenancy_act_1956": "excluded",
+                     "TELANGANA_1968_2_THE ANDHRA PRADESH AND MYSORE (TRANSFER OF TERRITORY) ACT, 1968": "excluded",
+                     "TELANGANA_2016_11_TELANGANA BUILDINGS ACT, 1960": "kept"}
+    assert register["summary"]["excluded_instruments"] == 2 and register["summary"]["excluded_documents"] == 3
+    assert {item["reason"][:7] for item in register["review"]["excluded"]} == {"limited", "removed"}
 
 
 def test_without_an_adapted_copy_the_most_complete_copy_is_kept():

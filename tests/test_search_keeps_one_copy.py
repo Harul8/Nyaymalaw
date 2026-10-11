@@ -42,6 +42,14 @@ def test_copies_are_hidden_except_the_sections_only_they_hold(tmp_path):
     assert collection.suppressed_positions() == frozenset({2, 3})
 
 
+def test_an_excluded_instrument_is_hidden_in_every_copy(tmp_path):
+    """Owner decision, 11 Oct 2026: Andhra-area laws and two named Acts leave search."""
+    documents = {"kept-act": {"role": "excluded", "kept_sections": []},
+                 "copy-act": {"role": "excluded", "kept_sections": []}}
+    collection, _ = with_register(tmp_path, documents)
+    assert collection.suppressed_positions() == frozenset({0, 1, 2, 3, 4})
+
+
 def test_a_hidden_copy_never_takes_a_search_slot_and_each_leg_looks_deeper(tmp_path, monkeypatch):
     collection, _ = with_register(tmp_path)
     depths = []

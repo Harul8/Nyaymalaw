@@ -14,9 +14,12 @@ This job reads the passage store (never writes it) and, with --write, writes
     "Andhra Pradesh (Andhra Area) X Act" does not join them;
   * in each group the Telangana-adapted copy is kept, else the copy holding the most
     sections; every other copy is suppressed SECTION BY SECTION, so a section only a
-    secondary copy holds stays searchable there;
+    secondary copy holding the same words keeps stays searchable there;
   * every copy is recorded against the kept one with how many shared sections hold the
-    same words -- 'same_words', or 'different_version' for the owner to review;
+    same words -- 'same_words', or 'different_version'; owner decision of 11 October
+    2026: a different version is removed completely, its unique sections included;
+  * owner decision of 11 October 2026: laws limited to the Andhra area are 'excluded' --
+    every copy is hidden from Telangana search;
   * each document gets the name it is shown under: the store's listing prefix
     ("Union Of India 1980 10 ") is dropped; for a State law "Andhra Pradesh" / "A.P."
     becomes "Telangana" and a following "(Telangana Area)" is dropped; central Acts keep
@@ -54,6 +57,14 @@ SCHEMA = 1
 #: Shared sections holding the same words at or above this share are 'same_words'.
 SAME_WORDS = 0.9
 
+#: Grouping-key marker of laws limited to the Andhra area; excluded from Telangana search.
+_ANDHRA_AREA = "andhra area"
+#: Instruments the owner removed from search (11 October 2026); the stored library keeps
+#: them, so the decision is reversible here.
+OWNER_REMOVED = (
+    "The Andhra Pradesh And Madras (Alteration Of Boundaries) Act, 1959",
+    "The Andhra Pradesh And Mysore (Transfer Of Territory) Act, 1968",
+)
 #: A central Act's enacting formula; State laws often mention laws "enacted by Parliament".
 _PARLIAMENT = re.compile(r"\bBe\s+it\s+enacted\s+by\s+Parliament\b", re.I)
 
@@ -123,6 +134,9 @@ def build(documents: dict[str, dict]) -> dict:
         name = statute_title(kept["stored"], kept["act_id"])
         if jurisdiction == "central" and name != statute_own_title(kept["stored"], kept["act_id"]):
             unnamed_central.append(kept["title"])
+        excluded = ("limited to the Andhra area (owner decision, 11 Oct 2026)" if _ANDHRA_AREA in key
+                    else "removed by the owner (11 Oct 2026)"
+                    if key in {group_key(title) for title in OWNER_REMOVED} else None)
         rows = []
         for m in members:
             entry = {"act_id": m["act_id"], "family": m["family"], "title": m["title"],
@@ -133,20 +147,28 @@ def build(documents: dict[str, dict]) -> dict:
                 shared = set(m["sections"]) & set(kept["sections"])
                 same = sum(1 for s in shared if m["sections"][s] & kept["sections"][s])
                 share = same / len(shared) if shared else 0.0
+                verdict = "same_words" if shared and share >= SAME_WORDS else "different_version"
+                unique = sorted(set(m["sections"]) - set(kept["sections"]), key=_order)
                 entry.update(role="copy", shared_sections=len(shared), same_words_share=round(share, 3),
-                             verdict="same_words" if shared and share >= SAME_WORDS else "different_version",
-                             kept_sections=sorted(set(m["sections"]) - set(kept["sections"]), key=_order))
+                             verdict=verdict, unique_sections=len(unique),
+                             kept_sections=unique if verdict == "same_words" else [])
+            if excluded:
+                entry.update(role="excluded", kept_sections=[])
             rows.append(entry)
             shown[m["act_id"]] = {"shown_title": name, "role": entry["role"], "group": key,
-                                  **({"kept_sections": entry["kept_sections"]} if m is not kept else {})}
+                                  **({"kept_sections": entry["kept_sections"]} if entry["role"] != "kept" else {})}
         register_groups.append({"key": key, "jurisdiction": jurisdiction, "shown_title": name,
-                                "kept": kept["act_id"], "members": rows})
+                                "own_title": kept["title"],
+                                "kept": None if excluded else kept["act_id"],
+                                **({"excluded": excluded} if excluded else {}),
+                                "members": rows})
     copies = [r for g in register_groups for r in g["members"] if r["role"] == "copy"]
     return {
         "schema": SCHEMA,
         "rules": {"grouping": "own title, State name normalised, year kept",
                   "kept_copy": "Telangana-adapted copy, else most sections, else India Code, else identifier",
-                  "suppression": "a copy's passages are not searched unless their section is in its kept_sections",
+                  "suppression": "a copy's passages are not searched unless their section is in its kept_sections; "
+                                 "a different version keeps none; every copy of an excluded instrument is hidden",
                   "same_words_threshold": SAME_WORDS,
                   "names": "listing prefix dropped; State laws: Andhra Pradesh / A.P. shown as Telangana, "
                            "'(Telangana Area)' dropped; central Acts keep their names; statute words unchanged"},
@@ -155,13 +177,16 @@ def build(documents: dict[str, dict]) -> dict:
                     "same_words": sum(c["verdict"] == "same_words" for c in copies),
                     "different_version": sum(c["verdict"] == "different_version" for c in copies),
                     "copies_with_unique_sections": sum(bool(c["kept_sections"]) for c in copies),
-                    "renamed_titles": sum(1 for g in register_groups if g["shown_title"] != next(
-                        m["title"] for m in g["members"] if m["role"] == "kept")),
+                    "renamed_titles": sum(1 for g in register_groups if g["shown_title"] != g["own_title"]),
+                    "excluded_instruments": sum(1 for g in register_groups if g.get("excluded")),
+                    "excluded_documents": sum(len(g["members"]) for g in register_groups if g.get("excluded")),
                     "andhra_area_instruments": sum(1 for g in register_groups if "andhra area" in g["key"])},
         "review": {"different_versions": [{"kept": g["kept"], "copy": m["act_id"],
                                            "same_words_share": m["same_words_share"]}
                                           for g in register_groups for m in g["members"]
-                                          if m.get("verdict") == "different_version"],
+                                          if m.get("verdict") == "different_version" and not g.get("excluded")],
+                   "excluded": [{"shown_title": g["shown_title"], "reason": g["excluded"]}
+                                for g in register_groups if g.get("excluded")],
                    "andhra_area": [g["shown_title"] for g in register_groups if "andhra area" in g["key"]],
                    "central_with_state_name": [g["shown_title"] for g in register_groups
                                                if g["jurisdiction"] == "central" and STATE_NAME.search(g["shown_title"])],
