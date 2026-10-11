@@ -75,6 +75,56 @@ _NAMES_ITS_KIND = re.compile(
     r"proviso|paragraph|para)\b", re.I)
 
 
+#: The prefix the store adds to India Code names: "Telangana 1960 0 ", "Union Of India 1963 1 ".
+_LISTING_PREFIX = re.compile(r"^(?:Telangana|Union Of India)\s+\d{4}\s+\d+\s+", re.I)
+_TITLE_YEAR = re.compile(r"\b(?:1[6-9]|20)\d\d\b")
+_ID_YEAR = re.compile(r"_((?:1[6-9]|20)\d\d)$")
+#: The State's name as statute titles print it.
+STATE_NAME = re.compile(r"\bAndhra\s+Pradesh\b|\bA\.\s?P\.|\bAP\b")
+TELANGANA = re.compile(r"\bTelangana\b", re.I)
+TELANGANA_AREA = re.compile(r"\(\s*Telangana\s+Area\s*\)", re.I)
+#: Central Acts named after the State keep their names (checked 11 October 2026 against
+#: the held copies' enacting formula; any further one is flagged by
+#: pipeline/instrument_copies.py for review before it can be renamed by mistake).
+CENTRAL_ACTS_NAMED_FOR_THE_STATE = frozenset(title.casefold() for title in (
+    "The Andhra Pradesh And Madras (Alteration Of Boundaries) Act, 1959",
+    "The Andhra Pradesh And Mysore (Transfer Of Territory) Act, 1968",
+    "The Andhra Pradesh Legislative Council Act, 2005",
+    "Andhra State Act, 1953",
+))
+
+
+def statute_own_title(stored: str, act_id: str = "") -> str:
+    """A held statute's own title: the store's listing prefix removed, and the year taken
+    from its identifier when the stored name lacks it. No renaming."""
+    title = " ".join(_LISTING_PREFIX.sub("", stored or "").split())
+    year = _ID_YEAR.search(act_id or "")
+    if year and not _TITLE_YEAR.search(title):
+        title = f"{title}, {year.group(1)}"
+    return title
+
+
+def statute_title(stored: str, act_id: str = "") -> str:
+    """The name a held statute is shown under. ONE COPY, and this is it.
+
+    Owner decisions of 10-11 October 2026: every Andhra Pradesh State law is shown as
+    a Telangana law. The store's listing prefix ("Union Of India 1980 10 ") is not
+    part of any title; a source whose name lacks its year takes it from its identifier.
+    A title already led by Telangana is a Telangana instrument, so an Andhra Pradesh
+    body it names keeps its name; central Acts named after the State keep theirs. This
+    names the instrument only -- the statute's own words are never changed, so quotes
+    stay exact. Saved responses replay under the rendering version they were made
+    with; a changed rule is a new rendering version, never a silent edit.
+    """
+    title = statute_own_title(stored, act_id)
+    if (title.casefold() in CENTRAL_ACTS_NAMED_FOR_THE_STATE
+            or re.match(r"(?:The\s+)?Telangana\b", title, re.I) or not STATE_NAME.search(title)):
+        return title
+    renamed = STATE_NAME.sub("Telangana", title)
+    renamed = re.sub(r"Telangana\s*\(\s*Telangana\s+Area\s*\)", "Telangana", renamed, flags=re.I)
+    return " ".join(renamed.split())
+
+
 def provision_label(act: str, unit: str) -> str:
     """One rendering of "this provision of this Act". ONE COPY, and this is it.
 

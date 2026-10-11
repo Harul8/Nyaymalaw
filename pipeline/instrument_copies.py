@@ -39,8 +39,14 @@ import json
 from pathlib import Path
 import re
 import sqlite3
+import sys
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+from nm.shared.citation_contracts import (  # noqa: E402  -- one owner of the naming rule
+    CENTRAL_ACTS_NAMED_FOR_THE_STATE, STATE_NAME, TELANGANA, TELANGANA_AREA,
+    statute_own_title, statute_title,
+)
 REGISTER = ROOT / "pipeline" / "instrument_copies.json"
 LINEAGE = ROOT / ".nm" / "retrieval" / "bare_acts.lineage.json"
 VECTOR_STORE = ROOT / "legal_database" / "vector_store"
@@ -48,22 +54,8 @@ SCHEMA = 1
 #: Shared sections holding the same words at or above this share are 'same_words'.
 SAME_WORDS = 0.9
 
-#: The prefix the store adds to India Code names: "Telangana 1960 0 ", "Union Of India 1963 1 ".
-_PREFIX = re.compile(r"^(?:Telangana|Union Of India)\s+\d{4}\s+\d+\s+", re.I)
-_YEAR = re.compile(r"\b(?:1[6-9]|20)\d\d\b")
-#: The State's name as titles print it.
-STATE_NAME = re.compile(r"\bAndhra\s+Pradesh\b|\bA\.\s?P\.|\bAP\b")
-_TELANGANA_AREA = re.compile(r"\(\s*Telangana\s+Area\s*\)", re.I)
-_TELANGANA = re.compile(r"\bTelangana\b", re.I)
 #: A central Act's enacting formula; State laws often mention laws "enacted by Parliament".
 _PARLIAMENT = re.compile(r"\bBe\s+it\s+enacted\s+by\s+Parliament\b", re.I)
-#: Central Acts named after the State whose held copies do not carry the enacting formula
-#: (checked 11 Oct 2026; reviewed by the owner with the register). Others are recognised
-#: from their stored "Be it enacted by Parliament".
-CENTRAL_WITH_STATE_NAME = (
-    "The Andhra Pradesh And Madras (Alteration Of Boundaries) Act, 1959",
-    "Andhra State Act, 1953",
-)
 
 
 def family(act_id: str) -> str:
@@ -74,50 +66,38 @@ def family(act_id: str) -> str:
     return "other_source"
 
 
-def proper_title(act_name: str, year: str = "") -> str:
-    """The instrument's own title: listing prefix removed, year added where the name lacks it."""
-    title = " ".join(_PREFIX.sub("", act_name or "").split())
-    if year and not _YEAR.search(title):
+def proper_title(act_name: str, act_id: str = "", year: str = "") -> str:
+    """The instrument's own title, as nm.shared.citation_contracts reads it; the stored year
+    is used only when neither the name nor a truncated identifier carries one."""
+    title = statute_own_title(act_name, act_id)
+    if year and not re.search(r"\b(?:1[6-9]|20)\d\d\b", title):
         title = f"{title}, {year}"
     return title
 
 
 def group_key(title: str) -> str:
     """Same instrument, whichever State name or source spelling a copy carries."""
-    text = _TELANGANA_AREA.sub(" ", title)
+    text = TELANGANA_AREA.sub(" ", title)
     text = STATE_NAME.sub(" state ", text)
-    text = _TELANGANA.sub(" state ", text).lower()
+    text = TELANGANA.sub(" state ", text).lower()
     text = re.sub(r"\bthe\b", " ", text)
     return " ".join(re.findall(r"[a-z0-9]+", text))
-
-
-def shown_title(title: str, jurisdiction: str) -> str:
-    """A State law is shown as a Telangana law; a central Act keeps its real name.
-
-    A title already led by "Telangana" is a Telangana instrument: an Andhra Pradesh body it
-    names ("... from the Andhra Pradesh Administrative Tribunal ...") keeps its name."""
-    if jurisdiction != "state" or re.match(r"(?:The\s+)?Telangana\b", title, re.I):
-        return title
-    renamed = STATE_NAME.sub("Telangana", title)
-    renamed = re.sub(r"Telangana\s*\(\s*Telangana\s+Area\s*\)", "Telangana", renamed, flags=re.I)
-    return " ".join(renamed.split())
 
 
 def _adapted(document: dict) -> bool:
     """A Telangana-titled copy: the law as adapted for Telangana, not an AP original."""
     title = document["title"]
-    return bool(_TELANGANA.search(title)) and not STATE_NAME.search(title) and not _TELANGANA_AREA.search(title)
+    return bool(TELANGANA.search(title)) and not STATE_NAME.search(title) and not TELANGANA_AREA.search(title)
 
 
 def _jurisdiction(members: list[dict]) -> str:
     """India Code's Telangana collection also lists central Acts, so a central Act is known
     by a Union copy, its stored enacting formula, or the reviewed list -- never by folder."""
     families = {m["family"] for m in members}
-    central = {group_key(title) for title in CENTRAL_WITH_STATE_NAME}
     if ("india_code_union" in families or any(m.get("enacted_by_parliament") for m in members)
-            or any(group_key(m["title"]) in central for m in members)):
+            or any(m["title"].casefold() in CENTRAL_ACTS_NAMED_FOR_THE_STATE for m in members)):
         return "central"
-    if "india_code_state" in families or any(STATE_NAME.search(m["title"]) or _TELANGANA.search(m["title"])
+    if "india_code_state" in families or any(STATE_NAME.search(m["title"]) or TELANGANA.search(m["title"])
                                              for m in members):
         return "state"
     return "unknown"
@@ -128,17 +108,21 @@ def build(documents: dict[str, dict]) -> dict:
     enacted_by_parliament: bool}. Returns the register (without corpus binding)."""
     groups: dict[str, list[dict]] = defaultdict(list)
     for act_id, raw in documents.items():
-        title = proper_title(raw.get("act_name") or act_id, raw.get("year") or "")
+        stored = raw.get("act_name") or act_id
+        title = proper_title(stored, act_id, raw.get("year") or "")
         groups[group_key(title)].append({"act_id": act_id, "family": family(act_id), "title": title,
+                                         "stored": stored,
                                          "sections": raw["sections"],
                                          "enacted_by_parliament": bool(raw.get("enacted_by_parliament"))})
-    register_groups, shown = [], {}
+    register_groups, shown, unnamed_central = [], {}, []
     for key in sorted(groups):
         members = groups[key]
         members.sort(key=lambda m: (not _adapted(m), -len(m["sections"]),
                                     m["family"] == "other_source", m["act_id"]))
         kept, jurisdiction = members[0], _jurisdiction(members)
-        name = shown_title(kept["title"], jurisdiction)
+        name = statute_title(kept["stored"], kept["act_id"])
+        if jurisdiction == "central" and name != statute_own_title(kept["stored"], kept["act_id"]):
+            unnamed_central.append(kept["title"])
         rows = []
         for m in members:
             entry = {"act_id": m["act_id"], "family": m["family"], "title": m["title"],
@@ -171,9 +155,8 @@ def build(documents: dict[str, dict]) -> dict:
                     "same_words": sum(c["verdict"] == "same_words" for c in copies),
                     "different_version": sum(c["verdict"] == "different_version" for c in copies),
                     "copies_with_unique_sections": sum(bool(c["kept_sections"]) for c in copies),
-                    "renamed_state_titles": sum(1 for g in register_groups
-                                                if g["jurisdiction"] == "state" and STATE_NAME.search(
-                                                    next(m["title"] for m in g["members"] if m["role"] == "kept"))),
+                    "renamed_titles": sum(1 for g in register_groups if g["shown_title"] != next(
+                        m["title"] for m in g["members"] if m["role"] == "kept")),
                     "andhra_area_instruments": sum(1 for g in register_groups if "andhra area" in g["key"])},
         "review": {"different_versions": [{"kept": g["kept"], "copy": m["act_id"],
                                            "same_words_share": m["same_words_share"]}
@@ -181,7 +164,8 @@ def build(documents: dict[str, dict]) -> dict:
                                           if m.get("verdict") == "different_version"],
                    "andhra_area": [g["shown_title"] for g in register_groups if "andhra area" in g["key"]],
                    "central_with_state_name": [g["shown_title"] for g in register_groups
-                                               if g["jurisdiction"] == "central" and STATE_NAME.search(g["shown_title"])]},
+                                               if g["jurisdiction"] == "central" and STATE_NAME.search(g["shown_title"])],
+                   "central_acts_the_naming_rule_would_rename": unnamed_central},
         "groups": register_groups,
         "documents": shown,
     }
@@ -195,7 +179,7 @@ def _order(number: str):
 def _words(full_text: str) -> str:
     body = full_text.split("\n", 1)[1] if "\n" in full_text else full_text
     body = STATE_NAME.sub(" state ", body)
-    body = _TELANGANA.sub(" state ", body).lower()
+    body = TELANGANA.sub(" state ", body).lower()
     return hashlib.sha1(" ".join(re.findall(r"[a-z0-9]+", body)).encode()).hexdigest()[:16]
 
 
@@ -212,7 +196,7 @@ def read_documents(db: Path) -> dict[str, dict]:
                                                 "sections": defaultdict(set)})
             doc["sections"][str(section)].add(_words(row.get("full_text", "")))
         named = [a for a, d in documents.items()
-                 if STATE_NAME.search(proper_title(d["act_name"] or a, d["year"] or ""))
+                 if STATE_NAME.search(proper_title(d["act_name"] or a, a, d["year"] or ""))
                  or re.search(r"\bAndhra\b", d["act_name"] or a, re.I)]
         for start in range(0, len(named), 500):
             batch = named[start:start + 500]
@@ -238,6 +222,12 @@ def main(argv=None) -> int:
     register["built_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
     print(json.dumps({**register["summary"], "review_central_with_state_name": register["review"]["central_with_state_name"]},
                      ensure_ascii=False, indent=1))
+    wrongly_renamed = register["review"]["central_acts_the_naming_rule_would_rename"]
+    if wrongly_renamed:
+        print("REFUSED: central Acts the naming rule would rename -- add them to "
+              "CENTRAL_ACTS_NAMED_FOR_THE_STATE in nm/shared/citation_contracts.py after review: "
+              + "; ".join(wrongly_renamed))
+        return 1
     if args.write:
         REGISTER.write_text(json.dumps(register, ensure_ascii=False, indent=1, sort_keys=False) + "\n",
                             encoding="utf8")

@@ -14,7 +14,7 @@
   "same_words": 1492,
   "different_version": 86,
   "copies_with_unique_sections": 113,
-  "renamed_state_titles": 523,
+  "renamed_titles": 522,
   "andhra_area_instruments": 8
  },
  "review": {
@@ -464,7 +464,8 @@
    "The Andhra Pradesh And Madras (Alteration Of Boundaries) Act, 1959",
    "The Andhra Pradesh And Mysore (Transfer Of Territory) Act, 1968",
    "The Andhra Pradesh Legislative Council Act, 2005"
-  ]
+  ],
+  "central_acts_the_naming_rule_would_rename": []
  },
  "groups": [
   {
@@ -65092,5 +65093,5 @@
   "passages": 416571,
   "lineage_sha256": "c5b48a516658957ba45ccf2826146b0f41b31731d62ab96af0be79ee3580a603"
  },
- "built_at": "2026-10-11T02:40:42+00:00"
+ "built_at": "2026-10-11T02:54:33+00:00"
 }

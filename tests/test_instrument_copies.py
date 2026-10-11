@@ -1,10 +1,11 @@
 """One kept copy per instrument and the name it is shown under; owner decisions of 10-11 Oct 2026.
 
 Synthetic documents only: the register's rules, not the corpus. A copy is suppressed only
-for sections the kept copy also holds; State laws are shown as Telangana laws; central
-Acts keep their names; statute words are never part of the renaming.
+for sections the kept copy also holds; names come from the one shared rule
+(nm.shared.citation_contracts.statute_title); a central Act the rule would rename is
+flagged before any register can be written.
 """
-from pipeline.instrument_copies import build, group_key, proper_title, shown_title
+from pipeline.instrument_copies import build, group_key, proper_title
 
 
 def doc(act_name, sections, year="", parliament=False):
@@ -12,10 +13,10 @@ def doc(act_name, sections, year="", parliament=False):
             "sections": {number: {words} for number, words in sections.items()}}
 
 
-def test_listing_prefix_is_dropped_and_a_missing_year_is_added():
+def test_own_titles_drop_the_listing_prefix_and_keep_a_year():
     assert proper_title("Union Of India 1980 10 The Sale Of Goods Act, 1930") == "The Sale Of Goods Act, 1930"
-    assert proper_title("Telangana 1960 0 Andhra Pradesh Buildings Act, 1960") == "Andhra Pradesh Buildings Act, 1960"
-    assert proper_title("A.P. Advocates' Fee Rules", "2010") == "A.P. Advocates' Fee Rules, 2010"
+    assert proper_title("A.P. Advocates' Fee Rules", "a_p_advocates_fee_rules_2010") == "A.P. Advocates' Fee Rules, 2010"
+    assert proper_title("A.P. Long Truncated Rules", "a_p_long_truncated_rul", "1998") == "A.P. Long Truncated Rules, 1998"
 
 
 def test_the_same_instrument_groups_across_state_names_but_not_across_regions_or_years():
@@ -24,14 +25,6 @@ def test_the_same_instrument_groups_across_state_names_but_not_across_regions_or
     assert original == group_key("A.P. (Telangana Area) Tenancy and Agricultural Lands Act, 1950")
     assert group_key("Andhra Pradesh (Andhra Area) Tenancy Act, 1956") != group_key("Telangana Tenancy Act, 1956")
     assert group_key("Andhra Pradesh Court-Fees Act, 1956") != group_key("Telangana Court-Fees Act, 2016")
-
-
-def test_state_laws_are_shown_as_telangana_laws_and_central_acts_keep_their_names():
-    assert shown_title("A.P. Advocates' Fee Rules, 2010", "state") == "Telangana Advocates' Fee Rules, 2010"
-    assert (shown_title("Andhra Pradesh (Telangana Area) Tenancy Act, 1950", "state")
-            == "Telangana Tenancy Act, 1950")
-    assert shown_title("The Andhra Pradesh and Madras (Alteration of Boundaries) Act, 1959", "central") == \
-        "The Andhra Pradesh and Madras (Alteration of Boundaries) Act, 1959"
 
 
 def test_the_adapted_copy_is_kept_and_copies_keep_only_their_unique_sections():
@@ -67,24 +60,24 @@ def test_without_an_adapted_copy_the_most_complete_copy_is_kept():
     assert register["documents"]["the_specific_relief_act_1963"]["kept_sections"] == []
 
 
-def test_a_telangana_instrument_keeps_the_andhra_pradesh_body_it_names():
-    title = ("Telangana (Transfer Of Pending Cases Of State Of Telangana From The Andhra Pradesh "
-             "Administrative Tribunal To High Court) Act, 2017")
-    assert shown_title(title, "state") == title
-
-
-def test_a_central_act_held_only_in_the_state_collection_is_not_renamed():
+def test_a_central_act_held_only_in_the_state_collection_keeps_its_name():
     """India Code lists some central Acts under Telangana; folder is not jurisdiction."""
     register = build({"TELANGANA_1959_3_THE ANDHRA PRADESH AND MADRAS (ALTERATION OF BOUNDARIES) ACT, 1959": doc(
         "Telangana 1959 3 The Andhra Pradesh And Madras (Alteration Of Boundaries) Act, 1959", {"1": "a"})})
     [group] = register["groups"]
     assert group["jurisdiction"] == "central"
     assert group["shown_title"] == "The Andhra Pradesh And Madras (Alteration Of Boundaries) Act, 1959"
+    assert register["review"]["central_acts_the_naming_rule_would_rename"] == []
 
 
-def test_an_enacting_formula_marks_an_unpaired_document_central_so_it_is_not_renamed():
-    register = build({"andhra_state_act_1953": doc("Andhra State Act", {"1": "a"}, "1953", parliament=True),
-                      "a_p_advocates_fee_rules_2010": doc("A.P. Advocates' Fee Rules", {"1": "b"}, "2010")})
-    shown = {g["kept"]: (g["jurisdiction"], g["shown_title"]) for g in register["groups"]}
-    assert shown["andhra_state_act_1953"] == ("central", "Andhra State Act, 1953")
-    assert shown["a_p_advocates_fee_rules_2010"] == ("state", "Telangana Advocates' Fee Rules, 2010")
+def test_a_new_central_act_the_rule_would_rename_is_flagged_before_writing():
+    register = build({"the_andhra_pradesh_reorganisation_act_2014": doc(
+        "The Andhra Pradesh Reorganisation Act", {"1": "a"}, "2014", parliament=True)})
+    assert register["review"]["central_acts_the_naming_rule_would_rename"] == [
+        "The Andhra Pradesh Reorganisation Act, 2014"]
+
+
+def test_a_state_rule_takes_the_telangana_name_and_its_year_from_the_identifier():
+    register = build({"a_p_advocates_fee_rules_2010": doc("A.P. Advocates' Fee Rules", {"1": "b"}, "2010")})
+    [group] = register["groups"]
+    assert (group["jurisdiction"], group["shown_title"]) == ("state", "Telangana Advocates' Fee Rules, 2010")
