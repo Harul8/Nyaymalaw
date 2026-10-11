@@ -25,11 +25,31 @@ def test_v1_replay_and_v2_authority_review_render_identical_unchanged_source_row
     legacy, fresh, authorities = authority_ready()
     before = deepcopy((legacy, fresh, authorities))
     old = response_rendering.render(*legacy, contract=response_rendering.LEGACY_CONTRACT)
+    stored = response_rendering.render(*fresh, authority_evidence=authorities,
+                                       contract=response_rendering.STORED_TITLE_CONTRACT)
     new = response_rendering.render(*fresh, authority_evidence=authorities)
-    assert response_rendering.CONTRACT == "core_response_rendering_v2"
-    assert old == new
+    assert response_rendering.STORED_TITLE_CONTRACT == "core_response_rendering_v2"
+    assert response_rendering.CONTRACT == "core_response_rendering_v3"
+    assert old == stored == new, "names needing no change render identically in every version"
     assert (legacy, fresh, authorities) == before
     assert all("authority_evidence" not in source for e in new for source in e["sources"])
+
+
+def test_v3_shows_statutes_under_their_shown_names_and_v2_keeps_the_stored_title():
+    """Owner decisions, 10-11 Oct 2026; a saved v2 response never changes when reopened."""
+    _, fresh, authorities = authority_ready()
+    ctx, record, sources, draft, review, execution = fresh
+    stored = "Telangana 1960 0 Andhra Pradesh Buildings (Lease, Rent And Eviction) Control Act, 1960"
+    renamed = deepcopy(sources)
+    for row in renamed.values():
+        if row["kind"] == "provision":
+            row["title"] = stored
+    v2 = response_rendering._sources(draft["units"][0], renamed)
+    v3 = response_rendering._sources(draft["units"][0], renamed, shown_names=True)
+    titles = lambda rows: {s["title"] for s in rows if s["kind"] == "provision"}
+    assert titles(v2) == {stored}
+    assert titles(v3) == {"Telangana Buildings (Lease, Rent And Eviction) Control Act, 1960"}
+    assert [s["text"] for s in v2] == [s["text"] for s in v3], "statute words never change"
 
 
 def test_v2_cannot_render_without_the_authorities_that_were_independently_reviewed():

@@ -4,9 +4,13 @@ from __future__ import annotations
 from copy import deepcopy
 
 from nm.core_engine import response_authorities, response_review, response_writer
+from nm.shared.citation_contracts import statute_title
 
 LEGACY_CONTRACT = "core_response_rendering_v1"
-CONTRACT = "core_response_rendering_v2"
+#: Authority-bound rendering with each source under its stored title.
+STORED_TITLE_CONTRACT = "core_response_rendering_v2"
+#: v2 with statutes under their shown names (owner decisions, 10-11 Oct 2026).
+CONTRACT = "core_response_rendering_v3"
 _LEGAL = {"provision", "judgment"}
 _ROLES = {"provision": "legislative_text", "court_disposition": "court_conclusion",
           "court_reasoning": "court_reasoning", "party_submission": "party_submission",
@@ -28,7 +32,14 @@ def _statement(unit, use):
         "treatment_excerpt": treatment["text"] if treatment else "", "reason": ""}
 
 
-def _sources(unit, catalogue):
+def _title(row, shown_names):
+    """The reader's name for a source; statute words are never renamed."""
+    if shown_names and row["kind"] == "provision":
+        return statute_title(row["title"], row["source_identity"].get("act_id", ""))
+    return row["title"]
+
+
+def _sources(unit, catalogue, shown_names=False):
     statements = {}
     labels = {}
     for use in unit["uses"]:
@@ -55,16 +66,18 @@ def _sources(unit, catalogue):
         related = []
         for related_id, related_uses in statements.items():
             source = catalogue[related_id]
+            source_title = _title(source, shown_names)
             for index, statement in enumerate(related_uses):
                 if related_id == identity and index == 0:
                     continue
                 related.append({**deepcopy(statement), "source_id": related_id,
-                    "title": source["title"], "locator": source["locator"],
-                    "assertion_statement": " · ".join(filter(None, [source["title"],
+                    "title": source_title, "locator": source["locator"],
+                    "assertion_statement": " · ".join(filter(None, [source_title,
                         source["locator"]])) + ": " + statement["assertion_statement"]})
         verification["context_statements"] = related
+        title = _title(row, shown_names)
         rendered.append({"brain": True, "id": identity, "digest": row["digest"],
-            "kind": row["kind"], "label": row["title"], "title": row["title"],
+            "kind": row["kind"], "label": title, "title": title,
             # This is a reader label, never an invented paragraph/section number.
             "locator": row["locator"] or "Saved passage", "text": row["text"],
             "qualification": labels[identity] + ".", "verification": verification})
@@ -116,7 +129,7 @@ def _anchors(text, sources):
 def render(context, research_record, sources, draft, review, execution=None, *,
            authority_evidence=None, contract=CONTRACT):
     """No new prose; the declared version owns its exact reviewed dependencies."""
-    if contract not in {LEGACY_CONTRACT, CONTRACT}:
+    if contract not in {LEGACY_CONTRACT, STORED_TITLE_CONTRACT, CONTRACT}:
         raise ValueError("Unknown response rendering contract")
     checked_draft = response_writer.validate(draft, context, sources)
     if contract == LEGACY_CONTRACT:
@@ -135,7 +148,7 @@ def render(context, research_record, sources, draft, review, execution=None, *,
         raise ValueError("A response without accepted independent review cannot be rendered")
     elements = []
     for unit in checked_draft["units"]:
-        legal_sources = _sources(unit, sources)
+        legal_sources = _sources(unit, sources, shown_names=contract == CONTRACT)
         elements.append({"kind": unit["kind"].upper(), "text": unit["text"],
             "source": deepcopy(legal_sources[0]) if legal_sources else None,
             "sources": legal_sources,

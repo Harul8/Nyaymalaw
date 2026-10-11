@@ -103,10 +103,13 @@ def validate_activity(activity, context, elements):
     version = activity.get("contract")
     expected_fields = (_ACTIVITY_FIELDS if version == LEGACY_CONTRACT else
                        _ACTIVITY_FIELDS | {"authority_evidence"})
-    rendering = (response_rendering.LEGACY_CONTRACT if version == LEGACY_CONTRACT else
-                 response_rendering.CONTRACT)
+    # A saved response re-renders under the version it was admitted with: names a
+    # later rendering shows differently never rewrite an earlier turn.
+    renderings = ({response_rendering.LEGACY_CONTRACT} if version == LEGACY_CONTRACT else
+                  {response_rendering.STORED_TITLE_CONTRACT, response_rendering.CONTRACT})
+    rendering = activity.get("rendering_contract") if isinstance(activity, dict) else None
     if (version not in {LEGACY_CONTRACT, CONTRACT} or set(activity) != expected_fields
-            or activity["rendering_contract"] != rendering):
+            or rendering not in renderings):
         raise ValueError("Unknown saved turn or rendering contract")
     record = research.validate(activity["research"], activity["research"]["plan"], context)
     sources = answer_sources.build(context, record)
