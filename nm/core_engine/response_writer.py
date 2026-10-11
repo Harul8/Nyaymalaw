@@ -50,10 +50,11 @@ binding force without supplied support. Preserve adverse evidence and competing 
 legal assertion selects its supporting words; analysis selects its factual and, where
 needed, legal premises. Ask only for consequential missing matter details. A question
 or proposed next step cannot introduce an unsupported premise. Explain useful limits
-when support is missing without claiming that no law exists or asking the advocate
-to solve an internal processing failure. Without relevant held law, do the supported
-account or question work and explain the legal-source gap; never fill it with a legal
-standard from memory.
+when support is missing, without asking the advocate to solve an internal processing
+failure. Describe a legal-source gap only as what this research returned: a search
+that did not return a source shows neither that no such source is held nor that no
+such law exists. Without relevant held law, do the supported account or question
+work and explain that gap; never fill it with a legal standard from memory.
 
 Outcome: Return an ordered units array with natural text, kind, original-message
 addresses and source uses. Separate independently assessable assertions; retain all

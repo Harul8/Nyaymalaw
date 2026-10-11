@@ -2059,3 +2059,20 @@ The short phrases drop the anchoring legal vocabulary that the longer ones carry
 **Conclusion.** The defect is real and general, but correcting it at query time is neutral on the measured cases and adds per-query work, so it is not adopted. The clean fix is tokenising whole words when the indexes are next rebuilt. That rebuild is already an owner decision for chunk identity and heading fields. The lien miss remains a vocabulary and length problem in the planner's phrases.
 
 Evidence: `outputs/core-engine-build-20261010/seq3-word-folding/`. No provider calls; ledger unchanged at $4.071423.
+
+Owner decision (11 Oct): accept current search quality for now and record its known limits.
+
+### SEQ.4 gap wording: a gap is what this research returned (11 Oct 2026)
+
+**Defect.** The 11 Oct browser answer said "the held material does not include a repairer's or bailee's lien provision or a judgment deciding retention for repair charges". The corpus holds Contract Act s.170; the search had only not returned it, and independent review accepted the claim.
+- Failed invariant: a search that did not return a source shows neither that no such source is held nor that no such law exists.
+- Writer instruction 4 forbade claiming that no law exists, but not claiming that the collection lacks a source.
+- Owner approval: fix the writer and review instructions as two atomic pieces, verified by replaying the saved question with a cap of $0.60.
+
+**Piece 1, writer instruction** (`response_writer.py`; contract unchanged, as with earlier wording changes).
+- Instruction 4 now says to describe a legal-source gap only as what this research returned, and states the invariant above.
+- Focused test: the rule reaches the writer's model call, and shape acceptance adds no keyword filter (109 writer tests pass).
+- Replay: one Sol writer call on the saved turn's exact context, research, sources and execution evidence, $0.134232. Seven units.
+- The lien unit now reads: "this research did not return a provision or judgment establishing a repairer's possessory lien or its conditions". The deposit analysis likewise says "the returned passages do not establish…". The next step names the repairer's lien as the next research priority.
+- Residual imprecision: the following sentence says "I therefore cannot conclude from the held material that the shop may retain the laptop…". "Returned material" would be exact, but this is not an absence claim.
+- Pass condition met. Evidence: `outputs/core-engine-build-20261010/seq4-gap-wording/writer-draft.json`.

@@ -263,6 +263,22 @@ def test_no_arbitrary_length_or_keyword_heuristic_claims_semantic_correctness():
     assert draft["units"][0]["text"] == text
 
 
+def test_gap_scope_rule_reaches_the_writer_without_a_keyword_filter():
+    # A search that did not return a source says nothing about what is held: an
+    # 11 Oct answer said "the held material does not include" a lien provision the
+    # corpus holds. The writer contract owns a gap's scope; a pinned-model replay
+    # measures it. Shape acceptance stays neutral and review judges the meaning.
+    ctx, record = fixture()
+    sources = build(ctx, record)
+    text = "The held material does not include a provision on this point."
+    model = Model({"units": [unit(sources, kind="limitation", text=text)]})
+    draft = write(model, ctx, record, sources)
+    system = " ".join(model.calls[0][0].system.split())
+    assert "what this research returned" in system
+    assert "no such source is held" in system and "no such law exists" in system
+    assert draft["units"][0]["text"] == text
+
+
 @pytest.mark.parametrize("damage", ["text", "id", "reference", "contract", "extra_field"])
 def test_saved_or_reviewed_draft_rebinds_all_projection_fields(damage):
     ctx, record = fixture()
