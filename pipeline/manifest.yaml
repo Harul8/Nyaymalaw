@@ -304,3 +304,58 @@ acts:
   - landlord
   - wilful default
   - rent controller
+- act_name: Indian Contract Act, 1872
+  act_patterns:
+  - '%INDIAN CONTRACT ACT, 1872%'
+  intended_sections:
+  - 1-75
+  - 19A
+  - 124-238
+  - 178A
+  in_force_from: '1872-09-01'
+  keywords:
+  - contract
+  - agreement
+  - consideration
+  - bailment
+  - lien
+  - damages
+  - indemnity
+  - guarantee
+  - agency
+- act_name: Indian Partnership Act, 1932
+  act_patterns:
+  - '%INDIAN PARTNERSHIP ACT, 1932%'
+  intended_sections:
+  - 1-74
+  in_force_from: '1932-10-01'
+  keywords:
+  - partnership
+  - partner
+  - firm
+  - registration of firms
+  - dissolution of firm
+- act_name: Indian Succession Act, 1925
+  act_patterns:
+  - '%INDIAN SUCCESSION ACT, 1925%'
+  intended_sections:
+  - 1-392
+  - 33A
+  - 236A
+  keywords:
+  - succession
+  - will
+  - probate
+  - letters of administration
+  - succession certificate
+  - intestate
+- act_name: Dissolution of Muslim Marriages Act, 1939
+  act_patterns:
+  - '%DISSOLUTION OF MUSLIM MARRIAGES ACT, 1939%'
+  intended_sections:
+  - 1-5
+  keywords:
+  - dissolution of muslim marriage
+  - khula
+  - cruelty
+  - maintenance

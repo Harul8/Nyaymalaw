@@ -1846,3 +1846,41 @@ review remain responsible for the delivered answer, but planning-qualification
 repair stays open. All five no-research cases returned no work in all eight
 samples. Approved paid spend this session: $0.098732; shared ledger $3.780929 of
 $5 ($1.515431 of it reserved or unknown).
+
+### SEQ.3 missing central Acts added to the held statute index (owner-approved, 11 Oct 2026)
+
+Owner decision: obtain the Indian Contract Act 1872, Indian Partnership Act 1932,
+Indian Succession Act 1925 and Dissolution of Muslim Marriages Act 1939 by Indian
+Kanoon scraping and add them. Indian Kanoon's robots.txt permits the four
+complete-Act pages and its terms do not prohibit automated access; the four pages
+were fetched once each, 5 s apart. Their Akoma Ntoso markup was converted to the
+library's raw Act layout without rewriting words. Three Uttarakhand amendment
+blocks inside Partnership Act ss.58, 67 and 68 were excluded (not Telangana law);
+two proviso/explanation blocks (Contract Act s.28, DMMA s.2) were joined onto
+their preceding line so the append job's identifiers are unique. Indian Kanoon
+omits Contract Act s.6; with owner approval its words were read from India Code's
+official section view (indiacode.gov.in, the migrated site) and inserted, the
+source noted in the file. Known limit: the Indian Kanoon texts are older
+consolidations (they still except Jammu and Kashmir), so currency is not assessed.
+
+The existing append job (`pipeline/append_bare_acts.py`, LB-106) was rehearsed
+read-only, then run with both local servers stopped: 664 sections, 1,861
+passages, 142 seconds, no API cost. Index record, vector index, BM25 and passage
+store agree at 416,571 passages; the previous index and BM25 folder are kept as
+`.before-20261011T022640`. The four raw files and the acquisition record were
+placed under the library's `raw_data/BareActs/Union of India/` (the corpus
+junction target is the shared Agentified NM library). Production search then
+ranked the expected section first for six advocate-style questions: Contract Act
+s.170 (bailee's lien), s.6 (revocation by lapse), s.73 (breach compensation);
+Partnership Act s.69 (unregistered firm suits); Succession Act s.213 (probate);
+DMMA s.2 (grounds). `pipeline/manifest.yaml` gains the four reviewed entries
+(intended sections equal the held sections; commencement only where the held text
+states it). Main instance 8175 restarted on the current code (health current);
+the stale observed instance 8176 was stopped and not restarted.
+
+Checks: the append job's 18 safety tests pass; the manifest loads (26 entries).
+`tests/test_manifest_covers_what_it_declares.py` fails for every declared Act,
+including the 22 committed before this change, because the archived evidence
+adapter returns NOT_ASSESSED (no provision revision registry); verified against
+the committed manifest, so the failure is pre-existing and unrelated. Not run:
+full suite, gate, journeys, model calls or browser checks.
