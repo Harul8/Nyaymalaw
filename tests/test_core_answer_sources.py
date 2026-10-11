@@ -341,3 +341,32 @@ def test_statutes_are_presented_under_their_shown_name_while_the_catalogue_keeps
     shown = [row for row in presentation(sources)["passages"] if row["kind"] == "provision"]
     assert {row["title"] for row in shown} == {"Telangana Buildings (Lease, Rent And Eviction) Control Act, 1960"}
     assert [row["text"] for row in shown] == [sources[row["id"]]["text"] for row in shown]
+
+
+def test_aliases_name_each_legal_passage_once_in_catalogue_order():
+    from nm.core_engine.answer_sources import aliases
+    ctx, record = fixture()
+    sources = build(ctx, record)
+    offered = aliases(sources)
+    legal = [identity for identity, row in sources.items() if row["kind"] in {"provision", "judgment"}]
+    assert list(offered.values()) == legal and len(set(offered)) == len(offered)
+    for alias, identity in offered.items():
+        assert alias[0] == {"provision": "P", "judgment": "J"}[sources[identity]["kind"]]
+        assert len(alias) < 6 < len(identity)
+    assert aliases(deepcopy(sources)) == offered, "replay re-derives the same map"
+    assert not set(offered.values()) & {i for i, row in sources.items() if row["kind"] == "account"}
+
+
+def test_aliased_presentation_renames_only_passage_tags_and_context_members():
+    from nm.core_engine.answer_sources import aliases
+    ctx, record = fixture()
+    sources = build(ctx, record)
+    plain, aliased = presentation(sources), presentation(sources, aliased=True)
+    offered = {tag: alias for alias, tag in aliases(sources).items()}
+    assert [row["id"] for row in aliased["passages"]] == [offered[row["id"]] for row in plain["passages"]]
+    for row_plain, row_aliased in zip(plain["passages"], aliased["passages"]):
+        assert {**row_aliased, "id": row_plain["id"]} == row_plain
+    assert aliased["context_groups"] == {identity: [offered.get(m, m) for m in members]
+                                         for identity, members in plain["context_groups"].items()}
+    assert presentation(sources) == plain, "the owned-tag presentation is unchanged"
+    assert "provision:" not in json.dumps(aliased) and "judgment:" not in json.dumps(aliased)

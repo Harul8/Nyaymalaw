@@ -109,13 +109,33 @@ def select(reference, sources):
     return {key: chosen[key] for key in ("source_id", "start", "end", "text")}
 
 
-def presentation(sources):
+def aliases(sources):
+    """Short offered IDs for legal passages (P1, P2, ... and J1, J2, ...).
+
+    Hexadecimal source tags are long enough for a model to mistype and repeat
+    through every presentation. From writer and review v3 the models see these
+    instead. The map follows catalogue order, so replay re-derives it from the
+    saved catalogue; durable records keep the owned source tags.
+    """
+    prefixes, counts, result = {"provision": "P", "judgment": "J"}, {}, {}
+    for identity, row in sources.items():
+        prefix = prefixes.get(row["kind"])
+        if prefix:
+            counts[prefix] = counts.get(prefix, 0) + 1
+            result[f"{prefix}{counts[prefix]}"] = identity
+    return result
+
+
+def presentation(sources, *, aliased=False):
     """Model-only catalogue; share exact context and gaps, not their repeated proof.
 
     Original conversation is supplied apart. Complete canonical sources remain the
-    admission and replay owner; local presentation IDs never replace source tags.
-    A passage's neighbours are its ordered context group with that passage removed.
+    admission and replay owner. Local presentation IDs never replace source tags,
+    except that an aliased presentation names legal passages by their offered
+    aliases, which admission maps back. A passage's neighbours are its ordered
+    context group with that passage removed.
     """
+    offered = {tag: alias for alias, tag in aliases(sources).items()} if aliased else {}
     passages, coverage_by_id, coverage_keys = [], {}, {}
     gaps_by_id, gap_keys, context_groups = {}, {}, {}
 
@@ -151,6 +171,8 @@ def presentation(sources):
                 identity = f"coverage:{len(coverage_by_id) + 1}"
                 coverage_keys[coverage_key] = identity
                 shared = deepcopy(entry)
+                if shared.get("selected_source_id") in offered:
+                    shared["selected_source_id"] = offered[shared["selected_source_id"]]
                 if "gaps" in shared:
                     shared["gap_ids"] = []
                     for gap in shared.pop("gaps"):
@@ -162,6 +184,9 @@ def presentation(sources):
                         shared["gap_ids"].append(gap_keys[gap_key])
                 coverage_by_id[identity] = shared
             passage["coverage_ids"].append(coverage_keys[coverage_key])
+        passage["id"] = offered.get(row["id"], row["id"])
         passages.append(passage)
+    context_groups = {identity: [offered.get(member, member) for member in members]
+                      for identity, members in context_groups.items()}
     return {"passages": passages, "coverage_by_id": coverage_by_id,
             "gaps_by_id": gaps_by_id, "context_groups": context_groups}
