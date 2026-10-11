@@ -186,6 +186,9 @@ class LocalCollection:
         self._words = None
         self._revision: str | None = None
         self._lock = threading.Lock()
+        # The startup warm-up and a first search load each index once.
+        self._words_lock = threading.Lock()
+        self._vectors_lock = threading.Lock()
         self._parent_stamp = None
         self._parent_hash = None
         self._parents = None
@@ -337,7 +340,18 @@ class LocalCollection:
             raise SearchUnavailable("The loaded corpus changed; reload its search indices")
 
     def warm(self) -> None:
+        """Load what a first search would otherwise wait for (the startup thread):
+        indices, the copy register's hidden positions and the shared models."""
         self._open()
+        self._word_index()
+        self._vector_index()
+        if self.copies is not None:
+            self.suppressed_positions()
+        self.models.load()
+        # One probe pages in the vector index and starts the device kernels;
+        # its results are discarded and nothing is cached as evidence.
+        self.semantic_many(("warm-up",), 1)
+        self.rerank([("warm-up", "warm-up")])
 
     def _open(self):
         if self._loaded is not None:
@@ -370,40 +384,42 @@ class LocalCollection:
 
     def _word_index(self):
         record, _, count = self._open()
-        if self._words is None:
-            path = self.corpus_dir / record["bm25"]["path"]
-            try:
-                params = (path / "params.index.json").read_bytes()
-                if (json.loads(params)["num_docs"] != count
-                        or record["bm25"]["num_docs"] != count
-                        or hashlib.sha256(params).hexdigest() != record["bm25"]["params_sha256"]):
-                    raise SearchUnavailable("Word index differs from its recorded source positions")
-                import bm25s
-                self._words = bm25s.BM25.load(str(path), mmap=True)
-            except (ImportError, OSError, ValueError, KeyError) as exc:
-                raise SearchUnavailable("Word index is unavailable") from exc
+        with self._words_lock:
+            if self._words is None:
+                path = self.corpus_dir / record["bm25"]["path"]
+                try:
+                    params = (path / "params.index.json").read_bytes()
+                    if (json.loads(params)["num_docs"] != count
+                            or record["bm25"]["num_docs"] != count
+                            or hashlib.sha256(params).hexdigest() != record["bm25"]["params_sha256"]):
+                        raise SearchUnavailable("Word index differs from its recorded source positions")
+                    import bm25s
+                    self._words = bm25s.BM25.load(str(path), mmap=True)
+                except (ImportError, OSError, ValueError, KeyError) as exc:
+                    raise SearchUnavailable("Word index is unavailable") from exc
         return self._words
 
     def _vector_index(self):
         record, _, count = self._open()
-        if self._vectors is None:
-            path = self.corpus_dir / record["vector_index"]["path"]
-            try:
-                verified = record["verified"]
-                with path.open("rb") as stream:
-                    header = stream.read(16)
-                vectors = struct.unpack("<q", header[8:16])[0]
-                if (header[:4] != b"IxFI" or struct.unpack("<i", header[4:8])[0] != DIMENSIONS
-                        or vectors != count + record.get("vectors_without_passage", 0)
-                        or vectors != record["vector_index"]["vectors"]
-                        or path.stat().st_size != record["vector_index"]["bytes"]
-                        or not verified.get("sampled") or verified["same_vector"] != verified["sampled"]
-                        or verified["mean_similarity"] < 0.99):
-                    raise SearchUnavailable("Vector index differs from its verified source space")
-                import faiss
-                self._vectors = faiss.read_index(str(path), faiss.IO_FLAG_MMAP_IFC | faiss.IO_FLAG_READ_ONLY)
-            except (ImportError, OSError, ValueError, KeyError, struct.error) as exc:
-                raise SearchUnavailable("Vector index is unavailable") from exc
+        with self._vectors_lock:
+            if self._vectors is None:
+                path = self.corpus_dir / record["vector_index"]["path"]
+                try:
+                    verified = record["verified"]
+                    with path.open("rb") as stream:
+                        header = stream.read(16)
+                    vectors = struct.unpack("<q", header[8:16])[0]
+                    if (header[:4] != b"IxFI" or struct.unpack("<i", header[4:8])[0] != DIMENSIONS
+                            or vectors != count + record.get("vectors_without_passage", 0)
+                            or vectors != record["vector_index"]["vectors"]
+                            or path.stat().st_size != record["vector_index"]["bytes"]
+                            or not verified.get("sampled") or verified["same_vector"] != verified["sampled"]
+                            or verified["mean_similarity"] < 0.99):
+                        raise SearchUnavailable("Vector index differs from its verified source space")
+                    import faiss
+                    self._vectors = faiss.read_index(str(path), faiss.IO_FLAG_MMAP_IFC | faiss.IO_FLAG_READ_ONLY)
+                except (ImportError, OSError, ValueError, KeyError, struct.error) as exc:
+                    raise SearchUnavailable("Vector index is unavailable") from exc
         return self._vectors
 
     def lexical(self, query: str, depth: int) -> list[int]:
