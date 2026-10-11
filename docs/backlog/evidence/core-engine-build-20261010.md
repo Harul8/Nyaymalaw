@@ -1928,3 +1928,35 @@ surface (removed endpoints, action settings, a stale prompt-site register, layer
 checks), unrelated to these changes. Main instance 8175 restarted on this code
 (serving 90568535d4525fdd, health current). Not run: full suite, gate, model calls
 or browser checks.
+
+### SEQ.1-4 browser check after the corpus and naming changes (owner-requested, 11 Oct 2026)
+
+Run on a separate 127.0.0.1:8177 instance of the current code and corpus (main
+8175 untouched), with its own store and one synthetic advocate enrolled through
+`Application.directory.enrol`; the shared ledger capped spending. The advocate
+enabled OpenAI text processing in the account panel, started a conversation and
+asked one synthetic question: a Hyderabad tenant's Rs 50,000 deposit withheld for
+disputed electricity charges, and a repair shop holding a laptop until a disputed
+bill is paid. One turn: 4 model calls (Luna understanding and planning, Sol writer
+and review), accepted on the first review, $0.277792; ledger $4.058721 of $5.
+
+Observed: the turn used research v5 (unlabelled queries) and rendering v3. The source
+pane showed "Telangana Electricity Regulatory Commission (Security Deposit)
+Regulation, 2004" (stored under Andhra Pradesh) and "The Consumer Protection Act,
+1986" without the store's listing prefix; the provision readback check matched the
+saved passage. The saved turn reopened with the same 4,053-character thread and
+passed exact re-render validation. The deposit answer was careful and attributed;
+it flagged that the 1986 consumer Act may not govern now. Defect: for the laptop the
+answer said no bailee's lien provision is held, although Contract Act s.170 now is.
+Trace: the planner's enquiry ("India Telangana repair shop artisan lien bailee
+retention customer's repaired laptop disputed repair charges return of goods") never
+found s.170 (word search beyond rank 1,000, meaning search rank 449); without
+"India Telangana" it reached rank 110 (outside the 60 kept); a focused phrase
+("bailee lien to retain goods until repair charges are paid") ranks it 3rd, the term
+of art ("bailee's particular lien for labour or skill on goods bailed") 1st. The
+word index itself is sound: it ranks the new Acts' sections first for focused
+queries. Cause: unfocused, place-padded planner enquiries; a focused-enquiry
+planning candidate is the proposed next measurement. Also observed: stale interface
+copy on the home page ("Legal research and action execution are not connected in
+this build") and two tabs labelled "Not connected to the rebuilt brain yet";
+citations remain whole-paragraph links. Evidence: `outputs/core-engine-build-20261010/browser-test-20261011/`.
