@@ -16,7 +16,7 @@ import struct
 import threading
 import traceback
 from copy import deepcopy
-from contextlib import closing
+from contextlib import ExitStack, closing
 from functools import lru_cache
 from pathlib import Path
 from typing import Protocol
@@ -171,6 +171,26 @@ class _Models:
         return vectors, groups
 
 
+class _SnapshotScope:
+    """A search reads one checked snapshot. A change during it fails the whole
+    search on exit, so no result mixes two corpus versions."""
+
+    def __init__(self, collection) -> None:
+        self.collection = collection
+
+    def __enter__(self):
+        scope = self.collection._scope
+        scope.active, scope.verified = True, None
+        return self
+
+    def __exit__(self, kind, value, trace):
+        scope = self.collection._scope
+        verified, scope.active, scope.verified = scope.verified, False, None
+        if kind is None and verified is not None and self.collection.revision() != verified:
+            raise SearchUnavailable("The loaded corpus changed; reload its search indices")
+        return False
+
+
 class LocalCollection:
     """One coherent vector, word, and exact-passage collection."""
 
@@ -189,6 +209,7 @@ class LocalCollection:
         # The startup warm-up and a first search load each index once.
         self._words_lock = threading.Lock()
         self._vectors_lock = threading.Lock()
+        self._scope = threading.local()
         self._parent_stamp = None
         self._parent_hash = None
         self._parents = None
@@ -336,8 +357,19 @@ class LocalCollection:
         return hidden
 
     def _check_snapshot(self) -> None:
+        scope = self._scope
+        active = getattr(scope, "active", False)
+        if active and scope.verified is not None and scope.verified == self._revision:
+            return
         if self._revision is None or self.revision() != self._revision:
             raise SearchUnavailable("The loaded corpus changed; reload its search indices")
+        if active:
+            scope.verified = self._revision
+
+    def snapshot_scope(self):
+        """One search checks its loaded snapshot on first use and again on exit,
+        not before each of its hundreds of reads (this thread only)."""
+        return _SnapshotScope(self)
 
     def warm(self) -> None:
         """Load what a first search would otherwise wait for (the startup thread):
@@ -840,6 +872,14 @@ class HybridSearcher:
 
     def search(self, queries):
         """Search one dispute; query IDs are owned by its checked query plan."""
+        with ExitStack() as scopes:
+            for collection in self.collections.values():
+                scope = getattr(collection, "snapshot_scope", None)
+                if callable(scope):
+                    scopes.enter_context(scope())
+            return self._search(queries)
+
+    def _search(self, queries):
         if (not isinstance(queries, list) or not queries or any(
                 not isinstance(q, dict) or not isinstance(q.get("query_id"), str)
                 or not q["query_id"] or not isinstance(q.get("text"), str) or not q["text"].strip()
