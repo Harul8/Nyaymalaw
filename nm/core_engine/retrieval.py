@@ -29,7 +29,11 @@ LEG_DEPTH = 80
 PER_QUERY_POOL = 60
 RESULTS_PER_KIND = 6
 RRF_K = 60
-CONTRACT = "hybrid_retrieval_v5"
+#: v6 (owner decision, 12 Oct 2026): word and vector search inside the held Acts a
+#: research plan names join each formulation's legs, and the provision order blends the
+#: reranker's order with the shortlist's order. v5 records replay unchanged.
+CONTRACT = "hybrid_retrieval_v6"
+RERANK_ORDER_CONTRACT = "hybrid_retrieval_v5"
 PARENT_STORE_CONTRACT = "hybrid_retrieval_v4"
 PREVIOUS_CONTRACT = "hybrid_retrieval_v3"
 PARENT_TREE_CONTRACT = "hybrid_retrieval_v2"
@@ -62,7 +66,9 @@ def _log_stage_failure(kind, stage, exc, query_id=None):
 
 # The index's own tokenisation has one owner, shared with the index builds: a
 # query cut differently from the built index silently stops meeting its words.
-from nm.shared.citation_contracts import bm25_tokens, bind_provision_key, ProvisionKeyState  # noqa: E402
+from nm.shared.citation_contracts import (  # noqa: E402
+    bm25_tokens, bind_provision_key, instrument_candidates, ProvisionKeyState,
+)
 
 
 class SearchUnavailable(RuntimeError):
@@ -217,6 +223,9 @@ class LocalCollection:
         self._copies_hash = None
         self._hidden = None
         self._hidden_key = None
+        self._documents = None
+        self._documents_key = None
+        self._instrument_positions = {}
 
     def _parent_path(self, record):
         # Contextual records have declared source keys, not vector positions.
@@ -327,10 +336,7 @@ class LocalCollection:
             return self._hidden
         hidden = frozenset()
         try:
-            register = json.loads(Path(self.copies).read_text(encoding="utf-8"))
-            documents = register.get("documents") if register.get("schema") == COPY_REGISTER_SCHEMA else None
-            if not isinstance(documents, dict):
-                raise ValueError("The copy register has no supported document map")
+            documents = self._register_documents()
             # A copy keeps only the sections the register lists for it; every copy of an
             # instrument the owner excluded from search (11 Oct 2026) keeps none.
             kept = {act_id: {str(section) for section in entry.get("kept_sections", ())}
@@ -355,6 +361,91 @@ class LocalCollection:
                       type(exc).__name__)
         self._hidden, self._hidden_key = hidden, key
         return hidden
+
+    def _register_documents(self) -> dict:
+        """The one-copy register's document map, read once per served register."""
+        key = (self._revision, self._copies_identity())
+        if self._documents is None or self._documents_key != key:
+            register = json.loads(Path(self.copies).read_text(encoding="utf-8"))
+            documents = register.get("documents") if register.get("schema") == COPY_REGISTER_SCHEMA else None
+            if not isinstance(documents, dict):
+                raise ValueError("The copy register has no supported document map")
+            self._documents, self._documents_key, self._instrument_positions = documents, key, {}
+        return self._documents
+
+    def instrument_keys(self) -> frozenset:
+        """Instruments search keeps, by the shared instrument key of their register group.
+        An instrument the owner excluded from search has no kept copy, so it is not offered."""
+        if self.copies is None or self.doc_type != "bare_act":
+            return frozenset()
+        self._open()
+        try:
+            return frozenset(entry["group"] for entry in self._register_documents().values()
+                             if isinstance(entry, dict) and entry.get("role") == "kept"
+                             and isinstance(entry.get("group"), str) and entry["group"])
+        except (OSError, ValueError, TypeError, AttributeError) as exc:
+            raise SearchUnavailable("The instrument register cannot be read") from exc
+
+    def instrument_positions(self, keys) -> frozenset:
+        """Searchable passages of the given instruments: each kept copy, and a copy only
+        in the sections the register keeps for it."""
+        _, db_path, _ = self._open()
+        keys = frozenset(keys)
+        try:
+            documents = self._register_documents()
+            if keys not in self._instrument_positions:
+                names = sorted(act_id for act_id, entry in documents.items()
+                               if isinstance(entry, dict) and entry.get("group") in keys
+                               and entry.get("role") in ("kept", "copy"))
+                found = set()
+                with closing(sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)) as db:
+                    for start in range(0, len(names), 500):
+                        batch = names[start:start + 500]
+                        marks = ",".join("?" for _ in batch)
+                        found.update(int(row[0]) for row in db.execute(
+                            f"select pos from chunks where doc_type=? and act_id in ({marks})", (self.doc_type, *batch)))
+                self._instrument_positions[keys] = frozenset(found) - self.suppressed_positions()
+        except (OSError, ValueError, TypeError, AttributeError, sqlite3.Error) as exc:
+            raise SearchUnavailable("The named instruments' passages cannot be read") from exc
+        self._check_snapshot()
+        return self._instrument_positions[keys]
+
+    def lexical_within(self, query: str, depth: int, allowed) -> list[int]:
+        """Word search over the given passages only, with the full index's statistics."""
+        _, _, count = self._open()
+        bm25 = self._word_index()
+        try:
+            import numpy as np
+
+            tokens = [token for token in bm25_tokens(query) if token in bm25.vocab_dict]
+            within = np.asarray(sorted(p for p in allowed if 0 <= p < count), dtype="int64")
+            if not tokens or not len(within):
+                return []
+            scores = bm25.get_scores(tokens)[within]
+            order = np.argsort(-scores, kind="stable")[:depth]
+            return [int(within[i]) for i in order if scores[i] > 0]
+        except (ImportError, OSError, RuntimeError, ValueError, IndexError) as exc:
+            raise SearchUnavailable(f"{self.doc_type} word search within named instruments failed: {exc}") from exc
+
+    def semantic_many_within(self, queries: tuple[str, ...], depth: int, allowed) -> list[list[int]]:
+        """Vector search over the given passages only (an exact selection, not a filter
+        applied after a global cut-off), all formulations in one index operation."""
+        _, _, count = self._open()
+        index = self._vector_index()
+        try:
+            import faiss
+            import numpy as np
+
+            within = np.asarray(sorted(p for p in allowed if 0 <= p < count), dtype="int64")
+            if not len(within):
+                return [[] for _ in queries]
+            vectors, groups = self.models.encode(queries)
+            params = faiss.SearchParameters(sel=faiss.IDSelectorBatch(within))
+            _, positions = index.search(np.asarray(vectors, dtype="float32"), min(depth, len(within)), params=params)
+            ranked = [[int(pos) for pos in row if 0 <= pos < count] for row in positions]
+            return [_ordered(_rrf(ranked[start:end])) for start, end in groups]
+        except (ImportError, OSError, RuntimeError, ValueError, AttributeError) as exc:
+            raise SearchUnavailable(f"{self.doc_type} semantic search within named instruments failed: {exc}") from exc
 
     def _check_snapshot(self) -> None:
         scope = self._scope
@@ -870,21 +961,27 @@ class HybridSearcher:
             except SearchUnavailable:
                 log.warning("A corpus could not be warmed", exc_info=True)
 
-    def search(self, queries):
-        """Search one dispute; query IDs are owned by its checked query plan."""
+    def search(self, queries, instruments=None):
+        """Search one dispute; query IDs are owned by its checked query plan. instruments
+        are the Acts that plan names, matched to held instruments as search candidates."""
         with ExitStack() as scopes:
             for collection in self.collections.values():
                 scope = getattr(collection, "snapshot_scope", None)
                 if callable(scope):
                     scopes.enter_context(scope())
-            return self._search(queries)
+            return self._search(queries, instruments)
 
-    def _search(self, queries):
+    def _search(self, queries, instruments=None):
         if (not isinstance(queries, list) or not queries or any(
                 not isinstance(q, dict) or not isinstance(q.get("query_id"), str)
                 or not q["query_id"] or not isinstance(q.get("text"), str) or not q["text"].strip()
                 for q in queries) or len({q["query_id"] for q in queries}) != len(queries)):
             raise ValueError("Search needs unique owned query IDs and nonblank text")
+        names = [] if instruments is None else instruments
+        if (not isinstance(names, list) or any(not isinstance(n, str) or not n.strip() for n in names)
+                or len(set(names)) != len(names)):
+            raise ValueError("Named instruments must be distinct nonblank names")
+        named = [{"name": name, "candidates": []} for name in names]
         candidates, issues, stages, revisions = [], [], [], {}
         for kind in ("provision", "judgment"):
             collection = self.collections.get(kind)
@@ -893,6 +990,19 @@ class HybridSearcher:
             if collection is None or not revision:
                 issues.append({"kind": kind, "query_id": None, "stage": "identity", "reason": "Corpus identity unavailable"})
                 continue
+            # Word and vector search inside the held Acts the plan names joins each
+            # formulation's legs. A name proposes candidates and never resolves identity.
+            within = frozenset()
+            if kind == "provision" and names and callable(getattr(collection, "instrument_keys", None)):
+                try:
+                    held = collection.instrument_keys()
+                    named = [{"name": name, "candidates": list(instrument_candidates(name, held))} for name in names]
+                    keys = {key for entry in named for key in entry["candidates"]}
+                    within = collection.instrument_positions(keys) if keys else frozenset()
+                except SearchUnavailable as exc:
+                    _log_stage_failure(kind, "instruments", exc)
+                    issues.append({"kind": kind, "query_id": None, "stage": "instruments", "reason": type(exc).__name__})
+                    within = frozenset()
             pool, associations = {}, {}
             # A copy the owner's register does not keep never takes a slot: each leg looks
             # twice as deep and keeps its first LEG_DEPTH positions that are not such copies.
@@ -915,15 +1025,32 @@ class HybridSearcher:
                 except Exception as exc:
                     _log_stage_failure(kind, "semantic batch", exc)
                     semantic = None  # Independent calls retain any surviving query routes.
+            named_semantic = None
+            if within:
+                try:
+                    named_semantic = collection.semantic_many_within(tuple(q["text"] for q in queries), LEG_DEPTH, within)
+                    if len(named_semantic) != len(queries):
+                        raise SearchUnavailable("Incomplete named-instrument query batch")
+                except Exception as exc:
+                    _log_stage_failure(kind, "named semantic batch", exc)
+                    named_semantic = None
             for index, query in enumerate(queries):
                 legs = []
-                for leg in ("lexical", "semantic"):
+                for leg in ("lexical", "semantic", *(("named_lexical", "named_semantic") if within else ())):
                     try:
-                        values = semantic[index] if leg == "semantic" and semantic is not None else getattr(collection, leg)(query["text"], depth)
+                        if leg == "named_lexical":
+                            values = collection.lexical_within(query["text"], LEG_DEPTH, within)
+                        elif leg == "named_semantic":
+                            values = (named_semantic[index] if named_semantic is not None
+                                      else collection.semantic_many_within((query["text"],), LEG_DEPTH, within)[0])
+                        else:
+                            values = semantic[index] if leg == "semantic" and semantic is not None else getattr(collection, leg)(query["text"], depth)
                         ranked, invalid = _ranked_positions(values)
                         if invalid:
                             raise SearchUnavailable("Ranked positions are malformed")
-                        if hidden:
+                        if leg.startswith("named_"):
+                            ranked = [position for position in ranked if position in within][:LEG_DEPTH]
+                        elif hidden:
                             ranked = [position for position in ranked if position not in hidden][:LEG_DEPTH]
                         legs.append(ranked)
                         stages.append({"kind": kind, "query_id": query["query_id"], "stage": leg,
@@ -949,7 +1076,8 @@ class HybridSearcher:
             inquiry = "\n".join(dict.fromkeys(
                 [q["context"] for q in queries if q.get("context")]
                 + [q["text"] for q in queries]))
-            for position in positions:
+            shortlisted = {}  # each ranked source unit's best place in the fused shortlist
+            for pool_rank, position in enumerate(positions, 1):
                 row = rows.get(position)
                 try:
                     checked_source = _candidate(kind, position, row, revision, None, associations[position], {})
@@ -974,6 +1102,7 @@ class HybridSearcher:
                         # Score readable words even when their context is missing.
                         # The exact selected source keeps its explicit coverage gap.
                         target, row, context = position, rows[position], rank_contexts[position]
+                shortlisted.setdefault(target, pool_rank)
                 rank_rows[target] = row
                 rank_anchors[target] = _rerank_anchor(checked_source)
                 rank_associations.setdefault(target, []).extend(associations[position])
@@ -1000,6 +1129,13 @@ class HybridSearcher:
                     scored.append((position, max(float(s) for s in scores[offset:offset+width])))
                     offset += width
                 scored.sort(key=lambda x: (-x[1], _location_order(x[0])))
+                if kind == "provision":
+                    # v6: the reranker reads all formulations as one inquiry; the shortlist
+                    # records how strongly the formulations agree. Their orders are blended
+                    # by reciprocal ranks; the candidate keeps the reranker's own score.
+                    reranked = {position: rank for rank, (position, _) in enumerate(scored, 1)}
+                    scored.sort(key=lambda x: (-(1.0 / (RRF_K + reranked[x[0]]) + 1.0 / (RRF_K + shortlisted[x[0]])),
+                                               _location_order(x[0])))
                 stages.append({"kind": kind, "query_id": None, "stage": "rerank", "state": "evaluated", "hits": len(usable)})
             except Exception as exc:
                 _log_stage_failure(kind, "rerank", exc)
@@ -1044,26 +1180,44 @@ class HybridSearcher:
                 candidates = [c for c in candidates if c["kind"] != kind]
                 issues.append({"kind": kind, "query_id": None, "stage": "identity", "reason": "Corpus changed during search"})
         state = "partial" if issues else "ready"
-        return {"contract": CONTRACT, "state": state, "queries": deepcopy(queries),
+        return {"contract": CONTRACT, "state": state, "queries": deepcopy(queries), "instruments": named,
                 "corpus_revisions": revisions, "stages": stages, "candidates": candidates, "issues": issues}
 
 
-def validate_search(record, queries):
-    """Replay validates the saved exact snapshot, never reads a changed corpus."""
-    if (not isinstance(record, dict) or set(record) != {"contract", "state", "queries", "corpus_revisions", "stages", "candidates", "issues"}
-            or record["contract"] not in (LEGACY_CONTRACT, PARENT_TREE_CONTRACT, PREVIOUS_CONTRACT, PARENT_STORE_CONTRACT, CONTRACT) or record["queries"] != queries
+def validate_search(record, queries, instruments=None):
+    """Replay validates the saved exact snapshot, never reads a changed corpus.
+    instruments are the Acts the plan named; a v6 record keeps them with the held
+    candidates each proposed when it was searched."""
+    current = isinstance(record, dict) and record.get("contract") == CONTRACT
+    fields = {"contract", "state", "queries", "corpus_revisions", "stages", "candidates", "issues"}
+    if (not isinstance(record, dict) or set(record) != (fields | {"instruments"} if current else fields)
+            or record["contract"] not in (LEGACY_CONTRACT, PARENT_TREE_CONTRACT, PREVIOUS_CONTRACT, PARENT_STORE_CONTRACT,
+                                          RERANK_ORDER_CONTRACT, CONTRACT) or record["queries"] != queries
             or record["state"] != ("partial" if record["issues"] else "ready")
             or set(record["corpus_revisions"]) != {"provision", "judgment"}):
         raise ValueError("Search snapshot differs from its owned query contract")
     if any(not isinstance(record[key], list) for key in ("stages", "candidates", "issues")):
         raise ValueError("Search receipts and gaps must be explicit arrays")
+    proposed = False
+    if current:
+        named = record["instruments"]
+        if (not isinstance(named, list) or [entry.get("name") if isinstance(entry, dict) else None for entry in named]
+                != ([] if instruments is None else instruments)
+                or any(set(entry) != {"name", "candidates"} or not isinstance(entry["candidates"], list)
+                       or any(not isinstance(key, str) or not key for key in entry["candidates"]) for entry in named)):
+            raise ValueError("Search instruments differ from the Acts its plan named")
+        proposed = any(entry["candidates"] for entry in named)
+    elif instruments:
+        raise ValueError("A historical search did not search named instruments")
+    legs = ("lexical", "semantic", "named_lexical", "named_semantic") if current else ("lexical", "semantic")
     query_ids = {q["query_id"] for q in queries}
     evaluated = set()
     for stage in record["stages"]:
         if (not isinstance(stage, dict) or set(stage) != {"kind", "query_id", "stage", "state", "hits"}
                 or stage["kind"] not in record["corpus_revisions"] or stage["state"] != "evaluated"
                 or type(stage["hits"]) is not int or stage["hits"] < 0
-                or stage["stage"] not in ("lexical", "semantic", "rerank")
+                or stage["stage"] not in (*legs, "rerank")
+                or stage["stage"].startswith("named_") and (stage["kind"] != "provision" or not proposed)
                 or (stage["query_id"] not in query_ids if stage["stage"] != "rerank" else stage["query_id"] is not None)):
             raise ValueError("Search stage has no owned query/kind disposition")
         key = stage["kind"], stage["query_id"], stage["stage"]
@@ -1075,7 +1229,8 @@ def validate_search(record, queries):
         if (not isinstance(issue, dict) or not {"kind", "query_id", "stage", "reason"} <= issue.keys()
                 or issue["kind"] not in record["corpus_revisions"]
                 or issue["query_id"] is not None and issue["query_id"] not in query_ids
-                or issue["stage"] not in ("identity", "lexical", "semantic", "read", "rerank", "context")
+                or issue["stage"] not in ("identity", *legs, "read", "rerank", "context", *(("instruments",) if current else ()))
+                or issue["stage"].startswith("named_") and (issue["kind"] != "provision" or not proposed)
                 or not isinstance(issue["reason"], str) or not issue["reason"]):
             raise ValueError("Search gap has no owned query/source scope")
         failed.add((issue["kind"], issue["query_id"], issue["stage"]))
@@ -1091,11 +1246,18 @@ def validate_search(record, queries):
                 key = kind, query_id, leg
                 if (key in evaluated) == (key in failed):
                     raise ValueError("Every query/search leg needs exactly one execution disposition")
+        # Named legs run for every formulation when the named Acts' passages were read,
+        # and for none when they proposed nothing held or could not be read.
+        ran = {(query_id, leg) for (k, query_id, leg) in evaluated | failed if k == kind and leg.startswith("named_")}
+        if ran and ran != {(query_id, leg) for query_id in query_ids for leg in ("named_lexical", "named_semantic")}:
+            raise ValueError("Every query/search leg needs exactly one execution disposition")
+        if ran and any((kind, q, leg) in evaluated and (kind, q, leg) in failed for q, leg in ran):
+            raise ValueError("Every query/search leg needs exactly one execution disposition")
         if not any((kind, None, stage) in failed for stage in ("read", "rerank")) and (kind, None, "rerank") not in evaluated:
             raise ValueError("Reranking has no execution disposition")
     identities = set()
     for candidate in record["candidates"]:
-        if record["contract"] not in (PARENT_STORE_CONTRACT, CONTRACT) and any(type(p) is not int for p in (
+        if record["contract"] not in (PARENT_STORE_CONTRACT, RERANK_ORDER_CONTRACT, CONTRACT) and any(type(p) is not int for p in (
                 candidate["position"], *(s["position"] for s in candidate["context"]["segments"]))):
             raise ValueError("Historical search cannot contain contextual parent addresses")
         if (candidate["kind"] not in record["corpus_revisions"]
@@ -1129,7 +1291,7 @@ def validate_search(record, queries):
             for segment in segments:
                 by_id.setdefault(segment["row"]["chunk_id"], []).append(segment["row"])
             root = candidate["source"]
-            if (record["contract"] not in (PARENT_TREE_CONTRACT, PREVIOUS_CONTRACT, PARENT_STORE_CONTRACT, CONTRACT) or candidate["kind"] != "provision" or len(segments) < 2
+            if (record["contract"] not in (PARENT_TREE_CONTRACT, PREVIOUS_CONTRACT, PARENT_STORE_CONTRACT, RERANK_ORDER_CONTRACT, CONTRACT) or candidate["kind"] != "provision" or len(segments) < 2
                     or root.get("parent_chunk_id") or len(by_id[root["chunk_id"]]) != 1
                     or len({s["position"] for s in segments}) != len(segments)):
                 raise ValueError("Ranking context has no unique owned root")
@@ -1142,7 +1304,7 @@ def validate_search(record, queries):
                         raise ValueError("Ranking context has a detached or cyclic source")
                     seen.add(identity)
                     child = parents[0]
-        if record["contract"] in (PREVIOUS_CONTRACT, PARENT_STORE_CONTRACT, CONTRACT) and candidate["kind"] == "provision":
+        if record["contract"] in (PREVIOUS_CONTRACT, PARENT_STORE_CONTRACT, RERANK_ORDER_CONTRACT, CONTRACT) and candidate["kind"] == "provision":
             segments = context["segments"]
             if context["scope"] == "selected_indexed_segment":
                 if len(segments) != 1:

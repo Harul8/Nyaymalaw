@@ -117,16 +117,18 @@ def test_v3_rejects_disconnected_context_but_replays_unchanged_v1_v2_snapshots()
     replacement = _candidate(source["kind"], source["position"], source["source"],
         source["corpus_revision"], source["score"], source["query_ids"], invalid_window)
     result["candidates"][result["candidates"].index(source)] = replacement
-    assert result["contract"] == CONTRACT == "hybrid_retrieval_v5"
+    assert result["contract"] == CONTRACT == "hybrid_retrieval_v6"
     with pytest.raises(ValueError, match="unique|connected|root"):
         validate_search(result, QUERIES)
     saved_v4 = deepcopy(result)
     saved_v4["contract"] = "hybrid_retrieval_v4"
+    del saved_v4["instruments"]  # named instruments arrived with v6
     with pytest.raises(ValueError, match="unique|connected|root"):
         validate_search(saved_v4, QUERIES)
     for version in ("hybrid_retrieval_v1", "hybrid_retrieval_v2"):
         old = deepcopy(result)
         old["contract"] = version
+        del old["instruments"]
         assert validate_search(old, QUERIES) == old
 
 
@@ -137,6 +139,7 @@ def test_legacy_v2_exact_parent_tree_still_replays(tmp_path, monkeypatch):
     assert next(row for row in result["candidates"] if row["kind"] == "provision")["context"]["scope"] == "exact_parent_tree"
     old = deepcopy(result)
     old["contract"] = "hybrid_retrieval_v2"
+    del old["instruments"]
     assert validate_search(old, QUERIES[:1]) == old
 
 

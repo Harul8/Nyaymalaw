@@ -80,7 +80,7 @@ def test_hybrid_search_runs_inside_each_collections_scope(monkeypatch):
             return Scope()
 
     searcher = retrieval.HybridSearcher({"provision": Scoped("provision"), "judgment": Scoped("judgment")})
-    monkeypatch.setattr(searcher, "_search", lambda queries: entered.append(("search", len(queries))) or "result")
+    monkeypatch.setattr(searcher, "_search", lambda queries, instruments=None: entered.append(("search", len(queries))) or "result")
     assert searcher.search([{"query_id": "q", "text": "t"}]) == "result"
     assert entered == [("enter", "provision"), ("enter", "judgment"), ("search", 1),
                        ("exit", "judgment"), ("exit", "provision")]

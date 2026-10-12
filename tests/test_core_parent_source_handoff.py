@@ -133,6 +133,7 @@ def test_legacy_snapshots_cannot_acquire_parent_locators_but_keep_their_numeric_
     ctx, old_record = fixture()
     for search in old_record["searches"].values():
         search["contract"] = version
+        del search["instruments"]  # named instruments arrived with v6
     original = deepcopy(old_record)
     catalogue = answer_sources.build(ctx, old_record)
     assert research.validate(old_record, old_record["plan"], ctx) == original
