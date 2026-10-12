@@ -163,3 +163,18 @@ def test_vector_search_within_named_instruments_is_an_exact_selection(tmp_path):
     assert first == [1, 3, 2]  # position 0 is the global best but not named
     assert set(second) == {1, 2, 3} and second[0] in (2, 3)
     assert item.semantic_many_within(("lien",), 3, set()) == [[]]
+
+
+def test_named_instruments_offer_kept_copies_and_only_the_sections_a_copy_keeps(tmp_path):
+    rows = [_row("kept-act", "1"), _row("kept-act", "2"), _row("copy-act", "1"), _row("copy-act", "3"),
+            _row("excluded-act", "1")]
+    held = _local(tmp_path, rows)
+    path = tmp_path / "instrument_copies.json"
+    path.write_text(json.dumps({"schema": 1, "documents": {
+        "kept-act": {"role": "kept", "group": "kept act 2000"},
+        "copy-act": {"role": "copy", "group": "kept act 2000", "kept_sections": ["3"]},
+        "excluded-act": {"role": "excluded", "group": "andhra area act 1956", "kept_sections": []}}}), encoding="utf-8")
+    held.copies = path
+    assert held.instrument_keys() == frozenset({"kept act 2000"})
+    assert held.instrument_positions({"kept act 2000"}) == frozenset({0, 1, 3})
+    assert held.instrument_positions({"andhra area act 1956"}) == frozenset()
