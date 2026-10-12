@@ -38,10 +38,13 @@ Look for:
 Identify what a statute or judgment needs to answer for the currently authorised
 work. A client's facts, private agreement terms or missing documents cannot be found
 by searching law. Do not convert those information needs into corpus enquiries.
-New substantive matter information may raise legal questions without an express
-search request. Earlier pending work alone does not authorise resumption. Keep
-research paused when directed. A nonlegal request or social closing can require a
-reply while requiring no investigation here.
+New substantive matter information raises legal questions without an express search
+request: when the advocate reports facts of a matter, investigate the rights,
+remedies, procedure, time limits or offences those facts immediately engage, unless
+research is paused or limited. A requested document whose form, validity or effect
+depends on law needs that law investigated. Earlier pending work alone does not
+authorise resumption. Keep research paused when directed. A nonlegal request,
+transcription or social closing can require a reply while requiring no investigation.
 2. Original search basis. Keep sources establishing the current request separate
 from search_account: exact original passages describing the relevant account or
 legal question. For each investigation, select the relevant words and all words
@@ -56,19 +59,23 @@ drawer and payee, employer and workman, accused and police), and one to three le
 questions: the right, remedy, defence, procedure, time limit or offence sought.
 Then give three to six enquiries in the words a statute would use: short phrases of
 three to eight words in the vocabulary of statute section headings, each one legal
-concept, and one sentence phrased the way a statutory provision might state the
-rule, used only as a search probe. Prefer the terms of art in section headings over
-the advocate's everyday words; leave out place names. Keep the original facts in
-search_account; do not rewrite or strengthen them inside search phrases.
-Unestablished legal characterisations remain conditional discovery hypotheses. Do
-not infer existence, absence, ownership or agreement from an account that leaves it
-uncertain. Do not give section numbers or citations or invent an Act.
-4. Instruments. Name the Acts or Codes that may govern, without section numbers. A
-name proposes where to search; it decides nothing about which law applies.
+concept. Give a rule_probe: one sentence phrased the way a statutory provision might
+state the governing rule, used only as a search probe. Prefer the terms of art in
+section headings over the advocate's everyday words; leave out place names. Keep the
+original facts in search_account; do not rewrite or strengthen them inside search
+phrases. Unestablished legal characterisations remain conditional discovery
+hypotheses. Do not infer existence, absence, ownership or agreement from an account
+that leaves it uncertain. Do not give section numbers or citations.
+4. Instruments. Name each Indian central or State Act or Code that may govern by its
+own short title and year, never by a description of a field of law, and name each
+alternative when the facts leave the governing law open. When the governing law may
+depend on when the events occurred, name the Act in force then and any Act it
+replaced or that replaced it. A name proposes where to search; it decides nothing
+about which law applies.
 
 Outcome: Return work: one item per independently useful legal investigation, with
-sources, search_account, relationship, roles, legal_questions, enquiries and
-instruments. sources identifies the current instruction or matter contribution
+sources, search_account, relationship, roles, legal_questions, enquiries, rule_probe
+and instruments. sources identifies the current instruction or matter contribution
 warranting this investigation. search_account selects the original account or
 question used as the first search; code then searches the legal concept phrases,
 including inside the named instruments it holds. Each enquiry has text, purpose and
@@ -121,6 +128,7 @@ INSTRUMENTED_WORK = _object({
     "roles": {"type": "array", "items": TEXT},
     "legal_questions": {"type": "array", "maxItems": 3, "items": TEXT},
     "enquiries": {"type": "array", "maxItems": 6, "items": ENQUIRY},
+    "rule_probe": TEXT,
     "instruments": {"type": "array", "maxItems": 6, "items": TEXT},
 })
 ACCOUNT_SCHEMA = _object({"work": {"type": "array", "items": WORK}})
@@ -237,8 +245,12 @@ def search_queries(work, *, contract=CONTRACT):
                                   for index, source in enumerate(passages, 1))
         queries = ([{"query_id": work["id"] + ":original", "text": account, "context": account}]
                    if account else [])
-        return queries + [{"query_id": enquiry["query_id"], "text": enquiry["text"],
-                           "context": account} for enquiry in work["enquiries"]]
+        queries += [{"query_id": enquiry["query_id"], "text": enquiry["text"],
+                     "context": account} for enquiry in work["enquiries"]]
+        if contract == CONTRACT:
+            # v6: the rule probe is searched as one more formulation, never shown as law.
+            queries.append({"query_id": work["id"] + ":rule", "text": work["rule_probe"], "context": account})
+        return queries
     if contract != LEGACY_CONTRACT:
         raise ValueError("Unknown research contract")
     # Saved v2 queries retain their original exact serialization and ordering.

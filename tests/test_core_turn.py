@@ -44,7 +44,8 @@ class ScriptedModel:
                     "relationship": "parties to the reported position", "roles": ["claimant"],
                     "legal_questions": ["Which conditions apply?"], "enquiries": [{
                     "text": "conditions and contrary authority", "purpose": "Identify scope",
-                    "basis": "conditional"}], "instruments": []}] if self.legal else []}
+                    "basis": "conditional"}], "rule_probe": "Stated conditions limit the scope.",
+                    "instruments": []}] if self.legal else []}
         elif prompt.operation == "core_response_writer":
             uses = []
             text = "Hello. How can I help?"

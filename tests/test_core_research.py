@@ -26,13 +26,14 @@ def work(quote="Find the applicable law.", instruments=()):
                  "basis": "conditional"},
                 {"text": "available relief and contrary positions", "purpose": "Test remedies",
                  "basis": "conditional"}],
+            "rule_probe": "Where the stated conditions are met, the prescribed relief is available.",
             "instruments": list(instruments)}
 
 
 def v5_work(quote="Find the applicable law."):
     """A plan item as research v5 (before named instruments) proposed it."""
     item = work(quote)
-    for field in ("relationship", "roles", "legal_questions", "instruments"):
+    for field in ("relationship", "roles", "legal_questions", "rule_probe", "instruments"):
         del item[field]
     return item
 
@@ -295,7 +296,7 @@ def test_concepts_are_not_silently_truncated_and_empty_search_account_is_not_inv
     item["search_account"] = []
     admitted = accept({"work": [item]}, ctx)
     queries = search_queries(admitted["work"][0])
-    assert len(queries) == 2 and all(q["context"] == "" for q in queries)
+    assert len(queries) == 3 and all(q["context"] == "" for q in queries)  # two enquiries and the rule probe
     item["enquiries"] *= 4
     rejected = accept({"work": [item]}, ctx)
     assert rejected["work"] == [] and rejected["issues"]
@@ -384,4 +385,12 @@ def test_saved_v5_plans_and_searches_replay_without_named_instruments():
     assert validate(record, admitted, ctx) == record
     current = accept({"work": [v5_work()]}, ctx)  # a v6 plan must state its analysis and instruments
     assert current["work"] == [] and current["issues"]
+
+
+def test_the_rule_probe_is_searched_as_one_more_formulation():
+    ctx = context("Find the applicable law.")
+    admitted = accept({"work": [work()]}, ctx)
+    queries = search_queries(admitted["work"][0])
+    assert [q["query_id"] for q in queries] == ["t2:w1:original", "t2:w1:q1", "t2:w1:q2", "t2:w1:rule"]
+    assert queries[-1]["text"] == work()["rule_probe"] and queries[-1]["context"] == queries[0]["context"]
 
