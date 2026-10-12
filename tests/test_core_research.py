@@ -15,14 +15,26 @@ from tests.test_current_brain_retrieval import Collection
 pytestmark = pytest.mark.class_a
 
 
-def work(quote="Find the applicable law."):
+def work(quote="Find the applicable law.", instruments=()):
     return {"sources": [{"source_id": "t2:advocate", "quote": quote}],
             "search_account": [{"source_id": "t2:advocate", "quote": quote}],
+            "relationship": "parties to the reported position",
+            "roles": ["claimant", "respondent"],
+            "legal_questions": ["Which held law governs the reported position?"],
             "enquiries": [
                 {"text": "legal prerequisites and exceptions", "purpose": "Locate elements",
                  "basis": "conditional"},
                 {"text": "available relief and contrary positions", "purpose": "Test remedies",
-                 "basis": "conditional"}]}
+                 "basis": "conditional"}],
+            "instruments": list(instruments)}
+
+
+def v5_work(quote="Find the applicable law."):
+    """A plan item as research v5 (before named instruments) proposed it."""
+    item = work(quote)
+    for field in ("relationship", "roles", "legal_questions", "instruments"):
+        del item[field]
+    return item
 
 
 class Model:
@@ -104,10 +116,10 @@ def test_searches_bind_queries_and_preserve_independent_work_when_one_fails(fail
     original = searcher.search
     seen = []
 
-    def search(queries):
+    def search(queries, instruments=None):
         seen.append(queries)
         if len(seen) == 1: raise failure
-        return original(queries)
+        return original(queries, instruments)
 
     searcher.search = search
     ctx = context("Find the applicable law.")
@@ -153,9 +165,9 @@ def test_independent_results_survive_shared_or_distinct_authority_plans(distinct
     search = searcher.search
     requests = []
 
-    def capture(queries):
+    def capture(queries, instruments=None):
         requests.append(queries)
-        return search(queries)
+        return search(queries, instruments)
 
     searcher.search = capture
     record = retrieve(admitted, searcher, ctx)
@@ -242,7 +254,7 @@ def test_fresh_records_carry_the_unlabelled_contract_and_replay_through_it():
     item["search_account"].append({"source_id": "t1:advocate", "quote": None})
     admitted = accept({"work": [item]}, ctx)
     record = retrieve(admitted, HybridSearcher({"provision": Collection(), "judgment": Collection("judgment")}), ctx)
-    assert record["contract"] == CONTRACT == "core_research_v5"
+    assert record["contract"] == CONTRACT == "core_research_v6"
     assert validate(record, admitted, ctx) == record
     searched = next(iter(record["searches"].values()))["queries"]
     assert all("Advocate passage" not in q["text"] + q["context"] for q in searched)
@@ -284,10 +296,10 @@ def test_concepts_are_not_silently_truncated_and_empty_search_account_is_not_inv
     admitted = accept({"work": [item]}, ctx)
     queries = search_queries(admitted["work"][0])
     assert len(queries) == 2 and all(q["context"] == "" for q in queries)
-    item["enquiries"] *= 2
+    item["enquiries"] *= 4
     rejected = accept({"work": [item]}, ctx)
     assert rejected["work"] == [] and rejected["issues"]
-    assert len(rejected["proposal"]["work"][0]["enquiries"]) == 4
+    assert len(rejected["proposal"]["work"][0]["enquiries"]) == 8
 
 
 def test_real_frozen_v2_search_replays_without_new_query_construction():
@@ -334,3 +346,42 @@ def test_briefly_served_v3_broad_plan_preserves_captured_query_serialization():
     plan = result["admitted_plan"]
     assert accept(plan["proposal"], case["context"], contract=PREVIOUS_CONTRACT) == plan
     assert {w["id"]: search_queries(w, contract=PREVIOUS_CONTRACT) for w in plan["work"]} == result["constructed_queries"]
+
+
+def test_named_instruments_reach_search_once_each_and_bind_the_record():
+    ctx = context("Find the applicable law.")
+    admitted = accept({"work": [work(instruments=["Indian Contract Act", " Indian  Contract Act ", "Sale of Goods Act"])]}, ctx)
+    searcher = HybridSearcher({"provision": Collection(), "judgment": Collection("judgment")})
+    original, given = searcher.search, []
+
+    def capture(queries, instruments=None):
+        given.append(instruments)
+        return original(queries, instruments)
+
+    searcher.search = capture
+    record = retrieve(admitted, searcher, ctx)
+    assert given == [["Indian Contract Act", "Sale of Goods Act"]]
+    assert [e["name"] for e in record["searches"]["t2:w1"]["instruments"]] == given[0]
+    assert validate(record, admitted, ctx) == record
+    changed = deepcopy(admitted)
+    changed["work"][0]["instruments"] = ["Specific Relief Act"]
+    with pytest.raises(ValueError):
+        validate(record, changed, ctx)
+
+
+def test_saved_v5_plans_and_searches_replay_without_named_instruments():
+    from nm.core_engine import retrieval
+    from nm.core_engine.research import ACCOUNT_CONTRACT, search_instruments
+    ctx = context("Find the applicable law.")
+    admitted = accept({"work": [v5_work()]}, ctx, contract=ACCOUNT_CONTRACT)
+    assert search_instruments(admitted["work"][0], contract=ACCOUNT_CONTRACT) is None
+    queries = search_queries(admitted["work"][0], contract=ACCOUNT_CONTRACT)
+    searched = HybridSearcher({"provision": Collection(), "judgment": Collection("judgment")}).search(queries)
+    searched["contract"] = retrieval.RERANK_ORDER_CONTRACT
+    del searched["instruments"]
+    record = {"contract": ACCOUNT_CONTRACT, "plan": admitted, "searches": {"t2:w1": searched},
+              "failures": {}, "state": "evaluated"}
+    assert validate(record, admitted, ctx) == record
+    current = accept({"work": [v5_work()]}, ctx)  # a v6 plan must state its analysis and instruments
+    assert current["work"] == [] and current["issues"]
+
