@@ -99,7 +99,7 @@ def test_four_actual_stage_calls_save_reopen_and_replay_without_reexecution(stor
     stored = store.load(chat_matter_id("owner", response["chat_id"]))
     rows = saved_rows(stored, "owner")
     assert rows[0]["activities"]["contract"] == "core_turn_v2"
-    assert rows[0]["activities"]["review"]["contract"] == "core_response_review_v3"
+    assert rows[0]["activities"]["review"]["contract"] == "core_response_review_v4"
     assert rows[0]["activities"]["authority_evidence"]["contract"] == "core_response_authorities_v1"
     assert rows[0]["response"] == response
     source = response["elements"][0]["source"]

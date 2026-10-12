@@ -476,7 +476,7 @@ def test_authority_checks_are_separate_compact_model_input_and_full_bound_eviden
     model = Model(positive(args[-1]))
     receipt = review_checked(model, *args, execution, authority_evidence=authority)
     payload = json.loads(model.calls[0][0].user)
-    assert receipt["contract"] == CONTRACT == "core_response_review_v3"
+    assert receipt["contract"] == CONTRACT == "core_response_review_v4"
     assert authority["readbacks"]
     from nm.core_engine.answer_sources import aliases
     from nm.core_engine.response_review import _aliased
@@ -577,3 +577,28 @@ def test_saved_v2_review_replays_unchanged_with_owned_tags():
     with pytest.raises(SchemaViolation):
         _accept(negative(draft, ctx, category="grounding", sources=[{"source_id": alias, "quote": None}]),
                 dependencies, contract=AUTHORITY_CONTRACT)
+
+
+def restriction_review(draft, ctx, disposition, unit_ids):
+    data = positive(draft, requests=[request(ctx, draft, disposition=disposition, unit_ids=unit_ids,
+        reason="The reply honours the restriction by not doing the restricted work.")])
+    return data
+
+
+def test_v4_admits_a_restriction_respected_by_absence_without_reply_units():
+    ctx, record, sources, draft = setup()
+    receipt = review(Model(restriction_review(draft, ctx, "respected", [])), ctx, record, sources, draft)
+    assert receipt["contract"] == CONTRACT == "core_response_review_v4" and receipt["accepted"] is True
+    assert validate(receipt, ctx, record, sources, draft) == receipt
+
+
+def test_addressed_still_needs_reply_units_and_earlier_versions_have_no_respected():
+    from nm.core_engine.response_review import ALIAS_CONTRACT, _accept, _dependencies
+    ctx, record, sources, draft = setup()
+    with pytest.raises(SchemaViolation, match="identify reply units"):
+        review(Model(restriction_review(draft, ctx, "addressed", [])), ctx, record, sources, draft)
+    authority = response_authorities.check(ctx, record, sources, draft)
+    dependencies = _dependencies(ctx, record, sources, draft, None, authority_evidence=authority,
+                                 contract=ALIAS_CONTRACT)
+    with pytest.raises(SchemaViolation):
+        _accept(restriction_review(draft, ctx, "respected", []), dependencies, contract=ALIAS_CONTRACT)

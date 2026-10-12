@@ -21,8 +21,11 @@ from nm.shared.model_port import (
 LEGACY_CONTRACT = "core_response_review_v1"
 AUTHORITY_CONTRACT = "core_response_review_v2"
 #: v2 with legal passages offered and selected by short aliases (12 Oct 2026).
-CONTRACT = "core_response_review_v3"
-CONTRACTS = (LEGACY_CONTRACT, AUTHORITY_CONTRACT, CONTRACT)
+ALIAS_CONTRACT = "core_response_review_v3"
+#: v3 where a restriction honoured by not doing the restricted work is
+#: "respected" and needs no reply unit (12 Oct 2026).
+CONTRACT = "core_response_review_v4"
+CONTRACTS = (LEGACY_CONTRACT, AUTHORITY_CONTRACT, ALIAS_CONTRACT, CONTRACT)
 MAX_OUTPUT = 6500
 SYSTEM = """Message: You receive the complete original attributed conversation, the
 latest advocate message, current records and saved work; the complete retrieved
@@ -98,8 +101,9 @@ every supplied draft unit ID. Account for any consequential authority-check disc
 or unresolved association in that unit's reason or finding. Return one request_coverage
 entry per independent requested
 result. Select the original advocate words identifying that result, name only its
-relevant reply units, and explain its disposition as addressed, justified_limit or
-missing. Keep separate outcomes separate even when requested in one message. Do not
+relevant reply units, and explain its disposition as addressed, justified_limit,
+respected or missing. A restriction on what NM may do or claim that the reply honours
+by not doing the restricted work is respected; it needs no reply unit IDs. Keep separate outcomes separate even when requested in one message. Do not
 merge them into a broad message-level verdict or duplicate the broad message as a
 substitute for identifying each result. When the same words genuinely express several
 results in context, distinguish their scope in the reasons and relevant unit IDs.
@@ -110,7 +114,7 @@ no unit ID and select the omitted original request. A request unmet because its 
 unit is defective may link to the finding through that rejected unit, while the finding
 selects the evidence establishing the defect. Every rejected unit and missing request
 needs a corresponding finding. Accept only when every unit is supported, every
-current request is addressed or has a justified limit, and no consequential finding
+current request is addressed, respected or has a justified limit, and no consequential finding
 remains. A positive verdict is a semantic review proposal, never an effect receipt.
 For every reference, use an offered source_id with quote=null to select that source's
 complete exact text, or quote a shorter exact continuous passage. Never paraphrase or
@@ -128,16 +132,23 @@ def _object(fields):
 IDS = {"type": "array", "items": TEXT}
 UNIT = _object({"unit_id": TEXT,
     "verdict": {"type": "string", "enum": ["supported", "rejected"]}, "reason": TEXT})
-REQUEST = _object({"request": REFERENCE,
+PREVIOUS_REQUEST = _object({"request": REFERENCE,
     "disposition": {"type": "string", "enum": ["addressed", "justified_limit", "missing"]},
+    "unit_ids": IDS, "reason": TEXT})
+REQUEST = _object({"request": REFERENCE,
+    "disposition": {"type": "string", "enum": ["addressed", "justified_limit", "respected", "missing"]},
     "unit_ids": IDS, "reason": TEXT})
 FINDING = _object({"category": {"type": "string", "enum": [
     "grounding", "attribution", "quotation", "omission", "framing", "effect"]},
     "unit_ids": IDS, "sources": {"type": "array", "items": REFERENCE}, "mismatch": TEXT})
-SCHEMA = _object({"verdict": {"type": "string", "enum": ["accept", "reject"]},
-    "units": {"type": "array", "items": UNIT},
-    "request_coverage": {"type": "array", "items": REQUEST},
-    "findings": {"type": "array", "items": FINDING}})
+def _review_schema(request):
+    return _object({"verdict": {"type": "string", "enum": ["accept", "reject"]},
+        "units": {"type": "array", "items": UNIT},
+        "request_coverage": {"type": "array", "items": request},
+        "findings": {"type": "array", "items": FINDING}})
+
+
+PREVIOUS_SCHEMA, SCHEMA = _review_schema(PREVIOUS_REQUEST), _review_schema(REQUEST)
 
 
 def _dependencies(context, research_record, sources, draft, execution, *,
@@ -150,7 +161,7 @@ def _dependencies(context, research_record, sources, draft, execution, *,
     if contract == LEGACY_CONTRACT:
         if authority_evidence is not None:
             raise ValueError("Legacy review cannot acquire fresh authority evidence")
-    elif contract in {AUTHORITY_CONTRACT, CONTRACT}:
+    elif contract in {AUTHORITY_CONTRACT, ALIAS_CONTRACT, CONTRACT}:
         if authority_evidence is None:
             raise ValueError("Current review requires bound authority evidence")
         dependencies["authority_evidence"] = response_authorities.validate(
@@ -202,10 +213,11 @@ def _accept(proposal, dependencies, *, contract=LEGACY_CONTRACT):
     if (contract not in CONTRACTS
             or ("authority_evidence" in dependencies) != (contract != LEGACY_CONTRACT)):
         raise ValueError("Review version differs from its evidence contract")
-    data = canonical_schema_data(proposal, SCHEMA)
-    require_schema(data, SCHEMA)
+    schema = SCHEMA if contract == CONTRACT else PREVIOUS_SCHEMA
+    data = canonical_schema_data(proposal, schema)
+    require_schema(data, schema)
     sources, draft = dependencies["sources"], dependencies["draft"]
-    offered = answer_sources.aliases(sources) if contract == CONTRACT else {}
+    offered = answer_sources.aliases(sources) if contract in {ALIAS_CONTRACT, CONTRACT} else {}
     known = {unit["id"] for unit in draft["units"]}
     reviewed = [unit["unit_id"] for unit in data["units"]]
     _ids(reviewed, known)
@@ -225,6 +237,8 @@ def _accept(proposal, dependencies, *, contract=LEGACY_CONTRACT):
         requests.add(key)
         if item["disposition"] == "missing":
             missing.append((key, set(item["unit_ids"])))
+        elif item["disposition"] == "respected":
+            continue  # Honoured by absence: the original words, not a reply unit, are its evidence.
         elif not item["unit_ids"]:
             raise SchemaViolation("An addressed request or justified limit must identify reply units")
 
