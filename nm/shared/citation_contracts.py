@@ -125,6 +125,37 @@ def statute_title(stored: str, act_id: str = "") -> str:
     return " ".join(renamed.split())
 
 
+#: A key's closing year: "limitation act 1963", "land revenue act 1317 fasli".
+_KEY_YEAR = re.compile(r"\s+(?:1\d{3}|20\d\d)(?:\s+fasli)?$")
+
+
+def instrument_key(title: str) -> str:
+    """Same instrument, whichever State name or source spelling a copy carries.
+    ONE COPY: the one-copy register (pipeline/instrument_copies.py) groups held copies
+    by it, and research matches the Acts a plan names against those groups by it."""
+    text = TELANGANA_AREA.sub(" ", title or "")
+    text = STATE_NAME.sub(" state ", text)
+    text = TELANGANA.sub(" state ", text).lower()
+    text = re.sub(r"\bthe\b", " ", text)
+    return " ".join(re.findall(r"[a-z0-9]+", text))
+
+
+def instrument_candidates(name: str, held_keys) -> tuple[str, ...]:
+    """Held instruments a named Act may be, as search candidates only.
+
+    The exact key when it is held; otherwise every held key with the same title apart
+    from its year (a name given without a year, or with one no held copy carries). An
+    ambiguous name keeps every candidate: this ranks search, never resolves identity.
+    """
+    key = instrument_key(name)
+    if not key:
+        return ()
+    if key in held_keys:
+        return (key,)
+    title = _KEY_YEAR.sub("", key)
+    return tuple(sorted(held for held in held_keys if _KEY_YEAR.sub("", held) == title))
+
+
 def provision_label(act: str, unit: str) -> str:
     """One rendering of "this provision of this Act". ONE COPY, and this is it.
 

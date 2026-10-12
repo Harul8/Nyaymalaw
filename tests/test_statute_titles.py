@@ -6,7 +6,12 @@ central Acts named after the State keep their names. Only names change, never wo
 """
 import pytest
 
-from nm.shared.citation_contracts import CENTRAL_ACTS_NAMED_FOR_THE_STATE, statute_own_title, statute_title
+import json
+from pathlib import Path
+
+from nm.shared.citation_contracts import (
+    CENTRAL_ACTS_NAMED_FOR_THE_STATE, instrument_candidates, instrument_key, statute_own_title, statute_title,
+)
 
 
 @pytest.mark.parametrize("stored,act_id,shown", [
@@ -45,3 +50,28 @@ def test_central_acts_named_for_the_state_keep_their_names(title):
 def test_own_title_never_renames():
     assert statute_own_title("Telangana 1964 2 Andhra Pradesh Co-Operative Societies Rules, 1964") == \
         "Andhra Pradesh Co-Operative Societies Rules, 1964"
+
+
+HELD = ("consumer protection act 1986", "consumer protection act 2019", "hindu succession act 1956",
+        "state buildings lease rent and eviction control act 1960", "state land revenue act 1317 fasli")
+
+
+def test_the_register_groups_by_the_shared_instrument_key():
+    register = json.loads((Path(__file__).resolve().parents[1] / "pipeline" / "instrument_copies.json")
+                          .read_text(encoding="utf-8"))
+    assert all(instrument_key(group["shown_title"]) == group["key"] for group in register["groups"])
+
+
+@pytest.mark.parametrize("name,candidates", [
+    ("The Consumer Protection Act, 2019", ("consumer protection act 2019",)),
+    ("Consumer Protection Act", ("consumer protection act 1986", "consumer protection act 2019")),
+    ("Hindu Succession Act, 1955", ("hindu succession act 1956",)),
+    ("Andhra Pradesh Buildings (Lease, Rent and Eviction) Control Act",
+     ("state buildings lease rent and eviction control act 1960",)),
+    ("Telangana Land Revenue Act", ("state land revenue act 1317 fasli",)),
+    ("Indian Contract Act", ()),
+    ("", ()),
+])
+def test_a_named_act_proposes_held_candidates_and_keeps_ambiguity(name, candidates):
+    assert instrument_candidates(name, set(HELD)) == candidates
+

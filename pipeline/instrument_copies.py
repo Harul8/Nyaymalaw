@@ -48,7 +48,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from nm.shared.citation_contracts import (  # noqa: E402  -- one owner of the naming rule
     CENTRAL_ACTS_NAMED_FOR_THE_STATE, STATE_NAME, TELANGANA, TELANGANA_AREA,
-    statute_own_title, statute_title,
+    instrument_key, statute_own_title, statute_title,
 )
 REGISTER = ROOT / "pipeline" / "instrument_copies.json"
 LINEAGE = ROOT / ".nm" / "retrieval" / "bare_acts.lineage.json"
@@ -87,12 +87,9 @@ def proper_title(act_name: str, act_id: str = "", year: str = "") -> str:
 
 
 def group_key(title: str) -> str:
-    """Same instrument, whichever State name or source spelling a copy carries."""
-    text = TELANGANA_AREA.sub(" ", title)
-    text = STATE_NAME.sub(" state ", text)
-    text = TELANGANA.sub(" state ", text).lower()
-    text = re.sub(r"\bthe\b", " ", text)
-    return " ".join(re.findall(r"[a-z0-9]+", text))
+    """Same instrument, whichever State name or source spelling a copy carries: the one
+    shared rule, which research also uses to match the Acts a plan names."""
+    return instrument_key(title)
 
 
 def _adapted(document: dict) -> bool:
