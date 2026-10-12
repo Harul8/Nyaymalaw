@@ -126,3 +126,40 @@ def test_named_instruments_must_be_distinct_nonblank_names(tmp_path, monkeypatch
     held, _ = collection(tmp_path, monkeypatch)
     with pytest.raises(ValueError, match="distinct nonblank"):
         search(held, instruments)
+
+
+def bare(tmp_path, count):
+    from types import SimpleNamespace
+    item = retrieval.LocalCollection(corpus_dir=tmp_path, lineage=tmp_path / "unused.json",
+                                     doc_type="bare_act", models=SimpleNamespace())
+    item._open = lambda: ({}, None, count)
+    return item
+
+
+def test_word_search_within_named_instruments_ranks_only_their_passages(tmp_path):
+    np = pytest.importorskip("numpy")
+    from types import SimpleNamespace
+    item = bare(tmp_path, 6)
+    scores = np.array([9.0, 0.0, 3.0, 3.0, 7.0, 1.0])
+    item._word_index = lambda: SimpleNamespace(vocab_dict={"lien": 0}, get_scores=lambda tokens: scores)
+    # Position 0 scores highest overall but is outside the named Acts; ties keep stored order.
+    assert item.lexical_within("bailee's lien", 3, {1, 2, 3, 5}) == [2, 3, 5]
+    assert item.lexical_within("bailee's lien", 10, {1}) == []  # a zero score is no hit
+    assert item.lexical_within("unknown words", 10, {2}) == []
+
+
+def test_vector_search_within_named_instruments_is_an_exact_selection(tmp_path):
+    np = pytest.importorskip("numpy")
+    faiss = pytest.importorskip("faiss")
+    from types import SimpleNamespace
+    item = bare(tmp_path, 4)
+    index = faiss.IndexFlatIP(2)
+    index.add(np.array([[1.0, 0.0], [0.8, 0.6], [0.0, 1.0], [0.6, 0.8]], dtype="float32"))
+    item._vector_index = lambda: index
+    # Two formulations; the second spans two windows, fused by reciprocal ranks.
+    item.models = SimpleNamespace(encode=lambda queries: (np.array([[1.0, 0.0], [0.0, 1.0], [0.6, 0.8]], dtype="float32"),
+                                                          [(0, 1), (1, 3)]))
+    first, second = item.semantic_many_within(("lien", "dispossession"), 3, {1, 2, 3})
+    assert first == [1, 3, 2]  # position 0 is the global best but not named
+    assert set(second) == {1, 2, 3} and second[0] in (2, 3)
+    assert item.semantic_many_within(("lien",), 3, set()) == [[]]
