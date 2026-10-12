@@ -2163,3 +2163,94 @@ Neither ledger alone now holds enough reservation headroom for a full answer, wh
 - Broader real-request acceptance is the owner's browser testing.
 
 Evidence: `outputs/core-engine-build-20261010/` folders `seq4-latency`, `seq4-aliases`, `seq4-restriction`, and `browser-test-20261011` (`start-test-server-extension.ps1`, `inspect_latest.py`, store).
+
+### SEQ.3 retrieval quality on the Acts both corpora hold, and ranking improvements (12 Oct 2026)
+
+Owner instructions, 12 Oct, in order:
+- Build the India Code pipeline separately, ignoring the current corpus.
+- Bring no more Acts. Test only the Acts both corpora hold, and measure retrieval quality and how to improve it.
+- Seeing the full library with legal phrasing find nearly as much as India Code, focus on improving the current library, particularly ranking.
+
+Owner approval, 12 Oct: one small paid selection run, about $0.03.
+
+**Set-up (no model calls)**
+- Three versions of the statutes:
+  - the full current library as served (one-copy register applied);
+  - the same 16 Acts cut from it: 10,761 passages, the library's stored vectors copied (90 of 90 sampled vectors verified) and the word index rebuilt over the cut;
+  - the separate India Code corpus of the same 16 Acts: 10,145 passages.
+- 30 scorecard questions with 49 expected provisions in those Acts. Six Limitation Act schedule Articles are excluded, because India Code holds no schedule text.
+- Each search is traced stage by stage: word search, vector search, the fused shortlist the reranker reads, the reranked order and the six results the writer receives. The trace reproduced the production search exactly in 99 of 99 checked runs.
+- "Found" means the expected provision entered the shortlist. "In the six" means it reached the six results.
+- Legal phrasing reuses the 12 Oct Luna phrasing: one search per issue with the question, up to five concept phrases and a rule probe.
+
+**Baseline**
+
+| Version | Query | In the six | Found |
+|---|---|---|---|
+| Full library | as written | 15 | 18 |
+| Full library | legal phrasing | 23 | 42 |
+| Same 16 Acts, current text | as written | 23 | 32 |
+| Same 16 Acts, current text | legal phrasing | 28 | 44 |
+| Same 16 Acts, India Code text | as written | 23 | 32 |
+| Same 16 Acts, India Code text | legal phrasing | 29 | 46 |
+
+- On the same Acts, India Code text retrieves no better than the current text. Its earlier lead came from searching 16 Acts, not from better words.
+- The library's other statutes cost most as-written fetching (18 found against 32).
+- Legal phrasing fixes most fetching. After it, most losses are ranking: the full library finds 42 but places 23 in the six.
+
+**Section coverage of the same 16 Acts**
+- The served library lacks 16 main sections that India Code holds: TPA ss.59, 107 and 123; SRA ss.14A and 20A-20C; six Motor Vehicles Act sections; NI ss.70 and 104A; Registration s.23A.
+- Only the current library holds the Limitation schedule's 137 Articles and Arbitration ss.43A-43M (India Code has no text for them), plus about 110 misparsed schedule rows and stray section numbers.
+- 6.9% of the current text's section heads carry under 15 words of section text; 0.2% in India Code.
+
+**Free variants on the two 16-Act versions (in the six, legal phrasing: current text / India Code text)**
+
+| Variant | In the six |
+|---|---|
+| Production | 28 / 29 |
+| Deeper shortlists (legs 160 deep, 120 per formulation) | 28 / 30 |
+| Extra leg: section headings by vector | 28 / 29 |
+| Extra leg: vectors inside model-named Acts, exact names | 28 / 29 |
+| Extra legs: words and vectors inside model-named Acts, year-free names | 27 / 30 |
+| Reranker reads the question alone | 25 / 27 |
+| Ten results instead of six | 34 / 31 |
+| Reranker order blended with the shortlist order | 34 / 35 |
+
+- The blend fuses the reranker's order with the shortlist's order by reciprocal ranks (k 60, the production constant, not tuned). It gained 8 and lost 2 on each version; NI s.138 moved from 43rd to 2nd. As written, with one formulation, it hurts: 23 to 19 and 16.
+- Year-free name matching puts the expected Act among the model-named Acts for 48 of 49 expectations (median two Acts per question). Searching inside them added nothing beyond the general search on these versions.
+
+**Full current library: ranking variants (legal phrasing; in the six)**
+
+The held-out sample is the scorecard's other 17 questions (24 expectations), on Acts outside the 16. None of the variants was tried on it before this check.
+
+| Ranking change (no model calls) | 30 questions (49) | Held-out (24) | Both (73) |
+|---|---|---|---|
+| Production | 23 | 15 | 38 |
+| Reranker order blended with the shortlist order | 27 | 15 | 42 |
+| Reranker reads each formulation separately; the orders fused by reciprocal ranks | 30 | 18 | 48 |
+| Reranker reads each formulation separately; best score kept | 14 | not run | - |
+| Words and vectors inside model-named Acts, then the blend | 32 | 16 | 48 |
+
+- Per-formulation ranking with fused orders gained 11 and lost 4 on the 30 questions, and gained 3 and lost none held out. In this harness, with up to seven formulations, reranking took about four times as long. Production research searches the advocate's account plus up to three enquiries.
+- The blend's main-sample gain (7 gained, 3 lost) did not recur held out (one gained, one lost).
+- Named-Act search needs the research plan to name candidate Acts, which the live plan does not do. It reached 42 of 49 within the top 40, against 38.
+
+**Paid selection run (owner-approved; 30 Luna calls, $0.011522, extension ledger)**
+
+For each question, Luna saw the question and the full library's top 40 candidates after legal phrasing (Act, section, heading, opening words) and picked up to eight.
+
+| Full library, legal phrasing | Caught | Items per question |
+|---|---|---|
+| Search's six results | 23 | 6 |
+| Luna's picks | 31 | about 3 |
+| Picks topped up to six from the search order | 33 | 6 |
+| Ceiling: anywhere in the top 40 | 38 | 40 |
+
+- Twelve picks came from below the six, as deep as 31st. Four provisions in the six were not picked.
+- Picks outside the scorecard were often apt: for a cruelty divorce question naming no religion, the Hindu Marriage, Special Marriage, Divorce and Parsi Acts.
+- Currency gap: for a 2026 assault, Luna picked IPC ss.323 and 325. The candidates do not say that the IPC is repealed; a currency marker needs the pending currency-register decision.
+- The served six sometimes hold one section twice through duplicate copies, which wastes result slots.
+
+**Fetched but unused.** Before the instruction to bring no more Acts, twelve further Union Acts (among them the CPC and the Contract Act) were fetched from India Code as raw records. They are not converted or indexed. India Code holds no usable text of the repealed IPC, CrPC or Evidence Act, and no longer lists the Payment of Gratuity or Industrial Disputes Acts among central Acts.
+
+Evidence: `outputs/core-engine-build-20261010/` folders `current-subset` (`build_subset.py`, lineage), `indiacode-corpus`, `indiacode-acquisition` and `seq3-sample-quality` (`measure.py`, `variants.py`, `select_run.py`, results, candidates, selections and logs).
