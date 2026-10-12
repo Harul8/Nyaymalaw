@@ -2094,3 +2094,72 @@ Owner decision (11 Oct): accept current search quality for now and record its kn
 - Not run: full suite, gate, journeys, golden or served end-to-end runs.
 
 Evidence: `outputs/core-engine-build-20261010/seq4-gap-wording/` (replay script, writer draft, both reviews).
+
+### SEQ.4 completion pass: latency, citation links, aliases and restriction coverage (11-12 Oct 2026)
+
+Owner instruction: complete everything pending in SEQ.4. Owner approval (12 Oct): four paid checks and a $5.50 overall cap. The existing ledger refuses to be enlarged by design, so the extra $0.50 is a separate ledger, `api-budget-extension-20261012.sqlite`, used only for the final browser turn.
+
+**Measured first (no provider calls)**
+
+| Stage, saved 11 Oct question | Before |
+|---|---|
+| Search, two work items | 59.1 s on the first question after a restart, 15.9 s warm |
+| Authority checks | 0.8 s |
+
+- The first-question excess was model and index loading: the startup thread only checked corpus metadata.
+- Each warm search re-derived corpus identity about 500 times at about 4 ms each.
+- The reranker is compute-bound at about 2.5 s per call on the GPU; larger batches do not help and shift scores slightly.
+- Long hexadecimal source tags were 15% of the writer's input characters (418 occurrences).
+
+**Pieces, each committed and pushed after its check**
+
+1. **Startup warm-up** (`retrieval.py`, 8db28c7). Warm-up now loads the word and vector indices, the hidden-copy positions and both models, and runs one discarded probe. Per-index locks make a racing search wait for the single load. Warm-up takes 26.4 s in the background; the first search after it takes 18.2 s (59.1 s before), with an identical search record.
+2. **Per-search snapshot check** (`retrieval.py`, 3228f77). A search checks its loaded corpus snapshot on first use and again on exit, per thread. A change during a search fails the whole search, so no result mixes versions. Warm search is 12.5-13.9 s (15.9 s), with an identical record.
+3. **Rendering v4** (`response_rendering.py`, `turn.py`; 81e135e). A source is linked at the words that cite it:
+   - a case citation matched to one used judgment;
+   - a provision reference binding one used provision whose Act is named in the same sentence;
+   - a name or locator found once, ignoring case.
+
+   Every other used source follows the paragraph as a marker. A whole paragraph, a bare number or a shared name is never a link, and v1-v3 responses re-render as saved. On the saved 11 Oct answer, v3 had linked four paragraphs whole; v4 links "section 14" in one and marks the sources of the other three.
+4. **Browser display** (`brain-sources.js`, `app.css`; 00b4204). Links sit at the saved offsets, and markers are small labelled buttons that open the same saved passage. Checked with four node tests and a local preview.
+5. **Short source aliases.**
+   - Catalogue owner (`answer_sources.py`, 8913743): deterministic P1../J1.. aliases and an aliased presentation.
+   - Writer v3 (7bdec58). Replay $0.110697: admitted first time, aliases mapped to owned uses, input 48,526 tokens against 59,608.
+   - Review v3 (183ee7e). Replay $0.130558: accepted with no findings, input 57,529 tokens against 64,428.
+   - Admission maps an offered alias, or an exact owned tag, back to the owned source. Anything else is refused, and earlier versions replay unchanged.
+6. **Respected restrictions** (review v4, cab6cee). A restriction honoured by not doing the restricted work needs no reply unit; addressed requests still need units.
+   - Two replays of the saved 10 Oct friction review input cost $0.067461. An earlier attempt was refused before dispatch by a cap below the reservation, with no charge.
+   - Both first outputs were admitted without repair and accepted. Seven genuine restrictions were marked respected and four positive requests were addressed with units.
+
+**Integrated browser turn (127.0.0.1:8177 test instance, synthetic account, extension ledger)**
+
+The question was the 11 Oct deposit and laptop facts plus "Do not contact the landlord or the shop yet". The saved turn used research v5, writer v3, review v4 and rendering v4.
+
+| Measure | Result |
+|---|---|
+| Review | accepted first pass; the restriction recorded as respected with no reply unit |
+| Calls | 4, no corrections or retries: Luna 4.5 s and 4.9 s; Sol writer 22.6 s on 52,964 input tokens; Sol review 24.1 s on 62,152 |
+| Cost | $0.252199 |
+| Turn time | about 74 s to the saved reply (130 s for the 10 Oct first answer); search and checks about 17 s |
+
+- **Gaps:** worded as what the research returned ("The research did not return a relevant repairer-retention or lien provision").
+- **Restriction:** honoured ("no approach to the landlord or shop is proposed at this stage").
+- **Links:** one inline link ("section 2" of the Consumer Protection Act, 2019) and four markers. A marker opened the exact saved passage in the reader.
+- **Reopen:** the turn reopened identically (3,522 characters, same links and markers). The earlier 11 Oct conversation still opens under its saved v3 rendering.
+- **Search:** Contract Act s.170 was again not found, the accepted SEQ.3 limit.
+
+**Ledgers**
+- Existing: $4.799644 of $5.
+- Extension: $0.252200 of $0.50.
+- Combined: $5.051844 of the approved $5.50.
+
+Neither ledger alone now holds enough reservation headroom for a full answer, which reserves about $0.23 per Sol call. Main instance 8175 was restarted on this code (serving 0c11e05f94aeac1d, code current).
+
+**Checks.** 334 tests in the writer, review, authority, rendering, turn, served and source-catalogue files and 134 retrieval and research tests pass, plus four node tests of the reader script. Pre-existing unrelated failures remain in the asset-population, CSS-scan and home-text tests. Not run: full suite, gate, journeys, golden or served end-to-end evaluations.
+
+**Remaining SEQ.4 items**
+- Current-law currency needs an owner decision on an owner-reviewed currency register. The repeal sections CPA 2019 s.107, BNSS s.531 and BSA s.170 are held; commencement dates come from notifications the corpus does not hold.
+- Comprehensive citation identity for case names without reporter citations belongs with SEQ.2.
+- Broader real-request acceptance is the owner's browser testing.
+
+Evidence: `outputs/core-engine-build-20261010/` folders `seq4-latency`, `seq4-aliases`, `seq4-restriction`, and `browser-test-20261011` (`start-test-server-extension.ps1`, `inspect_latest.py`, store).
