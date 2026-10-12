@@ -129,8 +129,11 @@ def test_whole_originals_adjacent_legal_text_and_execution_are_separate_inputs()
     assert [select(ref, sources) for ref in shown[0]["addresses"]] == draft["units"][0]["addresses"]
     assert "proposal" not in payload["complete_draft_proposal"]  # No duplicate draft text.
     assert payload["research_proposal_and_results"]["plan_proposal"] == record["plan"]["proposal"]
-    assert {s["id"] for s in payload["legal_sources"]["passages"]} == {
-        s["id"] for s in sources.values() if s["kind"] in {"provision", "judgment"}}
+    from nm.core_engine.answer_sources import aliases
+    offered = aliases(sources)
+    assert {s["id"] for s in payload["legal_sources"]["passages"]} == set(offered)
+    assert set(offered.values()) == {s["id"] for s in sources.values() if s["kind"] in {"provision", "judgment"}}
+    assert not any(tag in model.calls[0][0].user for tag in offered.values()), "legal passages travel by alias"
     assert any("Court rejected" in s["text"] for s in payload["legal_sources"]["passages"])
     assert all(s["kind"] in {"provision", "judgment"} for s in payload["legal_sources"]["passages"])
     assert tier is Tier.JUDGE and schema == SCHEMA and kwargs == {"max_tokens": MAX_OUTPUT}
@@ -150,18 +153,22 @@ def test_review_selectors_reconstruct_legacy_full_and_short_sources_without_repe
             "treatment_source": {"source_id": legal["id"], "quote": legal["text"][:12]}}]}]}
     draft = accept_draft(proposal, ctx, sources, contract=WRITER_LEGACY_CONTRACT)
     originals = deepcopy((draft, sources))
-    shown = _draft_presentation(draft, sources)
+    shown = _draft_presentation(draft, sources, aliased=True)
     unit, actual = shown["units"][0], draft["units"][0]
     assert (draft, sources) == originals
     assert (unit["id"], unit["kind"], unit["text"]) == (actual["id"], actual["kind"], actual["text"])
     assert unit["uses"][0]["quote"] is None
     assert unit["uses"][0]["treatment_source"]["quote"] == legal["text"][:12]
+    from nm.core_engine.answer_sources import aliases
+    owned = aliases(sources)
+    tag = lambda ref: {**ref, "source_id": owned.get(ref["source_id"], ref["source_id"])}
     for projected, original in zip(unit["uses"], actual["uses"]):
-        resolved = select({k: projected[k] for k in ("source_id", "quote")}, sources)
+        assert projected["source_id"] in owned, "legal uses are shown by alias"
+        resolved = select(tag({k: projected[k] for k in ("source_id", "quote")}), sources)
         assert resolved["text"] == original["text"]
         assert (resolved["start"], resolved["end"]) == (original["start"], original["end"])
         assert all(projected[k] == original[k] for k in ("role", "speaker", "treatment"))
-        assert select(projected["treatment_source"], sources) == original["treatment_source"]
+        assert select(tag(projected["treatment_source"]), sources) == original["treatment_source"]
     model = Model(positive(draft))
     result = review(model, ctx, record, sources, draft)
     assert json.loads(model.calls[0][0].user)["complete_draft_proposal"] == shown
@@ -469,10 +476,14 @@ def test_authority_checks_are_separate_compact_model_input_and_full_bound_eviden
     model = Model(positive(args[-1]))
     receipt = review_checked(model, *args, execution, authority_evidence=authority)
     payload = json.loads(model.calls[0][0].user)
-    assert receipt["contract"] == CONTRACT == "core_response_review_v2"
+    assert receipt["contract"] == CONTRACT == "core_response_review_v3"
     assert authority["readbacks"]
+    from nm.core_engine.answer_sources import aliases
+    from nm.core_engine.response_review import _aliased
+    shown = {tag: alias for alias, tag in aliases(args[2]).items()}
     assert payload["owned_authority_checks"] == {
-        "contract": authority["contract"], "units": authority["units"]}
+        "contract": authority["contract"], "units": _aliased(authority["units"], shown)}
+    assert not any(tag in json.dumps(payload["owned_authority_checks"]) for tag in shown)
     assert "readbacks" not in payload["owned_authority_checks"]
     assert payload["owned_execution_evidence"] == execution
     assert validate_checked(receipt, *args, execution, authority_evidence=authority) == receipt
@@ -529,3 +540,40 @@ def test_v2_review_does_not_fall_back_to_legacy_when_authority_is_missing():
     saved["contract"] = "future_review_version"
     with pytest.raises(ValueError, match="Unknown or malformed"):
         validate_checked(saved, *args, authority_evidence=authority)
+
+
+def test_v3_findings_select_legal_passages_by_alias_and_replay():
+    from nm.core_engine.answer_sources import aliases
+    ctx, record, sources, draft = setup(legal=True)
+    alias, tag = next(iter(aliases(sources).items()))
+    data = negative(draft, ctx, category="grounding", sources=[{"source_id": alias, "quote": None}])
+    receipt = review(Model(data), ctx, record, sources, draft)
+    assert receipt["contract"] == CONTRACT and receipt["accepted"] is False
+    assert receipt["proposal"]["findings"][0]["sources"] == [{"source_id": alias, "quote": None}]
+    assert validate(receipt, ctx, record, sources, draft) == receipt
+    exact = negative(draft, ctx, category="grounding", sources=[{"source_id": tag, "quote": None}])
+    assert review(Model(exact), ctx, record, sources, draft)["accepted"] is False
+
+
+def test_v3_refuses_an_unoffered_alias():
+    ctx, record, sources, draft = setup(legal=True)
+    data = negative(draft, ctx, category="grounding", sources=[{"source_id": "P99", "quote": None}])
+    with pytest.raises(SchemaViolation):
+        review(Model(data), ctx, record, sources, draft)
+
+
+def test_saved_v2_review_replays_unchanged_with_owned_tags():
+    from nm.core_engine.answer_sources import aliases
+    from nm.core_engine.response_review import AUTHORITY_CONTRACT, _accept, _dependencies
+    ctx, record, sources, draft = setup(legal=True)
+    authority = response_authorities.check(ctx, record, sources, draft)
+    alias, tag = next(iter(aliases(sources).items()))
+    dependencies = _dependencies(ctx, record, sources, draft, None, authority_evidence=authority,
+                                 contract=AUTHORITY_CONTRACT)
+    saved = _accept(negative(draft, ctx, category="grounding", sources=[{"source_id": tag, "quote": None}]),
+                    dependencies, contract=AUTHORITY_CONTRACT)
+    assert saved["contract"] == "core_response_review_v2"
+    assert validate(saved, ctx, record, sources, draft) == saved
+    with pytest.raises(SchemaViolation):
+        _accept(negative(draft, ctx, category="grounding", sources=[{"source_id": alias, "quote": None}]),
+                dependencies, contract=AUTHORITY_CONTRACT)

@@ -221,7 +221,8 @@ def render(context, research_record, sources, draft, review, execution=None, *,
         checked_review = response_review.validate(review, context, research_record,
             sources, checked_draft, execution=execution)
     else:
-        if authority_evidence is None or review.get("contract") != response_review.CONTRACT:
+        if authority_evidence is None or review.get("contract") not in {
+                response_review.AUTHORITY_CONTRACT, response_review.CONTRACT}:
             raise ValueError("Current rendering requires an authority-bound current review")
         checked_authorities = response_authorities.validate(authority_evidence, context,
             research_record, sources, checked_draft)
