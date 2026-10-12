@@ -79,8 +79,11 @@ def test_complete_context_and_all_neighbouring_legal_words_reach_one_writer_call
     assert payload["original_context"] == ctx
     assert payload["execution_evidence"] == {"operations": []}
     assert payload["interpretation_proposal"] == {"units": []}
-    assert {s["id"] for s in payload["held_passages"]["passages"]} == {
-        s["id"] for s in sources.values() if s["kind"] in {"provision", "judgment"}}
+    from nm.core_engine.answer_sources import aliases
+    offered = aliases(sources)
+    assert {s["id"] for s in payload["held_passages"]["passages"]} == set(offered)
+    assert set(offered.values()) == {s["id"] for s in sources.values() if s["kind"] in {"provision", "judgment"}}
+    assert not any(tag in prompt.user for tag in offered.values()), "legal passages travel by alias"
     assert any("Court rejected" in s["text"] for s in payload["held_passages"]["passages"])
     assert payload["research"]["plan_proposal"] == record["plan"]["proposal"]
     assert tier is Tier.HARD and kwargs == {"max_tokens": MAX_OUTPUT} and schema == SCHEMA

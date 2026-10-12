@@ -12,7 +12,10 @@ from nm.shared.model_port import (
 )
 
 LEGACY_CONTRACT = "core_response_writer_v1"
-CONTRACT = "core_response_writer_v2"
+OWNED_TAG_CONTRACT = "core_response_writer_v2"
+#: v2 with legal passages offered and selected by short aliases (11 Oct 2026).
+CONTRACT = "core_response_writer_v3"
+CONTRACTS = (LEGACY_CONTRACT, OWNED_TAG_CONTRACT, CONTRACT)
 MAX_OUTPUT = 6500
 SYSTEM = """Message: You receive the exact latest advocate message, complete attributed
 conversation, current authorised records and saved work. Interpretation and research
@@ -60,7 +63,8 @@ Outcome: Return an ordered units array with natural text, kind, original-message
 addresses and source uses. Separate independently assessable assertions; retain all
 conditions without an arbitrary length limit. Each unit addresses original advocate
 material; the draft must address the latest message. Each reference selects only an
-owned source_id. Code supplies the complete exact saved passage and its attribution;
+offered source_id; held legal passages are offered under short IDs such as P1 or J1.
+Code supplies the complete exact saved passage and its attribution;
 do not retype, paraphrase or shorten source text in a reference. The full passage and
 neighbouring context remain the basis for checking each assertion and its conditions.
 Account, law and analysis units need source uses; law needs held legal material.
@@ -156,6 +160,18 @@ def _legacy_use(use, sources):
             "treatment": use["treatment"], "treatment_source": treatment}
 
 
+def _offered(use, offered):
+    """v3 selects a legal passage by its offered alias; an exact owned tag stays
+    itself and anything else is refused by selection as an unknown source."""
+    if not offered:
+        return use
+    resolved = deepcopy(use)
+    for holder in (resolved, (resolved.get("court_treatment") or {}).get("source")):
+        if holder and holder.get("source_id") in offered:
+            holder["source_id"] = offered[holder["source_id"]]
+    return resolved
+
+
 def _owned_use(use, sources, originals):
     support = answer_sources.select({"source_id": use["source_id"], "quote": None}, sources)
     primary = sources[support["source_id"]]
@@ -195,8 +211,9 @@ def accept(proposal, context, sources, *, contract=CONTRACT):
     A malformed unit rejects the draft for the turn owner's bounded correction.
     Nothing is silently salvaged or described as reviewed by this boundary.
     """
-    if contract not in {LEGACY_CONTRACT, CONTRACT}:
+    if contract not in CONTRACTS:
         raise ValueError("Unknown response writer contract")
+    offered = answer_sources.aliases(sources) if contract == CONTRACT else {}
     schema = LEGACY_SCHEMA if contract == LEGACY_CONTRACT else SCHEMA
     data = canonical_schema_data(proposal, schema)
     require_schema(data, schema)
@@ -223,7 +240,7 @@ def accept(proposal, context, sources, *, contract=CONTRACT):
             addresses.append(answer_sources.select(reference, sources))
             addresses_latest |= ref["source_id"] == latest_id
         uses = [(_legacy_use(use, sources) if contract == LEGACY_CONTRACT
-                 else _owned_use(use, sources, originals)) for use in item["uses"]]
+                 else _owned_use(_offered(use, offered), sources, originals)) for use in item["uses"]]
         if item["kind"] in {"account", "law", "analysis"} and not uses:
             raise SchemaViolation("A substantive response unit needs exact source dependencies")
         if item["kind"] == "law" and not any(
@@ -240,7 +257,7 @@ def accept(proposal, context, sources, *, contract=CONTRACT):
 def validate(draft, context, sources):
     """Rebind a draft to its exact original selectors before review or replay."""
     if (not isinstance(draft, dict) or set(draft) != {"contract", "proposal", "units"}
-            or draft.get("contract") not in {LEGACY_CONTRACT, CONTRACT}
+            or draft.get("contract") not in CONTRACTS
             or accept(draft["proposal"], context, sources, contract=draft["contract"]) != draft):
         raise ValueError("Response draft differs from its checked source selections")
     return deepcopy(draft)
@@ -261,10 +278,13 @@ def write(model, context, research_record, sources, interpretation=None, executi
                      for identity, row in research_record["searches"].items()],
         "failures": research_record["failures"],
     }
+    offered = {tag: alias for alias, tag in answer_sources.aliases(sources).items()}
     payload = {"original_context": context, "interpretation_proposal": interpretation,
-               "research": research_context, "held_passages": answer_sources.presentation(sources),
+               "research": research_context,
+               "held_passages": answer_sources.presentation(sources, aliased=True),
                "execution_evidence": execution,
-               "source_kinds": {identity: row["kind"] for identity, row in sources.items()}}
+               "source_kinds": {offered.get(identity, identity): row["kind"]
+                                for identity, row in sources.items()}}
     prompt = Prompt(system=SYSTEM, user=json.dumps(payload, ensure_ascii=False),
                     operation="core_response_writer")
     if (estimate_tokens(SYSTEM + prompt.user + json.dumps(SCHEMA)) + MAX_OUTPUT
