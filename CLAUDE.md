@@ -85,6 +85,16 @@ wired; a local fallback cannot override its scope.
 
 ## Responses and model calls
 
+Owner standing instructions, 13 October 2026, for every model step:
+- Work in a reasoning loop, never one shot: the model thinks about the input,
+  does the work, checks its own result against the source, corrects it, and only
+  then moves on. Give reasoning time where the step needs judgement.
+- Do not write prompt rules that work against the models' natural capabilities.
+  State the purpose and needed outcome in plain language; leave understanding of
+  context, meaning, disputes, facts, rights and issues to the model; avoid
+  bookkeeping duties, artificial caps and rigid micro-rules; let code make the
+  mechanical checks (exact quotes, owned IDs, permissions) afterwards.
+
 P10 permits natural professional answers/summaries, grounded analysis, relevant
 limitations and proposed questions/next steps. S3 owns their admission contract.
 Code owns saved-effect, execution/completion claims, effect-only acknowledgements
