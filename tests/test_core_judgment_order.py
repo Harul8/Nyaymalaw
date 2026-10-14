@@ -65,7 +65,7 @@ def test_the_courts_own_words_come_before_reported_or_quoted_paragraphs():
             paragraph("e", 5, "The burden shifts to the accused once execution is admitted.", "ratio")]
     scores = {row["full_text"]: score for row, score in zip(rows, (0.99, 0.90, 0.98, 0.995, 0.85))}
     result = search(Judgments(rows, scores))
-    assert result["contract"] == retrieval.CONTRACT == "hybrid_retrieval_v7"
+    assert result["contract"] == retrieval.CONTRACT == "hybrid_retrieval_v8"
     assert judgment_order(result) == ["b:2", "e:5", "d:4", "a:1", "c:3"]
     assert {c["source"]["chunk_id"]: c["score"] for c in result["candidates"] if c["kind"] == "judgment"} == {
         "a:1": 0.99, "b:2": 0.90, "c:3": 0.98, "d:4": 0.995, "e:5": 0.85}  # each keeps the reranker's own score
