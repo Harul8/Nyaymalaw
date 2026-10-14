@@ -48,7 +48,7 @@ def test_saved_provision_view_preserves_actual_outcome_without_new_checks(served
     assert view["provision_checks"][0]["legal_version"] == "not_assessed"
     assert view["case_checks"] == [] and "status" not in view
     assert read.headers["cache-control"] == "no-store"
-    assert served.store.load(matter_id) == before and len(served.model.calls) == 4
+    assert served.store.load(matter_id) == before and len(served.model.calls) == 8
 
 
 def test_retrieved_judgment_without_citation_check_is_not_assessed(served):
@@ -170,4 +170,4 @@ def test_unknown_saved_activity_cannot_release_presentation_enrichment(served):
     response = served.client.get(source_url(reply))
     assert response.status_code == 409
     assert response.json()["detail"]["code"] == "saved_response_unavailable"
-    assert "authority_inspection" not in response.text and len(served.model.calls) == 4
+    assert "authority_inspection" not in response.text and len(served.model.calls) == 8

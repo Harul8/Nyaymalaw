@@ -61,8 +61,13 @@ def build(context, research_record):
                 memberships.append(work["id"])
 
     positions = {}
+    # v7 admits only the provisions the pick chose; judgments and earlier records admit
+    # every returned candidate.
+    admitted = research.admitted_provisions(checked)
     for work_id, search in checked["searches"].items():
         for selected in search["candidates"]:
+            if admitted is not None and selected["kind"] == "provision" and selected["id"] not in admitted:
+                continue
             kind, revision = selected["kind"], selected["corpus_revision"]
             window = selected["context"]
             units = []

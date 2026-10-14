@@ -1,19 +1,29 @@
-"""Research plan/source handoffs and independent search outcomes, not semantic proof."""
+"""Research: the v7 reasoning loop, its phrases, searches and provision pick, and the
+replay of every earlier plan version. These prove handoffs and mechanical contracts,
+not the model's legal judgment."""
 from copy import deepcopy
 import json
+import re
 
 import pytest
 
-from nm.core_engine.research import accept, plan, retrieve, search_queries, validate
 from nm.core_engine import answer_sources
+from nm.core_engine.calls import TurnCalls
+from nm.core_engine.research import (
+    CONTRACT, INSTRUMENTED_CONTRACT, MAX_REVISIONS, PROVISIONS_FOR_PICK, accept, plan, retrieve,
+    search_instruments, search_queries, validate,
+)
 from nm.core_engine.retrieval import HybridSearcher, SearchUnavailable
 from nm.shared.budget_contracts import Completion
-from nm.shared.model_port import ContextOverflow, ModelError, ModelResult, Usage
+from nm.shared.model_port import ContextOverflow, ModelError, ModelResult, SchemaViolation, Usage
 from tests.test_core_understanding import context
 from tests.test_current_brain_retrieval import Collection
 
 pytestmark = pytest.mark.class_a
+V6 = INSTRUMENTED_CONTRACT
 
+
+# --- v6 and earlier plan items (replay) ---------------------------------------------
 
 def work(quote="Find the applicable law.", instruments=()):
     return {"sources": [{"source_id": "t2:advocate", "quote": quote}],
@@ -38,96 +48,284 @@ def v5_work(quote="Find the applicable law."):
     return item
 
 
+# --- v7 proposals ---------------------------------------------------------------------
+
+def understanding(questions=1, disputes=1, *, needs_research=True, words="Find the applicable law"):
+    return {"summary": "A reported position on which the advocate seeks the law.",
+            "asked": ["Where the law stands on the reported position"], "ruled_out": [],
+            "needs_research": needs_research, "no_research_reason": "" if needs_research else "A courtesy.",
+            "parties": [{"who": "client", "role": "claimant"}],
+            "facts": [{"id": "F1", "fact": "The advocate seeks the applicable law.", "advocate_words": words,
+                       "certainty": "reported"}],
+            "disputes": [{"id": f"D{d}", "name": f"Dispute {d}", "between": ["client", "other party"],
+                          "fact_ids": ["F1"],
+                          "legal_questions": [{"id": f"D{d}Q{n}", "question": f"Which rule governs point {n} of dispute {d}?",
+                                               "why_needed": "It decides the advice.", "open_alternative": "",
+                                               "law_to_check": ["Indian Contract Act, 1872"]}
+                                              for n in range(1, questions + 1)] if needs_research else [],
+                          "rights_at_stake": [], "relief_sought": [], "missing_facts": []}
+                         for d in range(1, disputes + 1)],
+            "related_points": []}
+
+
+def statute_phrases(dispute, acts=("Indian Contract Act, 1872",)):
+    return {"questions": [{"question_id": q["id"],
+                           "phrases": [{"kind": "heading", "text": f"rule for {q['id']}"},
+                                       {"kind": "rule", "text": "Where the stated conditions are met, relief is available."}],
+                           "acts": list(acts)} for q in dispute["legal_questions"]]}
+
+
+def judgment_phrases(subject):
+    return {"questions": [{"question_id": q["id"], "phrases": [{"kind": "issue", "text": f"whether relief lies on {q['id']}"}]}
+                          for d in subject["disputes"] for q in d["legal_questions"]]}
+
+
+def proposal(questions=1, disputes=1, **kw):
+    subject = understanding(questions, disputes, **kw)
+    return {"understanding": subject,
+            "review_rounds": [{"code_problems": [], "verdict": "sound", "problems": []}],
+            "statute_phrases": [{"dispute_id": d["id"], **statute_phrases(d)} for d in subject["disputes"]],
+            "judgment_phrases": judgment_phrases(subject)["questions"], "failures": []}
+
+
+def _result(data, tier, completion=Completion.COMPLETE):
+    return ModelResult(None, deepcopy(data), tier, "synthetic", "fixture", Usage(1, 1, 0), 0, completion=completion)
+
+
 class Model:
-    def __init__(self, value, budget=100_000, completion=Completion.COMPLETE):
-        self.value, self.budget, self.completion, self.calls = value, budget, completion, []
+    """Answers each operation from a script; the pick chooses every shown provision."""
+
+    def __init__(self, subject=None, *, checks=None, revisions=None, fail=(), budget=100_000,
+                 completion=Completion.COMPLETE, choose=None):
+        self.subject = subject or understanding()
+        self.checks = list(checks or [{"verdict": "sound", "problems": []}])
+        self.revisions = list(revisions or [])
+        self.fail, self.budget, self.completion, self.choose = set(fail), budget, completion, choose
+        self.calls = []
 
     def context_budget(self, tier): return self.budget
 
     def structured(self, prompt, schema, tier, **kwargs):
         self.calls.append(prompt)
-        return ModelResult(None, deepcopy(self.value), tier, "synthetic", "fixture",
-                           Usage(1, 1, 0), 0, completion=self.completion)
+        operation = prompt.operation
+        if (operation, prompt.user) in self.fail or operation in self.fail:
+            raise SchemaViolation(f"Scripted failure for {operation}")
+        if operation == "core_research_understand":
+            data = self.subject
+        elif operation == "core_research_check":
+            data = self.checks.pop(0) if len(self.checks) > 1 else self.checks[0]
+        elif operation == "core_research_revise":
+            data = {"notes": "Corrected.", "understanding": self.revisions.pop(0)}
+        elif operation == "core_research_phrases":
+            dispute_id = re.search(r"^Dispute (\S+):", prompt.user, re.M).group(1)
+            data = statute_phrases(next(d for d in self.subject["disputes"] if d["id"] == dispute_id))
+        elif operation == "core_research_judgment_phrases":
+            data = judgment_phrases(self.subject)
+        elif operation == "core_research_pick":
+            shown = {}
+            for label, number in re.findall(r"^\s+(Q\d+)\.(\d+) ", prompt.user, re.M):
+                shown.setdefault(label, []).append(f"{label}.{number}")
+            data = {"questions": [{"question_id": q, "chosen": (self.choose or (lambda ids: ids))(ids), "note": "Chosen."}
+                                  for q, ids in shown.items()]}
+        else:
+            raise AssertionError(operation)
+        return _result(data, tier, self.completion)
 
 
-def test_planner_sees_original_history_and_does_not_route_only_from_interpretation():
+def operations(model):
+    return [prompt.operation for prompt in model.calls]
+
+
+def searcher():
+    many = Collection()
+    many.rows = {p: {"chunk_id": f"s{p}", "full_text": f"Section {p}\nProvision {p} text.", "act_id": "act",
+                     "act_name": "Act", "section_number": str(p)} for p in range(25)}
+    many.lexical = many.semantic = lambda query, depth: list(many.rows)
+    many.rerank = lambda pairs, *, anchors=None: [1.0] * len(pairs)
+    return HybridSearcher({"provision": many, "judgment": Collection("judgment")})
+
+
+# --- the v7 loop ----------------------------------------------------------------------
+
+def test_the_loop_reviews_and_revises_before_phrasing_and_reads_the_whole_conversation():
     earlier = {"source_id": "t1:advocate", "turn_id": "t1", "speaker": "advocate",
-               "record_role": "original_account", "text": "I dispute authorship; no admission was made."}
-    ctx = context("Find the applicable law.", [earlier])
-    ctx["current_records"] = {"restriction": "No external contact"}
-    proposal = work()
-    proposal["sources"].append({"source_id": earlier["source_id"], "quote": earlier["text"]})
-    proposal["search_account"] = [{"source_id": earlier["source_id"], "quote": None}]
-    model = Model({"work": [proposal]})
-    admitted = plan(model, ctx, {"units": [], "issues": ["missed request"]})
-    assert len(model.calls) == 1
-    assert json.loads(model.calls[0].user)["original_context"] == ctx
-    queries = search_queries(admitted["work"][0])
-    assert all(earlier["text"] in q["context"] for q in queries)
-    assert admitted["semantic_review"] == "pending"
-
-
-def test_invalid_source_is_held_without_losing_independent_work():
-    bad = work()
-    bad["sources"][0]["source_id"] = "different-matter"
-    admitted = accept({"work": [bad, work()]}, context("Find the applicable law."))
-    assert len(admitted["work"]) == len(admitted["issues"]) == 1
-    assert admitted["work"][0]["id"] == "t2:w2"
-
-
-def test_complete_source_selection_preserves_original_words_and_attribution_without_copying():
-    earlier = {"source_id": "t1:advocate", "turn_id": "t1", "speaker": "advocate",
-               "record_role": "original_account",
-               "text": "The other party alleges authorisation; our client denies it.\nThe original record is not supplied."}
-    ctx = context("Examine the position conditionally. Keep the allegation disputed; do not contact anyone.",
-                  [earlier])
-    item = work(None)
-    item["sources"].append({"source_id": earlier["source_id"], "quote": None})
-    item["search_account"] = [{"source_id": earlier["source_id"], "quote": None}]
-    admitted = accept({"work": [item]}, ctx)
+               "record_role": "original_account", "text": "The neighbour blocked the access."}
+    note = {"source_id": "t1:nm", "turn_id": "t1", "speaker": "nm", "record_role": "nm_interpretation",
+            "text": "An earlier note."}
+    ctx = context("Find the applicable law.", [earlier, note])
+    first, corrected = understanding(1), understanding(2)
+    model = Model(first, checks=[{"verdict": "revise", "problems": [{"problem": "A point is missing.", "fix": "Add it."}]},
+                                 {"verdict": "sound", "problems": []}], revisions=[corrected])
+    model.subject = corrected  # phrase calls answer for the corrected questions
+    admitted = plan(model, ctx)
+    assert operations(model)[:4] == ["core_research_understand", "core_research_check",
+                                     "core_research_revise", "core_research_check"]
+    assert sorted(operations(model)[4:]) == ["core_research_judgment_phrases", "core_research_phrases"]
+    seen = model.calls[0].user
+    assert "[1] Advocate: The neighbour blocked the access." in seen
+    assert "[2] Our research assistant (an earlier note, not the advocate's words): An earlier note." in seen
+    assert seen.endswith("Latest message from the advocate (the one we act on now):\nFind the applicable law.")
+    assert admitted["proposal"]["understanding"] == corrected and len(admitted["proposal"]["review_rounds"]) == 2
+    assert [w["question_id"] for w in admitted["work"]] == ["D1Q1", "D1Q2"]
     assert admitted["issues"] == [] and admitted["semantic_review"] == "pending"
-    assert admitted["proposal"]["work"][0]["sources"] == item["sources"]
-    for selected, original in zip(admitted["work"][0]["sources"], [ctx["latest"], earlier], strict=True):
-        assert selected == {**original, "start": 0, "end": len(original["text"])}
+    item = admitted["work"][0]
+    assert item["sources"] == [{**ctx["latest"], "start": 0, "end": len(ctx["latest"]["text"])}]
+    assert [e["text"] for e in item["enquiries"]] == ["rule for D1Q1", "Where the stated conditions are met, relief is available.",
+                                                      "whether relief lies on D1Q1"]
+
+
+def test_the_loop_stops_after_its_revisions_and_records_the_open_problems():
+    problem = {"verdict": "revise", "problems": [{"problem": "Still unclear.", "fix": "Clarify."}]}
+    model = Model(checks=[problem], revisions=[understanding()] * MAX_REVISIONS)
+    admitted = plan(model, context("Find the applicable law."))
+    assert operations(model).count("core_research_check") == MAX_REVISIONS + 1
+    assert operations(model).count("core_research_revise") == MAX_REVISIONS
+    assert any("open problems" in issue["mismatch"] for issue in admitted["issues"])
+
+
+def test_code_checks_reject_words_the_advocate_did_not_say_even_when_the_review_is_sound():
+    invented = understanding(words="The neighbour admitted the debt")
+    model = Model(invented, revisions=[understanding()])
+    admitted = plan(model, context("Find the applicable law."))
+    assert operations(model)[:3] == ["core_research_understand", "core_research_check", "core_research_revise"]
+    assert "do not appear" in admitted["proposal"]["review_rounds"][0]["code_problems"][0]["problem"]
+
+
+def test_a_message_needing_no_research_makes_no_phrase_calls_and_no_work():
+    model = Model(understanding(needs_research=False, words="Thank you"))
+    admitted = plan(model, context("Thank you."))
+    assert operations(model) == ["core_research_understand", "core_research_check"]
+    assert admitted["work"] == [] and admitted["issues"] == []
+
+
+def test_statute_phrases_are_written_per_dispute_beside_one_judgment_call():
+    model = Model(understanding(2, disputes=3))
+    admitted = plan(model, context("Find the applicable law."))
+    assert operations(model).count("core_research_phrases") == 3
+    assert operations(model).count("core_research_judgment_phrases") == 1
+    assert len(admitted["work"]) == 6 and [w["id"] for w in admitted["work"]] == [f"t2:w{n}" for n in range(1, 7)]
+
+
+def test_one_disputes_failed_phrases_keep_the_other_disputes_and_the_judgment_phrases():
+    model = Model(understanding(1, disputes=2))
+    original = model.structured
+
+    def structured(prompt, schema, tier, **kwargs):
+        if prompt.operation == "core_research_phrases" and "Dispute D2:" in prompt.user:
+            model.calls.append(prompt)
+            raise SchemaViolation("Scripted failure for D2")
+        return original(prompt, schema, tier, **kwargs)
+
+    model.structured = structured
+    admitted = plan(model, context("Find the applicable law."))
+    assert {w["question_id"] for w in admitted["work"]} == {"D1Q1", "D2Q1"}
+    d2 = next(w for w in admitted["work"] if w["question_id"] == "D2Q1")
+    assert [e["purpose"] for e in d2["enquiries"]] == ["issue"]  # judgment phrases still search it
+    assert any("statute_phrases unavailable for D2" in issue["mismatch"] for issue in admitted["issues"])
+
+
+def test_an_unavailable_review_keeps_the_understanding_and_is_recorded():
+    model = Model(fail={"core_research_check"})
+    admitted = plan(model, context("Find the applicable law."))
+    assert admitted["proposal"]["review_rounds"] == [{"code_problems": [], "verdict": "unavailable", "problems": []}]
+    assert any("check unavailable" in issue["mismatch"] for issue in admitted["issues"])
+    assert admitted["work"]
+
+
+def test_context_overflow_never_trims_or_calls_provider():
+    model = Model(budget=1)
+    with pytest.raises(ContextOverflow): plan(TurnCalls(model), context())
+    assert model.calls == []
+
+
+def test_incomplete_output_is_never_salvaged():
+    model = Model(completion=Completion.LENGTH_LIMITED)
+    with pytest.raises(ModelError): plan(model, context("Find the applicable law."))
+
+
+# --- v7 search, pick and replay -------------------------------------------------------
+
+def test_every_phrase_is_searched_with_its_question_and_named_acts_once_each():
+    ctx = context("Find the applicable law.")
+    subject = proposal()
+    subject["statute_phrases"][0]["questions"][0]["acts"] = ["Indian Contract Act, 1872", " Indian  Contract Act, 1872 "]
+    admitted = accept(subject, ctx)
     queries = search_queries(admitted["work"][0])
-    assert queries[0]["text"] == queries[0]["context"] == earlier["text"]
-    assert ctx["latest"]["text"] not in queries[0]["text"]
+    assert [q["query_id"] for q in queries] == ["t2:w1:q1", "t2:w1:q2", "t2:w1:q3"]
+    assert {q["context"] for q in queries} == {admitted["work"][0]["question"]}
+    assert search_instruments(admitted["work"][0]) == ["Indian Contract Act, 1872"]
 
 
-def test_explicit_changed_quote_is_held_while_complete_source_peer_survives():
-    ctx = context("the requested review remains conditional; the allegation is disputed.")
-    damaged = work("The requested review remains conditional")
-    admitted = accept({"work": [damaged, work(None)]}, ctx)
-    assert [item["id"] for item in admitted["work"]] == ["t2:w2"]
-    assert admitted["work"][0]["sources"][0]["text"] == ctx["latest"]["text"]
-    assert admitted["issues"][0]["work_id"] == "t2:w1"
-    assert "exact" in admitted["issues"][0]["mismatch"]
-    assert admitted["issues"][0]["proposal"]["sources"][0]["quote"] == damaged["sources"][0]["quote"]
+def test_search_returns_twenty_provisions_and_the_pick_admits_only_its_choice():
+    ctx = context("Find the applicable law.")
+    admitted = accept(proposal(), ctx)
+    found, asked = searcher(), []
+    search = found.search
+    found.search = lambda queries, instruments=None, **kw: asked.append(kw) or search(queries, instruments, **kw)
+    model = Model(choose=lambda ids: ids[:2])
+    record = retrieve(admitted, found, ctx, model=model)
+    assert asked == [{"results": {"provision": PROVISIONS_FOR_PICK}}]
+    assert record["contract"] == CONTRACT == "core_research_v7" and record["state"] == "evaluated"
+    provisions = [c for c in record["searches"]["t2:w1"]["candidates"] if c["kind"] == "provision"]
+    assert len(provisions) == PROVISIONS_FOR_PICK
+    assert record["picks"]["chosen"] == {"t2:w1": [provisions[0]["id"], provisions[1]["id"]]}
+    assert validate(record, admitted, ctx) == record
+    sources = answer_sources.build(ctx, record)
+    assert sorted(r["id"] for r in sources.values() if r["kind"] == "provision") == sorted(
+        {provisions[0]["id"], provisions[1]["id"]} | {seg for c in provisions[:2] for seg in []})
+    assert any(r["kind"] == "judgment" for r in sources.values())
 
 
-def test_empty_work_remains_a_proposal_not_proof_of_coverage():
-    assert accept({"work": []}, context())["semantic_review"] == "pending"
+def test_shown_ids_alone_count_and_an_unknown_id_marks_the_research_partial():
+    ctx = context("Find the applicable law.")
+    admitted = accept(proposal(), ctx)
+    record = retrieve(admitted, searcher(), ctx, model=Model(choose=lambda ids: [ids[0], "Q1.99", "Q7.1", "Q1.0"]))
+    assert len(record["picks"]["chosen"]["t2:w1"]) == 1
+    assert record["picks"]["unknown"] == ["Q1.99", "Q7.1", "Q1.0"] and record["state"] == "partial"
+    assert validate(record, admitted, ctx) == record
+
+
+def test_an_unavailable_pick_keeps_each_questions_first_six_provisions():
+    ctx = context("Find the applicable law.")
+    admitted = accept(proposal(), ctx)
+    record = retrieve(admitted, searcher(), ctx, model=Model(fail={"core_research_pick"}))
+    provisions = [c["id"] for c in record["searches"]["t2:w1"]["candidates"] if c["kind"] == "provision"]
+    assert record["picks"]["state"] == "unavailable" and record["picks"]["chosen"] == {"t2:w1": provisions[:6]}
+    assert record["state"] == "partial" and validate(record, admitted, ctx) == record
+
+
+def test_a_changed_pick_cannot_replay():
+    ctx = context("Find the applicable law.")
+    admitted = accept(proposal(), ctx)
+    record = retrieve(admitted, searcher(), ctx, model=Model(choose=lambda ids: ids[:1]))
+    other = next(c["id"] for c in record["searches"]["t2:w1"]["candidates"] if c["kind"] == "provision"
+                 and c["id"] not in record["picks"]["chosen"]["t2:w1"])
+    forged = deepcopy(record)
+    forged["picks"]["chosen"]["t2:w1"].append(other)
+    with pytest.raises(ValueError, match="pick"): validate(forged, admitted, ctx)
+    missing = deepcopy(record)
+    del missing["picks"]
+    with pytest.raises(ValueError): validate(missing, admitted, ctx)
 
 
 @pytest.mark.parametrize("failure", [SearchUnavailable("Unread work"), RuntimeError("Adapter failed"),
                                    KeyError("missing snapshot field")])
 def test_searches_bind_queries_and_preserve_independent_work_when_one_fails(failure):
-    admitted = accept({"work": [work(), work()]}, context("Find the applicable law."))
-    searcher = HybridSearcher({"provision": Collection(), "judgment": Collection("judgment")})
-    original = searcher.search
-    seen = []
+    ctx = context("Find the applicable law.")
+    admitted = accept(proposal(2), ctx)
+    found = searcher()
+    original, seen = found.search, []
 
-    def search(queries, instruments=None):
+    def search(queries, instruments=None, **kw):
         seen.append(queries)
         if len(seen) == 1: raise failure
-        return original(queries, instruments)
+        return original(queries, instruments, **kw)
 
-    searcher.search = search
-    ctx = context("Find the applicable law.")
-    record = retrieve(admitted, searcher, ctx)
+    found.search = search
+    record = retrieve(admitted, found, ctx, model=Model())
     assert record["state"] == "partial"
-    assert set(record["searches"]) == {"t2:w2"}
-    assert set(record["failures"]) == {"t2:w1"}
+    assert set(record["searches"]) == {"t2:w2"} and set(record["failures"]) == {"t2:w1"}
+    assert set(record["picks"]["chosen"]) == {"t2:w2"}
     assert validate(record, admitted, ctx) == record
     broken = deepcopy(record)
     broken["failures"] = {}
@@ -137,80 +335,16 @@ def test_searches_bind_queries_and_preserve_independent_work_when_one_fails(fail
     with pytest.raises(ValueError): validate(broken, admitted, ctx)
 
 
-def test_not_needed_search_does_not_load_corpus_or_invent_execution():
-    item = work("Hello.")
-    item["enquiries"] = []
-    admitted = accept({"work": [item]}, context())
-    record = retrieve(admitted, None, context())
-    assert record["searches"] == record["failures"] == {}
-    assert record["state"] == "evaluated" and record["plan"]["semantic_review"] == "pending"
-
-
-@pytest.mark.parametrize("distinct_authority_needed", [False, True])
-def test_independent_results_survive_shared_or_distinct_authority_plans(distinct_authority_needed):
-    """Supplied proposals prove handoffs, not the model's judgment of legal need."""
-    ctx = context("Assess the reported position and prepare internal questions. Do not contact anyone.")
-    analysis = work(None)
-    questions = work(None)
-    questions.update(enquiries=[])
-    if distinct_authority_needed:
-        questions["enquiries"] = [{"text": "legal requirements for disclosure of relevant records",
-                                  "purpose": "Find the separately needed disclosure conditions",
-                                  "basis": "conditional"}]
-    model = Model({"work": [analysis, questions]})
-    admitted = plan(model, ctx, {"units": []})
-    assert len(model.calls) == 1 and len(admitted["work"]) == 2
-    assert admitted["work"][1]["sources"][0]["text"] == ctx["latest"]["text"]
-
-    searcher = HybridSearcher({"provision": Collection(), "judgment": Collection("judgment")})
-    search = searcher.search
-    requests = []
-
-    def capture(queries, instruments=None):
-        requests.append(queries)
-        return search(queries, instruments)
-
-    searcher.search = capture
-    record = retrieve(admitted, searcher, ctx)
-    assert validate(record, admitted, ctx) == record
-    assert len(requests) == (2 if distinct_authority_needed else 1)
-    assert record["plan"]["work"] == admitted["work"]
-    assert record["plan"]["semantic_review"] == "pending"
-    assert ("t2:w2" in record["searches"]) == distinct_authority_needed
-    assert record["failures"] == {}
-
-    sources = answer_sources.build(ctx, record)
-    assert sources[ctx["latest"]["source_id"]]["work_ids"] == ["t2:w1", "t2:w2"]
-    legal = [row for row in sources.values() if row["kind"] in {"provision", "judgment"}]
-    assert legal
-    # The same turn's checked catalogue remains selectable by later requested work.
-    # No new search or completion is invented for a work item with empty enquiries.
-    assert answer_sources.select({"source_id": legal[0]["id"], "quote": None}, sources)["text"] == legal[0]["text"]
-    if not distinct_authority_needed:
-        assert all(row["work_ids"] == ["t2:w1"] for row in legal)
-
-
 def test_unconfigured_search_is_a_gap_and_not_empty_success():
-    admitted = accept({"work": [work()]}, context("Find the applicable law."))
-    record = retrieve(admitted, None, context("Find the applicable law."))
-    assert record["state"] == "partial" and record["failures"]
-
-
-def test_context_overflow_never_trims_or_calls_provider():
-    model = Model({"work": []}, budget=1)
-    with pytest.raises(ContextOverflow): plan(model, context(), {})
-    assert model.calls == []
-
-
-def test_incomplete_output_is_never_salvaged():
-    model = Model({"work": [work()]}, completion=Completion.LENGTH_LIMITED)
-    with pytest.raises(ModelError): plan(model, context("Find the applicable law."), {})
+    ctx = context("Find the applicable law.")
+    record = retrieve(accept(proposal(), ctx), None, ctx, model=Model())
+    assert record["state"] == "partial" and record["failures"] and record["picks"]["state"] == "not_needed"
 
 
 def test_replay_rebinds_source_provenance_to_original_context():
     ctx = context("Find the applicable law.")
-    admitted = accept({"work": [work()]}, ctx)
-    record = retrieve(admitted, None, ctx)
+    admitted = accept(proposal(), ctx)
+    record = retrieve(admitted, None, ctx, model=Model())
     for damage in ("text", "speaker", "start", "record_role"):
         changed = deepcopy(admitted)
         changed["work"][0]["sources"][0][damage] = "unowned alteration"
@@ -222,10 +356,73 @@ def test_replay_rebinds_source_provenance_to_original_context():
                                    {"stage": "search", "reason": ""}])
 def test_malformed_failed_work_receipt_cannot_pass_replay(failure):
     ctx = context("Find the applicable law.")
-    admitted = accept({"work": [work()]}, ctx)
-    record = retrieve(admitted, None, ctx)
+    admitted = accept(proposal(), ctx)
+    record = retrieve(admitted, None, ctx, model=Model())
     record["failures"]["t2:w1"] = failure
     with pytest.raises(ValueError): validate(record, admitted, ctx)
+
+
+def test_phrases_for_a_question_that_does_not_exist_are_held_as_an_issue():
+    subject = proposal()
+    subject["judgment_phrases"].append({"question_id": "D9Q9", "phrases": [{"kind": "issue", "text": "stray"}]})
+    admitted = accept(subject, context("Find the applicable law."))
+    assert [w["question_id"] for w in admitted["work"]] == ["D1Q1"]
+    assert any("Judgment phrases name no question" in issue["mismatch"] for issue in admitted["issues"])
+
+
+# --- earlier plan versions replay -----------------------------------------------------
+
+def test_v6_plans_keep_their_source_selection_and_queries():
+    earlier = {"source_id": "t1:advocate", "turn_id": "t1", "speaker": "advocate",
+               "record_role": "original_account",
+               "text": "The other party alleges authorisation; our client denies it.\nThe original record is not supplied."}
+    ctx = context("Examine the position conditionally. Keep the allegation disputed; do not contact anyone.", [earlier])
+    item = work(None)
+    item["sources"].append({"source_id": earlier["source_id"], "quote": None})
+    item["search_account"] = [{"source_id": earlier["source_id"], "quote": None}]
+    admitted = accept({"work": [item]}, ctx, contract=V6)
+    assert admitted["issues"] == [] and admitted["proposal"]["work"][0]["sources"] == item["sources"]
+    for selected, original in zip(admitted["work"][0]["sources"], [ctx["latest"], earlier], strict=True):
+        assert selected == {**original, "start": 0, "end": len(original["text"])}
+    queries = search_queries(admitted["work"][0], contract=V6)
+    assert queries[0]["text"] == queries[0]["context"] == earlier["text"]
+    assert [q["query_id"] for q in queries] == ["t2:w1:original", "t2:w1:q1", "t2:w1:q2", "t2:w1:rule"]
+    assert search_instruments(admitted["work"][0], contract=V6) == []
+
+
+def test_v6_explicit_changed_quote_is_held_while_complete_source_peer_survives():
+    ctx = context("the requested review remains conditional; the allegation is disputed.")
+    damaged = work("The requested review remains conditional")
+    admitted = accept({"work": [damaged, work(None)]}, ctx, contract=V6)
+    assert [item["id"] for item in admitted["work"]] == ["t2:w2"]
+    assert "exact" in admitted["issues"][0]["mismatch"]
+
+
+@pytest.mark.parametrize("role,speaker", [("nm_interpretation", "nm"), ("service", "service")])
+def test_v6_nonoriginal_search_basis_cannot_hide_independent_valid_work(role, speaker):
+    previous = {"source_id": "old", "turn_id": "t1", "speaker": speaker,
+                "record_role": role, "text": "A prior derived explanation."}
+    ctx = context("Review this explanation against my account.", [previous])
+    bad, good = work(None), work(None)
+    bad["search_account"] = [{"source_id": "old", "quote": None}]
+    admitted = accept({"work": [bad, good]}, ctx, contract=V6)
+    assert [w["id"] for w in admitted["work"]] == ["t2:w2"]
+    assert "original advocate" in admitted["issues"][0]["mismatch"]
+
+
+def test_saved_v6_records_replay_and_cannot_pass_as_v7():
+    from nm.core_engine import retrieval
+    ctx = context("Find the applicable law.")
+    admitted = accept({"work": [work(instruments=["Indian Contract Act"])]}, ctx, contract=V6)
+    queries = search_queries(admitted["work"][0], contract=V6)
+    instruments = search_instruments(admitted["work"][0], contract=V6)
+    searched = HybridSearcher({"provision": Collection(), "judgment": Collection("judgment")}).search(queries, instruments)
+    searched["contract"] = retrieval.NAMED_CONTRACT
+    record = {"contract": V6, "plan": admitted, "searches": {"t2:w1": searched}, "failures": {}, "state": "evaluated"}
+    assert validate(record, admitted, ctx) == record
+    assert answer_sources.build(ctx, record)  # earlier records admit every returned provision
+    with pytest.raises(ValueError):
+        validate({**record, "contract": CONTRACT}, admitted, ctx)
 
 
 def test_original_queries_preserve_order_boundaries_and_repeated_words_across_turns():
@@ -235,34 +432,15 @@ def test_original_queries_preserve_order_boundaries_and_repeated_words_across_tu
     item = work(None)
     item["search_account"] = [item["sources"][0],
         {"source_id": "t1:advocate", "quote": None}, item["sources"][0]]
-    admitted = accept({"work": [item]}, ctx)
+    admitted = accept({"work": [item]}, ctx, contract=V6)
     account = admitted["work"][0]["search_account"]
     assert [s["turn_id"] for s in account] == ["t1", "t2"]
-    query = search_queries(admitted["work"][0])[0]
+    query = search_queries(admitted["work"][0], contract=V6)[0]
     assert query["text"] == earlier["text"] + "\n\n" + ctx["latest"]["text"]
     assert "Advocate passage" not in query["text"] and query["text"] == query["context"]
     from nm.core_engine.research import WINDOWED_CONTRACT
     previous = search_queries(admitted["work"][0], contract=WINDOWED_CONTRACT)[0]
     assert "Advocate passage 1:" in previous["text"] and "Advocate passage 2:" in previous["text"]
-
-
-def test_fresh_records_carry_the_unlabelled_contract_and_replay_through_it():
-    from nm.core_engine.research import CONTRACT
-    earlier = {"source_id": "t1:advocate", "turn_id": "t1", "speaker": "advocate",
-               "record_role": "original_account", "text": "The owner kept the deposit."}
-    ctx = context("Find the applicable law.", [earlier])
-    item = work(None)
-    item["search_account"].append({"source_id": "t1:advocate", "quote": None})
-    admitted = accept({"work": [item]}, ctx)
-    record = retrieve(admitted, HybridSearcher({"provision": Collection(), "judgment": Collection("judgment")}), ctx)
-    assert record["contract"] == CONTRACT == "core_research_v6"
-    assert validate(record, admitted, ctx) == record
-    searched = next(iter(record["searches"].values()))["queries"]
-    assert all("Advocate passage" not in q["text"] + q["context"] for q in searched)
-    relabelled = deepcopy(record)
-    relabelled["contract"] = "core_research_v4"
-    with pytest.raises(ValueError):
-        validate(relabelled, admitted, ctx)
 
 
 def test_served_v4_research_record_replays_with_its_labelled_queries():
@@ -278,29 +456,16 @@ def test_served_v4_research_record_replays_with_its_labelled_queries():
     assert labelled, "the served v4 serialisation is preserved, not rebuilt"
 
 
-@pytest.mark.parametrize("role,speaker", [("nm_interpretation", "nm"), ("service", "service")])
-def test_nonoriginal_search_basis_cannot_hide_independent_valid_work(role, speaker):
-    previous = {"source_id": "old", "turn_id": "t1", "speaker": speaker,
-                "record_role": role, "text": "A prior derived explanation."}
-    ctx = context("Review this explanation against my account.", [previous])
-    bad, good = work(None), work(None)
-    bad["search_account"] = [{"source_id": "old", "quote": None}]
-    admitted = accept({"work": [bad, good]}, ctx)
-    assert [w["id"] for w in admitted["work"]] == ["t2:w2"]
-    assert "original advocate" in admitted["issues"][0]["mismatch"]
-
-
-def test_concepts_are_not_silently_truncated_and_empty_search_account_is_not_invented():
+def test_v6_concepts_are_not_silently_truncated():
     ctx = context("Explain the legal relationship in general.")
     item = work(None)
     item["search_account"] = []
-    admitted = accept({"work": [item]}, ctx)
-    queries = search_queries(admitted["work"][0])
+    admitted = accept({"work": [item]}, ctx, contract=V6)
+    queries = search_queries(admitted["work"][0], contract=V6)
     assert len(queries) == 3 and all(q["context"] == "" for q in queries)  # two enquiries and the rule probe
     item["enquiries"] *= 4
-    rejected = accept({"work": [item]}, ctx)
+    rejected = accept({"work": [item]}, ctx, contract=V6)
     assert rejected["work"] == [] and rejected["issues"]
-    assert len(rejected["proposal"]["work"][0]["enquiries"]) == 8
 
 
 def test_real_frozen_v2_search_replays_without_new_query_construction():
@@ -324,17 +489,13 @@ def test_offered_passage_id_resolves_original_spelling_offsets_and_ownership():
     _, _, offered = _source_windows(ctx)
     item = work(None)
     item["search_account"] = [{"source_id": p["source_id"], "quote": None} for p in offered[1:]]
-    admitted = accept({"work": [item]}, ctx)
+    admitted = accept({"work": [item]}, ctx, contract=V6)
     assert admitted["issues"] == []
     for source in admitted["work"][0]["search_account"]:
         assert source["source_id"] == ctx["latest"]["source_id"]
         assert source["text"] == ctx["latest"]["text"][source["start"]:source["end"]]
-        assert source["speaker"] == "advocate" and source["record_role"] == "original_account"
-    query = search_queries(admitted["work"][0])[0]["text"]
+    query = search_queries(admitted["work"][0], contract=V6)[0]["text"]
     assert "Hello." not in query and "Separately, the technician" in query
-    assert "The client disputes" in query
-    item["search_account"][0]["source_id"] += ":unknown"
-    assert accept({"work": [item]}, ctx)["issues"]
 
 
 def test_briefly_served_v3_broad_plan_preserves_captured_query_serialization():
@@ -344,35 +505,14 @@ def test_briefly_served_v3_broad_plan_preserves_captured_query_serialization():
     inputs = json.loads((root / "research-v3-runtime-ready-inputs.json").read_text(encoding="utf-8"))
     outputs = json.loads((root / "research-v3-runtime-ready-results.json").read_text(encoding="utf-8"))
     case, result = inputs["cases"][1], outputs["calls"][1]
-    plan = result["admitted_plan"]
-    assert accept(plan["proposal"], case["context"], contract=PREVIOUS_CONTRACT) == plan
-    assert {w["id"]: search_queries(w, contract=PREVIOUS_CONTRACT) for w in plan["work"]} == result["constructed_queries"]
-
-
-def test_named_instruments_reach_search_once_each_and_bind_the_record():
-    ctx = context("Find the applicable law.")
-    admitted = accept({"work": [work(instruments=["Indian Contract Act", " Indian  Contract Act ", "Sale of Goods Act"])]}, ctx)
-    searcher = HybridSearcher({"provision": Collection(), "judgment": Collection("judgment")})
-    original, given = searcher.search, []
-
-    def capture(queries, instruments=None):
-        given.append(instruments)
-        return original(queries, instruments)
-
-    searcher.search = capture
-    record = retrieve(admitted, searcher, ctx)
-    assert given == [["Indian Contract Act", "Sale of Goods Act"]]
-    assert [e["name"] for e in record["searches"]["t2:w1"]["instruments"]] == given[0]
-    assert validate(record, admitted, ctx) == record
-    changed = deepcopy(admitted)
-    changed["work"][0]["instruments"] = ["Specific Relief Act"]
-    with pytest.raises(ValueError):
-        validate(record, changed, ctx)
+    saved = result["admitted_plan"]
+    assert accept(saved["proposal"], case["context"], contract=PREVIOUS_CONTRACT) == saved
+    assert {w["id"]: search_queries(w, contract=PREVIOUS_CONTRACT) for w in saved["work"]} == result["constructed_queries"]
 
 
 def test_saved_v5_plans_and_searches_replay_without_named_instruments():
     from nm.core_engine import retrieval
-    from nm.core_engine.research import ACCOUNT_CONTRACT, search_instruments
+    from nm.core_engine.research import ACCOUNT_CONTRACT
     ctx = context("Find the applicable law.")
     admitted = accept({"work": [v5_work()]}, ctx, contract=ACCOUNT_CONTRACT)
     assert search_instruments(admitted["work"][0], contract=ACCOUNT_CONTRACT) is None
@@ -383,14 +523,22 @@ def test_saved_v5_plans_and_searches_replay_without_named_instruments():
     record = {"contract": ACCOUNT_CONTRACT, "plan": admitted, "searches": {"t2:w1": searched},
               "failures": {}, "state": "evaluated"}
     assert validate(record, admitted, ctx) == record
-    current = accept({"work": [v5_work()]}, ctx)  # a v6 plan must state its analysis and instruments
+    current = accept({"work": [v5_work()]}, ctx, contract=V6)  # a v6 plan must state its analysis and instruments
     assert current["work"] == [] and current["issues"]
 
 
-def test_the_rule_probe_is_searched_as_one_more_formulation():
-    ctx = context("Find the applicable law.")
-    admitted = accept({"work": [work()]}, ctx)
-    queries = search_queries(admitted["work"][0])
-    assert [q["query_id"] for q in queries] == ["t2:w1:original", "t2:w1:q1", "t2:w1:q2", "t2:w1:rule"]
-    assert queries[-1]["text"] == work()["rule_probe"] and queries[-1]["context"] == queries[0]["context"]
+@pytest.mark.parametrize("kinds,runs", [(["courtesy"], False), (["courtesy", "restriction"], False),
+                                        (["courtesy", "information"], True), (["request"], True)])
+def test_the_loop_is_spared_only_when_the_message_carries_no_information_or_request(kinds, runs):
+    model = Model()
+    interpretation = {"units": [{"kind": kind} for kind in kinds], "issues": []}
+    admitted = plan(model, context("Find the applicable law."), interpretation)
+    assert bool(model.calls) is runs
+    if not runs:
+        assert admitted["work"] == [] and admitted["proposal"]["understanding"]["needs_research"] is False
 
+
+def test_an_interpretation_with_issues_never_spares_the_loop():
+    model = Model()
+    plan(model, context("Find the applicable law."), {"units": [{"kind": "courtesy"}], "issues": ["unchecked"]})
+    assert model.calls

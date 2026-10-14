@@ -117,4 +117,4 @@ def test_old_saved_metrics_and_new_metrics_replay_exactly_without_reexecution(tm
     assert stored.brain_chat[0]==old_row
     assert run(store,model,chat_id=old["chat_id"] )=={**old,"replayed":True}
     assert run(store,model,chat_id=old["chat_id"],turn_id="t2",message="Hello again.")=={**new,"replayed":True}
-    assert len(model.calls)==4
+    assert len(model.calls)==3  # a courtesy turn spares research v7

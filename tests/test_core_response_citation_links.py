@@ -2,7 +2,7 @@
 import pytest
 
 from nm.core_engine import response_authorities, response_rendering, response_review
-from tests.test_core_research import Model
+from tests.test_core_response_rendering import Model
 from tests.test_core_response_authorities import Reader
 from tests.test_core_response_rendering import ready
 

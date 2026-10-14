@@ -60,7 +60,7 @@ def prepare(model, context, searcher, *, case_index=None, provision_reader=None)
     calls = model if isinstance(model, TurnCalls) else TurnCalls(model)
     interpreted = calls.checked("core_understanding", lambda: understanding.understand(calls, context))
     plan = calls.checked("core_research_plan", lambda: research.plan(calls, context, interpreted))
-    record = research.retrieve(plan, searcher, context)
+    record = research.retrieve(plan, searcher, context, model=calls)
     sources = answer_sources.build(context, record)
     execution = execution_record(record)
 

@@ -8,7 +8,7 @@ from nm.core_engine.calls import ReleaseWithheld
 from nm.core_engine.citations import CaseIdentityIndex
 from nm.core_engine.retrieval import HybridSearcher, _candidate
 from tests.test_citation_check import JUDGMENTS, _build
-from tests.test_core_research import work
+from tests.test_core_research import Model, proposal
 from tests.test_core_response_writer import source_use_v2, unit
 from tests.test_core_understanding import context
 from tests.test_current_brain_retrieval import Collection
@@ -18,7 +18,7 @@ pytestmark = pytest.mark.class_a
 
 def setup(*, acts=None, quoted_authority=None):
     ctx = context("Find the applicable law.")
-    plan = research.accept({"work": [work()]}, ctx)
+    plan = research.accept(proposal(), ctx)
     cases = Collection("judgment")
     for number, identity in enumerate(("SYN_1973_ALPHA", "SYN_1980_BETA")):
         case = JUDGMENTS[identity]
@@ -30,7 +30,7 @@ def setup(*, acts=None, quoted_authority=None):
         for number, (identity, key) in enumerate(acts):
             statutes.rows[number].update(act_id=identity, act_name="Held " + identity,
                 section_number=key, chunk_id=identity + ":" + key)
-    record = research.retrieve(plan, HybridSearcher({"judgment": cases, "provision": statutes}), ctx)
+    record = research.retrieve(plan, HybridSearcher({"judgment": cases, "provision": statutes}), ctx, model=Model())
     return ctx, record, answer_sources.build(ctx, record)
 
 

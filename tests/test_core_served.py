@@ -83,7 +83,7 @@ def test_public_turn_saves_exact_input_reopens_and_reads_exact_sources_without_c
     message = "  Original account: नमस्ते.\nDo not contact anyone.  "
     reply = successful(served, message=message)
     assert reply["committed"] == "committed" and reply["matter_id"] is None
-    assert reply["metrics"]["llm_calls"] == 4
+    assert reply["metrics"]["llm_calls"] == 8
     matter = served.store.load(chat_matter_id(OWNER, reply["chat_id"]))
     assert matter.brain_chat[0]["message"] == message
     assert matter.brain_chat[0]["response"]["committed"] == "committed"
@@ -105,13 +105,19 @@ def test_public_turn_saves_exact_input_reopens_and_reads_exact_sources_without_c
     assert work["chats"][0]["preview"] == message
     replay = successful(served, message=message, expected_version=0)
     assert replay == {**reply, "replayed": True}
-    assert len(served.model.calls) == 4
+    assert len(served.model.calls) == 8
 
 
 def test_followup_preserves_complete_saved_context_at_every_stage(served):
     first = successful(served, message="The account is contested. Do not write to the supplier.")
     successful(served, turn_id="turn-2", chat_id=first["chat_id"], message="Hello again.")
-    for operation, payload in served.model.calls[4:]:
+    for operation, payload in served.model.calls[8:]:
+        if operation.startswith("core_research_"):
+            # Research v7 reads the attributed conversation as text.
+            if operation in ("core_research_understand", "core_research_check"):
+                assert "[1] Advocate: The account is contested. Do not write to the supplier." in payload
+                assert f"[2] Our research assistant (an earlier note, not the advocate's words): {first['elements'][0]['text']}" in payload
+            continue
         context = payload if operation == "core_understanding" else payload["original_context"]
         assert context["conversation"][0]["text"] == "The account is contested. Do not write to the supplier."
         assert context["conversation"][1]["text"] == first["elements"][0]["text"]
@@ -131,7 +137,7 @@ def test_another_authenticated_account_cannot_read_or_continue_owned_chat(served
     assert post.status_code == unknown.status_code == 409
     assert post.json()["detail"]["why"] == unknown.json()["detail"]["why"]
     assert other.get("/api/work").json()["chats"] == []
-    assert len(served.model.calls) == 4 and not served.store.list_for(OTHER).matters
+    assert len(served.model.calls) == 8 and not served.store.list_for(OTHER).matters
 
 
 @pytest.mark.parametrize("headers", [{"x-nm-csrf": "wrong"}, {"origin": "https://foreign.invalid"}])
@@ -197,7 +203,7 @@ def test_revocation_after_atomic_save_withholds_reply_but_relogin_replays_once(s
     assert len(served.store.list_for(OWNER).matters) == 1
     served.login(client=served.client)
     replay = successful(served)
-    assert replay["replayed"] and len(served.model.calls) == 4
+    assert replay["replayed"] and len(served.model.calls) == 8
 
 
 @pytest.mark.parametrize("route", ["chat", "source", "work"])
@@ -215,7 +221,7 @@ def test_revocation_during_saved_read_prevents_disclosure(served, monkeypatch, r
     response = served.client.get(url)
     assert response.status_code == 401
     assert "Counsel" not in response.text and "reported account" not in response.text
-    assert len(served.model.calls) == 4
+    assert len(served.model.calls) == 8
 
 
 def test_unknown_saved_renderer_is_not_upgraded_or_released(served):
@@ -235,7 +241,7 @@ def test_unknown_saved_renderer_is_not_upgraded_or_released(served):
     assert send(served).status_code == 409
     work = served.client.get("/api/work").json()
     assert work["state"] == "partial" and not work["chats"] and not work["matters"]
-    assert len(served.model.calls) == 4
+    assert len(served.model.calls) == 8
 
 
 def test_old_matter_is_listed_as_history_without_reinterpretation(served):
@@ -256,7 +262,7 @@ def test_lost_save_acknowledgement_returns_durable_receipt_without_reexecution(s
     reply = successful(served)
     assert successful(served)["replayed"]
     assert len(served.store.load(chat_matter_id(OWNER, reply["chat_id"])).brain_chat) == 1
-    assert len(served.model.calls) == 4
+    assert len(served.model.calls) == 8
 
 
 def test_unconfirmed_save_retry_only_reads_receipt_and_never_reexecutes_effects(served, monkeypatch):
@@ -276,20 +282,20 @@ def test_unconfirmed_save_retry_only_reads_receipt_and_never_reexecutes_effects(
     unconfirmed = send(served)
     assert unconfirmed.status_code == 503
     assert unconfirmed.json()["detail"]["code"] == "attempt_unconfirmed"
-    assert len(served.model.calls) == 4 and not served.store.list_for(OWNER).matters
+    assert len(served.model.calls) == 8 and not served.store.list_for(OWNER).matters
     # A delayed confirmation supplies the exact original candidate. A retry
     # reads that durable receipt; it does not generate or apply another effect.
     original(pending[0][0], **pending[0][1])
     reply = successful(served)
-    assert reply["replayed"] and len(served.model.calls) == 4
+    assert reply["replayed"] and len(served.model.calls) == 8
     assert len(served.store.load(chat_matter_id(OWNER, reply["chat_id"])).brain_chat) == 1
 
 
 def test_review_correction_rechecks_complete_context_and_saves_once(served):
     served.model.reject = 1
     reply = successful(served)
-    assert reply["metrics"]["llm_calls"] == 6 and reply["metrics"]["draft_corrections"] == 1
-    correction, review = served.model.calls[4:]
+    assert reply["metrics"]["llm_calls"] == 10 and reply["metrics"]["draft_corrections"] == 1
+    correction, review = served.model.calls[8:]
     assert "correction" in correction[1] and "correction" not in review[1]
     assert correction[1]["original_context"] == review[1]["original_context"]
     assert len(served.store.load(chat_matter_id(OWNER, reply["chat_id"])).brain_chat) == 1
@@ -302,21 +308,21 @@ def test_shape_and_semantic_repair_share_one_bound_and_terminal_failure_never_sa
     detail = response.json()["detail"]
     assert detail["code"] == "answer_withheld" and not detail["retryable"]
     assert detail["committed"] == "not_committed" and "Counsel" not in response.text
-    assert len(served.model.calls) == 5 and not served.store.list_for(OWNER).matters
+    assert len(served.model.calls) == 9 and not served.store.list_for(OWNER).matters
 
 
 def test_terminal_review_gate_survives_same_identity_http_retry(served):
     served.model.reject = 2
     first = send(served)
     assert first.status_code == 503 and first.json()["detail"]["code"] == "answer_withheld"
-    assert len(served.model.calls) == 6
+    assert len(served.model.calls) == 10
     served.model.reject = 0
     second = send(served)
     assert second.status_code == 409 and second.json()["detail"]["code"] == "answer_withheld"
-    assert not second.json()["detail"]["retryable"] and len(served.model.calls) == 6
+    assert not second.json()["detail"]["retryable"] and len(served.model.calls) == 10
     assert not served.store.list_for(OWNER).matters
     successful(served, turn_id="distinct-new-turn")
-    assert len(served.model.calls) == 10
+    assert len(served.model.calls) == 18
 
 
 def test_provider_outage_does_not_save_an_empty_success(served):
@@ -335,7 +341,7 @@ def test_saved_replay_requires_no_new_model_permission_but_new_work_does(served,
     assert successful(served)["replayed"]
     response = send(served, turn_id="turn-2", chat_id=reply["chat_id"])
     assert response.status_code == 403 and response.json()["detail"]["code"] == "model_permission_required"
-    assert len(served.model.calls) == 4
+    assert len(served.model.calls) == 8
 
 
 def test_permission_denied_before_first_call_can_resume_same_request_after_grant(served, monkeypatch):
@@ -347,7 +353,7 @@ def test_permission_denied_before_first_call_can_resume_same_request_after_grant
     assert not served.model.calls and not served.store.list_for(OWNER).matters
     monkeypatch.setattr(served.app, "_model_for", original)
     reply = successful(served)
-    assert len(served.model.calls) == 4
+    assert len(served.model.calls) == 8
     assert len(served.store.load(chat_matter_id(OWNER, reply["chat_id"])).brain_chat) == 1
 
 
@@ -369,14 +375,14 @@ def test_saved_chat_replay_survives_unavailable_attempt_sidecar_after_restart(se
     viewed = served.client.get(source_url(reply)).json()
     viewed.pop('authority_inspection')
     assert viewed == reply["elements"][0]["source"]
-    assert successful(served)["replayed"] and len(served.model.calls) == 4
+    assert successful(served)["replayed"] and len(served.model.calls) == 8
     fresh = send(served, turn_id="turn-2", chat_id=reply["chat_id"])
     assert fresh.status_code == 503 and fresh.json()["detail"]["code"] == "attempt_unconfirmed"
-    assert not fresh.json()["detail"]["retryable"] and len(served.model.calls) == 4
+    assert not fresh.json()["detail"]["retryable"] and len(served.model.calls) == 8
 
 
 @pytest.mark.parametrize("element,source", [(-1, 0), (0, -1), (1, 0), (0, 99)])
 def test_saved_source_index_must_select_an_actual_checked_passage(served, element, source):
     reply = successful(served)
     response = served.client.get(source_url(reply, element, source))
-    assert response.status_code == 404 and len(served.model.calls) == 4
+    assert response.status_code == 404 and len(served.model.calls) == 8

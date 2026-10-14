@@ -3,12 +3,28 @@ from copy import deepcopy
 
 import pytest
 
+from nm.shared.budget_contracts import Completion
+from nm.shared.model_port import ModelResult, Usage
+
 from nm.core_engine import answer_sources, response_rendering, response_review, response_writer
 from nm.core_engine import turn, understanding
 from tests.test_core_answer_sources import fixture
-from tests.test_core_research import Model
 
 pytestmark = pytest.mark.class_a
+
+
+class Model:
+    """A fixed-answer model: every call returns the same proposal (the saved one for
+    legacy reconstruction, which makes no call)."""
+    def __init__(self, value, budget=100_000, completion=Completion.COMPLETE):
+        self.value, self.budget, self.completion, self.calls = value, budget, completion, []
+
+    def context_budget(self, tier): return self.budget
+
+    def structured(self, prompt, schema, tier, **kwargs):
+        self.calls.append(prompt)
+        return ModelResult(None, deepcopy(self.value), tier, "synthetic", "fixture",
+                           Usage(1, 1, 0), 0, completion=self.completion)
 
 
 def legacy_review(model, context, research_record, sources, draft, execution=None):

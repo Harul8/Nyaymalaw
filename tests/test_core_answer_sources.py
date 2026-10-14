@@ -8,7 +8,7 @@ from nm.core_engine.answer_sources import CONTRACT, build, presentation, select
 from nm.core_engine.research import accept, retrieve, validate
 from nm.core_engine.retrieval import HybridSearcher, _candidate, _digest
 from nm.shared.model_port import SchemaViolation
-from tests.test_core_research import work
+from tests.test_core_research import Model, proposal
 from tests.test_core_understanding import context
 from tests.test_current_brain_retrieval import Collection
 
@@ -35,11 +35,11 @@ class AdjacentJudgment(Collection):
 
 def fixture(*, work_count=1, history=None, judgment=None):
     ctx = context("Find the applicable law.", history)
-    plan = accept({"work": [work() for _ in range(work_count)]}, ctx)
+    plan = accept(proposal(work_count), ctx)
     statute = Collection()
     statute.rows[0]["section_number"] = "Article_64"
     searcher = HybridSearcher({"provision": statute, "judgment": judgment or AdjacentJudgment()})
-    return ctx, retrieve(plan, searcher, ctx)
+    return ctx, retrieve(plan, searcher, ctx, model=Model())
 
 
 def presented_coverage(displayed, identity):
@@ -156,13 +156,10 @@ def test_original_source_id_cannot_overwrite_a_legal_source_tag():
     ctx, first = fixture()
     legal_id = first["searches"]["t2:w1"]["candidates"][0]["id"]
     ctx["latest"]["source_id"] = legal_id
-    item = work()
-    item["sources"][0]["source_id"] = legal_id
-    item["search_account"][0]["source_id"] = legal_id
-    plan = accept({"work": [item]}, ctx)
+    plan = accept(proposal(), ctx)  # v7 work selects the whole latest message
     statute = Collection()
     statute.rows[0]["section_number"] = "Article_64"
-    record = retrieve(plan, HybridSearcher({"provision": statute, "judgment": AdjacentJudgment()}), ctx)
+    record = retrieve(plan, HybridSearcher({"provision": statute, "judgment": AdjacentJudgment()}), ctx, model=Model())
     with pytest.raises(ValueError, match="conflicting content or provenance"): build(ctx, record)
 
 
@@ -195,8 +192,8 @@ def test_partial_context_keeps_readable_sources_and_explicit_coverage_gaps():
 
 def test_search_failure_preserves_original_sources_without_inventing_legal_coverage():
     ctx = context("Find the applicable law.")
-    plan = accept({"work": [work()]}, ctx)
-    record = retrieve(plan, None, ctx)
+    plan = accept(proposal(), ctx)
+    record = retrieve(plan, None, ctx, model=Model())
     sources = build(ctx, record)
     assert list(sources) == [ctx["latest"]["source_id"]]
     assert presentation(sources) == {"passages": [], "coverage_by_id": {},
@@ -328,13 +325,13 @@ def test_document_title_alone_cannot_supply_legal_document_ownership():
 def test_statutes_are_presented_under_their_shown_name_while_the_catalogue_keeps_the_stored_one():
     """Owner decisions, 10-11 Oct 2026: AP State laws are shown as Telangana laws; words unchanged."""
     ctx = context("Find the applicable law.")
-    plan = accept({"work": [work()]}, ctx)
+    plan = accept(proposal(), ctx)
     statute = Collection()
     stored = "Telangana 1960 0 Andhra Pradesh Buildings (Lease, Rent And Eviction) Control Act, 1960"
     for row in statute.rows.values():
         row.update(act_name=stored,
                    act_id="TELANGANA_1960_0_ANDHRA PRADESH BUILDINGS (LEASE, RENT AND EVICTION) CONTROL ACT, 1960")
-    record = retrieve(plan, HybridSearcher({"provision": statute, "judgment": AdjacentJudgment()}), ctx)
+    record = retrieve(plan, HybridSearcher({"provision": statute, "judgment": AdjacentJudgment()}), ctx, model=Model())
     sources = build(ctx, record)
     provisions = [row for row in sources.values() if row["kind"] == "provision"]
     assert provisions and all(row["title"] == stored for row in provisions)

@@ -15,6 +15,7 @@ from nm.shared.model_port import ModelResult, ProviderUnavailable, Usage
 from nm.shared.store_file_store import FileMatterStore
 from nm.shared.turn_attempt_store import FileTurnAttempts
 from tests.test_core_answer_sources import AdjacentJudgment
+from tests.test_core_research import Model as ResearchModel, understanding
 from tests.test_current_brain_retrieval import Collection
 
 pytestmark = pytest.mark.class_a
@@ -29,6 +30,16 @@ class ScriptedModel:
     def context_budget(self, tier): return 100_000
 
     def structured(self, prompt, schema, tier, **kwargs):
+        if prompt.operation.startswith("core_research_"):
+            # Research v7 reads the conversation as attributed text, not JSON.
+            self.calls.append((prompt.operation, prompt.user))
+            if prompt.operation == self.failure:
+                raise ProviderUnavailable("Synthetic provider outage")
+            if prompt.operation == "core_research_understand":
+                latest = prompt.user.split("(the one we act on now):\n", 1)[1].split(
+                    "\n\nCurrent records of this matter:", 1)[0]
+                self.research = ResearchModel(understanding(needs_research=self.legal, words=latest))
+            return self.research.structured(prompt, schema, tier, **kwargs)
         data = json.loads(prompt.user)
         self.calls.append((prompt.operation, data))
         if prompt.operation == self.failure:
@@ -37,15 +48,12 @@ class ScriptedModel:
         latest = ctx["latest"]
         ref = {"source_id": latest["source_id"], "quote": latest["text"]}
         if prompt.operation == "core_understanding":
+            # A legal turn carries information, so research v7 runs its loop; a courtesy
+            # alone spares it.
             out = {"courtesies": [{"quote": latest["text"], "meaning": "A social message",
-                "context": [], "unresolved": []}], "information": [], "requests": [], "restrictions": []}
-        elif prompt.operation == "core_research_plan":
-            out = {"work": [{"sources": [ref], "search_account": [ref],
-                    "relationship": "parties to the reported position", "roles": ["claimant"],
-                    "legal_questions": ["Which conditions apply?"], "enquiries": [{
-                    "text": "conditions and contrary authority", "purpose": "Identify scope",
-                    "basis": "conditional"}], "rule_probe": "Stated conditions limit the scope.",
-                    "instruments": []}] if self.legal else []}
+                "context": [], "unresolved": []}], "requests": [], "restrictions": [],
+                "information": [{"quote": latest["text"], "meaning": "A reported position",
+                                 "context": [], "unresolved": []}] if self.legal else []}
         elif prompt.operation == "core_response_writer":
             uses = []
             text = "Hello. How can I help?"
@@ -96,8 +104,11 @@ def store(tmp_path): return FileMatterStore(tmp_path, key="synthetic-turn-fixtur
 def test_four_actual_stage_calls_save_reopen_and_replay_without_reexecution(store):
     model = ScriptedModel(legal=True)
     response = run(store, model)
-    assert response["committed"] == "committed" and response["metrics"]["llm_calls"] == 4
-    assert [name for name, _ in model.calls] == ["core_understanding", "core_research_plan",
+    assert response["committed"] == "committed" and response["metrics"]["llm_calls"] == 8
+    names = [name for name, _ in model.calls]
+    assert sorted(names[3:5]) == ["core_research_judgment_phrases", "core_research_phrases"]  # in parallel
+    assert names[:3] + names[5:] == ["core_understanding", "core_research_understand", "core_research_check",
+                                     "core_research_pick",
                                                 "core_response_writer", "core_response_review"]
     stored = store.load(chat_matter_id("owner", response["chat_id"]))
     rows = saved_rows(stored, "owner")
@@ -110,7 +121,7 @@ def test_four_actual_stage_calls_save_reopen_and_replay_without_reexecution(stor
     assert "Court rejected" in source["verification"]["treatment_excerpt"]
     assert len(response["elements"][0]["sources"]) == 2
     assert run(store, model) == {**response, "replayed": True}
-    assert len(model.calls) == 4
+    assert len(model.calls) == 8
 
 
 def test_mixed_legacy_and_current_history_reopens_without_fresh_authority_checks(store, monkeypatch):
@@ -135,7 +146,7 @@ def test_mixed_legacy_and_current_history_reopens_without_fresh_authority_checks
                         session_current=lambda: True)
     model = ScriptedModel()
     second = run(store, model, chat_id=first["chat_id"], turn_id="new", message="Continue.")
-    assert second["committed"] == "committed" and len(model.calls) == 4
+    assert second["committed"] == "committed" and len(model.calls) == 3
 
     def no_new_check(*args, **kwargs):
         raise AssertionError("Saved readback cannot consult current authority indexes")
@@ -144,7 +155,7 @@ def test_mixed_legacy_and_current_history_reopens_without_fresh_authority_checks
     assert [row["activities"]["contract"] for row in rows] == ["core_turn_v1", "core_turn_v2"]
     assert rows[0]["response"]["elements"] == elements
     assert run(store, model, chat_id=first["chat_id"], turn_id="new", message="Continue.")["replayed"]
-    assert len(model.calls) == 4
+    assert len(model.calls) == 3
 
 
 @pytest.mark.parametrize("saved", ["core_response_rendering_v2", "core_response_rendering_v3"])
@@ -185,7 +196,7 @@ def test_rewritten_draft_recomputes_its_authority_evidence_before_review(store, 
     result = run(store, model)
     reviews = [payload["owned_authority_checks"] for name, payload in model.calls
                if name == "core_response_review"]
-    assert result["metrics"]["llm_calls"] == 6 and len(checked) == len(reviews) == 2
+    assert result["metrics"]["llm_calls"] == 5 and len(checked) == len(reviews) == 2
     assert [row["units"] for row in checked] == [row["units"] for row in reviews]
 
 
@@ -193,8 +204,8 @@ def test_complete_conversation_survives_followup_and_restriction_words(store):
     model = ScriptedModel()
     first = run(store, model, message="Do not contact anyone. The account is disputed.")
     second = run(store, model, chat_id=first["chat_id"], turn_id="t2", message="Hello again.")
-    assert second["metrics"]["llm_calls"] == 4
-    for operation, payload in model.calls[4:]:
+    assert second["metrics"]["llm_calls"] == 3
+    for operation, payload in model.calls[3:]:
         context = payload if operation == "core_understanding" else payload["original_context"]
         assert context["conversation"][0]["text"] == "Do not contact anyone. The account is disputed."
         assert context["conversation"][1]["text"] == first["elements"][0]["text"]
@@ -203,21 +214,21 @@ def test_complete_conversation_survives_followup_and_restriction_words(store):
 def test_reviewer_rejection_uses_one_rewrite_and_new_independent_review(store):
     model = ScriptedModel(reject=1)
     response = run(store, model)
-    assert response["metrics"]["llm_calls"] == 6
+    assert response["metrics"]["llm_calls"] == 5
     assert response["metrics"]["draft_corrections"] == 1
-    assert "correction" in model.calls[4][1]
-    assert "correction" not in model.calls[5][1]
+    assert "correction" in model.calls[3][1]
+    assert "correction" not in model.calls[4][1]
 
 
 def test_repeated_rejection_withholds_entire_turn_without_save(store):
     model = ScriptedModel(reject=2)
     with pytest.raises(ConversationRefused) as error: run(store, model)
     assert error.value.code == "answer_withheld" and not error.value.retryable
-    assert error.value.metrics["llm_calls"] == 6
+    assert error.value.metrics["llm_calls"] == 5
     assert not store.list_for("owner").matters
     with pytest.raises(ConversationRefused) as replay: run(store, model)
     assert replay.value.code == "answer_withheld"
-    assert len(model.calls) == 6  # Model would accept now; the terminal owner refuses first.
+    assert len(model.calls) == 5  # Model would accept now; the terminal owner refuses first.
     assert run(store, model, turn_id="genuinely-new-turn")["committed"] == "committed"
 
 
@@ -225,7 +236,7 @@ def test_shape_repair_and_semantic_repair_cannot_each_get_new_allowance(store):
     model = ScriptedModel(malformed_writer=1, reject=1)
     with pytest.raises(ConversationRefused) as error: run(store, model)
     assert error.value.code == "answer_withheld"
-    assert len(model.calls) == 5
+    assert len(model.calls) == 4
     assert not store.list_for("owner").matters
 
 
@@ -246,18 +257,18 @@ def test_lost_acknowledgement_replays_saved_checked_response_once(store):
     model = ScriptedModel()
     first = run(LostAck(), model)
     assert run(store, model)["replayed"]
-    assert len(model.calls) == 4
+    assert len(model.calls) == 3
     assert len(store.load(chat_matter_id("owner", first["chat_id"])).brain_chat) == 1
 
 
 def test_spent_correction_survives_retry_after_provider_outage(store):
     model = ScriptedModel(malformed_writer=1, failure="core_response_review")
     with pytest.raises(ConversationRefused): run(store, model)
-    assert len(model.calls) == 5
+    assert len(model.calls) == 4
     model.failure, model.reject = None, 1
     with pytest.raises(ConversationRefused) as retry: run(store, model)
     assert retry.value.code == "answer_withheld"
-    assert len(model.calls) == 9  # No second rewrite after the same request resumes.
+    assert len(model.calls) == 7  # No second rewrite after the same request resumes.
 
 
 def test_permission_loss_after_correction_does_not_reset_allowance(store):
@@ -272,7 +283,7 @@ def test_permission_loss_after_correction_does_not_reset_allowance(store):
     model.structured, model.reject = original, 1
     with pytest.raises(ConversationRefused) as rejected: run(store, model)
     assert rejected.value.code == "answer_withheld"
-    assert len(model.calls) == 8  # Four before denied review, then four; no second correction.
+    assert len(model.calls) == 6  # Three before denied review, then three; no second correction.
 
 
 def test_known_pre_save_session_loss_allows_same_request_recovery(store):
@@ -296,7 +307,7 @@ def test_post_commit_auxiliary_policy_failure_cannot_hide_saved_response(store):
     reply = run(store, model, attempts=DeniedFinish())
     assert reply["committed"] == "committed"
     assert run(store, model, attempts=DeniedFinish())["replayed"]
-    assert len(model.calls) == 4
+    assert len(model.calls) == 3
 
 
 @pytest.mark.parametrize("damage", ["rendering", "review", "text"])
@@ -314,4 +325,4 @@ def test_resealed_but_incompatible_saved_evidence_is_never_upgraded(store, damag
     store.commit(replace(matter, brain_chat=rows, intake_answers=metadata, version=matter.version + 1),
                  expected_version=matter.version)
     with pytest.raises(ConversationRefused, match="read reliably"): run(store, model)
-    assert len(model.calls) == 4
+    assert len(model.calls) == 3

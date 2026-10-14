@@ -15,7 +15,7 @@ from nm.core_engine import response_writer, turn
 from nm.core_engine.conversation import chat_matter_id
 from nm.core_engine.retrieval import HybridSearcher, validate_search
 from tests.test_core_answer_sources import fixture
-from tests.test_core_research import work
+from tests.test_core_research import Model, proposal, work
 from tests.test_core_response_writer import source_use_v2, unit
 from tests.test_core_served import OWNER, served, source_url, successful
 from tests.test_core_statute_readback import _local, _row
@@ -54,9 +54,9 @@ def _parent_collection(tmp_path, monkeypatch):
 def _research(tmp_path, monkeypatch):
     collection, parent, child = _parent_collection(tmp_path, monkeypatch)
     ctx = context("Find the applicable law.")
-    plan = research.accept({"work": [work()]}, ctx)
+    plan = research.accept(proposal(), ctx)
     searcher = HybridSearcher({"provision": collection, "judgment": Collection("judgment")})
-    record = research.retrieve(plan, searcher, ctx)
+    record = research.retrieve(plan, searcher, ctx, model=Model())
     assert not record["failures"], record["failures"]
     assert research.validate(record, plan, ctx) == record
     return ctx, record, collection, parent, child
@@ -130,10 +130,18 @@ def test_parent_source_matches_authority_readback_without_an_invented_vector_pos
 def test_legacy_snapshots_cannot_acquire_parent_locators_but_keep_their_numeric_projection(
     tmp_path, monkeypatch, version,
 ):
-    ctx, old_record = fixture()
-    for search in old_record["searches"].values():
-        search["contract"] = version
-        del search["instruments"]  # named instruments arrived with v6
+    # Legacy search snapshots live inside legacy research records (v6 and before).
+    from tests.test_core_answer_sources import AdjacentJudgment
+    ctx = context("Find the applicable law.")
+    plan = research.accept({"work": [work()]}, ctx, contract=research.INSTRUMENTED_CONTRACT)
+    queries = research.search_queries(plan["work"][0], contract=research.INSTRUMENTED_CONTRACT)
+    statute = Collection()
+    statute.rows[0]["section_number"] = "Article_64"
+    search = HybridSearcher({"provision": statute, "judgment": AdjacentJudgment()}).search(queries)
+    search["contract"] = version
+    del search["instruments"]  # named instruments arrived with v6
+    old_record = {"contract": research.INSTRUMENTED_CONTRACT, "plan": plan, "searches": {"t2:w1": search},
+                  "failures": {}, "state": "partial" if search["issues"] else "evaluated"}
     original = deepcopy(old_record)
     catalogue = answer_sources.build(ctx, old_record)
     assert research.validate(old_record, old_record["plan"], ctx) == original
@@ -169,7 +177,7 @@ def test_parent_source_is_saved_served_and_replayed_without_fresh_law_or_model_c
 
     monkeypatch.setattr(served.model, "structured", write_parent)
     reply = successful(served, message="Find the applicable law.")
-    assert reply["metrics"]["llm_calls"] == 4 and len(served.model.calls) == 4
+    assert reply["metrics"]["llm_calls"] == 8 and len(served.model.calls) == 8
     source = reply["elements"][0]["source"]
     assert source["text"] == parent["full_text"]
     for operation, payload in served.model.calls:
@@ -201,4 +209,4 @@ def test_parent_source_is_saved_served_and_replayed_without_fresh_law_or_model_c
     assert inspection["provision_checks"][0]["position"] == "parent:" + parent["chunk_id"]
     replay = successful(served, message="Find the applicable law.", expected_version=0)
     assert replay == {**reply, "replayed": True}
-    assert len(served.model.calls) == 4 and served.store.load(stored.id) == before
+    assert len(served.model.calls) == 8 and served.store.load(stored.id) == before

@@ -7,6 +7,7 @@ import pytest
 from nm.core_engine import response_authorities
 from nm.core_engine.answer_sources import build, select
 from nm.core_engine.research import accept as accept_plan, retrieve
+from tests.test_core_research import Model as ResearchModel, proposal as research_proposal
 from nm.core_engine.response_review import (
     CONTRACT, LEGACY_CONTRACT, MAX_OUTPUT, SCHEMA, _digest,
     review as review_checked, validate as validate_checked,
@@ -56,7 +57,8 @@ def setup(*, legal=False, text="Hello.", history=None, count=1):
         ctx, record = legal_fixture(history=history)
     else:
         ctx = context(text, history)
-        record = retrieve(accept_plan({"work": []}, ctx), None, ctx)
+        record = retrieve(accept_plan(research_proposal(needs_research=False, words="Hello"), ctx), None, ctx,
+                          model=ResearchModel())
     sources = build(ctx, record)
     proposal = {"units": [{"kind": "greeting", "text": "Hello. How can I help?",
         "addresses": [{"source_id": ctx["latest"]["source_id"]}], "uses": []} for _ in range(count)]}
