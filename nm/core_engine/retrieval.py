@@ -1074,17 +1074,19 @@ class HybridSearcher:
             except SearchUnavailable:
                 log.warning("A corpus could not be warmed", exc_info=True)
 
-    def search(self, queries, instruments=None):
+    def search(self, queries, instruments=None, *, results=None):
         """Search one dispute; query IDs are owned by its checked query plan. instruments
-        are the Acts that plan names, matched to held instruments as search candidates."""
+        are the Acts that plan names, matched to held instruments as search candidates.
+        results sets how many candidates of each kind are returned (RESULTS_PER_KIND
+        unless a caller that chooses among more asks for more; owner decision, 14 Oct)."""
         with ExitStack() as scopes:
             for collection in self.collections.values():
                 scope = getattr(collection, "snapshot_scope", None)
                 if callable(scope):
                     scopes.enter_context(scope())
-            return self._search(queries, instruments)
+            return self._search(queries, instruments, results)
 
-    def _search(self, queries, instruments=None):
+    def _search(self, queries, instruments=None, results=None):
         if (not isinstance(queries, list) or not queries or any(
                 not isinstance(q, dict) or not isinstance(q.get("query_id"), str)
                 or not q["query_id"] or not isinstance(q.get("text"), str) or not q["text"].strip()
@@ -1094,6 +1096,10 @@ class HybridSearcher:
         if (not isinstance(names, list) or any(not isinstance(n, str) or not n.strip() for n in names)
                 or len(set(names)) != len(names)):
             raise ValueError("Named instruments must be distinct nonblank names")
+        returned = {"provision": RESULTS_PER_KIND, "judgment": RESULTS_PER_KIND, **(results or {})}
+        if set(returned) != {"provision", "judgment"} or any(
+                type(count) is not int or not 1 <= count <= 50 for count in returned.values()):
+            raise ValueError("Each kind returns between 1 and 50 candidates")
         named = [{"name": name, "candidates": []} for name in names]
         candidates, issues, stages, revisions = [], [], [], {}
         for kind in ("provision", "judgment"):
@@ -1279,7 +1285,7 @@ class HybridSearcher:
                     continue
                 groups[group] = groups.get(group, 0) + 1
                 selected.append((position, score))
-                if len(selected) == RESULTS_PER_KIND:
+                if len(selected) == returned[kind]:
                     break
             for position, score in selected:
                 try:

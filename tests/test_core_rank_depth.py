@@ -7,6 +7,8 @@ replay unchanged.
 """
 from copy import deepcopy
 
+import pytest
+
 from nm.core_engine import retrieval
 from nm.core_engine.retrieval import HybridSearcher, validate_search
 from tests.test_core_judgment_order import Judgments, paragraph
@@ -61,3 +63,16 @@ def test_judgments_rank_only_the_first_positions_and_v7_records_replay():
     saved_v7 = deepcopy(result)
     saved_v7["contract"] = retrieval.JUDGMENT_ORDER_CONTRACT
     assert validate_search(saved_v7, QUERIES) == saved_v7
+
+
+def test_a_caller_that_chooses_among_more_candidates_can_ask_for_them():
+    provisions = ManyProvisions(30)
+    searcher = HybridSearcher({"provision": provisions, "judgment": Collection("judgment")})
+    default = searcher.search(QUERIES)
+    assert sum(c["kind"] == "provision" for c in default["candidates"]) == retrieval.RESULTS_PER_KIND
+    more = searcher.search(QUERIES, results={"provision": 20})
+    assert sum(c["kind"] == "provision" for c in more["candidates"]) == 20
+    assert validate_search(more, QUERIES) == more
+    for wrong in ({"provision": 0}, {"provision": 51}, {"statute": 6}, {"provision": "20"}):
+        with pytest.raises(ValueError, match="between 1 and 50"):
+            searcher.search(QUERIES, results=wrong)
