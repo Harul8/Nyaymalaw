@@ -6,11 +6,13 @@ The two indexes and the local models load only when a search is requested.
 """
 from __future__ import annotations
 
+import bisect
 import hashlib
 import json
 import logging
 import math
 import os
+import re
 import sqlite3
 import struct
 import threading
@@ -29,10 +31,13 @@ LEG_DEPTH = 80
 PER_QUERY_POOL = 60
 RESULTS_PER_KIND = 6
 RRF_K = 60
+#: v7 (owner decision, 14 Oct 2026): judgment paragraphs are ordered by what makes them
+#: usable as authority (_judgment_order). v6 records replay unchanged.
+CONTRACT = "hybrid_retrieval_v7"
 #: v6 (owner decision, 12 Oct 2026): word and vector search inside the held Acts a
 #: research plan names join each formulation's legs, and the provision order blends the
 #: reranker's order with the shortlist's order. v5 records replay unchanged.
-CONTRACT = "hybrid_retrieval_v6"
+NAMED_CONTRACT = "hybrid_retrieval_v6"
 RERANK_ORDER_CONTRACT = "hybrid_retrieval_v5"
 PARENT_STORE_CONTRACT = "hybrid_retrieval_v4"
 PREVIOUS_CONTRACT = "hybrid_retrieval_v3"
@@ -226,6 +231,8 @@ class LocalCollection:
         self._documents = None
         self._documents_key = None
         self._instrument_positions = {}
+        self._standing = None
+        self._standing_lock = threading.Lock()
 
     def _parent_path(self, record):
         # Contextual records have declared source keys, not vector positions.
@@ -447,6 +454,48 @@ class LocalCollection:
         except (ImportError, OSError, RuntimeError, ValueError, AttributeError) as exc:
             raise SearchUnavailable(f"{self.doc_type} semantic search within named instruments failed: {exc}") from exc
 
+    def case_standing(self) -> dict:
+        """Each held judgment's citation standing: the mid-rank share of held judgments
+        of the same court and year that later judgments cite less, read once per corpus
+        revision from each judgment's first stored passage. None marks a court-year where
+        most held judgments have no recorded citations yet, so the count says little.
+        Standing orders search candidates; it is not court treatment, currency or
+        binding force."""
+        _, db_path, _ = self._open()
+        with self._standing_lock:
+            if self._standing is not None and self._standing[0] == self._revision:
+                return self._standing[1]
+            try:
+                with closing(sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)) as db:
+                    firsts = [pos for _, pos in db.execute(
+                        "select case_id, min(pos) from chunks where doc_type=? group by case_id", (self.doc_type,))]
+                    cases = {}
+                    for start in range(0, len(firsts), 500):
+                        batch = firsts[start:start + 500]
+                        marks = ",".join("?" for _ in batch)
+                        for case_id, blob in db.execute(
+                                f"select case_id, blob from chunks where doc_type=? and pos in ({marks})",
+                                (self.doc_type, *batch)):
+                            item = json.loads(blob)
+                            cited = item.get("cited_by_count") or 0
+                            cases[case_id] = (item.get("court"), item.get("year"), cited if type(cited) is int else 0)
+            except (sqlite3.Error, ValueError, TypeError, AttributeError) as exc:
+                raise SearchUnavailable("Judgment citation standing cannot be read") from exc
+            peers = {}
+            for court, year, cited in cases.values():
+                peers.setdefault((court, year), []).append(cited)
+            for values in peers.values():
+                values.sort()
+            table = {}
+            for case_id, (court, year, cited) in cases.items():
+                values = peers[(court, year)]
+                unsettled = sum(value == 0 for value in values) * 2 > len(values)
+                table[case_id] = None if unsettled else (
+                    bisect.bisect_left(values, cited) + bisect.bisect_right(values, cited)) / (2 * len(values))
+            self._standing = (self._revision, table)
+        self._check_snapshot()
+        return table
+
     def _check_snapshot(self) -> None:
         scope = self._scope
         active = getattr(scope, "active", False)
@@ -470,6 +519,13 @@ class LocalCollection:
         self._vector_index()
         if self.copies is not None:
             self.suppressed_positions()
+        if self.doc_type == "case_law":
+            try:
+                self.case_standing()
+            except SearchUnavailable:
+                # Only the citation part of judgment ordering depends on it; a search
+                # records the gap itself.
+                log.warning("Judgment citation standing could not be warmed", exc_info=True)
         self.models.load()
         # One probe pages in the vector index and starts the device kernels;
         # its results are discarded and nothing is cached as evidence.
@@ -876,6 +932,47 @@ def _anchored_windows(text, tokenizer, capacity, anchor):
     raise SearchUnavailable("The local model has no room for attributable windows")
 
 
+#: Stored judgment paragraph kinds that report rather than decide: the facts, counsel's
+#: arguments and the operative order. An automatic labeller assigned them, so they only
+#: order candidates and never remove one.
+REPORTED_PARAGRAPHS = frozenset({"facts", "arguments", "argument", "order"})
+#: A paragraph mostly inside quotation marks repeats a statute or an earlier judgment.
+QUOTED_SHARE = 0.5
+_QUOTED = re.compile(r"[\"“”]([^\"“”]{20,})[\"“”]")
+
+
+def _quoted_share(text):
+    return sum(len(quoted) for quoted in _QUOTED.findall(text)) / max(1, len(text))
+
+
+def _judgment_order(scored, rows, standing):
+    """v7 judgment order (owner decision, 14 Oct 2026). The reranker scores almost every
+    on-topic paragraph near its maximum, and paragraphs quoting a statute word for word
+    score highest, so its order among them carries little information. Paragraphs in the
+    court's own words come before those that report facts, arguments or the order or
+    mostly quote; within each, the reranker's order is blended by reciprocal ranks with
+    the judgment's citation standing among held judgments of its court and year. A
+    judgment from a court-year whose citations are mostly unrecorded takes the middle
+    standing of the others ordered; one absent from the table takes 0.5. Each candidate
+    keeps the reranker's own score."""
+    reranked = {position: rank for rank, (position, _) in enumerate(scored, 1)}
+    values = {position: standing.get(rows[position].get("case_id"), 0.5) for position, _ in scored}
+    known = sorted(value for value in values.values() if value is not None)
+    middle = known[len(known) // 2] if known else 0.5
+    values = {position: middle if value is None else value for position, value in values.items()}
+    standing_rank = {position: rank for rank, position in enumerate(
+        sorted(values, key=lambda p: (-values[p], reranked[p])), 1)}
+
+    def reported(position):
+        row = rows[position]
+        return (row.get("paragraph_type") in REPORTED_PARAGRAPHS
+                or _quoted_share(row.get("full_text") or "") >= QUOTED_SHARE)
+
+    return sorted(scored, key=lambda x: (
+        reported(x[0]), -(1.0 / (RRF_K + reranked[x[0]]) + 1.0 / (RRF_K + standing_rank[x[0]])),
+        _location_order(x[0])))
+
+
 def _rerank_anchor(checked_source):
     """Reuse the exact identity and locator already admitted by _candidate."""
     heading = (checked_source["source"].get("section_title")
@@ -1136,6 +1233,17 @@ class HybridSearcher:
                     reranked = {position: rank for rank, (position, _) in enumerate(scored, 1)}
                     scored.sort(key=lambda x: (-(1.0 / (RRF_K + reranked[x[0]]) + 1.0 / (RRF_K + shortlisted[x[0]])),
                                                _location_order(x[0])))
+                elif kind == "judgment":
+                    # v7: an unreadable standing table costs only the citation part of
+                    # the order, recorded as a gap; the paragraph-kind order still applies.
+                    standing = {}
+                    if callable(getattr(collection, "case_standing", None)):
+                        try:
+                            standing = collection.case_standing()
+                        except SearchUnavailable as exc:
+                            _log_stage_failure(kind, "standing", exc)
+                            issues.append({"kind": kind, "query_id": None, "stage": "standing", "reason": str(exc)})
+                    scored = _judgment_order(scored, rows, standing)
                 stages.append({"kind": kind, "query_id": None, "stage": "rerank", "state": "evaluated", "hits": len(usable)})
             except Exception as exc:
                 _log_stage_failure(kind, "rerank", exc)
@@ -1186,13 +1294,13 @@ class HybridSearcher:
 
 def validate_search(record, queries, instruments=None):
     """Replay validates the saved exact snapshot, never reads a changed corpus.
-    instruments are the Acts the plan named; a v6 record keeps them with the held
+    instruments are the Acts the plan named; a v6 or v7 record keeps them with the held
     candidates each proposed when it was searched."""
-    current = isinstance(record, dict) and record.get("contract") == CONTRACT
+    current = isinstance(record, dict) and record.get("contract") in (NAMED_CONTRACT, CONTRACT)
     fields = {"contract", "state", "queries", "corpus_revisions", "stages", "candidates", "issues"}
     if (not isinstance(record, dict) or set(record) != (fields | {"instruments"} if current else fields)
             or record["contract"] not in (LEGACY_CONTRACT, PARENT_TREE_CONTRACT, PREVIOUS_CONTRACT, PARENT_STORE_CONTRACT,
-                                          RERANK_ORDER_CONTRACT, CONTRACT) or record["queries"] != queries
+                                          RERANK_ORDER_CONTRACT, NAMED_CONTRACT, CONTRACT) or record["queries"] != queries
             or record["state"] != ("partial" if record["issues"] else "ready")
             or set(record["corpus_revisions"]) != {"provision", "judgment"}):
         raise ValueError("Search snapshot differs from its owned query contract")
@@ -1229,8 +1337,10 @@ def validate_search(record, queries, instruments=None):
         if (not isinstance(issue, dict) or not {"kind", "query_id", "stage", "reason"} <= issue.keys()
                 or issue["kind"] not in record["corpus_revisions"]
                 or issue["query_id"] is not None and issue["query_id"] not in query_ids
-                or issue["stage"] not in ("identity", *legs, "read", "rerank", "context", *(("instruments",) if current else ()))
+                or issue["stage"] not in ("identity", *legs, "read", "rerank", "context", *(("instruments",) if current else ()),
+                                          *(("standing",) if record["contract"] == CONTRACT else ()))
                 or issue["stage"].startswith("named_") and (issue["kind"] != "provision" or not proposed)
+                or issue["stage"] == "standing" and (issue["kind"] != "judgment" or issue["query_id"] is not None)
                 or not isinstance(issue["reason"], str) or not issue["reason"]):
             raise ValueError("Search gap has no owned query/source scope")
         failed.add((issue["kind"], issue["query_id"], issue["stage"]))
@@ -1257,7 +1367,7 @@ def validate_search(record, queries, instruments=None):
             raise ValueError("Reranking has no execution disposition")
     identities = set()
     for candidate in record["candidates"]:
-        if record["contract"] not in (PARENT_STORE_CONTRACT, RERANK_ORDER_CONTRACT, CONTRACT) and any(type(p) is not int for p in (
+        if record["contract"] not in (PARENT_STORE_CONTRACT, RERANK_ORDER_CONTRACT, NAMED_CONTRACT, CONTRACT) and any(type(p) is not int for p in (
                 candidate["position"], *(s["position"] for s in candidate["context"]["segments"]))):
             raise ValueError("Historical search cannot contain contextual parent addresses")
         if (candidate["kind"] not in record["corpus_revisions"]
@@ -1291,7 +1401,7 @@ def validate_search(record, queries, instruments=None):
             for segment in segments:
                 by_id.setdefault(segment["row"]["chunk_id"], []).append(segment["row"])
             root = candidate["source"]
-            if (record["contract"] not in (PARENT_TREE_CONTRACT, PREVIOUS_CONTRACT, PARENT_STORE_CONTRACT, RERANK_ORDER_CONTRACT, CONTRACT) or candidate["kind"] != "provision" or len(segments) < 2
+            if (record["contract"] not in (PARENT_TREE_CONTRACT, PREVIOUS_CONTRACT, PARENT_STORE_CONTRACT, RERANK_ORDER_CONTRACT, NAMED_CONTRACT, CONTRACT) or candidate["kind"] != "provision" or len(segments) < 2
                     or root.get("parent_chunk_id") or len(by_id[root["chunk_id"]]) != 1
                     or len({s["position"] for s in segments}) != len(segments)):
                 raise ValueError("Ranking context has no unique owned root")
@@ -1304,7 +1414,7 @@ def validate_search(record, queries, instruments=None):
                         raise ValueError("Ranking context has a detached or cyclic source")
                     seen.add(identity)
                     child = parents[0]
-        if record["contract"] in (PREVIOUS_CONTRACT, PARENT_STORE_CONTRACT, RERANK_ORDER_CONTRACT, CONTRACT) and candidate["kind"] == "provision":
+        if record["contract"] in (PREVIOUS_CONTRACT, PARENT_STORE_CONTRACT, RERANK_ORDER_CONTRACT, NAMED_CONTRACT, CONTRACT) and candidate["kind"] == "provision":
             segments = context["segments"]
             if context["scope"] == "selected_indexed_segment":
                 if len(segments) != 1:

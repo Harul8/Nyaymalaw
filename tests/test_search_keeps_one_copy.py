@@ -59,7 +59,7 @@ def test_a_hidden_copy_never_takes_a_search_slot_and_each_leg_looks_deeper(tmp_p
     result = HybridSearcher({"provision": collection, "judgment": Collection("judgment")}).search(QUERIES[:1])
     assert {c["position"] for c in result["candidates"] if c["kind"] == "provision"} == {0, 1, 4}
     assert depths and set(depths) == {retrieval.LEG_DEPTH * 2}
-    assert result["contract"] == "hybrid_retrieval_v6"
+    assert result["contract"] == "hybrid_retrieval_v7"
     assert validate_search(result, QUERIES[:1]) == result
 
 
@@ -98,7 +98,7 @@ def test_saved_v4_records_with_parent_sources_still_replay(tmp_path, monkeypatch
     collection = _local(tmp_path, [child])
     declare(collection, {"root": parent})
     result = _search(collection, monkeypatch, [0])
-    assert result["contract"] == retrieval.CONTRACT == "hybrid_retrieval_v6"
+    assert result["contract"] == retrieval.CONTRACT == "hybrid_retrieval_v7"
     saved_v4 = deepcopy(result)
     saved_v4["contract"] = retrieval.PARENT_STORE_CONTRACT
     del saved_v4["instruments"]

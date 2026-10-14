@@ -1,12 +1,12 @@
 """Search inside the Acts a research plan names, and the blended provision order
-(owner decision, 12 Oct 2026; search contract v6).
+(owner decision, 12 Oct 2026; search contract v6, carried into v7).
 
 A named Act proposes held instruments by the shared instrument key: its exact key,
 else every held key with the same title apart from the year. Word and vector search
 inside those instruments joins each formulation's legs. An unreadable register costs
 only the named legs, with an explicit gap. Provisions are ordered by blending the
 reranker's order with the fused shortlist's order; each candidate keeps the
-reranker's own score. Saved v5 records replay unchanged.
+reranker's own score. Saved v5 and v6 records replay unchanged.
 """
 from copy import deepcopy
 import json
@@ -54,7 +54,7 @@ def search(held, instruments, queries=QUERIES):
 def test_a_named_act_is_searched_inside_and_its_section_reaches_the_shortlist(tmp_path, monkeypatch):
     held, calls = collection(tmp_path, monkeypatch)
     result = search(held, ["Indian Contract Act"])
-    assert result["contract"] == retrieval.CONTRACT == "hybrid_retrieval_v6"
+    assert result["contract"] == retrieval.CONTRACT == "hybrid_retrieval_v7"
     assert result["instruments"] == [{"name": "Indian Contract Act", "candidates": ["indian contract act 1872"]}]
     assert ("words", [0]) in calls and ("vectors", [0]) in calls
     assert 0 in {c["position"] for c in result["candidates"] if c["kind"] == "provision"}
@@ -112,6 +112,9 @@ def test_the_record_keeps_the_names_its_plan_gave(tmp_path, monkeypatch):
         validate_search(result, QUERIES, ["Specific Relief Act"])
     with pytest.raises(ValueError, match="named"):
         validate_search(result, QUERIES)
+    saved_v6 = deepcopy(result)  # v7 changed only the judgment order
+    saved_v6["contract"] = retrieval.NAMED_CONTRACT
+    assert validate_search(saved_v6, QUERIES, ["Indian Contract Act"]) == saved_v6
     saved_v5 = deepcopy(result)
     saved_v5["contract"] = retrieval.RERANK_ORDER_CONTRACT
     del saved_v5["instruments"]
