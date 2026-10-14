@@ -65,7 +65,7 @@ def adapter(model="gpt-6.1-sol", result=None, budget=None):
     client = FakeClient(result or response(model=model))
     return Adapter(config, client=client, call_budget=budget), client
 
-@pytest.mark.parametrize("model,effort", [("gpt-6.1-sol", "low"), ("gpt-6-luna", "none")])
+@pytest.mark.parametrize("model,effort", [("gpt-6.1-sol", "low"), ("gpt-6-luna", "low")])
 def test_exact_responses_payload_is_counted_without_trimming(model, effort):
     session = FakeSession()
     port, client = adapter(model=model, budget=session)

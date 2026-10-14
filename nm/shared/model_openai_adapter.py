@@ -65,7 +65,11 @@ from nm.shared.text_contracts import blank
 #: written today.
 # These checked releases use Responses for exact input accounting and explicit
 # reasoning settings. Other model transports retain their existing contract.
-_RESPONSES_EFFORT = {"gpt-6-luna": "none", "gpt-6.1-sol": "low"}
+# Luna reasons at "low" (owner decision, 14 Oct 2026): every measured research step
+# (question breakdown, search phrases, picks) ran at low, and reasoning splits
+# disputes properly where "none" did not; the owner's standing rule gives reasoning
+# time where a step needs judgement.
+_RESPONSES_EFFORT = {"gpt-6-luna": "low", "gpt-6.1-sol": "low"}
 
 _FINISH_REASONS: dict[str, Completion] = {
     "stop": Completion.COMPLETE,
