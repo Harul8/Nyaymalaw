@@ -5,7 +5,7 @@ from copy import deepcopy
 import re
 
 from nm.core_engine import research, response_authorities, response_review, response_writer
-from nm.shared.citation_contracts import statute_title
+from nm.shared.citation_contracts import case_short_names, statute_title
 
 LEGACY_CONTRACT = "core_response_rendering_v1"
 #: Authority-bound rendering with each source under its stored title.
@@ -17,8 +17,11 @@ SHOWN_NAME_CONTRACT = "core_response_rendering_v3"
 CITED_WORDS_CONTRACT = "core_response_rendering_v4"
 #: v4 with a heading before each dispute's part when a reply answers more than one
 #: dispute, in the understanding's own name for it (owner decision, 15 Oct 2026).
-CONTRACT = "core_response_rendering_v5"
-_CITED = (CITED_WORDS_CONTRACT, CONTRACT)
+HEADINGS_CONTRACT = "core_response_rendering_v5"
+#: v5 linking the shorter case names an answer writes ('Bachhaj Nahar v Nilima Mandal',
+#: 'Hero Vinoth') to the judgment the paragraph used (owner decision, 15 Oct 2026).
+CONTRACT = "core_response_rendering_v6"
+_CITED = (CITED_WORDS_CONTRACT, HEADINGS_CONTRACT, CONTRACT)
 _LEGAL = {"provision", "judgment"}
 _ROLES = {"provision": "legislative_text", "court_disposition": "court_conclusion",
           "court_reasoning": "court_reasoning", "party_submission": "party_submission",
@@ -161,7 +164,13 @@ def _sentence(text, start, end):
     return text[begin:after.start() + 1 if after else len(text)]
 
 
-def _cited_words(text, sources, authority):
+def _short_names(source):
+    """v6: the shorter names an advocate writes for a used judgment (one owner:
+    nm/shared/citation_contracts.py)."""
+    return case_short_names(source["title"]) if source["kind"] == "judgment" else set()
+
+
+def _cited_words(text, sources, authority, *, short=False):
     """v4: link a source at the words that cite it and list the rest as markers.
 
     Words come from the authority checks (a case citation matched to one used
@@ -184,10 +193,15 @@ def _cited_words(text, sources, authority):
         if any(re.search(r"(?<![\w])" + re.escape(name) + r"(?![\w])", sentence, re.I)
                for name in _names(sources[matched[0]])):
             candidates.append((row["start"], row["end"], matched[0], 0))
-    owners = {}
+    owners, proper = {}, set()
     for number, source in enumerate(sources):
         locator = source["locator"]
         phrases = set(_names(source))
+        if short:
+            names = _short_names(source)
+            phrases |= names
+            # A one-word party name links only where it is written as a name.
+            proper |= {name.casefold() for name in names if len(name.split()) == 1}
         if locator and locator != "Saved passage":
             phrases |= {f"{name}{joint}{locator}" for name in _names(source) for joint in (" ", " · ")}
             if not locator.isdecimal():
@@ -196,6 +210,8 @@ def _cited_words(text, sources, authority):
             owners.setdefault(phrase.casefold(), (phrase, set()))[1].add(number)
     for phrase, numbers in owners.values():
         span = _span(text, phrase)
+        if span is not None and phrase.casefold() in proper and not text[span[0]].isupper():
+            span = None
         if len(numbers) == 1 and span is not None:
             candidates.append((span[0], span[1], next(iter(numbers)), 1))
     chosen, linked = [], set()
@@ -261,7 +277,7 @@ def render(context, research_record, sources, draft, review, execution=None, *,
         raise ValueError("A response without accepted independent review cannot be rendered")
     authorities = ({row["unit_id"]: row for row in checked_authorities["units"]}
                    if contract in _CITED else {})
-    headings = _headings(research_record, checked_draft) if contract == CONTRACT else {}
+    headings = _headings(research_record, checked_draft) if contract in (HEADINGS_CONTRACT, CONTRACT) else {}
     elements = []
     for position, unit in enumerate(checked_draft["units"]):
         if position in headings:
@@ -274,7 +290,7 @@ def render(context, research_record, sources, draft, review, execution=None, *,
             "refs": list(dict.fromkeys(source["locator"] for source in legal_sources))}
         if contract in _CITED:
             element["inline_citations"], element["citation_markers"] = _cited_words(
-                unit["text"], legal_sources, authorities[unit["id"]])
+                unit["text"], legal_sources, authorities[unit["id"]], short=contract == CONTRACT)
         else:
             element["inline_citations"] = _anchors(unit["text"], legal_sources)
         elements.append(element)

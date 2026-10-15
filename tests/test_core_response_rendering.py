@@ -186,3 +186,25 @@ def test_a_reply_answering_two_disputes_shows_each_disputes_name_before_its_part
     forged["plan"]["proposal"]["understanding"]["disputes"][1]["id"] = "D9"
     with pytest.raises(ValueError):
         response_rendering._headings(forged, draft)
+
+
+def test_v6_links_the_short_case_name_only_to_the_paragraphs_own_judgment():
+    """Owner decision, 15 Oct 2026: the answer keeps the shorter name; the link follows it."""
+    def judgment(identity, title):
+        return {"id": identity, "kind": "judgment", "title": title, "locator": "14"}
+    none = {"case_associations": [], "prose_provisions": []}
+    used = [judgment("j1", "Bachhaj Nahar vs Nilima Mandal & Ors"), judgment("j2", "Rangappa vs Sri Mohan")]
+    text = "Bachhaj Nahar v Nilima Mandal requires the easement to be pleaded; Rangappa concerns cheques."
+    anchors, markers = response_rendering._cited_words(text, used, none, short=True)
+    assert [(a["text"], a["source_id"]) for a in anchors] == [
+        ("Bachhaj Nahar v Nilima Mandal", "j1"), ("Rangappa", "j2")] and markers == []
+    earlier, kept = response_rendering._cited_words(text, used, none)
+    assert earlier == [] and len(kept) == 2  # a saved v5 rendering never gains links
+    # A one-word name links only where it is written as a name.
+    lower, _ = response_rendering._cited_words("the rangappa test", used, none, short=True)
+    assert lower == []
+    # A short name shared by two used judgments identifies neither.
+    twins = [judgment("a", "Yogendra Pratap Singh vs Savitri Pandey & Anr"),
+             judgment("b", "Yogendra Pratap Singh vs Savitri Pandey")]
+    shared, _ = response_rendering._cited_words("Yogendra Pratap Singh holds so.", twins, none, short=True)
+    assert shared == []

@@ -241,3 +241,20 @@ def test_the_identity_build_links_a_citation_the_way_the_check_reads_it():
 def test_a_case_number_is_not_a_case_citation():
     from nm.shared.citation_contracts import find_reporter_citations
     assert find_reporter_citations("We act in O.S. 442/2023 and W.P. 1234 of 2019 under section 6.") == ()
+
+
+# --- the shorter case names an advocate writes (owner decision, 15 Oct 2026) ----------
+
+def test_short_case_names_drop_party_tails_and_follow_the_state_convention():
+    from nm.shared.citation_contracts import case_short_names
+    names = case_short_names("Bachhaj Nahar vs Nilima Mandal & Ors")
+    assert {"Bachhaj Nahar v Nilima Mandal", "Bachhaj Nahar v. Nilima Mandal", "Bachhaj Nahar"} <= names
+    assert "Hero Vinoth v Seshammal" in case_short_names("Hero Vinoth (Minor) vs Seshammal")
+    assert "Anathula Sudhakar v P. Buchi Reddy" in case_short_names(
+        "Anathula Sudhakar vs P. Buchi Reddy (Dead) By Lrs & Ors")
+    assert "Kumar Exports v Sharma Carpets" in case_short_names("M/S Kumar Exports vs M/S Sharma Carpets")
+    # A case against the State or the Union is named by the other party.
+    assert "Nishkant Dubey" in case_short_names("The State Of Jharkhand vs Nishkant Dubey")
+    assert "The State Of Jharkhand" not in case_short_names("The State Of Jharkhand vs Nishkant Dubey")
+    assert "Saheli" in case_short_names("Saheli, A Women'S Resources Centre, ... vs Commissioner Of Police ...")
+    assert case_short_names("A title without two parties") == set()

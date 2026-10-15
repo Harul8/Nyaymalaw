@@ -32,7 +32,8 @@ def test_v1_replay_and_v2_authority_review_render_identical_unchanged_source_row
     assert response_rendering.STORED_TITLE_CONTRACT == "core_response_rendering_v2"
     assert response_rendering.SHOWN_NAME_CONTRACT == "core_response_rendering_v3"
     assert response_rendering.CITED_WORDS_CONTRACT == "core_response_rendering_v4"
-    assert response_rendering.CONTRACT == "core_response_rendering_v5"
+    assert response_rendering.HEADINGS_CONTRACT == "core_response_rendering_v5"
+    assert response_rendering.CONTRACT == "core_response_rendering_v6"
     assert old == stored == new, "names needing no change render identically in v1-v3"
     assert (legacy, fresh, authorities) == before
     assert all("authority_evidence" not in source for e in new for source in e["sources"])

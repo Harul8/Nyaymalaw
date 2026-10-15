@@ -159,7 +159,7 @@ def test_mixed_legacy_and_current_history_reopens_without_fresh_authority_checks
 
 
 @pytest.mark.parametrize("saved", ["core_response_rendering_v2", "core_response_rendering_v3",
-                                   "core_response_rendering_v4"])
+                                   "core_response_rendering_v4", "core_response_rendering_v5"])
 def test_a_turn_saved_under_an_earlier_rendering_reopens_unchanged_beside_a_current_turn(store, saved):
     """Shown names (v3) and cited-word links (v4) never rewrite an earlier saved response."""
     from nm.core_engine import response_rendering, turn
@@ -178,9 +178,9 @@ def test_a_turn_saved_under_an_earlier_rendering_reopens_unchanged_beside_a_curr
     assert second["committed"] == "committed"
     rows = saved_rows(store.load(chat_matter_id("owner", first["chat_id"])), "owner")
     assert [row["activities"]["rendering_contract"] for row in rows] == [
-        saved, "core_response_rendering_v5"]
+        saved, "core_response_rendering_v6"]
     assert rows[0]["response"]["elements"] == elements
-    if saved != "core_response_rendering_v4":
+    if saved not in ("core_response_rendering_v4", "core_response_rendering_v5"):
         assert all("citation_markers" not in element for element in rows[0]["response"]["elements"])
 
 

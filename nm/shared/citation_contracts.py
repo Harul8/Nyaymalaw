@@ -62,9 +62,10 @@ ANY_PROVISION = re.compile(
 #: so ordinary prose does not match. A false positive here withholds a good
 #: turn, which is a real cost -- but a false NEGATIVE puts an invented citation
 #: in front of a judge.
+_PIVOT = r"(?:v\.?|vs\.?|versus)"
 CASE = re.compile(
     r"\b([A-Z][\w.&'-]*(?:\s+[A-Z][\w.&'-]*){0,5})\s+"
-    r"(?:v\.?|vs\.?|versus)\s+"
+    + _PIVOT + r"\s+"
     r"([A-Z][\w.&'-]*(?:\s+[A-Z][\w.&'-]*){0,5})")
 
 
@@ -262,6 +263,43 @@ def provisions_cited(text: str) -> set[str]:
 def cases_named(text: str) -> set[str]:
     """Every case name in a piece of text."""
     return {f"{a.strip()} v {b.strip()}" for a, b in CASE.findall(text or "")}
+
+
+_VERSUS = re.compile(r"\s+" + _PIVOT + r"\s+", re.I)
+#: Party words a stored judgment title carries and an advocate drops when naming the case.
+_PARTY_HEAD = re.compile(r"^(?:m/s\.?|messrs\.?)\s+", re.I)
+_PARTY_TAIL = re.compile(
+    r"(?:\s*\.\.\.|,?\s*(?:&|and)\s+(?:ors|anr|others|another)\.?"
+    r"|\s*\((?:dead|d)\)\s*(?:by|thr\.?|through)\s+(?:lrs|l\.\s?rs)\.?|\s*\(minor\))\s*$", re.I)
+#: Indian usage names a case against the State or the Union by the other party.
+_GOVERNMENT = re.compile(r"^(?:the\s+)?(?:state\s+of\b|union\s+of\s+india\b)", re.I)
+
+
+def _party(raw: str) -> str:
+    party, previous = _PARTY_HEAD.sub("", raw.strip()), None
+    while party != previous:
+        previous, party = party, _PARTY_TAIL.sub("", party).strip(" ,")
+    return party
+
+
+def case_short_names(title: str) -> set[str]:
+    """The shorter names an advocate writes for a stored judgment title (owner decision,
+    15 Oct 2026): 'Bachhaj Nahar v Nilima Mandal' for 'Bachhaj Nahar vs Nilima Mandal &
+    Ors', and the one-party name ('Hero Vinoth'; 'Nishkant Dubey' when the first party is
+    the State or the Union). Mechanical spellings only: they never resolve which case is
+    meant, so a caller links one only when it names exactly one of the sources a passage
+    actually used."""
+    parts = _VERSUS.split((title or "").strip(), maxsplit=1)
+    if len(parts) != 2:
+        return set()
+    first, second = _party(parts[0]), _party(parts[1])
+    if not first or not second:
+        return set()
+    names = {f"{first} {pivot} {second}" for pivot in ("v", "v.", "vs", "vs.")}
+    single = (second if _GOVERNMENT.match(first) else first).split(",")[0].strip()
+    if len(single.split()) >= 2 or len(single) >= 6:
+        names.add(single)
+    return names
 
 
 #: Everything that is not a letter or a digit. THE EXACT KEY a reporter
