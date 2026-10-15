@@ -475,6 +475,17 @@
       <div id="intake-state" role="status"></div>
     </form>
 
+    <!-- EACH MATTER'S OWN VIEWS (owner decision, 15 Oct 2026), once a conversation
+         is saved. Documents and Research notes arrive with their items. -->
+    <nav id="matter-tabs" class="matter-tabs" aria-label="This matter" hidden>
+      <button type="button" class="matter-tab is-on" data-matter-tab="conversation" aria-current="page">Conversation</button>
+      <button type="button" class="matter-tab" data-matter-tab="board">Board</button>
+      <button type="button" class="matter-tab" data-matter-tab="documents" disabled
+              title="Arrives with document uploads">Documents</button>
+      <button type="button" class="matter-tab" data-matter-tab="notes" disabled
+              title="Arrives with the research-note export">Research notes</button>
+    </nav>
+    <section id="chat-board" class="chat-board" aria-label="Matter board" hidden></section>
     <div id="mode-line" class="mode-line" hidden></div>
     <div id="thread" class="thread"></div>
     <div id="opening-board-status" class="opening-board-status" role="status" hidden></div>

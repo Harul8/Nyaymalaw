@@ -251,6 +251,30 @@ main { display: grid; grid-template-columns: 19rem minmax(0, 1fr); flex: 1; min-
 .part-title { margin: 0; font-family: var(--f-serif); font-size: 1.2rem; font-weight: 500; }
 .part-toggle { min-height: 2.75rem; }
 .part-body { padding-top: 0.5rem; }
+/* Each matter's own views and its board (15 Oct 2026). */
+.matter-tabs { display: flex; flex-wrap: wrap; gap: 0.25rem; margin: 0.5rem 0 0.75rem; }
+.matter-tab { min-height: 2.75rem; padding: 0 0.9rem; border: 1px solid transparent; border-radius: 8px;
+  background: transparent; color: var(--ink-2); font: inherit; font-size: 0.92rem; cursor: pointer; }
+.matter-tab.is-on { background: var(--accent-w); color: var(--accent-2); font-weight: 600; }
+.matter-tab:disabled { color: var(--ink-3); cursor: not-allowed; }
+.chat-board { display: flex; flex-direction: column; gap: 1rem; padding-bottom: 2rem; }
+.board-lede { margin: 0; color: var(--ink-3); font-size: 0.9rem; }
+.board-section { display: flex; flex-direction: column; gap: 0.6rem; }
+.board-h { margin: 0; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-3); }
+.board-card { border: 1px solid var(--rule); border-radius: 12px; padding: 0.9rem 1rem; background: var(--board);
+  display: flex; flex-direction: column; gap: 0.4rem; }
+.board-dispute { margin: 0; font-family: var(--f-serif); font-size: 1.1rem; font-weight: 500; }
+.board-meta, .board-label { margin: 0; font-size: 0.85rem; color: var(--ink-3); }
+.board-label { font-weight: 600; color: var(--ink-2); }
+.board-questions, .board-needed, .board-list { margin: 0; padding-left: 1.2rem; display: flex; flex-direction: column; gap: 0.2rem; }
+.board-status { color: var(--ink-3); font-size: 0.85rem; }
+.board-status.researched { color: var(--good); }
+.board-status.search_failed { color: var(--signal); }
+.board-fact { margin: 0; }
+.board-certainty { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+  border-radius: 4px; padding: 1px 6px; background: var(--amber-w); color: var(--amber); }
+.board-certainty.disputed { background: var(--signal-w); color: var(--signal); }
+.board-certainty.confirmed { background: var(--good-w); color: var(--good); }
 .el.ground .k { color: var(--ink-3); }
 .el .when {
   font-family: var(--f-mono); font-size: 0.68rem; color: var(--ink-3);

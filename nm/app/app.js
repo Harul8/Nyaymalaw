@@ -2661,6 +2661,112 @@ function showConversationFromStart() {
   $('jump-latest').hidden = t.scrollHeight <= t.clientHeight;
 }
 
+// EACH MATTER'S OWN VIEWS (owner decision, 15 Oct 2026): Conversation, and the Board
+// read from the conversation's saved understanding. Shown once a conversation is
+// saved; Documents and Research notes arrive with items 6 and 7.
+function syncMatterTabs() {
+  const chatId = activeIntent && activeIntent.chatId;
+  $('matter-tabs').hidden = !chatId;
+  if (!chatId) state.matterTab = 'conversation';
+  const tab = state.matterTab || 'conversation';
+  for (const button of $('matter-tabs').querySelectorAll('[data-matter-tab]')) {
+    const on = button.dataset.matterTab === tab;
+    button.classList.toggle('is-on', on);
+    if (on) button.setAttribute('aria-current', 'page');
+    else button.removeAttribute('aria-current');
+  }
+  $('chat-board').hidden = tab !== 'board';
+  $('thread').hidden = tab === 'board';
+}
+
+async function loadChatBoard() {
+  const chatId = activeIntent && activeIntent.chatId;
+  if (!chatId) return;
+  const host = $('chat-board');
+  const generation = (state.boardGeneration = (state.boardGeneration || 0) + 1);
+  host.replaceChildren(stateBlock('building', 'Reading this matter’s board…'));
+  let board;
+  try {
+    board = await api(`/api/chats/${encodeURIComponent(chatId)}/board`);
+  } catch (error) {
+    if (generation !== state.boardGeneration) return;
+    host.replaceChildren(stateBlock('unbuildable', `The board could not be read: ${error.message}. `
+      + 'This is a failure to read, not an empty matter.'));
+    return;
+  }
+  if (generation !== state.boardGeneration || !activeIntent || activeIntent.chatId !== chatId) return;
+  host.replaceChildren(...renderChatBoard(board));
+}
+
+const CERTAINTY = { reported: 'Reported', disputed: 'Disputed', uncertain: 'Uncertain', confirmed: 'Given' };
+const QUESTION_STATUS = { researched: 'researched', search_failed: 'search failed', not_researched: 'not researched' };
+
+// The board as NM understood the matter from the advocate's own words. Nothing on
+// it is presented as established: facts carry the certainty they were given with.
+function renderChatBoard(board) {
+  const make = (tag, className, text) => {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  };
+  const list = (items, className) => {
+    const ul = make('ul', className);
+    for (const item of items) ul.appendChild(make('li', '', item));
+    return ul;
+  };
+  if (!board || board.state !== 'ready') {
+    return [stateBlock('empty', 'Nothing here yet: the board fills once NM has researched a message in this matter.')];
+  }
+  const out = [make('p', 'board-lede', 'As NM understood this matter from your messages. '
+    + 'Facts are as you gave them, not proved.')];
+  const disputes = make('section', 'board-section');
+  disputes.appendChild(make('h3', 'board-h', 'Disputes'));
+  for (const dispute of board.disputes) {
+    const card = make('article', 'board-card');
+    card.appendChild(make('h4', 'board-dispute', dispute.name));
+    if (dispute.between.length) card.appendChild(make('p', 'board-meta', dispute.between.join(' · ')));
+    const questions = make('ul', 'board-questions');
+    for (const question of dispute.questions) {
+      const li = make('li', '', question.question);
+      li.appendChild(make('span', `board-status ${question.status}`,
+        ` · ${QUESTION_STATUS[question.status] || question.status}`));
+      questions.appendChild(li);
+    }
+    card.appendChild(questions);
+    if (dispute.still_needed.length) {
+      card.appendChild(make('p', 'board-label', 'Still needed'));
+      card.appendChild(list(dispute.still_needed, 'board-needed'));
+    }
+    disputes.appendChild(card);
+  }
+  out.push(disputes);
+  if (board.related_points.length) {
+    const related = make('section', 'board-section');
+    related.appendChild(make('h3', 'board-h', 'Related points for your decision'));
+    related.appendChild(list(board.related_points.map((r) => (r.why ? `${r.point} — ${r.why}` : r.point)), 'board-list'));
+    out.push(related);
+  }
+  if (board.facts.length) {
+    const facts = make('section', 'board-section');
+    facts.appendChild(make('h3', 'board-h', 'Facts, as you gave them'));
+    for (const fact of board.facts) {
+      const row = make('p', 'board-fact');
+      row.appendChild(make('span', `board-certainty ${fact.certainty}`, CERTAINTY[fact.certainty] || fact.certainty));
+      row.appendChild(make('span', '', ` ${fact.fact}`));
+      facts.appendChild(row);
+    }
+    out.push(facts);
+  }
+  if (board.instructions.length) {
+    const instructions = make('section', 'board-section');
+    instructions.appendChild(make('h3', 'board-h', 'Your standing instructions'));
+    instructions.appendChild(list(board.instructions, 'board-list'));
+    out.push(instructions);
+  }
+  return out;
+}
+
 // A REPLY ANSWERING SEVERAL DISPUTES (owner decision, 15 Oct 2026): links to each
 // dispute, the first dispute open and every later one collapsed under its heading.
 // The headings are the server's, in the answer's own order; what the advocate opens
@@ -2741,7 +2847,9 @@ function sizeComposer() {
 
 function updateWorkspace() {
   const intakeOpen = !$('intake').hidden && !openingEdit;
-  $('composer').hidden = intakeOpen || $('pane-advise').dataset.view === 'list';
+  syncMatterTabs();
+  $('composer').hidden = intakeOpen || $('pane-advise').dataset.view === 'list'
+    || state.matterTab === 'board';
   $('pane-advise').classList.toggle('empty-chat',
     $('pane-advise').dataset.view === 'opening' && !state.turns.length);
   // F-B-04. The file icon is offered for an open matter, and on a new matter's
@@ -3682,6 +3790,7 @@ $('intake').addEventListener('submit', async (ev) => {
 // the board appears after its details have been read back.
 function startMatter(chatId = null) {
   if (typeof chatId !== 'string') chatId = null;
+  state.matterTab = 'conversation';
   state.workTab = 'home';
   showTab('advise');
   setWorkView('opening');
@@ -3705,6 +3814,13 @@ function startMatter(chatId = null) {
 // F-A-18, F-B-01. Home's one button starts a new matter, under Home.
 $('home-start').addEventListener('click', startMatter);
 $('rail-new').addEventListener('click', startMatter);
+$('matter-tabs').addEventListener('click', (event) => {
+  const button = event.target.closest('[data-matter-tab]');
+  if (!button || button.disabled) return;
+  state.matterTab = button.dataset.matterTab;
+  updateWorkspace();
+  if (state.matterTab === 'board') loadChatBoard();
+});
 
 /* THE GATE RUNS FIRST.
  *

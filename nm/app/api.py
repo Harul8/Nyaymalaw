@@ -23,6 +23,7 @@ from nm.arrive.directory_port import AccountBusy, AuthenticationUnavailable
 from nm.arrive.professional_access import read_professional_status
 from nm.core_engine.conversation import HEADER, ConversationRefused, chat_matter_id
 from nm.core_engine.response_rendering import unit_index
+from nm.core_engine.matter_board import board as matter_board
 from nm.core_engine.turn import CONTRACT as CORE_TURN, LEGACY_CONTRACT as LEGACY_CORE_TURN, saved_rows
 from nm.shared.external_ai_contracts import ModelPermissionRefused
 from nm.shared.clock_contracts import FORUM
@@ -1324,6 +1325,17 @@ def chat(chat_id: str, advocate_id: Advocate, request: Request, response: Respon
     response.headers['Cache-Control'] = 'no-store'
     return {'state': 'ok', 'chat_id': chat_id, 'matter_id': None,
             'matter_version': matter.version, 'turns': turns}
+
+
+@app.get('/api/chats/{chat_id}/board')
+def chat_board(chat_id: str, advocate_id: Advocate, request: Request, response: Response):
+    """The matter board from the conversation's saved understanding (15 Oct 2026)."""
+    _, rows = _read_chat(chat_id, advocate_id, request)
+    board = matter_board(rows)
+    if not _session_current(request, advocate_id):
+        raise HTTPException(401, 'not signed in')
+    response.headers['Cache-Control'] = 'no-store'
+    return {'chat_id': chat_id, **board}
 
 
 def _source_authority_inspection(row, element, selected):
