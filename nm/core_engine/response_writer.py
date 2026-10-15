@@ -9,6 +9,7 @@ dispute each run of units answers) sits beside it and is checked on replay.
 from __future__ import annotations
 
 import json
+import re
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 
@@ -317,6 +318,65 @@ def accept(proposal, context, sources, *, contract=CONTRACT, parts=None):
     if contract == CONTRACT:
         draft["parts"] = _layout(parts, len(units))
     return draft
+
+
+_MONTHS = {name: number for number, names in enumerate((
+    ("January", "Jan"), ("February", "Feb"), ("March", "Mar"), ("April", "Apr"), ("May",), ("June", "Jun"),
+    ("July", "Jul"), ("August", "Aug"), ("September", "Sept", "Sep"), ("October", "Oct"), ("November", "Nov"),
+    ("December", "Dec")), 1) for name in names}
+_MONTH = "|".join(sorted(_MONTHS, key=len, reverse=True))
+_DATE = re.compile(
+    rf"\b(?P<d1>\d{{1,2}})(?:st|nd|rd|th)?(?:\s+day\s+of)?\s+(?P<m1>{_MONTH})\b\.?(?:,?\s+(?P<y1>\d{{4}})\b)?"
+    rf"|\b(?P<m2>{_MONTH})\b\.?\s+(?P<d2>\d{{1,2}})(?:st|nd|rd|th)?(?!\d)(?:,?\s+(?P<y2>\d{{4}})\b)?"
+    r"|\b(?P<y3>\d{4})-(?P<m3>\d{2})-(?P<d3>\d{2})\b"
+    r"|\b(?P<d4>\d{1,2})[./-](?P<m4>\d{1,2})[./-](?P<y4>\d{4})\b")
+
+
+def _dates(text):
+    """Each calendar day a text names, as (day, month, year or None) with its words."""
+    found = []
+    for match in _DATE.finditer(text):
+        groups = match.groupdict()
+        for n in "1234":
+            if groups[f"d{n}"]:
+                month = groups[f"m{n}"]
+                month = _MONTHS[month] if month in _MONTHS else int(month)
+                day, year = int(groups[f"d{n}"]), groups[f"y{n}"]
+                if 1 <= day <= 31 and 1 <= month <= 12:
+                    found.append(((day, month, int(year) if year else None), match.group(0)))
+    return found
+
+
+def _strings(value):
+    if isinstance(value, str):
+        yield value
+    elif isinstance(value, dict):
+        for item in value.values():
+            yield from _strings(item)
+    elif isinstance(value, (list, tuple)):
+        for item in value:
+            yield from _strings(item)
+
+
+def dates_not_given(draft, context, sources, time_limits=None):
+    """Code's check that the answer works out no date itself (owner, 15 Oct 2026): each
+    date a unit states must be in the conversation or documents, a source supplied to
+    the writer, the time limits code worked out, or today. Returns one finding per unit
+    stating a date found nowhere there, for the turn's shared correction."""
+    given = {day for text in _strings([context, sources, time_limits, clock_contracts.setting()["today"]])
+             for day, _ in _dates(text)}
+    days = {(d, m) for d, m, _ in given}
+    findings = []
+    for unit in draft["units"]:
+        stated = [words for (d, m, y), words in _dates(unit["text"])
+                  if not ((d, m, y) in given or (d, m, None) in given if y else (d, m) in days)]
+        if stated:
+            findings.append({"category": "grounding", "unit_ids": [unit["id"]], "sources": [],
+                             "mismatch": "Dates stated here that are not in the advocate's messages or "
+                                         "documents, the sources supplied or the time limits code worked out: "
+                                         + "; ".join(dict.fromkeys(stated)) + ". Do not work out a date "
+                                         "yourself: use one given there, or say the date has not been worked out."})
+    return findings
 
 
 def validate(draft, context, sources):
