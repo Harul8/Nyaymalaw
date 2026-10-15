@@ -29,6 +29,7 @@
     "nm.app.main": "bootstrap",
     "nm.app.model_permission": "bootstrap",
     "nm.app.static_assets": "edge",
+    "nm.app.turn_progress": "domain",
     "nm.arrive": "domain",
     "nm.arrive.account_confirmation_contracts": "domain",
     "nm.arrive.advocate_contracts": "domain",
@@ -189,7 +190,7 @@
     "adapters": 28,
     "bootstrap": 5,
     "core": 61,
-    "domain": 69,
+    "domain": 70,
     "edge": 8,
     "infrastructure": 1,
     "ports": 11
