@@ -198,11 +198,12 @@
       <div data-ai-notice></div>
       <label class="consent" for="reg-external-ai">
         <input type="checkbox" id="reg-external-ai" name="external_ai">
-        <span>I have read this notice and permit the described OpenAI text processing.
-          I am authorised to provide the matter information I choose to submit.</span>
+        <span>I have read this notice and permit OpenAI to process my messages, the
+          documents I add and my voice notes as it describes. I am authorised to provide the
+          matter information I choose to submit.</span>
       </label>
       <p>You can register, open and access your own matters without accepting this.
-        External AI responses require acceptance. Change your choice in Profile → AI data sharing.</p>
+        Research and answers require it. Change your choice in Profile → AI data sharing.</p>
     </section>
 
     <button type="submit" class="primary wide" id="register-go">Register</button>
@@ -959,26 +960,36 @@
   <div id="sessions-action-state" role="status"></div>
   <button type="button" id="sessions-revoke" class="ghost" hidden>End other sessions</button>
 </dialog>
-<template id="openai-text-notice" data-notice-version="openai-text-2026-09-21">
-  <h3>OpenAI processing of matter text</h3>
-  <p>To interpret your instructions, research and prepare responses, Nyaymalaw sends
-    relevant matter text, conversation context and retrieved text excerpts to OpenAI's API.
-    This can include personal and confidential client information. Do not submit material
-    you are not authorised to share, or information subject to a prohibition on disclosure.</p>
-  <p>Processing is global and may occur outside India. India-only processing and zero
-    retention are not promised. OpenAI states that API data is not used for model training
-    by default, unless the API organisation opts in. Default abuse-monitoring logs may be
-    retained for up to 30 days, with exceptions such as legal obligations. Nyaymalaw sends
-    these text requests with response storage disabled; this does not remove abuse-monitoring retention.
-    Account-specific retention arrangements have not been independently verified.</p>
-  <p>This permission excludes raw uploaded files, photos, audio and video, external
-    transcription, embeddings and other providers. Any future expansion needs a new notice
-    and permission. You remain responsible for checking client authority and confidentiality obligations.</p>
-  <p>Withdraw in Profile → AI data sharing. Withdrawal blocks subsequent dispatches,
-    including retries, but cannot recall a request already sent or itself delete data
-    retained by a provider. Your account and matters remain accessible.</p>
+<!-- THE OPENAI NOTICE, accepted once: at registration or in Profile → AI data sharing
+     (owner decisions, 21 September and 15 October 2026). Its own tick-box, apart from
+     the privacy notice, so the consent is specific and informed (DPDP Act, 2023).
+     data-notice-version must equal NOTICE_VERSION in nm/shared/external_ai_contracts.py. -->
+<template id="openai-text-notice" data-notice-version="openai-2026-10-15">
+  <h3>OpenAI processing of your matters</h3>
+  <p>To understand your instructions, research the law and prepare answers, Nyaymalaw sends
+    to OpenAI's API: your messages and the conversation; the text of documents you add,
+    including the words read from scanned pages; the audio of voice notes you record, to
+    transcribe them; and the legal passages retrieved for your questions. This can include
+    personal and confidential client information. Do not submit material you are not
+    authorised to share, or information subject to a prohibition on disclosure.</p>
+  <p>This permission is for that purpose only. Photos you keep as evidence, video,
+    embeddings and other providers are not covered; any other use needs a new notice and
+    your permission. You remain responsible for checking client authority and
+    confidentiality obligations.</p>
+  <p>Processing is global and may occur outside India; India-only processing and zero
+    retention are not promised. OpenAI states that data sent through its API is not used
+    to train its models unless the sending organisation opts in. OpenAI keeps
+    abuse-monitoring logs, which can include what was sent and returned, for up to 30 days,
+    or longer where the law requires. Nyaymalaw sends requests with response storage turned
+    off where the API offers it; this does not remove that retention. Account-specific
+    retention arrangements have not been independently verified.</p>
+  <p>Giving this permission is your choice and is asked for once, separately from the
+    privacy notice. Without it you can still register and open your matters, but Nyaymalaw
+    cannot research or answer. Withdraw at any time in Profile → AI data sharing;
+    withdrawal stops later requests, including retries, but cannot recall a request already
+    sent or delete what a provider has retained.</p>
   <p><a href="https://developers.openai.com/api/docs/guides/your-data" target="_blank"
-    rel="noopener noreferrer">OpenAI API data controls</a> · Notice dated 21 September 2026.
+    rel="noopener noreferrer">OpenAI API data controls</a> · Notice dated 15 October 2026.
     This acceptance is not a professional or legal-compliance certification.</p>
 </template>
 <dialog id="ai-sharing-dialog" class="account-dialog" aria-labelledby="ai-sharing-title">
@@ -988,9 +999,9 @@
   <p id="ai-sharing-status" role="status" aria-live="polite"></p>
   <label class="consent" for="ai-sharing-accept">
     <input type="checkbox" id="ai-sharing-accept">
-    <span>I permit the described OpenAI text processing and am authorised to share the information I submit.</span>
+    <span>I permit OpenAI to process my messages, documents and voice notes as described, and am authorised to share the information I submit.</span>
   </label>
-  <button type="button" id="ai-sharing-save" class="primary" disabled>Enable OpenAI text processing</button>
+  <button type="button" id="ai-sharing-save" class="primary" disabled>Enable OpenAI processing</button>
   <button type="button" id="ai-sharing-withdraw" class="ghost" disabled>Withdraw permission</button>
 </dialog>
 <dialog id="advocate-preferences-dialog" class="account-dialog" aria-labelledby="advocate-preferences-title">

@@ -3667,8 +3667,8 @@ async function openAiSharing() {
     }
     aiPermission = result;
     $('ai-sharing-status').textContent = result.accepted
-      ? 'OpenAI text processing is enabled for your account.'
-      : 'OpenAI text processing is not enabled. Your matters remain accessible.';
+      ? 'OpenAI processing is enabled for your account.'
+      : 'OpenAI processing is not enabled. Your matters remain accessible.';
   } catch (err) {
     if (!err.obsolete && request === aiSharingRequest) $('ai-sharing-status').textContent = err.message;
   }
@@ -3691,7 +3691,7 @@ async function saveAiSharing(accepted) {
     aiPermission = result;
     $('ai-sharing-accept').checked = false;
     $('ai-sharing-status').textContent = result.accepted
-      ? 'Permission recorded for OpenAI text processing.'
+      ? 'Permission recorded for OpenAI processing.'
       : 'Permission withdrawn. Subsequent OpenAI requests are blocked; your matters remain accessible.';
   } catch (err) {
     if (!err.obsolete && request === aiSharingRequest) {

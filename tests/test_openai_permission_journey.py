@@ -41,10 +41,10 @@ def test_existing_account_can_accept_reload_withdraw_and_keep_its_matter(
     assert page.locator("#ai-sharing-save").is_disabled()
     assert "outside India" in page.inner_text("#ai-sharing-dialog")
     assert "30 days" in page.inner_text("#ai-sharing-dialog")
-    assert "excludes raw" in page.inner_text("#ai-sharing-dialog")
+    assert "Photos you keep as evidence" in page.inner_text("#ai-sharing-dialog")
     page.check("#ai-sharing-accept")
     page.click("#ai-sharing-save")
-    page.get_by_text("Permission recorded for OpenAI text processing.", exact=True).wait_for()
+    page.get_by_text("Permission recorded for OpenAI processing.", exact=True).wait_for()
     assert journey["box"].directory.model_permission(journey["advocate"]).accepted
     page.reload()
     page.wait_for_selector("#masthead:not([hidden])")

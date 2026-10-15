@@ -43,7 +43,7 @@ def require_permission(directory, account_id: str, config) -> None:
             "No further request was sent.") from exc
     if permission is None or not permission.permits(account_id, datetime.now(timezone.utc)):
         raise ModelPermissionRefused(
-            "Open AI data sharing in your profile to review and accept OpenAI text processing. "
+            "Open AI data sharing in your profile to review and accept OpenAI processing. "
             "Your workspace and matters remain available.")
     if permission.notice_version != NOTICE_VERSION:
         raise ModelPermissionRefused("Read the current AI data-sharing notice before continuing.")

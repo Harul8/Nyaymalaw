@@ -1,8 +1,11 @@
-"""Attributed permission to process matter text, not legal/compliance clearance.
+"""Attributed permission to send matter material to OpenAI, not legal/compliance clearance.
 
-Owner authorised global OpenAI text processing on 21 September 2026. Each
-advocate must still accept the disclosed purpose. Neither an API key nor an
-editable inventory row supplies that acceptance. Raw media is outside scope.
+Owner authorised global OpenAI text processing on 21 September 2026 and, on 15 October
+2026, extended the notice to the text of documents an advocate adds and the audio of
+voice notes for transcription, accepted once in the registration agreement (or in the
+profile). Each advocate must still accept the disclosed purpose. Neither an API key nor
+an editable inventory row supplies that acceptance. Photos, video, embeddings and other
+providers remain outside scope.
 """
 from __future__ import annotations
 
@@ -11,7 +14,7 @@ from datetime import datetime
 
 from nm.shared.egress_contracts import EgressRefused
 
-NOTICE_VERSION = "openai-text-2026-09-21"
+NOTICE_VERSION = "openai-2026-10-15"
 PURPOSE = "matter_text"
 
 
