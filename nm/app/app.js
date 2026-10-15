@@ -437,6 +437,8 @@ function clearPrivileged() {
   aiPermission = null;
   $('ai-sharing-status').textContent = '';
   $('ai-sharing-accept').checked = false;
+  $('dictation-setting-dialog').close();
+  $('dictation-setting-status').textContent = '';
   $('sessions-body').textContent = '';
   if (activeDelivery) {
     activeDelivery.entry.state = 'unknown';
@@ -4051,8 +4053,13 @@ async function startDictation() {
   $('dictate').setAttribute('aria-pressed', 'true');
   $('dictate').classList.add('recording');
   sayDictation('Listening. Press the mic again to stop.');
-  // F-C-03. The words appear as they are spoken, from the live model, into the
-  // brief box at the caret; the accurate transcription replaces them at the end.
+  // Live words only for an advocate who turned them on (owner decision, 15 Oct 2026);
+  // otherwise the words come back from GPT Transcribe when they stop.
+  let live = false;
+  try {
+    live = (await api('/api/account/dictation')).live === true;
+  } catch { /* the setting unread is the default: no live words */ }
+  if (!live || session !== state.sessionGeneration || dictation.recorder !== recorder) return;
   beginProvisional();
   await openLiveWords(stream, session);
 }
@@ -4621,6 +4628,67 @@ $('ai-sharing-save').addEventListener('click', () => saveAiSharing(true));
 $('ai-sharing-withdraw').addEventListener('click', () => saveAiSharing(false));
 $('ai-sharing-close').addEventListener('click', () => $('ai-sharing-dialog').close());
 $('ai-sharing-dialog').addEventListener('close', () => { ++aiSharingRequest; aiPermission = null; });
+
+// DICTATION (owner decision, 15 Oct 2026): which speech model the microphone uses.
+// GPT Transcribe by default, words when you stop; live words while speaking (GPT Live
+// Transcribe) only for an advocate who turns them on here.
+let dictationSetting = null;
+let dictationSettingRequest = 0;
+function syncDictationSetting() {
+  $('dictation-setting-save').disabled = !dictationSetting
+    || $('dictation-live').checked === dictationSetting.live;
+}
+function showDictationSetting(setting) {
+  dictationSetting = setting;
+  $('dictation-standard').checked = !setting.live;
+  $('dictation-live').checked = setting.live === true;
+  const price = (rate) => (rate ? `$${rate} a minute.` : '');
+  $('dictation-standard-price').textContent = price(setting.per_minute?.standard);
+  $('dictation-live-price').textContent = price(setting.per_minute?.live);
+}
+async function openDictationSetting() {
+  setAccountMenu(false);
+  const request = ++dictationSettingRequest;
+  dictationSetting = null;
+  $('dictation-setting-status').textContent = 'Checking your setting…';
+  syncDictationSetting();
+  if (!$('dictation-setting-dialog').open) $('dictation-setting-dialog').showModal();
+  try {
+    const setting = await api('/api/account/dictation');
+    if (request !== dictationSettingRequest) return;
+    showDictationSetting(setting);
+    $('dictation-setting-status').textContent = '';
+  } catch (err) {
+    if (!err.obsolete && request === dictationSettingRequest) $('dictation-setting-status').textContent = err.message;
+  }
+  if (request === dictationSettingRequest) syncDictationSetting();
+}
+async function saveDictationSetting() {
+  if (!dictationSetting) return;
+  const request = ++dictationSettingRequest;
+  const body = JSON.stringify({ live: $('dictation-live').checked, expected_version: dictationSetting.version });
+  dictationSetting = null;
+  syncDictationSetting();
+  $('dictation-setting-status').textContent = 'Saving…';
+  try {
+    const setting = await api('/api/account/dictation', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body });
+    if (request !== dictationSettingRequest) return;
+    showDictationSetting(setting);
+    $('dictation-setting-status').textContent = setting.live
+      ? 'Saved. Your words will appear as you speak.' : 'Saved. Your words will appear when you stop.';
+  } catch (err) {
+    if (!err.obsolete && request === dictationSettingRequest) {
+      $('dictation-setting-status').textContent = `Not saved. ${err.message}`;
+    }
+  }
+  if (request === dictationSettingRequest) syncDictationSetting();
+}
+$('dictation-setting').addEventListener('click', openDictationSetting);
+for (const id of ['dictation-standard', 'dictation-live']) $(id).addEventListener('change', syncDictationSetting);
+$('dictation-setting-save').addEventListener('click', saveDictationSetting);
+$('dictation-setting-close').addEventListener('click', () => $('dictation-setting-dialog').close());
+$('dictation-setting-dialog').addEventListener('close', () => { ++dictationSettingRequest; dictationSetting = null; });
 boot();
 
 /* ============================== THE TABS ==============================

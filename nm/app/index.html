@@ -323,6 +323,7 @@
                control has to be reachable from the one they are holding. -->
           <button id="devices" type="button" class="ghost">Signed-in devices</button>
           <button id="ai-sharing" type="button" class="ghost">AI data sharing</button>
+          <button id="dictation-setting" type="button" class="ghost">Dictation</button>
           <button id="advocate-preferences" type="button" class="ghost" hidden>Advice preferences</button>
           <button id="signout" type="button" class="ghost">Sign out</button>
         </div>
@@ -1023,6 +1024,28 @@
   </label>
   <button type="button" id="ai-sharing-save" class="primary" disabled>Enable OpenAI processing</button>
   <button type="button" id="ai-sharing-withdraw" class="ghost" disabled>Withdraw permission</button>
+</dialog>
+<!-- DICTATION (owner decision, 15 Oct 2026): gpt-transcribe by default; live words
+     while speaking (gpt-live-transcribe) only for an advocate who turns them on here. -->
+<dialog id="dictation-setting-dialog" class="account-dialog" aria-labelledby="dictation-setting-title">
+  <div class="dialog-heading"><h2 id="dictation-setting-title">Dictation</h2>
+    <button type="button" id="dictation-setting-close" class="ghost">Close</button></div>
+  <p>How your words come back when you dictate a message with the microphone.</p>
+  <fieldset class="dictation-choices">
+    <legend class="quiet">Speech model</legend>
+    <label class="consent" for="dictation-standard">
+      <input type="radio" name="dictation-model" id="dictation-standard" value="standard">
+      <span><strong>GPT Transcribe</strong> (default): the words appear when you stop speaking.
+        <span class="quiet" id="dictation-standard-price"></span></span>
+    </label>
+    <label class="consent" for="dictation-live">
+      <input type="radio" name="dictation-model" id="dictation-live" value="live">
+      <span><strong>GPT Live Transcribe</strong>: the words appear as you speak. Your voice is streamed
+        to OpenAI while you speak. <span class="quiet" id="dictation-live-price"></span></span>
+    </label>
+  </fieldset>
+  <p id="dictation-setting-status" role="status" aria-live="polite"></p>
+  <button type="button" id="dictation-setting-save" class="primary" disabled>Save</button>
 </dialog>
 <dialog id="advocate-preferences-dialog" class="account-dialog" aria-labelledby="advocate-preferences-title">
   <div class="dialog-heading"><h2 id="advocate-preferences-title">Your advice preferences</h2>

@@ -898,6 +898,59 @@ class FileDirectory:
         finally:
             claim.release()
 
+    # ----------------------------------------- dictation setting ---
+    # Owner decision, 15 Oct 2026: dictation uses gpt-transcribe; live words while
+    # speaking (gpt-live-transcribe) only for an advocate who turns them on.
+    def _dictation(self, doc: dict) -> dict:
+        if "dictation" not in doc:
+            return {"live": False, "version": 0, "recorded_at": None}
+        record = json.loads(self._cipher.decrypt(doc["dictation"].encode("ascii")).decode("utf8"))
+        if (not isinstance(record, dict) or set(record) != {"schema", "live", "version", "recorded_at"}
+                or record["schema"] != 1 or type(record["live"]) is not bool
+                or type(record["version"]) is not int or record["version"] < 1
+                or not isinstance(record["recorded_at"], str)):
+            raise ValueError("dictation setting is unreadable")
+        datetime.fromisoformat(record["recorded_at"])
+        return {key: record[key] for key in ("live", "version", "recorded_at")}
+
+    def dictation_setting(self, advocate_id: str) -> dict:
+        try:
+            doc = self._read(advocate_id)
+            if not isinstance(doc, dict):
+                raise ValueError("account is unreadable")
+            return self._dictation(doc)
+        except Exception as exc:  # noqa: BLE001 -- a damaged setting is not the default
+            raise AuthenticationUnavailable("The dictation setting could not be read.") from exc
+
+    def record_dictation_setting(self, advocate_id: str, *, live: bool, expected_version: int,
+                                 now: datetime) -> dict:
+        if (type(live) is not bool or type(expected_version) is not int or expected_version < 0
+                or not isinstance(now, datetime) or now.utcoffset() is None):
+            raise ValueError("a live choice, its observed version and an aware time are required")
+        advocate_id = canonical_id(advocate_id)
+        claim = self._claim_account(advocate_id)
+        if claim is None:
+            raise AccountBusy("Account is being updated. Reopen the dictation setting and retry.")
+        try:
+            try:
+                doc = self._read(advocate_id)
+                if not isinstance(doc, dict):
+                    raise ValueError("account is unreadable")
+                current = self._dictation(doc)
+            except Exception as exc:  # noqa: BLE001 -- a writer may not repair a damaged setting
+                raise AuthenticationUnavailable("The dictation setting could not be read.") from exc
+            if current["version"] != expected_version:
+                raise ValueError("The dictation setting changed. Reopen it and retry.")
+            record = {"schema": 1, "live": live, "version": expected_version + 1, "recorded_at": now.isoformat()}
+            doc["dictation"] = self._cipher.encrypt(json.dumps(record).encode("utf8")).decode("ascii")
+            try:
+                self._replace_advocate(self._advocate_path(advocate_id), doc)
+            except OSError as exc:
+                raise AuthenticationUnavailable("The dictation setting was not saved.") from exc
+            return {key: record[key] for key in ("live", "version", "recorded_at")}
+        finally:
+            claim.release()
+
     # ----------------------------------------- advocate preferences ---
     def _advocate_memory(self, doc: dict, advocate_id: str) -> AdvocateMemory | None:
         from nm.arrive.advocate_memory_codec import MAX_RECORD_BYTES, decode_memory

@@ -98,6 +98,8 @@ class Application:
                                   or self.root / 'legal_database' / 'raw_data' / 'BareActs')
         # Voice notes and dictation (owner decisions, 15 Oct 2026).
         self.transcription_model = (settings.get('NM_TRANSCRIBE_MODEL') or 'gpt-transcribe').strip()
+        # Live words while dictating, only for an advocate who turns them on (owner, 15 Oct 2026).
+        self.live_transcription_model = (settings.get('NM_LIVE_TRANSCRIBE_MODEL') or 'gpt-live-transcribe').strip()
 
     def _model_for(self, advocate_id, *, session_current, page_images=False, audio_model=None):
         if isinstance(self._model_adapter, OpenAIModelAdapter):

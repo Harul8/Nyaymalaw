@@ -456,6 +456,43 @@ def set_model_permission(req: ModelPermissionRequest, advocate_id: Advocate) -> 
     return model_permission(advocate_id)
 
 
+class DictationSettingRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    live: StrictBool
+    expected_version: int = Field(strict=True, ge=0)
+
+
+def _dictation_view(setting: dict) -> dict:
+    from nm.shared.model_config import AUDIO_PRICE_PER_MINUTE
+
+    standard, live = application().transcription_model, application().live_transcription_model
+    return {**setting, "model": live if setting["live"] else standard,
+            "per_minute": {"standard": AUDIO_PRICE_PER_MINUTE.get(standard),
+                           "live": AUDIO_PRICE_PER_MINUTE.get(live)}}
+
+
+@app.get("/api/account/dictation")
+def dictation_setting(advocate_id: Advocate) -> dict:
+    """Which speech model dictation uses: gpt-transcribe unless the advocate turned on
+    live words (owner decision, 15 Oct 2026)."""
+    try:
+        return _dictation_view(application().directory.dictation_setting(advocate_id))
+    except AuthenticationUnavailable as exc:
+        raise HTTPException(503, "The dictation setting could not be read.") from exc
+
+
+@app.post("/api/account/dictation", dependencies=[CsrfProtected])
+def set_dictation_setting(req: DictationSettingRequest, advocate_id: Advocate) -> dict:
+    try:
+        setting = application().directory.record_dictation_setting(
+            advocate_id, live=req.live, expected_version=req.expected_version, now=utcnow())
+    except (ValueError, AccountBusy) as exc:
+        raise HTTPException(409, str(exc)) from exc
+    except AuthenticationUnavailable as exc:
+        raise HTTPException(503, "The dictation setting was not saved.") from exc
+    return _dictation_view(setting)
+
+
 class RegistrationConsent(BaseModel):
     """Two required acknowledgements and a separate optional OpenAI choice.
 

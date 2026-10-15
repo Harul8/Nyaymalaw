@@ -96,6 +96,16 @@ class DirectoryPort(Protocol):
         """Authenticated account's versioned acceptance/withdrawal, never a roster grant."""
         ...
 
+    def dictation_setting(self, advocate_id: str) -> dict:
+        """{'live', 'version', 'recorded_at'}: live words are off unless the advocate
+        turned them on (owner decision, 15 Oct 2026); damaged state raises."""
+        ...
+
+    def record_dictation_setting(self, advocate_id: str, *, live: bool, expected_version: int,
+                                 now: datetime) -> dict:
+        """The advocate's own choice of live words, by account-lock compare-and-set."""
+        ...
+
     def begin_pending_registration(self, enrolment: Enrolment, now: datetime) -> dict:
         """Hold a bounded inactive signup and return the internal mail challenge."""
         ...
