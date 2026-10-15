@@ -362,6 +362,13 @@ class FileMatterStore:
             raise EncryptionNotConfigured("original-byte uploads require the sealed store")
         return SealedUploadStore(self._root, self._sealer)
 
+    def prepare_custody(self, matter_id: str) -> None:
+        """Create a matter's data key once, for material stored before any record
+        (an advocate's document space, 15 Oct 2026); an existing key is kept."""
+        if self._sealer is None:
+            raise EncryptionNotConfigured("sealed material requires the sealed store")
+        self._sealer.matter_key(matter_id)
+
     def document_storage(self):
         """Composition-only derivative factory, using the same per-matter keys."""
         from nm.shared.store_documents import SealedDocumentStore

@@ -58,8 +58,12 @@ class Application:
         _refuse_a_shared_seal(key, settings)
         self._gate = Gatekeeper(policy=egress_policy(self.root), audit=self._egress_audit)
         storage_root = settings.get('NM_MATTER_STORE') or self.root / '.nm'
-        self.store = PolicedPort(inner=store or FileMatterStore(storage_root, key=key),
+        raw_store = store or FileMatterStore(storage_root, key=key)
+        self.store = PolicedPort(inner=raw_store,
             gate=self._gate, port=StorePort, sink=Sink.STORAGE, processor_id=STORAGE_PROCESSOR)
+        # An advocate's documents (owner decisions, 15 Oct 2026): checked by ClamAV,
+        # read on this installation, sealed under the advocate's own key.
+        self.documents = _document_desk(raw_store, Path(storage_root), self._gate, settings)
         self.turn_attempts = PolicedPort(inner=_DeferredAdapter(
             lambda: FileTurnAttempts(Path(storage_root) / 'turn-attempts.sqlite')),
             gate=self._gate, port=TurnAttemptPort, sink=Sink.STORAGE, processor_id=STORAGE_PROCESSOR,
@@ -146,6 +150,30 @@ class Application:
                 'brain': {'engine': 'core_engine', 'state': 'development', 'stages': [
                     'understanding', 'research_planning', 'held_retrieval',
                     'response_writing', 'authority_checks', 'independent_review', 'atomic_release']}}
+
+
+def _document_desk(raw_store, storage_root, gate, settings):
+    """None where the store cannot seal originals (insecure test ciphers, fakes)."""
+    if not all(hasattr(raw_store, name) for name in ('upload_storage', 'document_storage', 'prepare_custody')):
+        return None
+    from nm.app.documents import DocumentDesk
+    from nm.open_matter.clamav_check import ClamAVCheck
+    from nm.open_matter.document_local import LocalDocumentText
+    from nm.open_matter.matter_documents_port import DocumentDerivativePort
+    from nm.open_matter.upload_port import UploadPort
+    from nm.shared.store_file_store import EncryptionNotConfigured
+    try:
+        originals, texts = raw_store.upload_storage(), raw_store.document_storage()
+    except EncryptionNotConfigured:
+        return None
+    return DocumentDesk(prepare_space=raw_store.prepare_custody,
+        originals=PolicedPort(inner=originals, gate=gate, port=UploadPort, sink=Sink.STORAGE,
+                              processor_id=STORAGE_PROCESSOR),
+        texts=PolicedPort(inner=texts, gate=gate, port=DocumentDerivativePort, sink=Sink.STORAGE,
+                          processor_id=STORAGE_PROCESSOR),
+        checker=ClamAVCheck(settings.get('NM_CLAMSCAN'), settings.get('NM_CLAMAV_DATABASE'),
+                            storage_root / 'scan'),
+        reader=LocalDocumentText())
 
 
 class _DeferredAdapter:
