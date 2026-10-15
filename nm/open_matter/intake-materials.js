@@ -82,8 +82,10 @@
     if (dialog.open && kind === 'voice') el('record').focus();
     return opening;
   }
-  $('plus-media').addEventListener('click', () => openFor('media'));
-  $('plus-voice').addEventListener('click', () => openFor('voice'));
+  // Recordings and voice notes are attached to the message and transcribed instead
+  // (owner decisions, 15 Oct 2026; app.js); this window keeps no plus-menu item.
+  $('plus-media')?.addEventListener('click', () => openFor('media'));
+  $('plus-voice')?.addEventListener('click', () => openFor('voice'));
 
   let generation = 0, receiptReadGeneration = 0, token = null, busy = false, active = null;
   let files = [], receipts = [], resumeId = null, adopting = null;

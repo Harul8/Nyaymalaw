@@ -33,6 +33,8 @@ from nm.shared.model_config import (
     token_pricing,
 )
 from nm.shared.model_port import (
+    AUDIO_TYPES,
+    MAX_AUDIO_BYTES,
     ConfigurationError,
     ContentRefused,
     EmbeddingResult,
@@ -47,6 +49,7 @@ from nm.shared.model_port import (
     ToolCallResult,
     ToolDefinition,
     ToolMessage,
+    Transcription,
     Usage,
     on_the_wire,
     require_schema,
@@ -125,6 +128,8 @@ class OpenAIModelAdapter:
         # Page images go only on a route bound for reading an advocate's scanned
         # pages (owner decision, 15 Oct 2026); every other route stays text-only.
         self._page_images = False
+        # Audio goes only on a route bound for transcription, to the model named there.
+        self._audio_model: str | None = None
         if client is not None:
             self._client = client
             return
@@ -163,18 +168,52 @@ class OpenAIModelAdapter:
         self._client = OpenAI(**kwargs)
 
     def for_matter_text(self, before_dispatch: Callable[[], None], *,
-                        page_images: bool = False) -> OpenAIModelAdapter:
+                        page_images: bool = False, audio_model: str | None = None) -> OpenAIModelAdapter:
         """Request-bound authority, shared transport; no shared consent state."""
         bound = OpenAIModelAdapter(self._config, client=self._client, call_budget=self._call_budget)
         bound._before_dispatch = before_dispatch
         bound._page_images = page_images is True
+        bound._audio_model = audio_model if isinstance(audio_model, str) and audio_model.strip() else None
         return bound
 
     def with_call_budget(self, budget: CallBudget | SessionCallBudget) -> OpenAIModelAdapter:
         bound = OpenAIModelAdapter(self._config, client=self._client, call_budget=budget)
         bound._before_dispatch = self._before_dispatch
         bound._page_images = self._page_images
+        bound._audio_model = self._audio_model
         return bound
+
+    def transcribe(self, audio: bytes, *, file_name: str, media_type: str, prompt: str = "") -> Transcription:
+        """Speech to text for an advocate's voice note or dictation (owner decisions,
+        15 Oct 2026). Audio leaves only on a binding made for transcription, under the
+        advocate's permission, which is checked before every attempt.
+
+        Transcription is priced by audio rather than text tokens, so the development
+        call budget does not reserve for it; the receipt carries the provider's usage.
+        """
+        if self._audio_model is None or self._before_dispatch is None:
+            raise ModelPermissionRefused("Audio is sent only to transcribe an advocate's voice note or dictation.")
+        if (not isinstance(audio, bytes) or not 0 < len(audio) <= MAX_AUDIO_BYTES
+                or media_type not in AUDIO_TYPES):
+            raise ValueError("A recording to transcribe is mp3, m4a, wav or webm audio of at most 25 MB")
+        kwargs: dict[str, Any] = {"model": self._audio_model, "file": (file_name, audio, media_type),
+                                  "response_format": "json"}
+        if prompt:
+            kwargs["prompt"] = prompt
+        started = time.perf_counter()
+        response, retries = request_with_retries(
+            lambda: self._client.audio.transcriptions.create(**kwargs), model=self._audio_model,
+            before_dispatch=self._before_dispatch, call_budget=None)
+        text = getattr(response, "text", None)
+        if not isinstance(text, str):
+            raise SchemaViolation("The provider returned no transcript text")
+        usage = getattr(response, "usage", None)
+        usage = usage.model_dump() if hasattr(usage, "model_dump") else dict(usage or {})
+        languages = (getattr(response, "languages", None)
+                     or (getattr(response, "model_extra", None) or {}).get("languages"))
+        return Transcription(text=text, provider=self.provider, model=self._audio_model,
+                             latency_ms=int((time.perf_counter() - started) * 1000), retries=retries,
+                             languages=tuple(str(code) for code in languages or ()), usage=usage)
 
     # ------------------------------------------------------------- port ---
     @property

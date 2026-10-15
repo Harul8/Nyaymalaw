@@ -63,7 +63,7 @@ const chip = (get, index = 0) => get('attachments').children[index];
   await pending;
   assert.equal(requests[0].url, '/api/documents');
   assert.equal(requests[0].options.headers['X-NM-Document-Name'], 'memo.pdf');
-  assert.equal(requests[1].url, `/api/documents/${encodeURIComponent(scanned.document_ref)}/read-scans`);
+  assert.equal(requests[1].url, `/api/documents/${encodeURIComponent(scanned.document_ref)}/read`);
   assert.match(chip(get).textContent, /Read · 2 pages \(1 by AI\) · 1 page partly legible/);
   assert.equal(context.attachmentsBlockSend(), null);
 }

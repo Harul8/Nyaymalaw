@@ -34,15 +34,16 @@ def _where(words, rows):
     said = research._bare(" ".join(row["message"] for row in rows))
     if all(piece in said for piece in pieces):
         return {"from": "advocate"}
-    pages = [(document["name"], page) for row in rows for document in row.get("documents", ())
+    pages = [(document, page) for row in rows for document in row.get("documents", ())
              for page in document["pages"]]
     places = []
     # Each piece of the quotation may sit on its own page, even of another document.
     for piece in pieces:
-        found = next(((name, page) for name, page in pages if piece in research._bare(page["text"])), None)
+        found = next(((document, page) for document, page in pages if piece in research._bare(page["text"])), None)
         if found is None:
             return {"from": "not_found"}
-        place = {"document": found[0], "page": found[1]["number"], "read_by": found[1]["read_by"]}
+        place = {"document": found[0]["name"], "page": found[1]["number"], "read_by": found[1]["read_by"],
+                 **({"recording": True} if found[0].get("recording") else {})}
         if place not in places:
             places.append(place)
     return {"from": "document", "places": places}

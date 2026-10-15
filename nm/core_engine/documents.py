@@ -6,6 +6,9 @@ text and who read it (this installation's reader, or the AI for a scanned page);
 page not read keeps its reason. The material a question receives is the documents
 sent with it, page by page and apart from what the advocate reports. Nothing is cut
 silently: documents too large for one question are refused plainly.
+
+A voice note is received the same way (owner decisions, 15 Oct 2026): its one unit
+is the recording, transcribed by the AI; video is not read.
 """
 from __future__ import annotations
 
@@ -16,11 +19,15 @@ from copy import deepcopy
 
 CONTRACT = "core_document_v1"
 MAX_BYTES = 16 * 1024 * 1024
+#: A recording may be as large as the transcription service takes.
+MAX_AUDIO_BYTES = 25 * 1024 * 1024
+#: Recordings by format, with the media type the transcription service is told.
+AUDIO = {"mp3": "audio/mpeg", "m4a": "audio/mp4", "wav": "audio/wav", "webm": "audio/webm"}
 #: The page text one question may carry from its documents.
 MAX_TURN_CHARACTERS = 400_000
 #: Documents one message can carry.
 MAX_TURN_DOCUMENTS = 10
-FORMATS = ("pdf", "docx", "text", "image")
+FORMATS = ("pdf", "docx", "text", "image", *AUDIO)
 CHECK_STATES = ("clear", "held", "unavailable")
 
 
@@ -36,9 +43,23 @@ def document_name(raw):
     return name
 
 
+def max_bytes(fmt):
+    return MAX_AUDIO_BYTES if fmt in AUDIO else MAX_BYTES
+
+
 def document_format(name, data):
-    """'pdf', 'docx', 'text' or 'image' from the file's own signature, else None."""
+    """'pdf', 'docx', 'text', 'image' or a recording's format from the file's own
+    signature, else None. A video container is not taken as a recording."""
     lowered = (name or "").lower()
+    if data.startswith(b"RIFF") and data[8:12] == b"WAVE":
+        return "wav"
+    if data.startswith(b"ID3") or (len(data) > 1 and data[0] == 0xFF and data[1] & 0xE0 == 0xE0
+                                   and lowered.endswith(".mp3")):
+        return "mp3"
+    if data[4:8] == b"ftyp" and lowered.endswith(".m4a"):
+        return "m4a"
+    if data.startswith(b"\x1aE\xdf\xa3") and lowered.endswith(".webm"):
+        return "webm"
     if data.startswith(b"%PDF-"):
         return "pdf"
     if data.startswith(b"PK\x03\x04") and lowered.endswith(".docx"):
@@ -52,10 +73,6 @@ def document_format(name, data):
             return None
         return "text"
     return None
-
-
-def image_type(data):
-    return "image/png" if data.startswith(b"\x89PNG") else "image/jpeg"
 
 
 def _digest(value):
@@ -82,7 +99,7 @@ def _page(page):
                 or ("note" in page and (not isinstance(page["note"], str) or not page["note"].strip()))):
             raise ValueError("A page the AI read carries the model, its legibility and any note")
     elif (set(page) != {"number", "state", "code", "reason"} or not str(page["reason"]).strip()
-          or page["code"] not in ("scanned", "unreadable", "not_checked")):
+          or page["code"] not in ("scanned", "audio", "unreadable", "not_checked")):
         raise ValueError("An unread page carries why it was not read")
     return page
 
@@ -122,9 +139,10 @@ def checked(record, ref):
 
 
 def needs_transcription(record):
-    """Scanned pages the AI is asked to read (owner decision, 15 Oct 2026)."""
+    """What waits for the AI (owner decisions, 15 Oct 2026): scanned pages to read, or
+    a recording to transcribe."""
     return [page["number"] for page in record["pages"]
-            if page["state"] == "unread" and page["code"] == "scanned"]
+            if page["state"] == "unread" and page["code"] in ("scanned", "audio")]
 
 
 def summary(record):
@@ -141,6 +159,7 @@ def summary(record):
     else:
         state = "read"
     return {"document_ref": reference(record), "name": record["name"], "format": record["format"],
+            "recording": record["format"] in AUDIO,
             "state": state, "check": deepcopy(record["check"]), "pages_total": record["observed_pages"],
             "pages_read": len(read), "pages_read_by_ai": sum(page["read_by"] == "ai" for page in read),
             "pages_partly_legible": sum(page.get("legible") == "part" for page in read),
@@ -166,7 +185,9 @@ def turn_material(records):
         total += sum(len(page["text"]) for page in pages)
         material.append({"document_ref": reference(record), "name": record["name"], "pages": pages,
                          "unread": [{"number": page["number"], "reason": page["reason"]}
-                                    for page in record["pages"] if page["state"] == "unread"]})
+                                    for page in record["pages"] if page["state"] == "unread"],
+                         # Only a recording says so: earlier saved documents keep their shape.
+                         **({"recording": True} if record["format"] in AUDIO else {})})
     if total > MAX_TURN_CHARACTERS:
         raise DocumentRefused("These documents are too long to read for one question "
                               f"({total:,} characters; the limit is {MAX_TURN_CHARACTERS:,}). "
@@ -179,7 +200,9 @@ def checked_material(material):
     if not isinstance(material, list) or not material:
         raise ValueError("A question's documents are a nonempty list")
     for document in material:
-        if (not isinstance(document, dict) or set(document) != {"document_ref", "name", "pages", "unread"}
+        if (not isinstance(document, dict)
+                or set(document) - {"recording"} != {"document_ref", "name", "pages", "unread"}
+                or document.get("recording", True) is not True
                 or not isinstance(document["name"], str) or not document["name"].strip()
                 or not isinstance(document["document_ref"], str) or not document["document_ref"].startswith("doc_")
                 or not isinstance(document["pages"], list) or not isinstance(document["unread"], list)):

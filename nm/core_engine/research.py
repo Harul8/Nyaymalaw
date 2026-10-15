@@ -263,10 +263,14 @@ def conversation_text(context):
             about = row["document"]
             sent = ("with the latest message" if row["turn_id"] == context["latest"]["turn_id"]
                     else "earlier in the conversation")
+            if about.get("recording"):
+                lines.append(f'["{about["name"]}", recording, sent {sent}; transcribed by AI] {row["text"]}')
+                continue
             read = "; read by AI from a scan" if about["read_by"] == "ai" else ""
             lines.append(f'["{about["name"]}", page {about["page"]}, sent {sent}{read}] {row["text"]}')
         for page in context["unread_document_pages"]:
-            lines.append(f'["{page["name"]}", page {page["page"]}: not read ({page["reason"]})]')
+            where = "recording" if page.get("recording") else f'page {page["page"]}'
+            lines.append(f'["{page["name"]}", {where}: not read ({page["reason"]})]')
     if context.get("current_records"):
         lines += ["", "Current records of this matter: "
                   + json.dumps(context["current_records"], ensure_ascii=False)]

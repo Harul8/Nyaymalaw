@@ -48,7 +48,7 @@ def scanned(desk):
 def test_a_waiting_scanned_page_is_drawn_read_by_the_ai_and_kept_as_a_new_record(desk):
     first = scanned(desk)
     model = PageModel({2: {"text": "Notice dated 3 October 2026 [signature]", "readable": "all", "note": ""}})
-    renewed, calls = desk.read_scans(ADVOCATE, documents.reference(first), model)
+    renewed, calls = desk.read_waiting(ADVOCATE, documents.reference(first), model)
     prompt, = model.prompts
     assert prompt.operation == page_reading.OPERATION and prompt.system == page_reading.SYSTEM
     assert '"memo.pdf"' in prompt.user and prompt.user.startswith("Page 2 ")
@@ -72,7 +72,7 @@ def test_a_photographed_page_is_read_the_same_way(desk):
     record = desk.receive(ADVOCATE, "notice.png", photo.getvalue())
     assert documents.summary(record)["waiting_for_ai"] == 1
     model = PageModel({1: {"text": "Legal notice", "readable": "part", "note": "lower edge cut off"}})
-    renewed, _ = desk.read_scans(ADVOCATE, documents.reference(record), model)
+    renewed, _ = desk.read_waiting(ADVOCATE, documents.reference(record), model)
     assert renewed["pages"] == [{"number": 1, "state": "read", "text": "Legal notice", "read_by": "ai",
                                  "model": "page-model-1", "legible": "part", "note": "lower edge cut off"}]
     assert documents.summary(renewed)["pages_partly_legible"] == 1
@@ -84,7 +84,7 @@ def test_a_photographed_page_is_read_the_same_way(desk):
     (ProviderUnavailable("down"), "scanned"),
 ])
 def test_a_page_the_ai_could_not_read_stays_unread_with_its_reason(desk, answer, code):
-    renewed, _ = desk.read_scans(ADVOCATE, documents.reference(scanned(desk)), PageModel({2: answer}))
+    renewed, _ = desk.read_waiting(ADVOCATE, documents.reference(scanned(desk)), PageModel({2: answer}))
     page = renewed["pages"][1]
     assert page["state"] == "unread" and page["code"] == code and page["reason"]
     # A provider failure leaves the page waiting to be read again; the others do not.
@@ -95,7 +95,7 @@ def test_without_permission_nothing_is_read_or_stored(desk, tmp_path):
     first = scanned(desk)
     before = sorted(p.name for p in tmp_path.rglob("*.nm"))
     with pytest.raises(ModelPermissionRefused):
-        desk.read_scans(ADVOCATE, documents.reference(first), PageModel({2: ModelPermissionRefused("no")}))
+        desk.read_waiting(ADVOCATE, documents.reference(first), PageModel({2: ModelPermissionRefused("no")}))
     assert sorted(p.name for p in tmp_path.rglob("*.nm")) == before
 
 
@@ -103,14 +103,14 @@ def test_another_advocate_cannot_have_the_pages_read(desk):
     ref = documents.reference(scanned(desk))
     model = PageModel({})
     with pytest.raises(DocumentRefused):
-        desk.read_scans(OTHER, ref, model)
+        desk.read_waiting(OTHER, ref, model)
     assert model.prompts == []
 
 
 def test_nothing_waiting_means_no_call(desk):
     record = desk.receive(ADVOCATE, "note.txt", b"words")
     model = PageModel({})
-    assert desk.read_scans(ADVOCATE, documents.reference(record), model) == (record, [])
+    assert desk.read_waiting(ADVOCATE, documents.reference(record), model) == (record, [])
     assert model.prompts == []
 
 

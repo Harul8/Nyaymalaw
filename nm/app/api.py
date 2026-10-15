@@ -26,11 +26,12 @@ from nm.arrive.directory_port import AccountBusy, AuthenticationUnavailable
 from nm.arrive.professional_access import read_professional_status
 from nm.core_engine.conversation import HEADER, ConversationRefused, chat_matter_id
 from nm.core_engine import documents as document_rules
-from nm.core_engine import research_note
+from nm.core_engine import research_note, voice
 from nm.core_engine.response_rendering import unit_index
 from nm.core_engine.matter_board import board as matter_board
 from nm.core_engine.turn import CONTRACT as CORE_TURN, LEGACY_CONTRACT as LEGACY_CORE_TURN, saved_rows
 from nm.shared.external_ai_contracts import ModelPermissionRefused
+from nm.shared.model_port import ModelError
 from nm.shared.clock_contracts import FORUM
 from nm.shared.identity_contracts import source_fingerprint
 from nm.shared.traceability_contracts import implements
@@ -1344,7 +1345,7 @@ def chat(chat_id: str, advocate_id: Advocate, request: Request, response: Respon
 def _sent_document(document):
     """What a message shows about a document sent with it, without page text."""
     return {'document_ref': document['document_ref'], 'name': document['name'],
-            'pages_read': len(document['pages']),
+            'recording': bool(document.get('recording')), 'pages_read': len(document['pages']),
             'pages_read_by_ai': sum(page['read_by'] == 'ai' for page in document['pages']),
             'pages_unread': len(document['unread'])}
 
@@ -1420,7 +1421,7 @@ def _document_desk():
     return desk
 
 
-_TOO_LARGE = {'why': 'A document can be at most 16 MB.', 'code': 'document_too_large'}
+_TOO_LARGE = {'why': 'A document can be at most 16 MB, and a recording 25 MB.', 'code': 'document_too_large'}
 
 
 @app.post('/api/documents', dependencies=[CsrfProtected], status_code=201)
@@ -1429,12 +1430,12 @@ async def receive_document(advocate_id: Advocate, request: Request):
     decisions, 15 Oct 2026): checked for malware, read where it can be, and sealed in
     the advocate's own space. The body is read only up to the size limit."""
     declared = request.headers.get('content-length')
-    if declared is not None and (not declared.isdigit() or int(declared) > document_rules.MAX_BYTES):
+    if declared is not None and (not declared.isdigit() or int(declared) > document_rules.MAX_AUDIO_BYTES):
         raise HTTPException(413, _TOO_LARGE)
     data = bytearray()
     async for chunk in request.stream():
         data += chunk
-        if len(data) > document_rules.MAX_BYTES:
+        if len(data) > document_rules.MAX_AUDIO_BYTES:
             raise HTTPException(413, _TOO_LARGE)
     name = unquote(request.headers.get('x-nm-document-name') or '')
     return await run_in_threadpool(_receive_document, advocate_id, request, name, bytes(data))
@@ -1455,17 +1456,17 @@ def _receive_document(advocate_id, request, name, data):
     return document_rules.summary(record)
 
 
-@app.post('/api/documents/{document_ref}/read-scans', dependencies=[CsrfProtected])
-def read_document_scans(document_ref: str, advocate_id: Advocate, request: Request):
-    """The AI reads the document's scanned pages that are waiting (owner decision,
-    15 Oct 2026), under the advocate's AI data-sharing permission; a new record."""
+@app.post('/api/documents/{document_ref}/read', dependencies=[CsrfProtected])
+def read_document_waiting(document_ref: str, advocate_id: Advocate, request: Request):
+    """The AI does what waits (owner decisions, 15 Oct 2026): reads scanned pages or
+    transcribes a recording, under the advocate's AI data-sharing permission; a new record."""
     if not _session_current(request, advocate_id):
         raise HTTPException(401, 'not signed in')
     desk = _document_desk()
     try:
-        model = application().page_reader(
+        model = application().document_reader(
             advocate_id, session_current=lambda: _session_current(request, advocate_id))
-        record, _ = desk.read_scans(advocate_id, document_ref, model)
+        record, _ = desk.read_waiting(advocate_id, document_ref, model)
     except ModelPermissionRefused as exc:
         if not _session_current(request, advocate_id):
             raise HTTPException(401, 'not signed in') from exc
@@ -1478,6 +1479,59 @@ def read_document_scans(document_ref: str, advocate_id: Advocate, request: Reque
     if not _session_current(request, advocate_id):
         raise HTTPException(401, 'not signed in')
     return document_rules.summary(record)
+
+
+@app.get('/api/documents/{document_ref}/recording')
+def document_recording(document_ref: str, advocate_id: Advocate, request: Request):
+    """A voice note's original, for the advocate who sent it to play back."""
+    if not _session_current(request, advocate_id):
+        raise HTTPException(401, 'not signed in')
+    try:
+        data, media_type = _document_desk().recording(advocate_id, document_ref)
+    except document_rules.DocumentRefused as exc:
+        raise HTTPException(404, {'why': str(exc), 'code': 'document_unavailable'}) from exc
+    if not _session_current(request, advocate_id):
+        raise HTTPException(401, 'not signed in')
+    return Response(content=data, media_type=media_type, headers={'Cache-Control': 'no-store'})
+
+
+@app.post('/api/dictation', dependencies=[CsrfProtected])
+async def dictation(advocate_id: Advocate, request: Request):
+    """Dictated words for the message box (owner decisions, 15 Oct 2026): transcribed by
+    the speech model under the advocate's AI permission; the recording is not kept."""
+    declared = request.headers.get('content-length')
+    if declared is not None and (not declared.isdigit() or int(declared) > document_rules.MAX_AUDIO_BYTES):
+        raise HTTPException(413, {'why': 'A dictation can be at most 25 MB.', 'code': 'dictation_too_large'})
+    data = bytearray()
+    async for chunk in request.stream():
+        data += chunk
+        if len(data) > document_rules.MAX_AUDIO_BYTES:
+            raise HTTPException(413, {'why': 'A dictation can be at most 25 MB.', 'code': 'dictation_too_large'})
+    name = unquote(request.headers.get('x-nm-document-name') or '')
+    return await run_in_threadpool(_dictate, advocate_id, request, name, bytes(data))
+
+
+def _dictate(advocate_id, request, name, data):
+    if not _session_current(request, advocate_id):
+        raise HTTPException(401, 'not signed in')
+    fmt = document_rules.document_format(name, data) if data else None
+    if fmt not in document_rules.AUDIO:
+        raise HTTPException(422, {'why': 'The dictation was not a recording that can be transcribed.',
+                                  'code': 'dictation_refused'})
+    try:
+        model = application().dictation_reader(
+            advocate_id, session_current=lambda: _session_current(request, advocate_id))
+        text, _ = voice.dictate(model, data, fmt)
+    except ModelPermissionRefused as exc:
+        if not _session_current(request, advocate_id):
+            raise HTTPException(401, 'not signed in') from exc
+        raise HTTPException(403, {'why': str(exc), 'code': 'model_permission_required'}) from exc
+    except ModelError as exc:
+        raise HTTPException(503, {'why': 'The dictation could not be transcribed just now. Try again.',
+                                  'code': 'dictation_unavailable'}) from exc
+    if not _session_current(request, advocate_id):
+        raise HTTPException(401, 'not signed in')
+    return {'text': text}
 
 
 @app.get('/api/documents/{document_ref}')

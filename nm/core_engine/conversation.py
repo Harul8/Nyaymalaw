@@ -57,6 +57,8 @@ def document_sources(turn_id, documents):
         for page in document["pages"]:
             about = {"name": document["name"], "page": page["number"], "read_by": page["read_by"]}
             about.update({key: page[key] for key in ("legible", "note") if key in page})
+            if document.get("recording"):
+                about["recording"] = True
             rows.append({"source_id": f"{turn_id}:d{index}p{page['number']}", "turn_id": turn_id,
                          "speaker": "document", "record_role": "supplied_document",
                          "text": page["text"], "document": about})
@@ -64,7 +66,8 @@ def document_sources(turn_id, documents):
 
 
 def _unread_pages(turn_id, documents):
-    return [{"turn_id": turn_id, "name": document["name"], "page": page["number"], "reason": page["reason"]}
+    return [{"turn_id": turn_id, "name": document["name"], "page": page["number"], "reason": page["reason"],
+             **({"recording": True} if document.get("recording") else {})}
             for document in documents for page in document["unread"]]
 
 

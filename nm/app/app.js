@@ -2177,7 +2177,9 @@ function noteDocument(doc, note) {
     add(body, 'h3', 'Documents sent with it');
     for (const item of note.documents) {
       const unread = item.pages_unread ? `, ${item.pages_unread} not read` : '';
-      add(body, 'p', `• ${item.name} — ${item.pages_read} page${item.pages_read === 1 ? '' : 's'} read${unread}`);
+      add(body, 'p', item.recording
+        ? `• ${item.name} — recording, ${item.pages_read ? 'transcribed' : 'not transcribed'}`
+        : `• ${item.name} — ${item.pages_read} page${item.pages_read === 1 ? '' : 's'} read${unread}`);
     }
   }
   add(body, 'h2', 'Answer');
@@ -2407,7 +2409,9 @@ function renderTurn(entry) {
       for (const item of entry.documents) {
         const li = document.createElement('li');
         const unread = item.pages_unread ? ` · ${item.pages_unread} not read` : '';
-        li.textContent = `${item.name} · ${item.pages_read} page${item.pages_read === 1 ? '' : 's'} read${unread}`;
+        li.textContent = item.recording
+          ? `${item.name} · recording ${item.pages_read ? 'transcribed' : 'not transcribed'}`
+          : `${item.name} · ${item.pages_read} page${item.pages_read === 1 ? '' : 's'} read${unread}`;
         sent.appendChild(li);
       }
       b.appendChild(sent);
@@ -2936,10 +2940,20 @@ function renderChatDocuments(listing) {
       card.appendChild(make('h4', 'board-dispute', document_.name));
       const preview = turn.message.length > 140 ? `${turn.message.slice(0, 140)}…` : turn.message;
       card.appendChild(make('p', 'board-meta', `Sent with: “${preview}”`));
+      if (document_.recording) {
+        const player = document.createElement('audio');
+        player.controls = true;
+        player.preload = 'none';
+        player.className = 'document-player';
+        player.src = `/api/documents/${encodeURIComponent(document_.document_ref)}/recording`;
+        player.setAttribute('aria-label', `Play ${document_.name}`);
+        card.appendChild(player);
+      }
       for (const page of document_.pages) {
         const details = make('details', 'document-page');
-        let label = `Page ${page.number}`;
-        if (page.read_by === 'ai') {
+        let label = document_.recording ? 'Transcript' : `Page ${page.number}`;
+        if (document_.recording) label += ' · transcribed by AI';
+        else if (page.read_by === 'ai') {
           label += page.legible === 'part' ? ' · read by AI, partly legible' : ' · read by AI';
         }
         details.appendChild(make('summary', '', label));
@@ -2948,7 +2962,8 @@ function renderChatDocuments(listing) {
         card.appendChild(details);
       }
       for (const page of document_.unread) {
-        card.appendChild(make('p', 'document-unread', `Page ${page.number} not read: ${page.reason}`));
+        card.appendChild(make('p', 'document-unread', document_.recording
+          ? `Not transcribed: ${page.reason}` : `Page ${page.number} not read: ${page.reason}`));
       }
       out.push(card);
     }
@@ -3033,8 +3048,9 @@ function renderChatBoard(board) {
       row.appendChild(make('span', '', ` ${fact.fact}`));
       // Where the fact's words appear, as the server found them (15 Oct 2026).
       if (fact.from === 'document' && Array.isArray(fact.places)) {
-        const places = fact.places.map((place) => `${place.document}, page ${place.page}`
-          + (place.read_by === 'ai' ? ' (read by AI)' : ''));
+        const places = fact.places.map((place) => (place.recording
+          ? `${place.document} (recording, transcribed by AI)`
+          : `${place.document}, page ${place.page}` + (place.read_by === 'ai' ? ' (read by AI)' : '')));
         row.appendChild(make('span', 'board-status', ` · from ${places.join('; ')}`));
       }
       facts.appendChild(row);
@@ -3189,7 +3205,7 @@ async function send(message, { workProduct, keepInMatter = false } = {}) {
   const blocked = attachmentsBlockSend();
   if (blocked) { $('attachments-status').textContent = blocked; return; }
   const documents = attachments.map((item) => ({ document_ref: item.summary.document_ref,
-    name: item.summary.name, pages_read: item.summary.pages_read,
+    name: item.summary.name, recording: Boolean(item.summary.recording), pages_read: item.summary.pages_read,
     pages_read_by_ai: item.summary.pages_read_by_ai, pages_unread: item.summary.unread.length }));
   const entry = { brief: message, turnId: newTurnId(), state: 'sending',
     context: activeIntent, documents,
@@ -3509,19 +3525,90 @@ document.addEventListener('keydown', (ev) => {
 });
 
 // DOCUMENTS WITH A MESSAGE (owner decisions, 15 Oct 2026). Each file is sent to the
-// server, checked for malware and read there; scanned pages are then read by the AI
-// under the advocate's AI data-sharing agreement. A message carries only documents
-// that finished; one that was held or failed must be removed before sending. The
-// server owns every state shown here; this only reports it.
+// server, checked for malware and read there; scanned pages are then read, and a
+// recording transcribed, by the AI under the advocate's AI data-sharing agreement. A
+// message carries only documents that finished; one that was held or failed must be
+// removed before sending. The server owns every state shown here; this only reports it.
 const DOCUMENT_MAX_BYTES = 16 * 1024 * 1024;
 let attachments = [];
 
+// VOICE NOTES (owner decisions, 15 Oct 2026). Recordings the transcription service
+// takes go as they are; any other recording this browser can play (WhatsApp .opus or
+// .ogg, AAC, FLAC and the like) is converted here to plain WAV, in parts of at most ten
+// minutes. Video is not read.
+const AUDIO_MAX_BYTES = 25 * 1024 * 1024;
+const NATIVE_AUDIO = ['mp3', 'm4a', 'wav', 'webm'];
+const AUDIO_NAME = /\.(mp3|m4a|wav|webm|ogg|oga|opus|aac|flac|amr|3gp|mpga|wma)$/i;
+const VIDEO_NAME = /\.(mp4|mov|m4v|avi|mkv|wmv)$/i;
+const PART_SECONDS = 600;
+const VOICE_NOTE_LIMIT_MS = 10 * 60 * 1000;
+
+function extensionOf(name) {
+  const found = /\.([^.]+)$/.exec(name || '');
+  return found ? found[1].toLowerCase() : '';
+}
+
+function isRecording(file) {
+  return (file.type || '').startsWith('audio/') || AUDIO_NAME.test(file.name);
+}
+
+function wavBlob(samples, rate) {
+  const view = new DataView(new ArrayBuffer(44 + samples.length * 2));
+  const write = (offset, text) => { for (let i = 0; i < text.length; i += 1) view.setUint8(offset + i, text.charCodeAt(i)); };
+  write(0, 'RIFF'); view.setUint32(4, 36 + samples.length * 2, true); write(8, 'WAVE'); write(12, 'fmt ');
+  view.setUint32(16, 16, true); view.setUint16(20, 1, true); view.setUint16(22, 1, true);
+  view.setUint32(24, rate, true); view.setUint32(28, rate * 2, true); view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true); write(36, 'data'); view.setUint32(40, samples.length * 2, true);
+  for (let i = 0; i < samples.length; i += 1) {
+    const value = Math.max(-1, Math.min(1, samples[i]));
+    view.setInt16(44 + i * 2, value < 0 ? value * 0x8000 : value * 0x7fff, true);
+  }
+  return new Blob([view.buffer], { type: 'audio/wav' });
+}
+
+// The recording as 16 kHz mono WAV parts, decoded by this browser; nothing leaves it here.
+async function wavParts(file) {
+  const Playing = window.AudioContext || window.webkitAudioContext;
+  const player = new Playing();
+  let decoded;
+  try {
+    decoded = await player.decodeAudioData(await file.arrayBuffer());
+  } finally {
+    player.close();
+  }
+  const rate = 16000;
+  const mixer = new OfflineAudioContext(1, Math.max(1, Math.ceil(decoded.duration * rate)), rate);
+  const source = mixer.createBufferSource();
+  source.buffer = decoded;
+  source.connect(mixer.destination);
+  source.start();
+  const samples = (await mixer.startRendering()).getChannelData(0);
+  const parts = [];
+  for (let start = 0; start < samples.length; start += PART_SECONDS * rate) {
+    parts.push(wavBlob(samples.subarray(start, start + PART_SECONDS * rate), rate));
+  }
+  return parts;
+}
+
 function documentStatus(item) {
+  if (item.status === 'recording') {
+    const seconds = Math.floor((Date.now() - item.started) / 1000);
+    return `Recording ${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')} — press Stop when done`;
+  }
+  if (item.status === 'converting') return 'Converting the recording in this browser…';
   if (item.status === 'uploading') return 'Checking for malware and reading…';
-  if (item.status === 'reading_scans') return 'Reading scanned pages with AI…';
+  if (item.status === 'reading_scans') {
+    return item.summary && item.summary.recording ? 'Transcribing the recording with AI…'
+      : 'Reading scanned pages with AI…';
+  }
   if (item.status === 'failed') return `Not attached: ${item.note}`;
   const summary = item.summary;
   if (item.status === 'held') return `Held, not read: ${summary.check.reason}`;
+  if (summary.recording) {
+    const text = summary.pages_read ? 'Transcribed by AI'
+      : `Not transcribed: ${(summary.unread[0] && summary.unread[0].reason) || 'unknown reason'}`;
+    return item.note ? `${text}. ${item.note}` : text;
+  }
   const pages = (count) => `${count} page${count === 1 ? '' : 's'}`;
   let text = summary.state === 'not_read' ? 'No page could be read'
     : summary.state === 'partly_read' && summary.pages_total
@@ -3544,22 +3631,65 @@ function renderAttachments() {
     const status = document.createElement('span');
     status.className = 'attachment-status';
     status.textContent = documentStatus(item);
+    chip.append(name, status);
+    if (item.status === 'recording') {
+      const stop = document.createElement('button');
+      stop.type = 'button';
+      stop.className = 'ghost attachment-stop';
+      stop.textContent = 'Stop';
+      stop.setAttribute('aria-label', 'Stop recording the voice note and attach it');
+      stop.addEventListener('click', () => stopVoiceNote());
+      chip.appendChild(stop);
+    }
     const remove = document.createElement('button');
     remove.type = 'button';
     remove.className = 'ghost attachment-remove';
     remove.textContent = '×';
-    remove.setAttribute('aria-label', `Remove ${item.name} from this message`);
+    remove.setAttribute('aria-label', item.status === 'recording'
+      ? 'Discard this voice note recording' : `Remove ${item.name} from this message`);
     remove.addEventListener('click', () => {
+      if (item.status === 'recording') stopVoiceNote({ discard: true });
       attachments = attachments.filter((other) => other !== item);
       renderAttachments();
     });
-    chip.append(name, status, remove);
+    chip.appendChild(remove);
     return chip;
   }));
   if (!attachments.length) $('attachments-status').textContent = '';
 }
 
 async function attachFile(file) {
+  if ((file.type || '').startsWith('video/') || VIDEO_NAME.test(file.name)) {
+    attachments.push({ name: file.name, status: 'failed', summary: null,
+      note: 'video is not read; send the recording as audio (MP3, M4A, WAV, OGG or OPUS)' });
+    renderAttachments();
+    return;
+  }
+  if (!isRecording(file) || (NATIVE_AUDIO.includes(extensionOf(file.name)) && file.size <= AUDIO_MAX_BYTES)) {
+    await uploadAttachment(file);
+    return;
+  }
+  const item = { name: file.name, status: 'converting', summary: null, note: '' };
+  attachments.push(item);
+  renderAttachments();
+  let parts;
+  try {
+    parts = await wavParts(file);
+  } catch {
+    item.status = 'failed';
+    item.note = 'this browser could not play this recording; save it as MP3 or M4A and attach it again';
+    renderAttachments();
+    return;
+  }
+  if (!attachments.includes(item)) return;
+  attachments = attachments.filter((other) => other !== item);
+  renderAttachments();
+  await Promise.all(parts.map((part, index) => uploadAttachment(new File([part],
+    parts.length === 1 ? `${file.name}.wav` : `${file.name} (part ${index + 1} of ${parts.length}).wav`,
+    { type: 'audio/wav' }))));
+}
+
+async function uploadAttachment(file) {
   const item = { name: file.name, status: 'uploading', summary: null, note: '' };
   attachments.push(item);
   renderAttachments();
@@ -3568,7 +3698,10 @@ async function attachFile(file) {
     item.note = note;
     if (attachments.includes(item)) renderAttachments();
   };
-  if (file.size > DOCUMENT_MAX_BYTES) return settle('failed', 'a document can be at most 16 MB');
+  const limit = isRecording(file) ? AUDIO_MAX_BYTES : DOCUMENT_MAX_BYTES;
+  if (file.size > limit) {
+    return settle('failed', isRecording(file) ? 'a recording can be at most 25 MB' : 'a document can be at most 16 MB');
+  }
   try {
     item.summary = await api('/api/documents', {
       method: 'POST', body: file,
@@ -3580,21 +3713,79 @@ async function attachFile(file) {
   }
   if (item.summary.state !== 'held' && item.summary.waiting_for_ai > 0 && attachments.includes(item)) {
     settle('reading_scans');
+    const what = item.summary.recording ? 'The recording was not transcribed' : 'Scanned pages were not read';
     try {
       item.summary = await api(
-        `/api/documents/${encodeURIComponent(item.summary.document_ref)}/read-scans`, { method: 'POST' });
+        `/api/documents/${encodeURIComponent(item.summary.document_ref)}/read`, { method: 'POST' });
     } catch (error) {
       item.note = error.status === 403
-        ? 'Scanned pages were not read: accept AI data sharing in your profile to have them read.'
-        : `Scanned pages were not read: ${error.message}`;
+        ? `${what}: accept AI data sharing in your profile to allow it.`
+        : `${what}: ${error.message}`;
     }
   }
   settle(item.summary.state === 'held' ? 'held' : 'ready');
 }
 
+// RECORD A VOICE NOTE: the microphone starts and stops only when the advocate presses.
+const voiceNote = { recorder: null, stream: null, chunks: [], item: null, timer: null, ticker: null };
+
+async function startVoiceNote() {
+  if (voiceNote.recorder || (typeof dictation !== 'undefined' && dictation.recorder)) return;
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) {
+    $('attachments-status').textContent = 'This browser cannot record audio. Attach a recording instead.';
+    return;
+  }
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch {
+    $('attachments-status').textContent = 'The microphone is unavailable or permission was declined. Nothing was recorded.';
+    return;
+  }
+  const mime = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'].find((type) => MediaRecorder.isTypeSupported(type));
+  const recorder = new MediaRecorder(stream, mime ? { mimeType: mime } : {});
+  const item = { name: 'Voice note', status: 'recording', summary: null, note: '', started: Date.now() };
+  Object.assign(voiceNote, { recorder, stream, chunks: [], item });
+  recorder.addEventListener('dataavailable', (event) => { if (event.data.size) voiceNote.chunks.push(event.data); });
+  recorder.addEventListener('stop', () => {
+    const type = (recorder.mimeType || 'audio/webm').split(';')[0];
+    const blob = new Blob(voiceNote.chunks, { type });
+    clearTimeout(voiceNote.timer);
+    clearInterval(voiceNote.ticker);
+    voiceNote.stream.getTracks().forEach((track) => track.stop());
+    attachments = attachments.filter((other) => other !== item);
+    Object.assign(voiceNote, { recorder: null, stream: null, chunks: [], item: null, timer: null, ticker: null });
+    renderAttachments();
+    if (recorder.discard || !blob.size) return;
+    const when = new Date();
+    const stamp = `${when.getFullYear()}-${String(when.getMonth() + 1).padStart(2, '0')}-`
+      + `${String(when.getDate()).padStart(2, '0')} ${String(when.getHours()).padStart(2, '0')}`
+      + `${String(when.getMinutes()).padStart(2, '0')}`;
+    attachFile(new File([blob], `Voice note ${stamp}.${type === 'audio/mp4' ? 'm4a' : 'webm'}`, { type }));
+  });
+  attachments.push(item);
+  recorder.start(1000);
+  voiceNote.ticker = setInterval(() => renderAttachments(), 1000);
+  voiceNote.timer = setTimeout(() => {
+    $('attachments-status').textContent = 'Ten minutes is the limit for one voice note; it was stopped and attached.';
+    stopVoiceNote();
+  }, VOICE_NOTE_LIMIT_MS);
+  renderAttachments();
+}
+
+function stopVoiceNote({ discard = false } = {}) {
+  const recorder = voiceNote.recorder;
+  if (!recorder) return;
+  recorder.discard = discard;
+  if (recorder.state !== 'inactive') recorder.stop();
+}
+
 // Why the message cannot carry its documents yet, or null when it can.
 function attachmentsBlockSend() {
-  if (attachments.some((item) => ['uploading', 'reading_scans'].includes(item.status))) {
+  if (attachments.some((item) => item.status === 'recording')) {
+    return 'Stop the voice note recording before sending.';
+  }
+  if (attachments.some((item) => ['converting', 'uploading', 'reading_scans'].includes(item.status))) {
     return 'Wait until the attached documents have been read.';
   }
   if (attachments.some((item) => ['held', 'failed'].includes(item.status))) {
@@ -3607,6 +3798,10 @@ $('plus-attach').addEventListener('click', () => {
   setPlusMenu(false);
   $('attach-files').click();
 });
+$('plus-record').addEventListener('click', () => {
+  setPlusMenu(false);
+  startVoiceNote();
+});
 $('attach-files').addEventListener('change', () => {
   const files = [...$('attach-files').files];
   $('attach-files').value = '';
@@ -3615,11 +3810,13 @@ $('attach-files').addEventListener('change', () => {
 
 // F-C-02. THE MIC BESIDE THE PLUS: say the brief instead of typing it.
 //
-// Press to start, press again to stop. The recording goes to this
-// installation's own speech model (`/api/dictation`) -- no outside service --
-// and the words come back INTO THE BRIEF BOX, where the advocate reads and
-// corrects them before sending. Nothing is sent by itself, and the recording is
-// not kept: a voice note meant to be kept goes through the plus menu instead.
+// Press to start, press again to stop. The recording is transcribed by the speech
+// model through OpenAI under the advocate's AI agreement (`/api/dictation`; owner
+// decisions, 15 Oct 2026, replacing the earlier on-this-machine model) and the words
+// come back INTO THE BRIEF BOX, where the advocate reads and corrects them before
+// sending. Nothing is sent by itself, and the recording is not kept: a voice note
+// meant to be kept goes through the plus menu instead. Live words (F-C-03) need a
+// live speech service, which this installation does not run at present.
 const DICTATION_LIMIT_MS = 5 * 60 * 1000;
 //: F-C-03. The rate the live speech model is built for. The audio context is
 //: opened at it, so nothing is resampled on the way to the model.
@@ -3744,7 +3941,7 @@ async function openLiveWords(stream, session) {
     if (typeof heard.words === 'string') showLiveWords(heard.words);
   });
   socket.addEventListener('error', () => {
-    sayDictation('Listening. The live words stopped, so they will appear when you stop.');
+    sayDictation('Listening. The words will appear when you stop.');
   });
 }
 
@@ -3757,7 +3954,7 @@ function stopDictation({ discard = false } = {}) {
 }
 
 async function startDictation() {
-  if (dictation.recorder || dictation.busy || !state.advocate) return;
+  if (dictation.recorder || dictation.busy || !state.advocate || voiceNote.recorder) return;
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) {
     sayDictation('Dictation needs a browser that can record audio. Type the brief instead.');
     return;
@@ -3814,9 +4011,10 @@ async function transcribeDictation(blob, session) {
   $('dictate').disabled = true;
   sayDictation('Turning your words into text…');
   try {
+    const type = blob.type.split(';')[0] || 'audio/webm';
     const heard = await api('/api/dictation', {
       method: 'POST',
-      headers: { 'content-type': blob.type.split(';')[0] || 'audio/webm' },
+      headers: { 'content-type': type, 'X-NM-Document-Name': `dictation.${type === 'audio/mp4' ? 'm4a' : 'webm'}` },
       body: blob,
     });
     if (session !== state.sessionGeneration) return;
@@ -3830,9 +4028,7 @@ async function transcribeDictation(blob, session) {
     // inserted at the caret when those are no longer ours to replace.
     if (!replaceProvisional(words)) insertIntoBrief(words);
     dictation.ours = false;
-    sayDictation(heard.device === 'cpu'
-      ? 'Added to your brief; check it before sending. (Transcribed without the graphics card, so it was slower.)'
-      : 'Added to your brief; check it before sending.');
+    sayDictation('Added to your brief; check it before sending.');
   } catch (e) {
     if (e.obsolete || session !== state.sessionGeneration) return;
     sayDictation(`Your words were not added: ${e.message}`);

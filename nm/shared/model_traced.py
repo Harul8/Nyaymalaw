@@ -265,6 +265,11 @@ class TracedModel:
         return self._traced("structured", read_name(schema), prompt, tier,
                             run, schema=schema)
 
+    def transcribe(self, audio: bytes, **request):
+        """NOT TRACED: a recording is not text a trace can keep, and the transcript is
+        kept by its own record, with the call's receipt."""
+        return self.inner.transcribe(audio, **request)
+
     def embed(self, texts: tuple[str, ...]) -> EmbeddingResult:
         """NOT TRACED, and that is a decision rather than an omission.
 

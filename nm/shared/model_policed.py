@@ -146,6 +146,12 @@ class PolicedModel:
         return self.inner.tool_call(prompt, tools, tier, messages=messages,
                                     max_tokens=max_tokens)
 
+    def transcribe(self, audio: bytes, **request):
+        """A recording leaves for transcription (owner decisions, 15 Oct 2026): policed
+        and measured like any other client material."""
+        self._permit(len(audio) if isinstance(audio, bytes) else 0)
+        return self.inner.transcribe(audio, **request)
+
     def embed(self, texts: tuple[str, ...]):
         """POLICED, THOUGH `TracedModel` DELIBERATELY DOES NOT TRACE IT.
 

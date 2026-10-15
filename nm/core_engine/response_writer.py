@@ -74,7 +74,8 @@ Pages of documents the advocate sent arrive in original_context.documents, each 
 the document's name and page, with any pages that could not be read. A page says what
 its document says: cite it for that, keep it apart from the advocate's own account, and
 treat it as neither proved nor law. A page the AI read from a scan may hold [illegible]
-marks; say what could not be read where it matters.
+marks; say what could not be read where it matters. A voice note arrives the same way,
+as its recording's transcript made by the AI: what was said, by whoever is speaking.
 3. Read each legal source with its neighbouring context. For judgment passages,
 distinguish a party's submission, quoted contract or authority, the deciding court's
 reasoning and its operative result. Source labels and ranking do not establish those

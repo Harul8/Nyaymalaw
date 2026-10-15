@@ -43,7 +43,7 @@ def note(row, *, prepared_for):
     if not any(element.get("kind") != "HEADING" and element.get("text", "").strip() for element in elements):
         raise NoteUnavailable("This answer has nothing to keep as a research note.")
     documents = row.get("documents") or []
-    pages = {f"{row['turn_id']}:d{index}p{page['number']}": page
+    pages = {f"{row['turn_id']}:d{index}p{page['number']}": (page, bool(document.get("recording")))
              for index, document in enumerate(documents, 1) for page in document["pages"]}
     numbers, sources, blocks, quoted = {}, [], [], set()
     for element in elements:
@@ -56,10 +56,13 @@ def note(row, *, prepared_for):
             key = (source["kind"], title, source.get("locator") or "")
             if key not in numbers:
                 numbers[key] = len(sources) + 1
+                recording = pages.get(source["id"], (None, False))[1]
                 described = ((source.get("qualification") or "").rstrip(".")
-                             if source["kind"] == "judgment" else KINDS.get(source["kind"], source["kind"]))
+                             if source["kind"] == "judgment" else
+                             "Voice note you sent" if recording else KINDS.get(source["kind"], source["kind"]))
                 sources.append({"number": numbers[key], "kind": source["kind"], "title": title,
-                                "locator": key[2], "described": described, "read_by_ai": False, "passages": []})
+                                "locator": key[2], "described": described, "read_by_ai": False,
+                                "recording": recording, "passages": []})
             entry = sources[numbers[key] - 1]
             if source["id"] not in quoted:
                 quoted.add(source["id"])
@@ -68,7 +71,7 @@ def note(row, *, prepared_for):
                 # keep their own line breaks.
                 text = source["text"]
                 entry["passages"].append(" ".join(text.split()) if source["kind"] == "judgment" else text)
-                page = pages.get(source["id"])
+                page = pages.get(source["id"], (None, False))[0]
                 entry["read_by_ai"] |= bool(page and page["read_by"] == "ai")
             if numbers[key] not in refs:
                 refs.append(numbers[key])
@@ -80,7 +83,8 @@ def note(row, *, prepared_for):
     stem = " ".join(words[:8])[:60].strip() or "answer"
     return {"contract": CONTRACT, "title": "Research note", "question": row["message"],
             "documents": [{"name": document["name"], "pages_read": len(document["pages"]),
-                           "pages_unread": len(document["unread"])} for document in documents],
+                           "pages_unread": len(document["unread"]),
+                           "recording": bool(document.get("recording"))} for document in documents],
             "prepared_for": prepared_for, "prepared_at": shown, "blocks": blocks, "sources": sources,
             "provenance": PROVENANCE.format(when=shown),
             "file_name": f"Research note {moment:%Y-%m-%d} - {stem}"}
@@ -112,7 +116,8 @@ def _source_heading(source):
     if source["kind"] == "judgment" and locator.isdecimal():
         locator = f"para {locator}"
     name = " · ".join(part for part in (source["title"], locator) if part)
-    scan = " (read by AI from a scan)" if source["read_by_ai"] else ""
+    scan = ("" if not source["read_by_ai"] else
+            " (transcribed by AI)" if source.get("recording") else " (read by AI from a scan)")
     return f"[{source['number']}] {name}" + (f" — {source['described']}" if source["described"] else "") + scan
 
 
@@ -124,6 +129,10 @@ def _document_xml(note):
         body.append(_paragraph("Heading2", "Documents sent with it"))
         for document in note["documents"]:
             unread = f", {document['pages_unread']} not read" if document["pages_unread"] else ""
+            if document["recording"]:
+                heard = "transcribed" if document["pages_read"] else "not transcribed"
+                body.append(_paragraph("Normal", f"• {document['name']} — recording, {heard}"))
+                continue
             body.append(_paragraph("Normal", f"• {document['name']} — {document['pages_read']} "
                                              f"page{'s' if document['pages_read'] != 1 else ''} read{unread}"))
     body.append(_paragraph("Heading1", "Answer"))

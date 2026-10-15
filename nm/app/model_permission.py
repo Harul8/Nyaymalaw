@@ -6,7 +6,9 @@ BK-85-AC3 remains open. User acceptance is neither client authority nor counsel
 review. No raw-media, embeddings, telemetry or alternative endpoint is admitted,
 with one exception the owner made on 15 Oct 2026: pages of an advocate's own
 documents that have no text layer are sent as page images to be read, on a binding
-made only for that, under the notice the advocate accepted (openai-2026-10-15).
+made only for that, under the notice the advocate accepted (openai-2026-10-15); and
+the audio of voice notes and dictation is sent to be transcribed, on a binding made
+only for transcription, under the same notice.
 """
 from __future__ import annotations
 
@@ -53,7 +55,8 @@ def require_permission(directory, account_id: str, config) -> None:
 
 
 def bind_text_model(adapter, *, directory, account_id: str, config,
-                    session_current, audit=None, page_images: bool = False):
+                    session_current, audit=None, page_images: bool = False,
+                    audio_model: str | None = None):
     """One request-bound permission owner for author and independent verifier.
 
     The provider adapter rechecks this owner on every attempted dispatch,
@@ -74,5 +77,6 @@ def bind_text_model(adapter, *, directory, account_id: str, config,
 
     authorize()
     return PolicedModel(
-        inner=TracedModel(inner=adapter.for_matter_text(authorize, page_images=page_images)),
+        inner=TracedModel(inner=adapter.for_matter_text(authorize, page_images=page_images,
+                                                        audio_model=audio_model)),
         policy=text_policy(), audit=audit, authorize=authorize)

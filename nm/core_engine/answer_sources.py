@@ -76,7 +76,7 @@ def build(context, research_record):
         _add(sources, {"id": identity, "kind": _CONTEXT_ROLES[role],
             "text": original["text"], "speaker": original["speaker"],
             "record_role": role, "title": about["name"] if about else None,
-            "locator": f"page {about['page']}" if about else None,
+            "locator": ("recording" if about.get("recording") else f"page {about['page']}") if about else None,
             "digest": _digest(original), "context_ids": [], "work_ids": [],
             "coverage": [], "source_identity": {
                 "source_id": identity, "turn_id": original["turn_id"]}})

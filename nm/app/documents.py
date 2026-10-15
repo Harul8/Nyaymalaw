@@ -14,7 +14,7 @@ import re
 import secrets
 
 from nm.arrive.advocate_contracts import utcnow
-from nm.core_engine import documents, page_reading
+from nm.core_engine import documents, page_reading, voice
 from nm.core_engine.documents import DocumentRefused
 from nm.open_matter.document_local import DocumentParserDefect, ExtractionRefused
 from nm.open_matter.document_text_port import AdmittedDocument, DocumentFormat, TextState
@@ -40,9 +40,11 @@ class DocumentDesk:
         name = documents.document_name(name)
         fmt = documents.document_format(name, data)
         if fmt is None:
-            raise DocumentRefused("Only PDF, Word (.docx), plain text (.txt), PNG or JPEG files can be read.")
-        if not 0 < len(data) <= documents.MAX_BYTES:
-            raise DocumentRefused("A document can be at most 16 MB.")
+            raise DocumentRefused("Only PDF, Word (.docx), plain text (.txt), PNG or JPEG files, or recordings "
+                                  "in MP3, M4A, WAV or WebM, can be read. Video is not read.")
+        if not 0 < len(data) <= documents.max_bytes(fmt):
+            raise DocumentRefused("A recording can be at most 25 MB." if fmt in documents.AUDIO
+                                  else "A document can be at most 16 MB.")
         sha = hashlib.sha256(data).hexdigest()
         document_id = "doc_" + secrets.token_hex(12)
         state, reason = self.checker.check(data)
@@ -72,6 +74,10 @@ class DocumentDesk:
         return AdmittedDocument(data, DocumentFormat(fmt), sha, admission)
 
     def _read(self, advocate_id, document_id, fmt, data, sha):
+        if fmt in documents.AUDIO:
+            # A voice note is heard by the speech model, not read here (15 Oct 2026).
+            return [{"number": 1, "state": "unread", "code": "audio",
+                     "reason": "a recording, waiting to be transcribed"}], 1, None
         if fmt == "image":
             return [{"number": 1, "state": "unread", "code": "scanned",
                      "reason": "an image, with no text layer to read here"}], 1, None
@@ -93,20 +99,25 @@ class DocumentDesk:
                               "reason": unit.reason or "this page could not be read"})
         return pages, result.observed_units, (result.reason if result.failure else None)
 
-    def read_scans(self, advocate_id, ref, model):
-        """The document again, with its waiting scanned pages read by the model (owner
-        decision, 15 Oct 2026), stored as a new immutable record; and the calls made."""
+    def read_waiting(self, advocate_id, ref, model):
+        """The document again, with what waits for the AI done (owner decisions, 15 Oct
+        2026): scanned pages read, or a recording transcribed; stored as a new immutable
+        record; and the calls made."""
         record = self.load(advocate_id, ref)
         numbers = documents.needs_transcription(record)
         if not numbers:
             return record, []
         data = self._original(advocate_id, record)
-        images, undrawn = self.reader.page_images(
-            self._admitted(advocate_id, record["document_id"], record["format"], data, record["sha256"]),
-            numbers)
-        read, calls = page_reading.read_pages(model, record["name"], images)
-        for number, reason in undrawn.items():
-            read[number] = {"number": number, "state": "unread", "code": "unreadable", "reason": reason}
+        if record["format"] in documents.AUDIO:
+            page, call = voice.transcribe_note(model, record["name"], data, record["format"])
+            read, calls = {1: page}, [call] if call else []
+        else:
+            images, undrawn = self.reader.page_images(
+                self._admitted(advocate_id, record["document_id"], record["format"], data, record["sha256"]),
+                numbers)
+            read, calls = page_reading.read_pages(model, record["name"], images)
+            for number, reason in undrawn.items():
+                read[number] = {"number": number, "state": "unread", "code": "unreadable", "reason": reason}
         renewed = documents.receipt(
             document_id=record["document_id"], name=record["name"], fmt=record["format"],
             sha256=record["sha256"], size=record["size"], received_at=record["received_at"],
@@ -130,6 +141,13 @@ class DocumentDesk:
         if hashlib.sha256(data).hexdigest() != record["sha256"]:
             raise DocumentRefused("This document's original could not be verified.")
         return data
+
+    def recording(self, advocate_id, ref):
+        """A voice note's original, for the advocate to play back: its bytes and type."""
+        record = self.load(advocate_id, ref)
+        if record["format"] not in documents.AUDIO or record["check"]["state"] != "clear":
+            raise DocumentRefused("This is not a recording that can be played.")
+        return self._original(advocate_id, record), documents.AUDIO[record["format"]]
 
     def load(self, advocate_id, ref):
         """The exact record a reference names, from the advocate's own space only."""

@@ -177,6 +177,24 @@ class PageImage:
             raise ValueError("A page image is a JPEG or PNG of at most 8 MB")
 
 
+#: Audio a transcription request may carry (OpenAI's file limit, owner decisions 15 Oct 2026).
+MAX_AUDIO_BYTES = 25 * 1024 * 1024
+AUDIO_TYPES = ("audio/mpeg", "audio/mp4", "audio/wav", "audio/webm")
+
+
+@dataclass(frozen=True)
+class Transcription:
+    """What a speech model heard in one recording, and the call's receipt."""
+
+    text: str
+    provider: str
+    model: str
+    latency_ms: int
+    retries: int = 0
+    languages: tuple[str, ...] = ()
+    usage: Mapping[str, Any] = field(default_factory=dict)
+
+
 @dataclass(frozen=True)
 class Prompt:
     """A prompt in the product's vocabulary.

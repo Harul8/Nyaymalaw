@@ -92,23 +92,32 @@ class Application:
         self.case_index = _DeferredAdapter(lambda: CaseIdentityIndex.local(self.root))
         # What each running turn is doing, for its own advocate (memory only).
         self.turn_progress = TurnProgress()
+        # Voice notes and dictation (owner decisions, 15 Oct 2026).
+        self.transcription_model = (settings.get('NM_TRANSCRIBE_MODEL') or 'gpt-transcribe').strip()
 
-    def _model_for(self, advocate_id, *, session_current, page_images=False):
+    def _model_for(self, advocate_id, *, session_current, page_images=False, audio_model=None):
         if isinstance(self._model_adapter, OpenAIModelAdapter):
             from nm.app.model_permission import bind_text_model
             return bind_text_model(self._model_adapter, directory=self.directory,
                 account_id=advocate_id, config=self.config,
                 session_current=session_current, audit=self._egress_audit,
-                page_images=page_images)
+                page_images=page_images, audio_model=audio_model)
         # Fresh tracing per request prevents parallel conversations sharing traces.
         return PolicedModel(inner=TracedModel(inner=self._model_adapter),
             policy=self._gate.policy, audit=self._egress_audit,
             authorize=lambda: _require_session(session_current))
 
-    def page_reader(self, advocate_id, *, session_current):
-        """The model that reads one advocate's scanned pages (owner decision,
-        15 Oct 2026), under that advocate's current permission and session."""
-        return self._model_for(advocate_id, session_current=session_current, page_images=True)
+    def document_reader(self, advocate_id, *, session_current):
+        """The model that reads one advocate's scanned pages and transcribes their voice
+        notes (owner decisions, 15 Oct 2026), under that advocate's current permission
+        and session."""
+        return self._model_for(advocate_id, session_current=session_current, page_images=True,
+                               audio_model=self.transcription_model)
+
+    def dictation_reader(self, advocate_id, *, session_current):
+        """The model that transcribes one advocate's dictation; nothing else leaves."""
+        return self._model_for(advocate_id, session_current=session_current,
+                               audio_model=self.transcription_model)
 
     def run_turn(self, *, advocate_id, session_current, document_refs=(), **request):
         from nm.core_engine.turn import process

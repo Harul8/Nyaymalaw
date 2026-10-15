@@ -505,13 +505,14 @@
            malware and read before the message can carry them. -->
       <ul id="attachments" class="attachments" aria-label="Documents attached to this message" hidden></ul>
       <p id="attachments-status" class="attachments-status" role="status" aria-live="polite"></p>
-      <input id="attach-files" type="file" multiple hidden accept=".pdf,.docx,.txt,.png,.jpg,.jpeg"
-             aria-label="Choose documents or photos to attach">
+      <input id="attach-files" type="file" multiple hidden
+             accept=".pdf,.docx,.txt,.png,.jpg,.jpeg,.mp3,.m4a,.wav,.webm,.ogg,.oga,.opus,.aac,.flac,.amr,.3gp,audio/*"
+             aria-label="Choose documents, photos or recordings to attach">
       <div class="composer-row">
         <div class="composer-tools">
-          <!-- F-C-01. THE PLUS: documents and photos are attached to the message and
-               read (owner decisions, 15 Oct 2026); audio, video and voice notes still
-               open the original-material window until item 8. -->
+          <!-- F-C-01. THE PLUS: documents, photos and recordings are attached to the
+               message and read or transcribed; a voice note is recorded here (owner
+               decisions, 15 Oct 2026). Video is not read. -->
           <div class="plus-menu" id="plus-menu">
             <button type="button" id="plus-toggle" class="tool-button" aria-haspopup="true"
                     aria-expanded="false" aria-controls="plus-panel">
@@ -519,12 +520,11 @@
                 <path d="M10 4v12M4 10h12" fill="none" stroke="currentColor" stroke-width="1.8"
                       stroke-linecap="round"/>
               </svg>
-              <span class="sr-only">Attach documents or photos, audio, video or a voice note</span>
+              <span class="sr-only">Attach documents, photos or recordings, or record a voice note</span>
             </button>
             <div id="plus-panel" class="plus-panel" role="menu" hidden>
-              <button type="button" role="menuitem" id="plus-attach">Attach documents or photos</button>
-              <button type="button" role="menuitem" id="plus-media">Upload audio or video</button>
-              <button type="button" role="menuitem" id="plus-voice">Record a voice note to keep</button>
+              <button type="button" role="menuitem" id="plus-attach">Attach documents, photos or recordings</button>
+              <button type="button" role="menuitem" id="plus-record">Record a voice note</button>
             </div>
           </div>
           <!-- F-C-02. THE MIC: say the brief instead of typing it. The words are

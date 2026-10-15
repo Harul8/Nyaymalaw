@@ -54,7 +54,8 @@ def test_a_request_without_this_page_s_csrf_value_is_refused_before_any_check(se
 
 
 def test_an_oversized_body_is_refused_before_it_is_read_or_checked(served, desk, monkeypatch):
-    monkeypatch.setattr(documents, "MAX_BYTES", 8)
+    # The body is read only up to the largest file taken at all, a recording's limit.
+    monkeypatch.setattr(documents, "MAX_AUDIO_BYTES", 8)
     reply = upload(served.client, data=b"more than eight bytes")
     assert reply.status_code == 413 and reply.json()["detail"]["code"] == "document_too_large"
     assert desk.checker.seen == []
@@ -83,12 +84,12 @@ def test_the_advocate_has_waiting_scanned_pages_read_under_their_own_permission(
     assert shown["waiting_for_ai"] == 1
     bound = []
 
-    def page_reader(advocate_id, *, session_current):
+    def document_reader(advocate_id, *, session_current):
         bound.append((advocate_id, session_current()))
         return PageModel({2: {"text": "Scanned words", "readable": "all", "note": ""}})
 
-    monkeypatch.setattr(served.app, "page_reader", page_reader)
-    url = f"/api/documents/{shown['document_ref']}/read-scans"
+    monkeypatch.setattr(served.app, "document_reader", document_reader)
+    url = f"/api/documents/{shown['document_ref']}/read"
     assert served.client.post(url, headers={"x-nm-csrf": "wrong"}).status_code == 403
     assert served.login(OTHER).post(url).status_code == 404
     read = served.client.post(url)
@@ -101,10 +102,10 @@ def test_reading_scans_without_ai_permission_is_refused_plainly(served, desk, mo
     from nm.shared.external_ai_contracts import ModelPermissionRefused
     from tests.test_core_documents import pdf
 
-    def page_reader(advocate_id, *, session_current):
+    def document_reader(advocate_id, *, session_current):
         raise ModelPermissionRefused("Read the current AI data-sharing notice before continuing.")
 
-    monkeypatch.setattr(served.app, "page_reader", page_reader)
+    monkeypatch.setattr(served.app, "document_reader", document_reader)
     ref = upload(served.client, data=pdf(["Typed page.", ""]), name="memo.pdf").json()["document_ref"]
-    refused = served.client.post(f"/api/documents/{ref}/read-scans")
+    refused = served.client.post(f"/api/documents/{ref}/read")
     assert refused.status_code == 403 and refused.json()["detail"]["code"] == "model_permission_required"
