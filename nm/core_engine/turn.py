@@ -170,7 +170,8 @@ def validate_activity(activity, context, elements):
                   {response_rendering.STORED_TITLE_CONTRACT, response_rendering.SHOWN_NAME_CONTRACT,
                    response_rendering.CITED_WORDS_CONTRACT, response_rendering.HEADINGS_CONTRACT,
                    response_rendering.SHORT_NAME_CONTRACT, response_rendering.DOCUMENT_PAGES_CONTRACT}
-                  if version == AUTHORITY_CONTRACT else {response_rendering.CONTRACT})
+                  if version == AUTHORITY_CONTRACT else
+                  {response_rendering.WORKING_CONTRACT, response_rendering.CONTRACT})
     rendering = activity.get("rendering_contract") if isinstance(activity, dict) else None
     if (version not in {LEGACY_CONTRACT, AUTHORITY_CONTRACT, CONTRACT} or set(activity) != expected_fields
             or rendering not in renderings):

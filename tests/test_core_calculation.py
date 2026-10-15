@@ -11,7 +11,7 @@ from dataclasses import replace
 
 import pytest
 
-from nm.core_engine import calculation, research
+from nm.core_engine import calculation, research, response_rendering
 from nm.core_engine.conversation import ConversationRefused, chat_matter_id
 from nm.core_engine.turn import saved_rows
 from nm.shared.model_port import Completion, ModelResult, ProviderUnavailable, Usage
@@ -108,7 +108,10 @@ def test_the_answer_carries_a_working_box_for_each_checked_limit_and_reports_the
     assert complaint["text"] == "Last day to file the complaint"  # the box's facts are data; words are the answer's
     assert complaint["working"]["counting_starts_after"] == "2026-09-14"
     assert complaint["working"]["runs_from"]["after"] == "c1" and complaint["working"]["may_extend"]
-    # Shown as fixed labels over the saved values, never as sentences (owner, 15 Oct 2026).
+    # Shown as fixed labels over the saved values, never as sentences (owner, 15 Oct 2026),
+    # with the day the standing was worked out (v9).
+    row = saved_rows(store.load(chat_matter_id("owner", reply["chat_id"])), "owner")[0]
+    as_of = response_rendering._date(row["activities"]["calculation"]["today"])
     assert complaint["working"]["rows"] == [
         ["Provision", f"s.142(1)(b), {NI}"], ["Period", "“one month”"],
         ["The Act’s words", "“within one month of the date on which the cause of action arises”"],
@@ -116,7 +119,8 @@ def test_the_answer_carries_a_working_box_for_each_checked_limit_and_reports_the
         ["Event", "the cause of action"], ["Counting starts after", "14 September 2026 (Monday)"],
         ["Period ends", "14 October 2026 (Wednesday)"], ["Last day", "14 October 2026 (Wednesday)"],
         ["Earliest day", "14 September 2026 (Monday)"], ["Taken on", "12 September 2026 (Saturday)"],
-        ["Whose words", "“We filed the complaint on 12 September 2026”"], ["Result", "Early"],
+        ["Whose words", "“We filed the complaint on 12 September 2026”"],
+        ["As of", as_of], ["Result", "Early"],
         ["Days before the earliest day", "2"],
         ["Court closed on the last day", "Limitation Act s.4 not applied: the court calendar is not held"]]
     assert [title for title, _ in complaint["working"]["lists"]] == ["Assumed", "May extend time (not counted)"]
@@ -128,8 +132,10 @@ def test_the_answer_carries_a_working_box_for_each_checked_limit_and_reports_the
     assert all('"time_limits"' in payload for payload in model.seen["core_response_writer"])
     assert all('"owned_time_limits"' in payload and "2026-10-14" in payload
                for payload in model.seen["core_response_review"])
-    row = saved_rows(store.load(chat_matter_id("owner", reply["chat_id"])), "owner")[0]
     assert row["activities"]["calculation"]["state"] == "worked"
+    # An answer saved under v8 still reopens as it was shown, without the date.
+    earlier = response_rendering._working(row["activities"]["calculation"])
+    assert ["As of", as_of] not in earlier[1]["working"]["rows"]
     assert [a["title"] for a in row["activities"]["calculation"]["acts"]] == [LIMITATION, NI]
 
 

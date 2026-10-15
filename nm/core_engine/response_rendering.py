@@ -27,8 +27,12 @@ SHORT_NAME_CONTRACT = "core_response_rendering_v6"
 #: under the document's name and page (owner decisions, 15 Oct 2026).
 DOCUMENT_PAGES_CONTRACT = "core_response_rendering_v7"
 #: v7 with a code-owned Working box for each time limit worked out (item 9, 15 Oct 2026).
-CONTRACT = "core_response_rendering_v8"
-_CITED = (CITED_WORDS_CONTRACT, HEADINGS_CONTRACT, SHORT_NAME_CONTRACT, DOCUMENT_PAGES_CONTRACT, CONTRACT)
+WORKING_CONTRACT = "core_response_rendering_v8"
+#: v8 with the date each limit's standing was worked out, so a reopened answer never
+#: shows its days left or passed as if counted today (open items round, 16 Oct 2026).
+CONTRACT = "core_response_rendering_v9"
+_WORKING = (WORKING_CONTRACT, CONTRACT)
+_CITED = (CITED_WORDS_CONTRACT, HEADINGS_CONTRACT, SHORT_NAME_CONTRACT, DOCUMENT_PAGES_CONTRACT, *_WORKING)
 _LEGAL = {"provision", "judgment"}
 _ROLES = {"provision": "legislative_text", "court_disposition": "court_conclusion",
           "court_reasoning": "court_reasoning", "party_submission": "party_submission",
@@ -284,7 +288,7 @@ def _date(iso):
     return f"{day.day} {_MONTHS[day.month - 1]} {day.year} ({_WEEKDAYS[day.weekday()]})"
 
 
-def _shown(working, earlier):
+def _shown(working, earlier, as_of=None):
     """A Working box's labelled rows and lists: fixed labels over saved values, no
     sentences (owner, 15 Oct 2026). The screen and the research note both show these."""
     if "not_assessed" in working:
@@ -318,6 +322,8 @@ def _shown(working, earlier):
         row("Taken on", _date(working["step_taken"]["date"]))
         row("Whose words", f"“{working['step_taken']['quote']}”")
     standing = working["standing"]
+    if as_of:
+        row("As of", _date(as_of))
     row("Result", _RESULTS[standing["state"]])
     row(_DAYS[standing["state"]], standing["days"])
     row("Court closed on the last day", _COURT_CLOSED)
@@ -327,9 +333,10 @@ def _shown(working, earlier):
     return rows, lists
 
 
-def _working(record):
+def _working(record, *, as_of=False):
     """One code-owned Working box per time limit: code's arithmetic as data and as
-    labelled rows; the answer's own words explain it."""
+    labelled rows; the answer's own words explain it. From v9 each says the date its
+    standing was worked out."""
     boxes, earlier = [], {entry["id"]: entry["what"] for entry in record["calculations"]}
     for entry in record["calculations"]:
         provision, worked = entry["provision"], entry["working"]
@@ -350,7 +357,8 @@ def _working(record):
                       "sources": [], "refs": [], "inline_citations": [], "citation_markers": [],
                       "working": {"what": item["what"], "not_assessed": item["why"]}})
     for box in boxes:
-        box["working"]["rows"], box["working"]["lists"] = _shown(box["working"], earlier)
+        box["working"]["rows"], box["working"]["lists"] = _shown(
+            box["working"], earlier, record.get("today") if as_of else None)
     return boxes
 
 
@@ -380,14 +388,14 @@ def render(context, research_record, sources, draft, review, execution=None, *,
     authorities = ({row["unit_id"]: row for row in checked_authorities["units"]}
                    if contract in _CITED else {})
     headings = (_headings(research_record, checked_draft)
-                if contract in (HEADINGS_CONTRACT, SHORT_NAME_CONTRACT, DOCUMENT_PAGES_CONTRACT, CONTRACT) else {})
+                if contract in (HEADINGS_CONTRACT, SHORT_NAME_CONTRACT, DOCUMENT_PAGES_CONTRACT, *_WORKING) else {})
     elements = []
     for position, unit in enumerate(checked_draft["units"]):
         if position in headings:
             elements.append({"kind": "HEADING", "text": headings[position], "source": None, "sources": [],
                              "refs": [], "inline_citations": [], "citation_markers": []})
         legal_sources = _sources(unit, sources, shown_names=contract in {SHOWN_NAME_CONTRACT, *_CITED},
-                                 documents=contract in (DOCUMENT_PAGES_CONTRACT, CONTRACT))
+                                 documents=contract in (DOCUMENT_PAGES_CONTRACT, *_WORKING))
         element = {"kind": unit["kind"].upper(), "text": unit["text"],
             "source": deepcopy(legal_sources[0]) if legal_sources else None,
             "sources": legal_sources,
@@ -395,12 +403,12 @@ def render(context, research_record, sources, draft, review, execution=None, *,
         if contract in _CITED:
             element["inline_citations"], element["citation_markers"] = _cited_words(
                 unit["text"], legal_sources, authorities[unit["id"]],
-                short=contract in (SHORT_NAME_CONTRACT, DOCUMENT_PAGES_CONTRACT, CONTRACT))
+                short=contract in (SHORT_NAME_CONTRACT, DOCUMENT_PAGES_CONTRACT, *_WORKING))
         else:
             element["inline_citations"] = _anchors(unit["text"], legal_sources)
         elements.append(element)
-    if contract == CONTRACT and time_limits is not None:
+    if contract in _WORKING and time_limits is not None:
         # The Working boxes follow the answer's opening paragraph.
         first = next((i for i, element in enumerate(elements) if element["kind"] != "HEADING"), 0)
-        elements[first + 1:first + 1] = _working(time_limits)
+        elements[first + 1:first + 1] = _working(time_limits, as_of=contract == CONTRACT)
     return elements
