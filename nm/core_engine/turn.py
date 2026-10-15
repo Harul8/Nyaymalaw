@@ -81,9 +81,9 @@ def prepare(model, context, searcher, *, case_index=None, provision_reader=None,
     sources = answer_sources.build(context, record)
     execution = execution_record(record)
 
-    def write():
+    def write(keep=None):
         return response_writer.write(calls, context, record, sources,
-                                     interpretation=interpreted, execution=execution)
+                                     interpretation=interpreted, execution=execution, keep=keep)
 
     report("writing")
     draft = calls.checked("core_response_writer", write)
@@ -100,7 +100,9 @@ def prepare(model, context, searcher, *, case_index=None, provision_reader=None,
     if not reviewed["accepted"]:
         try:
             report("revising")
-            draft = calls.correct("core_response_writer", write,
+            # Parts the review did not fault are kept as written; the rest are rewritten.
+            keep = response_writer.kept_parts(draft, reviewed["proposal"]["findings"])
+            draft = calls.correct("core_response_writer", lambda: write(keep),
                                   mismatch=reviewed["proposal"]["findings"],
                                   rejected=draft["proposal"])
             authorities = response_authorities.check(context, record, sources, draft,
@@ -129,7 +131,7 @@ def validate_activity(activity, context, elements):
     # later rendering shows differently never rewrite an earlier turn.
     renderings = ({response_rendering.LEGACY_CONTRACT} if version == LEGACY_CONTRACT else
                   {response_rendering.STORED_TITLE_CONTRACT, response_rendering.SHOWN_NAME_CONTRACT,
-                   response_rendering.CONTRACT})
+                   response_rendering.CITED_WORDS_CONTRACT, response_rendering.CONTRACT})
     rendering = activity.get("rendering_contract") if isinstance(activity, dict) else None
     if (version not in {LEGACY_CONTRACT, CONTRACT} or set(activity) != expected_fields
             or rendering not in renderings):

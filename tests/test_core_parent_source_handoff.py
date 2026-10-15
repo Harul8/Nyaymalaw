@@ -168,8 +168,7 @@ def test_parent_source_is_saved_served_and_replayed_without_fresh_law_or_model_c
         if prompt.operation != "core_response_writer":
             return result
         data = json.loads(prompt.user)
-        source = next(s for s in data["held_passages"]["passages"]
-                      if s["source_identity"].get("position") == "parent:" + parent["chunk_id"])
+        source = next(s for s in data["held_passages"]["passages"] if s["text"] == parent["full_text"])
         proposal = deepcopy(result.data)
         proposal["units"][0].update(kind="law", text=source["text"],
                                   uses=[source_use_v2(source)])
@@ -177,7 +176,7 @@ def test_parent_source_is_saved_served_and_replayed_without_fresh_law_or_model_c
 
     monkeypatch.setattr(served.model, "structured", write_parent)
     reply = successful(served, message="Find the applicable law.")
-    assert reply["metrics"]["llm_calls"] == 8 and len(served.model.calls) == 8
+    assert reply["metrics"]["llm_calls"] == 9 and len(served.model.calls) == 9
     source = reply["elements"][0]["source"]
     assert source["text"] == parent["full_text"]
     for operation, payload in served.model.calls:
@@ -209,4 +208,4 @@ def test_parent_source_is_saved_served_and_replayed_without_fresh_law_or_model_c
     assert inspection["provision_checks"][0]["position"] == "parent:" + parent["chunk_id"]
     replay = successful(served, message="Find the applicable law.", expected_version=0)
     assert replay == {**reply, "replayed": True}
-    assert len(served.model.calls) == 8 and served.store.load(stored.id) == before
+    assert len(served.model.calls) == 9 and served.store.load(stored.id) == before

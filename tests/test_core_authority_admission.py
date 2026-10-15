@@ -71,13 +71,13 @@ def test_exact_source_mismatch_is_withheld_before_positive_reviewer_or_save(serv
     names = [operation for operation, _ in served.model.calls]
     assert names[0] == "core_understanding" and names[-1] == "core_response_writer"
     assert sorted(names[1:-1]) == ["core_research_check", "core_research_judgment_phrases",
-                                   "core_research_phrases", "core_research_pick", "core_research_understand"]
+                                   "core_research_judgment_pick", "core_research_phrases", "core_research_pick", "core_research_understand"]
     assert not served.store.list_for(OWNER).matters
     # A fresh source mismatch cannot be cleared by retrying the same turn or by
     # allowing the configured always-positive synthetic reviewer to run.
     retry = send(served)
     assert retry.status_code == 409 and retry.json()["detail"]["code"] == "answer_withheld"
-    assert len(served.model.calls) == 7
+    assert len(served.model.calls) == 8
 
 
 @pytest.mark.parametrize("outcome", ["matched", "unavailable", "ambiguous", "not_held"])
@@ -86,7 +86,7 @@ def test_identical_source_or_honest_unresolved_limit_can_reach_independent_revie
     response = send(served)
     assert response.status_code == 200, response.text
     assert response.json()["committed"] == "committed"
-    assert len(served.model.calls) == 8
+    assert len(served.model.calls) == 9
     payload = served.model.calls[-1][1]
     selected = payload["owned_authority_checks"]["units"][0]["selected_provisions"][0]
     assert selected["state"] == outcome

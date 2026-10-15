@@ -130,7 +130,10 @@ def test_whole_originals_adjacent_legal_text_and_execution_are_separate_inputs()
     assert [row["text"] for row in shown] == [row["text"] for row in draft["units"]]
     assert [select(ref, sources) for ref in shown[0]["addresses"]] == draft["units"][0]["addresses"]
     assert "proposal" not in payload["complete_draft_proposal"]  # No duplicate draft text.
-    assert payload["research_proposal_and_results"]["plan_proposal"] == record["plan"]["proposal"]
+    # v5: the understanding and each question's outcome, not the plan's bookkeeping.
+    research = payload["research_proposal_and_results"]
+    assert research["understanding"] == record["plan"]["proposal"]["understanding"] and "plan_proposal" not in research
+    assert not any({"source_identity", "record_role"} & set(s) for s in payload["legal_sources"]["passages"])
     from nm.core_engine.answer_sources import aliases
     offered = aliases(sources)
     assert {s["id"] for s in payload["legal_sources"]["passages"]} == set(offered)
@@ -478,7 +481,7 @@ def test_authority_checks_are_separate_compact_model_input_and_full_bound_eviden
     model = Model(positive(args[-1]))
     receipt = review_checked(model, *args, execution, authority_evidence=authority)
     payload = json.loads(model.calls[0][0].user)
-    assert receipt["contract"] == CONTRACT == "core_response_review_v4"
+    assert receipt["contract"] == CONTRACT == "core_response_review_v5"
     assert authority["readbacks"]
     from nm.core_engine.answer_sources import aliases
     from nm.core_engine.response_review import _aliased
@@ -590,7 +593,7 @@ def restriction_review(draft, ctx, disposition, unit_ids):
 def test_v4_admits_a_restriction_respected_by_absence_without_reply_units():
     ctx, record, sources, draft = setup()
     receipt = review(Model(restriction_review(draft, ctx, "respected", [])), ctx, record, sources, draft)
-    assert receipt["contract"] == CONTRACT == "core_response_review_v4" and receipt["accepted"] is True
+    assert receipt["contract"] == CONTRACT == "core_response_review_v5" and receipt["accepted"] is True
     assert validate(receipt, ctx, record, sources, draft) == receipt
 
 

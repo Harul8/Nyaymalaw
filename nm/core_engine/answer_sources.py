@@ -38,6 +38,29 @@ def _add(sources, row):
                 prior[field].append(deepcopy(value))
 
 
+def _window(selected, picked):
+    """The saved context a returned passage is read with.
+
+    Research v8 (owner decision, 15 Oct 2026): a judgment paragraph the pick chose is read
+    with the nearest stored paragraph either side, every other returned paragraph alone.
+    Earlier records and provisions keep their whole saved window. A neighbour that could
+    not be read stays an unread position, never a silent omission.
+    """
+    window = selected["context"]
+    if picked is None or selected["kind"] != "judgment":
+        return window
+    position = selected["position"]
+    around = sorted({s["position"] for s in window["segments"]} | set(window["unread_positions"]) - {position})
+    keep = {position}
+    if selected["id"] in picked:
+        keep |= {max((p for p in around if p < position), default=position),
+                 min((p for p in around if p > position), default=position)}
+    return {"scope": "adjacent_indexed_segments" if len(keep) > 1 else "selected_indexed_segment",
+            "bounded": window["bounded"],
+            "unread_positions": [p for p in window["unread_positions"] if p in keep],
+            "segments": [s for s in window["segments"] if s["position"] in keep]}
+
+
 def build(context, research_record):
     """Validate original dependencies, then assign one tag per exact source unit."""
     checked = research.validate(research_record, research_record["plan"], context)
@@ -61,15 +84,16 @@ def build(context, research_record):
                 memberships.append(work["id"])
 
     positions = {}
-    # v7 admits only the provisions the pick chose; judgments and earlier records admit
-    # every returned candidate.
+    # v7 and v8 admit only the provisions the pick chose; judgments and earlier records
+    # admit every returned candidate. v8 narrows how much of each judgment is read.
     admitted = research.admitted_provisions(checked)
+    picked = research.picked_judgments(checked)
     for work_id, search in checked["searches"].items():
         for selected in search["candidates"]:
             if admitted is not None and selected["kind"] == "provision" and selected["id"] not in admitted:
                 continue
             kind, revision = selected["kind"], selected["corpus_revision"]
-            window = selected["context"]
+            window = _window(selected, picked)
             units = []
             for position, row in [(selected["position"], selected["source"]),
                     *((s["position"], s["row"]) for s in window["segments"])]:
@@ -131,7 +155,7 @@ def aliases(sources):
     return result
 
 
-def presentation(sources, *, aliased=False):
+def presentation(sources, *, aliased=False, compact=False, work_ids=None):
     """Model-only catalogue; share exact context and gaps, not their repeated proof.
 
     Original conversation is supplied apart. Complete canonical sources remain the
@@ -139,6 +163,11 @@ def presentation(sources, *, aliased=False):
     except that an aliased presentation names legal passages by their offered
     aliases, which admission maps back. A passage's neighbours are its ordered
     context group with that passage removed.
+
+    compact (writer v4, review v5): each passage without the identity fields code
+    alone uses (store position, document key, record role, empty speaker). work_ids:
+    only the passages serving those research work items, with their groups and
+    coverage, for writing one part of an answer; aliases stay those of the whole.
     """
     offered = {tag: alias for alias, tag in aliases(sources).items()} if aliased else {}
     passages, coverage_by_id, coverage_keys = [], {}, {}
@@ -152,6 +181,8 @@ def presentation(sources, *, aliased=False):
 
     for row in sources.values():
         if row["kind"] not in _LEGAL:
+            continue
+        if work_ids is not None and not set(row["work_ids"]) & set(work_ids):
             continue
         passage = deepcopy(row)
         passage.pop("digest")
@@ -190,8 +221,13 @@ def presentation(sources, *, aliased=False):
                 coverage_by_id[identity] = shared
             passage["coverage_ids"].append(coverage_keys[coverage_key])
         passage["id"] = offered.get(row["id"], row["id"])
+        if compact:
+            for field in ("source_identity", "record_role", "speaker"):
+                passage.pop(field)
         passages.append(passage)
-    context_groups = {identity: [offered.get(member, member) for member in members]
+    shown = {row["id"] for row in sources.values()
+             if row["kind"] in _LEGAL and (work_ids is None or set(row["work_ids"]) & set(work_ids))}
+    context_groups = {identity: [offered.get(member, member) for member in members if member in shown]
                       for identity, members in context_groups.items()}
     return {"passages": passages, "coverage_by_id": coverage_by_id,
             "gaps_by_id": gaps_by_id, "context_groups": context_groups}

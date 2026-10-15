@@ -5,7 +5,7 @@ model sets out the matter, code checks it mechanically, the model reviews it aga
 the conversation and corrects it (at most MAX_REVISIONS times); search phrases are
 written per dispute in parallel beside one judgment-phrase call; each legal question is
 searched with every phrase and its named Acts; the model picks the provisions that
-answer each question. Earlier plans (v2-v6) replay unchanged.
+answer each question and, from v8, the judgment paragraphs. Earlier plans replay unchanged.
 """
 from __future__ import annotations
 
@@ -29,15 +29,22 @@ ACCOUNT_CONTRACT = "core_research_v5"
 #: and names the Acts that may govern; search looks inside those held Acts too.
 INSTRUMENTED_CONTRACT = "core_research_v6"
 #: v7 (owner decisions, 13-14 Oct 2026): the loop above; one work item per legal question.
-CONTRACT = "core_research_v7"
+PICKED_CONTRACT = "core_research_v7"
+#: v8 (owner decision, 15 Oct 2026): beside the provision pick, the model picks for each
+#: question the judgment paragraphs a lawyer would rely on, only among the six the search
+#: returns. The answer reads the picked paragraphs with their neighbours and every other
+#: returned paragraph alone: a paragraph-level pick dropped 4 of 16 key judgments
+#: (measured 15 Oct), so it focuses the reading and never removes a returned judgment.
+CONTRACT = "core_research_v8"
+_QUESTION_PLANS = (PICKED_CONTRACT, CONTRACT)
 CONTRACTS = (LEGACY_CONTRACT, PREVIOUS_CONTRACT, WINDOWED_CONTRACT, ACCOUNT_CONTRACT,
-             INSTRUMENTED_CONTRACT, CONTRACT)
+             INSTRUMENTED_CONTRACT, PICKED_CONTRACT, CONTRACT)
 MAX_REVISIONS = 2
 #: The pick chooses from each question's first PROVISIONS_FOR_PICK provisions.
 PROVISIONS_FOR_PICK = 20
 #: Answer limits per step. Calls in flight are budgeted at their limit.
 MAX_OUTPUT = {"understand": 12000, "check": 6000, "revise": 12000, "phrases": 6000,
-              "judgment_phrases": 8000, "pick": 8000}
+              "judgment_phrases": 8000, "pick": 8000, "judgment_pick": 8000}
 
 # The prompts below were developed and measured in outputs/decomposition-scratch
 # (13-14 Oct 2026). They state the purpose and the needed outcome in plain language
@@ -105,6 +112,12 @@ PICK = """You are a senior Indian litigation lawyer. A matter has been broken in
 For each question, choose the provisions a lawyer must read to answer it: the ones that state the governing rule, right, liability, remedy, procedure, time limit, presumption or offence the question asks about. Most questions are answered by one to three provisions; choose more only when each one is needed. Put the most necessary first.
 
 Judge each provision by what it actually says, not by whether it shares words with the question. If no shown provision answers a question, choose none for it and say what is missing.
+"""
+JUDGMENT_PICK = """You are a senior Indian litigation lawyer. A matter has been broken into legal questions, and for each question a search of the judgments we hold, the Supreme Court of India and the High Court of Andhra Pradesh, has returned up to six paragraphs, each shown with its judgment, court, year, how many later judgments cite it, and the paragraph's words.
+
+For each question, choose the paragraphs a lawyer would rely on to answer it: those where a court decides or authoritatively explains the point the question asks about. Most questions need one to three; choose more only when each adds something, and put the most useful first.
+
+Judge each paragraph by what the court is doing in it. A paragraph that only quotes the statute, recites the facts of that case or reports a party's argument is rarely what a lawyer cites, unless the court adopts it as its own view. Weigh the court and the judgment's standing as a lawyer would, without passing over a recent judgment merely because few have cited it yet. If no shown paragraph answers a question, choose none for it and say what is missing.
 """
 
 
@@ -451,7 +464,7 @@ def _accept_v7(proposal, context):
 def accept(proposal, context, *, contract=CONTRACT):
     if contract not in CONTRACTS:
         raise ValueError("Unknown research contract")
-    if contract == CONTRACT:
+    if contract in _QUESTION_PLANS:
         return _accept_v7(proposal, context)
     schema = {LEGACY_CONTRACT: LEGACY_SCHEMA, PREVIOUS_CONTRACT: PREVIOUS_SCHEMA,
               WINDOWED_CONTRACT: ACCOUNT_SCHEMA, ACCOUNT_CONTRACT: ACCOUNT_SCHEMA,
@@ -497,7 +510,7 @@ def accept(proposal, context, *, contract=CONTRACT):
 
 def search_queries(work, *, contract=CONTRACT):
     """Versioned exact-query construction; no semantic rewriting or ranking bonus."""
-    if contract == CONTRACT:
+    if contract in _QUESTION_PLANS:
         # v7: every phrase is searched in both libraries; the reranker reads them with
         # the legal question they serve (measured 14 Oct 2026).
         return [{"query_id": enquiry["query_id"], "text": enquiry["text"], "context": work["question"]}
@@ -535,15 +548,19 @@ def search_queries(work, *, contract=CONTRACT):
 
 def search_instruments(work, *, contract=CONTRACT):
     """The Acts an investigation names, each once; plans before v6 named none."""
-    if contract not in (INSTRUMENTED_CONTRACT, CONTRACT):
+    if contract not in (INSTRUMENTED_CONTRACT, *_QUESTION_PLANS):
         return None
     return list(dict.fromkeys(" ".join(name.split()) for name in work["instruments"] if name.strip()))
 
 
-# --- v7: the provision pick ---------------------------------------------------------
+# --- v7: the provision pick; v8: the judgment pick -----------------------------------
+
+def _of_kind(search, kind):
+    return [c for c in search["candidates"] if c["kind"] == kind]
+
 
 def _provisions(search):
-    return [c for c in search["candidates"] if c["kind"] == "provision"]
+    return _of_kind(search, "provision")
 
 
 def _pick_text(plan, searches, labels):
@@ -562,7 +579,31 @@ def _pick_text(plan, searches, labels):
     return "\n".join(lines)
 
 
-def _resolve_picks(choice, plan, searches, labels):
+def _judgment_pick_text(plan, searches, labels):
+    """Each returned paragraph with its judgment, court, year, standing and whole words."""
+    lines = [f"Matter: {plan['proposal']['understanding']['summary']}"]
+    for work in plan["work"]:
+        if work["id"] not in searches:
+            continue
+        label = labels[work["id"]]
+        lines.append(f"\n{label}: {work['question']}")
+        for number, candidate in enumerate(_of_kind(searches[work["id"]], "judgment"), 1):
+            source = candidate["source"]
+            where = ", ".join(str(value) for value in (source.get("court"), source.get("year")) if value)
+            cited = source.get("cited_by_count")
+            if type(cited) is int:
+                where += f", cited by {cited}"
+            words = re.sub(r"\s+", " ", source.get("full_text") or "").strip()
+            lines.append(f"  {label}.{number} {candidate['title']} ({where}), paragraph {candidate['locator']}: {words}")
+    return "\n".join(lines)
+
+
+#: Each pick's operation, prompt, output step and shown text.
+PICKS = {"provision": ("core_research_pick", PICK, "pick", _pick_text),
+         "judgment": ("core_research_judgment_pick", JUDGMENT_PICK, "judgment_pick", _judgment_pick_text)}
+
+
+def _resolve_picks(choice, plan, searches, labels, kind="provision"):
     """Only shown IDs count; the code owns the mapping from a shown ID to a candidate."""
     by_label = {label: work_id for work_id, label in labels.items()}
     chosen, unknown = {work_id: [] for work_id in labels}, []
@@ -573,7 +614,7 @@ def _resolve_picks(choice, plan, searches, labels):
             try:
                 if work_id is None or label != item["question_id"] or not number.isdigit() or int(number) < 1:
                     raise ValueError
-                candidate = _provisions(searches[work_id])[int(number) - 1]
+                candidate = _of_kind(searches[work_id], kind)[int(number) - 1]
             except (ValueError, IndexError):
                 unknown.append(shown)
                 continue
@@ -582,9 +623,9 @@ def _resolve_picks(choice, plan, searches, labels):
     return chosen, unknown
 
 
-def _fallback_picks(searches, labels):
+def _fallback_picks(searches, labels, kind="provision"):
     """When the pick is unavailable each question keeps the search's own first six."""
-    return {work_id: [c["id"] for c in _provisions(searches[work_id])[:6]] for work_id in labels}
+    return {work_id: [c["id"] for c in _of_kind(searches[work_id], kind)[:6]] for work_id in labels}
 
 
 def _labels(plan, searches):
@@ -592,23 +633,29 @@ def _labels(plan, searches):
             enumerate((w for w in plan["work"] if w["id"] in searches), 1)}
 
 
-def pick(model, plan, searches):
+def pick(model, plan, searches, kind="provision"):
     labels = _labels(plan, searches)
-    if not any(_provisions(searches[work_id]) for work_id in labels):
+    if not any(_of_kind(searches[work_id], kind) for work_id in labels):
         return {"state": "not_needed", "proposal": None, "chosen": {w: [] for w in labels}, "unknown": [],
                 "reason": None}
+    operation, system, step, text = PICKS[kind]
     try:
-        choice = _call(model, "core_research_pick", PICK, _pick_text(plan, searches, labels), CHOICE, "pick")
+        choice = _call(model, operation, system, text(plan, searches, labels), CHOICE, step)
     except (ModelError, SchemaViolation) as exc:
-        return {"state": "unavailable", "proposal": None, "chosen": _fallback_picks(searches, labels),
+        return {"state": "unavailable", "proposal": None, "chosen": _fallback_picks(searches, labels, kind),
                 "unknown": [], "reason": type(exc).__name__}
-    chosen, unknown = _resolve_picks(choice, plan, searches, labels)
+    chosen, unknown = _resolve_picks(choice, plan, searches, labels, kind)
     return {"state": "evaluated", "proposal": choice, "chosen": chosen, "unknown": unknown, "reason": None}
+
+
+def _picks_open(picks):
+    return any(p["state"] == "unavailable" or p["unknown"] for p in picks)
 
 
 def retrieve(plan, searcher, context, model=None, *, progress=None):
     """Independent work items retain checked snapshots or explicit read-only gaps; the
-    model then picks the provisions that answer each question (v7)."""
+    model then picks the provisions and the judgment paragraphs that answer each
+    question, both at once (v8)."""
     if accept(plan["proposal"], context) != plan:
         raise ValueError("Research plan differs from its original sources")
     report = progress or (lambda stage, **detail: None)
@@ -629,26 +676,40 @@ def retrieve(plan, searcher, context, model=None, *, progress=None):
             # This independent read-only adapter/snapshot failed. It supplies no
             # admitted evidence; peers remain available and the failure stays explicit.
             record["failures"][work["id"]] = {"stage": "search", "reason": str(exc) or type(exc).__name__}
+    kinds = {"provision": "picks", "judgment": "judgment_picks"}
     if model is None:
         labels = _labels(plan, record["searches"])
-        record["picks"] = {"state": "unavailable", "proposal": None, "chosen": _fallback_picks(record["searches"], labels),
-                           "unknown": [], "reason": "No model for the pick"}
+        for kind, field in kinds.items():
+            record[field] = {"state": "unavailable", "proposal": None, "unknown": [], "reason": "No model for the pick",
+                             "chosen": _fallback_picks(record["searches"], labels, kind)}
     else:
         if record["searches"]:
             report("choosing_provisions")
-        record["picks"] = pick(model, plan, record["searches"])
-    record["state"] = "partial" if (plan["issues"] or record["failures"] or record["picks"]["state"] == "unavailable"
-                                    or record["picks"]["unknown"] or any(
+        with ThreadPoolExecutor(max_workers=len(kinds)) as pool:
+            chosen = dict(zip(kinds, pool.map(lambda kind: pick(model, plan, record["searches"], kind), kinds)))
+        for kind, field in kinds.items():
+            record[field] = chosen[kind]
+    record["state"] = "partial" if (plan["issues"] or record["failures"]
+                                    or _picks_open([record[field] for field in kinds.values()]) or any(
         search["state"] == "partial" for search in record["searches"].values())) else "evaluated"
     return record
 
 
 def admitted_provisions(record):
-    """The provision candidates the answer may use: v7 admits only the pick; earlier
-    records admit every returned provision."""
-    if record.get("contract") != CONTRACT:
+    """The provision candidates the answer may use: v7 and v8 admit only the pick;
+    earlier records admit every returned provision."""
+    if record.get("contract") not in _QUESTION_PLANS:
         return None
     return {candidate_id for ids in record["picks"]["chosen"].values() for candidate_id in ids}
+
+
+def picked_judgments(record):
+    """The judgment paragraphs the v8 pick chose, which the answer reads with their
+    neighbouring paragraphs; None for earlier records, which read every returned
+    paragraph with its whole saved context."""
+    if record.get("contract") != CONTRACT:
+        return None
+    return {candidate_id for ids in record["judgment_picks"]["chosen"].values() for candidate_id in ids}
 
 
 def validate(record, plan, context):
@@ -661,7 +722,9 @@ def validate(record, plan, context):
         raise ValueError("Saved research plan does not fit its research contract") from exc
     if replayed != plan:
         raise ValueError("Saved research plan differs from its original sources")
-    fields = {"contract", "plan", "searches", "failures", "state"} | ({"picks"} if contract == CONTRACT else set())
+    fields = ({"contract", "plan", "searches", "failures", "state"}
+              | ({"picks"} if contract in _QUESTION_PLANS else set())
+              | ({"judgment_picks"} if contract == CONTRACT else set()))
     if (not isinstance(record, dict)
             or set(record) != fields
             or record.get("plan") != plan or not isinstance(record.get("searches"), dict)
@@ -680,31 +743,35 @@ def validate(record, plan, context):
         if work["id"] in successes:
             validate_search(record["searches"][work["id"]], search_queries(work, contract=contract),
                             search_instruments(work, contract=contract))
-    if contract == CONTRACT:
+    picks = []
+    if contract in _QUESTION_PLANS:
         _validate_picks(record["picks"], plan, record["searches"])
-    expected = "partial" if (plan["issues"] or failures or (contract == CONTRACT and (
-        record["picks"]["state"] == "unavailable" or record["picks"]["unknown"])) or any(
+        picks.append(record["picks"])
+    if contract == CONTRACT:
+        _validate_picks(record["judgment_picks"], plan, record["searches"], "judgment")
+        picks.append(record["judgment_picks"])
+    expected = "partial" if (plan["issues"] or failures or _picks_open(picks) or any(
         search["state"] == "partial" for search in record["searches"].values())) else "evaluated"
     if record["state"] != expected:
         raise ValueError("Research status disagrees with actual search outcomes")
     return deepcopy(record)
 
 
-def _validate_picks(picks, plan, searches):
+def _validate_picks(picks, plan, searches, kind="provision"):
     labels = _labels(plan, searches)
     if (not isinstance(picks, dict) or set(picks) != {"state", "proposal", "chosen", "unknown", "reason"}
             or picks["state"] not in ("evaluated", "unavailable", "not_needed")):
-        raise ValueError("The provision pick has no checked disposition")
+        raise ValueError(f"The {kind} pick has no checked disposition")
     if picks["state"] == "evaluated":
         choice = canonical_schema_data(picks["proposal"], CHOICE)
         require_schema(choice, CHOICE)
         if (picks["proposal"] != choice or picks["reason"] is not None
-                or (picks["chosen"], picks["unknown"]) != _resolve_picks(choice, plan, searches, labels)):
-            raise ValueError("The saved provision pick differs from its proposal")
+                or (picks["chosen"], picks["unknown"]) != _resolve_picks(choice, plan, searches, labels, kind)):
+            raise ValueError(f"The saved {kind} pick differs from its proposal")
     elif picks["state"] == "unavailable":
         if (picks["proposal"] is not None or picks["unknown"] or not isinstance(picks["reason"], str)
-                or not picks["reason"] or picks["chosen"] != _fallback_picks(searches, labels)):
-            raise ValueError("An unavailable pick keeps each question's first six provisions")
+                or not picks["reason"] or picks["chosen"] != _fallback_picks(searches, labels, kind)):
+            raise ValueError(f"An unavailable {kind} pick keeps each question's first six")
     elif (picks["proposal"] is not None or picks["unknown"] or picks["reason"] is not None
-          or picks["chosen"] != {w: [] for w in labels} or any(_provisions(searches[w]) for w in labels)):
-        raise ValueError("A pick is not needed only when no provision was returned")
+          or picks["chosen"] != {w: [] for w in labels} or any(_of_kind(searches[w], kind) for w in labels)):
+        raise ValueError(f"A {kind} pick is not needed only when none was returned")

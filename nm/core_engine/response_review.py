@@ -11,7 +11,7 @@ import hashlib
 import json
 from copy import deepcopy
 
-from nm.core_engine import answer_sources, response_authorities, response_writer
+from nm.core_engine import answer_sources, research, response_authorities, response_writer
 from nm.core_engine.understanding import REFERENCE, TEXT
 from nm.shared.model_port import (
     ContextOverflow, ModelError, Prompt, SchemaViolation, Tier,
@@ -24,14 +24,22 @@ AUTHORITY_CONTRACT = "core_response_review_v2"
 ALIAS_CONTRACT = "core_response_review_v3"
 #: v3 where a restriction honoured by not doing the restricted work is
 #: "respected" and needs no reply unit (12 Oct 2026).
-CONTRACT = "core_response_review_v4"
-CONTRACTS = (LEGACY_CONTRACT, AUTHORITY_CONTRACT, ALIAS_CONTRACT, CONTRACT)
-MAX_OUTPUT = 6500
+RESPECTED_CONTRACT = "core_response_review_v4"
+#: v4 judging a reply written in parts, one per dispute, against compact sources and
+#: the understanding with each question's search outcome (owner decision, 15 Oct 2026).
+CONTRACT = "core_response_review_v5"
+CONTRACTS = (LEGACY_CONTRACT, AUTHORITY_CONTRACT, ALIAS_CONTRACT, RESPECTED_CONTRACT, CONTRACT)
+_CURRENT = (RESPECTED_CONTRACT, CONTRACT)
+#: Verdicts for every unit of a long reply; reasoning counts towards it.
+MAX_OUTPUT = 16000
 SYSTEM = """Message: You receive the complete original attributed conversation, the
 latest advocate message, current records and saved work; the complete retrieved
-legal catalogue including adjacent passages and coverage gaps; the research plan
-and search outcomes; the complete proposed reply; code-owned authority checks bound
-to that draft and its source snapshot; and separate code-owned execution evidence.
+legal catalogue including adjacent passages and coverage gaps; our understanding of
+the matter and each legal question's search outcome; the complete proposed reply;
+code-owned authority checks bound to that draft and its source snapshot; and separate
+code-owned execution evidence. A reply may be written in parts, one per dispute,
+each by a separate call: judge it as one reply, including repetition or contradiction
+between its parts.
 Authority checks record identity, readback and quotation results, not legal conclusions
 or executed effects. Draft selections use source_id and quote=null for the complete
 original source, or an exact quoted string for a shorter passage. The full sources
@@ -90,6 +98,9 @@ from the supplied evidence. A genuine consequential missing input or source limi
 may justify a narrower answer; internal processing failures are not missing facts the
 advocate must resend. Preserve independently supported work. Do not reject harmless
 wording, optional metadata, concise paraphrase or a correct answer needing no new write.
+A related point offered for the advocate's decision, naming the point and why it may
+matter without stating its law as established, is a proper offer, not an unsupported
+legal assertion.
 Judge a unit's own content separately from completeness of the whole reply. A correct
 unit remains supported when another independent requested result is missing. Record
 that omission against the unmet request, without marking an unrelated correct unit
@@ -161,7 +172,7 @@ def _dependencies(context, research_record, sources, draft, execution, *,
     if contract == LEGACY_CONTRACT:
         if authority_evidence is not None:
             raise ValueError("Legacy review cannot acquire fresh authority evidence")
-    elif contract in {AUTHORITY_CONTRACT, ALIAS_CONTRACT, CONTRACT}:
+    elif contract in {AUTHORITY_CONTRACT, ALIAS_CONTRACT, *_CURRENT}:
         if authority_evidence is None:
             raise ValueError("Current review requires bound authority evidence")
         dependencies["authority_evidence"] = response_authorities.validate(
@@ -213,11 +224,11 @@ def _accept(proposal, dependencies, *, contract=LEGACY_CONTRACT):
     if (contract not in CONTRACTS
             or ("authority_evidence" in dependencies) != (contract != LEGACY_CONTRACT)):
         raise ValueError("Review version differs from its evidence contract")
-    schema = SCHEMA if contract == CONTRACT else PREVIOUS_SCHEMA
+    schema = SCHEMA if contract in _CURRENT else PREVIOUS_SCHEMA
     data = canonical_schema_data(proposal, schema)
     require_schema(data, schema)
     sources, draft = dependencies["sources"], dependencies["draft"]
-    offered = answer_sources.aliases(sources) if contract in {ALIAS_CONTRACT, CONTRACT} else {}
+    offered = answer_sources.aliases(sources) if contract in {ALIAS_CONTRACT, *_CURRENT} else {}
     known = {unit["id"] for unit in draft["units"]}
     reviewed = [unit["unit_id"] for unit in data["units"]]
     _ids(reviewed, known)
@@ -277,7 +288,8 @@ def _draft_presentation(draft, sources, *, aliased=False):
             None if selected["start"] == 0 and selected["end"] == len(whole)
             else selected["text"])}
 
-    return {"contract": draft["contract"], "units": [{
+    layout = {"parts": deepcopy(draft["parts"])} if "parts" in draft else {}
+    return {"contract": draft["contract"], **layout, "units": [{
         "id": unit["id"], "kind": unit["kind"], "text": unit["text"],
         "addresses": [reference(selected) for selected in unit["addresses"]],
         "uses": [{**reference(use), "role": use["role"], "speaker": use["speaker"],
@@ -293,18 +305,22 @@ def review(model, context, research_record, sources, draft, execution=None, *,
     # Original words are already complete above; legal rows include all adjacent
     # context, not merely the writer's chosen support. Full durable binding is kept.
     research_context = {"state": research_record["state"],
-        "plan_proposal": research_record["plan"]["proposal"],
         "planning_issues": research_record["plan"]["issues"],
-        "searches": [{"work_id": identity, "state": row["state"],
-                      "stages": row["stages"], "issues": row["issues"]}
+        "searches": [{"work_id": identity, "state": row["state"], "issues": row["issues"]}
                      for identity, row in research_record["searches"].items()],
         "failures": research_record["failures"]}
+    if research_record.get("contract") in (research.PICKED_CONTRACT, research.CONTRACT):
+        research_context["understanding"] = research_record["plan"]["proposal"]["understanding"]
+        research_context["questions"] = [{"work_id": w["id"], "dispute_id": w["dispute"]["id"],
+                                          "question": w["question"]} for w in research_record["plan"]["work"]]
+    else:
+        research_context["plan_proposal"] = research_record["plan"]["proposal"]
     # Legal passages, the draft's legal uses and the checks naming them all use
     # the offered aliases; admission maps a selected alias back to its owned tag.
     shown = {tag: alias for alias, tag in answer_sources.aliases(sources).items()}
     payload = {"original_context": dependencies["original_context"],
         "research_proposal_and_results": research_context,
-        "legal_sources": answer_sources.presentation(sources, aliased=True),
+        "legal_sources": answer_sources.presentation(sources, aliased=True, compact=True),
         "complete_draft_proposal": _draft_presentation(draft, sources, aliased=True),
         "owned_execution_evidence": dependencies["execution"],
         "owned_authority_checks": {

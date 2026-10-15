@@ -189,7 +189,7 @@ def test_existing_v1_projection_and_legacy_rendering_are_unchanged(monkeypatch):
     assert old["units"][0]["uses"][0]["speaker"] is None
 
 
-@pytest.mark.parametrize("contract", ["unknown", "core_response_writer_v4"])
+@pytest.mark.parametrize("contract", ["unknown", "core_response_writer_v5"])
 def test_unknown_saved_contract_fails_without_fallback(contract):
     ctx, _, sources = setup()
     saved = candidate.accept(proposal(sources, [use(sources["t2:advocate"])]), ctx, sources)
@@ -227,7 +227,7 @@ def test_fresh_writer_remains_one_routine_call_and_transmits_complete_context():
     offered = {tag: alias for alias, tag in answer_sources.aliases(sources).items()}
     assert sent["source_kinds"] == {offered.get(identity, identity): row["kind"]
                                     for identity, row in sources.items()}
-    assert sent["held_passages"] == answer_sources.presentation(sources, aliased=True)
+    assert sent["held_passages"] == answer_sources.presentation(sources, aliased=True, compact=True)
     assert schema == candidate.SCHEMA
     assert kwargs == {"max_tokens": candidate.MAX_OUTPUT}
     assert result["contract"] == candidate.CONTRACT
@@ -277,7 +277,7 @@ def aliased(source, sources, **changes):
     return use(source, **changes) | {"source_id": offered[source["id"]]}
 
 
-def test_v3_selects_legal_passages_by_alias_and_replays_from_the_saved_catalogue():
+def test_v3_and_v4_select_legal_passages_by_alias_and_replay_from_the_saved_catalogue():
     ctx, _, sources = setup()
     provision = next(s for s in sources.values() if s["kind"] == "provision")
     judgments = [s for s in sources.values() if s["kind"] == "judgment"]
@@ -289,9 +289,12 @@ def test_v3_selects_legal_passages_by_alias_and_replays_from_the_saved_catalogue
     first, second = draft["units"][0]["uses"]
     assert (first["source_id"], second["source_id"]) == (provision["id"], judgments[0]["id"])
     assert second["treatment_source"]["source_id"] == judgments[1]["id"]
-    assert draft["contract"] == candidate.CONTRACT == "core_response_writer_v3"
+    assert draft["contract"] == candidate.CONTRACT == "core_response_writer_v4"
     assert draft["proposal"] == supplied, "the saved proposal keeps the offered aliases"
     assert candidate.validate(deepcopy(draft), ctx, deepcopy(sources)) == draft
+    saved_v3 = candidate.accept(supplied, ctx, sources, contract=candidate.ALIAS_CONTRACT)
+    assert saved_v3["units"] == draft["units"] and "parts" not in saved_v3
+    assert candidate.validate(deepcopy(saved_v3), ctx, deepcopy(sources)) == saved_v3
 
 
 def test_v3_refuses_an_unoffered_alias_and_keeps_exact_owned_tags():

@@ -236,6 +236,9 @@ main { display: grid; grid-template-columns: 19rem minmax(0, 1fr); flex: 1; min-
 .el.finding  { border-left-color: var(--amber); }
 .el.finding .k { color: var(--amber); }
 .el.ground   { border-left-color: var(--rule); color: var(--ink-2); font-size: 0.88rem; }
+/* A reply answering several disputes: each dispute's name before its part (15 Oct 2026). */
+.el.HEADING { border-left: none; padding-left: 0; margin: 1.25rem 0 0.35rem; }
+.el.HEADING .body { font-weight: 600; font-size: 1.02rem; }
 .el.ground .k { color: var(--ink-3); }
 .el .when {
   font-family: var(--f-mono); font-size: 0.68rem; color: var(--ink-3);

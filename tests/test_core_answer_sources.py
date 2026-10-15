@@ -16,16 +16,16 @@ pytestmark = pytest.mark.class_a
 
 
 class AdjacentJudgment(Collection):
-    def __init__(self, *, bounded=False):
+    def __init__(self, *, bounded=False, hit=0):
         super().__init__("judgment")
-        self.bounded = bounded
+        self.bounded, self.hit = bounded, hit
         self.rows[0].update(full_text="Counsel submitted that the amount was payable.",
                             atom_type="holding", paragraph_type="court_holding")
         self.rows[1].update(full_text="The Court rejected that submission because its condition was unmet.",
                             paragraph_num="13", atom_type="argument")
 
-    def lexical(self, query, depth): return [0]
-    def semantic(self, query, depth): return [0]
+    def lexical(self, query, depth): return [self.hit]
+    def semantic(self, query, depth): return [self.hit]
 
     def context(self, position, source):
         return {"scope": "adjacent_indexed_segments", "bounded": self.bounded,
@@ -148,6 +148,9 @@ def test_same_corpus_position_cannot_supply_contradictory_passages_across_work()
             segment.update(row=changed, content_digest=_digest(changed))
     search["candidates"][i] = _candidate("judgment", prior["position"], changed,
         prior["corpus_revision"], prior["score"], prior["query_ids"], window)
+    # The saved judgment pick named the paragraph at this place in the list (v8).
+    record["judgment_picks"]["chosen"]["t2:w2"] = [search["candidates"][i]["id"] if c == prior["id"] else c
+                                                   for c in record["judgment_picks"]["chosen"]["t2:w2"]]
     assert validate(record, record["plan"], ctx) == record
     with pytest.raises(ValueError, match="conflicting saved source"): build(ctx, record)
 
@@ -177,7 +180,8 @@ def test_exact_selection_rejects_unknown_ambiguous_and_normalised_words():
 
 
 def test_partial_context_keeps_readable_sources_and_explicit_coverage_gaps():
-    ctx, record = fixture(judgment=AdjacentJudgment(bounded=True))
+    # The returned paragraph's later neighbour could not be read (v8 reads one either side).
+    ctx, record = fixture(judgment=AdjacentJudgment(bounded=True, hit=1))
     sources = build(ctx, record)
     assert record["state"] == "partial"
     displayed = presentation(sources)
@@ -367,3 +371,66 @@ def test_aliased_presentation_renames_only_passage_tags_and_context_members():
                                          for identity, members in plain["context_groups"].items()}
     assert presentation(sources) == plain, "the owned-tag presentation is unchanged"
     assert "provision:" not in json.dumps(aliased) and "judgment:" not in json.dumps(aliased)
+
+
+# --- research v8: picked judgments read with their neighbours; compact part views ----------
+
+class LongJudgment(Collection):
+    """Seven stored paragraphs of one judgment; the search returns the second and fifth."""
+    def __init__(self):
+        super().__init__("judgment")
+        self.rows = {p: {"chunk_id": f"para{p}", "full_text": f"Paragraph {p} of the judgment.",
+                         "case_id": "case", "case_name": "Judgment", "paragraph_num": str(p + 1)} for p in range(7)}
+
+    def lexical(self, query, depth): return [1, 4]
+    def semantic(self, query, depth): return [1, 4]
+
+    def context(self, position, source):
+        near = [p for p in self.rows if abs(p - position) <= 2]
+        return {"scope": "adjacent_indexed_segments", "bounded": False, "unread_positions": [],
+                "segments": [{"position": p, "row": deepcopy(self.rows[p])} for p in near]}
+
+
+def test_a_picked_judgment_is_read_with_one_paragraph_either_side_and_every_other_alone():
+    ctx = context("Find the applicable law.")
+    plan = accept(proposal(), ctx)
+    searcher = HybridSearcher({"provision": Collection(), "judgment": LongJudgment()})
+    record = retrieve(plan, searcher, ctx, model=Model(choose_judgments=lambda ids: ids[:1]))
+    returned = [c for c in record["searches"]["t2:w1"]["candidates"] if c["kind"] == "judgment"]
+    picked = next(c for c in returned if c["id"] in record["judgment_picks"]["chosen"]["t2:w1"])
+    other = next(c for c in returned if c["id"] != picked["id"])
+    sources = build(ctx, record)
+    read = sorted(int(r["source_identity"]["position"]) for r in sources.values() if r["kind"] == "judgment")
+    assert read == sorted({picked["position"] - 1, picked["position"], picked["position"] + 1, other["position"]})
+    assert sources[other["id"]]["context_ids"] == []  # the unpicked paragraph is still there, alone
+    scopes = {c["selected_source_id"]: c["scope"] for r in sources.values() for c in r["coverage"]}
+    assert scopes[picked["id"]] == "adjacent_indexed_segments" and scopes[other["id"]] == "selected_indexed_segment"
+
+
+class PerQuestion(Collection):
+    """Each legal question's phrases find a different stored paragraph."""
+    def __init__(self):
+        super().__init__("judgment")
+        self.rows[1]["case_id"] = "other case"
+
+    def lexical(self, query, depth):
+        return [0] if "D1Q1" in query else [1] if "D1Q2" in query else []
+    semantic = lexical
+
+    def context(self, position, source):
+        return {"scope": "selected_indexed_segment", "bounded": False, "unread_positions": [],
+                "segments": [{"position": position, "row": deepcopy(source)}]}
+
+
+def test_a_compact_part_view_shows_only_that_parts_passages_under_the_whole_answers_ids():
+    ctx = context("Find the applicable law.")
+    plan = accept(proposal(2), ctx)
+    searcher = HybridSearcher({"provision": Collection(), "judgment": PerQuestion()})
+    sources = build(ctx, retrieve(plan, searcher, ctx, model=Model()))
+    whole = presentation(sources, aliased=True)
+    part = presentation(sources, aliased=True, compact=True, work_ids=["t2:w1"])
+    first = {p["id"] for p in whole["passages"] if "t2:w1" in p["work_ids"]}
+    assert {p["id"] for p in part["passages"]} == first < {p["id"] for p in whole["passages"]}
+    assert all(not {"source_identity", "record_role", "speaker"} & set(p) for p in part["passages"])
+    shown = {p["id"] for p in part["passages"]}
+    assert all(set(members) <= shown for members in part["context_groups"].values())

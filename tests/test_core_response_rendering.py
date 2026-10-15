@@ -157,3 +157,31 @@ def test_saved_rendering_replay_rejects_changed_text_or_references(change):
     else: elements[0]["inline_citations"][0]["source_id"] = "foreign"
     with pytest.raises(ValueError, match="admitted rendering"):
         turn.validate_activity(activity, ctx, elements)
+
+
+def test_a_reply_answering_two_disputes_shows_each_disputes_name_before_its_part():
+    """Rendering v5 (owner decision, 15 Oct 2026): the heading is the understanding's own
+    name for the dispute, placed by code; a reply about one dispute has no heading."""
+    from nm.core_engine import response_authorities, response_review, response_writer, turn
+    from tests.test_core_response_review import Model as ReviewModel, positive, request
+    from tests.test_core_response_writer import PartModel, two_disputes
+    ctx, record, sources = two_disputes()
+    draft = response_writer.write(PartModel(sources), ctx, record, sources)
+    execution = turn.execution_record(record)
+    authorities = response_authorities.check(ctx, record, sources, draft)
+    reviewed = response_review.review(ReviewModel(positive(draft, requests=[request(ctx, draft)])), ctx, record,
+                                      sources, draft, execution, authority_evidence=authorities)
+    elements = response_rendering.render(ctx, record, sources, draft, reviewed, execution,
+                                         authority_evidence=authorities)
+    assert [(e["kind"], e["text"]) for e in elements] == [
+        ("HEADING", "Dispute 1"), ("QUESTION", "Answer for D1?"),
+        ("HEADING", "Dispute 2"), ("QUESTION", "Answer for D2?")]
+    heading = elements[0]
+    assert heading["sources"] == [] and heading["source"] is None and heading["citation_markers"] == []
+    earlier = response_rendering.render(ctx, record, sources, draft, reviewed, execution, authority_evidence=authorities,
+                                        contract=response_rendering.CITED_WORDS_CONTRACT)
+    assert [e["kind"] for e in earlier] == ["QUESTION", "QUESTION"]  # a saved v4 rendering never gains headings
+    forged = deepcopy(record)
+    forged["plan"]["proposal"]["understanding"]["disputes"][1]["id"] = "D9"
+    with pytest.raises(ValueError):
+        response_rendering._headings(forged, draft)

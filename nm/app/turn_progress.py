@@ -19,7 +19,7 @@ STAGES = {
     "revising_understanding": "Correcting the understanding",
     "writing_search_terms": "Writing search terms for each legal question",
     "searching": "Searching the statutes and judgments",
-    "choosing_provisions": "Choosing the provisions that answer each question",
+    "choosing_provisions": "Choosing the provisions and judgments that answer each question",
     "writing": "Writing the answer",
     "checking_authorities": "Checking the cited sources",
     "reviewing": "Reviewing the answer independently",

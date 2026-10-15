@@ -1,5 +1,5 @@
-"""Research: the v7 reasoning loop, its phrases, searches and provision pick, and the
-replay of every earlier plan version. These prove handoffs and mechanical contracts,
+"""Research: the v7 reasoning loop, its phrases, searches, the provision pick and (v8)
+the judgment pick, and the replay of every earlier plan version. These prove handoffs and mechanical contracts,
 not the model's legal judgment."""
 from copy import deepcopy
 import json
@@ -10,8 +10,8 @@ import pytest
 from nm.core_engine import answer_sources
 from nm.core_engine.calls import TurnCalls
 from nm.core_engine.research import (
-    CONTRACT, INSTRUMENTED_CONTRACT, MAX_REVISIONS, PROVISIONS_FOR_PICK, accept, plan, retrieve,
-    search_instruments, search_queries, validate,
+    CONTRACT, INSTRUMENTED_CONTRACT, MAX_REVISIONS, PICKED_CONTRACT, PROVISIONS_FOR_PICK, accept,
+    picked_judgments, plan, retrieve, search_instruments, search_queries, validate,
 )
 from nm.core_engine.retrieval import HybridSearcher, SearchUnavailable
 from nm.shared.budget_contracts import Completion
@@ -93,14 +93,15 @@ def _result(data, tier, completion=Completion.COMPLETE):
 
 
 class Model:
-    """Answers each operation from a script; the pick chooses every shown provision."""
+    """Answers each operation from a script; each pick chooses every shown candidate."""
 
     def __init__(self, subject=None, *, checks=None, revisions=None, fail=(), budget=100_000,
-                 completion=Completion.COMPLETE, choose=None):
+                 completion=Completion.COMPLETE, choose=None, choose_judgments=None):
         self.subject = subject or understanding()
         self.checks = list(checks or [{"verdict": "sound", "problems": []}])
         self.revisions = list(revisions or [])
         self.fail, self.budget, self.completion, self.choose = set(fail), budget, completion, choose
+        self.choose_judgments = choose_judgments
         self.calls = []
 
     def context_budget(self, tier): return self.budget
@@ -121,11 +122,12 @@ class Model:
             data = statute_phrases(next(d for d in self.subject["disputes"] if d["id"] == dispute_id))
         elif operation == "core_research_judgment_phrases":
             data = judgment_phrases(self.subject)
-        elif operation == "core_research_pick":
+        elif operation in ("core_research_pick", "core_research_judgment_pick"):
             shown = {}
             for label, number in re.findall(r"^\s+(Q\d+)\.(\d+) ", prompt.user, re.M):
                 shown.setdefault(label, []).append(f"{label}.{number}")
-            data = {"questions": [{"question_id": q, "chosen": (self.choose or (lambda ids: ids))(ids), "note": "Chosen."}
+            choose = self.choose if operation == "core_research_pick" else self.choose_judgments
+            data = {"questions": [{"question_id": q, "chosen": (choose or (lambda ids: ids))(ids), "note": "Chosen."}
                                   for q, ids in shown.items()]}
         else:
             raise AssertionError(operation)
@@ -142,7 +144,19 @@ def searcher():
                      "act_name": "Act", "section_number": str(p)} for p in range(25)}
     many.lexical = many.semantic = lambda query, depth: list(many.rows)
     many.rerank = lambda pairs, *, anchors=None: [1.0] * len(pairs)
-    return HybridSearcher({"provision": many, "judgment": Collection("judgment")})
+    return HybridSearcher({"provision": many, "judgment": judgments()})
+
+
+def judgments(count=8):
+    """More paragraphs than the six the search returns, each with its court, year and standing."""
+    held = Collection("judgment")
+    held.rows = {p: {"chunk_id": f"j{p}", "full_text": f"Paragraph {p}:\n the court  holds rule {p}.",
+                     "case_id": f"case{p}", "case_name": f"Case {p} v State", "paragraph_num": str(p + 1),
+                     "court": "Supreme Court of India", "year": "2001", "cited_by_count": p * 10,
+                     "paragraph_type": "reasoning"} for p in range(count)}
+    held.lexical = held.semantic = lambda query, depth: list(held.rows)
+    held.rerank = lambda pairs, *, anchors=None: [1.0] * len(pairs)
+    return held
 
 
 # --- the v7 loop ----------------------------------------------------------------------
@@ -265,7 +279,7 @@ def test_search_returns_twenty_provisions_and_the_pick_admits_only_its_choice():
     model = Model(choose=lambda ids: ids[:2])
     record = retrieve(admitted, found, ctx, model=model)
     assert asked == [{"results": {"provision": PROVISIONS_FOR_PICK}}]
-    assert record["contract"] == CONTRACT == "core_research_v7" and record["state"] == "evaluated"
+    assert record["contract"] == CONTRACT == "core_research_v8" and record["state"] == "evaluated"
     provisions = [c for c in record["searches"]["t2:w1"]["candidates"] if c["kind"] == "provision"]
     assert len(provisions) == PROVISIONS_FOR_PICK
     assert record["picks"]["chosen"] == {"t2:w1": [provisions[0]["id"], provisions[1]["id"]]}
@@ -274,6 +288,64 @@ def test_search_returns_twenty_provisions_and_the_pick_admits_only_its_choice():
     assert sorted(r["id"] for r in sources.values() if r["kind"] == "provision") == sorted(
         {provisions[0]["id"], provisions[1]["id"]} | {seg for c in provisions[:2] for seg in []})
     assert any(r["kind"] == "judgment" for r in sources.values())
+
+
+def test_the_judgment_pick_chooses_among_the_six_returned_and_records_its_choice():
+    ctx = context("Find the applicable law.")
+    admitted = accept(proposal(), ctx)
+    model = Model(choose_judgments=lambda ids: [ids[2], ids[0]])
+    record = retrieve(admitted, searcher(), ctx, model=model)
+    paragraphs = [c for c in record["searches"]["t2:w1"]["candidates"] if c["kind"] == "judgment"]
+    assert len(paragraphs) == 6
+    shown = next(p.user for p in model.calls if p.operation == "core_research_judgment_pick")
+    assert re.findall(r"^\s+Q1\.(\d+) ", shown, re.M) == ["1", "2", "3", "4", "5", "6"]
+    first = paragraphs[0]["source"]
+    assert (f"Q1.1 {first['case_name']} (Supreme Court of India, 2001, cited by {first['cited_by_count']}), "
+            f"paragraph {first['paragraph_num']}: Paragraph") in shown
+    assert "the court holds rule" in shown  # whole words, spacing collapsed
+    assert record["judgment_picks"]["chosen"] == {"t2:w1": [paragraphs[2]["id"], paragraphs[0]["id"]]}
+    assert picked_judgments(record) == {paragraphs[2]["id"], paragraphs[0]["id"]}
+    assert record["state"] == "evaluated" and validate(record, admitted, ctx) == record
+    assert operations(model).count("core_research_judgment_pick") == 1
+
+
+def test_an_unavailable_judgment_pick_keeps_the_six_and_marks_the_research_partial():
+    ctx = context("Find the applicable law.")
+    admitted = accept(proposal(), ctx)
+    record = retrieve(admitted, searcher(), ctx, model=Model(fail={"core_research_judgment_pick"}))
+    paragraphs = [c["id"] for c in record["searches"]["t2:w1"]["candidates"] if c["kind"] == "judgment"]
+    assert record["judgment_picks"]["state"] == "unavailable"
+    assert record["judgment_picks"]["chosen"] == {"t2:w1": paragraphs[:6]}
+    assert record["picks"]["state"] == "evaluated"  # the provision pick is independent
+    assert record["state"] == "partial" and validate(record, admitted, ctx) == record
+
+
+def test_a_changed_judgment_pick_cannot_replay():
+    ctx = context("Find the applicable law.")
+    admitted = accept(proposal(), ctx)
+    record = retrieve(admitted, searcher(), ctx, model=Model(choose_judgments=lambda ids: ids[:1]))
+    other = next(c["id"] for c in record["searches"]["t2:w1"]["candidates"] if c["kind"] == "judgment"
+                 and c["id"] not in record["judgment_picks"]["chosen"]["t2:w1"])
+    forged = deepcopy(record)
+    forged["judgment_picks"]["chosen"]["t2:w1"].append(other)
+    with pytest.raises(ValueError, match="judgment pick"): validate(forged, admitted, ctx)
+    missing = deepcopy(record)
+    del missing["judgment_picks"]
+    with pytest.raises(ValueError): validate(missing, admitted, ctx)
+
+
+def test_saved_v7_records_replay_unchanged_and_admit_every_returned_judgment():
+    ctx = context("Find the applicable law.")
+    admitted = accept(proposal(), ctx, contract=PICKED_CONTRACT)
+    record = retrieve(admitted, searcher(), ctx, model=Model(choose_judgments=lambda ids: ids[:1]))
+    saved = {key: value for key, value in record.items() if key != "judgment_picks"}
+    saved["contract"] = PICKED_CONTRACT
+    assert validate(saved, admitted, ctx) == saved
+    assert picked_judgments(saved) is None
+    judged = {r["id"] for r in answer_sources.build(ctx, saved).values() if r["kind"] == "judgment"}
+    assert {c["id"] for c in saved["searches"]["t2:w1"]["candidates"] if c["kind"] == "judgment"} <= judged
+    with pytest.raises(ValueError):
+        validate({**saved, "contract": CONTRACT}, admitted, ctx)
 
 
 def test_shown_ids_alone_count_and_an_unknown_id_marks_the_research_partial():
@@ -339,6 +411,7 @@ def test_unconfigured_search_is_a_gap_and_not_empty_success():
     ctx = context("Find the applicable law.")
     record = retrieve(accept(proposal(), ctx), None, ctx, model=Model())
     assert record["state"] == "partial" and record["failures"] and record["picks"]["state"] == "not_needed"
+    assert record["judgment_picks"]["state"] == "not_needed"
 
 
 def test_replay_rebinds_source_provenance_to_original_context():

@@ -85,10 +85,17 @@ def test_complete_context_and_all_neighbouring_legal_words_reach_one_writer_call
     assert set(offered.values()) == {s["id"] for s in sources.values() if s["kind"] in {"provision", "judgment"}}
     assert not any(tag in prompt.user for tag in offered.values()), "legal passages travel by alias"
     assert any("Court rejected" in s["text"] for s in payload["held_passages"]["passages"])
-    assert payload["research"]["plan_proposal"] == record["plan"]["proposal"]
+    assert not any({"source_identity", "record_role"} & set(s) for s in payload["held_passages"]["passages"])
+    # v4: the understanding and each question's outcome, not the plan's bookkeeping.
+    understood = record["plan"]["proposal"]["understanding"]
+    assert payload["research"]["understanding"] == understood and "plan_proposal" not in payload["research"]
+    assert [q["work_id"] for q in payload["research"]["questions"]] == [w["id"] for w in record["plan"]["work"]]
+    assert payload["this_part"] == {"part": 1, "of": 1, "opens_the_answer": True,
+                                    "dispute": understood["disputes"][0], "other_parts": []}
     assert tier is Tier.HARD and kwargs == {"max_tokens": MAX_OUTPUT} and schema == SCHEMA
     assert prompt.operation == "core_response_writer"
     assert draft["contract"] == CONTRACT and draft["proposal"] == proposed
+    assert draft["parts"] == [{"dispute_id": understood["disputes"][0]["id"], "units": 1}]
     assert draft["units"][0]["id"] == "t2:b1"
 
 
@@ -293,3 +300,100 @@ def test_saved_or_reviewed_draft_rebinds_all_projection_fields(damage):
     elif damage == "contract": draft["contract"] = "unrecognised"
     else: draft["review"] = "approved"
     with pytest.raises(ValueError): validate(draft, ctx, sources)
+
+
+# --- v4: one part per dispute (owner decision, 15 Oct 2026) ------------------------------
+
+class TwoDisputeLibrary:
+    """Each dispute's question finds its own judgment paragraph."""
+    @staticmethod
+    def searcher():
+        from nm.core_engine.retrieval import HybridSearcher
+        from tests.test_current_brain_retrieval import Collection
+        judgments = Collection("judgment")
+        judgments.rows[1]["case_id"] = "other case"
+        judgments.lexical = judgments.semantic = (
+            lambda query, depth: [0] if "D1Q1" in query else [1] if "D2Q1" in query else [])
+        return HybridSearcher({"provision": Collection(), "judgment": judgments})
+
+
+def two_disputes():
+    from nm.core_engine.research import accept as accept_plan, retrieve
+    from tests.test_core_research import Model as ResearchModel, proposal as research_proposal
+    from tests.test_core_understanding import context
+    ctx = context("Find the applicable law.")
+    record = retrieve(accept_plan(research_proposal(1, 2), ctx), TwoDisputeLibrary.searcher(), ctx,
+                      model=ResearchModel())
+    return ctx, record, build(ctx, record)
+
+
+class PartModel:
+    """Each part answers with one unit naming its dispute and records what it was shown."""
+    def __init__(self, sources, *, broken=None):
+        import threading
+        self.sources, self.broken, self.seen, self.lock = sources, broken, [], threading.Lock()
+
+    def context_budget(self, tier): return 100_000
+
+    def structured(self, prompt, schema, tier, **kwargs):
+        payload = json.loads(prompt.user)
+        with self.lock:
+            self.seen.append(payload)
+        dispute = payload["this_part"]["dispute"]["id"]
+        data = {"units": [unit(self.sources, text=f"Answer for {dispute}?")]}
+        if dispute == self.broken:
+            data["units"][0]["addresses"] = [{"source_id": "not offered"}]
+        return ModelResult(None, data, tier, "synthetic", "fixture", Usage(1, 1, 0), 0,
+                           completion=Completion.COMPLETE)
+
+
+def test_each_dispute_is_written_in_its_own_part_seeing_only_its_own_sources():
+    ctx, record, sources = two_disputes()
+    model = PartModel(sources)
+    draft = write(model, ctx, record, sources)
+    shown = {p["this_part"]["dispute"]["id"]: p for p in model.seen}
+    assert sorted(shown) == ["D1", "D2"] and len(model.seen) == 2
+    assert shown["D1"]["this_part"]["opens_the_answer"] and not shown["D2"]["this_part"]["opens_the_answer"]
+    assert shown["D1"]["this_part"]["other_parts"] == ["Dispute 2"]
+    texts = {d: {p["text"] for p in shown[d]["held_passages"]["passages"] if p["kind"] == "judgment"} for d in shown}
+    assert texts["D1"] and texts["D2"] and not texts["D1"] & texts["D2"]
+    assert all(p["original_context"] == ctx for p in model.seen)
+    assert draft["parts"] == [{"dispute_id": "D1", "units": 1}, {"dispute_id": "D2", "units": 1}]
+    assert [u["text"] for u in draft["units"]] == ["Answer for D1?", "Answer for D2?"]
+    assert [u["id"] for u in draft["units"]] == ["t2:b1", "t2:b2"]
+    assert validate(deepcopy(draft), ctx, sources) == draft
+
+
+def test_a_correction_rewrites_only_the_part_a_finding_names():
+    from nm.core_engine.response_writer import kept_parts
+    ctx, record, sources = two_disputes()
+    draft = write(PartModel(sources), ctx, record, sources)
+    finding = {"category": "grounding", "unit_ids": [draft["units"][1]["id"]], "sources": [], "mismatch": "x"}
+    kept = kept_parts(draft, [finding])
+    assert list(kept) == [0]
+    again = PartModel(sources)
+    corrected = write(again, ctx, record, sources, keep=kept)
+    assert [p["this_part"]["dispute"]["id"] for p in again.seen] == ["D2"]
+    assert corrected["units"][0]["text"] == draft["units"][0]["text"]
+    assert kept_parts(draft, [{**finding, "unit_ids": []}]) == {}  # an omission reopens every part
+
+
+def test_a_malformed_part_refuses_the_whole_draft_for_correction():
+    ctx, record, sources = two_disputes()
+    with pytest.raises(SchemaViolation):
+        write(PartModel(sources, broken="D2"), ctx, record, sources)
+
+
+@pytest.mark.parametrize("change", ["count", "dispute", "empty", "extra"])
+def test_a_changed_layout_cannot_replay(change):
+    ctx, record, sources = two_disputes()
+    draft = write(PartModel(sources), ctx, record, sources)
+    forged = deepcopy(draft)
+    if change == "count": forged["parts"][0]["units"] = 2
+    elif change == "dispute": forged["parts"][0]["dispute_id"] = ""
+    elif change == "empty": forged["parts"] = []
+    else: forged["parts"][0]["title"] = "Written by code?"
+    with pytest.raises(ValueError): validate(forged, ctx, sources)
+    from nm.core_engine.response_writer import ALIAS_CONTRACT
+    with pytest.raises(ValueError):
+        accept(draft["proposal"], ctx, sources, contract=ALIAS_CONTRACT, parts=draft["parts"])

@@ -104,16 +104,16 @@ def store(tmp_path): return FileMatterStore(tmp_path, key="synthetic-turn-fixtur
 def test_four_actual_stage_calls_save_reopen_and_replay_without_reexecution(store):
     model = ScriptedModel(legal=True)
     response = run(store, model)
-    assert response["committed"] == "committed" and response["metrics"]["llm_calls"] == 8
+    assert response["committed"] == "committed" and response["metrics"]["llm_calls"] == 9
     names = [name for name, _ in model.calls]
     assert sorted(names[3:5]) == ["core_research_judgment_phrases", "core_research_phrases"]  # in parallel
-    assert names[:3] + names[5:] == ["core_understanding", "core_research_understand", "core_research_check",
-                                     "core_research_pick",
-                                                "core_response_writer", "core_response_review"]
+    assert sorted(names[5:7]) == ["core_research_judgment_pick", "core_research_pick"]  # in parallel
+    assert names[:3] + names[7:] == ["core_understanding", "core_research_understand", "core_research_check",
+                                     "core_response_writer", "core_response_review"]
     stored = store.load(chat_matter_id("owner", response["chat_id"]))
     rows = saved_rows(stored, "owner")
     assert rows[0]["activities"]["contract"] == "core_turn_v2"
-    assert rows[0]["activities"]["review"]["contract"] == "core_response_review_v4"
+    assert rows[0]["activities"]["review"]["contract"] == "core_response_review_v5"
     assert rows[0]["activities"]["authority_evidence"]["contract"] == "core_response_authorities_v1"
     assert rows[0]["response"] == response
     source = response["elements"][0]["source"]
@@ -121,7 +121,7 @@ def test_four_actual_stage_calls_save_reopen_and_replay_without_reexecution(stor
     assert "Court rejected" in source["verification"]["treatment_excerpt"]
     assert len(response["elements"][0]["sources"]) == 2
     assert run(store, model) == {**response, "replayed": True}
-    assert len(model.calls) == 8
+    assert len(model.calls) == 9
 
 
 def test_mixed_legacy_and_current_history_reopens_without_fresh_authority_checks(store, monkeypatch):
@@ -158,7 +158,8 @@ def test_mixed_legacy_and_current_history_reopens_without_fresh_authority_checks
     assert len(model.calls) == 3
 
 
-@pytest.mark.parametrize("saved", ["core_response_rendering_v2", "core_response_rendering_v3"])
+@pytest.mark.parametrize("saved", ["core_response_rendering_v2", "core_response_rendering_v3",
+                                   "core_response_rendering_v4"])
 def test_a_turn_saved_under_an_earlier_rendering_reopens_unchanged_beside_a_current_turn(store, saved):
     """Shown names (v3) and cited-word links (v4) never rewrite an earlier saved response."""
     from nm.core_engine import response_rendering, turn
@@ -177,9 +178,10 @@ def test_a_turn_saved_under_an_earlier_rendering_reopens_unchanged_beside_a_curr
     assert second["committed"] == "committed"
     rows = saved_rows(store.load(chat_matter_id("owner", first["chat_id"])), "owner")
     assert [row["activities"]["rendering_contract"] for row in rows] == [
-        saved, "core_response_rendering_v4"]
+        saved, "core_response_rendering_v5"]
     assert rows[0]["response"]["elements"] == elements
-    assert all("citation_markers" not in element for element in rows[0]["response"]["elements"])
+    if saved != "core_response_rendering_v4":
+        assert all("citation_markers" not in element for element in rows[0]["response"]["elements"])
 
 
 def test_rewritten_draft_recomputes_its_authority_evidence_before_review(store, monkeypatch):

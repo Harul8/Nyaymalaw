@@ -4,7 +4,7 @@ from __future__ import annotations
 from copy import deepcopy
 import re
 
-from nm.core_engine import response_authorities, response_review, response_writer
+from nm.core_engine import research, response_authorities, response_review, response_writer
 from nm.shared.citation_contracts import statute_title
 
 LEGACY_CONTRACT = "core_response_rendering_v1"
@@ -14,7 +14,11 @@ STORED_TITLE_CONTRACT = "core_response_rendering_v2"
 SHOWN_NAME_CONTRACT = "core_response_rendering_v3"
 #: v3 linking each source at the words that cite it, never a whole paragraph;
 #: sources not cited by name follow the paragraph as markers (11 Oct 2026).
-CONTRACT = "core_response_rendering_v4"
+CITED_WORDS_CONTRACT = "core_response_rendering_v4"
+#: v4 with a heading before each dispute's part when a reply answers more than one
+#: dispute, in the understanding's own name for it (owner decision, 15 Oct 2026).
+CONTRACT = "core_response_rendering_v5"
+_CITED = (CITED_WORDS_CONTRACT, CONTRACT)
 _LEGAL = {"provision", "judgment"}
 _ROLES = {"provision": "legislative_text", "court_disposition": "court_conclusion",
           "court_reasoning": "court_reasoning", "party_submission": "party_submission",
@@ -209,10 +213,30 @@ def _cited_words(text, sources, authority):
     return anchors, markers
 
 
+def _headings(research_record, draft):
+    """Where each dispute's part begins, with the understanding's name for that dispute;
+    none when the reply answers one dispute or was written whole."""
+    parts = draft.get("parts") or []
+    if len({part["dispute_id"] for part in parts}) < 2:
+        return {}
+    names = {}
+    if research_record.get("contract") in (research.PICKED_CONTRACT, research.CONTRACT):
+        for dispute in research_record["plan"]["proposal"]["understanding"]["disputes"]:
+            names.setdefault(dispute["id"], dispute["name"])
+    headings, start = {}, 0
+    for part in parts:
+        if part["dispute_id"] not in names or not names[part["dispute_id"]].strip():
+            raise ValueError("A part of the reply names no dispute of its research")
+        if part["dispute_id"] not in headings.values():
+            headings[start] = part["dispute_id"]
+        start += part["units"]
+    return {position: names[identity] for position, identity in headings.items()}
+
+
 def render(context, research_record, sources, draft, review, execution=None, *,
            authority_evidence=None, contract=CONTRACT):
     """No new prose; the declared version owns its exact reviewed dependencies."""
-    if contract not in {LEGACY_CONTRACT, STORED_TITLE_CONTRACT, SHOWN_NAME_CONTRACT, CONTRACT}:
+    if contract not in {LEGACY_CONTRACT, STORED_TITLE_CONTRACT, SHOWN_NAME_CONTRACT, *_CITED}:
         raise ValueError("Unknown response rendering contract")
     checked_draft = response_writer.validate(draft, context, sources)
     if contract == LEGACY_CONTRACT:
@@ -222,7 +246,8 @@ def render(context, research_record, sources, draft, review, execution=None, *,
             sources, checked_draft, execution=execution)
     else:
         if authority_evidence is None or review.get("contract") not in {
-                response_review.AUTHORITY_CONTRACT, response_review.ALIAS_CONTRACT, response_review.CONTRACT}:
+                response_review.AUTHORITY_CONTRACT, response_review.ALIAS_CONTRACT,
+                response_review.RESPECTED_CONTRACT, response_review.CONTRACT}:
             raise ValueError("Current rendering requires an authority-bound current review")
         checked_authorities = response_authorities.validate(authority_evidence, context,
             research_record, sources, checked_draft)
@@ -231,15 +256,19 @@ def render(context, research_record, sources, draft, review, execution=None, *,
     if not checked_review["accepted"]:
         raise ValueError("A response without accepted independent review cannot be rendered")
     authorities = ({row["unit_id"]: row for row in checked_authorities["units"]}
-                   if contract == CONTRACT else {})
+                   if contract in _CITED else {})
+    headings = _headings(research_record, checked_draft) if contract == CONTRACT else {}
     elements = []
-    for unit in checked_draft["units"]:
-        legal_sources = _sources(unit, sources, shown_names=contract in {SHOWN_NAME_CONTRACT, CONTRACT})
+    for position, unit in enumerate(checked_draft["units"]):
+        if position in headings:
+            elements.append({"kind": "HEADING", "text": headings[position], "source": None, "sources": [],
+                             "refs": [], "inline_citations": [], "citation_markers": []})
+        legal_sources = _sources(unit, sources, shown_names=contract in {SHOWN_NAME_CONTRACT, *_CITED})
         element = {"kind": unit["kind"].upper(), "text": unit["text"],
             "source": deepcopy(legal_sources[0]) if legal_sources else None,
             "sources": legal_sources,
             "refs": list(dict.fromkeys(source["locator"] for source in legal_sources))}
-        if contract == CONTRACT:
+        if contract in _CITED:
             element["inline_citations"], element["citation_markers"] = _cited_words(
                 unit["text"], legal_sources, authorities[unit["id"]])
         else:
