@@ -51,6 +51,7 @@
     "nm.core_engine.citations": "core",
     "nm.core_engine.conversation": "core",
     "nm.core_engine.documents": "core",
+    "nm.core_engine.limitation": "core",
     "nm.core_engine.matter_board": "core",
     "nm.core_engine.page_reading": "core",
     "nm.core_engine.research": "core",
@@ -140,6 +141,7 @@
     "nm.shared.source_layout": "infrastructure",
     "nm.shared.spoken_contracts": "domain",
     "nm.shared.storage_errors_port": "ports",
+    "nm.shared.held_acts": "adapters",
     "nm.shared.store_documents": "adapters",
     "nm.shared.store_envelope": "adapters",
     "nm.shared.store_file_store": "adapters",
@@ -194,9 +196,9 @@
     "nm.work_the_file.write_tools": "core"
   },
   "expected_roles": {
-    "adapters": 29,
+    "adapters": 30,
     "bootstrap": 6,
-    "core": 66,
+    "core": 67,
     "domain": 70,
     "edge": 8,
     "infrastructure": 1,
