@@ -83,7 +83,7 @@ def test_text_that_is_not_xml_safe_is_written_safely(store):
 
 
 def test_a_time_limit_s_working_rows_are_kept_as_the_answer_showed_them(store):
-    row = saved(store, Calculating(chain("t1:advocate")), message=MESSAGE, held_acts=Held())
+    row = saved(store, Calculating(chain()), message=MESSAGE, held_acts=Held())
     note = research_note.note(row, prepared_for="A. Advocate")
     shown = [element for element in row["response"]["elements"] if element["kind"] == "WORKING"]
     working = [block for block in note["blocks"] if block["kind"] == "working"]

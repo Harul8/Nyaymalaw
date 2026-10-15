@@ -25,7 +25,7 @@ TEXTS = {
          "demand for the payment of the said amount of money by giving a notice; in writing, to the drawer of the "
          "cheque, 5[within thirty days] of the receipt of information by him from the bank regarding the return of "
          "the cheque as unpaid; and\n(c) the drawer of such cheque fails to make the payment ... within fifteen days "
-         "of the receipt of the said notice.\n142. (b) such complaint is made within one month of the date on which "
+         "of the receipt of the saidnotice.\n142. (b) such complaint is made within one month of the date on which "
          "the cause of action arises under clause (c) of the proviso to section 138:"),
     LIMITATION: ("THE SCHEDULE\nFIRST DIVISION--SUITS\n19\nFor money payable for money lent.\nThree years\n"
                  "When the loan is made.\n"),
@@ -45,7 +45,7 @@ class Held:
 
 
 def step(id_, what, words, period, start, **extra):
-    blank = {"what": "", "date": "", "source_id": "", "quote": ""}
+    blank = {"what": "", "date": "", "quote": ""}
     return {"id": id_, "what": what, "act": extra.get("act", NI), "provision": extra.get("provision", "s.138"),
             "article": extra.get("article", ""), "part": "", "words": words, "period_words": period,
             "start": start, "copies": [], "done": extra.get("done", blank),
@@ -53,18 +53,19 @@ def step(id_, what, words, period, start, **extra):
             "assumptions": ["The dates are as reported."], "missing": [], "may_extend": extra.get("may_extend", [])}
 
 
-def chain(source_id):
-    fact = lambda date, quote: {"after": "", "event": "", "date": date, "source_id": source_id, "quote": quote}  # noqa: E731
+def chain():
+    # The model quotes in its own typography and spacing; code finds the words in the conversation.
+    fact = lambda date, quote: {"after": "", "event": "", "date": date, "quote": quote}  # noqa: E731
     return {"needed": True, "why": "The advocate asks whether the complaint was in time.", "not_assessed": [],
             "calculations": [
                 step("c1", "Last day for the drawer to pay", "within fifteen days of the receipt of the said notice",
-                     "fifteen days", fact("2026-08-29", "Notice was delivered on 29 August 2026")),
+                     "fifteen days", fact("2026-08-29", "notice was delivered on 29 August 2026.")),
                 step("c2", "Last day to file the complaint",
                      "within one month of the date on which the cause of action arises", "one month",
-                     {"after": "c1", "event": "the cause of action", "date": "", "source_id": "", "quote": ""},
+                     {"after": "c1", "event": "the cause of action", "date": "", "quote": ""},
                      provision="s.142(1)(b)", earliest_after="c1",
-                     done={"what": "complaint filed", "date": "2026-09-12", "source_id": source_id,
-                           "quote": "We filed the complaint on 12 September 2026"},
+                     done={"what": "complaint filed", "date": "2026-09-12",
+                           "quote": "We filed the complaint on  12 September\n2026"},
                      may_extend=["Proviso to s.142(1)(b): cognizance after time on sufficient cause."]),
                 step("bad", "A period misquoted", "within ninety days of the receipt", "ninety days",
                      fact("2026-08-18", "18 August 2026"))]}
@@ -94,7 +95,7 @@ def turn(store, model, held=None):
 
 
 def test_the_answer_carries_a_working_box_for_each_checked_limit_and_reports_the_rest(store):
-    model = Calculating(chain("t1:advocate"))
+    model = Calculating(chain())
     reply = turn(store, model)
     prompt = model.seen["calculation"]
     assert "held text" in prompt.system and TEXTS[NI] in prompt.system and MESSAGE in prompt.user
@@ -134,7 +135,7 @@ def test_the_answer_carries_a_working_box_for_each_checked_limit_and_reports_the
 
 def test_a_saved_limit_replays_without_the_corpus_and_a_changed_one_is_refused(store):
     held = Held()
-    reply = turn(store, Calculating(chain("t1:advocate")), held)
+    reply = turn(store, Calculating(chain()), held)
     reads = len(held.reads)
     matter = store.load(chat_matter_id("owner", reply["chat_id"]))
     assert saved_rows(matter, "owner")[0]["response"]["elements"] == reply["elements"]
@@ -143,6 +144,32 @@ def test_a_saved_limit_replays_without_the_corpus_and_a_changed_one_is_refused(s
     damaged[0]["activities"]["calculation"]["calculations"][1]["working"]["last_day"] = "2026-10-15"
     with pytest.raises(ConversationRefused):
         saved_rows(replace(matter, brain_chat=tuple(damaged)), "owner")
+    # A record saved before code found the quoted words itself (v1) still reopens.
+    earlier = calculation.unavailable("down") | {"contract": calculation.V1_CONTRACT}
+    assert calculation.validate(earlier, None) == earlier
+
+
+def test_code_finds_the_quoted_words_and_refuses_what_it_cannot_check(store):
+    proposal = chain()
+    pay, complaint, _ = proposal["calculations"]
+    pay["start"]["quote"] = "Notice was delivered on 30 August 2026"  # not what the advocate wrote
+    complaint["start"]["after"] = "The drawer's period to pay has run."  # words, not a step's id
+    proposal["calculations"].insert(0, step("c0", "Last day for the complaint period to run", "within one month of the "
+                                            "date on which the cause of action arises", "one month",
+                                            {"after": "", "event": "", "date": "2026-09-14", "quote": "12 September 2026"}))
+    # A notice made premature by a period that ends after the notice's own last day: an empty window.
+    proposal["calculations"].append(step("c9", "Last day to give notice", "within thirty days of the receipt of "
+                                         "information", "thirty days",
+                                         {"after": "", "event": "", "date": "2026-08-18",
+                                          "quote": "The bank’s return memo reached my client on 18 August 2026"},
+                                         earliest_after="c0"))
+    reply = turn(store, Calculating(proposal))
+    boxes = {e["text"]: e["working"] for e in reply["elements"] if e["kind"] == "WORKING"}
+    assert boxes["Last day for the drawer to pay"]["not_assessed"] == (
+        "the words given for the starting event are not in the conversation or documents as quoted")
+    assert "which was not worked out first" in boxes["Last day to file the complaint"]["not_assessed"]
+    assert boxes["Last day to give notice"]["not_assessed"].startswith(
+        "its earliest day (2026-10-15) falls after its last day (2026-09-17)")
 
 
 def test_a_failed_calculation_never_stops_the_answer_and_states_no_date(store):
