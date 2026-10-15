@@ -31,20 +31,36 @@ failure this file exists to refuse.
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
+
+from tests.test_citation_patterns import _readers
 
 pytestmark = pytest.mark.class_a
 
 ROOT = Path(__file__).resolve().parents[1]
 
-#: rule -> (the ONE module that owns it, a pattern that may appear nowhere else,
-#:          why a second copy is dangerous)
-OWNED: dict[str, tuple[str, str, str]] = {
+
+def _reads_a_provision(source: str) -> bool:
+    """Judged by what the module's patterns MATCH, by the one scan that does so.
+
+    A spelling pattern here flagged a filter for wordings that name the law
+    because its word list contains "section"; tests/test_citation_patterns.py
+    replaced that scan on 10 October 2026, and this reuses it rather than
+    keeping the unhardened copy of the guard.
+    """
+    return "provision" in _readers(source)
+
+
+#: rule -> (the ONE module that owns it, a pattern that may appear nowhere else
+#:          -- or a function judging a module's source -- and why a second copy
+#:          is dangerous)
+OWNED: dict[str, tuple[str, str | Callable[[str], bool], str]] = {
     "how an advocate writes a provision reference": (
-        "nm/Archives/legal_brain/common/citation_contracts.py",
-        r"re\.compile\([^)]*(?:sections?|article|\bsec\b)",
+        "nm/shared/citation_contracts.py",
+        _reads_a_provision,
         "the gate's copy was hardened against `O.S. 442/2023` parsing as "
         "section 442 and the adapter's was not, so a realistic brief retrieved "
         "s.442, found nothing, and reported a corpus gap for a provision the "
@@ -52,7 +68,7 @@ OWNED: dict[str, tuple[str, str, str]] = {
 
     "the per-tier context budget": (
         "nm/shared/model_config.py",
-        r"CONTEXT_BUDGET\b[^=]*=\s*\{",
+        r"CONTEXT_BUDGET\b[^=\n]*=\s*\{",
         "a budget declared per adapter is a PROVIDER's budget, so a prompt "
         "built to fill one provider's context does not port and the switch "
         "fails at switch time, which is when it is most expensive (B-002)"),
@@ -80,6 +96,12 @@ OWNED: dict[str, tuple[str, str, str]] = {
 }
 
 
+def _holds(pattern: str | Callable[[str], bool], text: str) -> bool:
+    if callable(pattern):
+        return pattern(text)
+    return re.search(pattern, text, re.I | re.S) is not None
+
+
 def test_every_owned_rule_names_a_module_that_exists():
     """A registry pointing at a file that is gone is a rule nobody owns."""
     for rule, (owner, _, _) in OWNED.items():
@@ -95,7 +117,7 @@ def test_the_owner_actually_contains_the_rule():
     """
     for rule, (owner, pattern, _) in OWNED.items():
         text = (ROOT / owner).read_text(encoding="utf8")
-        assert re.search(pattern, text, re.I | re.S), (
+        assert _holds(pattern, text), (
             f"{rule!r} claims to live in {owner} and its pattern matches "
             f"nothing there. The scan below would then report a clean codebase "
             f"whatever the codebase contained.")
@@ -110,11 +132,10 @@ def test_no_rule_has_a_second_home():
     offenders: list[str] = []
     for rule, (owner, pattern, why) in OWNED.items():
         canonical = ROOT / owner
-        rx = re.compile(pattern, re.I | re.S)
         for path in sorted((ROOT / "nm").rglob("*.py")):
             if path == canonical or "__pycache__" in path.parts:
                 continue
-            if rx.search(path.read_text(encoding="utf8")):
+            if _holds(pattern, path.read_text(encoding="utf8")):
                 offenders.append(
                     f"{path.relative_to(ROOT)} holds a second copy of "
                     f"{rule!r} (owned by {owner}) — {why}")
@@ -124,3 +145,15 @@ def test_no_rule_has_a_second_home():
         + "\n\nImport from the owner instead. The question is never 'where is "
           "the other copy' but 'what makes a second copy impossible' — and "
           "when there are two, one gets hardened and the other does not.")
+
+
+def test_the_budget_scan_sees_a_second_table_and_not_a_use():
+    """THE CONTROLS for the budget entry. Its pattern once ran past the end of
+    the line, so an import of the owner's table followed by any later dict
+    literal read as a second table."""
+    _, pattern, _ = OWNED["the per-tier context budget"]
+    assert _holds(pattern, "CONTEXT_BUDGET: dict[Tier, int] = {")
+    assert _holds(pattern, "_CONTEXT_BUDGET = {")
+    assert not _holds(pattern, "from x import (\n    CONTEXT_BUDGET,\n)\nEFFORT = {")
+    assert not _holds(pattern, 'SEEN = {"context_budget"}\nDISPATCHES = {')
+    assert not _holds(pattern, "return CONTEXT_BUDGET[tier]")
