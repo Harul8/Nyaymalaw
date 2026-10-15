@@ -2471,7 +2471,7 @@ function renderTurn(entry) {
     if (same >= 0) rows[same].said += 1;
     else rows.push({ el, said: 1 });
   }
-  for (const row of rows) renderElement(wrap, row.el);
+  renderParts(wrap, rows.map((row) => row.el), entry, renderElement);
   for (const paragraph of composed) renderParagraph(wrap, paragraph);
 
   // The step and the saved passage a composed paragraph points at, by index.
@@ -2655,6 +2655,67 @@ function showConversationFromStart() {
   const t = $('thread');
   t.scrollTop = 0;
   $('jump-latest').hidden = t.scrollHeight <= t.clientHeight;
+}
+
+// A REPLY ANSWERING SEVERAL DISPUTES (owner decision, 15 Oct 2026): links to each
+// dispute, the first dispute open and every later one collapsed under its heading.
+// The headings are the server's, in the answer's own order; what the advocate opens
+// is kept on the turn while the conversation is on screen.
+function renderParts(into, elements, entry, render) {
+  if (elements.filter((el) => el.kind === 'HEADING').length < 2) {
+    for (const el of elements) render(into, el);
+    return;
+  }
+  if (!Array.isArray(entry.openParts)) entry.openParts = [true];
+  const stem = `part-${String(entry.turnId || 'turn').replace(/[^A-Za-z0-9_-]/g, '-')}`;
+  const index = document.createElement('nav');
+  index.className = 'part-index';
+  index.setAttribute('aria-label', 'Disputes in this answer');
+  let body = into;
+  let part = -1;
+  for (const el of elements) {
+    if (el.kind !== 'HEADING') { render(body, el); continue; }
+    part += 1;
+    const number = part;
+    const open = Boolean(entry.openParts[number]);
+    const id = `${stem}-${number}`;
+    const name = `${number + 1} · ${el.text}`;
+    if (number === 0) into.appendChild(index);
+    const section = document.createElement('section');
+    section.className = 'answer-part';
+    section.setAttribute('aria-labelledby', `${id}-title`);
+    const head = document.createElement('div');
+    head.className = 'part-head';
+    const title = document.createElement('h3');
+    title.className = 'part-title';
+    title.id = `${id}-title`;
+    title.textContent = name;
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'ghost part-toggle';
+    toggle.setAttribute('aria-expanded', String(open));
+    toggle.setAttribute('aria-controls', id);
+    toggle.textContent = open ? 'Hide this part' : 'Show this part';
+    toggle.addEventListener('click', () => { entry.openParts[number] = !open; repaint(); });
+    head.append(title, toggle);
+    body = document.createElement('div');
+    body.className = 'part-body';
+    body.id = id;
+    body.hidden = !open;
+    section.append(head, body);
+    into.appendChild(section);
+    const link = document.createElement('a');
+    link.className = 'part-link';
+    link.href = `#${id}-title`;
+    link.textContent = name;
+    link.addEventListener('click', (event) => {
+      event.preventDefault();
+      entry.openParts[number] = true;
+      repaint();
+      document.getElementById(`${id}-title`)?.scrollIntoView({ block: 'start' });
+    });
+    index.appendChild(link);
+  }
 }
 
 function repaint() {
