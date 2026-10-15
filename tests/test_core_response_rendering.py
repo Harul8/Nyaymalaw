@@ -208,3 +208,13 @@ def test_v6_links_the_short_case_name_only_to_the_paragraphs_own_judgment():
              judgment("b", "Yogendra Pratap Singh vs Savitri Pandey")]
     shared, _ = response_rendering._cited_words("Yogendra Pratap Singh holds so.", twins, none, short=True)
     assert shared == []
+
+
+def test_a_rendered_element_maps_to_its_own_draft_paragraph_past_the_headings():
+    """A source opened from a several-dispute answer must read its own paragraph's checks."""
+    elements = [{"kind": "GREETING"}, {"kind": "HEADING"}, {"kind": "LAW"}, {"kind": "HEADING"},
+                {"kind": "LAW"}, {"kind": "NEXT_STEP"}]
+    assert [response_rendering.unit_index(elements, i) for i in (0, 2, 4, 5)] == [0, 1, 2, 3]
+    for bad in (1, 3, 6, -1):
+        with pytest.raises(IndexError):
+            response_rendering.unit_index(elements, bad)

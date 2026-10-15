@@ -229,6 +229,14 @@ def _cited_words(text, sources, authority, *, short=False):
     return anchors, markers
 
 
+def unit_index(elements, element):
+    """The draft paragraph a rendered element shows. From v5 a heading may precede a
+    dispute's part; headings have no paragraph of their own, so they are not counted."""
+    if not 0 <= element < len(elements) or elements[element].get("kind") == "HEADING":
+        raise IndexError("This rendered element shows no draft paragraph")
+    return element - sum(1 for item in elements[:element] if item.get("kind") == "HEADING")
+
+
 def _headings(research_record, draft):
     """Where each dispute's part begins, with the understanding's name for that dispute;
     none when the reply answers one dispute or was written whole. An opening part (no

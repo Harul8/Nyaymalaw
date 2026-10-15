@@ -22,6 +22,7 @@ from nm.arrive.advocate_contracts import PASSWORD_RESET_MINUTES, SESSION_IDLE_MI
 from nm.arrive.directory_port import AccountBusy, AuthenticationUnavailable
 from nm.arrive.professional_access import read_professional_status
 from nm.core_engine.conversation import HEADER, ConversationRefused, chat_matter_id
+from nm.core_engine.response_rendering import unit_index
 from nm.core_engine.turn import CONTRACT as CORE_TURN, LEGACY_CONTRACT as LEGACY_CORE_TURN, saved_rows
 from nm.shared.external_ai_contracts import ModelPermissionRefused
 from nm.shared.clock_contracts import FORUM
@@ -1328,7 +1329,7 @@ def chat(chat_id: str, advocate_id: Advocate, request: Request, response: Respon
 def _source_authority_inspection(row, element, selected):
     """Presentation of this saved unit's checks, after complete replay validation."""
     activity = row['activities']
-    unit_id = activity['draft']['units'][element]['id']
+    unit_id = activity['draft']['units'][unit_index(row['response']['elements'], element)]['id']
     view = {'contract': 'core_source_authority_view_v1',
             'activity_contract': activity['contract'], 'unit_id': unit_id,
             'source_id': selected['id'], 'state': 'not_assessed', 'reason': None,

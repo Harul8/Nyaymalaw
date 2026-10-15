@@ -19,7 +19,8 @@ pytestmark = pytest.mark.class_a
 
 def project(draft, evidence, selected, element=0):
     row = {"activities": {"contract": turn.CONTRACT, "draft": draft,
-                           "authority_evidence": evidence}}
+                           "authority_evidence": evidence},
+           "response": {"elements": [{"kind": unit["kind"].upper()} for unit in draft["units"]]}}
     return api._source_authority_inspection(row, element, selected)
 
 
