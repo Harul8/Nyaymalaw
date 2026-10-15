@@ -7,6 +7,7 @@ there afterwards withholds the answer. Scripted writers prove the check and the 
 not how often a model invents dates.
 """
 import json
+import sqlite3
 
 import pytest
 
@@ -80,7 +81,15 @@ def test_the_writer_is_told_once_and_a_corrected_answer_is_kept(store):
     assert finding["category"] == "grounding" and "13 September 2026" in finding["mismatch"]
 
 
-def test_a_date_still_worked_out_after_the_correction_withholds_the_answer(store):
+def test_a_date_still_worked_out_after_the_correction_withholds_the_answer(store, caplog):
     with pytest.raises(ConversationRefused) as refused:
         run(store, Dating(times=2))
     assert refused.value.code == "answer_withheld"
+    # Why is kept with the attempt and logged, content-free (open items round, item b).
+    reason = "answer_withheld-G-GROUND-response_review"
+    assert refused.value.diagnosis == reason
+    with sqlite3.connect(store._root / "attempts.sqlite") as db:
+        assert db.execute("SELECT state, code FROM turn_attempts").fetchall() == [("terminal", reason)]
+    logged, = [r.getMessage() for r in caplog.records if r.getMessage().startswith("Message not answered")]
+    assert logged == f"Message not answered: {reason} (G-GROUND: grounding)"
+    assert "13 September" not in logged and "Hello" not in logged

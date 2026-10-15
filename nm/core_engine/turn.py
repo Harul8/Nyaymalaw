@@ -7,6 +7,7 @@ together. This initial flow performs read-only research; record editing is separ
 from __future__ import annotations
 
 import logging
+import re
 
 from copy import deepcopy
 
@@ -60,7 +61,19 @@ def _withhold(calls, findings):
     if (owned.response, owned.scope, owned.recovery) != (
             Response.WITHHOLD, Scope.TURN, Recovery.NONE):
         raise RuntimeError("The release boundary no longer matches its gate contract")
-    calls.withhold(identity)
+    # The categories are the review's fixed names, never its words about the draft.
+    calls.withhold(f"{identity}: {', '.join(sorted(categories))}")
+
+
+def _diagnosis(code, exc, calls):
+    """Why a message was not answered, content-free, kept with the attempt and logged:
+    the outcome, the gate or failure kind, and the stage that ended the turn. Never the
+    message, a draft or the review's words (open items round, 15 Oct 2026)."""
+    message = str(exc)
+    kind = (message.split(":", 1)[0] if isinstance(exc, ReleaseWithheld) and message.startswith("G-")
+            else "release" if isinstance(exc, ReleaseWithheld) else type(exc).__name__)
+    stage = calls.calls[-1]["operation"].removeprefix("core_") if calls.calls else "none"
+    return re.sub(r"[^A-Za-z0-9_-]", "_", f"{code}-{kind}-{stage}")[:80]
 
 
 def _reporter(progress):
@@ -244,7 +257,10 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
             code = "response_unavailable"
         refusal = ConversationRefused(why, status=503, code=code,
                                      retryable=code == "response_unavailable")
-        finish("retryable" if refusal.retryable else "terminal", code)
+        refusal.diagnosis = _diagnosis(code, exc, calls)
+        log.warning("Message not answered: %s%s", refusal.diagnosis,
+                    f" ({exc})" if isinstance(exc, ReleaseWithheld) and str(exc).startswith("G-") else "")
+        finish("retryable" if refusal.retryable else "terminal", refusal.diagnosis)
         refusal.metrics = calls.metrics()
         raise refusal from exc
     _reporter(progress)("saving")
