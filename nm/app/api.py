@@ -7,12 +7,13 @@ from __future__ import annotations
 import hmac
 import logging
 import os
+import re
 from copy import deepcopy
 from datetime import date
 from math import ceil
 from pathlib import Path
 from typing import Annotated
-from urllib.parse import unquote
+from urllib.parse import quote, unquote
 from fastapi import BackgroundTasks, Cookie, Depends, FastAPI, Header, HTTPException, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -25,6 +26,7 @@ from nm.arrive.directory_port import AccountBusy, AuthenticationUnavailable
 from nm.arrive.professional_access import read_professional_status
 from nm.core_engine.conversation import HEADER, ConversationRefused, chat_matter_id
 from nm.core_engine import documents as document_rules
+from nm.core_engine import research_note
 from nm.core_engine.response_rendering import unit_index
 from nm.core_engine.matter_board import board as matter_board
 from nm.core_engine.turn import CONTRACT as CORE_TURN, LEGACY_CONTRACT as LEGACY_CORE_TURN, saved_rows
@@ -1358,6 +1360,45 @@ def chat_documents(chat_id: str, advocate_id: Advocate, request: Request, respon
         raise HTTPException(401, 'not signed in')
     response.headers['Cache-Control'] = 'no-store'
     return {'chat_id': chat_id, 'sent': sent}
+
+
+def _research_note(chat_id, turn_id, advocate_id, request):
+    """One saved answer as a research note, after the conversation's replay checks."""
+    _, rows = _read_chat(chat_id, advocate_id, request)
+    row = next((item for item in rows if item['turn_id'] == turn_id), None)
+    if row is None:
+        raise HTTPException(404, 'Saved answer not available.')
+    identity = application().directory.identity(advocate_id)
+    try:
+        made = research_note.note(row, prepared_for=identity.name if identity else advocate_id)
+    except research_note.NoteUnavailable as exc:
+        raise HTTPException(404, {'why': str(exc), 'code': 'note_unavailable'}) from exc
+    if not _session_current(request, advocate_id):
+        raise HTTPException(401, 'not signed in')
+    return row, made
+
+
+@app.get('/api/chats/{chat_id}/turns/{turn_id}/note')
+def research_note_view(chat_id: str, turn_id: str, advocate_id: Advocate, request: Request,
+                       response: Response):
+    """The research note of one answer (owner decisions, 15 Oct 2026); the browser prints
+    it as PDF."""
+    _, made = _research_note(chat_id, turn_id, advocate_id, request)
+    response.headers['Cache-Control'] = 'no-store'
+    return made
+
+
+@app.get('/api/chats/{chat_id}/turns/{turn_id}/note.docx')
+def research_note_word(chat_id: str, turn_id: str, advocate_id: Advocate, request: Request):
+    """The research note of one answer as a Word file (the default format)."""
+    row, made = _research_note(chat_id, turn_id, advocate_id, request)
+    name = made['file_name'] + '.docx'
+    plain = re.sub(r'[^A-Za-z0-9 ._-]', '_', name)
+    return Response(content=research_note.docx(made, row['response']['at']),
+                    media_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    headers={'Cache-Control': 'no-store',
+                             'Content-Disposition': f'attachment; filename="{plain}"; '
+                                                    f"filename*=UTF-8''{quote(name)}"})
 
 
 @app.get('/api/chats/{chat_id}/board')

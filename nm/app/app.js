@@ -2073,10 +2073,151 @@ function replyFooter(entry, copyText) {
   });
   foot.appendChild(copy);
   if (answer.matter_id && answer.turn_id) foot.appendChild(rateControl(answer, status));
+  if (noteAvailable(answer)) foot.appendChild(noteControl(answer, status));
   const at = answeredAt(answer);
   if (at) foot.appendChild(at);
   foot.appendChild(status);
   return foot;
+}
+
+// A RESEARCH NOTE (owner decisions, 15 Oct 2026): one saved answer as a document, built
+// by the server from the saved turn. Word by default, downloaded as a file; PDF as an
+// option, printed from the same note so every script renders with this device's fonts.
+function noteAvailable(answer) {
+  return Boolean(answer && answer.chat_id && answer.turn_id && !answer.blocked
+    && Array.isArray(answer.elements) && answer.elements.some((el) => el.kind !== 'HEADING'));
+}
+
+function noteUrl(answer) {
+  return `/api/chats/${encodeURIComponent(answer.chat_id)}/turns/${encodeURIComponent(answer.turn_id)}/note`;
+}
+
+function noteControl(answer, status) {
+  const box = document.createElement('span');
+  box.className = 'note-control';
+  const label = document.createElement('span');
+  label.className = 'note-label';
+  label.textContent = 'Research note:';
+  const word = document.createElement('button');
+  word.type = 'button'; word.className = 'ghost note-format';
+  word.textContent = 'Word';
+  word.setAttribute('aria-label', 'Save this answer as a research note in Word');
+  word.addEventListener('click', () => downloadNoteWord(answer, status));
+  const pdf = document.createElement('button');
+  pdf.type = 'button'; pdf.className = 'ghost note-format';
+  pdf.textContent = 'PDF';
+  pdf.setAttribute('aria-label', 'Save this answer as a research note in PDF (opens the print window)');
+  pdf.addEventListener('click', () => printNote(answer, status));
+  box.append(label, word, pdf);
+  return box;
+}
+
+function noteFileName(disposition) {
+  const encoded = /filename\*=UTF-8''([^;]+)/i.exec(disposition || '');
+  if (encoded) {
+    try { return decodeURIComponent(encoded[1]); } catch { /* fall back to the plain name */ }
+  }
+  const plain = /filename="([^"]+)"/i.exec(disposition || '');
+  return plain ? plain[1] : 'Research note.docx';
+}
+
+async function downloadNoteWord(answer, status) {
+  status.textContent = 'Preparing the Word file…';
+  try {
+    const res = await fetch(`${noteUrl(answer)}.docx`);
+    if (!res.ok) {
+      let why = `HTTP ${res.status}`;
+      try {
+        const body = await res.json();
+        why = (body.detail && (body.detail.why || body.detail)) || why;
+      } catch { /* not a JSON refusal */ }
+      throw new Error(typeof why === 'string' ? why : `HTTP ${res.status}`);
+    }
+    const blob = await res.blob();
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = noteFileName(res.headers.get('content-disposition'));
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(link.href), 30000);
+    status.textContent = 'Research note saved as a Word file';
+  } catch (error) {
+    status.textContent = `The research note could not be prepared: ${error.message}`;
+  }
+}
+
+// The note laid out for printing; the print window's Save as PDF makes the file.
+function noteDocument(doc, note) {
+  const add = (parent, tag, text, className) => {
+    const node = doc.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    parent.appendChild(node);
+    return node;
+  };
+  const style = doc.createElement('style');
+  style.textContent = '@page { size: A4; margin: 18mm 20mm; }'
+    + 'body { font-family: Calibri, "Segoe UI", "Nirmala UI", "Noto Sans", sans-serif; font-size: 11pt;'
+    + ' line-height: 1.45; color: #1b1b1b; }'
+    + 'h1 { font-family: Cambria, Georgia, serif; font-weight: 400; color: #185748; font-size: 22pt; margin: 0 0 4pt; }'
+    + 'h2 { color: #185748; font-size: 14pt; margin: 18pt 0 6pt; } h3 { font-size: 12pt; margin: 12pt 0 4pt; }'
+    + '.meta { color: #666; font-size: 9pt; } .refs { color: #555; font-size: 9pt; }'
+    + 'blockquote { margin: 4pt 0 8pt 14pt; padding-left: 8pt; border-left: 2pt solid #bbb; color: #333;'
+    + ' font-size: 10pt; white-space: pre-wrap; } .source { font-weight: 700; font-size: 10pt; margin: 10pt 0 2pt;'
+    + ' break-after: avoid; } p { margin: 0 0 8pt; white-space: pre-wrap; }';
+  doc.head.appendChild(style);
+  doc.title = note.file_name;
+  const body = doc.body;
+  add(body, 'h1', note.title);
+  add(body, 'p', `Prepared for ${note.prepared_for} · ${note.prepared_at}`, 'meta');
+  add(body, 'h2', 'Question');
+  add(body, 'blockquote', note.question);
+  if (note.documents.length) {
+    add(body, 'h3', 'Documents sent with it');
+    for (const item of note.documents) {
+      const unread = item.pages_unread ? `, ${item.pages_unread} not read` : '';
+      add(body, 'p', `• ${item.name} — ${item.pages_read} page${item.pages_read === 1 ? '' : 's'} read${unread}`);
+    }
+  }
+  add(body, 'h2', 'Answer');
+  for (const block of note.blocks) {
+    if (block.kind === 'heading') { add(body, 'h3', block.text); continue; }
+    const paragraph = add(body, 'p', block.text);
+    if (block.refs.length) add(paragraph, 'span', ` [${block.refs.join(', ')}]`, 'refs');
+  }
+  if (note.sources.length) {
+    add(body, 'h2', 'Sources');
+    for (const source of note.sources) {
+      add(body, 'p', source.heading, 'source');
+      for (const passage of source.passages) add(body, 'blockquote', passage);
+    }
+  }
+  add(body, 'p', note.provenance, 'meta');
+}
+
+async function printNote(answer, status) {
+  status.textContent = 'Preparing the PDF…';
+  let note;
+  try {
+    note = await api(noteUrl(answer));
+  } catch (error) {
+    status.textContent = `The research note could not be prepared: ${error.message}`;
+    return;
+  }
+  const frame = document.createElement('iframe');
+  frame.className = 'note-print-frame';
+  frame.setAttribute('aria-hidden', 'true');
+  document.body.appendChild(frame);
+  const doc = frame.contentDocument;
+  doc.open();
+  doc.write('<!doctype html><html lang="en"><head><meta charset="utf-8"><title></title></head><body></body></html>');
+  doc.close();
+  noteDocument(doc, note);
+  frame.contentWindow.addEventListener('afterprint', () => frame.remove());
+  frame.contentWindow.focus();
+  frame.contentWindow.print();
+  status.textContent = 'In the print window, choose “Save as PDF”.';
 }
 
 // LB-90. WHAT THIS MESSAGE CHANGED ON THE BOARD, and what waits for you
@@ -2718,7 +2859,40 @@ function syncMatterTabs() {
   }
   $('chat-board').hidden = tab !== 'board';
   $('chat-documents').hidden = tab !== 'documents';
+  $('chat-notes').hidden = tab !== 'notes';
   $('thread').hidden = tab !== 'conversation';
+}
+
+// The conversation's answers, each to keep as a research note (Word or PDF).
+function renderChatNotes() {
+  const host = $('chat-notes');
+  const answers = state.turns.filter((entry) => noteAvailable(entry.answer));
+  if (!answers.length) {
+    host.replaceChildren(stateBlock('empty', 'No answer in this matter can be kept as a research note yet.'));
+    return;
+  }
+  const lede = document.createElement('p');
+  lede.className = 'board-lede';
+  lede.textContent = 'Each answer as a research note: the question, the answer and every source it cites, '
+    + 'quoted as saved. Word by default; PDF opens the print window.';
+  host.replaceChildren(lede, ...answers.map((entry) => {
+    const card = document.createElement('article');
+    card.className = 'board-card note-card';
+    const question = document.createElement('p');
+    question.className = 'note-question';
+    question.textContent = entry.brief.length > 200 ? `${entry.brief.slice(0, 200)}…` : entry.brief;
+    const foot = document.createElement('div');
+    foot.className = 'reply-foot';
+    const status = document.createElement('span');
+    status.className = 'reply-status';
+    status.setAttribute('role', 'status');
+    foot.appendChild(noteControl(entry.answer, status));
+    const at = answeredAt(entry.answer);
+    if (at) foot.appendChild(at);
+    foot.appendChild(status);
+    card.append(question, foot);
+    return card;
+  }));
 }
 
 async function loadChatDocuments() {
@@ -4127,6 +4301,7 @@ $('matter-tabs').addEventListener('click', (event) => {
   updateWorkspace();
   if (state.matterTab === 'board') loadChatBoard();
   if (state.matterTab === 'documents') loadChatDocuments();
+  if (state.matterTab === 'notes') renderChatNotes();
 });
 
 /* THE GATE RUNS FIRST.

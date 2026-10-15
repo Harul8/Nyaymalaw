@@ -476,16 +476,16 @@
     </form>
 
     <!-- EACH MATTER'S OWN VIEWS (owner decision, 15 Oct 2026), once a conversation
-         is saved. Research notes arrive with item 7. -->
+         is saved. -->
     <nav id="matter-tabs" class="matter-tabs" aria-label="This matter" hidden>
       <button type="button" class="matter-tab is-on" data-matter-tab="conversation" aria-current="page">Conversation</button>
       <button type="button" class="matter-tab" data-matter-tab="board">Board</button>
       <button type="button" class="matter-tab" data-matter-tab="documents">Documents</button>
-      <button type="button" class="matter-tab" data-matter-tab="notes" disabled
-              title="Arrives with the research-note export">Research notes</button>
+      <button type="button" class="matter-tab" data-matter-tab="notes">Research notes</button>
     </nav>
     <section id="chat-board" class="chat-board" aria-label="Matter board" hidden></section>
     <section id="chat-documents" class="chat-board chat-documents" aria-label="Documents in this matter" hidden></section>
+    <section id="chat-notes" class="chat-board chat-notes" aria-label="Research notes in this matter" hidden></section>
     <div id="mode-line" class="mode-line" hidden></div>
     <div id="thread" class="thread"></div>
     <button type="button" id="reply-to-selection" class="reply-to-selection" hidden>Reply to this</button>

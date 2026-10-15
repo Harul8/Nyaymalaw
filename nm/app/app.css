@@ -293,6 +293,12 @@ main { display: grid; grid-template-columns: 19rem minmax(0, 1fr); flex: 1; min-
 .document-text { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 0.88rem; line-height: 1.5;
   padding: 0.6rem 0.75rem; border-left: 3px solid var(--rule); background: var(--paper); }
 .document-unread { margin: 0; font-size: 0.85rem; color: var(--signal); }
+/* Research notes: one answer kept as Word or PDF (15 Oct 2026). */
+.note-control { display: inline-flex; align-items: center; gap: 0.15rem; font-size: 0.82rem; color: var(--ink-3); }
+.note-format { min-height: 2.75rem; padding: 0 0.55rem; font-size: 0.82rem; color: var(--accent); }
+.note-question { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.note-card .reply-foot { margin-left: 0; }
+.note-print-frame { position: fixed; width: 0; height: 0; border: 0; left: -10000px; top: 0; }
 /* Select words in the conversation and reply to them (15 Oct 2026). */
 .reply-to-selection { position: fixed; z-index: 30; min-height: 2.75rem; padding: 0 0.9rem;
   border: 1px solid var(--rule); border-radius: 8px; background: var(--surface); color: var(--accent);
