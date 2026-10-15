@@ -6,6 +6,8 @@ together. This initial flow performs read-only research; record editing is separ
 """
 from __future__ import annotations
 
+import logging
+
 from copy import deepcopy
 
 from nm.core_engine import answer_sources, research, response_authorities, response_rendering, response_review
@@ -22,6 +24,7 @@ from nm.shared.model_port import ContextOverflow, ModelError, SchemaViolation
 from nm.shared.turn_attempt_port import AttemptRefused, TurnAttemptPort
 
 LEGACY_CONTRACT = "core_turn_v1"
+log = logging.getLogger(__name__)
 CONTRACT = "core_turn_v2"
 EXECUTION = "core_read_only_execution_v1"
 _ACTIVITY_FIELDS = {"contract", "interpretation", "research", "sources", "draft",
@@ -55,12 +58,26 @@ def _withhold(calls, findings):
     calls.withhold(identity)
 
 
-def prepare(model, context, searcher, *, case_index=None, provision_reader=None):
+def _reporter(progress):
+    """Stage reports for the waiting advocate; a reporting failure never fails the turn."""
+    def report(stage, **detail):
+        if progress is None:
+            return
+        try:
+            progress(stage, **detail)
+        except Exception:  # noqa: BLE001 - the progress display is auxiliary to the turn
+            log.warning("Turn progress could not be recorded", exc_info=True)
+    return report
+
+
+def prepare(model, context, searcher, *, case_index=None, provision_reader=None, progress=None):
     """Prepare and admit one response. No persistence or external action occurs here."""
+    report = _reporter(progress)
     calls = model if isinstance(model, TurnCalls) else TurnCalls(model)
+    report("understanding")
     interpreted = calls.checked("core_understanding", lambda: understanding.understand(calls, context))
-    plan = calls.checked("core_research_plan", lambda: research.plan(calls, context, interpreted))
-    record = research.retrieve(plan, searcher, context, model=calls)
+    plan = calls.checked("core_research_plan", lambda: research.plan(calls, context, interpreted, progress=report))
+    record = research.retrieve(plan, searcher, context, model=calls, progress=report)
     sources = answer_sources.build(context, record)
     execution = execution_record(record)
 
@@ -68,7 +85,9 @@ def prepare(model, context, searcher, *, case_index=None, provision_reader=None)
         return response_writer.write(calls, context, record, sources,
                                      interpretation=interpreted, execution=execution)
 
+    report("writing")
     draft = calls.checked("core_response_writer", write)
+    report("checking_authorities")
     authorities = response_authorities.check(context, record, sources, draft,
         case_index=case_index, provision_reader=provision_reader)
 
@@ -76,14 +95,17 @@ def prepare(model, context, searcher, *, case_index=None, provision_reader=None)
         return response_review.review(calls, context, record, sources, draft, execution=execution,
                                       authority_evidence=authorities)
 
+    report("reviewing")
     reviewed = calls.checked("core_response_review", review)
     if not reviewed["accepted"]:
         try:
+            report("revising")
             draft = calls.correct("core_response_writer", write,
                                   mismatch=reviewed["proposal"]["findings"],
                                   rejected=draft["proposal"])
             authorities = response_authorities.check(context, record, sources, draft,
                 case_index=case_index, provision_reader=provision_reader)
+            report("reviewing")
             reviewed = calls.checked("core_response_review", review)
         except (CorrectionUnavailable, SchemaViolation):
             _withhold(calls, reviewed["proposal"]["findings"])
@@ -139,7 +161,8 @@ def saved_rows(matter, advocate_id):
 
 def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=None,
             matter_id=None, expected_version=None, session_current=lambda: False,
-            attempts: TurnAttemptPort | None = None, case_index=None, provision_reader=None):
+            attempts: TurnAttemptPort | None = None, case_index=None, provision_reader=None,
+            progress=None):
     if not session_current():
         raise ConversationRefused("Sign in again before continuing.", status=401)
     context = open_turn(store, advocate_id=advocate_id, message=message, turn_id=turn_id,
@@ -170,7 +193,7 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
                       reserve_correction=lambda: attempts.consume_correction(identity, token))
     try:
         elements, activity, metrics = prepare(calls, context.payload(), searcher,
-            case_index=case_index, provision_reader=provision_reader)
+            case_index=case_index, provision_reader=provision_reader, progress=progress)
         validate_activity(activity, context.payload(), elements)
     except AttemptRefused as exc:
         raise _attempt_refusal(exc) from exc
@@ -192,6 +215,7 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
         finish("retryable" if refusal.retryable else "terminal", code)
         refusal.metrics = calls.metrics()
         raise refusal from exc
+    _reporter(progress)("saving")
     try:
         response = commit_turn(store, context, elements=elements, activities=activity,
                                metrics=metrics, session_current=session_current)

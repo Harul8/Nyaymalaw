@@ -26,6 +26,7 @@ from nm.shared.turn_attempt_port import TurnAttemptPort
 from nm.shared.turn_attempt_store import FileTurnAttempts
 from nm.core_engine.retrieval import HybridSearcher
 from nm.core_engine.citations import CaseIdentityIndex
+from nm.app.turn_progress import TurnProgress
 
 ROOT = Path(__file__).resolve().parents[2]
 _CREDENTIAL_NAME = re.compile(r'KEY|SECRET|TOKEN|PASSWORD|CREDENTIAL', re.I)
@@ -85,6 +86,8 @@ class Application:
         self.legal_search = (HybridSearcher.local(root=self.root,
             corpus_dir=settings.get('NM_CORPUS_DIR')) if legal_search is _DEFAULT_SEARCH else legal_search)
         self.case_index = _DeferredAdapter(lambda: CaseIdentityIndex.local(self.root))
+        # What each running turn is doing, for its own advocate (memory only).
+        self.turn_progress = TurnProgress()
 
     def _model_for(self, advocate_id, *, session_current):
         if isinstance(self._model_adapter, OpenAIModelAdapter):
@@ -103,11 +106,26 @@ class Application:
         # Saved replay performs no provider work. Permission/model construction
         # belongs to the first fresh model operation, not to receipt readback.
         model = _DeferredAdapter(lambda: self._model_for(advocate_id, session_current=session_current))
-        return process(model, self.store, self.legal_search, advocate_id=advocate_id,
-                       session_current=session_current, attempts=self.turn_attempts,
-                       case_index=self.case_index,
-                       provision_reader=getattr(self.legal_search, 'collections', {}).get('provision'),
-                       **request)
+        turn_id, reported = request.get('turn_id'), []
+
+        def progress(stage, **detail):
+            reported.append(stage)
+            self.turn_progress.report(advocate_id, turn_id, stage, detail)
+
+        ended = 'stopped'
+        try:
+            result = process(model, self.store, self.legal_search, advocate_id=advocate_id,
+                             session_current=session_current, attempts=self.turn_attempts,
+                             case_index=self.case_index,
+                             provision_reader=getattr(self.legal_search, 'collections', {}).get('provision'),
+                             progress=progress, **request)
+            ended = 'finished'
+            return result
+        finally:
+            # Only the run that did the work closes its progress: a same-turn retry
+            # refused while the first run works must not mark that run stopped.
+            if reported:
+                self.turn_progress.end(advocate_id, turn_id, ended)
 
     def browser_asset_paths(self):
         return browser_assets(root=ROOT)

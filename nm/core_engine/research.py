@@ -325,7 +325,7 @@ def _carries_matter(interpretation):
     return any(unit.get("kind") in ("information", "request") for unit in interpretation["units"])
 
 
-def plan(model, context, interpretation=None):
+def plan(model, context, interpretation=None, *, progress=None):
     """The v7 reasoning loop. Expected model failures after the first understanding are
     recorded where they occur; independent work continues. The loop reads the
     conversation itself; the interpretation only spares it for a message that carries
@@ -335,11 +335,14 @@ def plan(model, context, interpretation=None):
                                          "no_research_reason": NO_NEW_MATTER, "parties": [], "facts": [],
                                          "disputes": [], "related_points": []},
                        "review_rounds": [], "statute_phrases": [], "judgment_phrases": [], "failures": []}, context)
+    report = progress or (lambda stage, **detail: None)
     text = conversation_text(context)
+    report("understanding_matter")
     understanding = _call(model, "core_research_understand", UNDERSTAND, text, UNDERSTANDING, "understand")
     rounds, failures = [], []
     for number in range(MAX_REVISIONS + 1):
         mechanical = code_checks(understanding, context)
+        report("checking_understanding", round=number + 1)
         try:
             review = _call(model, "core_research_check", CHECK, text + "\n\nYour colleague's understanding:\n"
                            + json.dumps(understanding, ensure_ascii=False, indent=1), CHECKED, "check")
@@ -351,6 +354,7 @@ def plan(model, context, interpretation=None):
         problems = mechanical + (review["problems"] if review["verdict"] == "revise" else [])
         if not problems or number == MAX_REVISIONS:
             break
+        report("revising_understanding", round=number + 1)
         try:
             revised = _call(model, "core_research_revise", REVISE, text + "\n\nYour understanding:\n"
                             + json.dumps(understanding, ensure_ascii=False, indent=1)
@@ -363,6 +367,7 @@ def plan(model, context, interpretation=None):
     statute, judgment = [], []
     disputes = [d for d in understanding["disputes"] if d["legal_questions"]]
     if understanding["needs_research"] and disputes:
+        report("writing_search_terms", total=sum(len(d["legal_questions"]) for d in disputes))
         tasks = [("statute", dispute) for dispute in disputes] + [("judgment", None)]
 
         def phrase(task):
@@ -601,13 +606,15 @@ def pick(model, plan, searches):
     return {"state": "evaluated", "proposal": choice, "chosen": chosen, "unknown": unknown, "reason": None}
 
 
-def retrieve(plan, searcher, context, model=None):
+def retrieve(plan, searcher, context, model=None, *, progress=None):
     """Independent work items retain checked snapshots or explicit read-only gaps; the
     model then picks the provisions that answer each question (v7)."""
     if accept(plan["proposal"], context) != plan:
         raise ValueError("Research plan differs from its original sources")
+    report = progress or (lambda stage, **detail: None)
     record = {"contract": CONTRACT, "plan": deepcopy(plan), "searches": {}, "failures": {}}
-    for work in plan["work"]:
+    for number, work in enumerate(plan["work"], 1):
+        report("searching", done=number - 1, total=len(plan["work"]))
         queries = search_queries(work)
         if not queries:
             continue
@@ -627,6 +634,8 @@ def retrieve(plan, searcher, context, model=None):
         record["picks"] = {"state": "unavailable", "proposal": None, "chosen": _fallback_picks(record["searches"], labels),
                            "unknown": [], "reason": "No model for the pick"}
     else:
+        if record["searches"]:
+            report("choosing_provisions")
         record["picks"] = pick(model, plan, record["searches"])
     record["state"] = "partial" if (plan["issues"] or record["failures"] or record["picks"]["state"] == "unavailable"
                                     or record["picks"]["unknown"] or any(

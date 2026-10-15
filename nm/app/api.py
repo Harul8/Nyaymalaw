@@ -1243,6 +1243,17 @@ def turn(req: TurnRequest, advocate_id: Advocate, request: Request) -> _Released
     return _release(output)
 
 
+@app.get('/api/turn-progress')
+def turn_progress(turn_id: str, advocate_id: Advocate, request: Request):
+    """What the advocate's own turn in progress is doing: stage names, counts and
+    times only (owner decision, 14 Oct 2026). Unknown is never a failure claim."""
+    if not _session_current(request, advocate_id):
+        raise HTTPException(401, 'not signed in')
+    if not turn_id or len(turn_id) > 200:
+        raise HTTPException(422, 'A turn identity is required.')
+    return application().turn_progress.read(advocate_id, turn_id)
+
+
 def _conversation_error(exc, req=None):
     """Owned service facts only; no rejected drafts or internal model feedback."""
     detail = {'why': exc.why, 'code': exc.code, 'committed': exc.committed,

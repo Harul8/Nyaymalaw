@@ -254,6 +254,11 @@ async function openDraftRecovery() {
           if (!current()) return;
           intent.editedAt = saved.savedAt;
           intent.pending.forEach(entry=>{entry.context=intent;});
+          // A turn may still be working on the server after a reload: follow it,
+          // then fetch its saved answer under the same turn id.
+          intent.pending.forEach(entry=>{
+            if (!entry.answer && entry.turnId) watchProgress(entry, () => deliver(entry));
+          });
           // Recover explicitly, keeping other tab versions in protected storage.
           intentContexts.set(intent.key, intent);
           activeIntent = null;
@@ -2345,11 +2350,51 @@ function renderTurn(entry) {
   // In flight. The optimistic repaint happens BEFORE the answer arrives, so
   // this branch must exist -- without it the first repaint of every turn
   // throws on `entry.answer.elements` and the send silently does nothing.
+  // A turn takes minutes (owner decision, 14 Oct 2026): while it works the
+  // page shows the stage it has reached, the time so far and the stages done.
   if (!entry.answer) {
-    const pending = document.createElement('div');
-    pending.className = 'el ground';
-    pending.textContent = 'Preparing a response…';
-    wrap.appendChild(pending);
+    const progress = entry.progress;
+    if (!progress || progress.state !== 'working') {
+      const pending = document.createElement('div');
+      pending.className = 'el ground';
+      pending.textContent = 'Preparing a response…';
+      wrap.appendChild(pending);
+      return wrap;
+    }
+    const took = (seconds) => {
+      const s = Number.isInteger(seconds) && seconds > 0 ? seconds : 0;
+      return s < 60 ? `${s} s` : `${Math.floor(s / 60)} min ${s % 60} s`;
+    };
+    const box = document.createElement('div');
+    box.className = 'el ground turn-progress';
+    const detail = progress.detail || {};
+    let label = progress.label || 'Preparing a response';
+    if (Number.isInteger(detail.total) && Number.isInteger(detail.done) && detail.total > 0) {
+      label += `: question ${Math.min(detail.done + 1, detail.total)} of ${detail.total}`;
+    } else if (Number.isInteger(detail.total) && detail.total > 0) {
+      label += ` (${detail.total} legal ${detail.total === 1 ? 'question' : 'questions'})`;
+    } else if (Number.isInteger(detail.round)) {
+      label += ` (round ${detail.round})`;
+    }
+    const now = document.createElement('div');
+    now.className = 'progress-now';
+    now.textContent = `${label}…`;
+    const time = document.createElement('div');
+    time.className = 'progress-time';
+    time.textContent = `${took(progress.elapsed_seconds)} so far. Most answers take a few minutes.`;
+    box.append(now, time);
+    const done = (progress.steps || []).slice(0, -1);
+    if (done.length) {
+      const list = document.createElement('ol');
+      list.className = 'progress-steps';
+      for (const step of done) {
+        const item = document.createElement('li');
+        item.textContent = `${step.label} · ${took(step.seconds)}`;
+        list.appendChild(item);
+      }
+      box.appendChild(list);
+    }
+    wrap.appendChild(box);
     return wrap;
   }
 
@@ -2740,10 +2785,12 @@ async function deliver(entry) {
   repaint();
   $('thread').scrollTop = $('thread').scrollHeight;
   $('jump-latest').hidden = true;
+  let watcher = null;
   try {
     if (!await saveProtectedDraft()) {
       throw new Error('The retry details could not be saved on this device. No request was sent.');
     }
+    watcher = watchProgress(entry);
     const answer = await api('/api/turn', {
       method: 'POST', headers: { 'content-type': 'application/json' },
       signal: stop.signal, body: entry.envelope,
@@ -2825,6 +2872,8 @@ async function deliver(entry) {
     }
     if (ownsIntent(intent) && attempt.session === state.sessionGeneration) repaint();
   } finally {
+    if (watcher) watcher.stop();
+    entry.progress = null;
     cancel.remove();
     if (activeDelivery === delivery) {
       activeDelivery = null;
@@ -2833,6 +2882,38 @@ async function deliver(entry) {
       updateWorkspace();
     }
   }
+}
+
+// WHAT A TURN IN PROGRESS IS DOING (owner decision, 14 Oct 2026). Only stage
+// names, counts and times come back. While sending, polling runs until the
+// answer or a refusal arrives; after a reload (with onFinished) it stops when
+// the server no longer knows the turn and fetches the saved answer when done.
+const PROGRESS_EVERY_MS = 2000;
+function watchProgress(entry, onFinished) {
+  let stopped = false;
+  let timer = null;
+  const timers = typeof setTimeout === 'function' ? { set: setTimeout, clear: clearTimeout } : null;
+  const stop = () => {
+    stopped = true;
+    if (timer !== null && timers) timers.clear(timer);
+  };
+  async function poll() {
+    if (stopped) return;
+    try {
+      const seen = await api(`/api/turn-progress?turn_id=${encodeURIComponent(entry.turnId)}`);
+      if (stopped) return;
+      entry.progress = seen;
+      repaint();
+      if (onFinished && seen.state === 'finished') { stop(); onFinished(); return; }
+      if (onFinished && seen.state !== 'working') { stop(); return; }
+    } catch (error) {
+      // Progress is auxiliary: the send or the saved conversation still decides.
+      if (onFinished || error?.status === 401) { stop(); return; }
+    }
+    if (!stopped && timers) timer = timers.set(poll, PROGRESS_EVERY_MS);
+  }
+  if (timers) timer = timers.set(poll, onFinished ? 0 : PROGRESS_EVERY_MS);
+  return { stop };
 }
 
 /* ------------------------------------------------------------------ wire --- */
