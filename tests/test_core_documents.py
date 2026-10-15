@@ -127,8 +127,35 @@ def test_nothing_read_can_be_recorded_for_a_document_the_check_did_not_clear():
 
 
 def test_documents_too_long_for_one_question_are_refused_never_cut(desk, monkeypatch):
-    record = desk.receive(ADVOCATE, "note.txt", b"0123456789")
-    assert documents.turn_material([record])[0]["pages"][0]["text"] == "0123456789"
+    first = desk.receive(ADVOCATE, "note.txt", b"0123456789")
+    second = desk.receive(ADVOCATE, "other.txt", b"abcdefghij")
+    material = documents.turn_material([first, second])
+    assert [d["pages"][0]["text"] for d in material] == ["0123456789", "abcdefghij"]
+    assert documents.checked_material(material) == material
     monkeypatch.setattr(documents, "MAX_TURN_CHARACTERS", 15)
     with pytest.raises(DocumentRefused, match="too long"):
-        documents.turn_material([record, record])
+        documents.turn_material([first, second])
+
+
+def test_a_question_refuses_held_repeated_or_too_many_documents(desk, monkeypatch):
+    note = desk.receive(ADVOCATE, "note.txt", b"words")
+    desk.checker = Checker("held", "flagged")
+    held = desk.receive(ADVOCATE, "bad.txt", b"words")
+    for records, why in [([held], "malware"), ([note, note], "twice")]:
+        with pytest.raises(DocumentRefused, match=why):
+            documents.turn_material(records)
+    monkeypatch.setattr(documents, "MAX_TURN_DOCUMENTS", 0)
+    with pytest.raises(DocumentRefused, match="At most"):
+        documents.turn_material([note])
+
+
+@pytest.mark.parametrize("change", [
+    lambda m: m[0].update(name=""), lambda m: m[0]["pages"][0].update(read_by="someone"),
+    lambda m: m[0]["pages"].append(dict(m[0]["pages"][0])), lambda m: m[0].update(extra=1),
+    lambda m: m[0]["unread"].append({"number": 9}),
+])
+def test_saved_question_material_must_keep_its_exact_shape(desk, change):
+    material = documents.turn_material([desk.receive(ADVOCATE, "note.txt", b"words")])
+    change(material)
+    with pytest.raises(ValueError):
+        documents.checked_material(material)

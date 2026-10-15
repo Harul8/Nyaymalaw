@@ -20,8 +20,11 @@ CITED_WORDS_CONTRACT = "core_response_rendering_v4"
 HEADINGS_CONTRACT = "core_response_rendering_v5"
 #: v5 linking the shorter case names an answer writes ('Bachhaj Nahar v Nilima Mandal',
 #: 'Hero Vinoth') to the judgment the paragraph used (owner decision, 15 Oct 2026).
-CONTRACT = "core_response_rendering_v6"
-_CITED = (CITED_WORDS_CONTRACT, HEADINGS_CONTRACT, CONTRACT)
+SHORT_NAME_CONTRACT = "core_response_rendering_v6"
+#: v6 also showing each page of a document the advocate sent that a paragraph cites,
+#: under the document's name and page (owner decisions, 15 Oct 2026).
+CONTRACT = "core_response_rendering_v7"
+_CITED = (CITED_WORDS_CONTRACT, HEADINGS_CONTRACT, SHORT_NAME_CONTRACT, CONTRACT)
 _LEGAL = {"provision", "judgment"}
 _ROLES = {"provision": "legislative_text", "court_disposition": "court_conclusion",
           "court_reasoning": "court_reasoning", "party_submission": "party_submission",
@@ -30,7 +33,7 @@ _ROLE_LABELS = {"original_account": "Original account", "opposing_account": "Opp
     "contract": "Quoted contract terms", "provision": "Legislative text",
     "party_submission": "Party submission", "court_reasoning": "Court reasoning",
     "court_disposition": "Court disposition", "quoted_authority": "Quoted authority",
-    "uncertain": "Unresolved source role"}
+    "uncertain": "Unresolved source role", "supplied_document": "Document the advocate sent"}
 
 
 def _statement(unit, use):
@@ -50,12 +53,13 @@ def _title(row, shown_names):
     return row["title"]
 
 
-def _sources(unit, catalogue, shown_names=False):
+def _sources(unit, catalogue, shown_names=False, documents=False):
     statements = {}
     labels = {}
+    shown = _LEGAL | ({"document"} if documents else set())
     for use in unit["uses"]:
         identity = use["source_id"]
-        if catalogue[identity]["kind"] in _LEGAL:
+        if catalogue[identity]["kind"] in shown:
             statements.setdefault(identity, []).append(_statement(unit, use))
             labels.setdefault(identity, _ROLE_LABELS[use["role"]])
         treatment = use["treatment_source"]
@@ -285,20 +289,23 @@ def render(context, research_record, sources, draft, review, execution=None, *,
         raise ValueError("A response without accepted independent review cannot be rendered")
     authorities = ({row["unit_id"]: row for row in checked_authorities["units"]}
                    if contract in _CITED else {})
-    headings = _headings(research_record, checked_draft) if contract in (HEADINGS_CONTRACT, CONTRACT) else {}
+    headings = (_headings(research_record, checked_draft)
+                if contract in (HEADINGS_CONTRACT, SHORT_NAME_CONTRACT, CONTRACT) else {})
     elements = []
     for position, unit in enumerate(checked_draft["units"]):
         if position in headings:
             elements.append({"kind": "HEADING", "text": headings[position], "source": None, "sources": [],
                              "refs": [], "inline_citations": [], "citation_markers": []})
-        legal_sources = _sources(unit, sources, shown_names=contract in {SHOWN_NAME_CONTRACT, *_CITED})
+        legal_sources = _sources(unit, sources, shown_names=contract in {SHOWN_NAME_CONTRACT, *_CITED},
+                                 documents=contract == CONTRACT)
         element = {"kind": unit["kind"].upper(), "text": unit["text"],
             "source": deepcopy(legal_sources[0]) if legal_sources else None,
             "sources": legal_sources,
             "refs": list(dict.fromkeys(source["locator"] for source in legal_sources))}
         if contract in _CITED:
             element["inline_citations"], element["citation_markers"] = _cited_words(
-                unit["text"], legal_sources, authorities[unit["id"]], short=contract == CONTRACT)
+                unit["text"], legal_sources, authorities[unit["id"]],
+                short=contract in (SHORT_NAME_CONTRACT, CONTRACT))
         else:
             element["inline_citations"] = _anchors(unit["text"], legal_sources)
         elements.append(element)

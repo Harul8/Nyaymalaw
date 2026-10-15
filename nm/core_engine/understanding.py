@@ -15,6 +15,13 @@ MAX_OUTPUT = 6000
 FIRST = "Message: This is the advocate's opening message. No earlier conversation exists."
 FOLLOW_UP = """Message: This is the advocate's next message. You receive the complete
 ordered conversation with speakers and source IDs, current records and saved work."""
+DOCUMENTS = """
+Documents: The advocate sent documents with their messages. Each read page arrives in
+documents with its own source ID, the document's name and page; unread pages are listed
+with why. A page says what its document says: it is material the advocate supplied, not
+the advocate's own words, and its author is whoever the document shows. Select from a
+page as context where it bears on what the advocate communicates or wants.
+"""
 SYSTEM = """
 Purpose: Interpret what the advocate communicates and wants now. Produce proposals
 for subsequent work; do not answer, research, execute work or change records.
@@ -87,8 +94,9 @@ SCHEMA = {"type": "object", "additionalProperties": False, "required": list(KIND
 
 
 def source_catalogue(context):
-    """Server context only. Preserve exact words and provenance, including NM roles."""
-    rows = [*context["conversation"], context["latest"]]
+    """Server context only. Preserve exact words and provenance, including NM roles and
+    the pages of documents the advocate sent."""
+    rows = [*context["conversation"], context["latest"], *context.get("documents", ())]
     result = {}
     for row in rows:
         identity = row["source_id"]
@@ -156,7 +164,8 @@ def understand(model, context):
     source_catalogue(context)
     if context["position"] != ("follow_up" if context["conversation"] else "first"):
         raise ValueError("Conversation position disagrees with original history")
-    system = (FIRST if context["position"] == "first" else FOLLOW_UP) + SYSTEM
+    system = ((FIRST if context["position"] == "first" else FOLLOW_UP)
+              + (DOCUMENTS if "documents" in context else "") + SYSTEM)
     payload = {key: deepcopy(value) for key, value in context.items() if key != "position"}
     prompt = Prompt(system=system, user=json.dumps(payload, ensure_ascii=False),
                     operation="core_understanding")

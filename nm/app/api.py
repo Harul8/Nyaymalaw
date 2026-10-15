@@ -310,6 +310,9 @@ class TurnRequest(BaseModel):
     chat_id: str | None = None
     thread_id: str | None = None
     turn_id: str | None = None
+    #: Documents sent with this message, by their exact references (owner decisions,
+    #: 15 Oct 2026); each is read from the signed-in advocate's own space only.
+    document_refs: list[Annotated[str, Field(max_length=120)]] = Field(default_factory=list, max_length=10)
     today: date | None = None
     jurisdiction: str = FORUM
     work_product: str = ""
@@ -1232,9 +1235,13 @@ def turn(req: TurnRequest, advocate_id: Advocate, request: Request) -> _Released
         output = application().run_turn(advocate_id=advocate_id,
             message=req.message, turn_id=req.turn_id, chat_id=req.chat_id,
             matter_id=req.matter_id, expected_version=req.expected_version,
+            document_refs=req.document_refs,
             session_current=lambda: _session_current(request, advocate_id))
     except ConversationRefused as exc:
         raise HTTPException(exc.status, _conversation_error(exc, req)) from exc
+    except document_rules.DocumentRefused as exc:
+        raise HTTPException(422, {'why': str(exc), 'code': 'document_refused', 'committed': 'not_committed',
+                                  'turn_id': req.turn_id, 'chat_id': req.chat_id, 'retryable': False}) from exc
     except ModelPermissionRefused as exc:
         if not _session_current(request, advocate_id):
             raise HTTPException(401, 'not signed in') from exc
@@ -1435,6 +1442,10 @@ def _source_authority_inspection(row, element, selected):
         return view
     if activity['contract'] != CORE_TURN:
         raise ValueError('Unknown saved source authority contract')
+    if selected['kind'] == 'document':
+        view['reason'] = ('A page of a document the advocate sent, shown exactly as it was read; '
+                          'citation identity checks apply to held law.')
+        return view
     checked = next(unit for unit in activity['authority_evidence']['units']
                    if unit['unit_id'] == unit_id)
     view['limits'] = deepcopy(checked['limits'])

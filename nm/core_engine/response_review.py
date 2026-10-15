@@ -62,7 +62,11 @@ original request, not against the writer's chosen addresses or candidate count.
 2. Read every reply unit and its material assertions against all relevant original
 and retrieved evidence. Preserve speaker, source purpose, chronology, uncertainty,
 negation and conditions. An NM interpretation cannot substantiate itself. A reported
-document or account is not verified fact. Distinguish text actually held from a
+document or account is not verified fact. Pages of documents the advocate sent are in
+the conversation's documents, each under its document's name and page, with the pages
+that could not be read: check what the reply says a document says against that page,
+and that it is not presented as the advocate's own account, as proved or as law.
+Distinguish text actually held from a
 statute's applicability and a judgment's legal effect; retrieval rank proves neither.
 A search that did not return a source shows neither that no such source is held nor
 that no such law exists: a gap stated as what this research returned is supported; a

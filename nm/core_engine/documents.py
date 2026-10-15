@@ -18,6 +18,8 @@ CONTRACT = "core_document_v1"
 MAX_BYTES = 16 * 1024 * 1024
 #: The page text one question may carry from its documents.
 MAX_TURN_CHARACTERS = 400_000
+#: Documents one message can carry.
+MAX_TURN_DOCUMENTS = 10
 FORMATS = ("pdf", "docx", "text", "image")
 CHECK_STATES = ("clear", "held", "unavailable")
 
@@ -147,18 +149,50 @@ def summary(record):
 
 
 def turn_material(records):
-    """The documents one question carries, page by page; refused, never cut, if too large."""
+    """The documents one question carries, page by page, with the pages not read and why.
+
+    Refused, never cut: a document the malware check did not clear, more than ten
+    documents, or more page text than one question can carry."""
+    if len(records) > MAX_TURN_DOCUMENTS:
+        raise DocumentRefused(f"At most {MAX_TURN_DOCUMENTS} documents can be sent with one message.")
+    if len({record["document_id"] for record in records}) != len(records):
+        raise DocumentRefused("The same document was attached twice.")
     material, total = [], 0
     for record in records:
-        pages = [{key: page[key] for key in ("number", "text", "read_by", "legible", "note") if key in page}
+        if record["check"]["state"] != "clear":
+            raise DocumentRefused(f'"{record["name"]}" was not cleared by the malware check, so it is not read.')
+        pages = [{key: value for key, value in page.items() if key != "state"}
                  for page in record["pages"] if page["state"] == "read"]
         total += sum(len(page["text"]) for page in pages)
-        material.append({"document_ref": reference(record), "name": record["name"],
-                         "check": record["check"]["state"], "pages": pages,
+        material.append({"document_ref": reference(record), "name": record["name"], "pages": pages,
                          "unread": [{"number": page["number"], "reason": page["reason"]}
                                     for page in record["pages"] if page["state"] == "unread"]})
     if total > MAX_TURN_CHARACTERS:
         raise DocumentRefused("These documents are too long to read for one question "
                               f"({total:,} characters; the limit is {MAX_TURN_CHARACTERS:,}). "
                               "Send fewer, or the relevant pages.")
-    return material
+    return checked_material(material)
+
+
+def checked_material(material):
+    """A saved question's documents, exactly in the shape turn_material gives them."""
+    if not isinstance(material, list) or not material:
+        raise ValueError("A question's documents are a nonempty list")
+    for document in material:
+        if (not isinstance(document, dict) or set(document) != {"document_ref", "name", "pages", "unread"}
+                or not isinstance(document["name"], str) or not document["name"].strip()
+                or not isinstance(document["document_ref"], str) or not document["document_ref"].startswith("doc_")
+                or not isinstance(document["pages"], list) or not isinstance(document["unread"], list)):
+            raise ValueError("A question's document carries its reference, name, pages and unread pages")
+        numbers = []
+        for page in document["pages"]:
+            _page({**page, "state": "read"})
+            numbers.append(page["number"])
+        for page in document["unread"]:
+            if (not isinstance(page, dict) or set(page) != {"number", "reason"} or type(page["number"]) is not int
+                    or page["number"] < 1 or not isinstance(page["reason"], str) or not page["reason"].strip()):
+                raise ValueError("An unread page carries its number and why")
+            numbers.append(page["number"])
+        if len(numbers) != len(set(numbers)):
+            raise ValueError("A page is listed once")
+    return deepcopy(material)

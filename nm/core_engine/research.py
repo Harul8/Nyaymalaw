@@ -50,7 +50,7 @@ MAX_OUTPUT = {"understand": 12000, "check": 6000, "revise": 12000, "phrases": 60
 # The prompts below were developed and measured in outputs/decomposition-scratch
 # (13-14 Oct 2026). They state the purpose and the needed outcome in plain language
 # and leave understanding to the model; code makes the mechanical checks afterwards.
-UNDERSTAND = """You are a senior Indian litigation lawyer working with a colleague, the advocate, who practises in Telangana. You receive the conversation so far: the advocate's messages and any earlier notes from our research assistant. The last message is the one we are acting on now.
+UNDERSTAND = """You are a senior Indian litigation lawyer working with a colleague, the advocate, who practises in Telangana. You receive the conversation so far: the advocate's messages, any documents they sent and any earlier notes from our research assistant. The last message is the one we are acting on now.
 
 Advocates bring matters to us so that we can find the law that governs them. Your job in this step is to understand the matter well enough that the right law can be researched. You are not answering the legal questions yet. Read the whole conversation, think about what has happened, who is involved, what the advocate wants now and why, and then set out your understanding.
 
@@ -58,7 +58,7 @@ What we need from you:
 
 - What the advocate wants from us now. Often they say so. When they only tell us what has happened, they want to know where the law stands on those events: the legal questions a lawyer would need answered to advise on them. Also note anything they have told us not to do (for example to pause research, not to contact anyone, not to assume a disputed event).
 - The people involved and their roles.
-- The facts, each kept exactly as certain as the advocate put it: confirmed, reported by someone, uncertain, or disputed. Give the advocate's own words for each fact. What the advocate reports is their account, not proven fact, and we never add facts they did not give.
+- The facts, each kept exactly as certain as the advocate put it: confirmed, reported by someone, uncertain, or disputed. Give the advocate's own words for each fact, or, for a fact that comes from a document they sent, the document's own words. What the advocate reports is their account, and what a document says is what its author wrote; neither is proven fact, and we never add facts they did not give.
 - The separate disputes. A dispute is one set of events between particular parties that needs its own legal answer. Events that call for different kinds of law, such as a civil wrong and a crime, or that concern different transactions, are separate disputes, even when they happen together or involve the same people.
 - For each dispute, think through every legal consequence the events may have, civil, criminal and under any special statute, and for each: the right or liability, the remedy, how and where it is pursued and within what time, and, where the case turns on particular evidence, how that evidence is proved. Ask as legal questions those that bear on what the advocate wants; put the rest in related points.
 - For each dispute, the legal questions we must research to do what the advocate wants. A legal question is about one legal point: a right, an obligation, a remedy, a defence, a procedure, a time limit, a presumption or an offence. If answering it would need two different rules, such as what a right is and how it is enforced, it is two questions. Write each so that a lawyer could answer it from one or two provisions of law, and say briefly why we need it. Where the facts leave open something that changes the governing law (for example when the events happened, or which personal law applies), say what is open.
@@ -76,7 +76,7 @@ Check the understanding carefully against the conversation itself, the way you w
 - Are separate disputes kept apart (events that call for different kinds of law, or that concern different transactions), and is anything that belongs together split up?
 - Does each legal question ask about one legal point, or would answering it need two different rules? Taken together, would the questions let us do what the advocate asked? Are any of them duplicates, or so general that no particular law answers them?
 - Have the events' other legal consequences (civil, criminal, under a special statute), and how each is pursued and proved, been considered, and asked where they bear on what the advocate wants?
-- Is any fact stated more strongly than the advocate put it, or added?
+- Is any fact stated more strongly than the advocate or a document they sent put it, or added?
 - Are the related points genuinely useful to the advocate, and kept separate from what we research now?
 - Is research being started when the advocate has ruled it out, or skipped when it is needed? When the advocate only tells us what has happened, they want to know where the law stands on those events.
 
@@ -256,6 +256,17 @@ def conversation_text(context):
                else "Our research assistant (an earlier note, not the advocate's words)")
         lines.append(f"[{number}] {who}: {row['text']}")
     lines += ["", "Latest message from the advocate (the one we act on now):", context["latest"]["text"]]
+    if "documents" in context:
+        lines += ["", "Documents the advocate sent (each page says what its document says; "
+                      "these are not the advocate's own words):"]
+        for row in context["documents"]:
+            about = row["document"]
+            sent = ("with the latest message" if row["turn_id"] == context["latest"]["turn_id"]
+                    else "earlier in the conversation")
+            read = "; read by AI from a scan" if about["read_by"] == "ai" else ""
+            lines.append(f'["{about["name"]}", page {about["page"]}, sent {sent}{read}] {row["text"]}')
+        for page in context["unread_document_pages"]:
+            lines.append(f'["{page["name"]}", page {page["page"]}: not read ({page["reason"]})]')
     if context.get("current_records"):
         lines += ["", "Current records of this matter: "
                   + json.dumps(context["current_records"], ensure_ascii=False)]
@@ -282,14 +293,18 @@ def code_checks(understanding, context):
     problems = []
     advocate = _plain(" ".join([row["text"] for row in context["conversation"]
                                 if row.get("record_role") == "original_account"] + [context["latest"]["text"]]))
+    # A fact may rest on a document the advocate sent; where its words appear is the
+    # code's to establish (owner decisions, 15 Oct 2026).
+    supplied = _plain(" ".join(row["text"] for row in context.get("documents", ())))
     facts = {f["id"] for f in understanding["facts"]}
     if len(facts) != len(understanding["facts"]):
         problems.append({"problem": "Two facts share an id.", "fix": "Give each fact its own id."})
     for fact in understanding["facts"]:
-        if any(piece not in advocate for piece in _quoted_fragments(fact["advocate_words"])):
-            problems.append({"problem": f"Fact {fact['id']}: the quoted advocate words do not appear in the "
-                                        f"advocate's messages ({fact['advocate_words']!r}).",
-                             "fix": "Quote the advocate's exact words for this fact, or remove the fact if they did not say it."})
+        if any(piece not in advocate and piece not in supplied
+               for piece in _quoted_fragments(fact["advocate_words"])):
+            problems.append({"problem": f"Fact {fact['id']}: the quoted words do not appear in the advocate's "
+                                        f"messages or the documents they sent ({fact['advocate_words']!r}).",
+                             "fix": "Quote the exact words this fact rests on, or remove the fact if they were not given."})
     disputes = {d["id"] for d in understanding["disputes"]}
     if len(disputes) != len(understanding["disputes"]):
         problems.append({"problem": "Two disputes share an id.", "fix": "Give each dispute its own id."})

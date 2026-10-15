@@ -110,8 +110,17 @@ class Application:
         15 Oct 2026), under that advocate's current permission and session."""
         return self._model_for(advocate_id, session_current=session_current, page_images=True)
 
-    def run_turn(self, *, advocate_id, session_current, **request):
+    def run_turn(self, *, advocate_id, session_current, document_refs=(), **request):
         from nm.core_engine.turn import process
+
+        if document_refs:
+            # The documents sent with the message, read from this advocate's own space;
+            # refused plainly, never cut, when one cannot be used.
+            from nm.core_engine import documents
+            if self.documents is None:
+                raise documents.DocumentRefused("Documents cannot be read on this installation.")
+            request["documents"] = documents.turn_material(
+                [self.documents.load(advocate_id, ref) for ref in document_refs])
 
         # Saved replay performs no provider work. Permission/model construction
         # belongs to the first fresh model operation, not to receipt readback.

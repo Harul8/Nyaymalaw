@@ -132,7 +132,7 @@ def validate_activity(activity, context, elements):
     renderings = ({response_rendering.LEGACY_CONTRACT} if version == LEGACY_CONTRACT else
                   {response_rendering.STORED_TITLE_CONTRACT, response_rendering.SHOWN_NAME_CONTRACT,
                    response_rendering.CITED_WORDS_CONTRACT, response_rendering.HEADINGS_CONTRACT,
-                   response_rendering.CONTRACT})
+                   response_rendering.SHORT_NAME_CONTRACT, response_rendering.CONTRACT})
     rendering = activity.get("rendering_contract") if isinstance(activity, dict) else None
     if (version not in {LEGACY_CONTRACT, CONTRACT} or set(activity) != expected_fields
             or rendering not in renderings):
@@ -153,7 +153,8 @@ def saved_rows(matter, advocate_id):
     rows = checked_rows(matter, advocate_id)
     try:
         for index, row in enumerate(rows):
-            original = TurnContext(matter, row["chat_id"], row["turn_id"], row["message"], rows[:index])
+            original = TurnContext(matter, row["chat_id"], row["turn_id"], row["message"], rows[:index],
+                                   documents=tuple(row.get("documents", ())))
             validate_activity(row["activities"], original.payload(), row["response"]["elements"])
     except (ValueError, KeyError, TypeError, SchemaViolation) as exc:
         raise ConversationRefused("This saved conversation could not be read reliably. "
@@ -165,11 +166,12 @@ def saved_rows(matter, advocate_id):
 def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=None,
             matter_id=None, expected_version=None, session_current=lambda: False,
             attempts: TurnAttemptPort | None = None, case_index=None, provision_reader=None,
-            progress=None):
+            progress=None, documents=()):
     if not session_current():
         raise ConversationRefused("Sign in again before continuing.", status=401)
     context = open_turn(store, advocate_id=advocate_id, message=message, turn_id=turn_id,
-                        chat_id=chat_id, matter_id=matter_id, expected_version=expected_version)
+                        chat_id=chat_id, matter_id=matter_id, expected_version=expected_version,
+                        documents=documents)
     if context.rows:
         saved_rows(context.matter, advocate_id)
     if context.replay is not None:

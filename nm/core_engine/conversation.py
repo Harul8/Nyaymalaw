@@ -12,6 +12,7 @@ from copy import deepcopy
 from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 
+from nm.core_engine.documents import checked_material
 from nm.shared.store_port import StaleWrite
 from nm.work_the_file.matter_contracts import Matter
 
@@ -40,6 +41,33 @@ def _nonempty(value):
     return type(value) is str and bool(value.strip())
 
 
+def _request(advocate_id, chat_id, turn_id, message, documents):
+    """A turn's request; the documents sent with it are named by their exact references."""
+    request = {"advocate_id": advocate_id, "chat_id": chat_id, "turn_id": turn_id, "message": message}
+    if documents:
+        request["document_refs"] = [document["document_ref"] for document in documents]
+    return request
+
+
+def document_sources(turn_id, documents):
+    """Each read page of the documents sent with a turn, as material the advocate supplied:
+    what the document says, not the advocate's own words (owner decisions, 15 Oct 2026)."""
+    rows = []
+    for index, document in enumerate(documents, 1):
+        for page in document["pages"]:
+            about = {"name": document["name"], "page": page["number"], "read_by": page["read_by"]}
+            about.update({key: page[key] for key in ("legible", "note") if key in page})
+            rows.append({"source_id": f"{turn_id}:d{index}p{page['number']}", "turn_id": turn_id,
+                         "speaker": "document", "record_role": "supplied_document",
+                         "text": page["text"], "document": about})
+    return rows
+
+
+def _unread_pages(turn_id, documents):
+    return [{"turn_id": turn_id, "name": document["name"], "page": page["number"], "reason": page["reason"]}
+            for document in documents for page in document["unread"]]
+
+
 def checked_rows(matter, advocate_id):
     if matter.advocate_id != advocate_id:
         raise ConversationRefused("Conversation not available.", status=404)
@@ -60,13 +88,14 @@ def checked_rows(matter, advocate_id):
             body = {k: v for k, v in row.items() if k != "digest"}
             request = row["request"]
             response = row["response"]
+            documents = checked_material(row["documents"]) if "documents" in row else ()
             if (row["contract"] != CONTRACT or type(row["sequence"]) is not int
                     or row["sequence"] != sequence
                     or row["previous"] != previous or row["digest"] != digest(body)
                     or row["matter_id"] != matter.id or row["advocate_id"] != advocate_id
                     or row["chat_id"] != header["chat_id"]
-                    or request != {"advocate_id": advocate_id, "chat_id": header["chat_id"],
-                                   "turn_id": row["turn_id"], "message": row["message"]}
+                    or request != _request(advocate_id, header["chat_id"], row["turn_id"],
+                                           row["message"], documents)
                     or not _nonempty(row["message"]) or not _nonempty(row["turn_id"])
                     or type(row["state_version"]) is not int
                     or not last_version < row["state_version"] <= matter.version
@@ -103,15 +132,18 @@ class TurnContext:
     message: str
     rows: tuple[dict, ...]
     replay: dict | None = None
+    #: The documents sent with this message, page by page (owner decisions, 15 Oct 2026).
+    documents: tuple[dict, ...] = ()
 
     @property
     def request(self):
-        return {"advocate_id": self.matter.advocate_id, "chat_id": self.chat_id,
-                "turn_id": self.turn_id, "message": self.message}
+        return _request(self.matter.advocate_id, self.chat_id, self.turn_id, self.message, self.documents)
 
     def payload(self):
-        conversation = []
+        conversation, pages, unread = [], [], []
         for row in self.rows:
+            pages += document_sources(row["turn_id"], row.get("documents", ()))
+            unread += _unread_pages(row["turn_id"], row.get("documents", ()))
             conversation.append({"source_id": row["turn_id"] + ":advocate",
                                  "turn_id": row["turn_id"], "speaker": "advocate",
                                  "record_role": "original_account", "text": row["message"]})
@@ -127,14 +159,22 @@ class TurnContext:
                                      "text": response["service_status"]})
         latest = {"source_id": self.turn_id + ":advocate", "turn_id": self.turn_id,
                   "speaker": "advocate", "record_role": "original_account", "text": self.message}
-        return {"position": "follow_up" if self.rows else "first", "latest": latest,
-                "conversation": conversation,
-                "current_records": deepcopy(self.rows[-1]["records"]) if self.rows else {},
-                "saved_work": deepcopy(self.rows[-1]["work"]) if self.rows else []}
+        pages += document_sources(self.turn_id, self.documents)
+        unread += _unread_pages(self.turn_id, self.documents)
+        context = {"position": "follow_up" if self.rows else "first", "latest": latest,
+                   "conversation": conversation,
+                   "current_records": deepcopy(self.rows[-1]["records"]) if self.rows else {},
+                   "saved_work": deepcopy(self.rows[-1]["work"]) if self.rows else []}
+        # Only a conversation with documents carries these, so every earlier context,
+        # and the saved answers checked against it, stays exactly as it was.
+        if pages or unread:
+            context["documents"] = pages
+            context["unread_document_pages"] = unread
+        return context
 
 
 def open_turn(store, *, advocate_id, message, turn_id, chat_id=None, matter_id=None,
-              expected_version=None):
+              expected_version=None, documents=()):
     if not all(_nonempty(v) for v in (advocate_id, message, turn_id)):
         raise ConversationRefused("A message and request identity are required.", status=422)
     if matter_id is not None:
@@ -154,7 +194,8 @@ def open_turn(store, *, advocate_id, message, turn_id, chat_id=None, matter_id=N
     rows = checked_rows(matter, advocate_id) if matter else ()
     matter = matter or Matter(id=stored_id, advocate_id=advocate_id,
                               title="Conversation", brain_ready=False)
-    context = TurnContext(matter, identity, turn_id, message, rows)
+    context = TurnContext(matter, identity, turn_id, message, rows,
+                          documents=tuple(checked_material(list(documents))) if documents else ())
     for row in rows:
         if row["turn_id"] == turn_id:
             if row["request"] != context.request:
@@ -192,6 +233,8 @@ def commit_turn(store, context, *, elements, activities, records=None, work=None
            "activities": deepcopy(activities),
            "records": deepcopy(records if records is not None else previous.get("records", {})),
            "work": deepcopy(work if work is not None else previous.get("work", []))}
+    if context.documents:
+        row["documents"] = deepcopy(list(context.documents))
     row["digest"] = digest(row)
     metadata = {**context.matter.intake_answers, HEADER: {
         "contract": CONTRACT, "chat_id": context.chat_id,

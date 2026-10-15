@@ -70,6 +70,11 @@ where appropriate, without turning acknowledgement into an intake questionnaire.
 Preserve speaker, negation, chronology, uncertainty and conditions. Reported, supplied,
 examined, accepted and proved are different states. An NM interpretation cannot prove
 itself. Do not invent facts, legal rules, citations, jurisdiction or document contents.
+Pages of documents the advocate sent arrive in original_context.documents, each under
+the document's name and page, with any pages that could not be read. A page says what
+its document says: cite it for that, keep it apart from the advocate's own account, and
+treat it as neither proved nor law. A page the AI read from a scan may hold [illegible]
+marks; say what could not be read where it matters.
 3. Read each legal source with its neighbouring context. For judgment passages,
 distinguish a party's submission, quoted contract or authority, the deciding court's
 reasoning and its operative result. Source labels and ranking do not establish those
@@ -105,7 +110,7 @@ Account, law and analysis units need source uses; law needs held legal material.
 Analysis selects its factual and legal premises. Questions and next steps select any
 premises they assert; greetings need no source use.
 For every use, copy source_kind from the supplied source_kinds catalogue:
-- account, nm_context and service: give only source_kind and source_id. Code
+- account, nm_context, service and document: give only source_kind and source_id. Code
   preserves the original speaker and provenance. NM interpretations and service notices
   may explain earlier conversation; they cannot prove the underlying matter account.
 - provision: give only source_kind and source_id. Court treatment does not apply
@@ -149,7 +154,7 @@ COURT_TREATMENT = {"anyOf": [
              "source": SOURCE_REFERENCE}),
 ]}
 USE = {"anyOf": [
-    _object({"source_kind": {"type": "string", "enum": ["account", "nm_context", "service"]},
+    _object({"source_kind": {"type": "string", "enum": ["account", "nm_context", "service", "document"]},
              **SOURCE_REFERENCE["properties"]}),
     _object({"source_kind": {"type": "string", "enum": ["provision"]},
              **SOURCE_REFERENCE["properties"]}),
@@ -212,10 +217,10 @@ def _owned_use(use, sources, originals):
     kind = primary["kind"]
     if use["source_kind"] != kind:
         raise SchemaViolation("Selected source_kind differs from its owned catalogue kind")
-    if kind in {"account", "nm_context", "service"}:
+    if kind in {"account", "nm_context", "service", "document"}:
         original = originals.get(primary["id"])
         expected = {"account": "original_account", "nm_context": "nm_interpretation",
-                    "service": "service_status"}[kind]
+                    "service": "service_status", "document": "supplied_document"}[kind]
         if (original is None or original.get("record_role") != expected
                 or primary.get("record_role") != expected
                 or primary.get("text") != original["text"]
@@ -223,7 +228,8 @@ def _owned_use(use, sources, originals):
                 or primary.get("source_identity") != {
                     "source_id": original["source_id"], "turn_id": original["turn_id"]}):
             raise ValueError("Response support differs from its original conversation source")
-        return {**support, "role": "original_account" if kind == "account" else "uncertain",
+        role = {"account": "original_account", "document": "supplied_document"}.get(kind, "uncertain")
+        return {**support, "role": role,
                 "speaker": original["speaker"], "treatment": "not_applicable",
                 "treatment_source": None}
     if kind == "provision":

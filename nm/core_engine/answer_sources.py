@@ -20,7 +20,7 @@ from nm.shared.model_port import SchemaViolation, require_schema
 CONTRACT = "core_answer_sources_v1"
 _LEGAL = {"provision", "judgment"}
 _CONTEXT_ROLES = {"original_account": "account", "nm_interpretation": "nm_context",
-                  "service_status": "service"}
+                  "service_status": "service", "supplied_document": "document"}
 _LINK_FIELDS = {"context_ids", "work_ids", "coverage"}
 
 
@@ -71,9 +71,12 @@ def build(context, research_record):
                 not isinstance(original.get(field), str) or not original[field]
                 for field in ("speaker", "turn_id"))):
             raise ValueError("Conversation source has no owned provenance")
+        # A document's page is shown under the document's name and page number.
+        about = original.get("document") if role == "supplied_document" else None
         _add(sources, {"id": identity, "kind": _CONTEXT_ROLES[role],
             "text": original["text"], "speaker": original["speaker"],
-            "record_role": role, "title": None, "locator": None,
+            "record_role": role, "title": about["name"] if about else None,
+            "locator": f"page {about['page']}" if about else None,
             "digest": _digest(original), "context_ids": [], "work_ids": [],
             "coverage": [], "source_identity": {
                 "source_id": identity, "turn_id": original["turn_id"]}})
