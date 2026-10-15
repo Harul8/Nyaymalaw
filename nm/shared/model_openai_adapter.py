@@ -188,8 +188,9 @@ class OpenAIModelAdapter:
         15 Oct 2026). Audio leaves only on a binding made for transcription, under the
         advocate's permission, which is checked before every attempt.
 
-        Transcription is priced by audio rather than text tokens, so the development
-        call budget does not reserve for it; the receipt carries the provider's usage.
+        Transcription is priced by the minute of audio: a bounded development session
+        reserves for it on the shared ledger and settles at the duration the provider
+        reports (open items round, 15 Oct 2026); the receipt carries the provider's usage.
         """
         if self._audio_model is None or self._before_dispatch is None:
             raise ModelPermissionRefused("Audio is sent only to transcribe an advocate's voice note or dictation.")
@@ -200,10 +201,16 @@ class OpenAIModelAdapter:
                                   "response_format": "json"}
         if prompt:
             kwargs["prompt"] = prompt
+        if isinstance(self._call_budget, SessionCallBudget):
+            budget = self._call_budget.for_audio(self._audio_model, len(audio))
+        elif self._call_budget is not None:
+            raise ConfigurationError("This bounded evaluation does not authorise speech transcription.")
+        else:
+            budget = None
         started = time.perf_counter()
         response, retries = request_with_retries(
             lambda: self._client.audio.transcriptions.create(**kwargs), model=self._audio_model,
-            before_dispatch=self._before_dispatch, call_budget=None)
+            before_dispatch=self._before_dispatch, call_budget=budget)
         text = getattr(response, "text", None)
         if not isinstance(text, str):
             raise SchemaViolation("The provider returned no transcript text")

@@ -4,6 +4,7 @@ OpenAI under the accepted agreement; dictation's recording is not kept).
 A recorded speech model stands in for the provider: these prove the custody, the
 record, the binding and the wiring, not how well speech is heard.
 """
+import sqlite3
 import struct
 from types import SimpleNamespace
 
@@ -14,10 +15,11 @@ from nm.core_engine.conversation import chat_matter_id, document_sources
 from nm.core_engine.turn import saved_rows
 from nm.core_engine.documents import DocumentRefused
 from nm.shared.external_ai_contracts import ModelPermissionRefused
+from nm.shared.model_call_budget import CallBudget
 from nm.shared.model_config import ModelConfig, TierConfig
 from nm.shared.model_openai_adapter import OpenAIModelAdapter
 from nm.shared.model_policed import PolicedModel
-from nm.shared.model_port import ProviderUnavailable, Tier, Transcription
+from nm.shared.model_port import ConfigurationError, ProviderUnavailable, Tier, Transcription
 from tests.test_core_documents import ADVOCATE, OTHER, Checker, desk  # noqa: F401 - pytest fixture
 from tests.test_core_served import served  # noqa: F401 - pytest fixture
 from tests.test_core_turn import run, store  # noqa: F401 - pytest fixture
@@ -153,6 +155,31 @@ def test_audio_leaves_only_on_a_binding_made_for_transcription_with_permission_c
         permit=lambda sink, provider, classes, size_bytes: measured.append(size_bytes)))
     policed.transcribe(wav(), file_name="note.wav", media_type="audio/wav")
     assert measured == [len(wav())]
+
+
+def test_a_bounded_session_reserves_for_transcription_and_settles_at_the_reported_minutes(tmp_path):
+    from nm.shared.model_call_budget import SessionCallBudget
+    ledger = tmp_path / "ledger.sqlite"
+    session = SessionCallBudget(ledger, "5", models=("gpt-6-luna",))
+    reply = SimpleNamespace(text=SAID, usage={"type": "duration", "seconds": 39}, languages=["en"])
+    client = SimpleNamespace(audio=SimpleNamespace(transcriptions=SimpleNamespace(create=lambda **kwargs: reply)))
+    config = ModelConfig({Tier.ROUTINE: TierConfig(Tier.ROUTINE, "openai", "gpt-6-luna", "unused", None)})
+    port = OpenAIModelAdapter(config, client=client, call_budget=session).for_matter_text(
+        lambda: None, audio_model="gpt-transcribe")
+    port.transcribe(wav(), file_name="note.wav", media_type="audio/wav")
+    with sqlite3.connect(ledger) as db:
+        row = db.execute("SELECT model, state, charge, reservation, audio_seconds FROM attempts").fetchall()
+    # $0.0045 a minute (official page, 15 Oct 2026): 39 s is 2,925 micro-dollars; ten minutes reserved.
+    assert row == [("gpt-transcribe", "measured", 2925, 45000, 39.0)]
+    # A reply that states no duration keeps the whole reservation.
+    reply.usage = {"type": "tokens", "input_tokens": 10}
+    port.transcribe(wav(), file_name="note.wav", media_type="audio/wav")
+    assert session.status()["charged_usd"] == pytest.approx(0.002925 + 0.045)
+    # A pinned single-model evaluation does not cover speech.
+    pinned = OpenAIModelAdapter(config, client=client, call_budget=CallBudget(tmp_path / "pinned.sqlite", "1"))
+    with pytest.raises(ConfigurationError):
+        pinned.for_matter_text(lambda: None, audio_model="gpt-transcribe").transcribe(
+            wav(), file_name="note.wav", media_type="audio/wav")
 
 
 def test_the_languages_heard_are_kept_as_codes_whatever_shape_the_provider_gives():

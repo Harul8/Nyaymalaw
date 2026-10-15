@@ -68,6 +68,13 @@ PRICES: dict[str, tuple[float, float]] = {
     "scripted": (0.0, 0.0),
 }
 
+#: Speech models are priced by the minute of audio, in USD. Official pricing page
+#: (developers.openai.com/api/docs/pricing) checked 15 October 2026.
+AUDIO_PRICE_PER_MINUTE: dict[str, str] = {
+    "gpt-transcribe": "0.0045",
+    "gpt-live-transcribe": "0.017",
+}
+
 #: The most output one call can return, per pinned model: with the context budget
 #: above, what a spending reservation must cover so it can never under-count.
 MAX_OUTPUT: dict[str, int] = {

@@ -120,7 +120,8 @@ class CallBudget:
                                ("reservation", "INTEGER"), ("identity_policy", "TEXT"),
                                ("pricing_policy", "TEXT"), ("input_token_bound", "INTEGER"),
                                ("output_token_bound", "INTEGER"), ("cached_tokens", "INTEGER"),
-                               ("cache_write_tokens", "INTEGER"), ("bound_violation", "TEXT")):
+                               ("cache_write_tokens", "INTEGER"), ("bound_violation", "TEXT"),
+                               ("audio_seconds", "REAL")):
                 if name not in columns:
                     db.execute(f"ALTER TABLE attempts ADD COLUMN {name} {kind}")
 
@@ -251,6 +252,49 @@ class CallBudget:
                 usage=Usage(incoming, outgoing, cost / 1_000_000))
 
 
+class AudioCallBudget(CallBudget):
+    """One speech-to-text call on the shared ledger, priced by the minute of audio
+    (open items round, 15 Oct 2026). The reservation covers `minutes_bound` minutes;
+    the provider's reported duration settles it. Audio carries no returned model
+    identity, and usage that does not state a duration keeps the whole reservation."""
+
+    def __init__(self, path: Path, maximum_usd: str, *, model: str, per_minute: str, minutes_bound: int):
+        try:
+            rate = Decimal(per_minute)
+        except (InvalidOperation, TypeError, ValueError) as exc:
+            raise ConfigurationError("An audio price must be numeric.") from exc
+        if not rate.is_finite() or rate <= 0 or type(minutes_bound) is not int or minutes_bound <= 0:
+            raise ConfigurationError("An audio call needs a positive price and minute bound.")
+        super().__init__(path, maximum_usd, model=model, price_per_million=(per_minute, "0"),
+                         reservation_micro_usd=int((rate * minutes_bound * 1_000_000).to_integral_value(
+                             rounding=ROUND_CEILING)))
+        self.rate = rate
+        self.pricing_policy = json.dumps({"unit": "minute", "rate": per_minute, "minutes_bound": minutes_bound},
+                                         sort_keys=True, separators=(",", ":"))
+
+    def settle(self, token: str, response) -> None:
+        usage = getattr(response, "usage", None)
+        usage = usage if isinstance(usage, dict) else (usage.model_dump() if hasattr(usage, "model_dump")
+                                                        else vars(usage) if usage is not None else {})
+        seconds = usage.get("seconds") if usage.get("type") == "duration" else None
+        if type(seconds) not in (int, float) or seconds < 0:
+            return  # An unstated duration keeps the whole reservation.
+        cost = int((self.rate * Decimal(str(seconds)) * 1_000_000 / 60).to_integral_value(rounding=ROUND_CEILING))
+        state = "measured_over_bound" if cost > self.reservation else "measured"
+        with self._connect() as db:
+            db.execute("BEGIN IMMEDIATE")
+            changed = db.execute(
+                "UPDATE attempts SET charge=?,state=?,audio_seconds=?,bound_violation=? "
+                "WHERE id=? AND state='reserved_or_unknown' AND model=? AND pricing_policy=?",
+                (cost, state, float(seconds), json.dumps(["price_reservation"]) if cost > self.reservation else None,
+                 token, self.model, self.pricing_policy))
+            if changed.rowcount != 1:
+                raise ProviderUnavailable("Evaluation reservation was absent or already settled.")
+        if state == "measured_over_bound":
+            raise ProviderUnavailable("The recording was longer than its reserved duration.",
+                                      usage=Usage(0, 0, cost / 1_000_000))
+
+
 class SessionCallBudget:
     """Request-bound model terms sharing one existing durable session ledger."""
 
@@ -303,6 +347,19 @@ class SessionCallBudget:
                           reservation_micro_usd=reserve, returned_model_aliases=aliases,
                           require_returned_model=True, pricing=pricing,
                           input_token_bound=incoming, output_token_bound=limit), limit
+
+    def for_audio(self, model: str, audio_bytes: int) -> AudioCallBudget:
+        """A speech call on this session's ledger. Its duration bound assumes no less
+        than 32 kbit/s (4,000 bytes a second), and never less than ten minutes."""
+        from nm.shared.model_config import AUDIO_PRICE_PER_MINUTE
+
+        if model not in AUDIO_PRICE_PER_MINUTE:
+            raise ConfigurationError("This bounded session has no verified price for that speech model.")
+        if type(audio_bytes) is not int or audio_bytes <= 0:
+            raise ConfigurationError("An audio call needs its recording's size.")
+        minutes = max(10, -(-audio_bytes // (4_000 * 60)))
+        return AudioCallBudget(self.path, self.maximum_usd, model=model,
+                               per_minute=AUDIO_PRICE_PER_MINUTE[model], minutes_bound=minutes)
 
     def status(self) -> dict:
         return self._ledger.status()
