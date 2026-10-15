@@ -68,6 +68,16 @@ def today(now: datetime | None = None) -> date:
     return moment.astimezone(IST).date()
 
 
+def setting(now: datetime | None = None) -> dict:
+    """Where and when the advocate works, as code tells the models (owner decision,
+    15 Oct 2026). Without it an answer asked which country the land was in and could
+    not tell whether "yesterday" fell under the old or the new criminal codes. Model
+    input only: saved conversations never store it, so replay is unchanged."""
+    day = today(now)
+    return {"advocate_practises_in": f"{FORUM}, India", "today": day.isoformat(),
+            "weekday": day.strftime("%A")}
+
+
 def describe() -> str:
     """What the product will tell an advocate about its own clock.
 

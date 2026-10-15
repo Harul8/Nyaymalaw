@@ -13,6 +13,7 @@ from copy import deepcopy
 
 from nm.core_engine import answer_sources, research, response_authorities, response_writer
 from nm.core_engine.understanding import REFERENCE, TEXT
+from nm.shared import clock_contracts
 from nm.shared.model_port import (
     ContextOverflow, ModelError, Prompt, SchemaViolation, Tier,
     canonical_schema_data, estimate_tokens, require_schema,
@@ -33,7 +34,8 @@ _CURRENT = (RESPECTED_CONTRACT, CONTRACT)
 #: Verdicts for every unit of a long reply; reasoning counts towards it.
 MAX_OUTPUT = 16000
 SYSTEM = """Message: You receive the complete original attributed conversation, the
-latest advocate message, current records and saved work; the complete retrieved
+latest advocate message, current records and saved work; where and when the advocate
+works (their forum and today's date); the complete retrieved
 legal catalogue including adjacent passages and coverage gaps; our understanding of
 the matter and each legal question's search outcome; the complete proposed reply;
 code-owned authority checks bound to that draft and its source snapshot; and separate
@@ -318,7 +320,7 @@ def review(model, context, research_record, sources, draft, execution=None, *,
     # Legal passages, the draft's legal uses and the checks naming them all use
     # the offered aliases; admission maps a selected alias back to its owned tag.
     shown = {tag: alias for alias, tag in answer_sources.aliases(sources).items()}
-    payload = {"original_context": dependencies["original_context"],
+    payload = {"original_context": dependencies["original_context"], "setting": clock_contracts.setting(),
         "research_proposal_and_results": research_context,
         "legal_sources": answer_sources.presentation(sources, aliased=True, compact=True),
         "complete_draft_proposal": _draft_presentation(draft, sources, aliased=True),

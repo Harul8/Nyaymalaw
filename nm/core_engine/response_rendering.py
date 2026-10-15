@@ -215,9 +215,10 @@ def _cited_words(text, sources, authority):
 
 def _headings(research_record, draft):
     """Where each dispute's part begins, with the understanding's name for that dispute;
-    none when the reply answers one dispute or was written whole."""
+    none when the reply answers one dispute or was written whole. An opening part (no
+    dispute) has no heading."""
     parts = draft.get("parts") or []
-    if len({part["dispute_id"] for part in parts}) < 2:
+    if len({part["dispute_id"] for part in parts} - {None}) < 2:
         return {}
     names = {}
     if research_record.get("contract") in (research.PICKED_CONTRACT, research.CONTRACT):
@@ -225,6 +226,9 @@ def _headings(research_record, draft):
             names.setdefault(dispute["id"], dispute["name"])
     headings, start = {}, 0
     for part in parts:
+        if part["dispute_id"] is None:
+            start += part["units"]
+            continue
         if part["dispute_id"] not in names or not names[part["dispute_id"]].strip():
             raise ValueError("A part of the reply names no dispute of its research")
         if part["dispute_id"] not in headings.values():

@@ -339,7 +339,7 @@ class PartModel:
         payload = json.loads(prompt.user)
         with self.lock:
             self.seen.append(payload)
-        dispute = payload["this_part"]["dispute"]["id"]
+        dispute = (payload["this_part"]["dispute"] or {}).get("id", "opening")
         data = {"units": [unit(self.sources, text=f"Answer for {dispute}?")]}
         if dispute == self.broken:
             data["units"][0]["addresses"] = [{"source_id": "not offered"}]
@@ -351,16 +351,20 @@ def test_each_dispute_is_written_in_its_own_part_seeing_only_its_own_sources():
     ctx, record, sources = two_disputes()
     model = PartModel(sources)
     draft = write(model, ctx, record, sources)
-    shown = {p["this_part"]["dispute"]["id"]: p for p in model.seen}
-    assert sorted(shown) == ["D1", "D2"] and len(model.seen) == 2
-    assert shown["D1"]["this_part"]["opens_the_answer"] and not shown["D2"]["this_part"]["opens_the_answer"]
-    assert shown["D1"]["this_part"]["other_parts"] == ["Dispute 2"]
-    texts = {d: {p["text"] for p in shown[d]["held_passages"]["passages"] if p["kind"] == "judgment"} for d in shown}
+    shown = {(p["this_part"]["dispute"] or {}).get("id", "opening"): p for p in model.seen}
+    assert sorted(shown) == ["D1", "D2", "opening"] and len(model.seen) == 3
+    # The opening part: no dispute, no legal sources, names every dispute answered elsewhere.
+    opening = shown["opening"]["this_part"]
+    assert opening["opens_the_answer"] and opening["other_parts"] == ["Dispute 1", "Dispute 2"]
+    assert shown["opening"]["held_passages"]["passages"] == [] and shown["opening"]["research"]["questions"] == []
+    assert not shown["D1"]["this_part"]["opens_the_answer"] and shown["D1"]["this_part"]["other_parts"] == ["Dispute 2"]
+    texts = {d: {p["text"] for p in shown[d]["held_passages"]["passages"] if p["kind"] == "judgment"} for d in ("D1", "D2")}
     assert texts["D1"] and texts["D2"] and not texts["D1"] & texts["D2"]
     assert all(p["original_context"] == ctx for p in model.seen)
-    assert draft["parts"] == [{"dispute_id": "D1", "units": 1}, {"dispute_id": "D2", "units": 1}]
-    assert [u["text"] for u in draft["units"]] == ["Answer for D1?", "Answer for D2?"]
-    assert [u["id"] for u in draft["units"]] == ["t2:b1", "t2:b2"]
+    assert draft["parts"] == [{"dispute_id": None, "units": 1}, {"dispute_id": "D1", "units": 1},
+                              {"dispute_id": "D2", "units": 1}]
+    assert [u["text"] for u in draft["units"]] == ["Answer for opening?", "Answer for D1?", "Answer for D2?"]
+    assert [u["id"] for u in draft["units"]] == ["t2:b1", "t2:b2", "t2:b3"]
     assert validate(deepcopy(draft), ctx, sources) == draft
 
 
@@ -368,13 +372,13 @@ def test_a_correction_rewrites_only_the_part_a_finding_names():
     from nm.core_engine.response_writer import kept_parts
     ctx, record, sources = two_disputes()
     draft = write(PartModel(sources), ctx, record, sources)
-    finding = {"category": "grounding", "unit_ids": [draft["units"][1]["id"]], "sources": [], "mismatch": "x"}
+    finding = {"category": "grounding", "unit_ids": [draft["units"][2]["id"]], "sources": [], "mismatch": "x"}
     kept = kept_parts(draft, [finding])
-    assert list(kept) == [0]
+    assert list(kept) == [0, 1]
     again = PartModel(sources)
     corrected = write(again, ctx, record, sources, keep=kept)
     assert [p["this_part"]["dispute"]["id"] for p in again.seen] == ["D2"]
-    assert corrected["units"][0]["text"] == draft["units"][0]["text"]
+    assert [u["text"] for u in corrected["units"][:2]] == [u["text"] for u in draft["units"][:2]]
     assert kept_parts(draft, [{**finding, "unit_ids": []}]) == {}  # an omission reopens every part
 
 
@@ -389,11 +393,26 @@ def test_a_changed_layout_cannot_replay(change):
     ctx, record, sources = two_disputes()
     draft = write(PartModel(sources), ctx, record, sources)
     forged = deepcopy(draft)
-    if change == "count": forged["parts"][0]["units"] = 2
-    elif change == "dispute": forged["parts"][0]["dispute_id"] = ""
+    if change == "count": forged["parts"][1]["units"] = 2
+    elif change == "dispute": forged["parts"][1]["dispute_id"] = ""
     elif change == "empty": forged["parts"] = []
     else: forged["parts"][0]["title"] = "Written by code?"
     with pytest.raises(ValueError): validate(forged, ctx, sources)
     from nm.core_engine.response_writer import ALIAS_CONTRACT
     with pytest.raises(ValueError):
         accept(draft["proposal"], ctx, sources, contract=ALIAS_CONTRACT, parts=draft["parts"])
+
+
+def test_the_writer_is_told_where_and_when_the_advocate_works(monkeypatch):
+    """Owner decision, 15 Oct 2026: forum and today's date come from code, in India's time."""
+    from datetime import date
+    from nm.shared import clock_contracts
+    monkeypatch.setattr(clock_contracts, "today", lambda now=None: date(2026, 10, 15))
+    ctx, record, sources = two_disputes()
+    model = PartModel(sources)
+    write(model, ctx, record, sources)
+    assert all(p["setting"] == {"advocate_practises_in": "Telangana, India", "today": "2026-10-15",
+                                "weekday": "Thursday"} for p in model.seen)
+    from nm.core_engine.research import conversation_text
+    assert conversation_text(ctx).startswith(
+        "Today is Thursday, 2026-10-15, where the advocate practises (Telangana, India).")

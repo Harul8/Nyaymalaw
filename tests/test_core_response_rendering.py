@@ -174,13 +174,14 @@ def test_a_reply_answering_two_disputes_shows_each_disputes_name_before_its_part
     elements = response_rendering.render(ctx, record, sources, draft, reviewed, execution,
                                          authority_evidence=authorities)
     assert [(e["kind"], e["text"]) for e in elements] == [
+        ("QUESTION", "Answer for opening?"),  # the opening part has no heading
         ("HEADING", "Dispute 1"), ("QUESTION", "Answer for D1?"),
         ("HEADING", "Dispute 2"), ("QUESTION", "Answer for D2?")]
-    heading = elements[0]
+    heading = elements[1]
     assert heading["sources"] == [] and heading["source"] is None and heading["citation_markers"] == []
     earlier = response_rendering.render(ctx, record, sources, draft, reviewed, execution, authority_evidence=authorities,
                                         contract=response_rendering.CITED_WORDS_CONTRACT)
-    assert [e["kind"] for e in earlier] == ["QUESTION", "QUESTION"]  # a saved v4 rendering never gains headings
+    assert [e["kind"] for e in earlier] == ["QUESTION"] * 3  # a saved v4 rendering never gains headings
     forged = deepcopy(record)
     forged["plan"]["proposal"]["understanding"]["disputes"][1]["id"] = "D9"
     with pytest.raises(ValueError):

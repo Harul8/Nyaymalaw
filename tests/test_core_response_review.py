@@ -125,6 +125,7 @@ def test_whole_originals_adjacent_legal_text_and_execution_are_separate_inputs()
     prompt, schema, tier, kwargs = model.calls[0]
     payload = json.loads(prompt.user)
     assert payload["original_context"] == ctx
+    assert payload["setting"]["advocate_practises_in"] == "Telangana, India"  # from code, 15 Oct 2026
     assert payload["owned_execution_evidence"] == execution
     shown = payload["complete_draft_proposal"]["units"]
     assert [row["text"] for row in shown] == [row["text"] for row in draft["units"]]

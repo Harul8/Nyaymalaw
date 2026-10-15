@@ -16,6 +16,7 @@ from copy import deepcopy
 
 from nm.core_engine.retrieval import SearchUnavailable, validate_search
 from nm.core_engine.understanding import REFERENCE, TEXT, select, source_catalogue
+from nm.shared import clock_contracts
 from nm.shared.model_port import (
     ModelError, Prompt, SchemaViolation, Tier, canonical_schema_data, require_schema,
 )
@@ -242,10 +243,14 @@ def _select(reference, catalogue, offsets):
 # --- v7: the conversation as the model reads it, and mechanical checks -------------
 
 def conversation_text(context):
-    """The advocate's words and our earlier notes, attributed, oldest first."""
+    """Today's date where the advocate works, then the advocate's words and our earlier
+    notes, attributed, oldest first."""
     earlier = [row for row in context["conversation"]
                if row.get("record_role") in ("original_account", "nm_interpretation")]
-    lines = ["Conversation so far (oldest first):"] if earlier else []
+    where = clock_contracts.setting()
+    lines = [f"Today is {where['weekday']}, {where['today']}, where the advocate practises "
+             f"({where['advocate_practises_in']}).", ""]
+    lines += ["Conversation so far (oldest first):"] if earlier else []
     for number, row in enumerate(earlier, 1):
         who = ("Advocate" if row["record_role"] == "original_account"
                else "Our research assistant (an earlier note, not the advocate's words)")
