@@ -28,13 +28,16 @@ from nm.shared.model_port import ConfigurationError, Tier, TierUnavailable
 # is a confidentiality decision and not only a technical one (tenet 1).
 PERMITTED_PROVIDERS: frozenset[str] = frozenset({"openai", "anthropic", "scripted"})
 
-# Tokens a step may build to. Deliberately the smallest supported window, not
-# the largest available: a prompt built to fill one provider's context does not
-# port, and finding that out at switch time defeats the design.
+# Tokens a step may build to, declared once for every provider so a prompt that
+# fits here fits whichever adapter is live. Owner decision, 15 October 2026: the
+# configured models (Luna and Sol, 1,050,000-token windows, BILLING_CONTEXT below)
+# take 1,000,000, replacing the earlier 100,000 that refused large matters before
+# writing. This is the safety net, not the normal size: answer composition bounds
+# what each step sees. A provider with a smaller window must lower these first.
 CONTEXT_BUDGET: dict[Tier, int] = {
-    Tier.ROUTINE: 100_000,
-    Tier.HARD: 100_000,
-    Tier.JUDGE: 100_000,
+    Tier.ROUTINE: 1_000_000,
+    Tier.HARD: 1_000_000,
+    Tier.JUDGE: 1_000_000,
     Tier.EMBED: 8_000,
 }
 
