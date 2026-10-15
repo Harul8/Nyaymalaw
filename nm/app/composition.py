@@ -195,14 +195,17 @@ def _document_desk(raw_store, storage_root, gate, settings):
         originals, texts = raw_store.upload_storage(), raw_store.document_storage()
     except EncryptionNotConfigured:
         return None
+    checker = ClamAVCheck(settings.get('NM_CLAMSCAN'), settings.get('NM_CLAMAV_DATABASE'), storage_root / 'scan')
+    # The resident engine loads at start; definitions over a day old are refreshed at start
+    # and daily (owner decision, 15 Oct 2026).
+    checker.warm()
+    checker.keep_refreshed()
     return DocumentDesk(prepare_space=raw_store.prepare_custody,
         originals=PolicedPort(inner=originals, gate=gate, port=UploadPort, sink=Sink.STORAGE,
                               processor_id=STORAGE_PROCESSOR),
         texts=PolicedPort(inner=texts, gate=gate, port=DocumentDerivativePort, sink=Sink.STORAGE,
                           processor_id=STORAGE_PROCESSOR),
-        checker=ClamAVCheck(settings.get('NM_CLAMSCAN'), settings.get('NM_CLAMAV_DATABASE'),
-                            storage_root / 'scan'),
-        reader=LocalDocumentText())
+        checker=checker, reader=LocalDocumentText())
 
 
 class _DeferredAdapter:
