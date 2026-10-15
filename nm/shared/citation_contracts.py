@@ -31,6 +31,8 @@ import re
 from dataclasses import dataclass
 from enum import Enum
 
+from nm.shared.clock_contracts import FORUM
+
 # The two guards, each learned by firing wrongly:
 #
 #   (?<![A-Za-z]\.)   a section marker preceded by another abbreviation
@@ -120,8 +122,8 @@ def statute_title(stored: str, act_id: str = "") -> str:
     if (title.casefold() in CENTRAL_ACTS_NAMED_FOR_THE_STATE
             or re.match(r"(?:The\s+)?Telangana\b", title, re.I) or not STATE_NAME.search(title)):
         return title
-    renamed = STATE_NAME.sub("Telangana", title)
-    renamed = re.sub(r"Telangana\s*\(\s*Telangana\s+Area\s*\)", "Telangana", renamed, flags=re.I)
+    renamed = STATE_NAME.sub(FORUM, title)
+    renamed = re.sub(r"Telangana\s*\(\s*Telangana\s+Area\s*\)", FORUM, renamed, flags=re.I)
     return " ".join(renamed.split())
 
 
