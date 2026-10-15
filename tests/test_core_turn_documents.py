@@ -193,6 +193,18 @@ def test_the_served_turn_reads_only_the_advocate_s_own_cleared_documents(served,
     assert row["documents"][0]["pages"][0]["text"] == "Return memo: funds insufficient."
 
 
+def test_the_reading_pane_says_how_a_cited_page_was_read():
+    from nm.app.api import _how_read
+    page = lambda number, read_by, **extra: {"number": number, "read_by": read_by, "text": "x", **extra}  # noqa: E731
+    rows = [{"turn_id": "t1", "documents": [{"pages": [page(1, "local"), page(2, "ai", legible="part")]}]},
+            {"turn_id": "t2", "documents": [{"pages": [page(1, "ai")]}, {"recording": True, "pages": [page(1, "ai")]}]}]
+    assert _how_read(rows, "t1:d1p1") == "Read from the file's own text on this computer."
+    assert _how_read(rows, "t1:d1p2") == "Read by AI from a scan or photo, partly legible: check it against your original."
+    assert _how_read(rows, "t2:d1p1") == "Read by AI from a scan or photo: check it against your original."
+    assert _how_read(rows, "t2:d2p1") == "Transcribed by AI: check it against the recording."
+    assert _how_read(rows, "t3:d1p1") == ""
+
+
 def test_too_many_documents_are_refused_at_the_door(served):
     reply = served.client.post("/api/turn", json={"message": "Read.", "turn_id": "many",
                                                   "document_refs": ["doc_x"] * 11})
