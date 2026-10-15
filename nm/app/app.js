@@ -2358,11 +2358,36 @@ function renderTurn(entry) {
   // page shows the stage it has reached, the time so far and the stages done.
   if (!entry.answer) {
     const progress = entry.progress;
+    // WHAT WAS ADDED WHILE THIS QUESTION IS WORKED ON (owner decision, 15 Oct 2026),
+    // sent as the next message as soon as this answer is saved; each can be removed.
+    const queued = Array.isArray(entry.context && entry.context.queued) ? entry.context.queued : [];
+    const waiting = queued.length ? document.createElement('div') : null;
+    if (waiting) {
+      waiting.className = 'progress-queued';
+      const label = document.createElement('div');
+      label.className = 'progress-queued-label';
+      label.textContent = 'Added while working · sent as soon as this answer is ready';
+      waiting.appendChild(label);
+      queued.forEach((text, index) => {
+        const row = document.createElement('div');
+        row.className = 'queued-item';
+        const words = document.createElement('span');
+        words.textContent = text;
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.className = 'ghost';
+        remove.textContent = 'Remove';
+        remove.addEventListener('click', () => { queued.splice(index, 1); repaint(); });
+        row.append(words, remove);
+        waiting.appendChild(row);
+      });
+    }
     if (!progress || progress.state !== 'working') {
       const pending = document.createElement('div');
       pending.className = 'el ground';
       pending.textContent = 'Preparing a response…';
       wrap.appendChild(pending);
+      if (waiting) wrap.appendChild(waiting);
       return wrap;
     }
     const took = (seconds) => {
@@ -2398,6 +2423,7 @@ function renderTurn(entry) {
       }
       box.appendChild(list);
     }
+    if (waiting) box.appendChild(waiting);
     wrap.appendChild(box);
     return wrap;
   }
@@ -2951,6 +2977,7 @@ async function deliver(entry) {
     stop.abort();
   });
   btn.parentElement.insertBefore(cancel, btn);
+  $('message').placeholder = COMPOSER_WAITING;
   entry.state = 'sending';
   entry.error = null;
   entry.refusal = null;
@@ -3054,9 +3081,42 @@ async function deliver(entry) {
       activeDelivery = null;
       btn.disabled = false;
       btn.textContent = 'Send';
+      $('message').placeholder = COMPOSER_PROMPT;
       updateWorkspace();
     }
+    releaseQueued(entry);
   }
+}
+
+// ADD TO A QUESTION WHILE IT IS WORKED ON (owner decision, 15 Oct 2026), as in
+// Cursor: what the advocate sends meanwhile is queued on the conversation the
+// question belongs to, shown under the progress, and sent as the next message once
+// the answer is saved. If the answer fails, it returns to the message box instead.
+const COMPOSER_PROMPT = 'Tell NM what you need, ask a question, or add material.';
+const COMPOSER_WAITING = 'Add to this question; it is sent as soon as the answer is ready (Enter).';
+function queueAddition(text) {
+  const intent = activeDelivery && activeDelivery.entry.context;
+  if (!intent || !text.trim()) return;
+  if (!Array.isArray(intent.queued)) intent.queued = [];
+  intent.queued.push(text);
+  $('message').value = '';
+  intent.text = '';
+  sizeComposer();
+  repaint();
+}
+
+function releaseQueued(entry) {
+  const intent = entry.context;
+  const queued = intent && Array.isArray(intent.queued) ? intent.queued.splice(0) : [];
+  if (!queued.length) return;
+  if (['committed', 'replayed'].includes(entry.state) && ownsIntent(intent) && !activeDelivery) {
+    send(queued.join('\n\n'));
+    return;
+  }
+  const box = $('message');
+  box.value = [...queued, box.value].filter((text) => text.trim()).join('\n\n');
+  intent.text = box.value;
+  sizeComposer();
 }
 
 // WHAT A TURN IN PROGRESS IS DOING (owner decision, 14 Oct 2026). Only stage
@@ -3099,6 +3159,8 @@ $('composer').addEventListener('submit', (ev) => {
   const box = $('message');
   const text = box.value;
   if (!text.trim()) return;
+  // While a question is worked on, what is sent waits its turn (15 Oct 2026).
+  if (activeDelivery) { queueAddition(text); return; }
   // deliver clears the typing field after minting the retry receipt, and
   // refuses network dispatch unless that receipt has been protected locally.
   send(text);
