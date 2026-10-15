@@ -12,9 +12,11 @@ from datetime import date
 from math import ceil
 from pathlib import Path
 from typing import Annotated
+from urllib.parse import unquote
 from fastapi import BackgroundTasks, Cookie, Depends, FastAPI, Header, HTTPException, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from starlette.concurrency import run_in_threadpool
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, StrictBool, field_validator
 from nm.app.static_assets import browser_assets_router
 from nm.arrive import attempts_contracts as attempts
@@ -22,6 +24,7 @@ from nm.arrive.advocate_contracts import PASSWORD_RESET_MINUTES, SESSION_IDLE_MI
 from nm.arrive.directory_port import AccountBusy, AuthenticationUnavailable
 from nm.arrive.professional_access import read_professional_status
 from nm.core_engine.conversation import HEADER, ConversationRefused, chat_matter_id
+from nm.core_engine import documents as document_rules
 from nm.core_engine.response_rendering import unit_index
 from nm.core_engine.matter_board import board as matter_board
 from nm.core_engine.turn import CONTRACT as CORE_TURN, LEGACY_CONTRACT as LEGACY_CORE_TURN, saved_rows
@@ -1336,6 +1339,62 @@ def chat_board(chat_id: str, advocate_id: Advocate, request: Request, response: 
         raise HTTPException(401, 'not signed in')
     response.headers['Cache-Control'] = 'no-store'
     return {'chat_id': chat_id, **board}
+
+
+def _document_desk():
+    desk = application().documents
+    if desk is None:
+        raise HTTPException(503, {'why': 'Documents cannot be received on this installation.',
+                                  'code': 'documents_unavailable'})
+    return desk
+
+
+_TOO_LARGE = {'why': 'A document can be at most 16 MB.', 'code': 'document_too_large'}
+
+
+@app.post('/api/documents', dependencies=[CsrfProtected], status_code=201)
+async def receive_document(advocate_id: Advocate, request: Request):
+    """One document as the request body, its file name in X-NM-Document-Name (owner
+    decisions, 15 Oct 2026): checked for malware, read where it can be, and sealed in
+    the advocate's own space. The body is read only up to the size limit."""
+    declared = request.headers.get('content-length')
+    if declared is not None and (not declared.isdigit() or int(declared) > document_rules.MAX_BYTES):
+        raise HTTPException(413, _TOO_LARGE)
+    data = bytearray()
+    async for chunk in request.stream():
+        data += chunk
+        if len(data) > document_rules.MAX_BYTES:
+            raise HTTPException(413, _TOO_LARGE)
+    name = unquote(request.headers.get('x-nm-document-name') or '')
+    return await run_in_threadpool(_receive_document, advocate_id, request, name, bytes(data))
+
+
+def _receive_document(advocate_id, request, name, data):
+    if not _session_current(request, advocate_id):
+        raise HTTPException(401, 'not signed in')
+    try:
+        record = _document_desk().receive(advocate_id, name, data)
+    except document_rules.DocumentRefused as exc:
+        raise HTTPException(422, {'why': str(exc), 'code': 'document_refused'}) from exc
+    except OSError as exc:
+        raise HTTPException(503, {'why': 'This document could not be kept safely. Try again.',
+                                  'code': 'document_storage'}) from exc
+    if not _session_current(request, advocate_id):
+        raise HTTPException(401, 'not signed in')
+    return document_rules.summary(record)
+
+
+@app.get('/api/documents/{document_ref}')
+def document_summary(document_ref: str, advocate_id: Advocate, request: Request, response: Response):
+    """What the advocate is shown about one of their own documents, without its text."""
+    if not _session_current(request, advocate_id):
+        raise HTTPException(401, 'not signed in')
+    try:
+        record = _document_desk().load(advocate_id, document_ref)
+    except document_rules.DocumentRefused as exc:
+        raise HTTPException(404, {'why': str(exc), 'code': 'document_unavailable'}) from exc
+    response.headers['Cache-Control'] = 'no-store'
+    return document_rules.summary(record)
 
 
 def _source_authority_inspection(row, element, selected):

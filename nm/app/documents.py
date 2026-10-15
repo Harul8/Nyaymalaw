@@ -18,6 +18,7 @@ from nm.core_engine import documents
 from nm.core_engine.documents import DocumentRefused
 from nm.open_matter.document_local import DocumentParserDefect, ExtractionRefused
 from nm.open_matter.document_text_port import AdmittedDocument, DocumentFormat, TextState
+from nm.open_matter.matter_documents_port import MAX_DERIVATIVE_BYTES
 from nm.open_matter.media_contracts import MediaKind, Processor, Quarantine, admitted
 
 CHUNK = 1024 * 1024
@@ -36,6 +37,7 @@ class DocumentDesk:
         self.checker, self.reader, self.clock = checker, reader, clock
 
     def receive(self, advocate_id, name, data):
+        name = documents.document_name(name)
         fmt = documents.document_format(name, data)
         if fmt is None:
             raise DocumentRefused("Only PDF, Word (.docx), plain text (.txt), PNG or JPEG files can be read.")
@@ -44,18 +46,22 @@ class DocumentDesk:
         sha = hashlib.sha256(data).hexdigest()
         document_id = "doc_" + secrets.token_hex(12)
         state, reason = self.checker.check(data)
-        where = space(advocate_id)
-        self.prepare_space(where)
-        pages, observed, failure = [], None, None
-        if state == "clear":
-            for start in range(0, len(data), CHUNK):
-                self.originals.put(where, f"{document_id}-{start // CHUNK}", data[start:start + CHUNK])
-            pages, observed, failure = self._read(advocate_id, document_id, fmt, data, sha)
+        pages, observed, failure = (self._read(advocate_id, document_id, fmt, data, sha)
+                                    if state == "clear" else ([], None, None))
         record = documents.receipt(
             document_id=document_id, name=name, fmt=fmt, sha256=sha, size=len(data),
             received_at=self.clock().isoformat(), check={"state": state, "reason": reason, "checker": self.checker.name},
             pages=pages, observed_pages=observed, failure=failure)
         body = json.dumps(record, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+        if len(body) > MAX_DERIVATIVE_BYTES:
+            raise DocumentRefused("This document holds more text than can be kept for one document. "
+                                  "Send the relevant pages instead.")
+        # Nothing is stored until the whole record is known: a refusal leaves nothing behind.
+        where = space(advocate_id)
+        self.prepare_space(where)
+        if state == "clear":
+            for start in range(0, len(data), CHUNK):
+                self.originals.put(where, f"{document_id}-{start // CHUNK}", data[start:start + CHUNK])
         self.texts.put(where, documents.reference(record), body)
         return record
 

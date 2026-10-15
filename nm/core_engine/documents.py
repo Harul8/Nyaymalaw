@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from copy import deepcopy
 
 CONTRACT = "core_document_v1"
@@ -23,6 +24,14 @@ CHECK_STATES = ("clear", "held", "unavailable")
 
 class DocumentRefused(ValueError):
     """The advocate is told plainly why a document was not taken or not used."""
+
+
+def document_name(raw):
+    """The file's own name as the advocate's computer gave it, without any folder."""
+    name = re.split(r"[\\/]", raw or "")[-1].strip()
+    if not name or len(name) > 200 or any(ord(ch) < 32 or ord(ch) == 127 for ch in name):
+        raise DocumentRefused("A document needs its file name (at most 200 characters).")
+    return name
 
 
 def document_format(name, data):
