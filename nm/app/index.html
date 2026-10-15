@@ -330,9 +330,10 @@
     </div>
   </div>
 
-  <!-- FOUR PLACES, AND ONLY FOUR. Case file and History belong to a matter and
-       are opened from inside My work for the matter that is open. -->
-  <nav class="tabs" id="tabs" aria-label="Workspace navigation">
+  <!-- NO TABS (owner decision, 15 Oct 2026): the sidebar holds a new-matter button
+       and the list of matters; each matter carries its own views. The four places
+       stay in the page, unreached, until their surfaces are retired. -->
+  <nav class="tabs" id="tabs" aria-label="Workspace navigation" hidden>
     <button class="tab is-on" data-tab="home" aria-current="page">Home</button>
     <button class="tab" data-tab="advise">My work</button>
     <button class="tab" data-tab="search" disabled title="Not connected to the rebuilt brain yet">Legal library</button>
@@ -370,6 +371,7 @@
   <aside class="rail" id="rail">
     <div class="rail-head">
       <h2 id="rail-title">Matters</h2>
+      <button type="button" id="rail-new" class="ghost rail-new">+ New matter</button>
     </div>
     <div class="rail-meta" id="rail-meta"></div>
     <div id="rail-body"></div>

@@ -811,7 +811,8 @@ function setWorkView(view) {
 function syncBoardHost() {
   const pane = $('pane-advise');
   const rail = $('rail');
-  if (window.innerWidth > 820 && pane.dataset.view !== 'opening') {
+  // On a wide screen the list of matters is always beside the work (15 Oct 2026).
+  if (window.innerWidth > 820) {
     $('sidebar-board').appendChild(rail);
   } else {
     pane.insertBefore(rail, pane.querySelector('.conversation'));
@@ -877,8 +878,10 @@ async function showMatterList({ preserveIntent = false } = {}) {
 
 function selectMatterRow() {
   let current = null;
-  for (const row of $('rail-body').querySelectorAll('[data-matter-id]')) {
-    const selected = row.dataset.matterId === state.matterId;
+  const chatId = activeIntent && activeIntent.chatId;
+  for (const row of $('rail-body').querySelectorAll('[data-matter-id], [data-chat-id]')) {
+    const selected = row.dataset.matterId ? row.dataset.matterId === state.matterId
+      : Boolean(chatId) && row.dataset.chatId === chatId;
     row.classList.toggle('selected', selected);
     row.setAttribute('aria-pressed', String(selected));
     if (selected) current = row;
@@ -921,6 +924,7 @@ async function loadMatterList() {
   const pendingRows = data.chats.map((chat) => {
     const row = document.createElement('div');
     row.className = 'row';
+    row.dataset.chatId = chat.chat_id;
     row.setAttribute('role', 'button');
     row.tabIndex = 0;
     row.setAttribute('aria-label', `Continue chat: ${chat.preview}`);
@@ -2875,6 +2879,8 @@ async function deliver(entry) {
       intent.chatId = answer.chat_id;
       intent.key = intentKey(intent.matterId, intent.chatId);
       intentContexts.set(intent.key, intent);
+      // A new conversation joins the list of matters as soon as it is saved.
+      loadMatterList();
     }
     if (answer.matter_id && !intent.matterId) {
       intentContexts.delete(intent.key);
@@ -3697,6 +3703,7 @@ function startMatter(chatId = null) {
 
 // F-A-18, F-B-01. Home's one button starts a new matter, under Home.
 $('home-start').addEventListener('click', startMatter);
+$('rail-new').addEventListener('click', startMatter);
 
 /* THE GATE RUNS FIRST.
  *
@@ -5643,7 +5650,11 @@ function showApplication(advocate, workspace, professionalApproval) {
   // A brief interrupted in a saved matter returns under My work; one
   // interrupted before its matter was saved returns under Home (F-B).
   if (draftWaiting) state.workTab = state.draft.matterId ? 'advise' : 'home';
-  showTab(draftWaiting ? 'advise' : 'home');
+  // Owner decision, 15 Oct 2026: no Home page and no tabs. A sign-in opens a new
+  // matter beside the list of matters, unless a brief was interrupted.
+  showTab('advise');
+  if (!draftWaiting) startMatter();
+  loadMatterList();
   loadHealth();
   // The landing page is Home. Loading every matter's checked register here
   // started a second, overlapping list request when the advocate chose My
