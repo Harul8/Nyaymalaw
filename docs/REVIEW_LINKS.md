@@ -24,3 +24,19 @@ names the plan row it belongs to. Review pages are private to the owner.
 
 Also for the owner to confirm with this review: the proposed corrected judgment
 key, `outputs/decomposition-scratch/judgment-key-v2.json` (scratch, not tracked).
+
+## Screen designs (SEQ.4, item 4), added 15 October 2026
+
+- Link: https://claude.ai/artifact/VWuf3D6LwCGdaBRhVjyCxp
+- What: seven mock-ups on one canvas, built from real answers (DC15 and LX2 of
+  the 15 October checks), not invented text: (1) an answer dispute by dispute,
+  with a dispute index, source chips, limits, related points to tick for
+  research and next steps; (2) the screen while a turn is working; (3) the
+  source reader with the cited paragraph and its neighbour; (4) adding
+  documents and a voice note, with the permission they need and a transcript
+  to check; (5) the matter board, including dates and time limits; (6) the
+  research note to export as PDF or Word; (7) the answer on a phone.
+- Why: items 5 to 9 build these surfaces; the owner chooses what to keep,
+  change or drop before any of them is built.
+- After reviewing: comment on the canvas or tell Claude the decisions; they
+  are recorded on the plan before building.
