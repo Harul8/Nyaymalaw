@@ -21,6 +21,8 @@ async function refused(code, expectedState, expectedReloads) {
   const friendly = 'The saved conversation could not be verified. No new message was saved.';
   let reloads = 0;
   const context = vm.createContext({
+    // A browser always has timers; the progress watcher calls them directly.
+    setTimeout: () => 0, clearTimeout: () => {},
     AbortController, activeDelivery: null,
     state: {sessionGeneration: 1, matterId: 'synthetic-matter'},
     ownsIntent: () => true, $: node,

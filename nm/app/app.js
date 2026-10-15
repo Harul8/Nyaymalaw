@@ -3111,6 +3111,52 @@ $('message').addEventListener('keydown', (ev) => {
   }
 });
 
+// SELECT AND REPLY (owner decision, 15 Oct 2026): select words in the conversation
+// and reply to them. The quoted words go into the message box, where the advocate
+// sees and edits exactly what is sent; nothing is sent by itself.
+const REPLY_QUOTE_LIMIT = 600;
+function selectedThreadText(selection, thread) {
+  if (!selection || selection.isCollapsed || !selection.rangeCount) return null;
+  const range = selection.getRangeAt(0);
+  if (!thread.contains(range.commonAncestorContainer)) return null;
+  const text = selection.toString().replace(/\s+/g, ' ').trim();
+  if (text.length < 2 || text.length > REPLY_QUOTE_LIMIT) return null;
+  return { text, rect: range.getBoundingClientRect() };
+}
+function quoteIntoMessage(box, quote) {
+  const line = `Regarding “${quote}”:\n`;
+  box.value = box.value.trim() ? `${line}${box.value}` : line;
+  return box.value;
+}
+let replySync = null;
+function syncReplyButton() {
+  const button = $('reply-to-selection');
+  const found = $('composer').hidden ? null : selectedThreadText(window.getSelection(), $('thread'));
+  if (!found) { button.hidden = true; return; }
+  button.dataset.quote = found.text;
+  button.style.top = `${Math.max(8, found.rect.bottom + 6)}px`;
+  button.style.left = `${Math.max(8, Math.min(window.innerWidth - 150, found.rect.left))}px`;
+  button.hidden = false;
+}
+document.addEventListener('selectionchange', () => {
+  if (replySync !== null) clearTimeout(replySync);
+  replySync = setTimeout(syncReplyButton, 120);
+});
+window.addEventListener('scroll', () => { $('reply-to-selection').hidden = true; }, true);
+// Keep the selection while the button is pressed; act on the click.
+$('reply-to-selection').addEventListener('mousedown', (ev) => ev.preventDefault());
+$('reply-to-selection').addEventListener('click', () => {
+  const button = $('reply-to-selection');
+  const box = $('message');
+  quoteIntoMessage(box, button.dataset.quote || '');
+  box.dispatchEvent(new Event('input', { bubbles: true }));
+  sizeComposer();
+  button.hidden = true;
+  window.getSelection()?.removeAllRanges();
+  box.focus();
+  box.setSelectionRange(box.value.length, box.value.length);
+});
+
 
 /* ------------------------------------------------------- plus and mic --- */
 
