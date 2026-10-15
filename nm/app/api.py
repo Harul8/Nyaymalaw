@@ -1675,7 +1675,7 @@ async def live_dictation(websocket: WebSocket):
             _live_log.warning('Live dictation ledger not settled: %s', type(exc).__name__)
         try:
             await websocket.close()
-        except RuntimeError:
+        except (RuntimeError, WebSocketDisconnect):
             pass  # already closed by the page
 
 
