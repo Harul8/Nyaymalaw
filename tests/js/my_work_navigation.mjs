@@ -58,6 +58,7 @@ function fixture() {
     },
     showTab() {}, showIntake() {}, snapshotIntent() {}, consumeComposer() {},
     matchesIntake: () => false, newTurnId: () => 'new-turn',
+    attachments: [], attachmentsBlockSend: () => null, renderAttachments() {},
     deliver: async entry => { sent.push(JSON.parse(entry.envelope)); },
     toggleMatters() {}, toggleMatterBoard: open => boardToggles.push(open),
     setWorkView: view => { get('pane-advise').dataset.view = view; },

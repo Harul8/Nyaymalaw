@@ -278,6 +278,17 @@ def _plain(text):
     return " ".join(text.split()).casefold()
 
 
+def _bare(text):
+    """Plain words without quotation marks: a quotation's marks are typography, not the
+    words, and a page read from a scan may set them differently from the quoting fact."""
+    return " ".join(re.sub(r"[\"']", " ", _plain(text)).split())
+
+
+def fact_pieces(words):
+    """The pieces of a fact's quoted words that must each appear in the material."""
+    return [piece for piece in (_bare(fragment) for fragment in _quoted_fragments(words)) if piece]
+
+
 def _quoted_fragments(quote):
     """The pieces of a quotation that must appear word for word: typographic quotes,
     a leading turn marker such as "[1]" and edge punctuation are not the advocate's
@@ -291,17 +302,17 @@ def _quoted_fragments(quote):
 def code_checks(understanding, context):
     """Mechanical checks only; meaning is the model's work."""
     problems = []
-    advocate = _plain(" ".join([row["text"] for row in context["conversation"]
-                                if row.get("record_role") == "original_account"] + [context["latest"]["text"]]))
+    advocate = _bare(" ".join([row["text"] for row in context["conversation"]
+                               if row.get("record_role") == "original_account"] + [context["latest"]["text"]]))
     # A fact may rest on a document the advocate sent; where its words appear is the
     # code's to establish (owner decisions, 15 Oct 2026).
-    supplied = _plain(" ".join(row["text"] for row in context.get("documents", ())))
+    supplied = _bare(" ".join(row["text"] for row in context.get("documents", ())))
     facts = {f["id"] for f in understanding["facts"]}
     if len(facts) != len(understanding["facts"]):
         problems.append({"problem": "Two facts share an id.", "fix": "Give each fact its own id."})
     for fact in understanding["facts"]:
         if any(piece not in advocate and piece not in supplied
-               for piece in _quoted_fragments(fact["advocate_words"])):
+               for piece in fact_pieces(fact["advocate_words"])):
             problems.append({"problem": f"Fact {fact['id']}: the quoted words do not appear in the advocate's "
                                         f"messages or the documents they sent ({fact['advocate_words']!r}).",
                              "fix": "Quote the exact words this fact rests on, or remove the fact if they were not given."})

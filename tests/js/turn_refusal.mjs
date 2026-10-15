@@ -69,6 +69,7 @@ async function composed(text) {
     snapshotIntent() {}, sizeComposer() {}, repaint() {},
     matchesIntake: () => true,
     deliver: async (entry) => { outgoing.push(entry); },
+    attachments: [], attachmentsBlockSend: () => null, renderAttachments() {},
   });
   vm.runInContext(app.slice(sendStart, start) + app.slice(wireStart, wireEnd), context);
   handlers.get('submit')({preventDefault() {}});

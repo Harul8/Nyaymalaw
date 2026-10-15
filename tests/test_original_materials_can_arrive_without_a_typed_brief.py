@@ -48,10 +48,11 @@ def _open(page):
         _start_matter(page)
         _intake(page, client=TITLE_CLIENT)
     page.click("#plus-toggle")
-    # `Upload documents` also opens the file chooser; the journey sets files
-    # on the input itself, so the chooser is taken and left unanswered.
+    # `Upload audio or video` also opens the file chooser; the journey sets files
+    # on the input itself, so the chooser is taken and left unanswered. Documents
+    # and photos are attached to the message instead (15 Oct 2026).
     with page.expect_file_chooser():
-        page.click("#plus-documents")
+        page.click("#plus-media")
     page.wait_for_selector("#materials-dialog[open]")
 
 

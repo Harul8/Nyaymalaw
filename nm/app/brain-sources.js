@@ -134,9 +134,11 @@ window.NmBrainSources = (() => {
       court_reasoning:'Court reasoning', party_submission:'Party submission',
       quoted_authority:'Quoted authority', case_background:'Case background', unclear:'Unclear',
       contract:'Quoted contract terms', original_account:'Original account',
-      opposing_account:'Opposing account', treatment_support:'Passage used to assess court treatment'};
+      opposing_account:'Opposing account', treatment_support:'Passage used to assess court treatment',
+      supplied_document:'Document the advocate sent'};
     const roleLabel = (statement) => roles[statement?.source_role] || roles[statement?.assertion_role];
     const treatmentLabel = (statement) => {
+      if (statement?.source_role === 'supplied_document') return '';
       const treatment = statement?.source_treatment;
       if (statement?.assertion_role === 'party_submission'
           && ['adopted', 'rejected', 'qualified'].includes(treatment)) return `Court ${treatment}`;
@@ -160,7 +162,9 @@ window.NmBrainSources = (() => {
       ['Treatment in the source', treatmentLabel(source.verification)],
       ['Treatment words', source.verification?.treatment_excerpt],
     ]) {
-      if (!text) continue;
+      // A document page has no court treatment, and its author is whoever it shows.
+      if (!text || (source.kind === 'document' && [
+        'Who states the proposition', 'Treatment in the source', 'Treatment words'].includes(label))) continue;
       const detail = document.createElement('p');
       detail.className = 'brain-source-excerpt'; detail.textContent = `${label}: ${text}`;
       details.push(detail);
@@ -173,7 +177,7 @@ window.NmBrainSources = (() => {
           ? [['Related source passage', [statement.title, statement.locator].filter(words).join(' · ')],
              ['Related source role', `${role}${treatment ? ` · ${treatment}` : ''}`]]
           : [['Related statement', `${role}${treatment ? ` · ${treatment}` : ''}: ${statement.assertion_statement}`]]),
-        ['Speaker', statement.owner_label],
+        ['Speaker', statement.owner_label === 'document' ? '' : statement.owner_label],
         [coreResponse ? 'Related source words' : 'Statement words', statement.support_excerpt],
         ['Attribution words', statement.owner_excerpt], ['Treatment words', statement.treatment_excerpt],
       ]) {
@@ -221,6 +225,9 @@ window.NmBrainSources = (() => {
   }
 
   const legal = (source) => source?.kind === 'provision' || source?.kind === 'judgment';
+  // A page of a document the advocate sent is cited and opened like a passage of law
+  // (rendering v7, 15 Oct 2026); only law carries citation identity checks.
+  const cited = (source) => legal(source) || source?.kind === 'document';
   const words = (value) => typeof value === 'string' && Boolean(value.trim());
   const passageKey = (source) => JSON.stringify([
     source.kind, source.label, source.locator, source.text, source.digest,
@@ -254,7 +261,7 @@ window.NmBrainSources = (() => {
 
   function sourceChoices(answer, element, elementIndex, sourceIndex, opener, owns) {
     const sources = Array.isArray(element.sources) ? element.sources : [element.source];
-    const choices = sources.flatMap((source, index) => legal(source) && bound(answer, element, source)
+    const choices = sources.flatMap((source, index) => cited(source) && bound(answer, element, source)
       ? [{source, index}] : []);
     if (choices.length < 2) return null;
     const nav = document.createElement('nav');
@@ -298,7 +305,7 @@ window.NmBrainSources = (() => {
     for (const marker of element.citation_markers) {
       const index = marker?.source_index;
       const source = Number.isInteger(index) ? sources[index] : null;
-      if (!legal(source) || source.id !== marker?.source_id || !bound(answer, element, source)) continue;
+      if (!cited(source) || source.id !== marker?.source_id || !bound(answer, element, source)) continue;
       host.appendChild(document.createTextNode(' '));
       const chip = responseLink(answer, element, {source, index}, labelFor(source));
       chip.className = 'citation-link citation-marker';
@@ -323,7 +330,7 @@ window.NmBrainSources = (() => {
         const start = !words(phrase) ? -1 : placed
           ? (text.slice(citation.start, citation.end) === phrase ? citation.start : -1)
           : text.indexOf(phrase);
-        if (start < 0 || (!placed && text.indexOf(phrase, start + 1) >= 0) || !legal(source)
+        if (start < 0 || (!placed && text.indexOf(phrase, start + 1) >= 0) || !cited(source)
             || source.id !== citation.source_id || !bound(answer, element, source)) continue;
         anchors.push({start, end:start + phrase.length, phrase, source, index});
       }

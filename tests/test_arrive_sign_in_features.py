@@ -1412,8 +1412,10 @@ def plus_button_under_the_brief(app_page, page_script):
     assert composer.index('id="message"') < composer.index('id="plus-toggle"')
     items = re.findall(
         r'<button type="button" role="menuitem" id="(plus-[a-z]+)">([^<]+)</button>', composer)
-    assert items == [("plus-documents", "Upload documents"),
-                     ("plus-media", "Upload photos, audio or video"),
+    # Documents and photos are attached to the message and read (owner decisions,
+    # 15 Oct 2026); audio, video and voice notes keep the materials window for now.
+    assert items == [("plus-attach", "Attach documents or photos"),
+                     ("plus-media", "Upload audio or video"),
                      ("plus-voice", "Record a voice note to keep")], items
     assert "$('plus-panel').hidden = !open;" in _function(page_script, "setPlusMenu")
 

@@ -28,18 +28,24 @@ def _where(words, rows):
     """Where a fact's quoted words appear: the advocate's messages, or one page of a
     document they sent (owner decisions, 15 Oct 2026). Code finds this; the model's
     understanding does not label it."""
-    pieces = research._quoted_fragments(words)
-    said = research._plain(" ".join(row["message"] for row in rows))
-    if pieces and all(piece in said for piece in pieces):
+    pieces = research.fact_pieces(words)
+    if not pieces:
+        return {"from": "not_found"}
+    said = research._bare(" ".join(row["message"] for row in rows))
+    if all(piece in said for piece in pieces):
         return {"from": "advocate"}
-    for row in rows:
-        for document in row.get("documents", ()):
-            for page in document["pages"]:
-                text = research._plain(page["text"])
-                if pieces and all(piece in text for piece in pieces):
-                    return {"from": "document", "document": document["name"], "page": page["number"],
-                            "read_by": page["read_by"]}
-    return {"from": "not_found"}
+    pages = [(document["name"], page) for row in rows for document in row.get("documents", ())
+             for page in document["pages"]]
+    places = []
+    # Each piece of the quotation may sit on its own page, even of another document.
+    for piece in pieces:
+        found = next(((name, page) for name, page in pages if piece in research._bare(page["text"])), None)
+        if found is None:
+            return {"from": "not_found"}
+        place = {"document": found[0], "page": found[1]["number"], "read_by": found[1]["read_by"]}
+        if place not in places:
+            places.append(place)
+    return {"from": "document", "places": places}
 
 
 def board(rows):

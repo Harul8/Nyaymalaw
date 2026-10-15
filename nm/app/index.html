@@ -476,16 +476,16 @@
     </form>
 
     <!-- EACH MATTER'S OWN VIEWS (owner decision, 15 Oct 2026), once a conversation
-         is saved. Documents and Research notes arrive with their items. -->
+         is saved. Research notes arrive with item 7. -->
     <nav id="matter-tabs" class="matter-tabs" aria-label="This matter" hidden>
       <button type="button" class="matter-tab is-on" data-matter-tab="conversation" aria-current="page">Conversation</button>
       <button type="button" class="matter-tab" data-matter-tab="board">Board</button>
-      <button type="button" class="matter-tab" data-matter-tab="documents" disabled
-              title="Arrives with document uploads">Documents</button>
+      <button type="button" class="matter-tab" data-matter-tab="documents">Documents</button>
       <button type="button" class="matter-tab" data-matter-tab="notes" disabled
               title="Arrives with the research-note export">Research notes</button>
     </nav>
     <section id="chat-board" class="chat-board" aria-label="Matter board" hidden></section>
+    <section id="chat-documents" class="chat-board chat-documents" aria-label="Documents in this matter" hidden></section>
     <div id="mode-line" class="mode-line" hidden></div>
     <div id="thread" class="thread"></div>
     <button type="button" id="reply-to-selection" class="reply-to-selection" hidden>Reply to this</button>
@@ -501,11 +501,17 @@
     <form id="composer" class="composer" autocomplete="off">
       <label class="sr-only" for="message">Your instruction or brief</label>
       <textarea id="message" rows="1" placeholder="Tell NM what you need, ask a question, or add material."></textarea>
+      <!-- Documents attached to this message (owner decisions, 15 Oct 2026): checked for
+           malware and read before the message can carry them. -->
+      <ul id="attachments" class="attachments" aria-label="Documents attached to this message" hidden></ul>
+      <p id="attachments-status" class="attachments-status" role="status" aria-live="polite"></p>
+      <input id="attach-files" type="file" multiple hidden accept=".pdf,.docx,.txt,.png,.jpg,.jpeg"
+             aria-label="Choose documents or photos to attach">
       <div class="composer-row">
         <div class="composer-tools">
-          <!-- F-C-01. THE PLUS: documents, photos, audio or video, or a voice note
-               to keep. Each opens the original-material window, which seals
-               what it receives and reads none of it. -->
+          <!-- F-C-01. THE PLUS: documents and photos are attached to the message and
+               read (owner decisions, 15 Oct 2026); audio, video and voice notes still
+               open the original-material window until item 8. -->
           <div class="plus-menu" id="plus-menu">
             <button type="button" id="plus-toggle" class="tool-button" aria-haspopup="true"
                     aria-expanded="false" aria-controls="plus-panel">
@@ -513,11 +519,11 @@
                 <path d="M10 4v12M4 10h12" fill="none" stroke="currentColor" stroke-width="1.8"
                       stroke-linecap="round"/>
               </svg>
-              <span class="sr-only">Add documents, photos, audio, video or a voice note</span>
+              <span class="sr-only">Attach documents or photos, audio, video or a voice note</span>
             </button>
             <div id="plus-panel" class="plus-panel" role="menu" hidden>
-              <button type="button" role="menuitem" id="plus-documents">Upload documents</button>
-              <button type="button" role="menuitem" id="plus-media">Upload photos, audio or video</button>
+              <button type="button" role="menuitem" id="plus-attach">Attach documents or photos</button>
+              <button type="button" role="menuitem" id="plus-media">Upload audio or video</button>
               <button type="button" role="menuitem" id="plus-voice">Record a voice note to keep</button>
             </div>
           </div>

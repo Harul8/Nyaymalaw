@@ -129,10 +129,17 @@ def test_a_fact_may_rest_on_a_document_and_the_board_says_which_page(store):
     problems = research.code_checks(understanding, context)
     assert [p["problem"].split(":")[0] for p in problems] == ["Fact f2"]
     rows = [{"message": "The cheque bounced.", "documents": material()}]
-    assert matter_board._where("returned unpaid", rows) == {
-        "from": "document", "document": "memo.pdf", "page": 1, "read_by": "local"}
+    memo = {"document": "memo.pdf", "page": 1, "read_by": "local"}
+    assert matter_board._where("returned unpaid", rows) == {"from": "document", "places": [memo]}
     assert matter_board._where("The cheque bounced", rows) == {"from": "advocate"}
     assert matter_board._where("paid in full", rows) == {"from": "not_found"}
+    # Quotation marks are typography: a page and a fact may set them differently.
+    quoted = deepcopy(rows)
+    quoted[0]["documents"][0]["pages"][0]["text"] = 'Returned with the endorsement "Funds Insufficient".'
+    assert matter_board._where("“with the endorsement ‘Funds Insufficient’.”", quoted)["from"] == "document"
+    # A quotation may join words from two pages.
+    assert matter_board._where('"cheque 004521 returned unpaid"; "Notice dated 25-09-2026"', rows) == {
+        "from": "document", "places": [memo, {"document": "memo.pdf", "page": 2, "read_by": "ai"}]}
 
 
 def test_an_earlier_rendering_never_shows_document_pages(store):

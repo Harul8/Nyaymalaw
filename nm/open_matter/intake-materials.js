@@ -68,11 +68,11 @@
   document.body.append(dialog);
   const el = id => dialog.querySelector(`#materials-${id}`);
   // F-C-01. OPENED FROM THE PLUS MENU UNDER THE BRIEF; there is no files bar
-  // above the chat. Documents and media each open the file chooser for their
-  // kind, and a voice note to keep goes to the recorder below.
+  // above the chat. Audio and video open the file chooser, and a voice note to
+  // keep goes to the recorder below. Documents and photos are attached to the
+  // message and read instead (owner decisions, 15 Oct 2026; app.js).
   const KINDS = {
-    documents: '.pdf,.doc,.docx,.odt,.rtf,.txt,.xls,.xlsx,.csv,.eml,.msg',
-    media: 'image/*,audio/*,video/*',
+    media: 'audio/*,video/*',
   };
   function openFor(kind) {
     setPlusMenu(false);
@@ -82,7 +82,6 @@
     if (dialog.open && kind === 'voice') el('record').focus();
     return opening;
   }
-  $('plus-documents').addEventListener('click', () => openFor('documents'));
   $('plus-media').addEventListener('click', () => openFor('media'));
   $('plus-voice').addEventListener('click', () => openFor('voice'));
 

@@ -275,6 +275,24 @@ main { display: grid; grid-template-columns: 19rem minmax(0, 1fr); flex: 1; min-
   border-radius: 4px; padding: 1px 6px; background: var(--amber-w); color: var(--amber); }
 .board-certainty.disputed { background: var(--signal-w); color: var(--signal); }
 .board-certainty.confirmed { background: var(--good-w); color: var(--good); }
+/* Documents attached to a message and sent in a matter (15 Oct 2026). */
+.attachments { list-style: none; margin: 0.4rem 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.attachment { display: flex; align-items: center; gap: 0.5rem; max-width: 100%; padding: 0.25rem 0.25rem 0.25rem 0.7rem;
+  border: 1px solid var(--rule); border-radius: 8px; background: var(--board); font-size: 0.85rem; }
+.attachment-name { font-weight: 600; overflow-wrap: anywhere; }
+.attachment-status { color: var(--ink-3); overflow-wrap: anywhere; }
+.attachment.uploading .attachment-status, .attachment.reading_scans .attachment-status { color: var(--accent); }
+.attachment.held, .attachment.failed { border-color: var(--signal); }
+.attachment.held .attachment-status, .attachment.failed .attachment-status { color: var(--signal); }
+.attachment-remove { min-width: 2.75rem; min-height: 2.75rem; font-size: 1.1rem; }
+.attachments-status { margin: 0.3rem 0 0; font-size: 0.85rem; color: var(--signal); }
+.attachments-status:empty { display: none; }
+.brief-documents { list-style: none; margin: 0.4rem 0 0; padding: 0; font-size: 0.82rem; opacity: 0.85; }
+.brief-documents li::before { content: "▤ "; }
+.document-page summary { cursor: pointer; min-height: 2.75rem; display: flex; align-items: center; font-size: 0.9rem; }
+.document-text { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 0.88rem; line-height: 1.5;
+  padding: 0.6rem 0.75rem; border-left: 3px solid var(--rule); background: var(--paper); }
+.document-unread { margin: 0; font-size: 0.85rem; color: var(--signal); }
 /* Select words in the conversation and reply to them (15 Oct 2026). */
 .reply-to-selection { position: fixed; z-index: 30; min-height: 2.75rem; padding: 0 0.9rem;
   border: 1px solid var(--rule); border-radius: 8px; background: var(--surface); color: var(--accent);
@@ -425,7 +443,10 @@ button.wide { margin: 0.5rem 0.6rem 0.8rem; }
 #pane-advise[data-view="opening"] .workspace-heading { display: none; }
 #pane-advise[data-view="opening"].empty-chat .conversation { justify-content: center; }
 #pane-advise[data-view="opening"].empty-chat .composer { margin-top: 0; margin-bottom: 0; }
-#pane-advise[data-view="opening"] .plus-menu { display: none; }
+/* Documents and photos can go with a first message (15 Oct 2026); audio, video and voice
+   notes still open the materials window, which needs a saved matter. */
+#pane-advise[data-view="opening"] #plus-media,
+#pane-advise[data-view="opening"] #plus-voice { display: none; }
 .opening-board-status { width: min(52rem, calc(100% - 2rem)); margin: 0 auto; }
 .opening-edit { width: min(46rem, calc(100% - 2rem)); padding: 0; }
 .opening-edit .intake { margin: 0; width: auto; max-width: none; border: 0; }

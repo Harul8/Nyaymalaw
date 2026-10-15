@@ -137,6 +137,7 @@ async function saveProtectedDraft({previousKey = null} = {}) {
       opening:held.opening || null,
       editedAt:held.editedAt || Date.now(),
       pending:held.pending.map(entry=>({turnId:entry.turnId, brief:entry.brief,
+        documents:entry.documents || [],
         request:entry.request, envelope:entry.envelope, state:'unknown',
         error:'A prior request needs reconciliation before retry.'})),
     };
@@ -1735,14 +1736,15 @@ async function restoreConversation(matterId, generation = state.railGeneration) 
 function restoredTurn(turn) {
   // A turn whose words no record holds says so, rather than an answer to nothing.
   const briefMissing = !(turn.message || turn.asked) && turn.message_source === 'not_held';
+  const documents = Array.isArray(turn.documents) ? turn.documents : [];
   if (turn.committed !== true || !['released', 'legacy_released'].includes(turn.release_state)) {
-    return { brief: turn.message || turn.asked || '', briefMissing, state: 'not_established',
+    return { brief: turn.message || turn.asked || '', briefMissing, documents, state: 'not_established',
       error: turn.blocked_reason || 'Release and successful commitment could not be established.',
       refusal: { withheld_by: turn.withheld_by || [],
         why: turn.blocked_reason || 'This archival record is not a released answer.',
         not_established: turn.not_established || [] } };
   }
-  return { brief: turn.message || turn.asked || '', briefMissing, answer: {
+  return { brief: turn.message || turn.asked || '', briefMissing, documents, answer: {
     matter_id: turn.matter_id, chat_id: turn.chat_id, turn_id: turn.turn_id,
     elements: turn.elements || [], blocked: turn.blocked,
     blocked_reason: turn.blocked_reason, metrics: null, restored: true,
@@ -2256,6 +2258,19 @@ function renderTurn(entry) {
     const b = document.createElement('div');
     b.className = 'brief';
     b.textContent = entry.brief;
+    // The documents sent with this message, by name (owner decisions, 15 Oct 2026).
+    if (Array.isArray(entry.documents) && entry.documents.length) {
+      const sent = document.createElement('ul');
+      sent.className = 'brief-documents';
+      sent.setAttribute('aria-label', 'Documents sent with this message');
+      for (const item of entry.documents) {
+        const li = document.createElement('li');
+        const unread = item.pages_unread ? ` · ${item.pages_unread} not read` : '';
+        li.textContent = `${item.name} · ${item.pages_read} page${item.pages_read === 1 ? '' : 's'} read${unread}`;
+        sent.appendChild(li);
+      }
+      b.appendChild(sent);
+    }
     row.appendChild(b);
     wrap.appendChild(row);
   } else if (entry.briefMissing) {
@@ -2687,9 +2702,9 @@ function showConversationFromStart() {
   $('jump-latest').hidden = t.scrollHeight <= t.clientHeight;
 }
 
-// EACH MATTER'S OWN VIEWS (owner decision, 15 Oct 2026): Conversation, and the Board
-// read from the conversation's saved understanding. Shown once a conversation is
-// saved; Documents and Research notes arrive with items 6 and 7.
+// EACH MATTER'S OWN VIEWS (owner decision, 15 Oct 2026): Conversation, the Board read
+// from the conversation's saved understanding, and the Documents sent in it. Shown
+// once a conversation is saved; Research notes arrive with item 7.
 function syncMatterTabs() {
   const chatId = activeIntent && activeIntent.chatId;
   $('matter-tabs').hidden = !chatId;
@@ -2702,7 +2717,69 @@ function syncMatterTabs() {
     else button.removeAttribute('aria-current');
   }
   $('chat-board').hidden = tab !== 'board';
-  $('thread').hidden = tab === 'board';
+  $('chat-documents').hidden = tab !== 'documents';
+  $('thread').hidden = tab !== 'conversation';
+}
+
+async function loadChatDocuments() {
+  const chatId = activeIntent && activeIntent.chatId;
+  if (!chatId) return;
+  const host = $('chat-documents');
+  const generation = (state.documentsGeneration = (state.documentsGeneration || 0) + 1);
+  host.replaceChildren(stateBlock('building', 'Reading the documents sent in this matter…'));
+  let listing;
+  try {
+    listing = await api(`/api/chats/${encodeURIComponent(chatId)}/documents`);
+  } catch (error) {
+    if (generation !== state.documentsGeneration) return;
+    host.replaceChildren(stateBlock('unbuildable', `The documents could not be read: ${error.message}. `
+      + 'This is a failure to read, not an empty list.'));
+    return;
+  }
+  if (generation !== state.documentsGeneration || !activeIntent || activeIntent.chatId !== chatId) return;
+  host.replaceChildren(...renderChatDocuments(listing));
+}
+
+// Every document sent in the conversation, each page exactly as it was read, so the
+// advocate can check a page the AI read against the original, and why any page was not.
+function renderChatDocuments(listing) {
+  const make = (tag, className, text) => {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  };
+  const sent = listing && Array.isArray(listing.sent) ? listing.sent : [];
+  if (!sent.length) {
+    return [stateBlock('empty', 'No documents have been sent in this matter yet. '
+      + 'Attach them with the + under your message.')];
+  }
+  const out = [make('p', 'board-lede', 'Each page as it was read. A page the AI read from a scan '
+    + 'is marked; check it against your original where it matters.')];
+  for (const turn of sent) {
+    for (const document_ of turn.documents) {
+      const card = make('article', 'board-card document-card');
+      card.appendChild(make('h4', 'board-dispute', document_.name));
+      const preview = turn.message.length > 140 ? `${turn.message.slice(0, 140)}…` : turn.message;
+      card.appendChild(make('p', 'board-meta', `Sent with: “${preview}”`));
+      for (const page of document_.pages) {
+        const details = make('details', 'document-page');
+        let label = `Page ${page.number}`;
+        if (page.read_by === 'ai') {
+          label += page.legible === 'part' ? ' · read by AI, partly legible' : ' · read by AI';
+        }
+        details.appendChild(make('summary', '', label));
+        if (page.note) details.appendChild(make('p', 'board-meta', page.note));
+        details.appendChild(make('div', 'document-text', page.text));
+        card.appendChild(details);
+      }
+      for (const page of document_.unread) {
+        card.appendChild(make('p', 'document-unread', `Page ${page.number} not read: ${page.reason}`));
+      }
+      out.push(card);
+    }
+  }
+  return out;
 }
 
 async function loadChatBoard() {
@@ -2744,8 +2821,8 @@ function renderChatBoard(board) {
   if (!board || board.state !== 'ready') {
     return [stateBlock('empty', 'Nothing here yet: the board fills once NM has researched a message in this matter.')];
   }
-  const out = [make('p', 'board-lede', 'As NM understood this matter from your messages. '
-    + 'Facts are as you gave them, not proved.')];
+  const out = [make('p', 'board-lede', 'As NM understood this matter from your messages and the documents '
+    + 'you sent. Facts are as you or a document gave them, not proved.')];
   const disputes = make('section', 'board-section');
   disputes.appendChild(make('h3', 'board-h', 'Disputes'));
   for (const dispute of board.disputes) {
@@ -2780,6 +2857,12 @@ function renderChatBoard(board) {
       const row = make('p', 'board-fact');
       row.appendChild(make('span', `board-certainty ${fact.certainty}`, CERTAINTY[fact.certainty] || fact.certainty));
       row.appendChild(make('span', '', ` ${fact.fact}`));
+      // Where the fact's words appear, as the server found them (15 Oct 2026).
+      if (fact.from === 'document' && Array.isArray(fact.places)) {
+        const places = fact.places.map((place) => `${place.document}, page ${place.page}`
+          + (place.read_by === 'ai' ? ' (read by AI)' : ''));
+        row.appendChild(make('span', 'board-status', ` · from ${places.join('; ')}`));
+      }
       facts.appendChild(row);
     }
     out.push(facts);
@@ -2928,8 +3011,14 @@ async function send(message, { workProduct, keepInMatter = false } = {}) {
     && ['unknown', 'not_committed', 'sending'].includes(entry.state)
     && entry.refusal?.retryable !== false);
   if (pending) { consumeComposer(pending); await deliver(pending); return; }
+  // The documents attached under the brief travel with this message only.
+  const blocked = attachmentsBlockSend();
+  if (blocked) { $('attachments-status').textContent = blocked; return; }
+  const documents = attachments.map((item) => ({ document_ref: item.summary.document_ref,
+    name: item.summary.name, pages_read: item.summary.pages_read,
+    pages_read_by_ai: item.summary.pages_read_by_ai, pages_unread: item.summary.unread.length }));
   const entry = { brief: message, turnId: newTurnId(), state: 'sending',
-    context: activeIntent,
+    context: activeIntent, documents,
     request: { matter_id: state.matterId, chat_id: activeIntent.chatId || null,
       thread_id: state.disputeFocus, expected_version: state.matterVersion,
       parties: { ...((state.intake && state.intake.parties) || {}) },
@@ -2947,10 +3036,13 @@ async function send(message, { workProduct, keepInMatter = false } = {}) {
     // F-C-04. Only the advocate's explicit choice travels; its absence is the
     // ordinary offer, spelled as it always was.
     ...(keepInMatter ? { keep_in_matter: true } : {}),
+    ...(documents.length ? { document_refs: documents.map((document) => document.document_ref) } : {}),
   });
   activeIntent.pending.push(entry);
   state.turns.push(entry);
   consumeComposer(entry);
+  attachments = [];
+  renderAttachments();
   repaint();
   await deliver(entry);
 }
@@ -3109,7 +3201,8 @@ function releaseQueued(entry) {
   const intent = entry.context;
   const queued = intent && Array.isArray(intent.queued) ? intent.queued.splice(0) : [];
   if (!queued.length) return;
-  if (['committed', 'replayed'].includes(entry.state) && ownsIntent(intent) && !activeDelivery) {
+  if (['committed', 'replayed'].includes(entry.state) && ownsIntent(intent) && !activeDelivery
+      && !attachmentsBlockSend()) {
     send(queued.join('\n\n'));
     return;
   }
@@ -3239,6 +3332,111 @@ document.addEventListener('keydown', (ev) => {
     setPlusMenu(false);
     $('plus-toggle').focus();
   }
+});
+
+// DOCUMENTS WITH A MESSAGE (owner decisions, 15 Oct 2026). Each file is sent to the
+// server, checked for malware and read there; scanned pages are then read by the AI
+// under the advocate's AI data-sharing agreement. A message carries only documents
+// that finished; one that was held or failed must be removed before sending. The
+// server owns every state shown here; this only reports it.
+const DOCUMENT_MAX_BYTES = 16 * 1024 * 1024;
+let attachments = [];
+
+function documentStatus(item) {
+  if (item.status === 'uploading') return 'Checking for malware and reading…';
+  if (item.status === 'reading_scans') return 'Reading scanned pages with AI…';
+  if (item.status === 'failed') return `Not attached: ${item.note}`;
+  const summary = item.summary;
+  if (item.status === 'held') return `Held, not read: ${summary.check.reason}`;
+  const pages = (count) => `${count} page${count === 1 ? '' : 's'}`;
+  let text = summary.state === 'not_read' ? 'No page could be read'
+    : summary.state === 'partly_read' && summary.pages_total
+      ? `${summary.pages_read} of ${pages(summary.pages_total)} read`
+      : `Read · ${pages(summary.pages_read)}`;
+  if (summary.pages_read_by_ai) text += ` (${summary.pages_read_by_ai} by AI)`;
+  if (summary.pages_partly_legible) text += ` · ${pages(summary.pages_partly_legible)} partly legible`;
+  return item.note ? `${text}. ${item.note}` : text;
+}
+
+function renderAttachments() {
+  const host = $('attachments');
+  host.hidden = !attachments.length;
+  host.replaceChildren(...attachments.map((item) => {
+    const chip = document.createElement('li');
+    chip.className = `attachment ${item.status}`;
+    const name = document.createElement('span');
+    name.className = 'attachment-name';
+    name.textContent = item.name;
+    const status = document.createElement('span');
+    status.className = 'attachment-status';
+    status.textContent = documentStatus(item);
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'ghost attachment-remove';
+    remove.textContent = '×';
+    remove.setAttribute('aria-label', `Remove ${item.name} from this message`);
+    remove.addEventListener('click', () => {
+      attachments = attachments.filter((other) => other !== item);
+      renderAttachments();
+    });
+    chip.append(name, status, remove);
+    return chip;
+  }));
+  if (!attachments.length) $('attachments-status').textContent = '';
+}
+
+async function attachFile(file) {
+  const item = { name: file.name, status: 'uploading', summary: null, note: '' };
+  attachments.push(item);
+  renderAttachments();
+  const settle = (status, note = item.note) => {
+    item.status = status;
+    item.note = note;
+    if (attachments.includes(item)) renderAttachments();
+  };
+  if (file.size > DOCUMENT_MAX_BYTES) return settle('failed', 'a document can be at most 16 MB');
+  try {
+    item.summary = await api('/api/documents', {
+      method: 'POST', body: file,
+      headers: { 'content-type': 'application/octet-stream',
+        'X-NM-Document-Name': encodeURIComponent(file.name) },
+    });
+  } catch (error) {
+    return settle('failed', error.message);
+  }
+  if (item.summary.state !== 'held' && item.summary.waiting_for_ai > 0 && attachments.includes(item)) {
+    settle('reading_scans');
+    try {
+      item.summary = await api(
+        `/api/documents/${encodeURIComponent(item.summary.document_ref)}/read-scans`, { method: 'POST' });
+    } catch (error) {
+      item.note = error.status === 403
+        ? 'Scanned pages were not read: accept AI data sharing in your profile to have them read.'
+        : `Scanned pages were not read: ${error.message}`;
+    }
+  }
+  settle(item.summary.state === 'held' ? 'held' : 'ready');
+}
+
+// Why the message cannot carry its documents yet, or null when it can.
+function attachmentsBlockSend() {
+  if (attachments.some((item) => ['uploading', 'reading_scans'].includes(item.status))) {
+    return 'Wait until the attached documents have been read.';
+  }
+  if (attachments.some((item) => ['held', 'failed'].includes(item.status))) {
+    return 'Remove the documents that could not be used before sending.';
+  }
+  return null;
+}
+
+$('plus-attach').addEventListener('click', () => {
+  setPlusMenu(false);
+  $('attach-files').click();
+});
+$('attach-files').addEventListener('change', () => {
+  const files = [...$('attach-files').files];
+  $('attach-files').value = '';
+  for (const file of files) attachFile(file);
 });
 
 // F-C-02. THE MIC BESIDE THE PLUS: say the brief instead of typing it.
@@ -3928,6 +4126,7 @@ $('matter-tabs').addEventListener('click', (event) => {
   state.matterTab = button.dataset.matterTab;
   updateWorkspace();
   if (state.matterTab === 'board') loadChatBoard();
+  if (state.matterTab === 'documents') loadChatDocuments();
 });
 
 /* THE GATE RUNS FIRST.

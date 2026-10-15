@@ -22,6 +22,7 @@ function harness() {
     $: (id) => (id === 'message' ? box : {}),
     activeDelivery: null, sizeComposer() {}, repaint() { repaints += 1; },
     ownsIntent: () => true, send: (text) => { sent.push(text); },
+    attachmentsBlockSend: () => null,
   });
   vm.runInContext(between('// ADD TO A QUESTION WHILE IT IS WORKED ON', '// WHAT A TURN IN PROGRESS IS DOING'), context);
   return { context, box, sent, repaints: () => repaints };

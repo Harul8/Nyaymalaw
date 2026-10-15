@@ -1329,12 +1329,35 @@ def chat(chat_id: str, advocate_id: Advocate, request: Request, response: Respon
     # The existing UI expects a boolean release projection. Do not change the
     # canonical saved receipt's string commitment or its original snapshot.
     turns = [{**row['response'], 'message': row['message'], 'message_source': 'held',
-              'committed': True, 'release_state': 'released'} for row in rows]
+              'committed': True, 'release_state': 'released',
+              'documents': [_sent_document(document) for document in row.get('documents', ())]}
+             for row in rows]
     if not _session_current(request, advocate_id):
         raise HTTPException(401, 'not signed in')
     response.headers['Cache-Control'] = 'no-store'
     return {'state': 'ok', 'chat_id': chat_id, 'matter_id': None,
             'matter_version': matter.version, 'turns': turns}
+
+
+def _sent_document(document):
+    """What a message shows about a document sent with it, without page text."""
+    return {'document_ref': document['document_ref'], 'name': document['name'],
+            'pages_read': len(document['pages']),
+            'pages_read_by_ai': sum(page['read_by'] == 'ai' for page in document['pages']),
+            'pages_unread': len(document['unread'])}
+
+
+@app.get('/api/chats/{chat_id}/documents')
+def chat_documents(chat_id: str, advocate_id: Advocate, request: Request, response: Response):
+    """The conversation's Documents view (owner decisions, 15 Oct 2026): every document
+    sent in it, with each page exactly as it was read and why any page was not."""
+    _, rows = _read_chat(chat_id, advocate_id, request)
+    sent = [{'turn_id': row['turn_id'], 'message': row['message'],
+             'documents': deepcopy(row['documents'])} for row in rows if row.get('documents')]
+    if not _session_current(request, advocate_id):
+        raise HTTPException(401, 'not signed in')
+    response.headers['Cache-Control'] = 'no-store'
+    return {'chat_id': chat_id, 'sent': sent}
 
 
 @app.get('/api/chats/{chat_id}/board')
