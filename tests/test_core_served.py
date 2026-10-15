@@ -41,7 +41,10 @@ def served(tmp_path, monkeypatch):
         legal_search=searcher(), audit_root=tmp_path / "audit", environment={
             "NM_MATTER_KEY": KEY, "NM_MATTER_STORE": str(tmp_path),
             "NM_MODEL_PROVIDER": "scripted", "NM_MODEL_ROUTINE": "scripted-1",
-            "NM_EMBED_MODEL": "text-embedding-3-large"})
+            "NM_EMBED_MODEL": "text-embedding-3-large",
+            # Like the scripted search, these turns read no corpus: no held Acts, so no
+            # time limit is worked out (tests/test_core_calculation.py covers that path).
+            "NM_BARE_ACTS_DIR": str(tmp_path / "no-held-acts")})
     monkeypatch.setattr(api, "_application", app)
     asgi = create_app(app)
     clients = []

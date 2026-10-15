@@ -2,9 +2,11 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from datetime import date
 import re
 
-from nm.core_engine import research, response_authorities, response_review, response_writer
+from nm.core_engine import calculation, limitation, research, response_authorities, response_review
+from nm.core_engine import response_writer
 from nm.shared.citation_contracts import case_short_names, statute_title
 
 LEGACY_CONTRACT = "core_response_rendering_v1"
@@ -23,8 +25,10 @@ HEADINGS_CONTRACT = "core_response_rendering_v5"
 SHORT_NAME_CONTRACT = "core_response_rendering_v6"
 #: v6 also showing each page of a document the advocate sent that a paragraph cites,
 #: under the document's name and page (owner decisions, 15 Oct 2026).
-CONTRACT = "core_response_rendering_v7"
-_CITED = (CITED_WORDS_CONTRACT, HEADINGS_CONTRACT, SHORT_NAME_CONTRACT, CONTRACT)
+DOCUMENT_PAGES_CONTRACT = "core_response_rendering_v7"
+#: v7 with a code-owned Working box for each time limit worked out (item 9, 15 Oct 2026).
+CONTRACT = "core_response_rendering_v8"
+_CITED = (CITED_WORDS_CONTRACT, HEADINGS_CONTRACT, SHORT_NAME_CONTRACT, DOCUMENT_PAGES_CONTRACT, CONTRACT)
 _LEGAL = {"provision", "judgment"}
 _ROLES = {"provision": "legislative_text", "court_disposition": "court_conclusion",
           "court_reasoning": "court_reasoning", "party_submission": "party_submission",
@@ -265,8 +269,93 @@ def _headings(research_record, draft):
     return {position: names[identity] for position, identity in headings.items()}
 
 
+_MONTHS = ("January", "February", "March", "April", "May", "June", "July", "August", "September", "October",
+           "November", "December")
+_WEEKDAYS = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+_RESULTS = {"early": "Early", "in_time": "In time", "late": "Late", "open": "Open", "expired": "Passed"}
+_DAYS = {"early": "Days before the earliest day", "in_time": "Days to spare", "late": "Days late",
+         "open": "Days left", "expired": "Days since the last day"}
+_COURT_CLOSED = "Limitation Act s.4 not applied: the court calendar is not held"
+
+
+def _date(iso):
+    """'14 September 2026 (Monday)', the same everywhere it is shown."""
+    day = date.fromisoformat(iso)
+    return f"{day.day} {_MONTHS[day.month - 1]} {day.year} ({_WEEKDAYS[day.weekday()]})"
+
+
+def _shown(working, earlier):
+    """A Working box's labelled rows and lists: fixed labels over saved values, no
+    sentences (owner, 15 Oct 2026). The screen and the research note both show these."""
+    if "not_assessed" in working:
+        return [["Not assessed", working["not_assessed"]]], []
+    rows, start = [], working["runs_from"]
+
+    def row(label, value):
+        if value not in (None, ""):
+            rows.append([label, str(value)])
+
+    row("Provision", f"{working['provision']}, {working['act']}")
+    row("Period", f"“{working['period']}”")
+    if working["words"] and working["words"] != working["period"]:
+        row("The Act’s words", f"“{working['words']}”")
+    row("Runs from", _date(start["date"]))
+    if start.get("after"):
+        row("Starts the day after", earlier.get(start["after"], start["after"]))
+    row("Event", start.get("event"))
+    if start.get("quote"):
+        row("Whose words", f"“{start['quote']}”")
+    row("Counting starts after", _date(working["counting_starts_after"]))
+    row("Period ends", _date(working["period_end"]))
+    for copy in working["copies"]:
+        row("Copy applied for / ready", f"{_date(copy['applied'])} / {_date(copy['ready'])}")
+    if working["copy_days"]:
+        row("Copy time left out (days)", working["copy_days"])
+    row("Last day", _date(working["last_day"]))
+    if working["earliest_day"]:
+        row("Earliest day", _date(working["earliest_day"]))
+    if working["step_taken"]:
+        row("Taken on", _date(working["step_taken"]["date"]))
+        row("Whose words", f"“{working['step_taken']['quote']}”")
+    standing = working["standing"]
+    row("Result", _RESULTS[standing["state"]])
+    row(_DAYS[standing["state"]], standing["days"])
+    row("Court closed on the last day", _COURT_CLOSED)
+    lists = [[title, list(items)] for title, items in (
+        ("Owner’s ruling applied", working["owner_rulings"]), ("Assumed", working["assumptions"]),
+        ("Still needed", working["missing"]), ("May extend time (not counted)", working["may_extend"])) if items]
+    return rows, lists
+
+
+def _working(record):
+    """One code-owned Working box per time limit: code's arithmetic as data and as
+    labelled rows; the answer's own words explain it."""
+    boxes, earlier = [], {entry["id"]: entry["what"] for entry in record["calculations"]}
+    for entry in record["calculations"]:
+        provision, worked = entry["provision"], entry["working"]
+        working = {"what": entry["what"], "provision": entry["provision_name"], "act": provision["act"],
+                   "period": provision["period_words"], "words": provision.get("words") or provision.get("from"),
+                   "runs_from": deepcopy(entry["start"]), "copies": deepcopy(entry["copies"]),
+                   "step_taken": deepcopy(entry["done"]), "earliest_day": entry["earliest"],
+                   "counting_starts_after": worked["start"], "period_end": worked["period_end"],
+                   "copy_days": worked["copy_days"], "last_day": worked["last_day"],
+                   "owner_rulings": [limitation.RULINGS[r] for r in worked["rulings"]],
+                   "standing": deepcopy(entry["standing"]),
+                   "assumptions": list(entry["assumptions"]), "missing": list(entry["missing"]),
+                   "may_extend": list(entry["may_extend"])}
+        boxes.append({"kind": "WORKING", "text": entry["what"], "source": None, "sources": [],
+                      "refs": [], "inline_citations": [], "citation_markers": [], "working": working})
+    for item in record["not_assessed"]:
+        boxes.append({"kind": "WORKING", "text": item["what"], "source": None,
+                      "sources": [], "refs": [], "inline_citations": [], "citation_markers": [],
+                      "working": {"what": item["what"], "not_assessed": item["why"]}})
+    for box in boxes:
+        box["working"]["rows"], box["working"]["lists"] = _shown(box["working"], earlier)
+    return boxes
+
+
 def render(context, research_record, sources, draft, review, execution=None, *,
-           authority_evidence=None, contract=CONTRACT):
+           authority_evidence=None, contract=CONTRACT, time_limits=None):
     """No new prose; the declared version owns its exact reviewed dependencies."""
     if contract not in {LEGACY_CONTRACT, STORED_TITLE_CONTRACT, SHOWN_NAME_CONTRACT, *_CITED}:
         raise ValueError("Unknown response rendering contract")
@@ -284,20 +373,21 @@ def render(context, research_record, sources, draft, review, execution=None, *,
         checked_authorities = response_authorities.validate(authority_evidence, context,
             research_record, sources, checked_draft)
         checked_review = response_review.validate(review, context, research_record,
-            sources, checked_draft, execution=execution, authority_evidence=checked_authorities)
+            sources, checked_draft, execution=execution, authority_evidence=checked_authorities,
+            time_limits=calculation.for_answer(time_limits) if time_limits is not None else None)
     if not checked_review["accepted"]:
         raise ValueError("A response without accepted independent review cannot be rendered")
     authorities = ({row["unit_id"]: row for row in checked_authorities["units"]}
                    if contract in _CITED else {})
     headings = (_headings(research_record, checked_draft)
-                if contract in (HEADINGS_CONTRACT, SHORT_NAME_CONTRACT, CONTRACT) else {})
+                if contract in (HEADINGS_CONTRACT, SHORT_NAME_CONTRACT, DOCUMENT_PAGES_CONTRACT, CONTRACT) else {})
     elements = []
     for position, unit in enumerate(checked_draft["units"]):
         if position in headings:
             elements.append({"kind": "HEADING", "text": headings[position], "source": None, "sources": [],
                              "refs": [], "inline_citations": [], "citation_markers": []})
         legal_sources = _sources(unit, sources, shown_names=contract in {SHOWN_NAME_CONTRACT, *_CITED},
-                                 documents=contract == CONTRACT)
+                                 documents=contract in (DOCUMENT_PAGES_CONTRACT, CONTRACT))
         element = {"kind": unit["kind"].upper(), "text": unit["text"],
             "source": deepcopy(legal_sources[0]) if legal_sources else None,
             "sources": legal_sources,
@@ -305,8 +395,12 @@ def render(context, research_record, sources, draft, review, execution=None, *,
         if contract in _CITED:
             element["inline_citations"], element["citation_markers"] = _cited_words(
                 unit["text"], legal_sources, authorities[unit["id"]],
-                short=contract in (SHORT_NAME_CONTRACT, CONTRACT))
+                short=contract in (SHORT_NAME_CONTRACT, DOCUMENT_PAGES_CONTRACT, CONTRACT))
         else:
             element["inline_citations"] = _anchors(unit["text"], legal_sources)
         elements.append(element)
+    if contract == CONTRACT and time_limits is not None:
+        # The Working boxes follow the answer's opening paragraph.
+        first = next((i for i, element in enumerate(elements) if element["kind"] != "HEADING"), 0)
+        elements[first + 1:first + 1] = _working(time_limits)
     return elements

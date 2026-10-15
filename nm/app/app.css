@@ -296,6 +296,18 @@ main { display: grid; grid-template-columns: 19rem minmax(0, 1fr); flex: 1; min-
 .document-text { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 0.88rem; line-height: 1.5;
   padding: 0.6rem 0.75rem; border-left: 3px solid var(--rule); background: var(--paper); }
 .document-unread { margin: 0; font-size: 0.85rem; color: var(--signal); }
+/* A time limit's working, as code did it (item 9, 15 Oct 2026). */
+.working-box { border: 1px solid var(--rule); border-left: 4px solid var(--accent); border-radius: 10px;
+  padding: 0.75rem 1rem; margin: 0.75rem 0; background: var(--board); font-size: 0.92rem; }
+.working-label { margin: 0.35rem 0 0.15rem; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em;
+  text-transform: uppercase; color: var(--ink-3); }
+.working-result { margin: 0 0 0.4rem; font-weight: 600; }
+.working-line { margin: 0.15rem 0; overflow-wrap: anywhere; }
+.working-rows { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 0.2rem 0.9rem; margin: 0.35rem 0; }
+.working-rows dt { color: var(--ink-3); font-size: 0.84rem; }
+.working-rows dd { margin: 0; overflow-wrap: anywhere; }
+.working-list { margin: 0.35rem 0; padding-left: 1.3rem; }
+@media (max-width: 560px) { .working-rows { grid-template-columns: minmax(0, 1fr); } .working-rows dd { margin-bottom: 0.3rem; } }
 /* Research notes: one answer kept as Word or PDF (15 Oct 2026). */
 .note-control { display: inline-flex; align-items: center; gap: 0.15rem; font-size: 0.82rem; color: var(--ink-3); }
 .note-format { min-height: 2.75rem; padding: 0 0.55rem; font-size: 0.82rem; color: var(--accent); }

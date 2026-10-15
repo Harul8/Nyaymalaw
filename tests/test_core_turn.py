@@ -30,6 +30,12 @@ class ScriptedModel:
     def context_budget(self, tier): return 100_000
 
     def structured(self, prompt, schema, tier, **kwargs):
+        if prompt.operation == "core_calculation":
+            # Item 9: the scripted turns need no time limit unless a test says otherwise.
+            self.calls.append((prompt.operation, prompt.user))
+            return ModelResult(None, {"needed": False, "why": "No time limit is asked about.",
+                                      "calculations": [], "not_assessed": []}, tier, "synthetic", "fixture",
+                               Usage(1, 1, 0), 0, completion=Completion.COMPLETE)
         if prompt.operation.startswith("core_research_"):
             # Research v7 reads the conversation as attributed text, not JSON.
             self.calls.append((prompt.operation, prompt.user))
@@ -112,7 +118,9 @@ def test_four_actual_stage_calls_save_reopen_and_replay_without_reexecution(stor
                                      "core_response_writer", "core_response_review"]
     stored = store.load(chat_matter_id("owner", response["chat_id"]))
     rows = saved_rows(stored, "owner")
-    assert rows[0]["activities"]["contract"] == "core_turn_v2"
+    assert rows[0]["activities"]["contract"] == "core_turn_v3"
+    # No held Acts were given to this turn, so no time limit was worked out (item 9).
+    assert rows[0]["activities"]["calculation"]["state"] == "not_needed"
     assert rows[0]["activities"]["review"]["contract"] == "core_response_review_v5"
     assert rows[0]["activities"]["authority_evidence"]["contract"] == "core_response_authorities_v1"
     assert rows[0]["response"] == response
@@ -132,6 +140,7 @@ def test_mixed_legacy_and_current_history_reopens_without_fresh_authority_checks
     _, activity, metrics = turn.prepare(ScriptedModel(), context.payload(), searcher())
     original = context.payload()
     activity.pop("authority_evidence")
+    activity.pop("calculation")
     activity["contract"] = turn.LEGACY_CONTRACT
     activity["rendering_contract"] = response_rendering.LEGACY_CONTRACT
     dependencies = response_review._dependencies(original, activity["research"],
@@ -152,7 +161,7 @@ def test_mixed_legacy_and_current_history_reopens_without_fresh_authority_checks
         raise AssertionError("Saved readback cannot consult current authority indexes")
     monkeypatch.setattr(response_authorities, "check", no_new_check)
     rows = saved_rows(store.load(chat_matter_id("owner", first["chat_id"])), "owner")
-    assert [row["activities"]["contract"] for row in rows] == ["core_turn_v1", "core_turn_v2"]
+    assert [row["activities"]["contract"] for row in rows] == ["core_turn_v1", "core_turn_v3"]
     assert rows[0]["response"]["elements"] == elements
     assert run(store, model, chat_id=first["chat_id"], turn_id="new", message="Continue.")["replayed"]
     assert len(model.calls) == 3
@@ -160,7 +169,7 @@ def test_mixed_legacy_and_current_history_reopens_without_fresh_authority_checks
 
 @pytest.mark.parametrize("saved", ["core_response_rendering_v2", "core_response_rendering_v3",
                                    "core_response_rendering_v4", "core_response_rendering_v5",
-                                   "core_response_rendering_v6"])
+                                   "core_response_rendering_v6", "core_response_rendering_v7"])
 def test_a_turn_saved_under_an_earlier_rendering_reopens_unchanged_beside_a_current_turn(store, saved):
     """Shown names (v3) and cited-word links (v4) never rewrite an earlier saved response."""
     from nm.core_engine import response_rendering, turn
@@ -169,6 +178,9 @@ def test_a_turn_saved_under_an_earlier_rendering_reopens_unchanged_beside_a_curr
     context = open_turn(store, advocate_id="owner", message="Earlier account.", turn_id="old")
     _, activity, metrics = turn.prepare(ScriptedModel(), context.payload(), searcher())
     original = context.payload()
+    # A turn saved before item 9: no calculation, under the version with authority evidence.
+    activity.pop("calculation")
+    activity["contract"] = turn.AUTHORITY_CONTRACT
     activity["rendering_contract"] = saved
     elements = response_rendering.render(original, activity["research"], activity["sources"],
         activity["draft"], activity["review"], execution=activity["execution"],
@@ -179,9 +191,10 @@ def test_a_turn_saved_under_an_earlier_rendering_reopens_unchanged_beside_a_curr
     assert second["committed"] == "committed"
     rows = saved_rows(store.load(chat_matter_id("owner", first["chat_id"])), "owner")
     assert [row["activities"]["rendering_contract"] for row in rows] == [
-        saved, "core_response_rendering_v7"]
+        saved, "core_response_rendering_v8"]
     assert rows[0]["response"]["elements"] == elements
-    if saved not in ("core_response_rendering_v4", "core_response_rendering_v5", "core_response_rendering_v6"):
+    if saved not in ("core_response_rendering_v4", "core_response_rendering_v5", "core_response_rendering_v6",
+                     "core_response_rendering_v7"):
         assert all("citation_markers" not in element for element in rows[0]["response"]["elements"])
 
 

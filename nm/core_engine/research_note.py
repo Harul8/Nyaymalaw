@@ -3,8 +3,9 @@ decisions, 15 Oct 2026: Word by default, PDF as an option).
 
 Built by code from the saved turn after its replay checks, with no model call:
 nothing is added, summarised or reworded. The question is shown exactly as sent with
-the documents that went with it, the answer in its order with its dispute headings,
-each paragraph followed by the numbers of the sources it cites, and each source quoted
+the documents that went with it, the answer in its order with its dispute headings and
+any time limit's Working rows, each paragraph followed by the numbers of the sources
+it cites, and each source quoted
 exactly as saved (a judgment's stray line breaks closed up); passages of one provision,
 judgment paragraph or document page share its number. The Word file is written here directly (a .docx is zipped XML); the
 PDF is the browser's print of the same note.
@@ -49,6 +50,12 @@ def note(row, *, prepared_for):
     for element in elements:
         if element.get("kind") == "HEADING":
             blocks.append({"kind": "heading", "text": element["text"]})
+            continue
+        if element.get("kind") == "WORKING":
+            # The same labelled rows and lists the answer showed (item 9).
+            blocks.append({"kind": "working", "text": element["text"],
+                           "rows": [list(row) for row in element["working"]["rows"]],
+                           "lists": [[title, list(items)] for title, items in element["working"]["lists"]]})
             continue
         refs = []
         for source in element.get("sources") or []:
@@ -140,6 +147,14 @@ def _document_xml(note):
         if block["kind"] == "heading":
             body.append(_paragraph("Heading2", block["text"]))
             continue
+        if block["kind"] == "working":
+            body.append(_paragraph("SourceTitle", f"Working: {block['text']}"))
+            body.extend(f'<w:p><w:pPr><w:pStyle w:val="Working"/></w:pPr>{_runs(label + ": ", "<w:rPr><w:b/></w:rPr>")}'
+                        f'{_runs(value)}</w:p>' for label, value in block["rows"])
+            for title, items in block["lists"]:
+                body.append(_paragraph("Working", title + ":"))
+                body.extend(_paragraph("Working", f"• {item}") for item in items)
+            continue
         refs = ("" if not block["refs"] else _runs(" [" + ", ".join(map(str, block["refs"])) + "]",
                                                    '<w:rPr><w:color w:val="555555"/><w:sz w:val="18"/></w:rPr>'))
         body.append(_paragraph("Normal", block["text"], refs))
@@ -163,6 +178,7 @@ _STYLES = f'''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:style w:type="paragraph" w:styleId="Heading2"><w:name w:val="heading 2"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:qFormat/><w:pPr><w:keepNext/><w:spacing w:before="240" w:after="100"/><w:outlineLvl w:val="1"/></w:pPr><w:rPr><w:b/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr></w:style>
 <w:style w:type="paragraph" w:styleId="SourceTitle"><w:name w:val="Source title"/><w:basedOn w:val="Normal"/><w:next w:val="Quote"/><w:pPr><w:keepNext/><w:spacing w:before="200" w:after="60"/></w:pPr><w:rPr><w:b/><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr></w:style>
 <w:style w:type="paragraph" w:styleId="Quote"><w:name w:val="Quote"/><w:basedOn w:val="Normal"/><w:pPr><w:pBdr><w:left w:val="single" w:sz="12" w:space="8" w:color="BBBBBB"/></w:pBdr><w:ind w:left="397"/></w:pPr><w:rPr><w:color w:val="333333"/><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr></w:style>
+<w:style w:type="paragraph" w:styleId="Working"><w:name w:val="Working"/><w:basedOn w:val="Normal"/><w:pPr><w:spacing w:after="40"/><w:ind w:left="397"/></w:pPr><w:rPr><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr></w:style>
 <w:style w:type="paragraph" w:styleId="Meta"><w:name w:val="Meta"/><w:basedOn w:val="Normal"/><w:rPr><w:color w:val="666666"/><w:sz w:val="18"/><w:szCs w:val="18"/></w:rPr></w:style>
 </w:styles>'''
 

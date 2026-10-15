@@ -10,7 +10,10 @@ import logging
 
 from copy import deepcopy
 
-from nm.core_engine import answer_sources, research, response_authorities, response_rendering, response_review
+from concurrent.futures import ThreadPoolExecutor
+
+from nm.core_engine import answer_sources, calculation, research, response_authorities, response_rendering
+from nm.core_engine import response_review
 from nm.core_engine import response_writer, understanding
 from nm.core_engine.calls import CorrectionUnavailable, ReleaseWithheld, TurnCalls
 from nm.core_engine.conversation import (
@@ -25,7 +28,9 @@ from nm.shared.turn_attempt_port import AttemptRefused, TurnAttemptPort
 
 LEGACY_CONTRACT = "core_turn_v1"
 log = logging.getLogger(__name__)
-CONTRACT = "core_turn_v2"
+#: v2 with authority evidence; v3 adds the time limits worked out (item 9, 15 Oct 2026).
+AUTHORITY_CONTRACT = "core_turn_v2"
+CONTRACT = "core_turn_v3"
 EXECUTION = "core_read_only_execution_v1"
 _ACTIVITY_FIELDS = {"contract", "interpretation", "research", "sources", "draft",
                     "review", "execution", "rendering_contract"}
@@ -70,20 +75,33 @@ def _reporter(progress):
     return report
 
 
-def prepare(model, context, searcher, *, case_index=None, provision_reader=None, progress=None):
+def _needs_research(plan):
+    understanding = (plan.get("proposal") or {}).get("understanding") or {}
+    return understanding.get("needs_research") is True
+
+
+def prepare(model, context, searcher, *, case_index=None, provision_reader=None, progress=None,
+            held_acts=None):
     """Prepare and admit one response. No persistence or external action occurs here."""
     report = _reporter(progress)
     calls = model if isinstance(model, TurnCalls) else TurnCalls(model)
     report("understanding")
     interpreted = calls.checked("core_understanding", lambda: understanding.understand(calls, context))
     plan = calls.checked("core_research_plan", lambda: research.plan(calls, context, interpreted, progress=report))
-    record = research.retrieve(plan, searcher, context, model=calls, progress=report)
+    # Time limits are worked out beside the search, only where research is needed.
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        working = (pool.submit(calculation.work_out, calls, context, held_acts)
+                   if held_acts is not None and _needs_research(plan) else None)
+        record = research.retrieve(plan, searcher, context, model=calls, progress=report)
+        limits = working.result() if working is not None else calculation.skipped()
+    time_limits = calculation.for_answer(limits)
     sources = answer_sources.build(context, record)
     execution = execution_record(record)
 
     def write(keep=None):
         return response_writer.write(calls, context, record, sources,
-                                     interpretation=interpreted, execution=execution, keep=keep)
+                                     interpretation=interpreted, execution=execution, keep=keep,
+                                     time_limits=time_limits)
 
     report("writing")
     draft = calls.checked("core_response_writer", write)
@@ -93,7 +111,7 @@ def prepare(model, context, searcher, *, case_index=None, provision_reader=None,
 
     def review():
         return response_review.review(calls, context, record, sources, draft, execution=execution,
-                                      authority_evidence=authorities)
+                                      authority_evidence=authorities, time_limits=time_limits)
 
     report("reviewing")
     reviewed = calls.checked("core_response_review", review)
@@ -114,11 +132,11 @@ def prepare(model, context, searcher, *, case_index=None, provision_reader=None,
         if not reviewed["accepted"]:
             _withhold(calls, reviewed["proposal"]["findings"])
     elements = response_rendering.render(context, record, sources, draft, reviewed,
-        execution=execution, authority_evidence=authorities)
+        execution=execution, authority_evidence=authorities, time_limits=limits)
     activity = {"contract": CONTRACT, "interpretation": interpreted, "research": record,
                 "sources": sources, "draft": draft, "review": reviewed, "execution": execution,
                 "rendering_contract": response_rendering.CONTRACT,
-                "authority_evidence": authorities}
+                "authority_evidence": authorities, "calculation": limits}
     return elements, activity, calls.metrics()
 
 
@@ -126,24 +144,27 @@ def validate_activity(activity, context, elements):
     """Replay uses the saved contract and snapshots; it never fetches newer law."""
     version = activity.get("contract")
     expected_fields = (_ACTIVITY_FIELDS if version == LEGACY_CONTRACT else
-                       _ACTIVITY_FIELDS | {"authority_evidence"})
+                       _ACTIVITY_FIELDS | {"authority_evidence"} if version == AUTHORITY_CONTRACT else
+                       _ACTIVITY_FIELDS | {"authority_evidence", "calculation"})
     # A saved response re-renders under the version it was admitted with: names a
     # later rendering shows differently never rewrite an earlier turn.
     renderings = ({response_rendering.LEGACY_CONTRACT} if version == LEGACY_CONTRACT else
                   {response_rendering.STORED_TITLE_CONTRACT, response_rendering.SHOWN_NAME_CONTRACT,
                    response_rendering.CITED_WORDS_CONTRACT, response_rendering.HEADINGS_CONTRACT,
-                   response_rendering.SHORT_NAME_CONTRACT, response_rendering.CONTRACT})
+                   response_rendering.SHORT_NAME_CONTRACT, response_rendering.DOCUMENT_PAGES_CONTRACT}
+                  if version == AUTHORITY_CONTRACT else {response_rendering.CONTRACT})
     rendering = activity.get("rendering_contract") if isinstance(activity, dict) else None
-    if (version not in {LEGACY_CONTRACT, CONTRACT} or set(activity) != expected_fields
+    if (version not in {LEGACY_CONTRACT, AUTHORITY_CONTRACT, CONTRACT} or set(activity) != expected_fields
             or rendering not in renderings):
         raise ValueError("Unknown saved turn or rendering contract")
+    limits = calculation.validate(activity["calculation"], context) if version == CONTRACT else None
     record = research.validate(activity["research"], activity["research"]["plan"], context)
     sources = answer_sources.build(context, record)
     if sources != activity["sources"] or execution_record(record) != activity["execution"]:
         raise ValueError("Saved sources or operation evidence changed")
     rebuilt = response_rendering.render(context, record, sources, activity["draft"],
         activity["review"], execution=activity["execution"],
-        authority_evidence=activity.get("authority_evidence"), contract=rendering)
+        authority_evidence=activity.get("authority_evidence"), contract=rendering, time_limits=limits)
     if rebuilt != elements:
         raise ValueError("Saved response differs from its admitted rendering")
     return deepcopy(activity)
@@ -166,7 +187,7 @@ def saved_rows(matter, advocate_id):
 def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=None,
             matter_id=None, expected_version=None, session_current=lambda: False,
             attempts: TurnAttemptPort | None = None, case_index=None, provision_reader=None,
-            progress=None, documents=()):
+            progress=None, documents=(), held_acts=None):
     if not session_current():
         raise ConversationRefused("Sign in again before continuing.", status=401)
     context = open_turn(store, advocate_id=advocate_id, message=message, turn_id=turn_id,
@@ -198,7 +219,8 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
                       reserve_correction=lambda: attempts.consume_correction(identity, token))
     try:
         elements, activity, metrics = prepare(calls, context.payload(), searcher,
-            case_index=case_index, provision_reader=provision_reader, progress=progress)
+            case_index=case_index, provision_reader=provision_reader, progress=progress,
+            held_acts=held_acts)
         validate_activity(activity, context.payload(), elements)
     except AttemptRefused as exc:
         raise _attempt_refusal(exc) from exc

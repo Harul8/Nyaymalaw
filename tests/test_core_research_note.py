@@ -12,6 +12,7 @@ import pytest
 from nm.core_engine import research_note
 from nm.core_engine.conversation import chat_matter_id
 from nm.core_engine.turn import saved_rows
+from tests.test_core_calculation import MESSAGE, Calculating, Held, chain
 from tests.test_core_served import OTHER, served  # noqa: F401 - pytest fixture
 from tests.test_core_turn import ScriptedModel, run, store  # noqa: F401 - pytest fixture
 from tests.test_core_turn_documents import DocumentModel, material
@@ -79,6 +80,18 @@ def test_text_that_is_not_xml_safe_is_written_safely(store):
     data = research_note.docx(research_note.note(row, prepared_for="R & D <Chambers>"), row["response"]["at"])
     texts = [text for text, _ in paragraphs(data)]
     assert "Ampersand & <angle>  form feed" in texts
+
+
+def test_a_time_limit_s_working_rows_are_kept_as_the_answer_showed_them(store):
+    row = saved(store, Calculating(chain("t1:advocate")), message=MESSAGE, held_acts=Held())
+    note = research_note.note(row, prepared_for="A. Advocate")
+    shown = [element for element in row["response"]["elements"] if element["kind"] == "WORKING"]
+    working = [block for block in note["blocks"] if block["kind"] == "working"]
+    assert [(b["text"], b["rows"], b["lists"]) for b in working] == [
+        (e["text"], e["working"]["rows"], e["working"]["lists"]) for e in shown]
+    texts = [text for text, _ in paragraphs(research_note.docx(note, row["response"]["at"]))]
+    assert "Working: Last day to file the complaint" in texts
+    assert "Last day: 14 October 2026 (Wednesday)" in texts and "• The dates are as reported." in texts
 
 
 def test_an_answer_with_nothing_to_keep_has_no_note(store):

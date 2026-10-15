@@ -70,6 +70,12 @@ where appropriate, without turning acknowledgement into an intake questionnaire.
 Preserve speaker, negation, chronology, uncertainty and conditions. Reported, supplied,
 examined, accepted and proved are different states. An NM interpretation cannot prove
 itself. Do not invent facts, legal rules, citations, jurisdiction or document contents.
+Never count days or work out a time limit yourself. Time limits, when supplied in
+time_limits, were worked out by code from the Acts' own words: state each result as given (the provision, the date time runs from and whose
+words give it, the last day, where the step stands, the assumptions, what is missing
+and what may extend time). A Working box showing the arithmetic accompanies the answer.
+Do not count days yourself or give a date the time limits do not give, and say plainly
+when a time limit was not assessed and why.
 Pages of documents the advocate sent arrive in original_context.documents, each under
 the document's name and page, with any pages that could not be read. A page says what
 its document says: cite it for that, keep it apart from the advocate's own account, and
@@ -360,7 +366,7 @@ def _research_context(record, work_ids):
     return shown
 
 
-def _payload(context, record, sources, interpretation, execution, layout, index):
+def _payload(context, record, sources, interpretation, execution, layout, index, time_limits=None):
     part = layout[index]
     disputes = {}
     if record.get("contract") in (research.PICKED_CONTRACT, research.CONTRACT):
@@ -376,6 +382,7 @@ def _payload(context, record, sources, interpretation, execution, layout, index)
                           "other_parts": [disputes[p["dispute_id"]]["name"] for p in layout
                                           if p is not part and p["dispute_id"] in disputes]},
             "research": _research_context(record, part["work_ids"]),
+            **({"time_limits": time_limits} if time_limits is not None else {}),
             "held_passages": held, "execution_evidence": execution,
             "source_kinds": {offered.get(identity, identity): row["kind"] for identity, row in sources.items()
                              if row["kind"] not in {"provision", "judgment"} or offered.get(identity) in shown}}
@@ -415,7 +422,8 @@ def kept_parts(draft, findings):
     return kept
 
 
-def write(model, context, research_record, sources, interpretation=None, execution=None, *, keep=None):
+def write(model, context, research_record, sources, interpretation=None, execution=None, *, keep=None,
+          time_limits=None):
     """One writer-tier call per part, in parallel; TurnCalls owns any conditional correction.
     keep: parts accepted by review, reused as written when a correction rewrites the rest."""
     if answer_sources.build(context, research_record) != sources:
@@ -427,7 +435,7 @@ def write(model, context, research_record, sources, interpretation=None, executi
         if kept is not None and kept["dispute_id"] == layout[index]["dispute_id"]:
             return kept["units"]
         data = _write_part(model, _payload(context, research_record, sources, interpretation, execution,
-                                           layout, index))
+                                           layout, index, time_limits))
         units = data.get("units") if isinstance(data, dict) else None
         # Malformed output stays in the assembled draft, where admission refuses it.
         return deepcopy(units) if isinstance(units, list) else [deepcopy(data)]

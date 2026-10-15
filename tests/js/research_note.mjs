@@ -42,7 +42,9 @@ const answer = { chat_id: 'chat 1', turn_id: 't/1', blocked: false,
 const note = { title: 'Research note', file_name: 'Research note 2026-10-15 - Was it filed',
   prepared_for: 'A. Advocate', prepared_at: '15 October 2026, 4:57 PM IST', question: 'Was it filed?',
   documents: [{ name: 'memo.pdf', pages_read: 2, pages_unread: 1 }],
-  blocks: [{ kind: 'heading', text: 'Dispute' }, { kind: 'paragraph', text: 'Held law.', refs: [1, 2] }],
+  blocks: [{ kind: 'heading', text: 'Dispute' }, { kind: 'paragraph', text: 'Held law.', refs: [1, 2] },
+    { kind: 'working', text: 'Last day to file', rows: [['Last day', '14 October 2026 (Wednesday)']],
+      lists: [['Assumed', ['The dates are as reported.']]] }],
   sources: [{ number: 1, heading: '[1] Act · s.138 — Statute', passages: ['First words.', 'Second words.'] },
             { number: 2, heading: '[2] memo.pdf · page 1 — Document you sent (read by AI from a scan)', passages: ['Memo'] }],
   provenance: 'Prepared by Nyaymalaw from the answer saved on 15 October 2026.' };
@@ -95,7 +97,8 @@ const note = { title: 'Research note', file_name: 'Research note 2026-10-15 - Wa
   assert.deepEqual(text, [
     'h1:Research note', 'p:Prepared for A. Advocate · 15 October 2026, 4:57 PM IST', 'h2:Question',
     'blockquote:Was it filed?', 'h3:Documents sent with it', 'p:• memo.pdf — 2 pages read, 1 not read',
-    'h2:Answer', 'h3:Dispute', 'p:Held law. [1, 2]', 'h2:Sources', 'p:[1] Act · s.138 — Statute',
+    'h2:Answer', 'h3:Dispute', 'p:Held law. [1, 2]', 'p:Working: Last day to file',
+    'p:Last day: 14 October 2026 (Wednesday)', 'p:Assumed:', 'p:• The dates are as reported.', 'h2:Sources', 'p:[1] Act · s.138 — Statute',
     'blockquote:First words.', 'blockquote:Second words.',
     'p:[2] memo.pdf · page 1 — Document you sent (read by AI from a scan)', 'blockquote:Memo',
     'p:Prepared by Nyaymalaw from the answer saved on 15 October 2026.']);

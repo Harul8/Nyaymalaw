@@ -6,10 +6,13 @@ left out are read from the Acts' own words (owner's governing principle) by the
 calculation step and checked as exact quotations there. This module only does the
 arithmetic on them: the starting day is left out (Limitation Act s.12(1); Saketh India
 v India Securities on calendar months), and two owner rulings apply only where an Act
-is silent, each named in the working when applied:
+is silent, each recorded in the working when applied:
   - a period whose matching date does not exist ends on the last day of that month;
   - copy time under s.12(2) and (3) counts both the application day and the ready day.
 Court closure (s.4) is never applied, only flagged: the court calendar is not held.
+
+The working is data (dates, counts, the words read and the rulings applied), never
+sentences: putting it into words is the writer's work (owner, 15 Oct 2026).
 """
 from __future__ import annotations
 
@@ -18,10 +21,11 @@ import re
 from datetime import date, timedelta
 
 CONTRACT = "core_limitation_arithmetic_v1"
-RULING_MISSING_DATE = ("The matching date does not exist in that month, so the period ends on the last day "
-                       "of the month (owner's ruling where the Act is silent, 15 Oct 2026).")
-RULING_COPY_DAYS = ("Copy time counts both the day the copy was applied for and the day it was ready "
-                    "(owner's ruling where the Act is silent, 15 Oct 2026).")
+#: The owner's rulings where an Act is silent (15 Oct 2026), in the words they were recorded.
+RULINGS = {
+    "missing_date": "A period whose matching date does not exist ends on the last day of that month.",
+    "copy_time": "Copy time counts both the day the copy was applied for and the day it was ready.",
+}
 _SMALL = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9,
           "ten": 10, "eleven": 11, "twelve": 12, "thirteen": 13, "fourteen": 14, "fifteen": 15, "sixteen": 16,
           "seventeen": 17, "eighteen": 18, "nineteen": 19}
@@ -74,12 +78,8 @@ def end_of_period(start, number, unit):
     year, month = start.year + index // 12, index % 12 + 1
     last = calendar.monthrange(year, month)[1]
     if start.day > last:
-        return date(year, month, last), RULING_MISSING_DATE
+        return date(year, month, last), "missing_date"
     return date(year, month, start.day), None
-
-
-def shown(day):
-    return f"{day.day} {day:%B %Y} ({day:%A})"
 
 
 def copy_days(spans):
@@ -93,30 +93,19 @@ def copy_days(spans):
 
 
 def working(start, period_words, *, copies=()):
-    """The arithmetic for one period, step by step, with the rulings it applied."""
+    """The arithmetic for one period as data: counting starts after `start` (left out),
+    the period's end, any copy time left out, the last day, and the rulings applied."""
     period = period_from_words(period_words)
     if period is None:
         raise LimitationUnassessed(f"No countable period in the words {period_words!r}.")
     number, unit, words = period
-    end, ruling = end_of_period(start, number, unit)
-    steps = [f"The period is “{words}”. Counting starts after {shown(start)}, which is left out; "
-             f"{number} {unit} then end on {shown(end)}."]
-    rulings = [ruling] if ruling else []
-    if ruling:
-        steps.append(ruling)
+    period_end, ruling = end_of_period(start, number, unit)
     excluded = copy_days(copies)
-    if excluded:
-        spans = "; ".join(f"{shown(a)} to {shown(b)}" for a, b in copies)
-        end = end + timedelta(days=excluded)
-        steps.append(f"Copy time left out: {excluded} days ({spans}), so the last day moves to {shown(end)}.")
-        rulings.append(RULING_COPY_DAYS)
-        steps.append(RULING_COPY_DAYS)
-    return {"contract": CONTRACT, "start": start.isoformat(), "period": {"words": words, "number": number,
-            "unit": unit}, "copy_days": excluded, "last_day": end.isoformat(), "steps": steps,
-            "rulings": rulings,
-            "court_closed": (f"If the court is closed on {shown(end)}, the step may be taken on the day it "
-                             "reopens (Limitation Act s.4); the court calendar is not held, so that day is "
-                             "not assumed.")}
+    rulings = ([ruling] if ruling else []) + (["copy_time"] if excluded else [])
+    return {"contract": CONTRACT, "start": start.isoformat(),
+            "period": {"words": words, "number": number, "unit": unit}, "period_end": period_end.isoformat(),
+            "copy_days": excluded, "copy_spans": [[a.isoformat(), b.isoformat()] for a, b in copies],
+            "last_day": (period_end + timedelta(days=excluded)).isoformat(), "rulings": rulings}
 
 
 def standing(last_day, *, today, done_on=None, earliest=None):

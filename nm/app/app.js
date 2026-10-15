@@ -2165,7 +2165,8 @@ function noteDocument(doc, note) {
     + '.meta { color: #666; font-size: 9pt; } .refs { color: #555; font-size: 9pt; }'
     + 'blockquote { margin: 4pt 0 8pt 14pt; padding-left: 8pt; border-left: 2pt solid #bbb; color: #333;'
     + ' font-size: 10pt; white-space: pre-wrap; } .source { font-weight: 700; font-size: 10pt; margin: 10pt 0 2pt;'
-    + ' break-after: avoid; } p { margin: 0 0 8pt; white-space: pre-wrap; }';
+    + ' break-after: avoid; } p { margin: 0 0 8pt; white-space: pre-wrap; }'
+    + '.working { margin: 0 0 2pt 14pt; font-size: 10pt; } .working b { font-weight: 700; }';
   doc.head.appendChild(style);
   doc.title = note.file_name;
   const body = doc.body;
@@ -2185,6 +2186,19 @@ function noteDocument(doc, note) {
   add(body, 'h2', 'Answer');
   for (const block of note.blocks) {
     if (block.kind === 'heading') { add(body, 'h3', block.text); continue; }
+    if (block.kind === 'working') {
+      add(body, 'p', `Working: ${block.text}`, 'source');
+      for (const [label, value] of block.rows) {
+        const line = add(body, 'p', undefined, 'working');
+        add(line, 'b', `${label}: `);
+        add(line, 'span', value);
+      }
+      for (const [title, items] of block.lists) {
+        add(body, 'p', `${title}:`, 'working');
+        for (const item of items) add(body, 'p', `• ${item}`, 'working');
+      }
+      continue;
+    }
     const paragraph = add(body, 'p', block.text);
     if (block.refs.length) add(paragraph, 'span', ` [${block.refs.join(', ')}]`, 'refs');
   }
@@ -2708,6 +2722,10 @@ function renderTurn(entry) {
   }
 
   function renderElement(into, el) {
+    if (el.kind === 'WORKING' && el.working) {
+      into.appendChild(renderWorking(el));
+      return;
+    }
     const d = document.createElement('div');
     // A loud signal is never collapsed, whatever the server says about
     // collapsibility -- the client does not get to quiet it.
@@ -3064,6 +3082,39 @@ function renderChatBoard(board) {
     out.push(instructions);
   }
   return out;
+}
+
+// A TIME LIMIT'S WORKING (item 9, owner decisions 15 Oct 2026): the labelled rows and
+// lists the server saved with the answer (the Act's own words, what time runs from and
+// whose words give it, each date code counted, the assumptions, what is missing and what
+// may extend time), drawn exactly as given. Nothing is computed, labelled or put into
+// sentences here: the answer's own words explain it, and the research note shows the
+// same rows.
+function renderWorking(el) {
+  const work = el.working;
+  const make = (tag, className, text) => {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  };
+  const box = make('section', 'el WORKING working-box');
+  box.setAttribute('aria-label', `Working: ${work.what}`);
+  box.appendChild(make('p', 'working-label', 'Working'));
+  box.appendChild(make('p', 'working-result', work.what));
+  const rows = make('dl', 'working-rows');
+  for (const [label, value] of work.rows || []) {
+    rows.appendChild(make('dt', '', label));
+    rows.appendChild(make('dd', '', value));
+  }
+  box.appendChild(rows);
+  for (const [title, items] of work.lists || []) {
+    box.appendChild(make('p', 'working-label', title));
+    const list = make('ul', 'working-list');
+    for (const item of items) list.appendChild(make('li', '', item));
+    box.appendChild(list);
+  }
+  return box;
 }
 
 // A REPLY ANSWERING SEVERAL DISPUTES (owner decision, 15 Oct 2026): links to each

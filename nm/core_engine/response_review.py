@@ -81,6 +81,11 @@ A treatment passage must concern that submission; a nearby court statement alone
 insufficient. Preserve the factual and legal conditions of any application or inference.
 Check quotations and the scope supported by the exact passages, including adjacent
 qualifications. Questions, proposals and limits must not introduce unsupported premises.
+Time limits, when supplied as owned time limits, were worked out by code from the Acts'
+own words: check that the reply states each as given (the provision, the date time runs
+from, the last day, where the step stands, the assumptions, what is missing and what may
+extend time), adds no date of its own, and does not present a limit that was not
+assessed as worked out.
 Examine the authority checks for each unit against its actual legal use. A direct case
 citation must agree with the case relied on. A selected judgment may instead mention
 another authority: determine from the passage who cited it and whether the draft reports
@@ -169,7 +174,7 @@ PREVIOUS_SCHEMA, SCHEMA = _review_schema(PREVIOUS_REQUEST), _review_schema(REQUE
 
 
 def _dependencies(context, research_record, sources, draft, execution, *,
-                  authority_evidence=None, contract=LEGACY_CONTRACT):
+                  authority_evidence=None, contract=LEGACY_CONTRACT, time_limits=None):
     if answer_sources.build(context, research_record) != sources:
         raise ValueError("Review catalogue differs from its owned source snapshot")
     response_writer.validate(draft, context, sources)
@@ -185,6 +190,10 @@ def _dependencies(context, research_record, sources, draft, execution, *,
             authority_evidence, context, research_record, sources, draft)
     else:
         raise ValueError("Unknown independent review contract")
+    # Time limits worked out by code (item 9); only a turn that worked them out has them,
+    # so earlier saved reviews bind exactly what they bound.
+    if time_limits is not None:
+        dependencies["time_limits"] = deepcopy(time_limits)
     return dependencies
 
 
@@ -305,9 +314,9 @@ def _draft_presentation(draft, sources, *, aliased=False):
 
 
 def review(model, context, research_record, sources, draft, execution=None, *,
-           authority_evidence=None):
+           authority_evidence=None, time_limits=None):
     dependencies = _dependencies(context, research_record, sources, draft, execution,
-        authority_evidence=authority_evidence, contract=CONTRACT)
+        authority_evidence=authority_evidence, contract=CONTRACT, time_limits=time_limits)
     # Original words are already complete above; legal rows include all adjacent
     # context, not merely the writer's chosen support. Full durable binding is kept.
     research_context = {"state": research_record["state"],
@@ -332,6 +341,8 @@ def review(model, context, research_record, sources, draft, execution=None, *,
         "owned_authority_checks": {
             "contract": dependencies["authority_evidence"]["contract"],
             "units": _aliased(deepcopy(dependencies["authority_evidence"]["units"]), shown)}}
+    if time_limits is not None:
+        payload["owned_time_limits"] = dependencies["time_limits"]
     # Full readbacks remain in durable binding; the source catalogue already holds
     # the exact legal passages. Present only their checks and remaining limits here.
     prompt = Prompt(system=SYSTEM, user=json.dumps(payload, ensure_ascii=False),
@@ -347,14 +358,14 @@ def review(model, context, research_record, sources, draft, execution=None, *,
 
 
 def validate(record, context, research_record, sources, draft, execution=None, *,
-             authority_evidence=None):
+             authority_evidence=None, time_limits=None):
     if (not isinstance(record, dict) or set(record) != {
             "contract", "proposal", "accepted", "bound_digest"}
             or record.get("contract") not in CONTRACTS
             or type(record.get("accepted")) is not bool):
         raise ValueError("Unknown or malformed independent response review receipt")
     dependencies = _dependencies(context, research_record, sources, draft, execution,
-        authority_evidence=authority_evidence, contract=record["contract"])
+        authority_evidence=authority_evidence, contract=record["contract"], time_limits=time_limits)
     checked = _accept(record["proposal"], dependencies, contract=record["contract"])
     if checked != record:
         raise ValueError("Independent review does not bind this exact draft and evidence")

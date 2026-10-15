@@ -92,6 +92,10 @@ class Application:
         self.case_index = _DeferredAdapter(lambda: CaseIdentityIndex.local(self.root))
         # What each running turn is doing, for its own advocate (memory only).
         self.turn_progress = TurnProgress()
+        # The Acts time limits may be worked out under (owner decisions, 15 Oct 2026).
+        from nm.shared.held_acts import HeldActs
+        self.held_acts = HeldActs(settings.get('NM_BARE_ACTS_DIR')
+                                  or self.root / 'legal_database' / 'raw_data' / 'BareActs')
         # Voice notes and dictation (owner decisions, 15 Oct 2026).
         self.transcription_model = (settings.get('NM_TRANSCRIBE_MODEL') or 'gpt-transcribe').strip()
 
@@ -144,6 +148,7 @@ class Application:
         try:
             result = process(model, self.store, self.legal_search, advocate_id=advocate_id,
                              session_current=session_current, attempts=self.turn_attempts,
+                             held_acts=self.held_acts,
                              case_index=self.case_index,
                              provision_reader=getattr(self.legal_search, 'collections', {}).get('provision'),
                              progress=progress, **request)

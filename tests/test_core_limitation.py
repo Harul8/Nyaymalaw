@@ -36,17 +36,20 @@ held = pytest.mark.skipif(not (ACTS / CURRENT_ACTS["The Limitation Act, 1963"]).
 ], ids=lambda value: value if isinstance(value, str) else None)
 def test_each_scenario_s_last_day_and_where_it_stands_today(scenario, start, words, copies, last, state):
     worked = L.working(start, words, copies=copies)
-    assert worked["last_day"] == last.isoformat()
+    assert worked["last_day"] == last.isoformat() and worked["start"] == start.isoformat()
     assert L.standing(last, today=TODAY)["state"] == state
-    assert "not assumed" in worked["court_closed"] and L.shown(last) in worked["court_closed"]
+    # The working is data only: putting it into words is the writer's work (owner, 15 Oct 2026).
+    assert all(not isinstance(value, str) or len(value) <= 40 for value in worked.values())
 
 
 def test_the_owner_s_rulings_are_applied_only_where_needed_and_named():
     assert L.working(date(2024, 2, 28), "Three years")["rulings"] == []
-    assert L.working(date(2024, 2, 29), "Three years")["rulings"] == [L.RULING_MISSING_DATE]
+    assert L.working(date(2024, 2, 29), "Three years")["rulings"] == ["missing_date"]
     assert L.working(date(2026, 1, 31), "one month")["last_day"] == "2026-02-28"
     copy = L.working(date(2026, 6, 2), "Ninety days", copies=((date(2026, 6, 5), date(2026, 6, 20)),))
-    assert copy["copy_days"] == 16 and L.RULING_COPY_DAYS in copy["rulings"]
+    assert copy["copy_days"] == 16 and copy["rulings"] == ["copy_time"]
+    assert (copy["period_end"], copy["last_day"]) == ("2026-08-31", "2026-09-16")
+    assert set(L.RULINGS) == {"missing_date", "copy_time"}
     # Overlapping copy periods (decree and judgment) are left out once.
     assert L.copy_days(((date(2026, 6, 5), date(2026, 6, 10)), (date(2026, 6, 8), date(2026, 6, 12)))) == 8
     with pytest.raises(L.LimitationUnassessed):
