@@ -4,6 +4,7 @@ Account boundaries are retained from the previous active API. Retired legal
 engine routes are deliberately absent; their saved files are not modified.
 """
 from __future__ import annotations
+import asyncio
 import hmac
 import logging
 import os
@@ -14,7 +15,8 @@ from math import ceil
 from pathlib import Path
 from typing import Annotated
 from urllib.parse import quote, unquote
-from fastapi import BackgroundTasks, Cookie, Depends, FastAPI, Header, HTTPException, Request, Response
+from fastapi import (BackgroundTasks, Cookie, Depends, FastAPI, Header, HTTPException, Request, Response,
+                     WebSocket, WebSocketDisconnect)
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.concurrency import run_in_threadpool
@@ -1570,6 +1572,111 @@ def _dictate(advocate_id, request, name, data):
     if not _session_current(request, advocate_id):
         raise HTTPException(401, 'not signed in')
     return {'text': text}
+
+
+#: The longest live dictation the ledger reserves for; the page stops at five minutes.
+LIVE_MINUTES = 6
+#: How long the page's 'done' waits for the last live words before the page falls back.
+LIVE_FINAL_WAIT = 20.0
+_live_log = logging.getLogger('nm.dictation')
+
+
+def _socket_advocate(websocket: WebSocket):
+    """The signed-in advocate on a socket this page opened, or None: the same exact
+    origin policy and session as every other credentialled route."""
+    origin = (websocket.headers.get('origin') or '').rstrip('/')
+    configured = (os.environ.get(_TRUSTED_ORIGINS) or '').strip()
+    page = f"{'https' if websocket.url.scheme == 'wss' else 'http'}://{websocket.url.netloc}"
+    trusted = ({o.strip().rstrip('/') for o in configured.split(',') if o.strip()} if configured else {page})
+    if not origin or origin not in trusted:
+        return None
+    directory = application().directory
+    session = directory.session(websocket.cookies.get('nm_session', ''),
+        _device(websocket.cookies.get('nm_device'), websocket.headers.get('user-agent')), utcnow())
+    if session is None or directory.identity(session.advocate_id) is None:
+        return None
+    return session.advocate_id
+
+
+@app.websocket('/ws/dictation')
+async def live_dictation(websocket: WebSocket):
+    """Live words while dictating, for an advocate who turned them on (owner decision,
+    15 Oct 2026). The page sends 24 kHz 16-bit mono frames and 'done' when the advocate
+    stops; it receives {'words'} as they are heard and {'final'} at the end, or
+    {'live': false, 'why'} when live words cannot run, and then transcribes its own
+    recording as usual. Nothing is kept here."""
+    advocate_id = await run_in_threadpool(_socket_advocate, websocket)
+    if advocate_id is None:
+        await websocket.close(code=1008)
+        return
+    await websocket.accept()
+
+    async def refuse(why):
+        await websocket.send_json({'live': False, 'why': why})
+        await websocket.close()
+
+    try:
+        setting = await run_in_threadpool(application().directory.dictation_setting, advocate_id)
+    except AuthenticationUnavailable:
+        return await refuse('Your dictation setting could not be read.')
+    if not setting['live']:
+        return await refuse('Live words are off in your dictation settings.')
+    current = lambda: _socket_advocate(websocket) == advocate_id  # noqa: E731
+    try:
+        model = await run_in_threadpool(application().live_dictation_reader, advocate_id, session_current=current)
+        session = await model.live_transcription(prompt=voice.DICTATION_PROMPT, minutes=LIVE_MINUTES)
+    except ModelPermissionRefused as exc:
+        return await refuse(str(exc))
+    except ModelError:
+        return await refuse('Live words are not available just now.')
+
+    async def to_page():
+        async for kind, words in session.updates():
+            if kind == 'error':
+                await websocket.send_json({'live': False, 'why': 'Live words stopped.'})
+                return
+            await websocket.send_json({kind: words})
+            if kind == 'final':
+                return
+
+    pump = asyncio.create_task(to_page())
+    try:
+        while not pump.done():
+            message = await websocket.receive()
+            if message['type'] == 'websocket.disconnect':
+                break
+            if message.get('bytes'):
+                try:
+                    await session.send(message['bytes'])
+                except ValueError:
+                    continue  # past the time limit: the page stops itself at five minutes
+                except ModelError:
+                    break  # the provider went away; the page transcribes its recording
+            elif message.get('text') == 'done':
+                try:
+                    committed = await session.commit()
+                except ModelError:
+                    break
+                if not committed:
+                    await websocket.send_json({'final': ''})
+                    break
+                try:
+                    await asyncio.wait_for(asyncio.shield(pump), LIVE_FINAL_WAIT)
+                except asyncio.TimeoutError:
+                    await websocket.send_json({'final': None, 'why': 'The live words did not finish in time.'})
+                break
+    except WebSocketDisconnect:
+        pass
+    finally:
+        pump.cancel()
+        try:
+            await session.close()
+        except ModelError as exc:
+            _live_log.warning('Live dictation ledger not settled: %s', type(exc).__name__)
+        try:
+            await websocket.close()
+        except RuntimeError:
+            pass  # already closed by the page
 
 
 @app.get('/api/documents/{document_ref}')

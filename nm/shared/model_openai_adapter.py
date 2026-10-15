@@ -119,6 +119,111 @@ def _user_content(prompt: Prompt, *, responses: bool):
             *({"type": "image_url", "image_url": {"url": url, "detail": "high"}} for url in urls)]
 
 
+class LiveTranscription:
+    """One live dictation at OpenAI's realtime transcription (24 kHz 16-bit mono audio
+    in; the words so far out). Nothing is kept here: each frame is sent and dropped.
+    The dictation is one turn, committed when the advocate stops; its final words are
+    the transcripts of every item heard, in order."""
+
+    RATE = 24_000
+
+    def __init__(self, link, *, model: str, minutes: int, budget=None, token=None):
+        self._link, self.model, self._limit = link, model, minutes * 60 * self.RATE * 2
+        self._budget, self._token = budget, token
+        self.sent_bytes = 0
+        self._order: list[str] = []
+        self._text: dict[str, str] = {}
+        self._done: set[str] = set()
+        self._committed_item = None
+        self._committed = False
+        self._closed = False
+
+    @property
+    def seconds(self) -> float:
+        return self.sent_bytes / (self.RATE * 2)
+
+    def words(self) -> str:
+        return " ".join(text for text in (self._text[item].strip() for item in self._order) if text)
+
+    async def send(self, pcm: bytes) -> None:
+        if not isinstance(pcm, bytes) or not pcm or len(pcm) % 2:
+            raise ValueError("Live audio arrives as whole 16-bit samples")
+        if self._committed or self.sent_bytes + len(pcm) > self._limit:
+            raise ValueError("The live dictation has ended or reached its time limit")
+        self.sent_bytes += len(pcm)
+        await self._send({"type": "input_audio_buffer.append", "audio": base64.b64encode(pcm).decode("ascii")})
+
+    async def _send(self, event):
+        try:
+            await self._link.send(json.dumps(event))
+        except Exception as exc:  # noqa: BLE001 -- a dropped stream is the provider going away
+            raise ProviderUnavailable(f"The live transcription stream closed ({type(exc).__name__}).") from exc
+
+    async def commit(self) -> bool:
+        """End the dictation's audio; False when nothing was heard to transcribe."""
+        if self._committed or not self.sent_bytes:
+            return False
+        self._committed = True
+        await self._send({"type": "input_audio_buffer.commit"})
+        return True
+
+    def _seen(self, item):
+        if item not in self._text:
+            self._order.append(item)
+            self._text[item] = ""
+
+    async def updates(self):
+        """('words', the words so far) as they arrive; ('final', the words) once the
+        committed audio is transcribed; ('error', reason) if the provider refuses or the
+        stream drops."""
+        try:
+            async for update in self._updates():
+                yield update
+        except Exception as exc:  # noqa: BLE001 -- a dropped stream is the provider going away
+            yield "error", f"the live transcription stream closed ({type(exc).__name__})"
+
+    async def _updates(self):
+        async for message in self._link:
+            try:
+                event = json.loads(message)
+            except (TypeError, ValueError):
+                continue
+            kind, item = event.get("type"), event.get("item_id")
+            if kind == "input_audio_buffer.committed" and isinstance(item, str):
+                self._seen(item)
+                self._committed_item = item
+            elif kind == "conversation.item.input_audio_transcription.delta" and isinstance(item, str):
+                self._seen(item)
+                if item not in self._done and isinstance(event.get("delta"), str):
+                    self._text[item] += event["delta"]
+                    yield "words", self.words()
+            elif kind == "conversation.item.input_audio_transcription.completed" and isinstance(item, str):
+                self._seen(item)
+                self._text[item] = event.get("transcript") if isinstance(event.get("transcript"), str) else ""
+                self._done.add(item)
+                yield "words", self.words()
+            elif kind == "error":
+                reason = (event.get("error") or {}).get("message") if isinstance(event.get("error"), dict) else None
+                yield "error", str(reason or "the provider refused the live dictation")[:200]
+                return
+            if (self._committed and self._committed_item in self._done
+                    and all(item in self._done for item in self._order)):
+                yield "final", self.words()
+                return
+
+    async def close(self) -> None:
+        """Close the stream; a bounded session is charged for the audio sent."""
+        if self._closed:
+            return
+        self._closed = True
+        try:
+            await self._link.close()
+        finally:
+            if self._token is not None:
+                self._budget.settle(self._token, SimpleNamespace(
+                    usage={"type": "duration", "seconds": round(self.seconds, 3)}))
+
+
 class OpenAIModelAdapter:
     def __init__(self, config: ModelConfig, client: Any | None = None,
                  call_budget: CallBudget | SessionCallBudget | None = None) -> None:
@@ -228,6 +333,44 @@ class OpenAIModelAdapter:
         return Transcription(text=text, provider=self.provider, model=self._audio_model,
                              latency_ms=int((time.perf_counter() - started) * 1000), retries=retries,
                              languages=tuple(codes), usage=usage)
+
+    async def live_transcription(self, *, prompt: str = "", minutes: int = 6, connect=None) -> LiveTranscription:
+        """Live words while an advocate dictates (owner decision, 15 Oct 2026: only for an
+        advocate who turned them on). Audio leaves only on a binding made for
+        transcription, under the advocate's permission, checked before connecting. A
+        bounded development session reserves `minutes` of audio and is charged for the
+        audio actually sent."""
+        if self._audio_model is None or self._before_dispatch is None:
+            raise ModelPermissionRefused("Audio is sent only to transcribe an advocate's voice note or dictation.")
+        if isinstance(self._call_budget, SessionCallBudget):
+            budget = self._call_budget.for_audio(self._audio_model, minutes=minutes)
+        elif self._call_budget is not None:
+            raise ConfigurationError("This bounded evaluation does not authorise speech transcription.")
+        else:
+            budget = None
+        self._before_dispatch()
+        if connect is None:
+            from websockets.asyncio.client import connect
+        base = str(getattr(self._client, "base_url", None) or "https://api.openai.com/v1").rstrip("/")
+        uri = "ws" + base.removeprefix("http") + "/realtime?intent=transcription"
+        context = None
+        if uri.startswith("wss:") and sys.platform == "win32":
+            import truststore
+            context = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        token = budget.reserve(self._audio_model) if budget else None
+        try:
+            link = await connect(uri, additional_headers={"Authorization": f"Bearer {self._client.api_key}"},
+                                 proxy=None, max_size=1 << 22, **({"ssl": context} if context else {}))
+            await link.send(json.dumps({"type": "session.update", "session": {
+                "type": "transcription", "audio": {"input": {
+                    "format": {"type": "audio/pcm", "rate": LiveTranscription.RATE},
+                    "transcription": {"model": self._audio_model, **({"prompt": prompt} if prompt else {})},
+                    "turn_detection": None}}}}))
+        except Exception as exc:  # noqa: BLE001 -- any failure to open is the provider being unavailable
+            if token is not None:
+                budget.settle(token, SimpleNamespace(usage={"type": "duration", "seconds": 0}))
+            raise ProviderUnavailable(f"Live transcription could not start ({type(exc).__name__}).") from exc
+        return LiveTranscription(link, model=self._audio_model, minutes=minutes, budget=budget, token=token)
 
     # ------------------------------------------------------------- port ---
     @property

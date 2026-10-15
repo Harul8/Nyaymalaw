@@ -348,16 +348,18 @@ class SessionCallBudget:
                           require_returned_model=True, pricing=pricing,
                           input_token_bound=incoming, output_token_bound=limit), limit
 
-    def for_audio(self, model: str, audio_bytes: int) -> AudioCallBudget:
-        """A speech call on this session's ledger. Its duration bound assumes no less
-        than 32 kbit/s (4,000 bytes a second), and never less than ten minutes."""
+    def for_audio(self, model: str, audio_bytes: int | None = None, *, minutes: int | None = None) -> AudioCallBudget:
+        """A speech call on this session's ledger. A recording's duration bound assumes
+        no less than 32 kbit/s (4,000 bytes a second), and never less than ten minutes;
+        a live stream states its own limit in minutes."""
         from nm.shared.model_config import AUDIO_PRICE_PER_MINUTE
 
         if model not in AUDIO_PRICE_PER_MINUTE:
             raise ConfigurationError("This bounded session has no verified price for that speech model.")
-        if type(audio_bytes) is not int or audio_bytes <= 0:
-            raise ConfigurationError("An audio call needs its recording's size.")
-        minutes = max(10, -(-audio_bytes // (4_000 * 60)))
+        if minutes is None:
+            if type(audio_bytes) is not int or audio_bytes <= 0:
+                raise ConfigurationError("An audio call needs its recording's size.")
+            minutes = max(10, -(-audio_bytes // (4_000 * 60)))
         return AudioCallBudget(self.path, self.maximum_usd, model=model,
                                per_minute=AUDIO_PRICE_PER_MINUTE[model], minutes_bound=minutes)
 

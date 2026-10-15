@@ -125,6 +125,11 @@ class Application:
         return self._model_for(advocate_id, session_current=session_current,
                                audio_model=self.transcription_model)
 
+    def live_dictation_reader(self, advocate_id, *, session_current):
+        """The live speech model, for an advocate who turned live words on."""
+        return self._model_for(advocate_id, session_current=session_current,
+                               audio_model=self.live_transcription_model)
+
     def run_turn(self, *, advocate_id, session_current, document_refs=(), **request):
         from nm.core_engine.turn import process
 

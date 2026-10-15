@@ -152,6 +152,12 @@ class PolicedModel:
         self._permit(len(audio) if isinstance(audio, bytes) else 0)
         return self.inner.transcribe(audio, **request)
 
+    async def live_transcription(self, **request):
+        """Live dictation audio leaves as it is spoken (owner decision, 15 Oct 2026): the
+        stream is policed once, before it opens; its length is not known in advance."""
+        self._permit(0)
+        return await self.inner.live_transcription(**request)
+
     def embed(self, texts: tuple[str, ...]):
         """POLICED, THOUGH `TracedModel` DELIBERATELY DOES NOT TRACE IT.
 

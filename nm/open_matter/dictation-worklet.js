@@ -4,13 +4,13 @@
  * processor 128 samples at a time -- 8 ms, which would be 125 messages a second
  * on the socket -- so they are gathered into ~100 ms frames first.
  *
- * THE RATE IS THE CONTEXT'S. The page opens the audio context at 16 kHz, the
- * rate the model is built for, so nothing is resampled here or on the server.
+ * THE RATE IS THE CONTEXT'S. The page opens the audio context at 24 kHz, the
+ * rate the live model takes, so nothing is resampled here or on the server.
  *
  * NOTHING IS KEPT. Each frame is posted to the page and the buffer reused; this
  * processor holds at most a tenth of a second of the advocate's voice.
  */
-const FRAME_SAMPLES = 1600;
+const FRAME_SAMPLES = 2400;
 
 class DictationProcessor extends AudioWorkletProcessor {
   constructor() {

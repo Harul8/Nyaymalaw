@@ -3868,12 +3868,16 @@ $('attach-files').addEventListener('change', () => {
 // decisions, 15 Oct 2026, replacing the earlier on-this-machine model) and the words
 // come back INTO THE BRIEF BOX, where the advocate reads and corrects them before
 // sending. Nothing is sent by itself, and the recording is not kept: a voice note
-// meant to be kept goes through the plus menu instead. Live words (F-C-03) need a
-// live speech service, which this installation does not run at present.
+// meant to be kept goes through the plus menu instead. Live words (F-C-03) come from
+// GPT Live Transcribe, only for an advocate who turned them on in their Dictation
+// setting (owner decision, 15 Oct 2026); their final words then replace the
+// recording's transcription, which is used only if the live words do not finish.
 const DICTATION_LIMIT_MS = 5 * 60 * 1000;
-//: F-C-03. The rate the live speech model is built for. The audio context is
+//: F-C-03. The rate the live speech model takes (24 kHz). The audio context is
 //: opened at it, so nothing is resampled on the way to the model.
-const LIVE_SAMPLE_RATE = 16000;
+const LIVE_SAMPLE_RATE = 24000;
+//: How long stopping waits for the last live words before transcribing the recording.
+const LIVE_FINAL_WAIT_MS = 25000;
 const dictation = {
   recorder: null, stream: null, chunks: [], timer: null, busy: false,
   // THE LIVE HALF (F-C-03): the socket and audio graph feeding it, where the
@@ -3934,23 +3938,27 @@ function showLiveWords(words) {
   }
 }
 
+// The final live words, or null when there are none to use. `finish` asks the server
+// for them; an abandoned dictation just closes, and the server keeps nothing either way.
 function closeLiveWords({ finish = false } = {}) {
   const live = dictation.live;
   dictation.live = null;
-  if (!live) return;
+  if (!live) return Promise.resolve(null);
   try {
     if (live.node) live.node.port.onmessage = null;
     if (live.node) live.node.disconnect();
     if (live.source) live.source.disconnect();
     if (live.silence) live.silence.disconnect();
-    // `finish` asks the server for the last words; an abandoned dictation just
-    // closes, and the server keeps nothing either way.
-    if (live.socket.readyState === WebSocket.OPEN) {
-      if (finish) live.socket.send('done');
-      else live.socket.close();
-    }
     if (live.context.state !== 'closed') live.context.close();
-  } catch { /* a socket or graph already gone needs no closing */ }
+  } catch { /* a graph already gone needs no closing */ }
+  const shut = (words) => {
+    try { live.socket.close(); } catch { /* already closed */ }
+    return words;
+  };
+  if (!finish || live.socket.readyState !== WebSocket.OPEN) return Promise.resolve(shut(null));
+  live.socket.send('done');
+  const late = new Promise((resolve) => setTimeout(() => resolve(null), LIVE_FINAL_WAIT_MS));
+  return Promise.race([live.final, late]).then(shut);
 }
 
 // THE MICROPHONE, STRAIGHT TO THE LIVE MODEL. The audio graph is NOT connected
@@ -3983,18 +3991,24 @@ async function openLiveWords(stream, session) {
   source.connect(node);
   node.connect(silence);
   silence.connect(context.destination);
-  dictation.live = { context, socket, node, source, silence };
+  let settle;
+  const final = new Promise((resolve) => { settle = resolve; });
+  dictation.live = { context, socket, node, source, silence, final };
   socket.addEventListener('message', (ev) => {
     let heard;
     try { heard = JSON.parse(ev.data); } catch { return; }
     if (heard.live === false) {
-      sayDictation(`${heard.why} Listening.`);
+      sayDictation(`${heard.why} Listening; the words will appear when you stop.`);
+      settle(null);
       return;
     }
     if (typeof heard.words === 'string') showLiveWords(heard.words);
+    if ('final' in heard) settle(typeof heard.final === 'string' ? heard.final : null);
   });
+  socket.addEventListener('close', () => settle(null));
   socket.addEventListener('error', () => {
     sayDictation('Listening. The words will appear when you stop.');
+    settle(null);
   });
 }
 
@@ -4030,15 +4044,30 @@ async function startDictation() {
   recorder.addEventListener('dataavailable', (ev) => {
     if (ev.data.size) dictation.chunks.push(ev.data);
   });
-  recorder.addEventListener('stop', () => {
+  recorder.addEventListener('stop', async () => {
     const blob = new Blob(dictation.chunks, { type: recorder.mimeType || 'audio/webm' });
     dictation.chunks = [];
     dictation.recorder = null;
-    closeLiveWords({ finish: !recorder.discard });
+    const wasLive = Boolean(dictation.live);
+    const heard = closeLiveWords({ finish: !recorder.discard });
     releaseMicrophone();
     $('dictate').setAttribute('aria-pressed', 'false');
     $('dictate').classList.remove('recording');
     if (recorder.discard || session !== state.sessionGeneration) return;
+    if (wasLive) {
+      // The live words' own final text, when they finished; otherwise the recording.
+      dictation.busy = true;
+      $('dictate').disabled = true;
+      sayDictation('Finishing your words…');
+      const words = await heard;
+      dictation.busy = false;
+      $('dictate').disabled = false;
+      if (session !== state.sessionGeneration) return;
+      if (typeof words === 'string') {
+        addDictated(words);
+        return;
+      }
+    }
     if (!blob.size) {
       sayDictation('No audio was captured. Nothing was transcribed.');
       return;
@@ -4076,17 +4105,7 @@ async function transcribeDictation(blob, session) {
       body: blob,
     });
     if (session !== state.sessionGeneration) return;
-    const words = (heard.text || '').trim();
-    if (!words) {
-      sayDictation('No words were recognised. Nothing was added; try again closer to the microphone.');
-      replaceProvisional('');
-      return;
-    }
-    // THE ACCURATE TEXT REPLACES THE LIVE WORDS it was standing in for, and is
-    // inserted at the caret when those are no longer ours to replace.
-    if (!replaceProvisional(words)) insertIntoBrief(words);
-    dictation.ours = false;
-    sayDictation('Added to your brief; check it before sending.');
+    addDictated(heard.text);
   } catch (e) {
     if (e.obsolete || session !== state.sessionGeneration) return;
     sayDictation(`Your words were not added: ${e.message}`);
@@ -4094,6 +4113,20 @@ async function transcribeDictation(blob, session) {
     dictation.busy = false;
     $('dictate').disabled = false;
   }
+}
+
+// THE FINAL TEXT REPLACES THE LIVE WORDS it was standing in for, and is inserted at
+// the caret when those are no longer ours to replace.
+function addDictated(text) {
+  const words = (text || '').trim();
+  if (!words) {
+    sayDictation('No words were recognised. Nothing was added; try again closer to the microphone.');
+    replaceProvisional('');
+    return;
+  }
+  if (!replaceProvisional(words)) insertIntoBrief(words);
+  dictation.ours = false;
+  sayDictation('Added to your brief; check it before sending.');
 }
 
 // AT THE CURSOR, with a space either side where one is missing, so dictation

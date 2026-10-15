@@ -270,6 +270,11 @@ class TracedModel:
         kept by its own record, with the call's receipt."""
         return self.inner.transcribe(audio, **request)
 
+    async def live_transcription(self, **request):
+        """NOT TRACED, like `transcribe`: live audio is not text a trace can keep, and the
+        words go back into the advocate's message box for them to check."""
+        return await self.inner.live_transcription(**request)
+
     def embed(self, texts: tuple[str, ...]) -> EmbeddingResult:
         """NOT TRACED, and that is a decision rather than an omission.
 
