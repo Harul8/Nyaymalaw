@@ -1,6 +1,8 @@
 # Limitation scenarios: draft for the owner's confirmation
 
-**Status:** draft, 15 October 2026. Item 9 (SEQ.7), slice A4. These scenarios become the passing standard for the limitation calculation only after the owner, or an advocate the owner names, confirms or corrects each one.
+**Status:** 15 October 2026. Item 9 (SEQ.7), slice A4. The owner has ruled on the open points (section 3). The scenarios become the passing standard once the owner, or an advocate the owner names, has read them; any correction updates the tests.
+
+**Governing principle (owner, 15 Oct 2026):** the Acts' own words decide which event counts and which period applies. Each answer quotes those words and shows its reasoning; code does only the arithmetic and checks that every quotation is exact. The owner's rulings below apply only where an Act is silent, and the answer says when it applies one.
 
 **How to review:** for each scenario, reply *confirm*, or give the correction and its reason. The counting rules (section 1) matter as much as the dates: the code will apply them to every case.
 
@@ -14,8 +16,8 @@
 |---|------|-----------|----------------|
 | R1 | Day periods: the starting day is left out, so the last day is the starting date plus the number of days. | Limitation Act s.12(1): "the day from which such period is to be reckoned, shall be excluded." | |
 | R2 | Month and year periods are calendar months and years. With the starting day left out, the period ends on the same date of the later month or year (Saketh India: three months from 5 February ended on 5 May). | s.12(1); *Saketh India v India Securities* (1999), which also says "A month is to be reckoned according to the British Calendar". | |
-| R3 | **Where that date does not exist** (29 February + 3 years), the period ends on the last day of that month (28 February). | No held text found that settles it. | **Yes: this needs your ruling** (see scenario 6). |
-| R4 | Copy time (appeals): the days from applying for the certified copy to the day it was ready are left out, **counting both days**. Time the court took to prepare the decree before the copy was applied for is not left out. | s.12(2), (3) and the Explanation. | **Yes: the "both days" convention** (scenario 7). |
+| R3 | **Where that date does not exist** (29 February + 3 years), the period ends on the last day of that month (28 February). | No held text settles it; **owner's ruling, 15 Oct 2026**, applied only because the Act is silent. | Ruled. |
+| R4 | Copy time (appeals): the days from applying for the certified copy to the day it was ready are left out, **counting both days**. Time the court took to prepare the decree before the copy was applied for is not left out. | s.12(2), (3) and the Explanation; **owner's ruling, 15 Oct 2026**, on counting both days. | Ruled. |
 | R5 | A written acknowledgment signed before expiry, or a part payment made before expiry and acknowledged in the payer's writing, starts a fresh period from the date it was signed or paid. | ss.18 and 19 (with the proviso to s.19). | |
 | R6 | Delay condonation is never computed: s.5 (appeals and applications, **not suits**, and **not Order XXI applications**) and the proviso to NI Act s.142 are the court's discretion. The answer says whether condonation is even available. | s.5; NI Act s.142(1)(b) proviso. | |
 | R7 | Court closure (s.4) is flagged, never applied: when the last day may be a day the court is closed, the answer says the filing may be made "on the day when the court reopens", and does not guess that day without the court calendar. | s.4 and its Explanation. | |
@@ -61,13 +63,13 @@
 **Advocate says:** "The supplier was bound to deliver by 29 February 2024 and did not."
 **Provision:** Article 55, "When the contract is broken …", three years.
 **Working:** three years from 29 Feb 2024; there is no 29 Feb 2027. Under R3 the last day is **28 Feb 2027 (Sunday)**; the other reading gives 1 Mar 2027 (Monday).
-**Expected (draft):** state **28 Feb 2027** as the safe last day, mention the other reading, and flag s.4 (a Sunday). **Please rule on R3.**
+**Expected:** **28 Feb 2027** (owner's ruling R3, stated as applied because the Act is silent), with s.4 flagged (a Sunday).
 
 ### Scenario 7: first appeal to the High Court, with copy time *(confirm the copy-day convention)*
 **Advocate says:** "The district court's decree is dated 2 June 2026. We applied for the certified copy on 5 June; it was ready on 20 June. When must the appeal to the High Court be filed?"
 **Provisions:** Article 116(a), "to a High Court from any decree or order. | Ninety days | The date of the decree or order."; s.12(2).
 **Working:** 90 days from 2 Jun 2026, that day left out → 31 Aug 2026; copy time 5 to 20 June, both days counted = 16 days → **16 Sep 2026 (Wednesday)**.
-**Expected:** a filing today is **late**. An application under s.5 is available (an appeal); the court decides it. **Please confirm R4.** If the application day is not left out, the date is 15 Sep 2026.
+**Expected:** a filing today is **late**. An application under s.5 is available (an appeal); the court decides it. Copy days counted under R4 (owner's ruling).
 
 ### Scenario 8: appeal to the district court, copy dates unknown
 **Advocate says:** "The junior civil judge's decree is dated 31 January 2026. Can we still appeal?"
@@ -101,7 +103,7 @@
 - One filed **14 Oct 2026** is **in time**.
 - One filed **today (15 Oct)** is **one day late**: cognizance is possible only if the court accepts sufficient cause (s.142 proviso, flagged and not computed).
 
-**Please confirm** that the thirty-day notice limit is met by the date the notice is *given* (sent), not received.
+**Notice:** the answer quotes proviso (b), "by giving a notice, in writing, … within thirty days of the receipt of information", and reasons from those words which date satisfies it (no fixed rule in code). Here the notice was sent on 25 Aug and received on 29 Aug, both before 17 Sep, so it is in time on either reading.
 
 ### Scenario 12: the last day falls on a Sunday
 **Advocate says:** "Decree of the junior civil judge dated 4 September 2026; we have not appealed yet."
@@ -115,9 +117,9 @@
 
 ---
 
-## 3. Points that need your ruling
+## 3. Owner's rulings (15 October 2026)
 
-1. **R3** (scenario 6): when the matching date does not exist, does the period end on the last day of that month (28 Feb), or the next day (1 Mar)?
-2. **R4** (scenario 7): copy time counted from the application day to the ready day, both days included?
-3. **Scenario 11**: notice limit met by the date the notice is sent?
-4. **Anything missing** from the population: for example s.6 (legal disability), s.14 (time in a court without jurisdiction), s.17 (fraud or mistake), or appeals to the Supreme Court. I suggest these are flagged as "may extend; not computed" in the first build.
+1. **R3:** a period whose matching date does not exist ends on the last day of that month (28 February). Applied only where the Act is silent, and the answer says so.
+2. **R4:** copy time is counted from the application day to the ready day, both days included.
+3. **Which event counts** (for example the notice in scenario 11): go by the Act's own words, not fixed rules in code. Applied to every point: the answer quotes and reasons; code does the arithmetic.
+4. **Not computed in the first build:** s.6 (legal disability), s.14 (time in a court without jurisdiction), s.17 (fraud or mistake) and appeals to the Supreme Court. Where the facts suggest one may apply, the answer names it and says it may extend time but is not computed.
