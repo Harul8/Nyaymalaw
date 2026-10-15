@@ -454,7 +454,7 @@ function clearPrivileged() {
   state.matterId = null;
   state.turns = [];
   ['thread', 'rail-body', 'rail-meta', 'matter-board-body', 'matter-board-meta',
-   'search-results', 'history-body',
+   'search-results', 'history-body', 'who-name', 'profile-name', 'profile-email', 'profile-workspace',
    'who-detail', 'professional-approval', 'files-menu', 'search-index', 'search-state', 'history-state']
     .forEach((id) => { const el = $(id); if (el) el.textContent = ''; });
   $('matter-heading').textContent = 'My work';

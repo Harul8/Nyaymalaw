@@ -949,6 +949,10 @@ def cards_shrink(stylesheet):
 
 
 # ---------------------------------------------------------------- F-A-17 ---
+#
+# The sidebar and the person menu (owner's navigation decision on the item 4 screen
+# designs, 15 Oct 2026: a list of matters and each matter's own views, replacing the
+# Home, My work, Legal library and Preparation tabs).
 
 @given("the page", target_fixture="app_page")
 def the_page() -> str:
@@ -960,71 +964,41 @@ def ribbon_html(page: str) -> str:
     return page[start:page.index("</header>", start)]
 
 
-def ribbon_first_row(page: str) -> str:
-    ribbon = ribbon_html(page)
-    return ribbon[ribbon.index('<div class="ribbon-row">'):ribbon.index('<nav class="tabs"')]
-
-
 def pane_html(page: str, name: str) -> str:
     start = page.index(f'<main id="pane-{name}"')
     return page[start:page.index("</main>", start)]
 
 
-@then("the ribbon's first row has the NM logo and Nyaymalaw on the left")
-def ribbon_brand(app_page):
-    row = ribbon_first_row(app_page)
-    brand, account = row.index('<div class="brand">'), row.index('<div class="ribbon-account">')
-    assert brand < account, "the logo is not before the advocate's details"
-    assert re.search(r'<span class="mark">NM</span>\s*<span class="name">Nyaymalaw</span>',
-                     row[brand:account])
+def _rail(page: str) -> str:
+    rail = page[page.index('<aside class="rail" id="rail">'):]
+    return rail[:rail.index("</aside>")]
 
 
-@then("on its right the advocate's name, the active workspace and a person menu button, in "
-      "that order")
-def ribbon_account(app_page):
-    row = ribbon_first_row(app_page)
-    account = row[row.index('<div class="ribbon-account">'):]
-    order = [account.index(marker) for marker in (
-        'id="who-name"', 'id="workspace-context" aria-label="Active workspace"',
-        'id="account-toggle"')]
-    assert order == sorted(order), order
+@then("the sidebar has the NM logo and Nyaymalaw, a New matter button and the list of matters")
+def sidebar_brand_new_and_list(app_page):
+    assert re.search(r'<span class="mark">NM</span>\s*<span class="name">Nyaymalaw</span>', ribbon_html(app_page))
+    rail = _rail(app_page)
+    assert '<button type="button" id="rail-new" class="ghost rail-new">+ New matter</button>' in rail
+    assert 'id="rail-body"' in rail
+
+
+@then("it names the signed-in advocate beside the person menu button")
+def sidebar_names_the_advocate(app_page):
+    ribbon = ribbon_html(app_page)
+    account = ribbon[ribbon.index('<div class="ribbon-account">'):]
+    assert account.index('id="who-name"') < account.index('id="account-toggle"')
     toggle = re.search(r'<button\b[^>]*id="account-toggle"[^>]*>', account).group(0)
     for part in ('type="button"', 'aria-haspopup="true"', 'aria-expanded="false"',
                  'aria-controls="account-panel"'):
         assert part in toggle, part
-    assert 'class="person-icon"' in account and 'class="menu-arrow"' in account
 
 
-@then("the ribbon's tabs are exactly Home, My work, Legal library and Preparation")
-def ribbon_tabs(app_page):
-    ribbon = ribbon_html(app_page)
-    nav = ribbon[ribbon.index('<nav class="tabs" id="tabs"'):]
-    tabs = re.findall(r'<button class="tab[^"]*" data-tab="([a-z]+)"[^>]*>([^<]+)</button>', nav)
-    assert tabs == [("home", "Home"), ("advise", "My work"), ("search", "Legal library"),
-                    ("prepare", "Preparation")], tabs
-
-
-@then("the ribbon is outside every page, and every page scrolls inside itself below it")
-def ribbon_outside_every_page(app_page, stylesheet):
-    ribbon_end = app_page.index("</header>", app_page.index('<header class="masthead"'))
-    panes = re.findall(r'<main id="(pane-[a-z]+)"', app_page)
-    assert len(panes) == 6, panes
-    for pane in panes:
-        assert app_page.index(f'<main id="{pane}"') > ribbon_end, f"{pane} is not below the ribbon"
-    ribbon = declarations(stylesheet, ".masthead")
-    assert "flex: none" in ribbon and "position: fixed" not in ribbon, ribbon
-    body = declarations(stylesheet, "body")
-    assert "flex-direction: column" in body and "100dvh" in body, body
-    assert "min-height: 0" in declarations(stylesheet, "main")
-
-
-@then("moving between pages never hides the ribbon; only the sign-in gate does")
-def ribbon_never_hidden(page_script):
-    hides = [found.start()
-             for found in re.finditer(r"\$\('masthead'\)\.hidden = true", page_script)]
-    gate = page_script.index("function showGate(")
-    assert len(hides) == 1 and gate < hides[0] < page_script.index("\n}\n", gate), hides
-    assert "masthead" not in _function(page_script, "showTab")
+@then("no Home, My work, Legal library or Preparation tab is shown after a sign-in")
+def no_top_tabs(app_page, page_script):
+    assert re.search(r'<nav class="tabs" id="tabs"[^>]*\bhidden>', app_page)
+    assert "$('tabs').hidden" not in page_script and "tabs.hidden" not in page_script
+    show = _function(page_script, "showApplication")
+    assert "showTab('advise');" in show and "showTab('home')" not in show
 
 
 @then("the person menu shows the name, email, active workspace, enrolment and practice, and "
@@ -1041,11 +1015,13 @@ def person_menu_profile(app_page, page_script):
         assert f"$('{field}').textContent" in show, f"{field} is never filled"
 
 
-@then("the person menu has Signed-in devices and Sign out")
+@then("the person menu has Signed-in devices, AI data sharing, Dictation and Sign out")
 def person_menu_actions(app_page):
     panel = app_page[app_page.index('<div id="account-panel"'):app_page.index('<nav class="tabs"')]
-    assert '<button id="devices" type="button" class="ghost">Signed-in devices</button>' in panel
-    assert '<button id="signout" type="button" class="ghost">Sign out</button>' in panel
+    buttons = re.findall(r'<button id="([a-z-]+)" type="button" class="ghost"(?: hidden)?>([^<]+)</button>', panel)
+    shown = [(id_, label) for id_, label in buttons if id_ != "advocate-preferences"]
+    assert shown == [("devices", "Signed-in devices"), ("ai-sharing", "AI data sharing"),
+                     ("dictation-setting", "Dictation"), ("signout", "Sign out")], buttons
 
 
 @then("the menu opens from its button and closes on Escape, on a click elsewhere, and when "
@@ -1059,40 +1035,6 @@ def person_menu_behaviour(page_script):
     assert "setAccountMenu(false);" in _function(page_script, "clearPrivileged")
 
 
-@then("Case file and History are not tabs")
-def case_file_and_history_are_not_tabs(app_page):
-    ribbon = ribbon_html(app_page)
-    for name in ("casefile", "history"):
-        assert f'data-tab="{name}"' not in ribbon, name
-
-
-@then("the library availability line is on the Legal library page and not in the ribbon")
-def health_on_the_library_page(app_page):
-    assert 'id="health"' not in ribbon_html(app_page)
-    assert '<div class="health" id="health" role="status">' in pane_html(app_page, "search")
-
-
-@then("at 820 px wide or narrower the name and workspace move into the person menu")
-def phone_name_in_the_menu(app_page, stylesheet):
-    phone = media_blocks(stylesheet, PHONE)
-    assert "display: none" in declarations(
-        phone, ".ribbon-account > .who-name, .ribbon-account > .workspace-context")
-    panel = app_page[app_page.index('<div id="account-panel"'):]
-    assert 'id="profile-name"' in panel and 'id="profile-workspace"' in panel
-
-
-@then("the tabs stay on one row that scrolls inside the ribbon")
-def phone_tabs_scroll(stylesheet):
-    tabs = declarations(media_blocks(stylesheet, PHONE), ".tabs")
-    assert "flex-wrap: nowrap" in tabs and "overflow-x: auto" in tabs, tabs
-
-
-@then("the Matters button is inside My work")
-def matters_button_in_my_work(app_page):
-    assert 'id="matters-toggle"' in pane_html(app_page, "advise")
-    assert 'id="matters-toggle"' not in ribbon_html(app_page)
-
-
 @then("the name shown is the account's own name, or its email when it has none")
 def name_from_the_account(page_script):
     show = _function(page_script, "showApplication")
@@ -1103,61 +1045,43 @@ def name_from_the_account(page_script):
 
 
 @then("ending the session clears the name, the workspace and every profile detail")
-def session_end_clears_the_ribbon(page_script):
+def session_end_clears_the_profile(page_script):
     clear = _function(page_script, "clearPrivileged")
-    assert "['who-name', 'workspace-name', 'profile-name', 'profile-email', " \
-        "'profile-workspace']" in clear
-    for detail in ("'who-detail'", "'professional-approval'"):
+    for detail in ("'who-name'", "'profile-name'", "'profile-email'", "'profile-workspace'",
+                   "'who-detail'", "'professional-approval'"):
         assert detail in clear, detail
 
 
+@then("at 820 px wide or narrower a Matters button opens the list of matters")
+def phone_matters_button(app_page, stylesheet):
+    toggle = re.search(r'<button id="matters-toggle"[^>]*>\s*Matters</button>', app_page)
+    assert toggle and 'aria-controls="rail"' in toggle.group(0)
+    phone = media_blocks(stylesheet, PHONE)
+    assert ".workspace-navigation" in phone and "show-rail .rail" in phone
+    script = _asset("app.js")
+    assert "pane.classList.toggle('show-rail', open);" in _function(script, "toggleMatters")
+
+
 # ---------------------------------------------------------------- F-A-18 ---
+#
+# No Home page: a sign-in opens a new matter beside the list (owner, 15 Oct 2026).
 
-HOME_WORDS = ("Nyaymalaw is a legal research and matter workspace for advocates practising "
-              "Telangana and Union of India law.",
-              "Every answer shows the Act, section or judgment it rests on.")
-
-
-@then(parsers.parse('the home page says "{words}"'))
-def home_says(app_page, words):
-    assert words in visible_text(pane_html(app_page, "home"))
-
-
-@then(parsers.parse('the home page has one button, "{label}", and nothing else'))
-def home_has_one_button(app_page, label):
-    home = pane_html(app_page, "home")
-    assert re.findall(r"<button\b[^>]*>([^<]*)</button>", home) == [label]
-    assert not re.search(r"<(?:a|input|select|textarea|form|nav|img)\b", home), (
-        "the home page carries more than its introduction and button")
-    text = visible_text(home)
-    for piece in (*HOME_WORDS, label):
-        text = text.replace(piece, " ", 1)
-    assert not text.split(), f"the home page says more: {text}"
-
-
-@then("the Start a matter button starts a new matter under Home")
-def home_starts_a_matter(page_script):
-    assert "$('home-start').addEventListener('click', startMatter);" in page_script
-    start = _function(page_script, "startMatter")
-    assert "state.workTab = 'home';" in start and "showTab('advise');" in start
-
-
-@then("a sign-in shows the Home page")
-def sign_in_lands_on_home(page_script):
+@then("a sign-in opens a new matter beside the list of matters")
+def sign_in_opens_a_new_matter(page_script):
     show = _function(page_script, "showApplication")
-    landing = "showTab(draftWaiting ? 'advise' : 'home');"
-    assert landing in show
-    assert "showTab(" not in show.replace(landing, ""), "a second landing decision"
+    for step in ("showTab('advise');", "if (!draftWaiting) startMatter();", "loadMatterList();"):
+        assert step in show, step
+    start = _function(page_script, "startMatter")
+    assert "showTab('advise');" in start and "$('message').focus();" in start
 
 
-@then("a sign-in after a session ended part-way through a brief goes back to that brief in "
-      "My work")
+@then("a sign-in after a session ended part-way through a brief goes back to that brief")
 def sign_in_returns_to_the_draft(page_script):
     show = _function(page_script, "showApplication")
     waiting = show.index("const draftWaiting = Boolean(state.draft && "
                          "state.draft.advocate === advocate.id")
-    assert waiting < show.index("showTab(draftWaiting ? 'advise' : 'home');") \
-        < show.index("if (draftWaiting) {")
+    assert waiting < show.index("if (!draftWaiting) startMatter();") < show.index("if (draftWaiting) {")
+    assert "showThreadBoard(draft.matterId)" in show[show.index("if (draftWaiting) {"):]
     assert "keepDraft();" in _function(page_script, "sessionEnded")
 
 
@@ -1243,91 +1167,64 @@ def in_my_work_straight_away(client, context):
 
 
 # ---------------------------------------------------------------- F-B-02 ---
+#
+# The Board, one of each matter's own views (owner, 15 Oct 2026).
 
-@then("in an open matter the board is the left pane and the chat the right")
-def board_left_chat_right(app_page, stylesheet):
-    advise = pane_html(app_page, "advise")
-    rail = advise.index('<aside class="rail" id="rail">')
-    board = advise.index('id="rail-body"')
-    assert rail < board < advise.index("</aside>") < advise.index('<section class="conversation"')
-    assert 'id="matter-board"' not in advise
-    assert "grid-template-columns: 19rem minmax(0, 1fr)" in declarations(stylesheet, "main")
-
-
-@then("the board is filled from My work's row for this matter, with the same fields as the "
-      "list")
-def board_is_my_works_row(page_script):
-    board = _function(page_script, "showThreadBoard")
-    assert "await api(`/api/matters/${matterId}`)" in board
-    assert "renderMatterBoard" not in board
-    assert "await api('/api/matters')" not in board
-    assert "await api('/api/matters')" in _function(page_script, "showMatterList")
-    assert "matterFields(dl, m);" in _function(page_script, "showMatterList")
-    fields = _function(page_script, "matterFields")
-    # `'posture'` WAS RENAMED `'position'` in 602e3f0's plain-language pass;
-    # the field and what it shows -- blocked, or no unresolved posture -- did
-    # not change.
-    for label in ("'client'", "'against'", "'deadline'", "'last worked'", "'position'"):
-        assert label in fields, label
+@then("a saved conversation offers Conversation, Board, Documents and Research notes, and each "
+      "shows only its own view")
+def each_matter_s_own_views(app_page, page_script):
+    nav = app_page[app_page.index('<nav id="matter-tabs"'):]
+    nav = nav[:nav.index("</nav>")]
+    assert re.findall(r'data-matter-tab="([a-z]+)"[^>]*>([^<]+)</button>', nav) == [
+        ("conversation", "Conversation"), ("board", "Board"), ("documents", "Documents"),
+        ("notes", "Research notes")]
+    sync = _function(page_script, "syncMatterTabs")
+    for line in ("$('matter-tabs').hidden = !chatId;", "$('chat-board').hidden = tab !== 'board';",
+                 "$('chat-documents').hidden = tab !== 'documents';", "$('chat-notes').hidden = tab !== 'notes';",
+                 "$('thread').hidden = tab !== 'conversation';"):
+        assert line in sync, line
 
 
-@then("the board is read again after every message")
-def board_after_every_message(page_script):
-    assert "renderDisputeBoard(body, data.agenda, data.proposed_disputes);" in _function(
-        page_script, "showThreadBoard")
-    assert "await showThreadBoard(state.matterId, {" in _function(page_script, "deliver")
+@then("the Board is read from the server for this conversation when it is chosen")
+def board_from_the_server(page_script):
+    assert "if (state.matterTab === 'board') loadChatBoard();" in page_script
+    assert "await api(`/api/chats/${encodeURIComponent(chatId)}/board`)" in _function(page_script, "loadChatBoard")
 
 
-@then("a board that cannot be read says so rather than showing an empty one")
+@then("a Board that cannot be read says so rather than showing an empty one")
 def unreadable_board_says_so(page_script):
-    assert "showOpeningBoardFailure(matterId," in _function(page_script, "showThreadBoard")
-    assert _function(page_script, "renderDisputeBoard").count(
-        "stateBlock('unbuildable'") == 3
-
-
-@then("the issues recorded on the matter are listed on the board under its details")
-def issues_on_the_board(app_page, page_script):
-    rail = app_page[app_page.index('<aside class="rail" id="rail">'):]
-    rail = rail[:rail.index("</aside>")]
-    assert 'id="matter-board"' not in rail
-    assert rail.index('id="rail-meta"') < rail.index('id="rail-body"')
-    show = _function(page_script, "showThreadBoard")
-    assert "$('rail-title').textContent = 'Matter board';" in show
-    assert "renderDisputeBoard(body, data.agenda, data.proposed_disputes);" in show
-    board = _function(page_script, "renderDisputeBoard")
-    assert "Array.isArray(agenda?.disputes)" in board
-    assert "Array.isArray(projection?.rows)" in board
-    assert "No disputes identified yet." in board
+    board = _function(page_script, "loadChatBoard")
+    assert "stateBlock('unbuildable', `The board could not be read:" in board
+    assert "not an empty matter" in board
 
 
 # ---------------------------------------------------------------- F-B-03 ---
+#
+# The list of matters replaces My work (owner, 15 Oct 2026).
 
-@then("My work has no new-matter button and no welcome page")
-def my_work_is_only_the_list(app_page, page_script):
-    advise = pane_html(app_page, "advise")
-    for gone in ('id="new-matter"', 'id="welcome"', 'id="welcome-start"'):
-        assert gone not in advise, gone
-    assert "$('new-matter')" not in page_script and "$('welcome" not in page_script
-
-
-@then("choosing the My work tab always shows the list of matters")
-def my_work_tab_lists(page_script, stylesheet):
-    chosen = _function(page_script, "openTab")
-    assert "state.workTab = 'advise';" in chosen and "showMatterList();" in chosen
-    assert "b.addEventListener('click', () => openTab(b.dataset.tab));" in page_script
-    assert "setWorkView('list');" in _function(page_script, "showMatterList")
-    assert "display: none" in declarations(stylesheet, f"{LISTING} .conversation")
+@then("the list of matters is read from the server and lists every saved conversation")
+def list_from_the_server(page_script):
+    load = _function(page_script, "loadMatterList")
+    assert "data = await api('/api/work');" in load
+    assert "data.chats.map((chat) =>" in load and "row.dataset.chatId = chat.chat_id;" in load
 
 
-@then("opening a matter shows its board and restores its conversation, with My work still "
-      "the marked tab")
-def opening_a_matter_resumes_it(page_script):
-    assert "row.onclick = () => showThreadBoard(m.matter_id);" in _function(
-        page_script, "showMatterList")
-    show = _function(page_script, "showThreadBoard")
-    assert "setWorkView('matter');" in show
-    assert "if (restore && !(await restoreConversation(matterId, generation))) return;" in show
-    assert "workTab" not in show, "opening a matter must not move it to another tab"
+@then("the open conversation is highlighted in the list")
+def open_conversation_highlighted(page_script):
+    select = _function(page_script, "selectMatterRow")
+    assert "row.dataset.chatId === chatId" in select and "row.classList.toggle('selected', selected);" in select
+
+
+@then("a list that cannot be read says so rather than looking empty")
+def unreadable_list_says_so(page_script):
+    load = _function(page_script, "loadMatterList")
+    assert "This is a failure to " in load and "not a statement that you have no matters" in load
+
+
+@then("choosing a conversation in the list restores it")
+def choosing_a_conversation_restores_it(page_script):
+    load = _function(page_script, "loadMatterList")
+    assert "const selection = restorePendingChat(chat.chat_id);" in load and "row.onclick = open;" in load
 
 
 def _frontend_file(name: str) -> str:

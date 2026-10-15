@@ -1,19 +1,13 @@
 # GENERATED from docs/Nyaymalaw_Implementation_Plan.xlsx, row F-B-02, column "Executable scenarios (Gherkin)".
 # Edit the sheet, then run `python assurance/control_plane/plan_scenarios.py --write`.
-Feature: F-B-02 The matter board beside the chat
+Feature: F-B-02 The Board, one of each matter's own views
 
-  Scenario: The matter board is on the left and the chat on the right
-    Given the page
-    And the page stylesheet
-    Then in an open matter the board is the left pane and the chat the right
-
-  Scenario: The board shows this matter only, from the record My work lists
-    Given the page script
-    Then the board is filled from My work's row for this matter, with the same fields as the list
-    And the board is read again after every message
-    And a board that cannot be read says so rather than showing an empty one
-
-  Scenario: The issues in the matter are on the board
+  Scenario: Each saved conversation has its own Conversation, Board, Documents and Research notes
     Given the page
     And the page script
-    Then the issues recorded on the matter are listed on the board under its details
+    Then a saved conversation offers Conversation, Board, Documents and Research notes, and each shows only its own view
+
+  Scenario: The Board is read from the conversation's saved understanding
+    Given the page script
+    Then the Board is read from the server for this conversation when it is chosen
+    And a Board that cannot be read says so rather than showing an empty one
