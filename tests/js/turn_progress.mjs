@@ -58,8 +58,12 @@ function poller(replies) {
   const asked = [];
   const context = vm.createContext({
     encodeURIComponent,
-    setTimeout: (fn) => { queue.push(fn); return queue.length; },
-    clearTimeout: () => {},
+    // Like the browser's: called as anything's method it throws (found 15 Oct 2026).
+    setTimeout: function (fn) {
+      if (this !== undefined) throw new TypeError('Illegal invocation');
+      queue.push(fn); return queue.length;
+    },
+    clearTimeout: function () { if (this !== undefined) throw new TypeError('Illegal invocation'); },
     repaint: () => {},
     api: async (path) => { asked.push(path); return replies.shift(); },
   });

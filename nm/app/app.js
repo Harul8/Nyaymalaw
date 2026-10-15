@@ -2959,10 +2959,11 @@ const PROGRESS_EVERY_MS = 2000;
 function watchProgress(entry, onFinished) {
   let stopped = false;
   let timer = null;
-  const timers = typeof setTimeout === 'function' ? { set: setTimeout, clear: clearTimeout } : null;
+  // The browser's timers are called directly: invoked as an object's method they
+  // throw "Illegal invocation" and every send failed (found 15 Oct 2026).
   const stop = () => {
     stopped = true;
-    if (timer !== null && timers) timers.clear(timer);
+    if (timer !== null) clearTimeout(timer);
   };
   async function poll() {
     if (stopped) return;
@@ -2977,9 +2978,9 @@ function watchProgress(entry, onFinished) {
       // Progress is auxiliary: the send or the saved conversation still decides.
       if (onFinished || error?.status === 401) { stop(); return; }
     }
-    if (!stopped && timers) timer = timers.set(poll, PROGRESS_EVERY_MS);
+    if (!stopped) timer = setTimeout(poll, PROGRESS_EVERY_MS);
   }
-  if (timers) timer = timers.set(poll, onFinished ? 0 : PROGRESS_EVERY_MS);
+  timer = setTimeout(poll, onFinished ? 0 : PROGRESS_EVERY_MS);
   return { stop };
 }
 
