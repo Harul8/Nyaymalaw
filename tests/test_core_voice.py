@@ -123,10 +123,11 @@ def test_size_limits_differ_for_recordings_and_documents(desk, monkeypatch):
         desk.receive(ADVOCATE, "clip.mp4", b"\x00\x00\x00\x20ftypisom" + b"\x00" * 20)
 
 
-def adapter():
+def adapter(languages=("en",)):
     calls = []
     client = SimpleNamespace(audio=SimpleNamespace(transcriptions=SimpleNamespace(
-        create=lambda **kwargs: calls.append(kwargs) or SimpleNamespace(text=SAID, usage=None, languages=["en"]))))
+        create=lambda **kwargs: calls.append(kwargs) or SimpleNamespace(text=SAID, usage=None,
+                                                                         languages=list(languages)))))
     config = ModelConfig({Tier.ROUTINE: TierConfig(Tier.ROUTINE, "openai", "gpt-6-luna", "unused", None)})
     return OpenAIModelAdapter(config, client=client), calls
 
@@ -152,6 +153,14 @@ def test_audio_leaves_only_on_a_binding_made_for_transcription_with_permission_c
         permit=lambda sink, provider, classes, size_bytes: measured.append(size_bytes)))
     policed.transcribe(wav(), file_name="note.wav", media_type="audio/wav")
     assert measured == [len(wav())]
+
+
+def test_the_languages_heard_are_kept_as_codes_whatever_shape_the_provider_gives():
+    # Measured live, 15 Oct 2026: the provider returns objects carrying a code.
+    port, _ = adapter(languages=(SimpleNamespace(code="en"), {"code": "hi"}, "te", SimpleNamespace(code=" ")))
+    heard = port.for_matter_text(lambda: None, audio_model="gpt-transcribe").transcribe(
+        wav(), file_name="note.wav", media_type="audio/wav")
+    assert heard.languages == ("en", "hi", "te")
 
 
 def test_dictation_returns_the_words_and_keeps_nothing(served, monkeypatch, tmp_path):

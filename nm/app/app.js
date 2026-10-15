@@ -2932,8 +2932,8 @@ function renderChatDocuments(listing) {
     return [stateBlock('empty', 'No documents have been sent in this matter yet. '
       + 'Attach them with the + under your message.')];
   }
-  const out = [make('p', 'board-lede', 'Each page as it was read. A page the AI read from a scan '
-    + 'is marked; check it against your original where it matters.')];
+  const out = [make('p', 'board-lede', 'Each page as it was read and each recording as it was transcribed. '
+    + 'What the AI read or heard is marked; check it against your original where it matters.')];
   for (const turn of sent) {
     for (const document_ of turn.documents) {
       const card = make('article', 'board-card document-card');

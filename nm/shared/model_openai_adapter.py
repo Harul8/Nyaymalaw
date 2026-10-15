@@ -211,9 +211,16 @@ class OpenAIModelAdapter:
         usage = usage.model_dump() if hasattr(usage, "model_dump") else dict(usage or {})
         languages = (getattr(response, "languages", None)
                      or (getattr(response, "model_extra", None) or {}).get("languages"))
+        # Each language arrives as a code, or as an object or mapping that carries one.
+        codes = []
+        for language in languages or ():
+            code = (language.get("code") if isinstance(language, Mapping)
+                    else getattr(language, "code", language))
+            if isinstance(code, str) and code.strip():
+                codes.append(code.strip())
         return Transcription(text=text, provider=self.provider, model=self._audio_model,
                              latency_ms=int((time.perf_counter() - started) * 1000), retries=retries,
-                             languages=tuple(str(code) for code in languages or ()), usage=usage)
+                             languages=tuple(codes), usage=usage)
 
     # ------------------------------------------------------------- port ---
     @property
