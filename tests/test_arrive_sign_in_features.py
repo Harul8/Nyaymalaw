@@ -24,6 +24,7 @@ import json
 import re
 from datetime import datetime, timedelta
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from fastapi.testclient import TestClient
@@ -1402,55 +1403,98 @@ def the_matters_records_open_from_the_icon(page_script):
 
 
 # ================================ C. Take the brief ===========================
+#
+# Rewritten 16 Oct 2026 to the owner's decisions of 15 Oct 2026 (F-C-01 to F-C-03):
+# attached files are checked and read, dictation goes to GPT Transcribe, and live
+# words come from GPT Live Transcribe only for an advocate who turns them on.
+
+def _asset(name: str) -> str:
+    """A browser asset's source, found through the layout's closed asset list."""
+    layout = json.loads((ROOT / "nm" / "source_layout.json").read_text(encoding="utf8"))
+    return (ROOT / layout["browser_assets"][name]).read_text(encoding="utf8")
+
+
+def _wav(seconds: float = 0.2) -> bytes:
+    """A short silent 16-bit mono WAV recording."""
+    import struct
+
+    frames = b"\x00\x00" * int(16000 * seconds)
+    return (b"RIFF" + struct.pack("<I", 36 + len(frames)) + b"WAVEfmt "
+            + struct.pack("<IHHIIHH", 16, 1, 1, 16000, 32000, 2, 16) + b"data"
+            + struct.pack("<I", len(frames)) + frames)
+
+
+def _nothing_kept(client, data: bytes) -> None:
+    for path in client.directory._root.rglob("*"):
+        if path.is_file():
+            assert data not in path.read_bytes(), path
+
 
 # ---------------------------------------------------------------- F-C-01 ---
 
-@then("under the brief a plus button opens Upload documents, Upload photos, audio or video, "
-      "and Record a voice note to keep")
+@then("under the brief a plus button offers Attach documents, photos or recordings, and Record a voice note")
 def plus_button_under_the_brief(app_page, page_script):
     composer = _composer(app_page)
     assert composer.index('id="message"') < composer.index('id="plus-toggle"')
     items = re.findall(
         r'<button type="button" role="menuitem" id="(plus-[a-z]+)">([^<]+)</button>', composer)
-    # Documents, photos and recordings are attached to the message and read or
-    # transcribed, and a voice note is recorded here (owner decisions, 15 Oct 2026).
     assert items == [("plus-attach", "Attach documents, photos or recordings"),
                      ("plus-record", "Record a voice note")], items
     assert "$('plus-panel').hidden = !open;" in _function(page_script, "setPlusMenu")
 
 
-@then("each opens the original-material window, which keeps what it receives sealed and unread")
-def plus_items_open_the_materials_window():
-    materials = _frontend_file("intake-materials.js")
-    for kind in ("documents", "media", "voice"):
-        assert f"$('plus-{kind}').addEventListener('click', () => openFor('{kind}'));" \
-            in materials, kind
-    assert "They are not scanned" in materials
-
-
 @then("there is no files bar above the chat")
-def no_files_bar():
-    materials = _frontend_file("intake-materials.js")
-    assert "materials-entry" not in materials and "$('workspace-focus').after(" not in materials
+def no_files_bar(app_page):
+    materials = _asset("intake-materials.js")
+    assert "materials-entry" not in app_page and "materials-entry" not in materials
+    assert "$('workspace-focus').after(" not in materials
+    assert "Add files or record a voice note" not in app_page
+
+
+class _ClamAV:
+    """Stands in for the malware check: it flags any file carrying the marker."""
+
+    name = "recorded-check"
+
+    def check(self, data):
+        if b"FLAGGED" in data:
+            return "held", "ClamAV reported a threat in this file (Eicar-Test-Signature)"
+        return "clear", "no threat found by ClamAV"
+
+
+@when("a clean file and a flagged file are attached")
+def attach_clean_and_flagged(client, wired, context, monkeypatch):
+    monkeypatch.setattr(wired.documents, "checker", _ClamAV())
+    for name, data in (("memo.txt", b"Return memo: funds insufficient."), ("bad.txt", b"FLAGGED words")):
+        reply = client.post("/api/documents", content=data, headers={"x-nm-document-name": name})
+        assert reply.status_code == 201, reply.text
+        context[name] = reply.json()
+
+
+@then("the clean file is read and the flagged file is held unread with ClamAV's reason")
+def clean_read_flagged_held(context):
+    clean, flagged = context["memo.txt"], context["bad.txt"]
+    assert (clean["state"], clean["pages_read"]) == ("read", 1)
+    assert (flagged["state"], flagged["pages_read"]) == ("held", 0)
+    assert "Eicar-Test-Signature" in flagged["check"]["reason"]
 
 
 # ---------------------------------------------------------------- F-C-02 ---
 
-AUDIO = b"OggS\x00synthetic-opus-recording"
+class _Hearing:
+    """Stands in for GPT Transcribe, and remembers what it was given."""
 
+    def __init__(self, refuse=None):
+        self.heard, self.refuse = [], refuse
 
-class _Transcriber:
-    """Stands in for the speech model, and remembers what it was given."""
+    def transcribe(self, audio, *, file_name, media_type, prompt=""):
+        from nm.shared.model_port import Transcription
 
-    def __init__(self):
-        self.heard = []
-
-    def transcribe(self, audio, media_type):
-        from nm.open_matter.dictation_contracts import Transcript
-
-        self.heard.append((audio, media_type))
-        return Transcript(text="We act for the plaintiff.", language="en", seconds=2.0,
-                          device="cuda")
+        if self.refuse is not None:
+            raise self.refuse
+        self.heard.append({"audio": audio, "media_type": media_type, "prompt": prompt})
+        return Transcription(text="We act for the plaintiff.", provider="openai", model="gpt-transcribe",
+                             latency_ms=5, retries=0, languages=("en",), usage={})
 
 
 @then("beside the plus button there is a mic button that starts recording and stops on a "
@@ -1465,113 +1509,95 @@ def mic_beside_the_plus(app_page, page_script):
 @then("the words come back into the brief box to be checked, and nothing is sent by itself")
 def words_into_the_brief(page_script):
     transcribe = _function(page_script, "transcribeDictation")
-    assert "insertIntoBrief(words);" in transcribe
-    assert "send(" not in transcribe and "requestSubmit" not in transcribe
+    added = _function(page_script, "addDictated")
+    assert "addDictated(heard.text);" in transcribe
+    assert "if (!replaceProvisional(words)) insertIntoBrief(words);" in added
+    for body in (transcribe, added):
+        assert "send(" not in body and "requestSubmit" not in body
     assert "stopDictation({ discard: true });" in _function(page_script, "clearPrivileged")
 
 
-@given("the dictation service", target_fixture="speech")
-def the_dictation_service(wired, monkeypatch):
-    # `wired`, NEVER an imported `application()`: a step that resolves the
-    # application itself patches whichever one was wired last -- a previous
-    # test's -- and the route then runs the real model. See the fixture.
-    fake = _Transcriber()
-    monkeypatch.setattr(wired.transcriber, "inner", fake)
-    return fake
+@given("the dictation model", target_fixture="speech")
+def the_dictation_model(wired, monkeypatch):
+    hearing, bound = _Hearing(), []
+
+    def reader(advocate_id, *, session_current):
+        bound.append((advocate_id, session_current()))
+        return hearing
+
+    monkeypatch.setattr(wired, "dictation_reader", reader)
+    hearing.bound = bound
+    return hearing
 
 
 @when("an advocate sends a short recording to be transcribed")
 def send_a_recording(client, context):
-    context["response"] = client.post("/api/dictation", content=AUDIO,
-                                      headers={"content-type": "audio/webm"})
+    context["audio"] = _wav()
+    context["response"] = client.post("/api/dictation", content=context["audio"],
+                                      headers={"x-nm-document-name": "dictation.wav"})
 
 
 @then("the words come back and the recording is not stored anywhere")
 def words_back_and_nothing_kept(client, context, speech):
     response = context["response"]
     assert response.status_code == 200, response.text
-    assert response.json() == {"text": "We act for the plaintiff.", "language": "en",
-                               "seconds": 2.0, "device": "cuda", "stored": False}
-    assert speech.heard == [(AUDIO, "audio/webm")]
-    for path in client.directory._root.rglob("*"):
-        if path.is_file():
-            assert AUDIO not in path.read_bytes(), path
+    assert response.json() == {"text": "We act for the plaintiff."}
+    assert [heard["audio"] for heard in speech.heard] == [context["audio"]]
+    _nothing_kept(client, context["audio"])
 
 
-@then("it went through the recorded local speech processor")
-def through_the_local_speech_processor(wired):
-    from nm.shared.egress_contracts import Sink
-    from nm.shared.egress_policy import TRANSCRIPTION_PROCESSOR, egress_policy
+@then("the recording went to GPT Transcribe with the dictation prompt")
+def through_gpt_transcribe(wired, speech):
+    from nm.core_engine import voice
 
-    policed = wired.transcriber
-    assert policed.sink is Sink.TRANSCRIPTION
-    assert policed.processor_id == TRANSCRIPTION_PROCESSOR
-    recorded = egress_policy(ROOT).find(TRANSCRIPTION_PROCESSOR)
-    assert recorded is not None and recorded.region == "in"
-    assert Sink.TRANSCRIPTION in recorded.purposes
+    assert wired.transcription_model == "gpt-transcribe"
+    assert speech.heard[0]["prompt"] == voice.DICTATION_PROMPT and speech.heard[0]["media_type"] == "audio/wav"
+    (_, signed_in), = speech.bound
+    assert signed_in is True
 
 
-@when("the local speech model is not installed and an advocate dictates")
-def dictate_without_the_model(client, wired, context, monkeypatch):
-    import sys
+@when("an advocate who has not accepted AI processing dictates")
+def dictate_without_permission(client, wired, context, monkeypatch):
+    from nm.shared.external_ai_contracts import ModelPermissionRefused
 
-    from nm.open_matter.speech_local_whisper import LocalWhisper
-
-    monkeypatch.setitem(sys.modules, "faster_whisper", None)
-    monkeypatch.setattr(wired.transcriber, "inner", LocalWhisper(model="tiny"))
-    context["response"] = client.post("/api/dictation", content=AUDIO,
-                                      headers={"content-type": "audio/webm"})
+    refusal = ModelPermissionRefused("AI processing needs your permission: enable it in AI data sharing.")
+    monkeypatch.setattr(wired, "dictation_reader", lambda advocate_id, *, session_current: _Hearing(refusal))
+    context["response"] = client.post("/api/dictation", content=_wav(),
+                                      headers={"x-nm-document-name": "dictation.wav"})
 
 
-@then("dictation asks the speech model for English unless the installation sets another language")
-def dictation_asks_for_english():
-    """MEASURED 15 September 2026: left to detect, a few seconds of
-    Indian-accented English came back in Urdu script, and an advocate cannot
-    correct a brief they cannot read."""
-    adapter = _backend_file("adapters/speech/local_whisper.py")
-    assert 'language: str = "en"' in adapter
-    assert 'language=None if wanted in ("", "auto") else wanted,' in adapter
-    assert '"translate" if self.translate else "transcribe"' in adapter
-    wiring = _backend_file("bootstrap/composition.py")
-    assert 'language=settings.get("NM_DICTATION_LANGUAGE") or "en",' in wiring
-
-
-@then("dictation is refused, saying the local speech model is not installed")
-def dictation_refused_not_installed(context):
+@then("dictation is refused, saying AI processing needs their permission")
+def dictation_refused_without_permission(context):
     response = context["response"]
-    assert response.status_code == 503, response.text
-    assert "the local speech model is not installed" in response.json()["detail"]
+    assert response.status_code == 403, response.text
+    assert response.json()["detail"] == {
+        "why": "AI processing needs your permission: enable it in AI data sharing.",
+        "code": "model_permission_required"}
 
 
 # ---------------------------------------------------------------- F-C-03 ---
 
-class _LiveEngine:
-    """Stands in for the live speech model, and remembers what it was fed."""
+@then("dictation opens the live words socket only when the advocate's dictation setting is live")
+def live_words_only_when_turned_on(page_script):
+    start = _function(page_script, "startDictation")
+    assert "live = (await api('/api/account/dictation')).live === true;" in start
+    assert start.index("if (!live ||") < start.index("await openLiveWords(stream, session);")
 
-    def __init__(self, fail=None):
-        self.fed = []
-        self.rate = None
-        self.fail = fail
 
-    def listen(self, sample_rate):
-        if self.fail:
-            raise self.fail
-        self.rate = sample_rate
-        return self
-
-    def hear(self, pcm):
-        self.fed.append(pcm)
-        return " ".join(f"word{number}" for number in range(1, len(self.fed) + 1))
-
-    def close(self):
-        return "word1 word2 and the last one"
+@then("the dictation setting offers GPT Transcribe by default and GPT Live Transcribe")
+def the_dictation_setting(client):
+    app_page = _asset("index.html")
+    dialog = app_page[app_page.index('id="dictation-setting-dialog"'):]
+    dialog = dialog[:dialog.index("</dialog>")]
+    assert "GPT Transcribe</strong> (default)" in dialog and "GPT Live Transcribe</strong>" in dialog
+    setting = client.get("/api/account/dictation").json()
+    assert (setting["live"], setting["model"]) == (False, "gpt-transcribe")
 
 
 @then("the live words come from a socket and are written into the brief box as they arrive")
 def live_words_into_the_brief(app_page, page_script):
-    assert "/ws/dictation" in page_script
     live = _function(page_script, "openLiveWords")
-    assert "new WebSocket(" in live and "showLiveWords(heard.words)" in live
+    assert "/ws/dictation" in live and "new WebSocket(" in live and "showLiveWords(heard.words)" in live
     assert "replaceProvisional((words || '').trim())" in _function(page_script, "showLiveWords")
     assert 'id="message"' in _composer(app_page)
 
@@ -1584,21 +1610,25 @@ def live_words_let_go_on_an_edit(page_script):
     assert "You edited the brief" in _function(page_script, "showLiveWords")
 
 
-@then("the final transcription replaces the live words it stood in for")
+@then("the final live words replace the words they stood in for, or the recording is transcribed if they do "
+      "not finish")
 def final_replaces_the_live_words(page_script):
-    transcribe = _function(page_script, "transcribeDictation")
-    assert "if (!replaceProvisional(words)) insertIntoBrief(words);" in transcribe
+    close = _function(page_script, "closeLiveWords")
+    assert "live.socket.send('done');" in close and "LIVE_FINAL_WAIT_MS" in close
+    stop = page_script[page_script.index("recorder.addEventListener('stop', async () => {"):]
+    stop = stop[:stop.index("\n  });")]
+    assert stop.index("addDictated(words);") < stop.index("transcribeDictation(blob, session);")
 
 
-@then("the audio is sent as 16 kHz mono frames of about a tenth of a second")
+@then("the audio is sent as 24 kHz mono frames of about a tenth of a second")
 def audio_as_the_model_wants_it(page_script):
-    worklet = _frontend_file("dictation-worklet.js")
-    assert "const FRAME_SAMPLES = 1600;" in worklet
-    assert "new Int16Array(FRAME_SAMPLES)" in worklet
-    assert "const LIVE_SAMPLE_RATE = 16000;" in page_script
+    from nm.shared.model_openai_adapter import LiveTranscription
+
+    worklet = _asset("dictation-worklet.js")
+    assert "const FRAME_SAMPLES = 2400;" in worklet and "new Int16Array(FRAME_SAMPLES)" in worklet
+    assert "const LIVE_SAMPLE_RATE = 24000;" in page_script
     assert "new AudioContext({ sampleRate: LIVE_SAMPLE_RATE })" in page_script
-    rate = _backend_file("domain/dictation.py")
-    assert "LIVE_SAMPLE_RATE = 16_000" in rate
+    assert LiveTranscription.RATE == 24000
 
 
 @then("the page does not play the advocate's own voice back")
@@ -1633,65 +1663,94 @@ def socket_refused_from_another_page(client):
             socket.receive_json()
 
 
-@given("the live dictation service", target_fixture="live_speech")
-def the_live_dictation_service(wired, monkeypatch):
-    engine = _LiveEngine()
-    monkeypatch.setattr(wired.live_dictation, "inner", engine)
-    return engine
+@given("an advocate who turned live words on")
+def live_words_turned_on(client):
+    reply = client.post("/api/account/dictation", json={"live": True, "expected_version": 0})
+    assert reply.status_code == 200 and reply.json()["model"] == "gpt-live-transcribe", reply.text
+
+
+class _LiveLink:
+    """The provider's side of a live stream: deltas, then the committed item's words."""
+
+    def __init__(self):
+        self.sent, self.closed = [], False
+
+    async def send(self, message):
+        self.sent.append(json.loads(message))
+
+    def __aiter__(self):
+        return self._events()
+
+    async def _events(self):
+        events = [
+            {"type": "conversation.item.input_audio_transcription.delta", "item_id": "i1", "delta": "word1"},
+            {"type": "conversation.item.input_audio_transcription.delta", "item_id": "i1", "delta": " word2"},
+            {"type": "input_audio_buffer.committed", "item_id": "i1"},
+            {"type": "conversation.item.input_audio_transcription.completed", "item_id": "i1",
+             "transcript": "word1 word2 and the last one"}]
+        for event in events:
+            yield json.dumps(event)
+
+    async def close(self):
+        self.closed = True
+
+
+@given("the live dictation model", target_fixture="live_speech")
+def the_live_dictation_model(wired, monkeypatch):
+    from nm.shared.model_openai_adapter import LiveTranscription
+
+    model = SimpleNamespace(link=_LiveLink(), sessions=[])
+
+    async def live_transcription(**request):
+        session = LiveTranscription(model.link, model="gpt-live-transcribe", minutes=request["minutes"])
+        model.sessions.append(session)
+        return session
+
+    model.live_transcription = live_transcription
+    monkeypatch.setattr(wired, "live_dictation_reader", lambda advocate_id, *, session_current: model)
+    return model
 
 
 @when("the page sends two frames of speech and then stops")
 def send_two_frames(client, context):
-    with client.websocket_connect(
-            "/ws/dictation", headers={"origin": "http://testserver"}) as socket:
-        context["opened"] = socket.receive_json()
-        context["heard"] = []
-        for frame in (b"\x01\x02" * 800, b"\x03\x04" * 800):
+    with client.websocket_connect("/ws/dictation", headers={"origin": "http://testserver"}) as socket:
+        for frame in (b"\x01\x02" * 1200, b"\x03\x04" * 1200):
             socket.send_bytes(frame)
-            context["heard"].append(socket.receive_json())
         socket.send_text("done")
-        context["final"] = socket.receive_json()
+        context["heard"] = []
+        while True:
+            message = socket.receive_json()
+            context["heard"].append(message)
+            if "final" in message:
+                break
 
 
-@then("the words heard so far come back after each frame")
-def words_after_each_frame(context, live_speech):
-    from nm.open_matter.dictation_contracts import LIVE_SAMPLE_RATE
-
-    assert context["opened"] == {"live": True}
-    assert [row["words"] for row in context["heard"]] == ["word1", "word1 word2"]
-    assert live_speech.rate == LIVE_SAMPLE_RATE
-    assert len(live_speech.fed) == 2
+@then("the words heard so far come back as they are heard")
+def words_as_heard(context, live_speech):
+    assert context["heard"][:2] == [{"words": "word1"}, {"words": "word1 word2"}]
+    appended = [event for event in live_speech.link.sent if event["type"] == "input_audio_buffer.append"]
+    assert len(appended) == 2
 
 
 @then("the final words come back when it stops")
 def final_words_on_stop(context):
-    assert context["final"] == {"words": "word1 word2 and the last one", "done": True}
+    assert context["heard"][-1] == {"final": "word1 word2 and the last one"}
 
 
 @then("no audio is stored anywhere")
-def no_live_audio_stored(client, live_speech):
-    for frame in live_speech.fed:
-        for path in client.directory._root.rglob("*"):
-            if path.is_file():
-                assert frame not in path.read_bytes(), path
+def no_live_audio_stored(client):
+    for frame in (b"\x01\x02" * 1200, b"\x03\x04" * 1200):
+        _nothing_kept(client, frame)
 
 
-@when("the live speech model is not downloaded and an advocate dictates")
-def live_model_missing(client, wired, context, monkeypatch, tmp_path):
-    from nm.open_matter.speech_vosk_live import VoskLive
-
-    monkeypatch.setattr(wired.live_dictation, "inner",
-                        VoskLive(model_dir=tmp_path / "no-model-here"))
-    with client.websocket_connect(
-            "/ws/dictation", headers={"origin": "http://testserver"}) as socket:
+@when("an advocate with live words off opens the live dictation socket")
+def live_words_off(client, context):
+    with client.websocket_connect("/ws/dictation", headers={"origin": "http://testserver"}) as socket:
         context["opened"] = socket.receive_json()
 
 
 @then("the socket says the live words are off and the recording goes on")
-def live_words_off_but_recording_goes_on(context, page_script):
-    opened = context["opened"]
-    assert opened["live"] is False
-    assert "not downloaded" in opened["why"] or "not installed" in opened["why"]
-    assert "will appear when you stop" in opened["why"]
-    # The page keeps recording for the final transcription and says so.
-    assert "sayDictation(`${heard.why} Listening.`)" in _function(page_script, "openLiveWords")
+def live_words_off_but_recording_goes_on(context):
+    assert context["opened"] == {"live": False, "why": "Live words are off in your dictation settings."}
+    live = _function(_asset("app.js"), "openLiveWords")
+    assert "Listening; the words will appear when you stop." in live and "settle(null);" in live

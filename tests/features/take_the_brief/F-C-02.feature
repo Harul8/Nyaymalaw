@@ -8,15 +8,12 @@ Feature: F-C-02 Dictate the brief with the mic, transcribed on this installation
     Then beside the plus button there is a mic button that starts recording and stops on a second press
     And the words come back into the brief box to be checked, and nothing is sent by itself
 
-  Scenario: Speech is turned into text on this installation and the recording is not kept
-    Given the dictation service
+  Scenario: Dictation goes to GPT Transcribe and the recording is not kept
+    Given the dictation model
     When an advocate sends a short recording to be transcribed
     Then the words come back and the recording is not stored anywhere
-    And it went through the recorded local speech processor
+    And the recording went to GPT Transcribe with the dictation prompt
 
-  Scenario: Dictation that is not set up says so
-    When the local speech model is not installed and an advocate dictates
-    Then dictation is refused, saying the local speech model is not installed
-
-  Scenario: The words come back in English
-    Then dictation asks the speech model for English unless the installation sets another language
+  Scenario: Dictation without the AI agreement says so
+    When an advocate who has not accepted AI processing dictates
+    Then dictation is refused, saying AI processing needs their permission
