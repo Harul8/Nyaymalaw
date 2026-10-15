@@ -128,7 +128,11 @@ DERIVED_SECTIONS: tuple[str, ...] = (
 #: computed per message and stay NOT ASSESSED -- said so on the summary, never
 #: counted as done -- so a review cannot wait forever on work nothing runs.
 WORKED_SECTIONS: tuple[str, ...] = ("gaps", "authorities")
-assert set(WORKED_SECTIONS) <= set(DERIVED_SECTIONS)
+# RAISED, NOT ASSERTED: `python -O` deletes an assert (BK-17).
+if not set(WORKED_SECTIONS) <= set(DERIVED_SECTIONS):
+    raise ValueError(
+        f"WORKED_SECTIONS names sections that are not derived per thread: "
+        f"{sorted(set(WORKED_SECTIONS) - set(DERIVED_SECTIONS))}")
 
 #: The same, for sections the MATTER owns rather than a thread.
 #:
