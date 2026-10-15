@@ -52,6 +52,7 @@
     "nm.core_engine.conversation": "core",
     "nm.core_engine.documents": "core",
     "nm.core_engine.matter_board": "core",
+    "nm.core_engine.page_reading": "core",
     "nm.core_engine.research": "core",
     "nm.core_engine.response_authorities": "core",
     "nm.core_engine.response_rendering": "core",
@@ -193,7 +194,7 @@
   "expected_roles": {
     "adapters": 29,
     "bootstrap": 6,
-    "core": 63,
+    "core": 64,
     "domain": 70,
     "edge": 8,
     "infrastructure": 1,

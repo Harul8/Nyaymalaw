@@ -14,7 +14,7 @@ import re
 import secrets
 
 from nm.arrive.advocate_contracts import utcnow
-from nm.core_engine import documents
+from nm.core_engine import documents, page_reading
 from nm.core_engine.documents import DocumentRefused
 from nm.open_matter.document_local import DocumentParserDefect, ExtractionRefused
 from nm.open_matter.document_text_port import AdmittedDocument, DocumentFormat, TextState
@@ -65,15 +65,18 @@ class DocumentDesk:
         self.texts.put(where, documents.reference(record), body)
         return record
 
+    def _admitted(self, advocate_id, document_id, fmt, data, sha):
+        admission = admitted(document_id, MediaKind.DOCUMENT, purpose="legal research for the advocate's question",
+                             authority=f"the advocate {advocate_id}", quarantine=Quarantine.RELEASED,
+                             processors=(Processor(self.checker.name, False, "malware check before reading"),))
+        return AdmittedDocument(data, DocumentFormat(fmt), sha, admission)
+
     def _read(self, advocate_id, document_id, fmt, data, sha):
         if fmt == "image":
             return [{"number": 1, "state": "unread", "code": "scanned",
                      "reason": "an image, with no text layer to read here"}], 1, None
-        admission = admitted(document_id, MediaKind.DOCUMENT, purpose="legal research for the advocate's question",
-                             authority=f"the advocate {advocate_id}", quarantine=Quarantine.RELEASED,
-                             processors=(Processor(self.checker.name, False, "malware check before reading"),))
         try:
-            result = self.reader.extract(AdmittedDocument(data, DocumentFormat(fmt), sha, admission))
+            result = self.reader.extract(self._admitted(advocate_id, document_id, fmt, data, sha))
         except (ExtractionRefused, DocumentParserDefect) as exc:
             # A document a parser cannot handle is an expected outcome for uploaded files.
             _log.warning("A document could not be read: %s", type(exc).__name__)
@@ -89,6 +92,44 @@ class DocumentDesk:
                 pages.append({"number": unit.number, "state": "unread", "code": "unreadable",
                               "reason": unit.reason or "this page could not be read"})
         return pages, result.observed_units, (result.reason if result.failure else None)
+
+    def read_scans(self, advocate_id, ref, model):
+        """The document again, with its waiting scanned pages read by the model (owner
+        decision, 15 Oct 2026), stored as a new immutable record; and the calls made."""
+        record = self.load(advocate_id, ref)
+        numbers = documents.needs_transcription(record)
+        if not numbers:
+            return record, []
+        data = self._original(advocate_id, record)
+        images, undrawn = self.reader.page_images(
+            self._admitted(advocate_id, record["document_id"], record["format"], data, record["sha256"]),
+            numbers)
+        read, calls = page_reading.read_pages(model, record["name"], images)
+        for number, reason in undrawn.items():
+            read[number] = {"number": number, "state": "unread", "code": "unreadable", "reason": reason}
+        renewed = documents.receipt(
+            document_id=record["document_id"], name=record["name"], fmt=record["format"],
+            sha256=record["sha256"], size=record["size"], received_at=record["received_at"],
+            check=record["check"], pages=[read.get(page["number"], page) for page in record["pages"]],
+            observed_pages=record["observed_pages"], failure=record["failure"])
+        body = json.dumps(renewed, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+        if len(body) > MAX_DERIVATIVE_BYTES:
+            raise DocumentRefused("This document holds more text than can be kept for one document. "
+                                  "Send the relevant pages instead.")
+        self.texts.put(space(advocate_id), documents.reference(renewed), body)
+        return renewed, calls
+
+    def _original(self, advocate_id, record):
+        """The original bytes from their sealed chunks, only if they are exactly the ones received."""
+        where = space(advocate_id)
+        try:
+            data = b"".join(self.originals.read(where, f"{record['document_id']}-{index}")
+                            for index in range(-(-record["size"] // CHUNK)))
+        except (OSError, ValueError) as exc:
+            raise DocumentRefused("This document's original is not available.") from exc
+        if hashlib.sha256(data).hexdigest() != record["sha256"]:
+            raise DocumentRefused("This document's original could not be verified.")
+        return data
 
     def load(self, advocate_id, ref):
         """The exact record a reference names, from the advocate's own space only."""

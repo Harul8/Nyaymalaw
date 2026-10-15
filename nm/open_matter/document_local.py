@@ -1,6 +1,9 @@
 """Read admitted document bytes locally in a hard-bounded disposable process.
 
 No OCR, network, filesystem extraction, fact admission or quarantine release.
+Pages with no text layer can be drawn as images in the same kind of bounded
+process, for the model to read them (owner decision, 15 Oct 2026); drawing reads
+no text and carries no image metadata over.
 PDF parser limits follow pypdf's documented content-stream warning, with hard
 process memory containment because a compressed input bound cannot bound RAM.
 """
@@ -12,6 +15,7 @@ import logging
 import multiprocessing
 import re
 import traceback
+import warnings
 import zipfile
 import zlib
 from dataclasses import replace
@@ -39,6 +43,11 @@ OPERATION = DOCUMENT_OPERATION
 _WORD = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
 _LOCAL_PARTS = re.compile(r"word/(?:document|header\d+|footer\d+|footnotes|endnotes|comments)\.xml")
 _log = logging.getLogger(__name__)
+#: A drawn page fits within this many pixels on its longer side, as a JPEG.
+PAGE_IMAGE_SIDE = 2000
+PAGE_IMAGE_QUALITY = 85
+#: Time allowed per page drawn, on top of the extraction deadline.
+SECONDS_PER_PAGE = 4.0
 
 
 class ExtractionRefused(ValueError):
@@ -267,12 +276,187 @@ def _worker(document: AdmittedDocument, bounds: ExtractionBounds, connection) ->
         connection.close()
 
 
+def _jpeg(image) -> bytes:
+    from PIL import Image
+
+    if image.mode not in ("RGB", "L"):
+        rgba = image.convert("RGBA")
+        image = Image.new("RGB", rgba.size, "white")
+        image.paste(rgba, mask=rgba.getchannel("A"))
+    image.thumbnail((PAGE_IMAGE_SIDE, PAGE_IMAGE_SIDE))
+    out = io.BytesIO()
+    image.save(out, "JPEG", quality=PAGE_IMAGE_QUALITY)  # no EXIF or other metadata is copied
+    return out.getvalue()
+
+
+def _pdf_pages(data: bytes, numbers: tuple[int, ...]) -> tuple[dict, dict]:
+    import pypdfium2 as pdfium
+
+    images, unread = {}, {}
+    pdf = pdfium.PdfDocument(data)
+    try:
+        count = len(pdf)
+        for number in numbers:
+            if not 1 <= number <= count:
+                unread[number] = "this page is not in the document"
+                continue
+            page = pdf[number - 1]
+            try:
+                width, height = page.get_size()
+                scale = min(200 / 72, PAGE_IMAGE_SIDE / max(width, height, 1.0))
+                bitmap = page.render(scale=scale)
+                try:
+                    images[number] = _jpeg(bitmap.to_pil())
+                finally:
+                    bitmap.close()
+            except pdfium.PdfiumError:
+                unread[number] = "this page could not be drawn as an image"
+            finally:
+                page.close()
+    finally:
+        pdf.close()
+    return images, unread
+
+
+def _image_page(data: bytes) -> tuple[dict, dict]:
+    from PIL import Image, ImageOps
+
+    with Image.open(io.BytesIO(data)) as image:
+        if image.format not in ("PNG", "JPEG"):
+            raise _Unreadable("unsupported", "only PNG and JPEG images are drawn")
+        image.load()
+        return {1: _jpeg(ImageOps.exif_transpose(image))}, {}
+
+
+def _drawing_failure(exc: Exception) -> bool:
+    """Failures a malformed page or image is expected to cause, not programming defects."""
+    import pypdfium2 as pdfium
+    from PIL import Image, UnidentifiedImageError
+
+    return isinstance(exc, (pdfium.PdfiumError, UnidentifiedImageError, Image.DecompressionBombError,
+                            Image.DecompressionBombWarning, OSError, SyntaxError, zlib.error))
+
+
+def _page_worker(document: AdmittedDocument, numbers: tuple[int, ...], bounds: ExtractionBounds,
+                 connection) -> None:
+    logging.disable(logging.CRITICAL)
+    try:
+        job = memory_limit(bounds.memory_bytes)
+        del job  # The native handle remains open until this disposable process exits.
+        from PIL import Image
+
+        # An image claiming more pixels than a page needs is refused, not decoded.
+        Image.MAX_IMAGE_PIXELS = 60_000_000
+        warnings.simplefilter("error", Image.DecompressionBombWarning)
+        drawn = (_pdf_pages(document.data, numbers) if document.format is DocumentFormat.PDF
+                 else _image_page(document.data))
+        connection.send(("pages", drawn))
+    except _Unreadable as exc:
+        connection.send(("failed", exc.reason))
+    except SandboxUnavailable:
+        connection.send(("failed", "hard memory containment is unavailable; nothing was drawn"))
+    except MemoryError:
+        connection.send(("failed", "drawing the pages reached its hard memory bound"))
+    except Exception as exc:  # noqa: BLE001 -- programming failures are surfaced, not hidden.
+        if _drawing_failure(exc):
+            connection.send(("failed", "the pages could not be drawn as images"))
+        else:
+            frames = tuple((frame.filename, frame.lineno, frame.name)
+                           for frame in traceback.extract_tb(exc.__traceback__))
+            connection.send(("defect", (type(exc).__name__, frames)))
+    finally:
+        connection.close()
+
+
+def _bounded(target, args, deadline: float):
+    """Run one job in a disposable process: its message, or ('deadline'|'stopped', None)."""
+    context = multiprocessing.get_context("spawn")
+    incoming, outgoing = context.Pipe(duplex=False)
+    process = context.Process(target=target, args=(*args, outgoing), daemon=True)
+    try:
+        process.start()
+        outgoing.close()
+        if not incoming.poll(deadline):
+            return "deadline", None
+        try:
+            return incoming.recv()
+        except EOFError:
+            return "stopped", None
+    finally:
+        incoming.close()
+        outgoing.close()
+        if process.is_alive():
+            process.terminate()
+        if process.pid is not None:
+            process.join(timeout=1.0)
+            if process.is_alive():
+                process.kill()
+                process.join(timeout=1.0)
+
+
 class LocalDocumentText:
     """The upload-owner-facing reader. It accepts immutable admitted bytes only."""
 
     def extract(self, document: AdmittedDocument, *,
                 bounds: ExtractionBounds | None = None) -> ExtractionResult:
         bounds = bounds or ExtractionBounds()
+        self._admit(document, bounds)
+        if document.format is DocumentFormat.IMAGE:
+            raise ExtractionRefused("an image has no text layer to read")
+        kind, payload = _bounded(_worker, (document, bounds), bounds.deadline_seconds)
+        if kind == "deadline":
+            return _result(document, failure="deadline_bound",
+                reason="the local reader reached its deadline; no complete reading is claimed")
+        if kind == "stopped":
+            return _result(document, failure="worker_unavailable",
+                reason="the bounded reader stopped before returning its result")
+        if kind == "defect":
+            error_kind, frames = payload
+            _log.error("local document reader defect: %s; safe stack %s", error_kind, frames)
+            raise DocumentParserDefect(f"the document reader raised {error_kind}")
+        if kind != "result" or not isinstance(payload, ExtractionResult):
+            raise DocumentParserDefect(
+                "the document reader returned a malformed internal result")
+        return _checked_worker_result(document, payload)
+
+    def page_images(self, document: AdmittedDocument, numbers, *,
+                    bounds: ExtractionBounds | None = None) -> tuple[dict[int, bytes], dict[int, str]]:
+        """The listed pages of a PDF, or an image's one page, drawn as JPEGs.
+
+        Returns the drawn pages and, for each page not drawn, why. When the whole
+        drawing fails, every page carries that reason; nothing is claimed drawn."""
+        bounds = bounds or ExtractionBounds()
+        self._admit(document, bounds)
+        numbers = tuple(numbers)
+        if (document.format not in (DocumentFormat.PDF, DocumentFormat.IMAGE) or not numbers
+                or len(numbers) > bounds.max_units or len(set(numbers)) != len(numbers)
+                or any(type(n) is not int or n < 1 for n in numbers)
+                or (document.format is DocumentFormat.IMAGE and numbers != (1,))):
+            raise ExtractionRefused("only listed pages of a PDF, or an image's one page, are drawn")
+        kind, payload = _bounded(_page_worker, (document, numbers, bounds),
+                                 bounds.deadline_seconds + SECONDS_PER_PAGE * len(numbers))
+        if kind == "defect":
+            error_kind, frames = payload
+            _log.error("local page drawing defect: %s; safe stack %s", error_kind, frames)
+            raise DocumentParserDefect(f"the page drawing raised {error_kind}")
+        if kind == "pages":
+            images, unread = payload
+            if (not isinstance(images, dict) or not isinstance(unread, dict)
+                    or set(images) | set(unread) != set(numbers) or set(images) & set(unread)
+                    or any(not isinstance(v, bytes) or not v.startswith(b"\xff\xd8\xff")
+                           for v in images.values())
+                    or any(not isinstance(v, str) or not v for v in unread.values())):
+                raise DocumentParserDefect("the page drawing returned a malformed result")
+            return images, unread
+        reasons = {"deadline": "drawing the pages reached its deadline",
+                   "stopped": "the bounded page drawing stopped before returning"}
+        reason = payload if kind == "failed" and isinstance(payload, str) else reasons.get(kind)
+        if reason is None:
+            raise DocumentParserDefect("the page drawing returned a malformed result")
+        return {}, {number: reason for number in numbers}
+
+    @staticmethod
+    def _admit(document: AdmittedDocument, bounds: ExtractionBounds) -> None:
         allowed, reason = document.admission.may_reach_reasoning()
         if not allowed or document.admission.kind is not MediaKind.DOCUMENT:
             raise ExtractionRefused(reason if not allowed else "the admission is not a document")
@@ -291,38 +475,6 @@ class LocalDocumentText:
             PROCESSOR, (OPERATION,), configuration_known=True, off_premises=False))
         if refused:
             raise ExtractionRefused(refused[0])
-        context = multiprocessing.get_context("spawn")
-        incoming, outgoing = context.Pipe(duplex=False)
-        process = context.Process(target=_worker, args=(document, bounds, outgoing), daemon=True)
-        try:
-            process.start()
-            outgoing.close()
-            if not incoming.poll(bounds.deadline_seconds):
-                return _result(document, failure="deadline_bound",
-                    reason="the local reader reached its deadline; no complete reading is claimed")
-            try:
-                kind, payload = incoming.recv()
-            except EOFError:
-                return _result(document, failure="worker_unavailable",
-                    reason="the bounded reader stopped before returning its result")
-            if kind == "defect":
-                error_kind, frames = payload
-                _log.error("local document reader defect: %s; safe stack %s", error_kind, frames)
-                raise DocumentParserDefect(f"the document reader raised {error_kind}")
-            if kind != "result" or not isinstance(payload, ExtractionResult):
-                raise DocumentParserDefect(
-                    "the document reader returned a malformed internal result")
-            return _checked_worker_result(document, payload)
-        finally:
-            incoming.close()
-            outgoing.close()
-            if process.is_alive():
-                process.terminate()
-            if process.pid is not None:
-                process.join(timeout=1.0)
-                if process.is_alive():
-                    process.kill()
-                    process.join(timeout=1.0)
 
 
 def _checked_worker_result(document, payload):

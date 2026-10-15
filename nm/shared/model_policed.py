@@ -122,7 +122,9 @@ class PolicedModel:
     def _size(prompt: Any) -> int:
         """Bytes, for the audit line. A size is not content."""
         try:
-            return len(str(getattr(prompt, "user", "") or "").encode("utf8"))
+            # Page images leave too, so they are measured with the words.
+            return (len(str(getattr(prompt, "user", "") or "").encode("utf8"))
+                    + sum(len(image.data) for image in getattr(prompt, "images", ())))
         except Exception:  # noqa: BLE001 -- an unmeasurable prompt is not a refusal
             return 0
 

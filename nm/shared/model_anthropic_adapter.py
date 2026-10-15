@@ -238,6 +238,8 @@ class AnthropicModelAdapter:
             prompt.system is not None and not isinstance(prompt.system, str)
         ):
             raise ModelPermissionRefused("Only text may be sent to this model route")
+        if prompt.images:
+            raise ModelPermissionRefused("Page images are not sent on this model route")
         if max_tokens is not None and (type(max_tokens) is not int or max_tokens <= 0):
             raise ValueError("Output ceiling must be positive")
         wire = [{"role": "user", "content": prompt.user}]

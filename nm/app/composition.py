@@ -93,16 +93,22 @@ class Application:
         # What each running turn is doing, for its own advocate (memory only).
         self.turn_progress = TurnProgress()
 
-    def _model_for(self, advocate_id, *, session_current):
+    def _model_for(self, advocate_id, *, session_current, page_images=False):
         if isinstance(self._model_adapter, OpenAIModelAdapter):
             from nm.app.model_permission import bind_text_model
             return bind_text_model(self._model_adapter, directory=self.directory,
                 account_id=advocate_id, config=self.config,
-                session_current=session_current, audit=self._egress_audit)
+                session_current=session_current, audit=self._egress_audit,
+                page_images=page_images)
         # Fresh tracing per request prevents parallel conversations sharing traces.
         return PolicedModel(inner=TracedModel(inner=self._model_adapter),
             policy=self._gate.policy, audit=self._egress_audit,
             authorize=lambda: _require_session(session_current))
+
+    def page_reader(self, advocate_id, *, session_current):
+        """The model that reads one advocate's scanned pages (owner decision,
+        15 Oct 2026), under that advocate's current permission and session."""
+        return self._model_for(advocate_id, session_current=session_current, page_images=True)
 
     def run_turn(self, *, advocate_id, session_current, **request):
         from nm.core_engine.turn import process

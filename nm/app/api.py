@@ -1384,6 +1384,31 @@ def _receive_document(advocate_id, request, name, data):
     return document_rules.summary(record)
 
 
+@app.post('/api/documents/{document_ref}/read-scans', dependencies=[CsrfProtected])
+def read_document_scans(document_ref: str, advocate_id: Advocate, request: Request):
+    """The AI reads the document's scanned pages that are waiting (owner decision,
+    15 Oct 2026), under the advocate's AI data-sharing permission; a new record."""
+    if not _session_current(request, advocate_id):
+        raise HTTPException(401, 'not signed in')
+    desk = _document_desk()
+    try:
+        model = application().page_reader(
+            advocate_id, session_current=lambda: _session_current(request, advocate_id))
+        record, _ = desk.read_scans(advocate_id, document_ref, model)
+    except ModelPermissionRefused as exc:
+        if not _session_current(request, advocate_id):
+            raise HTTPException(401, 'not signed in') from exc
+        raise HTTPException(403, {'why': str(exc), 'code': 'model_permission_required'}) from exc
+    except document_rules.DocumentRefused as exc:
+        raise HTTPException(404, {'why': str(exc), 'code': 'document_unavailable'}) from exc
+    except OSError as exc:
+        raise HTTPException(503, {'why': 'The pages that were read could not be kept safely. Try again.',
+                                  'code': 'document_storage'}) from exc
+    if not _session_current(request, advocate_id):
+        raise HTTPException(401, 'not signed in')
+    return document_rules.summary(record)
+
+
 @app.get('/api/documents/{document_ref}')
 def document_summary(document_ref: str, advocate_id: Advocate, request: Request, response: Response):
     """What the advocate is shown about one of their own documents, without its text."""

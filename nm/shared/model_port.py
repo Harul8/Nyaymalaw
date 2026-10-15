@@ -156,6 +156,27 @@ class ConfigurationError(ModelError):
 # ------------------------------------------------------------- data types ---
 
 
+PAGE_IMAGE_TYPES = ("image/jpeg", "image/png")
+MAX_PAGE_IMAGE_BYTES = 8 * 1024 * 1024
+
+
+@dataclass(frozen=True)
+class PageImage:
+    """One page of an advocate's own document, drawn as an image, for the model to
+    read (owner decision, 15 Oct 2026: scanned pages are read by the model).
+
+    Only a route bound for reading pages sends one; every other route refuses it.
+    """
+
+    media_type: str
+    data: bytes = field(repr=False)
+
+    def __post_init__(self) -> None:
+        if (self.media_type not in PAGE_IMAGE_TYPES or not isinstance(self.data, bytes)
+                or not 0 < len(self.data) <= MAX_PAGE_IMAGE_BYTES):
+            raise ValueError("A page image is a JPEG or PNG of at most 8 MB")
+
+
 @dataclass(frozen=True)
 class Prompt:
     """A prompt in the product's vocabulary.
@@ -171,10 +192,14 @@ class Prompt:
     system: str | None = None
     operation: str = ""
     """Internal task identity; never inferred from prompt words or user text."""
+    images: tuple[PageImage, ...] = field(default=(), repr=False)
+    """Page images that follow `user`; sent only on a route bound for reading pages."""
 
     def __post_init__(self) -> None:
         if not self.user or not self.user.strip():
             raise ValueError("Prompt.user must not be empty")
+        if not isinstance(self.images, tuple) or any(not isinstance(i, PageImage) for i in self.images):
+            raise ValueError("Prompt.images holds page images only")
 
 
 @dataclass(frozen=True)

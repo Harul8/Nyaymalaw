@@ -32,6 +32,8 @@ class DocumentFormat(str, Enum):
     PDF = "pdf"
     TEXT = "text"
     DOCX = "docx"
+    #: A photographed or scanned page: drawn for the model to read, never parsed as text.
+    IMAGE = "image"
     UNKNOWN = "unknown"
 
     @classmethod

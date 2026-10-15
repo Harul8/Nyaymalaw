@@ -12,7 +12,7 @@ import pytest
 from nm.app import api
 from nm.core_engine import documents
 from tests.test_core_documents import Checker
-from tests.test_core_served import OTHER, served  # noqa: F401 - pytest fixture
+from tests.test_core_served import OTHER, OWNER, served  # noqa: F401 - pytest fixture
 
 pytestmark = pytest.mark.class_a
 
@@ -73,3 +73,38 @@ def test_without_a_configured_malware_checker_a_document_is_held_unread(served):
     shown = reply.json()
     assert shown["state"] == "held" and shown["pages_read"] == 0
     assert shown["check"]["reason"] == "no malware checker is set up on this installation"
+
+
+def test_the_advocate_has_waiting_scanned_pages_read_under_their_own_permission(served, desk, monkeypatch):
+    from tests.test_core_documents import pdf
+    from tests.test_core_page_reading import PageModel
+
+    shown = upload(served.client, data=pdf(["Typed page.", ""]), name="memo.pdf").json()
+    assert shown["waiting_for_ai"] == 1
+    bound = []
+
+    def page_reader(advocate_id, *, session_current):
+        bound.append((advocate_id, session_current()))
+        return PageModel({2: {"text": "Scanned words", "readable": "all", "note": ""}})
+
+    monkeypatch.setattr(served.app, "page_reader", page_reader)
+    url = f"/api/documents/{shown['document_ref']}/read-scans"
+    assert served.client.post(url, headers={"x-nm-csrf": "wrong"}).status_code == 403
+    assert served.login(OTHER).post(url).status_code == 404
+    read = served.client.post(url)
+    assert read.status_code == 200, read.text
+    assert read.json()["pages_read_by_ai"] == 1 and read.json()["document_ref"] != shown["document_ref"]
+    assert "Scanned words" not in read.text and bound[-1] == (OWNER, True)
+
+
+def test_reading_scans_without_ai_permission_is_refused_plainly(served, desk, monkeypatch):
+    from nm.shared.external_ai_contracts import ModelPermissionRefused
+    from tests.test_core_documents import pdf
+
+    def page_reader(advocate_id, *, session_current):
+        raise ModelPermissionRefused("Read the current AI data-sharing notice before continuing.")
+
+    monkeypatch.setattr(served.app, "page_reader", page_reader)
+    ref = upload(served.client, data=pdf(["Typed page.", ""]), name="memo.pdf").json()["document_ref"]
+    refused = served.client.post(f"/api/documents/{ref}/read-scans")
+    assert refused.status_code == 403 and refused.json()["detail"]["code"] == "model_permission_required"

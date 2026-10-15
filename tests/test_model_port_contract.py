@@ -16,7 +16,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from nm.shared.model_config import ModelConfig, TierConfig
+from nm.shared.model_config import CONTEXT_BUDGET, ModelConfig, TierConfig
 from nm.shared.model_openai_adapter import OpenAIModelAdapter
 from nm.shared.model_port import (
     ContextOverflow,
@@ -119,9 +119,9 @@ def test_provider_and_resolved_model_are_reported(adapter):
 
 @pytest.mark.eval_id("E-004h")
 def test_context_budget_is_declared_by_the_port_not_the_provider(adapter):
-    """The budget is the smallest supported window, so a prompt built to it
-    ports. Every adapter must report the same number."""
-    assert adapter.context_budget(Tier.ROUTINE) == 100_000
+    """The budget belongs to the port, so every adapter reports the same number:
+    1,000,000 tokens since the owner's decision of 15 Oct 2026."""
+    assert adapter.context_budget(Tier.ROUTINE) == CONTEXT_BUDGET[Tier.ROUTINE] == 1_000_000
 
 
 @pytest.mark.eval_id("E-006")
@@ -182,7 +182,7 @@ def test_an_unconfigured_tier_raises_with_its_reason(adapter):
 def test_context_overflow_is_typed_never_a_truncation(adapter):
     """THE COUNTEREXAMPLE: silent truncation produces an answer that looks
     complete and was reasoned from a fraction of the material."""
-    huge = "x" * (100_000 * 4 + 400_000)
+    huge = "x" * (CONTEXT_BUDGET[Tier.ROUTINE] * 4 + 400_000)
     with pytest.raises(ContextOverflow):
         adapter.complete(Prompt(user=huge), Tier.ROUTINE)
 

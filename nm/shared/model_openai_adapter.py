@@ -12,6 +12,7 @@ lives in the same package.
 """
 from __future__ import annotations
 
+import base64
 import json
 import ssl
 import sys
@@ -102,12 +103,28 @@ def _invalid_json_constant(value):
     raise ValueError(f"response JSON used a non-finite numeric constant: {value}")
 
 
+def _user_content(prompt: Prompt, *, responses: bool):
+    """The user's words, followed by any page images at full detail."""
+    if not prompt.images:
+        return prompt.user
+    urls = [f"data:{image.media_type};base64,{base64.b64encode(image.data).decode('ascii')}"
+            for image in prompt.images]
+    if responses:
+        return [{"type": "input_text", "text": prompt.user},
+                *({"type": "input_image", "image_url": url, "detail": "high"} for url in urls)]
+    return [{"type": "text", "text": prompt.user},
+            *({"type": "image_url", "image_url": {"url": url, "detail": "high"}} for url in urls)]
+
+
 class OpenAIModelAdapter:
     def __init__(self, config: ModelConfig, client: Any | None = None,
                  call_budget: CallBudget | SessionCallBudget | None = None) -> None:
         self._config = config
         self._call_budget = call_budget
         self._before_dispatch: Callable[[], None] | None = None
+        # Page images go only on a route bound for reading an advocate's scanned
+        # pages (owner decision, 15 Oct 2026); every other route stays text-only.
+        self._page_images = False
         if client is not None:
             self._client = client
             return
@@ -145,15 +162,18 @@ class OpenAIModelAdapter:
         }
         self._client = OpenAI(**kwargs)
 
-    def for_matter_text(self, before_dispatch: Callable[[], None]) -> OpenAIModelAdapter:
+    def for_matter_text(self, before_dispatch: Callable[[], None], *,
+                        page_images: bool = False) -> OpenAIModelAdapter:
         """Request-bound authority, shared transport; no shared consent state."""
         bound = OpenAIModelAdapter(self._config, client=self._client, call_budget=self._call_budget)
         bound._before_dispatch = before_dispatch
+        bound._page_images = page_images is True
         return bound
 
     def with_call_budget(self, budget: CallBudget | SessionCallBudget) -> OpenAIModelAdapter:
         bound = OpenAIModelAdapter(self._config, client=self._client, call_budget=budget)
         bound._before_dispatch = self._before_dispatch
+        bound._page_images = self._page_images
         return bound
 
     # ------------------------------------------------------------- port ---
@@ -184,6 +204,8 @@ class OpenAIModelAdapter:
     def tool_call(self, prompt: Prompt, tools: tuple[ToolDefinition, ...], tier: Tier, *,
                   messages: tuple[ToolMessage, ...] = (),
                   max_tokens: int | None = None) -> ToolCallResult:
+        if prompt.images:
+            raise ModelPermissionRefused("Page images are not sent with tool calls.")
         guard_tool_budget(prompt, tools, tier, messages, max_tokens)
         cfg = self._cfg(tier)
         if cfg.model == "gpt-6.1-sol":
@@ -318,6 +340,9 @@ class OpenAIModelAdapter:
                 (prompt.system is not None and not isinstance(prompt.system, str))
                 or not isinstance(prompt.user, str)):
             raise ModelPermissionRefused("Only text is permitted; raw media cannot be sent.")
+        if prompt.images and not (self._page_images and self._before_dispatch is not None):
+            raise ModelPermissionRefused(
+                "Page images are sent only when reading an advocate's scanned pages.")
         cfg = self._cfg(tier)
         # The port's budget, enforced BEFORE the call and identically to every
         # other adapter. Relying on the provider to report overflow would make
@@ -334,7 +359,8 @@ class OpenAIModelAdapter:
             # Preserve the stable instruction and its authority role. The
             # Responses transport marks this exact prefix for cache reuse.
             messages.append({"role": "system", "content": prompt.system})
-        messages.append({"role": "user", "content": prompt.user})
+        messages.append({"role": "user", "content": _user_content(
+            prompt, responses=cfg.model in _RESPONSES_EFFORT)})
 
         kwargs: dict[str, Any] = {"model": cfg.model, "messages": messages, "store": False}
         if max_tokens:

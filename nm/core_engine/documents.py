@@ -66,9 +66,19 @@ def _page(page):
             or page.get("state") not in ("read", "unread")):
         raise ValueError("A document page needs its number and whether it was read")
     if page["state"] == "read":
-        if (set(page) != {"number", "state", "text", "read_by"} or not isinstance(page["text"], str)
-                or not page["text"].strip() or page["read_by"] not in ("local", "ai")):
+        if (not isinstance(page.get("text"), str) or not page["text"].strip()
+                or page.get("read_by") not in ("local", "ai")):
             raise ValueError("A read page carries its text and who read it")
+        if page["read_by"] == "local" and set(page) != {"number", "state", "text", "read_by"}:
+            raise ValueError("A page read here carries only its text")
+        # A page the AI read keeps which model read it, how much was legible and any note.
+        if page["read_by"] == "ai" and (
+                not {"number", "state", "text", "read_by", "model", "legible"} <= set(page)
+                <= {"number", "state", "text", "read_by", "model", "legible", "note"}
+                or not isinstance(page["model"], str) or not page["model"].strip()
+                or page["legible"] not in ("all", "part")
+                or ("note" in page and (not isinstance(page["note"], str) or not page["note"].strip()))):
+            raise ValueError("A page the AI read carries the model, its legibility and any note")
     elif (set(page) != {"number", "state", "code", "reason"} or not str(page["reason"]).strip()
           or page["code"] not in ("scanned", "unreadable", "not_checked")):
         raise ValueError("An unread page carries why it was not read")
@@ -131,6 +141,8 @@ def summary(record):
     return {"document_ref": reference(record), "name": record["name"], "format": record["format"],
             "state": state, "check": deepcopy(record["check"]), "pages_total": record["observed_pages"],
             "pages_read": len(read), "pages_read_by_ai": sum(page["read_by"] == "ai" for page in read),
+            "pages_partly_legible": sum(page.get("legible") == "part" for page in read),
+            "waiting_for_ai": len(needs_transcription(record)),
             "unread": unread, "failure": record["failure"]}
 
 
@@ -138,7 +150,7 @@ def turn_material(records):
     """The documents one question carries, page by page; refused, never cut, if too large."""
     material, total = [], 0
     for record in records:
-        pages = [{"number": page["number"], "text": page["text"], "read_by": page["read_by"]}
+        pages = [{key: page[key] for key in ("number", "text", "read_by", "legible", "note") if key in page}
                  for page in record["pages"] if page["state"] == "read"]
         total += sum(len(page["text"]) for page in pages)
         material.append({"document_ref": reference(record), "name": record["name"],
