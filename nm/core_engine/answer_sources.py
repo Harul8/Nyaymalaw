@@ -12,7 +12,7 @@ import json
 from nm.core_engine import research
 from nm.core_engine.retrieval import _candidate, _digest
 from nm.core_engine.understanding import (
-    REFERENCE, select as select_original, source_catalogue,
+    REFERENCE, conversation_aliases, renamed, select as select_original, source_catalogue,
 )
 from nm.shared.citation_contracts import provision_label, statute_title
 from nm.shared.model_port import SchemaViolation, require_schema
@@ -150,17 +150,18 @@ def _unknown(identity, sources):
     so a correction can repair it. Identifiers are code-made labels, not case words."""
     groups = {}
     for alias in aliases(sources):
-        groups.setdefault(alias[0], []).append(alias)
-    legal = ", ".join(f"{names[0]} to {names[-1]}" if len(names) > 1 else names[0] for names in groups.values())
-    others = [tag for tag, row in sources.items() if row["kind"] not in _LEGAL]
-    listed = ", ".join(others[:40]) + (" and more" if len(others) > 40 else "")
-    return (f"Selected source_id {identity!r} is not in the owned answer catalogue. Name a legal passage by its "
-            f"offered ID ({legal or 'none offered'}) and a message or document page by its own source_id "
-            f"({listed or 'none'}); context, coverage, gap, fact and dispute labels are not sources.")
+        groups.setdefault(alias.rstrip("0123456789"), []).append(alias)
+    kinds = {"P": "provisions", "J": "judgments", "M": "messages", "DOC": "document pages"}
+    named = "; ".join(f"{names[0]} to {names[-1]}" if len(names) > 1 else names[0] for names in groups.values())
+    shown = ", ".join(kinds[prefix] for prefix in groups)
+    return (f"Selected source_id {identity!r} is not in the owned answer catalogue. Name a source by the short ID "
+            f"it is shown under ({named or 'none offered'}: {shown or 'none'}); context, coverage, gap, fact, "
+            f"dispute and reply-unit labels are not sources.")
 
 
 def aliases(sources):
-    """Short offered IDs for legal passages (P1, P2, ... and J1, J2, ...).
+    """Short offered IDs for legal passages (P1, P2, ... and J1, J2, ...), and from 16 Oct
+    2026 for messages (M1, ...) and document pages (DOC1, ...).
 
     Hexadecimal source tags are long enough for a model to mistype and repeat
     through every presentation. From writer and review v3 the models see these
@@ -173,7 +174,17 @@ def aliases(sources):
         if prefix:
             counts[prefix] = counts.get(prefix, 0) + 1
             result[f"{prefix}{counts[prefix]}"] = identity
+    # Messages and document pages by short IDs too (16 Oct 2026): their owned IDs embed
+    # a long random turn identifier, and a writer miscopied one in the owner's run.
+    result.update(conversation_aliases((identity, row["kind"] == "document")
+                                       for identity, row in sources.items() if row["kind"] not in _LEGAL))
     return result
+
+
+def shown_context(context, sources):
+    """The original conversation as the writer and the reviewer read it: every owned
+    source ID shown by its short ID, the words exactly as saved."""
+    return renamed(context, {identity: alias for alias, identity in aliases(sources).items()})
 
 
 def presentation(sources, *, aliased=False, compact=False, work_ids=None):

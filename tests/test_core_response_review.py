@@ -124,12 +124,16 @@ def test_whole_originals_adjacent_legal_text_and_execution_are_separate_inputs()
     reviewed = review(model, ctx, record, sources, draft, execution)
     prompt, schema, tier, kwargs = model.calls[0]
     payload = json.loads(prompt.user)
-    assert payload["original_context"] == ctx
+    # The conversation as saved, every source ID shown by its short ID (16 Oct 2026).
+    from nm.core_engine import answer_sources
+    assert payload["original_context"] == answer_sources.shown_context(ctx, sources)
     assert payload["setting"]["advocate_practises_in"] == "Telangana, India"  # from code, 15 Oct 2026
     assert payload["owned_execution_evidence"] == execution
     shown = payload["complete_draft_proposal"]["units"]
     assert [row["text"] for row in shown] == [row["text"] for row in draft["units"]]
-    assert [select(ref, sources) for ref in shown[0]["addresses"]] == draft["units"][0]["addresses"]
+    named = answer_sources.aliases(sources)
+    assert [select({**ref, "source_id": named.get(ref["source_id"], ref["source_id"])}, sources)
+            for ref in shown[0]["addresses"]] == draft["units"][0]["addresses"]
     assert "proposal" not in payload["complete_draft_proposal"]  # No duplicate draft text.
     # v5: the understanding and each question's outcome, not the plan's bookkeeping.
     research = payload["research_proposal_and_results"]
@@ -137,8 +141,9 @@ def test_whole_originals_adjacent_legal_text_and_execution_are_separate_inputs()
     assert not any({"source_identity", "record_role"} & set(s) for s in payload["legal_sources"]["passages"])
     from nm.core_engine.answer_sources import aliases
     offered = aliases(sources)
-    assert {s["id"] for s in payload["legal_sources"]["passages"]} == set(offered)
-    assert set(offered.values()) == {s["id"] for s in sources.values() if s["kind"] in {"provision", "judgment"}}
+    legal_aliases = {alias for alias in offered if alias[0] in "PJ"}
+    assert {s["id"] for s in payload["legal_sources"]["passages"]} == legal_aliases
+    assert {offered[a] for a in legal_aliases} == {s["id"] for s in sources.values() if s["kind"] in {"provision", "judgment"}}
     assert not any(tag in model.calls[0][0].user for tag in offered.values()), "legal passages travel by alias"
     assert any("Court rejected" in s["text"] for s in payload["legal_sources"]["passages"])
     assert all(s["kind"] in {"provision", "judgment"} for s in payload["legal_sources"]["passages"])
@@ -162,7 +167,7 @@ def test_review_selectors_reconstruct_legacy_full_and_short_sources_without_repe
     shown = _draft_presentation(draft, sources, aliased=True)
     unit, actual = shown["units"][0], draft["units"][0]
     assert (draft, sources) == originals
-    assert (unit["id"], unit["kind"], unit["text"]) == (actual["id"], actual["kind"], actual["text"])
+    assert (unit["id"], unit["kind"], unit["text"]) == ("U1", actual["kind"], actual["text"])  # 16 Oct 2026
     assert unit["uses"][0]["quote"] is None
     assert unit["uses"][0]["treatment_source"]["quote"] == legal["text"][:12]
     from nm.core_engine.answer_sources import aliases
@@ -486,7 +491,9 @@ def test_authority_checks_are_separate_compact_model_input_and_full_bound_eviden
     assert authority["readbacks"]
     from nm.core_engine.answer_sources import aliases
     from nm.core_engine.response_review import _aliased
+    from nm.core_engine.response_review import unit_aliases
     shown = {tag: alias for alias, tag in aliases(args[2]).items()}
+    shown.update({tag: alias for alias, tag in unit_aliases(args[3]).items()})
     assert payload["owned_authority_checks"] == {
         "contract": authority["contract"], "units": _aliased(authority["units"], shown)}
     assert not any(tag in json.dumps(payload["owned_authority_checks"]) for tag in shown)

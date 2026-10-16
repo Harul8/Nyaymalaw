@@ -146,8 +146,11 @@ def test_mixed_legacy_and_current_history_reopens_without_fresh_authority_checks
     dependencies = response_review._dependencies(original, activity["research"],
         activity["sources"], activity["draft"], activity["execution"],
         contract=response_review.LEGACY_CONTRACT)
-    activity["review"] = response_review._accept(activity["review"]["proposal"], dependencies,
-        contract=response_review.LEGACY_CONTRACT)
+    # A legacy record holds owned IDs only; short IDs began on 16 Oct 2026.
+    from nm.core_engine import answer_sources
+    from nm.core_engine.understanding import renamed
+    legacy = renamed(activity["review"]["proposal"], answer_sources.aliases(activity["sources"]))
+    activity["review"] = response_review._accept(legacy, dependencies, contract=response_review.LEGACY_CONTRACT)
     elements = response_rendering.render(original, activity["research"], activity["sources"],
         activity["draft"], activity["review"], execution=activity["execution"],
         contract=response_rendering.LEGACY_CONTRACT)
@@ -213,7 +216,11 @@ def test_rewritten_draft_recomputes_its_authority_evidence_before_review(store, 
     reviews = [payload["owned_authority_checks"] for name, payload in model.calls
                if name == "core_response_review"]
     assert result["metrics"]["llm_calls"] == 5 and len(checked) == len(reviews) == 2
-    assert [row["units"] for row in checked] == [row["units"] for row in reviews]
+    # The review is shown each reply unit by its short ID (16 Oct 2026), in order.
+    plain = lambda units: [{k: v for k, v in unit.items() if k != "unit_id"} for unit in units]  # noqa: E731
+    assert [plain(row["units"]) for row in checked] == [plain(row["units"]) for row in reviews]
+    assert all([u["unit_id"] for u in row["units"]] == [f"U{n}" for n in range(1, len(row["units"]) + 1)]
+               for row in reviews)
 
 
 def test_complete_conversation_survives_followup_and_restriction_words(store):

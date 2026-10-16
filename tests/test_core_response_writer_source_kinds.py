@@ -223,7 +223,7 @@ def test_fresh_writer_remains_one_routine_call_and_transmits_complete_context():
     assert len(model.calls) == 1
     prompt, schema, tier, kwargs = model.calls[0]
     sent = json.loads(prompt.user)
-    assert sent["original_context"] == ctx
+    assert sent["original_context"] == answer_sources.shown_context(ctx, sources)  # short IDs, 16 Oct 2026
     offered = {tag: alias for alias, tag in answer_sources.aliases(sources).items()}
     assert sent["source_kinds"] == {offered.get(identity, identity): row["kind"]
                                     for identity, row in sources.items()}

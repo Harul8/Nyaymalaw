@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from nm.core_engine.answer_sources import CONTRACT, build, presentation, select
+from nm.core_engine.answer_sources import CONTRACT, aliases, build, presentation, select, shown_context
 from nm.core_engine.research import accept, retrieve, validate
 from nm.core_engine.retrieval import HybridSearcher, _candidate, _digest
 from nm.shared.model_port import SchemaViolation
@@ -192,8 +192,25 @@ def test_an_unknown_source_names_itself_and_what_can_be_named():
         select({"source_id": "context:3", "quote": None}, sources)
     why = str(refused.value)
     assert "'context:3' is not in the owned answer catalogue" in why
-    assert "P1 to P2, J1" in why and "t1:advocate, t1:doc_1:page:2" in why
-    assert "context, coverage, gap, fact and dispute labels are not sources" in why
+    assert "P1 to P2; J1; M1; DOC1: provisions, judgments, messages, document pages" in why
+    assert "context, coverage, gap, fact, dispute and reply-unit labels are not sources" in why
+
+
+def test_messages_and_document_pages_are_named_by_short_ids_and_mapped_back():
+    # 16 Oct 2026: owned IDs embed a long random turn identifier a writer miscopied.
+    sources = {
+        "turn_9f3c-4c8d:advocate": {"id": "turn_9f3c-4c8d:advocate", "kind": "account", "text": "We act."},
+        "provision:a": {"id": "provision:a", "kind": "provision", "text": "A rule."},
+        "turn_9f3c-4c8d:d1p1": {"id": "turn_9f3c-4c8d:d1p1", "kind": "document", "text": "Page one."},
+        "turn_9f3c-4c8d:d1p2": {"id": "turn_9f3c-4c8d:d1p2", "kind": "document", "text": "Page two."}}
+    named = aliases(sources)
+    assert named == {"P1": "provision:a", "M1": "turn_9f3c-4c8d:advocate",
+                     "DOC1": "turn_9f3c-4c8d:d1p1", "DOC2": "turn_9f3c-4c8d:d1p2"}
+    context = {"latest": {"source_id": "turn_9f3c-4c8d:advocate", "turn_id": "turn_9f3c-4c8d", "text": "We act."},
+               "documents": [{"source_id": "turn_9f3c-4c8d:d1p2", "text": "Page two."}]}
+    shown = shown_context(context, sources)
+    assert shown["latest"]["source_id"] == "M1" and shown["documents"][0]["source_id"] == "DOC2"
+    assert shown["latest"]["turn_id"] == "turn_9f3c-4c8d" and shown["latest"]["text"] == "We act."
 
 
 def test_a_held_passage_line_break_is_layout_and_the_selection_keeps_the_held_words():
@@ -379,12 +396,15 @@ def test_aliases_name_each_legal_passage_once_in_catalogue_order():
     sources = build(ctx, record)
     offered = aliases(sources)
     legal = [identity for identity, row in sources.items() if row["kind"] in {"provision", "judgment"}]
-    assert list(offered.values()) == legal and len(set(offered)) == len(offered)
+    assert [identity for alias, identity in offered.items() if alias[0] in "PJ"] == legal
+    assert len(set(offered)) == len(offered) == len(set(offered.values()))
     for alias, identity in offered.items():
-        assert alias[0] == {"provision": "P", "judgment": "J"}[sources[identity]["kind"]]
-        assert len(alias) < 6 < len(identity)
+        assert alias.rstrip("0123456789") == {"provision": "P", "judgment": "J", "account": "M", "nm_context": "M",
+                                              "service": "M", "document": "DOC"}[sources[identity]["kind"]]
+        assert len(alias) < 6
     assert aliases(deepcopy(sources)) == offered, "replay re-derives the same map"
-    assert not set(offered.values()) & {i for i, row in sources.items() if row["kind"] == "account"}
+    # Messages are named by M ids from 16 Oct 2026; every conversation source has one.
+    assert {i for i, row in sources.items() if row["kind"] == "account"} <= set(offered.values())
 
 
 def test_aliased_presentation_renames_only_passage_tags_and_context_members():

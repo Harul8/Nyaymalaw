@@ -76,14 +76,17 @@ def test_complete_context_and_all_neighbouring_legal_words_reach_one_writer_call
     assert len(model.calls) == 1
     prompt, schema, tier, kwargs = model.calls[0]
     payload = json.loads(prompt.user)
-    assert payload["original_context"] == ctx
+    from nm.core_engine import answer_sources
+    assert payload["original_context"] == answer_sources.shown_context(ctx, sources)  # short IDs, 16 Oct 2026
     assert payload["execution_evidence"] == {"operations": []}
     assert payload["interpretation_proposal"] == {"units": []}
     from nm.core_engine.answer_sources import aliases
     offered = aliases(sources)
-    assert {s["id"] for s in payload["held_passages"]["passages"]} == set(offered)
-    assert set(offered.values()) == {s["id"] for s in sources.values() if s["kind"] in {"provision", "judgment"}}
-    assert not any(tag in prompt.user for tag in offered.values()), "legal passages travel by alias"
+    legal_aliases = {alias for alias in offered if alias[0] in "PJ"}
+    assert {s["id"] for s in payload["held_passages"]["passages"]} == legal_aliases
+    assert {offered[a] for a in legal_aliases} == {s["id"] for s in sources.values() if s["kind"] in {"provision", "judgment"}}
+    # From 16 Oct 2026 every source travels by its short ID, messages included.
+    assert not any(tag in prompt.user for tag in offered.values()), "sources travel by alias"
     assert any("Court rejected" in s["text"] for s in payload["held_passages"]["passages"])
     assert not any({"source_identity", "record_role"} & set(s) for s in payload["held_passages"]["passages"])
     # v4: the understanding and each question's outcome, not the plan's bookkeeping.
@@ -360,7 +363,8 @@ def test_each_dispute_is_written_in_its_own_part_seeing_only_its_own_sources():
     assert not shown["D1"]["this_part"]["opens_the_answer"] and shown["D1"]["this_part"]["other_parts"] == ["Dispute 2"]
     texts = {d: {p["text"] for p in shown[d]["held_passages"]["passages"] if p["kind"] == "judgment"} for d in ("D1", "D2")}
     assert texts["D1"] and texts["D2"] and not texts["D1"] & texts["D2"]
-    assert all(p["original_context"] == ctx for p in model.seen)
+    from nm.core_engine import answer_sources
+    assert all(p["original_context"] == answer_sources.shown_context(ctx, sources) for p in model.seen)
     assert draft["parts"] == [{"dispute_id": None, "units": 1}, {"dispute_id": "D1", "units": 1},
                               {"dispute_id": "D2", "units": 1}]
     assert [u["text"] for u in draft["units"]] == ["Answer for opening?", "Answer for D1?", "Answer for D2?"]

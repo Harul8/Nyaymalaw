@@ -245,6 +245,14 @@ def _accept(proposal, dependencies, *, contract=LEGACY_CONTRACT):
     sources, draft = dependencies["sources"], dependencies["draft"]
     offered = answer_sources.aliases(sources) if contract in {ALIAS_CONTRACT, *_CURRENT} else {}
     known = {unit["id"] for unit in draft["units"]}
+    # A reply unit named by its short ID is the unit it was shown for (16 Oct 2026); the
+    # saved proposal keeps the owned unit IDs, so replay maps nothing and is exact.
+    named = unit_aliases(draft)
+    data = deepcopy(data)
+    for item in data["units"]:
+        item["unit_id"] = named.get(item["unit_id"], item["unit_id"])
+    for item in [*data["request_coverage"], *data["findings"]]:
+        item["unit_ids"] = [named.get(identity, identity) for identity in item["unit_ids"]]
     reviewed = [unit["unit_id"] for unit in data["units"]]
     _ids(reviewed, known)
     if set(reviewed) != known:
@@ -293,9 +301,17 @@ def _accept(proposal, dependencies, *, contract=LEGACY_CONTRACT):
             "bound_digest": _digest({"evidence": dependencies, "review_proposal": data})}
 
 
+def unit_aliases(draft):
+    """Reply units by short IDs, U1, U2... in order (16 Oct 2026): their owned IDs embed
+    the turn's long random identifier, and a reviewer miscopied one in the owner's run.
+    Admission maps them back; the saved review keeps the owned unit IDs."""
+    return {f"U{number}": unit["id"] for number, unit in enumerate(draft["units"], 1)}
+
+
 def _draft_presentation(draft, sources, *, aliased=False):
     """Present checked selectors once; retain complete durable selections elsewhere."""
     shown = {tag: alias for alias, tag in answer_sources.aliases(sources).items()} if aliased else {}
+    units = {tag: alias for alias, tag in unit_aliases(draft).items()} if aliased else {}
 
     def reference(selected):
         whole = sources[selected["source_id"]]["text"]
@@ -305,7 +321,7 @@ def _draft_presentation(draft, sources, *, aliased=False):
 
     layout = {"parts": deepcopy(draft["parts"])} if "parts" in draft else {}
     return {"contract": draft["contract"], **layout, "units": [{
-        "id": unit["id"], "kind": unit["kind"], "text": unit["text"],
+        "id": units.get(unit["id"], unit["id"]), "kind": unit["kind"], "text": unit["text"],
         "addresses": [reference(selected) for selected in unit["addresses"]],
         "uses": [{**reference(use), "role": use["role"], "speaker": use["speaker"],
                   "treatment": use["treatment"], "treatment_source": (
@@ -333,7 +349,11 @@ def review(model, context, research_record, sources, draft, execution=None, *,
     # Legal passages, the draft's legal uses and the checks naming them all use
     # the offered aliases; admission maps a selected alias back to its owned tag.
     shown = {tag: alias for alias, tag in answer_sources.aliases(sources).items()}
-    payload = {"original_context": dependencies["original_context"], "setting": clock_contracts.setting(),
+    # Every ID the reviewer names is shown short: messages, document pages and reply
+    # units as well as legal passages (16 Oct 2026); admission maps them back.
+    shown.update({tag: alias for alias, tag in unit_aliases(draft).items()})
+    payload = {"original_context": answer_sources.shown_context(dependencies["original_context"], sources),
+               "setting": clock_contracts.setting(),
         "research_proposal_and_results": research_context,
         "legal_sources": answer_sources.presentation(sources, aliased=True, compact=True),
         "complete_draft_proposal": _draft_presentation(draft, sources, aliased=True),
@@ -342,7 +362,7 @@ def review(model, context, research_record, sources, draft, execution=None, *,
             "contract": dependencies["authority_evidence"]["contract"],
             "units": _aliased(deepcopy(dependencies["authority_evidence"]["units"]), shown)}}
     if time_limits is not None:
-        payload["owned_time_limits"] = dependencies["time_limits"]
+        payload["owned_time_limits"] = _aliased(deepcopy(dependencies["time_limits"]), shown)
     # Full readbacks remain in durable binding; the source catalogue already holds
     # the exact legal passages. Present only their checks and remaining limits here.
     prompt = Prompt(system=SYSTEM, user=json.dumps(payload, ensure_ascii=False),

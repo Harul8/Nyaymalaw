@@ -137,7 +137,10 @@ def test_address_and_support_stay_distinct_for_review_and_correction_binding():
     model = Model(rejection)
     rejected = review(model, ctx, record, sources, draft)
     shown = json.loads(model.calls[0][0].user)["complete_draft_proposal"]["units"][0]
-    assert shown["addresses"] == [latest] and shown["uses"][0]["source_id"] == earlier["source_id"]
+    from nm.core_engine import answer_sources
+    named = {tag: alias for alias, tag in answer_sources.aliases(sources).items()}
+    assert shown["addresses"] == [{**latest, "source_id": named[latest["source_id"]]}]
+    assert shown["uses"][0]["source_id"] == named[earlier["source_id"]]
     assert not rejected["accepted"] and validate(rejected, ctx, record, sources, draft) == rejected
     corrected = deepcopy(proposal)
     corrected["units"][0]["uses"] = [use(latest["source_id"])]
@@ -181,7 +184,8 @@ def test_paused_earlier_work_does_not_mechanically_require_resumption_for_a_soci
     model = Model(positive(draft))
     accepted = review(model, ctx, record, sources, draft)
     payload = json.loads(model.calls[0][0].user)
-    assert payload["original_context"] == ctx
+    from nm.core_engine import answer_sources
+    assert payload["original_context"] == answer_sources.shown_context(ctx, sources)
     assert accepted["accepted"] and accepted["proposal"]["request_coverage"] == []
     # This proves the mechanics do not invent work from a pending flag. The model
     # still owns whether this particular request/response is substantively adequate.

@@ -66,7 +66,7 @@ def test_every_stage_sees_the_pages_and_the_answer_cites_one(store):
     assert reply["committed"] == "committed"
     calls = dict(model.calls)
     understanding = calls["core_understanding"]
-    assert [page["source_id"] for page in understanding["documents"]] == ["t1:d1p1", "t1:d1p2"]
+    assert [page["source_id"] for page in understanding["documents"]] == ["DOC1", "DOC2"]  # shown short
     assert understanding["documents"][1]["document"] == {"name": "memo.pdf", "page": 2, "read_by": "ai",
                                                         "legible": "part", "note": "lower edge cut off"}
     assert understanding["unread_document_pages"] == [{"turn_id": "t1", "name": "memo.pdf", "page": 3,

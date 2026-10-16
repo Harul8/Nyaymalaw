@@ -111,6 +111,39 @@ def source_catalogue(context):
     return result
 
 
+def conversation_aliases(rows):
+    """Short IDs for the conversation's sources, as the models are shown them (16 Oct
+    2026): M1, M2... for the messages in order and DOC1, DOC2... for the document pages
+    in order (D is taken: disputes are D1, D2...). The owned source IDs embed a long random turn identifier that a model must
+    copy exactly, and in the owner's end-to-end run it miscopied one. Code maps a short
+    ID back before any check; saved records keep the owned IDs. rows: (source_id,
+    is_document) in catalogue order. Returns {alias: source_id}."""
+    aliases, counts = {}, {"M": 0, "DOC": 0}
+    for identity, is_document in rows:
+        prefix = "DOC" if is_document else "M"
+        counts[prefix] += 1
+        aliases[f"{prefix}{counts[prefix]}"] = identity
+    return aliases
+
+
+def context_aliases(context):
+    """conversation_aliases for a turn's context: its messages, then its document pages."""
+    return conversation_aliases((identity, row.get("record_role") == "supplied_document")
+                                for identity, row in source_catalogue(context).items())
+
+
+def renamed(value, names):
+    """A copy of value with every string that is exactly an owned ID shown by its short
+    ID; nothing else changes (names: {source_id: alias})."""
+    if isinstance(value, str):
+        return names.get(value, value)
+    if isinstance(value, list):
+        return [renamed(item, names) for item in value]
+    if isinstance(value, dict):
+        return {key: renamed(item, names) for key, item in value.items()}
+    return value
+
+
 def _laid_out(quote, text):
     """Where a quote stands in page text whose line breaks are layout (open items round,
     16 Oct 2026): each run of spaces in the quote meets a run of spaces or line breaks in
@@ -157,6 +190,7 @@ def accept(proposal, context):
     require_schema(data, {**SCHEMA, "properties": {
         key: {"type": "array", "items": {}} for key in KINDS}})
     sources = source_catalogue(context)
+    aliases = context_aliases(context)
     units, issues = [], []
     proposals = [(key, unit) for key in KINDS for unit in data[key]]
     if not proposals:
@@ -167,7 +201,8 @@ def accept(proposal, context):
             require_schema(unit, SCHEMA["properties"][key]["items"])
             primary = select({"source_id": context["latest"]["source_id"],
                               "quote": unit["quote"]}, sources)
-            selected = [select(ref, sources) for ref in unit["context"]]
+            selected = [select({**ref, "source_id": aliases.get(ref["source_id"], ref["source_id"])}, sources)
+                        for ref in unit["context"]]
             if key == "requests":
                 if not unit["requested_work"] or not unit["desired_result"].strip():
                     raise SchemaViolation("A request needs its work kind and desired result")
@@ -192,7 +227,9 @@ def understand(model, context):
         raise ValueError("Conversation position disagrees with original history")
     system = ((FIRST if context["position"] == "first" else FOLLOW_UP)
               + (DOCUMENTS if "documents" in context else "") + SYSTEM)
-    payload = {key: deepcopy(value) for key, value in context.items() if key != "position"}
+    # Sources are shown by their short IDs; accept maps them back (16 Oct 2026).
+    shown = {identity: alias for alias, identity in context_aliases(context).items()}
+    payload = renamed({key: deepcopy(value) for key, value in context.items() if key != "position"}, shown)
     prompt = Prompt(system=system, user=json.dumps(payload, ensure_ascii=False),
                     operation="core_understanding")
     if (estimate_tokens(system + prompt.user + json.dumps(SCHEMA)) + MAX_OUTPUT

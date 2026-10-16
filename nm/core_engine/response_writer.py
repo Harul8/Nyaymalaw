@@ -14,7 +14,7 @@ from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 
 from nm.core_engine import answer_sources, research
-from nm.core_engine.understanding import REFERENCE, TEXT, source_catalogue
+from nm.core_engine.understanding import REFERENCE, TEXT, renamed, source_catalogue
 from nm.shared import clock_contracts
 from nm.shared.model_port import (
     ContextOverflow, ModelError, Prompt, SchemaViolation, Tier, canonical_schema_data,
@@ -288,6 +288,8 @@ def accept(proposal, context, sources, *, contract=CONTRACT, parts=None):
             raise SchemaViolation("A response unit needs nonblank text")
         addresses = []
         for ref in item["addresses"]:
+            if ref.get("source_id") in offered:  # a short ID is mapped back (16 Oct 2026)
+                ref = {**ref, "source_id": offered[ref["source_id"]]}
             original = originals.get(ref["source_id"])
             if (original is None or original.get("speaker") != "advocate"
                     or original.get("record_role") != "original_account"):
@@ -435,7 +437,10 @@ def _payload(context, record, sources, interpretation, execution, layout, index,
     held = answer_sources.presentation(sources, aliased=True, compact=True, work_ids=part["work_ids"])
     offered = {tag: alias for alias, tag in answer_sources.aliases(sources).items()}
     shown = {passage["id"] for passage in held["passages"]}
-    return {"original_context": context, "setting": clock_contracts.setting(),
+    # Messages and document pages are shown by their short IDs too (16 Oct 2026).
+    if time_limits is not None:
+        time_limits = renamed(time_limits, offered)
+    return {"original_context": answer_sources.shown_context(context, sources), "setting": clock_contracts.setting(),
             "interpretation_proposal": interpretation,
             "this_part": {"part": index + 1, "of": len(layout), "opens_the_answer": index == 0,
                           "dispute": disputes.get(part["dispute_id"]),

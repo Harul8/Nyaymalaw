@@ -95,11 +95,23 @@ def test_complete_sustained_history_restrictions_and_saved_work_reach_call():
                                  context=[{"source_id": "t40:advocate", "quote": "KEEP END 40"}])]})
     out = understand(model, ctx)
     payload = json.loads(model.calls[0][0].user)
-    assert payload["conversation"] == rows
+    # Shown by short IDs in order (16 Oct 2026); the words and turns exactly as saved.
+    assert payload["conversation"] == [{**row, "source_id": f"M{n}"} for n, row in enumerate(rows, 1)]
+    assert payload["latest"]["source_id"] == "M81"
     assert payload["current_records"] == ctx["current_records"]
     assert payload["saved_work"] == ctx["saved_work"]
     assert "opening message" not in model.calls[0][0].system
     assert out["units"][0]["context"][0]["turn_id"] == "t40"
+
+
+def test_a_short_id_the_model_names_is_mapped_back_to_its_owned_source():
+    rows = [{"source_id": "turn_9f3c-4c8d:advocate", "turn_id": "turn_9f3c-4c8d", "speaker": "advocate",
+             "record_role": "original_account", "text": "The notice went out on 5 May."}]
+    ctx = context("What did I say about the notice?", rows)
+    model = Model({"units": [unit("What did I say about the notice?", kind="request", requested_work="analysis",
+                                 desired_result="Recall the notice", context=[{"source_id": "M1", "quote": "5 May"}])]})
+    out = understand(model, ctx)
+    assert out["units"][0]["context"][0]["source_id"] == "turn_9f3c-4c8d:advocate"
 
 
 def test_mixed_independent_requests_and_restriction_are_not_collapsed():
