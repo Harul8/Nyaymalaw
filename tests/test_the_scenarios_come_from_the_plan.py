@@ -37,8 +37,10 @@ def test_active_sheet_does_not_choose_the_schema():
     rows = plan_scenarios.sheet_rows()
     assert len(rows) == 93
     assert {"F-B-17", "F-C-13"} <= {r["ID"] for r in rows}
-    assert sum(row[plan_scenarios.STATE_COLUMN] == "Executable" for row in rows) == 19
+    assert sum(row[plan_scenarios.STATE_COLUMN] == "Executable" for row in rows) == 18
     assert sum(row[plan_scenarios.STATE_COLUMN] == "Planned" for row in rows) == 74
+    # F-B-04, retired by the owner on 16 Oct 2026: kept in the sheet, nothing generated.
+    assert [row["ID"] for row in rows if row[plan_scenarios.STATE_COLUMN] == "Retired"] == ["F-B-04"]
 
 
 @pytest.mark.parametrize(

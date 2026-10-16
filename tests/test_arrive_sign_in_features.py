@@ -1087,83 +1087,24 @@ def sign_in_returns_to_the_draft(page_script):
 
 # ================================ B. Open a matter ============================
 
-OPENING = '#pane-advise[data-view="opening"]'
-LISTING = '#pane-advise[data-view="list"]'
-
-
-def _intake_submit(script: str) -> str:
-    submit = script[script.index("$('intake').addEventListener('submit'"):]
-    return submit[:submit.index("\n});")]
-
-
 # ---------------------------------------------------------------- F-B-01 ---
+#
+# Conversation first (owner decision, 16 Oct 2026): a new matter opens straight into
+# the conversation, with no form; the parties and details come from the messages.
 
-@then("Start a matter opens the intake form alone, with Home still the marked tab")
-def start_opens_the_intake_alone(page_script, stylesheet):
+@then("New matter opens a new conversation with the message box ready and no form")
+def new_matter_opens_the_conversation(page_script):
+    assert "$('rail-new').addEventListener('click', startMatter);" in page_script
     start = _function(page_script, "startMatter")
-    for part in ("state.workTab = 'home';", "showTab('advise');", "setWorkView('opening');",
-                 "selectIntent(null, { opening: true });"):
-        assert part in start, part
-    assert "showMatterList" not in start, "a new matter must not load the list of other matters"
-    # LB-84 keeps the intake's recovery menu reachable, but no matter heading
-    # or board is shown before a matter exists.
-    for hidden in (".rail", ".matters-toggle", ".workspace-heading > div:first-child"):
-        assert "display: none" in declarations(stylesheet, f"{OPENING} {hidden}"), hidden
+    for step in ("showIntake(false);", "$('matter-heading').textContent = 'New matter';", "$('message').focus();"):
+        assert step in start, step
 
 
-@then("recording the intake saves the matter on the server with the form's parties before "
-      "the chat opens")
-def intake_saves_the_matter_first(page_script):
-    submit = _intake_submit(page_script)
-    saved = submit.index("await api('/api/matters/intake'")
-    assert "parties: state.intake.parties" in submit[:saved]
-    assert "brief: state.intake.brief" in submit[:saved]
-    assert "JSON.stringify(payload)" in submit[:saved]
-    assert "request_key: intent.opening.key, ...payload" in submit[saved:]
-    closed = submit.index("showIntake(false);", saved)
-    board = submit.index(
-        "showThreadBoard(opened.matter_id, { adoptOpening: true, restore: false })")
-    assert saved < closed < board, "the chat opens before the server confirms the matter"
-    assert "opened.state !== 'intake_opened'" in submit
-
-
-@then("if the matter cannot be opened the form keeps its answers and says so")
-def failed_opening_keeps_the_form(page_script):
-    submit = _intake_submit(page_script)
-    failure = submit[submit.index("} catch (e) {"):]
-    assert "showIntake(false)" not in failure
-    # A missing acknowledgement is not evidence that the commit did not happen.
-    assert "Opening was not confirmed" in failure
-    assert "server may have saved" in failure
-    assert "original answers and retry identity are kept" in failure
-
-
-@when(parsers.parse('an advocate opens a matter for "{client_name}" against "{adverse}" '
-                    'without a title'))
-def open_a_matter_without_a_title(client, context, client_name, adverse):
-    context["parties"] = {client_name: "client", adverse: "adverse"}
-    context["response"] = client.post("/api/matters/intake", json={
-        "request_key": "scenario-opening", "parties": context["parties"]})
-
-
-@then(parsers.parse('the matter is saved as "{title}" with both parties recorded'))
-def matter_saved_as(wired, context, title):
-    response = context["response"]
-    assert response.status_code == 200, response.text
-    opened = response.json()
-    assert opened["state"] == "intake_opened" and opened["title"] == title, opened
-    context["matter_id"] = opened["matter_id"]
-    saved = wired.store.load(opened["matter_id"])
-    assert saved.title == title and saved.intake_parties == context["parties"]
-
-
-@then("it is in My work's list straight away")
-def in_my_work_straight_away(client, context):
-    rows = client.get("/api/matters").json()["matters"]
-    row = next((r for r in rows if r["matter_id"] == context["matter_id"]), None)
-    assert row, rows
-    client_name, adverse = list(context["parties"])
-    assert (row["client"], row["opponent"]) == (client_name, adverse), row
+@then("the conversation joins the list of matters once its first message is saved")
+def the_saved_conversation_joins_the_list(page_script):
+    joined = page_script[page_script.index("if (answer.chat_id && !intent.chatId) {"):]
+    joined = joined[:joined.index("\n    }\n")]
+    assert "intent.chatId = answer.chat_id;" in joined and "loadMatterList();" in joined
 
 
 # ---------------------------------------------------------------- F-B-02 ---
@@ -1227,76 +1168,9 @@ def choosing_a_conversation_restores_it(page_script):
     assert "const selection = restorePendingChat(chat.chat_id);" in load and "row.onclick = open;" in load
 
 
-def _frontend_file(name: str) -> str:
-    return (ROOT / "nm" / name).read_text(encoding="utf8")
-
-
-def _backend_file(relative: str) -> str:
-    return (ROOT / "nm" / relative).read_text(encoding="utf8")
-
-
 def _composer(page: str) -> str:
     composer = page[page.index('<form id="composer"'):]
     return composer[:composer.index("</form>")]
-
-
-# ---------------------------------------------------------------- F-B-04 ---
-
-def _matter_header(app_page: str) -> str:
-    """The open matter's header markup, comments removed: a comment is not a control."""
-    header = app_page[app_page.index('id="workspace-focus"'):app_page.index('<form id="intake"')]
-    return re.sub(r"<!--.*?-->", " ", header, flags=re.S)
-
-
-@then("the open matter's header holds only the file icon")
-def the_header_holds_only_the_file_icon(app_page, page_script):
-    """F-B-04, owner 28 September 2026: "remove more to recorded file on the
-    right hand top corner -- just keep file icon"."""
-    header = _matter_header(app_page)
-    controls = re.findall(r"<(button|summary|details|nav|a)\b[^>]*>", header)
-    assert controls == ["button"], f"the matter header holds {controls}, not one file icon"
-    assert 'id="files-toggle"' in header and 'aria-label="Files and matter details"' in header
-    for gone in ("More", "Case file", "History", "Recorded file", "Recover a draft",
-                 'id="save-status"', 'id="work-links"', 'id="workspace-more"'):
-        assert gone not in header, f"{gone!r} is still in the matter header"
-    assert "Recorded file" not in page_script, "the saved-status line is still written"
-    workspace = _function(page_script, "updateWorkspace")
-    assert "const filesShown = Boolean(state.matterId) || intakeOpen;" in workspace
-    assert "$('matter-files').hidden = !filesShown;" in workspace
-    tools = _frontend_file("legal_brain/communicate/matter-workspace.js")
-    assert "matter-tools" not in tools and "toolbar." not in tools, (
-        "the matter records are still mounted as header tools")
-
-
-@then("the file icon lists every file held on the matter, including audio, video and voice notes")
-def the_file_icon_lists_every_file(page_script):
-    opening = _function(page_script, "openFilesMenu")
-    assert "/uploads`" in opening, "the list is not read from the matter's saved upload receipts"
-    assert "does not mean no files are held" in opening, (
-        "a list that could not be read would render as no files")
-    kinds = _function(page_script, "fileKind")
-    for kind in ("'Voice note'", "'Audio'", "'Video'", "'Image'", "'Document'"):
-        assert kind in kinds, kind
-    cleared = _function(page_script, "clearPrivileged")
-    assert "'files-menu'" in cleared and "closeFilesMenu();" in cleared, (
-        "file names could outlive the session")
-
-
-@then("the matter's own records open from the same icon")
-def the_matters_records_open_from_the_icon(page_script):
-    """Owner, 28 September 2026: "if any of these are important and must be
-    kept, keep those files under the same files icon folder" -- all six are."""
-    records = page_script[page_script.index("const MATTER_RECORDS = ["):]
-    records = records[:records.index("];")]
-    for label, opens in (("Matter cover & instructions", "open('cover')"),
-                         ("Case file", "showTab('casefile')"),
-                         ("Attributed file", "open('casefile')"),
-                         ("History", "showTab('history')"),
-                         ("Protective handoff", "open('emergency')"),
-                         ("Recover a draft", "openDraftRecovery()")):
-        assert f"label: '{label}'" in records, f"{label} has no way in from the file icon"
-        assert opens in records, f"{label} does not open its own record"
-    assert "matterRecords()" in _function(page_script, "openFilesMenu")
 
 
 # ================================ C. Take the brief ===========================

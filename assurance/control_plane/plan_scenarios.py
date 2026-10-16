@@ -78,7 +78,9 @@ def sheet_rows(sheet: Path = SHEET) -> list[dict]:
             seen.add(row_id)
             body = str(row.get(COLUMN) or "").strip()
             state = row.get(STATE_COLUMN)
-            if state not in {"Executable", "Planned"}:
+            # Retired: the owner removed the requirement; its scenarios stay in the
+            # historical column and nothing is generated (16 Oct 2026).
+            if state not in {"Executable", "Planned", "Retired"}:
                 raise ValueError(f"{row_id}: executable scenario state is missing or invalid")
             if (state == "Executable") != bool(body):
                 raise ValueError(f"{row_id}: executable state and scenario body disagree")
