@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import json
-from datetime import date
 
 TEXT_LIMITS = {
     "instructor_name": 200, "instructor_role": 200, "authority_basis": 2000,
@@ -21,54 +20,6 @@ CHOICES = {
 #: original rather than over it. Same `{by, answer, at}` shape as every other
 #: intake answer; `answer` is the corrections, oldest first.
 CORRECTIONS = "opening_amendments"
-
-
-def normalise_brief(value: object) -> dict:
-    """Validate stated data, never infer a clearance or turn prose into proof."""
-    keys = set(TEXT_LIMITS) | set(CHOICES) | {"reported_date", "capacity"}
-    if not isinstance(value, dict) or set(value) - keys:
-        raise ValueError("opening brief contains unsupported fields")
-    result = {}
-    for key, limit in TEXT_LIMITS.items():
-        text = value.get(key, "")
-        if not isinstance(text, str) or len(text) > limit:
-            raise ValueError(f"{key} must be text within {limit} characters")
-        result[key] = text.strip()
-    for key, choices in CHOICES.items():
-        choice = value.get(key, choices[0])
-        if not isinstance(choice, str) or choice not in choices:
-            raise ValueError(f"{key} needs a supported explicit state")
-        result[key] = choice
-    reported = value.get("reported_date", "")
-    if not isinstance(reported, str) or len(reported) > 10:
-        raise ValueError("reported_date must be an ISO date or unknown")
-    if reported:
-        try:
-            if date.fromisoformat(reported).isoformat() != reported:
-                raise ValueError
-        except ValueError:
-            raise ValueError("reported_date must be an ISO date or unknown") from None
-        if result["urgency"] != "stated":
-            raise ValueError("a reported urgent date needs a stated urgency")
-    result["reported_date"] = reported
-    capacity = value.get("capacity", {"state": "not_assessed", "basis": ""})
-    if (not isinstance(capacity, dict) or set(capacity) != {"state", "basis"}
-            or capacity.get("state") not in ("not_assessed", "not_in_doubt", "in_doubt")
-            or not isinstance(capacity.get("basis"), str)
-            or len(capacity["basis"]) > 2000):
-        raise ValueError("capacity needs an explicit state and bounded basis")
-    result["capacity"] = {"state": capacity["state"], "basis": capacity["basis"].strip()}
-    if result["instructing"] != "representative" and any(
-        result[key] for key in ("instructor_name", "instructor_role", "authority_basis")
-    ):
-        raise ValueError("representative details require that instruction source")
-    if result["proceedings"] == "none" and any(
-        result[key] for key in ("forum", "case_reference", "stage")
-    ):
-        raise ValueError("proceeding details contradict the no-proceedings state")
-    if result["urgency"] != "stated" and result["urgency_details"]:
-        raise ValueError("urgency details require a stated urgency")
-    return result
 
 
 def corrections(matter) -> list[dict]:
@@ -113,25 +64,6 @@ def recorded_brief(matter) -> dict:
     }
 
 
-def opening_form(matter) -> dict:
-    """What the board's edit form starts from: the details as they now stand.
-
-    The parties are the file's whole current party set, including any recorded
-    since opening, so what the advocate sees and saves is what is screened.
-    """
-    return {
-        "title": matter.title,
-        "parties": dict(matter.intake_parties or {}),
-        "brief": current_opening(matter),
-    }
-
-
-def correction_notes(matter) -> list[dict]:
-    """The conversation's record of each correction: when, and what changed."""
-    return [{"at": row.get("at", ""), "changes": list(row.get("changes") or [])}
-            for row in corrections(matter) if row.get("changes")]
-
-
 _SIDES = {"client": "acting for", "adverse": "against", "related": "other party"}
 _WORDS = {
     "not_known": "not known yet", "individual": "individual", "organisation": "organisation",
@@ -152,50 +84,6 @@ _FIELDS = (
     ("reported_date", "reported date (not a calculated deadline)"),
     ("date_source", "source of that date"),
 )
-
-
-def _short(text: str, limit: int = 120) -> str:
-    text = " ".join(str(text).split())
-    return text if len(text) <= limit else text[: limit - 1].rstrip() + "…"
-
-
-def describe_changes(before: dict, after: dict) -> list[str]:
-    """Plain lines for what a correction changed. Empty means nothing changed.
-
-    `before` and `after` are `{title, parties, brief}`. A removed or moved
-    party is named, because the record of who was once on the file is what
-    keeps a correction from reading as a clearance.
-    """
-    lines = []
-    if (before.get("title") or "") != (after.get("title") or ""):
-        lines.append(f"matter name: {_short(after.get('title') or 'temporary name')}")
-    old, new = before.get("parties") or {}, after.get("parties") or {}
-    for name in sorted(set(old) | set(new), key=str.casefold):
-        if name not in old:
-            lines.append(f"{_SIDES.get(new[name], new[name])}: {name} added")
-        elif name not in new:
-            lines.append(f"{_SIDES.get(old[name], old[name])}: {name} removed")
-        elif old[name] != new[name]:
-            lines.append(f"{name}: moved from {_SIDES.get(old[name], old[name])} "
-                         f"to {_SIDES.get(new[name], new[name])}")
-    was, now = before.get("brief") or {}, after.get("brief") or {}
-    for key, label in _FIELDS:
-        prior, value = was.get(key, ""), now.get(key, "")
-        if (prior or "") == (value or ""):
-            continue
-        if key in CHOICES:
-            lines.append(f"{label}: {_WORDS.get(value, value)}")
-        elif value:
-            lines.append(f"{label}: {_short(value)}")
-        else:
-            lines.append(f"{label}: cleared")
-    if (was.get("capacity") or {}).get("state") != (now.get("capacity") or {}).get("state"):
-        state = (now.get("capacity") or {}).get("state", "not_assessed")
-        lines.append("capacity to instruct: " + {
-            "not_in_doubt": "you have assessed that the client can give these instructions",
-            "in_doubt": "in doubt",
-        }.get(state, "not assessed"))
-    return lines
 
 
 def instruction_context(matter) -> str:

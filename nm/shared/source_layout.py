@@ -84,14 +84,6 @@ def load_layout(root: Path = ROOT, *, reconcile: bool = True) -> dict:
     return value
 
 
-def source_paths(role: str | None = None, *, root: Path = ROOT) -> tuple[Path, ...]:
-    value = load_layout(root)
-    if role is not None and role not in ROLES:
-        raise LayoutRefused("An unknown source role cannot define a scan population")
-    return tuple(sorted(module_path(name, root=root) for name, owned in value["modules"].items()
-                        if role is None or role == owned))
-
-
 def browser_assets(*, root: Path = ROOT) -> dict[str, Path]:
     rows = load_layout(root)["browser_assets"]
     if not isinstance(rows, dict) or not rows:

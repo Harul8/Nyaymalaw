@@ -1,8 +1,8 @@
 """Current sealed relevance proofs forwarded to the existing file summary owner."""
-from nm.work_the_file.summary_contracts import MatterSummary, unbuildable
+from nm.work_the_file.summary_contracts import MatterSummary
 from nm.work_the_file.summary_contracts import build as domain_build
 
-__all__ = ["MatterSummary", "build", "unbuildable"]
+__all__ = ["MatterSummary", "build"]
 
 
 def build(matter, *args, source_current=None, checklist_projections=None, **kwargs):

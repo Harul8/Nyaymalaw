@@ -158,6 +158,14 @@ REACHED_ELSEWHERE = {
     "_implements_c4",
     # dataclass and Protocol machinery.
     "__post_init__", "decorate",
+    # The core engine's routes, registered by @app decorators in nm/app/api.py
+    # (documents, research notes, the board, dictation and live dictation).
+    "chat_board", "chat_documents", "chat_source", "dictation", "document_recording",
+    "document_summary", "historical_matter", "live_dictation", "read_document_waiting",
+    "receive_document", "research_note_view", "research_note_word", "dictation_setting",
+    "set_dictation_setting",
+    # A pydantic field validator: the model class calls it on every request.
+    "preserve_original_message",
 }
 
 
@@ -168,6 +176,9 @@ def _defined() -> dict[str, tuple[str, int]]:
     for f in sorted((ROOT / "nm").rglob("*.py")):
         if "__pycache__" in f.parts:
             continue
+        # The archived engines are reference copies, not served: their own functions are not
+        # this rule's population, though their ports and their calls into the product count.
+        archived = "Archives" in f.relative_to(ROOT).parts
         tree = ast.parse(f.read_text(encoding="utf8"))
         for node in ast.walk(tree):
             if isinstance(node, ast.ClassDef) and any(
@@ -177,7 +188,7 @@ def _defined() -> dict[str, tuple[str, int]]:
                 # rather than at the definition.
                 protocols.update(n.name for n in node.body
                                  if isinstance(n, ast.FunctionDef))
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and not archived:
                 if node.name.startswith("__"):
                     continue
                 out[node.name] = (str(f.relative_to(ROOT)), node.lineno)

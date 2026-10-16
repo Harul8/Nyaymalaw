@@ -213,19 +213,6 @@ class Handover:
         """
         return self.to_actor if self.state.responsibility_moved else self.from_actor
 
-    def unowned_after(self) -> tuple[str, ...]:
-        """Outstanding work that would land on nobody. Empty is the good case.
-
-        A declined or withdrawn handover leaves everything with the offeror,
-        which is correct and is not a gap; what this catches is an accepted
-        handover with no recipient recorded, which the constructor should have
-        refused and which would otherwise silently orphan the work.
-        """
-        if self.state.responsibility_moved and blank(self.to_actor):
-            return self.outstanding
-        return ()
-
-
 def offer(*, handover_id: str, matter_id: str, from_actor: str,
           to_actor: str, offered_at: str, summary: CaseSummary,
           outstanding: tuple[str, ...] = ()) -> Handover:

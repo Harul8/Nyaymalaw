@@ -127,13 +127,3 @@ class Quarantined:
         return f"<Quarantined {state}: {self.held_because[:50]!r}>"
 
 
-@implements("B4")
-def reachable_substance(items: tuple[Quarantined, ...]) -> tuple[str, ...]:
-    """Everything analysis could currently read. E-089's first half.
-
-    Returns what IS reachable rather than asserting that nothing is, so the
-    check has something to be wrong about: a version that always returned `()`
-    would satisfy an "assert nothing reachable" test identically, which is the
-    B-049 shape.
-    """
-    return tuple(q.held_because for q in items if q.reachable)

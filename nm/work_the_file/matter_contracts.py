@@ -1338,24 +1338,6 @@ class Matter:
         return replace(self, asked=self.asked + (
             AskedQuestion(gate=gate, text=text, asked_on=turn, thread=thread),))
 
-    def pause_need(self, need: str, resume_when: str, by: str = "",
-                   at: str = "") -> "Matter":
-        """The advocate cannot obtain this NEED. Record it as paused with a
-        resume trigger. P24 / C1 NEVER[4]: a paused need is NOT re-asked and
-        does NOT count as answered -- intake stays incomplete on it -- so the
-        loop on unavailable material stops without pretending the gap is closed.
-        `need` is the gap text; re-pausing the same need updates its trigger."""
-        need = need.strip()
-        if not need:
-            return self
-        rows = tuple(p for p in self.paused_needs
-                     if not (isinstance(p, dict) and p.get("need") == need))
-        row = {"need": need,
-               "resume_when": resume_when.strip() or "new material arrives",
-               "by": by, "at": at}
-        return replace(self, paused_needs=rows + (row,),
-                       version=self.version + 1)
-
     def resume_need(self, need: str) -> "Matter":
         """Reopen a paused need -- relevant material or an instruction arrived.
         It becomes an ordinary gap again, to be asked at the smallest useful

@@ -612,17 +612,6 @@ def build(matter: Matter, thread_id: str | None = None,
     )
 
 
-def unbuildable(reason: str) -> dict:
-    """A summary that could not be built is an EXPLICIT FAILURE.
-
-    Never an empty one. An empty summary tells the advocate the file holds
-    nothing, and the product would then re-ask everything it had ever been
-    told — defect shape S1, with the whole conversation as the blast radius.
-    """
-    return {"state": "unbuildable", "reason": reason, "established": [],
-            "open_questions": [], "answered": []}
-
-
 def _source(f) -> str:
     """WHERE THIS CAME FROM, where it is not the advocate's own word.
 

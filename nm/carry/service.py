@@ -333,17 +333,6 @@ def watch_report(screen, authority: ServiceAuthority | None, *,
 
 # ------------------------------------------------------------ persistence ---
 
-def authority_as_dict(a: ServiceAuthority) -> dict:
-    return {"schema": 1, "authority_id": a.authority_id,
-            "matter_id": a.matter_id,
-            "responsible_actor": a.responsible_actor, "purpose": a.purpose,
-            "trigger": a.trigger.value, "cadence": a.cadence,
-            "notify": a.notify.value, "granted_by": a.granted_by,
-            "granted_at": a.granted_at, "expires_on": a.expires_on,
-            "revoked_at": a.revoked_at, "revoked_by": a.revoked_by,
-            "version": a.version}
-
-
 def authority_from_dict(value) -> ServiceAuthority | None:
     if not isinstance(value, dict) or not value.get("authority_id"):
         return None
@@ -378,39 +367,6 @@ def authorities(matter) -> tuple[ServiceAuthority, ...]:
         authority_from_dict(v)
         for v in getattr(matter, "service_authorities", ()) or ())
         if a is not None)
-
-
-def put_authority(existing: tuple[ServiceAuthority, ...],
-                  a: ServiceAuthority) -> tuple[ServiceAuthority, ...]:
-    if any(x.authority_id == a.authority_id for x in existing):
-        return tuple(a if x.authority_id == a.authority_id else x
-                     for x in existing)
-    return (*existing, a)
-
-
-def current_authority(matter, today: str) -> ServiceAuthority | None:
-    """The one authority that permits work right now, or None.
-
-    A MATTER MAY HOLD SEVERAL and only a granted one counts. Returning a
-    revoked authority "so the caller can check" is how a caller forgets to.
-    """
-    return next((a for a in authorities(matter)
-                 if a.state_on(today) is AuthorityState.GRANTED), None)
-
-
-def authority_projection(a: ServiceAuthority, today: str) -> dict:
-    """What the advocate is shown. IT NEVER CLAIMS CONTINUOUS MONITORING."""
-    state = a.state_on(today)
-    return {"authority_id": a.authority_id, "state": state.value,
-            "responsible_actor": a.responsible_actor, "purpose": a.purpose,
-            "trigger": a.trigger.value, "cadence": a.cadence,
-            "notify": a.notify.value, "granted_by": a.granted_by,
-            "granted_at": a.granted_at, "expires_on": a.expires_on,
-            "revoked_at": a.revoked_at,
-            "permits_work": state.permits_work,
-            "still_needed": list(a.absent()),
-            "version": a.version,
-            "said": a.said(today)}
 
 
 def job_as_dict(j: ServiceJob) -> dict:
@@ -470,31 +426,3 @@ def put_job(existing: tuple[ServiceJob, ...],
     return (*existing, job)
 
 
-def job_projection(j: ServiceJob) -> dict:
-    return {"job_id": j.job_id, "kind": j.kind, "due_on": j.due_on,
-            "outcome": j.outcome.value, "settled": j.outcome.settled(),
-            "claims_delivery": j.claims_delivery,
-            "notified": j.notified.value, "attempts": j.attempts,
-            "because": j.because, "version": j.version,
-            "said": j.said()}
-
-
-def conflict_screen_of(matter):
-    """This matter's stored conflict screen, or None.
-
-    READ FROM THE FILE rather than re-run, because re-running here would give
-    the watch report a different answer from the one the advocate was shown on
-    their last turn -- two screens disagreeing about the same file.
-    """
-    from nm.open_matter.screens import ScreenKind, from_stored
-
-    stored = getattr(matter, "screens", ()) or ()
-    try:
-        # THE WHOLE POPULATION, THROUGH ITS OWNER. `from_stored` raises on a
-        # malformed record rather than dropping it, because a dropped screen
-        # invents a clean one -- so a file whose screens cannot be read
-        # produces no watch report rather than a reassuring empty one.
-        screens = from_stored(tuple(stored))
-    except ValueError:
-        return None
-    return next((s for s in screens if s.kind is ScreenKind.CONFLICT), None)

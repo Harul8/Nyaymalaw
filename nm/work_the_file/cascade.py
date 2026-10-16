@@ -328,21 +328,6 @@ def lost(before: tuple[Derived, ...],
 
 
 @implements("A3")
-def advice_at_risk(prior: tuple[PriorAdvice, ...],
-                   moved: tuple[Change, ...]) -> tuple[PriorAdvice, ...]:
-    """§5.4's THIRD PART, and the one a silent recompute loses.
-
-    *Where earlier advice is affected, that is said in terms, including whether
-    anything already done needs undoing.*
-
-    An advocate who filed on Tuesday against a date that moved on Thursday
-    needs to be told. Showing them a corrected number is not telling them.
-    """
-    names = {c.name for c in moved}
-    return tuple(a for a in prior if names & set(a.rested_on))
-
-
-@implements("A3")
 def unresolved_undo(moved: tuple[Change, ...]) -> tuple[str, ...]:
     """Changes where nobody said whether anything needs undoing.
 

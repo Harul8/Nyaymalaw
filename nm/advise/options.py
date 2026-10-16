@@ -14,7 +14,7 @@ who would otherwise repeat the number to a client.
 from __future__ import annotations
 
 from nm.advise.advice_decision_contracts import AdviceDecision, Disposition, authorises
-from nm.advise.options_contracts import Certainty, Comparison, Figure, Option, Route
+from nm.advise.options_contracts import Comparison
 from nm.shared.text_contracts import clean
 
 
@@ -23,76 +23,6 @@ def _enum(kind, value, fallback):
         return kind(value)
     except (ValueError, KeyError):
         return fallback
-
-
-def figure_as_dict(figure: Figure) -> dict:
-    return {"text": figure.text, "certainty": figure.certainty.value,
-            "basis": figure.basis}
-
-
-def figure_from_dict(value: dict) -> Figure:
-    """An unreadable certainty reads as UNKNOWN.
-
-    NOT as established: a corrupt row must fall to the value that claims
-    least, or a damaged record starts asserting measured figures.
-    """
-    return Figure(text=str(value.get("text") or ""),
-                  certainty=_enum(Certainty, value.get("certainty"),
-                                  Certainty.UNKNOWN),
-                  basis=str(value.get("basis") or ""))
-
-
-def option_as_dict(option: Option) -> dict:
-    return {
-        "route": option.route.value, "summary": option.summary,
-        "objective_fit": option.objective_fit,
-        "useful_recovery": figure_as_dict(option.useful_recovery),
-        "cost": figure_as_dict(option.cost),
-        "time": figure_as_dict(option.time),
-        "disruption": figure_as_dict(option.disruption),
-        "enforceability": figure_as_dict(option.enforceability),
-        "proportionate": option.proportionate,
-        "adverse": list(option.adverse),
-        "why_it_loses": option.why_it_loses,
-    }
-
-
-def option_from_dict(value: dict) -> Option:
-    blank_figure = {"text": "", "certainty": "unknown", "basis": ""}
-    return Option(
-        route=_enum(Route, value.get("route"), Route.NOT_ASSESSED),
-        summary=str(value.get("summary") or "?"),
-        objective_fit=str(value.get("objective_fit") or ""),
-        useful_recovery=figure_from_dict(value.get("useful_recovery") or blank_figure),
-        cost=figure_from_dict(value.get("cost") or blank_figure),
-        time=figure_from_dict(value.get("time") or blank_figure),
-        disruption=figure_from_dict(value.get("disruption") or blank_figure),
-        enforceability=figure_from_dict(value.get("enforceability") or blank_figure),
-        proportionate=value.get("proportionate"),
-        adverse=tuple(str(a) for a in (value.get("adverse") or ())),
-        why_it_loses=str(value.get("why_it_loses") or ""))
-
-
-def comparison_as_dict(comparison: Comparison) -> dict:
-    return {
-        "schema": 1,
-        "options": [option_as_dict(o) for o in comparison.options],
-        "supported": (comparison.supported.value
-                      if comparison.supported else None),
-        "because": comparison.because,
-        "no_view_because": comparison.no_view_because,
-    }
-
-
-def comparison_from_dict(value: dict) -> Comparison:
-    supported = value.get("supported")
-    return Comparison(
-        options=tuple(option_from_dict(o) for o in (value.get("options") or ())
-                      if isinstance(o, dict)),
-        supported=(_enum(Route, supported, Route.NOT_ASSESSED)
-                   if supported else None),
-        because=str(value.get("because") or ""),
-        no_view_because=str(value.get("no_view_because") or ""))
 
 
 def comparison_projection(comparison: Comparison) -> dict:
@@ -160,18 +90,6 @@ def decision_from_dict(value: dict) -> AdviceDecision:
         narrowed_to=str(value.get("narrowed_to") or ""),
         because=str(value.get("because") or ""),
         superseded_by=str(value.get("superseded_by") or ""))
-
-
-def decision_rows(matter) -> tuple[AdviceDecision, ...]:
-    return tuple(decision_from_dict(d)
-                 for d in (getattr(matter, "advice_decisions", ()) or ())
-                 if isinstance(d, dict))
-
-
-def put_decision(existing: tuple[AdviceDecision, ...],
-                 decision: AdviceDecision) -> tuple[AdviceDecision, ...]:
-    others = tuple(d for d in existing if d.decision_id != decision.decision_id)
-    return others + (decision,)
 
 
 def decision_projection(decision: AdviceDecision) -> dict:

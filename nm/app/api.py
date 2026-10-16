@@ -577,11 +577,6 @@ def _professional_status(directory, identity, now) -> dict:
     return read_professional_status(directory.professional_approval, identity.id, now)
 
 
-def _professional_access(advocate_id: str) -> dict:
-    return read_professional_status(application().directory.professional_approval,
-                                    advocate_id, utcnow())
-
-
 def registration_origin(request: Request,
                         x_enrolment_invitation: str | None = Header(default=None)) -> None:
     """Public signup needs the page origin; invitation API clients need their token.

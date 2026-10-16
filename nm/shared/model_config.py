@@ -283,10 +283,6 @@ class ModelConfig:
     def configured(self, tier: Tier) -> bool:
         return tier in self.tiers
 
-    def providers(self) -> set[str]:
-        return {c.provider for c in self.tiers.values()}
-
-
 def _require_pinned(tier: Tier, model: str) -> None:
     if model not in PUBLISHED_RELEASES and not _PINNED.search(model):
         raise ConfigurationError(

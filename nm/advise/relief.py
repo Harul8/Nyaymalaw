@@ -551,14 +551,6 @@ def disclosure(position: ReliefPosition | None) -> str:
     return head
 
 
-def gate_state(position: ReliefPosition | None) -> str:
-    """The G-REMEDY state, decided here so no call site reads it off fields."""
-    if position is None or position.state is ReliefState.NOT_ASSESSED:
-        return "not_assessed"
-    return "serveable" if position.state is ReliefState.SERVEABLE \
-        else "no_useful_relief"
-
-
 def reliefs_from_stored(rows: object) -> tuple[Relief, ...]:
     """A thread's persisted reliefs, whatever the store returned. An
     unreadable row is dropped rather than crashing the turn -- the honest

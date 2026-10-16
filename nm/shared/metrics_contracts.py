@@ -146,28 +146,6 @@ class TurnMetrics:
     provision is expressly permitted, and this is what decides WHICH provision
     to read."""
 
-    @property
-    def settling_reads(self) -> int:
-        """Calls made in ADMIT -- establishing the FILE, not deriving an answer.
-
-        The property every "nothing was computed behind a closed gate" check
-        subtracts. Asserting a flat `llm_calls == 0` conflates the two and has
-        to be relaxed -- rather than tightened -- the moment another read is
-        needed before a gate can decide, which has now happened four times:
-        the posture, the thread binding, the date chart, and the cause of
-        action.
-
-        THE PROPERTY IS WHY THAT WAS A ONE-LINE CHANGE. Each of those four
-        additions would have been an edit at every assertion site had the check
-        been spelled out there, and the fourth was caught by two existing tests
-        the moment the read was added rather than by anybody remembering.
-
-        What belongs here is precisely what is NOT side-dependent. A
-        recommendation is; an authority set is; a date is not; a cause is not."""
-        return (self.route_reads + self.posture_reads
-                + self.binding_reads + self.chronology_reads
-                + self.cause_reads + self.duty_reads)
-
     def record_call(self, result) -> None:
         """Every model call counts -- including a streamed one.
 
