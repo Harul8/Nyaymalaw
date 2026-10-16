@@ -112,53 +112,34 @@ def test_every_inspect_call_is_policed_with_actual_bytes_and_both_data_classes()
 
 def application(tmp_path, **kwargs):
     from nm.app.composition import Application
+    from nm.shared.model_config import ModelConfig, TierConfig
+    from nm.shared.model_port import Tier
+    from nm.shared.model_scripted import ScriptedModelAdapter
 
+    config = ModelConfig(tiers={Tier.ROUTINE: TierConfig(Tier.ROUTINE, "scripted", "scripted-1", None, None)})
     return Application(
-        environment={
-            "NM_MATTER_KEY": KEY,
-            "NM_MATTER_STORE": str(tmp_path),
-            "NM_MODEL_PROVIDER": "scripted",
-            "NM_MODEL_ROUTINE": "scripted-1",
-            "NM_EMBED_MODEL": "text-embedding-3-large",
-            "NM_PUBLIC_REGISTRATION": "local-test",
-        },
-        audit_root=tmp_path / "audit", **kwargs,
-    )
+        model=ScriptedModelAdapter(config, responses={"__default__": "Synthetic."}), legal_search=None,
+        environment={"NM_MATTER_KEY": KEY, "NM_MATTER_STORE": str(tmp_path),
+                     "NM_MODEL_PROVIDER": "scripted", "NM_MODEL_ROUTINE": "scripted-1",
+                     "NM_EMBED_MODEL": "text-embedding-3-large",
+                     "NM_PUBLIC_REGISTRATION": "local-test"},
+        audit_root=tmp_path / "audit", **kwargs)
 
 
-def test_actual_application_defaults_do_not_configure_or_approve_any_scanner(tmp_path):
+def test_the_application_reads_documents_only_after_a_check_on_this_machine(tmp_path):
+    """Owner decisions, 15 Oct 2026 (item 6): ClamAV on this installation checks every
+    document before anything reads it; the injectable outside scanner these tests once
+    guarded is retired. Without the installation's scanner nothing is cleared, and the
+    application has no way to take a scanner from outside."""
+    import inspect
+
+    from nm.app.composition import Application
+    from nm.open_matter.clamav_check import ClamAVCheck
+
     composed = application(tmp_path)
-    assert composed.documents is not None and composed.documents.quarantine is None
-    assert composed.documents_for(session_current=lambda: True).quarantine is None
+    checker = composed.documents.checker
+    assert isinstance(checker, ClamAVCheck)
+    assert checker.check(BYTES) == ("unavailable", "no malware checker is set up on this installation")
+    assert not {"document_quarantine", "document_quarantine_processor"} & set(
+        inspect.signature(Application).parameters)
     assert egress_policy(ROOT).find(SCANNER) is None
-
-
-@pytest.mark.parametrize("identity", ["", "external-quarantine", "local-looking-unregistered"])
-def test_actual_application_cannot_inject_a_raw_checker_under_missing_or_unreviewed_id(
-    tmp_path, identity
-):
-    checker = ControlledChecker()
-    expected = ValueError if not identity else EgressRefused
-    with pytest.raises(expected):
-        application(tmp_path, document_quarantine=checker,
-                    document_quarantine_processor=identity)
-    assert not checker.calls
-
-
-def test_actual_application_retains_policed_checker_in_request_bound_service(tmp_path, monkeypatch):
-    from nm.app import composition
-
-    # A unit-test-only reviewed recipient, not an authored production approval.
-    local = egress_policy(ROOT)
-    controlled = replace(local, processors=(*local.processors, controlled_processor()))
-    monkeypatch.setattr(composition, "egress_policy", lambda _root: controlled)
-    checker = ControlledChecker()
-    composed = application(tmp_path, document_quarantine=checker,
-                           document_quarantine_processor=SCANNER)
-    wrapped = composed.documents.quarantine
-    assert isinstance(wrapped, PolicedPort) and wrapped.inner is checker
-    assert composed.documents_for(session_current=lambda: True).quarantine is wrapped
-    composed._gate.policy = local
-    with pytest.raises(EgressRefused):
-        wrapped.inspect("original_one", hashlib.sha256(BYTES).hexdigest(), BYTES)
-    assert not checker.calls
