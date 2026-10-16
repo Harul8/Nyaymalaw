@@ -19,6 +19,8 @@ from nm.shared.model_port import SchemaViolation, require_schema
 
 CONTRACT = "core_answer_sources_v1"
 _LEGAL = {"provision", "judgment"}
+#: Page text: held legal passages and the advocate's document pages (open items round, 16 Oct 2026).
+_LAYOUT = _LEGAL | {"document"}
 _CONTEXT_ROLES = {"original_account": "account", "nm_interpretation": "nm_context",
                   "service_status": "service", "supplied_document": "document"}
 _LINK_FIELDS = {"context_ids", "work_ids", "coverage"}
@@ -130,14 +132,16 @@ def build(context, research_record):
 
 
 def select(reference, sources):
-    """Select exact unique words from an owned tag without normalising text."""
+    """Select exact unique words from an owned tag without normalising text. Held legal
+    passages and document pages keep their page line breaks, which a quote may meet
+    with spaces; the selection is still the source's own words."""
     require_schema(reference, REFERENCE)
     identity = reference["source_id"]
     source = sources.get(identity)
     if source is None or source.get("id") != identity:
         raise SchemaViolation("Selected source_id is not in the owned answer catalogue")
     chosen = select_original(reference, {identity: {
-        "source_id": identity, "text": source["text"]}})
+        "source_id": identity, "text": source["text"]}}, layout=source["kind"] in _LAYOUT)
     return {key: chosen[key] for key in ("source_id", "start", "end", "text")}
 
 

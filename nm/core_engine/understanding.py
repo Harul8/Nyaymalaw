@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import re
 from copy import deepcopy
 
 from nm.shared.model_port import (
@@ -11,6 +12,9 @@ from nm.shared.model_port import (
 
 CONTRACT = "core_understanding_v2"
 MAX_OUTPUT = 6000
+#: Text read from a document's pages keeps the page's line breaks, which are layout,
+#: not words; the advocate's own typed messages stay strictly exact.
+LAYOUT_ROLES = frozenset({"supplied_document"})
 
 FIRST = "Message: This is the advocate's opening message. No earlier conversation exists."
 FOLLOW_UP = """Message: This is the advocate's next message. You receive the complete
@@ -107,8 +111,23 @@ def source_catalogue(context):
     return result
 
 
-def select(reference, sources):
-    """Resolve an unambiguous exact passage. No paraphrase or whitespace repair."""
+def _laid_out(quote, text):
+    """Where a quote stands in page text whose line breaks are layout (open items round,
+    16 Oct 2026): each run of spaces in the quote meets a run of spaces or line breaks in
+    the text. Words and punctuation stay exact and separated words are never joined.
+    The first match and any later one."""
+    words = quote.split()
+    if not words:
+        return None, None
+    pattern = re.compile(r"\s+".join(re.escape(word) for word in words))
+    found = pattern.search(text)
+    return found, (pattern.search(text, found.start() + 1) if found else None)
+
+
+def select(reference, sources, *, layout=None):
+    """Resolve an unambiguous exact passage. No paraphrase. The exact words are looked
+    for first; only page text (layout True, or a supplied document's page) lets a space
+    in the quote meet a line break of the page. What is returned is the source's own words."""
     require_schema(reference, REFERENCE)
     source = sources.get(reference["source_id"])
     if source is None:
@@ -120,7 +139,14 @@ def select(reference, sources):
         return {**deepcopy(source), "start": 0, "end": len(text), "text": text}
     start = text.find(quote)
     if start < 0:
-        raise SchemaViolation(f"Selected quote is not exact original source text: source_id={reference['source_id']!r}, quote={quote!r}")
+        if layout is None:
+            layout = source.get("record_role") in LAYOUT_ROLES
+        found, again = _laid_out(quote, text) if layout else (None, None)
+        if found is None:
+            raise SchemaViolation(f"Selected quote is not exact original source text: source_id={reference['source_id']!r}, quote={quote!r}")
+        if again is not None:
+            raise SchemaViolation(f"Selected quote has multiple occurrences in {reference['source_id']!r}: {quote!r}; select a longer unique passage or the whole source")
+        return {**deepcopy(source), "start": found.start(), "end": found.end(), "text": found.group()}
     if text.find(quote, start + 1) >= 0:
         raise SchemaViolation(f"Selected quote has multiple occurrences in {reference['source_id']!r}: {quote!r}; select a longer unique passage or the whole source")
     return {**deepcopy(source), "start": start, "end": start + len(quote), "text": quote}

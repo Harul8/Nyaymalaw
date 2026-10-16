@@ -143,6 +143,41 @@ def test_altered_whitespace_is_not_silently_attributed():
     assert "not exact" in out["issues"][0]["mismatch"]
 
 
+def page(text):
+    return {"s1": {"source_id": "s1", "turn_id": "t1", "speaker": "advocate",
+                   "record_role": "supplied_document", "text": text}}
+
+
+def test_a_document_page_line_break_is_layout_and_the_held_words_are_kept():
+    # Open items round, 16 Oct 2026: a quote's space may meet the page's line break.
+    held = "The defendant shall, within thirty days from the date of service of \nsummons on him, present"
+    selected = select({"source_id": "s1", "quote": "date of service of summons on him"}, page(held))
+    assert selected["text"] == "date of service of \nsummons on him"
+    assert held[selected["start"]:selected["end"]] == selected["text"]
+    # Exact words are still found first, as earlier saved selections were.
+    assert select({"source_id": "s1", "quote": "of \nsummons"}, page(held))["text"] == "of \nsummons"
+
+
+@pytest.mark.parametrize("quote", ["ofsummons", "date of service of summons on her", "service, of summons"])
+def test_layout_never_joins_words_or_changes_them(quote):
+    with pytest.raises(SchemaViolation, match="not exact"):
+        select({"source_id": "s1", "quote": quote}, page("date of service of \nsummons on him"))
+
+
+def test_layout_still_refuses_a_quote_found_twice():
+    with pytest.raises(SchemaViolation, match="multiple occurrences"):
+        select({"source_id": "s1", "quote": "thirty days"}, page("thirty\ndays, or thirty  days"))
+
+
+def test_typed_words_stay_strict_unless_the_caller_names_page_text():
+    typed = {"s1": {**page("A\nB")["s1"], "record_role": "original_account"}}
+    with pytest.raises(SchemaViolation, match="not exact"):
+        select({"source_id": "s1", "quote": "A B"}, typed)
+    assert select({"source_id": "s1", "quote": "A B"}, typed, layout=True)["text"] == "A\nB"
+    with pytest.raises(SchemaViolation, match="not exact"):
+        select({"source_id": "s1", "quote": "A B"}, page("A\nB"), layout=False)
+
+
 def test_quoted_instruction_stays_information_and_nm_reference_keeps_role():
     earlier = {"source_id": "t1:nm", "turn_id": "t1", "speaker": "nm",
                "record_role": "nm_interpretation", "text": "NM's disputed interpretation"}

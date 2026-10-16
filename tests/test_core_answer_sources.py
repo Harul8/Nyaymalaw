@@ -179,6 +179,18 @@ def test_exact_selection_rejects_unknown_ambiguous_and_normalised_words():
         "source_id": "t1:advocate", "start": 11, "end": 22, "text": "Second yes."}
 
 
+def test_a_held_passage_line_break_is_layout_and_the_selection_keeps_the_held_words():
+    # Open items round, 16 Oct 2026: the live written statement answer was withheld
+    # because a reviewer's quote met the passage's line break with a space.
+    sources = {
+        "P": {"id": "P", "kind": "provision", "text": "within thirty days from the date of service of \nsummons on him"},
+        "A": {"id": "A", "kind": "account", "text": "served on\n4 September"}}
+    assert select({"source_id": "P", "quote": "service of summons on him"}, sources) == {
+        "source_id": "P", "start": 36, "end": 62, "text": "service of \nsummons on him"}
+    with pytest.raises(SchemaViolation, match="not exact"):
+        select({"source_id": "A", "quote": "served on 4 September"}, sources)
+
+
 def test_partial_context_keeps_readable_sources_and_explicit_coverage_gaps():
     # The returned paragraph's later neighbour could not be read (v8 reads one either side).
     ctx, record = fixture(judgment=AdjacentJudgment(bounded=True, hit=1))
