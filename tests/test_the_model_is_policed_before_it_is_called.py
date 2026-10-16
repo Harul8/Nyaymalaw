@@ -164,15 +164,19 @@ def test_the_composition_root_puts_the_policy_in_front_of_the_provider():
 
     from nm.app import composition
 
-    source = inspect.getsource(composition.Application.__init__)
-    assert "PolicedModel(" in source, (
-        "the composition root does not wrap the model in the egress policy")
-    wiring = source[source.index("PolicedModel("):]
-    wiring = wiring[:wiring.index("self.coverage")]
-    assert "TracedModel(" in wiring, "the tracer is not inside the policy"
-    assert wiring.index("PolicedModel(") < wiring.index("TracedModel("), (
-        "the tracer wraps the policy rather than the other way round, so a "
-        "refused dispatch would reach the provider before being refused")
+    from nm.app import model_permission
+
+    # Policed per request since the core engine: the scripted route in the composition
+    # root, and the OpenAI route bound to each advocate's permission.
+    for route in (composition.Application._model_for, model_permission.bind_text_model):
+        source = inspect.getsource(route)
+        assert "PolicedModel(" in source, (
+            f"{route.__name__} does not wrap the model in the egress policy")
+        wiring = source[source.index("PolicedModel("):]
+        assert "TracedModel(" in wiring, "the tracer is not inside the policy"
+        assert wiring.index("PolicedModel(") < wiring.index("TracedModel("), (
+            "the tracer wraps the policy rather than the other way round, so a "
+            "refused dispatch would reach the provider before being refused")
 
 
 def test_the_live_inventory_permits_only_what_it_records():

@@ -1044,6 +1044,14 @@ def _candidate(kind, position, row, revision, score, query_ids, context):
         "legal_status": "candidate_unassessed"}
 
 
+class SearchPort(Protocol):
+    """The held-law search as a destination: the queries carry the advocate's words, so
+    the composition root polices every search like any other destination."""
+
+    def search(self, queries, instruments=None, *, results=None) -> dict:
+        ...
+
+
 class HybridSearcher:
     """Independent lexical/vector legs and exact source reads for both corpora."""
     def __init__(self, collections):

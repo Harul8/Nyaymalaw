@@ -8,10 +8,12 @@ is not a guard.*
 
 THE HARD HALF IS THE SINKS WITH NO DESTINATION
 ------------------------------------------------
-Sinks are declared independently of folder names. MEDIA is now reached through
-the separately policed local document reader. BACKUP, SUPPORT and TELEMETRY
-remain without concrete sink invocations. Their absence is measured over the
-whole product source, not over the former empty layer directories.
+Sinks are declared independently of folder names. MEDIA is named only by the
+paired quarantine destination. Speech (TRANSCRIPTION) has no destination of its
+own since 15 Oct 2026: recordings and live dictation leave only on the policed
+model route, under the owner's exception for OpenAI processing. BACKUP, SUPPORT
+and TELEMETRY remain without concrete sink invocations. Absence is measured over
+the whole product source, not over the former empty layer directories.
 
 A file that reported "all seven sinks policed" would be reporting an EMPTY
 POPULATION AS A PASS -- the shape this repository has paid for repeatedly, and
@@ -288,46 +290,45 @@ def test_the_composition_root_polices_every_live_destination():
     """CLAUDE.md section 8. A policy module with a green suite and no caller
     refuses nothing, and that is how every defect the first external review
     found reached a served turn."""
-    from nm.app import composition
+    from nm.app import composition, model_permission
 
-    source = inspect.getsource(composition.Application.__init__)
-    for wrapper in ("PolicedPort(", "PolicedSearch(", "PolicedModel("):
-        assert wrapper in source, f"the composition root does not use {wrapper}"
-    import ast
-    import textwrap
-
-    calls = [node for node in ast.walk(ast.parse(textwrap.dedent(source)))
+    # The whole composition module: the documents desk is composed beside the class.
+    source = inspect.getsource(composition)
+    calls = [node for node in ast.walk(ast.parse(source))
              if isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
              and node.func.id == "PolicedPort"]
     ports = [keyword.value.id for call in calls for keyword in call.keywords
              if keyword.arg == "port" and isinstance(keyword.value, ast.Name)]
-    # LB-106 (29 September 2026): the bare-act search sends the advocate's words to this
-    # machine's models and index, so it is a destination, admitted like the rest.
-    expected = {"StorePort", "DirectoryPort", "UploadPort", "MailPort", "TranscriptionPort",
-                "LiveTranscriptionPort", "DocumentTextPort", "DocumentDerivativePort",
-                "SectionSearchPort"}
+    # LB-106 (29 September 2026): the held-law search sends the advocate's words to this
+    # machine's models and index, so it is a destination, admitted like the rest; it is
+    # policed again since the core engine's search (open items round, 16 Oct 2026).
+    expected = {"StorePort", "TurnAttemptPort", "DirectoryPort", "MailPort", "SearchPort",
+                "UploadPort", "DocumentDerivativePort"}
     assert ports and len(ports) == len(calls) == len(set(ports)), (
         "Every actual wrapper must declare its unique port destination")
     assert set(ports) == expected, "The served destination inventory must remain fully policed"
-    assert "Gatekeeper(" in source, (
+    # The model is policed per request, on the scripted and the OpenAI routes alike.
+    for route in (composition.Application._model_for, model_permission.bind_text_model):
+        body = inspect.getsource(route)
+        assert "PolicedModel(" in body, f"{route.__name__} does not police the model"
+    init = inspect.getsource(composition.Application.__init__)
+    assert init.count("Gatekeeper(") == 1, (
         "each wrapper builds its own decision point, so refusals land in "
         "different places and no audit holds the whole story")
 
 
 def test_the_live_inventory_records_every_processor_the_root_names():
     """The file this installation actually runs under, not a fixture."""
-    from nm.app.composition import (
-        INDEX_PROCESSOR,
-        OUTBOX_PROCESSOR,
-        STORAGE_PROCESSOR,
-        TRANSCRIPTION_PROCESSOR,
-    )
+    from nm.app.composition import INDEX_PROCESSOR, OUTBOX_PROCESSOR, STORAGE_PROCESSOR
+    from nm.app.model_permission import PROVIDER
     from nm.shared.egress_policy import egress_policy
 
     policy = egress_policy(ROOT)
     recorded = {p.processor_id for p in policy.processors}
-    for named in (STORAGE_PROCESSOR, INDEX_PROCESSOR, OUTBOX_PROCESSOR,
-                  TRANSCRIPTION_PROCESSOR):
+    # OpenAI is not in the in-India inventory: it is admitted only by the owner's
+    # exception, per advocate and per request (nm/app/model_permission.py).
+    assert PROVIDER not in recorded
+    for named in (STORAGE_PROCESSOR, INDEX_PROCESSOR, OUTBOX_PROCESSOR):
         assert named in recorded, (
             f"the composition root sends material to {named!r} and the "
             f"reviewed inventory does not record it, so the application "
@@ -343,19 +344,22 @@ def test_the_live_inventory_records_every_processor_the_root_names():
 POLICED: dict[Sink, str] = {
     Sink.MODEL: "nm/shared/model_policed.py",
     Sink.STORAGE: "nm/shared/policed_port_adapter.py",
-    Sink.INDEX: "nm/Archives/legal_brain/retrieve/search_policed.py",
+    Sink.INDEX: "nm/app/composition.py",
     # Account mail is wired through the generic `PolicedPort`, so the module
     # that names its sink is the composition root that admits it.
     Sink.MAIL: "nm/app/composition.py",
-    # Dictation (F-C-02) is wired through the generic `PolicedPort` the same way.
-    Sink.TRANSCRIPTION: "nm/app/composition.py",
-    Sink.MEDIA: "nm/app/composition.py",
+    Sink.MEDIA: "nm/open_matter/document_permission.py",
 }
 
 #: Sinks with NO destination, each with the evidence of its absence -- a claim
 #: about the filesystem, measured against the filesystem. When one of these
 #: stops holding, the product has grown a destination and this file says so.
 ABSENT: dict[Sink, tuple[str, str]] = {
+    Sink.TRANSCRIPTION: (
+        "Sink.TRANSCRIPTION",
+        "speech leaves only on the policed model route (model_policed.transcribe and "
+        "live_transcription), under the owner's exception of 15 Oct 2026; there is no "
+        "separate transcription destination"),
     Sink.BACKUP: (
         "Sink.BACKUP",
         "no backup writer exists; `local-disk` is approved for the purpose so "

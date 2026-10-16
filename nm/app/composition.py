@@ -12,7 +12,7 @@ from nm.arrive.mail_port import MailPort
 from nm.arrive.store_directory import FileDirectory
 from nm.shared.deployment_contracts import shares_value_with
 from nm.shared.egress_contracts import DataClass, Gatekeeper, Sink
-from nm.shared.egress_policy import OUTBOX_PROCESSOR, STORAGE_PROCESSOR, egress_policy
+from nm.shared.egress_policy import INDEX_PROCESSOR, OUTBOX_PROCESSOR, STORAGE_PROCESSOR, egress_policy
 from nm.shared.model_config import load, load_dotenv
 from nm.shared.model_openai_adapter import OpenAIModelAdapter
 from nm.shared.model_policed import PolicedModel
@@ -24,7 +24,7 @@ from nm.shared.store_file_store import FileMatterStore
 from nm.shared.store_port import StorePort
 from nm.shared.turn_attempt_port import TurnAttemptPort
 from nm.shared.turn_attempt_store import FileTurnAttempts
-from nm.core_engine.retrieval import HybridSearcher
+from nm.core_engine.retrieval import HybridSearcher, SearchPort
 from nm.core_engine.citations import CaseIdentityIndex
 from nm.app.turn_progress import TurnProgress
 
@@ -87,8 +87,13 @@ class Application:
                 Path(budget_path), settings.get('NM_EVAL_MAX_USD', '25'), models=models))
         # Configuration is not corpus readiness; models and indices load on demand.
         # Explicit None supports isolated flows without making provider-specific choices.
-        self.legal_search = (HybridSearcher.local(root=self.root,
+        search = (HybridSearcher.local(root=self.root,
             corpus_dir=settings.get('NM_CORPUS_DIR')) if legal_search is _DEFAULT_SEARCH else legal_search)
+        # The held-law index is a destination too: each query carries the advocate's words.
+        # In this process, but policed like every other destination (open items round, 16 Oct 2026).
+        self.legal_search = None if search is None else PolicedPort(inner=search, gate=self._gate,
+            port=SearchPort, sink=Sink.INDEX, processor_id=INDEX_PROCESSOR,
+            data_classes=(DataClass.CLIENT_MATTER,))
         self.case_index = _DeferredAdapter(lambda: CaseIdentityIndex.local(self.root))
         # What each running turn is doing, for its own advocate (memory only).
         self.turn_progress = TurnProgress()
