@@ -29,3 +29,17 @@ retired TurnEngine prompt/context test formerly in
 `tests/test_opening_brief_is_durable.py`; that file's other safeguards remain.
 The browser internal-ID assertion remains active through the shared neutral
 `tests/_ui_assertions.py` helper and no longer imports an archived engine test.
+
+Open items round, 16 October 2026: the browser journeys that drove the retired
+original-material window are archived here -
+`test_original_materials_can_arrive_without_a_typed_brief.py`,
+`test_the_workspace_design_remains_readable.py` (its one test checked the retired
+intake form and materials dialog) and `test_opening_journey_store_only_upload.py`
+(split from `tests/test_opening_journey.py`, whose other tests and `saved` helper
+remain). The owner's item 6 decisions (15 Oct 2026) replaced the window with the
+plus menu's attach, where files are malware-checked and read; F-B-01 (conversation
+first) and F-B-04 (old matter records retired) followed on 16 Oct. The new flow is
+covered offline by `tests/js/attachments.mjs`, `tests/test_core_document_routes.py`,
+`tests/test_core_turn_documents.py` and the F-C-01 scenarios. The remaining browser
+journeys still drive the old opening form and My work tab; they await the
+conversation-window layout the owner has asked for next.
