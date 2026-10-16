@@ -139,10 +139,24 @@ def select(reference, sources):
     identity = reference["source_id"]
     source = sources.get(identity)
     if source is None or source.get("id") != identity:
-        raise SchemaViolation("Selected source_id is not in the owned answer catalogue")
+        raise SchemaViolation(_unknown(identity, sources))
     chosen = select_original(reference, {identity: {
         "source_id": identity, "text": source["text"]}}, layout=source["kind"] in _LAYOUT)
     return {key: chosen[key] for key in ("source_id", "start", "end", "text")}
+
+
+def _unknown(identity, sources):
+    """Why a selection names nothing (16 Oct 2026): the identifier, and what can be named,
+    so a correction can repair it. Identifiers are code-made labels, not case words."""
+    groups = {}
+    for alias in aliases(sources):
+        groups.setdefault(alias[0], []).append(alias)
+    legal = ", ".join(f"{names[0]} to {names[-1]}" if len(names) > 1 else names[0] for names in groups.values())
+    others = [tag for tag, row in sources.items() if row["kind"] not in _LEGAL]
+    listed = ", ".join(others[:40]) + (" and more" if len(others) > 40 else "")
+    return (f"Selected source_id {identity!r} is not in the owned answer catalogue. Name a legal passage by its "
+            f"offered ID ({legal or 'none offered'}) and a message or document page by its own source_id "
+            f"({listed or 'none'}); context, coverage, gap, fact and dispute labels are not sources.")
 
 
 def aliases(sources):

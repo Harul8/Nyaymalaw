@@ -179,6 +179,23 @@ def test_exact_selection_rejects_unknown_ambiguous_and_normalised_words():
         "source_id": "t1:advocate", "start": 11, "end": 22, "text": "Second yes."}
 
 
+def test_an_unknown_source_names_itself_and_what_can_be_named():
+    # 16 Oct 2026: the owner's end-to-end matter was withheld twice for this; a
+    # correction told only that a source was unknown repeated the same mistake.
+    sources = {
+        "provision:a": {"id": "provision:a", "kind": "provision", "text": "A rule."},
+        "provision:b": {"id": "provision:b", "kind": "provision", "text": "Another rule."},
+        "judgment:c": {"id": "judgment:c", "kind": "judgment", "text": "A holding."},
+        "t1:advocate": {"id": "t1:advocate", "kind": "account", "text": "We act for the buyer."},
+        "t1:doc_1:page:2": {"id": "t1:doc_1:page:2", "kind": "document", "text": "Page two."}}
+    with pytest.raises(SchemaViolation) as refused:
+        select({"source_id": "context:3", "quote": None}, sources)
+    why = str(refused.value)
+    assert "'context:3' is not in the owned answer catalogue" in why
+    assert "P1 to P2, J1" in why and "t1:advocate, t1:doc_1:page:2" in why
+    assert "context, coverage, gap, fact and dispute labels are not sources" in why
+
+
 def test_a_held_passage_line_break_is_layout_and_the_selection_keeps_the_held_words():
     # Open items round, 16 Oct 2026: the live written statement answer was withheld
     # because a reviewer's quote met the passage's line break with a space.
