@@ -29,8 +29,13 @@ def test_the_shipped_matter_controller_preserves_its_boundary(witness):
     assert f"PASS matter workspace {witness}" in result.stdout
 
 
-def test_the_served_page_includes_the_matter_controls_after_the_shared_client():
+def test_the_retired_matter_controls_are_not_served():
+    """The owner retired the old matter records on 16 Oct 2026 (F-B-04): each matter's
+    Conversation, Board, Documents and Research notes replace them. The archived
+    controller above stays as a reference; the served page must not load it."""
+    import json
+
     page = (ROOT / "nm/app/index.html").read_text(encoding="utf-8")
-    assert '/static/matter-workspace.css' in page
-    assert '/static/matter-workspace.js' in page
-    assert page.index('/static/app.js') < page.index('/static/matter-workspace.js')
+    assert "matter-workspace" not in page
+    assets = json.loads((ROOT / "nm/source_layout.json").read_text(encoding="utf-8"))["browser_assets"]
+    assert not any("matter-workspace" in name for name in assets)
