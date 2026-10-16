@@ -43,3 +43,25 @@ covered offline by `tests/js/attachments.mjs`, `tests/test_core_document_routes.
 `tests/test_core_turn_documents.py` and the F-C-01 scenarios. The remaining browser
 journeys still drive the old opening form and My work tab; they await the
 conversation-window layout the owner has asked for next.
+
+Tests of the archived engines, 16 October 2026 (owner: "your decision"). The rule:
+a test is archived only when what it exercises is an archived engine responsibility
+that nothing running reaches - the served app, the corpus pipeline, operations,
+assurance and developer tooling - and every test that borrows from it is archived
+too. Measured from actual imports: 70 tests touch the archived engines; 17 archived
+modules are still reached by corpus jobs and the golden runner (citation and
+quotable contracts, acquisition, artefact, citator, corpus evidence, evidence port,
+hybrid sections, identity, jurisdiction, manifest, provenance, provision revision,
+provision and section search ports, resolution and source registry sources), so the
+tests of those stay. Archived now: `test_premises_come_before_arithmetic.py` - its
+domain half tests `nm/Archives/legal_brain/reason/premise.py`, which nothing running
+reaches, and its server half drives premise routes the app no longer serves (two of
+its tests fail for that reason); the core engine's time-limit step (item 9) owns
+that responsibility now. Kept, with why: `tests/test_turn_contract.py` lends its
+evidence double to `assurance/journeys/served.py`, and 21 tests borrow from it;
+`tests/test_prompt_consistency.py` mixes the archived prompts with date resolution
+and chronology checks still reached, and borrows from eight other old-engine tests,
+which therefore stay; tests that also drive the app's routes, documents, accounts or
+the shared model adapters guard live code; the browser journeys await the
+conversation-window rework. These move with their modules when the old
+`nm/work_the_file` and `nm/advise` code retires, with mixed files split then.
