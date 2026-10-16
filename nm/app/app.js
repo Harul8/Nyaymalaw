@@ -2916,7 +2916,7 @@ function syncBoardStatus() {
   const label = working && activeDelivery.entry.progress && activeDelivery.entry.progress.label;
   status.hidden = !working;
   status.textContent = working
-    ? `NM is working on your latest message${label ? ` · ${label}` : '…'} The board updates when the answer is ready.`
+    ? `NM is working on your latest message${label ? `: ${label}.` : '…'} The board updates when the answer is ready.`
     : '';
 }
 
