@@ -48,9 +48,20 @@ try {
 
 if ($held) {
     foreach ($processId in $held) {
-        $name = (Get-Process -Id $processId -ErrorAction SilentlyContinue).ProcessName
-        Write-Host "  restarting - stopping pid $processId ($name) on port $Port" -ForegroundColor Yellow
-        Stop-Process -Id $processId -Force -ErrorAction SilentlyContinue
+        # NM SERVES UNDER A SUPERVISOR that follows the code on disk (16 Oct 2026), and
+        # it would start the app again the moment it stopped. So the whole chain of
+        # nm.app.main processes holding this port goes, supervisor first.
+        $chain = @()
+        $current = Get-CimInstance Win32_Process -Filter "ProcessId=$processId" -ErrorAction SilentlyContinue
+        while ($current -and ($chain.Count -eq 0 -or $current.CommandLine -match 'nm\.app\.main')) {
+            $chain += $current
+            $current = Get-CimInstance Win32_Process -Filter "ProcessId=$($current.ParentProcessId)" -ErrorAction SilentlyContinue
+        }
+        [array]::Reverse($chain)
+        foreach ($process in $chain) {
+            Write-Host "  restarting - stopping pid $($process.ProcessId) ($($process.Name)) on port $Port" -ForegroundColor Yellow
+            Stop-Process -Id $process.ProcessId -Force -ErrorAction SilentlyContinue
+        }
     }
     # The socket lingers briefly after the process goes.
     $waited = 0
