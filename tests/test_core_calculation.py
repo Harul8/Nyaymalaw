@@ -20,6 +20,7 @@ from tests.test_core_turn import ScriptedModel, run, store  # noqa: F401 - pytes
 pytestmark = pytest.mark.class_a
 NI = "The Negotiable Instruments Act, 1881"
 LIMITATION = "The Limitation Act, 1963"
+CPC = "The Code of Civil Procedure, 1908"
 TEXTS = {
     NI: ("138. Dishonour of cheque for insufficiency, etc., of funds in the account.\n(b) the payee ... makes a "
          "demand for the payment of the said amount of money by giving a notice; in writing, to the drawer of the "
@@ -27,6 +28,9 @@ TEXTS = {
          "the cheque as unpaid; and\n(c) the drawer of such cheque fails to make the payment ... within fifteen days "
          "of the receipt of the saidnotice.\n142. (b) such complaint is made within one month of the date on which "
          "the cause of action arises under clause (c) of the proviso to section 138:"),
+    CPC: ("An Act to consolidate and amend the laws relating to the procedure of the Courts of Civil Judicature.\n"
+          "THE FIRST SCHEDULE\nORDER VIII\n1. Written Statement.-The Defendant shall, within thirty days from the date "
+          "of service of summons on him, present a written statement of his defence.\n"),
     LIMITATION: ("THE SCHEDULE\nFIRST DIVISION--SUITS\n19\nFor money payable for money lent.\nThree years\n"
                  "When the loan is made.\n"),
 }
@@ -136,7 +140,7 @@ def test_the_answer_carries_a_working_box_for_each_checked_limit_and_reports_the
     # An answer saved under v8 still reopens as it was shown, without the date.
     earlier = response_rendering._working(row["activities"]["calculation"])
     assert ["As of", as_of] not in earlier[1]["working"]["rows"]
-    assert [a["title"] for a in row["activities"]["calculation"]["acts"]] == [LIMITATION, NI]
+    assert [a["title"] for a in row["activities"]["calculation"]["acts"]] == [LIMITATION, NI, CPC]
 
 
 def test_a_saved_limit_replays_without_the_corpus_and_a_changed_one_is_refused(store):
@@ -205,3 +209,26 @@ def test_a_message_needing_no_research_makes_no_calculation_call(store):
 def test_an_act_not_listed_as_current_is_never_read_for_a_calculation():
     assert set(calculation.SUPPLIED) <= {LIMITATION, NI, "The Code of Civil Procedure, 1908"}
     assert "Today is" in research.conversation_text({"conversation": [], "latest": {"text": "x"}})
+
+
+def test_an_act_too_large_to_supply_whole_is_given_as_its_provisions_that_state_a_period():
+    from nm.core_engine import limitation
+    code = ("ARRANGEMENT OF SECTIONS\n1. Summons within thirty days.\n"
+            "An Act to consolidate the procedure.\n"
+            "27. Summons to defendants.-A summons may be served on such day not beyond thirty days from date\n"
+            "\n1. Subs. by Act 46 of 1999, s. 5, for certain words (w.e.f. 1-7-2002).\n53\n"
+            "of the institution of the suit.\n"
+            "28. Service of summons where defendant resides in another State.-A summons may be sent.\n"
+            "THE FIRST SCHEDULE\nORDER VIII\n1. Written Statement.-The Defendant shall, within thirty days from "
+            "the date of service of summons on him, present a written statement.\n"
+            "APPENDIX A\n1. Form of plaint within ninety days.\n")
+    parts = limitation.provisions_with_periods(code)
+    assert [part["label"] for part in parts] == ["The sections", "The First Schedule, Order VIII"]
+    # The section stays whole across the page: the editors' note and the page number are dropped.
+    assert parts[0]["text"] == ("27. Summons to defendants.-A summons may be served on such day not beyond thirty days "
+                                "from date\n\nof the institution of the suit.")
+    held = {"title": CPC, "text": code + "x" * calculation.WHOLE_LIMIT}
+    shown = calculation._held_text(held)
+    assert "the rest of it is held but not shown here" in shown and "Form of plaint" not in shown
+    assert "[The First Schedule, Order VIII]\n1. Written Statement." in shown
+    assert calculation._held_text({"title": NI, "text": TEXTS[NI]}) == f"=== {NI} (held text) ===\n{TEXTS[NI]}"

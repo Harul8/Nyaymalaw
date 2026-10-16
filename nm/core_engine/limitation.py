@@ -121,6 +121,64 @@ def standing(last_day, *, today, done_on=None, earliest=None):
     return {"state": "expired", "days": (today - last_day).days}
 
 
+_PROVISION = re.compile(r"^\s*(?:\d+\[)?(\d+[A-Z]*)\.\s+\S")
+_ORDER = re.compile(r"^\s*ORDER\s+([IVXLC]+)\s*$")
+_STATES_PERIOD = re.compile(r"\b(?:days?|months?|years?)\b", re.I)
+_APPENDIX = re.compile(r"^\s*APPENDIX[\s-]+[A-Z]\s*$")
+#: The editors' notes at the foot of each page of an India Code text ('1. Subs. by Act 3
+#: of 1921, s. 2, ...'), which run to the page number; they are not the Act's words.
+_NOTE = re.compile(r"^\s*\d+\.\s+(?:Subs|Ins|Omitted|Rep|Added|Re-?numbered|Inserted|Substituted|Deleted|Ibid|"
+                   r"Vide|See|Cl|Sub-s|For amendments|For the words|The words|The original|Now)\b")
+_PAGE = re.compile(r"^\s*\d+\s*$")
+
+
+def provisions_with_periods(text):
+    """Every section, or rule of an Order, of an Act's enacted text that states a period
+    a count can run on, whole and word for word, labelled by where it sits. The enacted
+    text begins at the preamble ('An Act to ...'), after the table of contents, which
+    repeats the headings without their words. Used where an Act is too large to supply
+    whole (the Code of Civil Procedure); nothing here decides which provision governs."""
+    start = text.find("\nAn Act to")
+    lines = text[start if start >= 0 else 0:].splitlines()
+    found, order, current = [], None, None
+    in_schedule = False
+
+    def close():
+        if current and _STATES_PERIOD.search(" ".join(current["lines"])) and any(
+                period_from_words(line) for line in current["lines"]):
+            found.append({"label": current["label"], "text": "\n".join(current["lines"]).strip()})
+
+    in_note = False
+    for line in lines:
+        if _PAGE.match(line):
+            in_note = False  # the page number closes the page's notes
+            continue
+        if in_note or _NOTE.match(line):
+            in_note = True
+            continue
+        if line.strip().upper().startswith("THE FIRST SCHEDULE"):
+            in_schedule = True
+        if _APPENDIX.match(line):
+            break  # the forms that follow the Orders are not provisions
+        heading = _ORDER.match(line)
+        if heading:
+            close()
+            order, current = heading.group(1), None
+            continue
+        number = _PROVISION.match(line)
+        if number:
+            close()
+            # Where it sits, not what number it is: print extraction can join a page
+            # note's marker to a number ('860.' for section 60), so the provision is
+            # named from its own words by whoever reads them, never guessed here.
+            label = f"The First Schedule, Order {order}" if in_schedule and order else "The sections"
+            current = {"label": label, "lines": [line]}
+        elif current is not None:
+            current["lines"].append(line)
+    close()
+    return found
+
+
 _PERIOD_LINE = re.compile(r"^(?:\d+|[A-Za-z]+(?:[\s\-]+[A-Za-z]+){0,3})\s+(?:days?|months?|years?)\.?$")
 
 

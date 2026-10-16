@@ -113,3 +113,15 @@ def test_only_acts_listed_as_current_are_read_and_each_reading_names_its_text():
 def test_an_unreadable_act_is_unavailable_not_empty(tmp_path):
     with pytest.raises(ActUnavailable, match="could not be read"):
         HeldActs(tmp_path).read("The Limitation Act, 1963")
+
+
+@held
+def test_the_held_code_s_provisions_that_state_a_period_are_extracted_whole():
+    code = HeldActs(ACTS).read("The Code of Civil Procedure, 1908")["text"]
+    parts = L.provisions_with_periods(code)
+    order_viii = [" ".join(p["text"].split()) for p in parts if p["label"] == "The First Schedule, Order VIII"]
+    assert any("within thirty days from the date of service of summons" in text
+               and "ninety days from the date of service of summons" in text for text in order_viii)
+    # Nothing from the arrangement of sections before the enacted text, and far less than the Code.
+    assert all("ARRANGEMENT OF SECTIONS" not in p["text"] for p in parts)
+    assert 40 <= len(parts) and sum(len(p["text"]) for p in parts) < len(code) // 5

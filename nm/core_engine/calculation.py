@@ -32,9 +32,11 @@ V1_CONTRACT = "core_calculation_v1"
 CONTRACT = "core_calculation_v2"
 OPERATION = "core_calculation"
 MAX_OUTPUT = 12000
-#: The Acts whose held text the step reads; the Code of Civil Procedure is listed as
-#: current but too large to supply whole, so its own time limits are not assessed yet.
-SUPPLIED = ("The Limitation Act, 1963", "The Negotiable Instruments Act, 1881")
+#: The Acts whose held text the step reads, all three listed as current.
+SUPPLIED = ("The Limitation Act, 1963", "The Negotiable Instruments Act, 1881", "The Code of Civil Procedure, 1908")
+#: An Act longer than this (the Code of Civil Procedure, about 1.1 million characters) is
+#: supplied as every section and rule of it that states a period, word for word.
+WHOLE_LIMIT = 300_000
 
 SYSTEM = """You work with an Indian advocate on time limits: the limitation periods for suits, appeals and applications, and the time limits special laws set, such as the steps for a cheque-bounce complaint under the Negotiable Instruments Act. You receive the conversation (the advocate's messages and the documents they sent), today's date where the advocate practises, and below, the held text of the Acts under which time limits may be worked out.
 
@@ -249,6 +251,18 @@ def skipped():
             "calculations": [], "not_assessed": []}
 
 
+def _held_text(act):
+    """An Act's held text as the step reads it: whole, or for an Act too large to supply
+    whole, every section and rule of it that states a period, word for word, under where
+    it sits. Quotations are checked against the whole held text either way."""
+    if len(act["text"]) <= WHOLE_LIMIT:
+        return f"=== {act['title']} (held text) ===\n{act['text']}"
+    parts = limitation.provisions_with_periods(act["text"])
+    return (f"=== {act['title']} (held text: every section and rule that states a period of days, months or "
+            f"years, word for word; the rest of it is held but not shown here) ===\n"
+            + "\n\n".join(f"[{part['label']}]\n{part['text']}" for part in parts))
+
+
 def work_out(model, context, held_acts, *, now=None):
     """The step: read, propose, check, compute. A model or reading failure is recorded,
     never a reason to fail the answer or to state a time limit unchecked."""
@@ -262,7 +276,7 @@ def work_out(model, context, held_acts, *, now=None):
         return unavailable("the held text of the Acts used for time limits could not be read")
     where = clock_contracts.setting(now)
     today = date.fromisoformat(where["today"])
-    system = SYSTEM + "\n\n" + "\n\n".join(f"=== {a['title']} (held text) ===\n{a['text']}" for a in acts.values())
+    system = SYSTEM + "\n\n" + "\n\n".join(_held_text(act) for act in acts.values())
     user = research.conversation_text(context)
     try:
         result = model.structured(Prompt(system=system, user=user, operation=OPERATION), SCHEMA, Tier.ROUTINE,
