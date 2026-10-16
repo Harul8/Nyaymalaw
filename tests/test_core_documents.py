@@ -87,6 +87,49 @@ def test_a_scanned_pdf_page_is_listed_unread_for_the_ai_and_text_pages_are_read_
     assert shown["state"] == "partly_read" and shown["pages_total"] == 2 and "Return memo" not in str(shown)
 
 
+def word(paragraphs):
+    """A minimal Word document, one paragraph per entry; an empty entry is an empty paragraph."""
+    import io
+    import zipfile
+    from xml.sax.saxutils import escape
+    body = "".join(f'<w:p><w:r><w:t xml:space="preserve">{escape(text)}</w:t></w:r></w:p>' if text else "<w:p/>"
+                   for text in paragraphs)
+    data = io.BytesIO()
+    with zipfile.ZipFile(data, "w") as z:
+        z.writestr("[Content_Types].xml", '<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/'
+                   'package/2006/content-types"><Override PartName="/word/document.xml" ContentType="application/'
+                   'vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>')
+        z.writestr("word/document.xml", '<?xml version="1.0"?><w:document xmlns:w="http://schemas.openxmlformats.org/'
+                   f'wordprocessingml/2006/main"><w:body>{body}</w:body></w:document>')
+    return data.getvalue()
+
+
+def test_a_word_document_is_one_page_of_its_paragraphs_and_no_empty_paragraph_waits_for_the_ai(desk):
+    # Found in the owner's end-to-end run (16 Oct 2026): empty paragraphs were listed as
+    # scanned pages waiting for the AI, and each paragraph was counted as a page.
+    record = desk.receive(ADVOCATE, "complaint.docx", word(["To,", "", "The Station House Officer.", "", "",
+                                                           "Sub: complaint of cheating."]))
+    assert record["pages"] == [{"number": 1, "state": "read", "read_by": "local",
+                                "text": "To,\n\nThe Station House Officer.\n\nSub: complaint of cheating."}]
+    assert documents.needs_transcription(record) == []
+    shown = documents.summary(record)
+    assert shown["state"] == "read" and shown["pages_total"] == 1 and shown["waiting_for_ai"] == 0
+
+
+def test_a_word_or_text_file_without_words_is_unread_and_never_sent_to_the_ai(desk):
+    for name, data in (("blank.docx", word(["", ""])), ("blank.txt", b"\f\f")):
+        record = desk.receive(ADVOCATE, name, data)
+        page, = record["pages"]
+        assert page["state"] == "unread" and page["code"] == "unreadable" and "no words" in page["reason"]
+        assert documents.needs_transcription(record) == []
+
+
+def test_a_text_file_keeps_its_form_feed_pages_and_skips_empty_ones(desk):
+    record = desk.receive(ADVOCATE, "notes.txt", b"First page.\f\fThird page.")
+    assert [(page["number"], page["text"]) for page in record["pages"]] == [(1, "First page."), (3, "Third page.")]
+    assert documents.needs_transcription(record) == []
+
+
 @pytest.mark.parametrize("state", ["held", "unavailable"])
 def test_a_file_the_check_does_not_clear_is_neither_read_nor_kept(desk, tmp_path, state):
     desk.checker = Checker(state, "the check did not clear it")

@@ -87,6 +87,9 @@ class DocumentDesk:
             # A document a parser cannot handle is an expected outcome for uploaded files.
             _log.warning("A document could not be read: %s", type(exc).__name__)
             return [], None, "this document could not be read on this installation"
+        failure = result.reason if result.failure else None
+        if fmt != "pdf":
+            return self._flowing(result.units, fmt) + (failure,)
         pages = []
         for unit in result.units:
             if unit.state is TextState.EXTRACTED:
@@ -97,7 +100,32 @@ class DocumentDesk:
             else:
                 pages.append({"number": unit.number, "state": "unread", "code": "unreadable",
                               "reason": unit.reason or "this page could not be read"})
-        return pages, result.observed_units, (result.reason if result.failure else None)
+        return pages, result.observed_units, failure
+
+    @staticmethod
+    def _flowing(units, fmt):
+        """A Word or text document's pages (16 Oct 2026): only a PDF page without a text
+        layer is a scan for the AI to read. A Word document has no fixed pages, so its
+        paragraphs are kept in order as one page; a text file's form-feed parts stay
+        pages. Empty paragraphs and parts are skipped, never sent to the AI."""
+        unread = [{"number": unit.number, "state": "unread", "code": "unreadable",
+                   "reason": unit.reason or "this part could not be read"}
+                  for unit in units if unit.state not in (TextState.EXTRACTED, TextState.NO_TEXT_LAYER)]
+        words = [unit for unit in units if unit.state is TextState.EXTRACTED]
+        if fmt == "docx":
+            pages = ([{"number": 1, "state": "read", "text": "\n\n".join(unit.text for unit in words),
+                       "read_by": "local"}] if words and not unread else [])
+            if unread:
+                pages = [{"number": 1, "state": "unread", "code": "unreadable",
+                          "reason": "parts of this Word document could not be read"}]
+        else:
+            pages = [{"number": unit.number, "state": "read", "text": unit.text, "read_by": "local"}
+                     for unit in words] + unread
+            pages.sort(key=lambda page: page["number"])
+        if not pages:
+            pages = [{"number": 1, "state": "unread", "code": "unreadable",
+                      "reason": "this document has no words to read"}]
+        return pages, (1 if fmt == "docx" else len(pages))
 
     def read_waiting(self, advocate_id, ref, model):
         """The document again, with what waits for the AI done (owner decisions, 15 Oct
