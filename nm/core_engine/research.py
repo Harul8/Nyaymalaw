@@ -36,10 +36,17 @@ PICKED_CONTRACT = "core_research_v7"
 #: returns. The answer reads the picked paragraphs with their neighbours and every other
 #: returned paragraph alone: a paragraph-level pick dropped 4 of 16 key judgments
 #: (measured 15 Oct), so it focuses the reading and never removes a returned judgment.
-CONTRACT = "core_research_v8"
-_QUESTION_PLANS = (PICKED_CONTRACT, CONTRACT)
+JUDGMENT_PICKED_CONTRACT = "core_research_v8"
+#: v9 (owner decision, 16 Oct 2026): each dispute also says why it matters to the
+#: advocate's client, shown on the matter board. v7 and v8 records keep their own shape.
+CONTRACT = "core_research_v9"
+#: The plans that set out the matter as disputes and legal questions (v7 on).
+QUESTION_PLANS = (PICKED_CONTRACT, JUDGMENT_PICKED_CONTRACT, CONTRACT)
+_QUESTION_PLANS = QUESTION_PLANS
+#: The records that pick judgment paragraphs and answer in parts per dispute (v8 on).
+JUDGMENT_PICKS = (JUDGMENT_PICKED_CONTRACT, CONTRACT)
 CONTRACTS = (LEGACY_CONTRACT, PREVIOUS_CONTRACT, WINDOWED_CONTRACT, ACCOUNT_CONTRACT,
-             INSTRUMENTED_CONTRACT, PICKED_CONTRACT, CONTRACT)
+             INSTRUMENTED_CONTRACT, PICKED_CONTRACT, JUDGMENT_PICKED_CONTRACT, CONTRACT)
 MAX_REVISIONS = 2
 #: The pick chooses from each question's first PROVISIONS_FOR_PICK provisions.
 PROVISIONS_FOR_PICK = 20
@@ -64,6 +71,7 @@ What we need from you:
 - For each dispute, the legal questions we must research to do what the advocate wants. A legal question is about one legal point: a right, an obligation, a remedy, a defence, a procedure, a time limit, a presumption or an offence. If answering it would need two different rules, such as what a right is and how it is enforced, it is two questions. Write each so that a lawyer could answer it from one or two provisions of law, and say briefly why we need it. Where the facts leave open something that changes the governing law (for example when the events happened, or which personal law applies), say what is open.
 - For each legal question, the law you would check first: the Indian Acts, and sections if you know them, that you believe govern it. This is your recollection to guide the search; it will be checked against the statutes we hold, so say only what you believe and do not guess.
 - For each dispute, the rights that may be at stake, the relief or outcome being sought, and the facts we would still need.
+- For each dispute, why it matters to the advocate's client: in a sentence or two, what is at stake for them and why it needs attention now.
 - Related points: things the advocate did not ask about but a careful lawyer would want them to know, such as a presumption that helps, a time limit that may be running, or an alternative remedy, with why each matters. We will tell the advocate about these and let them decide; we do not research them now.
 
 Some messages need no legal research: thanks or social messages, an instruction to keep research paused, a request to transcribe or tidy text. In that case say so and why, and leave the research questions empty; you may still record the disputes already known from the conversation.
@@ -164,23 +172,32 @@ INSTRUMENTED_SCHEMA = _object({"work": {"type": "array", "items": INSTRUMENTED_W
 LEGACY_SCHEMA = _object({"work": {"type": "array", "items": LEGACY_WORK}})
 PREVIOUS_SCHEMA = _object({"work": {"type": "array", "items": PREVIOUS_WORK}})
 
-UNDERSTANDING = _object({
-    "summary": STRING,
-    "asked": STRINGS,
-    "ruled_out": STRINGS,
-    "needs_research": {"type": "boolean"},
-    "no_research_reason": STRING,
-    "parties": {"type": "array", "items": _object({"who": STRING, "role": STRING})},
-    "facts": {"type": "array", "items": _object({
-        "id": STRING, "fact": STRING, "advocate_words": STRING,
-        "certainty": {"type": "string", "enum": ["confirmed", "reported", "uncertain", "disputed"]}})},
-    "disputes": {"type": "array", "items": _object({
-        "id": STRING, "name": STRING, "between": STRINGS, "fact_ids": STRINGS,
-        "legal_questions": {"type": "array", "items": _object({
-            "id": STRING, "question": STRING, "why_needed": STRING, "open_alternative": STRING, "law_to_check": STRINGS})},
-        "rights_at_stake": STRINGS, "relief_sought": STRINGS, "missing_facts": STRINGS})},
-    "related_points": {"type": "array", "items": _object({"point": STRING, "why_it_matters": STRING, "dispute_id": STRING})},
-})
+DISPUTE_V8 = _object({
+    "id": STRING, "name": STRING, "between": STRINGS, "fact_ids": STRINGS,
+    "legal_questions": {"type": "array", "items": _object({
+        "id": STRING, "question": STRING, "why_needed": STRING, "open_alternative": STRING, "law_to_check": STRINGS})},
+    "rights_at_stake": STRINGS, "relief_sought": STRINGS, "missing_facts": STRINGS})
+DISPUTE = _object({**DISPUTE_V8["properties"], "why_it_matters": STRING})
+
+
+def _understanding(dispute):
+    return _object({
+        "summary": STRING,
+        "asked": STRINGS,
+        "ruled_out": STRINGS,
+        "needs_research": {"type": "boolean"},
+        "no_research_reason": STRING,
+        "parties": {"type": "array", "items": _object({"who": STRING, "role": STRING})},
+        "facts": {"type": "array", "items": _object({
+            "id": STRING, "fact": STRING, "advocate_words": STRING,
+            "certainty": {"type": "string", "enum": ["confirmed", "reported", "uncertain", "disputed"]}})},
+        "disputes": {"type": "array", "items": dispute},
+        "related_points": {"type": "array", "items": _object({"point": STRING, "why_it_matters": STRING, "dispute_id": STRING})},
+    })
+
+
+UNDERSTANDING_V8 = _understanding(DISPUTE_V8)
+UNDERSTANDING = _understanding(DISPUTE)
 PROBLEM = _object({"problem": STRING, "fix": STRING})
 CHECKED = _object({"verdict": {"type": "string", "enum": ["sound", "revise"]},
                    "problems": {"type": "array", "items": PROBLEM}})
@@ -199,17 +216,24 @@ JUDGMENT_PHRASE_SCHEMA = _object({"questions": {"type": "array", "items": _objec
 CHOICE = _object({"questions": {"type": "array", "items": _object({
     "question_id": STRING, "chosen": STRINGS, "note": STRING})}})
 FAILURE = _object({"step": STRING, "scope": STRING, "reason": STRING})
-SCHEMA = _object({
-    "understanding": UNDERSTANDING,
-    "review_rounds": {"type": "array", "items": _object({
-        "code_problems": {"type": "array", "items": PROBLEM},
-        "verdict": {"type": "string", "enum": ["sound", "revise", "unavailable"]},
-        "problems": {"type": "array", "items": PROBLEM}})},
-    "statute_phrases": {"type": "array", "items": _object({
-        "dispute_id": STRING, "questions": STATUTE_PHRASES["properties"]["questions"]})},
-    "judgment_phrases": JUDGMENT_PHRASE_SCHEMA["properties"]["questions"],
-    "failures": {"type": "array", "items": FAILURE},
-})
+
+
+def _record_schema(understanding):
+    return _object({
+        "understanding": understanding,
+        "review_rounds": {"type": "array", "items": _object({
+            "code_problems": {"type": "array", "items": PROBLEM},
+            "verdict": {"type": "string", "enum": ["sound", "revise", "unavailable"]},
+            "problems": {"type": "array", "items": PROBLEM}})},
+        "statute_phrases": {"type": "array", "items": _object({
+            "dispute_id": STRING, "questions": STATUTE_PHRASES["properties"]["questions"]})},
+        "judgment_phrases": JUDGMENT_PHRASE_SCHEMA["properties"]["questions"],
+        "failures": {"type": "array", "items": FAILURE},
+    })
+
+
+SCHEMA_V8 = _record_schema(UNDERSTANDING_V8)
+SCHEMA = _record_schema(UNDERSTANDING)
 
 
 def _source_windows(context):
@@ -444,9 +468,9 @@ def plan(model, context, interpretation=None, *, progress=None):
                    "judgment_phrases": judgment, "failures": failures}, context)
 
 
-def _accept_v7(proposal, context):
-    data = canonical_schema_data(proposal, SCHEMA)
-    require_schema(data, SCHEMA)
+def _accept_v7(proposal, context, schema=SCHEMA):
+    data = canonical_schema_data(proposal, schema)
+    require_schema(data, schema)
     catalogue = source_catalogue(context)
     latest = select({"source_id": context["latest"]["source_id"], "quote": None}, catalogue)
     understanding, issues = data["understanding"], []
@@ -500,7 +524,7 @@ def accept(proposal, context, *, contract=CONTRACT):
     if contract not in CONTRACTS:
         raise ValueError("Unknown research contract")
     if contract in _QUESTION_PLANS:
-        return _accept_v7(proposal, context)
+        return _accept_v7(proposal, context, SCHEMA if contract == CONTRACT else SCHEMA_V8)
     schema = {LEGACY_CONTRACT: LEGACY_SCHEMA, PREVIOUS_CONTRACT: PREVIOUS_SCHEMA,
               WINDOWED_CONTRACT: ACCOUNT_SCHEMA, ACCOUNT_CONTRACT: ACCOUNT_SCHEMA,
               INSTRUMENTED_CONTRACT: INSTRUMENTED_SCHEMA}[contract]
@@ -742,7 +766,7 @@ def picked_judgments(record):
     """The judgment paragraphs the v8 pick chose, which the answer reads with their
     neighbouring paragraphs; None for earlier records, which read every returned
     paragraph with its whole saved context."""
-    if record.get("contract") != CONTRACT:
+    if record.get("contract") not in JUDGMENT_PICKS:
         return None
     return {candidate_id for ids in record["judgment_picks"]["chosen"].values() for candidate_id in ids}
 
@@ -759,7 +783,7 @@ def validate(record, plan, context):
         raise ValueError("Saved research plan differs from its original sources")
     fields = ({"contract", "plan", "searches", "failures", "state"}
               | ({"picks"} if contract in _QUESTION_PLANS else set())
-              | ({"judgment_picks"} if contract == CONTRACT else set()))
+              | ({"judgment_picks"} if contract in JUDGMENT_PICKS else set()))
     if (not isinstance(record, dict)
             or set(record) != fields
             or record.get("plan") != plan or not isinstance(record.get("searches"), dict)
@@ -782,7 +806,7 @@ def validate(record, plan, context):
     if contract in _QUESTION_PLANS:
         _validate_picks(record["picks"], plan, record["searches"])
         picks.append(record["picks"])
-    if contract == CONTRACT:
+    if contract in JUDGMENT_PICKS:
         _validate_picks(record["judgment_picks"], plan, record["searches"], "judgment")
         picks.append(record["judgment_picks"])
     expected = "partial" if (plan["issues"] or failures or _picks_open(picks) or any(

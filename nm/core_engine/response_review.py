@@ -324,7 +324,7 @@ def review(model, context, research_record, sources, draft, execution=None, *,
         "searches": [{"work_id": identity, "state": row["state"], "issues": row["issues"]}
                      for identity, row in research_record["searches"].items()],
         "failures": research_record["failures"]}
-    if research_record.get("contract") in (research.PICKED_CONTRACT, research.CONTRACT):
+    if research_record.get("contract") in research.QUESTION_PLANS:
         research_context["understanding"] = research_record["plan"]["proposal"]["understanding"]
         research_context["questions"] = [{"work_id": w["id"], "dispute_id": w["dispute"]["id"],
                                           "question": w["question"]} for w in research_record["plan"]["work"]]

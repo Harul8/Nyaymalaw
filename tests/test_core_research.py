@@ -10,7 +10,7 @@ import pytest
 from nm.core_engine import answer_sources
 from nm.core_engine.calls import TurnCalls
 from nm.core_engine.research import (
-    CONTRACT, INSTRUMENTED_CONTRACT, MAX_REVISIONS, PICKED_CONTRACT, PROVISIONS_FOR_PICK, accept,
+    CONTRACT, INSTRUMENTED_CONTRACT, JUDGMENT_PICKED_CONTRACT, MAX_REVISIONS, PICKED_CONTRACT, PROVISIONS_FOR_PICK, accept,
     picked_judgments, plan, retrieve, search_instruments, search_queries, validate,
 )
 from nm.core_engine.retrieval import HybridSearcher, SearchUnavailable
@@ -50,7 +50,9 @@ def v5_work(quote="Find the applicable law."):
 
 # --- v7 proposals ---------------------------------------------------------------------
 
-def understanding(questions=1, disputes=1, *, needs_research=True, words="Find the applicable law"):
+def understanding(questions=1, disputes=1, *, needs_research=True, words="Find the applicable law",
+                  why_it_matters=True):
+    """A v9 understanding; why_it_matters=False gives the v7 and v8 shape."""
     return {"summary": "A reported position on which the advocate seeks the law.",
             "asked": ["Where the law stands on the reported position"], "ruled_out": [],
             "needs_research": needs_research, "no_research_reason": "" if needs_research else "A courtesy.",
@@ -63,7 +65,9 @@ def understanding(questions=1, disputes=1, *, needs_research=True, words="Find t
                                                "why_needed": "It decides the advice.", "open_alternative": "",
                                                "law_to_check": ["Indian Contract Act, 1872"]}
                                               for n in range(1, questions + 1)] if needs_research else [],
-                          "rights_at_stake": [], "relief_sought": [], "missing_facts": []}
+                          "rights_at_stake": [], "relief_sought": [], "missing_facts": [],
+                          **({"why_it_matters": f"Dispute {d} decides what the client can recover."}
+                             if why_it_matters else {})}
                          for d in range(1, disputes + 1)],
             "related_points": []}
 
@@ -279,7 +283,7 @@ def test_search_returns_twenty_provisions_and_the_pick_admits_only_its_choice():
     model = Model(choose=lambda ids: ids[:2])
     record = retrieve(admitted, found, ctx, model=model)
     assert asked == [{"results": {"provision": PROVISIONS_FOR_PICK}}]
-    assert record["contract"] == CONTRACT == "core_research_v8" and record["state"] == "evaluated"
+    assert record["contract"] == CONTRACT == "core_research_v9" and record["state"] == "evaluated"
     provisions = [c for c in record["searches"]["t2:w1"]["candidates"] if c["kind"] == "provision"]
     assert len(provisions) == PROVISIONS_FOR_PICK
     assert record["picks"]["chosen"] == {"t2:w1": [provisions[0]["id"], provisions[1]["id"]]}
@@ -336,16 +340,37 @@ def test_a_changed_judgment_pick_cannot_replay():
 
 def test_saved_v7_records_replay_unchanged_and_admit_every_returned_judgment():
     ctx = context("Find the applicable law.")
-    admitted = accept(proposal(), ctx, contract=PICKED_CONTRACT)
-    record = retrieve(admitted, searcher(), ctx, model=Model(choose_judgments=lambda ids: ids[:1]))
+    admitted = accept(proposal(why_it_matters=False), ctx, contract=PICKED_CONTRACT)
+    record = retrieve(accept(proposal(), ctx), searcher(), ctx, model=Model(choose_judgments=lambda ids: ids[:1]))
     saved = {key: value for key, value in record.items() if key != "judgment_picks"}
-    saved["contract"] = PICKED_CONTRACT
+    saved.update(contract=PICKED_CONTRACT, plan=admitted)
     assert validate(saved, admitted, ctx) == saved
     assert picked_judgments(saved) is None
     judged = {r["id"] for r in answer_sources.build(ctx, saved).values() if r["kind"] == "judgment"}
     assert {c["id"] for c in saved["searches"]["t2:w1"]["candidates"] if c["kind"] == "judgment"} <= judged
     with pytest.raises(ValueError):
         validate({**saved, "contract": CONTRACT}, admitted, ctx)
+
+
+def test_saved_v8_records_replay_unchanged_with_their_judgment_picks_and_parts():
+    # Research v9 (16 Oct 2026) adds why each dispute matters; a v8 record keeps its shape.
+    ctx = context("Find the applicable law.")
+    admitted = accept(proposal(why_it_matters=False), ctx, contract=JUDGMENT_PICKED_CONTRACT)
+    record = retrieve(accept(proposal(), ctx), searcher(), ctx, model=Model(choose_judgments=lambda ids: ids[:1]))
+    saved = {**record, "contract": JUDGMENT_PICKED_CONTRACT, "plan": admitted}
+    assert validate(saved, admitted, ctx) == saved
+    assert picked_judgments(saved) == picked_judgments(record)
+    with pytest.raises(ValueError):
+        validate({**saved, "contract": CONTRACT}, admitted, ctx)
+
+
+def test_a_v9_dispute_says_why_it_matters():
+    ctx = context("Find the applicable law.")
+    assert accept(proposal(), ctx)["proposal"]["understanding"]["disputes"][0]["why_it_matters"]
+    with pytest.raises(SchemaViolation, match="why_it_matters"):
+        accept(proposal(why_it_matters=False), ctx)
+    with pytest.raises(SchemaViolation, match="undeclared"):
+        accept(proposal(), ctx, contract=JUDGMENT_PICKED_CONTRACT)
 
 
 def test_shown_ids_alone_count_and_an_unknown_id_marks_the_research_partial():

@@ -257,7 +257,7 @@ def _headings(research_record, draft):
     if len({part["dispute_id"] for part in parts} - {None}) < 2:
         return {}
     names = {}
-    if research_record.get("contract") in (research.PICKED_CONTRACT, research.CONTRACT):
+    if research_record.get("contract") in research.QUESTION_PLANS:
         for dispute in research_record["plan"]["proposal"]["understanding"]["disputes"]:
             names.setdefault(dispute["id"], dispute["name"])
     headings, start = {}, 0

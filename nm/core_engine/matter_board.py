@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from nm.core_engine import research
 
-_UNDERSTOOD = (research.PICKED_CONTRACT, research.CONTRACT)
+_UNDERSTOOD = research.QUESTION_PLANS
 
 
 def _status(record, work_id):
@@ -66,16 +66,21 @@ def board(rows):
             "summary": understanding["summary"], "asked": list(understanding["asked"]),
             "instructions": list(understanding["ruled_out"]),
             "parties": [{"who": p["who"], "role": p["role"]} for p in understanding["parties"]],
-            "facts": [{"fact": f["fact"], "certainty": f["certainty"], "words": f["advocate_words"],
+            "facts": [{"id": f["id"], "fact": f["fact"], "certainty": f["certainty"], "words": f["advocate_words"],
                        **_where(f["advocate_words"], rows[:index + 1])}
                       for f in understanding["facts"]],
+            # Each dispute with the facts it rests on (where it was picked up from), why each
+            # question was asked, and, from research v9, why it matters (16 Oct 2026).
             "disputes": [{
                 "id": d["id"], "name": d["name"], "between": list(d["between"]),
-                "questions": [{"question": q["question"], "status": _status(record, work.get(q["id"]))}
+                **({"why_it_matters": d["why_it_matters"]} if d.get("why_it_matters", "").strip() else {}),
+                "fact_ids": list(d["fact_ids"]),
+                "questions": [{"question": q["question"], "why": q["why_needed"], "open": q["open_alternative"],
+                               "status": _status(record, work.get(q["id"]))}
                               for q in d["legal_questions"]],
                 "still_needed": list(d["missing_facts"]), "rights_at_stake": list(d["rights_at_stake"]),
                 "relief_sought": list(d["relief_sought"])} for d in understanding["disputes"]],
-            "related_points": [{"point": r["point"], "why": r["why_it_matters"],
+            "related_points": [{"point": r["point"], "why": r["why_it_matters"], "dispute_id": r["dispute_id"] or None,
                                 "dispute": names.get(r["dispute_id"])} for r in understanding["related_points"]],
         }
     return {"state": "empty"}

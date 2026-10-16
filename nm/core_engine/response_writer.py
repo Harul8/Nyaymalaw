@@ -392,8 +392,8 @@ def validate(draft, context, sources):
 
 def parts(research_record):
     """The answer's code-owned parts: one per dispute with researched questions, in the
-    understanding's order (research v8); otherwise one part that is the whole reply."""
-    if research_record.get("contract") != research.CONTRACT:
+    understanding's order (research v8 on); otherwise one part that is the whole reply."""
+    if research_record.get("contract") not in research.JUDGMENT_PICKS:
         return [{"dispute_id": None, "work_ids": None}]
     work = research_record["plan"]["work"]
     grouped = {}
@@ -417,7 +417,7 @@ def _research_context(record, work_ids):
              "searches": [{"work_id": identity, "state": row["state"], "issues": row["issues"]}
                           for identity, row in record["searches"].items() if mine(identity)],
              "failures": {identity: row for identity, row in record["failures"].items() if mine(identity)}}
-    if record.get("contract") in (research.PICKED_CONTRACT, research.CONTRACT):
+    if record.get("contract") in research.QUESTION_PLANS:
         shown["understanding"] = record["plan"]["proposal"]["understanding"]
         shown["questions"] = [{"work_id": w["id"], "dispute_id": w["dispute"]["id"], "question": w["question"],
                                "why_needed": w["why_needed"]} for w in record["plan"]["work"] if mine(w["id"])]
@@ -429,7 +429,7 @@ def _research_context(record, work_ids):
 def _payload(context, record, sources, interpretation, execution, layout, index, time_limits=None):
     part = layout[index]
     disputes = {}
-    if record.get("contract") in (research.PICKED_CONTRACT, research.CONTRACT):
+    if record.get("contract") in research.QUESTION_PLANS:
         for dispute in record["plan"]["proposal"]["understanding"]["disputes"]:
             disputes.setdefault(dispute["id"], dispute)
     held = answer_sources.presentation(sources, aliased=True, compact=True, work_ids=part["work_ids"])

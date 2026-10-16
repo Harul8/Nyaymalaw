@@ -24,8 +24,24 @@ def test_a_researched_turn_fills_the_board_with_its_understanding_and_what_resea
     dispute, = shown["disputes"]
     assert dispute["name"] == "Dispute 1" and dispute["between"] == ["client", "other party"]
     assert [q["status"] for q in dispute["questions"]] == ["researched"]
+    assert dispute["questions"][0]["why"] == "It decides the advice."
     fact, = shown["facts"]
     assert fact["certainty"] == "reported" and fact["words"]  # the advocate's own words travel with it
+    # Where the dispute was picked up from, and why it matters (research v9, 16 Oct 2026).
+    assert dispute["fact_ids"] == [fact["id"]] == ["F1"]
+    assert dispute["why_it_matters"] == "Dispute 1 decides what the client can recover."
+
+
+def test_an_earlier_understanding_shows_no_why_it_matters(store):
+    # Older conversations open as they are (owner, 16 Oct 2026); nothing is added to them.
+    first = run(store, ScriptedModel(legal=True))
+    saved = rows(store, first["chat_id"])
+    record = saved[-1]["activities"]["research"]
+    record["contract"] = "core_research_v8"
+    for dispute in record["plan"]["proposal"]["understanding"]["disputes"]:
+        del dispute["why_it_matters"]
+    dispute, = board(saved)["disputes"]
+    assert "why_it_matters" not in dispute and dispute["name"] == "Dispute 1"
 
 
 def test_a_later_courtesy_does_not_empty_the_board(store):
