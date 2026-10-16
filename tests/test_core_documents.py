@@ -124,6 +124,21 @@ def test_a_word_or_text_file_without_words_is_unread_and_never_sent_to_the_ai(de
         assert documents.needs_transcription(record) == []
 
 
+def test_a_word_reader_that_returns_nothing_keeps_its_own_reason(desk, monkeypatch):
+    # Seen in the owner's run (16 Oct 2026): a reader that reached its deadline was
+    # reported as a document with no words.
+    from nm.open_matter.document_text_port import ExtractionResult
+    def deadline(document, bounds=None):
+        return ExtractionResult(document.source_sha256, document.admission.media_id, document.format,
+                                len(document.data), None, failure="deadline",
+                                reason="the local reader reached its deadline; no complete reading is claimed",
+                                parser="bounded", parser_version="1")
+    monkeypatch.setattr(desk.reader, "extract", deadline)
+    record = desk.receive(ADVOCATE, "complaint.docx", word(["To,", "The Station House Officer."]))
+    assert record["pages"] == [] and "deadline" in record["failure"]
+    assert documents.summary(record)["state"] == "not_read" and documents.needs_transcription(record) == []
+
+
 def test_a_text_file_keeps_its_form_feed_pages_and_skips_empty_ones(desk):
     record = desk.receive(ADVOCATE, "notes.txt", b"First page.\f\fThird page.")
     assert [(page["number"], page["text"]) for page in record["pages"]] == [(1, "First page."), (3, "Third page.")]

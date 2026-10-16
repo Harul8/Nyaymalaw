@@ -107,7 +107,11 @@ class DocumentDesk:
         """A Word or text document's pages (16 Oct 2026): only a PDF page without a text
         layer is a scan for the AI to read. A Word document has no fixed pages, so its
         paragraphs are kept in order as one page; a text file's form-feed parts stay
-        pages. Empty paragraphs and parts are skipped, never sent to the AI."""
+        pages. Empty paragraphs and parts are skipped, never sent to the AI. A reader that
+        returned nothing (it failed, or reached its deadline) leaves no pages: its own
+        reason is the record's failure, never 'no words'."""
+        if not units:
+            return [], None
         unread = [{"number": unit.number, "state": "unread", "code": "unreadable",
                    "reason": unit.reason or "this part could not be read"}
                   for unit in units if unit.state not in (TextState.EXTRACTED, TextState.NO_TEXT_LAYER)]
