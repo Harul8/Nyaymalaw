@@ -53,6 +53,8 @@ class Element {
     this.open = false;
     this.isConnected = true;
     this._text = '';
+    this.classes = new Set();
+    this.classList = { add: name => this.classes.add(name), remove: name => this.classes.delete(name) };
   }
   get textContent() {
     return this._text + this.children.map(child => child.textContent).join('');
@@ -72,13 +74,16 @@ class Element {
     for (const callback of this.listeners.get(name) || []) callback(event);
   }
   showModal() { this.open = true; }
+  show() { this.open = true; }
   close() { this.open = false; this.fire('close'); }
+  contains(node) { return node === this; }
   focus() { document.activeElement = this; }
 }
 
 const elements = new Map();
 const document = {
   activeElement: null,
+  addEventListener() {},
   createElement: tag => new Element(tag),
   getElementById(id) {
     if (!elements.has(id)) elements.set(id, new Element('div'));

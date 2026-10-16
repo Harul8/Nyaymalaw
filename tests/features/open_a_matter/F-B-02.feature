@@ -1,13 +1,29 @@
 # GENERATED from docs/Nyaymalaw_Implementation_Plan.xlsx, row F-B-02, column "Executable scenarios (Gherkin)".
 # Edit the sheet, then run `python assurance/control_plane/plan_scenarios.py --write`.
-Feature: F-B-02 The Board, one of each matter's own views
+Feature: F-B-02 The live matter board beside the conversation
 
-  Scenario: Each saved conversation has its own Conversation, Board, Documents and Research notes
+  Scenario: The matter board is beside the conversation, not a tab
     Given the page
     And the page script
-    Then a saved conversation offers Conversation, Board, Documents and Research notes, and each shows only its own view
+    Then the matter board comes before the conversation in the window and there are no Board, Documents or Research notes tabs
 
-  Scenario: The Board is read from the conversation's saved understanding
+  Scenario: The board is read from the conversation's saved understanding and again after every answer
     Given the page script
-    Then the Board is read from the server for this conversation when it is chosen
+    Then the board is read from the server for this conversation when it opens and after every answer
+    And while NM works on a message the board says what NM is doing
     And a Board that cannot be read says so rather than showing an empty one
+
+  Scenario: A dispute opens in the board's own pane
+    Given the page script
+    Then choosing a dispute opens its details in the board's own pane, which closes on Close or Escape
+
+  Scenario: The documents and research notes open from the file icon beside the board's title
+    Given the page
+    And the page script
+    Then the file icon beside the board's title lists the documents and the research notes
+    And a document opens in the reading pane on the right
+
+  Scenario: On a phone the board is behind a Matter board button
+    Given the page
+    And the page stylesheet
+    Then at 820 px wide or narrower a Matter board button opens the board

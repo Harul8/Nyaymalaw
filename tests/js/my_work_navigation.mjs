@@ -43,7 +43,7 @@ function fixture() {
     if (!elements.has(id)) elements.set(id, new Element());
     return elements.get(id);
   };
-  const requests = [], starts = [], boardToggles = [], sent = [];
+  const requests = [], starts = [], boardToggles = [], sent = [], boards = [];
   const state = { railGeneration: 0, matterListGeneration: 0, sessionGeneration: 1,
     matterId: null, matterVersion: null, turns: [] };
   const context = { state, activeIntent: null, activeDelivery: null, $: get,
@@ -62,14 +62,16 @@ function fixture() {
     deliver: async entry => { sent.push(JSON.parse(entry.envelope)); },
     toggleMatters() {}, toggleMatterBoard: open => boardToggles.push(open),
     setWorkView: view => { get('pane-advise').dataset.view = view; },
-    updateWorkspace() {}, closeFilesMenu() {},
+    updateWorkspace() {}, closeFilesMenu() {}, closeBoardPane() {},
+    // The board beside the conversation is read for the conversation now open (16 Oct 2026).
+    loadChatBoard: () => boards.push(context.activeIntent && context.activeIntent.chatId),
     restoreConversation: async matterId => { state.turns = [{ matterId }]; return true; },
     renderDisputeBoard: body => { body.textContent = 'Current dispute board'; },
   };
   vm.runInNewContext(source, context, { filename: 'nm/app/app.js' });
   const startMatter = context.startMatter;
   context.startMatter = (chatId = null) => { starts.push(chatId); startMatter(chatId); };
-  return { context, state, get, requests, starts, boardToggles, sent };
+  return { context, state, get, requests, starts, boardToggles, sent, boards };
 }
 
 const matter = { matter_id: 'matter-current', matter: 'Saved matter heading' };
@@ -103,6 +105,7 @@ async function loaded() {
   await earlier;
   assert.deepEqual(f.starts, ['chat-latest']);
   assert.equal(f.context.activeIntent.chatId, 'chat-latest');
+  assert.deepEqual(f.boards, ['chat-latest']);
   assert.equal(f.state.turns[0].brief, 'chat-latest');
   assert.equal(f.state.matterVersion, 7);
   await f.context.send('A follow-up on the reopened conversation.');
@@ -182,9 +185,11 @@ for (const failure of [false, true]) {
   if (failure) f.requests[0].reject(new Error('Earlier read failed'));
   else resolveList(f, 0, [{ matter_id: 'matter-old', matter: 'Obsolete heading' }], []);
   await earlier;
-  assert.equal(f.get('rail-body').textContent, matter.matter);
+  assert.equal(f.get('rail-body').children.length, 1);
+  assert.equal(f.get('rail-body').children[0].querySelector().textContent, matter.matter);
+  assert.ok(f.get('rail-body').textContent.includes('Earlier matter record'));
   assert.equal(f.get('rail-body').children[0].attributes['aria-pressed'], 'true');
-  assert.equal(f.get('rail-meta').textContent, '1 matter');
+  assert.equal(f.get('rail-meta').textContent, '0 conversations · 1 earlier matter record');
 }
 
 for (const failure of [false, true]) {

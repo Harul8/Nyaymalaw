@@ -60,7 +60,7 @@ body {
    the top of every page without a `position: fixed` bar covering anything. */
 .masthead {
   display: flex; flex-direction: column; gap: 0.35rem;
-  padding: 0.8rem 1.75rem 0;
+  padding: 0.55rem 1.2rem;
   background: var(--surface);
   border-bottom: 1px solid var(--rule);
   flex: none;
@@ -130,14 +130,17 @@ main { display: grid; grid-template-columns: 19rem minmax(0, 1fr); flex: 1; min-
 .rail-meta {
   padding: 0 1.2rem 1rem; font-size: 0.76rem; color: var(--ink-3);
 }
-.rail-new { margin-left: auto; min-height: 2.75rem; font-weight: 600; color: var(--accent); }
 .rail .row.selected { background: var(--accent-w); }
 .rail-meta:empty { display: none; }
 #rail-body, #matter-board-body { overflow-y: auto; flex: 1; padding: 0 0.6rem; }
 .matter-board {
-  display: none; flex-direction: column; min-height: 0;
-  background: var(--board); border-left: 1px solid var(--rule);
+  display: none; flex-direction: column; min-height: 0; position: relative;
+  background: var(--board);
 }
+/* The conversation history reads as a list of conversations, not a full-width wall. */
+#pane-advise[data-view="list"] > .rail .rail-head,
+#pane-advise[data-view="list"] > .rail .rail-meta,
+#pane-advise[data-view="list"] #rail-body { width: min(52rem, 100%); margin-inline: auto; }
 .matter-list-row.selected { background: var(--accent-w); border-color: var(--accent); }
 
 .row {
@@ -251,19 +254,33 @@ main { display: grid; grid-template-columns: 19rem minmax(0, 1fr); flex: 1; min-
 .part-title { margin: 0; font-family: var(--f-serif); font-size: 1.2rem; font-weight: 500; }
 .part-toggle { min-height: 2.75rem; }
 .part-body { padding-top: 0.5rem; }
-/* Each matter's own views and its board (15 Oct 2026). */
-.matter-tabs { display: flex; flex-wrap: wrap; gap: 0.25rem; margin: 0.5rem 0 0.75rem; }
-.matter-tab { min-height: 2.75rem; padding: 0 0.9rem; border: 1px solid transparent; border-radius: 8px;
-  background: transparent; color: var(--ink-2); font: inherit; font-size: 0.92rem; cursor: pointer; }
-.matter-tab.is-on { background: var(--accent-w); color: var(--accent-2); font-weight: 600; }
-.matter-tab:disabled { color: var(--ink-3); cursor: not-allowed; }
-.chat-board { display: flex; flex-direction: column; gap: 1rem; padding-bottom: 2rem; }
-.board-lede { margin: 0; color: var(--ink-3); font-size: 0.9rem; }
+/* THE MATTER BOARD on the left of the conversation (owner, 16 Oct 2026). */
+#matter-board-body { display: flex; flex-direction: column; gap: 1rem; padding: 0 0.8rem 1.5rem; }
+.board-progress { margin: 0 0.8rem 0.6rem; padding: 0.5rem 0.7rem; border-radius: 8px; font-size: 0.82rem;
+  color: var(--accent-2); background: var(--accent-w); }
+.board-why { font-size: 0.86rem; line-height: 1.45; color: var(--ink-2); }
+.board-lede { margin: 0; color: var(--ink-3); font-size: 0.82rem; }
 .board-section { display: flex; flex-direction: column; gap: 0.6rem; }
-.board-h { margin: 0; font-size: 0.78rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-3); }
-.board-card { border: 1px solid var(--rule); border-radius: 12px; padding: 0.9rem 1rem; background: var(--board);
-  display: flex; flex-direction: column; gap: 0.4rem; }
-.board-dispute { margin: 0; font-family: var(--f-serif); font-size: 1.1rem; font-weight: 500; }
+.board-h { margin: 0; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-3); }
+.board-card { border: 1px solid var(--rule); border-radius: 12px; padding: 0.75rem 0.85rem; background: var(--surface);
+  display: flex; flex-direction: column; gap: 0.3rem; }
+button.board-card { width: 100%; text-align: left; font: inherit; color: var(--ink); cursor: pointer; }
+button.board-card:hover, button.board-card[aria-pressed="true"] { border-color: var(--accent); }
+button.board-card[aria-pressed="true"] { background: var(--accent-w); }
+button.board-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.board-dispute { margin: 0; font-family: var(--f-serif); font-size: 1.02rem; font-weight: 500; }
+/* The board's own pane: over the board, reaching a little to the right. */
+.board-pane { position: absolute; top: 0.5rem; bottom: 0.5rem; left: 0.5rem; width: calc(100% + 3.5rem);
+  z-index: 30; display: flex; flex-direction: column; min-height: 0; background: var(--surface);
+  border: 1px solid var(--rule); border-radius: 12px; box-shadow: 0 14px 40px rgba(0, 0, 0, .16); }
+.detail-section { margin: 0.9rem 0 0; }
+.detail-h { margin: 0 0 0.35rem; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em;
+  text-transform: uppercase; color: var(--ink-3); }
+.detail-list { margin: 0; padding-left: 1.1rem; display: flex; flex-direction: column; gap: 0.5rem; }
+.detail-question { margin: 0; font-weight: 600; }
+.detail-words { margin: 0.3rem 0 0.2rem; padding-left: 0.6rem; border-left: 2px solid var(--rule);
+  color: var(--ink-2); font-style: italic; }
+.board-pane .board-card { margin-bottom: 0.5rem; }
 .board-meta, .board-label { margin: 0; font-size: 0.85rem; color: var(--ink-3); }
 .board-label { font-weight: 600; color: var(--ink-2); }
 .board-questions, .board-needed, .board-list { margin: 0; padding-left: 1.2rem; display: flex; flex-direction: column; gap: 0.2rem; }
@@ -445,23 +462,33 @@ button.primary:disabled { opacity: 0.5; cursor: default; }
 button.ghost { border: none; background: none; color: var(--accent); padding: 0.45rem 0.3rem; font-size: 0.78rem; }
 button.wide { margin: 0.5rem 0.6rem 0.8rem; }
 
-/* THE MATTERS TOGGLE, AT NARROW WIDTHS. BK-32-AC1, P36, F-A-17.
-   At 1280px the rail is already beside the conversation. Below 820px the rail
-   is a drawer and this opens it. It used to sit in the masthead and show on
-   every other page too, because an advocate on Research, the case file,
-   History or Preparation had no other route back to the matter list; the
-   ribbon's My work tab, on every page, is that route now. */
+/* THE CONVERSATION WINDOW (owner, 16 Oct 2026): the matter board on the left, the
+   conversation on the right, and, while a link is open, the reading pane on the
+   right beside the conversation. Conversation history is its own view. On a phone
+   the board is behind its button (below). */
 .workspace-navigation { display: none; }
 
-#pane-advise { background: var(--surface); }
-#pane-advise[data-view="list"] { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
-#pane-advise[data-view="list"] .rail { border-right: 0; display: flex; width: 100%; }
-#pane-advise[data-view="list"] .conversation { display: none; }
-#pane-advise[data-view="matter"] { grid-template-columns: minmax(0, 1fr) clamp(15rem, 23vw, 19rem); }
-#pane-advise[data-view="matter"] .matter-board { display: flex; }
-#pane-advise[data-view="opening"] { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
-#pane-advise[data-view="opening"] .rail { display: none; }
+#pane-advise { background: var(--surface); grid-template-rows: minmax(0, 1fr);
+  grid-template-columns: clamp(16rem, 24vw, 22rem) minmax(0, 1fr); }
+#pane-advise > .rail { display: none; }
+#pane-advise > .matter-board { display: flex; border-right: 1px solid var(--rule); }
+#pane-advise[data-view="list"] { grid-template-columns: minmax(0, 1fr); }
+#pane-advise[data-view="list"] > .rail { border-right: 0; display: flex; width: 100%; }
+#pane-advise[data-view="list"] > .conversation,
+#pane-advise[data-view="list"] > .matter-board,
+#pane-advise[data-view="list"] > .reading-pane { display: none; }
+#pane-advise.reading { grid-template-columns: clamp(15rem, 21vw, 20rem) minmax(0, 1fr) min(36rem, 38vw); }
 #pane-advise[data-view="opening"] .workspace-heading { display: none; }
+/* The reading pane is a column of the window, not a cover over it. */
+#pane-advise > .reading-pane { position: static; inset: auto; width: auto; height: auto; max-height: none;
+  margin: 0; border: 0; border-left: 1px solid var(--rule); box-shadow: none; min-height: 0; }
+#pane-advise > .reading-pane[open] { display: flex; flex-direction: column; }
+@media (max-width: 1199px) and (min-width: 821px) {
+  /* Narrower windows: the reading pane lies over the conversation's right side. */
+  #pane-advise.reading { grid-template-columns: clamp(16rem, 24vw, 22rem) minmax(0, 1fr); }
+  #pane-advise > .reading-pane { position: fixed; top: 0; right: 0; bottom: 0; width: min(34rem, 60vw);
+    z-index: 50; box-shadow: -8px 0 36px rgba(0, 0, 0, .12); }
+}
 #pane-advise[data-view="opening"].empty-chat .conversation { justify-content: center; }
 #pane-advise[data-view="opening"].empty-chat .composer { margin-top: 0; margin-bottom: 0; }
 
@@ -521,26 +548,18 @@ button.wide { margin: 0.5rem 0.6rem 0.8rem; }
 @media (max-width: 820px) {
   main { grid-template-columns: 1fr; }
 
-  #pane-advise[data-view="matter"] { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
-  #pane-advise[data-view="matter"] .workspace-navigation {
-    display: flex; gap: .5rem; margin: .4rem .9rem;
-  }
-  #pane-advise[data-view="matter"] > .rail,
-  #pane-advise[data-view="matter"] > .conversation,
-  #pane-advise[data-view="matter"] > .matter-board { grid-row: 2; grid-column: 1; }
-  #pane-advise[data-view="matter"] .matter-board { display: none; border-left: 0; }
-  .rail { display: none; }
-  #pane-advise[data-view="matter"].show-rail .rail { display: flex; }
-  #pane-advise.show-rail .conversation { display: none; }
-  #pane-advise.show-board .conversation { display: none; }
-  #pane-advise[data-view="matter"].show-board .matter-board { display: flex; }
-  /* A phone reaches the list of matters from a new or open conversation too. */
-  #pane-advise[data-view="opening"] { grid-template-rows: auto minmax(0, 1fr); }
-  #pane-advise[data-view="opening"] .workspace-navigation { display: flex; gap: .5rem; margin: .4rem .9rem; }
-  #pane-advise[data-view="opening"] #board-toggle { display: none; }
-  #pane-advise[data-view="opening"] > .rail,
-  #pane-advise[data-view="opening"] > .conversation { grid-row: 2; grid-column: 1; }
-  #pane-advise[data-view="opening"].show-rail .rail { display: flex; }
+  /* A PHONE (owner, 16 Oct 2026): the conversation, with the board behind its
+     button; the board's pane and the reading pane each fill the screen. */
+  #pane-advise, #pane-advise.reading { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
+  #pane-advise[data-view="list"] { grid-template-rows: minmax(0, 1fr); }
+  #pane-advise:not([data-view="list"]) .workspace-navigation { display: flex; gap: .5rem; margin: .4rem .9rem; }
+  #pane-advise > .rail, #pane-advise > .conversation, #pane-advise > .matter-board { grid-row: 2; grid-column: 1; }
+  #pane-advise[data-view="list"] > .rail { grid-row: 1; }
+  #pane-advise > .matter-board { display: none; border-right: 0; }
+  #pane-advise.show-board > .matter-board { display: flex; }
+  #pane-advise.show-board > .conversation { display: none; }
+  #pane-advise > .reading-pane, .board-pane { position: fixed; inset: 0; width: 100vw; height: 100dvh;
+    border-radius: 0; z-index: 60; }
 }
 
 /* THE GRID CHILD MUST BE ALLOWED TO SHRINK.
@@ -1132,7 +1151,7 @@ button.ghost.cancel { margin-right: 0.6rem; }
  * row that scrolls inside itself.
  */
 @media (max-width: 820px) {
-  .masthead { padding: 0.6rem 0.9rem 0; }
+  .masthead { padding: 0.5rem 0.7rem; }
   .ribbon-account > .who-name { display: none; }
   .tabs { flex-wrap: nowrap; gap: 2px; overflow-x: auto; scrollbar-width: none; }
   .tabs .tab { flex: none; padding: 8px 10px 7px; }
@@ -1498,58 +1517,22 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visib
 }
 #opening-fields dd { overflow-wrap: anywhere; white-space: pre-wrap; }
 
-.sidebar-board { display: none; min-height: 0; }
 .thread .el { border-left: 0; padding: 0; margin-bottom: 1.2rem; }
 .thread .el .body { margin: 0; }
 .thread .el.disclosure {
   border-left: 2px dashed var(--rule); padding-left: .8rem;
 }
 .thread .support .el { border-left: 2px solid var(--rule); padding-left: .8rem; }
-@media (min-width: 821px) {
-  body:has(#masthead:not([hidden])) {
-    display: grid; grid-template-columns: 19rem minmax(0, 1fr);
-    grid-template-rows: auto minmax(0, 1fr);
-  }
-  .masthead {
-    grid-column: 1; grid-row: 1 / 3; min-height: 0; min-width: 0;
-    display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto;
-    gap: 0; padding: 0; border-bottom: 0; border-right: 1px solid var(--rule);
-    background: var(--board);
-  }
-  .ribbon-row { display: contents; }
-  .masthead .brand { grid-row: 1; padding: 1rem 1.2rem .6rem; }
-  .masthead .tabs {
-    grid-row: 2; display: grid; grid-template-columns: repeat(4, auto);
-    border: 1px solid var(--rule); border-radius: 10px;
-    background: var(--surface); gap: .125rem;
-    padding: .125rem; margin: .25rem .5rem .4rem;
-  }
-  .masthead .tabs .tab {
-    text-align: center; white-space: nowrap; min-width: 0; min-height: 36px;
-    padding: .45rem .35rem; border: 0; border-radius: 7px;
-    font-size: .75rem; line-height: 1.25; letter-spacing: 0;
-  }
-  .masthead .tabs .tab.is-on { background: var(--accent-w); border-color: transparent; }
-  .sidebar-board { grid-row: 3; overflow-y: auto; }
-  body[data-pane="advise"] .sidebar-board { display: flex; flex-direction: column; }
-  .sidebar-board .rail { border: 0; flex: 1; min-height: min-content; }
-  .sidebar-board .rail-head { padding: .8rem 1rem; }
-  .sidebar-board #rail-body:empty, .sidebar-board .rail-meta:empty { display: none; }
-  .ribbon-account {
-    grid-row: 4; display: grid; grid-template-columns: 44px minmax(0, 1fr);
-    align-items: center; gap: .6rem; padding: .85rem;
-    border-top: 1px solid var(--rule);
-  }
-  .ribbon-account .account-menu { grid-column: 1; grid-row: 1; }
-  .ribbon-account .who-name { grid-column: 2; grid-row: 1; overflow-wrap: anywhere; }
-  .ribbon-account .account-toggle { padding: .4rem; min-width: 42px; min-height: 42px; }
-  .ribbon-account .menu-arrow { display: none; }
-  .ribbon-account .account-panel {
-    left: 0; right: auto; top: auto; bottom: calc(100% + .6rem);
-    max-height: calc(100dvh - 7rem); overflow-y: auto;
-  }
-  body:has(#masthead:not([hidden])) > main { grid-column: 2; grid-row: 2; min-width: 0; }
-  #rehearsal-warning { grid-column: 2; grid-row: 1; }
+/* THE TOP BAR (owner, 16 Oct 2026): the name, + New matter and Conversation history,
+   and who is signed in with the person menu, across the window on every page. */
+.top-actions { display: flex; align-items: center; gap: 0.25rem; margin-right: auto; margin-left: 1.5rem; }
+.top-action { min-height: 2.75rem; padding: 0 0.8rem; border-radius: 8px; font-size: 0.9rem; font-weight: 600; }
+.top-action:hover { background: var(--accent-w); }
+.top-action[aria-current="page"] { background: var(--accent-w); color: var(--accent-2); }
+@media (max-width: 820px) {
+  .masthead .brand .name { display: none; }
+  .top-actions { margin-left: 0.4rem; gap: 0; }
+  .top-action { padding: 0 0.45rem; font-size: 0.82rem; white-space: nowrap; }
 }
 /* Every dispute stays a short label on the board; details open separately. */
 .dispute-focus { text-align: left; white-space: normal; overflow-wrap: anywhere; }

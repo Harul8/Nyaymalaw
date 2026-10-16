@@ -1,10 +1,10 @@
 # GENERATED from docs/Nyaymalaw_Implementation_Plan.xlsx, row F-A-17, column "Executable scenarios (Gherkin)".
 # Edit the sheet, then run `python assurance/control_plane/plan_scenarios.py --write`.
-Feature: F-A-17 The sidebar and the person menu, the same on every page
+Feature: F-A-17 The top bar and the person menu, the same on every page
 
-  Scenario: The sidebar carries the logo, a new-matter button and the list of matters
+  Scenario: The top bar carries the logo, a new-matter button and the conversation history
     Given the page
-    Then the sidebar has the NM logo and Nyaymalaw, a New matter button and the list of matters
+    Then the top bar has the NM logo and Nyaymalaw, a New matter button and a Conversation history button
     And it names the signed-in advocate beside the person menu button
 
   Scenario: There are no top tabs
@@ -24,7 +24,6 @@ Feature: F-A-17 The sidebar and the person menu, the same on every page
     Then the name shown is the account's own name, or its email when it has none
     And ending the session clears the name, the workspace and every profile detail
 
-  Scenario: On a phone a Matters button opens the list
-    Given the page
-    And the page stylesheet
-    Then at 820 px wide or narrower a Matters button opens the list of matters
+  Scenario: On a phone the top bar stays on one row
+    Given the page stylesheet
+    Then at 820 px wide or narrower the top bar hides the wordmark and keeps its buttons on one row

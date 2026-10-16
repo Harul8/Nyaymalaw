@@ -472,6 +472,9 @@ function clearPrivileged() {
     .forEach((id) => { const el = $(id); if (el) el.textContent = '—'; });
   closeFilesMenu();
   $('matter-files').hidden = true;
+  closeBoardPane(false);
+  $('board-status').hidden = true;
+  $('board-status').textContent = '';
   const composer = $('message');
   if (composer) composer.value = '';
   const chooser = $('history-matter');
@@ -805,30 +808,24 @@ function field(dl, label, value) {
   dl.append(dt, dd);
 }
 
+// The conversation window's views (owner, 16 Oct 2026): 'list' is the conversation
+// history; 'opening' a new or saved conversation and 'matter' an earlier matter
+// record, both with the matter board on the left and the conversation on the right.
 function setWorkView(view) {
   $('pane-advise').dataset.view = view;
-  syncBoardHost();
+  if (view === 'list') $('top-history').setAttribute('aria-current', 'page');
+  else $('top-history').removeAttribute('aria-current');
   updateWorkspace();
 }
 
-function syncBoardHost() {
-  const pane = $('pane-advise');
-  const rail = $('rail');
-  // On a wide screen the list of matters is always beside the work (15 Oct 2026).
-  if (window.innerWidth > 820) {
-    $('sidebar-board').appendChild(rail);
-  } else {
-    pane.insertBefore(rail, pane.querySelector('.conversation'));
-  }
-}
-window.addEventListener('resize', syncBoardHost);
-
-// ONE WAY OUT OF AN OPEN MATTER, whether to My work's list or to a new
+// ONE WAY OUT OF AN OPEN MATTER, whether to the conversation history or to a new
 // opening. Any render still in flight for the old matter loses the right to
 // paint, because the generation it holds is no longer current.
 function closeOpenMatter() {
   closeDisputeReader(false);
+  closeBoardPane(false);
   state.railGeneration += 1;
+  state.boardGeneration = (state.boardGeneration || 0) + 1;
   state.matterId = null;
   state.matterVersion = null;
   state.matterReady = false;
@@ -839,7 +836,6 @@ function closeOpenMatter() {
   toggleMatterBoard(false);
   selectMatterRow();
   $('pane-advise').dataset.matterId = '';
-  $('back').hidden = true;
   $('opening-board-status').hidden = true;
   $('opening-board-status').replaceChildren();
   $('opening-fields').replaceChildren();
@@ -866,12 +862,12 @@ async function restorePendingChat(chatId) {
   repaint();
 }
 
+// CONVERSATION HISTORY (owner, 16 Oct 2026): its own view, read fresh each time.
 async function showMatterList({ preserveIntent = false } = {}) {
   if (!preserveIntent) selectIntent(null);
   closeOpenMatter();
-  toggleMatters(false);
   setWorkView('list');
-  $('rail-title').textContent = 'Matters';
+  $('rail-title').textContent = 'Conversation history';
   $('matter-heading').textContent = 'My work';
   $('matter-heading').removeAttribute('title');
   updateWorkspace();
@@ -896,7 +892,7 @@ async function loadMatterList() {
   const generation = ++state.matterListGeneration;
   const session = state.sessionGeneration;
   const body = $('rail-body');
-  body.replaceChildren(stateBlock('building', 'Loading matters…'));
+  body.replaceChildren(stateBlock('building', 'Loading your conversations…'));
 
   let data;
   try {
@@ -913,30 +909,36 @@ async function loadMatterList() {
   }
   if (generation !== state.matterListGeneration || session !== state.sessionGeneration) return;
 
-  $('rail-meta').textContent = `${data.row_count} matter${data.row_count === 1 ? '' : 's'}`
-    + (data.chat_count ? ` · ${data.chat_count} chat${data.chat_count === 1 ? '' : 's'}` : '');
+  $('rail-meta').textContent = `${data.chat_count} conversation${data.chat_count === 1 ? '' : 's'}`
+    + (data.row_count ? ` · ${data.row_count} earlier matter record${data.row_count === 1 ? '' : 's'}` : '');
   const incomplete = data.state !== 'ok';
   const notice = incomplete ? stateBlock('unbuildable',
     'Some work could not be loaded. This list may be incomplete. Retry before relying on it.') : null;
 
   if (!data.matters.length && !data.chats.length) {
-    body.replaceChildren(notice || stateBlock('empty', 'No matters yet. Start with a new brief.'));
+    body.replaceChildren(notice || stateBlock('empty', 'No conversations yet. Start one with + New matter.'));
     return;
   }
 
+  const updated = (at) => {
+    const when = at ? new Date(at) : null;
+    return when && !Number.isNaN(when.getTime())
+      ? ` · ${when.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}` : '';
+  };
   const pendingRows = data.chats.map((chat) => {
     const row = document.createElement('div');
     row.className = 'row';
     row.dataset.chatId = chat.chat_id;
     row.setAttribute('role', 'button');
     row.tabIndex = 0;
-    row.setAttribute('aria-label', `Continue chat: ${chat.preview}`);
+    row.setAttribute('aria-label', `Open conversation: ${chat.preview}`);
     const title = document.createElement('div');
     title.className = 'r-title';
     title.textContent = chat.preview || 'Conversation';
     const details = document.createElement('div');
     details.className = 'hint';
-    details.textContent = `Chat · ${chat.turn_count} message${chat.turn_count === 1 ? '' : 's'}`;
+    details.textContent = `${chat.turn_count} message${chat.turn_count === 1 ? '' : 's'}`
+      + updated(chat.last_updated);
     row.append(title, details);
     const open = () => {
       const selection = restorePendingChat(chat.chat_id);
@@ -966,7 +968,10 @@ async function loadMatterList() {
     row.setAttribute('aria-label', `Open ${m.matter}`);
     const t = document.createElement('div');
     t.className = 'r-title'; t.textContent = m.matter;
-    row.append(t);
+    const kind = document.createElement('div');
+    kind.className = 'hint';
+    kind.textContent = `Earlier matter record${updated(m.last_updated)}`;
+    row.append(t, kind);
     row.onclick = () => showThreadBoard(m.matter_id);
     row.addEventListener('keydown', (event) => {
       if (event.key === 'Enter' || event.key === ' ') {
@@ -1004,10 +1009,7 @@ async function showThreadBoard(
   // OPENING A MATTER CLOSES THE LIST at narrow widths. Leaving it up would
   // put the advocate on the answer they asked for with the index still over
   // it, which is the same unreachability wearing the other face.
-  if (closeNavigator) {
-    toggleMatters(false);
-    toggleMatterBoard(false);
-  }
+  if (closeNavigator) toggleMatterBoard(false);
   setWorkView(deferBoard ? 'opening' : 'matter');
   state.matterId = matterId;
   selectMatterRow();
@@ -1023,7 +1025,6 @@ async function showThreadBoard(
   }
   window.dispatchEvent(new Event('nm:matter-changed'));
   $('pane-advise').dataset.matterId = matterId;
-  $('back').hidden = false;
   $('opening-board-status').hidden = true;
   $('opening-board-status').replaceChildren();
   if (deferBoard) showMatterStatus('building', 'Reading the matter board…');
@@ -1093,7 +1094,7 @@ async function showThreadBoard(
   if (selected) {
     selected.querySelector('.r-title').textContent = data.title || 'Untitled matter';
     selected.setAttribute('aria-label', `Open ${data.title || 'Untitled matter'}`);
-  } else loadMatterList();
+  }
 }
 
 function requirementsFor(record, row) {
@@ -2867,29 +2868,123 @@ function showConversationFromStart() {
   $('jump-latest').hidden = t.scrollHeight <= t.clientHeight;
 }
 
-// EACH MATTER'S OWN VIEWS (owner decision, 15 Oct 2026): Conversation, the Board read
-// from the conversation's saved understanding, and the Documents sent in it. Shown
-// once a conversation is saved; Research notes arrive with item 7.
-function syncMatterTabs() {
-  const chatId = activeIntent && activeIntent.chatId;
-  $('matter-tabs').hidden = !chatId;
-  if (!chatId) state.matterTab = 'conversation';
-  const tab = state.matterTab || 'conversation';
-  for (const button of $('matter-tabs').querySelectorAll('[data-matter-tab]')) {
-    const on = button.dataset.matterTab === tab;
-    button.classList.toggle('is-on', on);
-    if (on) button.setAttribute('aria-current', 'page');
-    else button.removeAttribute('aria-current');
+// THE MATTER BOARD ON THE LEFT (owner decisions, 16 Oct 2026). It is read from the
+// conversation's saved understanding, read again after every answer, and while NM
+// works it says what NM is doing. A dispute opens in the board's own pane, over the
+// board and reaching a little to the right; so do the documents and research notes,
+// from the file icon beside the board's title.
+let boardPaneTrigger = null;
+
+function closeBoardPane(restoreFocus = true) {
+  state.boardPaneGeneration = (state.boardPaneGeneration || 0) + 1;
+  const trigger = boardPaneTrigger;
+  boardPaneTrigger = null;
+  $('board-pane').hidden = true;
+  $('board-pane-title').textContent = '';
+  $('board-pane-body').replaceChildren();
+  $('board-files').setAttribute('aria-expanded', 'false');
+  for (const card of $('matter-board-body').querySelectorAll('[aria-pressed="true"]')) {
+    card.setAttribute('aria-pressed', 'false');
   }
-  $('chat-board').hidden = tab !== 'board';
-  $('chat-documents').hidden = tab !== 'documents';
-  $('chat-notes').hidden = tab !== 'notes';
-  $('thread').hidden = tab !== 'conversation';
+  if (restoreFocus && trigger && trigger.isConnected) trigger.focus();
 }
 
+function openBoardPane(title, content, trigger) {
+  closeBoardPane(false);
+  boardPaneTrigger = trigger || null;
+  $('board-pane-title').textContent = title;
+  $('board-pane-body').replaceChildren(...content);
+  $('board-pane-body').scrollTop = 0;
+  $('board-pane').hidden = false;
+  $('board-pane-close').focus();
+  return state.boardPaneGeneration;
+}
+
+$('board-pane-close').addEventListener('click', () => closeBoardPane());
+document.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape' || event.defaultPrevented || $('board-pane').hidden) return;
+  // The reading pane on the right closes first unless the board's pane has the focus.
+  if (!$('board-pane').contains(document.activeElement) && $('brain-source-reader').open) return;
+  event.preventDefault();
+  closeBoardPane();
+});
+
+// What NM is doing on this conversation's message, shown on its board.
+function syncBoardStatus() {
+  const status = $('board-status');
+  const working = Boolean(activeDelivery && activeIntent && activeDelivery.entry.context === activeIntent);
+  const label = working && activeDelivery.entry.progress && activeDelivery.entry.progress.label;
+  status.hidden = !working;
+  status.textContent = working
+    ? `NM is working on your latest message${label ? ` · ${label}` : '…'} The board updates when the answer is ready.`
+    : '';
+}
+
+function renderBoardWaiting() {
+  $('matter-board-meta').textContent = '';
+  $('matter-board-body').replaceChildren(stateBlock('empty',
+    'The board fills in as NM understands this matter from your messages and the documents you send.'));
+}
+
+async function loadChatBoard() {
+  const chatId = activeIntent && activeIntent.chatId;
+  if (!chatId) { renderBoardWaiting(); return; }
+  const host = $('matter-board-body');
+  const generation = (state.boardGeneration = (state.boardGeneration || 0) + 1);
+  // A board already shown stays in view while it is read again after an answer.
+  if (!host.children.length || host.dataset.chatId !== chatId) {
+    host.replaceChildren(stateBlock('building', 'Reading this matter’s board…'));
+  }
+  let board;
+  try {
+    board = await api(`/api/chats/${encodeURIComponent(chatId)}/board`);
+  } catch (error) {
+    if (generation !== state.boardGeneration) return;
+    host.replaceChildren(stateBlock('unbuildable', `The board could not be read: ${error.message}. `
+      + 'This is a failure to read, not an empty matter.'));
+    return;
+  }
+  if (generation !== state.boardGeneration || !activeIntent || activeIntent.chatId !== chatId) return;
+  host.dataset.chatId = chatId;
+  host.replaceChildren(...renderChatBoard(board));
+}
+
+// THE DOCUMENTS AND RESEARCH NOTES, from the file icon beside the board's title
+// (owner, 16 Oct 2026): listed in the board's pane; a document opens in the
+// reading pane on the right, page by page as it was read.
+async function openBoardFiles() {
+  if (!$('board-pane').hidden && $('board-files').getAttribute('aria-expanded') === 'true') {
+    closeBoardPane();
+    return;
+  }
+  const chatId = activeIntent && activeIntent.chatId;
+  const part = (title) => {
+    const section = document.createElement('section');
+    section.className = 'detail-section';
+    const heading = document.createElement('h3');
+    heading.className = 'detail-h';
+    heading.textContent = title;
+    const body = document.createElement('div');
+    section.append(heading, body);
+    return [section, body];
+  };
+  const [documents, documentsBody] = part('Documents');
+  const [notes, notesBody] = part('Research notes');
+  const generation = openBoardPane('Documents and research notes', [documents, notes], $('board-files'));
+  $('board-files').setAttribute('aria-expanded', 'true');
+  renderChatNotes(notesBody);
+  if (!chatId) {
+    documentsBody.replaceChildren(stateBlock('empty', 'Documents appear here once this conversation is saved. '
+      + 'Attach them with the + under your message.'));
+    return;
+  }
+  await loadChatDocuments(documentsBody, generation);
+}
+
+$('board-files').addEventListener('click', () => openBoardFiles());
+
 // The conversation's answers, each to keep as a research note (Word or PDF).
-function renderChatNotes() {
-  const host = $('chat-notes');
+function renderChatNotes(host) {
   const answers = state.turns.filter((entry) => noteAvailable(entry.answer));
   if (!answers.length) {
     host.replaceChildren(stateBlock('empty', 'No answer in this matter can be kept as a research note yet.'));
@@ -2919,28 +3014,26 @@ function renderChatNotes() {
   }));
 }
 
-async function loadChatDocuments() {
+async function loadChatDocuments(host, paneGeneration) {
   const chatId = activeIntent && activeIntent.chatId;
   if (!chatId) return;
-  const host = $('chat-documents');
-  const generation = (state.documentsGeneration = (state.documentsGeneration || 0) + 1);
   host.replaceChildren(stateBlock('building', 'Reading the documents sent in this matter…'));
   let listing;
   try {
     listing = await api(`/api/chats/${encodeURIComponent(chatId)}/documents`);
   } catch (error) {
-    if (generation !== state.documentsGeneration) return;
+    if (paneGeneration !== state.boardPaneGeneration) return;
     host.replaceChildren(stateBlock('unbuildable', `The documents could not be read: ${error.message}. `
       + 'This is a failure to read, not an empty list.'));
     return;
   }
-  if (generation !== state.documentsGeneration || !activeIntent || activeIntent.chatId !== chatId) return;
-  host.replaceChildren(...renderChatDocuments(listing));
+  if (paneGeneration !== state.boardPaneGeneration || !activeIntent || activeIntent.chatId !== chatId) return;
+  host.replaceChildren(...renderChatDocuments(listing, (document_, turn, opener) =>
+    window.NmBrainSources.showContent(document_.name, renderDocumentPages(document_, turn), opener)));
 }
 
-// Every document sent in the conversation, each page exactly as it was read, so the
-// advocate can check a page the AI read against the original, and why any page was not.
-function renderChatDocuments(listing) {
+// Every document sent in the conversation, each to open in the reading pane.
+function renderChatDocuments(listing, open) {
   const make = (tag, className, text) => {
     const node = document.createElement(tag);
     if (className) node.className = className;
@@ -2956,65 +3049,78 @@ function renderChatDocuments(listing) {
     + 'What the AI read or heard is marked; check it against your original where it matters.')];
   for (const turn of sent) {
     for (const document_ of turn.documents) {
-      const card = make('article', 'board-card document-card');
-      card.appendChild(make('h4', 'board-dispute', document_.name));
+      const card = make('button', 'board-card document-card');
+      card.type = 'button';
+      card.appendChild(make('span', 'board-dispute', document_.name));
+      const read = document_.pages.length;
+      const unread = document_.unread.length;
+      card.appendChild(make('span', 'board-meta', document_.recording
+        ? (read ? 'Recording · transcribed' : 'Recording · not transcribed')
+        : `${read} page${read === 1 ? '' : 's'} read${unread ? ` · ${unread} not read` : ''}`));
       const preview = turn.message.length > 140 ? `${turn.message.slice(0, 140)}…` : turn.message;
-      card.appendChild(make('p', 'board-meta', `Sent with: “${preview}”`));
-      if (document_.recording) {
-        const player = document.createElement('audio');
-        player.controls = true;
-        player.preload = 'none';
-        player.className = 'document-player';
-        player.src = `/api/documents/${encodeURIComponent(document_.document_ref)}/recording`;
-        player.setAttribute('aria-label', `Play ${document_.name}`);
-        card.appendChild(player);
-      }
-      for (const page of document_.pages) {
-        const details = make('details', 'document-page');
-        let label = document_.recording ? 'Transcript' : `Page ${page.number}`;
-        if (document_.recording) label += ' · transcribed by AI';
-        else if (page.read_by === 'ai') {
-          label += page.legible === 'part' ? ' · read by AI, partly legible' : ' · read by AI';
-        }
-        details.appendChild(make('summary', '', label));
-        if (page.note) details.appendChild(make('p', 'board-meta', page.note));
-        details.appendChild(make('div', 'document-text', page.text));
-        card.appendChild(details);
-      }
-      for (const page of document_.unread) {
-        card.appendChild(make('p', 'document-unread', document_.recording
-          ? `Not transcribed: ${page.reason}` : `Page ${page.number} not read: ${page.reason}`));
-      }
+      card.appendChild(make('span', 'board-meta', `Sent with: “${preview}”`));
+      card.setAttribute('aria-label', `Read ${document_.name}`);
+      card.addEventListener('click', () => open(document_, turn, card));
       out.push(card);
     }
   }
   return out;
 }
 
-async function loadChatBoard() {
-  const chatId = activeIntent && activeIntent.chatId;
-  if (!chatId) return;
-  const host = $('chat-board');
-  const generation = (state.boardGeneration = (state.boardGeneration || 0) + 1);
-  host.replaceChildren(stateBlock('building', 'Reading this matter’s board…'));
-  let board;
-  try {
-    board = await api(`/api/chats/${encodeURIComponent(chatId)}/board`);
-  } catch (error) {
-    if (generation !== state.boardGeneration) return;
-    host.replaceChildren(stateBlock('unbuildable', `The board could not be read: ${error.message}. `
-      + 'This is a failure to read, not an empty matter.'));
-    return;
+// One document's pages exactly as they were read, so the advocate can check a page
+// the AI read against the original, and why any page was not read.
+function renderDocumentPages(document_, turn) {
+  const make = (tag, className, text) => {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  };
+  const preview = turn.message.length > 140 ? `${turn.message.slice(0, 140)}…` : turn.message;
+  const out = [make('p', 'hint', `Sent with: “${preview}”`)];
+  if (document_.recording) {
+    const player = document.createElement('audio');
+    player.controls = true;
+    player.preload = 'none';
+    player.className = 'document-player';
+    player.src = `/api/documents/${encodeURIComponent(document_.document_ref)}/recording`;
+    player.setAttribute('aria-label', `Play ${document_.name}`);
+    out.push(player);
   }
-  if (generation !== state.boardGeneration || !activeIntent || activeIntent.chatId !== chatId) return;
-  host.replaceChildren(...renderChatBoard(board));
+  for (const page of document_.pages) {
+    let label = document_.recording ? 'Transcript' : `Page ${page.number}`;
+    if (document_.recording) label += ' · transcribed by AI';
+    else if (page.read_by === 'ai') {
+      label += page.legible === 'part' ? ' · read by AI, partly legible' : ' · read by AI';
+    }
+    out.push(make('h3', 'detail-h', label));
+    if (page.note) out.push(make('p', 'board-meta', page.note));
+    out.push(make('div', 'document-text', page.text));
+  }
+  for (const page of document_.unread) {
+    out.push(make('p', 'document-unread', document_.recording
+      ? `Not transcribed: ${page.reason}` : `Page ${page.number} not read: ${page.reason}`));
+  }
+  return out;
 }
 
 const CERTAINTY = { reported: 'Reported', disputed: 'Disputed', uncertain: 'Uncertain', confirmed: 'Given' };
 const QUESTION_STATUS = { researched: 'researched', search_failed: 'search failed', not_researched: 'not researched' };
 
+// Where a fact's words were found, as the server found them (15 Oct 2026).
+function factPlace(fact) {
+  if (fact.from === 'advocate') return 'From your messages';
+  if (fact.from === 'document' && Array.isArray(fact.places)) {
+    return `From ${fact.places.map((place) => (place.recording
+      ? `${place.document} (recording, transcribed by AI)`
+      : `${place.document}, page ${place.page}` + (place.read_by === 'ai' ? ' (read by AI)' : ''))).join('; ')}`;
+  }
+  return 'Where these words were given was not found';
+}
+
 // The board as NM understood the matter from the advocate's own words. Nothing on
 // it is presented as established: facts carry the certainty they were given with.
+// Each dispute is a short card; its details open in the board's own pane.
 function renderChatBoard(board) {
   const make = (tag, className, text) => {
     const node = document.createElement(tag);
@@ -3028,28 +3134,32 @@ function renderChatBoard(board) {
     return ul;
   };
   if (!board || board.state !== 'ready') {
-    return [stateBlock('empty', 'Nothing here yet: the board fills once NM has researched a message in this matter.')];
+    return [stateBlock('empty', 'Nothing here yet: the board fills in once NM has researched a message in this matter.')];
   }
+  // The understanding's own summary is not shown: it is written before research and
+  // can state legal conclusions no check has seen (16 Oct 2026).
   const out = [make('p', 'board-lede', 'As NM understood this matter from your messages and the documents '
     + 'you sent. Facts are as you or a document gave them, not proved.')];
   const disputes = make('section', 'board-section');
-  disputes.appendChild(make('h3', 'board-h', 'Disputes'));
+  disputes.appendChild(make('h3', 'board-h', board.disputes.length === 1 ? 'Dispute'
+    : `Disputes (${board.disputes.length})`));
   for (const dispute of board.disputes) {
-    const card = make('article', 'board-card');
-    card.appendChild(make('h4', 'board-dispute', dispute.name));
-    if (dispute.between.length) card.appendChild(make('p', 'board-meta', dispute.between.join(' · ')));
-    const questions = make('ul', 'board-questions');
-    for (const question of dispute.questions) {
-      const li = make('li', '', question.question);
-      li.appendChild(make('span', `board-status ${question.status}`,
-        ` · ${QUESTION_STATUS[question.status] || question.status}`));
-      questions.appendChild(li);
-    }
-    card.appendChild(questions);
-    if (dispute.still_needed.length) {
-      card.appendChild(make('p', 'board-label', 'Still needed'));
-      card.appendChild(list(dispute.still_needed, 'board-needed'));
-    }
+    const card = make('button', 'board-card dispute-card');
+    card.type = 'button';
+    card.setAttribute('aria-pressed', 'false');
+    card.appendChild(make('span', 'board-dispute', dispute.name));
+    if (dispute.between.length) card.appendChild(make('span', 'board-meta', dispute.between.join(' · ')));
+    if (dispute.why_it_matters) card.appendChild(make('span', 'board-why', dispute.why_it_matters));
+    const counts = {};
+    for (const question of dispute.questions) counts[question.status] = (counts[question.status] || 0) + 1;
+    const done = Object.entries(counts)
+      .map(([status, count]) => `${count} ${QUESTION_STATUS[status] || status}`).join(' · ');
+    card.appendChild(make('span', 'board-status', `${dispute.questions.length} legal question`
+      + `${dispute.questions.length === 1 ? '' : 's'}${done ? ` · ${done}` : ''}`));
+    card.addEventListener('click', () => {
+      openBoardPane(dispute.name, renderDisputeDetail(dispute, board), card);
+      card.setAttribute('aria-pressed', 'true');
+    });
     disputes.appendChild(card);
   }
   out.push(disputes);
@@ -3066,13 +3176,7 @@ function renderChatBoard(board) {
       const row = make('p', 'board-fact');
       row.appendChild(make('span', `board-certainty ${fact.certainty}`, CERTAINTY[fact.certainty] || fact.certainty));
       row.appendChild(make('span', '', ` ${fact.fact}`));
-      // Where the fact's words appear, as the server found them (15 Oct 2026).
-      if (fact.from === 'document' && Array.isArray(fact.places)) {
-        const places = fact.places.map((place) => (place.recording
-          ? `${place.document} (recording, transcribed by AI)`
-          : `${place.document}, page ${place.page}` + (place.read_by === 'ai' ? ' (read by AI)' : '')));
-        row.appendChild(make('span', 'board-status', ` · from ${places.join('; ')}`));
-      }
+      if (fact.from === 'document') row.appendChild(make('span', 'board-status', ` · ${factPlace(fact)}`));
       facts.appendChild(row);
     }
     out.push(facts);
@@ -3083,6 +3187,72 @@ function renderChatBoard(board) {
     instructions.appendChild(list(board.instructions, 'board-list'));
     out.push(instructions);
   }
+  return out;
+}
+
+// A DISPUTE IN DETAIL (owner, 16 Oct 2026): why it matters, where it was picked up
+// from, who it is between, each legal question with why it was asked and what
+// research did, its facts, what is at stake and sought, what is still needed, and
+// the related points for it. Each part is shown only when the saved understanding
+// holds it; an earlier conversation shows no "why it matters".
+function renderDisputeDetail(dispute, board) {
+  const make = (tag, className, text) => {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  };
+  const list = (items) => {
+    const ul = make('ul', 'detail-list');
+    for (const item of items) ul.appendChild(make('li', '', item));
+    return ul;
+  };
+  const part = (title, ...content) => {
+    const section = make('section', 'detail-section');
+    section.appendChild(make('h3', 'detail-h', title));
+    section.append(...content);
+    return section;
+  };
+  const out = [];
+  if (dispute.why_it_matters) out.push(part('Why it matters', make('p', '', dispute.why_it_matters)));
+  const facts = (dispute.fact_ids || []).map((id) => board.facts.find((fact) => fact.id === id)).filter(Boolean);
+  if (facts.length) {
+    const ul = make('ul', 'detail-list');
+    for (const fact of facts) {
+      const li = make('li');
+      li.appendChild(make('span', `board-certainty ${fact.certainty}`, CERTAINTY[fact.certainty] || fact.certainty));
+      li.appendChild(make('span', '', ` ${fact.fact}`));
+      if (fact.words) li.appendChild(make('blockquote', 'detail-words', fact.words));
+      li.appendChild(make('p', 'board-meta', factPlace(fact)));
+      ul.appendChild(li);
+    }
+    out.push(part('Where it was picked up from', ul));
+  }
+  if (dispute.between.length) out.push(part('Between', make('p', '', dispute.between.join(' · '))));
+  if (dispute.questions.length) {
+    const ol = make('ol', 'detail-list');
+    for (const question of dispute.questions) {
+      const li = make('li');
+      li.appendChild(make('p', 'detail-question', question.question));
+      li.appendChild(make('p', `board-status ${question.status}`,
+        `Research: ${QUESTION_STATUS[question.status] || question.status}`));
+      if (question.why) li.appendChild(make('p', 'board-meta', `Why it was asked: ${question.why}`));
+      if (question.open) li.appendChild(make('p', 'board-meta', `Still open: ${question.open}`));
+      ol.appendChild(li);
+    }
+    out.push(part('Legal questions', ol));
+  }
+  if (dispute.rights_at_stake.length) out.push(part('Rights at stake', list(dispute.rights_at_stake)));
+  if (dispute.relief_sought.length) out.push(part('Relief sought', list(dispute.relief_sought)));
+  if (dispute.still_needed.length) out.push(part('Still needed', list(dispute.still_needed)));
+  const related = board.related_points.filter((point) => (point.dispute_id
+    ? point.dispute_id === dispute.id : point.dispute === dispute.name));
+  if (related.length) {
+    out.push(part('Related points for your decision',
+      list(related.map((point) => (point.why ? `${point.point} — ${point.why}` : point.point)))));
+  }
+  out.push(make('p', 'board-lede', 'NM’s understanding from your messages and documents. Facts are as you '
+    + 'or a document gave them, not proved.'));
   return out;
 }
 
@@ -3199,9 +3369,11 @@ function sizeComposer() {
 
 function updateWorkspace() {
   const intakeOpen = !$('intake').hidden && !openingEdit;
-  syncMatterTabs();
-  $('composer').hidden = intakeOpen || $('pane-advise').dataset.view === 'list'
-    || state.matterTab === 'board';
+  $('composer').hidden = intakeOpen || $('pane-advise').dataset.view === 'list';
+  // The board's file icon is the conversation's; an earlier matter record keeps its
+  // own file icon in its header.
+  $('board-files').hidden = Boolean(state.matterId);
+  syncBoardStatus();
   $('pane-advise').classList.toggle('empty-chat',
     $('pane-advise').dataset.view === 'opening' && !state.turns.length);
   // F-B-04. The file icon is offered for an open matter, and on a new matter's
@@ -3349,8 +3521,7 @@ async function deliver(entry) {
       intent.chatId = answer.chat_id;
       intent.key = intentKey(intent.matterId, intent.chatId);
       intentContexts.set(intent.key, intent);
-      // A new conversation joins the list of matters as soon as it is saved.
-      loadMatterList();
+      // Saved, it is in the conversation history, which is read each time it opens.
     }
     if (answer.matter_id && !intent.matterId) {
       intentContexts.delete(intent.key);
@@ -3367,6 +3538,8 @@ async function deliver(entry) {
     if (state.matterId) await showThreadBoard(state.matterId, {
       restore: false, closeNavigator: false, deferBoard: !entry.request.matter_id,
     });
+    // The board is read again after every answer (owner, 16 Oct 2026).
+    else if (intent.chatId) loadChatBoard();
   } catch (e) {
     // clearPrivileged already freezes an abandoned attempt as unknown. Neither
     // that old response nor a later retry can rewrite one another's outcome.
@@ -4151,33 +4324,18 @@ $('dictate').addEventListener('click', () => {
   else startDictation();
 });
 
-// My matters: back to My work's list, under My work.
-$('back').addEventListener('click', () => openTab('advise'));
-
-// BK-32. THE MATTER LIST, AT EVERY WIDTH.
+// THE BOARD ON A PHONE (owner, 16 Oct 2026): behind the Matter board button.
 //
 // `aria-expanded` is kept in step because the button IS the disclosure at
 // this width -- a screen reader that cannot tell open from closed has the
-// same problem the sighted advocate had: no way to know the list is there.
-function toggleMatters(force) {
-  const pane = $('pane-advise');
-  const open = force === undefined ? !pane.classList.contains('show-rail') : force;
-  pane.classList.toggle('show-rail', open);
-  $('matters-toggle').setAttribute('aria-expanded', open ? 'true' : 'false');
-  if (open) toggleMatterBoard(false);
-}
-
+// same problem the sighted advocate had: no way to know the board is there.
 function toggleMatterBoard(force) {
   const pane = $('pane-advise');
   const open = force === undefined ? !pane.classList.contains('show-board') : force;
   pane.classList.toggle('show-board', open);
   $('board-toggle').setAttribute('aria-expanded', String(open));
-  if (open) toggleMatters(false);
 }
 
-// INSIDE MY WORK, NOT THE RIBBON (F-A-17). From any other page the way back to
-// the matter list is the My work tab, which is on every page.
-$('matters-toggle').addEventListener('click', () => toggleMatters());
 $('board-toggle').addEventListener('click', () => toggleMatterBoard());
 
 // B3-B5. INTAKE IS ASKED ONCE PER MATTER, AND ITS ANSWERS TRAVEL WITH THE
@@ -4557,7 +4715,6 @@ $('intake').addEventListener('submit', async (ev) => {
 // the board appears after its details have been read back.
 function startMatter(chatId = null) {
   if (typeof chatId !== 'string') chatId = null;
-  state.matterTab = 'conversation';
   state.workTab = 'home';
   showTab('advise');
   setWorkView('opening');
@@ -4566,30 +4723,23 @@ function startMatter(chatId = null) {
   activeIntent.intake = null;
   state.intake = null;
   showIntake(false);
-  toggleMatters(false);
   closeOpenMatter();
   state.turns = [...activeIntent.pending];
   repaint();
+  // The board beside the conversation: a saved conversation's, or a new one's waiting.
+  loadChatBoard();
   $('mode-line').hidden = true;
-  $('rail-title').textContent = 'Matters';
   $('matter-heading').textContent = 'New matter';
   $('matter-heading').removeAttribute('title');
   window.dispatchEvent(new Event('nm:matter-changed'));
   $('message').focus();
 }
 
-// F-A-18, F-B-01. Home's one button starts a new matter, under Home.
+// F-A-18, F-B-01. The top bar's New matter starts one; Conversation history lists
+// every conversation (owner, 16 Oct 2026).
 $('home-start').addEventListener('click', startMatter);
-$('rail-new').addEventListener('click', startMatter);
-$('matter-tabs').addEventListener('click', (event) => {
-  const button = event.target.closest('[data-matter-tab]');
-  if (!button || button.disabled) return;
-  state.matterTab = button.dataset.matterTab;
-  updateWorkspace();
-  if (state.matterTab === 'board') loadChatBoard();
-  if (state.matterTab === 'documents') loadChatDocuments();
-  if (state.matterTab === 'notes') renderChatNotes();
-});
+$('top-new').addEventListener('click', () => startMatter());
+$('top-history').addEventListener('click', () => openTab('advise'));
 
 /* THE GATE RUNS FIRST.
  *
@@ -6597,11 +6747,10 @@ function showApplication(advocate, workspace, professionalApproval) {
   // A brief interrupted in a saved matter returns under My work; one
   // interrupted before its matter was saved returns under Home (F-B).
   if (draftWaiting) state.workTab = state.draft.matterId ? 'advise' : 'home';
-  // Owner decision, 15 Oct 2026: no Home page and no tabs. A sign-in opens a new
-  // matter beside the list of matters, unless a brief was interrupted.
+  // Owner decisions, 15 and 16 Oct 2026: no Home page and no tabs. A sign-in opens a
+  // new matter, its board beside it, unless a brief was interrupted.
   showTab('advise');
   if (!draftWaiting) startMatter();
-  loadMatterList();
   loadHealth();
   // The landing page is Home. Loading every matter's checked register here
   // started a second, overlapping list request when the advocate chose My

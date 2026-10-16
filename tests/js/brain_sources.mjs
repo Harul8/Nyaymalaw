@@ -14,15 +14,24 @@ class Node {
   appendChild(child) { this.children.push(child); return child; }
   append(...children) { this.children.push(...children); }
   setAttribute(name, value) { this.attributes.set(name, value); }
-  showModal() { this.open = true; }
+  show() { this.open = true; this.modal = false; }
+  showModal() { this.open = true; this.modal = true; }
   close() { this.open = false; }
+  contains(node) { return node === this; }
   focus() { this.focused = true; }
 }
 const nodes = new Map(['brain-source-reader', 'brain-source-title', 'brain-source-close',
-  'brain-source-status', 'brain-source-body'].map(id => [id, new Node()]));
+  'brain-source-status', 'brain-source-body', 'board-pane'].map(id => [id, new Node()]));
+// The window the reading pane sits in (owner, 16 Oct 2026): it makes room while the pane is open.
+const windowClasses = new Set();
+nodes.set('pane-advise', Object.assign(new Node(), {classList:{
+  add:name => windowClasses.add(name), remove:name => windowClasses.delete(name)}}));
 const events = new Map();
+const keys = [];
 const window = {addEventListener:(name, callback) => events.set(name, callback)};
 const document = {getElementById:id => nodes.get(id), createElement:tag => new Node(tag),
+  activeElement:null,
+  addEventListener:(name, callback) => { if (name === 'keydown') keys.push(callback); },
   createTextNode:text => { const node = new Node('#text'); node.textContent = text; return node; }};
 vm.runInNewContext(fs.readFileSync('nm/app/brain-sources.js', 'utf8'), {window, document});
 const reader = window.NmBrainSources;
@@ -43,9 +52,28 @@ assert.equal(reads[0].url, '/api/chats/pending-chat/turns/source-turn/brain-sour
 reads[0].resolve(saved); await opened;
 assert.equal(nodes.get('brain-source-body').children.at(-1).textContent, source.text);
 assert.equal(nodes.get('brain-source-reader').open, true);
+// Beside the conversation, not over it: not modal, and the window makes room.
+assert.equal(nodes.get('brain-source-reader').modal, false);
+assert.equal(windowClasses.has('reading'), true);
 reader.close();
 assert.equal(opener.focused, true);
 assert.equal(nodes.get('brain-source-body').children.length, 0);
+assert.equal(windowClasses.has('reading'), false);
+
+// Escape closes the pane, unless the board's own pane holds the focus (it closes first).
+{
+  const escape = () => { const event = {key:'Escape', defaultPrevented:false,
+    preventDefault() { this.defaultPrevented = true; }}; keys.forEach(key => key(event)); return event; };
+  reader.showContent('A document', [new Node()], opener);
+  assert.equal(nodes.get('brain-source-reader').open, true);
+  document.activeElement = nodes.get('board-pane');
+  assert.equal(escape().defaultPrevented, false);
+  assert.equal(nodes.get('brain-source-reader').open, true);
+  document.activeElement = null;
+  assert.equal(escape().defaultPrevented, true);
+  assert.equal(nodes.get('brain-source-reader').open, false);
+  assert.equal(windowClasses.has('reading'), false);
+}
 
 const stale = reader.open(answer, element, 0, 0, opener);
 const current = reader.open({...answer, matter_id:'saved-matter'}, element, 1, 0, opener);

@@ -950,9 +950,9 @@ def cards_shrink(stylesheet):
 
 # ---------------------------------------------------------------- F-A-17 ---
 #
-# The sidebar and the person menu (owner's navigation decision on the item 4 screen
-# designs, 15 Oct 2026: a list of matters and each matter's own views, replacing the
-# Home, My work, Legal library and Preparation tabs).
+# The top bar and the person menu (owner's conversation-window layout, 16 Oct 2026:
+# '+ New matter' and 'Conversation history' across the top, replacing the sidebar's
+# list of matters; no Home, My work, Legal library or Preparation tabs).
 
 @given("the page", target_fixture="app_page")
 def the_page() -> str:
@@ -969,17 +969,29 @@ def pane_html(page: str, name: str) -> str:
     return page[start:page.index("</main>", start)]
 
 
-def _rail(page: str) -> str:
-    rail = page[page.index('<aside class="rail" id="rail">'):]
-    return rail[:rail.index("</aside>")]
+def _board_html(page: str) -> str:
+    board = page[page.index('<aside class="matter-board" id="matter-board"'):]
+    return board[:board.index("</aside>")]
 
 
-@then("the sidebar has the NM logo and Nyaymalaw, a New matter button and the list of matters")
-def sidebar_brand_new_and_list(app_page):
-    assert re.search(r'<span class="mark">NM</span>\s*<span class="name">Nyaymalaw</span>', ribbon_html(app_page))
-    rail = _rail(app_page)
-    assert '<button type="button" id="rail-new" class="ghost rail-new">+ New matter</button>' in rail
-    assert 'id="rail-body"' in rail
+def _inner_function(script: str, name: str) -> str:
+    """One function of a module script written inside its closure, to its end."""
+    at = script.find(f"  function {name}(")
+    assert at >= 0, f"{name} is not in the script"
+    return script[at:script.index("\n  }\n", at)]
+
+
+@then("the top bar has the NM logo and Nyaymalaw, a New matter button and a Conversation history button")
+def top_bar_brand_new_and_history(app_page):
+    ribbon = ribbon_html(app_page)
+    assert re.search(r'<span class="mark">NM</span>\s*<span class="name">Nyaymalaw</span>', ribbon)
+    assert '<button type="button" id="top-new" class="ghost top-action">+ New matter</button>' in ribbon
+    assert re.search(r'<button type="button" id="top-history"[^>]*>Conversation history</button>', ribbon)
+    script = _asset("app.js")
+    assert "$('top-new').addEventListener('click', () => startMatter());" in script
+    assert "$('top-history').addEventListener('click', () => openTab('advise'));" in script
+    # The list of matters no longer sits beside the work.
+    assert 'id="sidebar-board"' not in app_page and 'id="rail-new"' not in app_page
 
 
 @then("it names the signed-in advocate beside the person menu button")
@@ -1052,27 +1064,25 @@ def session_end_clears_the_profile(page_script):
         assert detail in clear, detail
 
 
-@then("at 820 px wide or narrower a Matters button opens the list of matters")
-def phone_matters_button(app_page, stylesheet):
-    toggle = re.search(r'<button id="matters-toggle"[^>]*>\s*Matters</button>', app_page)
-    assert toggle and 'aria-controls="rail"' in toggle.group(0)
+@then("at 820 px wide or narrower the top bar hides the wordmark and keeps its buttons on one row")
+def phone_top_bar(stylesheet):
     phone = media_blocks(stylesheet, PHONE)
-    assert ".workspace-navigation" in phone and "show-rail .rail" in phone
-    script = _asset("app.js")
-    assert "pane.classList.toggle('show-rail', open);" in _function(script, "toggleMatters")
+    assert ".masthead .brand .name { display: none; }" in phone
+    assert re.search(r"\.top-action \{[^}]*white-space: nowrap;", phone)
 
 
 # ---------------------------------------------------------------- F-A-18 ---
 #
-# No Home page: a sign-in opens a new matter beside the list (owner, 15 Oct 2026).
+# No Home page: a sign-in opens a new matter with its board (owner, 15 and 16 Oct 2026).
 
-@then("a sign-in opens a new matter beside the list of matters")
+@then("a sign-in opens a new matter with its board beside the conversation")
 def sign_in_opens_a_new_matter(page_script):
     show = _function(page_script, "showApplication")
-    for step in ("showTab('advise');", "if (!draftWaiting) startMatter();", "loadMatterList();"):
+    for step in ("showTab('advise');", "if (!draftWaiting) startMatter();"):
         assert step in show, step
     start = _function(page_script, "startMatter")
-    assert "showTab('advise');" in start and "$('message').focus();" in start
+    for step in ("showTab('advise');", "setWorkView('opening');", "loadChatBoard();", "$('message').focus();"):
+        assert step in start, step
 
 
 @then("a sign-in after a session ended part-way through a brief goes back to that brief")
@@ -1090,46 +1100,57 @@ def sign_in_returns_to_the_draft(page_script):
 # ---------------------------------------------------------------- F-B-01 ---
 #
 # Conversation first (owner decision, 16 Oct 2026): a new matter opens straight into
-# the conversation, with no form; the parties and details come from the messages.
+# the conversation, with no form, its board beside it.
 
 @then("New matter opens a new conversation with the message box ready and no form")
 def new_matter_opens_the_conversation(page_script):
-    assert "$('rail-new').addEventListener('click', startMatter);" in page_script
+    assert "$('top-new').addEventListener('click', () => startMatter());" in page_script
     start = _function(page_script, "startMatter")
     for step in ("showIntake(false);", "$('matter-heading').textContent = 'New matter';", "$('message').focus();"):
         assert step in start, step
 
 
-@then("the conversation joins the list of matters once its first message is saved")
-def the_saved_conversation_joins_the_list(page_script):
-    joined = page_script[page_script.index("if (answer.chat_id && !intent.chatId) {"):]
-    joined = joined[:joined.index("\n    }\n")]
-    assert "intent.chatId = answer.chat_id;" in joined and "loadMatterList();" in joined
+@then("the board says it fills in as NM understands the matter")
+def new_board_waits(page_script):
+    assert "if (!chatId) { renderBoardWaiting(); return; }" in _function(page_script, "loadChatBoard")
+    assert "The board fills in as NM understands this matter" in _function(page_script, "renderBoardWaiting")
+
+
+@then("the conversation history is read afresh each time it is opened")
+def history_read_afresh(page_script):
+    assert "showMatterList();" in _function(page_script, "openTab")
+    assert "await loadMatterList();" in _function(page_script, "showMatterList")
+    load = _function(page_script, "loadMatterList")
+    assert "const generation = ++state.matterListGeneration;" in load and "data = await api('/api/work');" in load
 
 
 # ---------------------------------------------------------------- F-B-02 ---
 #
-# The Board, one of each matter's own views (owner, 15 Oct 2026).
+# The live matter board beside the conversation (owner, 16 Oct 2026).
 
-@then("a saved conversation offers Conversation, Board, Documents and Research notes, and each "
-      "shows only its own view")
-def each_matter_s_own_views(app_page, page_script):
-    nav = app_page[app_page.index('<nav id="matter-tabs"'):]
-    nav = nav[:nav.index("</nav>")]
-    assert re.findall(r'data-matter-tab="([a-z]+)"[^>]*>([^<]+)</button>', nav) == [
-        ("conversation", "Conversation"), ("board", "Board"), ("documents", "Documents"),
-        ("notes", "Research notes")]
-    sync = _function(page_script, "syncMatterTabs")
-    for line in ("$('matter-tabs').hidden = !chatId;", "$('chat-board').hidden = tab !== 'board';",
-                 "$('chat-documents').hidden = tab !== 'documents';", "$('chat-notes').hidden = tab !== 'notes';",
-                 "$('thread').hidden = tab !== 'conversation';"):
-        assert line in sync, line
+@then("the matter board comes before the conversation in the window and there are no Board, "
+      "Documents or Research notes tabs")
+def board_beside_the_conversation(app_page, page_script):
+    pane = pane_html(app_page, "advise")
+    assert pane.index('<aside class="matter-board" id="matter-board"') < pane.index('<section class="conversation"')
+    for gone in ('id="matter-tabs"', "data-matter-tab", 'id="chat-board"', 'id="chat-documents"', 'id="chat-notes"'):
+        assert gone not in app_page, gone
+    assert "syncMatterTabs" not in page_script
 
 
-@then("the Board is read from the server for this conversation when it is chosen")
+@then("the board is read from the server for this conversation when it opens and after every answer")
 def board_from_the_server(page_script):
-    assert "if (state.matterTab === 'board') loadChatBoard();" in page_script
     assert "await api(`/api/chats/${encodeURIComponent(chatId)}/board`)" in _function(page_script, "loadChatBoard")
+    assert "loadChatBoard();" in _function(page_script, "startMatter")
+    assert "else if (intent.chatId) loadChatBoard();" in _function(page_script, "deliver")
+
+
+@then("while NM works on a message the board says what NM is doing")
+def board_says_what_nm_is_doing(page_script):
+    status = _function(page_script, "syncBoardStatus")
+    assert "activeDelivery.entry.context === activeIntent" in status
+    assert "activeDelivery.entry.progress.label" in status and "NM is working on your latest message" in status
+    assert "syncBoardStatus();" in _function(page_script, "updateWorkspace")
 
 
 @then("a Board that cannot be read says so rather than showing an empty one")
@@ -1139,21 +1160,60 @@ def unreadable_board_says_so(page_script):
     assert "not an empty matter" in board
 
 
+@then("choosing a dispute opens its details in the board's own pane, which closes on Close or Escape")
+def dispute_opens_in_the_board_pane(page_script):
+    board = _function(page_script, "renderChatBoard")
+    assert "openBoardPane(dispute.name, renderDisputeDetail(dispute, board), card);" in board
+    detail = _function(page_script, "renderDisputeDetail")
+    for part in ("'Why it matters'", "'Where it was picked up from'", "'Between'", "'Legal questions'",
+                 "`Why it was asked: ${question.why}`", "'Rights at stake'", "'Relief sought'", "'Still needed'",
+                 "'Related points for your decision'"):
+        assert part in detail, part
+    assert "$('board-pane-close').addEventListener('click', () => closeBoardPane());" in page_script
+    escape = page_script[page_script.index("$('board-pane-close').addEventListener"):]
+    escape = escape[:escape.index("\n});\n")]
+    assert "event.key !== 'Escape'" in escape and "closeBoardPane();" in escape
+
+
+@then("the file icon beside the board's title lists the documents and the research notes")
+def board_file_icon(app_page, page_script):
+    head = _board_html(app_page)
+    head = head[:head.index("</div>")]
+    assert 'id="matter-board-title">Matter board</h2>' in head and 'id="board-files"' in head
+    assert "$('board-files').addEventListener('click', () => openBoardFiles());" in page_script
+    files = _function(page_script, "openBoardFiles")
+    for step in ("part('Documents')", "part('Research notes')", "renderChatNotes(notesBody);",
+                 "await loadChatDocuments(documentsBody, generation);"):
+        assert step in files, step
+
+
+@then("a document opens in the reading pane on the right")
+def document_opens_in_the_reading_pane(page_script):
+    assert ("window.NmBrainSources.showContent(document_.name, renderDocumentPages(document_, turn), opener)"
+            in _function(page_script, "loadChatDocuments"))
+    assert "card.addEventListener('click', () => open(document_, turn, card));" in _function(
+        page_script, "renderChatDocuments")
+
+
+@then("at 820 px wide or narrower a Matter board button opens the board")
+def phone_board_button(app_page, stylesheet):
+    toggle = re.search(r'<button id="board-toggle"[^>]*>\s*Matter board</button>', app_page)
+    assert toggle and 'aria-controls="matter-board"' in toggle.group(0)
+    phone = media_blocks(stylesheet, PHONE)
+    assert "#pane-advise.show-board > .matter-board { display: flex; }" in phone
+    assert "#pane-advise.show-board > .conversation { display: none; }" in phone
+    assert "pane.classList.toggle('show-board', open);" in _function(_asset("app.js"), "toggleMatterBoard")
+
+
 # ---------------------------------------------------------------- F-B-03 ---
 #
-# The list of matters replaces My work (owner, 15 Oct 2026).
+# Conversation history, and the conversation window it opens (owner, 16 Oct 2026).
 
-@then("the list of matters is read from the server and lists every saved conversation")
+@then("the conversation history is read from the server and lists every saved conversation")
 def list_from_the_server(page_script):
     load = _function(page_script, "loadMatterList")
     assert "data = await api('/api/work');" in load
     assert "data.chats.map((chat) =>" in load and "row.dataset.chatId = chat.chat_id;" in load
-
-
-@then("the open conversation is highlighted in the list")
-def open_conversation_highlighted(page_script):
-    select = _function(page_script, "selectMatterRow")
-    assert "row.dataset.chatId === chatId" in select and "row.classList.toggle('selected', selected);" in select
 
 
 @then("a list that cannot be read says so rather than looking empty")
@@ -1162,10 +1222,32 @@ def unreadable_list_says_so(page_script):
     assert "This is a failure to " in load and "not a statement that you have no matters" in load
 
 
-@then("choosing a conversation in the list restores it")
+@then("choosing a conversation in the history restores it with its board beside it")
 def choosing_a_conversation_restores_it(page_script):
     load = _function(page_script, "loadMatterList")
     assert "const selection = restorePendingChat(chat.chat_id);" in load and "row.onclick = open;" in load
+    assert "startMatter(chatId);" in _function(page_script, "restorePendingChat")
+    assert "loadChatBoard();" in _function(page_script, "startMatter")
+
+
+@then("the reading pane is part of the conversation window and opens beside the conversation without "
+      "covering it")
+def reading_pane_beside(app_page, stylesheet):
+    assert '<dialog id="brain-source-reader" class="reading-pane"' in pane_html(app_page, "advise")
+    begin = _inner_function(_asset("brain-sources.js"), "begin")
+    assert "node('pane-advise').classList.add('reading');" in begin
+    assert "dialog.show();" in begin and "showModal" not in begin
+    assert re.search(r"#pane-advise\.reading \{ grid-template-columns: [^;]+ minmax\(0, 1fr\) [^;]+; \}", stylesheet)
+
+
+@then("the reading pane closes on Close or Escape")
+def reading_pane_closes(app_page):
+    sources = _asset("brain-sources.js")
+    assert "node('brain-source-close').addEventListener('click', () => close());" in sources
+    keydown = sources[sources.index("document.addEventListener('keydown'"):]
+    keydown = keydown[:keydown.index("\n  });\n")]
+    assert "event.key !== 'Escape'" in keydown and "close();" in keydown
+    assert "node('pane-advise').classList.remove('reading');" in _inner_function(sources, "close")
 
 
 def _composer(page: str) -> str:

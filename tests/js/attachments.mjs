@@ -1,4 +1,4 @@
-// Documents attached to a message and the Documents tab (owner decisions, 15 Oct 2026):
+// Documents attached to a message and the documents list (owner decisions, 15 and 16 Oct 2026):
 // the chips report the server's states, scanned pages are read after upload, and a
 // message cannot be sent while a document is being read, held or failed.
 import assert from 'node:assert/strict';
@@ -96,27 +96,37 @@ const chip = (get, index = 0) => get('attachments').children[index];
   assert.equal(context.attachmentsBlockSend(), null);
 }
 
-// The Documents tab shows each page as it was read and why a page was not.
+// The documents list, from the file icon beside the board's title (16 Oct 2026): each
+// document opens in the reading pane, every page as it was read and why a page was not.
 {
   const context = vm.createContext({
     document: { createElement: (tag) => new Element(tag) },
     stateBlock: (_kind, text) => Object.assign(new Element('p'), { textContent: text }),
   });
-  vm.runInContext(between('function renderChatDocuments(listing) {', 'async function loadChatBoard() {'), context);
-  const [empty] = context.renderChatDocuments({ sent: [] });
+  vm.runInContext(between('function renderChatDocuments(listing, open) {', 'const CERTAINTY = '), context);
+  const [empty] = context.renderChatDocuments({ sent: [] }, () => {});
   assert.match(empty.textContent, /No documents have been sent/);
-  const out = context.renderChatDocuments({ sent: [{ turn_id: 't1', message: 'Please look at the memo.',
+  const turn = { turn_id: 't1', message: 'Please look at the memo.',
     documents: [{ document_ref: 'doc_x', name: 'memo.pdf',
       pages: [{ number: 1, text: 'Return memo.', read_by: 'local' },
               { number: 2, text: 'Notice [illegible]', read_by: 'ai', model: 'gpt-6-luna', legible: 'part',
                 note: 'lower edge cut off' }],
-      unread: [{ number: 3, reason: 'the AI could not make out this page' }] }] }] });
-  const card = out[1].textContent;
-  assert.match(card, /memo\.pdf/);
-  assert.match(card, /Sent with: “Please look at the memo\.”/);
-  assert.match(card, /Page 1Return memo\./);
-  assert.match(card, /Page 2 · read by AI, partly legiblelower edge cut offNotice \[illegible\]/);
-  assert.match(card, /Page 3 not read: the AI could not make out this page/);
+      unread: [{ number: 3, reason: 'the AI could not make out this page' }] }] };
+  const opened = [];
+  const out = context.renderChatDocuments({ sent: [turn] }, (doc, sent, opener) => opened.push([doc, sent, opener]));
+  const card = out[1];
+  assert.match(card.textContent, /memo\.pdf/);
+  assert.match(card.textContent, /2 pages read · 1 not read/);
+  assert.match(card.textContent, /Sent with: “Please look at the memo\.”/);
+  card.click();
+  assert.equal(opened.length, 1);
+  assert.equal(opened[0][0].name, 'memo.pdf');
+  assert.equal(opened[0][2], card);
+  const pages = context.renderDocumentPages(opened[0][0], opened[0][1]).map((node) => node.textContent).join('');
+  assert.match(pages, /Sent with: “Please look at the memo\.”/);
+  assert.match(pages, /Page 1Return memo\./);
+  assert.match(pages, /Page 2 · read by AI, partly legiblelower edge cut offNotice \[illegible\]/);
+  assert.match(pages, /Page 3 not read: the AI could not make out this page/);
 }
 
 console.log('attachments: ok');

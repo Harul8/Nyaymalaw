@@ -5,4 +5,5 @@ Feature: F-B-01 Start a new matter in the conversation
   Scenario: A new matter opens straight into the conversation
     Given the page script
     Then New matter opens a new conversation with the message box ready and no form
-    And the conversation joins the list of matters once its first message is saved
+    And the board says it fills in as NM understands the matter
+    And the conversation history is read afresh each time it is opened

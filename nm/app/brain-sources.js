@@ -12,12 +12,16 @@ window.NmBrainSources = (() => {
     scope = options.scope;
   }
 
+  // THE READING PANE ON THE RIGHT (owner, 16 Oct 2026): one pane for every link,
+  // opened beside the conversation rather than over it, so the answer and its
+  // source can be read together. The window makes room for it while it is open.
   function close(restoreFocus = true) {
     generation += 1;
     const opener = active?.opener;
     active = null;
     const dialog = node('brain-source-reader');
     if (dialog.open) dialog.close();
+    node('pane-advise').classList.remove('reading');
     node('brain-source-title').textContent = '';
     node('brain-source-status').textContent = '';
     node('brain-source-body').replaceChildren();
@@ -30,9 +34,18 @@ window.NmBrainSources = (() => {
     active = read;
     node('brain-source-title').textContent = label;
     node('brain-source-status').textContent = status;
-    node('brain-source-reader').showModal();
+    node('pane-advise').classList.add('reading');
+    const dialog = node('brain-source-reader');
+    if (!dialog.open) dialog.show();
     node('brain-source-close').focus();
     return read;
+  }
+
+  // Anything else a link opens - a document's pages as they were read - in the same pane.
+  function showContent(label, content, opener) {
+    begin(label, opener);
+    node('brain-source-body').replaceChildren(...content);
+    node('brain-source-body').scrollTop = 0;
   }
 
   function coreInspection(source, inspection) {
@@ -416,7 +429,15 @@ window.NmBrainSources = (() => {
   node('brain-source-reader').addEventListener('close', () => {
     if (active && !node('brain-source-reader').open) close();
   });
+  // A pane beside the page has no dialog Escape of its own; Escape closes it unless
+  // the board's own pane, which closes first, holds the focus.
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape' || event.defaultPrevented || !node('brain-source-reader').open) return;
+    if (node('board-pane')?.contains(document.activeElement)) return;
+    event.preventDefault();
+    close();
+  });
   window.addEventListener('nm:matter-changed', () => close(false));
-  return Object.freeze({configure, open, close, appendBody,
+  return Object.freeze({configure, open, close, showContent, appendBody,
     openRecordSource, isReadableRecordSource, labelFor});
 })();
