@@ -14,9 +14,8 @@ pytestmark = pytest.mark.class_a
 class Child:
     started = []
 
-    def __init__(self, command, env, stdin=None):
+    def __init__(self, command, env):
         self.command, self.env, self.returncode, self.stopped = command, env, None, False
-        self.stdin = stdin
         Child.started.append(self)
         self.pid = len(Child.started)
 
@@ -43,7 +42,11 @@ def supervise(monkeypatch, codes, in_flight, crash_first=False, rounds=40):
         seen["looks"] += 1
         return codes[min(seen["looks"] - 1, len(codes) - 1)]
 
-    def sleep(_seconds):
+    clock = [0.0]
+    monkeypatch.setattr(main.time, "monotonic", lambda: clock[0])
+
+    def sleep(seconds):
+        clock[0] += seconds
         seen["sleeps"] += 1
         if crash_first and len(Child.started) == 1 and seen["sleeps"] == 1:
             Child.started[0].returncode = 1
@@ -109,15 +112,27 @@ def test_a_server_that_cannot_start_is_not_started_forever(monkeypatch):
     Child.started = []
     monkeypatch.setattr(main.subprocess, "Popen", Failing)
     monkeypatch.setattr(main, "source_fingerprint", lambda: "a")
-    monkeypatch.setattr(main.time, "sleep", lambda _s: None)
+    clock = [0.0]
+    monkeypatch.setattr(main.time, "monotonic", lambda: clock[0])
+    monkeypatch.setattr(main.time, "sleep", lambda s: clock.__setitem__(0, clock[0] + s))
     assert main.follow_code(["--port", "8099"]) == 1
     assert len(Child.started) == main.QUICK_EXITS
 
 
-def test_the_app_leaves_when_its_supervisor_is_gone(monkeypatch):
-    import io
+def test_the_app_leaves_when_its_supervisor_is_gone(monkeypatch, tmp_path):
+    import os
     import threading
+    import time
     left = threading.Event()
     monkeypatch.setattr(main.os, "_exit", lambda code: left.set())
-    main._leave_with_supervisor(io.BytesIO(b"anything the supervisor wrote"))
+    beat = tmp_path / "alive"
+    beat.touch()
+    old = time.time() - 120
+    os.utime(beat, (old, old))  # the supervisor stopped touching it two minutes ago
+    main._leave_with_supervisor(str(beat), every=0.01, stale=60)
     assert left.wait(5)
+
+
+def test_the_supervisor_touches_its_heartbeat_and_passes_it_on(monkeypatch):
+    started = supervise(monkeypatch, ["a"], in_flight=[], rounds=3)
+    assert main.HEARTBEAT_FILE in started[0].env

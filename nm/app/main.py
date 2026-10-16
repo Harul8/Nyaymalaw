@@ -39,8 +39,11 @@ CHECK_SECONDS, SETTLE_SECONDS, RESTART_PAUSE = 5.0, 10.0, 3.0
 #: A child that stops this soon after starting, this many times in a row, is not
 #: started again (another server holds the port, or it cannot start at all).
 QUICK_EXIT_SECONDS, QUICK_EXITS = 30.0, 5
-#: Set by the supervisor: the file in which the child keeps its in-flight count.
-IN_FLIGHT_FILE = "NM_IN_FLIGHT_FILE"
+#: Set by the supervisor: the file in which the child keeps its in-flight count, and
+#: the file the supervisor touches to show it is still there.
+IN_FLIGHT_FILE, HEARTBEAT_FILE = "NM_IN_FLIGHT_FILE", "NM_SUPERVISOR_HEARTBEAT"
+#: How often the child looks at the heartbeat, and how old it may grow.
+HEARTBEAT_SECONDS, HEARTBEAT_STALE = 5.0, 60.0
 
 
 class _InFlight:
@@ -68,17 +71,21 @@ class _InFlight:
             self._move(-1)
 
 
-def _leave_with_supervisor(stream):
-    """The supervisor holds this child's standard input open; when the supervisor is
-    gone it closes, and the child goes too rather than serve on unwatched."""
-    def wait():
-        try:
-            while stream.read(1024):
-                pass
-        except (OSError, ValueError):
-            pass
-        os._exit(0)
-    threading.Thread(target=wait, name="supervisor-watch", daemon=True).start()
+def _leave_with_supervisor(heartbeat, *, every=HEARTBEAT_SECONDS, stale=HEARTBEAT_STALE):
+    """The supervisor touches its heartbeat file every few seconds; when it has stopped
+    for a minute the supervisor is gone, and the child goes too rather than serve on
+    unwatched. A file, not a pipe: nothing in the child blocks on its supervisor."""
+    def watch():
+        while True:
+            time.sleep(every)
+            try:
+                quiet = time.time() - os.path.getmtime(heartbeat)
+            except OSError:
+                quiet = stale + 1
+            if quiet > stale:
+                print("The supervisor is gone; this server stops.", flush=True)
+                os._exit(0)
+    threading.Thread(target=watch, name="supervisor-watch", daemon=True).start()
 
 
 def _in_flight(path):
@@ -93,17 +100,29 @@ def follow_code(serve_args):
     handle, name = tempfile.mkstemp(prefix="nm-in-flight-", suffix=".count")
     os.close(handle)
     counter = Path(name)
-    environment = dict(os.environ, **{IN_FLIGHT_FILE: str(counter)})
+    heartbeat = counter.with_suffix(".alive")
+    heartbeat.touch()
+    environment = dict(os.environ, **{IN_FLIGHT_FILE: str(counter), HEARTBEAT_FILE: str(heartbeat)})
+
+    def pause(seconds):
+        """Sleep, touching the heartbeat on the way, so the child knows it is watched."""
+        end = time.monotonic() + seconds
+        while True:
+            heartbeat.touch()
+            left = end - time.monotonic()
+            if left <= 0:
+                return
+            time.sleep(min(left, HEARTBEAT_SECONDS))
     command = [sys.executable, "-m", "nm.app.main", *serve_args]
     child, quick = None, 0
     try:
         while True:
             serving = source_fingerprint()
             counter.write_text("0", encoding="ascii")
-            child, began = subprocess.Popen(command, env=environment, stdin=subprocess.PIPE), time.monotonic()
+            child, began = subprocess.Popen(command, env=environment), time.monotonic()
             print(f"Serving code {serving} (process {child.pid}); following the code on disk.", flush=True)
             while True:
-                time.sleep(CHECK_SECONDS)
+                pause(CHECK_SECONDS)
                 if child.poll() is not None:
                     quick = quick + 1 if time.monotonic() - began < QUICK_EXIT_SECONDS else 0
                     if quick >= QUICK_EXITS:
@@ -111,7 +130,7 @@ def follow_code(serve_args):
                               f"{child.returncode}); not starting it again.", flush=True)
                         return 1
                     print(f"The server stopped (exit {child.returncode}); starting it again.", flush=True)
-                    time.sleep(RESTART_PAUSE)
+                    pause(RESTART_PAUSE)
                     break
                 try:
                     now = source_fingerprint()
@@ -120,7 +139,7 @@ def follow_code(serve_args):
                 if now == serving:
                     continue
                 # A change settles first: an edit or a checkout touches many files.
-                time.sleep(SETTLE_SECONDS)
+                pause(SETTLE_SECONDS)
                 if source_fingerprint() != now:
                     continue
                 waiting = _in_flight(counter)
@@ -128,7 +147,7 @@ def follow_code(serve_args):
                     print(f"The code changed ({serving} to {now}); waiting for {waiting} request(s) in "
                           "flight to finish before restarting.", flush=True)
                 while _in_flight(counter) and child.poll() is None:
-                    time.sleep(1)
+                    pause(1)
                 print(f"Restarting onto the code on disk ({serving} to {now}).", flush=True)
                 child.terminate()
                 try:
@@ -143,6 +162,7 @@ def follow_code(serve_args):
         return 0
     finally:
         counter.unlink(missing_ok=True)
+        heartbeat.unlink(missing_ok=True)
 
 
 def create_app(application: Application | None = None):
@@ -189,7 +209,8 @@ def main(argv: list[str] | None = None) -> int:
     served = api.app
     if os.environ.get(IN_FLIGHT_FILE):
         served = _InFlight(api.app, os.environ[IN_FLIGHT_FILE])
-        _leave_with_supervisor(sys.stdin.buffer)
+        if os.environ.get(HEARTBEAT_FILE):
+            _leave_with_supervisor(os.environ[HEARTBEAT_FILE])
     uvicorn.run(served, host=args.host, port=args.port, log_level="warning")
     return 0
 
