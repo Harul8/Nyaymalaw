@@ -76,11 +76,19 @@ def chain():
 
 
 class Calculating(ScriptedModel):
-    def __init__(self, proposal=None, fails=None):
+    def __init__(self, proposal=None, fails=None, correction=None, correction_fails=None):
         super().__init__(legal=True)
         self.proposal, self.fails, self.seen = proposal, fails, {}
+        self.correction, self.correction_fails = correction, correction_fails
 
     def structured(self, prompt, schema, tier, **kwargs):
+        if prompt.operation == "core_calculation_correct":
+            self.seen.setdefault("correction", []).append(prompt)
+            if self.correction_fails:
+                raise self.correction_fails
+            data = deepcopy(self.correction) if self.correction else {"calculations": [], "cannot": []}
+            return ModelResult(None, data, tier, "synthetic", "fixture", Usage(1, 1, 0), 0,
+                               completion=Completion.COMPLETE)
         if prompt.operation == "core_calculation":
             self.seen["calculation"] = prompt
             if self.fails:
@@ -157,6 +165,15 @@ def test_a_saved_limit_replays_without_the_corpus_and_a_changed_one_is_refused(s
     # A record saved before code found the quoted words itself (v1) still reopens.
     earlier = calculation.unavailable("down") | {"contract": calculation.V1_CONTRACT}
     assert calculation.validate(earlier, None) == earlier
+    # And one saved before the correction pass (v2), without a correction field.
+    from nm.core_engine.turn import TurnContext
+    row = saved_rows(matter, "owner")[0]
+    context = TurnContext(matter, row["chat_id"], row["turn_id"], row["message"], []).payload()
+    v2 = {key: value for key, value in row["activities"]["calculation"].items() if key != "correction"}
+    v2["contract"] = calculation.V2_CONTRACT
+    assert calculation.validate(v2, context) == v2
+    with pytest.raises(ValueError):  # a correction claimed without its disposition
+        calculation.validate(row["activities"]["calculation"] | {"correction": {"state": "corrected"}}, context)
 
 
 def test_code_finds_the_quoted_words_and_refuses_what_it_cannot_check(store):
@@ -180,6 +197,73 @@ def test_code_finds_the_quoted_words_and_refuses_what_it_cannot_check(store):
     assert "which was not worked out first" in boxes["Last day to file the complaint"]["not_assessed"]
     assert boxes["Last day to give notice"]["not_assessed"].startswith(
         "its earliest day (2026-10-15) falls after its last day (2026-09-17)")
+
+
+def fixed_bad():
+    return step("bad", "A period misquoted", "within thirty days", "thirty days",
+                {"after": "", "event": "", "date": "2026-08-18", "quote": "18 August 2026"})
+
+
+def test_a_refused_limit_gets_one_correction_that_faces_the_same_checks(store):
+    # Owner, 16 Oct 2026: one correction pass, only when code refused something.
+    stray = step("c1", "A checked limit the correction must not replace", "within thirty days", "thirty days",
+                 {"after": "", "event": "", "date": "2026-08-18", "quote": "18 August 2026"})
+    model = Calculating(chain(), correction={"calculations": [fixed_bad(), stray], "cannot": []})
+    reply = turn(store, model)
+    prompt, = model.seen["correction"]
+    assert prompt.system == model.seen["calculation"].system  # the same held Acts, cached alike
+    assert MESSAGE in prompt.user and '"id": "bad"' in prompt.user
+    assert "- bad (A period misquoted): the words quoted from" in prompt.user and "not in its held text" in prompt.user
+    # Code shows the Act's own words nearest to the misquotation; the model judges what to quote.
+    assert "The held text nearest to the words you quoted reads: “" in prompt.user and "of the receipt" in prompt.user
+    boxes = {e["text"]: e["working"] for e in reply["elements"] if e["kind"] == "WORKING"}
+    assert boxes["A period misquoted"]["last_day"] == "2026-09-17"  # corrected and checked
+    assert boxes["Last day for the drawer to pay"]["last_day"] == "2026-09-13"  # checked first; stands
+    row = saved_rows(store.load(chat_matter_id("owner", reply["chat_id"])), "owner")[0]
+    record = row["activities"]["calculation"]
+    assert record["contract"] == calculation.CONTRACT == "core_calculation_v3"
+    assert record["correction"]["state"] == "corrected" and [r["id"] for r in record["correction"]["refused"]] == ["bad"]
+    assert record["proposal"] == chain() and record["not_assessed"] == []
+    assert saved_rows(store.load(chat_matter_id("owner", reply["chat_id"])), "owner")[0]["response"][
+        "elements"] == reply["elements"]  # the corrected limit replays from the saved record
+
+
+def test_the_nearest_held_words_are_found_for_a_quotation_with_a_word_dropped():
+    held = ("which shall not be later than ninety days from the date of service of \r\n5[summons].] "
+            "(2) A defendant may appear in person.")
+    near = calculation._nearest("not later than ninety days from the date of service of summons", held)
+    assert "shall not be later than ninety days from the date of service of 5[summons].]" in near
+    assert calculation._nearest("words that appear nowhere in the Act", held) is None
+
+
+def test_no_correction_call_when_nothing_was_refused(store):
+    proposal = chain()
+    proposal["calculations"].pop()  # without the misquoted period
+    model = Calculating(proposal)
+    turn(store, model)
+    assert "correction" not in model.seen
+
+
+def test_a_limit_the_correction_cannot_work_out_stays_not_assessed_with_both_reasons(store):
+    model = Calculating(chain(), correction={"calculations": [], "cannot": [
+        {"id": "bad", "why": "the held text gives no ninety-day period for this step"},
+        {"id": "c1", "why": "a checked limit cannot be withdrawn this way"}]})
+    reply = turn(store, model)
+    boxes = {e["text"]: e["working"] for e in reply["elements"] if e["kind"] == "WORKING"}
+    assert boxes["Last day for the drawer to pay"]["last_day"] == "2026-09-13"
+    why = boxes["A period misquoted"]["not_assessed"]
+    assert "not in its held text" in why and "on a second look: the held text gives no ninety-day period" in why
+
+
+def test_a_correction_that_fails_leaves_the_first_check_standing(store):
+    model = Calculating(chain(), correction_fails=ProviderUnavailable("down"))
+    reply = turn(store, model)
+    boxes = {e["text"]: e["working"] for e in reply["elements"] if e["kind"] == "WORKING"}
+    assert "not in its held text" in boxes["A period misquoted"]["not_assessed"]
+    assert boxes["Last day to file the complaint"]["last_day"] == "2026-10-14"
+    row = saved_rows(store.load(chat_matter_id("owner", reply["chat_id"])), "owner")[0]
+    correction = row["activities"]["calculation"]["correction"]
+    assert correction["state"] == "unavailable" and correction["proposal"] is None
 
 
 def test_a_failed_calculation_never_stops_the_answer_and_states_no_date(store):

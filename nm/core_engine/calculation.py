@@ -16,9 +16,11 @@ checksums of the Acts read, so replay recomputes it without the corpus.
 """
 from __future__ import annotations
 
+import json
 import re
 from copy import deepcopy
 from datetime import date
+from functools import lru_cache
 
 from nm.core_engine import limitation, research
 from nm.core_engine.understanding import source_catalogue
@@ -29,8 +31,11 @@ from nm.shared.model_port import ModelError, Prompt, SchemaViolation, Tier, requ
 #: v1 asked the model for source IDs the conversation it reads does not show.
 V1_CONTRACT = "core_calculation_v1"
 #: v2: the model quotes; code finds the message or page holding the words (15 Oct 2026).
-CONTRACT = "core_calculation_v2"
+V2_CONTRACT = "core_calculation_v2"
+#: v3 (owner, 16 Oct 2026): one correction pass when code refuses a proposed time limit.
+CONTRACT = "core_calculation_v3"
 OPERATION = "core_calculation"
+CORRECTION_OPERATION = "core_calculation_correct"
 MAX_OUTPUT = 12000
 #: The Acts whose held text the step reads, all three listed as current.
 SUPPLIED = ("The Limitation Act, 1963", "The Negotiable Instruments Act, 1881", "The Code of Civil Procedure, 1908")
@@ -47,6 +52,12 @@ If it does, for each time limit that bears on it, go by what the Act says. Read 
 Do not count days yourself: give the starting date, the Act's words for the period and any copy dates, and the dates will be counted by code. Where a date is missing or uncertain, do not guess: list what is needed under "missing". Where two provisions could govern, give a calculation for each. If a time limit is set by an Act that is not given below, put it under "not_assessed" and say why.
 
 Work in a loop: decide what needs working out, read the Act's words, choose, check each choice against the words and the facts as given, correct anything wrong, and only then answer."""
+
+#: The one correction pass (owner, 16 Oct 2026), asked after the conversation and the
+#: proposal; the system text and the held Acts stay exactly as for the proposal.
+CORRECT = """Code checked the time limits you proposed against the held text of the Acts and the conversation. It could not check the ones listed above, and says why for each. Look at each again against the Act's words and the conversation, find what was wrong and correct it, then check the correction against the words before answering. Quote the Act's words and the advocate's or a document's words exactly as they stand.
+
+Give back each of these time limits corrected, with its own id, under "calculations"; the ones that were checked stand and are not given again. If one cannot be worked out from the held text and what was said, list its id under "cannot" with why."""
 
 TEXT = {"type": "string"}
 CALCULATION = {"type": "object", "additionalProperties": False, "required": [
@@ -71,10 +82,21 @@ SCHEMA = {"type": "object", "additionalProperties": False, "required": ["needed"
                          "not_assessed": {"type": "array", "items": {
                              "type": "object", "additionalProperties": False, "required": ["what", "why"],
                              "properties": {"what": TEXT, "why": TEXT}}}}}
+CORRECTION = {"type": "object", "additionalProperties": False, "required": ["calculations", "cannot"],
+              "properties": {"calculations": {"type": "array", "items": CALCULATION},
+                             "cannot": {"type": "array", "items": {
+                                 "type": "object", "additionalProperties": False, "required": ["id", "why"],
+                                 "properties": {"id": TEXT, "why": TEXT}}}}}
 
 
 class _Unchecked(ValueError):
-    """One proposed time limit that code could not check; it is reported, not computed."""
+    """One proposed time limit that code could not check; it is reported, not computed.
+    `near` holds the Act's own words closest to a quotation code could not find, for
+    the correction pass only."""
+
+    def __init__(self, why, near=None):
+        super().__init__(why)
+        self.near = near
 
 
 def _flat(text):
@@ -92,6 +114,45 @@ def _letters(text):
     extracted from print and run words together or split them ('thecheque', 'twic e'),
     so spacing cannot decide whether the Act says the words quoted."""
     return "".join(_flat(text).translate(_TYPOGRAPHY).casefold().split())
+
+
+@lru_cache(maxsize=4)
+def _letter_map(text):
+    """_letters(text), and for each of its characters the position in the text it came from."""
+    blanked = re.sub(r"\]|\b\d+\[", lambda match: " " * len(match.group()), text)
+    chars, where = [], []
+    for index, char in enumerate(blanked):
+        if char.isspace():
+            continue
+        for folded in char.translate(_TYPOGRAPHY).casefold():
+            chars.append(folded)
+            where.append(index)
+    return "".join(chars), where
+
+
+#: A stretch shorter than this says nothing about where a quotation belongs.
+NEAR_MINIMUM = 12
+
+
+def _nearest(quote, text, around=160):
+    """The Act's own words around the longest stretch of a quotation that the held text
+    does contain (owner, 16 Oct 2026): code locates; the model judges what to quote."""
+    letters, where = _letter_map(text)
+    target = _letters(quote)
+    found, low, high = None, NEAR_MINIMUM, len(target)
+    while low <= high:  # a stretch found at one length is found at every shorter length
+        size = (low + high) // 2
+        hit = next(((offset, at) for offset in range(len(target) - size + 1)
+                    if (at := letters.find(target[offset:offset + size])) >= 0), None)
+        if hit is None:
+            high = size - 1
+        else:
+            found, low = (hit[1], size), size + 1
+    if found is None:
+        return None
+    start, end = where[found[0]], where[found[0] + found[1] - 1] + 1
+    words = " ".join(text[max(0, start - around):end + around].split())
+    return ("…" if start > around else "") + words + ("…" if end + around < len(text) else "")
 
 
 def _plain_map(text):
@@ -166,7 +227,8 @@ def _provision(item, acts, entries):
                 "description": row["description"], "period_words": row["period"], "from": row["from"]}
     words = _flat(item["words"])
     if not words or _letters(words) not in _letters(act["text"]):
-        raise _Unchecked(f"the words quoted from {item['act']} are not in its held text")
+        raise _Unchecked(f"the words quoted from {item['act']} are not in its held text",
+                         near=_nearest(words, act["text"]))
     if not item["period_words"].strip() or _letters(item["period_words"]) not in _letters(words):
         raise _Unchecked("the period words are not within the quoted provision")
     return {"act": act["title"], "sha256": act["sha256"], "article": None, "part": None,
@@ -188,11 +250,29 @@ def _compute(entry, start, today):
 def accept(proposal, context, acts, *, today):
     """The checked record: each time limit computed, or reported not assessed with why."""
     require_schema(proposal, SCHEMA)
+    checked, not_assessed, _ = _check(proposal, context, acts, today)
+    return _record(proposal, acts, today, checked, not_assessed)
+
+
+def _record(proposal, acts, today, checked, not_assessed, correction=None):
+    """The saved record: the proposal, the one correction if it was asked for, and the
+    results code checked and computed."""
+    return {"contract": CONTRACT, "state": "worked" if proposal["needed"] else "not_needed",
+            "today": today.isoformat(), "acts": [{"title": a["title"], "sha256": a["sha256"], "file": a["file"]}
+                                                 for a in acts.values()],
+            "proposal": deepcopy(proposal), "correction": deepcopy(correction), "calculations": checked,
+            "not_assessed": not_assessed}
+
+
+def _check(proposal, context, acts, today):
+    """Each proposed time limit checked and computed, or refused with why: the checked
+    entries, what is not assessed, and the refused ones by id."""
     catalogue = source_catalogue(context)
     searched = _facts_in(context, catalogue)
     entries = (limitation.schedule(acts["The Limitation Act, 1963"]["text"])
                if "The Limitation Act, 1963" in acts else {})
     checked, not_assessed, done_ids = [], [deepcopy(item) for item in proposal["not_assessed"]], {}
+    refused = []
     for item in proposal["calculations"] if proposal["needed"] else []:
         try:
             provision = _provision(item, acts, entries)
@@ -232,13 +312,28 @@ def accept(proposal, context, acts, *, today):
                                  f"({entry['working']['last_day']}), so the steps are not linked as the Act links them")
         except (_Unchecked, limitation.LimitationUnassessed) as exc:
             not_assessed.append({"what": item["what"], "why": str(exc)})
+            refused.append({"id": item["id"], "what": item["what"], "why": str(exc),
+                            "near": getattr(exc, "near", None)})
             continue
         checked.append(entry)
         done_ids[item["id"]] = entry
-    return {"contract": CONTRACT, "state": "worked" if proposal["needed"] else "not_needed",
-            "today": today.isoformat(), "acts": [{"title": a["title"], "sha256": a["sha256"], "file": a["file"]}
-                                                 for a in acts.values()],
-            "proposal": deepcopy(proposal), "calculations": checked, "not_assessed": not_assessed}
+    return checked, not_assessed, refused
+
+
+def _corrected(proposal, correction, refused):
+    """The proposal with each refused time limit replaced by its correction, matched by
+    id: what was checked stands, a correction for anything else is ignored, and one the
+    model says it cannot work out leaves the proposal with its reason."""
+    ids = {row["id"] for row in refused}
+    fixes = {item["id"]: item for item in correction["calculations"] if item["id"] in ids}
+    cannot = {row["id"]: row["why"] for row in correction["cannot"] if row["id"] in ids and row["id"] not in fixes}
+    merged = deepcopy(proposal)
+    merged["calculations"] = [deepcopy(fixes.get(item["id"], item)) for item in proposal["calculations"]
+                              if item["id"] not in cannot]
+    first = {row["id"]: row for row in refused}
+    dropped = [{"what": first[id_]["what"], "why": f"{first[id_]['why']}; on a second look: {why}"}
+               for id_, why in cannot.items()]
+    return merged, dropped
 
 
 def unavailable(why):
@@ -285,16 +380,56 @@ def work_out(model, context, held_acts, *, now=None):
         return unavailable(f"the time limits could not be worked out ({type(exc).__name__})")
     if not result.usable or result.data is None:
         return unavailable("the time limits could not be worked out")
+    proposal = result.data
     try:
-        return accept(result.data, context, acts, today=today)
+        require_schema(proposal, SCHEMA)
     except SchemaViolation:
         return unavailable("the proposal for the time limits was not in the expected shape")
+    checked, not_assessed, refused = _check(proposal, context, acts, today)
+    if not refused:
+        return _record(proposal, acts, today, checked, not_assessed)
+    # ONE CORRECTION PASS (owner, 16 Oct 2026): only when code refused something, shown
+    # each refusal's reason; its corrections face exactly the same checks.
+    correction = _correct(model, system, user, proposal, refused)
+    if correction["state"] != "corrected":
+        return _record(proposal, acts, today, checked, not_assessed, correction)
+    merged, dropped = _corrected(proposal, correction["proposal"], refused)
+    checked, not_assessed, _ = _check(merged, context, acts, today)
+    return _record(proposal, acts, today, checked, not_assessed + dropped, correction)
+
+
+def _correct(model, system, user, proposal, refused):
+    """The one correction call: the same system text and held Acts, then the conversation,
+    the model's own proposal and why code could not check each refused time limit."""
+    reasons = "\n".join(f"- {row['id']} ({row['what']}): {row['why']}"
+                        + (f". The held text nearest to the words you quoted reads: “{row['near']}”"
+                           if row.get("near") else "") for row in refused)
+    text = (f"{user}\n\nYour proposal:\n{json.dumps(proposal, ensure_ascii=False, indent=1)}\n\n"
+            f"Not checked:\n{reasons}\n\n{CORRECT}")
+    made = {"refused": deepcopy(refused), "state": "unavailable", "why": None, "proposal": None}
+    try:
+        result = model.structured(Prompt(system=system, user=text, operation=CORRECTION_OPERATION), CORRECTION,
+                                  Tier.ROUTINE, max_tokens=MAX_OUTPUT)
+    except (ModelError, SchemaViolation) as exc:
+        return {**made, "why": type(exc).__name__}
+    if not result.usable or result.data is None:
+        return {**made, "why": "no usable correction"}
+    try:
+        require_schema(result.data, CORRECTION)
+    except SchemaViolation:
+        return {**made, "why": "SchemaViolation"}
+    return {**made, "state": "corrected", "proposal": deepcopy(result.data)}
 
 
 def validate(record, context):
     """Replay: the saved record recomputed from its own inputs, without the corpus."""
-    if not isinstance(record, dict) or record.get("contract") not in (V1_CONTRACT, CONTRACT):
+    if not isinstance(record, dict) or record.get("contract") not in (V1_CONTRACT, V2_CONTRACT, CONTRACT):
         raise ValueError("Unknown saved calculation contract")
+    correction = record.get("correction") if record["contract"] == CONTRACT else None
+    if correction is not None and (
+            not isinstance(correction, dict) or correction.get("state") not in ("corrected", "unavailable")
+            or not correction.get("refused") or (correction["state"] == "corrected") != (correction["proposal"] is not None)):
+        raise ValueError("A saved correction has no checked disposition")
     if record["state"] in ("unavailable",) or (record["state"] == "not_needed" and "proposal" not in record):
         if record["calculations"] or record["not_assessed"]:
             raise ValueError("A calculation that did not run has no results")
