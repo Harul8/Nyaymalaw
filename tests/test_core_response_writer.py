@@ -420,3 +420,13 @@ def test_the_writer_is_told_where_and_when_the_advocate_works(monkeypatch):
     from nm.core_engine.research import conversation_text
     assert conversation_text(ctx).startswith(
         "Today is Thursday, 2026-10-15, where the advocate practises (Telangana, India).")
+
+
+def test_counting_is_codes_and_the_legal_analysis_of_a_time_limit_is_the_writers():
+    # 17 Oct 2026: "never work out a time limit yourself" read as "do not analyse limitation",
+    # which the reviewer rightly rejected three times. The work is split plainly.
+    from nm.core_engine.response_writer import SYSTEM
+    words = " ".join(SYSTEM.split())
+    assert "Counting is code's work: never count days" in words
+    assert "The legal analysis of a time limit is yours" in words
+    assert "Never count days or work out a time limit yourself" not in words
