@@ -1306,7 +1306,9 @@ def turn_progress(turn_id: str, advocate_id: Advocate, request: Request):
 
 
 def _conversation_error(exc, req=None):
-    """Owned service facts only; no rejected drafts or internal model feedback."""
+    """Owned service facts only; no rejected drafts or internal model feedback. A withheld
+    answer's why may say what the independent check found (17 Oct 2026), in code's words
+    or, for something missing, the check's own explanation; never the words withheld."""
     detail = {'why': exc.why, 'code': exc.code, 'committed': exc.committed,
               'retryable': exc.retryable}
     if req is not None:

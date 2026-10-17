@@ -261,6 +261,15 @@ def test_repeated_rejection_withholds_entire_turn_without_save(store):
     with pytest.raises(ConversationRefused) as error: run(store, model)
     assert error.value.code == "answer_withheld" and not error.value.retryable
     assert error.value.metrics["llm_calls"] == 7
+    # The advocate is told what the check found and what can be done (17 Oct 2026): the
+    # kind of wrong words in code's words, never the reviewer's words about them.
+    assert error.value.why == (
+        "I could not provide a sufficiently reliable answer to this message. After the rewrites NM may make, "
+        "the independent check still found: A statement was attributed to a judgment from a passage that is not "
+        "the court's own reasoning. You can send the message again, narrow it, or add a fact or document it may "
+        "need. Your saved conversation is unchanged.")
+    assert "Synthetic attribution rejection" not in error.value.why
+    assert error.value.diagnosis == "answer_withheld-G-ATTRIB-response_review"
     assert not store.list_for("owner").matters
     with pytest.raises(ConversationRefused) as replay: run(store, model)
     assert replay.value.code == "answer_withheld"

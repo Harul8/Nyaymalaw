@@ -202,3 +202,21 @@ def test_a_failed_last_review_releases_the_draft_its_own_review_saw(monkeypatch)
 def test_what_concerns_more_than_the_sections_still_withholds_the_turn(monkeypatch):
     with pytest.raises(ReleaseWithheld, match="G-GROUND: omission"):
         scripted_turn(monkeypatch, [[1, 2], [1, 2], [1, 2]])
+
+
+def test_only_what_is_missing_is_explained_wrong_words_are_named_by_kind_only():
+    # Nothing that failed is shown (17 Oct 2026): an omission says what is missing; any
+    # other finding concerns words that were wrong, so only its kind is said.
+    wrong = {"category": "grounding", "unit_ids": ["u"], "sources": [],
+             "mismatch": "U2 says the limitation period ended on 31 December 2028."}
+    missing = {"category": "omission", "unit_ids": ["u"], "sources": [], "mismatch": "No reply applies Article 54."}
+    said = response_rendering.found_words([wrong, missing], where="the answer")
+    assert said == ("A statement was not supported by the words it relies on. Something the answer needed was "
+                    "missing: No reply applies Article 54.")
+    assert "2028" not in said
+    ctx, record, sources, draft = answer()
+    authorities, execution, review = reviewed(ctx, record, sources, draft, flagged=[2])
+    review["proposal"]["findings"][0]["category"] = "grounding"
+    # A grounding finding: the section is held back and its words are never repeated.
+    assert response_rendering.found_words(review["proposal"]["findings"]) == (
+        "A statement was not supported by the words it relies on.")

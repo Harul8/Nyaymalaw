@@ -56,7 +56,7 @@ def execution_record(record):
             "external_actions": [], "searches": searches, "persistence": "not_yet_committed"}
 
 
-def _withhold(calls, findings):
+def _withhold(calls, findings, dated=()):
     categories = {finding["category"] for finding in findings}
     identity = ("G-QUOTE" if "quotation" in categories else
                 "G-ATTRIB" if "attribution" in categories else "G-GROUND")
@@ -65,7 +65,14 @@ def _withhold(calls, findings):
             Response.WITHHOLD, Scope.TURN, Recovery.NONE):
         raise RuntimeError("The release boundary no longer matches its gate contract")
     # The categories are the review's fixed names, never its words about the draft.
-    calls.withhold(f"{identity}: {', '.join(sorted(categories))}")
+    try:
+        calls.withhold(f"{identity}: {', '.join(sorted(categories))}")
+    except ReleaseWithheld as exc:
+        # What the check found, for the advocate alone (owner decision, 17 Oct 2026);
+        # the attempt's diagnosis and the log keep only the fixed names.
+        exc.found = response_rendering.found_words(
+            [f for f in findings if not any(f is d for d in dated)], dated, where="the answer")
+        raise
 
 
 def _hold(calls, draft, reviewed, undated, findings):
@@ -75,7 +82,7 @@ def _hold(calls, draft, reviewed, undated, findings):
     with the release, as the date check reads today's date."""
     parts = response_rendering.held_sections(draft, reviewed, undated)
     if not parts:
-        _withhold(calls, findings)
+        _withhold(calls, findings, dated=undated)
     owned = gate("G-SECTION")
     if (owned.response, owned.scope, owned.recovery) != (Response.WITHHOLD, Scope.NEED, Recovery.ADVOCATE):
         raise RuntimeError("The section boundary no longer matches its gate contract")
@@ -278,7 +285,13 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
             why = "This conversation exceeds the current processing capacity. Your saved conversation is unchanged."
             code = "context_capacity"
         elif isinstance(exc, (ReleaseWithheld, CorrectionUnavailable, SchemaViolation)):
-            why = "I could not provide a sufficiently reliable answer to this message. Your saved conversation is unchanged."
+            # What the check still found, and what the advocate can do (owner decision,
+            # 17 Oct 2026), where the release boundary itself withheld the answer.
+            found = getattr(exc, "found", None)
+            why = ("I could not provide a sufficiently reliable answer to this message. "
+                   + (f"After the rewrites NM may make, the independent check still found: {found} You can "
+                      "send the message again, narrow it, or add a fact or document it may need. " if found else "")
+                   + "Your saved conversation is unchanged.")
             code = "answer_withheld"
         else:
             why = "The response could not be completed at present. Your saved conversation is unchanged."

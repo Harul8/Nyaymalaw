@@ -265,13 +265,14 @@ def unit_index(elements, element):
 
 #: What a held section was to cover when it answers no single dispute.
 OPENING = "the opening and the points not tied to one dispute"
-#: What the check found, in plain words, by its fixed category.
+#: What the check found, in plain words, by its fixed category; {where} is the section or
+#: the answer.
 _FOUND = {"grounding": "a statement was not supported by the words it relies on",
           "attribution": "a statement was attributed to a judgment from a passage that is not the court's own reasoning",
           "quotation": "a quotation did not match its source word for word",
-          "omission": "something the section needed was missing",
-          "framing": "the section framed the matter in a way its sources do not support",
-          "effect": "the section claimed an outcome that was not established"}
+          "omission": "something {where} needed was missing",
+          "framing": "{where} framed the matter in a way its sources do not support",
+          "effect": "{where} claimed an outcome that was not established"}
 _DATE_FOUND = ("a date was stated that is not in your messages or documents, the sources or the time "
                "limits code worked out")
 #: The short IDs the models are shown, as words a reader can follow.
@@ -335,17 +336,27 @@ def _notice(kind, text, **extra):
             "citation_markers": [], "disclosure": True, **extra}
 
 
+def found_words(findings, date_findings=(), *, where="the section"):
+    """What the check found, in plain words (owner decision, 17 Oct 2026). Nothing that
+    failed is shown: an omission says what is missing, so the check's own explanation
+    follows it (short IDs shown as words); every other finding concerns words that were
+    wrong, so only its category is said, in code's words; a date found nowhere likewise."""
+    found = [_FOUND.get(f["category"], f["category"]).format(where=where)
+             + (": " + _SHORT_IDS.sub(lambda m: _SHORT_WORDS[m.group().rstrip("0123456789")], f["mismatch"].strip())
+                if f["category"] == "omission" else "")
+             for f in findings]
+    if date_findings:
+        found.append(_DATE_FOUND)
+    return " ".join(item if item.endswith(".") else item + "." for item in
+                    (item[0].upper() + item[1:] for item in dict.fromkeys(found)))
+
+
 def _held_notice(index, name, draft, findings, date_findings):
     """In a held section's place: what it was to cover and what the check found."""
     start = sum(part["units"] for part in draft["parts"][:index])
     ids = {unit["id"] for unit in draft["units"][start:start + draft["parts"][index]["units"]]}
-    found = [f"{_FOUND.get(f['category'], f['category'])}: " + _SHORT_IDS.sub(
-                 lambda m: _SHORT_WORDS[m.group().rstrip("0123456789")], f["mismatch"].strip())
-             for f in findings if set(f["unit_ids"]) & ids]
-    if any(set(f["unit_ids"]) & ids for f in date_findings):
-        found.append(_DATE_FOUND)
-    said = " ".join(item if item.endswith(".") else item + "." for item in
-                    (item[0].upper() + item[1:] for item in dict.fromkeys(found)))
+    said = found_words([f for f in findings if set(f["unit_ids"]) & ids],
+                       [f for f in date_findings if set(f["unit_ids"]) & ids])
     return _notice("HELD", f"Held back: {name}. After the rewrites NM may make, the independent check still "
                    f"found a problem in this section, so it is not shown. What the check found: {said}",
                    held={"part": index, "section": name,
