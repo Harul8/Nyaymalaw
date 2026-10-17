@@ -85,6 +85,9 @@ def _leave_with_supervisor(heartbeat, *, every=HEARTBEAT_SECONDS, stale=HEARTBEA
             if quiet > stale:
                 print("The supervisor is gone; this server stops.", flush=True)
                 os._exit(0)
+                # Leaving is decided once (17 Oct 2026): a watch that kept looking would,
+                # in a test that stands in for the exit, end the test process later.
+                return
     threading.Thread(target=watch, name="supervisor-watch", daemon=True).start()
 
 

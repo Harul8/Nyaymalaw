@@ -139,6 +139,11 @@ def test_the_app_leaves_when_its_supervisor_is_gone(monkeypatch, tmp_path):
     os.utime(beat, (old, old))  # the supervisor stopped touching it two minutes ago
     main._leave_with_supervisor(str(beat), every=0.01, stale=60)
     assert left.wait(5)
+    # The watch stops once it has decided (17 Oct 2026): it had kept looking and, with the
+    # real exit restored after this test, ended the whole test run a moment later.
+    for watch in [t for t in threading.enumerate() if t.name == "supervisor-watch"]:
+        watch.join(1)
+    assert not any(t.name == "supervisor-watch" for t in threading.enumerate())
 
 
 def test_the_supervisor_touches_its_heartbeat_and_passes_it_on(monkeypatch):
