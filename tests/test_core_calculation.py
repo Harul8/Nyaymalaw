@@ -316,3 +316,23 @@ def test_an_act_too_large_to_supply_whole_is_given_as_its_provisions_that_state_
     assert "the rest of it is held but not shown here" in shown and "Form of plaint" not in shown
     assert "[The First Schedule, Order VIII]\n1. Written Statement." in shown
     assert calculation._held_text({"title": NI, "text": TEXTS[NI]}) == f"=== {NI} (held text) ===\n{TEXTS[NI]}"
+
+
+
+def test_a_schedule_article_quoted_across_its_columns_is_read_as_its_own_words():
+    # 17 Oct 2026, the owner's land matter: Articles 54, 59, 47 and 55 were proposed rightly and
+    # all refused, because the period and its start were quoted joined by a semicolon, while
+    # code joins the Schedule's columns itself. The entry is found by its number; the words
+    # only confirm it was read, so they are compared by letters and digits alone.
+    from nm.core_engine import limitation
+    acts = {LIMITATION: Held().read(LIMITATION)}
+    entries = limitation.schedule(acts[LIMITATION]["text"])
+    item = step("a", "Suit to recover the loan", "Three years; When the loan is made", "Three years",
+                {"after": "", "event": "", "date": "2024-01-10", "quote": "x"},
+                act=LIMITATION, provision="Article 19", article="19")
+    provision = calculation._provision(item, acts, entries)
+    assert (provision["article"], provision["period_words"], provision["from"]) == (
+        "19", "Three years", "When the loan is made.")
+    for wrong in ("Three years; When the loan is repaid", "Two years; When the loan is made"):
+        with pytest.raises(calculation._Unchecked, match="not in its held entry"):
+            calculation._provision({**item, "words": wrong}, acts, entries)

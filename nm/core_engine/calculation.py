@@ -116,6 +116,14 @@ def _letters(text):
     return "".join(_flat(text).translate(_TYPOGRAPHY).casefold().split())
 
 
+def _entry_words(text):
+    """A Schedule entry's words for the cross-check, letters and digits alone (17 Oct 2026):
+    code finds the entry by its number and joins its columns itself, so the mark the model
+    joins them with ('Three years; The date fixed for the performance') is not the Act's
+    and cannot decide whether the right entry was read."""
+    return re.sub(r"[\W_]", "", _letters(text))
+
+
 @lru_cache(maxsize=4)
 def _letter_map(text):
     """_letters(text), and for each of its characters the position in the text it came from."""
@@ -220,8 +228,10 @@ def _provision(item, acts, entries):
             raise _Unchecked(f"Article {item['article']}{item['part']} is not an entry of the held Schedule "
                              "with a countable period")
         row = rows[0]
-        held = _letters(" ".join((row["description"], row["period"], row["from"])))
-        if item["words"].strip() and _letters(item["words"]) not in held:
+        # The period and its start are taken from the held columns below; the quoted words
+        # only confirm that this entry was read.
+        held = _entry_words(" ".join((row["description"], row["period"], row["from"])))
+        if item["words"].strip() and _entry_words(item["words"]) not in held:
             raise _Unchecked(f"the words quoted for Article {item['article']} are not in its held entry")
         return {"act": act["title"], "sha256": act["sha256"], "article": row["article"], "part": row["part"],
                 "description": row["description"], "period_words": row["period"], "from": row["from"]}
