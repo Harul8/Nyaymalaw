@@ -262,6 +262,41 @@ def test_openai_rate_limit_beyond_the_bound_surfaces_as_typed():
         a.complete(Prompt(user="q"), Tier.ROUTINE)
 
 
+@pytest.mark.parametrize("name,status", [("APIConnectionError", None), ("APITimeoutError", None),
+                                         ("InternalServerError", 500), ("APIStatusError", 503)])
+def test_a_transient_provider_failure_is_retried_with_a_count(name, status):
+    # 17 Oct 2026: one dropped connection in a turn's twenty calls had ended the whole turn.
+    failure = type(name, (Exception,), {"status_code": status})
+    client = _FakeOpenAI("recovered", fail_times=2, exc=failure("connection reset"))
+    r = OpenAIModelAdapter(_config(), client=client).complete(Prompt(user="q"), Tier.ROUTINE)
+    assert r.text == "recovered" and r.retries == 2
+
+
+def test_a_lasting_or_client_side_failure_is_not_retried_beyond_its_kind():
+    from nm.shared.model_port import ProviderUnavailable
+    lasting = _FakeOpenAI(fail_times=99, exc=type("APIConnectionError", (Exception,), {})("down"))
+    with pytest.raises(ProviderUnavailable):
+        OpenAIModelAdapter(_config(), client=lasting).complete(Prompt(user="q"), Tier.ROUTINE)
+    assert len(lasting.calls) == 3
+    client_side = _FakeOpenAI(fail_times=99, exc=type("APIStatusError", (Exception,), {"status_code": 409})("conflict"))
+    with pytest.raises(ProviderUnavailable):
+        OpenAIModelAdapter(_config(), client=client_side).complete(Prompt(user="q"), Tier.ROUTINE)
+    assert len(client_side.calls) == 1
+
+
+def test_a_failure_our_own_accounting_raises_is_never_retried():
+    from nm.shared.model_port import ProviderUnavailable
+    from nm.shared.model_transport import request_with_retries
+    calls = []
+
+    def answered():
+        calls.append(1)
+        raise ProviderUnavailable("The provider did not establish request usage; cost is unknown")
+    with pytest.raises(ProviderUnavailable):
+        request_with_retries(answered)
+    assert calls == [1]
+
+
 def test_openai_content_refusal_is_not_reported_as_a_finding():
     a = OpenAIModelAdapter(_config(), client=_FakeOpenAI("", finish_reason="content_filter"))
     from nm.shared.model_port import ContentRefused

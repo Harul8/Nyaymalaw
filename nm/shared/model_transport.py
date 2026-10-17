@@ -15,6 +15,20 @@ from nm.shared.model_port import (
 )
 
 MAX_RETRIES = 3
+#: Provider failures that pass (17 Oct 2026: one dropped connection in a turn's twenty
+#: calls had ended the whole turn): retried like rate limits, within the same bound.
+TRANSIENT = frozenset({"APIConnectionError", "APITimeoutError", "InternalServerError", "OverloadedError"})
+
+
+def _transient(exc: Exception) -> bool:
+    """A provider-side failure that may pass. Only the SDK's own errors qualify: a port
+    error our code raised after the provider answered (usage or cost not established)
+    is never retried, since a retry would pay twice."""
+    if isinstance(exc, ModelError):
+        return False
+    status = getattr(exc, "status_code", None)
+    return type(exc).__name__ in TRANSIENT or (
+        type(exc).__name__ == "APIStatusError" and isinstance(status, int) and status >= 500)
 
 
 def normalise_error(exc: Exception) -> Exception:
@@ -51,7 +65,8 @@ def request_with_retries(
     call_budget=None,
     ledger_response=lambda response: response,
 ):
-    """Unknown/failed attempts keep their reservations, including on retry."""
+    """Unknown/failed attempts keep their reservations, including on retry. Rate limits
+    and transient provider failures are retried within the bound; nothing else is."""
     for attempt in range(MAX_RETRIES):
         if before_dispatch is not None:
             before_dispatch()
@@ -65,7 +80,7 @@ def request_with_retries(
             normalised = normalise_error(exc)
             if isinstance(normalised, ModelError):
                 normalised.retries = attempt
-            if isinstance(normalised, RateLimited) and attempt < MAX_RETRIES - 1:
+            if (isinstance(normalised, RateLimited) or _transient(exc)) and attempt < MAX_RETRIES - 1:
                 time.sleep(0.5 * (2**attempt) + random.uniform(0, 0.2))
                 continue
             if normalised is exc:
