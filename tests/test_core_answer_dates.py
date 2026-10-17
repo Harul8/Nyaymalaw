@@ -83,7 +83,7 @@ def test_the_writer_is_told_once_and_a_corrected_answer_is_kept(store):
 
 def test_a_date_still_worked_out_after_the_correction_withholds_the_answer(store, caplog):
     with pytest.raises(ConversationRefused) as refused:
-        run(store, Dating(times=2))
+        run(store, Dating(times=3))
     assert refused.value.code == "answer_withheld"
     # Why is kept with the attempt and logged, content-free (open items round, item b).
     reason = "answer_withheld-G-GROUND-response_review"
