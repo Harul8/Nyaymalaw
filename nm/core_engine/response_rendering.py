@@ -30,8 +30,14 @@ DOCUMENT_PAGES_CONTRACT = "core_response_rendering_v7"
 WORKING_CONTRACT = "core_response_rendering_v8"
 #: v8 with the date each limit's standing was worked out, so a reopened answer never
 #: shows its days left or passed as if counted today (open items round, 16 Oct 2026).
-CONTRACT = "core_response_rendering_v9"
-_WORKING = (WORKING_CONTRACT, CONTRACT)
+AS_OF_CONTRACT = "core_response_rendering_v9"
+#: v9 that may release an answer with sections held back (owner decision, 17 Oct 2026;
+#: gate G-SECTION): what the review or the date check still found after the rewrites is
+#: confined to sections, so those are left out and code says so in their place. Each
+#: paragraph shown names its own draft paragraph.
+CONTRACT = "core_response_rendering_v10"
+_AS_OF = (AS_OF_CONTRACT, CONTRACT)
+_WORKING = (WORKING_CONTRACT, *_AS_OF)
 _CITED = (CITED_WORDS_CONTRACT, HEADINGS_CONTRACT, SHORT_NAME_CONTRACT, DOCUMENT_PAGES_CONTRACT, *_WORKING)
 _LEGAL = {"provision", "judgment"}
 _ROLES = {"provision": "legislative_text", "court_disposition": "court_conclusion",
@@ -241,17 +247,109 @@ def _cited_words(text, sources, authority, *, short=False):
     return anchors, markers
 
 
-#: Shown elements that are not draft paragraphs: v5 headings and v8 Working boxes.
-NOT_PARAGRAPHS = frozenset({"HEADING", "WORKING"})
+#: Shown elements that are not draft paragraphs: v5 headings, v8 Working boxes and v10
+#: code's notices about sections held back.
+NOT_PARAGRAPHS = frozenset({"HEADING", "WORKING", "NOTICE", "HELD"})
 
 
 def unit_index(elements, element):
-    """The draft paragraph a rendered element shows. Headings (v5) and Working boxes (v8,
-    17 Oct 2026: they had been counted as paragraphs) have no paragraph of their own, so
-    they are not counted."""
+    """The draft paragraph a rendered element shows. Headings (v5), Working boxes (v8,
+    17 Oct 2026: they had been counted as paragraphs) and notices have no paragraph of
+    their own; from v10 each paragraph names its own, as held sections are left out."""
     if not 0 <= element < len(elements) or elements[element].get("kind") in NOT_PARAGRAPHS:
         raise IndexError("This rendered element shows no draft paragraph")
+    if "unit" in elements[element]:
+        return elements[element]["unit"]
     return element - sum(1 for item in elements[:element] if item.get("kind") in NOT_PARAGRAPHS)
+
+
+#: What a held section was to cover when it answers no single dispute.
+OPENING = "the opening and the points not tied to one dispute"
+#: What the check found, in plain words, by its fixed category.
+_FOUND = {"grounding": "a statement was not supported by the words it relies on",
+          "attribution": "a statement was attributed to a judgment from a passage that is not the court's own reasoning",
+          "quotation": "a quotation did not match its source word for word",
+          "omission": "something the section needed was missing",
+          "framing": "the section framed the matter in a way its sources do not support",
+          "effect": "the section claimed an outcome that was not established"}
+_DATE_FOUND = ("a date was stated that is not in your messages or documents, the sources or the time "
+               "limits code worked out")
+#: The short IDs the models are shown, as words a reader can follow.
+_SHORT_IDS = re.compile(r"\b(?:U|DOC|M|P|J)\d+\b")
+_SHORT_WORDS = {"U": "a paragraph", "DOC": "a document page", "M": "a message", "P": "a provision", "J": "a judgment"}
+
+
+def held_sections(draft, review, date_findings=()):
+    """G-SECTION (owner decision, 17 Oct 2026): the sections (one dispute's part each) of
+    an answer that what the review or the date check still finds is confined to. [] when
+    nothing is found; None when what is found is not confined - a finding that names no
+    paragraph concerns the whole answer, an answer not written in sections has none to
+    hold, and an answer that would keep no dispute's section has nothing to release."""
+    findings = [*([] if review["accepted"] else review["proposal"]["findings"]), *date_findings]
+    if not findings:
+        return []
+    parts = draft.get("parts") or []
+    if not parts or any(not finding["unit_ids"] for finding in findings):
+        return None
+    affected = {identity for finding in findings for identity in finding["unit_ids"]}
+    held, start = [], 0
+    for index, part in enumerate(parts):
+        if {unit["id"] for unit in draft["units"][start:start + part["units"]]} & affected:
+            held.append(index)
+        start += part["units"]
+    if all(part["dispute_id"] is None or index in held for index, part in enumerate(parts)):
+        return None
+    return held
+
+
+def _release(draft, review, held):
+    """The saved release record checked against the review and the date findings it
+    carries (the date check reads today's date, so its findings are kept, not redone)."""
+    if held is None:
+        return [], []
+    known = {unit["id"] for unit in draft["units"]}
+    if (not isinstance(held, dict) or set(held) != {"parts", "date_findings"}
+            or not isinstance(held["date_findings"], list) or any(
+                not isinstance(f, dict) or f.get("category") != "grounding" or not f.get("unit_ids")
+                or not set(f["unit_ids"]) <= known or not isinstance(f.get("mismatch"), str)
+                for f in held["date_findings"])):
+        raise ValueError("Unknown release record")
+    expected = held_sections(draft, review, held["date_findings"])
+    if not expected or expected != held["parts"]:
+        raise ValueError("Held sections differ from what the checks found")
+    return held["parts"], held["date_findings"]
+
+
+def _part_names(research_record, draft):
+    """Each section's name: the understanding's own name for its dispute, or OPENING."""
+    names = {}
+    if research_record.get("contract") in research.QUESTION_PLANS:
+        for dispute in research_record["plan"]["proposal"]["understanding"]["disputes"]:
+            names.setdefault(dispute["id"], dispute["name"])
+    return [OPENING if part["dispute_id"] is None else names.get(part["dispute_id"], "") or "this dispute"
+            for part in draft.get("parts") or []]
+
+
+def _notice(kind, text, **extra):
+    return {"kind": kind, "text": text, "source": None, "sources": [], "refs": [], "inline_citations": [],
+            "citation_markers": [], "disclosure": True, **extra}
+
+
+def _held_notice(index, name, draft, findings, date_findings):
+    """In a held section's place: what it was to cover and what the check found."""
+    start = sum(part["units"] for part in draft["parts"][:index])
+    ids = {unit["id"] for unit in draft["units"][start:start + draft["parts"][index]["units"]]}
+    found = [f"{_FOUND.get(f['category'], f['category'])}: " + _SHORT_IDS.sub(
+                 lambda m: _SHORT_WORDS[m.group().rstrip("0123456789")], f["mismatch"].strip())
+             for f in findings if set(f["unit_ids"]) & ids]
+    if any(set(f["unit_ids"]) & ids for f in date_findings):
+        found.append(_DATE_FOUND)
+    said = " ".join(item if item.endswith(".") else item + "." for item in
+                    (item[0].upper() + item[1:] for item in dict.fromkeys(found)))
+    return _notice("HELD", f"Held back: {name}. After the rewrites NM may make, the independent check still "
+                   f"found a problem in this section, so it is not shown. What the check found: {said}",
+                   held={"part": index, "section": name,
+                         "retry": f"Please try the held-back section on {name} again."})
 
 
 def _headings(research_record, draft):
@@ -368,8 +466,9 @@ def _working(record, *, as_of=False):
 
 
 def render(context, research_record, sources, draft, review, execution=None, *,
-           authority_evidence=None, contract=CONTRACT, time_limits=None):
-    """No new prose; the declared version owns its exact reviewed dependencies."""
+           authority_evidence=None, contract=CONTRACT, time_limits=None, held=None):
+    """No new prose; the declared version owns its exact reviewed dependencies. From v10,
+    held (the saved release record) leaves out the sections G-SECTION holds back."""
     if contract not in {LEGACY_CONTRACT, STORED_TITLE_CONTRACT, SHOWN_NAME_CONTRACT, *_CITED}:
         raise ValueError("Unknown response rendering contract")
     checked_draft = response_writer.validate(draft, context, sources)
@@ -388,17 +487,39 @@ def render(context, research_record, sources, draft, review, execution=None, *,
         checked_review = response_review.validate(review, context, research_record,
             sources, checked_draft, execution=execution, authority_evidence=checked_authorities,
             time_limits=calculation.for_answer(time_limits) if time_limits is not None else None)
-    if not checked_review["accepted"]:
+    if held is not None and contract != CONTRACT:
+        raise ValueError("Only a v10 rendering may hold sections back")
+    held_parts, date_findings = _release(checked_draft, checked_review, held)
+    if not checked_review["accepted"] and not held_parts:
         raise ValueError("A response without accepted independent review cannot be rendered")
     authorities = ({row["unit_id"]: row for row in checked_authorities["units"]}
                    if contract in _CITED else {})
     headings = (_headings(research_record, checked_draft)
                 if contract in (HEADINGS_CONTRACT, SHORT_NAME_CONTRACT, DOCUMENT_PAGES_CONTRACT, *_WORKING) else {})
+    held_at, held_units, start = {}, set(), 0
+    for index, part in enumerate(checked_draft.get("parts") or []):
+        if index in held_parts:
+            held_at[start] = index
+            held_units.update(range(start, start + part["units"]))
+        start += part["units"]
+    names = _part_names(research_record, checked_draft) if held_parts else []
+    findings = [] if checked_review["accepted"] else checked_review["proposal"]["findings"]
     elements = []
+    if held_parts:
+        many = len(held_parts) > 1
+        elements.append(_notice("NOTICE", f"This answer is incomplete: {len(held_parts)} of its "
+            f"{len(checked_draft['parts'])} sections {'are' if many else 'is'} held back below, because the "
+            f"independent check still found a problem in {'them' if many else 'it'} after the rewrites NM may "
+            "make. The sections shown were checked by the independent review."))
     for position, unit in enumerate(checked_draft["units"]):
         if position in headings:
             elements.append({"kind": "HEADING", "text": headings[position], "source": None, "sources": [],
                              "refs": [], "inline_citations": [], "citation_markers": []})
+        if position in held_at:
+            elements.append(_held_notice(held_at[position], names[held_at[position]], checked_draft,
+                                         findings, date_findings))
+        if position in held_units:
+            continue
         legal_sources = _sources(unit, sources, shown_names=contract in {SHOWN_NAME_CONTRACT, *_CITED},
                                  documents=contract in (DOCUMENT_PAGES_CONTRACT, *_WORKING))
         element = {"kind": unit["kind"].upper(), "text": unit["text"],
@@ -411,9 +532,16 @@ def render(context, research_record, sources, draft, review, execution=None, *,
                 short=contract in (SHORT_NAME_CONTRACT, DOCUMENT_PAGES_CONTRACT, *_WORKING))
         else:
             element["inline_citations"] = _anchors(unit["text"], legal_sources)
+        if contract == CONTRACT:
+            element["unit"] = position
         elements.append(element)
+    if held_parts:
+        many = len(held_parts) > 1
+        elements.append(_notice("NOTICE", f"Shall I try the held-back {'sections' if many else 'section'} again, "
+            f"or continue without {'them' if many else 'it'}? If {'they' if many else 'it'} may need a fact, a "
+            "document or a narrower question, tell me and I will use it."))
     if contract in _WORKING and time_limits is not None:
         # The Working boxes follow the answer's opening paragraph.
-        first = next((i for i, element in enumerate(elements) if element["kind"] != "HEADING"), 0)
-        elements[first + 1:first + 1] = _working(time_limits, as_of=contract == CONTRACT)
+        first = next((i for i, element in enumerate(elements) if element["kind"] not in NOT_PARAGRAPHS), 0)
+        elements[first + 1:first + 1] = _working(time_limits, as_of=contract in _AS_OF)
     return elements

@@ -62,6 +62,7 @@ def test_withholding_scope_inventory_preserves_need_isolation_and_separates_wiri
     turn_ids = {row.id for row in draft.withholding() if row.scope is draft.Scope.TURN}
     assert turn_ids == {'G-GROUND', 'G-ATTRIB', 'G-QUOTE', 'G-STALE', 'G-CORE', 'G-COMMIT'}
     need_ids = {row.id for row in draft.withholding() if row.scope is draft.Scope.NEED}
-    assert need_ids == {'G-DATE', 'G-INFORCE', 'G-BINDING', 'G-EFFECT'}
+    # G-SECTION (owner decision, 17 Oct 2026): a section still flagged after the rewrites.
+    assert need_ids == {'G-DATE', 'G-INFORCE', 'G-BINDING', 'G-EFFECT', 'G-SECTION'}
     assert {row.id for row in draft.GATES if not row.built} == set()
     assert json.loads(json.dumps(draft.as_rows())) == draft.as_rows()

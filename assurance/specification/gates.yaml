@@ -236,6 +236,24 @@ gates:
     not it is accurate.
   feature: P1
   built: true
+- id: G-SECTION
+  condition: 'After the bounded rewrites, the independent review or the date check still finds a problem
+    confined to sections of a several-dispute answer: a statement unsupported, misattributed or misquoted,
+    or something the section needed missing.'
+  states:
+  - released
+  - held
+  - not_assessed
+  response: withhold
+  scope: need
+  persistence: turn
+  recovery: advocate
+  visible: Nothing of the section is shown. The answer says at the top that it is incomplete; in the section's
+    place it says what the section was to cover and what the check found; it ends by asking whether to
+    try the section again, continue without it, or supply what it needs. The sections shown were checked
+    by the independent review.
+  feature: P1
+  built: true
 - id: G-INFORCE
   condition: Retrieved text was not in force on the matter's governing date.
   states:

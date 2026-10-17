@@ -69,6 +69,7 @@ def test_legacy_saved_source_explicitly_has_no_authority_check(served, monkeypat
     _, activity, metrics = turn.prepare(ScriptedModel(legal=True), original, searcher())
     activity.pop("authority_evidence")
     activity.pop("calculation")
+    activity.pop("release")
     activity["contract"] = turn.LEGACY_CONTRACT
     activity["rendering_contract"] = response_rendering.LEGACY_CONTRACT
     dependencies = response_review._dependencies(original, activity["research"], activity["sources"],

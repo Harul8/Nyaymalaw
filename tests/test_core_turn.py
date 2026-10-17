@@ -118,7 +118,7 @@ def test_four_actual_stage_calls_save_reopen_and_replay_without_reexecution(stor
                                      "core_response_writer", "core_response_review"]
     stored = store.load(chat_matter_id("owner", response["chat_id"]))
     rows = saved_rows(stored, "owner")
-    assert rows[0]["activities"]["contract"] == "core_turn_v3"
+    assert rows[0]["activities"]["contract"] == "core_turn_v4"
     # No held Acts were given to this turn, so no time limit was worked out (item 9).
     assert rows[0]["activities"]["calculation"]["state"] == "not_needed"
     assert rows[0]["activities"]["review"]["contract"] == "core_response_review_v5"
@@ -141,6 +141,7 @@ def test_mixed_legacy_and_current_history_reopens_without_fresh_authority_checks
     original = context.payload()
     activity.pop("authority_evidence")
     activity.pop("calculation")
+    activity.pop("release")
     activity["contract"] = turn.LEGACY_CONTRACT
     activity["rendering_contract"] = response_rendering.LEGACY_CONTRACT
     dependencies = response_review._dependencies(original, activity["research"],
@@ -164,7 +165,7 @@ def test_mixed_legacy_and_current_history_reopens_without_fresh_authority_checks
         raise AssertionError("Saved readback cannot consult current authority indexes")
     monkeypatch.setattr(response_authorities, "check", no_new_check)
     rows = saved_rows(store.load(chat_matter_id("owner", first["chat_id"])), "owner")
-    assert [row["activities"]["contract"] for row in rows] == ["core_turn_v1", "core_turn_v3"]
+    assert [row["activities"]["contract"] for row in rows] == ["core_turn_v1", "core_turn_v4"]
     assert rows[0]["response"]["elements"] == elements
     assert run(store, model, chat_id=first["chat_id"], turn_id="new", message="Continue.")["replayed"]
     assert len(model.calls) == 3
@@ -183,6 +184,7 @@ def test_a_turn_saved_under_an_earlier_rendering_reopens_unchanged_beside_a_curr
     original = context.payload()
     # A turn saved before item 9: no calculation, under the version with authority evidence.
     activity.pop("calculation")
+    activity.pop("release")
     activity["contract"] = turn.AUTHORITY_CONTRACT
     activity["rendering_contract"] = saved
     elements = response_rendering.render(original, activity["research"], activity["sources"],
@@ -194,7 +196,7 @@ def test_a_turn_saved_under_an_earlier_rendering_reopens_unchanged_beside_a_curr
     assert second["committed"] == "committed"
     rows = saved_rows(store.load(chat_matter_id("owner", first["chat_id"])), "owner")
     assert [row["activities"]["rendering_contract"] for row in rows] == [
-        saved, "core_response_rendering_v9"]
+        saved, "core_response_rendering_v10"]
     assert rows[0]["response"]["elements"] == elements
     if saved not in ("core_response_rendering_v4", "core_response_rendering_v5", "core_response_rendering_v6",
                      "core_response_rendering_v7"):
@@ -367,3 +369,29 @@ def test_resealed_but_incompatible_saved_evidence_is_never_upgraded(store, damag
                  expected_version=matter.version)
     with pytest.raises(ConversationRefused, match="read reliably"): run(store, model)
     assert len(model.calls) == 3
+
+
+@pytest.mark.parametrize("saved", ["core_response_rendering_v8", "core_response_rendering_v9"])
+def test_a_turn_saved_before_sections_could_be_held_reopens_unchanged(store, saved):
+    # 17 Oct 2026: v4 records what was released; a v3 turn has no such record and keeps its rendering.
+    from nm.core_engine import response_rendering, turn
+    from nm.core_engine.conversation import commit_turn, open_turn
+
+    context = open_turn(store, advocate_id="owner", message="Earlier account.", turn_id="old")
+    _, activity, metrics = turn.prepare(ScriptedModel(), context.payload(), searcher())
+    original = context.payload()
+    activity.pop("release")
+    activity["contract"] = turn.CALCULATION_CONTRACT
+    activity["rendering_contract"] = saved
+    elements = response_rendering.render(original, activity["research"], activity["sources"],
+        activity["draft"], activity["review"], execution=activity["execution"],
+        authority_evidence=activity["authority_evidence"], contract=saved, time_limits=activity["calculation"])
+    first = commit_turn(store, context, elements=elements, activities=activity, metrics=metrics,
+                        session_current=lambda: True)
+    second = run(store, ScriptedModel(), chat_id=first["chat_id"], turn_id="new", message="Continue.")
+    assert second["committed"] == "committed"
+    rows = saved_rows(store.load(chat_matter_id("owner", first["chat_id"])), "owner")
+    assert [row["activities"]["contract"] for row in rows] == ["core_turn_v3", "core_turn_v4"]
+    assert rows[0]["response"]["elements"] == elements
+    assert all("unit" not in element for element in elements)
+    assert all("unit" in element for element in rows[1]["response"]["elements"])

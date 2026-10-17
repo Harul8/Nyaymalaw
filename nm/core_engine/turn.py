@@ -31,7 +31,10 @@ LEGACY_CONTRACT = "core_turn_v1"
 log = logging.getLogger(__name__)
 #: v2 with authority evidence; v3 adds the time limits worked out (item 9, 15 Oct 2026).
 AUTHORITY_CONTRACT = "core_turn_v2"
-CONTRACT = "core_turn_v3"
+CALCULATION_CONTRACT = "core_turn_v3"
+#: v4 records what was released (owner decision, 17 Oct 2026; gate G-SECTION): the
+#: sections held back after the rewrites, with the date findings that held them, or None.
+CONTRACT = "core_turn_v4"
 EXECUTION = "core_read_only_execution_v1"
 _ACTIVITY_FIELDS = {"contract", "interpretation", "research", "sources", "draft",
                     "review", "execution", "rendering_contract"}
@@ -63,6 +66,20 @@ def _withhold(calls, findings):
         raise RuntimeError("The release boundary no longer matches its gate contract")
     # The categories are the review's fixed names, never its words about the draft.
     calls.withhold(f"{identity}: {', '.join(sorted(categories))}")
+
+
+def _hold(calls, draft, reviewed, undated, findings):
+    """After the rewrites (owner decision, 17 Oct 2026): what is still found inside the
+    sections of a several-dispute answer holds back those sections under G-SECTION, and
+    the rest is released; anything else withholds the turn. The date findings are kept
+    with the release, as the date check reads today's date."""
+    parts = response_rendering.held_sections(draft, reviewed, undated)
+    if not parts:
+        _withhold(calls, findings)
+    owned = gate("G-SECTION")
+    if (owned.response, owned.scope, owned.recovery) != (Response.WITHHOLD, Scope.NEED, Recovery.ADVOCATE):
+        raise RuntimeError("The section boundary no longer matches its gate contract")
+    return {"parts": parts, "date_findings": deepcopy(undated)}
 
 
 def _diagnosis(code, exc, calls):
@@ -132,7 +149,11 @@ def prepare(model, context, searcher, *, case_index=None, provision_reader=None,
     undated = response_writer.dates_not_given(draft, context, sources, time_limits)
     # What the review or the date check finds is rewritten and the whole answer reviewed
     # again; when that review still finds a problem, once more (owner decision, 17 Oct
-    # 2026). What is still found after that withholds the turn.
+    # 2026). What is still found after that holds back its sections, or the turn.
+    release = None
+    # The last draft a review saw, with its authority checks, that review and the date
+    # findings: what is held back or withheld is always judged on a draft and its own review.
+    checked = (draft, authorities, reviewed, undated)
     while not reviewed["accepted"] or undated:
         findings = ([] if reviewed["accepted"] else reviewed["proposal"]["findings"]) + undated
         try:
@@ -146,14 +167,17 @@ def prepare(model, context, searcher, *, case_index=None, provision_reader=None,
             report("reviewing")
             reviewed = calls.checked("core_response_review", review)
         except (CorrectionUnavailable, SchemaViolation):
-            _withhold(calls, findings)
+            draft, authorities, reviewed, undated = checked
+            release = _hold(calls, draft, reviewed, undated, findings)
+            break
         undated = response_writer.dates_not_given(draft, context, sources, time_limits)
+        checked = (draft, authorities, reviewed, undated)
     elements = response_rendering.render(context, record, sources, draft, reviewed,
-        execution=execution, authority_evidence=authorities, time_limits=limits)
+        execution=execution, authority_evidence=authorities, time_limits=limits, held=release)
     activity = {"contract": CONTRACT, "interpretation": interpreted, "research": record,
                 "sources": sources, "draft": draft, "review": reviewed, "execution": execution,
                 "rendering_contract": response_rendering.CONTRACT,
-                "authority_evidence": authorities, "calculation": limits}
+                "authority_evidence": authorities, "calculation": limits, "release": release}
     return elements, activity, calls.metrics()
 
 
@@ -162,7 +186,8 @@ def validate_activity(activity, context, elements):
     version = activity.get("contract")
     expected_fields = (_ACTIVITY_FIELDS if version == LEGACY_CONTRACT else
                        _ACTIVITY_FIELDS | {"authority_evidence"} if version == AUTHORITY_CONTRACT else
-                       _ACTIVITY_FIELDS | {"authority_evidence", "calculation"})
+                       _ACTIVITY_FIELDS | {"authority_evidence", "calculation"} if version == CALCULATION_CONTRACT
+                       else _ACTIVITY_FIELDS | {"authority_evidence", "calculation", "release"})
     # A saved response re-renders under the version it was admitted with: names a
     # later rendering shows differently never rewrite an earlier turn.
     renderings = ({response_rendering.LEGACY_CONTRACT} if version == LEGACY_CONTRACT else
@@ -170,19 +195,22 @@ def validate_activity(activity, context, elements):
                    response_rendering.CITED_WORDS_CONTRACT, response_rendering.HEADINGS_CONTRACT,
                    response_rendering.SHORT_NAME_CONTRACT, response_rendering.DOCUMENT_PAGES_CONTRACT}
                   if version == AUTHORITY_CONTRACT else
-                  {response_rendering.WORKING_CONTRACT, response_rendering.CONTRACT})
+                  {response_rendering.WORKING_CONTRACT, response_rendering.AS_OF_CONTRACT}
+                  if version == CALCULATION_CONTRACT else {response_rendering.CONTRACT})
     rendering = activity.get("rendering_contract") if isinstance(activity, dict) else None
-    if (version not in {LEGACY_CONTRACT, AUTHORITY_CONTRACT, CONTRACT} or set(activity) != expected_fields
-            or rendering not in renderings):
+    if (version not in {LEGACY_CONTRACT, AUTHORITY_CONTRACT, CALCULATION_CONTRACT, CONTRACT}
+            or set(activity) != expected_fields or rendering not in renderings):
         raise ValueError("Unknown saved turn or rendering contract")
-    limits = calculation.validate(activity["calculation"], context) if version == CONTRACT else None
+    limits = (calculation.validate(activity["calculation"], context)
+              if version in (CALCULATION_CONTRACT, CONTRACT) else None)
     record = research.validate(activity["research"], activity["research"]["plan"], context)
     sources = answer_sources.build(context, record)
     if sources != activity["sources"] or execution_record(record) != activity["execution"]:
         raise ValueError("Saved sources or operation evidence changed")
     rebuilt = response_rendering.render(context, record, sources, activity["draft"],
         activity["review"], execution=activity["execution"],
-        authority_evidence=activity.get("authority_evidence"), contract=rendering, time_limits=limits)
+        authority_evidence=activity.get("authority_evidence"), contract=rendering, time_limits=limits,
+        held=activity["release"] if version == CONTRACT else None)
     if rebuilt != elements:
         raise ValueError("Saved response differs from its admitted rendering")
     return deepcopy(activity)

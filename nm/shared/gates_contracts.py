@@ -390,6 +390,30 @@ GATES: tuple[Gate, ...] = (
         feature="P1",
         built=True,
     ),
+    # Owner decision, 17 Oct 2026: after the bounded rewrites, what the independent
+    # review still finds inside one section of a several-dispute answer holds back
+    # that section, not the whole answer. A finding that names no section, or one
+    # that leaves no dispute's section to release, still withholds the TURN under
+    # G-GROUND, G-ATTRIB or G-QUOTE.
+    Gate(
+        id="G-SECTION",
+        condition="After the bounded rewrites, the independent review or the date "
+                  "check still finds a problem confined to sections of a several-"
+                  "dispute answer: a statement unsupported, misattributed or "
+                  "misquoted, or something the section needed missing.",
+        states=("released", "held", "not_assessed"),
+        response=Response.WITHHOLD,
+        scope=Scope.NEED,
+        persistence=Persistence.TURN,
+        recovery=Recovery.ADVOCATE,
+        visible="Nothing of the section is shown. The answer says at the top that it "
+                "is incomplete; in the section's place it says what the section was "
+                "to cover and what the check found; it ends by asking whether to try "
+                "the section again, continue without it, or supply what it needs. "
+                "The sections shown were checked by the independent review.",
+        feature="P1",
+        built=True,
+    ),
     Gate(
         id="G-INFORCE",
         condition="Retrieved text was not in force on the matter's governing "

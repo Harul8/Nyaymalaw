@@ -39,6 +39,9 @@ def test_turn_and_need_withholding_have_explicit_distinct_owners():
     assert gate("G-EFFECT").scope is Scope.NEED
     assert gate("G-INCOMPLETE").response is Response.DISCLOSE
     assert gate("G-INCOMPLETE").scope is Scope.NEED
+    # 17 Oct 2026: a section still flagged after the rewrites is held back alone.
+    held = gate("G-SECTION")
+    assert (held.response, held.scope, held.recovery) == (Response.WITHHOLD, Scope.NEED, Recovery.ADVOCATE)
 
 
 def test_a_gate_cleared_by_a_person_carries_a_could_not_evaluate_state():
