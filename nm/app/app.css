@@ -26,6 +26,7 @@
   /* File-type tiles: white letters on a mid tone, the same in both themes. */
   --tile-ink: #ffffff; --tile-pdf: #a8443a; --tile-doc: #2f5d9a; --tile-img: #2f6b4f;
   --tile-audio: #6a4e1f; --tile-other: #5d6366;
+  --mark: #fbeeb4;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -38,6 +39,7 @@
     --signal: #d98c82; --signal-w: #2c1d1b;
     --good: #7fbe9c; --good-w: #17261f;
     --amber: #d8bd8a; --amber-w: #2a2318;
+    --mark: #4a4120;
   }
 }
 
@@ -334,6 +336,18 @@ button.board-card:focus-visible { outline: 2px solid var(--accent); outline-offs
 .file-attention { font-size: 0.8rem; color: var(--amber); }
 .file-read { justify-self: start; min-height: 2.75rem; padding: 0 0.2rem; color: var(--accent); }
 .file-original { display: inline-block; margin-bottom: 0.4rem; color: var(--accent); }
+/* The reading pane, passage first (owner decisions, 17 Oct 2026). */
+.source-where { margin: 0; font-size: 0.82rem; color: var(--ink-3); }
+.source-role { margin: 0; justify-self: start; display: inline-block; font-size: 0.78rem; font-weight: 600;
+  color: var(--accent-2); background: var(--accent-w); border-radius: 999px; padding: 0.1rem 0.6rem; }
+.source-attention { margin: 0; font-size: 0.85rem; color: var(--signal); }
+.brain-source-window { white-space: pre-wrap; overflow-wrap: anywhere; font-family: var(--f-serif);
+  font-size: 0.95rem; line-height: 1.6; padding: 0.7rem 0.85rem; border-radius: 8px; background: var(--board); }
+.brain-source-window mark, .brain-source-text mark, .document-text mark { background: var(--mark); color: inherit;
+  border-radius: 2px; padding: 0 1px; }
+.source-expand { justify-self: start; min-height: 2.75rem; color: var(--accent); }
+.how-checked { border-top: 1px solid var(--rule); padding-top: 0.5rem; font-size: 0.85rem; }
+.how-checked summary { cursor: pointer; min-height: 2.75rem; display: flex; align-items: center; color: var(--ink-2); }
 /* What NM read, as one document (owner decision 5, 17 Oct 2026). */
 .document-flow { display: grid; gap: 0.5rem; }
 .page-mark { font-family: var(--f-mono); font-size: 0.66rem; letter-spacing: 0.06em; text-transform: uppercase;

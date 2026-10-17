@@ -64,6 +64,7 @@ class Element {
     this.children = [];
   }
   appendChild(child) { this.children.push(child); return child; }
+  append(...children) { this.children.push(...children); }
   replaceChildren(...children) { this._text = ''; this.children = children; }
   setAttribute(key, value) { this[key] = value; }
   addEventListener(name, callback) {
@@ -85,6 +86,8 @@ const document = {
   activeElement: null,
   addEventListener() {},
   createElement: tag => new Element(tag),
+  // As a browser does: the reading pane marks the supporting words inside the text (17 Oct 2026).
+  createTextNode: text => Object.assign(new Element('#text'), { textContent: text }),
   getElementById(id) {
     if (!elements.has(id)) elements.set(id, new Element('div'));
     return elements.get(id);
@@ -333,7 +336,9 @@ for (let index = 0; index < requirementList.children.length; index += 1) {
   assert.equal(sourceDialog.open, true);
   assert.equal(dialog.open, true);
   assert.equal(document.getElementById('brain-source-title').textContent, source.title);
-  assert.equal(document.getElementById('brain-source-body').children.at(-1).textContent, source.text);
+  // The passage first, the checks folded (17 Oct 2026): found by its role, not its place.
+  assert.equal(document.getElementById('brain-source-body').children
+    .find((child) => child.className === 'brain-source-text').textContent, source.text);
   assert.ok(document.getElementById('brain-source-body').textContent.includes(source.verification.support_excerpt));
   if (source.verification.scope_excerpt) {
     assert.ok(document.getElementById('brain-source-body').textContent.includes(source.verification.scope_excerpt));

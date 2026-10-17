@@ -21,11 +21,15 @@ class Node {
   focus() { this.focused = true; }
 }
 const nodes = new Map(['brain-source-reader', 'brain-source-title', 'brain-source-close',
-  'brain-source-status', 'brain-source-body', 'board-pane'].map(id => [id, new Node()]));
+  'brain-source-status', 'brain-source-body', 'board-pane', 'brain-source-back'].map(id => [id, new Node()]));
 // The window the reading pane sits in (owner, 16 Oct 2026): it makes room while the pane is open.
 const windowClasses = new Set();
 nodes.set('pane-advise', Object.assign(new Node(), {classList:{
   add:name => windowClasses.add(name), remove:name => windowClasses.delete(name)}}));
+// The passage itself, wherever the pane places it (17 Oct 2026: the passage first, the
+// checks folded under "How NM checked this").
+const passageOf = (host) => host.children.find((child) => child.className === 'brain-source-text');
+const passageText = () => passageOf(nodes.get('brain-source-body'))?.textContent;
 const events = new Map();
 const keys = [];
 const window = {addEventListener:(name, callback) => events.set(name, callback)};
@@ -50,7 +54,7 @@ const opener = new Node(); opener.isConnected = true;
 const opened = reader.open(answer, element, 2, 0, opener);
 assert.equal(reads[0].url, '/api/chats/pending-chat/turns/source-turn/brain-sources/2/0');
 reads[0].resolve(saved); await opened;
-assert.equal(nodes.get('brain-source-body').children.at(-1).textContent, source.text);
+assert.equal(passageText(), source.text);
 assert.equal(nodes.get('brain-source-reader').open, true);
 // Beside the conversation, not over it: not modal, and the window makes room.
 assert.equal(nodes.get('brain-source-reader').modal, false);
@@ -82,7 +86,7 @@ assert.equal(nodes.get('brain-source-reader').open, true);
 assert.equal(reads[2].url, '/api/matters/saved-matter/turns/source-turn/brain-sources/1/0');
 reads[2].resolve(saved); await current;
 reads[1].resolve({...saved, text:'Old selection'}); await stale;
-assert.equal(nodes.get('brain-source-body').children.at(-1).textContent, source.text);
+assert.equal(passageText(), source.text);
 
 const mismatch = reader.open(answer, element, 0, 0, opener);
 reads[3].resolve({...saved, digest:'different'}); await mismatch;
@@ -128,7 +132,7 @@ const bodyLink = descendants(body, 'button')[0];
 const inlineRead = bodyLink.handlers.get('click')();
 assert.equal(reads[6].url, '/api/chats/pending-chat/turns/source-turn/brain-sources/1/2');
 reads[6].resolve(legalSource); await inlineRead;
-assert.equal(nodes.get('brain-source-body').children.at(-1).textContent, legalSource.text);
+assert.equal(passageText(), legalSource.text);
 assert.equal(bodyElement.sources.length, 4);
 assert.equal(bodyElement.sources[3].id, repeatedLegal.id);
 
@@ -158,7 +162,7 @@ assert.equal(descendants(multiBody, 'button')[0].textContent, 'Example Decision 
 const paragraphRead = descendants(multiBody, 'button')[0].handlers.get('click')();
 assert.match(reads[7].url, /brain-sources\/0\/1$/);
 reads[7].resolve(secondParagraph); await paragraphRead;
-assert.equal(nodes.get('brain-source-body').children.at(-1).textContent, secondParagraph.text);
+assert.equal(passageText(), secondParagraph.text);
 
 for (const other of [
   {...legalSource, id:'same-locator-other-text', text:'Different exact words', digest:'other-digest'},
@@ -231,16 +235,16 @@ const boardOpener = new Node('button');
 assert.equal(reader.openRecordSource(checkedBoard, boardOpener), true);
 assert.equal(reads.length, requestsBeforeBoard);
 assert.equal(nodes.get('brain-source-title').textContent, checkedBoard.title);
-assert.equal(nodes.get('brain-source-body').children.at(-1).textContent, checkedBoard.text);
+assert.equal(passageText(), checkedBoard.text);
 assert.match(nodes.get('brain-source-body').textContent, /Saved with this dispute's legal requirements/);
 assert.match(nodes.get('brain-source-body').textContent, /historical check predates/);
 assert.ok(nodes.get('brain-source-body').textContent.includes(checkedBoard.verification.support_excerpt));
 assert.ok(nodes.get('brain-source-body').textContent.includes(checkedBoard.verification.scope_excerpt));
 reads.at(-1).resolve(saved); await pendingResponseRead;
 assert.equal(nodes.get('brain-source-title').textContent, checkedBoard.title);
-assert.equal(nodes.get('brain-source-body').children.at(-1).textContent, checkedBoard.text);
+assert.equal(passageText(), checkedBoard.text);
 assert.equal(reader.openRecordSource({...checkedBoard, text:'Wrong source text'}, opener), false);
-assert.equal(nodes.get('brain-source-body').children.at(-1).textContent, checkedBoard.text);
+assert.equal(passageText(), checkedBoard.text);
 reader.close();
 assert.equal(boardOpener.focused, true);
 
@@ -251,7 +255,7 @@ reader.openRecordSource(checkedBoard, boardOpener);
 const afterBoardRead = reader.open(answer, element, 0, 0, opener);
 assert.equal(nodes.get('brain-source-body').children.length, 0);
 reads.at(-1).resolve(saved); await afterBoardRead;
-assert.equal(nodes.get('brain-source-body').children.at(-1).textContent, source.text);
+assert.equal(passageText(), source.text);
 assert.doesNotMatch(nodes.get('brain-source-body').textContent, /Supporting words/);
 
 const changedMetadata = reader.open(bodyAnswer, bodyElement, 1, 2, opener);
@@ -331,7 +335,7 @@ const afterTreatmentClick = reads.length;
 choices[2].handlers.get('click')();
 assert.equal(reads.length, afterTreatmentClick, 'A superseded selector cannot start a new read');
 reads.at(-1).resolve(treatmentSource); await readTreatment;
-assert.equal(nodes.get('brain-source-body').children.at(-1).textContent, treatmentSource.text);
+assert.equal(passageText(), treatmentSource.text);
 assert.match(nodes.get('brain-source-body').textContent, /Passage used to assess court treatment/);
 assert.match(nodes.get('brain-source-body').textContent, /Not applicable/);
 choices = descendants(descendants(nodes.get('brain-source-body'), 'nav')[0], 'button');
@@ -339,7 +343,7 @@ assert.equal(choices[1].disabled, true);
 const readStatute = choices[2].handlers.get('click')();
 assert.match(reads.at(-1).url, /brain-sources\/0\/2$/);
 reads.at(-1).resolve(legalSource); await readStatute;
-assert.equal(nodes.get('brain-source-body').children.at(-1).textContent, legalSource.text);
+assert.equal(passageText(), legalSource.text);
 assert.equal(nodes.get('brain-source-title'), titleNode);
 assert.equal(nodes.get('brain-source-close'), closeNode);
 assert.equal(JSON.stringify(relatedElement), unchangedRelated);
@@ -407,7 +411,7 @@ async function inspectAuthority(selected, inspection, clientInspection = null) {
   const pending = reader.open(response, item, 0, 0, opener);
   assert.equal(nodes.get('brain-source-body').children.length, 0);
   reads.at(-1).resolve({...selected, authority_inspection:inspection}); await pending;
-  assert.equal(nodes.get('brain-source-body').children.at(-1).textContent, selected.text);
+  assert.equal(passageText(), selected.text);
   assert.equal(JSON.stringify(item), before, 'Display evidence must not mutate canonical response sources');
   assert.equal(nodes.get('brain-source-title'), titleNode);
   assert.equal(nodes.get('brain-source-close'), closeNode);
@@ -539,7 +543,7 @@ for (const activity_contract of ['core_turn_v1', 'core_turn_v2']) {
   assert.ok(paragraphs.includes('Related source words: The court rejected that argument.'));
   assert.equal(pane.textContent.split(mixedResponse).length - 1, 1,
     'The NM paragraph is separate; a source role must not be prefixed to the same paragraph again');
-  assert.equal(pane.children.at(-1).textContent, exactSourceWords);
+  assert.equal(passageOf(pane).textContent, exactSourceWords);
   assert.equal(JSON.stringify(inspected), immutableInspected);
   assert.equal(JSON.stringify(mixedAnswer), immutableMixedAnswer);
   assert.equal(JSON.stringify(coreMixedSource), immutableMixedSource);
@@ -570,3 +574,105 @@ for (const inspection of [undefined,
 }
 console.log('PASS NM response versus source role, related source words, known-core and archival distinction');
 
+
+
+// THE PASSAGE FIRST (owner decisions, 17 Oct 2026): where it is from and what it is, the
+// supporting words marked in a little of what surrounds them, the whole passage or the
+// whole document a click away, every saved check folded, and Back.
+{
+  reader.close(false);  // a fresh pane: Back starts with nothing behind it
+  const body = () => nodes.get('brain-source-body');
+  const byClass = (name) => body().children.find((child) => child.className === name);
+  const long = 'An opening sentence that sets the scene for the clause. '.repeat(6)
+    + 'The suit shall be filed within three years of the date fixed for performance. '
+    + 'A closing sentence that follows the clause and ends it. '.repeat(6);
+  const statute = {brain:true, id:'statute-54', kind:'provision', label:'The Limitation Act, 1963',
+    locator:'Article 54', text:long, digest:'d-54', qualification:'Legislative text.',
+    verification:{source_role:'legislative_text', assertion_role:'legislative_text', reason:'Exact words held.',
+      support_excerpt:'within three years of the date fixed for performance', assertion_statement:'x'}};
+  const lawElement = {kind:'LAW', text:'The suit must be filed in time.', source:statute, sources:[statute],
+    refs:['Article 54']};
+  const lawAnswer = {chat_id:'pending-chat', matter_id:null, turn_id:'source-turn', elements:[lawElement]};
+  const v4 = {contract:'core_source_authority_view_v1', activity_contract:'core_turn_v4', source_id:'statute-54',
+    state:'recorded', case_checks:[], provision_checks:[{state:'different_snapshot', reason:'Readback differs.'}],
+    provision_mentions:[]};
+  const opening = reader.open(lawAnswer, lawElement, 0, 0, opener);
+  reads.at(-1).resolve({...statute, authority_inspection:v4}); await opening;
+  assert.equal(byClass('source-where').textContent, 'Held law · Article 54');
+  assert.equal(byClass('source-role').textContent, 'Legislative text');
+  // A check that did not come out clean is said above the fold; a version 4 turn's checks are read.
+  assert.match(byClass('source-attention').textContent, /did not come out clean/);
+  assert.doesNotMatch(body().textContent, /saved check evidence is unavailable/);
+  assert.match(body().textContent, /Provision readback: Readback differs from the selected saved passage/);
+  const window_ = byClass('brain-source-window');
+  const mark = window_.children.find((child) => child.tagName === 'MARK');
+  assert.equal(mark.textContent, 'within three years of the date fixed for performance');
+  assert.ok(window_.textContent.startsWith('…') && window_.textContent.endsWith('…'));
+  assert.ok(window_.textContent.length < long.length);
+  assert.equal(passageText(), long);
+  assert.equal(passageOf(body()).hidden, true);
+  const expand = byClass('ghost source-expand');
+  assert.equal(expand.textContent, 'Show the whole passage');
+  expand.handlers.get('click')();
+  assert.equal(passageOf(body()).hidden, false);
+  assert.equal(expand.textContent, 'Hide the whole passage');
+  const checks = byClass('how-checked');
+  assert.equal(checks.tagName, 'DETAILS');
+  assert.equal(checks.children[0].textContent, 'How NM checked this');
+  assert.match(checks.textContent, /Supporting source words: within three years/);
+  assert.equal(body().children.at(-1), checks, 'the checks come last, folded');
+
+  // A judgment's paragraph is named without the store's part number.
+  const judgment = {...statute, id:'j-73', kind:'judgment', label:'Example v State', locator:'73_2', digest:'d-73',
+    verification:{...statute.verification, source_role:'party_submission', assertion_role:'party_submission',
+      source_treatment:'rejected'}};
+  const judgmentElement = {...lawElement, source:judgment, sources:[judgment], refs:['73_2']};
+  const judgmentAnswer = {...lawAnswer, elements:[judgmentElement]};
+  const reading = reader.open(judgmentAnswer, judgmentElement, 0, 0, opener);
+  reads.at(-1).resolve({...judgment}); await reading;
+  assert.equal(byClass('source-where').textContent, 'Held judgment · paragraph 73');
+  assert.equal(byClass('source-role').textContent, 'Party submission · Court rejected');
+
+  // Back returns to what was open before, read again through the saved-source route.
+  const back = nodes.get('brain-source-back');
+  assert.equal(back.hidden, false);
+  const before = reads.length;
+  back.handlers.get('click')();
+  assert.equal(reads.length, before + 1);
+  reads.at(-1).resolve({...statute, authority_inspection:v4});
+  await new Promise((done) => setTimeout(done, 0));
+  assert.equal(byClass('source-where').textContent, 'Held law · Article 54');
+  assert.equal(back.hidden, true);
+
+  // A document page widens to the whole document, every page in order, the cited words marked.
+  const page2 = 'The purchaser paid the second instalment on time. The vendor shall register the deed on or '
+    + 'before 31-12-2025, and not later. ' + 'Further terms follow here and continue. '.repeat(10);
+  const page = {brain:true, id:'source-turn:d1p2', kind:'document', label:'Agreement of sale', locator:'page 2',
+    text:page2, digest:'d-page', qualification:'Document the advocate sent.',
+    verification:{source_role:'supplied_document', assertion_role:'original_account', reason:'Exact words.',
+      support_excerpt:'on or before 31-12-2025', assertion_statement:'x'}};
+  const pageElement = {kind:'ACCOUNT', text:'The agreement fixes a date.', source:page, sources:[page], refs:['page 2']};
+  const pageAnswer = {...lawAnswer, elements:[pageElement]};
+  const viewing = reader.open(pageAnswer, pageElement, 0, 0, opener);
+  reads.at(-1).resolve({...page}); await viewing;
+  assert.equal(byClass('source-where').textContent, 'Document you sent · page 2');
+  assert.equal(byClass('source-role'), undefined, 'a document has no court role');
+  const whole = byClass('ghost source-expand');
+  assert.equal(whole.textContent, 'Show the whole document');
+  const fetching = whole.handlers.get('click')();
+  assert.equal(reads.at(-1).url, '/api/chats/pending-chat/documents');
+  reads.at(-1).resolve({sent:[{turn_id:'source-turn', message:'m', documents:[{name:'Agreement of sale',
+    pages:[{number:1, text:'Page one words.', read_by:'local'}, {number:2, text:page2, read_by:'local'}],
+    unread:[{number:3, reason:'the scan was cut off'}]}]}]});
+  await fetching;
+  const flow = passageOf(body());
+  assert.equal(flow.hidden, false);
+  assert.deepEqual(flow.children.map((child) => child.textContent),
+    ['Page 1', 'Page one words.', 'Page 2', page2, 'Page 3', 'Not read: the scan was cut off']);
+  assert.equal(flow.children[3].children.find((child) => child.tagName === 'MARK').textContent,
+    'on or before 31-12-2025');
+  assert.equal(whole.hidden, true);
+  reader.close();
+  assert.equal(nodes.get('brain-source-back').hidden, true);
+}
+console.log('PASS the passage first, the whole document a click away, the checks folded, and Back');

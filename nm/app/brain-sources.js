@@ -5,6 +5,10 @@ window.NmBrainSources = (() => {
   let scope;
   let generation = 0;
   let active = null;
+  // BACK BETWEEN THINGS OPENED (owner decision, 17 Oct 2026): what was open before,
+  // newest last, and how to show again what is open now.
+  let trail = [];
+  let current = null;
   const node = (id) => document.getElementById(id);
 
   function configure(options) {
@@ -12,24 +16,43 @@ window.NmBrainSources = (() => {
     scope = options.scope;
   }
 
+  function showBack() {
+    const back = node('brain-source-back');
+    if (back) back.hidden = trail.length === 0;
+  }
+
+  function remember(entry, viaBack) {
+    if (!viaBack && current) trail.push(current);
+    current = entry;
+    showBack();
+  }
+
+  // Empty the pane for what opens next; the pane, its trail and its opener stay.
+  function clear() {
+    generation += 1;
+    active = null;
+    node('brain-source-title').textContent = '';
+    node('brain-source-status').textContent = '';
+    node('brain-source-body').replaceChildren();
+  }
+
   // THE READING PANE ON THE RIGHT (owner, 16 Oct 2026): one pane for every link,
   // opened beside the conversation rather than over it, so the answer and its
   // source can be read together. The window makes room for it while it is open.
   function close(restoreFocus = true) {
-    generation += 1;
     const opener = active?.opener;
-    active = null;
+    clear();
+    trail = [];
+    current = null;
+    showBack();
     const dialog = node('brain-source-reader');
     if (dialog.open) dialog.close();
     node('pane-advise').classList.remove('reading');
-    node('brain-source-title').textContent = '';
-    node('brain-source-status').textContent = '';
-    node('brain-source-body').replaceChildren();
     if (restoreFocus && opener?.isConnected) opener.focus();
   }
 
   function begin(label, opener, status = '') {
-    close(false);
+    clear();
     const read = {generation, scope:JSON.stringify(scope()), opener};
     active = read;
     node('brain-source-title').textContent = label;
@@ -41,8 +64,9 @@ window.NmBrainSources = (() => {
     return read;
   }
 
-  // Anything else a link opens - a document's pages as they were read - in the same pane.
-  function showContent(label, content, opener) {
+  // Anything else a link opens - a document as it was read - in the same pane.
+  function showContent(label, content, opener, viaBack = false) {
+    remember({show: (back) => showContent(label, content, opener, back)}, viaBack);
     begin(label, opener);
     node('brain-source-body').replaceChildren(...content);
     node('brain-source-body').scrollTop = 0;
@@ -51,11 +75,21 @@ window.NmBrainSources = (() => {
   function coreInspection(source, inspection) {
     return source?.brain === true && legal(source)
       && inspection?.contract === 'core_source_authority_view_v1'
-      && ['core_turn_v1', 'core_turn_v2', 'core_turn_v3'].includes(inspection.activity_contract)
+      && ['core_turn_v1', 'core_turn_v2', 'core_turn_v3', 'core_turn_v4'].includes(inspection.activity_contract)
       && inspection.source_id === source.id
       && ['recorded', 'not_assessed'].includes(inspection.state)
       && ['case_checks', 'provision_checks', 'provision_mentions']
         .every(key => Array.isArray(inspection[key]));
+  }
+
+  // A check on this source that did not come out clean (17 Oct 2026): said above the
+  // fold, as a disclosure is never folded away; its detail stays in the checks below.
+  function needsAttention(source, inspection) {
+    if (!coreInspection(source, inspection)) return false;
+    return (inspection.case_checks || []).some((check) => ['not_held', 'ambiguous', 'unavailable'].includes(check.lookup)
+        || check.association === 'different_used_identity'
+        || (check.quotes || []).some((quote) => quote.result === 'not_found'))
+      || (inspection.provision_checks || []).some((check) => check.state !== 'matched');
   }
 
   function authorityDetails(source, inspection) {
@@ -128,92 +162,216 @@ window.NmBrainSources = (() => {
     return [section];
   }
 
-  function populate(source, choices = null, inspection = null, responseText = null) {
-    const coreResponse = coreInspection(source, inspection) && words(responseText);
-    const locator = document.createElement('p');
-    locator.className = 'hint'; locator.textContent = source.locator;
-    const qualification = document.createElement('p');
-    qualification.className = 'hint'; qualification.textContent = source.qualification;
-    const details = [...(choices ? [choices] : [])];
-    if (coreResponse) {
-      const response = document.createElement('p');
-      response.className = 'brain-source-excerpt'; response.textContent = `NM response: ${responseText}`;
-      const sourceHeading = document.createElement('p');
-      sourceHeading.className = 'hint'; sourceHeading.textContent = 'Selected source passage';
-      details.push(response, sourceHeading);
-    }
-    details.push(locator, qualification, ...authorityDetails(source, inspection));
-    const roles = {legislative_text:'Legislative text', court_conclusion:'Court conclusion',
-      court_reasoning:'Court reasoning', party_submission:'Party submission',
-      quoted_authority:'Quoted authority', case_background:'Case background', unclear:'Unclear',
-      contract:'Quoted contract terms', original_account:'Original account',
-      opposing_account:'Opposing account', treatment_support:'Passage used to assess court treatment',
-      supplied_document:'Document the advocate sent'};
-    const roleLabel = (statement) => roles[statement?.source_role] || roles[statement?.assertion_role];
-    const treatmentLabel = (statement) => {
-      if (statement?.source_role === 'supplied_document') return '';
-      const treatment = statement?.source_treatment;
-      if (statement?.assertion_role === 'party_submission'
-          && ['adopted', 'rejected', 'qualified'].includes(treatment)) return `Court ${treatment}`;
-      return ({not_shown:'Not shown', 'not shown':'Not shown',
-        not_applicable:'Not applicable', 'not applicable':'Not applicable'})[treatment] || treatment;
+  const ROLES = {legislative_text:'Legislative text', court_conclusion:'Court conclusion',
+    court_reasoning:'Court reasoning', party_submission:'Party submission',
+    quoted_authority:'Quoted authority', case_background:'Case background', unclear:'Unclear',
+    contract:'Quoted contract terms', original_account:'Original account',
+    opposing_account:'Opposing account', treatment_support:'Passage used to assess court treatment',
+    supplied_document:'Document the advocate sent'};
+  const roleLabel = (statement) => ROLES[statement?.source_role] || ROLES[statement?.assertion_role];
+  const treatmentLabel = (statement) => {
+    if (statement?.source_role === 'supplied_document') return '';
+    const treatment = statement?.source_treatment;
+    if (statement?.assertion_role === 'party_submission'
+        && ['adopted', 'rejected', 'qualified'].includes(treatment)) return `Court ${treatment}`;
+    return ({not_shown:'Not shown', 'not shown':'Not shown',
+      not_applicable:'Not applicable', 'not applicable':'Not applicable'})[treatment] || treatment;
+  };
+
+  // Where a passage comes from, in the advocate's words: a document's page, a statute's
+  // section, a judgment's paragraph (the store's part number is not shown).
+  function whereFrom(source) {
+    const kind = source.kind === 'document' ? 'Document you sent'
+      : source.kind === 'judgment' ? 'Held judgment' : source.kind === 'provision' ? 'Held law' : '';
+    const locator = words(source.locator) ? source.locator : '';
+    const paragraph = /^(\d+)(?:_\d+)?$/.exec(locator);
+    return [kind, paragraph ? `paragraph ${paragraph[1]}` : locator].filter(words).join(' · ');
+  }
+
+  // The supporting words with a little of what surrounds them, cut at a sentence or a
+  // line where one is near. None when the words cannot be placed, or are the whole text.
+  function excerptWindow(text, excerpt, reach = 240) {
+    const at = words(excerpt) && words(text) ? text.indexOf(excerpt) : -1;
+    if (at < 0 || (at === 0 && excerpt.length === text.length)) return null;
+    let start = Math.max(0, at - reach);
+    let end = Math.min(text.length, at + excerpt.length + reach);
+    const lead = text.slice(start, at);
+    const cut = Math.max(lead.lastIndexOf('. '), lead.lastIndexOf('\n'));
+    if (start > 0 && cut >= 0) start += cut + 1;
+    const tail = text.slice(at + excerpt.length, end);
+    const stop = tail.search(/[.!?]\s|\n/);
+    if (end < text.length && stop >= 0) end = at + excerpt.length + stop + 1;
+    if (start === 0 && end === text.length) return null;
+    return {lead:`${start > 0 ? '…' : ''}${text.slice(start, at).trimStart()}`, excerpt,
+      tail:`${text.slice(at + excerpt.length, end).trimEnd()}${end < text.length ? '…' : ''}`};
+  }
+
+  // Text into host with the supporting words marked where they stand.
+  function marked(host, text, excerpt) {
+    const at = words(excerpt) ? text.indexOf(excerpt) : -1;
+    if (at < 0) { host.textContent = text; return host; }
+    const mark = document.createElement('mark');
+    mark.textContent = excerpt;
+    host.append(document.createTextNode(text.slice(0, at)), mark,
+      document.createTextNode(text.slice(at + excerpt.length)));
+    return host;
+  }
+
+  // A document as one (owner decision 5, 17 Oct 2026): every page in order, a small mark
+  // where each begins, the cited page's supporting words marked.
+  function documentFlow(document_, number, excerpt) {
+    const make = (tag, className, text) => {
+      const item = document.createElement(tag);
+      item.className = className;
+      if (text !== undefined) item.textContent = text;
+      return item;
     };
+    const entries = [...document_.pages.map((page) => ({number:page.number, page})),
+      ...document_.unread.map((unread) => ({number:unread.number, unread}))]
+      .sort((left, right) => left.number - right.number);
+    const flow = [];
+    for (const entry of entries) {
+      if (entries.length > 1) flow.push(make('div', 'page-mark', `Page ${entry.number}`));
+      if (entry.unread) { flow.push(make('p', 'document-unread', `Not read: ${entry.unread.reason}`)); continue; }
+      const text = make('div', 'document-text');
+      flow.push(entry.number === number ? marked(text, entry.page.text, excerpt) : Object.assign(text,
+        {textContent:entry.page.text}));
+    }
+    return flow;
+  }
+
+  // The whole document a cited page belongs to, from this conversation's saved files.
+  async function wholeDocument(answer, source, read, host, button) {
+    const place = /^(.*):d(\d+)p(\d+)$/.exec(source.id || '');
+    const owns = () => active === read && generation === read.generation;
+    if (!place || !answer.chat_id) { host.hidden = false; button.hidden = true; return; }
+    button.disabled = true;
+    button.textContent = 'Opening the whole document…';
+    try {
+      const listing = await request(`/api/chats/${encodeURIComponent(answer.chat_id)}/documents`);
+      if (!owns()) return;
+      const turn = (listing?.sent || []).find((row) => row.turn_id === place[1]);
+      const document_ = turn && turn.documents[Number(place[2]) - 1];
+      if (!document_) throw new Error('not found');
+      host.replaceChildren(...documentFlow(document_, Number(place[3]), source.verification?.support_excerpt));
+      host.hidden = false;
+      button.hidden = true;
+    } catch {
+      if (!owns()) return;
+      host.hidden = false;
+      button.disabled = true;
+      button.textContent = 'The whole document could not be opened; this page is shown below';
+    }
+  }
+
+  // THE PASSAGE FIRST (owner decisions, 17 Oct 2026): where it is from, what it is, the
+  // supporting words marked in place, the whole passage or document a click away, and
+  // every saved check folded under "How NM checked this".
+  function populate(source, choices = null, inspection = null, responseText = null, answer = null) {
+    const coreResponse = coreInspection(source, inspection) && words(responseText);
+    const make = (tag, className, text) => {
+      const item = document.createElement(tag);
+      if (className) item.className = className;
+      if (text !== undefined) item.textContent = text;
+      return item;
+    };
+    const shown = [make('p', 'source-where', whereFrom(source))];
+    const role = roleLabel(source.verification);
+    const treatment = treatmentLabel(source.verification);
+    if (legal(source) && words(role)) {
+      shown.push(make('p', 'source-role', `${role}${words(treatment) ? ` · ${treatment}` : ''}`));
+    }
+    if (words(source.qualification)) shown.push(make('p', 'hint', source.qualification));
+    if (needsAttention(source, inspection)) {
+      shown.push(make('p', 'source-attention',
+        'One of NM\u2019s checks on this source did not come out clean: see How NM checked this.'));
+    }
+    const excerpt = source.verification?.support_excerpt;
+    const full = marked(make('div', 'brain-source-text'), source.text, excerpt);
+    const view = excerptWindow(source.text, excerpt);
+    if (view) {
+      const window_ = make('div', 'brain-source-window');
+      const mark = make('mark', '', view.excerpt);
+      window_.append(document.createTextNode(view.lead), mark, document.createTextNode(view.tail));
+      const expand = make('button', 'ghost source-expand',
+        source.kind === 'document' ? 'Show the whole document' : 'Show the whole passage');
+      expand.type = 'button';
+      full.hidden = true;
+      const read = active;
+      expand.addEventListener('click', () => {
+        if (source.kind === 'document' && answer) return wholeDocument(answer, source, read, full, expand);
+        full.hidden = !full.hidden;
+        expand.textContent = full.hidden ? 'Show the whole passage' : 'Hide the whole passage';
+      });
+      shown.push(window_, expand);
+    } else if (source.kind === 'document' && answer && /:d\d+p\d+$/.test(source.id || '')) {
+      const expand = make('button', 'ghost source-expand', 'Show the whole document');
+      expand.type = 'button';
+      const read = active;
+      const page = full;
+      const whole = make('div', 'document-flow');
+      whole.hidden = true;
+      expand.addEventListener('click', () => wholeDocument(answer, source, read, whole, expand));
+      shown.push(page, expand, whole);
+    }
+    if (!shown.includes(full)) shown.push(full);
+    if (choices) shown.push(choices);
+    const checks = make('details', 'how-checked');
+    checks.appendChild(make('summary', '', 'How NM checked this'));
+    if (coreResponse) {
+      checks.append(make('p', 'brain-source-excerpt', `NM response: ${responseText}`),
+        make('p', 'hint', 'Selected source passage'));
+    }
+    checks.append(make('p', 'hint', source.locator), ...authorityDetails(source, inspection));
     if (source.provenance_status === 'not_recorded') {
-      const missing = document.createElement('p');
-      missing.className = 'hint';
-      missing.textContent = 'Statement-role labels were not recorded for this saved response.';
-      details.push(missing);
+      checks.appendChild(make('p', 'hint', 'Statement-role labels were not recorded for this saved response.'));
     }
     for (const [label, text] of [
       ...(coreResponse ? [] : [['Statement used', source.verification?.assertion_statement]]),
-      [coreResponse ? 'Source passage role' : 'Statement role', roleLabel(source.verification)],
+      [coreResponse ? 'Source passage role' : 'Statement role', role],
       ['Support check', source.verification?.reason],
       [coreResponse ? 'Supporting source words' : 'Supporting words', source.verification?.support_excerpt],
       ['Limiting condition', source.verification?.scope_excerpt],
       ['Who states the proposition', source.verification?.owner_label],
       ['Attribution words', source.verification?.owner_excerpt],
-      ['Treatment in the source', treatmentLabel(source.verification)],
+      ['Treatment in the source', treatment],
       ['Treatment words', source.verification?.treatment_excerpt],
     ]) {
       // A document page has no court treatment, and its author is whoever it shows.
       if (!text || (source.kind === 'document' && [
         'Who states the proposition', 'Treatment in the source', 'Treatment words'].includes(label))) continue;
-      const detail = document.createElement('p');
-      detail.className = 'brain-source-excerpt'; detail.textContent = `${label}: ${text}`;
-      details.push(detail);
+      checks.appendChild(make('p', 'brain-source-excerpt', `${label}: ${text}`));
     }
     for (const statement of source.verification?.context_statements || []) {
-      const role = roleLabel(statement) || 'Related statement';
-      const treatment = treatmentLabel(statement);
+      const related = roleLabel(statement) || 'Related statement';
+      const handled = treatmentLabel(statement);
       for (const [label, text] of [
         ...(coreResponse
           ? [['Related source passage', [statement.title, statement.locator].filter(words).join(' · ')],
-             ['Related source role', `${role}${treatment ? ` · ${treatment}` : ''}`]]
-          : [['Related statement', `${role}${treatment ? ` · ${treatment}` : ''}: ${statement.assertion_statement}`]]),
+             ['Related source role', `${related}${handled ? ` · ${handled}` : ''}`]]
+          : [['Related statement', `${related}${handled ? ` · ${handled}` : ''}: ${statement.assertion_statement}`]]),
         ['Speaker', statement.owner_label === 'document' ? '' : statement.owner_label],
         [coreResponse ? 'Related source words' : 'Statement words', statement.support_excerpt],
         ['Attribution words', statement.owner_excerpt], ['Treatment words', statement.treatment_excerpt],
       ]) {
         if (!text) continue;
-        const detail = document.createElement('p');
-        detail.className = 'brain-source-excerpt'; detail.textContent = `${label}: ${text}`;
-        details.push(detail);
+        checks.appendChild(make('p', 'brain-source-excerpt', `${label}: ${text}`));
       }
     }
-    const passage = document.createElement('div');
-    passage.className = 'brain-source-text'; passage.textContent = source.text;
-    node('brain-source-body').replaceChildren(...details, passage);
+    shown.push(checks);
+    node('brain-source-body').replaceChildren(...shown);
     node('brain-source-body').scrollTop = 0;
     node('brain-source-status').textContent = '';
   }
 
-  async function open(answer, element, elementIndex, sourceIndex, opener) {
+  async function open(answer, element, elementIndex, sourceIndex, opener, viaBack = false) {
     const sources = Array.isArray(element.sources) ? element.sources : [element.source];
     const source = sources[sourceIndex];
     if (!source?.brain || !answer.turn_id || (!answer.matter_id && !answer.chat_id)) return;
     const owner = answer.matter_id
       ? `matters/${encodeURIComponent(answer.matter_id)}`
       : `chats/${encodeURIComponent(answer.chat_id)}`;
+    remember({show: (back) => open(answer, element, elementIndex, sourceIndex, opener, back)}, viaBack);
     const read = begin(source.label, opener, 'Reading the saved passage…');
     const owns = () => active === read && generation === read.generation
       && JSON.stringify(scope()) === read.scope;
@@ -230,7 +388,7 @@ window.NmBrainSources = (() => {
         + (saved.verification_current === false
           ? ' This historical check predates the current source review.' : '')},
         sourceChoices(answer, element, elementIndex, sourceIndex, opener, owns),
-        saved.authority_inspection, element.text);
+        saved.authority_inspection, element.text, answer);
     } catch (error) {
       if (owns()) node('brain-source-status').textContent =
         `The saved passage could not be read. ${error.message}`;
@@ -412,8 +570,9 @@ window.NmBrainSources = (() => {
       && (checked.scope_status === 'no_special_condition') === !checked.scope_excerpt);
   }
 
-  function openRecordSource(source, opener, {reviewPending = true} = {}) {
+  function openRecordSource(source, opener, {reviewPending = true} = {}, viaBack = false) {
     if (!isReadableRecordSource(source)) return false;
+    remember({show: (back) => openRecordSource(source, opener, {reviewPending}, back)}, viaBack);
     begin(source.title, opener);
     populate({...source, qualification:
       "Saved with this dispute's legal requirements. Support was checked for that item; "
@@ -423,6 +582,10 @@ window.NmBrainSources = (() => {
   }
 
   node('brain-source-close').addEventListener('click', () => close());
+  node('brain-source-back')?.addEventListener('click', () => {
+    const previous = trail.pop();
+    if (previous) previous.show(true);
+  });
   node('brain-source-reader').addEventListener('cancel', (event) => {
     event.preventDefault(); close();
   });
