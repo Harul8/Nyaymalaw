@@ -37,7 +37,8 @@ def test_v1_replay_and_v2_authority_review_render_identical_unchanged_source_row
     assert response_rendering.DOCUMENT_PAGES_CONTRACT == "core_response_rendering_v7"
     assert response_rendering.WORKING_CONTRACT == "core_response_rendering_v8"
     assert response_rendering.AS_OF_CONTRACT == "core_response_rendering_v9"
-    assert response_rendering.CONTRACT == "core_response_rendering_v10"
+    assert response_rendering.HELD_CONTRACT == "core_response_rendering_v10"
+    assert response_rendering.CONTRACT == "core_response_rendering_v11"
     assert old == stored == new, "names needing no change render identically in v1-v3"
     assert (legacy, fresh, authorities) == before
     assert all("authority_evidence" not in source for e in new for source in e["sources"])

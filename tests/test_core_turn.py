@@ -69,7 +69,8 @@ class ScriptedModel:
                 treatment = next(s for s in data["held_passages"]["passages"] if "Court rejected" in s["text"])
                 uses = [{"source_id": source["id"], "source_kind": "judgment",
                     "role": "party_submission", "speaker": "Counsel",
-                    "court_treatment": {"status": "rejected", "source": {"source_id": treatment["id"]}}}]
+                    "court_treatment": {"status": "rejected", "source": {"source_id": treatment["id"]}},
+                    "words": "counsel's submission"}]
                 text = "The court rejected counsel's submission because its condition was unmet."
             out = {"units": [{"kind": "law" if uses else "greeting", "text": text,
                               "addresses": [{"source_id": latest["source_id"]}], "uses": uses}]}
@@ -196,7 +197,7 @@ def test_a_turn_saved_under_an_earlier_rendering_reopens_unchanged_beside_a_curr
     assert second["committed"] == "committed"
     rows = saved_rows(store.load(chat_matter_id("owner", first["chat_id"])), "owner")
     assert [row["activities"]["rendering_contract"] for row in rows] == [
-        saved, "core_response_rendering_v10"]
+        saved, "core_response_rendering_v11"]
     assert rows[0]["response"]["elements"] == elements
     if saved not in ("core_response_rendering_v4", "core_response_rendering_v5", "core_response_rendering_v6",
                      "core_response_rendering_v7"):

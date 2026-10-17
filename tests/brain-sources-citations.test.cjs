@@ -21,6 +21,8 @@ function load() {
     getElementById: (id) => (nodes[id] ||= element('div')),
     createElement: (tag) => element(tag),
     createTextNode: (text) => ({text: true, textContent: text}),
+    // The reading pane listens for Escape on the page (since 16 Oct 2026).
+    addEventListener() {},
   };
   const window = {addEventListener() {}};
   const code = fs.readFileSync(path.join(__dirname, '..', 'nm', 'app', 'brain-sources.js'), 'utf8');
@@ -42,20 +44,44 @@ function rendered(el) {
     : [c.className, c.textContent])};
 }
 
-test('v4 links sit at saved offsets and unnamed sources follow as markers', () => {
+// An earlier answer (rendering v4 to v10) keeps its markers, folded under one "Sources"
+// control after the paragraph (owner decision 6, 17 Oct 2026).
+function folded(host) {
+  const toggle = host.children.find((c) => c.className === 'citation-link citation-sources');
+  const fold = host.children.find((c) => c.className === 'citation-fold');
+  return {toggle, fold, chips: fold ? fold.children.filter((c) => !c.text).map((c) => [c.className, c.textContent]) : []};
+}
+
+test('v4 links sit at saved offsets and unnamed sources fold under one Sources control', () => {
   const text = 'Under section 1 the deposit is refundable. Section 1 also applies.';
   const el = {text, sources: [source(1), source(2)], refs: ['s.1', 's.2'],
     inline_citations: [{text: 'Section 1', source_id: 'provision:1', source_index: 0, start: 43, end: 52}],
     citation_markers: [{source_id: 'provision:2', source_index: 1}]};
-  const {count, parts} = rendered(el);
-  assert.equal(count, 2);
-  assert.deepEqual(parts, [
+  const host = element('p');
+  const sources = load();
+  const answer = answerFor(el);
+  assert.equal(sources.appendBody(host, answer, el), 2);
+  assert.deepEqual(host.children.map((c) => c.text ? ['text', c.textContent] : [c.className, c.textContent]), [
     ['text', 'Under section 1 the deposit is refundable. '],
     ['citation-link', 'Section 1'],
     ['text', ' also applies.'],
     ['text', ' '],
-    ['citation-link citation-marker', 'Act 2 · s.2'],
+    ['citation-link citation-sources', 'Sources (1)'],
+    ['text', ' '],
+    ['citation-fold', ''],
   ]);
+  const {toggle, fold, chips} = folded(host);
+  assert.deepEqual(chips, [['citation-link citation-marker', 'Act 2 · s.2']]);
+  assert.equal(fold.hidden, true);
+  assert.equal(toggle.attributes['aria-expanded'], 'false');
+  toggle.listeners.click();
+  assert.equal(fold.hidden, false);
+  assert.equal(toggle.attributes['aria-expanded'], 'true');
+  // The thread is redrawn while a later answer is prepared: an opened fold stays open.
+  const redrawn = element('p');
+  sources.appendBody(redrawn, answer, el);
+  assert.equal(folded(redrawn).fold.hidden, false);
+  assert.equal(folded(redrawn).toggle.attributes['aria-expanded'], 'true');
 });
 
 test('an offset that does not hold the saved words links nothing', () => {
@@ -79,7 +105,14 @@ test('a marker for a source the answer does not bind is not drawn', () => {
   const el = {text: 'Plain words.', sources: [source(1), foreign], refs: ['s.1', 's.2'],
     inline_citations: [], citation_markers: [{source_id: 'provision:2', source_index: 1},
       {source_id: 'provision:1', source_index: 0}]};
-  const {count, parts} = rendered(el);
-  assert.equal(count, 1);
-  assert.deepEqual(parts.slice(-1), [['citation-link citation-marker', 'Act 1 · s.1']]);
+  const host = element('p');
+  assert.equal(load().appendBody(host, answerFor(el), el), 1);
+  const {toggle, chips} = folded(host);
+  assert.equal(toggle.textContent, 'Sources (1)');
+  assert.deepEqual(chips, [['citation-link citation-marker', 'Act 1 · s.1']]);
+  // With no marker it may draw, there is no Sources control at all.
+  const none = {...el, citation_markers: [{source_id: 'provision:2', source_index: 1}]};
+  const bare = element('p');
+  assert.equal(load().appendBody(bare, answerFor(none), none), 0);
+  assert.deepEqual(folded(bare), {toggle: undefined, fold: undefined, chips: []});
 });

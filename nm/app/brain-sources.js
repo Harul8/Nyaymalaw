@@ -468,22 +468,47 @@ window.NmBrainSources = (() => {
     return link;
   }
 
-  // Rendering v4: each used source the paragraph does not name follows it as
-  // a small marker that opens the same saved passage.
+  // Rendering v4 to v10: each used source the paragraph does not name follows it as a
+  // marker that opens the same saved passage. From 17 Oct 2026 (owner decision 6) an
+  // earlier answer keeps its markers folded under one "Sources" control; from v11 a
+  // source sits on the words it supports and no marker follows. An opened fold stays
+  // open across the thread's redraws; the saved paragraph itself is the key.
+  const openSources = new WeakSet();
   function appendMarkers(host, answer, element, sources) {
     if (!Array.isArray(element.citation_markers)) return 0;
-    let count = 0;
+    const chips = [];
     for (const marker of element.citation_markers) {
       const index = marker?.source_index;
       const source = Number.isInteger(index) ? sources[index] : null;
       if (!cited(source) || source.id !== marker?.source_id || !bound(answer, element, source)) continue;
-      host.appendChild(document.createTextNode(' '));
       const chip = responseLink(answer, element, {source, index}, labelFor(source));
       chip.className = 'citation-link citation-marker';
-      host.appendChild(chip);
-      count += 1;
+      chips.push(chip);
     }
-    return count;
+    if (!chips.length) return 0;
+    const fold = document.createElement('span');
+    fold.className = 'citation-fold';
+    fold.hidden = !openSources.has(element);
+    for (const [offset, chip] of chips.entries()) {
+      if (offset) fold.appendChild(document.createTextNode(' '));
+      fold.appendChild(chip);
+    }
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'citation-link citation-sources';
+    toggle.textContent = `Sources (${chips.length})`;
+    toggle.setAttribute('aria-expanded', String(!fold.hidden));
+    toggle.addEventListener('click', () => {
+      fold.hidden = !fold.hidden;
+      if (fold.hidden) openSources.delete(element);
+      else openSources.add(element);
+      toggle.setAttribute('aria-expanded', String(!fold.hidden));
+    });
+    host.appendChild(document.createTextNode(' '));
+    host.appendChild(toggle);
+    host.appendChild(document.createTextNode(' '));
+    host.appendChild(fold);
+    return chips.length;
   }
 
   function appendBody(host, answer, element) {

@@ -5,7 +5,7 @@ import json
 import pytest
 
 from nm.core_engine.answer_sources import build
-from nm.core_engine.response_writer import CONTRACT, LEGACY_CONTRACT, MAX_OUTPUT, SCHEMA, accept, validate, write
+from nm.core_engine.response_writer import CONTRACT, LEGACY_CONTRACT, MAX_OUTPUT, SCHEMA_V5, accept, validate, write
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import (
     ContextOverflow, ModelError, ModelResult, SchemaViolation, Tier, Usage,
@@ -37,14 +37,31 @@ def source_use_v2(source, **changes):
     return result
 
 
+def worded(uses, text):
+    """Writer v5 (17 Oct 2026): each use names the words of its unit that it supports;
+    a fixture's use supports its whole unit unless it says otherwise. In place, so a test
+    may still change a use after building its unit."""
+    for use in uses:
+        use.setdefault("words", text)
+    return uses
+
+
+def unworded(uses):
+    """An earlier writer version's uses, which name no words; in place."""
+    for use in uses:
+        use.pop("words", None)
+    return uses
+
+
 def unit(sources, *, kind="question", text="Which part would you like clarified?", uses=None):
     return {"kind": kind, "text": text, "addresses": [reference(sources["t2:advocate"])],
-            "uses": uses or []}
+            "uses": worded(uses or [], text)}
 
 
 def unit_v1(sources, **kwargs):
     result = unit(sources, **kwargs)
     result["addresses"] = [reference_v1(sources["t2:advocate"])]
+    unworded(result["uses"])
     return result
 
 
@@ -95,7 +112,7 @@ def test_complete_context_and_all_neighbouring_legal_words_reach_one_writer_call
     assert [q["work_id"] for q in payload["research"]["questions"]] == [w["id"] for w in record["plan"]["work"]]
     assert payload["this_part"] == {"part": 1, "of": 1, "opens_the_answer": True,
                                     "dispute": understood["disputes"][0], "other_parts": []}
-    assert tier is Tier.HARD and kwargs == {"max_tokens": MAX_OUTPUT} and schema == SCHEMA
+    assert tier is Tier.HARD and kwargs == {"max_tokens": MAX_OUTPUT} and schema == SCHEMA_V5
     assert prompt.operation == "core_response_writer"
     assert draft["contract"] == CONTRACT and draft["proposal"] == proposed
     assert draft["parts"] == [{"dispute_id": understood["disputes"][0]["id"], "units": 1}]
@@ -145,7 +162,11 @@ def test_whole_source_ids_resolve_full_attributed_accounts_without_recopied_word
     assert accepted["uses"][0]["start"] == 0
     assert accepted["uses"][0]["end"] == len(history[0]["text"])
     assert draft["proposal"]["units"][0]["uses"][0] == {
-        "source_id": "t1:advocate", "source_kind": "account"}
+        "source_id": "t1:advocate", "source_kind": "account",
+        "words": "The earlier account contains two affirmations."}
+    # Writer v5 (17 Oct 2026): the words become the link, placed where they stand.
+    assert accepted["uses"][0]["words"] == {"text": "The earlier account contains two affirmations.",
+                                            "start": 0, "end": len("The earlier account contains two affirmations.")}
     assert validate(draft, ctx, sources) == draft
 
 

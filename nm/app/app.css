@@ -336,6 +336,23 @@ button.board-card:focus-visible { outline: 2px solid var(--accent); outline-offs
 .file-attention { font-size: 0.8rem; color: var(--amber); }
 .file-read { justify-self: start; min-height: 2.75rem; padding: 0 0.2rem; color: var(--accent); }
 .file-original { display: inline-block; margin-bottom: 0.4rem; color: var(--accent); }
+/* "In short" and the time limits (owner decisions, 17 Oct 2026). */
+.in-short { border: 1px solid var(--rule); border-radius: 10px; background: var(--board); padding: 0.75rem 1rem;
+  margin: 0.75rem 0; display: grid; gap: 0.4rem; }
+.in-short-title { margin: 0; font-family: var(--f-serif); font-size: 1rem; font-weight: 600; }
+.in-short .el { margin: 0; }
+.time-limits { margin: 0.75rem 0; }
+.time-limit-scroll { overflow-x: auto; border: 1px solid var(--rule); border-radius: 10px; }
+.time-limit-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+.time-limit-table th, .time-limit-table td { text-align: left; vertical-align: top; padding: 0.45rem 0.6rem;
+  border-bottom: 1px solid var(--rule); }
+.time-limit-table th { font-family: var(--f-mono); font-size: 0.66rem; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--ink-3); font-weight: 500; }
+.time-limit-day { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.time-limit-toggle { text-align: left; padding: 0; min-height: 2.75rem; color: var(--accent); }
+.time-limit-detail td { background: var(--board); }
+.time-limit-note { margin: 0.4rem 0 0; font-size: 0.8rem; color: var(--ink-3); }
+.citation-sources { font-size: 0.8rem; }
 /* The reading pane, passage first (owner decisions, 17 Oct 2026). */
 .source-where { margin: 0; font-size: 0.82rem; color: var(--ink-3); }
 .source-role { margin: 0; justify-self: start; display: inline-block; font-size: 0.78rem; font-weight: 600;

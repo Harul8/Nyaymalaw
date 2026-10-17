@@ -56,7 +56,8 @@ class DocumentModel(ScriptedModel):
             assert data["source_kinds"][page["source_id"]] == "document"
             result.data["units"] = [{"kind": "account", "text": "memo.pdf page 1 records the return unpaid.",
                                      "addresses": [{"source_id": data["original_context"]["latest"]["source_id"]}],
-                                     "uses": [{"source_kind": "document", "source_id": page["source_id"]}]}]
+                                     "uses": [{"source_kind": "document", "source_id": page["source_id"],
+                                               "words": "records the return unpaid"}]}]
         return result
 
 
@@ -82,7 +83,9 @@ def test_every_stage_sees_the_pages_and_the_answer_cites_one(store):
     assert (source["kind"], source["title"], source["locator"], source["text"]) == (
         "document", "memo.pdf", "page 1", MEMO)
     assert source["qualification"] == "Document the advocate sent."
-    assert element["inline_citations"][0]["text"] == "memo.pdf page 1"
+    # From v11 the page is linked at the words the answer says it supports (17 Oct 2026).
+    anchor, = element["inline_citations"]
+    assert (anchor["text"], element["citation_markers"]) == ("records the return unpaid", [])
 
 
 def test_the_saved_turn_keeps_the_exact_pages_and_reopens_and_replays_unchanged(store):

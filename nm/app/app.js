@@ -2678,7 +2678,7 @@ function renderTurn(entry) {
     if (same >= 0) rows[same].said += 1;
     else rows.push({ el, said: 1 });
   }
-  renderParts(wrap, rows.map((row) => row.el), entry, renderElement);
+  renderParts(wrap, groupAnswerElements(rows.map((row) => row.el)), entry, renderElement);
   for (const paragraph of composed) renderParagraph(wrap, paragraph);
 
   // The step and the saved passage a composed paragraph points at, by index.
@@ -2727,6 +2727,24 @@ function renderTurn(entry) {
   function renderElement(into, el) {
     if (el.kind === 'WORKING' && el.working) {
       into.appendChild(renderWorking(el));
+      return;
+    }
+    // "IN SHORT" (owner decisions, 17 Oct 2026): each dispute's summary, together, before
+    // the disputes themselves; each keeps its own links.
+    if (el.kind === 'IN_SHORT') {
+      const box = document.createElement('section');
+      box.className = 'in-short';
+      box.setAttribute('aria-label', 'In short');
+      const title = document.createElement('h3');
+      title.className = 'in-short-title';
+      title.textContent = 'In short';
+      box.appendChild(title);
+      for (const item of el.items) renderElement(box, item);
+      into.appendChild(box);
+      return;
+    }
+    if (el.kind === 'TIME_LIMITS') {
+      into.appendChild(renderTimeLimits(el.items));
       return;
     }
     const d = document.createElement('div');
@@ -3355,6 +3373,90 @@ function renderWorking(el) {
     for (const item of items) list.appendChild(make('li', '', item));
     box.appendChild(list);
   }
+  return box;
+}
+
+// IN SHORT AND THE TIME LIMITS (owner decisions, 17 Oct 2026): each run of dispute
+// summaries reads as one "In short" box, and each run of code's time-limit boxes as one
+// small table. Nothing is dropped or reordered; runs are only gathered.
+function groupAnswerElements(elements) {
+  const out = [];
+  for (const el of elements) {
+    const kind = el.kind === 'SUMMARY' ? 'IN_SHORT' : (el.kind === 'WORKING' && el.working ? 'TIME_LIMITS' : null);
+    const last = out[out.length - 1];
+    if (kind && last && last.kind === kind) last.items.push(el);
+    else if (kind) out.push({ kind, items: [el] });
+    else out.push(el);
+  }
+  return out;
+}
+
+// THE TIME LIMITS AS ONE SMALL TABLE (owner decisions, 17 Oct 2026): what, the last day and
+// where it stands, from the rows the server saved (the day count is as of the date it was
+// worked out, which is said); each row opens its full working beneath it, and a caveat the
+// server attaches to the counting is said once under the table, never folded away.
+const TIME_LIMIT_CAVEATS = ['Court closed on the last day'];
+// A row's working stays open across the thread's redraws (every two seconds while a later
+// answer is prepared); the saved element itself is the key.
+const OPEN_TIME_LIMITS = new WeakSet();
+
+function timeLimitStanding(rows) {
+  if (rows.has('Not assessed')) return `Not assessed: ${rows.get('Not assessed')}`;
+  const days = [...rows.keys()].find((label) => /^Days /.test(label));
+  const count = days ? `${rows.get(days)} ${rows.get(days) === '1' ? 'day' : 'days'} ${days.slice(5)}` : '';
+  return [rows.get('Result'), count, rows.get('As of') ? `as of ${rows.get('As of')}` : '']
+    .filter(Boolean).join(' · ');
+}
+
+function renderTimeLimits(items) {
+  const make = (tag, className, text) => {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  };
+  const box = make('section', 'el time-limits');
+  box.setAttribute('aria-label', 'Time limits');
+  box.appendChild(make('p', 'working-label', 'Time limits'));
+  const table = make('table', 'time-limit-table');
+  const head = make('tr');
+  for (const label of ['Time limit', 'Last day', 'Where it stands']) head.appendChild(make('th', '', label));
+  const thead = make('thead');
+  thead.appendChild(head);
+  const body = make('tbody');
+  const caveats = [];
+  for (const el of items) {
+    const rows = new Map(el.working.rows || []);
+    for (const label of TIME_LIMIT_CAVEATS) {
+      if (rows.has(label) && !caveats.includes(rows.get(label))) caveats.push(rows.get(label));
+    }
+    const row = make('tr');
+    const what = make('td', 'time-limit-what');
+    const toggle = make('button', 'ghost time-limit-toggle', el.working.what);
+    toggle.type = 'button';
+    what.appendChild(toggle);
+    row.append(what, make('td', 'time-limit-day', rows.get('Last day') || '—'),
+      make('td', 'time-limit-standing', timeLimitStanding(rows)));
+    const detail = make('tr', 'time-limit-detail');
+    detail.hidden = !OPEN_TIME_LIMITS.has(el);
+    toggle.setAttribute('aria-expanded', String(!detail.hidden));
+    const cell = make('td');
+    cell.colSpan = 3;
+    cell.appendChild(renderWorking(el));
+    detail.appendChild(cell);
+    toggle.addEventListener('click', () => {
+      detail.hidden = !detail.hidden;
+      if (detail.hidden) OPEN_TIME_LIMITS.delete(el);
+      else OPEN_TIME_LIMITS.add(el);
+      toggle.setAttribute('aria-expanded', String(!detail.hidden));
+    });
+    body.append(row, detail);
+  }
+  table.append(thead, body);
+  const scroll = make('div', 'time-limit-scroll');
+  scroll.appendChild(table);
+  box.appendChild(scroll);
+  for (const caveat of caveats) box.appendChild(make('p', 'time-limit-note', caveat));
   return box;
 }
 

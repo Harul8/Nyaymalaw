@@ -88,6 +88,8 @@ extend time), and does not present a limit that was not assessed as worked out.
 Counting is code's: the reply gives no last day or counted date of its own. Which
 provision and which of its alternatives governs, and from which dated event time runs,
 is legal analysis like any other: check it against the held provision and the facts.
+Where a unit's source names the words of the unit it supports, those words become the
+advocate's link to it: check that the source supports them.
 Examine the authority checks for each unit against its actual legal use. A direct case
 citation must agree with the case relied on. A selected judgment may instead mention
 another authority: determine from the passage who cited it and whether the draft reports
@@ -325,7 +327,8 @@ def _draft_presentation(draft, sources, *, aliased=False):
     return {"contract": draft["contract"], **layout, "units": [{
         "id": units.get(unit["id"], unit["id"]), "kind": unit["kind"], "text": unit["text"],
         "addresses": [reference(selected) for selected in unit["addresses"]],
-        "uses": [{**reference(use), "role": use["role"], "speaker": use["speaker"],
+        "uses": [{**reference(use), **({"words": use["words"]["text"]} if "words" in use else {}),
+                  "role": use["role"], "speaker": use["speaker"],
                   "treatment": use["treatment"], "treatment_source": (
                       reference(use["treatment_source"]) if use["treatment_source"] is not None else None)}
                  for use in unit["uses"]]} for unit in draft["units"]]}

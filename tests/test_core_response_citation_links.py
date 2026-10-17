@@ -16,7 +16,11 @@ def rendered(text=None):
     review = response_review.review(Model(legacy_review["proposal"]), ctx, record,
         sources, draft, execution=execution, authority_evidence=authorities)
     fresh = (ctx, record, sources, draft, review, execution)
-    return (response_rendering.render(*fresh, authority_evidence=authorities)[0],
+    # Unnamed sources follow the paragraph as markers from v4 to v10, the versions a saved
+    # answer is still replayed in; from v11 each source sits on its own words instead
+    # (tests/test_core_linked_words.py).
+    return (response_rendering.render(*fresh, authority_evidence=authorities,
+                                      contract=response_rendering.HELD_CONTRACT)[0],
             response_rendering.render(*fresh, authority_evidence=authorities,
                                       contract=response_rendering.SHOWN_NAME_CONTRACT)[0])
 

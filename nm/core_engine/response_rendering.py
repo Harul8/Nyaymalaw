@@ -35,8 +35,13 @@ AS_OF_CONTRACT = "core_response_rendering_v9"
 #: gate G-SECTION): what the review or the date check still found after the rewrites is
 #: confined to sections, so those are left out and code says so in their place. Each
 #: paragraph shown names its own draft paragraph.
-CONTRACT = "core_response_rendering_v10"
-_AS_OF = (AS_OF_CONTRACT, CONTRACT)
+HELD_CONTRACT = "core_response_rendering_v10"
+#: v10 with each source linked at the words its use names and no markers after a
+#: paragraph, and each dispute's summary opening the answer under "In short" (owner
+#: decisions, 17 Oct 2026; writer v5).
+CONTRACT = "core_response_rendering_v11"
+_HOLDS = (HELD_CONTRACT, CONTRACT)
+_AS_OF = (AS_OF_CONTRACT, *_HOLDS)
 _WORKING = (WORKING_CONTRACT, *_AS_OF)
 _CITED = (CITED_WORDS_CONTRACT, HEADINGS_CONTRACT, SHORT_NAME_CONTRACT, DOCUMENT_PAGES_CONTRACT, *_WORKING)
 _LEGAL = {"provision", "judgment"}
@@ -186,6 +191,24 @@ def _short_names(source):
     """v6: the shorter names an advocate writes for a used judgment (one owner:
     nm/shared/citation_contracts.py)."""
     return case_short_names(source["title"]) if source["kind"] == "judgment" else set()
+
+
+def _worded(unit, sources):
+    """v11 (owner decisions, 17 Oct 2026): each shown source is linked at the words of the
+    paragraph its use names, where they stand; no marker follows the paragraph. Where two
+    sources name overlapping words the first keeps the link, and the reading pane opened
+    from it offers the others."""
+    index = {source["id"]: number for number, source in enumerate(sources)}
+    candidates = sorted((use["words"]["start"], use["words"]["end"], index[use["source_id"]])
+                        for use in unit["uses"] if use.get("words") and use["source_id"] in index)
+    chosen, linked = [], set()
+    for start, end, number in candidates:
+        if number in linked or any(start < prior[1] and end > prior[0] for prior in chosen):
+            continue
+        chosen.append((start, end, number))
+        linked.add(number)
+    return [{"text": unit["text"][start:end], "source_id": sources[number]["id"], "source_index": number,
+             "start": start, "end": end} for start, end, number in chosen], []
 
 
 def _cited_words(text, sources, authority, *, short=False):
@@ -498,8 +521,12 @@ def render(context, research_record, sources, draft, review, execution=None, *,
         checked_review = response_review.validate(review, context, research_record,
             sources, checked_draft, execution=execution, authority_evidence=checked_authorities,
             time_limits=calculation.for_answer(time_limits) if time_limits is not None else None)
-    if held is not None and contract != CONTRACT:
-        raise ValueError("Only a v10 rendering may hold sections back")
+    if contract == CONTRACT and checked_draft["contract"] != response_writer.CONTRACT:
+        # Otherwise every source would be shown unlinked, with nothing to say so.
+        raise ValueError("A v11 rendering links each source at the words its use names, "
+                         "which only a writer v5 draft gives")
+    if held is not None and contract not in _HOLDS:
+        raise ValueError("Only a v10 or later rendering may hold sections back")
     held_parts, date_findings = _release(checked_draft, checked_review, held)
     if not checked_review["accepted"] and not held_parts:
         raise ValueError("A response without accepted independent review cannot be rendered")
@@ -522,37 +549,58 @@ def render(context, research_record, sources, draft, review, execution=None, *,
             f"{len(checked_draft['parts'])} sections {'are' if many else 'is'} held back below, because the "
             f"independent check still found a problem in {'them' if many else 'it'} after the rewrites NM may "
             "make. The sections shown were checked by the independent review."))
-    for position, unit in enumerate(checked_draft["units"]):
-        if position in headings:
-            elements.append({"kind": "HEADING", "text": headings[position], "source": None, "sources": [],
-                             "refs": [], "inline_citations": [], "citation_markers": []})
-        if position in held_at:
-            elements.append(_held_notice(held_at[position], names[held_at[position]], checked_draft,
-                                         findings, date_findings))
-        if position in held_units:
-            continue
+    def paragraph(position, unit):
         legal_sources = _sources(unit, sources, shown_names=contract in {SHOWN_NAME_CONTRACT, *_CITED},
                                  documents=contract in (DOCUMENT_PAGES_CONTRACT, *_WORKING))
         element = {"kind": unit["kind"].upper(), "text": unit["text"],
             "source": deepcopy(legal_sources[0]) if legal_sources else None,
             "sources": legal_sources,
             "refs": list(dict.fromkeys(source["locator"] for source in legal_sources))}
-        if contract in _CITED:
+        if contract == CONTRACT:
+            element["inline_citations"], element["citation_markers"] = _worded(unit, legal_sources)
+        elif contract in _CITED:
             element["inline_citations"], element["citation_markers"] = _cited_words(
                 unit["text"], legal_sources, authorities[unit["id"]],
                 short=contract in (SHORT_NAME_CONTRACT, DOCUMENT_PAGES_CONTRACT, *_WORKING))
         else:
             element["inline_citations"] = _anchors(unit["text"], legal_sources)
-        if contract == CONTRACT:
+        if contract in _HOLDS:
             element["unit"] = position
-        elements.append(element)
+        return element
+
+    # v11: each dispute's summary, in order, under "In short": after the answer's opening
+    # and before the first dispute's part. A reply with no dispute part keeps any summary
+    # where it was written.
+    lift_at, start = None, 0
+    for part in checked_draft.get("parts") or []:
+        if part["dispute_id"] is not None:
+            lift_at = start
+            break
+        start += part["units"]
+    lifted = [position for position, unit in enumerate(checked_draft["units"])
+              if contract == CONTRACT and lift_at is not None and unit["kind"] == "summary"
+              and position not in held_units]
+    for position, unit in enumerate(checked_draft["units"]):
+        if position == lift_at:
+            elements.extend(paragraph(lifted_at, checked_draft["units"][lifted_at]) for lifted_at in lifted)
+        if position in headings:
+            elements.append({"kind": "HEADING", "text": headings[position], "source": None, "sources": [],
+                             "refs": [], "inline_citations": [], "citation_markers": []})
+        if position in held_at:
+            elements.append(_held_notice(held_at[position], names[held_at[position]], checked_draft,
+                                         findings, date_findings))
+        if position in held_units or position in lifted:
+            continue
+        elements.append(paragraph(position, unit))
     if held_parts:
         many = len(held_parts) > 1
         elements.append(_notice("NOTICE", f"Shall I try the held-back {'sections' if many else 'section'} again, "
             f"or continue without {'them' if many else 'it'}? If {'they' if many else 'it'} may need a fact, a "
             "document or a narrower question, tell me and I will use it."))
     if contract in _WORKING and time_limits is not None:
-        # The Working boxes follow the answer's opening paragraph.
-        first = next((i for i, element in enumerate(elements) if element["kind"] not in NOT_PARAGRAPHS), 0)
+        # The Working boxes follow the answer's opening paragraph; from v11, "In short".
+        summaries = [i for i, element in enumerate(elements) if element["kind"] == "SUMMARY"]
+        first = summaries[-1] if contract == CONTRACT and summaries else next(
+            (i for i, element in enumerate(elements) if element["kind"] not in NOT_PARAGRAPHS), 0)
         elements[first + 1:first + 1] = _working(time_limits, as_of=contract in _AS_OF)
     return elements

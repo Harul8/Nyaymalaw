@@ -26,8 +26,13 @@ OWNED_TAG_CONTRACT = "core_response_writer_v2"
 #: v2 with legal passages offered and selected by short aliases (11 Oct 2026).
 ALIAS_CONTRACT = "core_response_writer_v3"
 #: v4 (owner decision, 15 Oct 2026): written in parts, one per dispute, in parallel.
-CONTRACT = "core_response_writer_v4"
-CONTRACTS = (LEGACY_CONTRACT, OWNED_TAG_CONTRACT, ALIAS_CONTRACT, CONTRACT)
+PARTS_CONTRACT = "core_response_writer_v4"
+#: v5 (owner decisions, 17 Oct 2026): each source names the words of its unit that it
+#: supports, which become the advocate's link to it; each dispute's part opens with a
+#: summary, which opens the answer under "In short".
+CONTRACT = "core_response_writer_v5"
+CONTRACTS = (LEGACY_CONTRACT, OWNED_TAG_CONTRACT, ALIAS_CONTRACT, PARTS_CONTRACT, CONTRACT)
+_IN_PARTS = (PARTS_CONTRACT, CONTRACT)
 #: Each part's answer limit; reasoning counts towards it.
 MAX_OUTPUT = 16000
 SYSTEM = """Message: You receive the exact latest advocate message, complete attributed
@@ -50,7 +55,10 @@ what this research could not establish, and give practical next steps. This is a
 unadmitted draft for independent review, not executed or saved work.
 
 Your part: this_part names the dispute this call answers, with its legal questions,
-rights at stake, relief sought and missing facts. Other parts of the answer, written
+rights at stake, relief sought and missing facts. Begin a dispute's part with one short
+unit of kind summary: what to do about this dispute, by when where a time limit was
+worked out, and what is still needed from the advocate. The summaries open the answer
+under "In short"; an opening part has none. Other parts of the answer, written
 separately, answer the other disputes it lists, including requests about them; do not
 answer those here. When this_part names no dispute it opens a reply that covers several:
 give a brief opening, anything the advocate asked that belongs to no single dispute, and
@@ -69,7 +77,8 @@ work, and a social closing does not renew it. Answer proportionately, with empat
 where appropriate, without turning acknowledgement into an intake questionnaire.
 2. Use supplied original material for the matter account and held passages for law.
 Preserve speaker, negation, chronology, uncertainty and conditions. Reported, supplied,
-examined, accepted and proved are different states. An NM interpretation cannot prove
+examined, accepted and proved are different states; say such a caveat once, where it
+matters, rather than in every unit. An NM interpretation cannot prove
 itself. Do not invent facts, legal rules, citations, jurisdiction or document contents.
 Counting is code's work: never count days, and give no last day or counted date that
 the time limits do not give. Time limits, when supplied in time_limits, were worked out
@@ -121,7 +130,10 @@ neighbouring context remain the basis for checking each assertion and its condit
 Account, law and analysis units need source uses; law needs held legal material.
 Analysis selects its factual and legal premises. Questions and next steps select any
 premises they assert; greetings need no source use.
-For every use, copy source_kind from the supplied source_kinds catalogue:
+For every use, give under words the few words of your own unit, copied exactly, that
+this source supports: the advocate opens the source from those words, so a unit need
+not name its documents, pages or sources in its text. Copy source_kind from the
+supplied source_kinds catalogue:
 - account, nm_context, service and document: give only source_kind and source_id. Code
   preserves the original speaker and provenance. NM interpretations and service notices
   may explain earlier conversation; they cannot prove the underlying matter account.
@@ -178,9 +190,9 @@ USE = {"anyOf": [
 ]}
 
 
-def _schema(use, reference):
+def _schema(use, reference, kinds=KINDS):
     unit = _object({
-        "kind": {"type": "string", "enum": list(KINDS)}, "text": TEXT,
+        "kind": {"type": "string", "enum": list(kinds)}, "text": TEXT,
         "addresses": {"type": "array", "minItems": 1, "items": reference},
         "uses": {"type": "array", "items": use},
     })
@@ -188,6 +200,10 @@ def _schema(use, reference):
 
 
 LEGACY_SCHEMA, SCHEMA = _schema(LEGACY_USE, REFERENCE), _schema(USE, SOURCE_REFERENCE)
+#: v5: a unit may be a dispute's summary, and every use names the words it supports.
+WORDS = {**TEXT, "description": "The few words of this unit, copied exactly, that this source supports."}
+USE_V5 = {"anyOf": [_object({**variant["properties"], "words": WORDS}) for variant in USE["anyOf"]]}
+SCHEMA_V5 = _schema(USE_V5, SOURCE_REFERENCE, kinds=(*KINDS, "summary"))
 
 
 def _legacy_use(use, sources):
@@ -278,10 +294,11 @@ def accept(proposal, context, sources, *, contract=CONTRACT, parts=None):
     """
     if contract not in CONTRACTS:
         raise ValueError("Unknown response writer contract")
-    if parts is not None and contract != CONTRACT:
-        raise ValueError("Only a v4 draft is written in parts")
-    offered = answer_sources.aliases(sources) if contract in (ALIAS_CONTRACT, CONTRACT) else {}
-    schema = LEGACY_SCHEMA if contract == LEGACY_CONTRACT else SCHEMA
+    if parts is not None and contract not in _IN_PARTS:
+        raise ValueError("Only a v4 or later draft is written in parts")
+    offered = answer_sources.aliases(sources) if contract in (ALIAS_CONTRACT, *_IN_PARTS) else {}
+    schema = (LEGACY_SCHEMA if contract == LEGACY_CONTRACT else SCHEMA_V5 if contract == CONTRACT
+              else SCHEMA)
     data = canonical_schema_data(proposal, schema)
     require_schema(data, schema)
     originals = source_catalogue(context)
@@ -310,6 +327,15 @@ def accept(proposal, context, sources, *, contract=CONTRACT, parts=None):
             addresses_latest |= ref["source_id"] == latest_id
         uses = [(_legacy_use(use, sources) if contract == LEGACY_CONTRACT
                  else _owned_use(_offered(use, offered), sources, originals)) for use in item["uses"]]
+        if contract == CONTRACT:
+            # The words a source supports become its link (17 Oct 2026): exactly in the unit,
+            # the first place they stand.
+            for use, owned in zip(item["uses"], uses):
+                start = item["text"].find(use["words"]) if use["words"].strip() else -1
+                if start < 0:
+                    raise SchemaViolation(f"The words given for source {use['source_id']!r} are not copied "
+                                          f"exactly from their unit: {use['words']!r}")
+                owned["words"] = {"text": use["words"], "start": start, "end": start + len(use["words"])}
         if item["kind"] in {"account", "law", "analysis"} and not uses:
             raise SchemaViolation("A substantive response unit needs exact source dependencies")
         if item["kind"] == "law" and not any(
@@ -321,7 +347,7 @@ def accept(proposal, context, sources, *, contract=CONTRACT, parts=None):
     if not addresses_latest:
         raise SchemaViolation("The response must address the latest advocate message")
     draft = {"contract": contract, "proposal": deepcopy(data), "units": units}
-    if contract == CONTRACT:
+    if contract in _IN_PARTS:
         draft["parts"] = _layout(parts, len(units))
     return draft
 
@@ -388,7 +414,7 @@ def dates_not_given(draft, context, sources, time_limits=None):
 def validate(draft, context, sources):
     """Rebind a draft to its exact original selectors before review or replay."""
     contract = draft.get("contract") if isinstance(draft, dict) else None
-    fields = {"contract", "proposal", "units"} | ({"parts"} if contract == CONTRACT else set())
+    fields = {"contract", "proposal", "units"} | ({"parts"} if contract in _IN_PARTS else set())
     if (contract not in CONTRACTS or set(draft) != fields
             or accept(draft["proposal"], context, sources, contract=contract,
                       parts=draft.get("parts")) != draft):
@@ -460,11 +486,11 @@ def _payload(context, record, sources, interpretation, execution, layout, index,
 def _write_part(model, payload):
     prompt = Prompt(system=SYSTEM, user=json.dumps(payload, ensure_ascii=False),
                     operation="core_response_writer")
-    if (estimate_tokens(SYSTEM + prompt.user + json.dumps(SCHEMA)) + MAX_OUTPUT
+    if (estimate_tokens(SYSTEM + prompt.user + json.dumps(SCHEMA_V5)) + MAX_OUTPUT
             > model.context_budget(Tier.HARD)):
         raise ContextOverflow("Complete response context exceeds the model budget")
     try:
-        result = model.structured(prompt, SCHEMA, Tier.HARD, max_tokens=MAX_OUTPUT)
+        result = model.structured(prompt, SCHEMA_V5, Tier.HARD, max_tokens=MAX_OUTPUT)
     except SchemaViolation as exc:
         if exc.rejected_result is None:
             raise
@@ -478,7 +504,7 @@ def _write_part(model, payload):
 def kept_parts(draft, findings):
     """After review, parts with no finding are kept as written and only the others are
     rewritten; a finding that names no reply unit (an omission) reopens every part."""
-    if draft["contract"] != CONTRACT or any(not finding["unit_ids"] for finding in findings):
+    if draft["contract"] not in _IN_PARTS or any(not finding["unit_ids"] for finding in findings):
         return {}
     affected = {identity for finding in findings for identity in finding["unit_ids"]}
     kept, start = {}, 0

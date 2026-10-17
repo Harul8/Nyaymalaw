@@ -6,10 +6,9 @@ import json
 import pytest
 
 from nm.core_engine.conversation import ConversationRefused, chat_matter_id
-from nm.core_engine.response_writer import accept as accept_draft
 from nm.core_engine.turn import saved_rows
 from nm.shared.store_file_store import FileMatterStore
-from tests.test_core_response_review import Model, positive, request, review, setup, validate
+from tests.test_core_response_review import Model, accept_draft, positive, request, review, setup, validate
 from tests.test_core_turn import ScriptedModel, run
 
 
@@ -74,6 +73,11 @@ class MissingWorkModel(ScriptedModel):
                 "findings": [{"category": "omission", "unit_ids": [], "sources": [questions],
                     "mismatch": "The independent request for questions has no delivered result or limit."}]
                     if missing else []}
+        if prompt.operation == "core_response_writer":
+            # Writer v5 (17 Oct 2026): each use names the words of its unit it supports.
+            for unit in out["units"]:
+                for selected in unit["uses"]:
+                    selected.setdefault("words", unit["text"])
         return replace(result, data=out)
 
 

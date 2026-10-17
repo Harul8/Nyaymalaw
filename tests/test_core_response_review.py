@@ -12,7 +12,18 @@ from nm.core_engine.response_review import (
     CONTRACT, LEGACY_CONTRACT, MAX_OUTPUT, SCHEMA, _digest,
     review as review_checked, validate as validate_checked,
 )
-from nm.core_engine.response_writer import LEGACY_CONTRACT as WRITER_LEGACY_CONTRACT, accept as accept_draft
+from nm.core_engine.response_writer import CONTRACT as WRITER_CONTRACT
+from nm.core_engine.response_writer import LEGACY_CONTRACT as WRITER_LEGACY_CONTRACT, accept as _accept_draft
+
+
+def accept_draft(proposal, *args, **kwargs):
+    """Writer v5 (17 Oct 2026): each use names the words of its unit that it supports; a
+    fixture's use supports its whole unit unless it names its own words."""
+    if kwargs.get("contract", WRITER_CONTRACT) == WRITER_CONTRACT:
+        for unit in proposal.get("units", []):
+            for use in unit.get("uses", []):
+                use.setdefault("words", unit["text"])
+    return _accept_draft(proposal, *args, **kwargs)
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import ContextOverflow, ModelError, ModelResult, SchemaViolation, Tier, Usage
 from tests.test_core_answer_sources import fixture as legal_fixture
