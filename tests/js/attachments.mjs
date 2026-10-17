@@ -138,6 +138,8 @@ const chip = (get, index = 0) => get('attachments').children[index];
     stateBlock: (_kind, text) => Object.assign(new Element('p'), { textContent: text }),
   });
   vm.runInContext(between("// THE MATTER'S FILES", 'const CERTAINTY = '), context);
+  // The page has one fileSize (18 Oct 2026: a second, shadowed copy had been tested instead).
+  vm.runInContext(between('function fileSize(bytes) {', "/* F-B-04, later the same day."), context);
   const [empty] = context.renderChatDocuments({ sent: [] }, () => {});
   assert.match(empty.textContent, /No files have been sent/);
   const received = '2026-10-17T04:20:00+00:00';
@@ -160,12 +162,12 @@ const chip = (get, index = 0) => get('attachments').children[index];
   assert.equal(name.textContent, 'memo.pdf');
   assert.equal(name.href, '/api/documents/doc_x/original');
   assert.equal(name.target, '_blank');
-  assert.equal(meta.textContent, 'PDF · 13 KB · 17 Oct 2026 · read by AI');
+  assert.equal(meta.textContent, 'PDF · 12.6 KB · 17 Oct 2026 · read by AI');
   assert.equal(attention.textContent, '1 page could not be read · 1 page partly legible');
   assert.equal(memo.title, 'Sent with: “Please look at the memo.”');
   const wordBody = word.children[1];
   assert.equal(wordBody.children[0].attributes['aria-label'], 'Police complaint.docx, opens in Word');
-  assert.equal(wordBody.children[1].textContent, 'Word · 3 KB · 17 Oct 2026');
+  assert.equal(wordBody.children[1].textContent, 'Word · 3.3 KB · 17 Oct 2026');
   assert.equal(wordBody.children.length, 3, 'no note when nothing needs attention');
   read.click();
   assert.equal(opened.length, 1);

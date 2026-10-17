@@ -11,6 +11,7 @@ from tests.test_citation_check import _build
 from tests.test_core_authority_admission import use_statute
 from tests.test_core_response_authorities import Reader, draft_for, judgments, setup
 from tests.test_core_response_writer import source_use_v2, unit
+from tests.test_core_response_writer import accept as writer_fixture_accept
 from tests.test_core_served import OWNER, served, source_url, successful
 from tests.test_core_turn import ScriptedModel, searcher
 
@@ -117,7 +118,7 @@ def test_case_identity_name_and_quote_results_stay_separate_without_extra_passag
 def test_secondary_citation_occurrence_remains_separate_from_primary_source_identity(tmp_path):
     ctx, research, sources = setup(quoted_authority="Counsel cited (1985) 2 SCC 10 without adoption.")
     selected = judgments(sources)["SYN_1973_ALPHA"]
-    draft = response_writer.accept({"units": [unit(sources, kind="law",
+    draft = writer_fixture_accept({"units": [unit(sources, kind="law",
         text="The passage mentions (1985) 2 SCC 10.",
         uses=[source_use_v2(selected, role="quoted_authority")])]}, ctx, sources)
     evidence = response_authorities.check(ctx, research, sources, draft, case_index=_build(tmp_path))
@@ -137,7 +138,7 @@ def test_view_filters_same_source_by_reply_unit_and_other_sources_by_identity(tm
     units = [unit(sources, kind="law", text=text, uses=[source_use_v2(source)])
              for text, source in [("The authority is (1973) 4 SCC 225.", selected),
                                   ("The authority is AIR 1980 SC 100.", other)]]
-    draft = response_writer.accept({"units": units}, ctx, sources)
+    draft = writer_fixture_accept({"units": units}, ctx, sources)
     evidence = response_authorities.check(ctx, research, sources, draft, case_index=_build(tmp_path))
     assert project(draft, evidence, selected, 0)["case_checks"][0]["lookup"] == "found"
     other_view = project(draft, evidence, other, 1)

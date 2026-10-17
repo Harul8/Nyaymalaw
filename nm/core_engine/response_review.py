@@ -11,7 +11,7 @@ import hashlib
 import json
 from copy import deepcopy
 
-from nm.core_engine import answer_sources, research, response_authorities, response_writer
+from nm.core_engine import answer_sources, checklist, research, response_authorities, response_writer
 from nm.core_engine.understanding import REFERENCE, TEXT
 from nm.shared import clock_contracts
 from nm.shared.model_port import (
@@ -28,9 +28,12 @@ ALIAS_CONTRACT = "core_response_review_v3"
 RESPECTED_CONTRACT = "core_response_review_v4"
 #: v4 judging a reply written in parts, one per dispute, against compact sources and
 #: the understanding with each question's search outcome (owner decision, 15 Oct 2026).
-CONTRACT = "core_response_review_v5"
-CONTRACTS = (LEGACY_CONTRACT, AUTHORITY_CONTRACT, ALIAS_CONTRACT, RESPECTED_CONTRACT, CONTRACT)
-_CURRENT = (RESPECTED_CONTRACT, CONTRACT)
+PARTS_CONTRACT = "core_response_review_v5"
+#: v5 checking each dispute's checklist as it checks each paragraph (owner decisions, 17 Oct
+#: 2026; writer v6): every checklist item has a verdict and a finding may name one.
+CONTRACT = "core_response_review_v6"
+CONTRACTS = (LEGACY_CONTRACT, AUTHORITY_CONTRACT, ALIAS_CONTRACT, RESPECTED_CONTRACT, PARTS_CONTRACT, CONTRACT)
+_CURRENT = (RESPECTED_CONTRACT, PARTS_CONTRACT, CONTRACT)
 #: Verdicts for every unit of a long reply; reasoning counts towards it.
 MAX_OUTPUT = 16000
 SYSTEM = """Message: You receive the complete original attributed conversation, the
@@ -90,6 +93,15 @@ provision and which of its alternatives governs, and from which dated event time
 is legal analysis like any other: check it against the held provision and the facts.
 Where a unit's source names the words of the unit it supports, those words become the
 advocate's link to it: check that the source supports them.
+A dispute's part may also carry its checklist: what the case needs as the held law
+requires it, each item with the law words that require it (or carried by its id from
+the matter's checklist in current records), where it stands and the words that show it.
+Check each item as you check a unit: that its law words require it, or would strengthen
+the case, as it is grouped; that where it stands is what the messages and documents show
+(in hand only where the quoted words hold it; coming or unclear, and not available, in
+the advocate's own words); that the time limits the part names concern its dispute; and
+that the list leaves out nothing the held law plainly requires for the relief or
+defence. Raise a missing item as an omission naming that dispute's summary unit.
 Examine the authority checks for each unit against its actual legal use. A direct case
 citation must agree with the case relied on. A selected judgment may instead mention
 another authority: determine from the passage who cited it and whether the draft reports
@@ -123,8 +135,8 @@ rejected. Reject a unit when its own content or treatment of its request is defe
 Raise findings only for consequential defects, with exact sources and a precise mismatch.
 
 Outcome: Return accept or reject; one supported or rejected verdict with a reason for
-every supplied draft unit ID. Account for any consequential authority-check discrepancy
-or unresolved association in that unit's reason or finding. Return one request_coverage
+every supplied draft unit ID and checklist item ID. Account for any consequential
+authority-check discrepancy or unresolved association in that unit's reason or finding. Return one request_coverage
 entry per independent requested
 result. Select the original advocate words identifying that result, name only its
 relevant reply units, and explain its disposition as addressed, justified_limit,
@@ -248,7 +260,9 @@ def _accept(proposal, dependencies, *, contract=LEGACY_CONTRACT):
     require_schema(data, schema)
     sources, draft = dependencies["sources"], dependencies["draft"]
     offered = answer_sources.aliases(sources) if contract in {ALIAS_CONTRACT, *_CURRENT} else {}
-    known = {unit["id"] for unit in draft["units"]}
+    # From v6 a checklist item is reviewed like a unit (18 Oct 2026).
+    known = set().union(*response_writer.part_ids(draft)) if "checklists" in draft else {
+        unit["id"] for unit in draft["units"]}
     # A reply unit named by its short ID is the unit it was shown for (16 Oct 2026); the
     # saved proposal keeps the owned unit IDs, so replay maps nothing and is exact.
     named = unit_aliases(draft)
@@ -260,7 +274,7 @@ def _accept(proposal, dependencies, *, contract=LEGACY_CONTRACT):
     reviewed = [unit["unit_id"] for unit in data["units"]]
     _ids(reviewed, known)
     if set(reviewed) != known:
-        raise SchemaViolation("Review must account for every complete draft unit")
+        raise SchemaViolation("Review must account for every complete draft unit and checklist item")
     for item in [*data["units"], *data["request_coverage"], *data["findings"]]:
         text = item.get("reason", item.get("mismatch", ""))
         if not text.strip():
@@ -308,12 +322,17 @@ def _accept(proposal, dependencies, *, contract=LEGACY_CONTRACT):
 def unit_aliases(draft):
     """Reply units by short IDs, U1, U2... in order (16 Oct 2026): their owned IDs embed
     the turn's long random identifier, and a reviewer miscopied one in the owner's run.
-    Admission maps them back; the saved review keeps the owned unit IDs."""
-    return {f"U{number}": unit["id"] for number, unit in enumerate(draft["units"], 1)}
+    From v6 checklist items likewise, C1, C2... Admission maps them back; the saved review
+    keeps the owned IDs."""
+    named = {f"U{number}": unit["id"] for number, unit in enumerate(draft["units"], 1)}
+    items = [item for part in draft.get("checklists", ()) for item in part["items"]]
+    named.update({f"C{number}": item["id"] for number, item in enumerate(items, 1)})
+    return named
 
 
-def _draft_presentation(draft, sources, *, aliased=False):
-    """Present checked selectors once; retain complete durable selections elsewhere."""
+def _draft_presentation(draft, sources, *, aliased=False, saved=None):
+    """Present checked selectors once; retain complete durable selections elsewhere.
+    saved: the matter's checklist items by id, for an item a part carries forward."""
     shown = {tag: alias for alias, tag in answer_sources.aliases(sources).items()} if aliased else {}
     units = {tag: alias for alias, tag in unit_aliases(draft).items()} if aliased else {}
 
@@ -324,6 +343,20 @@ def _draft_presentation(draft, sources, *, aliased=False):
             else selected["text"])}
 
     layout = {"parts": deepcopy(draft["parts"])} if "parts" in draft else {}
+    if "checklists" in draft:
+        saved = saved or {}
+
+        def law(item):
+            if item["law"] is not None:
+                return reference(item["law"])
+            kept = saved.get(item["carries"], {}).get("law", {})
+            return {"carried_from": item["carries"], "words": kept.get("words"),
+                    "source": " ".join(filter(None, (kept.get("title"), kept.get("locator"))))}
+
+        layout["checklists"] = [{"part": index + 1, "time_limits": list(part["time_limits"]), "items": [{
+            "id": units.get(item["id"], item["id"]), "need": item["need"], "group": item["group"], "law": law(item),
+            "status": item["status"], "evidence": reference(item["evidence"]) if item["evidence"] else None}
+            for item in part["items"]]} for index, part in enumerate(draft["checklists"])]
     return {"contract": draft["contract"], **layout, "units": [{
         "id": units.get(unit["id"], unit["id"]), "kind": unit["kind"], "text": unit["text"],
         "addresses": [reference(selected) for selected in unit["addresses"]],
@@ -361,7 +394,8 @@ def review(model, context, research_record, sources, draft, execution=None, *,
                "setting": clock_contracts.setting(),
         "research_proposal_and_results": research_context,
         "legal_sources": answer_sources.presentation(sources, aliased=True, compact=True),
-        "complete_draft_proposal": _draft_presentation(draft, sources, aliased=True),
+        "complete_draft_proposal": _draft_presentation(draft, sources, aliased=True,
+                                                       saved=checklist.saved(context)),
         "owned_execution_evidence": dependencies["execution"],
         "owned_authority_checks": {
             "contract": dependencies["authority_evidence"]["contract"],

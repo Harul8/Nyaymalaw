@@ -13,7 +13,8 @@ from copy import deepcopy
 
 from concurrent.futures import ThreadPoolExecutor
 
-from nm.core_engine import answer_sources, calculation, research, response_authorities, response_rendering
+from nm.core_engine import answer_sources, calculation, checklist, research, response_authorities
+from nm.core_engine import response_rendering
 from nm.core_engine import response_review
 from nm.core_engine import response_writer, understanding
 from nm.core_engine.calls import CorrectionUnavailable, ReleaseWithheld, TurnCalls
@@ -34,7 +35,11 @@ AUTHORITY_CONTRACT = "core_turn_v2"
 CALCULATION_CONTRACT = "core_turn_v3"
 #: v4 records what was released (owner decision, 17 Oct 2026; gate G-SECTION): the
 #: sections held back after the rewrites, with the date findings that held them, or None.
-CONTRACT = "core_turn_v4"
+RELEASE_CONTRACT = "core_turn_v4"
+#: v4 saving the matter's checklist with the turn as its current records, re-derived
+#: exactly from the turn's own activity when it is reopened (owner decisions, 17 Oct 2026).
+CONTRACT = "core_turn_v5"
+_RELEASED = (RELEASE_CONTRACT, CONTRACT)
 EXECUTION = "core_read_only_execution_v1"
 _ACTIVITY_FIELDS = {"contract", "interpretation", "research", "sources", "draft",
                     "review", "execution", "rendering_contract"}
@@ -204,13 +209,14 @@ def validate_activity(activity, context, elements):
                   if version == AUTHORITY_CONTRACT else
                   {response_rendering.WORKING_CONTRACT, response_rendering.AS_OF_CONTRACT}
                   if version == CALCULATION_CONTRACT else
-                  {response_rendering.HELD_CONTRACT, response_rendering.CONTRACT})
+                  {response_rendering.HELD_CONTRACT, response_rendering.CONTRACT}
+                  if version == RELEASE_CONTRACT else {response_rendering.CONTRACT})
     rendering = activity.get("rendering_contract") if isinstance(activity, dict) else None
-    if (version not in {LEGACY_CONTRACT, AUTHORITY_CONTRACT, CALCULATION_CONTRACT, CONTRACT}
+    if (version not in {LEGACY_CONTRACT, AUTHORITY_CONTRACT, CALCULATION_CONTRACT, *_RELEASED}
             or set(activity) != expected_fields or rendering not in renderings):
         raise ValueError("Unknown saved turn or rendering contract")
     limits = (calculation.validate(activity["calculation"], context)
-              if version in (CALCULATION_CONTRACT, CONTRACT) else None)
+              if version in (CALCULATION_CONTRACT, *_RELEASED) else None)
     record = research.validate(activity["research"], activity["research"]["plan"], context)
     sources = answer_sources.build(context, record)
     if sources != activity["sources"] or execution_record(record) != activity["execution"]:
@@ -218,7 +224,7 @@ def validate_activity(activity, context, elements):
     rebuilt = response_rendering.render(context, record, sources, activity["draft"],
         activity["review"], execution=activity["execution"],
         authority_evidence=activity.get("authority_evidence"), contract=rendering, time_limits=limits,
-        held=activity["release"] if version == CONTRACT else None)
+        held=activity["release"] if version in _RELEASED else None)
     if rebuilt != elements:
         raise ValueError("Saved response differs from its admitted rendering")
     return deepcopy(activity)
@@ -231,6 +237,10 @@ def saved_rows(matter, advocate_id):
             original = TurnContext(matter, row["chat_id"], row["turn_id"], row["message"], rows[:index],
                                    documents=tuple(row.get("documents", ())))
             validate_activity(row["activities"], original.payload(), row["response"]["elements"])
+            # From v5 the records a turn saved are exactly what its own activity gives.
+            if (row["activities"].get("contract") == CONTRACT
+                    and row["records"] != checklist.records(original.payload(), row["activities"])):
+                raise ValueError("Saved records differ from what the turn admitted")
     except (ValueError, KeyError, TypeError, SchemaViolation) as exc:
         raise ConversationRefused("This saved conversation could not be read reliably. "
             "Its records are unchanged.", code="saved_response_unavailable",
@@ -311,6 +321,7 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
     _reporter(progress)("saving")
     try:
         response = commit_turn(store, context, elements=elements, activities=activity,
+                               records=checklist.records(context.payload(), activity),
                                metrics=metrics, session_current=session_current)
     except ConversationRefused as exc:
         # A subsequent request checks the durable response before the attempt.

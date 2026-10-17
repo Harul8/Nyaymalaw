@@ -49,6 +49,7 @@
     "nm.core_engine.answer_sources": "core",
     "nm.core_engine.calls": "core",
     "nm.core_engine.calculation": "core",
+    "nm.core_engine.checklist": "core",
     "nm.core_engine.citations": "core",
     "nm.core_engine.conversation": "core",
     "nm.core_engine.documents": "core",
@@ -199,7 +200,7 @@
   "expected_roles": {
     "adapters": 30,
     "bootstrap": 6,
-    "core": 68,
+    "core": 69,
     "domain": 70,
     "edge": 8,
     "infrastructure": 1,

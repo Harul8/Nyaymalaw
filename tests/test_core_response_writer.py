@@ -5,7 +5,8 @@ import json
 import pytest
 
 from nm.core_engine.answer_sources import build
-from nm.core_engine.response_writer import CONTRACT, LEGACY_CONTRACT, MAX_OUTPUT, SCHEMA_V5, accept, validate, write
+from nm.core_engine.response_writer import CONTRACT, LEGACY_CONTRACT, MAX_OUTPUT, PART_SCHEMA, validate, write
+from nm.core_engine.response_writer import accept as admit
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import (
     ContextOverflow, ModelError, ModelResult, SchemaViolation, Tier, Usage,
@@ -53,6 +54,34 @@ def unworded(uses):
     return uses
 
 
+def checklisted(proposal, parts=1):
+    """Writer v6 (18 Oct 2026): each part returns its checklist and the time limits it
+    names; a fixture's part returns none unless it says otherwise. In place."""
+    proposal.setdefault("checklists", [{"checklist": [], "time_limits": []} for _ in range(parts)])
+    return proposal
+
+
+def unchecklisted(proposal):
+    """An earlier writer version's proposal, which carries no checklists; in place."""
+    proposal.pop("checklists", None)
+    return proposal
+
+
+def part_output(data):
+    """What one part's call returns under writer v6; in place."""
+    if isinstance(data, dict) and isinstance(data.get("units"), list):
+        data.setdefault("checklist", [])
+        data.setdefault("time_limits", [])
+    return data
+
+
+def accept(proposal, ctx, sources, **kwargs):
+    """Admission as the writer's own, with a v6 proposal's checklists as checklisted gives."""
+    if kwargs.get("contract", CONTRACT) == CONTRACT and isinstance(proposal, dict):
+        checklisted(proposal, len(kwargs.get("parts") or [None]))
+    return admit(proposal, ctx, sources, **kwargs)
+
+
 def unit(sources, *, kind="question", text="Which part would you like clarified?", uses=None):
     return {"kind": kind, "text": text, "addresses": [reference(sources["t2:advocate"])],
             "uses": worded(uses or [], text)}
@@ -74,7 +103,10 @@ class Model:
 
     def structured(self, prompt, schema, tier, **kwargs):
         self.calls.append((prompt, schema, tier, kwargs))
-        result = ModelResult(None, deepcopy(self.data), tier, "synthetic", "fixture",
+        data = deepcopy(self.data)
+        if prompt.operation == "core_response_writer":
+            part_output(data)
+        result = ModelResult(None, data, tier, "synthetic", "fixture",
                              Usage(1, 1, 0), 0, completion=self.completion)
         if self.quarantine: raise SchemaViolation("Rejected shape", rejected_result=result)
         return result
@@ -112,9 +144,9 @@ def test_complete_context_and_all_neighbouring_legal_words_reach_one_writer_call
     assert [q["work_id"] for q in payload["research"]["questions"]] == [w["id"] for w in record["plan"]["work"]]
     assert payload["this_part"] == {"part": 1, "of": 1, "opens_the_answer": True,
                                     "dispute": understood["disputes"][0], "other_parts": []}
-    assert tier is Tier.HARD and kwargs == {"max_tokens": MAX_OUTPUT} and schema == SCHEMA_V5
+    assert tier is Tier.HARD and kwargs == {"max_tokens": MAX_OUTPUT} and schema == PART_SCHEMA
     assert prompt.operation == "core_response_writer"
-    assert draft["contract"] == CONTRACT and draft["proposal"] == proposed
+    assert draft["contract"] == CONTRACT and draft["proposal"] == checklisted(proposed)
     assert draft["parts"] == [{"dispute_id": understood["disputes"][0]["id"], "units": 1}]
     assert draft["units"][0]["id"] == "t2:b1"
 
@@ -364,7 +396,7 @@ class PartModel:
         with self.lock:
             self.seen.append(payload)
         dispute = (payload["this_part"]["dispute"] or {}).get("id", "opening")
-        data = {"units": [unit(self.sources, text=f"Answer for {dispute}?")]}
+        data = part_output({"units": [unit(self.sources, text=f"Answer for {dispute}?")]})
         if dispute == self.broken:
             data["units"][0]["addresses"] = [{"source_id": "not offered"}]
         return ModelResult(None, data, tier, "synthetic", "fixture", Usage(1, 1, 0), 0,

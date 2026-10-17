@@ -8,7 +8,7 @@ from nm.core_engine import answer_sources, response_writer as candidate
 from nm.core_engine import response_authorities, response_rendering, response_review, turn
 from nm.shared.model_port import SchemaViolation, on_the_wire
 from tests.test_core_answer_sources import fixture
-from tests.test_core_response_writer import Model, source_use_v1, unit, unit_v1
+from tests.test_core_response_writer import Model, checklisted, source_use_v1, unit, unit_v1
 from tests.test_core_response_review import Model as ReviewModel, positive, request
 from tests.test_core_response_rendering import ready, legacy_render
 
@@ -31,7 +31,7 @@ def use(source, **changes):
 def proposal(sources, uses, kind="analysis"):
     item = unit(sources, kind=kind, text="Synthetic attribution test.", uses=uses)
     item["addresses"] = [ref(sources["t2:advocate"])]
-    return {"units": [item]}
+    return checklisted({"units": [item]})
 
 
 def legacy_proposal(sources, uses):
@@ -190,7 +190,7 @@ def test_existing_v1_projection_and_legacy_rendering_are_unchanged(monkeypatch):
     assert old["units"][0]["uses"][0]["speaker"] is None
 
 
-@pytest.mark.parametrize("contract", ["unknown", "core_response_writer_v6"])
+@pytest.mark.parametrize("contract", ["unknown", "core_response_writer_v7"])
 def test_unknown_saved_contract_fails_without_fallback(contract):
     ctx, _, sources = setup()
     saved = candidate.accept(proposal(sources, [use(sources["t2:advocate"])]), ctx, sources)
@@ -229,7 +229,7 @@ def test_fresh_writer_remains_one_routine_call_and_transmits_complete_context():
     assert sent["source_kinds"] == {offered.get(identity, identity): row["kind"]
                                     for identity, row in sources.items()}
     assert sent["held_passages"] == answer_sources.presentation(sources, aliased=True, compact=True)
-    assert schema == candidate.SCHEMA_V5
+    assert schema == candidate.PART_SCHEMA
     assert kwargs == {"max_tokens": candidate.MAX_OUTPUT}
     assert result["contract"] == candidate.CONTRACT
 
@@ -241,7 +241,7 @@ def test_fresh_calls_never_select_legacy_contract_from_a_model_proposal():
     with pytest.raises(SchemaViolation):
         candidate.write(model, ctx, record, sources)
     assert len(model.calls) == 1
-    assert model.calls[0][1] == candidate.SCHEMA_V5
+    assert model.calls[0][1] == candidate.PART_SCHEMA
     # Legacy selection is an explicit reconstruction argument, not model-controlled input.
     saved = candidate.accept(old, ctx, sources, contract=candidate.LEGACY_CONTRACT)
     assert candidate.validate(saved, ctx, sources) == saved
@@ -290,12 +290,16 @@ def test_v3_and_v4_select_legal_passages_by_alias_and_replay_from_the_saved_cata
     first, second = draft["units"][0]["uses"]
     assert (first["source_id"], second["source_id"]) == (provision["id"], judgments[0]["id"])
     assert second["treatment_source"]["source_id"] == judgments[1]["id"]
-    assert draft["contract"] == candidate.CONTRACT == "core_response_writer_v5"
+    assert draft["contract"] == candidate.CONTRACT == "core_response_writer_v6"
     assert draft["proposal"] == supplied, "the saved proposal keeps the offered aliases"
     assert candidate.validate(deepcopy(draft), ctx, deepcopy(sources)) == draft
+    # A saved v5 draft names its words but returns no checklists, and replays as saved.
+    from tests.test_core_response_writer import checklisted, unchecklisted, unworded
+    saved_v5 = candidate.accept(unchecklisted(deepcopy(supplied)), ctx, sources, contract=candidate.WORDS_CONTRACT)
+    assert saved_v5["units"] == draft["units"] and "checklists" not in saved_v5
+    assert candidate.validate(deepcopy(saved_v5), ctx, deepcopy(sources)) == saved_v5
     # Saved v3 and v4 drafts name no words and replay under their own versions.
-    from tests.test_core_response_writer import unworded
-    earlier = deepcopy(supplied)
+    earlier = unchecklisted(deepcopy(supplied))
     unworded(earlier["units"][0]["uses"])
     without = [{key: value for key, value in use.items() if key != "words"} for use in draft["units"][0]["uses"]]
     saved_v4 = candidate.accept(earlier, ctx, sources, contract=candidate.PARTS_CONTRACT)
@@ -306,9 +310,9 @@ def test_v3_and_v4_select_legal_passages_by_alias_and_replay_from_the_saved_cata
     assert candidate.validate(deepcopy(saved_v3), ctx, deepcopy(sources)) == saved_v3
     # An earlier version never takes words, and the current one always needs them.
     with pytest.raises(SchemaViolation):
-        candidate.accept(supplied, ctx, sources, contract=candidate.PARTS_CONTRACT)
-    with pytest.raises(SchemaViolation):
-        candidate.accept(earlier, ctx, sources)
+        candidate.accept(unchecklisted(deepcopy(supplied)), ctx, sources, contract=candidate.PARTS_CONTRACT)
+    with pytest.raises(SchemaViolation, match="words"):
+        candidate.accept(checklisted(deepcopy(earlier)), ctx, sources)
 
 
 def test_v3_refuses_an_unoffered_alias_and_keeps_exact_owned_tags():
@@ -323,13 +327,13 @@ def test_v3_refuses_an_unoffered_alias_and_keeps_exact_owned_tags():
 def test_saved_v2_drafts_replay_unchanged_under_their_owned_tags():
     ctx, _, sources = setup()
     provision = next(s for s in sources.values() if s["kind"] == "provision")
-    from tests.test_core_response_writer import unworded
-    older = proposal(sources, [use(provision)], kind="law")
+    from tests.test_core_response_writer import unchecklisted, unworded
+    older = unchecklisted(proposal(sources, [use(provision)], kind="law"))
     unworded(older["units"][0]["uses"])
     draft = candidate.accept(older, ctx, sources, contract=candidate.OWNED_TAG_CONTRACT)
     assert draft["contract"] == "core_response_writer_v2"
     assert candidate.validate(draft, ctx, sources) == draft
-    alias = proposal(sources, [aliased(provision, sources)], kind="law")
+    alias = unchecklisted(proposal(sources, [aliased(provision, sources)], kind="law"))
     unworded(alias["units"][0]["uses"])
     with pytest.raises(SchemaViolation):
         candidate.accept(alias, ctx, sources, contract=candidate.OWNED_TAG_CONTRACT)

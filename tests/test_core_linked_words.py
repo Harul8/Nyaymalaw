@@ -12,7 +12,7 @@ from nm.shared.model_port import ModelResult, SchemaViolation, Usage
 from tests.test_core_response_authorities import Reader
 from tests.test_core_response_rendering import Model as LegacyReviewModel, ready
 from tests.test_core_response_review import Model as ReviewModel, positive, request
-from tests.test_core_response_writer import PartModel, reference, two_disputes, unit
+from tests.test_core_response_writer import PartModel, accept, reference, two_disputes, unit
 
 pytestmark = pytest.mark.class_a
 
@@ -35,8 +35,8 @@ class LinkedModel(PartModel):
             units = [unit(self.sources, kind="summary", text=f"Act on {dispute} in time; I need the dates."),
                      {"kind": "law", "text": f"For {dispute}, the stated rule applies to these facts.",
                       "addresses": [reference(self.sources["t2:advocate"])], "uses": [use]}]
-        return ModelResult(None, {"units": deepcopy(units)}, tier, "synthetic", "fixture", Usage(1, 1, 0), 0,
-                           completion=Completion.COMPLETE)
+        return ModelResult(None, {"units": deepcopy(units), "checklist": [], "time_limits": []}, tier,
+                           "synthetic", "fixture", Usage(1, 1, 0), 0, completion=Completion.COMPLETE)
 
 
 def answer():
@@ -49,7 +49,7 @@ def answer():
 
 def test_each_source_names_the_words_it_supports_and_they_are_kept_where_they_stand():
     ctx, record, sources, draft, _, _ = answer()
-    assert draft["contract"] == response_writer.CONTRACT == "core_response_writer_v5"
+    assert draft["contract"] in response_writer.WORDED
     law = next(unit for unit in draft["units"] if unit["kind"] == "law")
     words, = [use["words"] for use in law["uses"]]
     assert words == {"text": "the stated rule", "start": law["text"].index("the stated rule"),
@@ -61,7 +61,7 @@ def test_each_source_names_the_words_it_supports_and_they_are_kept_where_they_st
         changed = deepcopy(draft["proposal"])
         changed["units"][2]["uses"][0]["words"] = wrong
         with pytest.raises(SchemaViolation, match="not copied exactly"):
-            response_writer.accept(changed, ctx, sources, parts=draft["parts"])
+            accept(changed, ctx, sources, parts=draft["parts"])
 
 
 def test_the_reviewer_sees_the_words_each_source_is_linked_from():
@@ -120,7 +120,7 @@ def test_a_summary_in_a_reply_with_no_dispute_part_stays_where_it_was_written():
     ctx, record, sources = two_disputes()
     units = [unit(sources, kind="greeting", text="Good morning."),
              unit(sources, kind="summary", text="Nothing here needs a dispute of its own.")]
-    draft = response_writer.accept({"units": units}, ctx, sources, parts=[{"dispute_id": None, "units": 2}])
+    draft = accept({"units": units}, ctx, sources, parts=[{"dispute_id": None, "units": 2}])
     authorities = response_authorities.check(ctx, record, sources, draft)
     execution = turn.execution_record(record)
     review = response_review.review(ReviewModel(positive(draft, requests=[request(ctx, draft)])), ctx, record,
@@ -136,7 +136,7 @@ def test_v11_refuses_a_draft_whose_sources_name_no_words():
     authorities = response_authorities.check(ctx, record, sources, draft, provision_reader=Reader(record))
     review = response_review.review(LegacyReviewModel(legacy_review["proposal"]), ctx, record, sources, draft,
                                     execution=execution, authority_evidence=authorities)
-    with pytest.raises(ValueError, match="only a writer v5 draft"):
+    with pytest.raises(ValueError, match="only a writer v5 or later draft"):
         response_rendering.render(ctx, record, sources, draft, review, execution, authority_evidence=authorities)
     # The versions an earlier answer is replayed in still draw it.
     assert response_rendering.render(ctx, record, sources, draft, review, execution, authority_evidence=authorities,

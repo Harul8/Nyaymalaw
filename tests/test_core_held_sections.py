@@ -180,7 +180,7 @@ def scripted_turn(monkeypatch, reviews):
 def test_the_turn_releases_the_checked_sections_after_the_rewrites_and_replays_them(monkeypatch):
     ctx, elements, activity, metrics, counter = scripted_turn(monkeypatch, [[2], [2], [2]])
     assert counter == {"writes": 3, "reviews": 3} and metrics["draft_corrections"] == 2
-    assert activity["contract"] == turn.CONTRACT == "core_turn_v4"
+    assert activity["contract"] == turn.CONTRACT == "core_turn_v5"
     assert activity["release"] == {"parts": [2], "date_findings": []}
     assert [e["kind"] for e in elements] == ["NOTICE", "QUESTION", "HEADING", "QUESTION", "HEADING", "HELD", "NOTICE"]
     assert turn.validate_activity(activity, ctx, elements) == activity

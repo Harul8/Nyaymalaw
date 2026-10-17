@@ -33,6 +33,7 @@ from nm.core_engine.response_rendering import unit_index
 from nm.core_engine.matter_board import board as matter_board
 from nm.core_engine.turn import AUTHORITY_CONTRACT as AUTHORITY_CORE_TURN, CONTRACT as CORE_TURN
 from nm.core_engine.turn import CALCULATION_CONTRACT as CALCULATION_CORE_TURN
+from nm.core_engine.turn import RELEASE_CONTRACT as RELEASE_CORE_TURN
 from nm.core_engine.turn import LEGACY_CONTRACT as LEGACY_CORE_TURN, saved_rows
 from nm.shared.external_ai_contracts import ModelPermissionRefused
 from nm.shared.model_port import ModelError
@@ -1739,7 +1740,7 @@ def _source_authority_inspection(row, element, selected):
     if activity['contract'] == LEGACY_CORE_TURN:
         view['reason'] = 'Authority checks were not recorded for this earlier response.'
         return view
-    if activity['contract'] not in (AUTHORITY_CORE_TURN, CALCULATION_CORE_TURN, CORE_TURN):
+    if activity['contract'] not in (AUTHORITY_CORE_TURN, CALCULATION_CORE_TURN, RELEASE_CORE_TURN, CORE_TURN):
         raise ValueError('Unknown saved source authority contract')
     if selected['kind'] == 'document':
         view['reason'] = ('A page of a document the advocate sent, shown exactly as it was read; '

@@ -3073,11 +3073,7 @@ async function loadChatDocuments(host, paneGeneration) {
 // shows what NM read. A note appears only when something needs attention.
 const FILE_KINDS = { pdf: ['PDF', 'PDF'], docx: ['DOC', 'Word'], text: ['TXT', 'Text'], image: ['IMG', 'Photo'] };
 
-function fileSize(bytes) {
-  if (!Number.isFinite(bytes) || bytes < 0) return '';
-  return bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
+// A file's size is written by the one fileSize below, with the matter's records.
 function fileDate(iso) {
   const day = typeof iso === 'string' ? new Date(iso) : null;
   return day && !Number.isNaN(day.getTime())
@@ -3230,25 +3226,7 @@ function renderChatBoard(board) {
   const disputes = make('section', 'board-section');
   disputes.appendChild(make('h3', 'board-h', board.disputes.length === 1 ? 'Dispute'
     : `Disputes (${board.disputes.length})`));
-  for (const dispute of board.disputes) {
-    const card = make('button', 'board-card dispute-card');
-    card.type = 'button';
-    card.setAttribute('aria-pressed', 'false');
-    card.appendChild(make('span', 'board-dispute', dispute.name));
-    if (dispute.between.length) card.appendChild(make('span', 'board-meta', dispute.between.join(' · ')));
-    if (dispute.why_it_matters) card.appendChild(make('span', 'board-why', dispute.why_it_matters));
-    const counts = {};
-    for (const question of dispute.questions) counts[question.status] = (counts[question.status] || 0) + 1;
-    const done = Object.entries(counts)
-      .map(([status, count]) => `${count} ${QUESTION_STATUS[status] || status}`).join(' · ');
-    card.appendChild(make('span', 'board-status', `${dispute.questions.length} legal question`
-      + `${dispute.questions.length === 1 ? '' : 's'}${done ? ` · ${done}` : ''}`));
-    card.addEventListener('click', () => {
-      openBoardPane(dispute.name, renderDisputeDetail(dispute, board), card);
-      card.setAttribute('aria-pressed', 'true');
-    });
-    disputes.appendChild(card);
-  }
+  for (const dispute of board.disputes) disputes.appendChild(renderDisputeCard(dispute, board));
   out.push(disputes);
   if (board.related_points.length) {
     const related = make('section', 'board-section');
@@ -3256,24 +3234,154 @@ function renderChatBoard(board) {
     related.appendChild(list(board.related_points.map((r) => (r.why ? `${r.point} — ${r.why}` : r.point)), 'board-list'));
     out.push(related);
   }
+  // The facts and standing instructions fold below the disputes (17 Oct 2026).
+  const fold = (title, ...content) => {
+    const details = make('details', 'board-fold');
+    details.appendChild(make('summary', 'board-h', title));
+    details.append(...content);
+    return details;
+  };
   if (board.facts.length) {
-    const facts = make('section', 'board-section');
-    facts.appendChild(make('h3', 'board-h', 'Facts, as you gave them'));
-    for (const fact of board.facts) {
+    const rows = board.facts.map((fact) => {
       const row = make('p', 'board-fact');
       row.appendChild(make('span', `board-certainty ${fact.certainty}`, CERTAINTY[fact.certainty] || fact.certainty));
       row.appendChild(make('span', '', ` ${fact.fact}`));
       if (fact.from === 'document') row.appendChild(make('span', 'board-status', ` · ${factPlace(fact)}`));
-      facts.appendChild(row);
-    }
-    out.push(facts);
+      return row;
+    });
+    out.push(fold(`Facts, as you gave them (${board.facts.length})`, ...rows));
   }
   if (board.instructions.length) {
-    const instructions = make('section', 'board-section');
-    instructions.appendChild(make('h3', 'board-h', 'Your standing instructions'));
-    instructions.appendChild(list(board.instructions, 'board-list'));
-    out.push(instructions);
+    out.push(fold(`Your standing instructions (${board.instructions.length})`, list(board.instructions, 'board-list')));
   }
+  return out;
+}
+
+// WHAT EACH DISPUTE NEEDS (owner decisions, 17 Oct 2026): the dispute, its time limits as
+// code worked them out, how much is in hand, and under Needed and Would strengthen each
+// item the law it holds requires, with its mark. The marks are shape, colour and words; the
+// server's saved checklist decides every one, and nothing here can set one.
+const CHECK_MARKS = {
+  in_hand: { mark: '\u2713', label: 'In hand' },
+  coming_or_unclear: { mark: '\u25D0', label: 'Coming or unclear' },
+  not_given: { mark: '\u25CB', label: 'Not yet given' },
+  not_available: { mark: '\u2715', label: 'Not available' },
+};
+const CHECK_GROUPS = [['needed', 'Needed'], ['would_strengthen', 'Would strengthen']];
+
+function renderDisputeCard(dispute, board) {
+  const make = (tag, className, text) => {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  };
+  const card = make('section', 'board-card dispute-card');
+  card.setAttribute('aria-label', dispute.name);
+  const open = make('button', 'dispute-open');
+  open.type = 'button';
+  open.setAttribute('aria-pressed', 'false');
+  open.appendChild(make('span', 'board-dispute', dispute.name));
+  open.addEventListener('click', () => {
+    openBoardPane(dispute.name, renderDisputeDetail(dispute, board), open);
+    open.setAttribute('aria-pressed', 'true');
+  });
+  card.appendChild(open);
+  if (dispute.between.length) card.appendChild(make('span', 'board-meta', dispute.between.join(' · ')));
+  const listed = dispute.checklist;
+  for (const limit of listed ? listed.time_limits : []) {
+    const rows = new Map(limit.rows || []);
+    const line = make('p', `dispute-deadline${rows.has('Not assessed') ? ' not-assessed' : ''}`);
+    line.appendChild(make('span', 'dispute-deadline-what', limit.what));
+    line.appendChild(make('span', 'dispute-deadline-day', rows.get('Last day') || 'Last day not worked out'));
+    line.appendChild(make('span', 'board-status', timeLimitStanding(rows)));
+    card.appendChild(line);
+  }
+  if (!listed) {
+    // An earlier conversation's board, before checklists, is as it was.
+    if (dispute.why_it_matters) card.appendChild(make('span', 'board-why', dispute.why_it_matters));
+    const counts = {};
+    for (const question of dispute.questions) counts[question.status] = (counts[question.status] || 0) + 1;
+    const done = Object.entries(counts)
+      .map(([status, count]) => `${count} ${QUESTION_STATUS[status] || status}`).join(' · ');
+    card.appendChild(make('span', 'board-status', `${dispute.questions.length} legal question`
+      + `${dispute.questions.length === 1 ? '' : 's'}${done ? ` · ${done}` : ''}`));
+    return card;
+  }
+  if (!listed.items.length) {
+    card.appendChild(make('p', 'check-none', 'NM found nothing this dispute needs in the law it holds. '
+      + 'That is what this research returned, not a finding that the law requires nothing.'));
+    return card;
+  }
+  card.appendChild(make('span', 'board-status check-count', `${listed.in_hand} of ${listed.items.length} in hand`));
+  for (const [group, title] of CHECK_GROUPS) {
+    const items = listed.items.filter((item) => item.group === group);
+    if (!items.length) continue;
+    card.appendChild(make('p', 'check-group', title));
+    const ul = make('ul', 'check-list');
+    for (const item of items) {
+      const mark = CHECK_MARKS[item.status] || CHECK_MARKS.not_given;
+      const li = make('li');
+      const row = make('button', `check-item check-item--${item.status}`);
+      row.type = 'button';
+      const glyph = make('span', 'check-mark', mark.mark);
+      glyph.setAttribute('aria-hidden', 'true');
+      row.append(glyph, make('span', 'check-need', item.need), make('span', 'check-state', checkState(item)));
+      row.setAttribute('aria-label', `${item.need}: ${checkState(item)}. Opens its details.`);
+      row.addEventListener('click', () => window.NmBrainSources.showContent(item.need,
+        renderChecklistItem(item, dispute), row));
+      li.appendChild(row);
+      ul.appendChild(li);
+    }
+    card.appendChild(ul);
+  }
+  return card;
+}
+
+function checkState(item) {
+  const mark = CHECK_MARKS[item.status] || CHECK_MARKS.not_given;
+  return item.status === 'not_given' && item.asked_at ? `${mark.label} · asked ${fileDate(item.asked_at)}` : mark.label;
+}
+
+// An item opens in the reading pane on the right (owner decision 2, 17 Oct 2026): what is
+// needed, where it stands with the words that show it, the law words that require it, and
+// "Tell NM about this", which puts a start in the message box.
+function renderChecklistItem(item, dispute) {
+  const make = (tag, className, text) => {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  };
+  const mark = CHECK_MARKS[item.status] || CHECK_MARKS.not_given;
+  const out = [];
+  const state = make('p', `check-detail-state check-item--${item.status}`);
+  const glyph = make('span', 'check-mark', mark.mark);
+  glyph.setAttribute('aria-hidden', 'true');
+  state.append(glyph, make('span', '', ` ${checkState(item)}`));
+  out.push(state, make('p', 'source-where', `${item.group === 'needed' ? 'Needed' : 'Would strengthen'} · ${dispute.name}`));
+  const evidence = item.evidence;
+  if (evidence) {
+    const where = evidence.from === 'document' ? `From ${evidence.document}, ${evidence.page}`
+      : `From your message${evidence.given_at ? ` of ${fileDate(evidence.given_at)}` : ''}`;
+    out.push(make('p', 'board-meta', item.status === 'in_hand' ? where : `${where}, in your words`),
+      make('blockquote', 'detail-words', evidence.words));
+  }
+  const law = item.law || {};
+  out.push(make('h3', 'detail-h', 'What the law says'),
+    make('p', 'source-where', [law.title, law.locator].filter(Boolean).join(' · ')),
+    make('blockquote', 'detail-words', law.words));
+  const tell = make('button', 'ghost held-retry', 'Tell NM about this');
+  tell.type = 'button';
+  tell.addEventListener('click', () => {
+    const box = $('message');
+    const start = `About "${item.need}" (${dispute.name}): `;
+    box.value = box.value.trim() ? `${box.value.trim()}\n${start}` : start;
+    box.dispatchEvent(new Event('input', { bubbles: true }));
+    sizeComposer();
+    box.focus();
+  });
+  out.push(tell);
   return out;
 }
 

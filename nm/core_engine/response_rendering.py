@@ -299,8 +299,9 @@ _FOUND = {"grounding": "a statement was not supported by the words it relies on"
 _DATE_FOUND = ("a date was stated that is not in your messages or documents, the sources or the time "
                "limits code worked out")
 #: The short IDs the models are shown, as words a reader can follow.
-_SHORT_IDS = re.compile(r"\b(?:U|DOC|M|P|J)\d+\b")
-_SHORT_WORDS = {"U": "a paragraph", "DOC": "a document page", "M": "a message", "P": "a provision", "J": "a judgment"}
+_SHORT_IDS = re.compile(r"\b(?:U|DOC|M|P|J|C|K)\d+\b")
+_SHORT_WORDS = {"U": "a paragraph", "DOC": "a document page", "M": "a message", "P": "a provision", "J": "a judgment",
+                "C": "a checklist item", "K": "an item on the matter's checklist"}
 
 
 def held_sections(draft, review, date_findings=()):
@@ -316,11 +317,7 @@ def held_sections(draft, review, date_findings=()):
     if not parts or any(not finding["unit_ids"] for finding in findings):
         return None
     affected = {identity for finding in findings for identity in finding["unit_ids"]}
-    held, start = [], 0
-    for index, part in enumerate(parts):
-        if {unit["id"] for unit in draft["units"][start:start + part["units"]]} & affected:
-            held.append(index)
-        start += part["units"]
+    held = [index for index, ids in enumerate(response_writer.part_ids(draft)) if ids & affected]
     if all(part["dispute_id"] is None or index in held for index, part in enumerate(parts)):
         return None
     return held
@@ -331,7 +328,7 @@ def _release(draft, review, held):
     carries (the date check reads today's date, so its findings are kept, not redone)."""
     if held is None:
         return [], []
-    known = {unit["id"] for unit in draft["units"]}
+    known = {unit["id"] for unit in draft["units"]}.union(*response_writer.part_ids(draft))
     if (not isinstance(held, dict) or set(held) != {"parts", "date_findings"}
             or not isinstance(held["date_findings"], list) or any(
                 not isinstance(f, dict) or f.get("category") != "grounding" or not f.get("unit_ids")
@@ -376,8 +373,7 @@ def found_words(findings, date_findings=(), *, where="the section"):
 
 def _held_notice(index, name, draft, findings, date_findings):
     """In a held section's place: what it was to cover and what the check found."""
-    start = sum(part["units"] for part in draft["parts"][:index])
-    ids = {unit["id"] for unit in draft["units"][start:start + draft["parts"][index]["units"]]}
+    ids = response_writer.part_ids(draft)[index]
     said = found_words([f for f in findings if set(f["unit_ids"]) & ids],
                        [f for f in date_findings if set(f["unit_ids"]) & ids])
     return _notice("HELD", f"Held back: {name}. After the rewrites NM may make, the independent check still "
@@ -423,6 +419,19 @@ def _date(iso):
     """'14 September 2026 (Monday)', the same everywhere it is shown."""
     day = date.fromisoformat(iso)
     return f"{day.day} {_MONTHS[day.month - 1]} {day.year} ({_WEEKDAYS[day.weekday()]})"
+
+
+def limit_rows(entry):
+    """A dispute's time limit on the board (18 Oct 2026), in the Working box's own labelled
+    rows: its last day and where it stands as of the day it was worked out, or why it was
+    not assessed."""
+    if "not_assessed" in entry:
+        return [["Not assessed", entry["not_assessed"]]]
+    state = entry["standing"]["state"]
+    rows = [["Last day", _date(entry["last_day"])]]
+    if entry.get("as_of"):
+        rows.append(["As of", _date(entry["as_of"])])
+    return rows + [["Result", _RESULTS[state]], [_DAYS[state], str(entry["standing"]["days"])]]
 
 
 def _shown(working, earlier, as_of=None):
@@ -514,17 +523,17 @@ def render(context, research_record, sources, draft, review, execution=None, *,
     else:
         if authority_evidence is None or review.get("contract") not in {
                 response_review.AUTHORITY_CONTRACT, response_review.ALIAS_CONTRACT,
-                response_review.RESPECTED_CONTRACT, response_review.CONTRACT}:
+                response_review.RESPECTED_CONTRACT, response_review.PARTS_CONTRACT, response_review.CONTRACT}:
             raise ValueError("Current rendering requires an authority-bound current review")
         checked_authorities = response_authorities.validate(authority_evidence, context,
             research_record, sources, checked_draft)
         checked_review = response_review.validate(review, context, research_record,
             sources, checked_draft, execution=execution, authority_evidence=checked_authorities,
             time_limits=calculation.for_answer(time_limits) if time_limits is not None else None)
-    if contract == CONTRACT and checked_draft["contract"] != response_writer.CONTRACT:
+    if contract == CONTRACT and checked_draft["contract"] not in response_writer.WORDED:
         # Otherwise every source would be shown unlinked, with nothing to say so.
         raise ValueError("A v11 rendering links each source at the words its use names, "
-                         "which only a writer v5 draft gives")
+                         "which only a writer v5 or later draft gives")
     if held is not None and contract not in _HOLDS:
         raise ValueError("Only a v10 or later rendering may hold sections back")
     held_parts, date_findings = _release(checked_draft, checked_review, held)

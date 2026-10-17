@@ -74,10 +74,12 @@ class MissingWorkModel(ScriptedModel):
                     "mismatch": "The independent request for questions has no delivered result or limit."}]
                     if missing else []}
         if prompt.operation == "core_response_writer":
-            # Writer v5 (17 Oct 2026): each use names the words of its unit it supports.
+            # Writer v5 (17 Oct 2026): each use names the words of its unit it supports; v6
+            # (18 Oct): each part returns its checklist, here none.
             for unit in out["units"]:
                 for selected in unit["uses"]:
                     selected.setdefault("words", unit["text"])
+            out.update(checklist=[], time_limits=[])
         return replace(result, data=out)
 
 

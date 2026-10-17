@@ -7,11 +7,12 @@ step's understanding of the advocate's words and the documents they sent, checke
 by that turn's research loop, so the board presents it as NM's working understanding
 and facts as the advocate or a document gave them, never as established. A question's
 status is what the saved research actually did for it, not a judgment that it was
-answered well.
+answered well. From turn v5 each dispute also carries its checklist, as the answer of
+that turn returned it and its checks admitted it (checklist.py).
 """
 from __future__ import annotations
 
-from nm.core_engine import research
+from nm.core_engine import checklist, research, response_rendering
 
 _UNDERSTOOD = research.QUESTION_PLANS
 
@@ -61,6 +62,13 @@ def board(rows):
             continue
         work = {item["question_id"]: item["id"] for item in record["plan"]["work"]}
         names = {dispute["id"]: dispute["name"] for dispute in understanding["disputes"]}
+        # What each dispute needs, saved with this turn from its answer (turn v5, 18 Oct
+        # 2026); a dispute's checklist is shown only under the same id and name.
+        dates = {saved["turn_id"]: saved["response"]["at"] for saved in rows[:index + 1]}
+        checklists = checklist.for_board(row.get("records"), dates)
+        for shown in checklists.values():
+            for limit in shown["time_limits"]:
+                limit["rows"] = response_rendering.limit_rows(limit)
         return {
             "state": "ready", "turn_id": row["turn_id"],
             "summary": understanding["summary"], "asked": list(understanding["asked"]),
@@ -79,7 +87,9 @@ def board(rows):
                                "status": _status(record, work.get(q["id"]))}
                               for q in d["legal_questions"]],
                 "still_needed": list(d["missing_facts"]), "rights_at_stake": list(d["rights_at_stake"]),
-                "relief_sought": list(d["relief_sought"])} for d in understanding["disputes"]],
+                "relief_sought": list(d["relief_sought"]),
+                **({"checklist": checklists[d["id"]]} if d["id"] in checklists
+                   and checklists[d["id"]]["name"] == d["name"] else {})} for d in understanding["disputes"]],
             "related_points": [{"point": r["point"], "why": r["why_it_matters"], "dispute_id": r["dispute_id"] or None,
                                 "dispute": names.get(r["dispute_id"])} for r in understanding["related_points"]],
         }

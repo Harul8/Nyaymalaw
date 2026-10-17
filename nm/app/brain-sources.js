@@ -75,7 +75,8 @@ window.NmBrainSources = (() => {
   function coreInspection(source, inspection) {
     return source?.brain === true && legal(source)
       && inspection?.contract === 'core_source_authority_view_v1'
-      && ['core_turn_v1', 'core_turn_v2', 'core_turn_v3', 'core_turn_v4'].includes(inspection.activity_contract)
+      && ['core_turn_v1', 'core_turn_v2', 'core_turn_v3', 'core_turn_v4', 'core_turn_v5']
+        .includes(inspection.activity_contract)
       && inspection.source_id === source.id
       && ['recorded', 'not_assessed'].includes(inspection.state)
       && ['case_checks', 'provision_checks', 'provision_mentions']

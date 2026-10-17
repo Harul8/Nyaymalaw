@@ -73,17 +73,22 @@ class ScriptedModel:
                     "words": "counsel's submission"}]
                 text = "The court rejected counsel's submission because its condition was unmet."
             out = {"units": [{"kind": "law" if uses else "greeting", "text": text,
-                              "addresses": [{"source_id": latest["source_id"]}], "uses": uses}]}
+                              "addresses": [{"source_id": latest["source_id"]}], "uses": uses}],
+                   "checklist": [], "time_limits": []}
             if self.malformed_writer:
                 self.malformed_writer -= 1
                 out["units"][0]["addresses"][0]["quote"] = "Absent quotation"
         elif prompt.operation == "core_response_review":
             units = data["complete_draft_proposal"]["units"]
+            # Every checklist item has its verdict too (review v6, 18 Oct 2026).
+            items = [item for part in data["complete_draft_proposal"].get("checklists", []) for item in part["items"]]
             rejected = self.reject > 0
             self.reject -= int(rejected)
             out = {"verdict": "reject" if rejected else "accept",
                 "units": [{"unit_id": u["id"], "verdict": "rejected" if rejected else "supported",
-                           "reason": "Synthetic unit decision"} for u in units],
+                           "reason": "Synthetic unit decision"} for u in units]
+                         + [{"unit_id": item["id"], "verdict": "supported", "reason": "Synthetic item decision"}
+                            for item in items],
                 "request_coverage": [{"request": ref, "disposition": "addressed",
                     "unit_ids": [u["id"] for u in units], "reason": "Synthetic coverage"}],
                 "findings": [{"category": "attribution", "unit_ids": [units[0]["id"]],
@@ -119,10 +124,10 @@ def test_four_actual_stage_calls_save_reopen_and_replay_without_reexecution(stor
                                      "core_response_writer", "core_response_review"]
     stored = store.load(chat_matter_id("owner", response["chat_id"]))
     rows = saved_rows(stored, "owner")
-    assert rows[0]["activities"]["contract"] == "core_turn_v4"
+    assert rows[0]["activities"]["contract"] == "core_turn_v5"
     # No held Acts were given to this turn, so no time limit was worked out (item 9).
     assert rows[0]["activities"]["calculation"]["state"] == "not_needed"
-    assert rows[0]["activities"]["review"]["contract"] == "core_response_review_v5"
+    assert rows[0]["activities"]["review"]["contract"] == "core_response_review_v6"
     assert rows[0]["activities"]["authority_evidence"]["contract"] == "core_response_authorities_v1"
     assert rows[0]["response"] == response
     source = response["elements"][0]["source"]
@@ -166,7 +171,7 @@ def test_mixed_legacy_and_current_history_reopens_without_fresh_authority_checks
         raise AssertionError("Saved readback cannot consult current authority indexes")
     monkeypatch.setattr(response_authorities, "check", no_new_check)
     rows = saved_rows(store.load(chat_matter_id("owner", first["chat_id"])), "owner")
-    assert [row["activities"]["contract"] for row in rows] == ["core_turn_v1", "core_turn_v4"]
+    assert [row["activities"]["contract"] for row in rows] == ["core_turn_v1", "core_turn_v5"]
     assert rows[0]["response"]["elements"] == elements
     assert run(store, model, chat_id=first["chat_id"], turn_id="new", message="Continue.")["replayed"]
     assert len(model.calls) == 3
@@ -401,7 +406,7 @@ def test_a_turn_saved_before_sections_could_be_held_reopens_unchanged(store, sav
     second = run(store, ScriptedModel(), chat_id=first["chat_id"], turn_id="new", message="Continue.")
     assert second["committed"] == "committed"
     rows = saved_rows(store.load(chat_matter_id("owner", first["chat_id"])), "owner")
-    assert [row["activities"]["contract"] for row in rows] == ["core_turn_v3", "core_turn_v4"]
+    assert [row["activities"]["contract"] for row in rows] == ["core_turn_v3", "core_turn_v5"]
     assert rows[0]["response"]["elements"] == elements
     assert all("unit" not in element for element in elements)
     assert all("unit" in element for element in rows[1]["response"]["elements"])

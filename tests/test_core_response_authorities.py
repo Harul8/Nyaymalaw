@@ -10,6 +10,7 @@ from nm.core_engine.retrieval import HybridSearcher, _candidate
 from tests.test_citation_check import JUDGMENTS, _build
 from tests.test_core_research import Model, proposal
 from tests.test_core_response_writer import source_use_v2, unit
+from tests.test_core_response_writer import accept as writer_fixture_accept
 from tests.test_core_understanding import context
 from tests.test_current_brain_retrieval import Collection
 
@@ -36,7 +37,7 @@ def setup(*, acts=None, quoted_authority=None):
 
 def draft_for(ctx, sources, text, selected):
     uses = [source_use_v2(s) for s in selected]
-    return response_writer.accept({"units": [unit(sources, kind="law", text=text, uses=uses)]}, ctx, sources)
+    return writer_fixture_accept({"units": [unit(sources, kind="law", text=text, uses=uses)]}, ctx, sources)
 
 
 def judgments(sources):
@@ -96,7 +97,7 @@ def test_different_cited_case_mentioned_by_selected_source_is_explicit_not_a_fal
     primary = judgments(sources)["SYN_1973_ALPHA"]
     proposed = {"units": [unit(sources, kind="law", text="The judgment mentions (1985) 2 SCC 10.",
         uses=[source_use_v2(primary, role="quoted_authority")])]}
-    draft = response_writer.accept(proposed, ctx, sources)
+    draft = writer_fixture_accept(proposed, ctx, sources)
     evidence = response_authorities.check(ctx, record, sources, draft, case_index=_build(tmp_path))
     row = evidence["units"][0]["case_associations"][0]
     assert row["lookup"] == "found" and row["association"] == "different_used_identity"

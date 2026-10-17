@@ -4,7 +4,8 @@ From v4 the draft is written in parts, one per dispute of the matter, in paralle
 part sees the whole conversation and understanding and only its own questions' held
 passages; code assembles the parts in the understanding's order and admits the whole.
 The proposal stays exactly the units the model wrote; the code-owned layout (which
-dispute each run of units answers) sits beside it and is checked on replay.
+dispute each run of units answers) sits beside it and is checked on replay. From v6 each
+dispute's part also returns that dispute's checklist, every quote in it checked here.
 """
 from __future__ import annotations
 
@@ -13,7 +14,7 @@ import re
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 
-from nm.core_engine import answer_sources, research
+from nm.core_engine import answer_sources, checklist, research
 from nm.core_engine.understanding import REFERENCE, TEXT, renamed, source_catalogue
 from nm.shared import clock_contracts
 from nm.shared.model_port import (
@@ -30,9 +31,15 @@ PARTS_CONTRACT = "core_response_writer_v4"
 #: v5 (owner decisions, 17 Oct 2026): each source names the words of its unit that it
 #: supports, which become the advocate's link to it; each dispute's part opens with a
 #: summary, which opens the answer under "In short".
-CONTRACT = "core_response_writer_v5"
-CONTRACTS = (LEGACY_CONTRACT, OWNED_TAG_CONTRACT, ALIAS_CONTRACT, PARTS_CONTRACT, CONTRACT)
-_IN_PARTS = (PARTS_CONTRACT, CONTRACT)
+WORDS_CONTRACT = "core_response_writer_v5"
+#: v6 (owner decisions, 17 Oct 2026; built 18 Oct): each dispute's part also returns that
+#: dispute's checklist, every item tied to the held law words that require it, and names
+#: the worked-out time limits that concern the dispute.
+CONTRACT = "core_response_writer_v6"
+CONTRACTS = (LEGACY_CONTRACT, OWNED_TAG_CONTRACT, ALIAS_CONTRACT, PARTS_CONTRACT, WORDS_CONTRACT, CONTRACT)
+_IN_PARTS = (PARTS_CONTRACT, WORDS_CONTRACT, CONTRACT)
+#: The versions whose sources name the words of their unit that they support.
+WORDED = (WORDS_CONTRACT, CONTRACT)
 #: Each part's answer limit; reasoning counts towards it.
 MAX_OUTPUT = 16000
 SYSTEM = """Message: You receive the exact latest advocate message, complete attributed
@@ -64,6 +71,23 @@ answer those here. When this_part names no dispute it opens a reply that covers 
 give a brief opening, anything the advocate asked that belongs to no single dispute, and
 related points not tied to one dispute; the disputes and their law are answered in the
 other parts. A reply with one part is the whole answer.
+
+Your dispute's checklist: beside its units, a dispute's part returns what the case
+needs as the held law requires it, so the advocate sees at a glance what is in hand.
+Under needed put what the held law makes necessary for the relief or defence (an element
+to prove, a notice, a document, a step within time); under would_strengthen what would
+make the case stronger without being required. Tie each item to the held passage that
+requires it, copying the words that say so exactly and fully enough to be found once.
+An item already on the matter's checklist (current_records.checklist) whose passage is
+not held for this part may instead be carried by its id. Say where each item stands from
+the messages and documents: in_hand when a message or document page holds it,
+coming_or_unclear when the advocate has promised it, given only part of it or is unsure
+of it, not_available when the advocate says it cannot be had, and not_given when nothing
+yet answers it. For every state but not_given copy exactly the words that show it, the
+advocate's own words for coming_or_unclear and not_available. List an item only where
+held law supports it; where none does, return no items. Under time_limits name, exactly
+as given in time_limits, the worked-out time limits that concern this dispute. An
+opening part returns neither.
 
 Work in a loop before you return: read the conversation and the passages, draft, check
 every statement against the words it relies on (who said it, its conditions, scope and
@@ -120,8 +144,9 @@ such law exists. Without relevant held law, do the supported account or question
 work and explain that gap; never fill it with a legal standard from memory.
 
 Outcome: Return an ordered units array with natural text, kind, original-message
-addresses and source uses. Separate independently assessable assertions; retain all
-conditions without an arbitrary length limit. Each unit addresses original advocate
+addresses and source uses, and for a dispute's part its checklist and time_limits.
+Separate independently assessable assertions; retain all conditions without an
+arbitrary length limit. Each unit addresses original advocate
 material; the draft must address the latest message. Each reference selects only an
 offered source_id; held legal passages are offered under short IDs such as P1 or J1.
 Code supplies the complete exact saved passage and its attribution;
@@ -204,6 +229,28 @@ LEGACY_SCHEMA, SCHEMA = _schema(LEGACY_USE, REFERENCE), _schema(USE, SOURCE_REFE
 WORDS = {**TEXT, "description": "The few words of this unit, copied exactly, that this source supports."}
 USE_V5 = {"anyOf": [_object({**variant["properties"], "words": WORDS}) for variant in USE["anyOf"]]}
 SCHEMA_V5 = _schema(USE_V5, SOURCE_REFERENCE, kinds=(*KINDS, "summary"))
+#: v6: a dispute's checklist and the time limits that concern it, beside its units.
+QUOTE = _object({"source_id": TEXT, "quote": {**TEXT, "description": "The exact words, copied from the source."}})
+ITEM = _object({
+    "need": {**TEXT, "description": "What the case needs, in plain words."},
+    "group": {"type": "string", "enum": list(checklist.GROUPS)},
+    "law": {"anyOf": [QUOTE, {"type": "null"}],
+            "description": "The held passage and its exact words that require this; null only when carries names it."},
+    "carries": {"type": ["string", "null"],
+                "description": "The id of the item on the matter's checklist this carries forward when its passage "
+                               "is not held for this part; otherwise null."},
+    "status": {"type": "string", "enum": list(checklist.STATES)},
+    "evidence": {"anyOf": [QUOTE, {"type": "null"}],
+                 "description": "The exact words of a message or document page that show where it stands; null for "
+                                "not_given."},
+})
+CHECKLIST = {"type": "array", "items": ITEM}
+LIMIT_NAMES = {"type": "array", "items": TEXT}
+#: What one dispute's part returns, and the whole reply's proposal as code assembles it.
+PART_SCHEMA = _object({"units": SCHEMA_V5["properties"]["units"], "checklist": CHECKLIST,
+                       "time_limits": LIMIT_NAMES})
+SCHEMA_V6 = _object({"units": SCHEMA_V5["properties"]["units"], "checklists": {
+    "type": "array", "items": _object({"checklist": CHECKLIST, "time_limits": LIMIT_NAMES})}})
 
 
 def _legacy_use(use, sources):
@@ -286,6 +333,55 @@ def _layout(parts, count):
     return deepcopy(parts)
 
 
+def _quoted(reference, sources, offered, kinds, what):
+    """An exact quotation from one owned source of the kinds allowed (v6)."""
+    selected = answer_sources.select({"source_id": offered.get(reference["source_id"], reference["source_id"]),
+                                      "quote": reference["quote"]}, sources)
+    source = sources[selected["source_id"]]
+    if source["kind"] not in kinds or (source["kind"] == "account" and source.get("speaker") != "advocate"):
+        raise SchemaViolation(f"{what} must quote {' or '.join(kinds[kind] for kind in kinds)}; "
+                              f"{reference['source_id']!r} is not one")
+    return selected
+
+
+_LAW = {"provision": "a held provision", "judgment": "a held judgment"}
+_HOLDS = {"account": "an advocate message", "document": "a document page"}
+_SAYS = {"account": "an advocate message"}
+
+
+def _checklists(given, layout, context, sources, offered):
+    """v6: each dispute part's checklist, every quote checked exactly (owner decisions, 17
+    Oct 2026). No item is a manual tick: one in hand names the words that hold it."""
+    if len(given) != len(layout):
+        raise SchemaViolation("Each part of the reply returns its own checklist")
+    saved, number, out = checklist.saved(context), 0, []
+    for part, written in zip(layout, given):
+        if part["dispute_id"] is None and (written["checklist"] or written["time_limits"]):
+            raise SchemaViolation("A part that answers no single dispute has no checklist or time limits")
+        items = []
+        for item in written["checklist"]:
+            number += 1
+            if not item["need"].strip():
+                raise SchemaViolation("A checklist item needs to say what the case needs")
+            if (item["law"] is None) == (item["carries"] is None):
+                raise SchemaViolation("A checklist item rests either on held law words or on the item of the "
+                                      "matter's checklist it carries, never both or neither")
+            if item["carries"] is not None and item["carries"] not in saved:
+                raise SchemaViolation(f"{item['carries']!r} is not an item on the matter's checklist")
+            if (item["status"] == "not_given") != (item["evidence"] is None):
+                raise SchemaViolation("A checklist item not yet given has no evidence; every other state quotes "
+                                      "the words that show it")
+            items.append({"id": f"{context['latest']['turn_id']}:c{number}", "need": item["need"],
+                          "group": item["group"], "status": item["status"], "carries": item["carries"],
+                          "law": None if item["law"] is None else _quoted(
+                              item["law"], sources, offered, _LAW, "A checklist item's law"),
+                          "evidence": None if item["evidence"] is None else _quoted(
+                              item["evidence"], sources, offered,
+                              _HOLDS if item["status"] == "in_hand" else _SAYS, "Where a checklist item stands")})
+        out.append({"items": items, "time_limits": list(written["time_limits"])})
+    return out
+
+
 def accept(proposal, context, sources, *, contract=CONTRACT, parts=None):
     """Check exact dependencies only; no keyword-based semantic certification.
 
@@ -297,8 +393,8 @@ def accept(proposal, context, sources, *, contract=CONTRACT, parts=None):
     if parts is not None and contract not in _IN_PARTS:
         raise ValueError("Only a v4 or later draft is written in parts")
     offered = answer_sources.aliases(sources) if contract in (ALIAS_CONTRACT, *_IN_PARTS) else {}
-    schema = (LEGACY_SCHEMA if contract == LEGACY_CONTRACT else SCHEMA_V5 if contract == CONTRACT
-              else SCHEMA)
+    schema = (LEGACY_SCHEMA if contract == LEGACY_CONTRACT else SCHEMA_V6 if contract == CONTRACT
+              else SCHEMA_V5 if contract == WORDS_CONTRACT else SCHEMA)
     data = canonical_schema_data(proposal, schema)
     require_schema(data, schema)
     originals = source_catalogue(context)
@@ -327,7 +423,7 @@ def accept(proposal, context, sources, *, contract=CONTRACT, parts=None):
             addresses_latest |= ref["source_id"] == latest_id
         uses = [(_legacy_use(use, sources) if contract == LEGACY_CONTRACT
                  else _owned_use(_offered(use, offered), sources, originals)) for use in item["uses"]]
-        if contract == CONTRACT:
+        if contract in WORDED:
             # The words a source supports become its link (17 Oct 2026): exactly in the unit,
             # the first place they stand.
             for use, owned in zip(item["uses"], uses):
@@ -349,6 +445,8 @@ def accept(proposal, context, sources, *, contract=CONTRACT, parts=None):
     draft = {"contract": contract, "proposal": deepcopy(data), "units": units}
     if contract in _IN_PARTS:
         draft["parts"] = _layout(parts, len(units))
+    if contract == CONTRACT:
+        draft["checklists"] = _checklists(data["checklists"], draft["parts"], context, sources, offered)
     return draft
 
 
@@ -399,11 +497,13 @@ def dates_not_given(draft, context, sources, time_limits=None):
              for day, _ in _dates(text)}
     days = {(d, m) for d, m, _ in given}
     findings = []
-    for unit in draft["units"]:
-        stated = [words for (d, m, y), words in _dates(unit["text"])
+    written = [(unit["id"], unit["text"]) for unit in draft["units"]] + [
+        (item["id"], item["need"]) for part in draft.get("checklists", ()) for item in part["items"]]
+    for identity, text in written:
+        stated = [words for (d, m, y), words in _dates(text)
                   if not ((d, m, y) in given or (d, m, None) in given if y else (d, m) in days)]
         if stated:
-            findings.append({"category": "grounding", "unit_ids": [unit["id"]], "sources": [],
+            findings.append({"category": "grounding", "unit_ids": [identity], "sources": [],
                              "mismatch": "Dates stated here that are not in the advocate's messages or "
                                          "documents, the sources supplied or the time limits code worked out: "
                                          + "; ".join(dict.fromkeys(stated)) + ". Do not work out a date "
@@ -414,7 +514,8 @@ def dates_not_given(draft, context, sources, time_limits=None):
 def validate(draft, context, sources):
     """Rebind a draft to its exact original selectors before review or replay."""
     contract = draft.get("contract") if isinstance(draft, dict) else None
-    fields = {"contract", "proposal", "units"} | ({"parts"} if contract in _IN_PARTS else set())
+    fields = ({"contract", "proposal", "units"} | ({"parts"} if contract in _IN_PARTS else set())
+              | ({"checklists"} if contract == CONTRACT else set()))
     if (contract not in CONTRACTS or set(draft) != fields
             or accept(draft["proposal"], context, sources, contract=contract,
                       parts=draft.get("parts")) != draft):
@@ -486,11 +587,11 @@ def _payload(context, record, sources, interpretation, execution, layout, index,
 def _write_part(model, payload):
     prompt = Prompt(system=SYSTEM, user=json.dumps(payload, ensure_ascii=False),
                     operation="core_response_writer")
-    if (estimate_tokens(SYSTEM + prompt.user + json.dumps(SCHEMA_V5)) + MAX_OUTPUT
+    if (estimate_tokens(SYSTEM + prompt.user + json.dumps(PART_SCHEMA)) + MAX_OUTPUT
             > model.context_budget(Tier.HARD)):
         raise ContextOverflow("Complete response context exceeds the model budget")
     try:
-        result = model.structured(prompt, SCHEMA_V5, Tier.HARD, max_tokens=MAX_OUTPUT)
+        result = model.structured(prompt, PART_SCHEMA, Tier.HARD, max_tokens=MAX_OUTPUT)
     except SchemaViolation as exc:
         if exc.rejected_result is None:
             raise
@@ -501,6 +602,19 @@ def _write_part(model, payload):
     return result.data
 
 
+def part_ids(draft):
+    """The IDs each part of a draft owns: its units and, from v6, its checklist items. A
+    finding naming any of them concerns that part."""
+    owned, start = [], 0
+    for index, part in enumerate(draft.get("parts") or []):
+        ids = {unit["id"] for unit in draft["units"][start:start + part["units"]]}
+        if "checklists" in draft:
+            ids |= {item["id"] for item in draft["checklists"][index]["items"]}
+        owned.append(ids)
+        start += part["units"]
+    return owned
+
+
 def kept_parts(draft, findings):
     """After review, parts with no finding are kept as written and only the others are
     rewritten; a finding that names no reply unit (an omission) reopens every part."""
@@ -508,11 +622,13 @@ def kept_parts(draft, findings):
         return {}
     affected = {identity for finding in findings for identity in finding["unit_ids"]}
     kept, start = {}, 0
-    for index, part in enumerate(draft["parts"]):
+    for index, (part, ids) in enumerate(zip(draft["parts"], part_ids(draft))):
         end = start + part["units"]
-        if not {unit["id"] for unit in draft["units"][start:end]} & affected:
+        if not ids & affected:
             kept[index] = {"dispute_id": part["dispute_id"],
                            "units": deepcopy(draft["proposal"]["units"][start:end])}
+            if draft["contract"] == CONTRACT:
+                kept[index].update(deepcopy(draft["proposal"]["checklists"][index]))
         start = end
     return kept
 
@@ -528,20 +644,35 @@ def write(model, context, research_record, sources, interpretation=None, executi
     def part(index):
         kept = keep.get(index)
         if kept is not None and kept["dispute_id"] == layout[index]["dispute_id"]:
-            return kept["units"]
+            return {"units": kept["units"], "checklist": kept.get("checklist", []),
+                    "time_limits": kept.get("time_limits", [])}
         data = _write_part(model, _payload(context, research_record, sources, interpretation, execution,
                                            layout, index, time_limits))
         units = data.get("units") if isinstance(data, dict) else None
         # Malformed output stays in the assembled draft, where admission refuses it.
-        return deepcopy(units) if isinstance(units, list) else [deepcopy(data)]
+        if not isinstance(units, list):
+            return {"units": [deepcopy(data)], "checklist": [], "time_limits": []}
+        return {"units": deepcopy(units), "checklist": deepcopy(data.get("checklist")),
+                "time_limits": deepcopy(data.get("time_limits"))}
 
     with ThreadPoolExecutor(max_workers=min(8, len(layout))) as pool:
         written = list(pool.map(part, range(len(layout))))
-    proposal = {"units": [unit for units in written for unit in units]}
-    shape = [{"dispute_id": layout[index]["dispute_id"], "units": len(units)} for index, units in enumerate(written)]
+    proposal = {"units": [unit for part in written for unit in part["units"]],
+                "checklists": [{"checklist": part["checklist"], "time_limits": part["time_limits"]}
+                               for part in written]}
+    shape = [{"dispute_id": layout[index]["dispute_id"], "units": len(part["units"])}
+             for index, part in enumerate(written)]
     try:
         if any(part["units"] < 1 for part in shape):
             raise SchemaViolation("Each part of the reply needs at least one unit")
+        # Only the time limits code worked out may be named for a dispute.
+        given = {entry["what"] for entry in (time_limits or {}).get("worked_out", [])} | {
+            entry["what"] for entry in (time_limits or {}).get("not_assessed", [])}
+        unknown = [name for part in written for name in part["time_limits"] or []
+                   if isinstance(name, str) and name not in given]
+        if unknown:
+            raise SchemaViolation("Time limits named for a dispute that code did not work out: "
+                                  + "; ".join(dict.fromkeys(unknown)) + ". Name them exactly as given in time_limits.")
         return accept(proposal, context, sources, parts=shape)
     except SchemaViolation:
         # A shape correction shows the writer the whole assembled draft it produced.

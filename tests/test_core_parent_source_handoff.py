@@ -17,6 +17,7 @@ from nm.core_engine.retrieval import HybridSearcher, validate_search
 from tests.test_core_answer_sources import fixture
 from tests.test_core_research import Model, proposal, work
 from tests.test_core_response_writer import source_use_v2, unit, worded
+from tests.test_core_response_writer import accept as writer_fixture_accept
 from tests.test_core_served import OWNER, served, source_url, successful
 from tests.test_core_statute_readback import _local, _row
 from tests.test_core_understanding import context
@@ -109,7 +110,7 @@ def test_parent_source_matches_authority_readback_without_an_invented_vector_pos
     ctx, record, collection, parent, _ = _research(tmp_path, monkeypatch)
     sources = answer_sources.build(ctx, record)
     source = _parent_source(sources, parent)
-    draft = response_writer.accept({"units": [unit(sources, kind="law",
+    draft = writer_fixture_accept({"units": [unit(sources, kind="law",
         text=parent["full_text"], uses=[source_use_v2(source)])]}, ctx, sources)
     evidence = response_authorities.check(ctx, record, sources, draft, provision_reader=collection)
 

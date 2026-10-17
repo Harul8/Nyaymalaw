@@ -72,7 +72,9 @@ const board = {
   assert.ok(all.includes('Do not send the appointment message.'));
 
   // Choosing the dispute opens its details in the board's own pane.
-  const card = nodes[1].children.find((node) => node.tagName === 'BUTTON');
+  // The dispute's name opens it (18 Oct 2026: its card also holds its checklist).
+  const card = nodes[1].children.find((node) => node.className === 'board-card dispute-card')
+    .children.find((node) => node.tagName === 'BUTTON');
   assert.equal(card.attributes['aria-pressed'], 'false');
   card.handlers.click();
   assert.equal(opened.length, 1);
@@ -97,7 +99,8 @@ const board = {
   delete earlier.disputes[0].why_it_matters;
   const nodes = context.renderChatBoard(earlier);
   assert.ok(!nodes.map(text).join('\n').includes('without the path'));
-  nodes[1].children.find((node) => node.tagName === 'BUTTON').handlers.click();
+  nodes[1].children.find((node) => node.className === 'board-card dispute-card')
+    .children.find((node) => node.tagName === 'BUTTON').handlers.click();
   assert.ok(!opened.at(-1).content.map(text).join('\n').includes('Why it matters'));
 }
 
