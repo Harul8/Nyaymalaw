@@ -11,11 +11,12 @@ class AttemptRefused(Exception):
 @runtime_checkable
 class TurnAttemptPort(Protocol):
     def claim(self, identity: str, request_digest: str) -> dict:
-        """Return token/correction_used, or refuse ambiguous or terminal ownership."""
+        """Return token/corrections_used (a count), or refuse ambiguous or terminal ownership."""
         ...
 
     def consume_correction(self, identity: str, token: str) -> None:
-        """Persist the one allowance before any corrective provider dispatch."""
+        """Persist one correction of the allowance before any corrective provider dispatch;
+        refused once the allowance is spent."""
         ...
 
     def finish(self, identity: str, token: str, state: str, code: str | None = None) -> None:

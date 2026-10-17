@@ -101,8 +101,10 @@ def test_missing_work_rewrites_once_preserving_supported_peer_then_rechecks_and_
     assert rows[0]["records"] == {} and rows[0]["work"] == []
 
 
+# Two corrections at most (owner decision, 17 Oct 2026): a review that keeps finding the
+# omission gets two rewrites; a shape repair leaves the review one.
 @pytest.mark.parametrize("settings,expected_calls", [
-    ({"reject_repair": True}, 5), ({"consume_shape_correction": True}, 4)])
+    ({"reject_repair": True}, 7), ({"consume_shape_correction": True}, 6)])
 def test_missing_work_cannot_reset_shared_correction_or_save_after_terminal_rejection(
         tmp_path, settings, expected_calls):
     store = FileMatterStore(tmp_path, key="synthetic-release-relationships")

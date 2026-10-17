@@ -130,25 +130,24 @@ def prepare(model, context, searcher, *, case_index=None, provision_reader=None,
     reviewed = calls.checked("core_response_review", review)
     # Code's own check: the answer states no date it worked out itself (owner, 15 Oct 2026).
     undated = response_writer.dates_not_given(draft, context, sources, time_limits)
-    if not reviewed["accepted"] or undated:
+    # What the review or the date check finds is rewritten and the whole answer reviewed
+    # again; when that review still finds a problem, once more (owner decision, 17 Oct
+    # 2026). What is still found after that withholds the turn.
+    while not reviewed["accepted"] or undated:
         findings = ([] if reviewed["accepted"] else reviewed["proposal"]["findings"]) + undated
         try:
             report("revising")
             # Parts with no finding are kept as written; the rest are rewritten.
             keep = response_writer.kept_parts(draft, findings)
             draft = calls.correct("core_response_writer", lambda: write(keep),
-                                  mismatch=findings, rejected=draft["proposal"])
+                                  mismatch=findings, rejected=draft["proposal"], asked_by_review=True)
             authorities = response_authorities.check(context, record, sources, draft,
                 case_index=case_index, provision_reader=provision_reader)
             report("reviewing")
             reviewed = calls.checked("core_response_review", review)
         except (CorrectionUnavailable, SchemaViolation):
             _withhold(calls, findings)
-        if not reviewed["accepted"]:
-            _withhold(calls, reviewed["proposal"]["findings"])
         undated = response_writer.dates_not_given(draft, context, sources, time_limits)
-        if undated:
-            _withhold(calls, undated)
     elements = response_rendering.render(context, record, sources, draft, reviewed,
         execution=execution, authority_evidence=authorities, time_limits=limits)
     activity = {"contract": CONTRACT, "interpretation": interpreted, "research": record,
@@ -234,7 +233,7 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
         except AttemptRefused as exc:
             raise _attempt_refusal(exc) from exc
 
-    calls = TurnCalls(model, correction_used=claim["correction_used"],
+    calls = TurnCalls(model, corrections_used=claim["corrections_used"],
                       reserve_correction=lambda: attempts.consume_correction(identity, token))
     try:
         elements, activity, metrics = prepare(calls, context.payload(), searcher,

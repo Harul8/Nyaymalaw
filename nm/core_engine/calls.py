@@ -1,4 +1,4 @@
-"""One turn owns model accounting and the single conditional draft correction."""
+"""One turn owns model accounting and its bounded conditional draft corrections."""
 from __future__ import annotations
 
 import json
@@ -7,9 +7,14 @@ from copy import deepcopy
 
 from nm.shared.model_port import ContextOverflow, ModelError, ModelResult, Prompt, SchemaViolation, estimate_tokens
 
+#: Corrections one turn may make (owner decision, 17 Oct 2026): any correction may be the
+#: first; only one the independent review asked for may be the second - when the second
+#: review still finds a problem, the flagged parts are rewritten once more.
+ALLOWANCE = 2
+
 
 class CorrectionUnavailable(ModelError):
-    """This turn's draft repair is already spent. Never a reason to release it."""
+    """This turn's draft corrections are spent. Never a reason to release it."""
 
 
 class ReleaseWithheld(ModelError):
@@ -23,14 +28,14 @@ class TurnCalls:
     This owner bounds semantic/shape correction across activities and records
     their receipts. No nested stage receives a fresh allowance.
     """
-    def __init__(self, model, *, correction_used=False, reserve_correction=None):
-        if type(correction_used) is not bool or (reserve_correction is not None
-                                               and not callable(reserve_correction)):
+    def __init__(self, model, *, corrections_used=0, reserve_correction=None):
+        if (type(corrections_used) is not int or not 0 <= corrections_used <= ALLOWANCE
+                or (reserve_correction is not None and not callable(reserve_correction))):
             raise ValueError("Correction ownership must come from a checked attempt")
         self.inner = model
         self.calls = []
         self.correction = None
-        self.correction_used = correction_used
+        self.corrections_used = corrections_used
         self.reserve_correction = reserve_correction
         self.last_output = None
         self.terminal = False
@@ -87,23 +92,25 @@ class TurnCalls:
                 "correction": feedback is not None and feedback["operation"] == prompt.operation,
                 "usage_confirmed": usage is not None})
 
-    def correct(self, operation, activity, *, mismatch, rejected=None):
+    def correct(self, operation, activity, *, mismatch, rejected=None, asked_by_review=False):
         """Correct a typed owner-rejected draft; caller must revalidate the result.
 
         Operation-scoped feedback never enters an independent review call.
         It is untrusted draft data, not original evidence or an execution receipt.
+        asked_by_review: the independent review's findings ask for it, so it may be the
+        turn's second correction; any other must be its first.
         """
         if self.terminal:
             raise ReleaseWithheld("This turn's release scope is withheld")
-        if self.correction_used:
-            raise CorrectionUnavailable("The shared draft correction has already been used")
+        if self.corrections_used >= (ALLOWANCE if asked_by_review is True else 1):
+            raise CorrectionUnavailable("This turn's draft corrections have been used")
         if not isinstance(operation, str) or not operation or not mismatch:
             raise ValueError("Correction requires an owning operation and precise mismatch")
         if self.reserve_correction is not None:
             # A lost acknowledgement conservatively spends the durable allowance.
             # Never dispatch a corrective call before that ownership is confirmed.
             self.reserve_correction()
-        self.correction_used = True
+        self.corrections_used += 1
         self.correction = {"operation": operation,
             "purpose": "Correct the rejected draft using the complete original input and declared output contract.",
             "mismatch": deepcopy(mismatch), "rejected_draft": deepcopy(rejected),
@@ -114,7 +121,7 @@ class TurnCalls:
             self.correction = None
 
     def checked(self, operation, activity):
-        """Shape errors may consume the one repair; outages/refusals never do."""
+        """A shape error may use the turn's first correction; outages/refusals never do."""
         try:
             return activity()
         except SchemaViolation as exc:
@@ -132,4 +139,4 @@ class TurnCalls:
                 "tokens_in": sum(c["tokens_in"] or 0 for c in self.calls),
                 "tokens_out": sum(c["tokens_out"] or 0 for c in self.calls),
                 "cached_tokens": sum(c["cached_tokens"] or 0 for c in self.calls),
-                "draft_corrections": int(self.correction_used)}
+                "draft_corrections": self.corrections_used}

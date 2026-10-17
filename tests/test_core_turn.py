@@ -243,24 +243,38 @@ def test_reviewer_rejection_uses_one_rewrite_and_new_independent_review(store):
     assert "correction" not in model.calls[4][1]
 
 
-def test_repeated_rejection_withholds_entire_turn_without_save(store):
+def test_a_second_rejection_gets_one_more_rewrite_and_a_third_review(store):
+    # Owner decision, 17 Oct 2026: when the second review still finds a problem, once more.
     model = ScriptedModel(reject=2)
+    response = run(store, model)
+    assert response["committed"] == "committed"
+    assert response["metrics"]["llm_calls"] == 7 and response["metrics"]["draft_corrections"] == 2
+    operations = [name for name, _ in model.calls]
+    assert operations[1:] == ["core_response_writer", "core_response_review"] * 3
+    assert ["correction" in payload for _, payload in model.calls[1:]] == [False, False, True, False, True, False]
+
+
+def test_repeated_rejection_withholds_entire_turn_without_save(store):
+    model = ScriptedModel(reject=3)
     with pytest.raises(ConversationRefused) as error: run(store, model)
     assert error.value.code == "answer_withheld" and not error.value.retryable
-    assert error.value.metrics["llm_calls"] == 5
+    assert error.value.metrics["llm_calls"] == 7
     assert not store.list_for("owner").matters
     with pytest.raises(ConversationRefused) as replay: run(store, model)
     assert replay.value.code == "answer_withheld"
-    assert len(model.calls) == 5  # Model would accept now; the terminal owner refuses first.
+    assert len(model.calls) == 7  # Model would accept now; the terminal owner refuses first.
     assert run(store, model, turn_id="genuinely-new-turn")["committed"] == "committed"
 
 
-def test_shape_repair_and_semantic_repair_cannot_each_get_new_allowance(store):
+def test_a_shape_repair_leaves_the_review_one_correction_and_no_more(store):
+    # A shape repair is the turn's first correction; the review may ask for the second.
     model = ScriptedModel(malformed_writer=1, reject=1)
-    with pytest.raises(ConversationRefused) as error: run(store, model)
+    assert run(store, model)["metrics"]["draft_corrections"] == 2
+    assert len(model.calls) == 6
+    model = ScriptedModel(malformed_writer=1, reject=2)
+    with pytest.raises(ConversationRefused) as error: run(store, model, turn_id="another-turn")
     assert error.value.code == "answer_withheld"
-    assert len(model.calls) == 4
-    assert not store.list_for("owner").matters
+    assert len(model.calls) == 6
 
 
 def test_provider_outage_never_saves_an_empty_success(store):
@@ -288,10 +302,11 @@ def test_spent_correction_survives_retry_after_provider_outage(store):
     model = ScriptedModel(malformed_writer=1, failure="core_response_review")
     with pytest.raises(ConversationRefused): run(store, model)
     assert len(model.calls) == 4
-    model.failure, model.reject = None, 1
+    model.failure, model.reject = None, 2
     with pytest.raises(ConversationRefused) as retry: run(store, model)
     assert retry.value.code == "answer_withheld"
-    assert len(model.calls) == 7  # No second rewrite after the same request resumes.
+    # The resumed request keeps its spent correction: one review rewrite is left, not two.
+    assert len(model.calls) == 9
 
 
 def test_permission_loss_after_correction_does_not_reset_allowance(store):
@@ -303,10 +318,10 @@ def test_permission_loss_after_correction_does_not_reset_allowance(store):
         return original(prompt, *args, **kw)
     model.structured = guarded
     with pytest.raises(ModelPermissionRefused): run(store, model)
-    model.structured, model.reject = original, 1
+    model.structured, model.reject = original, 2
     with pytest.raises(ConversationRefused) as rejected: run(store, model)
     assert rejected.value.code == "answer_withheld"
-    assert len(model.calls) == 6  # Three before denied review, then three; no second correction.
+    assert len(model.calls) == 8  # Three before the denied review, then five: one review rewrite left.
 
 
 def test_known_pre_save_session_loss_allows_same_request_recovery(store):

@@ -7,7 +7,7 @@ import sqlite3
 import pytest
 
 from nm.shared.turn_attempt_port import AttemptRefused, TurnAttemptPort
-from nm.shared.turn_attempt_store import FileTurnAttempts
+from nm.shared.turn_attempt_store import _SQL_V1, ALLOWANCE, FileTurnAttempts
 
 pytestmark = pytest.mark.class_a
 
@@ -29,8 +29,8 @@ def refused(code, action):
 def test_claim_is_content_free_and_running_survives_a_process_restart(ledger):
     assert isinstance(ledger, TurnAttemptPort)
     claim = ledger.claim(IDENTITY, REQUEST)
-    assert set(claim) == {"token", "correction_used"}
-    assert len(claim["token"]) == 64 and claim["correction_used"] is False
+    assert set(claim) == {"token", "corrections_used"}
+    assert len(claim["token"]) == 64 and claim["corrections_used"] == 0
     reopened = FileTurnAttempts(ledger.path)
     refused("busy", lambda: reopened.claim(IDENTITY, REQUEST))
     wire = ledger.path.read_bytes()
@@ -48,11 +48,13 @@ def test_changed_request_conflicts_even_after_explicit_retryable_finish(ledger):
 
 def test_retry_preserves_spent_allowance_and_changes_the_fencing_token(ledger):
     first = ledger.claim(IDENTITY, REQUEST)
-    ledger.consume_correction(IDENTITY, first["token"])
+    # Two corrections (owner decision, 17 Oct 2026), and no more.
+    for _ in range(ALLOWANCE):
+        ledger.consume_correction(IDENTITY, first["token"])
     refused("terminal", lambda: ledger.consume_correction(IDENTITY, first["token"]))
     ledger.finish(IDENTITY, first["token"], "retryable", "provider_unavailable")
     second = FileTurnAttempts(ledger.path).claim(IDENTITY, REQUEST)
-    assert second["correction_used"] is True and second["token"] != first["token"]
+    assert second["corrections_used"] == ALLOWANCE and second["token"] != first["token"]
     refused("conflict", lambda: ledger.finish(IDENTITY, first["token"], "terminal"))
     refused("conflict", lambda: ledger.consume_correction(IDENTITY, first["token"]))
     refused("terminal", lambda: ledger.consume_correction(IDENTITY, second["token"]))
@@ -62,8 +64,18 @@ def test_unused_correction_is_available_after_retryable_provider_failure(ledger)
     first = ledger.claim(IDENTITY, REQUEST)
     ledger.finish(IDENTITY, first["token"], "retryable")
     second = ledger.claim(IDENTITY, REQUEST)
-    assert second["correction_used"] is False
+    assert second["corrections_used"] == 0
     ledger.consume_correction(IDENTITY, second["token"])
+
+
+def test_a_retry_keeps_the_count_of_corrections_already_made(ledger):
+    first = ledger.claim(IDENTITY, REQUEST)
+    ledger.consume_correction(IDENTITY, first["token"])
+    ledger.finish(IDENTITY, first["token"], "retryable")
+    second = ledger.claim(IDENTITY, REQUEST)
+    assert second["corrections_used"] == 1
+    ledger.consume_correction(IDENTITY, second["token"])
+    refused("terminal", lambda: ledger.consume_correction(IDENTITY, second["token"]))
 
 
 @pytest.mark.parametrize("state,code", [("terminal", "terminal"), ("finished", "terminal"),
@@ -82,7 +94,7 @@ def test_final_states_cannot_be_reopened_or_downgraded(ledger, state, code):
 def test_different_opaque_owners_are_independent(ledger):
     first = ledger.claim(IDENTITY, REQUEST)
     ledger.finish(IDENTITY, first["token"], "terminal")
-    assert ledger.claim(OTHER, REQUEST)["correction_used"] is False
+    assert ledger.claim(OTHER, REQUEST)["corrections_used"] == 0
 
 
 def test_two_concurrent_claimants_cannot_both_dispatch(ledger):
@@ -97,7 +109,7 @@ def test_two_concurrent_claimants_cannot_both_dispatch(ledger):
     assert results.count("busy") == 1
 
 
-def test_two_concurrent_correction_requests_consume_only_once(ledger):
+def test_concurrent_correction_requests_consume_only_the_allowance(ledger):
     claim = ledger.claim(IDENTITY, REQUEST)
     def consume(_):
         try:
@@ -105,9 +117,9 @@ def test_two_concurrent_correction_requests_consume_only_once(ledger):
             return "consumed"
         except AttemptRefused as error:
             return error.code
-    with ThreadPoolExecutor(max_workers=2) as pool:
-        results = list(pool.map(consume, range(2)))
-    assert sorted(results) == ["consumed", "terminal"]
+    with ThreadPoolExecutor(max_workers=ALLOWANCE + 1) as pool:
+        results = list(pool.map(consume, range(ALLOWANCE + 1)))
+    assert sorted(results) == ["consumed"] * ALLOWANCE + ["terminal"]
 
 
 @pytest.mark.parametrize("damage", ["version", "column", "extra_table", "missing_table", "trigger"])
@@ -123,7 +135,7 @@ def test_unknown_database_schema_is_refused_without_automatic_migration(ledger, 
     refused("storage", lambda: FileTurnAttempts(ledger.path))
 
 
-@pytest.mark.parametrize("field,value", [("state", "invented_state"), ("correction_used", 7),
+@pytest.mark.parametrize("field,value", [("state", "invented_state"), ("corrections_used", 7),
     ("request_digest", "private message"), ("token", "changed"), ("code", "not valid metadata")])
 def test_corrupt_attempt_never_becomes_a_new_claim(ledger, field, value):
     ledger.claim(IDENTITY, REQUEST)
@@ -172,7 +184,7 @@ def test_lost_correction_acknowledgement_does_not_restore_allowance(ledger, monk
     refused("storage", lambda: ledger.consume_correction(IDENTITY, claimed["token"]))
     reopened = FileTurnAttempts(ledger.path)
     reopened.finish(IDENTITY, claimed["token"], "retryable")
-    assert reopened.claim(IDENTITY, REQUEST)["correction_used"] is True
+    assert reopened.claim(IDENTITY, REQUEST)["corrections_used"] == 1
 
 
 def test_unrecognised_identity_token_state_and_prose_are_not_stored(ledger):
@@ -193,3 +205,22 @@ def test_invalid_state_does_not_consume_or_change_a_claim(ledger):
     refused("conflict", lambda: ledger.finish(IDENTITY, claim["token"], ["terminal"]))
     ledger.consume_correction(IDENTITY, claim["token"])
     ledger.finish(IDENTITY, claim["token"], "terminal", "G-GROUND")
+
+
+def test_a_version_one_store_is_carried_over_with_its_records(tmp_path):
+    # 17 Oct 2026: version 1 held one allowance; its records keep their state and count.
+    path = tmp_path / "turn-attempts.sqlite3"
+    with sqlite3.connect(path) as db:
+        db.execute(_SQL_V1)
+        db.execute("PRAGMA user_version=1")
+        db.execute("INSERT INTO turn_attempts VALUES (?,?,?,1,'retryable',NULL)", (IDENTITY, REQUEST, OTHER))
+        db.execute("INSERT INTO turn_attempts VALUES (?,?,?,0,'terminal','G-GROUND')", (OTHER, REQUEST, IDENTITY))
+    ledger = FileTurnAttempts(path)
+    claim = ledger.claim(IDENTITY, REQUEST)
+    assert claim["corrections_used"] == 1
+    ledger.consume_correction(IDENTITY, claim["token"])
+    refused("terminal", lambda: ledger.consume_correction(IDENTITY, claim["token"]))
+    refused("terminal", lambda: ledger.claim(OTHER, REQUEST))
+    with sqlite3.connect(path) as db:
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 2
+        assert [r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE name NOT LIKE 'sqlite_%'")] == ["turn_attempts"]

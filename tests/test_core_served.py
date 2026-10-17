@@ -305,27 +305,28 @@ def test_review_correction_rechecks_complete_context_and_saves_once(served):
 
 
 def test_shape_and_semantic_repair_share_one_bound_and_terminal_failure_never_saves(served):
-    served.model.malformed_writer = served.model.reject = 1
+    # The shape repair is the first correction; the review may ask for the second, no third.
+    served.model.malformed_writer, served.model.reject = 1, 2
     response = send(served)
     assert response.status_code == 503
     detail = response.json()["detail"]
     assert detail["code"] == "answer_withheld" and not detail["retryable"]
     assert detail["committed"] == "not_committed" and "Counsel" not in response.text
-    assert len(served.model.calls) == 10 and not served.store.list_for(OWNER).matters
+    assert len(served.model.calls) == 12 and not served.store.list_for(OWNER).matters
 
 
 def test_terminal_review_gate_survives_same_identity_http_retry(served):
-    served.model.reject = 2
+    served.model.reject = 3
     first = send(served)
     assert first.status_code == 503 and first.json()["detail"]["code"] == "answer_withheld"
-    assert len(served.model.calls) == 11
+    assert len(served.model.calls) == 13
     served.model.reject = 0
     second = send(served)
     assert second.status_code == 409 and second.json()["detail"]["code"] == "answer_withheld"
-    assert not second.json()["detail"]["retryable"] and len(served.model.calls) == 11
+    assert not second.json()["detail"]["retryable"] and len(served.model.calls) == 13
     assert not served.store.list_for(OWNER).matters
     successful(served, turn_id="distinct-new-turn")
-    assert len(served.model.calls) == 20
+    assert len(served.model.calls) == 22
 
 
 def test_provider_outage_does_not_save_an_empty_success(served):

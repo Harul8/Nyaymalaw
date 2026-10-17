@@ -1,4 +1,4 @@
-"""Content-free durable turn ownership and the one correction allowance.
+"""Content-free durable turn ownership and its correction allowance.
 
 SQLite transactions follow the live model_call_budget owner's BEGIN IMMEDIATE
 pattern. This store carries only opaque request digests, fencing tokens and state;
@@ -16,12 +16,27 @@ from pathlib import Path
 
 from nm.shared.turn_attempt_port import AttemptRefused
 
-VERSION = 1
+VERSION = 2
+#: Corrections one turn may make (owner decision, 17 Oct 2026: when the second independent
+#: review still finds a problem, the flagged parts are rewritten once more). Held as a
+#: count, so a retried turn never receives fresh corrections.
+ALLOWANCE = 2
 _HASH = re.compile(r"[0-9a-f]{64}\Z")
 _CODE = re.compile(r"[A-Za-z][A-Za-z0-9_-]{0,79}\Z")
 _FINAL = {"retryable", "terminal", "finished", "unconfirmed"}
 _STATES = _FINAL | {"running"}
-_SQL = """CREATE TABLE turn_attempts (
+_SQL = f"""CREATE TABLE turn_attempts (
+    identity TEXT PRIMARY KEY NOT NULL CHECK(length(identity)=64),
+    request_digest TEXT NOT NULL CHECK(length(request_digest)=64),
+    token TEXT NOT NULL CHECK(length(token)=64),
+    corrections_used INTEGER NOT NULL CHECK(corrections_used BETWEEN 0 AND {ALLOWANCE}),
+    state TEXT NOT NULL CHECK(state IN ('running','retryable','terminal','finished','unconfirmed')),
+    code TEXT
+)"""
+_FIELDS = "identity,request_digest,token,corrections_used,state,code"
+#: Version 1 held one allowance, used or not. Exactly this table is carried over to
+#: version 2 with its records unchanged; any other schema is still refused.
+_SQL_V1 = """CREATE TABLE turn_attempts (
     identity TEXT PRIMARY KEY NOT NULL CHECK(length(identity)=64),
     request_digest TEXT NOT NULL CHECK(length(request_digest)=64),
     token TEXT NOT NULL CHECK(length(token)=64),
@@ -29,7 +44,6 @@ _SQL = """CREATE TABLE turn_attempts (
     state TEXT NOT NULL CHECK(state IN ('running','retryable','terminal','finished','unconfirmed')),
     code TEXT
 )"""
-_FIELDS = "identity,request_digest,token,correction_used,state,code"
 
 
 def _opaque(value):
@@ -56,6 +70,13 @@ class FileTurnAttempts:
                 if version == 0 and not objects and not existed:
                     db.execute(_SQL)
                     db.execute(f"PRAGMA user_version={VERSION}")
+                elif version == 1 and self._is(objects, _SQL_V1):
+                    db.execute("ALTER TABLE turn_attempts RENAME TO turn_attempts_v1")
+                    db.execute(_SQL)
+                    db.execute(f"INSERT INTO turn_attempts ({_FIELDS}) SELECT identity,request_digest,"
+                               "token,correction_used,state,code FROM turn_attempts_v1")
+                    db.execute("DROP TABLE turn_attempts_v1")
+                    db.execute(f"PRAGMA user_version={VERSION}")
                 self._schema(db)
         except (OSError, sqlite3.Error, ValueError):
             raise AttemptRefused("storage") from None
@@ -65,12 +86,14 @@ class FileTurnAttempts:
         return db.execute("SELECT type,name,sql FROM sqlite_master "
                           "WHERE name NOT LIKE 'sqlite_%' ORDER BY type,name").fetchall()
 
+    @staticmethod
+    def _is(objects, sql):
+        return (len(objects) == 1 and objects[0][:2] == ("table", "turn_attempts")
+                and " ".join((objects[0][2] or "").split()) == " ".join(sql.split()))
+
     @classmethod
     def _schema(cls, db):
-        objects = cls._objects(db)
-        if (db.execute("PRAGMA user_version").fetchone()[0] != VERSION
-                or len(objects) != 1 or objects[0][:2] != ("table", "turn_attempts")
-                or " ".join((objects[0][2] or "").split()) != " ".join(_SQL.split())):
+        if db.execute("PRAGMA user_version").fetchone()[0] != VERSION or not cls._is(cls._objects(db), _SQL):
             raise AttemptRefused("storage")
 
     @contextmanager
@@ -90,7 +113,7 @@ class FileTurnAttempts:
     def _row(db, identity):
         row = db.execute(f"SELECT {_FIELDS} FROM turn_attempts WHERE identity=?", (identity,)).fetchone()
         if row is not None and (any(not _opaque(value) for value in row[:3])
-                or type(row[3]) is not int or row[3] not in (0, 1)
+                or type(row[3]) is not int or not 0 <= row[3] <= ALLOWANCE
                 or row[4] not in _STATES or not _code(row[5])
                 or row[4] == "running" and row[5] is not None):
             raise AttemptRefused("storage")
@@ -111,7 +134,7 @@ class FileTurnAttempts:
         with self._transaction() as db:
             prior = self._row(db, identity)
             if prior is None:
-                correction_used = 0
+                corrections_used = 0
                 db.execute(f"INSERT INTO turn_attempts ({_FIELDS}) VALUES (?,?,?,0,'running',NULL)",
                            (identity, request_digest, token))
             else:
@@ -119,10 +142,10 @@ class FileTurnAttempts:
                     raise AttemptRefused("conflict")
                 if prior[4] != "retryable":
                     self._refuse_state(prior[4])
-                correction_used = prior[3]
+                corrections_used = prior[3]
                 db.execute("UPDATE turn_attempts SET token=?,state='running',code=NULL WHERE identity=?",
                            (token, identity))
-        return {"token": token, "correction_used": bool(correction_used)}
+        return {"token": token, "corrections_used": corrections_used}
 
     def consume_correction(self, identity: str, token: str) -> None:
         if not _opaque(identity) or not _opaque(token):
@@ -133,11 +156,11 @@ class FileTurnAttempts:
                 raise AttemptRefused("conflict")
             if prior[4] != "running":
                 self._refuse_state(prior[4])
-            if prior[3]:
+            if prior[3] >= ALLOWANCE:
                 raise AttemptRefused("terminal")
-            changed = db.execute("UPDATE turn_attempts SET correction_used=1 "
-                "WHERE identity=? AND token=? AND state='running' AND correction_used=0",
-                (identity, token))
+            changed = db.execute("UPDATE turn_attempts SET corrections_used=corrections_used+1 "
+                "WHERE identity=? AND token=? AND state='running' AND corrections_used=?",
+                (identity, token, prior[3]))
             if changed.rowcount != 1:
                 raise AttemptRefused("conflict")
 
