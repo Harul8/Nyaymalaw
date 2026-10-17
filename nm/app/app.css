@@ -23,6 +23,9 @@
   --f-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
   --f-mono: ui-monospace, Consolas, monospace;
   --f-serif: Georgia, "Times New Roman", serif;
+  /* File-type tiles: white letters on a mid tone, the same in both themes. */
+  --tile-ink: #ffffff; --tile-pdf: #a8443a; --tile-doc: #2f5d9a; --tile-img: #2f6b4f;
+  --tile-audio: #6a4e1f; --tile-other: #5d6366;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -315,6 +318,26 @@ button.board-card:focus-visible { outline: 2px solid var(--accent); outline-offs
 .document-text { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 0.88rem; line-height: 1.5;
   padding: 0.6rem 0.75rem; border-left: 3px solid var(--rule); background: var(--paper); }
 .document-unread { margin: 0; font-size: 0.85rem; color: var(--signal); }
+/* The matter's files (owner decision 4, 17 Oct 2026): name, type, size, date; a note only
+   when something needs attention. */
+.file-list { list-style: none; margin: 0; padding: 0; display: grid; }
+.file-row { display: grid; grid-template-columns: 2rem minmax(0, 1fr); gap: 0.7rem; padding: 0.7rem 0;
+  border-bottom: 1px solid var(--rule); }
+.file-tile { width: 2rem; height: 2.5rem; border-radius: 4px; display: grid; place-items: end center;
+  padding-bottom: 0.2rem; font-family: var(--f-mono); font-size: 0.55rem; font-weight: 700;
+  color: var(--tile-ink); background: var(--tile-other); }
+.file-pdf { background: var(--tile-pdf); } .file-docx { background: var(--tile-doc); }
+.file-image { background: var(--tile-img); } .file-audio { background: var(--tile-audio); }
+.file-body { display: grid; gap: 0.15rem; min-width: 0; }
+.file-name { color: var(--accent); overflow-wrap: anywhere; text-underline-offset: 3px; }
+.file-meta { font-size: 0.8rem; color: var(--ink-3); }
+.file-attention { font-size: 0.8rem; color: var(--amber); }
+.file-read { justify-self: start; min-height: 2.75rem; padding: 0 0.2rem; color: var(--accent); }
+.file-original { display: inline-block; margin-bottom: 0.4rem; color: var(--accent); }
+/* What NM read, as one document (owner decision 5, 17 Oct 2026). */
+.document-flow { display: grid; gap: 0.5rem; }
+.page-mark { font-family: var(--f-mono); font-size: 0.66rem; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--ink-3); border-top: 1px dashed var(--rule); padding-top: 0.35rem; }
 /* A time limit's working, as code did it (item 9, 15 Oct 2026). */
 .working-box { border: 1px solid var(--rule); border-left: 4px solid var(--accent); border-radius: 10px;
   padding: 0.75rem 1rem; margin: 0.75rem 0; background: var(--board); font-size: 0.92rem; }

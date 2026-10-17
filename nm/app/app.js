@@ -3050,7 +3050,32 @@ async function loadChatDocuments(host, paneGeneration) {
     window.NmBrainSources.showContent(document_.name, renderDocumentPages(document_, turn), opener)));
 }
 
-// Every document sent in the conversation, each to open in the reading pane.
+// THE MATTER'S FILES (owner decision 4, 17 Oct 2026): a plain list. Each name opens the
+// file exactly as sent in a new tab (a Word file downloads, to open in Word); "Read here"
+// shows what NM read. A note appears only when something needs attention.
+const FILE_KINDS = { pdf: ['PDF', 'PDF'], docx: ['DOC', 'Word'], text: ['TXT', 'Text'], image: ['IMG', 'Photo'] };
+
+function fileSize(bytes) {
+  if (!Number.isFinite(bytes) || bytes < 0) return '';
+  return bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function fileDate(iso) {
+  const day = typeof iso === 'string' ? new Date(iso) : null;
+  return day && !Number.isNaN(day.getTime())
+    ? day.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+}
+
+function fileAttention(document_) {
+  const plural = (count, word) => `${count} ${word}${count === 1 ? '' : 's'}`;
+  if (document_.recording) return document_.pages.length ? '' : 'Not transcribed';
+  const notes = [];
+  if (document_.unread.length) notes.push(`${plural(document_.unread.length, 'page')} could not be read`);
+  const partly = document_.pages.filter((page) => page.legible === 'part').length;
+  if (partly) notes.push(`${plural(partly, 'page')} partly legible`);
+  return notes.join(' · ');
+}
+
 function renderChatDocuments(listing, open) {
   const make = (tag, className, text) => {
     const node = document.createElement(tag);
@@ -3060,33 +3085,49 @@ function renderChatDocuments(listing, open) {
   };
   const sent = listing && Array.isArray(listing.sent) ? listing.sent : [];
   if (!sent.length) {
-    return [stateBlock('empty', 'No documents have been sent in this matter yet. '
+    return [stateBlock('empty', 'No files have been sent in this matter yet. '
       + 'Attach them with the + under your message.')];
   }
-  const out = [make('p', 'board-lede', 'Each page as it was read and each recording as it was transcribed. '
-    + 'What the AI read or heard is marked; check it against your original where it matters.')];
+  const list = make('ul', 'file-list');
   for (const turn of sent) {
+    const preview = turn.message.length > 140 ? `${turn.message.slice(0, 140)}…` : turn.message;
     for (const document_ of turn.documents) {
-      const card = make('button', 'board-card document-card');
-      card.type = 'button';
-      card.appendChild(make('span', 'board-dispute', document_.name));
-      const read = document_.pages.length;
-      const unread = document_.unread.length;
-      card.appendChild(make('span', 'board-meta', document_.recording
-        ? (read ? 'Recording · transcribed' : 'Recording · not transcribed')
-        : `${read} page${read === 1 ? '' : 's'} read${unread ? ` · ${unread} not read` : ''}`));
-      const preview = turn.message.length > 140 ? `${turn.message.slice(0, 140)}…` : turn.message;
-      card.appendChild(make('span', 'board-meta', `Sent with: “${preview}”`));
-      card.setAttribute('aria-label', `Read ${document_.name}`);
-      card.addEventListener('click', () => open(document_, turn, card));
-      out.push(card);
+      const file = document_.file || null;
+      const format = file ? file.format : '';
+      const [tile, kind] = FILE_KINDS[format] || (document_.recording ? ['REC', 'Recording'] : ['FILE', 'File']);
+      const row = make('li', 'file-row');
+      row.title = `Sent with: “${preview}”`;
+      const mark = make('span', `file-tile file-${FILE_KINDS[format] ? format : (document_.recording ? 'audio' : 'other')}`, tile);
+      mark.setAttribute('aria-hidden', 'true');
+      const body = make('div', 'file-body');
+      const name = document.createElement('a');
+      name.className = 'file-name';
+      name.textContent = document_.name;
+      name.href = `/api/documents/${encodeURIComponent(document_.document_ref)}/original`;
+      name.target = '_blank';
+      name.rel = 'noopener';
+      if (format === 'docx') name.setAttribute('aria-label', `${document_.name}, opens in Word`);
+      const byAi = document_.pages.some((page) => page.read_by === 'ai');
+      const meta = [kind, file ? fileSize(file.size) : '', file ? fileDate(file.received_at) : '',
+        byAi ? (document_.recording ? 'transcribed by AI' : 'read by AI') : ''].filter(Boolean).join(' · ');
+      body.append(name, make('div', 'file-meta', meta));
+      const attention = fileAttention(document_);
+      if (attention) body.appendChild(make('div', 'file-attention', attention));
+      const read = make('button', 'ghost file-read', 'Read here');
+      read.type = 'button';
+      read.setAttribute('aria-label', `Read here: ${document_.name}`);
+      read.addEventListener('click', () => open(document_, turn, read));
+      body.appendChild(read);
+      row.append(mark, body);
+      list.appendChild(row);
     }
   }
-  return out;
+  return [list];
 }
 
-// One document's pages exactly as they were read, so the advocate can check a page
-// the AI read against the original, and why any page was not read.
+// WHAT NM READ, AS ONE DOCUMENT (owner decision 5, 17 Oct 2026): every page in one flow,
+// a small mark where each page begins and how it was read, and in place of a page that
+// could not be read, why. The file as sent opens from the top.
 function renderDocumentPages(document_, turn) {
   const make = (tag, className, text) => {
     const node = document.createElement(tag);
@@ -3095,7 +3136,11 @@ function renderDocumentPages(document_, turn) {
     return node;
   };
   const preview = turn.message.length > 140 ? `${turn.message.slice(0, 140)}…` : turn.message;
-  const out = [make('p', 'hint', `Sent with: “${preview}”`)];
+  const original = make('a', 'file-original', document_.recording ? 'Open the recording as sent' : 'Open the file as sent');
+  original.href = `/api/documents/${encodeURIComponent(document_.document_ref)}/original`;
+  original.target = '_blank';
+  original.rel = 'noopener';
+  const out = [original, make('p', 'hint', `Sent with: “${preview}”`)];
   if (document_.recording) {
     const player = document.createElement('audio');
     player.controls = true;
@@ -3105,20 +3150,26 @@ function renderDocumentPages(document_, turn) {
     player.setAttribute('aria-label', `Play ${document_.name}`);
     out.push(player);
   }
-  for (const page of document_.pages) {
-    let label = document_.recording ? 'Transcript' : `Page ${page.number}`;
-    if (document_.recording) label += ' · transcribed by AI';
-    else if (page.read_by === 'ai') {
-      label += page.legible === 'part' ? ' · read by AI, partly legible' : ' · read by AI';
+  const entries = [...document_.pages.map((page) => ({ number: page.number, page })),
+    ...document_.unread.map((unread) => ({ number: unread.number, unread }))]
+    .sort((left, right) => left.number - right.number);
+  const flow = make('div', 'document-flow');
+  for (const { number, page, unread } of entries) {
+    let label = document_.recording ? 'Transcript' : `Page ${number}`;
+    if (page && page.read_by === 'ai') {
+      label += document_.recording ? ' · transcribed by AI'
+        : page.legible === 'part' ? ' · read by AI, partly legible' : ' · read by AI';
     }
-    out.push(make('h3', 'detail-h', label));
-    if (page.note) out.push(make('p', 'board-meta', page.note));
-    out.push(make('div', 'document-text', page.text));
+    if (entries.length > 1 || (page && page.read_by === 'ai')) flow.appendChild(make('div', 'page-mark', label));
+    if (unread) {
+      flow.appendChild(make('p', 'document-unread', document_.recording
+        ? `Not transcribed: ${unread.reason}` : `Not read: ${unread.reason}`));
+      continue;
+    }
+    if (page.note) flow.appendChild(make('p', 'board-meta', page.note));
+    flow.appendChild(make('div', 'document-text', page.text));
   }
-  for (const page of document_.unread) {
-    out.push(make('p', 'document-unread', document_.recording
-      ? `Not transcribed: ${page.reason}` : `Page ${page.number} not read: ${page.reason}`));
-  }
+  out.push(flow);
   return out;
 }
 

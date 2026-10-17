@@ -1191,8 +1191,10 @@ def board_file_icon(app_page, page_script):
 def document_opens_in_the_reading_pane(page_script):
     assert ("window.NmBrainSources.showContent(document_.name, renderDocumentPages(document_, turn), opener)"
             in _function(page_script, "loadChatDocuments"))
-    assert "card.addEventListener('click', () => open(document_, turn, card));" in _function(
-        page_script, "renderChatDocuments")
+    # 17 Oct 2026 (owner decision 4): "Read here" opens what NM read; the name opens the file as sent.
+    listing = _function(page_script, "renderChatDocuments")
+    assert "read.addEventListener('click', () => open(document_, turn, read));" in listing
+    assert "name.href = `/api/documents/${encodeURIComponent(document_.document_ref)}/original`;" in listing
 
 
 @then("at 820 px wide or narrower a Matter board button opens the board")

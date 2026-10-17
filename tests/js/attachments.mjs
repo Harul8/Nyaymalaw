@@ -129,37 +129,59 @@ const chip = (get, index = 0) => get('attachments').children[index];
   assert.equal(context.attachmentsBlockSend(), null);
 }
 
-// The documents list, from the file icon beside the board's title (16 Oct 2026): each
-// document opens in the reading pane, every page as it was read and why a page was not.
+// The matter's files (owner decision 4, 17 Oct 2026): a plain list. Each name opens the
+// file as sent, a note appears only when something needs attention, and "Read here" opens
+// what NM read as one document (decision 5), each page marked where it begins.
 {
   const context = vm.createContext({
     document: { createElement: (tag) => new Element(tag) },
     stateBlock: (_kind, text) => Object.assign(new Element('p'), { textContent: text }),
   });
-  vm.runInContext(between('function renderChatDocuments(listing, open) {', 'const CERTAINTY = '), context);
+  vm.runInContext(between("// THE MATTER'S FILES", 'const CERTAINTY = '), context);
   const [empty] = context.renderChatDocuments({ sent: [] }, () => {});
-  assert.match(empty.textContent, /No documents have been sent/);
+  assert.match(empty.textContent, /No files have been sent/);
+  const received = '2026-10-17T04:20:00+00:00';
   const turn = { turn_id: 't1', message: 'Please look at the memo.',
     documents: [{ document_ref: 'doc_x', name: 'memo.pdf',
+      file: { format: 'pdf', size: 12877, received_at: received, pages_total: 3, cleared: true },
       pages: [{ number: 1, text: 'Return memo.', read_by: 'local' },
               { number: 2, text: 'Notice [illegible]', read_by: 'ai', model: 'gpt-6-luna', legible: 'part',
                 note: 'lower edge cut off' }],
-      unread: [{ number: 3, reason: 'the AI could not make out this page' }] }] };
+      unread: [{ number: 3, reason: 'the AI could not make out this page' }] },
+    { document_ref: 'doc_y', name: 'Police complaint.docx',
+      file: { format: 'docx', size: 3347, received_at: received, pages_total: 1, cleared: true },
+      pages: [{ number: 1, text: 'Complaint.', read_by: 'local' }], unread: [] }] };
   const opened = [];
-  const out = context.renderChatDocuments({ sent: [turn] }, (doc, sent, opener) => opened.push([doc, sent, opener]));
-  const card = out[1];
-  assert.match(card.textContent, /memo\.pdf/);
-  assert.match(card.textContent, /2 pages read · 1 not read/);
-  assert.match(card.textContent, /Sent with: “Please look at the memo\.”/);
-  card.click();
+  const [list] = context.renderChatDocuments({ sent: [turn] }, (doc, sent, opener) => opened.push([doc, sent, opener]));
+  const [memo, word] = list.children;
+  const [tile, body] = memo.children;
+  assert.equal(tile.textContent, 'PDF');
+  const [name, meta, attention, read] = body.children;
+  assert.equal(name.textContent, 'memo.pdf');
+  assert.equal(name.href, '/api/documents/doc_x/original');
+  assert.equal(name.target, '_blank');
+  assert.equal(meta.textContent, 'PDF · 13 KB · 17 Oct 2026 · read by AI');
+  assert.equal(attention.textContent, '1 page could not be read · 1 page partly legible');
+  assert.equal(memo.title, 'Sent with: “Please look at the memo.”');
+  const wordBody = word.children[1];
+  assert.equal(wordBody.children[0].attributes['aria-label'], 'Police complaint.docx, opens in Word');
+  assert.equal(wordBody.children[1].textContent, 'Word · 3 KB · 17 Oct 2026');
+  assert.equal(wordBody.children.length, 3, 'no note when nothing needs attention');
+  read.click();
   assert.equal(opened.length, 1);
   assert.equal(opened[0][0].name, 'memo.pdf');
-  assert.equal(opened[0][2], card);
-  const pages = context.renderDocumentPages(opened[0][0], opened[0][1]).map((node) => node.textContent).join('');
-  assert.match(pages, /Sent with: “Please look at the memo\.”/);
-  assert.match(pages, /Page 1Return memo\./);
-  assert.match(pages, /Page 2 · read by AI, partly legiblelower edge cut offNotice \[illegible\]/);
-  assert.match(pages, /Page 3 not read: the AI could not make out this page/);
+  assert.equal(opened[0][2], read);
+  const shown = context.renderDocumentPages(opened[0][0], opened[0][1]);
+  assert.equal(shown[0].textContent, 'Open the file as sent');
+  assert.equal(shown[0].href, '/api/documents/doc_x/original');
+  assert.equal(shown[1].textContent, 'Sent with: “Please look at the memo.”');
+  assert.deepEqual(shown[2].children.map((node) => node.textContent), [
+    'Page 1', 'Return memo.', 'Page 2 · read by AI, partly legible', 'lower edge cut off', 'Notice [illegible]',
+    'Page 3', 'Not read: the AI could not make out this page']);
+  // A file whose own record could not be read still lists what the conversation saved.
+  const [bare] = context.renderChatDocuments({ sent: [{ ...turn, documents: [{ ...turn.documents[1], file: null }] }] },
+    () => {}).map((node) => node.children[0]);
+  assert.equal(bare.children[1].children[1].textContent, 'File');
 }
 
 console.log('attachments: ok');
