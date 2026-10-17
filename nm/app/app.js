@@ -2758,6 +2758,24 @@ function renderTurn(entry) {
       r.className = 'refs'; fillReferences(r, el);
       d.appendChild(r);
     }
+    // A SECTION HELD BACK (owner decision, 17 Oct 2026): the advocate decides what next.
+    // Trying again puts the request in the message box, to send as it is or with a fact,
+    // a document or a narrower question added first.
+    if (el.kind === 'HELD' && el.held && el.held.retry) {
+      const again = document.createElement('button');
+      again.type = 'button';
+      again.className = 'ghost held-retry';
+      again.textContent = 'Try this section again';
+      again.setAttribute('aria-label', `Put a request to try the section on ${el.held.section} again in the message box`);
+      again.addEventListener('click', () => {
+        const box = $('message');
+        box.value = box.value.trim() ? `${box.value.trim()}\n${el.held.retry}` : el.held.retry;
+        box.dispatchEvent(new Event('input', { bubbles: true }));
+        sizeComposer();
+        box.focus();
+      });
+      d.appendChild(again);
+    }
     into.appendChild(d);
   }
 
@@ -3298,20 +3316,34 @@ function renderParts(into, elements, entry, render) {
     for (const el of elements) render(into, el);
     return;
   }
-  if (!Array.isArray(entry.openParts)) entry.openParts = [true];
+  if (!Array.isArray(entry.openParts)) {
+    entry.openParts = [true];
+    // A part held back opens with the answer (17 Oct 2026): what the check found there
+    // is a disclosure, never folded away.
+    let heading = -1;
+    elements.forEach((el, position) => {
+      if (el.kind !== 'HEADING') return;
+      heading += 1;
+      if (elements[position + 1]?.kind === 'HELD') entry.openParts[heading] = true;
+    });
+  }
   const stem = `part-${String(entry.turnId || 'turn').replace(/[^A-Za-z0-9_-]/g, '-')}`;
   const index = document.createElement('nav');
   index.className = 'part-index';
   index.setAttribute('aria-label', 'Disputes in this answer');
   let body = into;
   let part = -1;
-  for (const el of elements) {
+  for (const [position, el] of elements.entries()) {
+    // Code's notices about the whole answer stay outside the parts (17 Oct 2026): that
+    // it is incomplete, and what to do about a part held back.
+    if (el.kind === 'NOTICE') { render(into, el); continue; }
     if (el.kind !== 'HEADING') { render(body, el); continue; }
     part += 1;
     const number = part;
     const open = Boolean(entry.openParts[number]);
     const id = `${stem}-${number}`;
-    const name = `${number + 1} · ${el.text}`;
+    const held = elements[position + 1]?.kind === 'HELD';
+    const name = `${number + 1} · ${el.text}${held ? ' · held back' : ''}`;
     if (number === 0) into.appendChild(index);
     const section = document.createElement('section');
     section.className = 'answer-part';

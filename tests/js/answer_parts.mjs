@@ -71,4 +71,27 @@ const draw = (into, element) => into.appendChild({ drawn: element.text, children
   assert.deepEqual(wrap.children.map((c) => c.drawn), ['Only law.']);
 }
 
+// An answer with a part held back (owner decision, 17 Oct 2026): code's notices about the
+// whole answer stay outside the parts, and the held part says so in its title and link.
+{
+  const wrap = el('div');
+  context.renderParts(wrap, [
+    { kind: 'NOTICE', text: 'This answer is incomplete: 1 of its 3 sections is held back below.' },
+    { kind: 'GREETING', text: 'Good morning.' },
+    { kind: 'HEADING', text: 'Obstruction of access' },
+    { kind: 'LAW', text: 'Necessity requires more.' },
+    { kind: 'HEADING', text: 'The returned cheque' },
+    { kind: 'HELD', text: 'Held back: The returned cheque.' },
+    { kind: 'NOTICE', text: 'Shall I try the held-back section again?' },
+  ], { turnId: 't2' }, draw);
+  assert.equal(wrap.children[0].drawn, 'This answer is incomplete: 1 of its 3 sections is held back below.');
+  assert.equal(wrap.children[wrap.children.length - 1].drawn, 'Shall I try the held-back section again?');
+  const nav = wrap.children.find((n) => n.tagName === 'NAV');
+  assert.deepEqual(nav.children.map((a) => a.textContent),
+    ['1 · Obstruction of access', '2 · The returned cheque · held back']);
+  const bodies = find(wrap, (n) => n.className === 'part-body');
+  assert.deepEqual(bodies[1].children.map((n) => n.drawn), ['Held back: The returned cheque.']);
+  assert.deepEqual(bodies.map((b) => b.hidden), [false, false], 'a held part opens with the answer');
+}
+
 console.log('answer parts: ok');
