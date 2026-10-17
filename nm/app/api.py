@@ -1394,11 +1394,49 @@ def chat_documents(chat_id: str, advocate_id: Advocate, request: Request, respon
     sent in it, with each page exactly as it was read and why any page was not."""
     _, rows = _read_chat(chat_id, advocate_id, request)
     sent = [{'turn_id': row['turn_id'], 'message': row['message'],
-             'documents': deepcopy(row['documents'])} for row in rows if row.get('documents')]
+             'documents': [{**deepcopy(document), 'file': _file_facts(advocate_id, document['document_ref'])}
+                           for document in row['documents']]} for row in rows if row.get('documents')]
     if not _session_current(request, advocate_id):
         raise HTTPException(401, 'not signed in')
     response.headers['Cache-Control'] = 'no-store'
     return {'chat_id': chat_id, 'sent': sent}
+
+
+def _file_facts(advocate_id, document_ref):
+    """What the files list shows of a sent document (owner decision 4, 17 Oct 2026): its
+    type, size and when it arrived, from its own record. None when that record cannot be
+    read now, or documents are not kept on this installation: the list still shows what
+    the conversation saved."""
+    desk = application().documents
+    if desk is None:
+        return None
+    try:
+        record = desk.load(advocate_id, document_ref)
+    except document_rules.DocumentRefused:
+        return None
+    return {'format': record['format'], 'size': record['size'], 'received_at': record['received_at'],
+            'pages_total': record['observed_pages'], 'cleared': record['check']['state'] == 'clear'}
+
+
+@app.get('/api/documents/{document_ref}/original')
+def document_original(document_ref: str, advocate_id: Advocate, request: Request):
+    """A document exactly as the advocate sent it, for them to open (owner decision 4,
+    17 Oct 2026). A PDF, photograph, recording or text shows in the browser; a Word file
+    downloads, to open in Word. Only its own advocate gets it, and nothing in it runs here."""
+    if not _session_current(request, advocate_id):
+        raise HTTPException(401, 'not signed in')
+    try:
+        data, media_type, name, shown = _document_desk().original(advocate_id, document_ref)
+    except document_rules.DocumentRefused as exc:
+        raise HTTPException(404, {'why': str(exc), 'code': 'document_unavailable'}) from exc
+    if not _session_current(request, advocate_id):
+        raise HTTPException(401, 'not signed in')
+    headers = {'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff',
+               'Content-Disposition': f"{'inline' if shown else 'attachment'}; filename*=UTF-8''{quote(name, safe='')}"}
+    if media_type != 'application/pdf':
+        # The browser's own PDF viewer needs what a sandbox removes; nothing else does.
+        headers['Content-Security-Policy'] = 'sandbox'
+    return Response(content=data, media_type=media_type, headers=headers)
 
 
 def _research_note(chat_id, turn_id, advocate_id, request):

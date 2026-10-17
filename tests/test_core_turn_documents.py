@@ -166,7 +166,8 @@ def upload(client, data, name):
 
 def test_the_served_turn_reads_only_the_advocate_s_own_cleared_documents(served, monkeypatch):
     served.app.documents.checker = Checker()
-    mine = upload(served.client, pdf(["Return memo: funds insufficient."]), "memo.pdf").json()
+    memo = pdf(["Return memo: funds insufficient."])
+    mine = upload(served.client, memo, "memo.pdf").json()
     theirs = upload(served.login(OTHER), b"their words", "theirs.txt").json()
     served.app.documents.checker = Checker("held", "flagged")
     held = upload(served.client, b"words", "bad.txt").json()
@@ -191,6 +192,14 @@ def test_the_served_turn_reads_only_the_advocate_s_own_cleared_documents(served,
     assert seen == [[mine["document_ref"]]]
     row = saved_rows(served.store.load(chat_matter_id(OWNER, reply.json()["chat_id"])), OWNER)[0]
     assert row["documents"][0]["pages"][0]["text"] == "Return memo: funds insufficient."
+    # The matter's files list (owner decision 4, 17 Oct 2026): each file's type, size and
+    # arrival from its own record, beside what the conversation saved.
+    listing = served.client.get(f"/api/chats/{reply.json()['chat_id']}/documents").json()
+    sent, = listing["sent"][0]["documents"]
+    assert sent["name"] == "memo.pdf" and sent["pages"] == row["documents"][0]["pages"]
+    assert {key: sent["file"][key] for key in ("format", "size", "pages_total", "cleared")} == {
+        "format": "pdf", "size": len(memo), "pages_total": 1, "cleared": True}
+    assert sent["file"]["received_at"].startswith("20")
 
 
 def test_the_reading_pane_says_how_a_cited_page_was_read():

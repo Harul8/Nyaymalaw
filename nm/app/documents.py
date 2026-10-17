@@ -23,6 +23,10 @@ from nm.open_matter.media_contracts import MediaKind, Processor, Quarantine, adm
 
 CHUNK = 1024 * 1024
 _REFERENCE = re.compile(r"(doc_[0-9a-f]{24})-([0-9a-f]{64})")
+#: The type an original is handed back with; a photograph's is read from its own bytes.
+ORIGINAL_TYPES = {"pdf": "application/pdf", "text": "text/plain; charset=utf-8",
+                  "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                  **documents.AUDIO}
 _log = logging.getLogger(__name__)
 
 
@@ -173,6 +177,24 @@ class DocumentDesk:
         if hashlib.sha256(data).hexdigest() != record["sha256"]:
             raise DocumentRefused("This document's original could not be verified.")
         return data
+
+    def original(self, advocate_id, ref):
+        """A document exactly as the advocate sent it, for them to open (owner decision 4,
+        17 Oct 2026): its bytes, its type, its name and whether a browser shows it. A PDF,
+        a photograph, a recording or plain text shows in the browser; a Word file is
+        downloaded, to open in Word. A document the malware check held is never handed back."""
+        record = self.load(advocate_id, ref)
+        if record["check"]["state"] != "clear":
+            raise DocumentRefused("This document was not cleared by the malware check, so it is not opened.")
+        data = self._original(advocate_id, record)
+        if record["format"] == "image":
+            media = ("image/png" if data.startswith(b"\x89PNG\r\n\x1a\n") else
+                     "image/jpeg" if data.startswith(b"\xff\xd8\xff") else None)
+            if media is None:
+                raise DocumentRefused("This picture's type could not be confirmed, so it is not opened.")
+        else:
+            media = ORIGINAL_TYPES[record["format"]]
+        return data, media, record["name"], record["format"] != "docx"
 
     def recording(self, advocate_id, ref):
         """A voice note's original, for the advocate to play back: its bytes and type."""

@@ -109,3 +109,37 @@ def test_reading_scans_without_ai_permission_is_refused_plainly(served, desk, mo
     ref = upload(served.client, data=pdf(["Typed page.", ""]), name="memo.pdf").json()["document_ref"]
     refused = served.client.post(f"/api/documents/{ref}/read")
     assert refused.status_code == 403 and refused.json()["detail"]["code"] == "model_permission_required"
+
+
+def test_the_advocate_opens_what_they_sent_exactly_as_sent(served, desk):
+    # Owner decision 4, 17 Oct 2026: a PDF, a photograph or text shows in the browser and
+    # nothing in it runs here; a Word file downloads, to open in Word.
+    import io
+    from PIL import Image
+    from tests.test_core_documents import pdf, word
+    photo = io.BytesIO()
+    Image.new("RGB", (40, 40), "white").save(photo, "PNG")
+    cases = [(b"The cheque was returned.", "note.txt", "text/plain; charset=utf-8", "inline"),
+             (pdf(["Return memo."]), "memo.pdf", "application/pdf", "inline"),
+             (photo.getvalue(), "notice photo.png", "image/png", "inline"),
+             (word(["Complaint."]), "Police complaint.docx",
+              "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "attachment")]
+    for data, name, media_type, shown in cases:
+        ref = upload(served.client, data=data, name=name).json()["document_ref"]
+        got = served.client.get(f"/api/documents/{ref}/original")
+        assert got.status_code == 200 and got.content == data, name
+        assert got.headers["content-type"] == media_type
+        assert got.headers["content-disposition"] == f"{shown}; filename*=UTF-8''{quote(name, safe='')}"
+        assert got.headers["x-content-type-options"] == "nosniff" and got.headers["cache-control"] == "no-store"
+        # The browser's own PDF viewer needs what a sandbox removes; everything else is sandboxed.
+        assert got.headers.get("content-security-policy") == (None if name.endswith(".pdf") else "sandbox")
+    assert served.login(OTHER).get(f"/api/documents/{ref}/original").status_code == 404
+    with TestClient(api.app) as anonymous:
+        assert anonymous.get(f"/api/documents/{ref}/original").status_code == 401
+
+
+def test_a_document_the_malware_check_held_is_never_handed_back(served, desk):
+    desk.checker = type(desk.checker)("held", "flagged by the scanner")
+    ref = upload(served.client).json()["document_ref"]
+    refused = served.client.get(f"/api/documents/{ref}/original")
+    assert refused.status_code == 404 and "malware" in refused.json()["detail"]["why"]
