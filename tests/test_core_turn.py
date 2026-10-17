@@ -277,11 +277,14 @@ def test_a_shape_repair_leaves_the_review_one_correction_and_no_more(store):
     assert len(model.calls) == 6
 
 
-def test_provider_outage_never_saves_an_empty_success(store):
+def test_provider_outage_never_saves_an_empty_success(store, caplog):
     with pytest.raises(ConversationRefused) as error:
         run(store, ScriptedModel(failure="core_response_review"))
     assert error.value.code == "response_unavailable" and error.value.committed == "not_committed"
     assert not store.list_for("owner").matters
+    # The provider failure's own kind and message are logged for diagnosis (17 Oct 2026).
+    logged, = [r.getMessage() for r in caplog.records if r.getMessage().startswith("Message not answered")]
+    assert logged.endswith("(ProviderUnavailable: Synthetic provider outage)")
 
 
 def test_lost_acknowledgement_replays_saved_checked_response_once(store):

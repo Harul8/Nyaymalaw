@@ -258,8 +258,11 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
         refusal = ConversationRefused(why, status=503, code=code,
                                      retryable=code == "response_unavailable")
         refusal.diagnosis = _diagnosis(code, exc, calls)
+        # A gate's fixed names, or a provider failure's own kind and message (17 Oct 2026:
+        # a failed call's reason was lost); never the message, a draft or the review's words.
         log.warning("Message not answered: %s%s", refusal.diagnosis,
-                    f" ({exc})" if isinstance(exc, ReleaseWithheld) and str(exc).startswith("G-") else "")
+                    f" ({exc})" if isinstance(exc, ReleaseWithheld) and str(exc).startswith("G-")
+                    else f" ({type(exc).__name__}: {str(exc)[:300]})" if code != "answer_withheld" else "")
         finish("retryable" if refusal.retryable else "terminal", refusal.diagnosis)
         refusal.metrics = calls.metrics()
         raise refusal from exc
