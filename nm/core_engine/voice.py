@@ -10,12 +10,15 @@ and a provider failure leaves it waiting to be transcribed again.
 """
 from __future__ import annotations
 
+import logging
+
 from nm.core_engine.documents import AUDIO
 from nm.shared.external_ai_contracts import ModelPermissionRefused
 from nm.shared.model_port import ModelError
 
 CONTRACT = "core_voice_v1"
 OPERATION = "core_voice_note"
+log = logging.getLogger(__name__)
 #: What the speech model is told about a voice note; it does the hearing.
 NOTE_PROMPT = ("A voice note an Indian advocate recorded about a client's matter: their own account, a "
                "client or witness speaking, or a call. It may mix English with Hindi or Telugu and name "
@@ -37,8 +40,10 @@ def transcribe_note(model, name, data, fmt):
         heard = model.transcribe(data, file_name=name, media_type=AUDIO[fmt], prompt=NOTE_PROMPT)
     except ModelPermissionRefused:
         raise
-    except ModelError:
+    except ModelError as exc:
         # Expected provider outcomes (unavailable, refused, malformed): the recording waits.
+        # Why is kept for diagnosis (17 Oct 2026): the failure's kind and message, no words heard.
+        log.warning("A recording waits to be transcribed again: %s: %s", type(exc).__name__, exc)
         return {"number": 1, "state": "unread", "code": "audio",
                 "reason": "the recording could not be transcribed just now; it can be tried again"}, None
     text = heard.text.strip()

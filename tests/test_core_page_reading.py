@@ -83,12 +83,15 @@ def test_a_photographed_page_is_read_the_same_way(desk):
     (ContentRefused("refused"), "unreadable"),
     (ProviderUnavailable("down"), "scanned"),
 ])
-def test_a_page_the_ai_could_not_read_stays_unread_with_its_reason(desk, answer, code):
+def test_a_page_the_ai_could_not_read_stays_unread_with_its_reason(desk, answer, code, caplog):
     renewed, _ = desk.read_waiting(ADVOCATE, documents.reference(scanned(desk)), PageModel({2: answer}))
     page = renewed["pages"][1]
     assert page["state"] == "unread" and page["code"] == code and page["reason"]
     # A provider failure leaves the page waiting to be read again; the others do not.
     assert documents.needs_transcription(renewed) == ([2] if code == "scanned" else [])
+    # And its kind and message are kept for diagnosis (17 Oct 2026).
+    waits = [r.getMessage() for r in caplog.records if "waits to be read again" in r.getMessage()]
+    assert waits == (["A page waits to be read again: ProviderUnavailable: down"] if code == "scanned" else [])
 
 
 def test_without_permission_nothing_is_read_or_stored(desk, tmp_path):

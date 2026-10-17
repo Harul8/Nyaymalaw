@@ -10,6 +10,7 @@ unread with its reason, never an empty success. A page that could not be read no
 """
 from __future__ import annotations
 
+import logging
 from concurrent.futures import ThreadPoolExecutor
 
 from nm.shared.external_ai_contracts import ModelPermissionRefused
@@ -18,6 +19,7 @@ from nm.shared.model_port import ContentRefused, ModelError, PageImage, Prompt, 
 CONTRACT = "core_page_reading_v1"
 OPERATION = "core_page_reading"
 MAX_OUTPUT = 12000
+log = logging.getLogger(__name__)
 #: Pages read at once for one document.
 AT_ONCE = 4
 
@@ -61,8 +63,10 @@ def read_page(model, name, number, image: bytes):
     except ContentRefused:
         return {"number": number, "state": "unread", "code": "unreadable",
                 "reason": "the AI declined to read this page"}, None
-    except ModelError:
+    except ModelError as exc:
         # Expected provider outcomes (unavailable, cut short, malformed): the page waits.
+        # Why is kept for diagnosis (17 Oct 2026): the failure's kind and message, no page text.
+        log.warning("A page waits to be read again: %s: %s", type(exc).__name__, exc)
         return {"number": number, "state": "unread", "code": "scanned",
                 "reason": "the AI could not read this page just now; it can be read again"}, None
     reading = result.data

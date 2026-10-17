@@ -91,11 +91,14 @@ def test_an_answer_cites_a_voice_note_as_its_recording(store):
 
 @pytest.mark.parametrize("hearing,code", [(Hearing(said="  "), "unreadable"),
                                           (Hearing(fails=ProviderUnavailable("down")), "audio")])
-def test_a_recording_heard_as_nothing_or_not_heard_stays_unread_with_its_reason(desk, hearing, code):
+def test_a_recording_heard_as_nothing_or_not_heard_stays_unread_with_its_reason(desk, hearing, code, caplog):
     renewed, _ = desk.read_waiting(ADVOCATE, documents.reference(desk.receive(ADVOCATE, "note.wav", wav())), hearing)
     page, = renewed["pages"]
     assert page["state"] == "unread" and page["code"] == code
     assert documents.needs_transcription(renewed) == ([1] if code == "audio" else [])
+    # A provider failure's kind and message are kept for diagnosis (17 Oct 2026).
+    waits = [r.getMessage() for r in caplog.records if "waits to be transcribed again" in r.getMessage()]
+    assert waits == (["A recording waits to be transcribed again: ProviderUnavailable: down"] if code == "audio" else [])
 
 
 def test_without_permission_nothing_is_transcribed_or_stored(desk, tmp_path):
