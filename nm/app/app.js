@@ -3842,7 +3842,10 @@ function documentStatus(item) {
       : `Read · ${pages(summary.pages_read)}`;
   if (summary.pages_read_by_ai) text += ` (${summary.pages_read_by_ai} by AI)`;
   if (summary.pages_partly_legible) text += ` · ${pages(summary.pages_partly_legible)} partly legible`;
-  return item.note ? `${text}. ${item.note}` : text;
+  if (item.note) return `${text}. ${item.note}`;
+  // Why pages were not read, each reason once (17 Oct 2026).
+  const reasons = [...new Set((summary.unread || []).map((page) => page.reason).filter(Boolean))];
+  return reasons.length ? `${text}: ${reasons.join('; ')}` : text;
 }
 
 function renderAttachments() {
@@ -3866,6 +3869,16 @@ function renderAttachments() {
       stop.setAttribute('aria-label', 'Stop recording the voice note and attach it');
       stop.addEventListener('click', () => stopVoiceNote());
       chip.appendChild(stop);
+    }
+    if (item.status === 'ready' && item.summary && item.summary.waiting_for_ai > 0) {
+      const again = document.createElement('button');
+      again.type = 'button';
+      again.className = 'ghost attachment-again';
+      again.textContent = item.summary.recording ? 'Transcribe again' : 'Read again';
+      again.setAttribute('aria-label', item.summary.recording
+        ? `Ask the AI to transcribe ${item.name} again` : `Ask the AI to read the unread pages of ${item.name} again`);
+      again.addEventListener('click', () => readWaiting(item));
+      chip.appendChild(again);
     }
     const remove = document.createElement('button');
     remove.type = 'button';
@@ -3938,16 +3951,30 @@ async function uploadAttachment(file) {
     return settle('failed', error.message);
   }
   if (item.summary.state !== 'held' && item.summary.waiting_for_ai > 0 && attachments.includes(item)) {
-    settle('reading_scans');
-    const what = item.summary.recording ? 'The recording was not transcribed' : 'Scanned pages were not read';
-    try {
-      item.summary = await api(
-        `/api/documents/${encodeURIComponent(item.summary.document_ref)}/read`, { method: 'POST' });
-    } catch (error) {
-      item.note = error.status === 403
-        ? `${what}: accept AI data sharing in your profile to allow it.`
-        : `${what}: ${error.message}`;
-    }
+    await readWaiting(item);
+    return;
+  }
+  settle(item.summary.state === 'held' ? 'held' : 'ready');
+}
+
+// The AI reads what waits for it: scanned pages, or a recording. While anything still
+// waits (the AI could not read it just now, or AI data sharing was off), the chip
+// offers to read it again (17 Oct 2026); what was already read stays.
+async function readWaiting(item) {
+  const settle = (status) => {
+    item.status = status;
+    if (attachments.includes(item)) renderAttachments();
+  };
+  item.note = '';
+  settle('reading_scans');
+  const what = item.summary.recording ? 'The recording was not transcribed' : 'Scanned pages were not read';
+  try {
+    item.summary = await api(
+      `/api/documents/${encodeURIComponent(item.summary.document_ref)}/read`, { method: 'POST' });
+  } catch (error) {
+    item.note = error.status === 403
+      ? `${what}: accept AI data sharing in your profile to allow it.`
+      : `${what}: ${error.message}`;
   }
   settle(item.summary.state === 'held' ? 'held' : 'ready');
 }

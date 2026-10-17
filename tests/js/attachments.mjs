@@ -77,6 +77,39 @@ const chip = (get, index = 0) => get('attachments').children[index];
   assert.equal(context.attachmentsBlockSend(), null);
 }
 
+// The AI could not read the scan just now (17 Oct 2026): the chip says why and offers to
+// read it again; reading again asks the same reader, and the button goes once all is read.
+{
+  const waiting = [1, 2].map((number) => ({ number, reason: 'the AI could not read this page just now; it can be read again' }));
+  const { context, requests, get } = harness([
+    summary({ state: 'not_read', pages_read: 0, waiting_for_ai: 2 }),
+    summary({ state: 'not_read', pages_read: 0, waiting_for_ai: 2, unread: waiting }),
+    summary({ pages_read_by_ai: 2 })]);
+  await context.attachFile(file('fir-scan.pdf'));
+  assert.equal(chip(get).textContent,
+    'fir-scan.pdfNo page could be read: the AI could not read this page just now; it can be read againRead again×');
+  assert.equal(context.attachmentsBlockSend(), null);
+  const again = chip(get).children[2];
+  assert.equal(again.attributes['aria-label'], 'Ask the AI to read the unread pages of fir-scan.pdf again');
+  const pending = again.listeners.click();
+  assert.match(chip(get).textContent, /Reading scanned pages with AI/);
+  assert.equal(context.attachmentsBlockSend(), 'Wait until the attached documents have been read.');
+  await pending;
+  assert.equal(requests.length, 3);
+  assert.equal(requests[2].url, requests[1].url);
+  assert.equal(chip(get).textContent, 'fir-scan.pdfRead · 2 pages (2 by AI)×');
+}
+
+// A recording waiting to be transcribed offers to transcribe it again.
+{
+  const { context, get } = harness([summary({ recording: true, state: 'not_read', pages_read: 0, waiting_for_ai: 1 }),
+    summary({ recording: true, state: 'not_read', pages_read: 0, waiting_for_ai: 1,
+      unread: [{ number: 1, reason: 'the recording could not be transcribed just now; it can be tried again' }] })]);
+  await context.attachFile(file('call.mp3'));
+  assert.match(chip(get).textContent, /Not transcribed: the recording could not be transcribed just now/);
+  assert.equal(chip(get).children[2].textContent, 'Transcribe again');
+}
+
 // A held or failed document blocks sending until it is removed; an oversized one is
 // refused without any request.
 {

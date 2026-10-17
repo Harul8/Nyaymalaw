@@ -303,6 +303,7 @@ button.board-card:focus-visible { outline: 2px solid var(--accent); outline-offs
 .attachment.held .attachment-status, .attachment.failed .attachment-status { color: var(--signal); }
 .attachment-remove { min-width: 2.75rem; min-height: 2.75rem; font-size: 1.1rem; }
 .attachment-stop { min-height: 2.75rem; font-weight: 600; color: var(--signal); }
+.attachment-again { min-height: 2.75rem; font-weight: 600; white-space: nowrap; }
 .attachment.recording .attachment-status, .attachment.converting .attachment-status { color: var(--signal); }
 .document-player { width: 100%; max-width: 28rem; }
 .attachments-status { margin: 0.3rem 0 0; font-size: 0.85rem; color: var(--signal); }
