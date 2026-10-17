@@ -84,8 +84,10 @@ qualifications. Questions, proposals and limits must not introduce unsupported p
 Time limits, when supplied as owned time limits, were worked out by code from the Acts'
 own words: check that the reply states each as given (the provision, the date time runs
 from, the last day, where the step stands, the assumptions, what is missing and what may
-extend time), adds no date of its own, and does not present a limit that was not
-assessed as worked out.
+extend time), and does not present a limit that was not assessed as worked out.
+Counting is code's: the reply gives no last day or counted date of its own. Which
+provision and which of its alternatives governs, and from which dated event time runs,
+is legal analysis like any other: check it against the held provision and the facts.
 Examine the authority checks for each unit against its actual legal use. A direct case
 citation must agree with the case relied on. A selected judgment may instead mention
 another authority: determine from the passage who cited it and whether the draft reports

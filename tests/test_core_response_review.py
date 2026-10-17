@@ -615,3 +615,11 @@ def test_addressed_still_needs_reply_units_and_earlier_versions_have_no_respecte
                                  contract=ALIAS_CONTRACT)
     with pytest.raises(SchemaViolation):
         _accept(restriction_review(draft, ctx, "respected", []), dependencies, contract=ALIAS_CONTRACT)
+
+
+def test_the_review_checks_a_time_limits_legal_analysis_and_leaves_counting_to_code():
+    # 17 Oct 2026: the same split as the writer's, so the two never ask for opposite things.
+    from nm.core_engine.response_review import SYSTEM
+    words = " ".join(SYSTEM.split())
+    assert "Counting is code's: the reply gives no last day or counted date of its own." in words
+    assert "is legal analysis like any other: check it against the held provision and the facts" in words
