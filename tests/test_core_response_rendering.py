@@ -218,3 +218,14 @@ def test_a_rendered_element_maps_to_its_own_draft_paragraph_past_the_headings():
     for bad in (1, 3, 6, -1):
         with pytest.raises(IndexError):
             response_rendering.unit_index(elements, bad)
+
+
+def test_a_rendered_element_maps_to_its_own_draft_paragraph_past_the_working_boxes():
+    # 17 Oct 2026: the time-limit Working boxes follow the opening paragraph and had been
+    # counted as paragraphs, so a source opened after them read another paragraph's checks.
+    elements = [{"kind": "GREETING"}, {"kind": "WORKING"}, {"kind": "WORKING"}, {"kind": "HEADING"},
+                {"kind": "LAW"}, {"kind": "NEXT_STEP"}]
+    assert [response_rendering.unit_index(elements, i) for i in (0, 4, 5)] == [0, 1, 2]
+    for bad in (1, 2, 3):
+        with pytest.raises(IndexError):
+            response_rendering.unit_index(elements, bad)

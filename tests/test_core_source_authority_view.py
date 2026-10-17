@@ -73,8 +73,11 @@ def test_legacy_saved_source_explicitly_has_no_authority_check(served, monkeypat
     activity["rendering_contract"] = response_rendering.LEGACY_CONTRACT
     dependencies = response_review._dependencies(original, activity["research"], activity["sources"],
         activity["draft"], activity["execution"], contract=response_review.LEGACY_CONTRACT)
-    activity["review"] = response_review._accept(activity["review"]["proposal"], dependencies,
-                                               contract=response_review.LEGACY_CONTRACT)
+    # A legacy review was never shown short IDs (16 Oct 2026); its proposal names owned ones.
+    from nm.core_engine import answer_sources
+    from nm.core_engine.understanding import renamed
+    legacy = renamed(activity["review"]["proposal"], answer_sources.aliases(activity["sources"]))
+    activity["review"] = response_review._accept(legacy, dependencies, contract=response_review.LEGACY_CONTRACT)
     elements = response_rendering.render(original, activity["research"], activity["sources"],
         activity["draft"], activity["review"], execution=activity["execution"],
         contract=response_rendering.LEGACY_CONTRACT)

@@ -241,12 +241,17 @@ def _cited_words(text, sources, authority, *, short=False):
     return anchors, markers
 
 
+#: Shown elements that are not draft paragraphs: v5 headings and v8 Working boxes.
+NOT_PARAGRAPHS = frozenset({"HEADING", "WORKING"})
+
+
 def unit_index(elements, element):
-    """The draft paragraph a rendered element shows. From v5 a heading may precede a
-    dispute's part; headings have no paragraph of their own, so they are not counted."""
-    if not 0 <= element < len(elements) or elements[element].get("kind") == "HEADING":
+    """The draft paragraph a rendered element shows. Headings (v5) and Working boxes (v8,
+    17 Oct 2026: they had been counted as paragraphs) have no paragraph of their own, so
+    they are not counted."""
+    if not 0 <= element < len(elements) or elements[element].get("kind") in NOT_PARAGRAPHS:
         raise IndexError("This rendered element shows no draft paragraph")
-    return element - sum(1 for item in elements[:element] if item.get("kind") == "HEADING")
+    return element - sum(1 for item in elements[:element] if item.get("kind") in NOT_PARAGRAPHS)
 
 
 def _headings(research_record, draft):
