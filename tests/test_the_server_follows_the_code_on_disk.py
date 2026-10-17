@@ -32,7 +32,7 @@ class Child:
         self.terminate()
 
 
-def supervise(monkeypatch, codes, in_flight, crash_first=False, rounds=40):
+def supervise(monkeypatch, codes, in_flight, crash_first=False, rounds=40, child=None):
     """Run the supervisor over scripted fingerprints and in-flight counts."""
     Child.started = []
     seen = {"looks": 0, "sleeps": 0}
@@ -56,7 +56,8 @@ def supervise(monkeypatch, codes, in_flight, crash_first=False, rounds=40):
     monkeypatch.setattr(main, "source_fingerprint", fingerprint)
     monkeypatch.setattr(main.time, "sleep", sleep)
     monkeypatch.setattr(main, "_in_flight", lambda _path: in_flight.pop(0) if in_flight else 0)
-    assert main.follow_code(["--port", "8099"]) == 0
+    given = {} if child is None else {"child": child}
+    assert main.follow_code(["--port", "8099"], **given) == 0
     return Child.started
 
 
@@ -65,6 +66,13 @@ def test_a_settled_change_restarts_the_app_onto_the_new_code(monkeypatch):
     assert len(started) >= 2 and started[0].stopped
     assert started[0].command[-3:] == ["nm.app.main", "--port", "8099"]  # what the supervisor was given
     assert main.IN_FLIGHT_FILE in started[0].env
+
+
+def test_a_development_launcher_is_served_and_followed_the_same_way(monkeypatch):
+    # 17 Oct 2026: a launcher that adds its own diagnostics restarts onto new code too.
+    started = supervise(monkeypatch, ["a", "a", "b", "b", "b"], in_flight=[], child=("dev_launcher.py",))
+    assert len(started) >= 2 and started[0].stopped
+    assert started[1].command[1:] == ["dev_launcher.py", "--port", "8099"]
 
 
 def test_nothing_restarts_while_a_request_is_in_flight(monkeypatch):

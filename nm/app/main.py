@@ -95,8 +95,10 @@ def _in_flight(path):
         return 0
 
 
-def follow_code(serve_args):
-    """Serve the app as a child process and restart it onto the code on disk."""
+def follow_code(serve_args, *, child=("-m", "nm.app.main")):
+    """Serve the app as a child process and restart it onto the code on disk. child: what
+    the interpreter runs to serve (17 Oct 2026: a development launcher that adds its own
+    diagnostics names itself, so it follows the code too); it is given serve_args."""
     handle, name = tempfile.mkstemp(prefix="nm-in-flight-", suffix=".count")
     os.close(handle)
     counter = Path(name)
@@ -113,7 +115,7 @@ def follow_code(serve_args):
             if left <= 0:
                 return
             time.sleep(min(left, HEARTBEAT_SECONDS))
-    command = [sys.executable, "-m", "nm.app.main", *serve_args]
+    command = [sys.executable, *child, *serve_args]
     child, quick = None, 0
     try:
         while True:
