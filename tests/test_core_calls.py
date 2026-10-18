@@ -193,3 +193,17 @@ def test_unconfirmed_durable_reservation_never_dispatches_repair():
     with pytest.raises(OSError):
         ledger.correct("write", lambda: call(ledger), mismatch="source mismatch")
     assert ledger.calls == []
+
+
+def test_the_review_may_fix_its_own_form_with_either_correction():
+    # Owner, 18 Oct 2026: a form slip by the review withheld two answers the writer had got right.
+    ledger = TurnCalls(Model({"units": [unit()]}))
+    ledger.correct("core_response_writer", lambda: call(ledger), mismatch="writer shape")
+    ledger.correct("core_response_review", lambda: call(ledger), mismatch="review form")
+    assert ledger.metrics()["draft_corrections"] == 2
+    with pytest.raises(CorrectionUnavailable):  # two corrections at most, as before
+        ledger.correct("core_response_review", lambda: call(ledger), mismatch="review form again")
+    ledger = TurnCalls(Model({"units": [unit()]}))
+    ledger.correct("core_response_review", lambda: call(ledger), mismatch="review form")
+    with pytest.raises(CorrectionUnavailable):  # any other form correction is only ever the first
+        ledger.correct("core_response_writer", lambda: call(ledger), mismatch="writer shape")

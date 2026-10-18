@@ -713,3 +713,19 @@ def test_a_missing_request_without_its_finding_is_named_for_the_correction():
     words = " ".join(response_review.SYSTEM.split())
     assert "Missing is for a requested result the reply does not answer at all" in words
     assert "the facts they give with it are judged in how the reply uses them, not listed as requests" in words
+
+
+def test_a_review_reference_is_placed_whatever_its_case_and_an_id_given_twice_names_one_unit():
+    """The tenth live run (18 Oct 2026): the review quoted the advocate's "Our" as "our"
+    and the answer was withheld. Code places the reference and keeps the advocate's words."""
+    args = setup(text="Summarise the account. Identify what remains unknown.")
+    ctx, _, sources, draft = args
+    identity = ctx["latest"]["source_id"]
+    slipped = request(ctx, draft, request={"source_id": identity, "quote": "summarise the account."})
+    data = positive(draft, requests=[slipped])
+    data.update(verdict="reject", findings=[{"category": "grounding", "unit_ids": [draft["units"][0]["id"]] * 2,
+        "sources": [{"source_id": identity, "quote": "IDENTIFY what remains unknown."}],
+        "mismatch": "The unit states what the advocate did not say."}])
+    reviewed = review(Model(data), *args)
+    assert not reviewed["accepted"] and reviewed["proposal"]["findings"][0]["unit_ids"] == [draft["units"][0]["id"]]
+    assert validate(reviewed, *args) == reviewed

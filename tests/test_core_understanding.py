@@ -260,3 +260,24 @@ def test_completed_shape_rejection_is_checked_per_unit_not_silently_accepted():
 def test_empty_interpretation_cannot_prove_the_message_was_read():
     with pytest.raises(SchemaViolation, match="empty interpretation"):
         admit({key: [] for key in KINDS}, context())
+
+
+def test_a_loose_selection_places_a_quotation_whatever_its_case_spacing_or_quotation_marks():
+    """The tenth live run (18 Oct 2026): a review quoted "our client presented it" where the
+    advocate wrote "Our client presented it", and the answer was withheld. Where asked (the
+    answer's checklist, the review's references), code places the quotation and keeps the
+    source's own words; words, punctuation and their order stay as quoted."""
+    typed = {"s1": {"source_id": "s1", "record_role": "original_account",
+                    "text": "First, a cheque. Our client presented it on 1 September 2026; the bank’s memo says ‘Funds Insufficient’."}}
+    selected = select({"source_id": "s1", "quote": "our client  presented it on 1 September 2026"}, typed, loose=True)
+    assert selected["text"] == "Our client presented it on 1 September 2026"
+    marks = select({"source_id": "s1", "quote": "the bank's memo says 'Funds Insufficient'"}, typed, loose=True)
+    assert marks["text"] == "the bank’s memo says ‘Funds Insufficient’"
+    with pytest.raises(SchemaViolation, match="not exact"):  # strict unless asked, as before
+        select({"source_id": "s1", "quote": "our client presented it"}, typed)
+    for wrong in ("our client presented it on 2 September 2026", "client, presented it on 1 September", "A CHEQUE"):
+        with pytest.raises(SchemaViolation):  # changed words or punctuation, or too short to place
+            select({"source_id": "s1", "quote": wrong}, typed, loose=True)
+    twice = {"s1": {**typed["s1"], "text": "The notice was sent. the notice was sent."}}
+    with pytest.raises(SchemaViolation, match="multiple occurrences"):
+        select({"source_id": "s1", "quote": "THE NOTICE WAS SENT"}, twice, loose=True)

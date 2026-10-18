@@ -430,9 +430,11 @@ def _layout(parts, count):
 
 
 def _quoted(reference, sources, offered, kinds, what):
-    """An exact quotation from one owned source of the kinds allowed (v6)."""
+    """An exact quotation from one owned source of the kinds allowed (v6), placed whatever
+    its case, spacing or typographic quotation marks (18 Oct 2026); the source's own words
+    are what is kept."""
     selected = answer_sources.select({"source_id": offered.get(reference["source_id"], reference["source_id"]),
-                                      "quote": reference["quote"]}, sources)
+                                      "quote": reference["quote"]}, sources, loose=True)
     source = sources[selected["source_id"]]
     if source["kind"] not in kinds or (source["kind"] == "account" and source.get("speaker") != "advocate"):
         raise SchemaViolation(f"{what} must quote {' or '.join(kinds[kind] for kind in kinds)}; "
@@ -803,8 +805,11 @@ def write(model, context, research_record, sources, interpretation=None, executi
         # rewrite of every section brought a new slip into one that had passed).
         if hasattr(model, "last_output"):
             model.last_output = deepcopy(proposal)
-        passed, found = {}, {}
-        for index, part, size in zip(indices, written, shape):
+
+        def refusal(part, size):
+            """What code found in a section on its own, in its fixed words for the advocate:
+            a quotation that is not its source's own words (such a refusal carries `near`),
+            another of its checks, or nothing."""
             try:
                 if not isinstance(part["units"], list) or not part["units"]:
                     raise SchemaViolation("Each part of the reply needs at least one unit")
@@ -813,14 +818,27 @@ def write(model, context, research_record, sources, interpretation=None, executi
                                                                 "time_limit_ids": part["time_limit_ids"]}]},
                        context, sources, parts=[size], whole=False)
             except (SchemaViolation, ValueError, KeyError, TypeError) as error:
-                # What code found there, in its fixed words for the advocate: a quotation
-                # that is not its source's own words (such a refusal carries `near`), or
-                # another of its checks.
-                found[index] = "quotation" if hasattr(error, "near") else "checks"
+                return "quotation" if hasattr(error, "near") else "checks"
+            return None
+
+        passed, found, trimmed = {}, {}, {}
+        for index, part, size in zip(indices, written, shape):
+            found[index] = refusal(part, size)
+            if found[index] is None:
+                del found[index]
+                passed[index] = {"dispute_id": layout[index]["dispute_id"], **deepcopy(part)}
                 continue
-            passed[index] = {"dispute_id": layout[index]["dispute_id"], **deepcopy(part)}
+            # The section without the checklist items code refuses on their own, should the
+            # rewrite fail again (owner, 18 Oct 2026: leave out only the item, say so).
+            items = part.get("checklist") if isinstance(part.get("checklist"), list) else []
+            left = [refusal({**part, "checklist": [item]}, size) for item in items]
+            if any(left):
+                rest = {**part, "checklist": [item for item, why in zip(items, left) if why is None]}
+                if refusal(rest, size) is None:
+                    trimmed[index] = {"part": {"dispute_id": layout[index]["dispute_id"], **deepcopy(rest)},
+                                      "dropped": [why for why in left if why]}
         # A fault no single section shows (the whole reply answering no latest message)
         # leaves nothing to keep: every section is written again.
         exc.kept = passed if len(passed) < len(written) else {}
-        exc.found = found
+        exc.found, exc.trimmed = found, trimmed
         raise

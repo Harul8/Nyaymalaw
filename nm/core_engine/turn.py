@@ -170,7 +170,7 @@ def prepare(model, context, searcher, *, case_index=None, provision_reader=None,
     # found in the others: the shape correction keeps the first as written and rewrites
     # only the rest (owner, 18 Oct 2026). Parts are numbered as the writer lays them out.
     layout = response_writer.parts(record)
-    passed, found, held_back = {}, {}, {}
+    passed, found, trimmed, held_back = {}, {}, {}, {}
 
     def write(keep=None):
         try:
@@ -179,10 +179,9 @@ def prepare(model, context, searcher, *, case_index=None, provision_reader=None,
                                          keep=keep if keep is not None else passed or None,
                                          time_limits=time_limits, skip=held_back)
         except SchemaViolation as exc:
-            passed.clear()
-            passed.update(getattr(exc, "kept", None) or {})
-            found.clear()
-            found.update(getattr(exc, "found", None) or {})
+            for mine, theirs in ((passed, "kept"), (found, "found"), (trimmed, "trimmed")):
+                mine.clear()
+                mine.update(getattr(exc, theirs, None) or {})
             raise
 
     report("writing")
@@ -191,23 +190,32 @@ def prepare(model, context, searcher, *, case_index=None, provision_reader=None,
     except (CorrectionUnavailable, SchemaViolation):
         # G-SECTION for code's own checks (owner, 18 Oct 2026: "withhold only the failed
         # part and pass the remaining part"): a section still refused after the rewrites NM
-        # may make is held back for this turn, and the sections that passed go on. With no
-        # dispute's section passing, nothing is released.
-        if not any(layout[index]["dispute_id"] is not None for index in passed):
+        # may make goes on without the checklist items code refuses, when only they are at
+        # fault, and is otherwise held back for this turn; the sections that passed go on.
+        # With no dispute's section going on, nothing is released.
+        keep = {**passed, **{index: entry["part"] for index, entry in trimmed.items()}}
+        if not any(layout[index]["dispute_id"] is not None for index in keep):
             raise
-        held_back.update({index: found.get(index, "checks") for index in range(len(layout))
-                          if index not in passed})
-        draft = write(dict(passed))  # every section left is one already checked
+        held_back.update({index: found.get(index, "checks") for index in range(len(layout)) if index not in keep})
+        draft = write(keep)  # every section left is one already checked
+    else:
+        trimmed.clear()
     report("checking_authorities")
     authorities = response_authorities.check(context, record, sources, draft,
         case_index=case_index, provision_reader=provision_reader)
     unwritten = [{"dispute_id": layout[index]["dispute_id"], "found": held_back[index]}
                  for index in sorted(held_back)]
+    # The checklist items left out, by section (rendering v13 says so in the answer).
+    shortened = [{"dispute_id": layout[index]["dispute_id"], "items": len(trimmed[index]["dropped"]),
+                  "found": "quotation" if "quotation" in trimmed[index]["dropped"] else "checks"}
+                 for index in sorted(trimmed)]
 
     def review():
         return response_review.review(calls, context, record, sources, draft, execution=execution,
                                       authority_evidence=authorities, time_limits=time_limits,
-                                      held_back=[entry["dispute_id"] for entry in unwritten] or None)
+                                      held_back=[entry["dispute_id"] for entry in unwritten] or None,
+                                      shortened=[[entry["dispute_id"], entry["items"]] for entry in shortened]
+                                      or None)
 
     report("reviewing")
     reviewed = calls.checked("core_response_review", review)
@@ -241,9 +249,11 @@ def prepare(model, context, searcher, *, case_index=None, provision_reader=None,
             break
         undated = response_writer.dates_not_given(draft, context, sources, time_limits)
         checked = (draft, authorities, reviewed, undated)
-    if unwritten:
-        # The release names the sections code's checks held back (rendering v13).
-        release = {**(release or {"parts": [], "date_findings": []}), "unwritten": unwritten}
+    if unwritten or shortened:
+        # The release names the sections code's checks held back and the checklist items
+        # they left out (rendering v13).
+        release = {**(release or {"parts": [], "date_findings": []}),
+                   **({"unwritten": unwritten} if unwritten else {}), **({"trimmed": shortened} if shortened else {})}
     elements = response_rendering.render(context, record, sources, draft, reviewed,
         execution=execution, authority_evidence=authorities, time_limits=limits, held=release)
     activity = {"contract": CONTRACT, "interpretation": interpreted, "research": record,

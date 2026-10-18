@@ -163,15 +163,17 @@ def scripted_turn(monkeypatch, reviews, model=None):
         return write((model or Rounds)(sources_, counter), context, record_, sources_, keep=keep, skip=skip)
 
     def scripted_review(calls, context, record_, sources_, draft, *, execution, authority_evidence,
-                        held_back=None, **kw):
+                        held_back=None, shortened=None, **kw):
         step = reviews[counter["reviews"]]
         counter["reviews"] += 1
         if held_back is not None:
             counter.setdefault("held_back", []).append(held_back)
+        if shortened is not None:
+            counter.setdefault("shortened", []).append(shortened)
         if isinstance(step, Exception):
             raise step
         return review(ReviewModel(verdict(context, draft, step)), context, record_, sources_, draft, execution,
-                      authority_evidence=authority_evidence, held_back=held_back)
+                      authority_evidence=authority_evidence, held_back=held_back, shortened=shortened)
     monkeypatch.setattr(response_writer, "write", scripted_write)
     monkeypatch.setattr(response_review, "review", scripted_review)
 
@@ -216,11 +218,13 @@ def test_the_turn_releases_the_checked_sections_after_the_rewrites_and_replays_t
 
 
 def test_a_failed_last_review_releases_the_draft_its_own_review_saw(monkeypatch):
-    # The second review fails its shape and no correction is left: the first draft, with
-    # the first review, is what is judged and released, never the unreviewed second.
+    # The second review fails its form, is corrected with the turn's second correction (owner,
+    # 18 Oct 2026) and fails again: the first draft, with the first review, is what is judged
+    # and released, never the unreviewed second.
     ctx, elements, activity, _, counter = scripted_turn(
-        monkeypatch, [[2], SchemaViolation("Synthetic review shape failure")])
-    assert counter["writes"] == 2
+        monkeypatch, [[2], SchemaViolation("Synthetic review shape failure"),
+                      SchemaViolation("Synthetic review shape failure")])
+    assert counter["writes"] == 2 and counter["reviews"] == 3
     assert [e["text"] for e in elements if e["kind"] == "QUESTION"] == [
         "Answer for opening (round 1)?", "Answer for D1 (round 1)?"]
     assert activity["draft"]["units"][2]["text"] == "Answer for D2 (round 1)?"
@@ -280,14 +284,14 @@ class Unlinked(Misquoting):
 
 
 def test_a_section_code_still_refuses_after_its_rewrite_is_held_back_and_the_rest_released(monkeypatch):
-    """The seventh live run (18 Oct 2026) withheld a whole answer because one section's
-    quotation was still not its source's words after the rewrite, though the other two had
-    passed. Owner: "withhold only the failed part and pass the remaining part"."""
-    ctx, elements, activity, metrics, counter = scripted_turn(monkeypatch, [[]], model=Misquoting)
+    """The seventh live run (18 Oct 2026) withheld a whole answer because one section was
+    still refused after the rewrite, though the other two had passed. Owner: "withhold only
+    the failed part and pass the remaining part". Here the section's own words are at fault."""
+    ctx, elements, activity, metrics, counter = scripted_turn(monkeypatch, [[]], model=Unlinked)
     assert metrics["draft_corrections"] == 1
     assert [part["dispute_id"] for part in activity["draft"]["parts"]] == [None, "D1"]
     assert activity["release"] == {"parts": [], "date_findings": [],
-                                   "unwritten": [{"dispute_id": "D2", "found": "quotation"}]}
+                                   "unwritten": [{"dispute_id": "D2", "found": "checks"}]}
     assert [e["kind"] for e in elements] == ["NOTICE", "QUESTION", "HEADING", "QUESTION", "HEADING", "HELD", "NOTICE"]
     assert elements[0]["text"] == (
         "This answer is incomplete: 1 of its 3 sections is held back below, because a check still found a "
@@ -295,7 +299,8 @@ def test_a_section_code_still_refuses_after_its_rewrite_is_held_back_and_the_res
     assert elements[4]["text"] == "Dispute 2"
     assert elements[5]["text"] == (
         "Held back: Dispute 2. After the rewrites NM may make, NM's own checks still found a problem in this "
-        "section, so it is not shown. What the checks found: A quotation did not match its source word for word.")
+        "section, so it is not shown. What the checks found: What was written did not pass NM's own checks of its "
+        "form and sources.")
     assert elements[5]["held"] == {"part": None, "section": "Dispute 2",
                                    "retry": "Please try the held-back section on Dispute 2 again."}
     assert elements[-1]["text"].startswith("Shall I try the held-back section again, or continue without it?")
@@ -324,10 +329,40 @@ def test_a_section_held_back_by_code_is_not_written_again_when_the_review_asks_f
 
 
 def test_nothing_is_released_when_no_disputes_section_passes_code_checks(monkeypatch):
-    class Both(Misquoting):
-        misquoted = ("D1", "D2")
-    with pytest.raises(SchemaViolation, match="not exact"):
+    class Both(Rounds):
+        def structured(self, prompt, schema, tier, **kwargs):
+            import json
+            result = super().structured(prompt, schema, tier, **kwargs)
+            if (json.loads(prompt.user)["this_part"]["dispute"] or {}).get("id") in ("D1", "D2"):
+                result.data["units"][0]["text"] += " [An unoffered source](P999)."
+            return result
+    with pytest.raises(SchemaViolation, match="does not use"):
         scripted_turn(monkeypatch, [[]], model=Both)
+
+
+def test_a_checklist_item_that_still_fails_is_left_out_and_its_section_shown(monkeypatch):
+    """Runs 5, 7 and 9 (18 Oct 2026) each lost a section, or the answer, to one checklist
+    quotation still wrong after the rewrite. Owner: leave out only that item and say so."""
+    ctx, elements, activity, metrics, counter = scripted_turn(monkeypatch, [[]], model=Misquoting)
+    assert metrics["draft_corrections"] == 1
+    assert [part["dispute_id"] for part in activity["draft"]["parts"]] == [None, "D1", "D2"]
+    assert activity["draft"]["checklists"][2]["items"] == []
+    assert activity["release"] == {"parts": [], "date_findings": [],
+                                   "trimmed": [{"dispute_id": "D2", "items": 1, "found": "quotation"}]}
+    assert [e["kind"] for e in elements] == ["NOTICE", "QUESTION", "HEADING", "QUESTION", "HEADING", "QUESTION"]
+    assert elements[0]["text"] == (
+        "Left out of the checklist for Dispute 2: 1 item, because NM's own checks still found a problem in it after "
+        "the rewrites NM may make: a quotation did not match its source word for word. The rest of that section is "
+        "shown, checked by the independent review.")
+    assert elements[-1]["text"] == "Answer for D2 (round 2)?"
+    # The review was told, and is bound to it on reopening.
+    assert counter["shortened"] == [[["D2", 1]]]
+    assert turn.validate_activity(activity, ctx, elements) == activity
+    with pytest.raises(ValueError):
+        turn.validate_activity({**activity, "release": None}, ctx, elements)
+    with pytest.raises(ValueError):
+        turn.validate_activity({**activity, "release": {"parts": [], "date_findings": [], "trimmed": [
+            {"dispute_id": "D1", "items": 1, "found": "quotation"}]}}, ctx, elements)
 
 
 def partial(skip):

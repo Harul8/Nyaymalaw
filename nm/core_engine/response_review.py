@@ -118,7 +118,9 @@ item the list leaves out.
 A section named under sections_held_back did not pass code's own checks after the
 rewrites NM may make, and the advocate is told in its place that it is held back. Judge
 the reply without it: a request that only that section would answer is a justified
-limit naming no reply units, and its absence is no finding.
+limit naming no reply units, and its absence is no finding. A dispute named under
+checklist_items_left_out lost that many checklist items to code's own checks after the
+rewrites, and the advocate is told so: their absence is no finding either.
 Examine the authority checks for each unit against its actual legal use. A direct case
 citation must agree with the case relied on. A selected judgment may instead mention
 another authority: determine from the passage who cited it and whether the draft reports
@@ -216,7 +218,8 @@ SCHEMA = _review_schema(REQUEST, rows=False)
 
 
 def _dependencies(context, research_record, sources, draft, execution, *,
-                  authority_evidence=None, contract=LEGACY_CONTRACT, time_limits=None, held_back=None):
+                  authority_evidence=None, contract=LEGACY_CONTRACT, time_limits=None, held_back=None,
+                  shortened=None):
     if answer_sources.build(context, research_record) != sources:
         raise ValueError("Review catalogue differs from its owned source snapshot")
     response_writer.validate(draft, context, sources)
@@ -240,6 +243,9 @@ def _dependencies(context, research_record, sources, draft, execution, *,
     # the opening); only a review of an answer without them binds them.
     if held_back:
         dependencies["held_back"] = list(held_back)
+    # The checklist items code's checks left out, by dispute, as [dispute_id, count].
+    if shortened:
+        dependencies["shortened"] = [list(entry) for entry in shortened]
     return dependencies
 
 
@@ -254,7 +260,10 @@ def _ids(values, known):
 
 
 def _selection_key(reference, sources):
-    selected = answer_sources.select(reference, sources)
+    """Where a reference stands: placed whatever its case, spacing or typographic quotation
+    marks (18 Oct 2026; the tenth live run's review wrote "our" for "Our" and the answer was
+    withheld). A saved review's exact references stand where they always stood."""
+    selected = answer_sources.select(reference, sources, loose=True)
     return selected["source_id"], selected["start"], selected["end"]
 
 
@@ -305,6 +314,8 @@ def _accept(proposal, dependencies, *, contract=LEGACY_CONTRACT):
         item["unit_id"] = named.get(item["unit_id"], item["unit_id"])
     for item in [*data["request_coverage"], *data["findings"]]:
         item["unit_ids"] = [named.get(identity, identity) for identity in item["unit_ids"]]
+        if contract == CONTRACT:  # v8: an ID given twice names one unit (18 Oct 2026)
+            item["unit_ids"] = list(dict.fromkeys(item["unit_ids"]))
     if contract in _FINDINGS:
         # A reply unit or checklist item given among a finding's sources (the reviewer did so
         # in two of four live runs, 18 Oct 2026, and the answer was lost) is what the finding
@@ -434,10 +445,10 @@ def _draft_presentation(draft, sources, *, aliased=False, saved=None):
 
 
 def review(model, context, research_record, sources, draft, execution=None, *,
-           authority_evidence=None, time_limits=None, held_back=None):
+           authority_evidence=None, time_limits=None, held_back=None, shortened=None):
     dependencies = _dependencies(context, research_record, sources, draft, execution,
         authority_evidence=authority_evidence, contract=CONTRACT, time_limits=time_limits,
-        held_back=held_back)
+        held_back=held_back, shortened=shortened)
     # Original words are already complete above; legal rows include all adjacent
     # context, not merely the writer's chosen support. Full durable binding is kept.
     research_context = {"state": research_record["state"],
@@ -476,6 +487,11 @@ def review(model, context, research_record, sources, draft, execution=None, *,
         payload["sections_held_back"] = [names.get(identity, "the dispute") if identity is not None
                                          else "the opening and the points not tied to one dispute"
                                          for identity in held_back]
+    if shortened:
+        names = {dispute["id"]: dispute["name"] for dispute in
+                 research_record["plan"]["proposal"]["understanding"]["disputes"]}
+        payload["checklist_items_left_out"] = [{"dispute": names.get(identity, "the dispute"), "items": count}
+                                               for identity, count in shortened]
     # Full readbacks remain in durable binding; the source catalogue already holds
     # the exact legal passages. Present only their checks and remaining limits here.
     prompt = Prompt(system=SYSTEM, user=json.dumps(payload, ensure_ascii=False),
@@ -491,7 +507,7 @@ def review(model, context, research_record, sources, draft, execution=None, *,
 
 
 def validate(record, context, research_record, sources, draft, execution=None, *,
-             authority_evidence=None, time_limits=None, held_back=None):
+             authority_evidence=None, time_limits=None, held_back=None, shortened=None):
     if (not isinstance(record, dict) or set(record) != {
             "contract", "proposal", "accepted", "bound_digest"}
             or record.get("contract") not in CONTRACTS
@@ -499,7 +515,7 @@ def validate(record, context, research_record, sources, draft, execution=None, *
         raise ValueError("Unknown or malformed independent response review receipt")
     dependencies = _dependencies(context, research_record, sources, draft, execution,
         authority_evidence=authority_evidence, contract=record["contract"], time_limits=time_limits,
-        held_back=held_back)
+        held_back=held_back, shortened=shortened)
     checked = _accept(record["proposal"], dependencies, contract=record["contract"])
     if checked != record:
         raise ValueError("Independent review does not bind this exact draft and evidence")

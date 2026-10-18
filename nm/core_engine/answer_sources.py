@@ -131,17 +131,18 @@ def build(context, research_record):
     return sources
 
 
-def select(reference, sources):
+def select(reference, sources, *, loose=False):
     """Select exact unique words from an owned tag without normalising text. Held legal
     passages and document pages keep their page line breaks, which a quote may meet
-    with spaces; the selection is still the source's own words."""
+    with spaces; loose places a quotation whatever its case, spacing or typographic
+    quotation marks (18 Oct 2026). The selection is still the source's own words."""
     require_schema(reference, REFERENCE)
     identity = reference["source_id"]
     source = sources.get(identity)
     if source is None or source.get("id") != identity:
         raise SchemaViolation(_unknown(identity, sources))
     chosen = select_original(reference, {identity: {
-        "source_id": identity, "text": source["text"]}}, layout=source["kind"] in _LAYOUT)
+        "source_id": identity, "text": source["text"]}}, layout=source["kind"] in _LAYOUT, loose=loose)
     return {key: chosen[key] for key in ("source_id", "start", "end", "text")}
 
 

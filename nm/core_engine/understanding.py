@@ -211,10 +211,27 @@ def nearest(quote, text, around=160):
     return start, end
 
 
-def select(reference, sources, *, layout=None):
+def _loosely(quote, text):
+    """Where a quotation stands in a text whatever its case, spacing, typographic quotation
+    marks and the editors' amendment markers (18 Oct 2026; the time-limit step has located
+    facts and Act words so since 16 Oct): its span and whether it stands there twice. Words,
+    punctuation and their order stay as quoted; a stretch too short to place is not placed."""
+    target = _letters_of(quote)[0]
+    if len(target) < NEAR_MINIMUM:
+        return None, False
+    letters, where = _letter_map(text)
+    at = letters.find(target)
+    if at < 0:
+        return None, False
+    return (where[at], where[at + len(target) - 1] + 1), letters.find(target, at + 1) >= 0
+
+
+def select(reference, sources, *, layout=None, loose=False):
     """Resolve an unambiguous exact passage. No paraphrase. The exact words are looked
     for first; only page text (layout True, or a supplied document's page) lets a space
-    in the quote meet a line break of the page. What is returned is the source's own words.
+    in the quote meet a line break of the page; loose (the answer's checklist and the
+    review's references, 18 Oct 2026) also places a quotation whatever its case, spacing
+    or typographic quotation marks. What is returned is the source's own words.
 
     A quotation that is not found is refused with the source's own words nearest to it,
     exactly as they stand, as the refusal's `near` (18 Oct 2026: a writer told only that
@@ -235,15 +252,18 @@ def select(reference, sources, *, layout=None):
         if layout is None:
             layout = source.get("record_role") in LAYOUT_ROLES
         found, again = _laid_out(quote, text) if layout else (None, None)
-        if found is None:
+        span = (found.start(), found.end()) if found is not None else None
+        if span is None and loose:
+            span, again = _loosely(quote, text)
+        if span is None:
             refused = SchemaViolation(f"Selected quote is not exact original source text: "
                                       f"source_id={reference['source_id']!r}, quote={quote!r}")
             window = nearest(quote, text)
             refused.near = text[window[0]:window[1]] if window else None
             raise refused
-        if again is not None:
+        if again:
             raise SchemaViolation(f"Selected quote has multiple occurrences in {reference['source_id']!r}: {quote!r}; select a longer unique passage or the whole source")
-        return {**deepcopy(source), "start": found.start(), "end": found.end(), "text": found.group()}
+        return {**deepcopy(source), "start": span[0], "end": span[1], "text": text[span[0]:span[1]]}
     if text.find(quote, start + 1) >= 0:
         raise SchemaViolation(f"Selected quote has multiple occurrences in {reference['source_id']!r}: {quote!r}; select a longer unique passage or the whole source")
     return {**deepcopy(source), "start": start, "end": start + len(quote), "text": quote}

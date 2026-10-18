@@ -347,32 +347,43 @@ def _release(draft, review, held, layout=None):
     carries (the date check reads today's date, so its findings are kept, not redone).
     From v13 (layout given) it may also name, as "unwritten", the sections code's own
     checks held back: exactly the parts of the answer's layout the draft does not hold,
-    in order (dispute None: the opening), each with what code found."""
+    in order (dispute None: the opening), each with what code found; and, as "trimmed", the
+    sections shown without checklist items code's checks refused, in order, each with how
+    many and what code found."""
     if held is None:
-        return [], [], []
+        return [], [], [], []
     known = {unit["id"] for unit in draft["units"]}.union(*response_writer.part_ids(draft))
-    fields = {"parts", "date_findings"} | ({"unwritten"} if layout is not None and isinstance(held, dict)
-                                          and "unwritten" in held else set())
-    if (not isinstance(held, dict) or set(held) != fields
+    optional = ({"unwritten", "trimmed"} & set(held)) if layout is not None and isinstance(held, dict) else set()
+    if (not isinstance(held, dict) or set(held) != {"parts", "date_findings"} | optional
             or not isinstance(held["date_findings"], list) or any(
                 not isinstance(f, dict) or f.get("category") != "grounding" or not f.get("unit_ids")
                 or not set(f["unit_ids"]) <= known or not isinstance(f.get("mismatch"), str)
                 for f in held["date_findings"])):
         raise ValueError("Unknown release record")
-    unwritten = held.get("unwritten", [])
-    if "unwritten" in held:
-        shown = [part["dispute_id"] for part in draft.get("parts") or []]
+    unwritten, trimmed = held.get("unwritten", []), held.get("trimmed", [])
+    shown = [part["dispute_id"] for part in draft.get("parts") or []]
+    if layout is not None:
         missing = [part["dispute_id"] for part in layout if part["dispute_id"] not in shown]
-        if (not isinstance(unwritten, list) or not unwritten or any(
-                not isinstance(entry, dict) or set(entry) != {"dispute_id", "found"}
-                or entry["found"] not in _CODE_FOUND for entry in unwritten)
+        if ("unwritten" in held or missing) and (
+                not isinstance(unwritten, list) or not unwritten or any(
+                    not isinstance(entry, dict) or set(entry) != {"dispute_id", "found"}
+                    or entry["found"] not in _CODE_FOUND for entry in unwritten)
                 or [entry["dispute_id"] for entry in unwritten] != missing
                 or not any(identity is not None for identity in shown)):
             raise ValueError("Unknown release record")
+        if "trimmed" in held and (
+                not isinstance(trimmed, list) or not trimmed or any(
+                    not isinstance(entry, dict) or set(entry) != {"dispute_id", "items", "found"}
+                    or entry["dispute_id"] is None or entry["dispute_id"] not in shown
+                    or type(entry["items"]) is not int or entry["items"] < 1 or entry["found"] not in _CODE_FOUND
+                    for entry in trimmed)
+                or [entry["dispute_id"] for entry in trimmed]
+                != [identity for identity in shown if identity in {entry["dispute_id"] for entry in trimmed}]):
+            raise ValueError("Unknown release record")
     expected = held_sections(draft, review, held["date_findings"])
-    if expected is None or expected != held["parts"] or not (expected or unwritten):
+    if expected is None or expected != held["parts"] or not (expected or unwritten or trimmed):
         raise ValueError("Held sections differ from what the checks found")
-    return held["parts"], held["date_findings"], unwritten
+    return held["parts"], held["date_findings"], unwritten, trimmed
 
 
 def _dispute_names(research_record):
@@ -574,10 +585,14 @@ def render(context, research_record, sources, draft, review, execution=None, *,
         unwritten_ids = ([entry.get("dispute_id") for entry in held["unwritten"] if isinstance(entry, dict)]
                          if contract == CONTRACT and isinstance(held, dict)
                          and isinstance(held.get("unwritten"), list) else [])
+        shortened = ([[entry.get("dispute_id"), entry.get("items")] for entry in held["trimmed"]
+                      if isinstance(entry, dict)]
+                     if contract == CONTRACT and isinstance(held, dict) and isinstance(held.get("trimmed"), list)
+                     else [])
         checked_review = response_review.validate(review, context, research_record,
             sources, checked_draft, execution=execution, authority_evidence=checked_authorities,
             time_limits=calculation.for_answer(time_limits) if time_limits is not None else None,
-            held_back=unwritten_ids or None)
+            held_back=unwritten_ids or None, shortened=shortened or None)
     if contract == WORDS_CONTRACT and checked_draft["contract"] not in response_writer.WORDED:
         # Otherwise every source would be shown unlinked, with nothing to say so.
         raise ValueError("A v11 rendering links each source at the words its use names, "
@@ -588,7 +603,7 @@ def render(context, research_record, sources, draft, review, execution=None, *,
     if held is not None and contract not in _HOLDS:
         raise ValueError("Only a v10 or later rendering may hold sections back")
     layout = response_writer.parts(research_record) if contract == CONTRACT else None
-    held_parts, date_findings, unwritten = _release(checked_draft, checked_review, held, layout)
+    held_parts, date_findings, unwritten, trimmed = _release(checked_draft, checked_review, held, layout)
     if not checked_review["accepted"] and not held_parts:
         raise ValueError("A response without accepted independent review cannot be rendered")
     authorities = ({row["unit_id"]: row for row in checked_authorities["units"]}
@@ -605,7 +620,7 @@ def render(context, research_record, sources, draft, review, execution=None, *,
     findings = [] if checked_review["accepted"] else checked_review["proposal"]["findings"]
     # v13: each section code's checks held back goes where it stands in the answer's
     # layout, before the first section shown that follows it (or at the end).
-    unwritten_at, disputes = {}, _dispute_names(research_record) if unwritten else {}
+    unwritten_at, disputes = {}, _dispute_names(research_record) if unwritten or trimmed else {}
     if unwritten:
         order = {part["dispute_id"]: index for index, part in enumerate(layout)}
         starts, start = [], 0
@@ -641,6 +656,13 @@ def render(context, research_record, sources, draft, review, execution=None, *,
             f"{len(checked_draft['parts']) + len(unwritten)} sections {'are' if many else 'is'} held back below, "
             f"because {found_by} a problem in {'them' if many else 'it'} after the rewrites NM may "
             "make. The sections shown were checked by the independent review."))
+    for entry in trimmed:
+        # v13: what a section shown goes without (owner, 18 Oct 2026).
+        name, said, many = disputes.get(entry["dispute_id"]) or "this dispute", _CODE_FOUND[entry["found"]],             entry["items"] > 1
+        elements.append(_notice("NOTICE", f"Left out of the checklist for {name}: {entry['items']} "
+            f"{'items' if many else 'item'}, because NM's own checks still found a problem in {'them' if many else 'it'} "
+            f"after the rewrites NM may make: {said}. The rest of that section is shown, checked by the independent "
+            "review."))
     def paragraph(position, unit):
         legal_sources = _sources(unit, sources, shown_names=contract in {SHOWN_NAME_CONTRACT, *_CITED},
                                  documents=contract in (DOCUMENT_PAGES_CONTRACT, *_WORKING))

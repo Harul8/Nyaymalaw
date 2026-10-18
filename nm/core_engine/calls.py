@@ -14,6 +14,9 @@ ALLOWANCE = 2
 #: Rewrites the independent review may ask for in one turn (owner, 18 Oct 2026, for speed:
 #: once, not twice; what the second review still finds holds back its sections).
 REVIEW_REWRITES = 1
+#: The review may correct its own form with either of the turn's corrections (owner, 18 Oct
+#: 2026): a form slip by the review withheld two answers the writer had got right.
+REVIEW_OPERATION = "core_response_review"
 
 
 class CorrectionUnavailable(ModelError):
@@ -114,13 +117,14 @@ class TurnCalls:
         Operation-scoped feedback never enters an independent review call.
         It is untrusted draft data, not original evidence or an execution receipt.
         asked_by_review: the independent review's findings ask for it, so it may be the
-        turn's second correction; any other must be its first. The review asks at most
-        REVIEW_REWRITES times.
+        turn's second correction, as may a correction of the review's own form; any other
+        must be its first. The review asks at most REVIEW_REWRITES times.
         """
         if self.terminal:
             raise ReleaseWithheld("This turn's release scope is withheld")
+        second = asked_by_review is True or operation == REVIEW_OPERATION
         with self._lock:
-            if (self.corrections_used >= (ALLOWANCE if asked_by_review is True else 1)
+            if (self.corrections_used >= (ALLOWANCE if second else 1)
                     or (asked_by_review is True and self.review_rewrites >= REVIEW_REWRITES)):
                 raise CorrectionUnavailable("This turn's draft corrections have been used")
             if not isinstance(operation, str) or not operation or not mismatch:
