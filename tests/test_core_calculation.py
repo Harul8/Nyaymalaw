@@ -174,6 +174,9 @@ def test_a_saved_limit_replays_without_the_corpus_and_a_changed_one_is_refused(s
     assert calculation.validate(v2, context) == v2
     with pytest.raises(ValueError):  # a correction claimed without its disposition
         calculation.validate(row["activities"]["calculation"] | {"correction": {"state": "corrected"}}, context)
+    # And one saved before a step taken had to be the step itself (v3).
+    v3 = row["activities"]["calculation"] | {"contract": calculation.V3_CONTRACT}
+    assert calculation.validate(v3, context) == v3
 
 
 def test_code_finds_the_quoted_words_and_refuses_what_it_cannot_check(store):
@@ -221,11 +224,39 @@ def test_a_refused_limit_gets_one_correction_that_faces_the_same_checks(store):
     assert boxes["Last day for the drawer to pay"]["last_day"] == "2026-09-13"  # checked first; stands
     row = saved_rows(store.load(chat_matter_id("owner", reply["chat_id"])), "owner")[0]
     record = row["activities"]["calculation"]
-    assert record["contract"] == calculation.CONTRACT == "core_calculation_v3"
+    assert record["contract"] == calculation.CONTRACT == "core_calculation_v4"
     assert record["correction"]["state"] == "corrected" and [r["id"] for r in record["correction"]["refused"]] == ["bad"]
     assert record["proposal"] == chain() and record["not_assessed"] == []
     assert saved_rows(store.load(chat_matter_id("owner", reply["chat_id"])), "owner")[0]["response"][
         "elements"] == reply["elements"]  # the corrected limit replays from the saved record
+
+
+def test_a_step_taken_quoted_from_the_event_time_runs_from_is_refused_then_corrected(store):
+    """Two of three live runs (18 Oct 2026) gave the delivery as the price suit's step taken,
+    so an unfiled suit read "in time": the words of the event time runs from are never the
+    step taken, and the correction is told why."""
+    proposal = chain()
+    pay = proposal["calculations"][0]
+    pay["done"] = {"what": "notice delivered", "date": "2026-08-29", "quote": "Notice was delivered on 29 August 2026"}
+    corrected = deepcopy(pay)
+    corrected["done"] = {"what": "", "date": "", "quote": ""}
+    model = Calculating(proposal, correction={"calculations": [corrected, fixed_bad()], "cannot": []})
+    reply = turn(store, model)
+    prompt, = model.seen["correction"]
+    assert "- c1 (Last day for the drawer to pay): the step taken is quoted from the words of the event time " \
+           "runs from" in prompt.user
+    assert 'Under "done", give the step this time limit governs only if' in model.seen["calculation"].system
+    boxes = {e["text"]: e["working"] for e in reply["elements"] if e["kind"] == "WORKING"}
+    pay_box = boxes["Last day for the drawer to pay"]
+    assert pay_box["last_day"] == "2026-09-13" and pay_box["step_taken"] is None
+    assert not any(label == "Taken on" for label, _ in pay_box["rows"])
+    # Without a correction it stays not assessed, with the reason.
+    plain = Calculating(deepcopy(proposal), correction={"calculations": [], "cannot": [
+        {"id": "c1", "why": "The advocate gives no payment."}]})
+    second = run(store, plain, message=MESSAGE, held_acts=Held(), turn_id="t-uncorrected")  # a new conversation
+    boxes = {e["text"]: e["working"] for e in second["elements"] if e["kind"] == "WORKING"}
+    assert boxes["Last day for the drawer to pay"]["not_assessed"].startswith(
+        "the step taken is quoted from the words of the event time runs from")
 
 
 def test_the_nearest_held_words_are_found_for_a_quotation_with_a_word_dropped():

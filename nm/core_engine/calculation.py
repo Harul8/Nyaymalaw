@@ -33,7 +33,11 @@ V1_CONTRACT = "core_calculation_v1"
 #: v2: the model quotes; code finds the message or page holding the words (15 Oct 2026).
 V2_CONTRACT = "core_calculation_v2"
 #: v3 (owner, 16 Oct 2026): one correction pass when code refuses a proposed time limit.
-CONTRACT = "core_calculation_v3"
+V3_CONTRACT = "core_calculation_v3"
+#: v4 (18 Oct 2026, after two of three live runs called an unfiled suit "in time"): a step
+#: taken is the step the time limit governs, never the event time runs from, and code
+#: refuses one quoted from that event's own words.
+CONTRACT = "core_calculation_v4"
 OPERATION = "core_calculation"
 CORRECTION_OPERATION = "core_calculation_correct"
 MAX_OUTPUT = 12000
@@ -47,7 +51,7 @@ SYSTEM = """You work with an Indian advocate on time limits: the limitation peri
 
 First decide whether what the advocate wants needs any time limit worked out. If it does not, say so and give no calculations.
 
-If it does, for each time limit that bears on it, go by what the Act says. Read the Act's own words to find the provision that governs the step, the period, and the event from which time runs. Under "words", quote the words that set the period and say what it runs from, exactly as they appear below; that phrase is enough, not the whole clause. Under "period_words", give the period itself as it stands inside those words, such as "thirty days". Where one provision sets more than one period, such as a period and an outer limit to which a court may extend it, give each period its own calculation with its own words. For an article of the Limitation Act's Schedule, give its number and, where it has lettered parts, the letter. Then find the date of that event in what the advocate or their documents say, and quote those words exactly as written there. Where the Act lets time be left out for obtaining certified copies, give the dates the copy was applied for and was ready, if they are known. Where the steps form a chain (notice, the period to pay, then the complaint), give each step its own id. A period that runs from an event the advocate or a document dates (the drawer receiving the notice) starts from that date, quoted, even when the event belongs to an earlier step. Only a period that begins when an earlier period has run out (the complaint period, which begins once the period to pay has ended unpaid) names that earlier step's id in "after" and leaves the date empty; code then starts it the day after the earlier step's last day. Where a step is premature if taken before an earlier period has run out (a complaint filed before the period to pay ends), put that earlier step's id in "earliest_after"; a step that merely follows an earlier event in time needs nothing there. Write every date as YYYY-MM-DD. Name anything that may extend or restart time (a written acknowledgment, a part payment, time in a court without jurisdiction, a disability, fraud, condonation of delay) under "may_extend", with the provision; these are flagged for the advocate, not counted.
+If it does, for each time limit that bears on it, go by what the Act says. Read the Act's own words to find the provision that governs the step, the period, and the event from which time runs. Under "words", quote the words that set the period and say what it runs from, exactly as they appear below; that phrase is enough, not the whole clause. Under "period_words", give the period itself as it stands inside those words, such as "thirty days". Where one provision sets more than one period, such as a period and an outer limit to which a court may extend it, give each period its own calculation with its own words. For an article of the Limitation Act's Schedule, give its number and, where it has lettered parts, the letter. Then find the date of that event in what the advocate or their documents say, and quote those words exactly as written there. Where the Act lets time be left out for obtaining certified copies, give the dates the copy was applied for and was ready, if they are known. Where the steps form a chain (notice, the period to pay, then the complaint), give each step its own id. A period that runs from an event the advocate or a document dates (the drawer receiving the notice) starts from that date, quoted, even when the event belongs to an earlier step. Only a period that begins when an earlier period has run out (the complaint period, which begins once the period to pay has ended unpaid) names that earlier step's id in "after" and leaves the date empty; code then starts it the day after the earlier step's last day. Where a step is premature if taken before an earlier period has run out (a complaint filed before the period to pay ends), put that earlier step's id in "earliest_after"; a step that merely follows an earlier event in time needs nothing there. Under "done", give the step this time limit governs only if the advocate or a document says it has already been taken (the suit or complaint filed, the notice given, the payment made), with its date and the words saying so; otherwise leave it empty. The event time runs from is never the step itself: for a suit for the price, the delivery starts the time and filing the suit is the step; for the drawer's time to pay, the notice reaching the drawer starts it and the payment is the step. Write every date as YYYY-MM-DD. Name anything that may extend or restart time (a written acknowledgment, a part payment, time in a court without jurisdiction, a disability, fraud, condonation of delay) under "may_extend", with the provision; these are flagged for the advocate, not counted.
 
 Do not count days yourself: give the starting date, the Act's words for the period and any copy dates, and the dates will be counted by code. Where a date is missing or uncertain, do not guess: list what is needed under "missing". Where two provisions could govern, give a calculation for each. If a time limit is set by an Act that is not given below, put it under "not_assessed" and say why.
 
@@ -72,6 +76,8 @@ CALCULATION = {"type": "object", "additionalProperties": False, "required": [
                "required": ["applied", "ready", "quote"],
                "properties": {"applied": TEXT, "ready": TEXT, "quote": TEXT}}},
     "done": {"type": "object", "additionalProperties": False, "required": ["what", "date", "quote"],
+             "description": "The step this time limit governs, only if already taken; never the event time runs "
+                            "from. Empty when the step has not been taken.",
              "properties": {"what": TEXT, "date": TEXT, "quote": TEXT}},
     "earliest_after": TEXT, "reasoning": TEXT,
     "assumptions": {"type": "array", "items": TEXT}, "missing": {"type": "array", "items": TEXT},
@@ -306,6 +312,12 @@ def _check(proposal, context, acts, today):
                       for c in item["copies"]]
             done = (_fact(item["done"], catalogue, "step taken", searched) | {"what": item["done"]["what"]}
                     if item["done"]["date"].strip() else None)
+            if (done and origin.get("source_id") == done["source_id"]
+                    and done["start"] < origin["end"] and origin["start"] < done["end"]):
+                # v4: the words of the event time runs from cannot also be the step taken.
+                raise _Unchecked("the step taken is quoted from the words of the event time runs from; give the "
+                                 "step this time limit governs (the suit filed, the notice given, the payment "
+                                 "made) only if it has been taken, and leave it empty otherwise")
             earliest = None
             if item["earliest_after"].strip():
                 before = done_ids.get(item["earliest_after"].strip())
@@ -433,9 +445,10 @@ def _correct(model, system, user, proposal, refused):
 
 def validate(record, context):
     """Replay: the saved record recomputed from its own inputs, without the corpus."""
-    if not isinstance(record, dict) or record.get("contract") not in (V1_CONTRACT, V2_CONTRACT, CONTRACT):
+    if not isinstance(record, dict) or record.get("contract") not in (V1_CONTRACT, V2_CONTRACT, V3_CONTRACT,
+                                                                      CONTRACT):
         raise ValueError("Unknown saved calculation contract")
-    correction = record.get("correction") if record["contract"] == CONTRACT else None
+    correction = record.get("correction") if record["contract"] in (V3_CONTRACT, CONTRACT) else None
     if correction is not None and (
             not isinstance(correction, dict) or correction.get("state") not in ("corrected", "unavailable")
             or not correction.get("refused") or (correction["state"] == "corrected") != (correction["proposal"] is not None)):

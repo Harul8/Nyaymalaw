@@ -277,3 +277,18 @@ def test_a_saved_v6_review_with_a_verdict_row_for_each_item_replays():
     with pytest.raises(SchemaViolation, match="and every checklist item one"):
         response_review._accept(positive(draft, requests=[request(ctx, draft)]), dependencies,
                                 contract=response_review.CHECKLIST_CONTRACT)
+
+
+def test_a_paragraph_or_item_given_among_a_findings_sources_is_what_the_finding_concerns():
+    """Two of four live runs (18 Oct 2026) gave a paragraph or checklist item among a
+    finding's sources, and the answer was lost; it joins the finding's unit_ids instead."""
+    ctx, record, sources, draft = written()
+    data = positive(draft, requests=[request(ctx, draft)])
+    data["verdict"] = "reject"
+    data["findings"] = [{"category": "grounding", "unit_ids": [], "sources": [
+        {"source_id": "C3", "quote": None}, {"source_id": "M1", "quote": "applicable law"}],
+        "mismatch": "C3 is not what the passage requires."}]
+    _, review = checked(ctx, record, sources, draft, data)
+    finding, = review["proposal"]["findings"]
+    assert finding["unit_ids"] == ["t2:c3"] and [ref["source_id"] for ref in finding["sources"]] == ["M1"]
+    assert response_rendering.held_sections(draft, review) == [2]

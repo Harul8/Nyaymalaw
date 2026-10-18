@@ -282,6 +282,20 @@ def _accept(proposal, dependencies, *, contract=LEGACY_CONTRACT):
         item["unit_id"] = named.get(item["unit_id"], item["unit_id"])
     for item in [*data["request_coverage"], *data["findings"]]:
         item["unit_ids"] = [named.get(identity, identity) for identity in item["unit_ids"]]
+    if contract == CONTRACT:
+        # A reply unit or checklist item given among a finding's sources (the reviewer did so
+        # in two of four live runs, 18 Oct 2026, and the answer was lost) is what the finding
+        # concerns, not a source: it joins the finding's unit_ids.
+        for finding in data["findings"]:
+            selections = []
+            for ref in finding["sources"]:
+                identity = named.get(ref.get("source_id"), ref.get("source_id"))
+                if identity in known:
+                    if identity not in finding["unit_ids"]:
+                        finding["unit_ids"] = [*finding["unit_ids"], identity]
+                else:
+                    selections.append(ref)
+            finding["sources"] = selections
     reviewed = [unit["unit_id"] for unit in data["units"]]
     _ids(reviewed, rows)
     if set(reviewed) != rows:
