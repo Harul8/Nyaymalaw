@@ -49,7 +49,7 @@ def test_a_disputes_time_limits_close_its_part_and_the_questions_end_the_answer(
     # Each paragraph still names its own draft paragraph; the heading names none.
     saved, = rows(store, reply)
     draft = saved["activities"]["draft"]
-    assert saved["activities"]["rendering_contract"] == response_rendering.CONTRACT == "core_response_rendering_v15"
+    assert saved["activities"]["rendering_contract"] == response_rendering.CONTRACT == "core_response_rendering_v16"
     assert draft["units"][response_rendering.unit_index(elements, 6)]["text"] == ASK
     with pytest.raises(IndexError):
         response_rendering.unit_index(elements, 5)

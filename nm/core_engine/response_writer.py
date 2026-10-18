@@ -59,23 +59,33 @@ REASONED_CONTRACT = "core_response_writer_v9"
 #: sentence that the passage supports, which code makes the dotted link where they stand in
 #: the unit; a link written on a single word is no link; anything not found leaves the source
 #: listed under its paragraph, as before. No new call.
-CONTRACT = "core_response_writer_v10"
+PLACED_CONTRACT = "core_response_writer_v10"
+#: v11 (19 Oct 2026; the readability design as the owner approved it, 18 Oct): each ask under
+#: "What I need from you", and an ask in "In short", opens the checklist item it asks for.
+#: An item names the words of each ask for it in its part's questions or summary, copied
+#: from the writer's own text, which code places as it places link words; an ask's link
+#: takes the place of a source's link on the same words (the source is then listed). Each
+#: question asks for one thing. No new call.
+CONTRACT = "core_response_writer_v11"
 CONTRACTS = (LEGACY_CONTRACT, OWNED_TAG_CONTRACT, ALIAS_CONTRACT, PARTS_CONTRACT, WORDS_CONTRACT,
-             CHECKLIST_CONTRACT, LINKS_CONTRACT, ADDRESSLESS_CONTRACT, REASONED_CONTRACT, CONTRACT)
+             CHECKLIST_CONTRACT, LINKS_CONTRACT, ADDRESSLESS_CONTRACT, REASONED_CONTRACT, PLACED_CONTRACT,
+             CONTRACT)
 _IN_PARTS = (PARTS_CONTRACT, WORDS_CONTRACT, CHECKLIST_CONTRACT, LINKS_CONTRACT, ADDRESSLESS_CONTRACT,
-             REASONED_CONTRACT, CONTRACT)
+             REASONED_CONTRACT, PLACED_CONTRACT, CONTRACT)
 #: The versions in which every source names the words of its unit that it supports.
 WORDED = (WORDS_CONTRACT, CHECKLIST_CONTRACT)
 #: The versions whose units link their sources in their own text, [words](P1).
-LINKED = (LINKS_CONTRACT, ADDRESSLESS_CONTRACT, REASONED_CONTRACT, CONTRACT)
+LINKED = (LINKS_CONTRACT, ADDRESSLESS_CONTRACT, REASONED_CONTRACT, PLACED_CONTRACT, CONTRACT)
 #: The versions whose units answer the latest message without naming it.
-ADDRESSLESS = (ADDRESSLESS_CONTRACT, REASONED_CONTRACT, CONTRACT)
+ADDRESSLESS = (ADDRESSLESS_CONTRACT, REASONED_CONTRACT, PLACED_CONTRACT, CONTRACT)
 #: The versions whose dispute parts return a checklist.
 CHECKLISTED = (CHECKLIST_CONTRACT, *LINKED)
 #: The versions whose checklist items say why each is needed (and may say where it stands).
-REASONED = (REASONED_CONTRACT, CONTRACT)
+REASONED = (REASONED_CONTRACT, PLACED_CONTRACT, CONTRACT)
 #: The versions whose uses of held law and document pages name their link words.
-PLACED = (CONTRACT,)
+PLACED = (PLACED_CONTRACT, CONTRACT)
+#: The versions whose checklist items name the words of the asks for them.
+ASKED = (CONTRACT,)
 #: Each part's answer limit; reasoning counts towards it.
 MAX_OUTPUT = 16000
 SYSTEM = """Message: You receive the exact latest advocate message, complete attributed
@@ -103,9 +113,10 @@ kind summary, a sentence or two that give the advocate the gist before the detai
 to do about this dispute, by when where a time limit was worked out, and what is still
 needed from them. The page opens the answer with every dispute's summary under its own
 heading "In short", so write the summary itself, with no heading of its own; an opening
-part has none. Ask what you need from the advocate in units of kind question, each one
-short, direct ask: the page gathers them at the end of the answer under "What I need
-from you". Other parts of the answer, written
+part has none. Ask what you need from the advocate in units of kind question, each a
+short, direct ask for one thing: the page gathers them at the end of the answer under
+"What I need from you", where each opens the checklist item it asks for. Other parts of
+the answer, written
 separately, answer the other disputes it lists, including requests about them; do not
 answer those here. When this_part names no dispute it opens a reply that covers several:
 give a brief opening, anything the advocate asked that belongs to no single dispute, and
@@ -130,15 +141,19 @@ the messages and documents: in_hand when a message or document page holds it,
 coming_or_unclear when the advocate has promised it, given only part of it or is unsure
 of it, not_available when the advocate says it cannot be had, and not_given when nothing
 yet answers it. For every state but not_given copy exactly the words that show it, the
-advocate's own words for coming_or_unclear and not_available. List an item only where
+advocate's own words for coming_or_unclear and not_available. Where a question of yours,
+or your summary, asks the advocate for an item, give in its asked_words the words of each
+such ask, copied exactly from your text: the advocate clicks them to open the item and
+tell NM about it. List an item only where
 held law supports it; where none does, return no items. Under time_limit_ids give the
 IDs (T1, T2...) of the time limits in time_limits that concern this dispute. An opening
 part returns neither.
 
 Work in a loop before you return: read the conversation and the passages, draft, check
 every statement against the words it relies on (who said it, its conditions, scope and
-certainty) and that the link_words of each held passage and document page you use are
-words of your own sentence that it supports, and correct the draft.
+certainty), that the link_words of each held passage and document page you use are
+words of your own sentence that it supports and the asked_words of each item words of
+your own ask for it, and correct the draft.
 
 Look for:
 1. Read the original messages before the proposals. Address every independently
@@ -368,6 +383,18 @@ def _units_v10(required):
 PART_SCHEMA_V10 = _object({"units": _units_v10(True), "checklist": CHECKLIST_V9, "time_limit_ids": LIMIT_IDS})
 SCHEMA_V10 = _object({"units": _units_v10(False), "checklists": {
     "type": "array", "items": _object({"checklist": CHECKLIST_V9, "time_limit_ids": LIMIT_IDS})}})
+#: v11: an item names the words of each ask for it in its part's questions or summary.
+ASKED_WORDS = {"type": "array", "items": {"type": "string"},
+               "description": "Where your questions or your summary ask the advocate for this item, the words of "
+                              "each such ask, copied exactly from your text: the advocate clicks them to open the "
+                              "item. Empty when none does."}
+ITEM_V11 = _object({**ITEM_V9["properties"], "asked_words": ASKED_WORDS})
+#: Admission takes an item without asked_words as one no ask is for.
+_ADMITTED_ITEM_V11 = {**ITEM_V11, "required": [name for name in ITEM_V11["required"] if name != "asked_words"]}
+PART_SCHEMA_V11 = _object({"units": _units_v10(True), "checklist": {"type": "array", "items": ITEM_V11},
+                           "time_limit_ids": LIMIT_IDS})
+SCHEMA_V11 = _object({"units": _units_v10(False), "checklists": {"type": "array", "items": _object({
+    "checklist": {"type": "array", "items": _ADMITTED_ITEM_V11}, "time_limit_ids": LIMIT_IDS})}})
 
 
 def _placed(text, words):
@@ -378,6 +405,25 @@ def _placed(text, words):
         return None
     match = re.search(r"\s+".join(map(re.escape, words)), text, re.I)
     return (match.start(), match.end()) if match else None
+
+
+def _asks(given, units, taken):
+    """v11: where the asks for an item stand in its part - for each of its asked words, the
+    first question or summary of the part that holds them, placed as link words are, where
+    no other ask stands already (taken: the asks placed so far, by unit). Words not found
+    are no link; the item stays on the board."""
+    placed = []
+    for words in given if isinstance(given, list) else []:
+        for unit in units:
+            place = _placed(unit["text"], words) if unit["kind"] in ("question", "summary") else None
+            spans = taken.setdefault(unit["id"], [])
+            if place is None or any(place[0] < end and start < place[1] for start, end in spans):
+                continue
+            spans.append(place)
+            placed.append({"unit_id": unit["id"], "text": unit["text"][place[0]:place[1]],
+                           "start": place[0], "end": place[1]})
+            break
+    return placed
 
 
 _LINK = re.compile(r"\[([^\[\]]+)\]((?:\([^()]*\))+)")
@@ -548,17 +594,20 @@ def _plain(text):
     return _LINK.sub(lambda match: match.group(1), text)
 
 
-def _checklists(given, layout, context, sources, offered, *, limits="time_limits", reasoned=False):
+def _checklists(given, layout, context, sources, offered, *, limits="time_limits", reasoned=False, units=None):
     """v6: each dispute part's checklist, every quote checked exactly (owner decisions, 17
     Oct 2026). No item is a manual tick: one in hand names the words that hold it. From
     v9 (reasoned) an item also says why the case needs it and, in a few words, where it
-    stands."""
+    stands. From v11 (units: the draft's admitted units) an item says where each ask for it
+    stands in its part's questions or summary."""
     if len(given) != len(layout):
         raise SchemaViolation("Each part of the reply returns its own checklist")
-    saved, number, out = checklist.saved(context), 0, []
+    saved, number, out, start, taken = checklist.saved(context), 0, [], 0, {}
     for part, written in zip(layout, given):
         if part["dispute_id"] is None and (written["checklist"] or written[limits]):
             raise SchemaViolation("A part that answers no single dispute has no checklist or time limits")
+        mine = (units or [])[start:start + part["units"]]
+        start += part["units"]
         items = []
         for item in written["checklist"]:
             number += 1
@@ -589,6 +638,8 @@ def _checklists(given, layout, context, sources, offered, *, limits="time_limits
                           "evidence": None if item["evidence"] is None else _quoted(
                               item["evidence"], sources, offered,
                               _HOLDS if item["status"] == "in_hand" else _SAYS, "Where a checklist item stands")})
+            if units is not None:
+                items[-1]["asked"] = _asks(item.get("asked_words"), mine, taken)
         out.append({"items": items, limits: list(written[limits])})
     return out
 
@@ -606,7 +657,8 @@ def accept(proposal, context, sources, *, contract=CONTRACT, parts=None, whole=T
     if parts is not None and contract not in _IN_PARTS:
         raise ValueError("Only a v4 or later draft is written in parts")
     offered = answer_sources.aliases(sources) if contract in (ALIAS_CONTRACT, *_IN_PARTS) else {}
-    schema = (LEGACY_SCHEMA if contract == LEGACY_CONTRACT else SCHEMA_V10 if contract == CONTRACT
+    schema = (LEGACY_SCHEMA if contract == LEGACY_CONTRACT else SCHEMA_V11 if contract == CONTRACT
+              else SCHEMA_V10 if contract == PLACED_CONTRACT
               else SCHEMA_V9 if contract == REASONED_CONTRACT else SCHEMA_V8 if contract == ADDRESSLESS_CONTRACT
               else SCHEMA_V7 if contract == LINKS_CONTRACT else SCHEMA_V6 if contract == CHECKLIST_CONTRACT
               else SCHEMA_V5 if contract == WORDS_CONTRACT else SCHEMA)
@@ -688,7 +740,21 @@ def accept(proposal, context, sources, *, contract=CONTRACT, parts=None, whole=T
     if contract in CHECKLISTED:
         draft["checklists"] = _checklists(data["checklists"], draft["parts"], context, sources, offered,
                                           limits="time_limit_ids" if contract in LINKED else "time_limits",
-                                          reasoned=contract in REASONED)
+                                          reasoned=contract in REASONED, units=units if contract in ASKED else None)
+    if contract in ASKED:
+        # v11: an ask's link takes the place of a source's link on the same words; the
+        # source is then listed under its paragraph.
+        asks = {}
+        for part in draft["checklists"]:
+            for item in part["items"]:
+                for ask in item["asked"]:
+                    asks.setdefault(ask["unit_id"], []).append(ask)
+        for unit in units:
+            for use in unit["uses"]:
+                words = use.get("words")
+                if words and any(words["start"] < ask["end"] and ask["start"] < words["end"]
+                                 for ask in asks.get(unit["id"], ())):
+                    del use["words"]
     return draft
 
 
@@ -830,11 +896,11 @@ def _payload(context, record, sources, interpretation, execution, layout, index,
 def _write_part(model, payload):
     prompt = Prompt(system=SYSTEM, user=json.dumps(payload, ensure_ascii=False),
                     operation="core_response_writer")
-    if (estimate_tokens(SYSTEM + prompt.user + json.dumps(PART_SCHEMA_V10)) + MAX_OUTPUT
+    if (estimate_tokens(SYSTEM + prompt.user + json.dumps(PART_SCHEMA_V11)) + MAX_OUTPUT
             > model.context_budget(Tier.HARD)):
         raise ContextOverflow("Complete response context exceeds the model budget")
     try:
-        result = model.structured(prompt, PART_SCHEMA_V10, Tier.HARD, max_tokens=MAX_OUTPUT)
+        result = model.structured(prompt, PART_SCHEMA_V11, Tier.HARD, max_tokens=MAX_OUTPUT)
     except SchemaViolation as exc:
         if exc.rejected_result is None:
             raise

@@ -294,7 +294,7 @@ def validate_activity(activity, context, elements):
                   if version == RELEASE_CONTRACT else
                   {response_rendering.WORDS_CONTRACT, response_rendering.LISTED_CONTRACT,
                    response_rendering.SECTIONS_CONTRACT, response_rendering.LAID_OUT_CONTRACT,
-                   response_rendering.CONTRACT})
+                   response_rendering.CONFINED_CONTRACT, response_rendering.CONTRACT})
     rendering = activity.get("rendering_contract") if isinstance(activity, dict) else None
     if (version not in {LEGACY_CONTRACT, AUTHORITY_CONTRACT, CALCULATION_CONTRACT, *_RELEASED}
             or set(activity) != expected_fields or rendering not in renderings):

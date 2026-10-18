@@ -53,7 +53,7 @@ def answer():
 
 def test_each_source_is_linked_from_the_writers_own_words_where_they_stand():
     ctx, record, sources, draft, _, _ = answer()
-    assert draft["contract"] == response_writer.CONTRACT == "core_response_writer_v10"
+    assert draft["contract"] == response_writer.CONTRACT == "core_response_writer_v11"
     law = next(unit for unit in draft["units"] if unit["kind"] == "law")
     assert law["text"] == "For D1, the stated rule applies to these facts."  # the markup taken out
     words, = [use["words"] for use in law["uses"]]
@@ -104,7 +104,7 @@ def test_the_answer_opens_then_says_in_short_then_each_dispute_with_its_links():
         "sources": sources, "draft": draft, "review": review, "execution": execution,
         "rendering_contract": response_rendering.CONTRACT, "authority_evidence": authorities,
         "calculation": calculation.skipped(),
-        "release": None}, ctx, elements)["rendering_contract"] == "core_response_rendering_v15"
+        "release": None}, ctx, elements)["rendering_contract"] == "core_response_rendering_v16"
 
 
 def test_a_held_sections_summary_is_held_with_it():
@@ -136,7 +136,13 @@ def test_a_summary_in_a_reply_with_no_dispute_part_stays_where_it_was_written():
                                     sources, draft, execution, authority_evidence=authorities)
     elements = response_rendering.render(ctx, record, sources, draft, review, execution,
                                          authority_evidence=authorities)
+    # v16 (19 Oct 2026): "In short" holds the disputes' summaries; an opening's summary,
+    # which the writer is asked not to write, is part of the opening.
     assert [(e["kind"], e["text"]) for e in elements] == [
+        ("GREETING", "Good morning."), ("OPENING", "Nothing here needs a dispute of its own.")]
+    earlier = response_rendering.render(ctx, record, sources, draft, review, execution,
+                                        authority_evidence=authorities, contract=response_rendering.CONFINED_CONTRACT)
+    assert [(e["kind"], e["text"]) for e in earlier] == [
         ("GREETING", "Good morning."), ("SUMMARY", "Nothing here needs a dispute of its own.")]
 
 
@@ -280,3 +286,28 @@ def test_v10_links_each_passage_on_the_words_of_the_writers_own_sentence_it_name
                     ["properties"]["uses"]["items"]["anyOf"] if "provision" in variant["properties"]["source_kind"]["enum"])
     assert "link_words" not in admitted["required"]
     assert "link_words" in " ".join(response_writer.SYSTEM.split())
+
+
+def test_v16_in_short_holds_the_disputes_summaries_and_an_openings_stays_in_the_opening():
+    """The live run of 19 Oct 2026: the opening part wrote a summary ("I'll address the
+    cheque complaint and the separate recovery claim in turn"), which the writer is asked not
+    to, and it opened "In short". From rendering v16 it is shown in the opening."""
+    class Opening(LinkedModel):
+        def structured(self, prompt, schema, tier, **kwargs):
+            result = super().structured(prompt, schema, tier, **kwargs)
+            if (json.loads(prompt.user)["this_part"]["dispute"] or {}).get("id") is None:
+                result.data["units"].append({"kind": "summary", "text": "I take the disputes in turn.", "uses": []})
+            return result
+
+    ctx, record, sources = two_disputes()
+    draft = response_writer.write(Opening(sources), ctx, record, sources)
+    authorities = response_authorities.check(ctx, record, sources, draft)
+    execution = turn.execution_record(record)
+    review = response_review.review(ReviewModel(positive(draft, requests=[request(ctx, draft)])), ctx, record,
+                                    sources, draft, execution, authority_evidence=authorities)
+    elements = response_rendering.render(ctx, record, sources, draft, review, execution,
+                                         authority_evidence=authorities)
+    assert [(e["kind"], e["text"]) for e in elements][:4] == [
+        ("GREETING", "Good morning."), ("OPENING", "I take the disputes in turn."),
+        ("SUMMARY", "Act on D1 in time; I need the dates."), ("SUMMARY", "Act on D2 in time; I need the dates.")]
+    assert response_rendering.unit_index(elements, 1) == 1

@@ -58,7 +58,17 @@ def test_the_items_are_left_out_said_so_and_dropped_from_the_matters_checklist()
     release = {"parts": [], "date_findings": [], "left_out": [{"dispute_id": "D2", "items": ["t2:c3"]}]}
     elements = response_rendering.render(ctx, record, sources, draft, review, execution,
                                          authority_evidence=authorities, held=release)
-    assert elements[0]["kind"] == "NOTICE" and elements[0]["text"] == (
+    # v16 (19 Oct 2026): said at the end of the dispute's own part, naming the item left out.
+    assert [element["kind"] for element in elements] == [
+        "QUESTION", "HEADING", "QUESTION", "HEADING", "QUESTION", "NOTICE"]
+    assert elements[-1]["text"] == (
+        "Left out of the checklist for Dispute 2: “The chunk the judgment names”, because the independent check "
+        "still found a problem in it after the rewrites NM may make: the item framed the matter in a way its "
+        "sources do not support. The rest of this section is shown, checked by the independent review.")
+    # v15 said it atop the answer, by count; a v15 answer replays so.
+    earlier = response_rendering.render(ctx, record, sources, draft, review, execution, authority_evidence=authorities,
+                                        held=release, contract=response_rendering.CONFINED_CONTRACT)
+    assert earlier[0]["kind"] == "NOTICE" and earlier[0]["text"] == (
         "Left out of the checklist for Dispute 2: 1 item, because the independent check still found a problem in "
         "it after the rewrites NM may make: the item framed the matter in a way its sources do not support. The "
         "rest of that section is shown, checked by the independent review.")
@@ -134,7 +144,7 @@ def test_the_turn_releases_the_section_with_the_items_left_out(monkeypatch):
     assert activity["release"] == {"parts": [], "date_findings": [],
                                    "left_out": [{"dispute_id": "D2", "items": [activity["draft"]["checklists"][2]
                                                                                 ["items"][0]["id"]]}]}
-    assert activity["rendering_contract"] == response_rendering.CONTRACT == "core_response_rendering_v15"
-    assert elements[0]["text"].startswith("Left out of the checklist for Dispute 2: 1 item")
+    assert activity["rendering_contract"] == response_rendering.CONTRACT == "core_response_rendering_v16"
+    assert elements[-1]["text"].startswith("Left out of the checklist for Dispute 2: “")
     assert turn.validate_activity(activity, ctx, elements) == activity
     assert lists(sources)["D2"][0]["need"] not in str(checklist.records(ctx, activity)["checklist"])

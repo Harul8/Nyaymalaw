@@ -71,6 +71,14 @@ def _item(item, earlier, sources, turn_id):
             "asked_in": asked, "noted_in": turn_id}
 
 
+def kept(item, context, sources):
+    """One admitted item of this turn's draft as the matter keeps it, without the id the
+    matter's checklist gives it: what an ask in the answer opens (rendering v16)."""
+    shown = _item(item, saved(context), sources, context["latest"]["turn_id"])
+    del shown["id"]
+    return shown
+
+
 def _limits(given, calculation):
     """The time limits a dispute's section named, as code worked them out that turn: by
     their IDs from writer v7 (T1, T2... over the worked-out limits, then those not

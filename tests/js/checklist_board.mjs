@@ -191,4 +191,30 @@ assert.match(fold.textContent, /Any other route — It may be quicker\./);
   assert.equal(find(card, (node) => node.className === 'dmeta')[0].children[0].textContent, 'By 1 Oct 2026 · Passed');
   assert.equal(find(card, (node) => node.className === 'dtitle')[0].textContent, 'Possession of the plot');
 }
+// AN ASK OPENS WHAT IT ASKS FOR (rendering v16; the readability design): the item as the board
+// of the same conversation now holds it, else as the answer admitted it.
+{
+  const ask = { start: 0, end: 15, text: 'Was it received', dispute: { id: 'D1', name: 'Possession of the plot' },
+    item: { need: 'Proof the cancellation letter was received', why: 'As the answer admitted it.', note: null,
+            group: 'needed', status: 'not_given', law, evidence: null, asked_in: 't1', noted_in: 't1' } };
+  context.state.chatBoard = { ...board, chat_id: 'c1' };
+  context.openAskedItem({ chat_id: 'c1' }, ask, 'opener');
+  let view = shown.pop();
+  assert.deepEqual([view.title, view.kind, view.opener], ['Proof the cancellation letter was received',
+    'Needed · Dispute 1', 'opener']);
+  assert.equal(view.content[0].textContent, 'Coming or unclear', 'as the board now holds it');
+  context.openAskedItem({ chat_id: 'c2' }, ask, 'opener');
+  view = shown.pop();
+  assert.equal(view.kind, 'Needed · Possession of the plot');
+  assert.deepEqual(Array.from(view.content.slice(0, 3), (node) => node.textContent), ['Not yet given',
+    'Why it is neededAs the answer admitted it.Article 54, The Limitation Act, 1963',
+    'Where it standsNot in your messages or documents yet.']);
+  message.value = '';
+  view.content.at(-1).children[0].click();
+  assert.equal(message.value, 'About "Proof the cancellation letter was received" (Possession of the plot): ');
+  message.value = '';
+  // A paragraph is drawn with its links when a source can be read or an ask opens an item.
+  assert.deepEqual([context.linkedBody({ asks: [ask] }), context.linkedBody({ asks: [] }),
+    context.linkedBody({ source: { brain: true } }), context.linkedBody({})], [true, false, true, false]);
+}
 console.log('checklist board: ok');

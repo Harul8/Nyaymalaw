@@ -9,7 +9,7 @@ import json
 import pytest
 
 from nm.core_engine import (
-    answer_sources, checklist, matter_board, response_authorities, response_rendering, response_review,
+    answer_sources, calculation, checklist, matter_board, response_authorities, response_rendering, response_review,
     response_writer, turn,
 )
 from nm.core_engine.calls import TurnCalls
@@ -73,7 +73,7 @@ def written(given=None, limits=None, time_limits=None, records=None):
 
 def test_each_dispute_returns_its_checklist_with_every_quote_checked():
     ctx, record, sources, draft = written()
-    assert draft["contract"] == response_writer.CONTRACT == "core_response_writer_v10"
+    assert draft["contract"] == response_writer.CONTRACT == "core_response_writer_v11"
     assert [len(part["items"]) for part in draft["checklists"]] == [0, 2, 1]  # the opening part has none
     # v9 (18 Oct 2026): each item says why the case needs it and, where unclear, where it stands.
     assert [(item["why"], item["note"]) for part in draft["checklists"] for item in part["items"]] == [
@@ -444,3 +444,120 @@ def test_an_earlier_draft_without_why_or_note_replays_as_it_was():
                                      parts=draft["parts"])
     assert all("why" not in item and "note" not in item for part in earlier["checklists"] for item in part["items"])
     assert response_writer.validate(deepcopy(earlier), ctx, sources) == earlier
+
+
+def test_v11_each_ask_for_an_item_opens_it_from_the_writers_own_words():
+    """The readability design (owner, 18 Oct 2026: "exactly the way your artifact has
+    presented"): each ask under "What I need from you", and an ask in "In short", opens the
+    checklist item it asks for. From writer v11 an item names the words of each ask for it,
+    copied from its part's questions or summary; code places them as it places link words.
+    An ask's link takes the place of a source's link on the same words (the source is then
+    listed beneath its paragraph), and two asks never share words."""
+    ctx, record, sources = two_disputes()
+    given = lists(sources)["D1"]
+    provision = alias(sources, "provision", "Complete provision")
+    units = [{"kind": "summary", "text": "File in time; I need the exception and the second provision's words.",
+              "uses": []},
+             {"kind": "question", "text": "Does the exception apply to your client?",
+              "uses": [{"source_kind": "provision", "source_id": provision, "link_words": "the exception apply"}]},
+             {"kind": "question", "text": "Can you send the words of the second provision?", "uses": []}]
+    given[0]["asked_words"] = ["the exception", "DOES the  exception apply"]
+    given[1]["asked_words"] = ["send the words of the second provision", "the exception", "words"]
+
+    def drafted(contract=response_writer.CONTRACT, items=given):
+        return response_writer.accept({"units": deepcopy(units), "checklists": [
+            {"checklist": deepcopy(items), "time_limit_ids": []}]}, ctx, sources,
+            parts=[{"dispute_id": "D1", "units": 3}], contract=contract)
+
+    draft = drafted()
+    summary, first, second = draft["units"]
+    one, two = draft["checklists"][0]["items"]
+    at = summary["text"].index("the exception")
+    assert one["asked"] == [
+        {"unit_id": summary["id"], "text": "the exception", "start": at, "end": at + len("the exception")},
+        {"unit_id": first["id"], "text": "Does the exception apply", "start": 0, "end": 24}]
+    # "the exception" is already an ask in both places, and one word is no link.
+    at = second["text"].index("send")
+    assert two["asked"] == [{"unit_id": second["id"], "text": "send the words of the second provision",
+                             "start": at, "end": len(second["text"]) - 1}]
+    assert "words" not in first["uses"][0]  # the ask's link holds those words; the passage is listed
+    assert response_writer.validate(deepcopy(draft), ctx, sources) == draft
+    # The model must give asked_words (strict output names every field); admission takes an
+    # item without them as one no ask is for.
+    wire = response_writer.PART_SCHEMA_V11["properties"]["checklist"]["items"]
+    admitted = response_writer.SCHEMA_V11["properties"]["checklists"]["items"]["properties"]["checklist"]["items"]
+    assert "asked_words" in wire["required"] and "asked_words" not in admitted["required"]
+    plain = [{key: value for key, value in item.items() if key != "asked_words"} for item in given]
+    assert [item["asked"] for item in drafted(items=plain)["checklists"][0]["items"]] == [[], []]
+    assert "asked_words" in " ".join(response_writer.SYSTEM.split())
+    # A v10 draft has no asks, and its source keeps its link.
+    earlier = drafted(response_writer.PLACED_CONTRACT, plain)
+    assert all("asked" not in item for item in earlier["checklists"][0]["items"])
+    assert earlier["units"][1]["uses"][0]["words"]["text"] == "the exception apply"
+    assert response_writer.validate(deepcopy(earlier), ctx, sources) == earlier
+
+
+class Asking(ChecklistModel):
+    """Dispute 1's part asks for its first item in its one question (writer v11)."""
+    def structured(self, prompt, schema, tier, **kwargs):
+        result = super().structured(prompt, schema, tier, **kwargs)
+        if (json.loads(prompt.user)["this_part"]["dispute"] or {}).get("id") == "D1":
+            result.data["units"][0].update(kind="question", text="Can you send the exception it makes?")
+            result.data["checklist"][0]["asked_words"] = ["send the exception"]
+        return result
+
+
+def test_v11_the_review_sees_which_ask_opens_which_item():
+    """Writer v11 (19 Oct 2026): the review is shown the asks that open each item, so a
+    question linked to an item it does not ask for can be found like any other fault."""
+    ctx, record, sources = two_disputes()
+    draft = response_writer.write(Asking(sources), ctx, record, sources)
+    model, review = checked(ctx, record, sources, draft)
+    assert review["accepted"]
+    shown = json.loads(model.calls[0][0].user)["complete_draft_proposal"]["checklists"]
+    assert shown[1]["items"][0]["asked_in"] == [{"unit": "U2", "words": "send the exception"}]
+    assert "asked_in" not in shown[1]["items"][1] and "asked_in" not in shown[2]["items"][0]
+    assert "asked_in" in " ".join(response_review.SYSTEM.split())
+
+
+
+def test_v16_an_ask_carries_the_item_it_opens_as_the_answer_admitted_it():
+    """Rendering v16 (19 Oct 2026; the readability design): a question or summary carries
+    each ask in it with the item it opens - as the matter keeps it, so the page can show it
+    in the reading pane - and the dispute it belongs to. An item left out carries no ask, and
+    an earlier rendering shows none."""
+    ctx, record, sources = two_disputes()
+    draft = response_writer.write(Asking(sources), ctx, record, sources)
+    model, review = checked(ctx, record, sources, draft)
+    authorities = response_authorities.check(ctx, record, sources, draft)
+    execution = turn.execution_record(record)
+    elements = response_rendering.render(ctx, record, sources, draft, review, execution,
+                                         authority_evidence=authorities)
+    asking = next(element for element in elements if element["text"] == "Can you send the exception it makes?")
+    ask, = asking["asks"]
+    item = draft["checklists"][1]["items"][0]
+    assert {key: ask[key] for key in ("start", "end", "text", "dispute")} == {
+        "start": 8, "end": 26, "text": "send the exception", "dispute": {"id": "D1", "name": "Dispute 1"}}
+    assert ask["item"] == {key: value for key, value in checklist.records(ctx, {
+        "draft": draft, "research": record, "sources": sources, "calculation": None,
+        "release": None})["checklist"]["disputes"][0]["items"][0].items() if key != "id"}
+    assert ask["item"]["need"] == item["need"] and ask["item"]["law"]["held_in"] == ctx["latest"]["turn_id"]
+    assert [element["asks"] for element in elements if element["kind"] == "QUESTION" and element is not asking] == [
+        [], []]
+    activity = {"contract": turn.CONTRACT, "interpretation": {"units": []}, "research": record, "sources": sources,
+                "draft": draft, "review": review, "execution": execution,
+                "rendering_contract": response_rendering.CONTRACT, "authority_evidence": authorities,
+                "calculation": calculation.skipped(), "release": None}
+    assert turn.validate_activity(activity, ctx, elements) == activity
+    # An item the review still faults is left out, and its ask opens nothing.
+    data = positive(draft, requests=[request(ctx, draft)])
+    data.update(verdict="reject", findings=[{"category": "framing", "unit_ids": ["C1"], "sources": [],
+                                              "mismatch": "C1 overstates it."}])
+    _, faulted = checked(ctx, record, sources, draft, data)
+    left = response_rendering.render(ctx, record, sources, draft, faulted, execution, authority_evidence=authorities,
+                                     held={"parts": [], "date_findings": [],
+                                           "left_out": [{"dispute_id": "D1", "items": [item["id"]]}]})
+    assert next(element for element in left if element["text"] == asking["text"])["asks"] == []
+    earlier = response_rendering.render(ctx, record, sources, draft, review, execution, authority_evidence=authorities,
+                                        contract=response_rendering.CONFINED_CONTRACT)
+    assert all("asks" not in element for element in earlier)

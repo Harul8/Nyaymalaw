@@ -87,7 +87,7 @@ let activeIntent = null;
 window.NmBrainSources?.configure({request:api, scope:() => ({
   advocate:state.advocate, session:state.sessionGeneration,
   matter:state.matterId, chat:activeIntent?.chatId || null,
-})});
+}), openAsk:(answer, element, ask, opener) => openAskedItem(answer, ask, opener)});
 // F-B-02. The board's edit of the opening details, while its dialog is open.
 let openingEdit = null;
 let draftVault = null;
@@ -2786,7 +2786,7 @@ function renderTurn(entry) {
     d.className = `el ${el.kind}${el.disclosure ? ' disclosure' : ''}`;
     const body = document.createElement('p');
     body.className = 'body';
-    if (el.source?.brain) window.NmBrainSources.appendBody(body, entry.answer, el);
+    if (linkedBody(el)) window.NmBrainSources.appendBody(body, entry.answer, el);
     else body.textContent = el.text;
     d.appendChild(body);
 
@@ -2883,7 +2883,7 @@ function renderTurn(entry) {
       d.className = `el ${el.kind}${el.disclosure ? ' disclosure' : ''}`;
       const body = document.createElement('p');
       body.className = 'body';
-      if (el.source?.brain) window.NmBrainSources.appendBody(body, entry.answer, el);
+      if (linkedBody(el)) window.NmBrainSources.appendBody(body, entry.answer, el);
       else body.textContent = el.text;
       d.appendChild(body);
       if (el.refs && el.refs.length && !el.source?.brain) {
@@ -2977,6 +2977,7 @@ async function loadChatBoard() {
   }
   if (generation !== state.boardGeneration || !activeIntent || activeIntent.chatId !== chatId) return;
   host.dataset.chatId = chatId;
+  state.chatBoard = board;
   host.replaceChildren(...renderChatBoard(board));
 }
 
@@ -3469,6 +3470,27 @@ function renderChecklistItem(item, dispute) {
     out.push(actions);
   }
   return out;
+}
+
+// WHAT AN ASK OPENS (rendering v16; the readability design, owner 18 Oct 2026): the checklist
+// item it asks for, in the reading pane - as the board of the same conversation now holds it
+// (the same dispute and need), or else as the answer admitted it.
+function openAskedItem(answer, ask, opener) {
+  const board = state.chatBoard && state.chatBoard.chat_id === answer.chat_id ? state.chatBoard : null;
+  const disputes = board && Array.isArray(board.disputes) ? board.disputes : [];
+  const number = disputes.findIndex((dispute) => dispute.id === ask.dispute?.id);
+  const dispute = number >= 0 ? disputes[number] : null;
+  const item = (dispute?.checklist?.items || []).find((held) => held.need === ask.item.need) || ask.item;
+  const group = (CHECK_GROUPS.find(([key]) => key === item.group) || [null, 'Needed'])[1];
+  const place = number >= 0 && disputes.length > 1 ? `Dispute ${number + 1}` : (dispute || ask.dispute || {}).name;
+  return window.NmBrainSources.showContent(item.need, renderChecklistItem(item, dispute || ask.dispute || {}),
+    opener, false, `${group} · ${place || 'this dispute'}`);
+}
+
+// A paragraph drawn with its links: a source the reading pane can open, or an ask that opens
+// what it asks for (rendering v16).
+function linkedBody(el) {
+  return Boolean(el.source?.brain) || (Array.isArray(el.asks) && el.asks.length > 0);
 }
 
 // The law an item rests on, in the reading pane: the saved passage of the answer that held

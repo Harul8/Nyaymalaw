@@ -164,6 +164,8 @@ REACHED_ELSEWHERE = {
     "document_summary", "historical_matter", "live_dictation", "read_document_waiting",
     "receive_document", "research_note_view", "research_note_word", "dictation_setting",
     "set_dictation_setting",
+    # A document as the advocate sent it (owner decision 4, 17 Oct 2026), opened from Files.
+    "document_original",
     # A pydantic field validator: the model class calls it on every request.
     "preserve_original_message",
 }

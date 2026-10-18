@@ -3,6 +3,8 @@
 window.NmBrainSources = (() => {
   let request;
   let scope;
+  // What an ask for a checklist item opens (rendering v16): the page's own view of the item.
+  let openAsk = null;
   let generation = 0;
   let active = null;
   // BACK BETWEEN THINGS OPENED (owner decision, 17 Oct 2026): what was open before,
@@ -14,6 +16,7 @@ window.NmBrainSources = (() => {
   function configure(options) {
     request = options.request;
     scope = options.scope;
+    openAsk = typeof options.openAsk === 'function' ? options.openAsk : null;
   }
 
   // Back is always there, ready when something was open before (the design, 18 Oct 2026).
@@ -535,6 +538,18 @@ window.NmBrainSources = (() => {
     return link;
   }
 
+  // An ask drawn as the words that ask, like a source's link; it opens the item asked for.
+  function askLink(answer, element, ask) {
+    const link = document.createElement('a');
+    link.href = '#'; link.className = 'citation-link ask-link'; link.textContent = ask.text;
+    link.setAttribute('aria-label', `Open what is needed: ${ask.item.need}`);
+    link.addEventListener('click', (event) => {
+      event?.preventDefault?.();
+      return openAsk(answer, element, ask, link);
+    });
+    return link;
+  }
+
   // Rendering v4 to v10: each used source the paragraph does not name follows it as a
   // marker that opens the same saved passage. From 17 Oct 2026 (owner decision 6) an
   // earlier answer keeps its markers folded under one "Sources" control; from v11 a
@@ -597,13 +612,22 @@ window.NmBrainSources = (() => {
             || source.id !== citation.source_id || !bound(answer, element, source)) continue;
         anchors.push({start, end:start + phrase.length, phrase, source, index});
       }
-      anchors.sort((left, right) => left.start - right.start);
+      // AN ASK OPENS WHAT IT ASKS FOR (rendering v16; the readability design, owner 18 Oct
+      // 2026): its words open the checklist item in the reading pane, where the advocate
+      // can tell NM about it. An ask comes before a source on the same words.
+      for (const ask of Array.isArray(element.asks) ? element.asks : []) {
+        if (!openAsk || !words(ask?.text) || !ask.item || !words(ask.item.need)
+            || !Number.isInteger(ask.start) || text.slice(ask.start, ask.end) !== ask.text) continue;
+        anchors.push({start: ask.start, end: ask.end, phrase: ask.text, ask});
+      }
+      anchors.sort((left, right) => left.start - right.start || Number(Boolean(right.ask)) - Number(Boolean(left.ask)));
       let offset = 0;
       let linked = 0;
       for (const anchor of anchors) {
         if (anchor.start < offset) continue;
         host.appendChild(document.createTextNode(text.slice(offset, anchor.start)));
-        host.appendChild(responseLink(answer, element, anchor, anchor.phrase, anchor.phrase));
+        host.appendChild(anchor.ask ? askLink(answer, element, anchor.ask)
+          : responseLink(answer, element, anchor, anchor.phrase, anchor.phrase));
         offset = anchor.end; linked += 1;
       }
       host.appendChild(document.createTextNode(text.slice(offset)));

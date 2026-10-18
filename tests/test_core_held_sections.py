@@ -351,12 +351,13 @@ def test_a_checklist_item_that_still_fails_is_left_out_and_its_section_shown(mon
     assert activity["draft"]["checklists"][2]["items"] == []
     assert activity["release"] == {"parts": [], "date_findings": [],
                                    "trimmed": [{"dispute_id": "D2", "items": 1, "found": "quotation"}]}
-    assert [e["kind"] for e in elements] == ["NOTICE", "QUESTION", "HEADING", "QUESTION", "HEADING", "QUESTION"]
-    assert elements[0]["text"] == (
+    # Rendering v16 (19 Oct 2026): said at the end of the dispute's own part.
+    assert [e["kind"] for e in elements] == ["QUESTION", "HEADING", "QUESTION", "HEADING", "QUESTION", "NOTICE"]
+    assert elements[-1]["text"] == (
         "Left out of the checklist for Dispute 2: 1 item, because NM's own checks still found a problem in it after "
         "the rewrites NM may make: a quotation did not match its source word for word. The rest of that section is "
         "shown, checked by the independent review.")
-    assert elements[-1]["text"] == "Answer for D2 (round 2)?"
+    assert elements[-2]["text"] == "Answer for D2 (round 2)?"
     # The review was told, and is bound to it on reopening.
     assert counter["shortened"] == [[["D2", 1]]]
     assert turn.validate_activity(activity, ctx, elements) == activity

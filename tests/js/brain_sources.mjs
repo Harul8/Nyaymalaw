@@ -217,6 +217,40 @@ for (const invalid of [
   assert.equal(invalidBody.textContent, invalid.text);
 }
 
+// AN ASK OPENS WHAT IT ASKS FOR (rendering v16; the readability design, owner 18 Oct 2026):
+// its words are a link like a source's, coming before a source on the same words; an ask
+// whose words are not where it says, or that names no item, is no link, nor is any ask on
+// a page that does not open them.
+{
+  const asked = [];
+  const configured = (openAsk) => reader.configure({scope:() => ({session}), openAsk,
+    request:url => new Promise((resolve, reject) => { reads.push({url, resolve, reject}); })});
+  configured((...args) => asked.push(args));
+  const ask = {start:8, end:26, text:'send the condition', dispute:{id:'D1', name:'Dispute one'},
+    item:{need:'The condition', status:'not_given'}};
+  const askElement = {text:'Can you send the condition and its date?', sources:[conversationSource, legalSource],
+    refs:[conversationSource.locator, legalSource.locator], citation_markers:[], asks:[ask],
+    inline_citations:[{text:'the condition', source_id:legalSource.id, source_index:1, start:13, end:26}]};
+  const drawn = (element) => {
+    const host = new Node('p');
+    reader.appendBody(host, {...answer, elements:[element]}, element);
+    return host;
+  };
+  const askBody = drawn(askElement);
+  assert.equal(askBody.textContent, askElement.text);
+  const links = descendants(askBody, 'a');
+  assert.deepEqual(links.map((link) => [link.className, link.textContent]),
+    [['citation-link ask-link', 'send the condition']]);
+  links[0].handlers.get('click')({preventDefault() {}});
+  assert.deepEqual(asked.pop().slice(2), [ask, links[0]]);
+  for (const wrong of [{...ask, start:9}, {...ask, item:null}]) {
+    assert.deepEqual(descendants(drawn({...askElement, asks:[wrong]}), 'a').map((link) => link.textContent),
+      ['the condition']);
+  }
+  configured(undefined);
+  assert.deepEqual(descendants(drawn(askElement), 'a').map((link) => link.textContent), ['the condition']);
+}
+
 const checkedBoard = {id:'A1', kind:'provision', title:'Example Act, 2025', locator:'Section 7',
   text:legalSource.text, verification:{support_excerpt:'the stated requirement applies',
     scope_excerpt:'Where the stated condition is met', scope_status:'conditional',

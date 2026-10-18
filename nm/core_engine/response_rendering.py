@@ -5,7 +5,7 @@ from copy import deepcopy
 from datetime import date
 import re
 
-from nm.core_engine import calculation, limitation, research, response_authorities, response_review
+from nm.core_engine import calculation, checklist, limitation, research, response_authorities, response_review
 from nm.core_engine import response_writer
 from nm.shared.citation_contracts import case_short_names, statute_title
 
@@ -58,9 +58,20 @@ LAID_OUT_CONTRACT = "core_response_rendering_v14"
 #: item statuses and an item left out): the items it names are left out, an omission that
 #: names only the dispute's summary (how the review names an item its checklist leaves out)
 #: is said beside the answer, and both are said in code's words.
-CONTRACT = "core_response_rendering_v15"
+CONFINED_CONTRACT = "core_response_rendering_v15"
+#: v15 with each ask that opens a checklist item carried on its question or summary with the
+#: item as the answer admitted it (writer v11; the readability design as the owner approved
+#: it, 18 Oct 2026); "In short" holding the disputes' summaries alone (an opening part's
+#: summary, which the writer is asked not to write, is shown where it was written as part of
+#: the opening: the live run of 19 Oct 2026); and code's notices about a dispute's checklist
+#: said at the end of that dispute's part, naming each item left out, not atop the answer.
+CONTRACT = "core_response_rendering_v16"
+#: The versions whose asks open the checklist items they ask for.
+_ASKED = (CONTRACT,)
+#: The versions in which what concerns only a dispute's checklist holds no section back.
+_CONFINED = (CONFINED_CONTRACT, CONTRACT)
 #: The versions laid out as the design shows them.
-_LAID_OUT = (LAID_OUT_CONTRACT, CONTRACT)
+_LAID_OUT = (LAID_OUT_CONTRACT, *_CONFINED)
 #: The versions that may name the sections code's own checks held back.
 _SECTIONED = (SECTIONS_CONTRACT, *_LAID_OUT)
 #: The versions that list after a paragraph each source it does not link.
@@ -624,13 +635,15 @@ def _working(record, *, as_of=False):
     return boxes
 
 
-def _laid_out(elements, ends, draft, held_parts, time_limits):
+def _laid_out(elements, ends, draft, held_parts, time_limits, closing=None):
     """v14, as the readability design shows an answer (owner, 18 Oct 2026): each dispute's
     time limits close its own part, by the IDs its part names (T1, T2...: the worked-out
     limits, then those not assessed, in code's order); a limit no part shown names follows
     "In short", as before; and every question to the advocate is gathered, in order, at the
     end of the answer under "What I need from you" - from each part that shows something
-    else of its own, so that no part is left a bare heading. Nothing is dropped or reworded."""
+    else of its own, so that no part is left a bare heading. Nothing is dropped or reworded.
+    closing (v16): code's notices about a dispute's checklist, by part, said after its time
+    limits."""
     out = list(elements)
     ranges, start = [], 0
     for part in draft.get("parts") or []:
@@ -639,9 +652,9 @@ def _laid_out(elements, ends, draft, held_parts, time_limits):
 
     def part_of(element):
         return next((index for index, units in enumerate(ranges) if element.get("unit") in units), None)
+    claimed, placed, closing = {}, set(), closing or {}
     if time_limits is not None:
         boxes = _working(time_limits, as_of=True)
-        claimed, placed = {}, set()
         for index, part in enumerate(draft.get("checklists") or []):
             if index in held_parts or index not in ends:
                 continue
@@ -650,8 +663,11 @@ def _laid_out(elements, ends, draft, held_parts, time_limits):
                 if 1 <= number <= len(boxes) and number not in placed:
                     placed.add(number)
                     claimed.setdefault(index, []).append(boxes[number - 1])
-        for index in sorted(claimed, key=lambda index: ends[index], reverse=True):
-            out[ends[index]:ends[index]] = claimed[index]
+    ending = {index: claimed.get(index, []) + closing.get(index, []) for index in {*claimed, *closing} if index in ends}
+    for index in sorted(ending, key=lambda index: ends[index], reverse=True):
+        out[ends[index]:ends[index]] = ending[index]
+    out[0:0] = [notice for index, notices in sorted(closing.items()) if index not in ends for notice in notices]
+    if time_limits is not None:
         rest = [box for number, box in enumerate(boxes, 1) if number not in placed]
         summaries = [i for i, element in enumerate(out) if element["kind"] == "SUMMARY"]
         first = summaries[-1] if summaries else next(
@@ -715,7 +731,7 @@ def render(context, research_record, sources, draft, review, execution=None, *,
                          "writer v7 or later draft gives them")
     layout = response_writer.parts(research_record) if contract in _SECTIONED else None
     held_parts, date_findings, unwritten, trimmed, left_out, noted = _release(
-        checked_draft, checked_review, held, layout, confined=contract == CONTRACT)
+        checked_draft, checked_review, held, layout, confined=contract in _CONFINED)
     if not checked_review["accepted"] and not held_parts and not (left_out or noted):
         raise ValueError("A response without accepted independent review cannot be rendered")
     authorities = ({row["unit_id"]: row for row in checked_authorities["units"]}
@@ -768,34 +784,74 @@ def render(context, research_record, sources, draft, review, execution=None, *,
             f"{len(checked_draft['parts']) + len(unwritten)} sections {'are' if many else 'is'} held back below, "
             f"because {found_by} a problem in {'them' if many else 'it'} after the rewrites NM may "
             "make. The sections shown were checked by the independent review."))
+    # v16: code's notices about a dispute's checklist close that dispute's part, by its index.
+    closing = {}
+
+    def say(index, text):
+        if contract in _ASKED:
+            closing.setdefault(index, []).append(_notice("NOTICE", text))
+        else:
+            elements.append(_notice("NOTICE", text))
+    needs = {item["id"]: item["need"] for part in checked_draft.get("checklists") or [] for item in part["items"]}
     for index, ids in sorted(left_out.items()):
-        # v15: the checklist items the review still found wrong after the rewrites.
+        # v15: the checklist items the review still found wrong after the rewrites; from v16
+        # each named by what it needed.
         name = disputes.get(checked_draft["parts"][index]["dispute_id"]) or "this dispute"
         said = found_words([finding for finding in checked_review["proposal"]["findings"]
                             if set(finding["unit_ids"]) <= set(ids)], where="the item").rstrip(".")
         many = len(ids) > 1
-        elements.append(_notice("NOTICE", f"Left out of the checklist for {name}: {len(ids)} "
+        if contract in _ASKED:
+            named = "; ".join(f"“{needs[identity]}”" for identity in ids)
+            say(index, f"Left out of the checklist for {name}: {named}, because the independent check still found "
+                f"a problem in {'them' if many else 'it'} after the rewrites NM may make: {said[0].lower()}{said[1:]}. "
+                "The rest of this section is shown, checked by the independent review.")
+            continue
+        say(index, f"Left out of the checklist for {name}: {len(ids)} "
             f"{'items' if many else 'item'}, because the independent check still found a problem in "
             f"{'them' if many else 'it'} after the rewrites NM may make: {said[0].lower()}{said[1:]}. The rest of that "
-            "section is shown, checked by the independent review."))
+            "section is shown, checked by the independent review.")
     for index, rows in sorted(noted.items()):
         # v15: what the review found the checklist leaves out, in its own explanation.
         name = disputes.get(checked_draft["parts"][index]["dispute_id"]) or "this dispute"
         for finding in rows:
             said = _SHORT_IDS.sub(lambda m: _SHORT_WORDS[m.group().rstrip("0123456789")], finding["mismatch"].strip())
-            elements.append(_notice("NOTICE", f"The independent check found that the checklist for {name} may "
-                                    f"leave something out: {said}"))
+            say(index, f"The independent check found that the checklist for {name} may leave something out: {said}")
     for entry in trimmed:
         # v13: what a section shown goes without (owner, 18 Oct 2026).
         name, said, many = disputes.get(entry["dispute_id"]) or "this dispute", _CODE_FOUND[entry["found"]],             entry["items"] > 1
-        elements.append(_notice("NOTICE", f"Left out of the checklist for {name}: {entry['items']} "
+        say(next(index for index, part in enumerate(checked_draft["parts"]) if part["dispute_id"] == entry["dispute_id"]),
+            f"Left out of the checklist for {name}: {entry['items']} "
             f"{'items' if many else 'item'}, because NM's own checks still found a problem in {'them' if many else 'it'} "
             f"after the rewrites NM may make: {said}. The rest of that section is shown, checked by the independent "
-            "review."))
+            "review.")
+    # v16: the paragraphs of the disputes' parts, and each ask that opens an item of one -
+    # with the item as this answer admitted it - unless the item was left out.
+    in_disputes, asks, start = set(), {}, 0
+    for part in checked_draft.get("parts") or []:
+        if part["dispute_id"] is not None:
+            in_disputes.update(range(start, start + part["units"]))
+        start += part["units"]
+    if contract in _ASKED and checked_draft["contract"] in response_writer.ASKED:
+        called, left = _dispute_names(research_record), {identity for ids in left_out.values() for identity in ids}
+        for index, part in enumerate(checked_draft["checklists"]):
+            identity = checked_draft["parts"][index]["dispute_id"]
+            for item in part["items"]:
+                if index in held_parts or item["id"] in left or not item["asked"]:
+                    continue
+                kept = checklist.kept(item, context, sources)
+                for ask in item["asked"]:
+                    asks.setdefault(ask["unit_id"], []).append({
+                        "start": ask["start"], "end": ask["end"], "text": ask["text"],
+                        "dispute": {"id": identity, "name": called.get(identity) or "this dispute"},
+                        "item": deepcopy(kept)})
+
     def paragraph(position, unit):
         legal_sources = _sources(unit, sources, shown_names=contract in {SHOWN_NAME_CONTRACT, *_CITED},
                                  documents=contract in (DOCUMENT_PAGES_CONTRACT, *_WORKING))
-        element = {"kind": unit["kind"].upper(), "text": unit["text"],
+        kind = unit["kind"].upper()
+        if contract in _ASKED and kind == "SUMMARY" and position not in in_disputes:
+            kind = "OPENING"  # v16: an opening part's summary is part of the opening
+        element = {"kind": kind, "text": unit["text"],
             "source": deepcopy(legal_sources[0]) if legal_sources else None,
             "sources": legal_sources,
             "refs": list(dict.fromkeys(source["locator"] for source in legal_sources))}
@@ -810,6 +866,8 @@ def render(context, research_record, sources, draft, review, execution=None, *,
             element["inline_citations"] = _anchors(unit["text"], legal_sources)
         if contract in _HOLDS:
             element["unit"] = position
+        if contract in _ASKED and kind in ("QUESTION", "SUMMARY"):
+            element["asks"] = sorted(asks.get(unit["id"], []), key=lambda ask: ask["start"])
         return element
 
     # v11: each dispute's summary, in order, under "In short": after the answer's opening
@@ -823,7 +881,7 @@ def render(context, research_record, sources, draft, review, execution=None, *,
         start += part["units"]
     lifted = [position for position, unit in enumerate(checked_draft["units"])
               if contract in _WORDED and lift_at is not None and unit["kind"] == "summary"
-              and position not in held_units]
+              and position not in held_units and (contract not in _ASKED or position in in_disputes)]
     # v14: where each part's elements end, so its time limits can close it.
     begins, start = {}, 0
     for index, part in enumerate(checked_draft.get("parts") or []):
@@ -854,7 +912,7 @@ def render(context, research_record, sources, draft, review, execution=None, *,
         ends[current] = len(elements)
     elements.extend(unwritten_notices(unwritten_at.get(len(checked_draft["units"]), [])))
     if contract in _LAID_OUT:
-        elements = _laid_out(elements, ends, checked_draft, held_parts, time_limits)
+        elements = _laid_out(elements, ends, checked_draft, held_parts, time_limits, closing)
     if held_count:
         many = held_count > 1
         elements.append(_notice("NOTICE", f"Shall I try the held-back {'sections' if many else 'section'} again, "
