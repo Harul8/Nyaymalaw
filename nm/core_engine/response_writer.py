@@ -79,8 +79,9 @@ unadmitted draft for independent review, not executed or saved work.
 Your part: this_part names the dispute this call answers, with its legal questions,
 rights at stake, relief sought and missing facts. Begin a dispute's part with one short
 unit of kind summary: what to do about this dispute, by when where a time limit was
-worked out, and what is still needed from the advocate. The summaries open the answer
-under "In short"; an opening part has none. Other parts of the answer, written
+worked out, and what is still needed from the advocate. The page opens the answer with
+the summaries under its own heading "In short", so write the summary itself, with no
+heading of its own; an opening part has none. Other parts of the answer, written
 separately, answer the other disputes it lists, including requests about them; do not
 answer those here. When this_part names no dispute it opens a reply that covers several:
 give a brief opening, anything the advocate asked that belongs to no single dispute, and

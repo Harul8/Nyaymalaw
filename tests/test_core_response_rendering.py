@@ -23,7 +23,10 @@ class Model:
 
     def structured(self, prompt, schema, tier, **kwargs):
         self.calls.append(prompt)
-        return ModelResult(None, deepcopy(self.value), tier, "synthetic", "fixture",
+        value = deepcopy(self.value)
+        if isinstance(value, dict) and "units" not in schema.get("properties", {}):
+            value.pop("units", None)  # review v8 names only what is wrong (18 Oct 2026)
+        return ModelResult(None, value, tier, "synthetic", "fixture",
                            Usage(1, 1, 0), 0, completion=self.completion)
 
 

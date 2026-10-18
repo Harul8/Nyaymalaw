@@ -73,6 +73,8 @@ class MissingWorkModel(ScriptedModel):
                 "findings": [{"category": "omission", "unit_ids": [], "sources": [questions],
                     "mismatch": "The independent request for questions has no delivered result or limit."}]
                     if missing else []}
+            if "units" not in schema["properties"]:  # review v8 names only what is wrong
+                out.pop("units")
         if prompt.operation == "core_response_writer":
             # Writer v7 (18 Oct 2026): each source is linked from the unit's own words, here
             # the whole unit; each part returns its checklist, here none.

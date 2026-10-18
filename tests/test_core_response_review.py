@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from nm.core_engine import response_authorities
+from nm.core_engine import response_authorities, response_review
 from nm.core_engine.answer_sources import build, select
 from nm.core_engine.research import accept as accept_plan, retrieve
 from tests.test_core_research import Model as ResearchModel, proposal as research_proposal
@@ -48,8 +48,18 @@ class Model:
 
     def structured(self, prompt, schema, tier, **kwargs):
         self.calls.append((prompt, schema, tier, kwargs))
-        return ModelResult(None, deepcopy(self.proposal), tier, "synthetic", "fixture",
+        return ModelResult(None, shaped(self.proposal, schema), tier, "synthetic", "fixture",
                            Usage(1, 1, 0), 0, completion=self.completion)
+
+
+def shaped(proposal, schema):
+    """A scripted review in the shape its call asks for: review v8 gives no verdict row for
+    each paragraph (owner, 18 Oct 2026), so the fixtures' rows are left out; what they
+    reject is named by their findings."""
+    data = deepcopy(proposal)
+    if isinstance(data, dict) and "units" not in schema.get("properties", {}):
+        data.pop("units", None)
+    return data
 
 
 def review(model, context, research_record, sources, draft, execution=None):
@@ -207,14 +217,49 @@ def test_review_selectors_reconstruct_legacy_full_and_short_sources_without_repe
     assert validate(result, ctx, record, sources, draft) == result
 
 
+def admitted(data, args, *, contract):
+    """A review proposal admitted under a given version, as a saved review replays."""
+    ctx, record, sources, draft = args
+    authority = response_authorities.check(ctx, record, sources, draft)
+    dependencies = response_review._dependencies(ctx, record, sources, draft, None, authority_evidence=authority,
+                                                 contract=contract)
+    return response_review._accept(data, dependencies, contract=contract)
+
+
 @pytest.mark.parametrize("damage", ["omitted", "duplicate", "unknown"])
 def test_every_draft_unit_needs_one_known_review_disposition(damage):
+    # Review v7 gave each paragraph a verdict row; a saved v7 review is still held to it.
     args = setup(count=2)
     data = positive(args[-1])
     if damage == "omitted": data["units"].pop()
     elif damage == "duplicate": data["units"][1] = deepcopy(data["units"][0])
     else: data["units"][1]["unit_id"] = "another-turn:b1"
-    with pytest.raises(SchemaViolation): review(Model(data), *args)
+    with pytest.raises(SchemaViolation): admitted(data, args, contract=response_review.ROWS_CONTRACT)
+
+
+def test_a_review_names_only_what_is_wrong():
+    """Owner, 18 Oct 2026 ("Review lists only problems"): no verdict row for each paragraph,
+    70 per cent of what a review wrote in the eighth live run. A paragraph no finding names
+    is supported; one a finding other than an omission names is rejected."""
+    args = setup(count=2)
+    ctx, _, _, draft = args
+    accepted = review(Model(positive(draft)), *args)
+    assert accepted["contract"] == response_review.CONTRACT == "core_response_review_v8"
+    assert accepted["accepted"] and "units" not in accepted["proposal"]
+    assert "units" not in response_review.SCHEMA["properties"]
+    words = " ".join(response_review.SYSTEM.split())
+    assert "a unit no finding names is supported, so give no verdict for each unit" in words
+    assert "one supported or rejected verdict" not in words
+    rejected = review(Model(negative(draft, ctx)), *args)
+    assert not rejected["accepted"] and validate(rejected, *args) == rejected
+    # A review that still gives rows is refused: its schema has none.
+    with pytest.raises(SchemaViolation):
+        admitted(positive(draft), args, contract=response_review.CONTRACT)
+    # A finding naming no known paragraph is refused as before.
+    unknown = negative(draft, ctx)
+    unknown["findings"][0]["unit_ids"] = ["foreign"]
+    with pytest.raises(SchemaViolation):
+        review(Model(unknown), *args)
 
 
 def test_original_request_omitted_from_plan_can_be_explicitly_flagged():
@@ -250,7 +295,7 @@ def test_independent_omission_does_not_require_rejecting_a_supported_unit():
         "sources": [omitted], "mismatch": "The independent uncertainty assessment is absent."}])
     reviewed = review(Model(data), *args)
     assert not reviewed["accepted"]
-    assert reviewed["proposal"]["units"][0]["verdict"] == "supported"
+    assert not any(finding["unit_ids"] for finding in reviewed["proposal"]["findings"])  # the unit stands
     assert len(reviewed["proposal"]["request_coverage"]) == 2
     assert validate(reviewed, *args) == reviewed
     # These fixture verdicts demonstrate separate accounting, not semantic detection.
@@ -402,7 +447,11 @@ def test_inconsistent_or_unaccountable_review_is_not_an_admission(damage):
         data["findings"][0]["category"] = "style_preference"
     elif damage == "blank_reason": data["units"][0]["reason"] = "  "
     else: data["request_coverage"] = [request(ctx, draft, disposition="justified_limit", unit_ids=[])]
-    with pytest.raises(SchemaViolation): review(Model(data), *args)
+    with pytest.raises(SchemaViolation):
+        if damage in ("rejected_without_finding", "finding_supported_unit", "blank_reason"):
+            admitted(data, args, contract=response_review.ROWS_CONTRACT)  # v7's verdict rows
+        else:
+            review(Model(data), *args)
 
 
 @pytest.mark.parametrize("category", ["grounding", "attribution", "quotation", "omission", "framing", "effect"])
@@ -430,7 +479,7 @@ def test_review_receipt_cannot_be_replayed_on_changed_dependencies(damage):
     elif damage == "current_records": args[0]["current_records"] = {"changed": True}
     elif damage == "saved_work": args[0]["saved_work"] = [{"id": "changed"}]
     elif damage == "execution": execution["operations"] = [{"id": "unexpected"}]
-    elif damage == "proposal": reviewed["proposal"]["units"][0]["reason"] = "A changed reviewer decision."
+    elif damage == "proposal": reviewed["proposal"]["verdict"] = "reject"
     elif damage == "accepted": reviewed["accepted"] = False
     elif damage == "contract": reviewed["contract"] = "future_unknown_version"
     else: reviewed["fresh_seal"] = "not owned"
@@ -508,7 +557,7 @@ def test_authority_checks_are_separate_compact_model_input_and_full_bound_eviden
     model = Model(positive(args[-1]))
     receipt = review_checked(model, *args, execution, authority_evidence=authority)
     payload = json.loads(model.calls[0][0].user)
-    assert receipt["contract"] == CONTRACT == "core_response_review_v7"
+    assert receipt["contract"] == CONTRACT == "core_response_review_v8"
     assert authority["readbacks"]
     from nm.core_engine.answer_sources import aliases
     from nm.core_engine.response_review import _aliased
@@ -622,7 +671,7 @@ def restriction_review(draft, ctx, disposition, unit_ids):
 def test_v4_admits_a_restriction_respected_by_absence_without_reply_units():
     ctx, record, sources, draft = setup()
     receipt = review(Model(restriction_review(draft, ctx, "respected", [])), ctx, record, sources, draft)
-    assert receipt["contract"] == CONTRACT == "core_response_review_v7" and receipt["accepted"] is True
+    assert receipt["contract"] == CONTRACT == "core_response_review_v8" and receipt["accepted"] is True
     assert validate(receipt, ctx, record, sources, draft) == receipt
 
 

@@ -91,6 +91,8 @@ class ScriptedModel:
                     "unit_ids": [u["id"] for u in units], "reason": "Synthetic coverage"}],
                 "findings": [{"category": "attribution", "unit_ids": [units[0]["id"]],
                     "sources": [ref], "mismatch": "Synthetic attribution rejection"}] if rejected else []}
+            if "units" not in schema["properties"]:  # review v8 names only what is wrong
+                out.pop("units")
         else:
             raise AssertionError(prompt.operation)
         return ModelResult(None, out, tier, "synthetic", "fixture", Usage(1, 1, 0), 0,
@@ -125,7 +127,7 @@ def test_four_actual_stage_calls_save_reopen_and_replay_without_reexecution(stor
     assert rows[0]["activities"]["contract"] == "core_turn_v5"
     # No held Acts were given to this turn, so no time limit was worked out (item 9).
     assert rows[0]["activities"]["calculation"]["state"] == "not_needed"
-    assert rows[0]["activities"]["review"]["contract"] == "core_response_review_v7"
+    assert rows[0]["activities"]["review"]["contract"] == "core_response_review_v8"
     assert rows[0]["activities"]["authority_evidence"]["contract"] == "core_response_authorities_v1"
     assert rows[0]["response"] == response
     source = response["elements"][0]["source"]
@@ -155,6 +157,9 @@ def test_mixed_legacy_and_current_history_reopens_without_fresh_authority_checks
     from nm.core_engine import answer_sources
     from nm.core_engine.understanding import renamed
     legacy = renamed(activity["review"]["proposal"], answer_sources.aliases(activity["sources"]))
+    # A legacy review gave every unit a verdict row; review v8 gives none.
+    legacy["units"] = [{"unit_id": unit["id"], "verdict": "supported", "reason": "Synthetic unit decision"}
+                       for unit in activity["draft"]["units"]]
     activity["review"] = response_review._accept(legacy, dependencies, contract=response_review.LEGACY_CONTRACT)
     elements = response_rendering.render(original, activity["research"], activity["sources"],
         activity["draft"], activity["review"], execution=activity["execution"],

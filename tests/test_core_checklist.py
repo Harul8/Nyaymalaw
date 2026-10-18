@@ -179,16 +179,18 @@ def checked(ctx, record, sources, draft, data=None):
 def test_the_review_names_a_wrong_item_in_a_finding_and_it_concerns_only_its_section():
     ctx, record, sources, draft = written()
     model, review = checked(ctx, record, sources, draft)
-    assert review["contract"] == "core_response_review_v7" and review["accepted"]
+    assert review["contract"] == "core_response_review_v8" and review["accepted"]
     shown = json.loads(model.calls[0][0].user)["complete_draft_proposal"]["checklists"]
     assert [[item["id"] for item in part["items"]] for part in shown] == [[], ["C1", "C2"], ["C3"]]
     assert shown[1]["items"][0]["law"] == {"source_id": "P1", "quote": "including its exception"}
     assert shown[1]["items"][0]["evidence"] == {"source_id": "M1", "quote": "applicable law"}
     assert "naming any item" in " ".join(response_review.SYSTEM.split())
-    # Review v7: verdict rows are for the units; a row for an item is refused as unknown.
+    # Review v7: verdict rows are for the units; a row for an item is refused as unknown (a
+    # saved v7 review is still held to it; v8 gives no rows).
+    from tests.test_core_response_review import admitted
     data = positive(draft, requests=[request(ctx, draft)], items=True)
     with pytest.raises(SchemaViolation, match="unknown draft unit IDs"):
-        checked(ctx, record, sources, draft, data)
+        admitted(data, (ctx, record, sources, draft), contract=response_review.ROWS_CONTRACT)
     # A wrong item, named by its short ID in a finding, concerns its own dispute's section alone.
     data = positive(draft, requests=[request(ctx, draft)])
     data["verdict"] = "reject"
@@ -335,8 +337,13 @@ def test_an_omission_may_name_the_supported_summary_it_is_missing_from():
     _, review = checked(ctx, record, sources, draft, data)
     assert not review["accepted"] and response_rendering.held_sections(draft, review) == [1]
     data["findings"][0]["category"] = "grounding"
+    # Review v8 gives no verdict rows: a finding of any other kind rejects what it names.
+    _, rejected = checked(ctx, record, sources, draft, data)
+    assert not rejected["accepted"] and response_rendering.held_sections(draft, rejected) == [1]
+    # A saved v7 review could not leave such a unit supported in its rows.
+    from tests.test_core_response_review import admitted
     with pytest.raises(SchemaViolation, match="cannot label its affected reply unit supported"):
-        checked(ctx, record, sources, draft, data)
+        admitted(data, (ctx, record, sources, draft), contract=response_review.ROWS_CONTRACT)
 
 
 def test_the_writer_keeps_short_ids_out_of_its_text_and_the_opening_quiet_about_law():

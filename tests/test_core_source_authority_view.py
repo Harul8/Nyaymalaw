@@ -79,6 +79,9 @@ def test_legacy_saved_source_explicitly_has_no_authority_check(served, monkeypat
     from nm.core_engine import answer_sources
     from nm.core_engine.understanding import renamed
     legacy = renamed(activity["review"]["proposal"], answer_sources.aliases(activity["sources"]))
+    # A legacy review gave every unit a verdict row; review v8 gives none.
+    legacy["units"] = [{"unit_id": unit["id"], "verdict": "supported", "reason": "Synthetic unit decision"}
+                       for unit in activity["draft"]["units"]]
     activity["review"] = response_review._accept(legacy, dependencies, contract=response_review.LEGACY_CONTRACT)
     elements = response_rendering.render(original, activity["research"], activity["sources"],
         activity["draft"], activity["review"], execution=activity["execution"],

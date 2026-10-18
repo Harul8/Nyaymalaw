@@ -34,11 +34,18 @@ PARTS_CONTRACT = "core_response_review_v5"
 CHECKLIST_CONTRACT = "core_response_review_v6"
 #: v6 judging the checklist through its findings (18 Oct 2026, writer v7): a finding names a
 #: wrong item and an item left out is an omission; verdict rows are for the units alone.
-CONTRACT = "core_response_review_v7"
+ROWS_CONTRACT = "core_response_review_v7"
+#: v7 naming only what is wrong (owner, 18 Oct 2026: "Review lists only problems"): no
+#: verdict row for each paragraph, 70 per cent of what a review wrote in the eighth live
+#: run; a paragraph no finding names is supported, one a finding other than an omission
+#: names is rejected, and an omission may name the paragraph something belongs in.
+CONTRACT = "core_response_review_v8"
 CONTRACTS = (LEGACY_CONTRACT, AUTHORITY_CONTRACT, ALIAS_CONTRACT, RESPECTED_CONTRACT, PARTS_CONTRACT,
-             CHECKLIST_CONTRACT, CONTRACT)
-_CURRENT = (RESPECTED_CONTRACT, PARTS_CONTRACT, CHECKLIST_CONTRACT, CONTRACT)
-#: Verdicts for every unit of a long reply; reasoning counts towards it.
+             CHECKLIST_CONTRACT, ROWS_CONTRACT, CONTRACT)
+_CURRENT = (RESPECTED_CONTRACT, PARTS_CONTRACT, CHECKLIST_CONTRACT, ROWS_CONTRACT, CONTRACT)
+#: The versions that judge a checklist through findings alone.
+_FINDINGS = (ROWS_CONTRACT, CONTRACT)
+#: A long reply's findings and coverage; reasoning counts towards it.
 MAX_OUTPUT = 16000
 SYSTEM = """Message: You receive the complete original attributed conversation, the
 latest advocate message, current records and saved work; where and when the advocate
@@ -139,14 +146,15 @@ A related point offered for the advocate's decision, naming the point and why it
 matter without stating its law as established, is a proper offer, not an unsupported
 legal assertion.
 Judge a unit's own content separately from completeness of the whole reply. A correct
-unit remains supported when another independent requested result is missing. Record
-that omission against the unmet request, without marking an unrelated correct unit
-rejected. Reject a unit when its own content or treatment of its request is defective.
+unit remains supported when another independent requested result is missing: record
+that omission against the unmet request. A finding about a unit's own content or its
+treatment of its request rejects that unit; an omission may name the unit something
+belongs in without faulting that unit's own content.
 Raise findings only for consequential defects, with exact sources and a precise mismatch.
 
-Outcome: Return accept or reject; one supported or rejected verdict with a reason for
-every supplied draft unit ID. Account for any consequential authority-check discrepancy
-or unresolved association in that unit's reason or finding. A finding's unit_ids name
+Outcome: Return accept or reject. Name what is wrong in findings: a unit no finding
+names is supported, so give no verdict for each unit. Account for any consequential
+authority-check discrepancy or unresolved association in a finding. A finding's unit_ids name
 reply units (U1...) and checklist items (C1...); its sources name only messages,
 document pages and legal passages (M1, DOC1, P1, J1...). Return one request_coverage
 entry per independent requested
@@ -162,10 +170,10 @@ Return findings with category grounding, attribution, quotation, omission, frami
 effect, affected unit_ids, exact source references and mismatch. For absent work, use
 no unit ID and select the omitted original request. A request unmet because its reply
 unit is defective may link to the finding through that rejected unit, while the finding
-selects the evidence establishing the defect. Every rejected unit and missing request
-needs a corresponding finding. Accept only when every unit is supported, every
-current request is addressed, respected or has a justified limit, and no consequential finding
-remains. A positive verdict is a semantic review proposal, never an effect receipt.
+selects the evidence establishing the defect. Every missing request needs a
+corresponding finding. Accept only when no consequential finding remains and every
+current request is addressed, respected or has a justified limit. A positive verdict is
+a semantic review proposal, never an effect receipt.
 For every reference, use an offered source_id with quote=null to select that source's
 complete exact text, or quote a shorter exact continuous passage. Never paraphrase or
 join separated words in a reference. Whole-source selection does not broaden the
@@ -191,14 +199,16 @@ REQUEST = _object({"request": REFERENCE,
 FINDING = _object({"category": {"type": "string", "enum": [
     "grounding", "attribution", "quotation", "omission", "framing", "effect"]},
     "unit_ids": IDS, "sources": {"type": "array", "items": REFERENCE}, "mismatch": TEXT})
-def _review_schema(request):
+def _review_schema(request, *, rows=True):
     return _object({"verdict": {"type": "string", "enum": ["accept", "reject"]},
-        "units": {"type": "array", "items": UNIT},
+        **({"units": {"type": "array", "items": UNIT}} if rows else {}),
         "request_coverage": {"type": "array", "items": request},
         "findings": {"type": "array", "items": FINDING}})
 
 
-PREVIOUS_SCHEMA, SCHEMA = _review_schema(PREVIOUS_REQUEST), _review_schema(REQUEST)
+PREVIOUS_SCHEMA, ROWS_SCHEMA = _review_schema(PREVIOUS_REQUEST), _review_schema(REQUEST)
+#: v8: no verdict row for each paragraph.
+SCHEMA = _review_schema(REQUEST, rows=False)
 
 
 def _dependencies(context, research_record, sources, draft, execution, *,
@@ -271,26 +281,27 @@ def _accept(proposal, dependencies, *, contract=LEGACY_CONTRACT):
     if (contract not in CONTRACTS
             or ("authority_evidence" in dependencies) != (contract != LEGACY_CONTRACT)):
         raise ValueError("Review version differs from its evidence contract")
-    schema = SCHEMA if contract in _CURRENT else PREVIOUS_SCHEMA
+    schema = SCHEMA if contract == CONTRACT else ROWS_SCHEMA if contract in _CURRENT else PREVIOUS_SCHEMA
     data = canonical_schema_data(proposal, schema)
     require_schema(data, schema)
     sources, draft = dependencies["sources"], dependencies["draft"]
     offered = answer_sources.aliases(sources) if contract in {ALIAS_CONTRACT, *_CURRENT} else {}
     # v6 gives a checklist item its own verdict row like a unit; v7 names a wrong item in a
-    # finding, so its verdict rows are for the units alone (18 Oct 2026).
+    # finding, so its verdict rows are for the units alone (18 Oct 2026); v8 has none.
     units = {unit["id"] for unit in draft["units"]}
     named_items = set().union(*response_writer.part_ids(draft)) - units if "checklists" in draft else set()
     known = units | named_items
-    rows = units if contract == CONTRACT else known
+    rows = set() if contract == CONTRACT else units if contract == ROWS_CONTRACT else known
     # A reply unit named by its short ID is the unit it was shown for (16 Oct 2026); the
     # saved proposal keeps the owned unit IDs, so replay maps nothing and is exact.
     named = unit_aliases(draft)
     data = deepcopy(data)
-    for item in data["units"]:
+    verdicts = data.get("units", [])
+    for item in verdicts:
         item["unit_id"] = named.get(item["unit_id"], item["unit_id"])
     for item in [*data["request_coverage"], *data["findings"]]:
         item["unit_ids"] = [named.get(identity, identity) for identity in item["unit_ids"]]
-    if contract == CONTRACT:
+    if contract in _FINDINGS:
         # A reply unit or checklist item given among a finding's sources (the reviewer did so
         # in two of four live runs, 18 Oct 2026, and the answer was lost) is what the finding
         # concerns, not a source: it joins the finding's unit_ids.
@@ -304,12 +315,12 @@ def _accept(proposal, dependencies, *, contract=LEGACY_CONTRACT):
                 else:
                     selections.append(ref)
             finding["sources"] = selections
-    reviewed = [unit["unit_id"] for unit in data["units"]]
+    reviewed = [unit["unit_id"] for unit in verdicts]
     _ids(reviewed, rows)
     if set(reviewed) != rows:
         raise SchemaViolation("Review must give every complete draft unit one verdict"
                               + (" and every checklist item one" if rows != units else ""))
-    for item in [*data["units"], *data["request_coverage"], *data["findings"]]:
+    for item in [*verdicts, *data["request_coverage"], *data["findings"]]:
         text = item.get("reason", item.get("mismatch", ""))
         if not text.strip():
             raise SchemaViolation("Review needs a meaningful reason or precise mismatch")
@@ -337,19 +348,21 @@ def _accept(proposal, dependencies, *, contract=LEGACY_CONTRACT):
             raise SchemaViolation("A finding without a reply unit must identify an original reviewed request")
         affected.update(finding["unit_ids"])
         selected_findings.update(selections)
-    rejected = {unit["unit_id"] for unit in data["units"] if unit["verdict"] == "rejected"}
+    # v7: an omission may name a paragraph it is missing from - the summary unit of a dispute
+    # whose checklist leaves an item out, as asked - whose own content is supported (the sixth
+    # live run, 18 Oct 2026, was refused so); a finding of any other kind rejects what it names.
+    judged = ({identity for finding in data["findings"] if finding["category"] != "omission"
+               for identity in finding["unit_ids"]} if contract in _FINDINGS else affected)
+    # v8 has no verdict rows: the paragraphs such a finding names are the rejected ones.
+    rejected = (judged & units if contract == CONTRACT
+                else {unit["unit_id"] for unit in verdicts if unit["verdict"] == "rejected"})
     if not rejected <= affected or any(not (
             any(_overlaps(request, source) for source in selected_findings)
             or any(unit_ids & rejected & set(finding["unit_ids"])
                    for finding in data["findings"]))
             for request, unit_ids in missing):
         raise SchemaViolation("Rejected units and missing requests need corresponding precise findings")
-    # v7: an omission may name a paragraph it is missing from - the summary unit of a dispute
-    # whose checklist leaves an item out, as asked - whose own content is supported (the sixth
-    # live run, 18 Oct 2026, was refused so); a finding of any other kind rejects what it names.
-    judged = ({identity for finding in data["findings"] if finding["category"] != "omission"
-               for identity in finding["unit_ids"]} if contract == CONTRACT else affected)
-    if judged - rejected - (named_items if contract == CONTRACT else set()):
+    if judged - rejected - (named_items if contract in _FINDINGS else set()):
         raise SchemaViolation("A consequential finding cannot label its affected reply unit supported")
     accepted = data["verdict"] == "accept"
     if accepted != (not data["findings"] and not rejected and not missing):
