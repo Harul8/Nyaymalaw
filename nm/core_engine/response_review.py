@@ -108,6 +108,10 @@ IDs in owned_time_limits) concern its dispute; and that the list leaves out noth
 held law plainly requires for the relief or defence. Raise a finding naming any item
 (C1, C2...) that is wrong, and an omission naming that dispute's summary unit for an
 item the list leaves out.
+A section named under sections_held_back did not pass code's own checks after the
+rewrites NM may make, and the advocate is told in its place that it is held back. Judge
+the reply without it: leave a request that only that section would answer out of
+request_coverage, and raise no finding for its absence.
 Examine the authority checks for each unit against its actual legal use. A direct case
 citation must agree with the case relied on. A selected judgment may instead mention
 another authority: determine from the passage who cited it and whether the draft reports
@@ -198,7 +202,7 @@ PREVIOUS_SCHEMA, SCHEMA = _review_schema(PREVIOUS_REQUEST), _review_schema(REQUE
 
 
 def _dependencies(context, research_record, sources, draft, execution, *,
-                  authority_evidence=None, contract=LEGACY_CONTRACT, time_limits=None):
+                  authority_evidence=None, contract=LEGACY_CONTRACT, time_limits=None, held_back=None):
     if answer_sources.build(context, research_record) != sources:
         raise ValueError("Review catalogue differs from its owned source snapshot")
     response_writer.validate(draft, context, sources)
@@ -218,6 +222,10 @@ def _dependencies(context, research_record, sources, draft, execution, *,
     # so earlier saved reviews bind exactly what they bound.
     if time_limits is not None:
         dependencies["time_limits"] = deepcopy(time_limits)
+    # The sections code's checks held back (owner, 18 Oct 2026), by their disputes (None:
+    # the opening); only a review of an answer without them binds them.
+    if held_back:
+        dependencies["held_back"] = list(held_back)
     return dependencies
 
 
@@ -401,9 +409,10 @@ def _draft_presentation(draft, sources, *, aliased=False, saved=None):
 
 
 def review(model, context, research_record, sources, draft, execution=None, *,
-           authority_evidence=None, time_limits=None):
+           authority_evidence=None, time_limits=None, held_back=None):
     dependencies = _dependencies(context, research_record, sources, draft, execution,
-        authority_evidence=authority_evidence, contract=CONTRACT, time_limits=time_limits)
+        authority_evidence=authority_evidence, contract=CONTRACT, time_limits=time_limits,
+        held_back=held_back)
     # Original words are already complete above; legal rows include all adjacent
     # context, not merely the writer's chosen support. Full durable binding is kept.
     research_context = {"state": research_record["state"],
@@ -436,6 +445,12 @@ def review(model, context, research_record, sources, draft, execution=None, *,
     if time_limits is not None:
         # Shown under the same IDs the writer named them by (T1, T2...).
         payload["owned_time_limits"] = response_writer.limit_ids(_aliased(deepcopy(dependencies["time_limits"]), shown))
+    if held_back:
+        names = {dispute["id"]: dispute["name"] for dispute in
+                 research_record["plan"]["proposal"]["understanding"]["disputes"]}
+        payload["sections_held_back"] = [names.get(identity, "the dispute") if identity is not None
+                                         else "the opening and the points not tied to one dispute"
+                                         for identity in held_back]
     # Full readbacks remain in durable binding; the source catalogue already holds
     # the exact legal passages. Present only their checks and remaining limits here.
     prompt = Prompt(system=SYSTEM, user=json.dumps(payload, ensure_ascii=False),
@@ -451,14 +466,15 @@ def review(model, context, research_record, sources, draft, execution=None, *,
 
 
 def validate(record, context, research_record, sources, draft, execution=None, *,
-             authority_evidence=None, time_limits=None):
+             authority_evidence=None, time_limits=None, held_back=None):
     if (not isinstance(record, dict) or set(record) != {
             "contract", "proposal", "accepted", "bound_digest"}
             or record.get("contract") not in CONTRACTS
             or type(record.get("accepted")) is not bool):
         raise ValueError("Unknown or malformed independent response review receipt")
     dependencies = _dependencies(context, research_record, sources, draft, execution,
-        authority_evidence=authority_evidence, contract=record["contract"], time_limits=time_limits)
+        authority_evidence=authority_evidence, contract=record["contract"], time_limits=time_limits,
+        held_back=held_back)
     checked = _accept(record["proposal"], dependencies, contract=record["contract"])
     if checked != record:
         raise ValueError("Independent review does not bind this exact draft and evidence")

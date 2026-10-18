@@ -157,17 +157,20 @@ def scripted_turn(monkeypatch, reviews, model=None):
     monkeypatch.setattr(research, "plan", lambda calls, context, interpreted, progress=None: record["plan"])
     monkeypatch.setattr(research, "retrieve", lambda plan, searcher, context, model=None, progress=None: record)
 
-    def scripted_write(calls, context, record_, sources_, *, keep=None, **kw):
+    def scripted_write(calls, context, record_, sources_, *, keep=None, skip=(), **kw):
         counter["writes"] += 1
-        return write((model or Rounds)(sources_, counter), context, record_, sources_, keep=keep)
+        return write((model or Rounds)(sources_, counter), context, record_, sources_, keep=keep, skip=skip)
 
-    def scripted_review(calls, context, record_, sources_, draft, *, execution, authority_evidence, **kw):
+    def scripted_review(calls, context, record_, sources_, draft, *, execution, authority_evidence,
+                        held_back=None, **kw):
         step = reviews[counter["reviews"]]
         counter["reviews"] += 1
+        if held_back is not None:
+            counter.setdefault("held_back", []).append(held_back)
         if isinstance(step, Exception):
             raise step
         return review(ReviewModel(verdict(context, draft, step)), context, record_, sources_, draft, execution,
-                      authority_evidence=authority_evidence)
+                      authority_evidence=authority_evidence, held_back=held_back)
     monkeypatch.setattr(response_writer, "write", scripted_write)
     monkeypatch.setattr(response_review, "review", scripted_review)
 
@@ -244,3 +247,125 @@ def test_only_what_is_missing_is_explained_wrong_words_are_named_by_kind_only():
     # A grounding finding: the section is held back and its words are never repeated.
     assert response_rendering.found_words(review["proposal"]["findings"]) == (
         "A statement was not supported by the words it relies on.")
+
+
+class Misquoting(Rounds):
+    """Dispute 2's section quotes its law with a word dropped in every write; every section
+    called is noted with the write that called it."""
+    misquoted = ("D2",)
+
+    def structured(self, prompt, schema, tier, **kwargs):
+        import json
+        result = super().structured(prompt, schema, tier, **kwargs)
+        dispute = (json.loads(prompt.user)["this_part"]["dispute"] or {}).get("id", "opening")
+        self.counter.setdefault("called", []).append((self.counter["writes"], dispute))
+        if dispute in self.misquoted:
+            result.data["checklist"] = [{"need": "The exception the provision makes", "group": "needed",
+                                         "law": {"source_id": "P1", "quote": "Complete provision including exception"},
+                                         "carries": None, "status": "not_given", "evidence": None}]
+        return result
+
+
+class Unlinked(Misquoting):
+    """Dispute 2's section links a source it does not use in every write."""
+    def structured(self, prompt, schema, tier, **kwargs):
+        import json
+        result = Rounds.structured(self, prompt, schema, tier, **kwargs)
+        dispute = (json.loads(prompt.user)["this_part"]["dispute"] or {}).get("id", "opening")
+        self.counter.setdefault("called", []).append((self.counter["writes"], dispute))
+        if dispute == "D2":
+            result.data["units"][0]["text"] += " [An unoffered source](P999)."
+        return result
+
+
+def test_a_section_code_still_refuses_after_its_rewrite_is_held_back_and_the_rest_released(monkeypatch):
+    """The seventh live run (18 Oct 2026) withheld a whole answer because one section's
+    quotation was still not its source's words after the rewrite, though the other two had
+    passed. Owner: "withhold only the failed part and pass the remaining part"."""
+    ctx, elements, activity, metrics, counter = scripted_turn(monkeypatch, [[]], model=Misquoting)
+    assert metrics["draft_corrections"] == 1
+    assert [part["dispute_id"] for part in activity["draft"]["parts"]] == [None, "D1"]
+    assert activity["release"] == {"parts": [], "date_findings": [],
+                                   "unwritten": [{"dispute_id": "D2", "found": "quotation"}]}
+    assert [e["kind"] for e in elements] == ["NOTICE", "QUESTION", "HEADING", "QUESTION", "HEADING", "HELD", "NOTICE"]
+    assert elements[0]["text"] == (
+        "This answer is incomplete: 1 of its 3 sections is held back below, because a check still found a "
+        "problem in it after the rewrites NM may make. The sections shown were checked by the independent review.")
+    assert elements[4]["text"] == "Dispute 2"
+    assert elements[5]["text"] == (
+        "Held back: Dispute 2. After the rewrites NM may make, NM's own checks still found a problem in this "
+        "section, so it is not shown. What the checks found: A quotation did not match its source word for word.")
+    assert elements[5]["held"] == {"part": None, "section": "Dispute 2",
+                                   "retry": "Please try the held-back section on Dispute 2 again."}
+    assert elements[-1]["text"].startswith("Shall I try the held-back section again, or continue without it?")
+    # The review was told the section held back, and is bound to it on reopening.
+    assert counter["held_back"] == [["D2"]]
+    assert turn.validate_activity(activity, ctx, elements) == activity
+    wrong = {**activity, "release": {"parts": [], "date_findings": []}}
+    with pytest.raises(ValueError):
+        turn.validate_activity(wrong, ctx, elements)
+
+
+def test_a_section_held_back_by_code_is_not_written_again_when_the_review_asks_for_a_rewrite(monkeypatch):
+    ctx, elements, activity, metrics, counter = scripted_turn(monkeypatch, [[1], []], model=Unlinked)
+    assert counter["writes"] == 4 and metrics["draft_corrections"] == 2
+    # The review's rewrite wrote Dispute 1 alone: the held section is not written again.
+    assert [called for write, called in counter["called"] if write == 4] == ["D1"]
+    assert [unit["text"] for unit in activity["draft"]["units"]] == [
+        "Answer for opening (round 1)?", "Answer for D1 (round 4)?"]
+    assert activity["release"] == {"parts": [], "date_findings": [],
+                                   "unwritten": [{"dispute_id": "D2", "found": "checks"}]}
+    held = next(e for e in elements if e["kind"] == "HELD")
+    assert held["text"].endswith("What the checks found: What was written did not pass NM's own checks of its "
+                                 "form and sources.")
+    assert counter["held_back"] == [["D2"], ["D2"]]
+    assert turn.validate_activity(activity, ctx, elements) == activity
+
+
+def test_nothing_is_released_when_no_disputes_section_passes_code_checks(monkeypatch):
+    class Both(Misquoting):
+        misquoted = ("D1", "D2")
+    with pytest.raises(SchemaViolation, match="not exact"):
+        scripted_turn(monkeypatch, [[]], model=Both)
+
+
+def partial(skip):
+    """An answer written without the sections at skip, reviewed as told they are held back."""
+    ctx, record, sources = two_disputes()
+    draft = response_writer.write(PartModel(sources), ctx, record, sources, skip=skip)
+    authorities = response_authorities.check(ctx, record, sources, draft)
+    execution = turn.execution_record(record)
+    layout = response_writer.parts(record)
+    held_back = [layout[index]["dispute_id"] for index in sorted(skip)]
+    review = response_review.review(ReviewModel(verdict(ctx, draft)), ctx, record, sources, draft, execution,
+                                    authority_evidence=authorities, held_back=held_back)
+    return ctx, record, sources, draft, authorities, execution, review
+
+
+def test_a_held_opening_comes_first_and_the_disputes_follow_under_their_headings():
+    ctx, record, sources, draft, authorities, execution, review = partial({0})
+    elements = response_rendering.render(ctx, record, sources, draft, review, execution,
+                                         authority_evidence=authorities, held={
+                                             "parts": [], "date_findings": [],
+                                             "unwritten": [{"dispute_id": None, "found": "checks"}]})
+    assert [e["kind"] for e in elements] == ["NOTICE", "HELD", "HEADING", "QUESTION", "HEADING", "QUESTION", "NOTICE"]
+    assert elements[1]["held"]["section"] == response_rendering.OPENING
+
+
+def test_a_release_record_naming_code_held_sections_must_match_the_draft():
+    ctx, record, sources, draft, authorities, execution, review = partial({2})
+
+    def render(held, **kw):
+        return response_rendering.render(ctx, record, sources, draft, review, execution,
+                                         authority_evidence=authorities, held=held, **kw)
+    assert render({"parts": [], "date_findings": [], "unwritten": [{"dispute_id": "D2", "found": "checks"}]})
+    for unwritten in ([{"dispute_id": "D1", "found": "checks"}], [{"dispute_id": "D2", "found": "anything"}],
+                      [], [{"dispute_id": "D2", "found": "checks"}, {"dispute_id": None, "found": "checks"}],
+                      [{"dispute_id": "D2"}]):
+        with pytest.raises(ValueError):
+            render({"parts": [], "date_findings": [], "unwritten": unwritten})
+    with pytest.raises(ValueError):  # the review was told of the held section and is bound to it
+        render(None)
+    with pytest.raises(ValueError):  # only v13 names sections code held back
+        render({"parts": [], "date_findings": [], "unwritten": [{"dispute_id": "D2", "found": "checks"}]},
+               contract=response_rendering.LISTED_CONTRACT)

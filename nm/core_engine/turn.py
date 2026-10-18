@@ -140,30 +140,48 @@ def prepare(model, context, searcher, *, case_index=None, provision_reader=None,
     sources = answer_sources.build(context, record)
     execution = execution_record(record)
 
-    # Sections that passed code's checks when a draft's shape was refused: the shape
-    # correction keeps them as written and rewrites only the rest (owner, 18 Oct 2026).
-    passed = {}
+    # Sections that passed code's checks when a draft's shape was refused, and what code
+    # found in the others: the shape correction keeps the first as written and rewrites
+    # only the rest (owner, 18 Oct 2026). Parts are numbered as the writer lays them out.
+    layout = response_writer.parts(record)
+    passed, found, held_back = {}, {}, {}
 
     def write(keep=None):
         try:
             return response_writer.write(calls, context, record, sources,
                                          interpretation=interpreted, execution=execution,
                                          keep=keep if keep is not None else passed or None,
-                                         time_limits=time_limits)
+                                         time_limits=time_limits, skip=held_back)
         except SchemaViolation as exc:
             passed.clear()
             passed.update(getattr(exc, "kept", None) or {})
+            found.clear()
+            found.update(getattr(exc, "found", None) or {})
             raise
 
     report("writing")
-    draft = calls.checked("core_response_writer", write)
+    try:
+        draft = calls.checked("core_response_writer", write)
+    except (CorrectionUnavailable, SchemaViolation):
+        # G-SECTION for code's own checks (owner, 18 Oct 2026: "withhold only the failed
+        # part and pass the remaining part"): a section still refused after the rewrites NM
+        # may make is held back for this turn, and the sections that passed go on. With no
+        # dispute's section passing, nothing is released.
+        if not any(layout[index]["dispute_id"] is not None for index in passed):
+            raise
+        held_back.update({index: found.get(index, "checks") for index in range(len(layout))
+                          if index not in passed})
+        draft = write(dict(passed))  # every section left is one already checked
     report("checking_authorities")
     authorities = response_authorities.check(context, record, sources, draft,
         case_index=case_index, provision_reader=provision_reader)
+    unwritten = [{"dispute_id": layout[index]["dispute_id"], "found": held_back[index]}
+                 for index in sorted(held_back)]
 
     def review():
         return response_review.review(calls, context, record, sources, draft, execution=execution,
-                                      authority_evidence=authorities, time_limits=time_limits)
+                                      authority_evidence=authorities, time_limits=time_limits,
+                                      held_back=[entry["dispute_id"] for entry in unwritten] or None)
 
     report("reviewing")
     reviewed = calls.checked("core_response_review", review)
@@ -180,8 +198,11 @@ def prepare(model, context, searcher, *, case_index=None, provision_reader=None,
         findings = ([] if reviewed["accepted"] else reviewed["proposal"]["findings"]) + undated
         try:
             report("revising")
-            # Parts with no finding are kept as written; the rest are rewritten.
-            keep = response_writer.kept_parts(draft, findings)
+            # Parts with no finding are kept as written; the rest are rewritten. A section
+            # held back by code's checks is not written again in this turn.
+            position = {part["dispute_id"]: index for index, part in enumerate(layout)}
+            keep = {position[part["dispute_id"]]: part
+                    for part in response_writer.kept_parts(draft, findings).values()}
             draft = calls.correct("core_response_writer", lambda: write(keep),
                                   mismatch=findings, rejected=draft["proposal"], asked_by_review=True)
             authorities = response_authorities.check(context, record, sources, draft,
@@ -194,6 +215,9 @@ def prepare(model, context, searcher, *, case_index=None, provision_reader=None,
             break
         undated = response_writer.dates_not_given(draft, context, sources, time_limits)
         checked = (draft, authorities, reviewed, undated)
+    if unwritten:
+        # The release names the sections code's checks held back (rendering v13).
+        release = {**(release or {"parts": [], "date_findings": []}), "unwritten": unwritten}
     elements = response_rendering.render(context, record, sources, draft, reviewed,
         execution=execution, authority_evidence=authorities, time_limits=limits, held=release)
     activity = {"contract": CONTRACT, "interpretation": interpreted, "research": record,
@@ -221,7 +245,8 @@ def validate_activity(activity, context, elements):
                   if version == CALCULATION_CONTRACT else
                   {response_rendering.HELD_CONTRACT, response_rendering.WORDS_CONTRACT}
                   if version == RELEASE_CONTRACT else
-                  {response_rendering.WORDS_CONTRACT, response_rendering.CONTRACT})
+                  {response_rendering.WORDS_CONTRACT, response_rendering.LISTED_CONTRACT,
+                   response_rendering.CONTRACT})
     rendering = activity.get("rendering_contract") if isinstance(activity, dict) else None
     if (version not in {LEGACY_CONTRACT, AUTHORITY_CONTRACT, CALCULATION_CONTRACT, *_RELEASED}
             or set(activity) != expected_fields or rendering not in renderings):

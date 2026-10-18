@@ -104,7 +104,7 @@ def test_the_answer_opens_then_says_in_short_then_each_dispute_with_its_links():
         "sources": sources, "draft": draft, "review": review, "execution": execution,
         "rendering_contract": response_rendering.CONTRACT, "authority_evidence": authorities,
         "calculation": calculation.skipped(),
-        "release": None}, ctx, elements)["rendering_contract"] == "core_response_rendering_v12"
+        "release": None}, ctx, elements)["rendering_contract"] == "core_response_rendering_v13"
 
 
 def test_a_held_sections_summary_is_held_with_it():

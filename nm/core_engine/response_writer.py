@@ -745,12 +745,16 @@ def kept_parts(draft, findings):
 
 
 def write(model, context, research_record, sources, interpretation=None, execution=None, *, keep=None,
-          time_limits=None):
+          time_limits=None, skip=()):
     """One writer-tier call per part, in parallel; TurnCalls owns any conditional correction.
-    keep: parts accepted by review, reused as written when a correction rewrites the rest."""
+    keep: parts accepted by review, reused as written when a correction rewrites the rest.
+    skip: parts held back because code's checks still refused them after the rewrites NM
+    may make (owner, 18 Oct 2026); the draft is the other parts alone. Parts are numbered
+    as parts() lays them out."""
     if answer_sources.build(context, research_record) != sources:
         raise ValueError("Writer sources differ from their owned context and research snapshot")
     layout, keep = parts(research_record), keep or {}
+    indices = [index for index in range(len(layout)) if index not in skip]
 
     def part(index):
         kept = keep.get(index)
@@ -766,13 +770,13 @@ def write(model, context, research_record, sources, interpretation=None, executi
         return {"units": deepcopy(units), "checklist": deepcopy(data.get("checklist")),
                 "time_limit_ids": deepcopy(data.get("time_limit_ids"))}
 
-    with ThreadPoolExecutor(max_workers=min(8, len(layout))) as pool:
-        written = list(pool.map(part, range(len(layout))))
+    with ThreadPoolExecutor(max_workers=max(1, min(8, len(indices)))) as pool:
+        written = list(pool.map(part, indices))
     proposal = {"units": [unit for part in written for unit in part["units"]],
                 "checklists": [{"checklist": part["checklist"], "time_limit_ids": part["time_limit_ids"]}
                                for part in written]}
     shape = [{"dispute_id": layout[index]["dispute_id"], "units": len(part["units"])}
-             for index, part in enumerate(written)]
+             for index, part in zip(indices, written)]
     # Only the time limits code worked out may be named for a dispute, by their IDs.
     given = {entry["id"] for key in ("worked_out", "not_assessed")
              for entry in (limit_ids(time_limits) or {}).get(key, [])}
@@ -797,19 +801,24 @@ def write(model, context, research_record, sources, interpretation=None, executi
         # rewrite of every section brought a new slip into one that had passed).
         if hasattr(model, "last_output"):
             model.last_output = deepcopy(proposal)
-        passed = {}
-        for index, part in enumerate(written):
+        passed, found = {}, {}
+        for index, part, size in zip(indices, written, shape):
             try:
                 if not isinstance(part["units"], list) or not part["units"]:
-                    continue
+                    raise SchemaViolation("Each part of the reply needs at least one unit")
                 limits_named(part)
                 accept({"units": part["units"], "checklists": [{"checklist": part["checklist"],
                                                                 "time_limit_ids": part["time_limit_ids"]}]},
-                       context, sources, parts=[shape[index]], whole=False)
-            except (SchemaViolation, ValueError, KeyError, TypeError):
+                       context, sources, parts=[size], whole=False)
+            except (SchemaViolation, ValueError, KeyError, TypeError) as error:
+                # What code found there, in its fixed words for the advocate: a quotation
+                # that is not its source's own words (such a refusal carries `near`), or
+                # another of its checks.
+                found[index] = "quotation" if hasattr(error, "near") else "checks"
                 continue
             passed[index] = {"dispute_id": layout[index]["dispute_id"], **deepcopy(part)}
         # A fault no single section shows (the whole reply answering no latest message)
         # leaves nothing to keep: every section is written again.
         exc.kept = passed if len(passed) < len(written) else {}
+        exc.found = found
         raise

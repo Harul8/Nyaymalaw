@@ -218,8 +218,9 @@ def select(reference, sources, *, layout=None):
 
     A quotation that is not found is refused with the source's own words nearest to it,
     exactly as they stand, as the refusal's `near` (18 Oct 2026: a writer told only that
-    its quotation was not exact copied the same wrong words again). The refusal's own
-    words are unchanged: saved research plans keep them and their replay compares them."""
+    its quotation was not exact copied the same wrong words again); every such refusal
+    has `near`, None when nothing locates the quotation. The refusal's own words are
+    unchanged: saved research plans keep them and their replay compares them."""
     require_schema(reference, REFERENCE)
     source = sources.get(reference["source_id"])
     if source is None:
