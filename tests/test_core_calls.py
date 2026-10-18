@@ -56,16 +56,39 @@ def test_a_refused_quotation_is_corrected_with_the_sources_own_words_nearest_to_
         "than skip words.")
 
 
-def test_the_review_may_ask_for_a_second_correction_and_no_more():
-    # Owner decision, 17 Oct 2026: when the second review still finds a problem, once more.
+def test_the_review_may_ask_for_one_rewrite_and_a_shape_repair_only_comes_first():
+    # Owner, 18 Oct 2026, for speed: the review asks for one rewrite, not two (17 Oct: two).
     ledger = TurnCalls(Model({"units": [unit()]}))
     ledger.correct("write", lambda: call(ledger), mismatch="review finding", asked_by_review=True)
     with pytest.raises(CorrectionUnavailable):  # a shape repair is only ever the first
         ledger.correct("write", lambda: call(ledger), mismatch="shape")
-    ledger.correct("write", lambda: call(ledger), mismatch="second review finding", asked_by_review=True)
     with pytest.raises(CorrectionUnavailable):
-        ledger.correct("write", lambda: call(ledger), mismatch="third review finding", asked_by_review=True)
-    assert ledger.metrics()["draft_corrections"] == 2 and ledger.metrics()["llm_calls"] == 2
+        ledger.correct("write", lambda: call(ledger), mismatch="second review finding", asked_by_review=True)
+    assert ledger.metrics()["draft_corrections"] == 1 and ledger.metrics()["llm_calls"] == 1
+    # A shape repair first leaves the review its one rewrite.
+    ledger = TurnCalls(Model({"units": [unit()]}))
+    ledger.correct("write", lambda: call(ledger), mismatch="shape")
+    ledger.correct("write", lambda: call(ledger), mismatch="review finding", asked_by_review=True)
+    assert ledger.metrics()["draft_corrections"] == 2
+
+
+def test_each_stage_running_beside_another_keeps_its_own_last_output():
+    # 18 Oct 2026: the interpretation and the matter's understanding run together; a
+    # correction of one must carry its own rejected output, not the other's.
+    import threading
+    ledger, seen = TurnCalls(Model({"units": [unit()]})), {}
+
+    def stage(name):
+        call(ledger)
+        ledger.last_output = {"from": name}
+        seen[name] = ledger.last_output
+    threads = [threading.Thread(target=stage, args=(name,)) for name in ("interpretation", "understanding")]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+    assert seen == {"interpretation": {"from": "interpretation"}, "understanding": {"from": "understanding"}}
+    assert ledger.last_output is None  # this thread made no call of its own
 
 
 def test_feedback_never_enters_independent_reviewer():

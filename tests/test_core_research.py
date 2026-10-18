@@ -216,6 +216,39 @@ def test_a_message_needing_no_research_makes_no_phrase_calls_and_no_work():
     assert admitted["work"] == [] and admitted["issues"] == []
 
 
+def test_the_last_check_runs_beside_the_search_phrases():
+    """Owner, 18 Oct 2026, for speed: one check-and-fix round, and no revision can follow
+    the last check, so the search phrases for that understanding are written beside it."""
+    import threading
+    problem = {"verdict": "revise", "problems": [{"problem": "Unclear.", "fix": "Clarify."}]}
+    phrasing = threading.Event()
+
+    class Beside(Model):
+        def structured(self, prompt, schema, tier, **kwargs):
+            if prompt.operation in ("core_research_phrases", "core_research_judgment_phrases"):
+                phrasing.set()
+            elif (prompt.operation == "core_research_check"
+                  and [p.operation for p in self.calls].count("core_research_check") == MAX_REVISIONS):
+                assert phrasing.wait(timeout=10), "the search phrases were not written beside the last check"
+            return super().structured(prompt, schema, tier, **kwargs)
+
+    model = Beside(checks=[problem, {"verdict": "sound", "problems": []}], revisions=[understanding()])
+    admitted = plan(model, context("Find the applicable law."))
+    assert MAX_REVISIONS == 1
+    assert [operations(model).count(name) for name in ("core_research_check", "core_research_revise")] == [2, 1]
+    assert admitted["proposal"]["statute_phrases"] and admitted["issues"] == []
+
+
+def test_the_loop_stops_at_its_next_step_once_it_is_not_wanted():
+    """18 Oct 2026: the matter's first understanding is written beside the message's
+    interpretation; when that finds no matter, the loop stops before its next step."""
+    model = Model()
+    admitted = plan(model, context("Thank you."), wanted=lambda: False)
+    assert operations(model) == ["core_research_understand"]
+    assert admitted == plan(Model(), context("Thank you."), {"units": [{"kind": "courtesy"}]})
+    assert admitted["proposal"]["understanding"]["needs_research"] is False
+
+
 def test_statute_phrases_are_written_per_dispute_beside_one_judgment_call():
     model = Model(understanding(2, disputes=3))
     admitted = plan(model, context("Find the applicable law."))

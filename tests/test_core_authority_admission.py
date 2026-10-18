@@ -70,9 +70,11 @@ def test_exact_source_mismatch_is_withheld_before_positive_reviewer_or_save(serv
     assert "saved conversation is unchanged" in detail["why"]
     assert "different_snapshot" not in response.text and "G-GROUND" not in response.text
     names = [operation for operation, _ in served.model.calls]
-    assert names[0] == "core_understanding" and names[-1] == "core_response_writer"
-    assert sorted(names[1:-1]) == ["core_research_check", "core_research_judgment_phrases",
-                                   "core_research_judgment_pick", "core_research_phrases", "core_research_pick", "core_research_understand"]
+    # The interpretation and the matter's first understanding are written together (18 Oct 2026).
+    assert sorted(names[:2]) == ["core_research_understand", "core_understanding"]
+    assert names[-1] == "core_response_writer"
+    assert sorted(names[2:-1]) == ["core_research_check", "core_research_judgment_phrases",
+                                   "core_research_judgment_pick", "core_research_phrases", "core_research_pick"]
     assert not served.store.list_for(OWNER).matters
     # A fresh source mismatch cannot be cleared by retrying the same turn or by
     # allowing the configured always-positive synthetic reviewer to run.

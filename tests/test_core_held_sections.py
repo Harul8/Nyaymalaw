@@ -154,7 +154,8 @@ def scripted_turn(monkeypatch, reviews, model=None):
     counter = {"writes": 0, "reviews": 0}
     write, review = response_writer.write, response_review.review
     monkeypatch.setattr(understanding, "understand", lambda calls, context: {"units": []})
-    monkeypatch.setattr(research, "plan", lambda calls, context, interpreted, progress=None: record["plan"])
+    monkeypatch.setattr(research, "plan", lambda calls, context, interpreted=None, progress=None, wanted=None:
+                        record["plan"])
     monkeypatch.setattr(research, "retrieve", lambda plan, searcher, context, model=None, progress=None: record)
 
     def scripted_write(calls, context, record_, sources_, *, keep=None, skip=(), **kw):
@@ -205,8 +206,9 @@ def test_a_shape_correction_rewrites_only_the_section_that_failed(monkeypatch):
 
 
 def test_the_turn_releases_the_checked_sections_after_the_rewrites_and_replays_them(monkeypatch):
-    ctx, elements, activity, metrics, counter = scripted_turn(monkeypatch, [[2], [2], [2]])
-    assert counter == {"writes": 3, "reviews": 3} and metrics["draft_corrections"] == 2
+    # Owner, 18 Oct 2026, for speed: one rewrite at the review's request, not two.
+    ctx, elements, activity, metrics, counter = scripted_turn(monkeypatch, [[2], [2]])
+    assert counter == {"writes": 2, "reviews": 2} and metrics["draft_corrections"] == 1
     assert activity["contract"] == turn.CONTRACT == "core_turn_v5"
     assert activity["release"] == {"parts": [2], "date_findings": []}
     assert [e["kind"] for e in elements] == ["NOTICE", "QUESTION", "HEADING", "QUESTION", "HEADING", "HELD", "NOTICE"]
@@ -214,21 +216,20 @@ def test_the_turn_releases_the_checked_sections_after_the_rewrites_and_replays_t
 
 
 def test_a_failed_last_review_releases_the_draft_its_own_review_saw(monkeypatch):
-    # The third review fails its shape and no correction is left: the second draft, with
-    # the second review, is what is judged and released, never the unreviewed third.
+    # The second review fails its shape and no correction is left: the first draft, with
+    # the first review, is what is judged and released, never the unreviewed second.
     ctx, elements, activity, _, counter = scripted_turn(
-        monkeypatch, [[2], [2], SchemaViolation("Synthetic review shape failure")])
-    assert counter["writes"] == 3
-    # Sections with no finding are kept as first written; the held one is the second round's.
+        monkeypatch, [[2], SchemaViolation("Synthetic review shape failure")])
+    assert counter["writes"] == 2
     assert [e["text"] for e in elements if e["kind"] == "QUESTION"] == [
         "Answer for opening (round 1)?", "Answer for D1 (round 1)?"]
-    assert activity["draft"]["units"][2]["text"] == "Answer for D2 (round 2)?"
+    assert activity["draft"]["units"][2]["text"] == "Answer for D2 (round 1)?"
     assert turn.validate_activity(activity, ctx, elements) == activity
 
 
 def test_what_concerns_more_than_the_sections_still_withholds_the_turn(monkeypatch):
     with pytest.raises(ReleaseWithheld, match="G-GROUND: omission"):
-        scripted_turn(monkeypatch, [[1, 2], [1, 2], [1, 2]])
+        scripted_turn(monkeypatch, [[1, 2], [1, 2]])
 
 
 def test_only_what_is_missing_is_explained_wrong_words_are_named_by_kind_only():

@@ -319,14 +319,14 @@ def test_terminal_review_gate_survives_same_identity_http_retry(served):
     served.model.reject = 3
     first = send(served)
     assert first.status_code == 503 and first.json()["detail"]["code"] == "answer_withheld"
-    assert len(served.model.calls) == 13
+    assert len(served.model.calls) == 11  # one rewrite at the review's request (18 Oct 2026)
     served.model.reject = 0
     second = send(served)
     assert second.status_code == 409 and second.json()["detail"]["code"] == "answer_withheld"
-    assert not second.json()["detail"]["retryable"] and len(served.model.calls) == 13
+    assert not second.json()["detail"]["retryable"] and len(served.model.calls) == 11
     assert not served.store.list_for(OWNER).matters
     successful(served, turn_id="distinct-new-turn")
-    assert len(served.model.calls) == 22
+    assert len(served.model.calls) == 20
 
 
 def test_provider_outage_does_not_save_an_empty_success(served):

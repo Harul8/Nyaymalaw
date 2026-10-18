@@ -118,10 +118,11 @@ def test_four_actual_stage_calls_save_reopen_and_replay_without_reexecution(stor
     response = run(store, model)
     assert response["committed"] == "committed" and response["metrics"]["llm_calls"] == 9
     names = [name for name, _ in model.calls]
+    # The interpretation and the matter's first understanding are written together (18 Oct 2026).
+    assert sorted(names[:2]) == ["core_research_understand", "core_understanding"]
     assert sorted(names[3:5]) == ["core_research_judgment_phrases", "core_research_phrases"]  # in parallel
     assert sorted(names[5:7]) == ["core_research_judgment_pick", "core_research_pick"]  # in parallel
-    assert names[:3] + names[7:] == ["core_understanding", "core_research_understand", "core_research_check",
-                                     "core_response_writer", "core_response_review"]
+    assert names[2:3] + names[7:] == ["core_research_check", "core_response_writer", "core_response_review"]
     stored = store.load(chat_matter_id("owner", response["chat_id"]))
     rows = saved_rows(stored, "owner")
     assert rows[0]["activities"]["contract"] == "core_turn_v5"
@@ -168,7 +169,9 @@ def test_mixed_legacy_and_current_history_reopens_without_fresh_authority_checks
                         session_current=lambda: True)
     model = ScriptedModel()
     second = run(store, model, chat_id=first["chat_id"], turn_id="new", message="Continue.")
-    assert second["committed"] == "committed" and len(model.calls) == 3
+    # The matter's first understanding is written beside the interpretation, which finds no
+    # matter here, so that understanding is the one call more (18 Oct 2026).
+    assert second["committed"] == "committed" and len(model.calls) == 4
 
     def no_new_check(*args, **kwargs):
         raise AssertionError("Saved readback cannot consult current authority indexes")
@@ -177,7 +180,7 @@ def test_mixed_legacy_and_current_history_reopens_without_fresh_authority_checks
     assert [row["activities"]["contract"] for row in rows] == ["core_turn_v1", "core_turn_v5"]
     assert rows[0]["response"]["elements"] == elements
     assert run(store, model, chat_id=first["chat_id"], turn_id="new", message="Continue.")["replayed"]
-    assert len(model.calls) == 3
+    assert len(model.calls) == 4
 
 
 @pytest.mark.parametrize("saved", ["core_response_rendering_v2", "core_response_rendering_v3",
@@ -226,7 +229,7 @@ def test_rewritten_draft_recomputes_its_authority_evidence_before_review(store, 
     result = run(store, model)
     reviews = [payload["owned_authority_checks"] for name, payload in model.calls
                if name == "core_response_review"]
-    assert result["metrics"]["llm_calls"] == 5 and len(checked) == len(reviews) == 2
+    assert result["metrics"]["llm_calls"] == 6 and len(checked) == len(reviews) == 2
     # The review is shown each reply unit by its short ID (16 Oct 2026), in order.
     plain = lambda units: [{k: v for k, v in unit.items() if k != "unit_id"} for unit in units]  # noqa: E731
     assert [plain(row["units"]) for row in checked] == [plain(row["units"]) for row in reviews]
@@ -238,38 +241,44 @@ def test_complete_conversation_survives_followup_and_restriction_words(store):
     model = ScriptedModel()
     first = run(store, model, message="Do not contact anyone. The account is disputed.")
     second = run(store, model, chat_id=first["chat_id"], turn_id="t2", message="Hello again.")
-    assert second["metrics"]["llm_calls"] == 3
-    for operation, payload in model.calls[3:]:
+    assert second["metrics"]["llm_calls"] == 4
+    for operation, payload in model.calls[4:]:
+        if operation == "core_research_understand":
+            continue  # the matter's first understanding reads the conversation as text
         context = payload if operation == "core_understanding" else payload["original_context"]
         assert context["conversation"][0]["text"] == "Do not contact anyone. The account is disputed."
         assert context["conversation"][1]["text"] == first["elements"][0]["text"]
 
 
+def answering(model):
+    """The writer and review calls, in order."""
+    return [payload for name, payload in model.calls if name in ("core_response_writer", "core_response_review")]
+
+
 def test_reviewer_rejection_uses_one_rewrite_and_new_independent_review(store):
     model = ScriptedModel(reject=1)
     response = run(store, model)
-    assert response["metrics"]["llm_calls"] == 5
+    assert response["metrics"]["llm_calls"] == 6
     assert response["metrics"]["draft_corrections"] == 1
-    assert "correction" in model.calls[3][1]
-    assert "correction" not in model.calls[4][1]
+    assert "correction" in answering(model)[2]
+    assert "correction" not in answering(model)[3]
 
 
-def test_a_second_rejection_gets_one_more_rewrite_and_a_third_review(store):
-    # Owner decision, 17 Oct 2026: when the second review still finds a problem, once more.
+def test_a_second_rejection_is_not_rewritten_again(store):
+    # Owner, 18 Oct 2026, for speed: the review asks for one rewrite, not two; what the
+    # second review still finds holds back its sections or, here, the answer.
     model = ScriptedModel(reject=2)
-    response = run(store, model)
-    assert response["committed"] == "committed"
-    assert response["metrics"]["llm_calls"] == 7 and response["metrics"]["draft_corrections"] == 2
-    operations = [name for name, _ in model.calls]
-    assert operations[1:] == ["core_response_writer", "core_response_review"] * 3
-    assert ["correction" in payload for _, payload in model.calls[1:]] == [False, False, True, False, True, False]
+    with pytest.raises(ConversationRefused) as error: run(store, model)
+    assert error.value.code == "answer_withheld"
+    assert error.value.metrics["llm_calls"] == 6 and error.value.metrics["draft_corrections"] == 1
+    assert ["correction" in payload for payload in answering(model)] == [False, False, True, False]
 
 
 def test_repeated_rejection_withholds_entire_turn_without_save(store):
     model = ScriptedModel(reject=3)
     with pytest.raises(ConversationRefused) as error: run(store, model)
     assert error.value.code == "answer_withheld" and not error.value.retryable
-    assert error.value.metrics["llm_calls"] == 7
+    assert error.value.metrics["llm_calls"] == 6
     # The advocate is told what the check found and what can be done (17 Oct 2026): the
     # kind of wrong words in code's words, never the reviewer's words about them.
     assert error.value.why == (
@@ -282,7 +291,7 @@ def test_repeated_rejection_withholds_entire_turn_without_save(store):
     assert not store.list_for("owner").matters
     with pytest.raises(ConversationRefused) as replay: run(store, model)
     assert replay.value.code == "answer_withheld"
-    assert len(model.calls) == 7  # Model would accept now; the terminal owner refuses first.
+    assert len(model.calls) == 6  # Model would accept now; the terminal owner refuses first.
     assert run(store, model, turn_id="genuinely-new-turn")["committed"] == "committed"
 
 
@@ -290,11 +299,11 @@ def test_a_shape_repair_leaves_the_review_one_correction_and_no_more(store):
     # A shape repair is the turn's first correction; the review may ask for the second.
     model = ScriptedModel(malformed_writer=1, reject=1)
     assert run(store, model)["metrics"]["draft_corrections"] == 2
-    assert len(model.calls) == 6
+    assert len(model.calls) == 7
     model = ScriptedModel(malformed_writer=1, reject=2)
     with pytest.raises(ConversationRefused) as error: run(store, model, turn_id="another-turn")
     assert error.value.code == "answer_withheld"
-    assert len(model.calls) == 6
+    assert len(model.calls) == 7
 
 
 def test_provider_outage_never_saves_an_empty_success(store, caplog):
@@ -317,19 +326,19 @@ def test_lost_acknowledgement_replays_saved_checked_response_once(store):
     model = ScriptedModel()
     first = run(LostAck(), model)
     assert run(store, model)["replayed"]
-    assert len(model.calls) == 3
+    assert len(model.calls) == 4
     assert len(store.load(chat_matter_id("owner", first["chat_id"])).brain_chat) == 1
 
 
 def test_spent_correction_survives_retry_after_provider_outage(store):
     model = ScriptedModel(malformed_writer=1, failure="core_response_review")
     with pytest.raises(ConversationRefused): run(store, model)
-    assert len(model.calls) == 4
+    assert len(model.calls) == 5
     model.failure, model.reject = None, 2
     with pytest.raises(ConversationRefused) as retry: run(store, model)
     assert retry.value.code == "answer_withheld"
-    # The resumed request keeps its spent correction: one review rewrite is left, not two.
-    assert len(model.calls) == 9
+    # The resumed request keeps its spent correction: one review rewrite is left.
+    assert len(model.calls) == 11
 
 
 def test_permission_loss_after_correction_does_not_reset_allowance(store):
@@ -344,7 +353,7 @@ def test_permission_loss_after_correction_does_not_reset_allowance(store):
     model.structured, model.reject = original, 2
     with pytest.raises(ConversationRefused) as rejected: run(store, model)
     assert rejected.value.code == "answer_withheld"
-    assert len(model.calls) == 8  # Three before the denied review, then five: one review rewrite left.
+    assert len(model.calls) == 10  # Four before the denied review, then six: one review rewrite left.
 
 
 def test_known_pre_save_session_loss_allows_same_request_recovery(store):
@@ -368,7 +377,7 @@ def test_post_commit_auxiliary_policy_failure_cannot_hide_saved_response(store):
     reply = run(store, model, attempts=DeniedFinish())
     assert reply["committed"] == "committed"
     assert run(store, model, attempts=DeniedFinish())["replayed"]
-    assert len(model.calls) == 3
+    assert len(model.calls) == 4
 
 
 @pytest.mark.parametrize("damage", ["rendering", "review", "text"])
@@ -386,7 +395,7 @@ def test_resealed_but_incompatible_saved_evidence_is_never_upgraded(store, damag
     store.commit(replace(matter, brain_chat=rows, intake_answers=metadata, version=matter.version + 1),
                  expected_version=matter.version)
     with pytest.raises(ConversationRefused, match="read reliably"): run(store, model)
-    assert len(model.calls) == 3
+    assert len(model.calls) == 4
 
 
 @pytest.mark.parametrize("saved", ["core_response_rendering_v8", "core_response_rendering_v9"])
@@ -413,3 +422,20 @@ def test_a_turn_saved_before_sections_could_be_held_reopens_unchanged(store, sav
     assert rows[0]["response"]["elements"] == elements
     assert all("unit" not in element for element in elements)
     assert all("unit" in element for element in rows[1]["response"]["elements"])
+
+
+def test_the_interpretation_and_the_matters_first_understanding_are_written_together(store):
+    """Owner, 18 Oct 2026, for speed: the matter's first understanding reads the conversation
+    itself, so it no longer waits for the message's interpretation."""
+    import threading
+    started = threading.Event()
+
+    class Together(ScriptedModel):
+        def structured(self, prompt, schema, tier, **kwargs):
+            if prompt.operation == "core_research_understand":
+                started.set()
+            elif prompt.operation == "core_understanding":
+                assert started.wait(timeout=10), "the matter's understanding waited for the interpretation"
+            return super().structured(prompt, schema, tier, **kwargs)
+    response = run(store, Together(legal=True))
+    assert response["committed"] == "committed" and response["metrics"]["llm_calls"] == 9

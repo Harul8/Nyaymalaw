@@ -2,15 +2,18 @@
 from __future__ import annotations
 
 import json
+import threading
 import time
 from copy import deepcopy
 
 from nm.shared.model_port import ContextOverflow, ModelError, ModelResult, Prompt, SchemaViolation, estimate_tokens
 
 #: Corrections one turn may make (owner decision, 17 Oct 2026): any correction may be the
-#: first; only one the independent review asked for may be the second - when the second
-#: review still finds a problem, the flagged parts are rewritten once more.
+#: first; only one the independent review asked for may be the second.
 ALLOWANCE = 2
+#: Rewrites the independent review may ask for in one turn (owner, 18 Oct 2026, for speed:
+#: once, not twice; what the second review still finds holds back its sections).
+REVIEW_REWRITES = 1
 
 
 class CorrectionUnavailable(ModelError):
@@ -36,9 +39,22 @@ class TurnCalls:
         self.calls = []
         self.correction = None
         self.corrections_used = corrections_used
+        self.review_rewrites = 0
         self.reserve_correction = reserve_correction
+        # Stages may run beside each other (18 Oct 2026): each thread keeps its own last
+        # output, and the allowance is taken under a lock.
+        self._local, self._lock = threading.local(), threading.Lock()
         self.last_output = None
         self.terminal = False
+
+    @property
+    def last_output(self):
+        """What this thread's latest call returned, for a correction of its own stage."""
+        return getattr(self._local, "output", None)
+
+    @last_output.setter
+    def last_output(self, value):
+        self._local.output = value
 
     def context_budget(self, tier):
         return self.inner.context_budget(tier)
@@ -98,19 +114,24 @@ class TurnCalls:
         Operation-scoped feedback never enters an independent review call.
         It is untrusted draft data, not original evidence or an execution receipt.
         asked_by_review: the independent review's findings ask for it, so it may be the
-        turn's second correction; any other must be its first.
+        turn's second correction; any other must be its first. The review asks at most
+        REVIEW_REWRITES times.
         """
         if self.terminal:
             raise ReleaseWithheld("This turn's release scope is withheld")
-        if self.corrections_used >= (ALLOWANCE if asked_by_review is True else 1):
-            raise CorrectionUnavailable("This turn's draft corrections have been used")
-        if not isinstance(operation, str) or not operation or not mismatch:
-            raise ValueError("Correction requires an owning operation and precise mismatch")
-        if self.reserve_correction is not None:
-            # A lost acknowledgement conservatively spends the durable allowance.
-            # Never dispatch a corrective call before that ownership is confirmed.
-            self.reserve_correction()
-        self.corrections_used += 1
+        with self._lock:
+            if (self.corrections_used >= (ALLOWANCE if asked_by_review is True else 1)
+                    or (asked_by_review is True and self.review_rewrites >= REVIEW_REWRITES)):
+                raise CorrectionUnavailable("This turn's draft corrections have been used")
+            if not isinstance(operation, str) or not operation or not mismatch:
+                raise ValueError("Correction requires an owning operation and precise mismatch")
+            if self.reserve_correction is not None:
+                # A lost acknowledgement conservatively spends the durable allowance.
+                # Never dispatch a corrective call before that ownership is confirmed.
+                self.reserve_correction()
+            self.corrections_used += 1
+            if asked_by_review is True:
+                self.review_rewrites += 1
         self.correction = {"operation": operation,
             "purpose": "Correct the rejected draft using the complete original input and declared output contract.",
             "mismatch": deepcopy(mismatch), "rejected_draft": deepcopy(rejected),

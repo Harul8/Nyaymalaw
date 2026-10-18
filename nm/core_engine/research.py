@@ -47,7 +47,9 @@ _QUESTION_PLANS = QUESTION_PLANS
 JUDGMENT_PICKS = (JUDGMENT_PICKED_CONTRACT, CONTRACT)
 CONTRACTS = (LEGACY_CONTRACT, PREVIOUS_CONTRACT, WINDOWED_CONTRACT, ACCOUNT_CONTRACT,
              INSTRUMENTED_CONTRACT, PICKED_CONTRACT, JUDGMENT_PICKED_CONTRACT, CONTRACT)
-MAX_REVISIONS = 2
+#: One check-and-fix round, then the last check (owner, 18 Oct 2026, for speed: a second
+#: round took about 45 s in the eighth live run).
+MAX_REVISIONS = 1
 #: The pick chooses from each question's first PROVISIONS_FOR_PICK provisions.
 PROVISIONS_FOR_PICK = 20
 #: Answer limits per step. Calls in flight are budgeted at their limit.
@@ -388,7 +390,7 @@ def _call(model, operation, system, user, schema, step):
 NO_NEW_MATTER = "The interpretation found no new information or request in the latest message."
 
 
-def _carries_matter(interpretation):
+def carries_matter(interpretation):
     """Whether the interpretation step found information or a request; an unchecked or
     partial interpretation is never taken as proof that nothing needs research."""
     if (not isinstance(interpretation, dict) or interpretation.get("issues")
@@ -397,75 +399,103 @@ def _carries_matter(interpretation):
     return any(unit.get("kind") in ("information", "request") for unit in interpretation["units"])
 
 
-def plan(model, context, interpretation=None, *, progress=None):
+def _no_matter(context):
+    return accept({"understanding": {"summary": "", "asked": [], "ruled_out": [], "needs_research": False,
+                                     "no_research_reason": NO_NEW_MATTER, "parties": [], "facts": [],
+                                     "disputes": [], "related_points": []},
+                   "review_rounds": [], "statute_phrases": [], "judgment_phrases": [], "failures": []}, context)
+
+
+def _phrases(model, understanding, report):
+    """The search phrases for an understanding, with any step that failed. Owner decision,
+    14 Oct 2026: one statute-phrase call per dispute, all at once, beside one
+    judgment-phrase call for the matter (measured 61% faster, no loss)."""
+    statute, judgment, failures = [], [], []
+    disputes = [d for d in understanding["disputes"] if d["legal_questions"]]
+    if not (understanding["needs_research"] and disputes):
+        return statute, judgment, failures
+    report("writing_search_terms", total=sum(len(d["legal_questions"]) for d in disputes))
+    tasks = [("statute", dispute) for dispute in disputes] + [("judgment", None)]
+
+    def phrase(task):
+        kind, dispute = task
+        try:
+            if kind == "statute":
+                return task, _call(model, "core_research_phrases", PHRASES,
+                                   _matter_text(understanding, [dispute]), STATUTE_PHRASES, "phrases"), None
+            return task, _call(model, "core_research_judgment_phrases", JUDGMENT_PHRASES,
+                               _matter_text(understanding, disputes), JUDGMENT_PHRASE_SCHEMA, "judgment_phrases"), None
+        except (ModelError, SchemaViolation) as exc:
+            return task, None, type(exc).__name__
+
+    with ThreadPoolExecutor(max_workers=min(8, len(tasks))) as pool:
+        for (kind, dispute), data, error in pool.map(phrase, tasks):
+            if error:
+                failures.append({"step": f"{kind}_phrases", "scope": dispute["id"] if dispute else "matter",
+                                 "reason": error})
+            elif kind == "statute":
+                statute.append({"dispute_id": dispute["id"], "questions": data["questions"]})
+            else:
+                judgment = data["questions"]
+    return statute, judgment, failures
+
+
+def plan(model, context, interpretation=None, *, progress=None, wanted=None):
     """The v7 reasoning loop. Expected model failures after the first understanding are
     recorded where they occur; independent work continues. The loop reads the
     conversation itself; the interpretation only spares it for a message that carries
-    no information or request."""
-    if interpretation is not None and not _carries_matter(interpretation):
-        return accept({"understanding": {"summary": "", "asked": [], "ruled_out": [], "needs_research": False,
-                                         "no_research_reason": NO_NEW_MATTER, "parties": [], "facts": [],
-                                         "disputes": [], "related_points": []},
-                       "review_rounds": [], "statute_phrases": [], "judgment_phrases": [], "failures": []}, context)
+    no information or request. wanted: asked before each step after the first, when the
+    loop runs beside the interpretation (18 Oct 2026); it may wait for the interpretation,
+    and once it answers False the loop stops there with the plan for no matter."""
+    if interpretation is not None and not carries_matter(interpretation):
+        return _no_matter(context)
+    still = wanted or (lambda: True)
     report = progress or (lambda stage, **detail: None)
     text = conversation_text(context)
     report("understanding_matter")
     understanding = _call(model, "core_research_understand", UNDERSTAND, text, UNDERSTANDING, "understand")
-    rounds, failures = [], []
-    for number in range(MAX_REVISIONS + 1):
-        mechanical = code_checks(understanding, context)
-        report("checking_understanding", round=number + 1)
-        try:
-            review = _call(model, "core_research_check", CHECK, text + "\n\nYour colleague's understanding:\n"
-                           + json.dumps(understanding, ensure_ascii=False, indent=1), CHECKED, "check")
-        except (ModelError, SchemaViolation) as exc:
-            rounds.append({"code_problems": mechanical, "verdict": "unavailable", "problems": []})
-            failures.append({"step": "check", "scope": f"round {number + 1}", "reason": type(exc).__name__})
-            break
-        rounds.append({"code_problems": mechanical, **review})
-        problems = mechanical + (review["problems"] if review["verdict"] == "revise" else [])
-        if not problems or number == MAX_REVISIONS:
-            break
-        report("revising_understanding", round=number + 1)
-        try:
-            revised = _call(model, "core_research_revise", REVISE, text + "\n\nYour understanding:\n"
-                            + json.dumps(understanding, ensure_ascii=False, indent=1)
-                            + "\n\nProblems found:\n" + json.dumps(problems, ensure_ascii=False, indent=1),
-                            REVISED, "revise")
-        except (ModelError, SchemaViolation) as exc:
-            failures.append({"step": "revise", "scope": f"round {number + 1}", "reason": type(exc).__name__})
-            break
-        understanding = revised["understanding"]
-    statute, judgment = [], []
-    disputes = [d for d in understanding["disputes"] if d["legal_questions"]]
-    if understanding["needs_research"] and disputes:
-        report("writing_search_terms", total=sum(len(d["legal_questions"]) for d in disputes))
-        tasks = [("statute", dispute) for dispute in disputes] + [("judgment", None)]
-
-        def phrase(task):
-            kind, dispute = task
+    rounds, failures, phrasing = [], [], None
+    with ThreadPoolExecutor(max_workers=1) as beside:
+        for number in range(MAX_REVISIONS + 1):
+            if not still():
+                return _no_matter(context)
+            mechanical = code_checks(understanding, context)
+            report("checking_understanding", round=number + 1)
+            if number == MAX_REVISIONS:
+                # No revision can follow the last check, so the search phrases for this
+                # understanding are written beside it (18 Oct 2026).
+                phrasing = beside.submit(_phrases, model, understanding, report)
             try:
-                if kind == "statute":
-                    return task, _call(model, "core_research_phrases", PHRASES,
-                                       _matter_text(understanding, [dispute]), STATUTE_PHRASES, "phrases"), None
-                return task, _call(model, "core_research_judgment_phrases", JUDGMENT_PHRASES,
-                                   _matter_text(understanding, disputes), JUDGMENT_PHRASE_SCHEMA, "judgment_phrases"), None
+                review = _call(model, "core_research_check", CHECK, text + "\n\nYour colleague's understanding:\n"
+                               + json.dumps(understanding, ensure_ascii=False, indent=1), CHECKED, "check")
             except (ModelError, SchemaViolation) as exc:
-                return task, None, type(exc).__name__
-
-        # Owner decision, 14 Oct 2026: one statute-phrase call per dispute, all at once,
-        # beside one judgment-phrase call for the matter (measured 61% faster, no loss).
-        with ThreadPoolExecutor(max_workers=min(8, len(tasks))) as pool:
-            for (kind, dispute), data, error in pool.map(phrase, tasks):
-                if error:
-                    failures.append({"step": f"{kind}_phrases", "scope": dispute["id"] if dispute else "matter",
-                                     "reason": error})
-                elif kind == "statute":
-                    statute.append({"dispute_id": dispute["id"], "questions": data["questions"]})
-                else:
-                    judgment = data["questions"]
+                rounds.append({"code_problems": mechanical, "verdict": "unavailable", "problems": []})
+                failures.append({"step": "check", "scope": f"round {number + 1}", "reason": type(exc).__name__})
+                break
+            rounds.append({"code_problems": mechanical, **review})
+            problems = mechanical + (review["problems"] if review["verdict"] == "revise" else [])
+            if not problems or number == MAX_REVISIONS:
+                break
+            if not still():
+                return _no_matter(context)
+            report("revising_understanding", round=number + 1)
+            try:
+                revised = _call(model, "core_research_revise", REVISE, text + "\n\nYour understanding:\n"
+                                + json.dumps(understanding, ensure_ascii=False, indent=1)
+                                + "\n\nProblems found:\n" + json.dumps(problems, ensure_ascii=False, indent=1),
+                                REVISED, "revise")
+            except (ModelError, SchemaViolation) as exc:
+                failures.append({"step": "revise", "scope": f"round {number + 1}", "reason": type(exc).__name__})
+                break
+            understanding = revised["understanding"]
+        if phrasing is not None:
+            statute, judgment, missed = phrasing.result()
+        elif not still():
+            return _no_matter(context)
+        else:
+            statute, judgment, missed = _phrases(model, understanding, report)
     return accept({"understanding": understanding, "review_rounds": rounds, "statute_phrases": statute,
-                   "judgment_phrases": judgment, "failures": failures}, context)
+                   "judgment_phrases": judgment, "failures": failures + missed}, context)
 
 
 def _accept_v7(proposal, context, schema=SCHEMA):

@@ -92,12 +92,15 @@ def test_missing_work_rewrites_once_preserving_supported_peer_then_rechecks_and_
     store = FileMatterStore(tmp_path, key="synthetic-release-relationships")
     model = MissingWorkModel()
     response = run(store, model, message=model.message)
-    assert response["metrics"]["llm_calls"] == 5  # a courtesy-only interpretation spares research
+    # A courtesy-only interpretation spares research after the matter's first understanding,
+    # which is written beside it (18 Oct 2026).
+    assert response["metrics"]["llm_calls"] == 6
     assert response["metrics"]["draft_corrections"] == 1
-    assert [name for name, _ in model.calls] == [
+    calls = [call for call in model.calls if call[0] != "core_research_understand"]
+    assert [name for name, _ in calls] == [
         "core_understanding", "core_response_writer",
         "core_response_review", "core_response_writer", "core_response_review"]
-    first_review, rewrite, final_review = [model.calls[i][1] for i in (2, 3, 4)]
+    first_review, rewrite, final_review = [calls[i][1] for i in (2, 3, 4)]
     original_peer = first_review["complete_draft_proposal"]["units"][1]
     assert final_review["complete_draft_proposal"]["units"][1] == original_peer
     assert rewrite["original_context"] == final_review["original_context"]
@@ -112,10 +115,11 @@ def test_missing_work_rewrites_once_preserving_supported_peer_then_rechecks_and_
     assert rows[0]["records"] == {} and rows[0]["work"] == []
 
 
-# Two corrections at most (owner decision, 17 Oct 2026): a review that keeps finding the
-# omission gets two rewrites; a shape repair leaves the review one.
+# Two corrections at most (owner decision, 17 Oct 2026), one of them at the review's request
+# (18 Oct 2026, for speed): a review that keeps finding the omission gets one rewrite, and a
+# shape repair still leaves the review its one.
 @pytest.mark.parametrize("settings,expected_calls", [
-    ({"reject_repair": True}, 7), ({"consume_shape_correction": True}, 6)])
+    ({"reject_repair": True}, 6), ({"consume_shape_correction": True}, 7)])
 def test_missing_work_cannot_reset_shared_correction_or_save_after_terminal_rejection(
         tmp_path, settings, expected_calls):
     store = FileMatterStore(tmp_path, key="synthetic-release-relationships")

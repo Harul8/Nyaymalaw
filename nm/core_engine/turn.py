@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 import re
+import threading
 
 from copy import deepcopy
 
@@ -128,8 +129,33 @@ def prepare(model, context, searcher, *, case_index=None, provision_reader=None,
     report = _reporter(progress)
     calls = model if isinstance(model, TurnCalls) else TurnCalls(model)
     report("understanding")
-    interpreted = calls.checked("core_understanding", lambda: understanding.understand(calls, context))
-    plan = calls.checked("core_research_plan", lambda: research.plan(calls, context, interpreted, progress=report))
+    # The matter's first understanding reads the conversation itself, so it is written
+    # beside the message's interpretation (owner, 18 Oct 2026, for speed); its next step
+    # waits for the interpretation, which says whether there is a matter to research at all.
+    decided, verdict = threading.Event(), {"carries": True}
+
+    def wanted():
+        decided.wait()
+        return verdict["carries"]
+
+    with ThreadPoolExecutor(max_workers=1) as beside:
+        planning = beside.submit(calls.checked, "core_research_plan",
+                                 lambda: research.plan(calls, context, progress=report, wanted=wanted))
+        try:
+            interpreted = calls.checked("core_understanding", lambda: understanding.understand(calls, context))
+            verdict["carries"] = research.carries_matter(interpreted)
+        except BaseException:
+            verdict["carries"] = False
+            raise
+        finally:
+            decided.set()
+        try:
+            plan = planning.result()
+        except Exception:
+            if verdict["carries"]:
+                raise
+    if not verdict["carries"]:
+        plan = research.plan(calls, context, interpreted)  # the plan for no matter, without a call
     # Time limits are worked out beside the search, only where research is needed.
     with ThreadPoolExecutor(max_workers=1) as pool:
         working = (pool.submit(calculation.work_out, calls, context, held_acts)
