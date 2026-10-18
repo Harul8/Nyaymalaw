@@ -26,6 +26,8 @@ const context = vm.createContext({
   openBoardPane: (title, content, trigger) => opened.push({ title, content, trigger }),
 });
 vm.runInContext(app.slice(start, end), context);
+const slice = (from, to) => app.slice(app.indexOf(from), app.indexOf(to, app.indexOf(from)));
+vm.runInContext(slice('function timeLimitStanding(rows) {', 'function renderTimeLimits(items) {'), context);
 
 // Nothing researched yet: said plainly, never an error.
 {
@@ -73,7 +75,8 @@ const board = {
 
   // Choosing the dispute opens its details in the board's own pane.
   // The dispute's name opens it (18 Oct 2026: its card also holds its checklist).
-  const card = nodes[1].children.find((node) => node.className === 'board-card dispute-card')
+  // Before checklists there is no legend: the disputes come first (18 Oct 2026).
+  const card = nodes[0].children.find((node) => node.className === 'board-card dispute-card')
     .children.find((node) => node.tagName === 'BUTTON');
   assert.equal(card.attributes['aria-pressed'], 'false');
   card.handlers.click();
@@ -99,9 +102,29 @@ const board = {
   delete earlier.disputes[0].why_it_matters;
   const nodes = context.renderChatBoard(earlier);
   assert.ok(!nodes.map(text).join('\n').includes('without the path'));
-  nodes[1].children.find((node) => node.className === 'board-card dispute-card')
+  nodes[0].children.find((node) => node.className === 'board-card dispute-card')
     .children.find((node) => node.tagName === 'BUTTON').handlers.click();
   assert.ok(!opened.at(-1).content.map(text).join('\n').includes('Why it matters'));
+}
+
+// A dispute's details give each of its time limits in full (18 Oct 2026): the board's card
+// shows only the last days.
+{
+  const listed = structuredClone(board);
+  listed.disputes[0].checklist = { name: 'Reported obstruction of access', answered_at: '2026-10-18T05:00:00+00:00',
+    in_hand: 0, items: [], time_limits: [
+      { what: 'Last day to file the suit', rows: [['Last day', '10 January 2027 (Sunday)'],
+        ['As of', '18 October 2026 (Sunday)'], ['Result', 'Open'], ['Days left', '84']] },
+      { what: 'Last day to answer the notice', rows: [['Not assessed', 'the notice date is not given']] }] };
+  const nodes = context.renderChatBoard(listed);
+  nodes[0].children.find((node) => node.className === 'board-card dispute-card')
+    .children.find((node) => node.tagName === 'BUTTON').handlers.click();
+  const detail = opened.at(-1).content.map(text).join('\n');
+  for (const part of ['Time limits', 'Last day to file the suit',
+    'Last day 10 January 2027 (Sunday) · Open · 84 days left · as of 18 October 2026 (Sunday)',
+    'Last day to answer the notice', 'Not assessed: the notice date is not given']) {
+    assert.ok(detail.includes(part), part);
+  }
 }
 
 console.log('chat board: ok');

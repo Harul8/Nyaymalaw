@@ -1162,10 +1162,11 @@ def unreadable_board_says_so(page_script):
 
 @then("choosing a dispute opens its details in the board's own pane, which closes on Close or Escape")
 def dispute_opens_in_the_board_pane(page_script):
-    board = _function(page_script, "renderChatBoard")
-    assert "openBoardPane(dispute.name, renderDisputeDetail(dispute, board), card);" in board
+    # The dispute's name opens it (18 Oct 2026: its card also holds its checklist).
+    card = _function(page_script, "renderDisputeCard")
+    assert "openBoardPane(dispute.name, renderDisputeDetail(dispute, board), open);" in card
     detail = _function(page_script, "renderDisputeDetail")
-    for part in ("'Why it matters'", "'Where it was picked up from'", "'Between'", "'Legal questions'",
+    for part in ("'Why it matters'", "'Time limits'", "'Where it was picked up from'", "'Between'", "'Legal questions'",
                  "`Why it was asked: ${question.why}`", "'Rights at stake'", "'Relief sought'", "'Still needed'",
                  "'Related points for your decision'"):
         assert part in detail, part

@@ -126,10 +126,15 @@ const bodyAnswer = {...answer, elements:[{text:'Earlier block'}, bodyElement]};
 const body = new Node('p');
 assert.equal(reader.appendBody(body, bodyAnswer, bodyElement), 2);
 assert.equal(body.textContent, bodyElement.text);
-assert.deepEqual(descendants(body, 'button').map(button => button.textContent),
+// A link is drawn as words of its sentence, which wrap with it (18 Oct 2026).
+assert.deepEqual(descendants(body, 'a').map(link => link.textContent),
   ['Example Act, 2025 · Section 7', 'Example Act, 2025']);
-const bodyLink = descendants(body, 'button')[0];
-const inlineRead = bodyLink.handlers.get('click')();
+assert.equal(descendants(body, 'button').length, 0);
+const bodyLink = descendants(body, 'a')[0];
+assert.equal(bodyLink.href, '#');
+let prevented = 0;
+const inlineRead = bodyLink.handlers.get('click')({preventDefault: () => { prevented += 1; }});
+assert.equal(prevented, 1, 'the link opens the pane, never navigates');
 assert.equal(reads[6].url, '/api/chats/pending-chat/turns/source-turn/brain-sources/1/2');
 reads[6].resolve(legalSource); await inlineRead;
 assert.equal(passageText(), legalSource.text);
@@ -158,8 +163,8 @@ const multiAnswer = {...answer, elements:[multiPassage]};
 const multiBody = new Node('p');
 assert.equal(reader.appendBody(multiBody, multiAnswer, multiPassage), 1);
 assert.equal(multiBody.textContent, multiPassage.text);
-assert.equal(descendants(multiBody, 'button')[0].textContent, 'Example Decision · Paragraph 8');
-const paragraphRead = descendants(multiBody, 'button')[0].handlers.get('click')();
+assert.equal(descendants(multiBody, 'a')[0].textContent, 'Example Decision · Paragraph 8');
+const paragraphRead = descendants(multiBody, 'a')[0].handlers.get('click')();
 assert.match(reads[7].url, /brain-sources\/0\/1$/);
 reads[7].resolve(secondParagraph); await paragraphRead;
 assert.equal(passageText(), secondParagraph.text);
@@ -200,7 +205,7 @@ const phraseAnswer = {...answer, elements:[phraseElement]};
 const phraseBody = new Node('p');
 assert.equal(reader.appendBody(phraseBody, phraseAnswer, phraseElement), 1);
 assert.equal(phraseBody.textContent, phraseElement.text);
-assert.equal(descendants(phraseBody, 'button')[0].textContent, 'The condition');
+assert.equal(descendants(phraseBody, 'a')[0].textContent, 'The condition');
 assert.equal(reader.appendReferences, undefined);
 for (const invalid of [
   {...phraseElement, inline_citations:[{text:'absent words', source_id:legalSource.id, source_index:1}]},
@@ -621,6 +626,24 @@ console.log('PASS NM response versus source role, related source words, known-co
   assert.equal(checks.children[0].textContent, 'How NM checked this');
   assert.match(checks.textContent, /Supporting source words: within three years/);
   assert.equal(body().children.at(-1), checks, 'the checks come last, folded');
+  // Checked against the design (18 Oct 2026): a qualification that only repeats the badge is
+  // not said twice; that no court treatment applies stays under the checks; supporting words
+  // that are the whole passage are not marked.
+  assert.equal(body().children.filter((child) => child.className === 'hint').length, 0);
+  const untreated = {...statute, id:'statute-14', digest:'d-14', text:'Three years from delivery.',
+    verification:{...statute.verification, source_treatment:'not_applicable',
+      support_excerpt:'Three years from delivery.'}};
+  const untreatedElement = {...lawElement, source:untreated, sources:[untreated]};
+  const untreatedOpening = reader.open({...lawAnswer, elements:[untreatedElement]}, untreatedElement, 0, 0, opener);
+  reads.at(-1).resolve({...untreated}); await untreatedOpening;
+  assert.equal(byClass('source-role').textContent, 'Legislative text');
+  assert.match(byClass('how-checked').textContent, /Treatment in the source: Not applicable/);
+  assert.equal(passageText(), 'Three years from delivery.');
+  assert.equal(passageOf(body()).children.length, 0, 'nothing marked when the words are the whole passage');
+  assert.equal(byClass('brain-source-window'), undefined);
+  reader.close(false);
+  const reopening = reader.open(lawAnswer, lawElement, 0, 0, opener);
+  reads.at(-1).resolve({...statute, authority_inspection:v4}); await reopening;
 
   // A judgment's paragraph is named without the store's part number.
   const judgment = {...statute, id:'j-73', kind:'judgment', label:'Example v State', locator:'73_2', digest:'d-73',

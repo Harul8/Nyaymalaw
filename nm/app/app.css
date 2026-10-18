@@ -196,7 +196,9 @@ main { display: grid; grid-template-columns: 19rem minmax(0, 1fr); flex: 1; min-
 }
 .thread { overflow-y: auto; flex: 1; min-height: 0; padding: 1.8rem 2.2rem 0.75rem; scrollbar-gutter: stable; }
 
-.turn { max-width: 52rem; margin: 0 auto 2rem; line-height: 1.7; }
+/* The answer at a reading measure, in line with the message box below it (the page checked
+   against the design, 18 Oct 2026: a later rule had let it run the window's full width). */
+.turn { min-width: 0; max-width: min(100%, 52rem); margin: 0 auto 2rem; line-height: 1.7; }
 
 /* THE ADVOCATE'S OWN WORDS, set apart as theirs and set to the right.
    Everything else on this screen is something the product wrote, and a reader
@@ -340,10 +342,16 @@ button.board-card:focus-visible { outline: 2px solid var(--accent); outline-offs
 .dispute-open { all: unset; cursor: pointer; display: block; border-radius: 6px; }
 .dispute-open:hover .board-dispute, .dispute-open[aria-pressed="true"] .board-dispute { color: var(--accent); }
 .dispute-open:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.dispute-deadline { margin: 0.1rem 0 0; display: flex; flex-wrap: wrap; gap: 0.15rem 0.5rem; font-size: 0.82rem; }
-.dispute-deadline-what { color: var(--ink-2); }
-.dispute-deadline-day { font-weight: 700; font-variant-numeric: tabular-nums; }
-.dispute-deadline.not-assessed .dispute-deadline-day { font-weight: 400; color: var(--ink-3); }
+/* The marks' legend, once above the disputes; under each name one line: each last day code
+   worked out, a quiet word where it could not, and how much is in hand. */
+.check-legend { margin: 0; display: flex; flex-wrap: wrap; gap: 0.2rem 0.8rem; font-size: 0.74rem; color: var(--ink-3); }
+.check-legend-entry { display: inline-flex; align-items: center; gap: 0.25rem; }
+.check-legend .check-mark { font-size: 0.9rem; line-height: 1; }
+.dispute-meta { margin: 0.15rem 0 0.1rem; display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem 0.5rem;
+  font-size: 0.78rem; color: var(--ink-3); }
+.dispute-deadline { display: inline-flex; align-items: center; padding: 0.05rem 0.55rem; border-radius: 999px;
+  font-size: 0.75rem; font-weight: 600; font-variant-numeric: tabular-nums; background: var(--accent-w); color: var(--accent-2); }
+.dispute-deadline.not-assessed { font-weight: 500; background: var(--surface-2); color: var(--ink-3); }
 .check-count { font-weight: 600; color: var(--ink-2); }
 .check-group { margin: 0.45rem 0 0.1rem; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.04em;
   text-transform: uppercase; color: var(--ink-3); }
@@ -361,6 +369,9 @@ button.board-card:focus-visible { outline: 2px solid var(--accent); outline-offs
 .check-item--not_given .check-mark { color: var(--ink-3); }
 .check-item--not_available .check-mark { color: var(--signal); }
 .check-detail-state { margin: 0; font-weight: 600; display: flex; gap: 0.3rem; align-items: baseline; }
+.check-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem; }
+.check-actions button { min-height: 2.75rem; }
+.check-actions button.ghost { border: 1px solid var(--accent); border-radius: 8px; padding: 0.45rem 0.9rem; font-size: 0.85rem; }
 .check-none { margin: 0.3rem 0 0; font-size: 0.82rem; color: var(--ink-3); }
 .board-fold { display: block; }
 .board-fold > summary { cursor: pointer; min-height: 2.75rem; display: flex; align-items: center; }
@@ -370,6 +381,7 @@ button.board-card:focus-visible { outline: 2px solid var(--accent); outline-offs
   margin: 0.75rem 0; display: grid; gap: 0.4rem; }
 .in-short-title { margin: 0; font-family: var(--f-serif); font-size: 1rem; font-weight: 600; }
 .in-short .el { margin: 0; }
+.in-short-list { margin: 0; padding-left: 1.1rem; display: grid; gap: 0.5rem; }
 .time-limits { margin: 0.75rem 0; }
 .time-limit-scroll { overflow-x: auto; border: 1px solid var(--rule); border-radius: 10px; }
 .time-limit-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
@@ -381,7 +393,13 @@ button.board-card:focus-visible { outline: 2px solid var(--accent); outline-offs
 .time-limit-toggle { text-align: left; padding: 0; min-height: 2.75rem; color: var(--accent); }
 .time-limit-detail td { background: var(--board); }
 .time-limit-note { margin: 0.4rem 0 0; font-size: 0.8rem; color: var(--ink-3); }
-.citation-sources { font-size: 0.8rem; }
+/* The sources a paragraph does not link, folded under one quiet "Sources" (decision 6,
+   17 Oct 2026); opened, one under another. */
+.citation-link.citation-sources { font-size: 0.78rem; color: var(--ink-3); }
+.citation-link.citation-sources:hover, .citation-link.citation-sources[aria-expanded="true"] { color: var(--accent); }
+.citation-fold { display: block; white-space: normal; margin: 0.3rem 0 0; padding-left: 0.7rem;
+  border-left: 2px solid var(--rule); }
+.citation-fold .citation-marker { display: block; width: fit-content; line-height: 1.7; }
 /* The reading pane, passage first (owner decisions, 17 Oct 2026). */
 .source-where { margin: 0; font-size: 0.82rem; color: var(--ink-3); }
 .source-role { margin: 0; justify-self: start; display: inline-block; font-size: 0.78rem; font-weight: 600;
@@ -430,19 +448,18 @@ button.board-card:focus-visible { outline: 2px solid var(--accent); outline-offs
   display: block; margin-top: 0.4rem; overflow-wrap: anywhere;
 }
 
+/* A source on the words it supports: dotted, wrapping with its sentence, never a box that
+   lifts the line (owner decisions, 17 Oct 2026; checked against the design 18 Oct). */
 .citation-link {
-  display: inline; font: inherit; color: var(--accent); background: transparent;
-  border: 0; padding: .2rem 0; text-align: left; white-space: normal;
-  text-decoration: underline; text-underline-offset: .2em; overflow-wrap: anywhere;
+  display: inline; font: inherit; color: var(--accent); background: transparent; cursor: pointer;
+  border: 0; border-radius: 3px; padding: 0; min-height: 0; text-align: left; white-space: normal;
+  text-decoration: underline dotted; text-decoration-thickness: 1px; text-underline-offset: .2em;
+  overflow-wrap: anywhere; -webkit-box-decoration-break: clone; box-decoration-break: clone;
 }
+.citation-link:hover { text-decoration-style: solid; background: var(--accent-w); }
 .citation-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
-/* A source the paragraph does not name, shown after it (rendering v4). */
-.citation-link.citation-marker {
-  font-family: var(--f-sans); font-size: 0.8rem; line-height: 1.5; text-decoration: none;
-  padding: 0 .45rem; margin: .1rem 0; border: 1px solid var(--rule); border-radius: 999px;
-  background: var(--accent-w);
-}
-.citation-link.citation-marker:hover { border-color: var(--accent); }
+/* A source the paragraph does not name, listed under "Sources" (rendering v4). */
+.citation-link.citation-marker { font-family: var(--f-sans); font-size: 0.8rem; }
 #source-reader {
   position: fixed; inset: 0 0 0 auto; margin: 0; padding: 0;
   width: min(40rem, 100vw); height: 100dvh; max-width: 100vw; max-height: 100dvh;
@@ -655,7 +672,7 @@ button.wide { margin: 0.5rem 0.6rem 0.8rem; }
    scrollbar under it. The locators made it visible; the bug was always there
    and would have shown on any narrow window. */
 main > * { min-width: 0; }
-.conversation, .thread, .turn { min-width: 0; max-width: 100%; }
+.conversation, .thread { min-width: 0; max-width: 100%; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 
 /* A refusal is structured. Rendering its JSON throws away the only part an
@@ -678,7 +695,8 @@ main > * { min-width: 0; }
   word-break: break-word;
 }
 .el .refs { display: block; }
-#thread, .turn, .el { max-width: 100%; min-width: 0; }
+/* The answer itself keeps its reading measure (.turn, above). */
+#thread, .el { max-width: 100%; min-width: 0; }
 
 /* NO `overflow-x: hidden` ON `body` OR `main`. BK-43.
  *
@@ -1282,6 +1300,8 @@ main.home { display: flex; align-items: flex-start; justify-content: center; ove
   cursor: pointer; }
 .files-toggle:hover, .files-toggle[aria-expanded="true"] { color: var(--accent); background: var(--accent-w, rgba(0,0,0,.04)); }
 .files-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.files-toggle.board-files { gap: 0.3rem; padding: 0 0.6rem; margin-left: auto; color: var(--accent); }
+.board-files-count { font-size: 0.8rem; font-weight: 600; }
 .files-menu { position: absolute; right: 0; top: 100%; z-index: 65; width: min(24rem, calc(100vw - 1.5rem));
   max-height: min(60vh, 28rem); overflow-y: auto; padding: .5rem; border: 1px solid var(--rule);
   border-radius: 12px; background: var(--surface); box-shadow: 0 4px 15px rgba(0,0,0,.08); }

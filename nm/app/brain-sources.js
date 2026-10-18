@@ -279,15 +279,24 @@ window.NmBrainSources = (() => {
     const shown = [make('p', 'source-where', whereFrom(source))];
     const role = roleLabel(source.verification);
     const treatment = treatmentLabel(source.verification);
+    // The badge says what the passage is and what the court did with it; that no treatment
+    // was shown or applies is said under How NM checked this (18 Oct 2026).
+    const handled = ['Not shown', 'Not applicable'].includes(treatment) ? '' : treatment;
     if (legal(source) && words(role)) {
-      shown.push(make('p', 'source-role', `${role}${words(treatment) ? ` · ${treatment}` : ''}`));
+      shown.push(make('p', 'source-role', `${role}${words(handled) ? ` · ${handled}` : ''}`));
     }
-    if (words(source.qualification)) shown.push(make('p', 'hint', source.qualification));
+    // A qualification that only repeats the badge is not said twice.
+    const repeats = legal(source) && words(source.qualification) && words(role)
+      && source.qualification.trim().replace(/\.$/, '').toLowerCase() === role.toLowerCase();
+    if (words(source.qualification) && !repeats) shown.push(make('p', 'hint', source.qualification));
     if (needsAttention(source, inspection)) {
       shown.push(make('p', 'source-attention',
         'One of NM\u2019s checks on this source did not come out clean: see How NM checked this.'));
     }
-    const excerpt = source.verification?.support_excerpt;
+    // Supporting words that are the whole passage are not marked: marking all of it shows
+    // nothing (18 Oct 2026).
+    const given = source.verification?.support_excerpt;
+    const excerpt = words(given) && words(source.text) && given.trim() === source.text.trim() ? '' : given;
     const full = marked(make('div', 'brain-source-text'), source.text, excerpt);
     const view = excerptWindow(source.text, excerpt);
     if (view) {
@@ -460,12 +469,16 @@ window.NmBrainSources = (() => {
     return nav;
   }
 
+  // A link drawn as words of the sentence it stands in, which wrap with it; a button cannot
+  // break across lines (the page checked against the design, 18 Oct 2026).
   function responseLink(answer, element, entry, label) {
-    const link = document.createElement('button');
-    link.type = 'button'; link.className = 'citation-link'; link.textContent = label;
+    const link = document.createElement('a');
+    link.href = '#'; link.className = 'citation-link'; link.textContent = label;
     link.setAttribute('aria-label', `Open saved passage: ${label}`);
-    link.addEventListener('click', () => open(answer, element,
-      answer.elements.indexOf(element), entry.index, link));
+    link.addEventListener('click', (event) => {
+      event?.preventDefault?.();
+      return open(answer, element, answer.elements.indexOf(element), entry.index, link);
+    });
     return link;
   }
 
