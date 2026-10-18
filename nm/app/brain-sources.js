@@ -281,9 +281,9 @@ window.NmBrainSources = (() => {
     const treatment = treatmentLabel(source.verification);
     // The badge says what the passage is and what the court did with it; that no treatment
     // was shown or applies is said under How NM checked this (18 Oct 2026).
-    const handled = ['Not shown', 'Not applicable'].includes(treatment) ? '' : treatment;
+    const badgeTreatment = ['Not shown', 'Not applicable'].includes(treatment) ? '' : treatment;
     if (legal(source) && words(role)) {
-      shown.push(make('p', 'source-role', `${role}${words(handled) ? ` · ${handled}` : ''}`));
+      shown.push(make('p', 'source-role', `${role}${words(badgeTreatment) ? ` · ${badgeTreatment}` : ''}`));
     }
     // A qualification that only repeats the badge is not said twice.
     const repeats = legal(source) && words(source.qualification) && words(role)
