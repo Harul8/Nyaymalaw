@@ -36,6 +36,24 @@ def test_one_shared_correction_across_stages_with_original_context_and_exact_fee
     assert ledger.metrics()["draft_corrections"] == 1
 
 
+def test_a_refused_quotation_is_corrected_with_the_sources_own_words_nearest_to_it():
+    # 18 Oct 2026: a correction told only that a quotation was not exact repeated it.
+    model = Model({"units": [unit()]})
+    ledger = TurnCalls(model)
+    attempts = []
+    def activity():
+        attempts.append(call(ledger))
+        if len(attempts) == 1:
+            refused = SchemaViolation("Selected quote is not exact original source text: quote='the price.'")
+            refused.near = "the price of the goods.\n(2)"
+            raise refused
+        return "checked replacement"
+    assert ledger.checked("write", activity) == "checked replacement"
+    assert json.loads(model.calls[1][0].user)["correction"]["mismatch"] == (
+        "Selected quote is not exact original source text: quote='the price.'. The source's own words nearest "
+        "to that quotation, exactly as they stand: “the price of the goods.\n(2)”")
+
+
 def test_the_review_may_ask_for_a_second_correction_and_no_more():
     # Owner decision, 17 Oct 2026: when the second review still finds a problem, once more.
     ledger = TurnCalls(Model({"units": [unit()]}))

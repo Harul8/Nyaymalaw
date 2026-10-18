@@ -12,6 +12,7 @@ from nm.core_engine import (
     answer_sources, checklist, matter_board, response_authorities, response_rendering, response_review,
     response_writer, turn,
 )
+from nm.core_engine.calls import TurnCalls
 from nm.core_engine.conversation import ConversationRefused, chat_matter_id
 from nm.shared.citation_contracts import statute_title
 from nm.shared.model_port import SchemaViolation
@@ -111,6 +112,32 @@ def test_a_checklist_item_is_admitted_only_on_exact_words_of_the_right_source(ca
     change(given, sources, case)
     with pytest.raises(SchemaViolation):
         response_writer.write(ChecklistModel(sources, given), ctx, record, sources)
+
+
+def test_a_misquoted_law_is_corrected_with_the_held_words_nearest_to_it():
+    """The seventh live run (18 Oct 2026): a section's checklist quoted a held provision with
+    words dropped; told only that the quotation was not exact, the correction copied the
+    same words again and the answer was withheld. The correction is shown the provision's
+    own words nearest to the quotation, exactly as they stand."""
+    ctx, record, sources = two_disputes()
+    given = lists(sources)
+    given["D1"][0]["law"]["quote"] = "Complete provision including exception"
+    model = ChecklistModel(sources, given)
+    calls = TurnCalls(model)
+
+    def write():
+        if model.seen:  # the correction copies the held words
+            model.given = lists(sources)
+        return response_writer.write(calls, ctx, record, sources)
+
+    draft = calls.checked("core_response_writer", write)
+    corrected = next(payload for payload in model.seen
+                     if "correction" in payload and (payload["this_part"]["dispute"] or {}).get("id") == "D1")
+    assert corrected["correction"]["mismatch"].endswith(
+        "The source's own words nearest to that quotation, exactly as they stand: "
+        "“Complete provision including its exception.”")
+    assert draft["checklists"][1]["items"][0]["law"]["text"] == "including its exception"
+    assert calls.metrics()["draft_corrections"] == 1
 
 
 def test_a_dispute_may_name_only_the_time_limits_code_worked_out_by_their_ids():

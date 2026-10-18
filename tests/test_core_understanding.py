@@ -190,6 +190,26 @@ def test_typed_words_stay_strict_unless_the_caller_names_page_text():
         select({"source_id": "s1", "quote": "A B"}, page("A\nB"), layout=False)
 
 
+def test_a_refused_quotation_carries_the_sources_own_words_nearest_to_it():
+    """The seventh live run (18 Oct 2026): told only that its quotation of a held provision
+    was not exact, a writer copied the same words again, two of them dropped. The refusal
+    keeps its words and carries the source's own words nearest to the quotation, exactly
+    as they stand, for a correction to copy from."""
+    held = ("(1) Where the buyer refuses to pay for the goods, the seller may claim the price of the "
+            "goods.\n(2)\nWhere the price is payable on a day certain, the seller may claim the price "
+            "although the property has not passed.")
+    quote = "the seller may claim the price.\n(2)\nWhere the price is payable on a day certain"
+    with pytest.raises(SchemaViolation) as refused:
+        select({"source_id": "s1", "quote": quote}, page(held))
+    # Saved research plans keep a refusal's words and their replay compares them.
+    assert str(refused.value) == f"Selected quote is not exact original source text: source_id='s1', quote={quote!r}"
+    assert "the price of the goods.\n(2)\nWhere the price is payable on a day certain" in refused.value.near
+    assert refused.value.near in held
+    with pytest.raises(SchemaViolation) as nowhere:
+        select({"source_id": "s1", "quote": "words found nowhere in it"}, page(held))
+    assert nowhere.value.near is None
+
+
 def test_quoted_instruction_stays_information_and_nm_reference_keeps_role():
     earlier = {"source_id": "t1:nm", "turn_id": "t1", "speaker": "nm",
                "record_role": "nm_interpretation", "text": "NM's disputed interpretation"}

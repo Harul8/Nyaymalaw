@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import re
 from copy import deepcopy
+from functools import lru_cache
 
 from nm.shared.model_port import (
     ContextOverflow, ModelError, Prompt, SchemaViolation, Tier, canonical_schema_data,
@@ -157,10 +158,68 @@ def _laid_out(quote, text):
     return found, (pattern.search(text, found.start() + 1) if found else None)
 
 
+#: Typographic marks located as their plain forms.
+TYPOGRAPHY = str.maketrans({"‘": "'", "’": "'", "“": '"', "”": '"', "–": "-",
+                            "—": "-"})
+#: A stretch shorter than this says nothing about where a quotation belongs.
+NEAR_MINIMUM = 12
+
+
+def _letters_of(text):
+    """The text's letters - spacing, typographic marks, case and the editors' amendment
+    markers of the held Acts ('5[within thirty days]') aside - and for each of them the
+    position in the text it came from."""
+    blanked = re.sub(r"\]|\b\d+\[", lambda match: " " * len(match.group()), text)
+    chars, where = [], []
+    for index, char in enumerate(blanked):
+        if char.isspace():
+            continue
+        for folded in char.translate(TYPOGRAPHY).casefold():
+            chars.append(folded)
+            where.append(index)
+    return "".join(chars), where
+
+
+_letter_map = lru_cache(maxsize=4)(_letters_of)
+
+
+def nearest(quote, text, around=160):
+    """Where a source's own words around the longest stretch of a quotation that it does
+    contain begin and end, or None when no stretch says where the quotation belongs. Code
+    locates; the model judges what to quote (owner, 16 Oct 2026, for the time-limit step;
+    18 Oct for every quotation code checks)."""
+    letters, where = _letter_map(text)
+    target = _letters_of(quote)[0]
+    found, low, high = None, NEAR_MINIMUM, len(target)
+    while low <= high:  # a stretch found at one length is found at every shorter length
+        size = (low + high) // 2
+        hit = next(((offset, at) for offset in range(len(target) - size + 1)
+                    if (at := letters.find(target[offset:offset + size])) >= 0), None)
+        if hit is None:
+            high = size - 1
+        else:
+            found, low = (hit[1], size), size + 1
+    if found is None:
+        return None
+    start, end = where[found[0]], where[found[0] + found[1] - 1] + 1
+    start, end = max(0, start - around), min(len(text), end + around)
+    for _ in range(40):  # whole words at either end, as far as a word reaches
+        if start and not text[start - 1].isspace():
+            start -= 1
+        if end < len(text) and not text[end].isspace():
+            end += 1
+    return start, end
+
+
 def select(reference, sources, *, layout=None):
     """Resolve an unambiguous exact passage. No paraphrase. The exact words are looked
     for first; only page text (layout True, or a supplied document's page) lets a space
-    in the quote meet a line break of the page. What is returned is the source's own words."""
+    in the quote meet a line break of the page. What is returned is the source's own words.
+
+    A quotation that is not found is refused with the source's own words nearest to it,
+    exactly as they stand, as the refusal's `near` (18 Oct 2026: a writer told only that
+    its quotation was not exact copied the same wrong words again). The refusal's own
+    words are unchanged: saved research plans keep them and their replay compares them."""
     require_schema(reference, REFERENCE)
     source = sources.get(reference["source_id"])
     if source is None:
@@ -176,7 +235,11 @@ def select(reference, sources, *, layout=None):
             layout = source.get("record_role") in LAYOUT_ROLES
         found, again = _laid_out(quote, text) if layout else (None, None)
         if found is None:
-            raise SchemaViolation(f"Selected quote is not exact original source text: source_id={reference['source_id']!r}, quote={quote!r}")
+            refused = SchemaViolation(f"Selected quote is not exact original source text: "
+                                      f"source_id={reference['source_id']!r}, quote={quote!r}")
+            window = nearest(quote, text)
+            refused.near = text[window[0]:window[1]] if window else None
+            raise refused
         if again is not None:
             raise SchemaViolation(f"Selected quote has multiple occurrences in {reference['source_id']!r}: {quote!r}; select a longer unique passage or the whole source")
         return {**deepcopy(source), "start": found.start(), "end": found.end(), "text": found.group()}

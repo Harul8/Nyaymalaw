@@ -20,10 +20,9 @@ import json
 import re
 from copy import deepcopy
 from datetime import date
-from functools import lru_cache
 
 from nm.core_engine import limitation, research
-from nm.core_engine.understanding import source_catalogue
+from nm.core_engine.understanding import TYPOGRAPHY as _TYPOGRAPHY, nearest, source_catalogue
 from nm.shared import clock_contracts
 from nm.shared.held_acts import ActUnavailable
 from nm.shared.model_port import ModelError, Prompt, SchemaViolation, Tier, require_schema
@@ -115,10 +114,6 @@ def _flat(text):
     return " ".join(re.sub(r"\]|\b\d+\[", "", text or "").split())
 
 
-_TYPOGRAPHY = str.maketrans({"\u2018": "'", "\u2019": "'", "\u201c": '"', "\u201d": '"', "\u2013": "-",
-                             "\u2014": "-"})
-
-
 def _letters(text):
     """An Act's words compared without spacing or typographic marks: the held texts were
     extracted from print and run words together or split them ('thecheque', 'twic e'),
@@ -134,43 +129,15 @@ def _entry_words(text):
     return re.sub(r"[\W_]", "", _letters(text))
 
 
-@lru_cache(maxsize=4)
-def _letter_map(text):
-    """_letters(text), and for each of its characters the position in the text it came from."""
-    blanked = re.sub(r"\]|\b\d+\[", lambda match: " " * len(match.group()), text)
-    chars, where = [], []
-    for index, char in enumerate(blanked):
-        if char.isspace():
-            continue
-        for folded in char.translate(_TYPOGRAPHY).casefold():
-            chars.append(folded)
-            where.append(index)
-    return "".join(chars), where
-
-
-#: A stretch shorter than this says nothing about where a quotation belongs.
-NEAR_MINIMUM = 12
-
-
-def _nearest(quote, text, around=160):
-    """The Act's own words around the longest stretch of a quotation that the held text
-    does contain (owner, 16 Oct 2026): code locates; the model judges what to quote."""
-    letters, where = _letter_map(text)
-    target = _letters(quote)
-    found, low, high = None, NEAR_MINIMUM, len(target)
-    while low <= high:  # a stretch found at one length is found at every shorter length
-        size = (low + high) // 2
-        hit = next(((offset, at) for offset in range(len(target) - size + 1)
-                    if (at := letters.find(target[offset:offset + size])) >= 0), None)
-        if hit is None:
-            high = size - 1
-        else:
-            found, low = (hit[1], size), size + 1
-    if found is None:
+def _nearest(quote, text):
+    """The Act's own words nearest to a quotation (owner, 16 Oct 2026: code locates; the
+    model judges what to quote), spacing closed up: this step compares an Act's words
+    without spacing, which its held texts got wrong in print."""
+    window = nearest(quote, text)
+    if window is None:
         return None
-    start, end = where[found[0]], where[found[0] + found[1] - 1] + 1
-    words = " ".join(text[max(0, start - around):end + around].split())
-    return ("…" if start > around else "") + words + ("…" if end + around < len(text) else "")
+    start, end = window
+    return ("…" if start > 0 else "") + " ".join(text[start:end].split()) + ("…" if end < len(text) else "")
 
 
 def _plain_map(text):

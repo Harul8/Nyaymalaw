@@ -121,11 +121,16 @@ class TurnCalls:
             self.correction = None
 
     def checked(self, operation, activity):
-        """A shape error may use the turn's first correction; outages/refusals never do."""
+        """A shape error may use the turn's first correction; outages/refusals never do.
+        A quotation refused as not the source's exact words is corrected with the source's
+        own words nearest to it (18 Oct 2026)."""
         try:
             return activity()
         except SchemaViolation as exc:
-            return self.correct(operation, activity, mismatch=str(exc), rejected=self.last_output)
+            near = getattr(exc, "near", None)
+            mismatch = str(exc) + (f". The source's own words nearest to that quotation, exactly as they stand: "
+                                   f"“{near}”" if near else "")
+            return self.correct(operation, activity, mismatch=mismatch, rejected=self.last_output)
 
     def withhold(self, reason):
         self.terminal = True
