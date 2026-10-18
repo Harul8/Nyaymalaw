@@ -214,6 +214,11 @@ def test_the_reading_pane_says_how_a_cited_page_was_read():
     assert _how_read(rows, "t2:d1p1") == "Read by AI from a scan or photo: check it against your original."
     assert _how_read(rows, "t2:d2p1") == "Transcribed by AI: check it against the recording."
     assert _how_read(rows, "t3:d1p1") == ""
+    # The same, for the pane's kind line and its badge (the readability design, 18 Oct 2026).
+    from nm.app.api import _page_reading
+    assert [_page_reading(rows, identity) for identity in ("t1:d1p1", "t1:d1p2", "t2:d1p1", "t2:d2p1", "t3:d1p1")] == [
+        {"by": "file", "legible": "whole"}, {"by": "ai", "legible": "part"}, {"by": "ai", "legible": "whole"},
+        {"by": "transcribed", "legible": "whole"}, None]
 
 
 def test_too_many_documents_are_refused_at_the_door(served):
