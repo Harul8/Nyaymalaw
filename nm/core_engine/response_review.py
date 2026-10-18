@@ -160,7 +160,11 @@ document pages and legal passages (M1, DOC1, P1, J1...). Return one request_cove
 entry per independent requested
 result. Select the original advocate words identifying that result, name only its
 relevant reply units, and explain its disposition as addressed, justified_limit,
-respected or missing. A restriction on what NM may do or claim that the reply honours
+respected or missing. Coverage is for what the advocate asks or instructs; the facts
+they give with it are judged in how the reply uses them, not listed as requests.
+Missing is for a requested result the reply does not answer at all; what an answered
+result still lacks is an omission finding naming the units it belongs in.
+A restriction on what NM may do or claim that the reply honours
 by not doing the restricted work is respected; it needs no reply unit IDs. Keep separate outcomes separate even when requested in one message. Do not
 merge them into a broad message-level verdict or duplicate the broad message as a
 substitute for identifying each result. When the same words genuinely express several
@@ -359,11 +363,16 @@ def _accept(proposal, dependencies, *, contract=LEGACY_CONTRACT):
     # v8 has no verdict rows: the paragraphs such a finding names are the rejected ones.
     rejected = (judged & units if contract == CONTRACT
                 else {unit["unit_id"] for unit in verdicts if unit["verdict"] == "rejected"})
-    if not rejected <= affected or any(not (
-            any(_overlaps(request, source) for source in selected_findings)
-            or any(unit_ids & rejected & set(finding["unit_ids"])
-                   for finding in data["findings"]))
-            for request, unit_ids in missing):
+    unlinked = [request for request, unit_ids in missing if not (
+        any(_overlaps(request, source) for source in selected_findings)
+        or any(unit_ids & rejected & set(finding["unit_ids"]) for finding in data["findings"]))]
+    if not rejected <= affected or unlinked:
+        if unlinked and contract == CONTRACT:
+            # Precise enough for a correction to repair (the tenth live run, 18 Oct 2026).
+            identity, start, end = unlinked[0]
+            raise SchemaViolation(f"The missing request “{sources[identity]['text'][start:end]}” needs a finding "
+                                  "whose sources select those words. What an answered request still lacks is an "
+                                  "omission naming the units it belongs in, not a missing request.")
         raise SchemaViolation("Rejected units and missing requests need corresponding precise findings")
     if judged - rejected - (named_items if contract in _FINDINGS else set()):
         raise SchemaViolation("A consequential finding cannot label its affected reply unit supported")

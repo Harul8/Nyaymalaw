@@ -693,3 +693,23 @@ def test_the_review_checks_a_time_limits_legal_analysis_and_leaves_counting_to_c
     words = " ".join(SYSTEM.split())
     assert "Counting is code's: the reply gives no last day or counted date of its own." in words
     assert "is legal analysis like any other: check it against the held provision and the facts" in words
+
+
+def test_a_missing_request_without_its_finding_is_named_for_the_correction():
+    """The tenth live run (18 Oct 2026): the review split an answered request into results
+    it called missing, and raised omissions naming the paragraphs they belonged in without
+    selecting the request's words, so it was refused twice and the answer withheld. The
+    refusal names the request, and the review is told what missing is for."""
+    args = setup(text="Summarise the account. Identify what remains unknown.")
+    ctx, _, _, draft = args
+    identity = ctx["latest"]["source_id"]
+    omitted = {"source_id": identity, "quote": "Identify what remains unknown."}
+    data = positive(draft, requests=[request(ctx, draft, request={"source_id": identity, "quote": "Summarise the account."}),
+                                     request(ctx, draft, request=omitted, disposition="missing", unit_ids=[])])
+    data.update(verdict="reject", findings=[{"category": "omission", "unit_ids": [draft["units"][0]["id"]],
+        "sources": [], "mismatch": "The reply leaves the unknowns out of the summary."}])
+    with pytest.raises(SchemaViolation, match="The missing request “Identify what remains unknown.” needs a finding"):
+        review(Model(data), *args)
+    words = " ".join(response_review.SYSTEM.split())
+    assert "Missing is for a requested result the reply does not answer at all" in words
+    assert "the facts they give with it are judged in how the reply uses them, not listed as requests" in words
