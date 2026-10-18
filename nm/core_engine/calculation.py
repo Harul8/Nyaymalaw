@@ -36,7 +36,9 @@ V2_CONTRACT = "core_calculation_v2"
 V3_CONTRACT = "core_calculation_v3"
 #: v4 (18 Oct 2026, after two of three live runs called an unfiled suit "in time"): a step
 #: taken is the step the time limit governs, never the event time runs from, and code
-#: refuses one quoted from that event's own words.
+#: refuses one quoted from that event's own words. A limit that cannot be worked out for
+#: want of a fact (its starting date not given, or the earlier limit it waits on not worked
+#: out) spends no correction, which cannot supply a fact; every live run had spent one so.
 CONTRACT = "core_calculation_v4"
 OPERATION = "core_calculation"
 CORRECTION_OPERATION = "core_calculation_correct"
@@ -53,7 +55,7 @@ First decide whether what the advocate wants needs any time limit worked out. If
 
 If it does, for each time limit that bears on it, go by what the Act says. Read the Act's own words to find the provision that governs the step, the period, and the event from which time runs. Under "words", quote the words that set the period and say what it runs from, exactly as they appear below; that phrase is enough, not the whole clause. Under "period_words", give the period itself as it stands inside those words, such as "thirty days". Where one provision sets more than one period, such as a period and an outer limit to which a court may extend it, give each period its own calculation with its own words. For an article of the Limitation Act's Schedule, give its number and, where it has lettered parts, the letter. Then find the date of that event in what the advocate or their documents say, and quote those words exactly as written there. Where the Act lets time be left out for obtaining certified copies, give the dates the copy was applied for and was ready, if they are known. Where the steps form a chain (notice, the period to pay, then the complaint), give each step its own id. A period that runs from an event the advocate or a document dates (the drawer receiving the notice) starts from that date, quoted, even when the event belongs to an earlier step. Only a period that begins when an earlier period has run out (the complaint period, which begins once the period to pay has ended unpaid) names that earlier step's id in "after" and leaves the date empty; code then starts it the day after the earlier step's last day. Where a step is premature if taken before an earlier period has run out (a complaint filed before the period to pay ends), put that earlier step's id in "earliest_after"; a step that merely follows an earlier event in time needs nothing there. Under "done", give the step this time limit governs only if the advocate or a document says it has already been taken (the suit or complaint filed, the notice given, the payment made), with its date and the words saying so; otherwise leave it empty. The event time runs from is never the step itself: for a suit for the price, the delivery starts the time and filing the suit is the step; for the drawer's time to pay, the notice reaching the drawer starts it and the payment is the step. Write every date as YYYY-MM-DD. Name anything that may extend or restart time (a written acknowledgment, a part payment, time in a court without jurisdiction, a disability, fraud, condonation of delay) under "may_extend", with the provision; these are flagged for the advocate, not counted.
 
-Do not count days yourself: give the starting date, the Act's words for the period and any copy dates, and the dates will be counted by code. Where a date is missing or uncertain, do not guess: list what is needed under "missing". Where two provisions could govern, give a calculation for each. If a time limit is set by an Act that is not given below, put it under "not_assessed" and say why.
+Do not count days yourself: give the starting date, the Act's words for the period and any copy dates, and the dates will be counted by code. Where a date is missing or uncertain, do not guess: list what is needed under "missing". Where two provisions could govern, give a calculation for each. If a time limit is set by an Act that is not given below, put it under "not_assessed" and say why. List only time limits, each a period within which a step must be taken; the documents, proof and other things a case needs are for the answer, not for you.
 
 Work in a loop: decide what needs working out, read the Act's words, choose, check each choice against the words and the facts as given, correct anything wrong, and only then answer."""
 
@@ -98,11 +100,13 @@ CORRECTION = {"type": "object", "additionalProperties": False, "required": ["cal
 class _Unchecked(ValueError):
     """One proposed time limit that code could not check; it is reported, not computed.
     `near` holds the Act's own words closest to a quotation code could not find, for
-    the correction pass only."""
+    the correction pass only. `correctable` is False for a fact that is missing, which
+    the correction pass cannot supply."""
 
-    def __init__(self, why, near=None):
+    def __init__(self, why, near=None, *, correctable=True):
         super().__init__(why)
         self.near = near
+        self.correctable = correctable
 
 
 def _flat(text):
@@ -288,20 +292,33 @@ def _check(proposal, context, acts, today):
     entries = (limitation.schedule(acts["The Limitation Act, 1963"]["text"])
                if "The Limitation Act, 1963" in acts else {})
     checked, not_assessed, done_ids = [], [deepcopy(item) for item in proposal["not_assessed"]], {}
-    refused = []
+    refused, unassessed = [], {}
+
+    def waiting(identity, how):
+        """A limit that waits on another: correctable only where that other is not one
+        listed before it and found unworkable for want of a fact."""
+        if identity in unassessed:
+            return _Unchecked(f"it {how} “{unassessed[identity]}” ends, and that could not be worked out",
+                              correctable=False)
+        return _Unchecked(f"it {how} {identity!r}, which is not a time limit worked out before it")
+
     for item in proposal["calculations"] if proposal["needed"] else []:
         try:
-            provision = _provision(item, acts, entries)
             start = item["start"]
+            if not start["after"].strip() and not start["date"].strip():
+                # A missing fact first: without its date nothing can be worked out, whatever the
+                # quotation, and no correction can supply it (the fifth live run spent one so).
+                raise _Unchecked("the starting date is not given" + (
+                    f"; needed: {'; '.join(item['missing'])}" if item["missing"] else ""), correctable=False)
+            if start["after"].strip() and start["after"].strip() in unassessed:
+                raise waiting(start["after"].strip(), "starts once")
+            provision = _provision(item, acts, entries)
             if start["after"].strip():
                 earlier = done_ids.get(start["after"].strip())
                 if earlier is None:
-                    raise _Unchecked(f"it starts after {start['after']!r}, which was not worked out first")
+                    raise waiting(start["after"].strip(), "starts once")
                 begin = date.fromordinal(date.fromisoformat(earlier["working"]["last_day"]).toordinal() + 1)
                 origin = {"after": earlier["id"], "event": start["event"], "date": begin.isoformat()}
-            elif not start["date"].strip():
-                raise _Unchecked("the starting date is not given" + (
-                    f"; needed: {'; '.join(item['missing'])}" if item["missing"] else ""))
             else:
                 origin = {"after": None, "event": start["event"],
                           **_fact(start, catalogue, "starting event", searched)}
@@ -322,7 +339,7 @@ def _check(proposal, context, acts, today):
             if item["earliest_after"].strip():
                 before = done_ids.get(item["earliest_after"].strip())
                 if before is None:
-                    raise _Unchecked(f"it must follow {item['earliest_after']!r}, which was not worked out first")
+                    raise waiting(item["earliest_after"].strip(), "may not be taken before")
                 earliest = date.fromordinal(date.fromisoformat(before["working"]["last_day"]).toordinal() + 1).isoformat()
             entry = {"id": item["id"], "what": item["what"], "provision_name": item["provision"],
                      "provision": provision, "start": origin, "copies": copies, "done": done, "earliest": earliest,
@@ -334,8 +351,10 @@ def _check(proposal, context, acts, today):
                                  f"({entry['working']['last_day']}), so the steps are not linked as the Act links them")
         except (_Unchecked, limitation.LimitationUnassessed) as exc:
             not_assessed.append({"what": item["what"], "why": str(exc)})
-            refused.append({"id": item["id"], "what": item["what"], "why": str(exc),
-                            "near": getattr(exc, "near", None)})
+            unassessed[item["id"]] = item["what"]
+            if getattr(exc, "correctable", True):
+                refused.append({"id": item["id"], "what": item["what"], "why": str(exc),
+                                "near": getattr(exc, "near", None)})
             continue
         checked.append(entry)
         done_ids[item["id"]] = entry

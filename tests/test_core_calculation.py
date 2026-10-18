@@ -197,7 +197,8 @@ def test_code_finds_the_quoted_words_and_refuses_what_it_cannot_check(store):
     boxes = {e["text"]: e["working"] for e in reply["elements"] if e["kind"] == "WORKING"}
     assert boxes["Last day for the drawer to pay"]["not_assessed"] == (
         "the words given for the starting event are not in the conversation or documents as quoted")
-    assert "which was not worked out first" in boxes["Last day to file the complaint"]["not_assessed"]
+    assert boxes["Last day to file the complaint"]["not_assessed"].endswith(
+        "which is not a time limit worked out before it")
     assert boxes["Last day to give notice"]["not_assessed"].startswith(
         "its earliest day (2026-10-15) falls after its last day (2026-09-17)")
 
@@ -257,6 +258,26 @@ def test_a_step_taken_quoted_from_the_event_time_runs_from_is_refused_then_corre
     boxes = {e["text"]: e["working"] for e in second["elements"] if e["kind"] == "WORKING"}
     assert boxes["Last day for the drawer to pay"]["not_assessed"].startswith(
         "the step taken is quoted from the words of the event time runs from")
+
+
+def test_a_missing_fact_spends_no_correction_and_what_waits_on_it_says_so_plainly(store):
+    """Every live run (18 Oct 2026) spent the time-limit step's one correction on starting
+    dates nobody had given; a correction cannot supply a fact. A limit waiting on one that
+    could not be worked out names it in plain words, never by its internal ID."""
+    proposal = chain()
+    pay, complaint, _ = proposal["calculations"]
+    pay["start"] = {"after": "", "event": "the drawer receiving the notice", "date": "", "quote": ""}
+    pay["missing"] = ["The date the drawer received the notice."]
+    proposal["calculations"] = [pay, complaint]  # nothing a correction could fix
+    model = Calculating(proposal)
+    reply = turn(store, model)
+    assert "correction" not in model.seen  # no correction call was made
+    boxes = {e["text"]: e["working"] for e in reply["elements"] if e["kind"] == "WORKING"}
+    assert boxes["Last day for the drawer to pay"]["not_assessed"] == (
+        "the starting date is not given; needed: The date the drawer received the notice.")
+    assert boxes["Last day to file the complaint"]["not_assessed"] == (
+        "it starts once “Last day for the drawer to pay” ends, and that could not be worked out")
+    assert "List only time limits" in model.seen["calculation"].system
 
 
 def test_the_nearest_held_words_are_found_for_a_quotation_with_a_word_dropped():
@@ -367,3 +388,17 @@ def test_a_schedule_article_quoted_across_its_columns_is_read_as_its_own_words()
     for wrong in ("Three years; When the loan is repaid", "Two years; When the loan is made"):
         with pytest.raises(calculation._Unchecked, match="not in its held entry"):
             calculation._provision({**item, "words": wrong}, acts, entries)
+
+
+def test_a_missing_starting_date_is_said_before_any_quotation_is_checked(store):
+    """The fifth live run (18 Oct 2026) spent a correction on the quotation of a limit whose
+    starting date nobody had given: the missing fact is what the advocate needs to hear."""
+    proposal = chain()
+    pay, complaint, _ = proposal["calculations"]
+    pay["start"] = {"after": "", "event": "the drawer receiving the notice", "date": "", "quote": ""}
+    pay["words"] = "words the Act does not say"
+    proposal["calculations"] = [pay, complaint]
+    model = Calculating(proposal)
+    boxes = {e["text"]: e["working"] for e in turn(store, model)["elements"] if e["kind"] == "WORKING"}
+    assert "correction" not in model.seen
+    assert boxes["Last day for the drawer to pay"]["not_assessed"] == "the starting date is not given"
