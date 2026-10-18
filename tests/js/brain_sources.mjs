@@ -21,14 +21,15 @@ class Node {
   focus() { this.focused = true; }
 }
 const nodes = new Map(['brain-source-reader', 'brain-source-title', 'brain-source-close',
-  'brain-source-status', 'brain-source-body', 'board-pane', 'brain-source-back'].map(id => [id, new Node()]));
+  'brain-source-status', 'brain-source-body', 'brain-source-back', 'brain-source-kind'].map(id => [id, new Node()]));
 // The window the reading pane sits in (owner, 16 Oct 2026): it makes room while the pane is open.
 const windowClasses = new Set();
 nodes.set('pane-advise', Object.assign(new Node(), {classList:{
   add:name => windowClasses.add(name), remove:name => windowClasses.delete(name)}}));
 // The passage itself, wherever the pane places it (17 Oct 2026: the passage first, the
 // checks folded under "How NM checked this").
-const passageOf = (host) => host.children.find((child) => child.className === 'brain-source-text');
+const passageOf = (host) => host.children.find((child) => String(child.className).split(' ')
+  .includes('brain-source-text'));
 const passageText = () => passageOf(nodes.get('brain-source-body'))?.textContent;
 const events = new Map();
 const keys = [];
@@ -61,19 +62,17 @@ assert.equal(nodes.get('brain-source-reader').modal, false);
 assert.equal(windowClasses.has('reading'), true);
 reader.close();
 assert.equal(opener.focused, true);
-assert.equal(nodes.get('brain-source-body').children.length, 0);
+const emptied = () => nodes.get('brain-source-body').children.map((child) => child.className).join() === 'reader-empty';
+assert.ok(emptied(), 'a closed pane says what it shows');
 assert.equal(windowClasses.has('reading'), false);
 
-// Escape closes the pane, unless the board's own pane holds the focus (it closes first).
+// Escape closes the pane.
 {
   const escape = () => { const event = {key:'Escape', defaultPrevented:false,
     preventDefault() { this.defaultPrevented = true; }}; keys.forEach(key => key(event)); return event; };
-  reader.showContent('A document', [new Node()], opener);
+  reader.showContent('A document', [new Node()], opener, false, 'Document you sent');
   assert.equal(nodes.get('brain-source-reader').open, true);
-  document.activeElement = nodes.get('board-pane');
-  assert.equal(escape().defaultPrevented, false);
-  assert.equal(nodes.get('brain-source-reader').open, true);
-  document.activeElement = null;
+  assert.equal(nodes.get('brain-source-kind').textContent, 'Document you sent');
   assert.equal(escape().defaultPrevented, true);
   assert.equal(nodes.get('brain-source-reader').open, false);
   assert.equal(windowClasses.has('reading'), false);
@@ -97,7 +96,7 @@ const ended = reader.open(answer, element, 0, 0, opener);
 session += 1; reader.close(false);
 reads[4].resolve(saved); await ended;
 assert.equal(nodes.get('brain-source-reader').open, false);
-assert.equal(nodes.get('brain-source-body').children.length, 0);
+assert.ok(emptied());
 
 const changed = reader.open(answer, element, 0, 0, opener);
 events.get('nm:matter-changed')();
@@ -270,7 +269,7 @@ assert.match(nodes.get('brain-source-status').textContent, /could not be matched
 reader.openRecordSource(checkedBoard, boardOpener);
 events.get('nm:matter-changed')();
 assert.equal(nodes.get('brain-source-reader').open, false);
-assert.equal(nodes.get('brain-source-body').children.length, 0);
+assert.ok(emptied(), 'a closed pane says what it shows');
 for (const treatment of ['adopted', 'rejected']) {
   const excerpt = `The applicant submitted a proposition. The court ${treatment} it.`;
   const labeled = {id:'labeled-decision', kind:'judgment', title:'Synthetic decision',
@@ -374,7 +373,7 @@ const lateRelated = choices[1].handlers.get('click')();
 events.get('nm:matter-changed')();
 reads.at(-1).resolve(treatmentSource); await lateRelated;
 assert.equal(nodes.get('brain-source-reader').open, false);
-assert.equal(nodes.get('brain-source-body').children.length, 0);
+assert.ok(emptied(), 'a closed pane says what it shows');
 assert.equal(nodes.get('brain-source-status').textContent, '');
 const beforeClosedClick = reads.length;
 choices[2].handlers.get('click')();
@@ -603,24 +602,28 @@ console.log('PASS NM response versus source role, related source words, known-co
     provision_mentions:[]};
   const opening = reader.open(lawAnswer, lawElement, 0, 0, opener);
   reads.at(-1).resolve({...statute, authority_inspection:v4}); await opening;
-  assert.equal(byClass('source-where').textContent, 'Held law · Article 54');
+  // What it is, said above its title; where it is from under it (the design, 18 Oct 2026).
+  assert.equal(nodes.get('brain-source-kind').textContent, 'Held law');
+  assert.equal(byClass('source-where').textContent, 'Article 54');
   assert.equal(byClass('source-role').textContent, 'Legislative text');
   // A check that did not come out clean is said above the fold; a version 4 turn's checks are read.
   assert.match(byClass('source-attention').textContent, /did not come out clean/);
   assert.doesNotMatch(body().textContent, /saved check evidence is unavailable/);
   assert.match(body().textContent, /Provision readback: Readback differs from the selected saved passage/);
-  const window_ = byClass('brain-source-window');
+  const window_ = byClass('brain-source-window passage');
+  assert.deepEqual(window_.children.map((child) => child.className || child.tagName),
+    ['ctx', 'MARK', 'ctx'], 'the context greyed, the words marked');
   const mark = window_.children.find((child) => child.tagName === 'MARK');
   assert.equal(mark.textContent, 'within three years of the date fixed for performance');
   assert.ok(window_.textContent.startsWith('…') && window_.textContent.endsWith('…'));
   assert.ok(window_.textContent.length < long.length);
   assert.equal(passageText(), long);
   assert.equal(passageOf(body()).hidden, true);
-  const expand = byClass('ghost source-expand');
-  assert.equal(expand.textContent, 'Show the whole passage');
+  const expand = byClass('source-expand');
+  assert.equal(expand.textContent, 'Show the whole section');
   expand.handlers.get('click')();
   assert.equal(passageOf(body()).hidden, false);
-  assert.equal(expand.textContent, 'Hide the whole passage');
+  assert.equal(expand.textContent, 'Hide the whole section');
   const checks = byClass('how-checked');
   assert.equal(checks.tagName, 'DETAILS');
   assert.equal(checks.children[0].textContent, 'How NM checked this');
@@ -640,7 +643,7 @@ console.log('PASS NM response versus source role, related source words, known-co
   assert.match(byClass('how-checked').textContent, /Treatment in the source: Not applicable/);
   assert.equal(passageText(), 'Three years from delivery.');
   assert.equal(passageOf(body()).children.length, 0, 'nothing marked when the words are the whole passage');
-  assert.equal(byClass('brain-source-window'), undefined);
+  assert.equal(byClass('brain-source-window passage'), undefined);
   reader.close(false);
   const reopening = reader.open(lawAnswer, lawElement, 0, 0, opener);
   reads.at(-1).resolve({...statute, authority_inspection:v4}); await reopening;
@@ -653,19 +656,20 @@ console.log('PASS NM response versus source role, related source words, known-co
   const judgmentAnswer = {...lawAnswer, elements:[judgmentElement]};
   const reading = reader.open(judgmentAnswer, judgmentElement, 0, 0, opener);
   reads.at(-1).resolve({...judgment}); await reading;
-  assert.equal(byClass('source-where').textContent, 'Held judgment · paragraph 73');
+  assert.equal(nodes.get('brain-source-kind').textContent, 'Held judgment');
+  assert.equal(byClass('source-where').textContent, 'paragraph 73');
   assert.equal(byClass('source-role').textContent, 'Party submission · Court rejected');
 
   // Back returns to what was open before, read again through the saved-source route.
   const back = nodes.get('brain-source-back');
-  assert.equal(back.hidden, false);
+  assert.equal(back.disabled, false);
   const before = reads.length;
   back.handlers.get('click')();
   assert.equal(reads.length, before + 1);
   reads.at(-1).resolve({...statute, authority_inspection:v4});
   await new Promise((done) => setTimeout(done, 0));
-  assert.equal(byClass('source-where').textContent, 'Held law · Article 54');
-  assert.equal(back.hidden, true);
+  assert.equal(byClass('source-where').textContent, 'Article 54');
+  assert.equal(back.disabled, true);
 
   // A document page widens to the whole document, every page in order, the cited words marked.
   const page2 = 'The purchaser paid the second instalment on time. The vendor shall register the deed on or '
@@ -678,9 +682,10 @@ console.log('PASS NM response versus source role, related source words, known-co
   const pageAnswer = {...lawAnswer, elements:[pageElement]};
   const viewing = reader.open(pageAnswer, pageElement, 0, 0, opener);
   reads.at(-1).resolve({...page}); await viewing;
-  assert.equal(byClass('source-where').textContent, 'Document you sent · page 2');
+  assert.equal(nodes.get('brain-source-kind').textContent, 'Document you sent');
+  assert.equal(byClass('source-where').textContent, 'page 2');
   assert.equal(byClass('source-role'), undefined, 'a document has no court role');
-  const whole = byClass('ghost source-expand');
+  const whole = byClass('source-expand');
   assert.equal(whole.textContent, 'Show the whole document');
   const fetching = whole.handlers.get('click')();
   assert.equal(reads.at(-1).url, '/api/chats/pending-chat/documents');
@@ -695,7 +700,19 @@ console.log('PASS NM response versus source role, related source words, known-co
   assert.equal(flow.children[3].children.find((child) => child.tagName === 'MARK').textContent,
     'on or before 31-12-2025');
   assert.equal(whole.hidden, true);
+  // A page read by AI from a scan, and only partly legible, says so (the design).
+  const scanned = reader.open(pageAnswer, pageElement, 0, 0, opener);
+  reads.at(-1).resolve({...page, reading:{by:'ai', legible:'part'}}); await scanned;
+  assert.equal(nodes.get('brain-source-kind').textContent, 'Document you sent · read by AI from a scan');
+  assert.equal(byClass('source-role warn').textContent, 'Part of this page could not be read');
+  // How NM checked this opens on what the source is used for, its words and who checked it.
+  const plainly = byClass('how-checked').children[1];
+  assert.equal(plainly.className, 'checked-plainly');
+  assert.deepEqual(plainly.children.map((child) => child.textContent), ['Words', 'Found on the page exactly as quoted']);
   reader.close();
-  assert.equal(nodes.get('brain-source-back').hidden, true);
+  assert.equal(nodes.get('brain-source-back').disabled, true);
+  // Closed, the pane says what it shows (on a wide window it stays beside the answer).
+  assert.equal(body().children[0].className, 'reader-empty');
+  assert.equal(nodes.get('brain-source-kind').textContent, '');
 }
 console.log('PASS the passage first, the whole document a click away, the checks folded, and Back');

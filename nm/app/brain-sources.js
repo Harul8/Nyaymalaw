@@ -16,9 +16,10 @@ window.NmBrainSources = (() => {
     scope = options.scope;
   }
 
+  // Back is always there, ready when something was open before (the design, 18 Oct 2026).
   function showBack() {
     const back = node('brain-source-back');
-    if (back) back.hidden = trail.length === 0;
+    if (back) back.disabled = trail.length === 0;
   }
 
   function remember(entry, viaBack) {
@@ -31,17 +32,30 @@ window.NmBrainSources = (() => {
   function clear() {
     generation += 1;
     active = null;
+    const kind = node('brain-source-kind');
+    if (kind) kind.textContent = '';
     node('brain-source-title').textContent = '';
     node('brain-source-status').textContent = '';
     node('brain-source-body').replaceChildren();
   }
 
+  // Nothing open: on a wide window the pane stays beside the answer and says what it shows
+  // (the design, 18 Oct 2026).
+  function showEmpty() {
+    const hint = document.createElement('p');
+    hint.className = 'reader-empty';
+    hint.textContent = 'Open a dotted phrase in the answer, an item on the board or Files, and it is shown here.';
+    node('brain-source-body').replaceChildren(hint);
+  }
+
   // THE READING PANE ON THE RIGHT (owner, 16 Oct 2026): one pane for every link,
   // opened beside the conversation rather than over it, so the answer and its
-  // source can be read together. The window makes room for it while it is open.
+  // source can be read together. On a wide window it is always there (the design, 18
+  // Oct 2026); narrower, it opens over the answer and closes.
   function close(restoreFocus = true) {
     const opener = active?.opener;
     clear();
+    showEmpty();
     trail = [];
     current = null;
     showBack();
@@ -51,23 +65,30 @@ window.NmBrainSources = (() => {
     if (restoreFocus && opener?.isConnected) opener.focus();
   }
 
-  function begin(label, opener, status = '') {
+  // kind: what is open, said above its title ('Held law', 'Needed · Dispute 1').
+  function begin(label, opener, status = '', kind = '') {
     clear();
     const read = {generation, scope:JSON.stringify(scope()), opener};
     active = read;
+    const line = node('brain-source-kind');
+    if (line) line.textContent = kind;
     node('brain-source-title').textContent = label;
     node('brain-source-status').textContent = status;
     node('pane-advise').classList.add('reading');
     const dialog = node('brain-source-reader');
     if (!dialog.open) dialog.show();
-    node('brain-source-close').focus();
+    // The pane's Close is hidden where the pane stays beside the answer: the pane itself
+    // takes the focus there.
+    const closer = node('brain-source-close');
+    (closer.offsetParent === null ? node('brain-source-body') : closer).focus();
     return read;
   }
 
-  // Anything else a link opens - a document as it was read - in the same pane.
-  function showContent(label, content, opener, viaBack = false) {
-    remember({show: (back) => showContent(label, content, opener, back)}, viaBack);
-    begin(label, opener);
+  // Anything else a link opens - a document as it was read, a checklist item, a dispute,
+  // the files, a time limit's working - in the same pane.
+  function showContent(label, content, opener, viaBack = false, kind = '') {
+    remember({show: (back) => showContent(label, content, opener, back, kind)}, viaBack);
+    begin(label, opener, '', kind);
     node('brain-source-body').replaceChildren(...content);
     node('brain-source-body').scrollTop = 0;
   }
@@ -179,14 +200,23 @@ window.NmBrainSources = (() => {
       not_applicable:'Not applicable', 'not applicable':'Not applicable'})[treatment] || treatment;
   };
 
+  // What a passage is, said above its title (the design, 18 Oct 2026), with how a page of a
+  // document the advocate sent was read.
+  function kindOf(source) {
+    if (source.kind === 'document') {
+      const by = source.reading?.by;
+      return `Document you sent${by === 'ai' ? ' · read by AI from a scan'
+        : by === 'transcribed' ? ' · transcribed by AI' : ''}`;
+    }
+    return source.kind === 'judgment' ? 'Held judgment' : source.kind === 'provision' ? 'Held law' : '';
+  }
+
   // Where a passage comes from, in the advocate's words: a document's page, a statute's
   // section, a judgment's paragraph (the store's part number is not shown).
   function whereFrom(source) {
-    const kind = source.kind === 'document' ? 'Document you sent'
-      : source.kind === 'judgment' ? 'Held judgment' : source.kind === 'provision' ? 'Held law' : '';
     const locator = words(source.locator) ? source.locator : '';
     const paragraph = /^(\d+)(?:_\d+)?$/.exec(locator);
-    return [kind, paragraph ? `paragraph ${paragraph[1]}` : locator].filter(words).join(' · ');
+    return paragraph ? `paragraph ${paragraph[1]}` : locator;
   }
 
   // The supporting words with a little of what surrounds them, cut at a sentence or a
@@ -265,10 +295,12 @@ window.NmBrainSources = (() => {
     }
   }
 
-  // THE PASSAGE FIRST (owner decisions, 17 Oct 2026): where it is from, what it is, the
-  // supporting words marked in place, the whole passage or document a click away, and
-  // every saved check folded under "How NM checked this".
-  function populate(source, choices = null, inspection = null, responseText = null, answer = null) {
+  // THE PASSAGE FIRST (owner decisions, 17 Oct 2026; the design of that day): what it is
+  // and where it is from, the supporting words marked in a little of their context, the
+  // whole document, section or paragraph a click away, and how NM checked it folded below:
+  // in a few words first, then every saved check. phrase: the words of the answer the
+  // source was opened from.
+  function populate(source, choices = null, inspection = null, responseText = null, answer = null, phrase = null) {
     const coreResponse = coreInspection(source, inspection) && words(responseText);
     const make = (tag, className, text) => {
       const item = document.createElement(tag);
@@ -276,6 +308,8 @@ window.NmBrainSources = (() => {
       if (text !== undefined) item.textContent = text;
       return item;
     };
+    const line = node('brain-source-kind');
+    if (line) line.textContent = kindOf(source);
     const shown = [make('p', 'source-where', whereFrom(source))];
     const role = roleLabel(source.verification);
     const treatment = treatmentLabel(source.verification);
@@ -284,6 +318,10 @@ window.NmBrainSources = (() => {
     const badgeTreatment = ['Not shown', 'Not applicable'].includes(treatment) ? '' : treatment;
     if (legal(source) && words(role)) {
       shown.push(make('p', 'source-role', `${role}${words(badgeTreatment) ? ` · ${badgeTreatment}` : ''}`));
+    }
+    // A page only partly read is said where it is read (the design, 18 Oct 2026).
+    if (source.kind === 'document' && source.reading?.legible === 'part') {
+      shown.push(make('p', 'source-role warn', 'Part of this page could not be read'));
     }
     // A qualification that only repeats the badge is not said twice.
     const repeats = legal(source) && words(source.qualification) && words(role)
@@ -297,37 +335,49 @@ window.NmBrainSources = (() => {
     // nothing (18 Oct 2026).
     const given = source.verification?.support_excerpt;
     const excerpt = words(given) && words(source.text) && given.trim() === source.text.trim() ? '' : given;
-    const full = marked(make('div', 'brain-source-text'), source.text, excerpt);
+    const full = marked(make('div', 'brain-source-text passage'), source.text, excerpt);
     const view = excerptWindow(source.text, excerpt);
+    const whole = source.kind === 'document' ? 'document' : source.kind === 'judgment' ? 'paragraph' : 'section';
     if (view) {
-      const window_ = make('div', 'brain-source-window');
+      const window_ = make('div', 'brain-source-window passage');
       const mark = make('mark', '', view.excerpt);
-      window_.append(document.createTextNode(view.lead), mark, document.createTextNode(view.tail));
-      const expand = make('button', 'ghost source-expand',
-        source.kind === 'document' ? 'Show the whole document' : 'Show the whole passage');
+      window_.append(make('span', 'ctx', view.lead), mark, make('span', 'ctx', view.tail));
+      const expand = make('button', 'source-expand', `Show the whole ${whole}`);
       expand.type = 'button';
       full.hidden = true;
+      full.className = 'brain-source-text whole';
       const read = active;
       expand.addEventListener('click', () => {
         if (source.kind === 'document' && answer) return wholeDocument(answer, source, read, full, expand);
         full.hidden = !full.hidden;
-        expand.textContent = full.hidden ? 'Show the whole passage' : 'Hide the whole passage';
+        expand.textContent = `${full.hidden ? 'Show' : 'Hide'} the whole ${whole}`;
       });
       shown.push(window_, expand);
     } else if (source.kind === 'document' && answer && /:d\d+p\d+$/.test(source.id || '')) {
-      const expand = make('button', 'ghost source-expand', 'Show the whole document');
+      const expand = make('button', 'source-expand', 'Show the whole document');
       expand.type = 'button';
       const read = active;
       const page = full;
-      const whole = make('div', 'document-flow');
-      whole.hidden = true;
-      expand.addEventListener('click', () => wholeDocument(answer, source, read, whole, expand));
-      shown.push(page, expand, whole);
+      const flow = make('div', 'document-flow whole');
+      flow.hidden = true;
+      expand.addEventListener('click', () => wholeDocument(answer, source, read, flow, expand));
+      shown.push(page, expand, flow);
     }
     if (!shown.includes(full)) shown.push(full);
     if (choices) shown.push(choices);
     const checks = make('details', 'how-checked');
     checks.appendChild(make('summary', '', 'How NM checked this'));
+    // In a few words first (the design, 18 Oct 2026): what the source is used for, its words
+    // and who checked it; every saved check follows.
+    const plainly = make('dl', 'checked-plainly');
+    const say = (label, value) => { if (words(value)) plainly.append(make('dt', '', label), make('dd', '', value)); };
+    say('Used for', words(phrase) ? `“${phrase}”` : '');
+    say('Words', words(given) && source.text.includes(given)
+      ? (source.kind === 'document' ? 'Found on the page exactly as quoted' : 'Found in the held text exactly as quoted')
+      : '');
+    say('Checked by', source.brain === true && inspection?.contract === 'core_source_authority_view_v1'
+      ? 'Code (exact words) and the independent review' : '');
+    if (plainly.children.length) checks.appendChild(plainly);
     if (coreResponse) {
       checks.append(make('p', 'brain-source-excerpt', `NM response: ${responseText}`),
         make('p', 'hint', 'Selected source passage'));
@@ -374,15 +424,16 @@ window.NmBrainSources = (() => {
     node('brain-source-status').textContent = '';
   }
 
-  async function open(answer, element, elementIndex, sourceIndex, opener, viaBack = false) {
+  // phrase: the words of the answer the source is opened from, where it is linked on them.
+  async function open(answer, element, elementIndex, sourceIndex, opener, viaBack = false, phrase = null) {
     const sources = Array.isArray(element.sources) ? element.sources : [element.source];
     const source = sources[sourceIndex];
     if (!source?.brain || !answer.turn_id || (!answer.matter_id && !answer.chat_id)) return;
     const owner = answer.matter_id
       ? `matters/${encodeURIComponent(answer.matter_id)}`
       : `chats/${encodeURIComponent(answer.chat_id)}`;
-    remember({show: (back) => open(answer, element, elementIndex, sourceIndex, opener, back)}, viaBack);
-    const read = begin(source.label, opener, 'Reading the saved passage…');
+    remember({show: (back) => open(answer, element, elementIndex, sourceIndex, opener, back, phrase)}, viaBack);
+    const read = begin(source.label, opener, 'Reading the saved passage…', kindOf(source));
     const owns = () => active === read && generation === read.generation
       && JSON.stringify(scope()) === read.scope;
     try {
@@ -398,7 +449,7 @@ window.NmBrainSources = (() => {
         + (saved.verification_current === false
           ? ' This historical check predates the current source review.' : '')},
         sourceChoices(answer, element, elementIndex, sourceIndex, opener, owns),
-        saved.authority_inspection, element.text, answer);
+        saved.authority_inspection, element.text, answer, phrase);
     } catch (error) {
       if (owns()) node('brain-source-status').textContent =
         `The saved passage could not be read. ${error.message}`;
@@ -471,13 +522,15 @@ window.NmBrainSources = (() => {
 
   // A link drawn as words of the sentence it stands in, which wrap with it; a button cannot
   // break across lines (the page checked against the design, 18 Oct 2026).
-  function responseLink(answer, element, entry, label) {
+  // phrase: the answer's own words the link sits on, said in the pane as what the source
+  // is used for.
+  function responseLink(answer, element, entry, label, phrase = null) {
     const link = document.createElement('a');
     link.href = '#'; link.className = 'citation-link'; link.textContent = label;
     link.setAttribute('aria-label', `Open saved passage: ${label}`);
     link.addEventListener('click', (event) => {
       event?.preventDefault?.();
-      return open(answer, element, answer.elements.indexOf(element), entry.index, link);
+      return open(answer, element, answer.elements.indexOf(element), entry.index, link, false, phrase);
     });
     return link;
   }
@@ -550,7 +603,7 @@ window.NmBrainSources = (() => {
       for (const anchor of anchors) {
         if (anchor.start < offset) continue;
         host.appendChild(document.createTextNode(text.slice(offset, anchor.start)));
-        host.appendChild(responseLink(answer, element, anchor, anchor.phrase));
+        host.appendChild(responseLink(answer, element, anchor, anchor.phrase, anchor.phrase));
         offset = anchor.end; linked += 1;
       }
       host.appendChild(document.createTextNode(text.slice(offset)));
@@ -631,11 +684,10 @@ window.NmBrainSources = (() => {
   node('brain-source-reader').addEventListener('close', () => {
     if (active && !node('brain-source-reader').open) close();
   });
-  // A pane beside the page has no dialog Escape of its own; Escape closes it unless
-  // the board's own pane, which closes first, holds the focus.
+  // A pane beside the page has no dialog Escape of its own: Escape closes it (on a wide
+  // window it stays beside the answer, saying what it shows).
   document.addEventListener('keydown', (event) => {
     if (event.key !== 'Escape' || event.defaultPrevented || !node('brain-source-reader').open) return;
-    if (node('board-pane')?.contains(document.activeElement)) return;
     event.preventDefault();
     close();
   });

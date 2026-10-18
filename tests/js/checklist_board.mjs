@@ -1,7 +1,9 @@
-// What each dispute needs, on the matter board (owner decisions, 17 Oct 2026): its time
-// limits as code worked them out, how much is in hand, each item under Needed and Would
-// strengthen with its mark, an item's details in the reading pane, and the facts and
-// standing instructions folded below. Offline substitutes for the DOM; not browser QA.
+// What each dispute needs, on the matter board, as the readability design shows it (owner
+// decisions, 17 Oct 2026; built to the design on 18 Oct): the marks' legend once, each
+// dispute a numbered section with its last days and how much is in hand, each item under
+// Needed and Would strengthen with its mark, an item's details in the reading pane, and the
+// facts, instructions and related points folded below. Offline substitutes for the DOM;
+// not browser QA.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
@@ -24,7 +26,7 @@ class Element {
   addEventListener(name, handler) { this.listeners[name] = handler; }
   dispatchEvent(event) { this.dispatched = event.type; }
   focus() { this.focused = true; }
-  click() { this.listeners.click?.(); }
+  click() { return this.listeners.click?.(); }
 }
 const find = (node, test, found = []) => {
   if (test(node)) found.push(node);
@@ -38,31 +40,35 @@ message.value = '';
 let sized = 0;
 const context = vm.createContext({
   document: { createElement: (tag) => new Element(tag) },
-  window: { NmBrainSources: { showContent: (title, content, opener) => shown.push({ title, content, opener }) } },
+  window: { NmBrainSources: {
+    showContent: (title, content, opener, back, kind) => shown.push({ title, content, opener, kind }),
+    open: (...args) => shown.push({ opened: args }) } },
   $: (id) => (id === 'message' ? message : new Element('div')),
   Event: class { constructor(type) { this.type = type; } },
   sizeComposer: () => { sized += 1; },
   stateBlock: (_kind, text) => Object.assign(new Element('p'), { textContent: text }),
-  openBoardPane: () => {}, renderDisputeDetail: () => [],
+  renderDisputeDetail: () => [],
+  state: { turns: [] },
   CERTAINTY: { reported: 'Reported' }, QUESTION_STATUS: { researched: 'researched' },
   factPlace: () => 'From your messages',
 });
 vm.runInContext(between('function renderChatBoard(board) {', '// A DISPUTE IN DETAIL'), context);
-vm.runInContext(between('function timeLimitStanding(rows) {', 'function renderTimeLimits(items) {'), context);
+vm.runInContext(between('function timeLimitStanding(rows) {', '// What is left of a time limit'), context);
 vm.runInContext(between('function fileDate(iso) {', 'function fileAttention('), context);
 
 const at = '2026-10-18T05:00:00+00:00';
 const law = { kind: 'provision', title: 'The Limitation Act, 1963', locator: 'Article 54',
-  words: 'Three years from the date fixed for the performance' };
+  words: 'Three years from the date fixed for the performance', source_id: 'provision:54', held_in: 't1' };
 const item = (id, need, group, status, extra = {}) => ({ id, need, group, status, law, evidence: null,
   asked_at: null, ...extra });
 const board = {
-  state: 'ready', related_points: [], instructions: ['Do not contact the buyer.'],
+  state: 'ready', related_points: [{ point: 'Any other route', why: 'It may be quicker.', dispute_id: null }],
+  instructions: ['Do not contact the buyer.'],
   facts: [{ id: 'f1', fact: 'The plot was sold twice', certainty: 'reported', from: 'advocate' }],
   disputes: [
     { id: 'D1', name: 'Possession of the plot', between: ['Client', 'Later buyer'], questions: [],
       checklist: { name: 'Possession of the plot', answered_at: at, in_hand: 1, time_limits: [
-        { what: 'Last day to file the suit', rows: [['Last day', '10 January 2027 (Sunday)'],
+        { what: 'Last day to file the suit', last_day: '2027-01-10', rows: [['Last day', '10 January 2027 (Sunday)'],
           ['As of', '18 October 2026 (Sunday)'], ['Result', 'Open'], ['Days left', '84']] },
         { what: 'Last day to answer the notice', rows: [['Not assessed', 'the notice date is not given']] }],
       items: [
@@ -70,7 +76,8 @@ const board = {
           { evidence: { from: 'document', document: 'agreement.pdf', page: 'page 1', words: 'agreed to sell',
                         given_at: at } }),
         item('K2', 'Proof the cancellation letter was received', 'needed', 'coming_or_unclear',
-          { evidence: { from: 'message', words: 'I am not sure he received it', given_at: at } }),
+          { why: 'A cancellation must be answered in the suit.', note: 'not sure it arrived',
+            evidence: { from: 'message', words: 'I am not sure he received it', given_at: at } }),
         item('K3', 'The date possession was refused', 'needed', 'not_given', { asked_at: at }),
         item('K4', 'The original receipt', 'would_strengthen', 'not_available',
           { evidence: { from: 'message', words: 'the receipt is lost', given_at: at } })] } },
@@ -78,66 +85,55 @@ const board = {
       checklist: { name: 'Cheating', answered_at: at, in_hand: 0, time_limits: [], items: [] } },
     { id: 'D3', name: 'An earlier dispute', between: [], questions: [{ status: 'researched' }] }],
 };
-// Disputes first (checked against the design, 18 Oct 2026): what the marks mean, once; the
-// disputes, numbered; how NM understood the matter, then the facts and instructions, below.
-const [legend, disputes, lede, facts, instructions] = context.renderChatBoard(board);
-assert.equal(legend.className, 'check-legend');
+
+// Disputes first: the marks' legend once, the disputes, then one fold below.
+const [legend, disputes, fold] = context.renderChatBoard(board);
+assert.equal(legend.className, 'legend');
 assert.equal(legend.attributes['aria-hidden'], 'true', "each item's own words are read out with it");
-assert.deepEqual(legend.children.map((entry) => [entry.className, entry.children.map((part) => part.textContent)]), [
-  ['check-legend-entry check-item--in_hand', ['✓', 'In hand']],
-  ['check-legend-entry check-item--coming_or_unclear', ['◐', 'Coming or unclear']],
-  ['check-legend-entry check-item--not_given', ['○', 'Not yet given']],
-  ['check-legend-entry check-item--not_available', ['✕', 'Not available']]]);
-assert.match(lede.textContent, /As NM understood this matter/);
+assert.deepEqual(legend.children.map((entry) => entry.children.map((part) => [part.className || '', part.textContent])), [
+  [['st st--in_hand', ''], ['', 'In hand']], [['st st--coming_or_unclear', ''], ['', 'Coming or unclear']],
+  [['st st--not_given', ''], ['', 'Not yet given']], [['st st--not_available', ''], ['', 'Not available']]]);
 assert.equal(disputes.attributes['aria-label'], 'Disputes (3)');
 const [first, second, third] = disputes.children;
 
-// The dispute, one line with each last day code worked out, a quiet word where it could not,
-// and how much is in hand, then its items by group with their marks.
+// The dispute, numbered; under its name each last day code worked out ('By', the design's
+// 'File by' being said only of a filing), a quiet word where it could not, and how much is
+// in hand; then its items by group, each with its mark, its need and a note under it.
+assert.equal(first.className, 'dispute');
 assert.equal(first.attributes['aria-label'], 'Possession of the plot');
-const open = find(first, (node) => node.className === 'dispute-open')[0];
-assert.equal(open.textContent, '1 · Possession of the plot');
-const [meta] = find(first, (node) => node.className === 'dispute-meta');
+const [title] = find(first, (node) => node.className === 'dtitle');
+assert.equal(title.textContent, '1 · Possession of the plot');
+const [meta] = find(first, (node) => node.className === 'dmeta');
 assert.deepEqual(meta.children.map((part) => [part.className, part.textContent]), [
-  ['dispute-deadline', 'Last day 10 January 2027 (Sunday)'],
-  ['dispute-deadline not-assessed', 'Last day not worked out'],
-  ['check-count', '1 of 4 in hand']]);
+  ['chip deadline', 'By 10 Jan 2027'], ['chip quiet', 'Last day not worked out'], ['count', '1 of 4 in hand']]);
 assert.equal(meta.children[0].title, 'Last day to file the suit: Open · 84 days left · as of 18 October 2026 (Sunday)');
-assert.deepEqual(find(first, (node) => node.className === 'check-group').map((node) => node.textContent),
+assert.deepEqual(find(first, (node) => node.className === 'group').map((node) => node.textContent),
   ['Needed', 'Would strengthen']);
-const rows = find(first, (node) => /^check-item /.test(node.className || ''));
-assert.deepEqual(rows.map((row) => [row.className, row.children.map((part) => part.textContent)]), [
-  ['check-item check-item--in_hand', ['✓', 'The sale agreement']],
-  ['check-item check-item--coming_or_unclear', ['◐', 'Proof the cancellation letter was received']],
-  ['check-item check-item--not_given', ['○', 'The date possession was refused', 'Asked 18 Oct 2026']],
-  ['check-item check-item--not_available', ['✕', 'The original receipt']]]);
+const rows = find(first, (node) => /^item /.test(node.className || ''));
+assert.deepEqual(rows.map((row) => [row.className, row.children[0].className,
+  row.children[1].children.map((part) => [part.className, part.textContent])]), [
+  ['item item--in_hand', 'st st--in_hand', [['t', 'The sale agreement'], ['sr', ' · In hand']]],
+  ['item item--coming_or_unclear', 'st st--coming_or_unclear',
+    [['t', 'Proof the cancellation letter was received'], ['sub', 'not sure it arrived'], ['sr', ' · Coming or unclear']]],
+  ['item item--not_given', 'st st--not_given',
+    [['t', 'The date possession was refused'], ['sub', 'Asked on 18 Oct'], ['sr', ' · Not yet given · asked 18 Oct 2026']]],
+  ['item item--not_available', 'st st--not_available', [['t', 'The original receipt'], ['sr', ' · Not available']]]]);
 assert.equal(rows[0].children[0].attributes['aria-hidden'], 'true', 'the mark is drawn; the words say it');
-assert.deepEqual(rows.map((row) => row.attributes['aria-label']), [
-  'The sale agreement: In hand. Opens its details.',
-  'Proof the cancellation letter was received: Coming or unclear. Opens its details.',
-  'The date possession was refused: Not yet given · asked 18 Oct 2026. Opens its details.',
-  'The original receipt: Not available. Opens its details.']);
-// A passed or late last day says so beside its date.
-{
-  const passed = structuredClone(board.disputes[0]);
-  passed.checklist.time_limits = [{ what: 'Last day to reply', rows: [['Last day', '1 October 2026 (Thursday)'],
-    ['As of', '18 October 2026 (Sunday)'], ['Result', 'Passed'], ['Days since the last day', '17']] }];
-  const [line] = find(context.renderDisputeCard(passed, board, null), (node) => node.className === 'dispute-meta');
-  assert.equal(line.children[0].textContent, 'Last day 1 October 2026 (Thursday) · Passed');
-}
 
-// An item opens in the reading pane: where it stands, the words that show it, the law words.
+// An item opens in the reading pane: where it stands, why it is needed with its law (which
+// opens in the pane), what the advocate said, and what they can do.
 rows[1].click();
-const { title, content, opener } = shown.pop();
-assert.equal(title, 'Proof the cancellation letter was received');
-assert.equal(opener, rows[1]);
-assert.deepEqual(Array.from(content, (node) => node.textContent), [
-  'Needed · Possession of the plot', '◐ Coming or unclear', 'What you said',
-  'From your message of 18 Oct 2026, in your words', 'I am not sure he received it', 'What the law says',
-  'The Limitation Act, 1963 · Article 54', 'Three years from the date fixed for the performance',
+const opened = shown.pop();
+assert.equal(opened.title, 'Proof the cancellation letter was received');
+assert.equal(opened.kind, 'Needed · Dispute 1');
+assert.equal(opened.opener, rows[1]);
+assert.deepEqual(Array.from(opened.content, (node) => node.textContent), [
+  'Coming or unclear',
+  'Why it is neededA cancellation must be answered in the suit.Article 54, The Limitation Act, 1963',
+  'Where it standsnot sure it arrivedI am not sure he received itFrom your message of 18 Oct 2026, in your words',
   'Tell NM about thisNot available']);
-const [tell, unavailable] = content.at(-1).children;
-assert.equal(tell.className, 'primary check-action');
+const [tell, unavailable] = opened.content.at(-1).children;
+assert.deepEqual([tell.className, unavailable.className], ['act primary', 'act ghost']);
 tell.click();
 assert.equal(message.value, 'About "Proof the cancellation letter was received" (Possession of the plot): ');
 assert.ok(message.focused && sized === 1 && message.dispatched === 'input');
@@ -145,20 +141,54 @@ message.value = '';
 unavailable.click();
 assert.equal(message.value,
   'About "Proof the cancellation letter was received" (Possession of the plot): this is not available.');
+// The law link opens the saved passage where the answer that held it used it; otherwise
+// the words the checklist kept.
+const lawLink = opened.content[1].children.at(-1).children[0];
+assert.equal(lawLink.className, 'cite');
+lawLink.click();
+const lawView = shown.pop();
+assert.deepEqual([lawView.title, lawView.kind], ['The Limitation Act, 1963', 'Held law']);
+assert.deepEqual(Array.from(lawView.content, (node) => node.textContent),
+  ['Article 54', 'Legislative text', 'Three years from the date fixed for the performance']);
+context.state.turns = [{ answer: { turn_id: 't1', elements: [
+  { kind: 'LAW', sources: [{ id: 'other', brain: true }, { id: 'provision:54', brain: true }] }] } }];
+lawLink.click();
+assert.deepEqual(Array.from(shown.pop().opened).slice(2, 4), [0, 1]);
+
+// In hand: what shows it, and nothing to do. Not given: when NM asked. Not available: what
+// the advocate said, and only "Tell NM about this".
 rows[0].click();
-const held = shown.pop().content;
-assert.deepEqual([held[2].textContent, held[3].textContent], ['What shows it', 'From agreement.pdf, page 1']);
-assert.deepEqual(held.at(-1).children.map((button) => button.textContent), ['Tell NM about this'],
-  'what is in hand is not offered as unavailable');
+const held = Array.from(shown.pop().content, (node) => node.textContent);
+assert.deepEqual(held, ['In hand', 'Why it is neededThree years from the date fixed for the performance'
+  + 'Article 54, The Limitation Act, 1963', 'What shows itagreed to sellFrom agreement.pdf, page 1']);
+rows[2].click();
+assert.equal(shown.pop().content[2].textContent,
+  'Where it standsNot in your messages or documents yet. NM asked for it on 18 Oct 2026.');
 rows[3].click();
-assert.deepEqual(shown.pop().content.at(-1).children.map((button) => button.textContent), ['Tell NM about this']);
+const gone = shown.pop().content;
+assert.equal(gone[2].children[0].textContent, 'What you said');
+assert.deepEqual(gone.at(-1).children.map((button) => button.textContent), ['Tell NM about this']);
 
 // An answered dispute with no law-backed item says so; an earlier board is as it was.
 assert.match(second.textContent, /NM found nothing this dispute needs in the law it holds/);
 assert.match(third.textContent, /1 legal question · 1 researched/);
+assert.equal(find(third, (node) => node.className === 'dtitle')[0].textContent, '3 · An earlier dispute');
 
-// The facts and standing instructions fold below.
-assert.equal(facts.tag, 'details');
-assert.equal(facts.children[0].textContent, 'Facts, as you gave them (1)');
-assert.equal(instructions.children[0].textContent, 'Your standing instructions (1)');
+// The facts, standing instructions and related points fold below, with what the board is.
+assert.equal(fold.tag, 'details');
+assert.equal(fold.children[0].textContent, 'Facts as you gave them (1) · Standing instructions (1) · Related points (1)');
+assert.match(fold.textContent, /As NM understood this matter/);
+assert.match(fold.textContent, /Do not contact the buyer\./);
+assert.match(fold.textContent, /Any other route — It may be quicker\./);
+
+// A passed last day says so beside its date; a single dispute is not numbered.
+{
+  const passed = structuredClone(board.disputes[0]);
+  passed.checklist.time_limits = [{ what: 'Last day to reply', last_day: '2026-10-01', rows: [
+    ['Last day', '1 October 2026 (Thursday)'], ['As of', '18 October 2026 (Sunday)'], ['Result', 'Passed'],
+    ['Days since the last day', '17']] }];
+  const card = context.renderDisputeCard(passed, board, null);
+  assert.equal(find(card, (node) => node.className === 'dmeta')[0].children[0].textContent, 'By 1 Oct 2026 · Passed');
+  assert.equal(find(card, (node) => node.className === 'dtitle')[0].textContent, 'Possession of the plot');
+}
 console.log('checklist board: ok');

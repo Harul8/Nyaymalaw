@@ -13,14 +13,15 @@ Feature: F-B-02 The live matter board beside the conversation
     And while NM works on a message the board says what NM is doing
     And a Board that cannot be read says so rather than showing an empty one
 
-  Scenario: A dispute opens in the board's own pane
+  Scenario: Each dispute shows what it needs, and a dispute or an item opens in the reading pane
     Given the page script
-    Then choosing a dispute opens its details in the board's own pane, which closes on Close or Escape
+    Then each dispute shows its last days, how much is in hand and its items under Needed and Would strengthen with their marks
+    And choosing a dispute or an item opens its details in the reading pane on the right
 
-  Scenario: The documents and research notes open from the file icon beside the board's title
+  Scenario: The files and research notes open from the Files button beside the board's title
     Given the page
     And the page script
-    Then the file icon beside the board's title lists the documents and the research notes
+    Then the Files button beside the board's title lists the files and the research notes in the reading pane
     And a document opens in the reading pane on the right
 
   Scenario: On a phone the board is behind a Matter board button

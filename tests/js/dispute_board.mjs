@@ -19,7 +19,8 @@ const readerBodyStyle = css.match(/\.dispute-reader-body\s*\{([^}]+)\}/)?.[1];
 assert.match(readerStyle, /overflow:\s*hidden/);
 assert.match(readerBodyStyle, /overflow-y:\s*auto/);
 const sourceMarkup = html.match(/<dialog id="brain-source-reader"[\s\S]*?<\/dialog>/)?.[0];
-assert.match(sourceMarkup, /<header[^>]*>[\s\S]*?id="brain-source-title"[\s\S]*?id="brain-source-close"[\s\S]*?<\/header>[\s\S]*?<div id="brain-source-body"/);
+// The design's pane (18 Oct 2026): Back, its name and Close in a bar, then what is open.
+assert.match(sourceMarkup, /<header[^>]*>[\s\S]*?id="brain-source-back"[\s\S]*?id="brain-source-close"[\s\S]*?<\/header>[\s\S]*?id="brain-source-kind"[\s\S]*?id="brain-source-title"[\s\S]*?<div id="brain-source-body"/);
 const sourceStyle = css.match(/#source-reader\s*\{([^}]+)\}/)?.[1];
 for (const style of [readerStyle, sourceStyle]) {
   assert.match(style, /position:\s*fixed/);
@@ -338,7 +339,7 @@ for (let index = 0; index < requirementList.children.length; index += 1) {
   assert.equal(document.getElementById('brain-source-title').textContent, source.title);
   // The passage first, the checks folded (17 Oct 2026): found by its role, not its place.
   assert.equal(document.getElementById('brain-source-body').children
-    .find((child) => child.className === 'brain-source-text').textContent, source.text);
+    .find((child) => String(child.className).split(' ').includes('brain-source-text')).textContent, source.text);
   assert.ok(document.getElementById('brain-source-body').textContent.includes(source.verification.support_excerpt));
   if (source.verification.scope_excerpt) {
     assert.ok(document.getElementById('brain-source-body').textContent.includes(source.verification.scope_excerpt));

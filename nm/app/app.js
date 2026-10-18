@@ -472,7 +472,7 @@ function clearPrivileged() {
     .forEach((id) => { const el = $(id); if (el) el.textContent = '—'; });
   closeFilesMenu();
   $('matter-files').hidden = true;
-  closeBoardPane(false);
+  window.NmBrainSources.close(false);
   $('board-status').hidden = true;
   $('board-status').textContent = '';
   const composer = $('message');
@@ -823,7 +823,7 @@ function setWorkView(view) {
 // paint, because the generation it holds is no longer current.
 function closeOpenMatter() {
   closeDisputeReader(false);
-  closeBoardPane(false);
+  window.NmBrainSources.close(false);
   state.railGeneration += 1;
   state.boardGeneration = (state.boardGeneration || 0) + 1;
   state.matterId = null;
@@ -2423,12 +2423,14 @@ function renderTurn(entry) {
       const sent = document.createElement('ul');
       sent.className = 'brief-documents';
       sent.setAttribute('aria-label', 'Documents sent with this message');
+      // Each by its name (the design of 17 Oct 2026), with a note only where something
+      // was not read.
       for (const item of entry.documents) {
         const li = document.createElement('li');
-        const unread = item.pages_unread ? ` · ${item.pages_unread} not read` : '';
-        li.textContent = item.recording
-          ? `${item.name} · recording ${item.pages_read ? 'transcribed' : 'not transcribed'}`
-          : `${item.name} · ${item.pages_read} page${item.pages_read === 1 ? '' : 's'} read${unread}`;
+        const unread = item.pages_unread ? ` · ${item.pages_unread} page${item.pages_unread === 1 ? '' : 's'} not read`
+          : '';
+        li.textContent = item.recording ? `${item.name}${item.pages_read ? '' : ' · not transcribed'}`
+          : `${item.name}${unread}`;
         sent.appendChild(li);
       }
       b.appendChild(sent);
@@ -2755,6 +2757,26 @@ function renderTurn(entry) {
       into.appendChild(renderTimeLimits(el.items));
       return;
     }
+    // WHAT I NEED FROM YOU (the design of 17 Oct 2026; rendering v14): the questions to the
+    // advocate, together at the end of the answer, each keeping its own links.
+    if (el.kind === 'NEEDS' && Array.isArray(el.items)) {
+      const box = document.createElement('section');
+      box.className = 'need';
+      box.setAttribute('aria-label', el.text);
+      const title = document.createElement('h3');
+      title.className = 'need-title';
+      title.textContent = el.text;
+      const asks = document.createElement('ul');
+      asks.className = 'need-list';
+      for (const item of el.items) {
+        const ask = document.createElement('li');
+        renderElement(ask, item);
+        asks.appendChild(ask);
+      }
+      box.append(title, asks);
+      into.appendChild(box);
+      return;
+    }
     const d = document.createElement('div');
     // A loud signal is never collapsed, whatever the server says about
     // collapsibility -- the client does not get to quiet it.
@@ -2912,46 +2934,11 @@ function showConversationFromStart() {
   $('jump-latest').hidden = t.scrollHeight <= t.clientHeight;
 }
 
-// THE MATTER BOARD ON THE LEFT (owner decisions, 16 Oct 2026). It is read from the
-// conversation's saved understanding, read again after every answer, and while NM
-// works it says what NM is doing. A dispute opens in the board's own pane, over the
-// board and reaching a little to the right; so do the documents and research notes,
-// from the file icon beside the board's title.
-let boardPaneTrigger = null;
-
-function closeBoardPane(restoreFocus = true) {
-  state.boardPaneGeneration = (state.boardPaneGeneration || 0) + 1;
-  const trigger = boardPaneTrigger;
-  boardPaneTrigger = null;
-  $('board-pane').hidden = true;
-  $('board-pane-title').textContent = '';
-  $('board-pane-body').replaceChildren();
-  $('board-files').setAttribute('aria-expanded', 'false');
-  for (const card of $('matter-board-body').querySelectorAll('[aria-pressed="true"]')) {
-    card.setAttribute('aria-pressed', 'false');
-  }
-  if (restoreFocus && trigger && trigger.isConnected) trigger.focus();
-}
-
-function openBoardPane(title, content, trigger) {
-  closeBoardPane(false);
-  boardPaneTrigger = trigger || null;
-  $('board-pane-title').textContent = title;
-  $('board-pane-body').replaceChildren(...content);
-  $('board-pane-body').scrollTop = 0;
-  $('board-pane').hidden = false;
-  $('board-pane-close').focus();
-  return state.boardPaneGeneration;
-}
-
-$('board-pane-close').addEventListener('click', () => closeBoardPane());
-document.addEventListener('keydown', (event) => {
-  if (event.key !== 'Escape' || event.defaultPrevented || $('board-pane').hidden) return;
-  // The reading pane on the right closes first unless the board's pane has the focus.
-  if (!$('board-pane').contains(document.activeElement) && $('brain-source-reader').open) return;
-  event.preventDefault();
-  closeBoardPane();
-});
+// THE MATTER BOARD ON THE LEFT (owner decisions, 16 Oct 2026), laid out as the readability
+// design shows it (owner, 18 Oct 2026: "exactly the way your artifact has presented"). It is
+// read from the conversation's saved understanding, read again after every answer, and while
+// NM works it says what NM is doing. A dispute, a checklist item and the files open in the
+// reading pane on the right, beside the answer.
 
 // What NM is doing on this conversation's message, shown on its board.
 function syncBoardStatus() {
@@ -2993,36 +2980,31 @@ async function loadChatBoard() {
   host.replaceChildren(...renderChatBoard(board));
 }
 
-// THE DOCUMENTS AND RESEARCH NOTES, from the file icon beside the board's title
-// (owner, 16 Oct 2026): listed in the board's pane; a document opens in the
-// reading pane on the right, page by page as it was read.
-async function openBoardFiles() {
-  if (!$('board-pane').hidden && $('board-files').getAttribute('aria-expanded') === 'true') {
-    closeBoardPane();
-    return;
-  }
+// THE FILES (owner decisions 4 and 5, 17 Oct 2026): the Files button beside the board's
+// title opens, in the reading pane, the files sent in this conversation - each name opens the
+// file as sent in a new tab, "Read here" what NM read - and each answer as a research note.
+function openBoardFiles() {
   const chatId = activeIntent && activeIntent.chatId;
-  const part = (title) => {
-    const section = document.createElement('section');
-    section.className = 'detail-section';
-    const heading = document.createElement('h3');
-    heading.className = 'detail-h';
-    heading.textContent = title;
-    const body = document.createElement('div');
-    section.append(heading, body);
-    return [section, body];
+  const make = (tag, className, text) => {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
   };
-  const [documents, documentsBody] = part('Documents');
-  const [notes, notesBody] = part('Research notes');
-  const generation = openBoardPane('Documents and research notes', [documents, notes], $('board-files'));
-  $('board-files').setAttribute('aria-expanded', 'true');
+  const files = make('div', 'reader-files');
+  const note = make('p', 'reader-note', 'The name opens the file as sent in a new tab. “Read here” shows what NM read.');
+  const notes = make('section', 'detail-section');
+  const notesBody = make('div');
+  notes.append(make('h3', 'detail-h', 'Research notes'), notesBody);
+  window.NmBrainSources.showContent('Files in this matter', [files, note, notes], $('board-files'), false,
+    'Matter files');
   renderChatNotes(notesBody);
   if (!chatId) {
-    documentsBody.replaceChildren(stateBlock('empty', 'Documents appear here once this conversation is saved. '
+    files.replaceChildren(stateBlock('empty', 'Files appear here once this conversation is saved. '
       + 'Attach them with the + under your message.'));
-    return;
+    return Promise.resolve();
   }
-  await loadChatDocuments(documentsBody, generation);
+  return loadChatDocuments(files);
 }
 
 $('board-files').addEventListener('click', () => openBoardFiles());
@@ -3058,22 +3040,24 @@ function renderChatNotes(host) {
   }));
 }
 
-async function loadChatDocuments(host, paneGeneration) {
+async function loadChatDocuments(host) {
   const chatId = activeIntent && activeIntent.chatId;
   if (!chatId) return;
-  host.replaceChildren(stateBlock('building', 'Reading the documents sent in this matter…'));
+  host.replaceChildren(stateBlock('building', 'Reading the files sent in this matter…'));
   let listing;
   try {
     listing = await api(`/api/chats/${encodeURIComponent(chatId)}/documents`);
   } catch (error) {
-    if (paneGeneration !== state.boardPaneGeneration) return;
-    host.replaceChildren(stateBlock('unbuildable', `The documents could not be read: ${error.message}. `
+    if (!host.isConnected) return;
+    host.replaceChildren(stateBlock('unbuildable', `The files could not be read: ${error.message}. `
       + 'This is a failure to read, not an empty list.'));
     return;
   }
-  if (paneGeneration !== state.boardPaneGeneration || !activeIntent || activeIntent.chatId !== chatId) return;
+  // Something else opened in the pane meanwhile: this list is no longer shown.
+  if (!host.isConnected || !activeIntent || activeIntent.chatId !== chatId) return;
   host.replaceChildren(...renderChatDocuments(listing, (document_, turn, opener) =>
-    window.NmBrainSources.showContent(document_.name, renderDocumentPages(document_, turn), opener)));
+    window.NmBrainSources.showContent(document_.name, renderDocumentPages(document_, turn), opener, false,
+      document_.recording ? 'Voice note you sent' : 'Document you sent')));
 }
 
 // THE MATTER'S FILES (owner decision 4, 17 Oct 2026): a plain list. Each name opens the
@@ -3086,6 +3070,19 @@ function fileDate(iso) {
   const day = typeof iso === 'string' ? new Date(iso) : null;
   return day && !Number.isNaN(day.getTime())
     ? day.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+}
+
+// A calendar day code saved ('2029-03-10'), as the design writes it: '10 Mar 2029'.
+function dayDate(iso) {
+  const day = typeof iso === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(iso) ? new Date(`${iso}T00:00:00Z`) : null;
+  return day && !Number.isNaN(day.getTime())
+    ? day.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) : '';
+}
+
+// The day and month of a moment saved, '18 Oct'.
+function dayMonth(iso) {
+  const day = typeof iso === 'string' ? new Date(iso) : null;
+  return day && !Number.isNaN(day.getTime()) ? day.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : '';
 }
 
 function fileAttention(document_) {
@@ -3130,12 +3127,14 @@ function renderChatDocuments(listing, open) {
       name.rel = 'noopener';
       if (format === 'docx') name.setAttribute('aria-label', `${document_.name}, opens in Word`);
       const byAi = document_.pages.some((page) => page.read_by === 'ai');
-      const meta = [kind, file ? fileSize(file.size) : '', file ? fileDate(file.received_at) : '',
+      const when = file ? fileDate(file.received_at) : '';
+      const meta = [kind, file ? fileSize(file.size) : '', when ? `sent ${when}` : '',
+        format === 'docx' ? 'opens in Word' : '',
         byAi ? (document_.recording ? 'transcribed by AI' : 'read by AI') : ''].filter(Boolean).join(' · ');
       body.append(name, make('div', 'file-meta', meta));
       const attention = fileAttention(document_);
       if (attention) body.appendChild(make('div', 'file-attention', attention));
-      const read = make('button', 'ghost file-read', 'Read here');
+      const read = make('button', 'file-read', 'Read here');
       read.type = 'button';
       read.setAttribute('aria-label', `Read here: ${document_.name}`);
       read.addEventListener('click', () => open(document_, turn, read));
@@ -3157,12 +3156,17 @@ function renderDocumentPages(document_, turn) {
     if (text !== undefined) node.textContent = text;
     return node;
   };
+  const entries = [...document_.pages.map((page) => ({ number: page.number, page })),
+    ...document_.unread.map((unread) => ({ number: unread.number, unread }))]
+    .sort((left, right) => left.number - right.number);
   const preview = turn.message.length > 140 ? `${turn.message.slice(0, 140)}…` : turn.message;
+  const where = make('p', 'source-where', document_.recording ? 'As NM transcribed it'
+    : `${entries.length} page${entries.length === 1 ? '' : 's'} · as NM read it`);
   const original = make('a', 'file-original', document_.recording ? 'Open the recording as sent' : 'Open the file as sent');
   original.href = `/api/documents/${encodeURIComponent(document_.document_ref)}/original`;
   original.target = '_blank';
   original.rel = 'noopener';
-  const out = [original, make('p', 'hint', `Sent with: “${preview}”`)];
+  const out = [where, original, make('p', 'hint', `Sent with: “${preview}”`)];
   if (document_.recording) {
     const player = document.createElement('audio');
     player.controls = true;
@@ -3172,10 +3176,7 @@ function renderDocumentPages(document_, turn) {
     player.setAttribute('aria-label', `Play ${document_.name}`);
     out.push(player);
   }
-  const entries = [...document_.pages.map((page) => ({ number: page.number, page })),
-    ...document_.unread.map((unread) => ({ number: unread.number, unread }))]
-    .sort((left, right) => left.number - right.number);
-  const flow = make('div', 'document-flow');
+  const flow = make('div', 'document-flow whole');
   for (const { number, page, unread } of entries) {
     let label = document_.recording ? 'Transcript' : `Page ${number}`;
     if (page && page.read_by === 'ai') {
@@ -3209,9 +3210,10 @@ function factPlace(fact) {
   return 'Where these words were given was not found';
 }
 
-// The board as NM understood the matter from the advocate's own words. Nothing on
-// it is presented as established: facts carry the certainty they were given with.
-// Each dispute is a short card; its details open in the board's own pane.
+// The board as NM understood the matter from the advocate's own words. Nothing on it is
+// presented as established: facts carry the certainty they were given with. The disputes
+// come first, under the marks' legend; how NM understood the matter, the facts, the
+// standing instructions and the related points fold below (the design of 17 Oct 2026).
 function renderChatBoard(board) {
   const make = (tag, className, text) => {
     const node = document.createElement(tag);
@@ -3229,63 +3231,65 @@ function renderChatBoard(board) {
   }
   // The understanding's own summary is not shown: it is written before research and
   // can state legal conclusions no check has seen (16 Oct 2026).
-  // DISPUTES FIRST (owner decisions, 17 Oct 2026; the page checked against the design on
-  // 18 Oct): what the marks mean is said once above them, and how NM understood the
-  // matter goes below, with the facts and standing instructions.
   const out = [];
   if (board.disputes.some((dispute) => dispute.checklist && dispute.checklist.items.length)) {
     out.push(renderCheckLegend());
   }
-  const disputes = make('section', 'board-section');
+  const disputes = make('section', 'board-disputes');
   disputes.setAttribute('aria-label', board.disputes.length === 1 ? 'Dispute' : `Disputes (${board.disputes.length})`);
   board.disputes.forEach((dispute, index) => disputes.appendChild(
     renderDisputeCard(dispute, board, board.disputes.length > 1 ? index + 1 : null)));
   out.push(disputes);
-  if (board.related_points.length) {
-    const related = make('section', 'board-section');
-    related.appendChild(make('h3', 'board-h', 'Related points for your decision'));
-    related.appendChild(list(board.related_points.map((r) => (r.why ? `${r.point} — ${r.why}` : r.point)), 'board-list'));
-    out.push(related);
-  }
-  out.push(make('p', 'board-lede', 'As NM understood this matter from your messages and the documents '
+  const counted = [[board.facts.length, 'Facts as you gave them'], [board.instructions.length, 'Standing instructions'],
+    [board.related_points.length, 'Related points']].filter(([count]) => count)
+    .map(([count, title]) => `${title} (${count})`);
+  const fold = make('details', 'folded');
+  fold.appendChild(make('summary', '', counted.join(' · ') || 'How NM understood this matter'));
+  fold.appendChild(make('p', 'board-lede', 'As NM understood this matter from your messages and the documents '
     + 'you sent. Facts are as you or a document gave them, not proved.'));
-  // The facts and standing instructions fold below the disputes (17 Oct 2026).
-  const fold = (title, ...content) => {
-    const details = make('details', 'board-fold');
-    details.appendChild(make('summary', 'board-h', title));
-    details.append(...content);
-    return details;
-  };
   if (board.facts.length) {
-    const rows = board.facts.map((fact) => {
+    fold.appendChild(make('h3', 'board-h', 'Facts, as you gave them'));
+    for (const fact of board.facts) {
       const row = make('p', 'board-fact');
       row.appendChild(make('span', `board-certainty ${fact.certainty}`, CERTAINTY[fact.certainty] || fact.certainty));
       row.appendChild(make('span', '', ` ${fact.fact}`));
       if (fact.from === 'document') row.appendChild(make('span', 'board-status', ` · ${factPlace(fact)}`));
-      return row;
-    });
-    out.push(fold(`Facts, as you gave them (${board.facts.length})`, ...rows));
+      fold.appendChild(row);
+    }
   }
   if (board.instructions.length) {
-    out.push(fold(`Your standing instructions (${board.instructions.length})`, list(board.instructions, 'board-list')));
+    fold.appendChild(make('h3', 'board-h', 'Your standing instructions'));
+    fold.appendChild(list(board.instructions, 'board-list'));
   }
+  if (board.related_points.length) {
+    fold.appendChild(make('h3', 'board-h', 'Related points for your decision'));
+    fold.appendChild(list(board.related_points.map((r) => (r.why ? `${r.point} — ${r.why}` : r.point)), 'board-list'));
+  }
+  out.push(fold);
   return out;
 }
 
-// WHAT EACH DISPUTE NEEDS (owner decisions, 17 Oct 2026): the dispute, its time limits as
-// code worked them out, how much is in hand, and under Needed and Would strengthen each
-// item the law it holds requires, with its mark. The marks are shape, colour and words; the
-// server's saved checklist decides every one, and nothing here can set one.
+// WHAT EACH DISPUTE NEEDS (owner decisions, 17 Oct 2026): the dispute, its last days as code
+// worked them out, how much is in hand, and under Needed and Would strengthen each item the
+// law it holds requires, with its mark. The marks are shape, colour and words; the server's
+// saved checklist decides every one, and nothing here can set one.
 const CHECK_MARKS = {
-  in_hand: { mark: '\u2713', label: 'In hand' },
-  coming_or_unclear: { mark: '\u25D0', label: 'Coming or unclear' },
-  not_given: { mark: '\u25CB', label: 'Not yet given' },
-  not_available: { mark: '\u2715', label: 'Not available' },
+  in_hand: { label: 'In hand' },
+  coming_or_unclear: { label: 'Coming or unclear' },
+  not_given: { label: 'Not yet given' },
+  not_available: { label: 'Not available' },
 };
 const CHECK_GROUPS = [['needed', 'Needed'], ['would_strengthen', 'Would strengthen']];
 
-// What the marks mean, said once above the disputes; each item's own words are read out
-// with it (owner decision 1, 17 Oct 2026).
+// A mark drawn by shape and colour; its words are read out with the item it marks.
+function checkMark(status) {
+  const mark = document.createElement('span');
+  mark.className = `st st--${CHECK_MARKS[status] ? status : 'not_given'}`;
+  mark.setAttribute('aria-hidden', 'true');
+  return mark;
+}
+
+// What the marks mean, said once above the disputes.
 function renderCheckLegend() {
   const make = (tag, className, text) => {
     const node = document.createElement(tag);
@@ -3293,14 +3297,41 @@ function renderCheckLegend() {
     if (text !== undefined) node.textContent = text;
     return node;
   };
-  const legend = make('p', 'check-legend');
+  const legend = make('p', 'legend');
   legend.setAttribute('aria-hidden', 'true');
-  for (const [status, { mark, label }] of Object.entries(CHECK_MARKS)) {
-    const entry = make('span', `check-legend-entry check-item--${status}`);
-    entry.append(make('span', 'check-mark', mark), make('span', '', label));
+  for (const [status, { label }] of Object.entries(CHECK_MARKS)) {
+    const entry = make('span', 'legend-entry');
+    entry.append(checkMark(status), make('span', '', label));
     legend.appendChild(entry);
   }
   return legend;
+}
+
+// Each last day code worked out, as a chip - 'By 10 Mar 2029', with 'Passed' or 'Late' where
+// so (the design's 'File by' is said only of a filing, and not every time limit is one) -
+// and a quiet word for those it could not work out.
+function deadlineChips(limits) {
+  const make = (tag, className, text) => {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  };
+  const chips = [];
+  let unworked = 0;
+  for (const limit of limits || []) {
+    const rows = new Map(limit.rows || []);
+    if (!rows.has('Last day')) { unworked += 1; continue; }
+    const result = rows.get('Result');
+    const chip = make('span', 'chip deadline',
+      `By ${dayDate(limit.last_day) || rows.get('Last day')}${result && result !== 'Open' ? ` · ${result}` : ''}`);
+    chip.title = `${limit.what}: ${timeLimitStanding(rows)}`;
+    chips.push(chip);
+  }
+  if (unworked) {
+    chips.push(make('span', 'chip quiet', unworked === 1 ? 'Last day not worked out' : `${unworked} last days not worked out`));
+  }
+  return chips;
 }
 
 function renderDisputeCard(dispute, board, number = null) {
@@ -3310,86 +3341,60 @@ function renderDisputeCard(dispute, board, number = null) {
     if (text !== undefined) node.textContent = text;
     return node;
   };
-  const card = make('section', 'board-card dispute-card');
-  card.setAttribute('aria-label', dispute.name);
-  const open = make('button', 'dispute-open');
-  open.type = 'button';
-  open.setAttribute('aria-pressed', 'false');
-  open.appendChild(make('span', 'board-dispute', number ? `${number} · ${dispute.name}` : dispute.name));
-  open.addEventListener('click', () => {
-    openBoardPane(dispute.name, renderDisputeDetail(dispute, board), open);
-    open.setAttribute('aria-pressed', 'true');
-  });
-  card.appendChild(open);
-  if (dispute.between.length) card.appendChild(make('span', 'board-meta', dispute.between.join(' · ')));
+  const section = make('section', 'dispute');
+  section.setAttribute('aria-label', dispute.name);
+  const title = make('button', 'dtitle', number ? `${number} · ${dispute.name}` : dispute.name);
+  title.type = 'button';
+  title.addEventListener('click', () => window.NmBrainSources.showContent(dispute.name,
+    renderDisputeDetail(dispute, board), title, false, number ? `Dispute ${number}` : 'Dispute'));
+  section.appendChild(title);
   const listed = dispute.checklist;
-  if (listed) {
-    // One line under the name (owner decisions, 17 Oct 2026): each last day code worked
-    // out, a quiet word where it could not, and how much is in hand. Each time limit's
-    // full standing is in the dispute's details and in the answer's table.
-    const meta = make('p', 'dispute-meta');
-    let unworked = 0;
-    for (const limit of listed.time_limits) {
-      const rows = new Map(limit.rows || []);
-      if (!rows.has('Last day')) { unworked += 1; continue; }
-      const result = rows.get('Result');
-      const chip = make('span', 'dispute-deadline',
-        `Last day ${rows.get('Last day')}${result && result !== 'Open' ? ` · ${result}` : ''}`);
-      chip.title = `${limit.what}: ${timeLimitStanding(rows)}`;
-      meta.appendChild(chip);
-    }
-    if (unworked) {
-      meta.appendChild(make('span', 'dispute-deadline not-assessed',
-        unworked === 1 ? 'Last day not worked out' : `${unworked} last days not worked out`));
-    }
-    if (listed.items.length) {
-      meta.appendChild(make('span', 'check-count', `${listed.in_hand} of ${listed.items.length} in hand`));
-    }
-    if (meta.children.length) card.appendChild(meta);
-  }
   if (!listed) {
-    // An earlier conversation's board, before checklists, is as it was.
-    if (dispute.why_it_matters) card.appendChild(make('span', 'board-why', dispute.why_it_matters));
+    // An earlier conversation's board, before checklists, says what it said then.
+    if (dispute.why_it_matters) section.appendChild(make('p', 'board-why', dispute.why_it_matters));
     const counts = {};
     for (const question of dispute.questions) counts[question.status] = (counts[question.status] || 0) + 1;
     const done = Object.entries(counts)
       .map(([status, count]) => `${count} ${QUESTION_STATUS[status] || status}`).join(' · ');
-    card.appendChild(make('span', 'board-status', `${dispute.questions.length} legal question`
+    section.appendChild(make('p', 'dmeta', `${dispute.questions.length} legal question`
       + `${dispute.questions.length === 1 ? '' : 's'}${done ? ` · ${done}` : ''}`));
-    return card;
+    return section;
   }
+  const meta = make('p', 'dmeta');
+  meta.append(...deadlineChips(listed.time_limits));
+  if (listed.items.length) meta.appendChild(make('span', 'count', `${listed.in_hand} of ${listed.items.length} in hand`));
+  if (meta.children.length) section.appendChild(meta);
   if (!listed.items.length) {
-    card.appendChild(make('p', 'check-none', 'NM found nothing this dispute needs in the law it holds. '
+    section.appendChild(make('p', 'check-none', 'NM found nothing this dispute needs in the law it holds. '
       + 'That is what this research returned, not a finding that the law requires nothing.'));
-    return card;
+    return section;
   }
-  for (const [group, title] of CHECK_GROUPS) {
+  const place = number ? `Dispute ${number}` : dispute.name;
+  for (const [group, groupTitle] of CHECK_GROUPS) {
     const items = listed.items.filter((item) => item.group === group);
     if (!items.length) continue;
-    card.appendChild(make('p', 'check-group', title));
-    const ul = make('ul', 'check-list');
+    section.appendChild(make('p', 'group', groupTitle));
+    const ul = make('ul', 'checklist');
     for (const item of items) {
-      const mark = CHECK_MARKS[item.status] || CHECK_MARKS.not_given;
       const li = make('li');
-      const row = make('button', `check-item check-item--${item.status}`);
+      const row = make('button', `item item--${item.status}`);
       row.type = 'button';
-      const glyph = make('span', 'check-mark', mark.mark);
-      glyph.setAttribute('aria-hidden', 'true');
-      row.append(glyph, make('span', 'check-need', item.need));
-      // The mark says where an item stands, the legend what each mark means, and the
-      // words are read out with the item; when NM asked is shown (17 Oct 2026).
-      if (item.status === 'not_given' && item.asked_at) {
-        row.appendChild(make('span', 'check-state', `Asked ${fileDate(item.asked_at)}`));
-      }
-      row.setAttribute('aria-label', `${item.need}: ${checkState(item)}. Opens its details.`);
+      const words = make('span', 'item-words');
+      words.appendChild(make('span', 't', item.need));
+      // Under the need, when NM asked for it, or the writer's few words on where it stands.
+      const sub = item.status === 'not_given' ? (item.asked_at ? `Asked on ${dayMonth(item.asked_at)}` : '')
+        : item.status === 'in_hand' ? '' : (item.note || '');
+      if (sub) words.appendChild(make('span', 'sub', sub));
+      words.appendChild(make('span', 'sr', ` · ${checkState(item)}`));
+      row.append(checkMark(item.status), words);
       row.addEventListener('click', () => window.NmBrainSources.showContent(item.need,
-        renderChecklistItem(item, dispute), row));
+        renderChecklistItem(item, dispute), row, false, `${groupTitle} · ${place}`));
       li.appendChild(row);
       ul.appendChild(li);
     }
-    card.appendChild(ul);
+    section.appendChild(ul);
   }
-  return card;
+  return section;
 }
 
 function checkState(item) {
@@ -3397,9 +3402,10 @@ function checkState(item) {
   return item.status === 'not_given' && item.asked_at ? `${mark.label} · asked ${fileDate(item.asked_at)}` : mark.label;
 }
 
-// An item opens in the reading pane on the right (owner decision 2, 17 Oct 2026): what is
-// needed, where it stands with the words that show it, the law words that require it, and
-// "Tell NM about this", which puts a start in the message box.
+// An item in the reading pane (owner decision 2, 17 Oct 2026; the design of that day): where
+// it stands, why it is needed with the law that requires it (which opens in the pane), what
+// shows it or what the advocate said, and what they can do - tell NM about it, or say it
+// cannot be had - each putting a start in the message box.
 function renderChecklistItem(item, dispute) {
   const make = (tag, className, text) => {
     const node = document.createElement(tag);
@@ -3407,54 +3413,94 @@ function renderChecklistItem(item, dispute) {
     if (text !== undefined) node.textContent = text;
     return node;
   };
-  const mark = CHECK_MARKS[item.status] || CHECK_MARKS.not_given;
-  const out = [make('p', 'source-where', `${item.group === 'needed' ? 'Needed' : 'Would strengthen'} · ${dispute.name}`)];
-  const state = make('p', `check-detail-state check-item--${item.status}`);
-  const glyph = make('span', 'check-mark', mark.mark);
-  glyph.setAttribute('aria-hidden', 'true');
-  state.append(glyph, make('span', '', ` ${checkState(item)}`));
-  out.push(state);
+  const block = (title, ...content) => {
+    const section = make('section', 'req-block');
+    section.appendChild(make('h4', '', title));
+    section.append(...content);
+    return section;
+  };
+  const status = make('p', `req-status item--${item.status}`);
+  status.append(checkMark(item.status), make('span', '', checkState(item)));
+  const out = [status];
+  const law = item.law || {};
+  const lawLink = make('button', 'cite', [law.locator, law.title].filter(Boolean).join(', ') || 'The law that requires it');
+  lawLink.type = 'button';
+  lawLink.addEventListener('click', () => openLaw(law, lawLink));
+  const cite = make('p', 'req-law');
+  cite.appendChild(lawLink);
+  // Before writer v9 an item gave no reason of its own: the law's words say why.
+  out.push(block('Why it is needed', item.why ? make('p', '', item.why) : make('blockquote', 'quote', law.words || ''),
+    cite));
+  const stands = [];
+  if (item.status === 'not_given') {
+    stands.push(make('p', '', `Not in your messages or documents yet.${item.asked_at
+      ? ` NM asked for it on ${fileDate(item.asked_at)}.` : ''}`));
+  } else if (item.note && item.status !== 'in_hand') {
+    stands.push(make('p', '', item.note));
+  }
   const evidence = item.evidence;
   if (evidence) {
     const where = evidence.from === 'document' ? `From ${evidence.document}, ${evidence.page}`
       : `From your message${evidence.given_at ? ` of ${fileDate(evidence.given_at)}` : ''}`;
-    out.push(make('h3', 'detail-h', item.status === 'in_hand' ? 'What shows it' : 'What you said'),
-      make('p', 'board-meta', item.status === 'in_hand' ? where : `${where}, in your words`),
-      make('blockquote', 'detail-words', evidence.words));
+    stands.push(make('blockquote', 'quote', evidence.words),
+      make('p', 'source-where', item.status === 'in_hand' ? where : `${where}, in your words`));
   }
-  const law = item.law || {};
-  out.push(make('h3', 'detail-h', 'What the law says'),
-    make('p', 'source-where', [law.title, law.locator].filter(Boolean).join(' · ')),
-    make('blockquote', 'detail-words', law.words));
-  // Each action puts a start in the message box for the advocate to finish and send (the
-  // design of 17 Oct 2026): what they can tell NM, or that the item cannot be had.
-  const fill = (words) => {
-    const box = $('message');
-    box.value = box.value.trim() ? `${box.value.trim()}\n${words}` : words;
-    box.dispatchEvent(new Event('input', { bubbles: true }));
-    sizeComposer();
-    box.focus();
-  };
-  const actions = make('div', 'check-actions');
-  const tell = make('button', 'primary check-action', 'Tell NM about this');
-  tell.type = 'button';
-  tell.addEventListener('click', () => fill(`About "${item.need}" (${dispute.name}): `));
-  actions.appendChild(tell);
-  if (item.status === 'not_given' || item.status === 'coming_or_unclear') {
-    const unavailable = make('button', 'ghost check-action', 'Not available');
-    unavailable.type = 'button';
-    unavailable.addEventListener('click', () => fill(`About "${item.need}" (${dispute.name}): this is not available.`));
-    actions.appendChild(unavailable);
+  out.push(block(item.status === 'in_hand' ? 'What shows it' : item.status === 'not_available' ? 'What you said'
+    : 'Where it stands', ...stands));
+  if (item.status !== 'in_hand') {
+    const fill = (words) => {
+      const box = $('message');
+      box.value = box.value.trim() ? `${box.value.trim()}\n${words}` : words;
+      box.dispatchEvent(new Event('input', { bubbles: true }));
+      sizeComposer();
+      box.focus();
+    };
+    const actions = make('div', 'actions');
+    const tell = make('button', 'act primary', 'Tell NM about this');
+    tell.type = 'button';
+    tell.addEventListener('click', () => fill(`About "${item.need}" (${dispute.name}): `));
+    actions.appendChild(tell);
+    if (item.status !== 'not_available') {
+      const unavailable = make('button', 'act ghost', 'Not available');
+      unavailable.type = 'button';
+      unavailable.addEventListener('click', () => fill(`About "${item.need}" (${dispute.name}): this is not available.`));
+      actions.appendChild(unavailable);
+    }
+    out.push(actions);
   }
-  out.push(actions);
   return out;
 }
 
-// A DISPUTE IN DETAIL (owner, 16 Oct 2026): why it matters, where it was picked up
-// from, who it is between, each legal question with why it was asked and what
-// research did, its facts, what is at stake and sought, what is still needed, and
-// the related points for it. Each part is shown only when the saved understanding
-// holds it; an earlier conversation shows no "why it matters".
+// The law an item rests on, in the reading pane: the saved passage of the answer that held
+// it, read through its own route, where a paragraph of that answer used it; otherwise its
+// words as the checklist kept them.
+function openLaw(law, opener) {
+  const entry = state.turns.find((turn) => turn.answer && turn.answer.turn_id === law.held_in);
+  const elements = entry ? entry.answer.elements || [] : [];
+  for (const [index, element] of elements.entries()) {
+    const at = (element.sources || []).findIndex((source) => source && source.id === law.source_id);
+    if (at >= 0 && element.sources[at].brain) {
+      return window.NmBrainSources.open(entry.answer, element, index, at, opener);
+    }
+  }
+  const make = (tag, className, text) => {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  };
+  const passage = make('div', 'brain-source-text passage');
+  passage.appendChild(make('mark', '', law.words || ''));
+  return window.NmBrainSources.showContent(law.title || 'The law', [make('p', 'source-where', law.locator || ''),
+    make('p', 'source-role', law.kind === 'judgment' ? 'Held judgment' : 'Legislative text'), passage], opener, false,
+  law.kind === 'judgment' ? 'Held judgment' : 'Held law');
+}
+
+// A DISPUTE IN DETAIL (owner, 16 Oct 2026), in the reading pane (18 Oct 2026): who it is
+// between, why it matters, its last days, each time limit in full, where it was picked up
+// from, each legal question with why it was asked and what research did, what is at stake
+// and sought, what is still needed, and the related points for it. Each part is shown only
+// when the saved understanding holds it; an earlier conversation shows no "why it matters".
 function renderDisputeDetail(dispute, board) {
   const make = (tag, className, text) => {
     const node = document.createElement(tag);
@@ -3474,10 +3520,16 @@ function renderDisputeDetail(dispute, board) {
     return section;
   };
   const out = [];
-  if (dispute.why_it_matters) out.push(part('Why it matters', make('p', '', dispute.why_it_matters)));
-  // Each time limit as code worked it out, or why it could not be (18 Oct 2026): the
-  // board's card shows only the last days.
+  if (dispute.between.length) out.push(make('p', 'source-where', `Between ${dispute.between.join(' · ')}`));
+  if (dispute.why_it_matters) out.push(make('p', 'dispute-why', dispute.why_it_matters));
   const limits = (dispute.checklist && dispute.checklist.time_limits) || [];
+  const chips = deadlineChips(limits);
+  if (chips.length) {
+    const meta = make('p', 'dmeta');
+    meta.append(...chips);
+    out.push(meta);
+  }
+  // Each time limit as code worked it out, or why it could not be (18 Oct 2026).
   if (limits.length) {
     const ul = make('ul', 'detail-list');
     for (const limit of limits) {
@@ -3503,7 +3555,6 @@ function renderDisputeDetail(dispute, board) {
     }
     out.push(part('Where it was picked up from', ul));
   }
-  if (dispute.between.length) out.push(part('Between', make('p', '', dispute.between.join(' · '))));
   if (dispute.questions.length) {
     const ol = make('ol', 'detail-list');
     for (const question of dispute.questions) {
@@ -3564,14 +3615,21 @@ function renderWorking(el) {
   return box;
 }
 
-// IN SHORT AND THE TIME LIMITS (owner decisions, 17 Oct 2026): each run of dispute
-// summaries reads as one "In short" box, and each run of code's time-limit boxes as one
-// small table. Nothing is dropped or reordered; runs are only gathered.
+// IN SHORT, THE TIME LIMITS AND WHAT NM NEEDS (owner decisions, 17 Oct 2026; the design of
+// that day): each run of dispute summaries reads as one "In short" box, each run of code's
+// time-limit boxes as one small table, and the questions the server gathers under "What I
+// need from you" (rendering v14) as one block. Nothing is dropped or reordered; runs are
+// only gathered.
 function groupAnswerElements(elements) {
   const out = [];
   for (const el of elements) {
-    const kind = el.kind === 'SUMMARY' ? 'IN_SHORT' : (el.kind === 'WORKING' && el.working ? 'TIME_LIMITS' : null);
     const last = out[out.length - 1];
+    if (el.kind === 'NEEDS') { out.push({ kind: 'NEEDS', text: el.text, items: [] }); continue; }
+    if (el.kind === 'QUESTION' && last && last.kind === 'NEEDS' && Array.isArray(last.items)) {
+      last.items.push(el);
+      continue;
+    }
+    const kind = el.kind === 'SUMMARY' ? 'IN_SHORT' : (el.kind === 'WORKING' && el.working ? 'TIME_LIMITS' : null);
     if (kind && last && last.kind === kind) last.items.push(el);
     else if (kind) out.push({ kind, items: [el] });
     else out.push(el);
@@ -3579,14 +3637,11 @@ function groupAnswerElements(elements) {
   return out;
 }
 
-// THE TIME LIMITS AS ONE SMALL TABLE (owner decisions, 17 Oct 2026): what, the last day and
-// where it stands, from the rows the server saved (the day count is as of the date it was
-// worked out, which is said); each row opens its full working beneath it, and a caveat the
-// server attaches to the counting is said once under the table, never folded away.
+// THE TIME LIMITS AS ONE SMALL TABLE (owner decisions, 17 Oct 2026; the design of that
+// day): each limit, its last day and what is left, from the rows the server saved; its
+// working opens in the reading pane. Why a limit was not worked out stays in view under its
+// name, and what the counting assumes is said once under the table, never folded away.
 const TIME_LIMIT_CAVEATS = ['Court closed on the last day'];
-// A row's working stays open across the thread's redraws (every two seconds while a later
-// answer is prepared); the saved element itself is the key.
-const OPEN_TIME_LIMITS = new WeakSet();
 
 function timeLimitStanding(rows) {
   if (rows.has('Not assessed')) return `Not assessed: ${rows.get('Not assessed')}`;
@@ -3594,6 +3649,50 @@ function timeLimitStanding(rows) {
   const count = days ? `${rows.get(days)} ${rows.get(days) === '1' ? 'day' : 'days'} ${days.slice(5)}` : '';
   return [rows.get('Result'), count, rows.get('As of') ? `as of ${rows.get('As of')}` : '']
     .filter(Boolean).join(' · ');
+}
+
+// What is left of a time limit, in the saved count's own words: '874 days left', or the
+// result first where it is not open ('Passed · 17 days since the last day').
+function timeLimitLeft(rows) {
+  if (rows.has('Not assessed')) return '—';
+  const days = [...rows.keys()].find((label) => /^Days /.test(label));
+  const count = days ? `${rows.get(days)} ${rows.get(days) === '1' ? 'day' : 'days'} ${days.slice(5)}` : '';
+  const result = rows.get('Result');
+  return result === 'Open' ? count || result : [result, count].filter(Boolean).join(' · ');
+}
+
+// A time limit's working in the reading pane: the provision, then each labelled row and
+// list exactly as the server saved them.
+function renderWorkingView(el) {
+  const make = (tag, className, text) => {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  };
+  const rows = el.working.rows || [];
+  const provision = rows.find(([label]) => label === 'Provision');
+  const out = [];
+  if (provision) out.push(make('p', 'source-where', provision[1]));
+  const table = make('table', 'working-table');
+  const body = make('tbody');
+  for (const [label, value] of rows) {
+    if (label === 'Provision') continue;
+    const row = make('tr');
+    row.append(make('th', '', label), make('td', '', value));
+    body.appendChild(row);
+  }
+  table.appendChild(body);
+  const scroll = make('div', 'time-limit-scroll');
+  scroll.appendChild(table);
+  out.push(scroll);
+  for (const [title, items] of el.working.lists || []) {
+    out.push(make('h4', 'working-label', title));
+    const list = make('ul', 'working-list');
+    for (const item of items) list.appendChild(make('li', '', item));
+    out.push(list);
+  }
+  return out;
 }
 
 function renderTimeLimits(items) {
@@ -3605,121 +3704,74 @@ function renderTimeLimits(items) {
   };
   const box = make('section', 'el time-limits');
   box.setAttribute('aria-label', 'Time limits');
-  box.appendChild(make('p', 'working-label', 'Time limits'));
   const table = make('table', 'time-limit-table');
   const head = make('tr');
-  for (const label of ['Time limit', 'Last day', 'Where it stands']) head.appendChild(make('th', '', label));
+  for (const label of ['Time limit', 'Last day', 'Left']) head.appendChild(make('th', '', label));
   const thead = make('thead');
   thead.appendChild(head);
   const body = make('tbody');
   const caveats = [];
+  const asOf = new Set();
   for (const el of items) {
     const rows = new Map(el.working.rows || []);
     for (const label of TIME_LIMIT_CAVEATS) {
       if (rows.has(label) && !caveats.includes(rows.get(label))) caveats.push(rows.get(label));
     }
+    if (rows.has('As of')) asOf.add(rows.get('As of'));
     const row = make('tr');
     const what = make('td', 'time-limit-what');
-    const toggle = make('button', 'ghost time-limit-toggle', el.working.what);
-    toggle.type = 'button';
-    what.appendChild(toggle);
-    row.append(what, make('td', 'time-limit-day', rows.get('Last day') || '—'),
-      make('td', 'time-limit-standing', timeLimitStanding(rows)));
-    const detail = make('tr', 'time-limit-detail');
-    detail.hidden = !OPEN_TIME_LIMITS.has(el);
-    toggle.setAttribute('aria-expanded', String(!detail.hidden));
-    const cell = make('td');
-    cell.colSpan = 3;
-    cell.appendChild(renderWorking(el));
-    detail.appendChild(cell);
-    toggle.addEventListener('click', () => {
-      detail.hidden = !detail.hidden;
-      if (detail.hidden) OPEN_TIME_LIMITS.delete(el);
-      else OPEN_TIME_LIMITS.add(el);
-      toggle.setAttribute('aria-expanded', String(!detail.hidden));
-    });
-    body.append(row, detail);
+    what.appendChild(make('span', '', `${el.working.what} · `));
+    const working = make('button', 'cite', 'working');
+    working.type = 'button';
+    working.setAttribute('aria-label', `The working: ${el.working.what}`);
+    working.addEventListener('click', () => window.NmBrainSources.showContent(el.working.what,
+      renderWorkingView(el), working, false, 'Time limit · worked out by code'));
+    what.appendChild(working);
+    if (rows.has('Not assessed')) what.appendChild(make('span', 'limit-why', `Not worked out: ${rows.get('Not assessed')}`));
+    row.append(what, make('td', 'num', dayDate(el.working.last_day) || rows.get('Last day') || '—'),
+      make('td', 'num', timeLimitLeft(rows)));
+    body.appendChild(row);
   }
   table.append(thead, body);
   const scroll = make('div', 'time-limit-scroll');
   scroll.appendChild(table);
   box.appendChild(scroll);
+  if (asOf.size === 1) box.appendChild(make('p', 'time-limit-note', `Days are counted as of ${[...asOf][0]}.`));
   for (const caveat of caveats) box.appendChild(make('p', 'time-limit-note', caveat));
   return box;
 }
 
-// A REPLY ANSWERING SEVERAL DISPUTES (owner decision, 15 Oct 2026): links to each
-// dispute, the first dispute open and every later one collapsed under its heading.
-// The headings are the server's, in the answer's own order; what the advocate opens
-// is kept on the turn while the conversation is on screen.
+// A REPLY ANSWERING SEVERAL DISPUTES (owner decision, 15 Oct 2026; laid out as the design
+// shows it, 18 Oct 2026): each dispute's part under its numbered heading, all open. The
+// headings are the server's, in the answer's own order.
 function renderParts(into, elements, entry, render) {
   if (elements.filter((el) => el.kind === 'HEADING').length < 2) {
     for (const el of elements) render(into, el);
     return;
   }
-  if (!Array.isArray(entry.openParts)) {
-    entry.openParts = [true];
-    // A part held back opens with the answer (17 Oct 2026): what the check found there
-    // is a disclosure, never folded away.
-    let heading = -1;
-    elements.forEach((el, position) => {
-      if (el.kind !== 'HEADING') return;
-      heading += 1;
-      if (elements[position + 1]?.kind === 'HELD') entry.openParts[heading] = true;
-    });
-  }
-  const stem = `part-${String(entry.turnId || 'turn').replace(/[^A-Za-z0-9_-]/g, '-')}`;
-  const index = document.createElement('nav');
-  index.className = 'part-index';
-  index.setAttribute('aria-label', 'Disputes in this answer');
   let body = into;
-  let part = -1;
-  for (const [position, el] of elements.entries()) {
-    // Code's notices about the whole answer stay outside the parts (17 Oct 2026): that
-    // it is incomplete, and what to do about a part held back.
-    if (el.kind === 'NOTICE') { render(into, el); continue; }
+  let number = 0;
+  for (const el of elements) {
+    // Code's notices about the whole answer, and what NM needs from the advocate, stand
+    // outside the parts (17 and 18 Oct 2026).
+    if (el.kind === 'NOTICE' || el.kind === 'NEEDS') { render(into, el); continue; }
     if (el.kind !== 'HEADING') { render(body, el); continue; }
-    part += 1;
-    const number = part;
-    const open = Boolean(entry.openParts[number]);
-    const id = `${stem}-${number}`;
-    const held = elements[position + 1]?.kind === 'HELD';
-    const name = `${number + 1} · ${el.text}${held ? ' · held back' : ''}`;
-    if (number === 0) into.appendChild(index);
+    number += 1;
     const section = document.createElement('section');
     section.className = 'answer-part';
-    section.setAttribute('aria-labelledby', `${id}-title`);
     const head = document.createElement('div');
-    head.className = 'part-head';
+    head.className = 'part-h';
+    const n = document.createElement('span');
+    n.className = 'n';
+    n.textContent = String(number);
     const title = document.createElement('h3');
     title.className = 'part-title';
-    title.id = `${id}-title`;
-    title.textContent = name;
-    const toggle = document.createElement('button');
-    toggle.type = 'button';
-    toggle.className = 'ghost part-toggle';
-    toggle.setAttribute('aria-expanded', String(open));
-    toggle.setAttribute('aria-controls', id);
-    toggle.textContent = open ? 'Hide this part' : 'Show this part';
-    toggle.addEventListener('click', () => { entry.openParts[number] = !open; repaint(); });
-    head.append(title, toggle);
+    title.textContent = el.text;
+    head.append(n, title);
     body = document.createElement('div');
     body.className = 'part-body';
-    body.id = id;
-    body.hidden = !open;
     section.append(head, body);
     into.appendChild(section);
-    const link = document.createElement('a');
-    link.className = 'part-link';
-    link.href = `#${id}-title`;
-    link.textContent = name;
-    link.addEventListener('click', (event) => {
-      event.preventDefault();
-      entry.openParts[number] = true;
-      repaint();
-      document.getElementById(`${id}-title`)?.scrollIntoView({ block: 'start' });
-    });
-    index.appendChild(link);
   }
 }
 

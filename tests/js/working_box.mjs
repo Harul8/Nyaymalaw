@@ -19,8 +19,13 @@ class Node {
   setAttribute(name, value) { this.attributes[name] = value; }
   addEventListener(name, handler) { this.handlers[name] = handler; }
 }
-const context = vm.createContext({ document: { createElement: (tag) => new Node(tag) } });
+const opened = [];
+const context = vm.createContext({ document: { createElement: (tag) => new Node(tag) },
+  window: { NmBrainSources: { showContent: (title, content, opener, back, kind) => opened.push({ title, content, kind }) } } });
 vm.runInContext(app.slice(from, to), context);
+// The table writes a saved calendar day as the design does ('14 Oct 2026').
+vm.runInContext(app.slice(app.indexOf('function dayDate(iso) {'), app.indexOf('// The day and month of a moment saved')),
+  context);
 
 const drawn = (box) => box.children.map((node) => [node.tag, node.className,
   node.children.length ? node.children.map((child) => `${child.tag}:${child.textContent}`) : node.textContent]);
@@ -65,37 +70,29 @@ assert.deepEqual(Array.from(grouped, (el) => [el.kind, el.items ? Array.from(el.
   ['TIME_LIMITS', ['Last day to file the suit', 'Last day to reply to the notice', 'A period']],
   ['HEADING', 'Dispute 1'], ['LAW', 'Law.'], ['IN_SHORT', ['Three.']], ['WORKING', 'No saved working.']]);
 
-// The table: what, the last day and where it stands, from the saved rows; a caveat on the
-// counting is said once under it; each row opens its own full working beneath it.
+// The table, as the design shows it (18 Oct 2026): each limit, its last day and what is left,
+// from the saved rows; why a limit was not worked out stays under its name; the day counts
+// were made and the counting's caveat are each said once under it; the working opens in the
+// reading pane.
 const table = context.renderTimeLimits([suit, notice, unread]);
 assert.equal(table.className, 'el time-limits');
 assert.equal(table.attributes['aria-label'], 'Time limits');
-const [title, scroll, ...notes] = table.children;
-assert.equal(title.textContent, 'Time limits');
-assert.deepEqual(notes.map((note) => [note.className, note.textContent]), [['time-limit-note', closed[1]]]);
+const [scroll, ...notes] = table.children;
+assert.deepEqual(notes.map((note) => [note.className, note.textContent]), [
+  ['time-limit-note', 'Days are counted as of 17 October 2026 (Saturday).'], ['time-limit-note', closed[1]]]);
 const [thead, tbody] = scroll.children[0].children;
-assert.deepEqual(thead.children[0].children.map((cell) => cell.textContent), ['Time limit', 'Last day', 'Where it stands']);
-const shown = tbody.children.filter((row) => row.className !== 'time-limit-detail');
-assert.deepEqual(shown.map((row) => row.children.map((cell) => cell.textContent)), [
-  ['Last day to file the suit', '10 January 2027 (Sunday)', 'Open · 85 days left · as of 17 October 2026 (Saturday)'],
-  ['Last day to reply to the notice', '16 October 2026 (Friday)',
-    'Passed · 1 day since the last day · as of 17 October 2026 (Saturday)'],
-  ['A period', '—', 'Not assessed: the words are not in the held text']]);
-const details = tbody.children.filter((row) => row.className === 'time-limit-detail');
-assert.deepEqual(details.map((row) => row.hidden), [true, true, true]);
-const toggle = shown[1].children[0].children[0];
-assert.equal(toggle.attributes['aria-expanded'], 'false');
-toggle.handlers.click();
-assert.deepEqual(details.map((row) => row.hidden), [true, false, true]);
-assert.equal(toggle.attributes['aria-expanded'], 'true');
-assert.equal(details[1].children[0].colSpan, 3);
-assert.equal(details[1].children[0].children[0].className, 'el WORKING working-box');
-assert.equal(details[1].children[0].children[0].attributes['aria-label'], 'Working: Last day to reply to the notice');
-// The thread is redrawn every two seconds while a later answer is prepared: what the
-// advocate opened stays open, and closes when they close it.
-const redrawn = () => context.renderTimeLimits([suit, notice, unread]).children[1].children[0].children[1]
-  .children.filter((row) => row.className === 'time-limit-detail');
-assert.deepEqual(redrawn().map((row) => row.hidden), [true, false, true]);
-toggle.handlers.click();
-assert.deepEqual(redrawn().map((row) => row.hidden), [true, true, true]);
+assert.deepEqual(thead.children[0].children.map((cell) => cell.textContent), ['Time limit', 'Last day', 'Left']);
+assert.deepEqual(tbody.children.map((row) => row.children.map((cell) => cell.textContent)), [
+  ['Last day to file the suit · working', '10 January 2027 (Sunday)', '85 days left'],
+  ['Last day to reply to the notice · working', '16 October 2026 (Friday)', 'Passed · 1 day since the last day'],
+  ['A period · workingNot worked out: the words are not in the held text', '—', '—']]);
+const link = tbody.children[1].children[0].children[1];
+assert.equal(link.className, 'cite');
+link.handlers.click();
+assert.equal(opened[0].title, 'Last day to reply to the notice');
+assert.equal(opened[0].kind, 'Time limit · worked out by code');
+assert.deepEqual(Array.from(opened[0].content, (node) => node.textContent).slice(0, 1), ['Last day16 October 2026 (Friday)As of17 October 2026 (Saturday)ResultPassedDays since the last day1Court closed on the last day' + closed[1]]);
+// A saved calendar day is written short where the server saved it.
+const dated = context.renderTimeLimits([{ ...suit, working: { ...suit.working, last_day: '2027-01-10' } }]);
+assert.equal(dated.children[0].children[0].children[1].children[0].children[1].textContent, '10 Jan 2027');
 console.log('working box: ok');

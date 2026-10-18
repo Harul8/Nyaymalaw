@@ -14,5 +14,5 @@ Feature: F-B-03 Conversation history, and the conversation window it opens
   Scenario: Every link opens in one reading pane on the right
     Given the page
     And the page stylesheet
-    Then the reading pane is part of the conversation window and opens beside the conversation without covering it
+    Then the reading pane is part of the conversation window and stays beside the conversation on a wide screen
     And the reading pane closes on Close or Escape

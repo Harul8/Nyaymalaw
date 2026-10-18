@@ -1,6 +1,7 @@
-// A reply answering several disputes shows links to each, the first dispute open
-// and every later one collapsed under its heading (owner decision, 15 Oct 2026).
-// Offline substitutes for the DOM; not browser QA.
+// A reply answering several disputes shows each dispute's part under its numbered heading,
+// all open, as the readability design shows it (owner, 18 Oct 2026: "exactly the way your
+// artifact has presented"; it supersedes the decision of 15 Oct to start later parts
+// collapsed under an index). Offline substitutes for the DOM; not browser QA.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
@@ -27,44 +28,32 @@ const find = (node, test, found = []) => {
   return found;
 };
 
-let repaints = 0;
-const context = vm.createContext({
-  document: { createElement: el, getElementById: () => null },
-  repaint: () => { repaints += 1; },
-  String, Array, Boolean,
-});
+const context = vm.createContext({ document: { createElement: el, getElementById: () => null }, String, Array });
 vm.runInContext(app.slice(start, end), context);
 const draw = (into, element) => into.appendChild({ drawn: element.text, children: [] });
 
-// Two disputes: links, the first open, the second collapsed.
+// Two disputes: each under its numbered heading, both open; no index, nothing to collapse.
 {
   const wrap = el('div');
-  const entry = { turnId: 't 1/a' };
   context.renderParts(wrap, [
     { kind: 'GREETING', text: 'Good morning.' },
     { kind: 'HEADING', text: 'Obstruction of access' },
     { kind: 'LAW', text: 'Necessity requires more.' },
     { kind: 'HEADING', text: 'The returned cheque' },
     { kind: 'LAW', text: 'Section 138 concerns…' },
-  ], entry, draw);
+  ], { turnId: 't1' }, draw);
   assert.equal(wrap.children[0].drawn, 'Good morning.', 'the opening stays above the parts');
-  const nav = wrap.children[1];
-  assert.equal(nav.tagName, 'NAV');
-  assert.deepEqual(nav.children.map((a) => a.textContent), ['1 · Obstruction of access', '2 · The returned cheque']);
+  const parts = wrap.children.slice(1);
+  assert.deepEqual(parts.map((part) => part.className), ['answer-part', 'answer-part']);
+  assert.deepEqual(parts.map((part) => part.children[0].children.map((node) => [node.className, node.textContent])), [
+    [['n', '1'], ['part-title', 'Obstruction of access']], [['n', '2'], ['part-title', 'The returned cheque']]]);
   const bodies = find(wrap, (n) => n.className === 'part-body');
-  assert.deepEqual(bodies.map((b) => b.hidden), [false, true]);
+  assert.deepEqual(bodies.map((b) => b.hidden), [false, false]);
   assert.deepEqual(bodies.map((b) => b.children[0].drawn), ['Necessity requires more.', 'Section 138 concerns…']);
-  assert.equal(bodies[0].id, 'part-t-1-a-0', 'ids are safe for any turn id');
-  const toggles = find(wrap, (n) => n.className === 'ghost part-toggle');
-  assert.deepEqual(toggles.map((t) => t.attributes['aria-expanded']), ['true', 'false']);
-  toggles[1].handlers.click();
-  assert.equal(JSON.stringify(entry.openParts), '[true,true]');
-  assert.equal(repaints, 1);
-  nav.children[0].handlers.click({ preventDefault() {} });
-  assert.equal(repaints, 2);
+  assert.equal(find(wrap, (n) => n.tagName === 'NAV' || /toggle/.test(n.className || '')).length, 0);
 }
 
-// One dispute, or none: drawn as before, with no links or parts.
+// One dispute, or none: drawn as before, with no parts.
 {
   const wrap = el('div');
   context.renderParts(wrap, [{ kind: 'LAW', text: 'Only law.' }], {}, draw);
@@ -72,7 +61,7 @@ const draw = (into, element) => into.appendChild({ drawn: element.text, children
 }
 
 // An answer with a part held back (owner decision, 17 Oct 2026): code's notices about the
-// whole answer stay outside the parts, and the held part says so in its title and link.
+// whole answer, and what NM needs from the advocate (rendering v14), stay outside the parts.
 {
   const wrap = el('div');
   context.renderParts(wrap, [
@@ -82,16 +71,15 @@ const draw = (into, element) => into.appendChild({ drawn: element.text, children
     { kind: 'LAW', text: 'Necessity requires more.' },
     { kind: 'HEADING', text: 'The returned cheque' },
     { kind: 'HELD', text: 'Held back: The returned cheque.' },
+    { kind: 'NEEDS', text: 'What I need from you', items: [] },
     { kind: 'NOTICE', text: 'Shall I try the held-back section again?' },
   ], { turnId: 't2' }, draw);
   assert.equal(wrap.children[0].drawn, 'This answer is incomplete: 1 of its 3 sections is held back below.');
-  assert.equal(wrap.children[wrap.children.length - 1].drawn, 'Shall I try the held-back section again?');
-  const nav = wrap.children.find((n) => n.tagName === 'NAV');
-  assert.deepEqual(nav.children.map((a) => a.textContent),
-    ['1 · Obstruction of access', '2 · The returned cheque · held back']);
+  assert.deepEqual(wrap.children.slice(-2).map((node) => node.drawn),
+    ['What I need from you', 'Shall I try the held-back section again?']);
   const bodies = find(wrap, (n) => n.className === 'part-body');
   assert.deepEqual(bodies[1].children.map((n) => n.drawn), ['Held back: The returned cheque.']);
-  assert.deepEqual(bodies.map((b) => b.hidden), [false, false], 'a held part opens with the answer');
+  assert.deepEqual(bodies.map((b) => b.hidden), [false, false], 'a held part is shown with the answer');
 }
 
 console.log('answer parts: ok');

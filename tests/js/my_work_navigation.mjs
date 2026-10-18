@@ -48,7 +48,7 @@ function fixture() {
     matterId: null, matterVersion: null, turns: [] };
   const context = { state, activeIntent: null, activeDelivery: null, $: get,
     document: { createElement: () => new Element() },
-    window: { dispatchEvent() {} }, Event: class {},
+    window: { dispatchEvent() {}, NmBrainSources: { close() {} } }, Event: class {},
     api: url => new Promise((resolve, reject) => requests.push({ url, resolve, reject })),
     stateBlock: (_kind, text) => { const block = new Element(); block.textContent = text; return block; },
     restoredTurn: turn => turn,
@@ -62,7 +62,7 @@ function fixture() {
     deliver: async entry => { sent.push(JSON.parse(entry.envelope)); },
     toggleMatters() {}, toggleMatterBoard: open => boardToggles.push(open),
     setWorkView: view => { get('pane-advise').dataset.view = view; },
-    updateWorkspace() {}, closeFilesMenu() {}, closeBoardPane() {},
+    updateWorkspace() {}, closeFilesMenu() {},
     // The board beside the conversation is read for the conversation now open (16 Oct 2026).
     loadChatBoard: () => boards.push(context.activeIntent && context.activeIntent.chatId),
     restoreConversation: async matterId => { state.turns = [{ matterId }]; return true; },

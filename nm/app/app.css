@@ -206,11 +206,12 @@ main { display: grid; grid-template-columns: 19rem minmax(0, 1fr); flex: 1; min-
    having to read it. */
 .said-row { display: flex; justify-content: flex-end; margin-bottom: 1.1rem; }
 .brief {
-  /* Separate attributed user text without turning NM's reply into a card. */
-  background: var(--user-message); border: 1px solid transparent; border-radius: 16px;
-  padding: 0.65rem 0.95rem; max-width: 80%;
-  white-space: pre-wrap; font-size: 0.94rem; line-height: 1.55;
-  color: var(--ink);
+  /* Separate attributed user text without turning NM's reply into a card (the design's
+     bubble, 18 Oct 2026). */
+  background: var(--user-message); border: 1px solid transparent; border-radius: 12px 12px 2px 12px;
+  padding: 10px 14px; max-width: 84%;
+  white-space: pre-wrap; font-size: 0.9rem; line-height: 1.55;
+  color: var(--ink-2);
 }
 
 /* THE SUPPORT, FOLDED. Retrieved statutory text and quoted paragraphs are the
@@ -251,16 +252,14 @@ main { display: grid; grid-template-columns: 19rem minmax(0, 1fr); flex: 1; min-
 /* A reply answering several disputes: each dispute's name before its part (15 Oct 2026). */
 .el.HEADING { border-left: none; padding-left: 0; margin: 1.25rem 0 0.35rem; }
 .el.HEADING .body { font-weight: 600; font-size: 1.02rem; }
-/* A reply answering several disputes: links to each, the later ones collapsed. */
-.part-index { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.25rem 0 0.75rem; }
-.part-link { display: inline-flex; align-items: center; min-height: 2.75rem; padding: 0 0.9rem;
-  border: 1px solid var(--rule); border-radius: 999px; color: var(--ink); text-decoration: none; font-size: 0.9rem; }
-.part-link:hover { background: var(--accent-w); color: var(--accent-2); }
-.answer-part { border-top: 1px solid var(--rule); padding-top: 0.6rem; margin-top: 0.6rem; }
-.part-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.5rem; }
-.part-title { margin: 0; font-family: var(--f-serif); font-size: 1.2rem; font-weight: 500; }
-.part-toggle { min-height: 2.75rem; }
-.part-body { padding-top: 0.5rem; }
+/* A reply answering several disputes: each part under its numbered heading, all open (the
+   readability design, 18 Oct 2026). */
+.answer-part { margin-top: 1.1rem; }
+.part-h { display: flex; align-items: baseline; gap: 0.6rem; border-bottom: 1px solid var(--rule);
+  padding-bottom: 0.35rem; margin-bottom: 0.7rem; }
+.part-h .n { font-family: var(--f-mono); font-size: 0.75rem; color: var(--ink-3); }
+.part-title { margin: 0; font-family: var(--f-serif); font-size: 1.08rem; font-weight: 500; line-height: 1.35; }
+.part-body { padding-top: 0.1rem; }
 /* THE MATTER BOARD on the left of the conversation (owner, 16 Oct 2026). */
 #matter-board-body { display: flex; flex-direction: column; gap: 1rem; padding: 0 0.8rem 1.5rem; }
 .board-progress { margin: 0 0.8rem 0.6rem; padding: 0.5rem 0.7rem; border-radius: 8px; font-size: 0.82rem;
@@ -276,10 +275,6 @@ button.board-card:hover, button.board-card[aria-pressed="true"] { border-color: 
 button.board-card[aria-pressed="true"] { background: var(--accent-w); }
 button.board-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .board-dispute { margin: 0; font-family: var(--f-serif); font-size: 1.02rem; font-weight: 500; }
-/* The board's own pane: over the board, reaching a little to the right. */
-.board-pane { position: absolute; top: 0.5rem; bottom: 0.5rem; left: 0.5rem; width: calc(100% + 3.5rem);
-  z-index: 30; display: flex; flex-direction: column; min-height: 0; background: var(--surface);
-  border: 1px solid var(--rule); border-radius: 12px; box-shadow: 0 14px 40px rgba(0, 0, 0, .16); }
 .detail-section { margin: 0.9rem 0 0; }
 .detail-h { margin: 0 0 0.35rem; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em;
   text-transform: uppercase; color: var(--ink-3); }
@@ -287,7 +282,6 @@ button.board-card:focus-visible { outline: 2px solid var(--accent); outline-offs
 .detail-question { margin: 0; font-weight: 600; }
 .detail-words { margin: 0.3rem 0 0.2rem; padding-left: 0.6rem; border-left: 2px solid var(--rule);
   color: var(--ink-2); font-style: italic; }
-.board-pane .board-card { margin-bottom: 0.5rem; }
 .board-meta, .board-label { margin: 0; font-size: 0.85rem; color: var(--ink-3); }
 .board-label { font-weight: 600; color: var(--ink-2); }
 .board-questions, .board-needed, .board-list { margin: 0; padding-left: 1.2rem; display: flex; flex-direction: column; gap: 0.2rem; }
@@ -316,8 +310,9 @@ button.board-card:focus-visible { outline: 2px solid var(--accent); outline-offs
 .document-player { width: 100%; max-width: 28rem; }
 .attachments-status { margin: 0.3rem 0 0; font-size: 0.85rem; color: var(--signal); }
 .attachments-status:empty { display: none; }
-.brief-documents { list-style: none; margin: 0.4rem 0 0; padding: 0; font-size: 0.82rem; opacity: 0.85; }
-.brief-documents li::before { content: "▤ "; }
+.brief-documents { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px;
+  font-size: 0.76rem; white-space: normal; }
+.brief-documents li { border: 1px solid var(--rule); border-radius: 6px; padding: 1px 7px; background: var(--paper); }
 .document-page summary { cursor: pointer; min-height: 2.75rem; display: flex; align-items: center; font-size: 0.9rem; }
 .document-text { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 0.88rem; line-height: 1.5;
   padding: 0.6rem 0.75rem; border-left: 3px solid var(--rule); background: var(--paper); }
@@ -338,61 +333,87 @@ button.board-card:focus-visible { outline: 2px solid var(--accent); outline-offs
 .file-attention { font-size: 0.8rem; color: var(--amber); }
 .file-read { justify-self: start; min-height: 2.75rem; padding: 0 0.2rem; color: var(--accent); }
 .file-original { display: inline-block; margin-bottom: 0.4rem; color: var(--accent); }
-/* What each dispute needs (owner decisions, 17 Oct 2026): four marks, by shape, colour and words. */
-.dispute-open { all: unset; cursor: pointer; display: block; border-radius: 6px; }
-.dispute-open:hover .board-dispute, .dispute-open[aria-pressed="true"] .board-dispute { color: var(--accent); }
-.dispute-open:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-/* The marks' legend, once above the disputes; under each name one line: each last day code
-   worked out, a quiet word where it could not, and how much is in hand. */
-.check-legend { margin: 0; display: flex; flex-wrap: wrap; gap: 0.2rem 0.8rem; font-size: 0.74rem; color: var(--ink-3); }
-.check-legend-entry { display: inline-flex; align-items: center; gap: 0.25rem; }
-.check-legend .check-mark { font-size: 0.9rem; line-height: 1; }
-.dispute-meta { margin: 0.15rem 0 0.1rem; display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem 0.5rem;
-  font-size: 0.78rem; color: var(--ink-3); }
-.dispute-deadline { display: inline-flex; align-items: center; padding: 0.05rem 0.55rem; border-radius: 999px;
-  font-size: 0.75rem; font-weight: 600; font-variant-numeric: tabular-nums; background: var(--accent-w); color: var(--accent-2); }
-.dispute-deadline.not-assessed { font-weight: 500; background: var(--surface-2); color: var(--ink-3); }
-.check-count { font-weight: 600; color: var(--ink-2); }
-.check-group { margin: 0.45rem 0 0.1rem; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.04em;
+/* THE BOARD AS THE DESIGN SHOWS IT (18 Oct 2026): 'Matter board' and 'Files · n'; the marks'
+   legend; each dispute a numbered section, not a box, with its last days and how much is in
+   hand; what it needs under Needed and Would strengthen, each item a short line with its
+   mark; the facts, instructions and related points folded below. */
+.board-head { justify-content: space-between; }
+.files-btn { display: inline-flex; align-items: center; gap: 0.35rem; min-height: 2rem; padding: 0.15rem 0.7rem;
+  font-size: 0.82rem; font-weight: 500; color: var(--accent); background: none; border: 1px solid var(--rule);
+  border-radius: 999px; cursor: pointer; }
+.files-btn:hover { border-color: var(--accent); }
+.legend { margin: 0; display: flex; flex-wrap: wrap; gap: 0.25rem 0.75rem; font-size: 0.74rem; color: var(--ink-3); }
+.legend-entry { display: inline-flex; align-items: center; gap: 0.3rem; }
+/* The four marks, drawn by shape and colour; the words go with them. */
+.st { position: relative; flex: none; display: inline-block; width: 16px; height: 16px; border-radius: 50%;
+  box-sizing: border-box; color: var(--paper); font-size: 10px; font-weight: 700; line-height: 16px; text-align: center; }
+.st--in_hand { background: var(--good); }
+.st--in_hand::after { content: "\2713"; }
+.st--coming_or_unclear { border: 1.8px solid var(--amber);
+  background: linear-gradient(90deg, transparent 50%, var(--amber) 50%); }
+.st--not_given { border: 1.8px solid var(--ink-3); }
+.st--not_available { background: var(--signal); }
+.st--not_available::after { content: "\2715"; }
+.board-disputes { display: grid; gap: 0; }
+.dispute { display: grid; gap: 0.5rem; padding: 0.85rem 0 0.9rem; border-top: 1px solid var(--rule); }
+.dispute:first-child { border-top: 0; padding-top: 0.2rem; }
+.dtitle { all: unset; box-sizing: border-box; cursor: pointer; font-family: var(--f-serif); font-size: 1rem;
+  line-height: 1.35; color: var(--ink); border-radius: 4px; }
+.dtitle:hover { color: var(--accent); }
+.dtitle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.dmeta { margin: 0; display: flex; flex-wrap: wrap; gap: 0.35rem 0.5rem; align-items: center; font-size: 0.78rem;
+  color: var(--ink-3); }
+.chip { display: inline-flex; align-items: center; padding: 0.05rem 0.55rem; border-radius: 999px; font-size: 0.75rem;
+  font-variant-numeric: tabular-nums; }
+.chip.deadline { background: var(--accent-w); color: var(--accent-2); font-weight: 600; }
+.chip.quiet { background: var(--surface-2); color: var(--ink-3); }
+.count { color: var(--ink-3); }
+.group { margin: 0.15rem 0 0; font-family: var(--f-mono); font-size: 0.66rem; letter-spacing: 0.08em;
   text-transform: uppercase; color: var(--ink-3); }
-.check-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.1rem; }
-.check-item { all: unset; box-sizing: border-box; width: 100%; cursor: pointer; display: grid;
-  grid-template-columns: 1.2rem minmax(0, 1fr); gap: 0 0.4rem; padding: 0.35rem 0.3rem; min-height: 2.75rem;
-  border-radius: 6px; font-size: 0.86rem; line-height: 1.35; }
-.check-item:hover { background: var(--board); }
-.check-item:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-.check-mark { grid-row: span 2; font-size: 1rem; line-height: 1.3; text-align: center; }
-.check-need { color: var(--ink); }
-.check-state { font-size: 0.76rem; color: var(--ink-3); }
-.check-item--in_hand .check-mark { color: var(--good); }
-.check-item--coming_or_unclear .check-mark { color: var(--amber); }
-.check-item--not_given .check-mark { color: var(--ink-3); }
-.check-item--not_available .check-mark { color: var(--signal); }
-.check-detail-state { margin: 0; font-weight: 600; display: flex; gap: 0.3rem; align-items: baseline; }
-.check-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem; }
-.check-actions button { min-height: 2.75rem; }
-.check-actions button.ghost { border: 1px solid var(--accent); border-radius: 8px; padding: 0.45rem 0.9rem; font-size: 0.85rem; }
-.check-none { margin: 0.3rem 0 0; font-size: 0.82rem; color: var(--ink-3); }
-.board-fold { display: block; }
-.board-fold > summary { cursor: pointer; min-height: 2.75rem; display: flex; align-items: center; }
-.board-fold > :not(summary) + :not(summary) { margin-top: 0.4rem; }
-/* "In short" and the time limits (owner decisions, 17 Oct 2026). */
-.in-short { border: 1px solid var(--rule); border-radius: 10px; background: var(--board); padding: 0.75rem 1rem;
-  margin: 0.75rem 0; display: grid; gap: 0.4rem; }
-.in-short-title { margin: 0; font-family: var(--f-serif); font-size: 1rem; font-weight: 600; }
-.in-short .el { margin: 0; }
-.in-short-list { margin: 0; padding-left: 1.1rem; display: grid; gap: 0.5rem; }
-.time-limits { margin: 0.75rem 0; }
-.time-limit-scroll { overflow-x: auto; border: 1px solid var(--rule); border-radius: 10px; }
-.time-limit-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
-.time-limit-table th, .time-limit-table td { text-align: left; vertical-align: top; padding: 0.45rem 0.6rem;
-  border-bottom: 1px solid var(--rule); }
-.time-limit-table th { font-family: var(--f-mono); font-size: 0.66rem; letter-spacing: 0.06em; text-transform: uppercase;
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.item { all: unset; box-sizing: border-box; width: 100%; cursor: pointer; display: grid;
+  grid-template-columns: 18px minmax(0, 1fr); gap: 8px; align-items: start; padding: 5px 6px; border-radius: 6px;
+  font-size: 0.88rem; line-height: 1.4; color: var(--ink); }
+.item:hover, .item[aria-current="true"] { background: var(--paper); box-shadow: inset 0 0 0 1px var(--rule); }
+.item:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.item .st { margin-top: 2px; }
+.item .t { text-decoration: underline; text-decoration-color: var(--rule); text-underline-offset: 3px; }
+.item:hover .t { text-decoration-color: var(--accent); }
+.item .sub { display: block; font-size: 0.76rem; color: var(--ink-3); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.check-none { margin: 0; font-size: 0.82rem; color: var(--ink-3); }
+.folded { font-size: 0.82rem; color: var(--ink-3); border-top: 1px solid var(--rule); padding-top: 0.6rem; }
+.folded > summary { cursor: pointer; min-height: 2.75rem; display: flex; align-items: center; }
+.folded > :not(summary) { margin-top: 0.45rem; }
+.folded .board-fact, .folded .board-list { color: var(--ink-2); }
+/* "In short", the time limits and what NM needs (owner decisions, 17 Oct 2026; the design). */
+.in-short { border: 1px solid var(--rule); border-radius: 8px; background: var(--surface-2); padding: 14px 16px;
+  margin: 0.75rem 0 1.1rem; display: grid; gap: 8px; }
+.in-short-title { margin: 0; font-family: var(--f-serif); font-size: 0.98rem; font-weight: 500; }
+.thread .in-short .el { margin: 0; }
+.in-short-list { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+.thread .in-short .el .body { font-size: 0.92rem; }
+.time-limits { margin: 0.4rem 0 1.1rem; }
+.time-limit-scroll { overflow-x: auto; border: 1px solid var(--rule); border-radius: 8px; }
+.time-limit-table, .working-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; line-height: 1.45; }
+.time-limit-table th, .time-limit-table td, .working-table th, .working-table td { text-align: left; vertical-align: top;
+  padding: 8px 10px; border-bottom: 1px solid var(--rule); }
+.time-limit-table tr:last-child td, .working-table tr:last-child th, .working-table tr:last-child td { border-bottom: 0; }
+.time-limit-table th { font-family: var(--f-mono); font-size: 0.66rem; letter-spacing: 0.07em; text-transform: uppercase;
   color: var(--ink-3); font-weight: 500; }
-.time-limit-day { white-space: nowrap; font-variant-numeric: tabular-nums; }
-.time-limit-toggle { text-align: left; padding: 0; min-height: 2.75rem; color: var(--accent); }
-.time-limit-detail td { background: var(--board); }
+.working-table th { font-weight: 500; color: var(--ink-3); white-space: nowrap; }
+.time-limit-table td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.limit-why { display: block; margin-top: 0.2rem; font-size: 0.78rem; color: var(--ink-3); }
 .time-limit-note { margin: 0.4rem 0 0; font-size: 0.8rem; color: var(--ink-3); }
+.need { border-left: 3px solid var(--accent); padding: 4px 0 4px 12px; margin: 1.2rem 0 0.4rem; display: grid; gap: 6px; }
+.need-title { margin: 0; font-size: 0.95rem; font-weight: 700; font-family: var(--f-sans); }
+.need-list { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+.thread .need .el { margin: 0; }
+.thread .need .el .body { font-size: 0.92rem; }
+/* A dotted link in prose that is not a source - the working of a time limit, an item's law. */
+.cite { display: inline; font: inherit; color: var(--accent); background: none; border: 0; padding: 0; min-height: 0;
+  cursor: pointer; text-decoration: underline dotted; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.cite:hover { text-decoration-style: solid; background: var(--accent-w); border-radius: 3px; }
 /* The sources a paragraph does not link, folded under one quiet "Sources" (decision 6,
    17 Oct 2026); opened, one under another. */
 .citation-link.citation-sources { font-size: 0.78rem; color: var(--ink-3); }
@@ -400,18 +421,61 @@ button.board-card:focus-visible { outline: 2px solid var(--accent); outline-offs
 .citation-fold { display: block; white-space: normal; margin: 0.3rem 0 0; padding-left: 0.7rem;
   border-left: 2px solid var(--rule); }
 .citation-fold .citation-marker { display: block; width: fit-content; line-height: 1.7; }
-/* The reading pane, passage first (owner decisions, 17 Oct 2026). */
+/* THE READING PANE AS THE DESIGN SHOWS IT (18 Oct 2026): Back and its name; a kind line,
+   title and where; the passage with its context greyed and the words marked; the whole
+   document, section or paragraph a click away; a badge for what it is; how NM checked it,
+   folded at the foot. */
+.reader-bar { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; padding: 12px 18px 0; }
+.reader-name { margin-left: auto; font-size: 0.82rem; color: var(--ink-3); }
+.reader-btn { font: inherit; font-size: 0.8rem; min-height: 0; padding: 3px 9px; border-radius: 6px; cursor: pointer;
+  color: var(--ink-3); background: none; border: 1px solid var(--rule); }
+.reader-btn:hover:not(:disabled) { color: var(--accent); border-color: var(--accent); }
+.reader-btn:disabled { opacity: 0.45; cursor: default; }
+.reader-head { flex: 0 0 auto; padding: 14px 18px 0; display: grid; gap: 4px; }
+.reader-head .kind { margin: 0; font-family: var(--f-mono); font-size: 0.66rem; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--accent); }
+.reader-head .kind:empty { display: none; }
+.rtitle { margin: 0; font-family: var(--f-serif); font-size: 1.1rem; font-weight: 500; line-height: 1.3;
+  overflow-wrap: anywhere; }
+#brain-source-body { display: grid; align-content: start; gap: 14px; padding: 12px 18px 18px; font-size: 0.9rem; }
+#brain-source-body p { margin: 0; }
+.reader-empty { color: var(--ink-3); font-size: 0.85rem; }
+.reader-note { font-size: 0.82rem; color: var(--ink-3); }
 .source-where { margin: 0; font-size: 0.82rem; color: var(--ink-3); }
-.source-role { margin: 0; justify-self: start; display: inline-block; font-size: 0.78rem; font-weight: 600;
-  color: var(--accent-2); background: var(--accent-w); border-radius: 999px; padding: 0.1rem 0.6rem; }
+.source-role { margin: 0; justify-self: start; display: inline-flex; gap: 6px; align-items: center; font-size: 0.78rem;
+  font-weight: 600; color: var(--accent-2); background: var(--accent-w); border-radius: 999px; padding: 2px 10px; }
+.source-role.warn { color: var(--signal); background: var(--signal-w); }
 .source-attention { margin: 0; font-size: 0.85rem; color: var(--signal); }
-.brain-source-window { white-space: pre-wrap; overflow-wrap: anywhere; font-family: var(--f-serif);
-  font-size: 0.95rem; line-height: 1.6; padding: 0.7rem 0.85rem; border-radius: 8px; background: var(--board); }
+.passage { white-space: pre-wrap; overflow-wrap: anywhere; font-family: var(--f-serif); font-size: 0.98rem;
+  line-height: 1.65; color: var(--ink); background: var(--board); border-radius: 8px; padding: 14px 16px; }
+.passage .ctx { color: var(--ink-3); }
 .brain-source-window mark, .brain-source-text mark, .document-text mark { background: var(--mark); color: inherit;
   border-radius: 2px; padding: 0 1px; }
-.source-expand { justify-self: start; min-height: 2.75rem; color: var(--accent); }
-.how-checked { border-top: 1px solid var(--rule); padding-top: 0.5rem; font-size: 0.85rem; }
-.how-checked summary { cursor: pointer; min-height: 2.75rem; display: flex; align-items: center; color: var(--ink-2); }
+.source-expand { justify-self: start; font: inherit; font-size: 0.86rem; min-height: 0; padding: 5px 12px;
+  color: var(--accent); background: none; border: 1px solid var(--accent); border-radius: 6px; cursor: pointer; }
+.whole { white-space: pre-wrap; overflow-wrap: anywhere; font-family: var(--f-serif); font-size: 0.94rem;
+  line-height: 1.6; max-height: 420px; overflow: auto; border: 1px solid var(--rule); border-radius: 8px;
+  padding: 14px 16px; }
+.how-checked { border-top: 1px solid var(--rule); padding-top: 10px; font-size: 0.82rem; color: var(--ink-3); }
+.how-checked summary { cursor: pointer; color: var(--ink-2); }
+.checked-plainly { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 12px; margin: 8px 0; }
+.checked-plainly dt { color: var(--ink-3); }
+.checked-plainly dd { margin: 0; color: var(--ink-2); }
+/* A checklist item in the pane. */
+.req-status { display: flex; gap: 8px; align-items: center; font-weight: 600; font-size: 0.9rem; }
+.req-block { display: grid; gap: 6px; }
+.req-block h4 { margin: 0; font-family: var(--f-mono); font-size: 0.66rem; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--ink-3); font-weight: 500; }
+.req-block p, .req-block li { font-size: 0.9rem; color: var(--ink-2); }
+.quote { margin: 0; font-family: var(--f-serif); border-left: 3px solid var(--rule); padding-left: 10px; color: var(--ink-2); }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.act { font: inherit; font-size: 0.85rem; min-height: 0; border-radius: 6px; padding: 6px 12px; cursor: pointer;
+  border: 1px solid var(--accent); }
+.act.primary { background: var(--accent); color: var(--paper); }
+/* Over the page's own plain ghost buttons, which have no border. */
+.act.ghost { background: none; color: var(--accent); border: 1px solid var(--accent); padding: 6px 12px;
+  font-size: 0.85rem; }
+.dispute-why { color: var(--ink); }
 /* What NM read, as one document (owner decision 5, 17 Oct 2026). */
 .document-flow { display: grid; gap: 0.5rem; }
 .page-mark { font-family: var(--f-mono); font-size: 0.66rem; letter-spacing: 0.06em; text-transform: uppercase;
@@ -579,7 +643,15 @@ button.wide { margin: 0.5rem 0.6rem 0.8rem; }
 #pane-advise[data-view="list"] > .conversation,
 #pane-advise[data-view="list"] > .matter-board,
 #pane-advise[data-view="list"] > .reading-pane { display: none; }
-#pane-advise.reading { grid-template-columns: clamp(15rem, 21vw, 20rem) minmax(0, 1fr) min(36rem, 38vw); }
+#pane-advise.reading { grid-template-columns: minmax(250px, 300px) minmax(0, 1fr) minmax(280px, 360px); }
+@media (min-width: 1200px) {
+  /* The three panes as the readability design shows them (18 Oct 2026): the board, the
+     answer and the reading pane, always there beside it; nothing to close. */
+  #pane-advise:not([data-view="list"]) {
+    grid-template-columns: minmax(250px, 300px) minmax(0, 1fr) minmax(280px, 360px); }
+  #pane-advise:not([data-view="list"]) > .reading-pane { display: flex; flex-direction: column; }
+  #pane-advise .reader-close { display: none; }
+}
 #pane-advise[data-view="opening"] .workspace-heading { display: none; }
 /* The reading pane is a column of the window, not a cover over it. */
 #pane-advise > .reading-pane { position: static; inset: auto; width: auto; height: auto; max-height: none;
@@ -660,7 +732,7 @@ button.wide { margin: 0.5rem 0.6rem 0.8rem; }
   #pane-advise > .matter-board { display: none; border-right: 0; }
   #pane-advise.show-board > .matter-board { display: flex; }
   #pane-advise.show-board > .conversation { display: none; }
-  #pane-advise > .reading-pane, .board-pane { position: fixed; inset: 0; width: 100vw; height: 100dvh;
+  #pane-advise > .reading-pane { position: fixed; inset: 0; width: 100vw; height: 100dvh;
     border-radius: 0; z-index: 60; }
 }
 
@@ -1300,8 +1372,6 @@ main.home { display: flex; align-items: flex-start; justify-content: center; ove
   cursor: pointer; }
 .files-toggle:hover, .files-toggle[aria-expanded="true"] { color: var(--accent); background: var(--accent-w, rgba(0,0,0,.04)); }
 .files-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.files-toggle.board-files { gap: 0.3rem; padding: 0 0.6rem; margin-left: auto; color: var(--accent); }
-.board-files-count { font-size: 0.8rem; font-weight: 600; }
 .files-menu { position: absolute; right: 0; top: 100%; z-index: 65; width: min(24rem, calc(100vw - 1.5rem));
   max-height: min(60vh, 28rem); overflow-y: auto; padding: .5rem; border: 1px solid var(--rule);
   border-radius: 12px; background: var(--surface); box-shadow: 0 4px 15px rgba(0,0,0,.08); }
@@ -1624,6 +1694,8 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visib
 
 .thread .el { border-left: 0; padding: 0; margin-bottom: 1.2rem; }
 .thread .el .body { margin: 0; }
+/* Paragraphs at the design's measure (18 Oct 2026). */
+.thread .turn .el .body { max-width: 66ch; font-size: 0.95rem; line-height: 1.6; }
 .thread .el.disclosure {
   border-left: 2px dashed var(--rule); padding-left: .8rem;
 }

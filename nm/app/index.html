@@ -382,34 +382,20 @@
     <div id="rail-body"></div>
   </aside>
 
-  <!-- THE LIVE MATTER BOARD, on the left of the conversation (owner, 16 Oct 2026).
-       Its own reading pane opens over it, reaching a little to the right: a
-       dispute's details, or the documents and research notes. -->
+  <!-- THE LIVE MATTER BOARD, on the left of the conversation (owner, 16 Oct 2026), laid
+       out as the readability design shows it (18 Oct 2026). A dispute, a checklist item
+       and the files open in the reading pane on the right. -->
   <aside class="matter-board" id="matter-board" aria-labelledby="matter-board-title">
-    <div class="rail-head">
+    <div class="rail-head board-head">
       <h2 id="matter-board-title">Matter board</h2>
-      <button type="button" id="board-files" class="files-toggle board-files" aria-expanded="false"
-              aria-controls="board-pane" aria-label="Documents and research notes"
-              title="Documents and research notes">
-        <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" focusable="false">
-          <path d="M11.5 2.5H5.8A1.3 1.3 0 0 0 4.5 3.8v12.4a1.3 1.3 0 0 0 1.3 1.3h8.4
-                   a1.3 1.3 0 0 0 1.3-1.3V6.5z M11.5 2.5v4h4 M7.5 10.5h5 M7.5 13.5h5"
-                fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"
-                stroke-linecap="round"/>
-        </svg>
-        <span id="board-files-count" class="board-files-count">Files</span>
+      <button type="button" id="board-files" class="files-btn board-files"
+              aria-controls="brain-source-reader" aria-label="Files: documents and research notes">
+        <span aria-hidden="true">▤</span> <span id="board-files-count" class="board-files-count">Files</span>
       </button>
     </div>
     <p id="board-status" class="board-progress" role="status" aria-live="polite" hidden></p>
     <div class="rail-meta" id="matter-board-meta"></div>
     <div id="matter-board-body"></div>
-    <section id="board-pane" class="board-pane" aria-labelledby="board-pane-title" hidden>
-      <header class="dispute-reader-head">
-        <h2 id="board-pane-title"></h2>
-        <button type="button" id="board-pane-close" class="ghost">Close</button>
-      </header>
-      <div id="board-pane-body" class="dispute-reader-body" tabindex="0"></div>
-    </section>
   </aside>
 
   <!-- ========================= THE ANSWER ========================= -->
@@ -571,17 +557,22 @@
     </form>
   </section>
 
-  <!-- ONE READING PANE ON THE RIGHT for every link (owner, 16 Oct 2026): beside the
-       conversation on a wide screen, not over it; full screen on a phone. -->
+  <!-- ONE READING PANE ON THE RIGHT for every link (owner, 16 Oct 2026): always beside
+       the conversation on a wide screen, as the readability design shows it (18 Oct 2026);
+       over it on a narrower one and full screen on a phone. -->
   <dialog id="brain-source-reader" class="reading-pane" aria-labelledby="brain-source-title">
-    <header class="dispute-reader-head">
-      <button type="button" id="brain-source-back" class="ghost" hidden>Back</button>
-      <h2 id="brain-source-title"></h2>
-      <button type="button" id="brain-source-close" class="ghost">Close</button>
+    <header class="reader-bar">
+      <button type="button" id="brain-source-back" class="reader-btn" disabled>‹ Back</button>
+      <span class="reader-name">Reading pane</span>
+      <button type="button" id="brain-source-close" class="reader-btn reader-close">Close</button>
     </header>
+    <div class="reader-head">
+      <p id="brain-source-kind" class="kind"></p>
+      <h2 id="brain-source-title" class="rtitle"></h2>
+    </div>
     <p id="brain-source-status" role="status" aria-live="polite"></p>
     <div id="brain-source-body" class="dispute-reader-body" tabindex="0"
-         aria-label="Reading pane"></div>
+         aria-label="Reading pane"><p class="reader-empty">Open a dotted phrase in the answer, an item on the board or Files, and it is shown here.</p></div>
   </dialog>
 </main>
 

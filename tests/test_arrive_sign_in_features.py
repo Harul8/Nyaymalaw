@@ -1160,37 +1160,57 @@ def unreadable_board_says_so(page_script):
     assert "not an empty matter" in board
 
 
-@then("choosing a dispute opens its details in the board's own pane, which closes on Close or Escape")
-def dispute_opens_in_the_board_pane(page_script):
-    # The dispute's name opens it (18 Oct 2026: its card also holds its checklist).
+@then("each dispute shows its last days, how much is in hand and its items under Needed and Would strengthen "
+      "with their marks")
+def each_dispute_shows_what_it_needs(page_script):
+    # The readability design (owner, 18 Oct 2026); behaviour in tests/js/checklist_board.mjs.
     card = _function(page_script, "renderDisputeCard")
-    assert "openBoardPane(dispute.name, renderDisputeDetail(dispute, board), open);" in card
+    for step in ("meta.append(...deadlineChips(listed.time_limits));",
+                 "`${listed.in_hand} of ${listed.items.length} in hand`",
+                 "for (const [group, groupTitle] of CHECK_GROUPS) {", "row.append(checkMark(item.status), words);"):
+        assert step in card, step
+    assert "const CHECK_GROUPS = [['needed', 'Needed'], ['would_strengthen', 'Would strengthen']];" in page_script
+    chips = _function(page_script, "deadlineChips")
+    assert "`By ${dayDate(limit.last_day) || rows.get('Last day')}" in chips and "Last day not worked out" in chips
+    assert "out.push(renderCheckLegend());" in _function(page_script, "renderChatBoard")
+
+
+@then("choosing a dispute or an item opens its details in the reading pane on the right")
+def a_dispute_or_item_opens_in_the_reading_pane(page_script):
+    card = _function(page_script, "renderDisputeCard")
+    assert ("window.NmBrainSources.showContent(dispute.name,\n    renderDisputeDetail(dispute, board), title, false, "
+            "number ? `Dispute ${number}` : 'Dispute')") in card
+    assert ("window.NmBrainSources.showContent(item.need,\n        renderChecklistItem(item, dispute), row, false, "
+            "`${groupTitle} · ${place}`)") in card
     detail = _function(page_script, "renderDisputeDetail")
-    for part in ("'Why it matters'", "'Time limits'", "'Where it was picked up from'", "'Between'", "'Legal questions'",
-                 "`Why it was asked: ${question.why}`", "'Rights at stake'", "'Relief sought'", "'Still needed'",
-                 "'Related points for your decision'"):
+    for part in ("`Between ${dispute.between.join(' · ')}`", "dispute.why_it_matters", "'Time limits'",
+                 "'Where it was picked up from'", "'Legal questions'", "`Why it was asked: ${question.why}`",
+                 "'Rights at stake'", "'Relief sought'", "'Still needed'", "'Related points for your decision'"):
         assert part in detail, part
-    assert "$('board-pane-close').addEventListener('click', () => closeBoardPane());" in page_script
-    escape = page_script[page_script.index("$('board-pane-close').addEventListener"):]
-    escape = escape[:escape.index("\n});\n")]
-    assert "event.key !== 'Escape'" in escape and "closeBoardPane();" in escape
+    item = _function(page_script, "renderChecklistItem")
+    for part in ("'Why it is needed'", "'What shows it'", "'What you said'", "'Where it stands'",
+                 "'Tell NM about this'", "'Not available'", "openLaw(law, lawLink)"):
+        assert part in item, part
+    assert "'board-pane'" not in page_script, "a dispute no longer opens in the board's own pane"
 
 
-@then("the file icon beside the board's title lists the documents and the research notes")
-def board_file_icon(app_page, page_script):
+@then("the Files button beside the board's title lists the files and the research notes in the reading pane")
+def board_files_button(app_page, page_script):
     head = _board_html(app_page)
     head = head[:head.index("</div>")]
     assert 'id="matter-board-title">Matter board</h2>' in head and 'id="board-files"' in head
+    assert 'id="board-files-count"' in head
     assert "$('board-files').addEventListener('click', () => openBoardFiles());" in page_script
     files = _function(page_script, "openBoardFiles")
-    for step in ("part('Documents')", "part('Research notes')", "renderChatNotes(notesBody);",
-                 "await loadChatDocuments(documentsBody, generation);"):
+    for step in ("window.NmBrainSources.showContent('Files in this matter', [files, note, notes], $('board-files'), false,",
+                 "'Research notes'", "renderChatNotes(notesBody);", "return loadChatDocuments(files);"):
         assert step in files, step
+    assert "`Files · ${sent}`" in _function(page_script, "updateWorkspace")
 
 
 @then("a document opens in the reading pane on the right")
 def document_opens_in_the_reading_pane(page_script):
-    assert ("window.NmBrainSources.showContent(document_.name, renderDocumentPages(document_, turn), opener)"
+    assert ("window.NmBrainSources.showContent(document_.name, renderDocumentPages(document_, turn), opener, false,"
             in _function(page_script, "loadChatDocuments"))
     # 17 Oct 2026 (owner decision 4): "Read here" opens what NM read; the name opens the file as sent.
     listing = _function(page_script, "renderChatDocuments")
@@ -1233,14 +1253,18 @@ def choosing_a_conversation_restores_it(page_script):
     assert "loadChatBoard();" in _function(page_script, "startMatter")
 
 
-@then("the reading pane is part of the conversation window and opens beside the conversation without "
-      "covering it")
+@then("the reading pane is part of the conversation window and stays beside the conversation on a wide screen")
 def reading_pane_beside(app_page, stylesheet):
     assert '<dialog id="brain-source-reader" class="reading-pane"' in pane_html(app_page, "advise")
     begin = _inner_function(_asset("brain-sources.js"), "begin")
     assert "node('pane-advise').classList.add('reading');" in begin
     assert "dialog.show();" in begin and "showModal" not in begin
     assert re.search(r"#pane-advise\.reading \{ grid-template-columns: [^;]+ minmax\(0, 1fr\) [^;]+; \}", stylesheet)
+    # The design (18 Oct 2026): on a wide screen the three panes are always there.
+    wide = media_blocks(stylesheet, "(min-width: 1200px)")
+    assert re.search(r'#pane-advise:not\(\[data-view="list"\]\) \{\s*grid-template-columns: [^;]+ minmax\(0, 1fr\) '
+                     r'[^;]+; \}', wide)
+    assert '#pane-advise:not([data-view="list"]) > .reading-pane { display: flex; flex-direction: column; }' in wide
 
 
 @then("the reading pane closes on Close or Escape")

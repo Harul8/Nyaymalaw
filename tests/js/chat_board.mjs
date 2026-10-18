@@ -1,7 +1,7 @@
 // The matter board as NM understood it, from the conversation's saved understanding
-// (owner decisions, 15 and 16 Oct 2026): short dispute cards on the board, each
-// opening its details in the board's own pane. Offline substitutes for the DOM; not
-// browser QA.
+// (owner decisions, 15 and 16 Oct 2026): each dispute on the board opening its details in
+// the reading pane on the right (the readability design, 18 Oct 2026). Offline
+// substitutes for the DOM; not browser QA.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
@@ -23,11 +23,13 @@ const opened = [];
 const context = vm.createContext({
   document: { createElement: el },
   stateBlock: (kind, message) => ({ stateKind: kind, textContent: message, children: [] }),
-  openBoardPane: (title, content, trigger) => opened.push({ title, content, trigger }),
+  window: { NmBrainSources: { showContent: (title, content, trigger, back, kind) =>
+    opened.push({ title, content: Array.from(content), trigger, kind }) } },
 });
 vm.runInContext(app.slice(start, end), context);
 const slice = (from, to) => app.slice(app.indexOf(from), app.indexOf(to, app.indexOf(from)));
-vm.runInContext(slice('function timeLimitStanding(rows) {', 'function renderTimeLimits(items) {'), context);
+vm.runInContext(slice('function timeLimitStanding(rows) {', '// What is left of a time limit'), context);
+vm.runInContext(slice('function fileDate(iso) {', 'function fileAttention('), context);
 
 // Nothing researched yet: said plainly, never an error.
 {
@@ -64,7 +66,7 @@ const board = {
   assert.ok(all.includes('As NM understood this matter'));
   assert.ok(!all.includes('Written before research'));
   assert.ok(all.includes('Reported obstruction of access'));
-  assert.ok(all.includes('The client · The neighbour'));
+  assert.ok(!all.includes('The client · The neighbour'), 'who it is between is in its details');
   assert.ok(all.includes('The client cannot reach the property without the path.'));
   assert.ok(all.includes('2 legal questions · 1 researched · 1 search failed'));
   assert.ok(!all.includes('Can the client establish an easement?'), 'questions live in the dispute pane');
@@ -73,21 +75,20 @@ const board = {
   assert.ok(all.includes('From photo.jpg, page 1 (read by AI)'));
   assert.ok(all.includes('Do not send the appointment message.'));
 
-  // Choosing the dispute opens its details in the board's own pane.
-  // The dispute's name opens it (18 Oct 2026: its card also holds its checklist).
-  // Before checklists there is no legend: the disputes come first (18 Oct 2026).
-  const card = nodes[0].children.find((node) => node.className === 'board-card dispute-card')
+  // The dispute's name opens its details in the reading pane (18 Oct 2026). Before
+  // checklists there is no legend: the disputes come first.
+  const card = nodes[0].children.find((node) => node.className === 'dispute')
     .children.find((node) => node.tagName === 'BUTTON');
-  assert.equal(card.attributes['aria-pressed'], 'false');
+  assert.equal(card.className, 'dtitle');
   card.handlers.click();
   assert.equal(opened.length, 1);
   assert.equal(opened[0].title, 'Reported obstruction of access');
+  assert.equal(opened[0].kind, 'Dispute');
   assert.equal(opened[0].trigger, card);
-  assert.equal(card.attributes['aria-pressed'], 'true');
   const detail = opened[0].content.map(text).join('\n');
-  for (const part of ['Why it matters', 'The client cannot reach the property without the path.',
+  for (const part of ['Between The client · The neighbour', 'The client cannot reach the property without the path.',
     'Where it was picked up from', 'ownership is disputed', 'From your messages', 'From photo.jpg, page 1 (read by AI)',
-    'Between', 'Legal questions', 'Can the client establish an easement?', 'Research: researched',
+    'Legal questions', 'Can the client establish an easement?', 'Research: researched',
     'Why it was asked: It decides the right of way.', 'Still open: How long the path has been used.',
     'Research: search failed', 'Rights at stake', 'A right of way', 'Relief sought', 'An injunction',
     'Still needed', 'Related points for your decision', 'Any other access — It affects necessity.']) {
@@ -102,9 +103,9 @@ const board = {
   delete earlier.disputes[0].why_it_matters;
   const nodes = context.renderChatBoard(earlier);
   assert.ok(!nodes.map(text).join('\n').includes('without the path'));
-  nodes[0].children.find((node) => node.className === 'board-card dispute-card')
+  nodes[0].children.find((node) => node.className === 'dispute')
     .children.find((node) => node.tagName === 'BUTTON').handlers.click();
-  assert.ok(!opened.at(-1).content.map(text).join('\n').includes('Why it matters'));
+  assert.ok(!opened.at(-1).content.map(text).join('\n').includes('without the path'));
 }
 
 // A dispute's details give each of its time limits in full (18 Oct 2026): the board's card
@@ -117,10 +118,11 @@ const board = {
         ['As of', '18 October 2026 (Sunday)'], ['Result', 'Open'], ['Days left', '84']] },
       { what: 'Last day to answer the notice', rows: [['Not assessed', 'the notice date is not given']] }] };
   const nodes = context.renderChatBoard(listed);
-  nodes[0].children.find((node) => node.className === 'board-card dispute-card')
+  nodes[0].children.find((node) => node.className === 'dispute')
     .children.find((node) => node.tagName === 'BUTTON').handlers.click();
   const detail = opened.at(-1).content.map(text).join('\n');
-  for (const part of ['Time limits', 'Last day to file the suit',
+  for (const part of ['By 10 January 2027 (Sunday)', 'Last day not worked out', 'Time limits',
+    'Last day to file the suit',
     'Last day 10 January 2027 (Sunday) · Open · 84 days left · as of 18 October 2026 (Sunday)',
     'Last day to answer the notice', 'Not assessed: the notice date is not given']) {
     assert.ok(detail.includes(part), part);

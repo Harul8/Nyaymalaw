@@ -162,22 +162,25 @@ const chip = (get, index = 0) => get('attachments').children[index];
   assert.equal(name.textContent, 'memo.pdf');
   assert.equal(name.href, '/api/documents/doc_x/original');
   assert.equal(name.target, '_blank');
-  assert.equal(meta.textContent, 'PDF · 12.6 KB · 17 Oct 2026 · read by AI');
+  assert.equal(meta.textContent, 'PDF · 12.6 KB · sent 17 Oct 2026 · read by AI');
   assert.equal(attention.textContent, '1 page could not be read · 1 page partly legible');
   assert.equal(memo.title, 'Sent with: “Please look at the memo.”');
   const wordBody = word.children[1];
   assert.equal(wordBody.children[0].attributes['aria-label'], 'Police complaint.docx, opens in Word');
-  assert.equal(wordBody.children[1].textContent, 'Word · 3.3 KB · 17 Oct 2026');
+  assert.equal(wordBody.children[1].textContent, 'Word · 3.3 KB · sent 17 Oct 2026 · opens in Word');
   assert.equal(wordBody.children.length, 3, 'no note when nothing needs attention');
   read.click();
   assert.equal(opened.length, 1);
   assert.equal(opened[0][0].name, 'memo.pdf');
   assert.equal(opened[0][2], read);
   const shown = context.renderDocumentPages(opened[0][0], opened[0][1]);
-  assert.equal(shown[0].textContent, 'Open the file as sent');
-  assert.equal(shown[0].href, '/api/documents/doc_x/original');
-  assert.equal(shown[1].textContent, 'Sent with: “Please look at the memo.”');
-  assert.deepEqual(shown[2].children.map((node) => node.textContent), [
+  // As the design shows it (18 Oct 2026): how many pages and that this is as NM read them.
+  assert.equal(shown[0].textContent, '3 pages · as NM read it');
+  assert.equal(shown[1].textContent, 'Open the file as sent');
+  assert.equal(shown[1].href, '/api/documents/doc_x/original');
+  assert.equal(shown[2].textContent, 'Sent with: “Please look at the memo.”');
+  assert.equal(shown[3].className, 'document-flow whole');
+  assert.deepEqual(shown[3].children.map((node) => node.textContent), [
     'Page 1', 'Return memo.', 'Page 2 · read by AI, partly legible', 'lower edge cut off', 'Notice [illegible]',
     'Page 3', 'Not read: the AI could not make out this page']);
   // A file whose own record could not be read still lists what the conversation saved.
