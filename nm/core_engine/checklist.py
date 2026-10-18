@@ -63,7 +63,10 @@ def _item(item, earlier, sources, turn_id):
     if item["status"] == "not_given":
         asked = (before["asked_in"] if before and before["status"] == "not_given" and before.get("asked_in")
                  else turn_id)
-    return {"id": None, "need": item["need"], "group": item["group"], "law": law, "status": item["status"],
+    return {"id": None, "need": item["need"],
+            # From writer v9 (18 Oct 2026): why the case needs it, and where it stands in a few words.
+            **{key: item[key] for key in ("why", "note") if key in item},
+            "group": item["group"], "law": law, "status": item["status"],
             "evidence": _evidence(item["evidence"], sources) if item["evidence"] else None,
             "asked_in": asked, "noted_in": turn_id}
 
@@ -141,7 +144,8 @@ def for_board(row_records, dates):
             evidence = deepcopy(item["evidence"])
             if evidence is not None:
                 evidence["given_at"] = dates.get(evidence["turn_id"])
-            items.append({**{key: deepcopy(item[key]) for key in ("id", "need", "group", "status", "law")},
+            items.append({**{key: deepcopy(item[key]) for key in ("id", "need", "why", "note", "group", "status", "law")
+                             if key in item},
                           "evidence": evidence, "asked_at": dates.get(item["asked_in"]) if item["asked_in"] else None})
         shown[dispute["id"]] = {"name": dispute["name"], "answered_at": dates.get(dispute["answered_in"]),
                                 "time_limits": deepcopy(dispute["time_limits"]), "items": items,

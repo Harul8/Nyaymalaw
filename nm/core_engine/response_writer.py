@@ -45,16 +45,27 @@ LINKS_CONTRACT = "core_response_writer_v7"
 #: v8 (owner, 18 Oct 2026): the writer no longer names the message each unit answers, a
 #: bookkeeping duty it slipped on in two of five live runs; every unit answers the latest
 #: message, which code records as its address.
-CONTRACT = "core_response_writer_v8"
+ADDRESSLESS_CONTRACT = "core_response_writer_v8"
+#: v9 (owner decisions, 18 Oct 2026: the three panes exactly as the readability design shows
+#: them): every held passage and document page a unit uses is linked on the words it
+#: supports, the list beneath a paragraph staying the fallback (the writer had linked 8 of
+#: 49 in the owner's browser run); each checklist item is a short line with one sentence on
+#: why the case needs it and, where it is coming or unclear or not available, a few words on
+#: where it stands; a summary is a sentence or two; what NM needs is asked in short questions.
+CONTRACT = "core_response_writer_v9"
 CONTRACTS = (LEGACY_CONTRACT, OWNED_TAG_CONTRACT, ALIAS_CONTRACT, PARTS_CONTRACT, WORDS_CONTRACT,
-             CHECKLIST_CONTRACT, LINKS_CONTRACT, CONTRACT)
-_IN_PARTS = (PARTS_CONTRACT, WORDS_CONTRACT, CHECKLIST_CONTRACT, LINKS_CONTRACT, CONTRACT)
+             CHECKLIST_CONTRACT, LINKS_CONTRACT, ADDRESSLESS_CONTRACT, CONTRACT)
+_IN_PARTS = (PARTS_CONTRACT, WORDS_CONTRACT, CHECKLIST_CONTRACT, LINKS_CONTRACT, ADDRESSLESS_CONTRACT, CONTRACT)
 #: The versions in which every source names the words of its unit that it supports.
 WORDED = (WORDS_CONTRACT, CHECKLIST_CONTRACT)
 #: The versions whose units link their sources in their own text, [words](P1).
-LINKED = (LINKS_CONTRACT, CONTRACT)
+LINKED = (LINKS_CONTRACT, ADDRESSLESS_CONTRACT, CONTRACT)
+#: The versions whose units answer the latest message without naming it.
+ADDRESSLESS = (ADDRESSLESS_CONTRACT, CONTRACT)
 #: The versions whose dispute parts return a checklist.
 CHECKLISTED = (CHECKLIST_CONTRACT, *LINKED)
+#: The versions whose checklist items say why each is needed (and may say where it stands).
+REASONED = (CONTRACT,)
 #: Each part's answer limit; reasoning counts towards it.
 MAX_OUTPUT = 16000
 SYSTEM = """Message: You receive the exact latest advocate message, complete attributed
@@ -77,11 +88,14 @@ what this research could not establish, and give practical next steps. This is a
 unadmitted draft for independent review, not executed or saved work.
 
 Your part: this_part names the dispute this call answers, with its legal questions,
-rights at stake, relief sought and missing facts. Begin a dispute's part with one short
-unit of kind summary: what to do about this dispute, by when where a time limit was
-worked out, and what is still needed from the advocate. The page opens the answer with
-the summaries under its own heading "In short", so write the summary itself, with no
-heading of its own; an opening part has none. Other parts of the answer, written
+rights at stake, relief sought and missing facts. Begin a dispute's part with one unit of
+kind summary, a sentence or two that give the advocate the gist before the detail: what
+to do about this dispute, by when where a time limit was worked out, and what is still
+needed from them. The page opens the answer with every dispute's summary under its own
+heading "In short", so write the summary itself, with no heading of its own; an opening
+part has none. Ask what you need from the advocate in units of kind question, each one
+short, direct ask: the page gathers them at the end of the answer under "What I need
+from you". Other parts of the answer, written
 separately, answer the other disputes it lists, including requests about them; do not
 answer those here. When this_part names no dispute it opens a reply that covers several:
 give a brief opening, anything the advocate asked that belongs to no single dispute, and
@@ -93,7 +107,11 @@ Your dispute's checklist: beside its units, a dispute's part returns what the ca
 needs as the held law requires it, so the advocate sees at a glance what is in hand.
 Under needed put what the held law makes necessary for the relief or defence (an element
 to prove, a notice, a document, a step within time); under would_strengthen what would
-make the case stronger without being required. Tie each item to the held passage that
+make the case stronger without being required. Write each need as a short checklist
+line, the way an advocate's own checklist reads ("The signed agreement of sale", "Proof
+the balance was available"), and in why one plain sentence on why the case needs it.
+For an item coming_or_unclear or not_available, say in note, in a few words, where it
+stands ("promised tomorrow", "not sure it arrived"); otherwise note is null. Tie each item to the held passage that
 requires it, copying one continuous stretch of the words that say so, exactly as they
 stand with nothing left out in the middle, fully enough to be found once.
 An item already on the matter's checklist (current_records.checklist) whose passage is
@@ -109,7 +127,8 @@ part returns neither.
 
 Work in a loop before you return: read the conversation and the passages, draft, check
 every statement against the words it relies on (who said it, its conditions, scope and
-certainty), and correct the draft.
+certainty) and that each held passage and document page you use is linked from the words
+it supports, and correct the draft.
 
 Look for:
 1. Read the original messages before the proposals. Address every independently
@@ -172,13 +191,14 @@ neighbouring context remain the basis for checking each assertion and its condit
 Account, law and analysis units need source uses; law needs held legal material.
 Analysis selects its factual and legal premises. Questions and next steps select any
 premises they assert; greetings need no source use.
-In a unit's text, put each source's link on the few words already in your sentence that
-the source supports, as a markdown link inside the sentence with the source's short ID:
-"Section 138 [requires presentation within six months](P6) of the cheque's date", not a
-label after it ("... within six months. [The presentation period](P6)"). The advocate
-opens the source from those words, so a unit need not name its documents, pages or
-sources in its text; a label standing alone is taken out, and a source you use but do
-not link is listed beneath the paragraph. The short IDs (M1, P1, T1...) are only for
+In a unit's text, link every held passage and document page the unit uses on the few
+words already in your sentence that it supports, as a markdown link inside the sentence
+with the source's short ID: "Section 138 [requires presentation within six months](P6)
+of the cheque's date", not a label after it ("... within six months. [The presentation
+period](P6)"). The advocate reads the answer through these links and opens each source
+from its words, so a unit need not name its documents, pages or sources in its text. A
+label standing alone is taken out, and a source you use but do not link is only listed
+beneath the paragraph, which is harder for the advocate to follow. The short IDs (M1, P1, T1...) are only for
 links, source selections and time_limit_ids: never write one in your text, and call a
 time limit by what it is. For every use, copy source_kind from the
 supplied source_kinds catalogue:
@@ -290,6 +310,19 @@ _UNITS_V8 = {**_UNITS_V7, "items": _object({key: value for key, value in _UNITS_
 PART_SCHEMA_V8 = _object({"units": _UNITS_V8, "checklist": CHECKLIST, "time_limit_ids": LIMIT_IDS})
 SCHEMA_V8 = _object({"units": _UNITS_V8, "checklists": {
     "type": "array", "items": _object({"checklist": CHECKLIST, "time_limit_ids": LIMIT_IDS})}})
+#: v9: each item a short line, why the case needs it, and where it stands in a few words.
+ITEM_V9 = _object({
+    **ITEM["properties"],
+    "need": {**TEXT, "description": "What the case needs, as a short checklist line."},
+    "why": {**TEXT, "description": "One plain sentence on why the case needs it."},
+    "note": {"type": ["string", "null"],
+             "description": "For an item coming_or_unclear or not_available, a few words on where it stands; "
+                            "otherwise null."},
+})
+CHECKLIST_V9 = {"type": "array", "items": ITEM_V9}
+PART_SCHEMA_V9 = _object({"units": _UNITS_V8, "checklist": CHECKLIST_V9, "time_limit_ids": LIMIT_IDS})
+SCHEMA_V9 = _object({"units": _UNITS_V8, "checklists": {
+    "type": "array", "items": _object({"checklist": CHECKLIST_V9, "time_limit_ids": LIMIT_IDS})}})
 _LINK = re.compile(r"\[([^\[\]]+)\]((?:\([^()]*\))+)")
 _SENTENCE_END = ".;:!?"
 
@@ -453,9 +486,16 @@ _HOLDS = {"account": "an advocate message", "document": "a document page"}
 _SAYS = {"account": "an advocate message"}
 
 
-def _checklists(given, layout, context, sources, offered, *, limits="time_limits"):
+def _plain(text):
+    """Words written with link markup keep their words (forensic review, 18 Oct 2026)."""
+    return _LINK.sub(lambda match: match.group(1), text)
+
+
+def _checklists(given, layout, context, sources, offered, *, limits="time_limits", reasoned=False):
     """v6: each dispute part's checklist, every quote checked exactly (owner decisions, 17
-    Oct 2026). No item is a manual tick: one in hand names the words that hold it."""
+    Oct 2026). No item is a manual tick: one in hand names the words that hold it. From
+    v9 (reasoned) an item also says why the case needs it and, in a few words, where it
+    stands."""
     if len(given) != len(layout):
         raise SchemaViolation("Each part of the reply returns its own checklist")
     saved, number, out = checklist.saved(context), 0, []
@@ -467,9 +507,16 @@ def _checklists(given, layout, context, sources, offered, *, limits="time_limits
             number += 1
             # Written as a link, a need keeps its words (forensic review, 18 Oct 2026): its law
             # and evidence are given beside it.
-            need = _LINK.sub(lambda match: match.group(1), item["need"])
+            need = _plain(item["need"])
             if not need.strip():
                 raise SchemaViolation("A checklist item needs to say what the case needs")
+            reasons = {}
+            if reasoned:
+                why = _plain(item["why"])
+                if not why.strip():
+                    raise SchemaViolation("A checklist item needs to say why the case needs it")
+                note = _plain(item["note"]) if isinstance(item["note"], str) else None
+                reasons = {"why": why, "note": note if note and note.strip() else None}
             if (item["law"] is None) == (item["carries"] is None):
                 raise SchemaViolation("A checklist item rests either on held law words or on the item of the "
                                       "matter's checklist it carries, never both or neither")
@@ -478,7 +525,7 @@ def _checklists(given, layout, context, sources, offered, *, limits="time_limits
             if (item["status"] == "not_given") != (item["evidence"] is None):
                 raise SchemaViolation("A checklist item not yet given has no evidence; every other state quotes "
                                       "the words that show it")
-            items.append({"id": f"{context['latest']['turn_id']}:c{number}", "need": need,
+            items.append({"id": f"{context['latest']['turn_id']}:c{number}", "need": need, **reasons,
                           "group": item["group"], "status": item["status"], "carries": item["carries"],
                           "law": None if item["law"] is None else _quoted(
                               item["law"], sources, offered, _LAW, "A checklist item's law"),
@@ -502,7 +549,8 @@ def accept(proposal, context, sources, *, contract=CONTRACT, parts=None, whole=T
     if parts is not None and contract not in _IN_PARTS:
         raise ValueError("Only a v4 or later draft is written in parts")
     offered = answer_sources.aliases(sources) if contract in (ALIAS_CONTRACT, *_IN_PARTS) else {}
-    schema = (LEGACY_SCHEMA if contract == LEGACY_CONTRACT else SCHEMA_V8 if contract == CONTRACT
+    schema = (LEGACY_SCHEMA if contract == LEGACY_CONTRACT else SCHEMA_V9 if contract == CONTRACT
+              else SCHEMA_V8 if contract == ADDRESSLESS_CONTRACT
               else SCHEMA_V7 if contract == LINKS_CONTRACT else SCHEMA_V6 if contract == CHECKLIST_CONTRACT
               else SCHEMA_V5 if contract == WORDS_CONTRACT else SCHEMA)
     data = canonical_schema_data(proposal, schema)
@@ -516,7 +564,7 @@ def accept(proposal, context, sources, *, contract=CONTRACT, parts=None, whole=T
             raise SchemaViolation("A response unit needs nonblank text")
         addresses = []
         # v8: every unit answers the latest message, recorded by code as its address.
-        for ref in item["addresses"] if contract != CONTRACT else [{"source_id": latest_id}]:
+        for ref in item["addresses"] if contract not in ADDRESSLESS else [{"source_id": latest_id}]:
             if ref.get("source_id") in offered:  # a short ID is mapped back (16 Oct 2026)
                 ref = {**ref, "source_id": offered[ref["source_id"]]}
             original = originals.get(ref["source_id"])
@@ -548,7 +596,7 @@ def accept(proposal, context, sources, *, contract=CONTRACT, parts=None, whole=T
         # words, and a label standing alone holds none (the source is listed instead).
         for start, end, identity, written in links:
             owned = next((use for use in uses if use["source_id"] == identity), None)
-            if owned is None and contract == CONTRACT and (sources.get(identity) or {}).get("kind") in _PLAIN:
+            if owned is None and contract in ADDRESSLESS and (sources.get(identity) or {}).get("kind") in _PLAIN:
                 # v8: the link names its source, so code lists it (forensic review, 18 Oct 2026);
                 # a judgment's use must still say how the court treated it.
                 owned = _owned_use({"source_kind": sources[identity]["kind"], "source_id": identity},
@@ -573,7 +621,8 @@ def accept(proposal, context, sources, *, contract=CONTRACT, parts=None, whole=T
         draft["parts"] = _layout(parts, len(units))
     if contract in CHECKLISTED:
         draft["checklists"] = _checklists(data["checklists"], draft["parts"], context, sources, offered,
-                                          limits="time_limit_ids" if contract in LINKED else "time_limits")
+                                          limits="time_limit_ids" if contract in LINKED else "time_limits",
+                                          reasoned=contract in REASONED)
     return draft
 
 
@@ -625,7 +674,8 @@ def dates_not_given(draft, context, sources, time_limits=None):
     days = {(d, m) for d, m, _ in given}
     findings = []
     written = [(unit["id"], unit["text"]) for unit in draft["units"]] + [
-        (item["id"], item["need"]) for part in draft.get("checklists", ()) for item in part["items"]]
+        (item["id"], " ".join(filter(None, (item["need"], item.get("why"), item.get("note")))))
+        for part in draft.get("checklists", ()) for item in part["items"]]
     for identity, text in written:
         stated = [words for (d, m, y), words in _dates(text)
                   if not ((d, m, y) in given or (d, m, None) in given if y else (d, m) in days)]
@@ -714,11 +764,11 @@ def _payload(context, record, sources, interpretation, execution, layout, index,
 def _write_part(model, payload):
     prompt = Prompt(system=SYSTEM, user=json.dumps(payload, ensure_ascii=False),
                     operation="core_response_writer")
-    if (estimate_tokens(SYSTEM + prompt.user + json.dumps(PART_SCHEMA_V8)) + MAX_OUTPUT
+    if (estimate_tokens(SYSTEM + prompt.user + json.dumps(PART_SCHEMA_V9)) + MAX_OUTPUT
             > model.context_budget(Tier.HARD)):
         raise ContextOverflow("Complete response context exceeds the model budget")
     try:
-        result = model.structured(prompt, PART_SCHEMA_V8, Tier.HARD, max_tokens=MAX_OUTPUT)
+        result = model.structured(prompt, PART_SCHEMA_V9, Tier.HARD, max_tokens=MAX_OUTPUT)
     except SchemaViolation as exc:
         if exc.rejected_result is None:
             raise

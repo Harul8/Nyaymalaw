@@ -48,7 +48,8 @@ def note(row, *, prepared_for):
              for index, document in enumerate(documents, 1) for page in document["pages"]}
     numbers, sources, blocks, quoted = {}, [], [], set()
     for element in elements:
-        if element.get("kind") == "HEADING":
+        # "What I need from you" (rendering v14) heads the questions gathered under it.
+        if element.get("kind") in ("HEADING", "NEEDS"):
             blocks.append({"kind": "heading", "text": element["text"]})
             continue
         if element.get("kind") == "WORKING":

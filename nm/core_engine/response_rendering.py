@@ -46,9 +46,16 @@ LISTED_CONTRACT = "core_response_rendering_v12"
 #: v12 that may also hold back a section code's own checks still refused after the
 #: rewrites NM may make, named in the saved release record (owner, 18 Oct 2026: "withhold
 #: only the failed part and pass the remaining part"); the answer is otherwise v12's.
-CONTRACT = "core_response_rendering_v13"
+SECTIONS_CONTRACT = "core_response_rendering_v13"
+#: v13 laid out as the readability design shows it (owner, 18 Oct 2026: "exactly the way
+#: your artifact has presented"): each dispute's time limits at the end of its own part (a
+#: limit no part names after "In short", as before), and every question to the advocate
+#: gathered at the end of the answer under "What I need from you".
+CONTRACT = "core_response_rendering_v14"
+#: The versions that may name the sections code's own checks held back.
+_SECTIONED = (SECTIONS_CONTRACT, CONTRACT)
 #: The versions that list after a paragraph each source it does not link.
-_LISTED = (LISTED_CONTRACT, CONTRACT)
+_LISTED = (LISTED_CONTRACT, *_SECTIONED)
 #: The versions that link each source at its own words and open with "In short".
 _WORDED = (WORDS_CONTRACT, *_LISTED)
 _HOLDS = (HELD_CONTRACT, *_WORDED)
@@ -286,7 +293,9 @@ def _cited_words(text, sources, authority, *, short=False):
 
 #: Shown elements that are not draft paragraphs: v5 headings, v8 Working boxes and v10
 #: code's notices about sections held back.
-NOT_PARAGRAPHS = frozenset({"HEADING", "WORKING", "NOTICE", "HELD"})
+NOT_PARAGRAPHS = frozenset({"HEADING", "WORKING", "NOTICE", "HELD", "NEEDS"})
+#: v14: the heading under which every question to the advocate is gathered.
+NEEDS = "What I need from you"
 
 
 def unit_index(elements, element):
@@ -560,6 +569,50 @@ def _working(record, *, as_of=False):
     return boxes
 
 
+def _laid_out(elements, ends, draft, held_parts, time_limits):
+    """v14, as the readability design shows an answer (owner, 18 Oct 2026): each dispute's
+    time limits close its own part, by the IDs its part names (T1, T2...: the worked-out
+    limits, then those not assessed, in code's order); a limit no part shown names follows
+    "In short", as before; and every question to the advocate is gathered, in order, at the
+    end of the answer under "What I need from you" - from each part that shows something
+    else of its own, so that no part is left a bare heading. Nothing is dropped or reworded."""
+    out = list(elements)
+    ranges, start = [], 0
+    for part in draft.get("parts") or []:
+        ranges.append(range(start, start + part["units"]))
+        start += part["units"]
+
+    def part_of(element):
+        return next((index for index, units in enumerate(ranges) if element.get("unit") in units), None)
+    if time_limits is not None:
+        boxes = _working(time_limits, as_of=True)
+        claimed, placed = {}, set()
+        for index, part in enumerate(draft.get("checklists") or []):
+            if index in held_parts or index not in ends:
+                continue
+            for name in part.get("time_limit_ids") or []:
+                number = int(name[1:]) if name[:1] == "T" and name[1:].isdigit() else 0
+                if 1 <= number <= len(boxes) and number not in placed:
+                    placed.add(number)
+                    claimed.setdefault(index, []).append(boxes[number - 1])
+        for index in sorted(claimed, key=lambda index: ends[index], reverse=True):
+            out[ends[index]:ends[index]] = claimed[index]
+        rest = [box for number, box in enumerate(boxes, 1) if number not in placed]
+        summaries = [i for i, element in enumerate(out) if element["kind"] == "SUMMARY"]
+        first = summaries[-1] if summaries else next(
+            (i for i, element in enumerate(out) if element["kind"] not in NOT_PARAGRAPHS), 0)
+        out[first + 1:first + 1] = rest
+    shown = {part_of(element) for element in out
+             if element["kind"] not in NOT_PARAGRAPHS and element["kind"] not in ("QUESTION", "SUMMARY")}
+    asks = [element for element in out if element["kind"] == "QUESTION" and part_of(element) in shown - {None}]
+    if asks:
+        out = [element for element in out if not any(element is ask for ask in asks)]
+        out.append({"kind": "NEEDS", "text": NEEDS, "source": None, "sources": [], "refs": [],
+                    "inline_citations": [], "citation_markers": []})
+        out.extend(asks)
+    return out
+
+
 def render(context, research_record, sources, draft, review, execution=None, *,
            authority_evidence=None, contract=CONTRACT, time_limits=None, held=None):
     """No new prose; the declared version owns its exact reviewed dependencies. From v10,
@@ -583,11 +636,11 @@ def render(context, research_record, sources, draft, review, execution=None, *,
         # v13: the review was told the sections code's checks held back; the release
         # record that names them is checked in full below.
         unwritten_ids = ([entry.get("dispute_id") for entry in held["unwritten"] if isinstance(entry, dict)]
-                         if contract == CONTRACT and isinstance(held, dict)
+                         if contract in _SECTIONED and isinstance(held, dict)
                          and isinstance(held.get("unwritten"), list) else [])
         shortened = ([[entry.get("dispute_id"), entry.get("items")] for entry in held["trimmed"]
                       if isinstance(entry, dict)]
-                     if contract == CONTRACT and isinstance(held, dict) and isinstance(held.get("trimmed"), list)
+                     if contract in _SECTIONED and isinstance(held, dict) and isinstance(held.get("trimmed"), list)
                      else [])
         checked_review = response_review.validate(review, context, research_record,
             sources, checked_draft, execution=execution, authority_evidence=checked_authorities,
@@ -602,7 +655,10 @@ def render(context, research_record, sources, draft, review, execution=None, *,
                          "draft leaves them")
     if held is not None and contract not in _HOLDS:
         raise ValueError("Only a v10 or later rendering may hold sections back")
-    layout = response_writer.parts(research_record) if contract == CONTRACT else None
+    if contract == CONTRACT and checked_draft["contract"] not in response_writer.LINKED:
+        raise ValueError("A v14 rendering places each dispute's time limits by the IDs its part names, as a "
+                         "writer v7 or later draft gives them")
+    layout = response_writer.parts(research_record) if contract in _SECTIONED else None
     held_parts, date_findings, unwritten, trimmed = _release(checked_draft, checked_review, held, layout)
     if not checked_review["accepted"] and not held_parts:
         raise ValueError("A response without accepted independent review cannot be rendered")
@@ -695,7 +751,17 @@ def render(context, research_record, sources, draft, review, execution=None, *,
     lifted = [position for position, unit in enumerate(checked_draft["units"])
               if contract in _WORDED and lift_at is not None and unit["kind"] == "summary"
               and position not in held_units]
+    # v14: where each part's elements end, so its time limits can close it.
+    begins, start = {}, 0
+    for index, part in enumerate(checked_draft.get("parts") or []):
+        begins[start] = index
+        start += part["units"]
+    ends, current = {}, None
     for position, unit in enumerate(checked_draft["units"]):
+        if position in begins:
+            if current is not None:
+                ends[current] = len(elements)
+            current = begins[position]
         here = unwritten_at.get(position, [])
         # A held opening comes first; "In short" then opens the disputes.
         elements.extend(unwritten_notices([entry for entry in here if entry["dispute_id"] is None]))
@@ -711,13 +777,17 @@ def render(context, research_record, sources, draft, review, execution=None, *,
         if position in held_units or position in lifted:
             continue
         elements.append(paragraph(position, unit))
+    if current is not None:
+        ends[current] = len(elements)
     elements.extend(unwritten_notices(unwritten_at.get(len(checked_draft["units"]), [])))
+    if contract == CONTRACT:
+        elements = _laid_out(elements, ends, checked_draft, held_parts, time_limits)
     if held_count:
         many = held_count > 1
         elements.append(_notice("NOTICE", f"Shall I try the held-back {'sections' if many else 'section'} again, "
             f"or continue without {'them' if many else 'it'}? If {'they' if many else 'it'} may need a fact, a "
             "document or a narrower question, tell me and I will use it."))
-    if contract in _WORKING and time_limits is not None:
+    if contract in _WORKING and time_limits is not None and contract != CONTRACT:
         # The Working boxes follow the answer's opening paragraph; from v11, "In short".
         summaries = [i for i, element in enumerate(elements) if element["kind"] == "SUMMARY"]
         first = summaries[-1] if contract in _WORDED and summaries else next(

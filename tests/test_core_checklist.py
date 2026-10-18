@@ -31,13 +31,16 @@ def alias(sources, kind, words):
 def lists(sources):
     message = alias(sources, "account", "Find the applicable law.")
     return {
-        "D1": [{"need": "The exception the provision makes", "group": "needed",
+        "D1": [{"need": "The exception the provision makes", "why": "The provision applies only with it.",
+                "note": None, "group": "needed",
                 "law": {"source_id": alias(sources, "provision", "Complete provision"), "quote": "including its exception"},
                 "carries": None, "status": "in_hand", "evidence": {"source_id": message, "quote": "applicable law"}},
-               {"need": "The words of the second provision", "group": "needed",
+               {"need": "The words of the second provision", "why": "They set the second condition.", "note": None,
+                "group": "needed",
                 "law": {"source_id": alias(sources, "provision", "Different exact"), "quote": "Different exact words"},
                 "carries": None, "status": "not_given", "evidence": None}],
-        "D2": [{"need": "The chunk the judgment names", "group": "would_strengthen",
+        "D2": [{"need": "The chunk the judgment names", "why": "The court relied on it.", "note": "not sure yet",
+                "group": "would_strengthen",
                 "law": {"source_id": alias(sources, "judgment", "Different exact"), "quote": "same chunk ID"},
                 "carries": None, "status": "coming_or_unclear",
                 "evidence": {"source_id": message, "quote": "Find the applicable law"}}]}
@@ -70,8 +73,12 @@ def written(given=None, limits=None, time_limits=None, records=None):
 
 def test_each_dispute_returns_its_checklist_with_every_quote_checked():
     ctx, record, sources, draft = written()
-    assert draft["contract"] == response_writer.CONTRACT == "core_response_writer_v8"
+    assert draft["contract"] == response_writer.CONTRACT == "core_response_writer_v9"
     assert [len(part["items"]) for part in draft["checklists"]] == [0, 2, 1]  # the opening part has none
+    # v9 (18 Oct 2026): each item says why the case needs it and, where unclear, where it stands.
+    assert [(item["why"], item["note"]) for part in draft["checklists"] for item in part["items"]] == [
+        ("The provision applies only with it.", None), ("They set the second condition.", None),
+        ("The court relied on it.", "not sure yet")]
     first, second = draft["checklists"][1]["items"]
     provision = next(identity for identity, row in sources.items() if row["text"].startswith("Complete provision")
                      and row["kind"] == "provision")
@@ -100,12 +107,15 @@ def change(given, sources, case):
     elif case == "carries_an_unknown_item": first.update(law=None, carries="K9")
     elif case == "an_opening_with_a_checklist": given[None] = [deepcopy(first)]
     elif case == "blank_need": first["need"] = "   "
+    elif case == "blank_why": first["why"] = "[ ](P1)"
+    elif case == "no_why": del first["why"]
 
 
 @pytest.mark.parametrize("case", [
     "law_not_in_its_passage", "law_from_a_message", "evidence_not_found", "not_given_with_evidence",
     "in_hand_without_evidence", "unclear_not_in_the_advocates_words", "law_and_carried",
-    "neither_law_nor_carried", "carries_an_unknown_item", "an_opening_with_a_checklist", "blank_need"])
+    "neither_law_nor_carried", "carries_an_unknown_item", "an_opening_with_a_checklist", "blank_need",
+    "blank_why", "no_why"])
 def test_a_checklist_item_is_admitted_only_on_exact_words_of_the_right_source(case):
     ctx, record, sources = two_disputes()
     given = lists(sources)
@@ -188,7 +198,11 @@ def test_the_review_names_a_wrong_item_in_a_finding_and_it_concerns_only_its_sec
     assert [[item["id"] for item in part["items"]] for part in shown] == [[], ["C1", "C2"], ["C3"]]
     assert shown[1]["items"][0]["law"] == {"source_id": "P1", "quote": "including its exception"}
     assert shown[1]["items"][0]["evidence"] == {"source_id": "M1", "quote": "applicable law"}
+    # Writer v9 (18 Oct 2026): the review sees why each item is needed and where it stands.
+    assert [(item["why"], item["note"]) for item in shown[2]["items"]] == [("The court relied on it.", "not sure yet")]
     assert "naming any item" in " ".join(response_review.SYSTEM.split())
+    assert "an item's why and note, where given, say only what its law words and the messages bear out" in " ".join(
+        response_review.SYSTEM.split())
     # Review v7: verdict rows are for the units; a row for an item is refused as unknown (a
     # saved v7 review is still held to it; v8 gives no rows).
     from tests.test_core_response_review import admitted
@@ -232,8 +246,9 @@ def test_the_matter_keeps_its_checklist_and_when_nm_first_asked():
     ctx, record, sources = two_disputes()
     before = previous_records(sources)
     given = lists(sources)
-    given["D1"] = [{"need": "Proof of service", "group": "needed", "law": None, "carries": "K1",
-                    "status": "not_given", "evidence": None}, given["D1"][1], given["D1"][0]]
+    given["D1"] = [{"need": "Proof of service", "why": "Service starts the time.", "note": None, "group": "needed",
+                    "law": None, "carries": "K1", "status": "not_given", "evidence": None},
+                   given["D1"][1], given["D1"][0]]
     _, record, sources, draft = written(given=given, records=deepcopy(before))
     ctx["current_records"] = deepcopy(before)
     # Dispute 2's section was held back, so its checklist is kept as it was.
@@ -265,10 +280,12 @@ def test_a_saved_turn_keeps_its_checklist_as_records_and_the_board_shows_it(stor
                 passage = next(p for p in data["held_passages"]["passages"] if "Counsel submitted" in p["text"])
                 message = data["original_context"]["latest"]["source_id"]
                 result.data["checklist"] = [
-                    {"need": "Proof the notice was served", "group": "needed",
+                    {"need": "Proof the notice was served", "why": "Service must be shown.", "note": None,
+                     "group": "needed",
                      "law": {"source_id": passage["id"], "quote": "Counsel submitted"}, "carries": None,
                      "status": "in_hand", "evidence": {"source_id": message, "quote": "The notice was served"}},
-                    {"need": "The postal receipt", "group": "would_strengthen",
+                    {"need": "The postal receipt", "why": "It proves the date of posting.", "note": "promised",
+                     "group": "would_strengthen",
                      "law": {"source_id": passage["id"], "quote": "Counsel submitted"}, "carries": None,
                      "status": "coming_or_unclear",
                      "evidence": {"source_id": message, "quote": "I will send the postal receipt"}}]
@@ -287,6 +304,11 @@ def test_a_saved_turn_keeps_its_checklist_as_records_and_the_board_shows_it(stor
     shown = board["disputes"][0]["checklist"]
     assert shown["in_hand"] == 1 and [item["status"] for item in shown["items"]] == ["in_hand", "coming_or_unclear"]
     assert shown["items"][0]["evidence"]["given_at"] == reply["at"] and shown["answered_at"] == reply["at"]
+    # Writer v9: why each item is needed and where it stands, kept and shown (18 Oct 2026).
+    assert [(item["why"], item["note"]) for item in items] == [("Service must be shown.", None),
+                                                              ("It proves the date of posting.", "promised")]
+    assert [(item["why"], item["note"]) for item in shown["items"]] == [("Service must be shown.", None),
+                                                                       ("It proves the date of posting.", "promised")]
     # Records that differ from what the turn admitted are refused on reopening.
     damaged = deepcopy(matter)
     rows_ = list(damaged.brain_chat)
@@ -366,3 +388,34 @@ def test_a_need_written_with_link_markup_keeps_its_words():
     draft = response_writer.write(ChecklistModel(sources, given), ctx, record, sources)
     assert draft["checklists"][1]["items"][0]["need"] == "The exception the provision makes"
     assert response_writer.validate(deepcopy(draft), ctx, sources) == draft
+
+
+def test_an_items_why_and_note_are_plain_words_and_a_blank_note_is_none():
+    # Writer v9 (18 Oct 2026): why the case needs an item, and where it stands in a few words.
+    ctx, record, sources = two_disputes()
+    given = lists(sources)
+    given["D1"][0].update(why="[The provision](P1) applies only with it.", note="  ")
+    given["D2"][0]["note"] = "[promised](M1) tomorrow"
+    draft = response_writer.write(ChecklistModel(sources, given), ctx, record, sources)
+    first, unclear = draft["checklists"][1]["items"][0], draft["checklists"][2]["items"][0]
+    assert (first["why"], first["note"]) == ("The provision applies only with it.", None)
+    assert unclear["note"] == "promised tomorrow"
+    assert response_writer.validate(deepcopy(draft), ctx, sources) == draft
+    # A date in an item's why or note is checked like any other date the answer states.
+    unclear["note"] = "promised for 3 March 2031"
+    found = response_writer.dates_not_given(draft, ctx, sources)
+    assert [finding["unit_ids"] for finding in found] == [[unclear["id"]]]
+
+
+def test_an_earlier_draft_without_why_or_note_replays_as_it_was():
+    # A writer v8 draft has no why or note; it is admitted, and its records kept, as before.
+    ctx, record, sources = two_disputes()
+    draft = response_writer.write(ChecklistModel(sources), ctx, record, sources)
+    proposal = deepcopy(draft["proposal"])
+    for part in proposal["checklists"]:
+        for item in part["checklist"]:
+            del item["why"], item["note"]
+    earlier = response_writer.accept(proposal, ctx, sources, contract=response_writer.ADDRESSLESS_CONTRACT,
+                                     parts=draft["parts"])
+    assert all("why" not in item and "note" not in item for part in earlier["checklists"] for item in part["items"])
+    assert response_writer.validate(deepcopy(earlier), ctx, sources) == earlier

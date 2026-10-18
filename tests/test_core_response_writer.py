@@ -6,7 +6,7 @@ import pytest
 
 from nm.core_engine.answer_sources import build
 from nm.core_engine.response_writer import (
-    CHECKLIST_CONTRACT, CONTRACT, LEGACY_CONTRACT, LINKS_CONTRACT, MAX_OUTPUT, PART_SCHEMA_V8, validate, write,
+    CHECKLIST_CONTRACT, CONTRACT, LEGACY_CONTRACT, LINKS_CONTRACT, MAX_OUTPUT, PART_SCHEMA_V9, validate, write,
 )
 from nm.core_engine.response_writer import accept as admit
 from nm.shared.budget_contracts import Completion
@@ -189,7 +189,7 @@ def test_complete_context_and_all_neighbouring_legal_words_reach_one_writer_call
     assert [q["work_id"] for q in payload["research"]["questions"]] == [w["id"] for w in record["plan"]["work"]]
     assert payload["this_part"] == {"part": 1, "of": 1, "opens_the_answer": True,
                                     "dispute": understood["disputes"][0], "other_parts": []}
-    assert tier is Tier.HARD and kwargs == {"max_tokens": MAX_OUTPUT} and schema == PART_SCHEMA_V8
+    assert tier is Tier.HARD and kwargs == {"max_tokens": MAX_OUTPUT} and schema == PART_SCHEMA_V9
     assert prompt.operation == "core_response_writer"
     assert draft["contract"] == CONTRACT and draft["proposal"] == checklisted(unaddressed(proposed["units"]) and proposed)
     assert draft["parts"] == [{"dispute_id": understood["disputes"][0]["id"], "units": 1}]

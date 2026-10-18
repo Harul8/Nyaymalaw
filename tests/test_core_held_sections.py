@@ -265,7 +265,9 @@ class Misquoting(Rounds):
         dispute = (json.loads(prompt.user)["this_part"]["dispute"] or {}).get("id", "opening")
         self.counter.setdefault("called", []).append((self.counter["writes"], dispute))
         if dispute in self.misquoted:
-            result.data["checklist"] = [{"need": "The exception the provision makes", "group": "needed",
+            result.data["checklist"] = [{"need": "The exception the provision makes",
+                                         "why": "The provision applies only with it.", "note": None,
+                                         "group": "needed",
                                          "law": {"source_id": "P1", "quote": "Complete provision including exception"},
                                          "carries": None, "status": "not_given", "evidence": None}]
         return result

@@ -53,7 +53,7 @@ def answer():
 
 def test_each_source_is_linked_from_the_writers_own_words_where_they_stand():
     ctx, record, sources, draft, _, _ = answer()
-    assert draft["contract"] == response_writer.CONTRACT == "core_response_writer_v8"
+    assert draft["contract"] == response_writer.CONTRACT == "core_response_writer_v9"
     law = next(unit for unit in draft["units"] if unit["kind"] == "law")
     assert law["text"] == "For D1, the stated rule applies to these facts."  # the markup taken out
     words, = [use["words"] for use in law["uses"]]
@@ -104,7 +104,7 @@ def test_the_answer_opens_then_says_in_short_then_each_dispute_with_its_links():
         "sources": sources, "draft": draft, "review": review, "execution": execution,
         "rendering_contract": response_rendering.CONTRACT, "authority_evidence": authorities,
         "calculation": calculation.skipped(),
-        "release": None}, ctx, elements)["rendering_contract"] == "core_response_rendering_v13"
+        "release": None}, ctx, elements)["rendering_contract"] == "core_response_rendering_v14"
 
 
 def test_a_held_sections_summary_is_held_with_it():

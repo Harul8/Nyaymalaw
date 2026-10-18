@@ -111,7 +111,8 @@ the matter's checklist in current records), where it stands and the words that s
 Check the items as you check the units: that each item's law words require it, or would
 strengthen the case, as it is grouped; that where it stands is what the messages and
 documents show (in hand only where the quoted words hold it; coming or unclear, and not
-available, in the advocate's own words); that the time limits the part names (by their
+available, in the advocate's own words); that an item's why and note, where given, say
+only what its law words and the messages bear out; that the time limits the part names (by their
 IDs in owned_time_limits) concern its dispute; and that the list leaves out nothing the
 held law plainly requires for the relief or defence. Raise a finding naming any item
 (C1, C2...) that is wrong, and an omission naming that dispute's summary unit for an
@@ -454,7 +455,10 @@ def _draft_presentation(draft, sources, *, aliased=False, saved=None):
         layout["checklists"] = [{"part": index + 1, **({"time_limit_ids": list(part["time_limit_ids"])}
                                                         if "time_limit_ids" in part else
                                                         {"time_limits": list(part["time_limits"])}), "items": [{
-            "id": units.get(item["id"], item["id"]), "need": item["need"], "group": item["group"], "law": law(item),
+            "id": units.get(item["id"], item["id"]), "need": item["need"],
+            # From writer v9, why the case needs it and where it stands (18 Oct 2026).
+            **{key: item[key] for key in ("why", "note") if key in item},
+            "group": item["group"], "law": law(item),
             "status": item["status"], "evidence": reference(item["evidence"]) if item["evidence"] else None}
             for item in part["items"]]} for index, part in enumerate(draft["checklists"])]
     return {"contract": draft["contract"], **layout, "units": [{

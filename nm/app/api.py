@@ -1798,24 +1798,37 @@ def chat_source(chat_id: str, turn_id: str, element: int, source: int,
     shown = {**deepcopy(selected), 'authority_inspection': _source_authority_inspection(row, element, selected)}
     if selected['kind'] == 'document':
         shown['qualification'] = f"{selected['qualification']} {_how_read(rows, selected['id'])}".strip()
+        # The same, for the reading pane's kind line and its badge (the design, 18 Oct 2026).
+        shown['reading'] = _page_reading(rows, selected['id'])
     return shown
+
+
+def _page_reading(rows, source_id):
+    """How a cited page of a document the advocate sent was read, from the saved
+    documents: by the AI from a scan or photo (perhaps only partly legible), transcribed
+    from a recording, or from the file's own text. None when the page is not found."""
+    for row in rows:
+        for index, document in enumerate(row.get('documents', ()), 1):
+            for page in document['pages']:
+                if f"{row['turn_id']}:d{index}p{page['number']}" == source_id:
+                    return {'by': 'transcribed' if document.get('recording')
+                            else 'ai' if page['read_by'] == 'ai' else 'file',
+                            'legible': 'part' if page.get('legible') == 'part' else 'whole'}
+    return None
 
 
 def _how_read(rows, source_id):
     """How a cited page of a document the advocate sent was read, from the saved
     documents (open items round, 15 Oct 2026): what the AI read is marked for checking."""
-    for row in rows:
-        for index, document in enumerate(row.get('documents', ()), 1):
-            for page in document['pages']:
-                if f"{row['turn_id']}:d{index}p{page['number']}" != source_id:
-                    continue
-                if document.get('recording'):
-                    return 'Transcribed by AI: check it against the recording.'
-                if page['read_by'] == 'ai':
-                    partly = ', partly legible' if page.get('legible') == 'part' else ''
-                    return f'Read by AI from a scan or photo{partly}: check it against your original.'
-                return "Read from the file's own text on this computer."
-    return ''
+    reading = _page_reading(rows, source_id)
+    if reading is None:
+        return ''
+    if reading['by'] == 'transcribed':
+        return 'Transcribed by AI: check it against the recording.'
+    if reading['by'] == 'ai':
+        partly = ', partly legible' if reading['legible'] == 'part' else ''
+        return f'Read by AI from a scan or photo{partly}: check it against your original.'
+    return "Read from the file's own text on this computer."
 
 @app.get('/api/matters/{matter_id}')
 @app.get('/api/matters/{matter_id}/transcript')
