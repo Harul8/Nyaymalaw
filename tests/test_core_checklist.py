@@ -143,13 +143,14 @@ def test_a_misquoted_law_is_corrected_with_the_held_words_nearest_to_it():
     assert calls.metrics()["draft_corrections"] == 1
 
 
-def test_a_dispute_may_name_only_the_time_limits_code_worked_out_by_their_ids():
-    with pytest.raises(SchemaViolation, match="not in time_limits: T1. No time limit was worked out"):
-        written(limits={"D1": ["T1"]})
+def test_a_dispute_names_only_the_time_limits_code_worked_out_and_any_other_id_is_left_out():
+    # Forensic review, 18 Oct 2026: an ID code did not work out names no time limit, so it is
+    # left out rather than costing the answer a correction.
+    assert [part["time_limit_ids"] for part in written(limits={"D1": ["T1"]})[3]["checklists"]] == [[], [], []]
     worked = {"state": "worked", "worked_out": [{"what": "Last day to file"}],
               "not_assessed": [{"what": "Notice period", "why": "no date"}]}
-    with pytest.raises(SchemaViolation, match="not in time_limits: Last day to file. Use the IDs shown there: T1, T2"):
-        written(limits={"D1": ["Last day to file"]}, time_limits=worked)
+    draft = written(limits={"D1": ["Last day to file", "T2", "T9", "T1"]}, time_limits=worked)[3]
+    assert [part["time_limit_ids"] for part in draft["checklists"]] == [[], ["T2", "T1"], []]
     ctx, record, sources, draft = written(limits={"D1": ["T2", "T1"]}, time_limits=worked)
     assert [part["time_limit_ids"] for part in draft["checklists"]] == [[], ["T2", "T1"], []]
     # The writer saw each time limit under its ID.
@@ -355,3 +356,13 @@ def test_the_writer_keeps_short_ids_out_of_its_text_and_the_opening_quiet_about_
     assert "Such an opening is given no legal passages and needs none: do not remark on that" in system
     from nm.core_engine import calculation
     assert 'leave them out altogether, not under "not_assessed" either' in calculation.SYSTEM
+
+
+def test_a_need_written_with_link_markup_keeps_its_words():
+    # Forensic review, 18 Oct 2026: a need is plain words; markup around them is taken out.
+    ctx, record, sources = two_disputes()
+    given = lists(sources)
+    given["D1"][0]["need"] = "[The exception](P1) the provision makes"
+    draft = response_writer.write(ChecklistModel(sources, given), ctx, record, sources)
+    assert draft["checklists"][1]["items"][0]["need"] == "The exception the provision makes"
+    assert response_writer.validate(deepcopy(draft), ctx, sources) == draft

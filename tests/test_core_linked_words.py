@@ -215,3 +215,25 @@ def test_a_link_may_name_its_sources_in_one_bracket_or_in_several():
         law_unit, = draft["units"]
         assert law_unit["text"] == "It is enforceable under the provisions."  # no markup left over
         assert [use["words"]["text"] for use in law_unit["uses"]] == ["under the provisions"] * 2
+
+
+def test_a_link_separates_its_sources_with_a_semicolon_too_and_lists_a_source_it_names():
+    """Forensic review, 18 Oct 2026: code decides what it can. A link naming its sources with
+    ';' names both; a link to a held provision or message the paragraph did not also list
+    lists it (the link names it); a judgment must still say how the court treated it."""
+    ctx, record, sources = two_disputes()
+    first, second = [row for row in sources.values() if row["kind"] == "provision"][:2]
+    judgment = next(row for row in sources.values() if row["kind"] == "judgment")
+    units = [{"kind": "law", "text": f"It is enforceable [under the provisions]({first['id']}; {second['id']}).",
+              "uses": [{"source_id": first["id"], "source_kind": "provision"}]}]
+    draft = response_writer.accept({"units": units, "checklists": [{"checklist": [], "time_limit_ids": []}]},
+                                   ctx, sources, parts=[{"dispute_id": None, "units": 1}])
+    law_unit, = draft["units"]
+    assert law_unit["text"] == "It is enforceable under the provisions."
+    assert [use["source_id"] for use in law_unit["uses"]] == [first["id"], second["id"]]
+    assert [use["words"]["text"] for use in law_unit["uses"]] == ["under the provisions"] * 2
+    assert response_writer.validate(draft, ctx, sources) == draft
+    units[0]["text"] = f"It is enforceable [under the judgment]({judgment['id']})."
+    with pytest.raises(SchemaViolation, match="does not use"):
+        response_writer.accept({"units": units, "checklists": [{"checklist": [], "time_limit_ids": []}]},
+                               ctx, sources, parts=[{"dispute_id": None, "units": 1}])

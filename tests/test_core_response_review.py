@@ -342,8 +342,15 @@ def test_each_missing_row_needs_its_own_finding_relationship():
 def test_omission_without_a_rejected_unit_still_needs_original_request_evidence():
     args, data = earlier_evidence_rejection()
     data["request_coverage"][0]["unit_ids"] = []
-    with pytest.raises(SchemaViolation):
-        review(Model(data), *args)
+    with pytest.raises(SchemaViolation):  # a saved v7 review is held to its own rule
+        admitted(deepcopy(data), args, contract=response_review.ROWS_CONTRACT)
+    # v8 (forensic review, 18 Oct 2026): the missing request is recorded as the omission it states.
+    derived = review(Model(deepcopy(data)), *args)
+    omission = derived["proposal"]["findings"][-1]
+    assert not derived["accepted"] and omission["category"] == "omission" and omission["unit_ids"] == []
+    assert omission["sources"] == [data["request_coverage"][0]["request"]]
+    assert omission["mismatch"] == data["request_coverage"][0]["reason"]
+    assert validate(derived, *args) == derived
     data["findings"].append({"category": "omission", "unit_ids": [],
         "sources": [ref(args[0]["latest"])], "mismatch": "The requested assessment is missing."})
     reviewed = review(Model(data), *args)
@@ -448,10 +455,20 @@ def test_inconsistent_or_unaccountable_review_is_not_an_admission(damage):
     elif damage == "blank_reason": data["units"][0]["reason"] = "  "
     else: data["request_coverage"] = [request(ctx, draft, disposition="justified_limit", unit_ids=[])]
     with pytest.raises(SchemaViolation):
-        if damage in ("rejected_without_finding", "finding_supported_unit", "blank_reason"):
-            admitted(data, args, contract=response_review.ROWS_CONTRACT)  # v7's verdict rows
+        if damage in ("rejected_without_finding", "finding_supported_unit", "blank_reason", *CODE_DECIDES):
+            admitted(deepcopy(data), args, contract=response_review.ROWS_CONTRACT)  # v7 and its rules
         else:
             review(Model(data), *args)
+    if damage in CODE_DECIDES:
+        # v8 (forensic review, 18 Oct 2026): code decides what it can - a verdict beside a
+        # finding is a rejection, a missing request states its own omission, a finding naming
+        # no paragraph concerns the whole answer, a justified limit needs no paragraph.
+        reviewed = review(Model(data), *args)
+        assert reviewed["accepted"] is (damage == "unsupported_request_limit")
+        assert validate(reviewed, *args) == reviewed
+
+
+CODE_DECIDES = ("positive_with_finding", "missing_without_finding", "finding_no_target", "unsupported_request_limit")
 
 
 @pytest.mark.parametrize("category", ["grounding", "attribution", "quotation", "omission", "framing", "effect"])
@@ -678,8 +695,11 @@ def test_v4_admits_a_restriction_respected_by_absence_without_reply_units():
 def test_addressed_still_needs_reply_units_and_earlier_versions_have_no_respected():
     from nm.core_engine.response_review import ALIAS_CONTRACT, _accept, _dependencies
     ctx, record, sources, draft = setup()
-    with pytest.raises(SchemaViolation, match="identify reply units"):
-        review(Model(restriction_review(draft, ctx, "addressed", [])), ctx, record, sources, draft)
+    with pytest.raises(SchemaViolation, match="identify reply units"):  # up to v7
+        admitted(restriction_review(draft, ctx, "addressed", []), (ctx, record, sources, draft),
+                 contract=response_review.ROWS_CONTRACT)
+    # v8: which paragraphs answer a request is the review's own accounting (18 Oct 2026).
+    assert review(Model(restriction_review(draft, ctx, "addressed", [])), ctx, record, sources, draft)["accepted"]
     authority = response_authorities.check(ctx, record, sources, draft)
     dependencies = _dependencies(ctx, record, sources, draft, None, authority_evidence=authority,
                                  contract=ALIAS_CONTRACT)
@@ -698,14 +718,16 @@ def test_the_review_checks_a_time_limits_legal_analysis_and_leaves_counting_to_c
 def test_a_missing_request_without_its_finding_is_named_for_the_correction():
     """The tenth live run (18 Oct 2026): the review split an answered request into results
     it called missing, and raised omissions naming the paragraphs they belonged in without
-    selecting the request's words, so it was refused twice and the answer withheld. The
-    refusal names the request, and the review is told what missing is for."""
-    args = setup(text="Summarise the account. Identify what remains unknown.")
+    selecting the request's words, so it was refused twice and the answer withheld. A
+    missing request naming no paragraph now states its own omission; one naming paragraphs
+    no finding rejects is refused by name, and the review is told what missing is for."""
+    args = setup(text="Summarise the account. Identify what remains unknown.", count=2)
     ctx, _, _, draft = args
     identity = ctx["latest"]["source_id"]
     omitted = {"source_id": identity, "quote": "Identify what remains unknown."}
     data = positive(draft, requests=[request(ctx, draft, request={"source_id": identity, "quote": "Summarise the account."}),
-                                     request(ctx, draft, request=omitted, disposition="missing", unit_ids=[])])
+                                     request(ctx, draft, request=omitted, disposition="missing",
+                                             unit_ids=[draft["units"][1]["id"]])])
     data.update(verdict="reject", findings=[{"category": "omission", "unit_ids": [draft["units"][0]["id"]],
         "sources": [], "mismatch": "The reply leaves the unknowns out of the summary."}])
     with pytest.raises(SchemaViolation, match="The missing request “Identify what remains unknown.” needs a finding"):
@@ -728,4 +750,16 @@ def test_a_review_reference_is_placed_whatever_its_case_and_an_id_given_twice_na
         "mismatch": "The unit states what the advocate did not say."}])
     reviewed = review(Model(data), *args)
     assert not reviewed["accepted"] and reviewed["proposal"]["findings"][0]["unit_ids"] == [draft["units"][0]["id"]]
+    assert validate(reviewed, *args) == reviewed
+
+
+def test_a_time_limit_checklist_item_or_dispute_given_as_a_source_is_no_source():
+    # Forensic review, 18 Oct 2026: as with U3 and C8 before, the review is shown these labels;
+    # given among a finding's sources they are set aside, not taken as unknown sources.
+    args = setup()
+    ctx, _, _, draft = args
+    data = negative(draft, ctx, sources=[ref(ctx["latest"]), {"source_id": "T1", "quote": None},
+                                         {"source_id": "K2", "quote": None}, {"source_id": "D1", "quote": None}])
+    reviewed = review(Model(data), *args)
+    assert not reviewed["accepted"] and reviewed["proposal"]["findings"][0]["sources"] == [ref(ctx["latest"])]
     assert validate(reviewed, *args) == reviewed

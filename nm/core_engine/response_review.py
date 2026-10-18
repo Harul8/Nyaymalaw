@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from copy import deepcopy
 
 from nm.core_engine import answer_sources, checklist, research, response_authorities, response_writer
@@ -254,6 +255,10 @@ def _digest(dependencies):
         separators=(",", ":"), allow_nan=False).encode("utf-8")).hexdigest()
 
 
+#: Labels the review is shown that are not sources: time limits, matter checklist items, disputes.
+_LABEL = re.compile(r"(?:T|K|D)\d+")
+
+
 def _ids(values, known):
     if len(values) != len(set(values)) or not set(values) <= known:
         raise SchemaViolation("Review refers to duplicate or unknown draft unit IDs")
@@ -327,6 +332,8 @@ def _accept(proposal, dependencies, *, contract=LEGACY_CONTRACT):
                 if identity in known:
                     if identity not in finding["unit_ids"]:
                         finding["unit_ids"] = [*finding["unit_ids"], identity]
+                elif contract == CONTRACT and _LABEL.fullmatch(str(identity)):
+                    continue  # v8: a time limit, matter checklist item or dispute is no source
                 else:
                     selections.append(ref)
             finding["sources"] = selections
@@ -351,17 +358,30 @@ def _accept(proposal, dependencies, *, contract=LEGACY_CONTRACT):
             missing.append((key, set(item["unit_ids"])))
         elif item["disposition"] == "respected":
             continue  # Honoured by absence: the original words, not a reply unit, are its evidence.
-        elif not item["unit_ids"] and not (item["disposition"] == "justified_limit"
-                                           and dependencies.get("held_back")):
-            # A request only a section code held back would answer is a justified limit
-            # with no paragraph shown for it (the ninth live run, 18 Oct 2026).
+        elif not item["unit_ids"] and contract != CONTRACT:
+            # v8 takes the paragraphs that answer a request as the review's own accounting:
+            # nothing downstream reads them (forensic review, 18 Oct 2026).
             raise SchemaViolation("An addressed request or justified limit must identify reply units")
+    if contract == CONTRACT:
+        # v8: a request the review calls missing, with no finding of its own, is recorded as
+        # the omission it states, in the review's own words (forensic review, 18 Oct 2026).
+        cited = {_selection_key(_offered(ref, offered), sources) for finding in data["findings"]
+                 for ref in finding["sources"]}
+        for item in data["request_coverage"]:
+            if item["disposition"] != "missing" or item["unit_ids"]:
+                continue
+            key = _selection_key(_offered(item["request"], offered), sources)
+            if not any(_overlaps(key, source) for source in cited):
+                data["findings"].append({"category": "omission", "unit_ids": [],
+                                         "sources": [deepcopy(item["request"])], "mismatch": item["reason"]})
+                cited.add(key)
 
     affected, selected_findings = set(), set()
     for finding in data["findings"]:
         _ids(finding["unit_ids"], known)
         selections = {_selection_key(_offered(ref, offered), sources) for ref in finding["sources"]}
-        if not finding["unit_ids"] and not any(
+        # v8: a finding naming no paragraph concerns the whole answer, whatever it cites.
+        if not finding["unit_ids"] and contract != CONTRACT and not any(
                 _overlaps(source, request) for source in selections for request in requests):
             raise SchemaViolation("A finding without a reply unit must identify an original reviewed request")
         affected.update(finding["unit_ids"])
@@ -388,6 +408,9 @@ def _accept(proposal, dependencies, *, contract=LEGACY_CONTRACT):
     if judged - rejected - (named_items if contract in _FINDINGS else set()):
         raise SchemaViolation("A consequential finding cannot label its affected reply unit supported")
     accepted = data["verdict"] == "accept"
+    if contract == CONTRACT and accepted and (data["findings"] or missing):
+        # v8: what the review found outweighs a verdict written beside it.
+        data["verdict"], accepted = "reject", False
     if accepted != (not data["findings"] and not rejected and not missing):
         raise SchemaViolation("Review verdict disagrees with its unit, request or finding dispositions")
     return {"contract": contract, "proposal": deepcopy(data), "accepted": accepted,

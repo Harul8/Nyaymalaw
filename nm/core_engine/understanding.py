@@ -283,10 +283,12 @@ def accept(proposal, context):
         identity = context["latest"]["turn_id"] + f":u{index}"
         try:
             require_schema(unit, SCHEMA["properties"][key]["items"])
+            # Placed whatever its case, spacing or typographic quotation marks (18 Oct 2026):
+            # a slip there silently dropped that part of the interpretation.
             primary = select({"source_id": context["latest"]["source_id"],
-                              "quote": unit["quote"]}, sources)
-            selected = [select({**ref, "source_id": aliases.get(ref["source_id"], ref["source_id"])}, sources)
-                        for ref in unit["context"]]
+                              "quote": unit["quote"]}, sources, loose=True)
+            selected = [select({**ref, "source_id": aliases.get(ref["source_id"], ref["source_id"])}, sources,
+                               loose=True) for ref in unit["context"]]
             if key == "requests":
                 if not unit["requested_work"] or not unit["desired_result"].strip():
                     raise SchemaViolation("A request needs its work kind and desired result")

@@ -422,6 +422,6 @@ def test_a_request_only_a_held_section_would_answer_is_a_justified_limit_naming_
                                     authority_evidence=authorities, held_back=["D2"])
     assert review["accepted"]
     assert "justified limit naming no reply units" in " ".join(response_review.SYSTEM.split())
-    with pytest.raises(SchemaViolation, match="identify reply units"):  # nothing held back: refused as before
-        response_review.review(ReviewModel(data), ctx, record, sources, draft, execution,
-                               authority_evidence=authorities)
+    # Review v8 needs no paragraph for a justified limit at all (forensic review, 18 Oct 2026).
+    assert response_review.review(ReviewModel(data), ctx, record, sources, draft, execution,
+                                  authority_evidence=authorities)["accepted"]

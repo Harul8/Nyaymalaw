@@ -281,3 +281,12 @@ def test_a_loose_selection_places_a_quotation_whatever_its_case_spacing_or_quota
     twice = {"s1": {**typed["s1"], "text": "The notice was sent. the notice was sent."}}
     with pytest.raises(SchemaViolation, match="multiple occurrences"):
         select({"source_id": "s1", "quote": "THE NOTICE WAS SENT"}, twice, loose=True)
+
+
+def test_the_interpretation_keeps_a_part_quoted_with_a_slip_of_case_or_spacing():
+    # Forensic review, 18 Oct 2026: a part of the interpretation quoted "find the law for me"
+    # where the advocate wrote "Find the law for me" was silently dropped as an issue.
+    ctx = context("Please summarise my account. Find the law for me.")
+    out = accept({"units": [unit("find the law  for me.", kind="request", requested_work="research",
+                                 desired_result="Relevant law")]}, ctx)
+    assert not out["issues"] and out["units"][0]["source"]["text"] == "Find the law for me."

@@ -309,7 +309,8 @@ def _linked(text, offered):
     plain, links, position, length = [], [], 0, 0
     for index, match in enumerate(matches):
         words = match.group(1)
-        names = [name.strip() for group in re.findall(r"\(([^()]*)\)", match.group(2)) for name in group.split(",")]
+        names = [name.strip() for group in re.findall(r"\(([^()]*)\)", match.group(2))
+                 for name in re.split(r"[,;]", group)]
         if not words.strip() or not all(names):
             raise SchemaViolation("A link needs words of your own text and a source's short ID: " + match.group(0))
         left, right = text[:match.start()].rstrip(), text[match.end():].lstrip()
@@ -386,6 +387,9 @@ def _owned_use(use, sources, originals):
     support = answer_sources.select({"source_id": use["source_id"], "quote": None}, sources)
     primary = sources[support["source_id"]]
     kind = primary["kind"]
+    # Kept strict on purpose (forensic review, 18 Oct 2026): the kind says whose words a
+    # source holds - the advocate's, a document's, NM's own or the law's - and a writer that
+    # names another is attributing them wrongly.
     if use["source_kind"] != kind:
         raise SchemaViolation("Selected source_kind differs from its owned catalogue kind")
     if kind in {"account", "nm_context", "service", "document"}:
@@ -443,6 +447,8 @@ def _quoted(reference, sources, offered, kinds, what):
 
 
 _LAW = {"provision": "a held provision", "judgment": "a held judgment"}
+#: Sources whose use is no more than their ID: everything but a judgment.
+_PLAIN = frozenset({"account", "nm_context", "service", "document", "provision"})
 _HOLDS = {"account": "an advocate message", "document": "a document page"}
 _SAYS = {"account": "an advocate message"}
 
@@ -459,11 +465,11 @@ def _checklists(given, layout, context, sources, offered, *, limits="time_limits
         items = []
         for item in written["checklist"]:
             number += 1
-            if not item["need"].strip():
+            # Written as a link, a need keeps its words (forensic review, 18 Oct 2026): its law
+            # and evidence are given beside it.
+            need = _LINK.sub(lambda match: match.group(1), item["need"])
+            if not need.strip():
                 raise SchemaViolation("A checklist item needs to say what the case needs")
-            if _LINK.search(item["need"]):
-                raise SchemaViolation("A checklist item says what is needed in plain words; its law and evidence "
-                                      "are given beside it, not as links")
             if (item["law"] is None) == (item["carries"] is None):
                 raise SchemaViolation("A checklist item rests either on held law words or on the item of the "
                                       "matter's checklist it carries, never both or neither")
@@ -472,7 +478,7 @@ def _checklists(given, layout, context, sources, offered, *, limits="time_limits
             if (item["status"] == "not_given") != (item["evidence"] is None):
                 raise SchemaViolation("A checklist item not yet given has no evidence; every other state quotes "
                                       "the words that show it")
-            items.append({"id": f"{context['latest']['turn_id']}:c{number}", "need": item["need"],
+            items.append({"id": f"{context['latest']['turn_id']}:c{number}", "need": need,
                           "group": item["group"], "status": item["status"], "carries": item["carries"],
                           "law": None if item["law"] is None else _quoted(
                               item["law"], sources, offered, _LAW, "A checklist item's law"),
@@ -542,6 +548,12 @@ def accept(proposal, context, sources, *, contract=CONTRACT, parts=None, whole=T
         # words, and a label standing alone holds none (the source is listed instead).
         for start, end, identity, written in links:
             owned = next((use for use in uses if use["source_id"] == identity), None)
+            if owned is None and contract == CONTRACT and (sources.get(identity) or {}).get("kind") in _PLAIN:
+                # v8: the link names its source, so code lists it (forensic review, 18 Oct 2026);
+                # a judgment's use must still say how the court treated it.
+                owned = _owned_use({"source_kind": sources[identity]["kind"], "source_id": identity},
+                                   sources, originals)
+                uses.append(owned)
             if owned is None:
                 raise SchemaViolation(f"The link {written} names a source this unit does not use")
             if start is not None:
@@ -776,14 +788,19 @@ def write(model, context, research_record, sources, interpretation=None, executi
 
     with ThreadPoolExecutor(max_workers=max(1, min(8, len(indices)))) as pool:
         written = list(pool.map(part, indices))
+    # Only the time limits code worked out may be named for a dispute, by their IDs; an ID
+    # code did not work out names no time limit and is left out (forensic review, 18 Oct 2026).
+    given = {entry["id"] for key in ("worked_out", "not_assessed")
+             for entry in (limit_ids(time_limits) or {}).get(key, [])}
+    for part in written:
+        if isinstance(part.get("time_limit_ids"), list):
+            part["time_limit_ids"] = [name for name in part["time_limit_ids"]
+                                      if not isinstance(name, str) or name in given]
     proposal = {"units": [unit for part in written for unit in part["units"]],
                 "checklists": [{"checklist": part["checklist"], "time_limit_ids": part["time_limit_ids"]}
                                for part in written]}
     shape = [{"dispute_id": layout[index]["dispute_id"], "units": len(part["units"])}
              for index, part in zip(indices, written)]
-    # Only the time limits code worked out may be named for a dispute, by their IDs.
-    given = {entry["id"] for key in ("worked_out", "not_assessed")
-             for entry in (limit_ids(time_limits) or {}).get(key, [])}
 
     def limits_named(part):
         unknown = [name for name in part["time_limit_ids"] or [] if isinstance(name, str) and name not in given]
