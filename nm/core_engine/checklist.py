@@ -104,6 +104,8 @@ def records(context, activity):
     earlier = saved(context)
     kept = {(dispute["id"], dispute["name"]): dispute for dispute in (_current(context) or {}).get("disputes", [])}
     held = set((activity.get("release") or {}).get("parts") or [])
+    # The items the review still found wrong after the rewrites are left out (rendering v15).
+    left = {identity for entry in (activity.get("release") or {}).get("left_out") or [] for identity in entry["items"]}
     written = {}
     for index, (part, given) in enumerate(zip(draft["parts"], draft["checklists"])):
         if part["dispute_id"] is not None and index not in held:
@@ -118,7 +120,8 @@ def records(context, activity):
         if given is not None:
             entry = {"id": dispute["id"], "name": dispute["name"], "answered_in": turn_id,
                      "time_limits": _limits(given, activity.get("calculation")),
-                     "items": [_item(item, earlier, activity["sources"], turn_id) for item in given["items"]]}
+                     "items": [_item(item, earlier, activity["sources"], turn_id) for item in given["items"]
+                               if item["id"] not in left]}
         elif (dispute["id"], dispute["name"]) in kept:
             entry = deepcopy(kept[(dispute["id"], dispute["name"])])
         else:

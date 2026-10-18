@@ -73,7 +73,7 @@ def written(given=None, limits=None, time_limits=None, records=None):
 
 def test_each_dispute_returns_its_checklist_with_every_quote_checked():
     ctx, record, sources, draft = written()
-    assert draft["contract"] == response_writer.CONTRACT == "core_response_writer_v9"
+    assert draft["contract"] == response_writer.CONTRACT == "core_response_writer_v10"
     assert [len(part["items"]) for part in draft["checklists"]] == [0, 2, 1]  # the opening part has none
     # v9 (18 Oct 2026): each item says why the case needs it and, where unclear, where it stands.
     assert [(item["why"], item["note"]) for part in draft["checklists"] for item in part["items"]] == [

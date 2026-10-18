@@ -53,7 +53,7 @@ def answer():
 
 def test_each_source_is_linked_from_the_writers_own_words_where_they_stand():
     ctx, record, sources, draft, _, _ = answer()
-    assert draft["contract"] == response_writer.CONTRACT == "core_response_writer_v9"
+    assert draft["contract"] == response_writer.CONTRACT == "core_response_writer_v10"
     law = next(unit for unit in draft["units"] if unit["kind"] == "law")
     assert law["text"] == "For D1, the stated rule applies to these facts."  # the markup taken out
     words, = [use["words"] for use in law["uses"]]
@@ -104,7 +104,7 @@ def test_the_answer_opens_then_says_in_short_then_each_dispute_with_its_links():
         "sources": sources, "draft": draft, "review": review, "execution": execution,
         "rendering_contract": response_rendering.CONTRACT, "authority_evidence": authorities,
         "calculation": calculation.skipped(),
-        "release": None}, ctx, elements)["rendering_contract"] == "core_response_rendering_v14"
+        "release": None}, ctx, elements)["rendering_contract"] == "core_response_rendering_v15"
 
 
 def test_a_held_sections_summary_is_held_with_it():
@@ -193,7 +193,13 @@ def test_a_link_standing_alone_after_a_sentence_is_a_label_and_its_source_is_lis
     assert law_unit["text"] == "The provision applies to what you asked. It has an exception."
     by_source = {use["source_id"]: use.get("words") for use in law_unit["uses"]}
     assert by_source[first["id"]] is None  # cited by a label only: listed beneath the paragraph
-    assert by_source[second["id"]]["text"] == "exception"  # its link inside the sentence holds
+    # From v10 a link on a single word ("terms", "exception") is no link; its source is listed.
+    assert by_source[second["id"]] is None
+    earlier = response_writer.accept({"units": units, "checklists": [{"checklist": [], "time_limit_ids": []}]},
+                                     ctx, sources, parts=[{"dispute_id": None, "units": 1}],
+                                     contract=response_writer.REASONED_CONTRACT)
+    assert {use["source_id"]: use.get("words") for use in earlier["units"][0]["uses"]}[second["id"]]["text"] == \
+        "exception"  # a v9 draft keeps its link inside the sentence
     # A whole sentence written as a link is words of the text, not a label.
     whole = deepcopy(units)
     whole[0]["text"] = f"[The provision applies to what you asked.]({first['id']}) It has no other condition."
@@ -237,3 +243,40 @@ def test_a_link_separates_its_sources_with_a_semicolon_too_and_lists_a_source_it
     with pytest.raises(SchemaViolation, match="does not use"):
         response_writer.accept({"units": units, "checklists": [{"checklist": [], "time_limit_ids": []}]},
                                ctx, sources, parts=[{"dispute_id": None, "units": 1}])
+
+
+def test_v10_links_each_passage_on_the_words_of_the_writers_own_sentence_it_names():
+    """The fourth live run (19 Oct 2026, writer v9) linked none of the held law in the
+    section shown, and where it linked, mostly on words such as "terms". From v10 each use of
+    held law or a document page names its link words, copied from the writer's own text;
+    code places them where they stand, whatever their case or spacing."""
+    ctx, record, sources = two_disputes()
+    first, second = [row for row in sources.values() if row["kind"] == "provision"][:2]
+    text = "A cheque returned unpaid gives a complaint, but only within one month of the cause of action."
+
+    def drafted(first_words, second_words):
+        uses = [{"source_id": first["id"], "source_kind": "provision", "link_words": first_words},
+                {"source_id": second["id"], "source_kind": "provision", "link_words": second_words}]
+        return response_writer.accept({"units": [{"kind": "law", "text": text, "uses": uses}],
+                                       "checklists": [{"checklist": [], "time_limit_ids": []}]},
+                                      ctx, sources, parts=[{"dispute_id": None, "units": 1}])
+    draft = drafted("A cheque returned unpaid gives a complaint", "within  ONE month of the cause")
+    law_unit, = draft["units"]
+    assert [use["words"] for use in law_unit["uses"]] == [
+        {"text": "A cheque returned unpaid gives a complaint", "start": 0, "end": 42},
+        {"text": "within one month of the cause", "start": text.index("within"),
+         "end": text.index("within") + len("within one month of the cause")}]
+    assert response_writer.validate(draft, ctx, sources) == draft
+    # A single word, or words that are the passage's own and not the sentence's, are no
+    # link: the source is listed beneath the paragraph, as before.
+    law_unit, = drafted("complaint", "the drawer fails to make the payment")["units"]
+    assert [use.get("words") for use in law_unit["uses"]] == [None, None]
+    # The model must give link words (strict output names every field); admission takes a
+    # use without them as one with nothing to link.
+    provision = next(variant for variant in response_writer.PART_SCHEMA_V10["properties"]["units"]["items"]
+                     ["properties"]["uses"]["items"]["anyOf"] if "provision" in variant["properties"]["source_kind"]["enum"])
+    assert "link_words" in provision["required"]
+    admitted = next(variant for variant in response_writer.SCHEMA_V10["properties"]["units"]["items"]
+                    ["properties"]["uses"]["items"]["anyOf"] if "provision" in variant["properties"]["source_kind"]["enum"])
+    assert "link_words" not in admitted["required"]
+    assert "link_words" in " ".join(response_writer.SYSTEM.split())

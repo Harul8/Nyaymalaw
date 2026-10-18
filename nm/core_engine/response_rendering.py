@@ -51,9 +51,18 @@ SECTIONS_CONTRACT = "core_response_rendering_v13"
 #: your artifact has presented"): each dispute's time limits at the end of its own part (a
 #: limit no part names after "In short", as before), and every question to the advocate
 #: gathered at the end of the answer under "What I need from you".
-CONTRACT = "core_response_rendering_v14"
+LAID_OUT_CONTRACT = "core_response_rendering_v14"
+#: v14 in which what the review still finds after the rewrites only in a dispute's checklist
+#: does not hold the section back (owner, 18 Oct 2026: "withhold only the failed part and
+#: pass the remaining part"; the fourth live run's consignment section was held for two
+#: item statuses and an item left out): the items it names are left out, an omission that
+#: names only the dispute's summary (how the review names an item its checklist leaves out)
+#: is said beside the answer, and both are said in code's words.
+CONTRACT = "core_response_rendering_v15"
+#: The versions laid out as the design shows them.
+_LAID_OUT = (LAID_OUT_CONTRACT, CONTRACT)
 #: The versions that may name the sections code's own checks held back.
-_SECTIONED = (SECTIONS_CONTRACT, CONTRACT)
+_SECTIONED = (SECTIONS_CONTRACT, *_LAID_OUT)
 #: The versions that list after a paragraph each source it does not link.
 _LISTED = (LISTED_CONTRACT, *_SECTIONED)
 #: The versions that link each source at its own words and open with "In short".
@@ -327,13 +336,45 @@ _SHORT_WORDS = {"U": "a paragraph", "DOC": "a document page", "M": "a message", 
                 "C": "a checklist item", "K": "an item on the matter's checklist"}
 
 
-def held_sections(draft, review, date_findings=()):
+def checklist_findings(draft, review):
+    """v15 (owner, 18 Oct 2026): what the review still finds that concerns only a dispute's
+    checklist. A finding naming only checklist items leaves those items out; an omission
+    naming only a dispute part's summary paragraph - how the review is told to name an item
+    the checklist leaves out - is noted beside the answer. Returns the items left out and
+    the omissions noted, by part, and every other finding."""
+    if review["accepted"]:
+        return {}, {}, []
+    items = {item["id"]: index for index, part in enumerate(draft.get("checklists") or [])
+             for item in part["items"]}
+    summaries, start = {}, 0
+    for index, part in enumerate(draft.get("parts") or []):
+        for unit in draft["units"][start:start + part["units"]]:
+            if unit["kind"] == "summary" and part["dispute_id"] is not None:
+                summaries[unit["id"]] = index
+        start += part["units"]
+    left_out, noted, rest = {}, {}, []
+    for finding in review["proposal"]["findings"]:
+        ids = finding["unit_ids"]
+        if ids and all(identity in items for identity in ids):
+            for identity in ids:
+                if identity not in left_out.setdefault(items[identity], []):
+                    left_out[items[identity]].append(identity)
+        elif finding["category"] == "omission" and len(ids) == 1 and ids[0] in summaries:
+            noted.setdefault(summaries[ids[0]], []).append(finding)
+        else:
+            rest.append(finding)
+    return left_out, noted, rest
+
+
+def held_sections(draft, review, date_findings=(), *, confined=False):
     """G-SECTION (owner decision, 17 Oct 2026): the sections (one dispute's part each) of
     an answer that what the review or the date check still finds is confined to. [] when
     nothing is found; None when what is found is not confined - a finding that names no
     paragraph concerns the whole answer, an answer not written in sections has none to
-    hold, and an answer that would keep no dispute's section has nothing to release."""
-    findings = [*([] if review["accepted"] else review["proposal"]["findings"]), *date_findings]
+    hold, and an answer that would keep no dispute's section has nothing to release.
+    confined (v15): what concerns only a dispute's checklist holds nothing back."""
+    findings = [*([] if review["accepted"] else checklist_findings(draft, review)[2] if confined
+                  else review["proposal"]["findings"]), *date_findings]
     if not findings:
         return []
     parts = draft.get("parts") or []
@@ -351,7 +392,7 @@ _CODE_FOUND = {"quotation": _FOUND["quotation"],
                "checks": "what was written did not pass NM's own checks of its form and sources"}
 
 
-def _release(draft, review, held, layout=None):
+def _release(draft, review, held, layout=None, *, confined=False):
     """The saved release record checked against the review and the date findings it
     carries (the date check reads today's date, so its findings are kept, not redone).
     From v13 (layout given) it may also name, as "unwritten", the sections code's own
@@ -360,9 +401,10 @@ def _release(draft, review, held, layout=None):
     sections shown without checklist items code's checks refused, in order, each with how
     many and what code found."""
     if held is None:
-        return [], [], [], []
+        return [], [], [], [], {}, {}
     known = {unit["id"] for unit in draft["units"]}.union(*response_writer.part_ids(draft))
-    optional = ({"unwritten", "trimmed"} & set(held)) if layout is not None and isinstance(held, dict) else set()
+    optional = (({"unwritten", "trimmed"} | ({"left_out", "noted"} if confined else set())) & set(held)
+                if layout is not None and isinstance(held, dict) else set())
     if (not isinstance(held, dict) or set(held) != {"parts", "date_findings"} | optional
             or not isinstance(held["date_findings"], list) or any(
                 not isinstance(f, dict) or f.get("category") != "grounding" or not f.get("unit_ids")
@@ -389,10 +431,23 @@ def _release(draft, review, held, layout=None):
                 or [entry["dispute_id"] for entry in trimmed]
                 != [identity for identity in shown if identity in {entry["dispute_id"] for entry in trimmed}]):
             raise ValueError("Unknown release record")
-    expected = held_sections(draft, review, held["date_findings"])
-    if expected is None or expected != held["parts"] or not (expected or unwritten or trimmed):
+    expected = held_sections(draft, review, held["date_findings"], confined=confined)
+    left_out, noted = {}, {}
+    if confined:
+        # v15: the items left out and the omissions noted are exactly what the review still
+        # found only in the checklists of the sections shown.
+        found_out, found_noted, _ = checklist_findings(draft, review)
+        shown_parts = draft.get("parts") or []
+        left_out = {index: ids for index, ids in found_out.items() if expected is not None and index not in expected}
+        noted = {index: rows for index, rows in found_noted.items() if expected is not None and index not in expected}
+        record = ([{"dispute_id": shown_parts[index]["dispute_id"], "items": ids} for index, ids in sorted(left_out.items())],
+                  [shown_parts[index]["dispute_id"] for index in sorted(noted)])
+        if (held.get("left_out", []), held.get("noted", [])) != record or ("left_out" in held and not left_out) or (
+                "noted" in held and not noted):
+            raise ValueError("Unknown release record")
+    if expected is None or expected != held["parts"] or not (expected or unwritten or trimmed or left_out or noted):
         raise ValueError("Held sections differ from what the checks found")
-    return held["parts"], held["date_findings"], unwritten, trimmed
+    return held["parts"], held["date_findings"], unwritten, trimmed, left_out, noted
 
 
 def _dispute_names(research_record):
@@ -655,12 +710,13 @@ def render(context, research_record, sources, draft, review, execution=None, *,
                          "draft leaves them")
     if held is not None and contract not in _HOLDS:
         raise ValueError("Only a v10 or later rendering may hold sections back")
-    if contract == CONTRACT and checked_draft["contract"] not in response_writer.LINKED:
+    if contract in _LAID_OUT and checked_draft["contract"] not in response_writer.LINKED:
         raise ValueError("A v14 rendering places each dispute's time limits by the IDs its part names, as a "
                          "writer v7 or later draft gives them")
     layout = response_writer.parts(research_record) if contract in _SECTIONED else None
-    held_parts, date_findings, unwritten, trimmed = _release(checked_draft, checked_review, held, layout)
-    if not checked_review["accepted"] and not held_parts:
+    held_parts, date_findings, unwritten, trimmed, left_out, noted = _release(
+        checked_draft, checked_review, held, layout, confined=contract == CONTRACT)
+    if not checked_review["accepted"] and not held_parts and not (left_out or noted):
         raise ValueError("A response without accepted independent review cannot be rendered")
     authorities = ({row["unit_id"]: row for row in checked_authorities["units"]}
                    if contract in _CITED else {})
@@ -676,7 +732,7 @@ def render(context, research_record, sources, draft, review, execution=None, *,
     findings = [] if checked_review["accepted"] else checked_review["proposal"]["findings"]
     # v13: each section code's checks held back goes where it stands in the answer's
     # layout, before the first section shown that follows it (or at the end).
-    unwritten_at, disputes = {}, _dispute_names(research_record) if unwritten or trimmed else {}
+    unwritten_at, disputes = {}, (_dispute_names(research_record) if unwritten or trimmed or left_out or noted else {})
     if unwritten:
         order = {part["dispute_id"]: index for index, part in enumerate(layout)}
         starts, start = [], 0
@@ -712,6 +768,23 @@ def render(context, research_record, sources, draft, review, execution=None, *,
             f"{len(checked_draft['parts']) + len(unwritten)} sections {'are' if many else 'is'} held back below, "
             f"because {found_by} a problem in {'them' if many else 'it'} after the rewrites NM may "
             "make. The sections shown were checked by the independent review."))
+    for index, ids in sorted(left_out.items()):
+        # v15: the checklist items the review still found wrong after the rewrites.
+        name = disputes.get(checked_draft["parts"][index]["dispute_id"]) or "this dispute"
+        said = found_words([finding for finding in checked_review["proposal"]["findings"]
+                            if set(finding["unit_ids"]) <= set(ids)], where="the item").rstrip(".")
+        many = len(ids) > 1
+        elements.append(_notice("NOTICE", f"Left out of the checklist for {name}: {len(ids)} "
+            f"{'items' if many else 'item'}, because the independent check still found a problem in "
+            f"{'them' if many else 'it'} after the rewrites NM may make: {said[0].lower()}{said[1:]}. The rest of that "
+            "section is shown, checked by the independent review."))
+    for index, rows in sorted(noted.items()):
+        # v15: what the review found the checklist leaves out, in its own explanation.
+        name = disputes.get(checked_draft["parts"][index]["dispute_id"]) or "this dispute"
+        for finding in rows:
+            said = _SHORT_IDS.sub(lambda m: _SHORT_WORDS[m.group().rstrip("0123456789")], finding["mismatch"].strip())
+            elements.append(_notice("NOTICE", f"The independent check found that the checklist for {name} may "
+                                    f"leave something out: {said}"))
     for entry in trimmed:
         # v13: what a section shown goes without (owner, 18 Oct 2026).
         name, said, many = disputes.get(entry["dispute_id"]) or "this dispute", _CODE_FOUND[entry["found"]],             entry["items"] > 1
@@ -780,14 +853,14 @@ def render(context, research_record, sources, draft, review, execution=None, *,
     if current is not None:
         ends[current] = len(elements)
     elements.extend(unwritten_notices(unwritten_at.get(len(checked_draft["units"]), [])))
-    if contract == CONTRACT:
+    if contract in _LAID_OUT:
         elements = _laid_out(elements, ends, checked_draft, held_parts, time_limits)
     if held_count:
         many = held_count > 1
         elements.append(_notice("NOTICE", f"Shall I try the held-back {'sections' if many else 'section'} again, "
             f"or continue without {'them' if many else 'it'}? If {'they' if many else 'it'} may need a fact, a "
             "document or a narrower question, tell me and I will use it."))
-    if contract in _WORKING and time_limits is not None and contract != CONTRACT:
+    if contract in _WORKING and time_limits is not None and contract not in _LAID_OUT:
         # The Working boxes follow the answer's opening paragraph; from v11, "In short".
         summaries = [i for i, element in enumerate(elements) if element["kind"] == "SUMMARY"]
         first = summaries[-1] if contract in _WORDED and summaries else next(

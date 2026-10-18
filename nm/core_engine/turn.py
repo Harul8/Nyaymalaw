@@ -85,14 +85,25 @@ def _hold(calls, draft, reviewed, undated, findings):
     """After the rewrites (owner decision, 17 Oct 2026): what is still found inside the
     sections of a several-dispute answer holds back those sections under G-SECTION, and
     the rest is released; anything else withholds the turn. The date findings are kept
-    with the release, as the date check reads today's date."""
-    parts = response_rendering.held_sections(draft, reviewed, undated)
-    if not parts:
+    with the release, as the date check reads today's date. What the review still finds
+    only in a dispute's checklist leaves the items it names out, or is noted beside the
+    answer, and holds nothing back (rendering v15; owner, 18 Oct 2026: "withhold only the
+    failed part and pass the remaining part")."""
+    parts = response_rendering.held_sections(draft, reviewed, undated, confined=True)
+    left_out, noted, _ = response_rendering.checklist_findings(draft, reviewed)
+    if parts is not None:
+        left_out = {index: ids for index, ids in left_out.items() if index not in parts}
+        noted = {index: rows for index, rows in noted.items() if index not in parts}
+    if not parts and not (parts == [] and (left_out or noted)):
         _withhold(calls, findings, dated=undated)
     owned = gate("G-SECTION")
     if (owned.response, owned.scope, owned.recovery) != (Response.WITHHOLD, Scope.NEED, Recovery.ADVOCATE):
         raise RuntimeError("The section boundary no longer matches its gate contract")
-    return {"parts": parts, "date_findings": deepcopy(undated)}
+    shown = draft["parts"]
+    return {"parts": parts, "date_findings": deepcopy(undated),
+            **({"left_out": [{"dispute_id": shown[index]["dispute_id"], "items": ids}
+                             for index, ids in sorted(left_out.items())]} if left_out else {}),
+            **({"noted": [shown[index]["dispute_id"] for index in sorted(noted)]} if noted else {})}
 
 
 def _diagnosis(code, exc, calls):
@@ -282,7 +293,8 @@ def validate_activity(activity, context, elements):
                   {response_rendering.HELD_CONTRACT, response_rendering.WORDS_CONTRACT}
                   if version == RELEASE_CONTRACT else
                   {response_rendering.WORDS_CONTRACT, response_rendering.LISTED_CONTRACT,
-                   response_rendering.SECTIONS_CONTRACT, response_rendering.CONTRACT})
+                   response_rendering.SECTIONS_CONTRACT, response_rendering.LAID_OUT_CONTRACT,
+                   response_rendering.CONTRACT})
     rendering = activity.get("rendering_contract") if isinstance(activity, dict) else None
     if (version not in {LEGACY_CONTRACT, AUTHORITY_CONTRACT, CALCULATION_CONTRACT, *_RELEASED}
             or set(activity) != expected_fields or rendering not in renderings):

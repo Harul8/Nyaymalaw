@@ -52,20 +52,30 @@ ADDRESSLESS_CONTRACT = "core_response_writer_v8"
 #: 49 in the owner's browser run); each checklist item is a short line with one sentence on
 #: why the case needs it and, where it is coming or unclear or not available, a few words on
 #: where it stands; a summary is a sentence or two; what NM needs is asked in short questions.
-CONTRACT = "core_response_writer_v9"
+REASONED_CONTRACT = "core_response_writer_v9"
+#: v10 (19 Oct 2026; the fourth live run, on v9, linked none of the held law in the section
+#: shown and, where it linked, mostly on words such as "terms" or "as applicable"): each use
+#: of a held passage or document page names in link_words the words of the writer's own
+#: sentence that the passage supports, which code makes the dotted link where they stand in
+#: the unit; a link written on a single word is no link; anything not found leaves the source
+#: listed under its paragraph, as before. No new call.
+CONTRACT = "core_response_writer_v10"
 CONTRACTS = (LEGACY_CONTRACT, OWNED_TAG_CONTRACT, ALIAS_CONTRACT, PARTS_CONTRACT, WORDS_CONTRACT,
-             CHECKLIST_CONTRACT, LINKS_CONTRACT, ADDRESSLESS_CONTRACT, CONTRACT)
-_IN_PARTS = (PARTS_CONTRACT, WORDS_CONTRACT, CHECKLIST_CONTRACT, LINKS_CONTRACT, ADDRESSLESS_CONTRACT, CONTRACT)
+             CHECKLIST_CONTRACT, LINKS_CONTRACT, ADDRESSLESS_CONTRACT, REASONED_CONTRACT, CONTRACT)
+_IN_PARTS = (PARTS_CONTRACT, WORDS_CONTRACT, CHECKLIST_CONTRACT, LINKS_CONTRACT, ADDRESSLESS_CONTRACT,
+             REASONED_CONTRACT, CONTRACT)
 #: The versions in which every source names the words of its unit that it supports.
 WORDED = (WORDS_CONTRACT, CHECKLIST_CONTRACT)
 #: The versions whose units link their sources in their own text, [words](P1).
-LINKED = (LINKS_CONTRACT, ADDRESSLESS_CONTRACT, CONTRACT)
+LINKED = (LINKS_CONTRACT, ADDRESSLESS_CONTRACT, REASONED_CONTRACT, CONTRACT)
 #: The versions whose units answer the latest message without naming it.
-ADDRESSLESS = (ADDRESSLESS_CONTRACT, CONTRACT)
+ADDRESSLESS = (ADDRESSLESS_CONTRACT, REASONED_CONTRACT, CONTRACT)
 #: The versions whose dispute parts return a checklist.
 CHECKLISTED = (CHECKLIST_CONTRACT, *LINKED)
 #: The versions whose checklist items say why each is needed (and may say where it stands).
-REASONED = (CONTRACT,)
+REASONED = (REASONED_CONTRACT, CONTRACT)
+#: The versions whose uses of held law and document pages name their link words.
+PLACED = (CONTRACT,)
 #: Each part's answer limit; reasoning counts towards it.
 MAX_OUTPUT = 16000
 SYSTEM = """Message: You receive the exact latest advocate message, complete attributed
@@ -127,8 +137,8 @@ part returns neither.
 
 Work in a loop before you return: read the conversation and the passages, draft, check
 every statement against the words it relies on (who said it, its conditions, scope and
-certainty) and that each held passage and document page you use is linked from the words
-it supports, and correct the draft.
+certainty) and that the link_words of each held passage and document page you use are
+words of your own sentence that it supports, and correct the draft.
 
 Look for:
 1. Read the original messages before the proposals. Address every independently
@@ -191,16 +201,17 @@ neighbouring context remain the basis for checking each assertion and its condit
 Account, law and analysis units need source uses; law needs held legal material.
 Analysis selects its factual and legal premises. Questions and next steps select any
 premises they assert; greetings need no source use.
-In a unit's text, link every held passage and document page the unit uses on the few
-words already in your sentence that it supports, as a markdown link inside the sentence
-with the source's short ID: "Section 138 [requires presentation within six months](P6)
-of the cheque's date", not a label after it ("... within six months. [The presentation
-period](P6)"). The advocate reads the answer through these links and opens each source
-from its words, so a unit need not name its documents, pages or sources in its text. A
-label standing alone is taken out, and a source you use but do not link is only listed
-beneath the paragraph, which is harder for the advocate to follow. The short IDs (M1, P1, T1...) are only for
-links, source selections and time_limit_ids: never write one in your text, and call a
-time limit by what it is. For every use, copy source_kind from the
+For each held passage and document page a unit uses, give in its link_words the few
+words of your own sentence that it supports, copied exactly from your text, not from the
+passage: they become the dotted link the advocate clicks to read it. Choose the words
+that carry what the passage says - the rule, the period, the condition ("requires
+presentation within six months", "three years from the date of delivery") - never a
+filler word ("terms", "as applicable") or a label after the sentence. The advocate reads
+the answer through these links, so a unit need not name its documents, pages or sources
+in its text; a passage whose words are not found is only listed beneath the paragraph,
+which is harder for the advocate to follow. The short IDs (M1, P1, T1...) are only for
+source selections and time_limit_ids: never write one in your text, and call a time
+limit by what it is. For every use, copy source_kind from the
 supplied source_kinds catalogue:
 - account, nm_context, service and document: give only source_kind and source_id. Code
   preserves the original speaker and provenance. NM interpretations and service notices
@@ -323,6 +334,52 @@ CHECKLIST_V9 = {"type": "array", "items": ITEM_V9}
 PART_SCHEMA_V9 = _object({"units": _UNITS_V8, "checklist": CHECKLIST_V9, "time_limit_ids": LIMIT_IDS})
 SCHEMA_V9 = _object({"units": _UNITS_V8, "checklists": {
     "type": "array", "items": _object({"checklist": CHECKLIST_V9, "time_limit_ids": LIMIT_IDS})}})
+#: v10: a held passage's or document page's use names its link words.
+LINK_WORDS = {**TEXT, "description": "The few words of your own sentence in this unit's text that this passage "
+                                     "supports, copied exactly from your text, not from the passage: the advocate "
+                                     "clicks them to read it."}
+
+
+def _use_v10(required):
+    """The uses of v10: held law and document pages name their link words. required: the
+    wire schema asks for them (strict output needs every field); admission takes a use
+    without them as one with no link words."""
+    def variant(kinds, **fields):
+        shape = _object({"source_kind": {"type": "string", "enum": list(kinds)},
+                         **SOURCE_REFERENCE["properties"], **fields, "link_words": LINK_WORDS})
+        if not required:
+            shape["required"] = [name for name in shape["required"] if name != "link_words"]
+        return shape
+    judgment = USE["anyOf"][2]["properties"]
+    return {"anyOf": [
+        _object({"source_kind": {"type": "string", "enum": ["account", "nm_context", "service"]},
+                 **SOURCE_REFERENCE["properties"]}),
+        variant(["document"]), variant(["provision"]),
+        variant(["judgment"], role=judgment["role"], speaker=judgment["speaker"],
+                court_treatment=judgment["court_treatment"])]}
+
+
+def _units_v10(required):
+    return {**_UNITS_V8, "items": _object({**_UNITS_V8["items"]["properties"],
+                                           "text": {**TEXT, "description": "Natural prose."},
+                                           "uses": {"type": "array", "items": _use_v10(required)}})}
+
+
+PART_SCHEMA_V10 = _object({"units": _units_v10(True), "checklist": CHECKLIST_V9, "time_limit_ids": LIMIT_IDS})
+SCHEMA_V10 = _object({"units": _units_v10(False), "checklists": {
+    "type": "array", "items": _object({"checklist": CHECKLIST_V9, "time_limit_ids": LIMIT_IDS})}})
+
+
+def _placed(text, words):
+    """Where link words stand in a unit's text, whatever their case or spacing: the first
+    place, when they are at least two words; None otherwise."""
+    words = str(words or "").split()
+    if len(words) < 2:
+        return None
+    match = re.search(r"\s+".join(map(re.escape, words)), text, re.I)
+    return (match.start(), match.end()) if match else None
+
+
 _LINK = re.compile(r"\[([^\[\]]+)\]((?:\([^()]*\))+)")
 _SENTENCE_END = ".;:!?"
 
@@ -549,8 +606,8 @@ def accept(proposal, context, sources, *, contract=CONTRACT, parts=None, whole=T
     if parts is not None and contract not in _IN_PARTS:
         raise ValueError("Only a v4 or later draft is written in parts")
     offered = answer_sources.aliases(sources) if contract in (ALIAS_CONTRACT, *_IN_PARTS) else {}
-    schema = (LEGACY_SCHEMA if contract == LEGACY_CONTRACT else SCHEMA_V9 if contract == CONTRACT
-              else SCHEMA_V8 if contract == ADDRESSLESS_CONTRACT
+    schema = (LEGACY_SCHEMA if contract == LEGACY_CONTRACT else SCHEMA_V10 if contract == CONTRACT
+              else SCHEMA_V9 if contract == REASONED_CONTRACT else SCHEMA_V8 if contract == ADDRESSLESS_CONTRACT
               else SCHEMA_V7 if contract == LINKS_CONTRACT else SCHEMA_V6 if contract == CHECKLIST_CONTRACT
               else SCHEMA_V5 if contract == WORDS_CONTRACT else SCHEMA)
     data = canonical_schema_data(proposal, schema)
@@ -582,7 +639,8 @@ def accept(proposal, context, sources, *, contract=CONTRACT, parts=None, whole=T
             addresses.append(answer_sources.select(reference, sources))
             addresses_latest |= ref["source_id"] == latest_id
         uses = [(_legacy_use(use, sources) if contract == LEGACY_CONTRACT
-                 else _owned_use(_offered(use, offered), sources, originals)) for use in item["uses"]]
+                 else _owned_use(_offered({key: value for key, value in use.items() if key != "link_words"},
+                                          offered), sources, originals)) for use in item["uses"]]
         if contract in WORDED:
             # The words a source supports become its link (17 Oct 2026): exactly in the unit,
             # the first place they stand.
@@ -604,8 +662,16 @@ def accept(proposal, context, sources, *, contract=CONTRACT, parts=None, whole=T
                 uses.append(owned)
             if owned is None:
                 raise SchemaViolation(f"The link {written} names a source this unit does not use")
-            if start is not None:
+            # v10: a link on a single word ("terms") is no link; its source is listed.
+            if start is not None and (contract not in PLACED or len(text[start:end].split()) >= 2):
                 owned.setdefault("words", {"text": text[start:end], "start": start, "end": end})
+        if contract in PLACED:
+            # v10: each held passage or document page is linked on the words of the unit it
+            # names, where they stand; words not found leave it listed (19 Oct 2026).
+            for use, owned in zip(item["uses"], uses):
+                place = _placed(text, use.get("link_words")) if "words" not in owned else None
+                if place is not None:
+                    owned["words"] = {"text": text[place[0]:place[1]], "start": place[0], "end": place[1]}
         if item["kind"] in {"account", "law", "analysis"} and not uses:
             raise SchemaViolation("A substantive response unit needs exact source dependencies")
         if item["kind"] == "law" and not any(
@@ -764,11 +830,11 @@ def _payload(context, record, sources, interpretation, execution, layout, index,
 def _write_part(model, payload):
     prompt = Prompt(system=SYSTEM, user=json.dumps(payload, ensure_ascii=False),
                     operation="core_response_writer")
-    if (estimate_tokens(SYSTEM + prompt.user + json.dumps(PART_SCHEMA_V9)) + MAX_OUTPUT
+    if (estimate_tokens(SYSTEM + prompt.user + json.dumps(PART_SCHEMA_V10)) + MAX_OUTPUT
             > model.context_budget(Tier.HARD)):
         raise ContextOverflow("Complete response context exceeds the model budget")
     try:
-        result = model.structured(prompt, PART_SCHEMA_V9, Tier.HARD, max_tokens=MAX_OUTPUT)
+        result = model.structured(prompt, PART_SCHEMA_V10, Tier.HARD, max_tokens=MAX_OUTPUT)
     except SchemaViolation as exc:
         if exc.rejected_result is None:
             raise
