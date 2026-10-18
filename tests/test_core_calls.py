@@ -51,7 +51,9 @@ def test_a_refused_quotation_is_corrected_with_the_sources_own_words_nearest_to_
     assert ledger.checked("write", activity) == "checked replacement"
     assert json.loads(model.calls[1][0].user)["correction"]["mismatch"] == (
         "Selected quote is not exact original source text: quote='the price.'. The source's own words nearest "
-        "to that quotation, exactly as they stand: “the price of the goods.\n(2)”")
+        "to that quotation, exactly as they stand: “the price of the goods.\n(2)”. A quotation is one continuous "
+        "stretch of its source, word for word, with nothing left out in the middle: quote a shorter stretch rather "
+        "than skip words.")
 
 
 def test_the_review_may_ask_for_a_second_correction_and_no_more():

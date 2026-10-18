@@ -94,7 +94,8 @@ needs as the held law requires it, so the advocate sees at a glance what is in h
 Under needed put what the held law makes necessary for the relief or defence (an element
 to prove, a notice, a document, a step within time); under would_strengthen what would
 make the case stronger without being required. Tie each item to the held passage that
-requires it, copying the words that say so exactly and fully enough to be found once.
+requires it, copying one continuous stretch of the words that say so, exactly as they
+stand with nothing left out in the middle, fully enough to be found once.
 An item already on the matter's checklist (current_records.checklist) whose passage is
 not held for this part may instead be carried by its id. Say where each item stands from
 the messages and documents: in_hand when a message or document page holds it,

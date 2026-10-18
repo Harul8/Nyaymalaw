@@ -135,7 +135,10 @@ def test_a_misquoted_law_is_corrected_with_the_held_words_nearest_to_it():
                      if "correction" in payload and (payload["this_part"]["dispute"] or {}).get("id") == "D1")
     assert corrected["correction"]["mismatch"].endswith(
         "The source's own words nearest to that quotation, exactly as they stand: "
-        "“Complete provision including its exception.”")
+        "“Complete provision including its exception.”. A quotation is one continuous stretch of its source, "
+        "word for word, with nothing left out in the middle: quote a shorter stretch rather than skip words.")
+    # The ninth live run (18 Oct 2026): a quotation of a list left an item out of the middle.
+    assert "copying one continuous stretch of the words that say so" in " ".join(response_writer.SYSTEM.split())
     assert draft["checklists"][1]["items"][0]["law"]["text"] == "including its exception"
     assert calls.metrics()["draft_corrections"] == 1
 

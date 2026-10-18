@@ -369,3 +369,23 @@ def test_a_release_record_naming_code_held_sections_must_match_the_draft():
     with pytest.raises(ValueError):  # only v13 names sections code held back
         render({"parts": [], "date_findings": [], "unwritten": [{"dispute_id": "D2", "found": "checks"}]},
                contract=response_rendering.LISTED_CONTRACT)
+
+
+def test_a_request_only_a_held_section_would_answer_is_a_justified_limit_naming_no_paragraph():
+    """The ninth live run (18 Oct 2026): told of a section code's checks held back, the
+    review recorded the request that section would have answered as a justified limit
+    with no paragraph, and was refused, so the answer was withheld."""
+    ctx, record, sources = two_disputes()
+    draft = response_writer.write(PartModel(sources), ctx, record, sources, skip={2})
+    authorities = response_authorities.check(ctx, record, sources, draft)
+    execution = turn.execution_record(record)
+    data = verdict(ctx, draft)
+    data["request_coverage"].append(request(ctx, draft, disposition="justified_limit", unit_ids=[],
+                                            reason="Only the held-back consignment section would answer it."))
+    review = response_review.review(ReviewModel(data), ctx, record, sources, draft, execution,
+                                    authority_evidence=authorities, held_back=["D2"])
+    assert review["accepted"]
+    assert "justified limit naming no reply units" in " ".join(response_review.SYSTEM.split())
+    with pytest.raises(SchemaViolation, match="identify reply units"):  # nothing held back: refused as before
+        response_review.review(ReviewModel(data), ctx, record, sources, draft, execution,
+                               authority_evidence=authorities)

@@ -117,8 +117,8 @@ held law plainly requires for the relief or defence. Raise a finding naming any 
 item the list leaves out.
 A section named under sections_held_back did not pass code's own checks after the
 rewrites NM may make, and the advocate is told in its place that it is held back. Judge
-the reply without it: leave a request that only that section would answer out of
-request_coverage, and raise no finding for its absence.
+the reply without it: a request that only that section would answer is a justified
+limit naming no reply units, and its absence is no finding.
 Examine the authority checks for each unit against its actual legal use. A direct case
 citation must agree with the case relied on. A selected judgment may instead mention
 another authority: determine from the passage who cited it and whether the draft reports
@@ -336,7 +336,10 @@ def _accept(proposal, dependencies, *, contract=LEGACY_CONTRACT):
             missing.append((key, set(item["unit_ids"])))
         elif item["disposition"] == "respected":
             continue  # Honoured by absence: the original words, not a reply unit, are its evidence.
-        elif not item["unit_ids"]:
+        elif not item["unit_ids"] and not (item["disposition"] == "justified_limit"
+                                           and dependencies.get("held_back")):
+            # A request only a section code held back would answer is a justified limit
+            # with no paragraph shown for it (the ninth live run, 18 Oct 2026).
             raise SchemaViolation("An addressed request or justified limit must identify reply units")
 
     affected, selected_findings = set(), set()

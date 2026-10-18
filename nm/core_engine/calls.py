@@ -130,6 +130,11 @@ class TurnCalls:
             near = getattr(exc, "near", None)
             mismatch = str(exc) + (f". The source's own words nearest to that quotation, exactly as they stand: "
                                    f"“{near}”" if near else "")
+            if hasattr(exc, "near"):
+                # The ninth live run (18 Oct 2026): shown the words, a writer still left a
+                # listed item out of the middle of its quotation.
+                mismatch += (". A quotation is one continuous stretch of its source, word for word, with nothing "
+                             "left out in the middle: quote a shorter stretch rather than skip words.")
             return self.correct(operation, activity, mismatch=mismatch, rejected=self.last_output)
 
     def withhold(self, reason):
