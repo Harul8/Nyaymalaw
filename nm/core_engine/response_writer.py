@@ -912,6 +912,14 @@ def write(model, context, research_record, sources, interpretation=None, executi
         if isinstance(part.get("time_limit_ids"), list):
             part["time_limit_ids"] = [name for name in part["time_limit_ids"]
                                       if not isinstance(name, str) or name in given]
+        # A use naming a time limit's ID names code's own worked result, which the answer
+        # shows in its time limits, not a source to read: it is left out too (live run of
+        # 19 Oct 2026: the writer grounded a stated last day in "T1", its rewrite did again,
+        # and the section was held back for it).
+        for unit in part["units"]:
+            if isinstance(unit, dict) and isinstance(unit.get("uses"), list):
+                unit["uses"] = [use for use in unit["uses"]
+                                if not (isinstance(use, dict) and use.get("source_id") in given)]
     proposal = {"units": [unit for part in written for unit in part["units"]],
                 "checklists": [{"checklist": part["checklist"], "time_limit_ids": part["time_limit_ids"]}
                                for part in written]}

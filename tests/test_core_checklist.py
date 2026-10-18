@@ -167,6 +167,31 @@ def test_a_dispute_names_only_the_time_limits_code_worked_out_and_any_other_id_i
     assert response_writer.limit_ids(worked)["not_assessed"][0]["id"] == "T2"
 
 
+def test_a_use_naming_a_time_limit_is_left_out_as_code_s_own_result_not_a_source():
+    """The live run of 19 Oct 2026 (writer v10): a section grounded the last day it stated
+    in the time limit's ID, as if a source, and its rewrite did again; the section was held
+    back for it. A time limit is code's own result, shown with the answer's time limits:
+    such a use is left out. An ID code did not give still names nothing and is refused."""
+    worked = {"state": "worked", "worked_out": [{"what": "Last day to file"}], "not_assessed": []}
+
+    class Grounded(ChecklistModel):
+        def structured(self, prompt, schema, tier, **kwargs):
+            result = super().structured(prompt, schema, tier, **kwargs)
+            result.data["units"][0]["uses"].append({"source_kind": "nm_context", "source_id": self.named})
+            return result
+
+    ctx, record, sources = two_disputes()
+    model = Grounded(sources, limits={"D1": ["T1"]})
+    model.named = "T1"
+    draft = response_writer.write(model, ctx, record, sources, time_limits=worked)
+    assert all(use["source_id"] != "T1" for unit in draft["units"] for use in unit["uses"])
+    assert [part["time_limit_ids"] for part in draft["checklists"]] == [[], ["T1"], []]
+    assert response_writer.validate(deepcopy(draft), ctx, sources) == draft
+    model.named = "T2"
+    with pytest.raises(SchemaViolation, match="'T2' is not in the owned answer catalogue"):
+        response_writer.write(model, ctx, record, sources, time_limits=worked)
+
+
 def test_a_disputes_time_limits_are_kept_as_code_worked_them_out_and_shown_in_its_words():
     calculation = {"today": "2026-10-18", "not_assessed": [{"what": "Notice period", "why": "no date is given"}],
                    "calculations": [{"what": "Last day to file the suit", "provision_name": "Article 54",
