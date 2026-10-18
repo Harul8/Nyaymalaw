@@ -1,6 +1,9 @@
 """Sources sit on the words they support, and each dispute's summary opens the answer
-(owner decisions, 17 Oct 2026; writer v5, rendering v11). Scripted fixtures exercise the
-admission, review view and rendering; they do not show a real writer chooses words well."""
+(owner decisions, 17 Oct 2026; writer v5, rendering v11). From writer v7 and rendering v12
+(18 Oct 2026, after the first live run) the writer links a source from its own words as
+[words](ID), and a source it leaves unlinked is listed after its paragraph. Scripted
+fixtures exercise the admission, review view and rendering; they do not show a real writer
+chooses words well."""
 import json
 from copy import deepcopy
 
@@ -29,13 +32,13 @@ class LinkedModel(PartModel):
             units = [unit(self.sources, kind="greeting", text="Good morning.")]
         else:
             passage = payload["held_passages"]["passages"][0]
-            use = {"source_id": passage["id"], "source_kind": passage["kind"], "words": "the stated rule"}
+            use = {"source_id": passage["id"], "source_kind": passage["kind"]}
             if passage["kind"] == "judgment":
                 use.update(role="court_reasoning", speaker=None, court_treatment={"status": "not_applicable"})
             units = [unit(self.sources, kind="summary", text=f"Act on {dispute} in time; I need the dates."),
-                     {"kind": "law", "text": f"For {dispute}, the stated rule applies to these facts.",
+                     {"kind": "law", "text": f"For {dispute}, [the stated rule]({passage['id']}) applies to these facts.",
                       "addresses": [reference(self.sources["t2:advocate"])], "uses": [use]}]
-        return ModelResult(None, {"units": deepcopy(units), "checklist": [], "time_limits": []}, tier,
+        return ModelResult(None, {"units": deepcopy(units), "checklist": [], "time_limit_ids": []}, tier,
                            "synthetic", "fixture", Usage(1, 1, 0), 0, completion=Completion.COMPLETE)
 
 
@@ -47,21 +50,26 @@ def answer():
     return ctx, record, sources, draft, authorities, execution
 
 
-def test_each_source_names_the_words_it_supports_and_they_are_kept_where_they_stand():
+def test_each_source_is_linked_from_the_writers_own_words_where_they_stand():
     ctx, record, sources, draft, _, _ = answer()
-    assert draft["contract"] in response_writer.WORDED
+    assert draft["contract"] == response_writer.CONTRACT == "core_response_writer_v7"
     law = next(unit for unit in draft["units"] if unit["kind"] == "law")
+    assert law["text"] == "For D1, the stated rule applies to these facts."  # the markup taken out
     words, = [use["words"] for use in law["uses"]]
     assert words == {"text": "the stated rule", "start": law["text"].index("the stated rule"),
                      "end": law["text"].index("the stated rule") + len("the stated rule")}
     assert [unit["kind"] for unit in draft["units"]] == ["greeting", "summary", "law", "summary", "law"]
     assert response_writer.validate(draft, ctx, sources) == draft
-    # Words that are not in their unit, or blank, are refused for the bounded correction.
-    for wrong in ("a rule nowhere in the text", "   "):
+    # A link to a source the unit does not use, a link with no words or no ID, and words given
+    # beside the text are all refused for the bounded correction; no markup is ever shown.
+    for wrong, match in ((lambda u: u.update(text="For D1, [the stated rule](P99) applies."), "does not use"),
+                         (lambda u: u.update(text="For D1, [ ](P1) applies."), "needs words"),
+                         (lambda u: u.update(text="For D1, [the stated rule]() applies."), "needs words"),
+                         (lambda u: u["uses"][0].update(words="the stated rule"), "undeclared")):
         changed = deepcopy(draft["proposal"])
-        changed["units"][2]["uses"][0]["words"] = wrong
-        with pytest.raises(SchemaViolation, match="not copied exactly"):
-            accept(changed, ctx, sources, parts=draft["parts"])
+        wrong(changed["units"][2])
+        with pytest.raises(SchemaViolation, match=match):
+            response_writer.accept(changed, ctx, sources, parts=draft["parts"])
 
 
 def test_the_reviewer_sees_the_words_each_source_is_linked_from():
@@ -95,7 +103,7 @@ def test_the_answer_opens_then_says_in_short_then_each_dispute_with_its_links():
         "sources": sources, "draft": draft, "review": review, "execution": execution,
         "rendering_contract": response_rendering.CONTRACT, "authority_evidence": authorities,
         "calculation": calculation.skipped(),
-        "release": None}, ctx, elements)["rendering_contract"] == "core_response_rendering_v11"
+        "release": None}, ctx, elements)["rendering_contract"] == "core_response_rendering_v12"
 
 
 def test_a_held_sections_summary_is_held_with_it():
@@ -131,13 +139,80 @@ def test_a_summary_in_a_reply_with_no_dispute_part_stays_where_it_was_written():
         ("GREETING", "Good morning."), ("SUMMARY", "Nothing here needs a dispute of its own.")]
 
 
-def test_v11_refuses_a_draft_whose_sources_name_no_words():
+def test_v11_and_v12_refuse_a_draft_of_another_writer_version():
     ctx, record, sources, draft, legacy_review, execution = ready()
     authorities = response_authorities.check(ctx, record, sources, draft, provision_reader=Reader(record))
     review = response_review.review(LegacyReviewModel(legacy_review["proposal"]), ctx, record, sources, draft,
                                     execution=execution, authority_evidence=authorities)
-    with pytest.raises(ValueError, match="only a writer v5 or later draft"):
+    with pytest.raises(ValueError, match="only a writer v5 or v6 draft"):
+        response_rendering.render(ctx, record, sources, draft, review, execution, authority_evidence=authorities,
+                                  contract=response_rendering.WORDS_CONTRACT)
+    with pytest.raises(ValueError, match="writer v7"):
         response_rendering.render(ctx, record, sources, draft, review, execution, authority_evidence=authorities)
     # The versions an earlier answer is replayed in still draw it.
     assert response_rendering.render(ctx, record, sources, draft, review, execution, authority_evidence=authorities,
                                      contract=response_rendering.HELD_CONTRACT)
+
+
+def test_a_source_the_writer_does_not_link_is_listed_after_its_paragraph():
+    ctx, record, sources = two_disputes()
+    first, second = [row for row in sources.values() if row["kind"] == "provision"][:2]
+    units = [{"kind": "law", "text": "[The provision](%s) applies to what you asked." % first["id"],
+              "addresses": [reference(sources["t2:advocate"])],
+              "uses": [{"source_id": first["id"], "source_kind": "provision"},
+                       {"source_id": second["id"], "source_kind": "provision"}]}]
+    draft = response_writer.accept({"units": units, "checklists": [{"checklist": [], "time_limit_ids": []}]},
+                                   ctx, sources, parts=[{"dispute_id": None, "units": 1}])
+    authorities = response_authorities.check(ctx, record, sources, draft)
+    execution = turn.execution_record(record)
+    review = response_review.review(ReviewModel(positive(draft, requests=[request(ctx, draft)])), ctx, record,
+                                    sources, draft, execution, authority_evidence=authorities)
+    law, = response_rendering.render(ctx, record, sources, draft, review, execution, authority_evidence=authorities)
+    assert law["text"] == "The provision applies to what you asked."
+    assert [(anchor["text"], anchor["source_id"]) for anchor in law["inline_citations"]] == [
+        ("The provision", first["id"])]
+    # The second provision, used but not linked, follows the paragraph; the page folds it
+    # under "Sources". Nothing the paragraph relies on is lost.
+    assert [(marker["source_id"], law["sources"][marker["source_index"]]["id"])
+            for marker in law["citation_markers"]] == [(second["id"], second["id"])]
+
+
+def test_a_link_standing_alone_after_a_sentence_is_a_label_and_its_source_is_listed():
+    """The second live run (18 Oct 2026) wrote most links as labels after sentences; they
+    are taken out of the text and their sources listed, so no stray label reads as prose."""
+    ctx, record, sources = two_disputes()
+    first, second = [row for row in sources.values() if row["kind"] == "provision"][:2]
+    text = (f"The provision applies to what you asked. [The applicable rule]({first['id']}) "
+            f"[Its exception]({second['id']}) It has an [exception]({second['id']}).")
+    units = [{"kind": "law", "text": text, "addresses": [reference(sources["t2:advocate"])],
+              "uses": [{"source_id": first["id"], "source_kind": "provision"},
+                       {"source_id": second["id"], "source_kind": "provision"}]}]
+    draft = response_writer.accept({"units": units, "checklists": [{"checklist": [], "time_limit_ids": []}]},
+                                   ctx, sources, parts=[{"dispute_id": None, "units": 1}])
+    law_unit, = draft["units"]
+    assert law_unit["text"] == "The provision applies to what you asked. It has an exception."
+    by_source = {use["source_id"]: use.get("words") for use in law_unit["uses"]}
+    assert by_source[first["id"]] is None  # cited by a label only: listed beneath the paragraph
+    assert by_source[second["id"]]["text"] == "exception"  # its link inside the sentence holds
+    # A whole sentence written as a link is words of the text, not a label.
+    whole = deepcopy(units)
+    whole[0]["text"] = f"[The provision applies to what you asked.]({first['id']}) It has no other condition."
+    kept = response_writer.accept({"units": whole, "checklists": [{"checklist": [], "time_limit_ids": []}]},
+                                  ctx, sources, parts=[{"dispute_id": None, "units": 1}])
+    assert kept["units"][0]["text"] == "The provision applies to what you asked. It has no other condition."
+    assert kept["units"][0]["uses"][0]["words"]["text"] == "The provision applies to what you asked."
+
+
+def test_a_link_may_name_its_sources_in_one_bracket_or_in_several():
+    ctx, record, sources = two_disputes()
+    first, second = [row for row in sources.values() if row["kind"] == "provision"][:2]
+    for written in (f"({first['id']}, {second['id']})", f"({first['id']})({second['id']})"):
+        units = [{"kind": "law", "text": f"It is enforceable [under the provisions]{written}.",
+                  "addresses": [reference(sources["t2:advocate"])],
+                  "uses": [{"source_id": first["id"], "source_kind": "provision"},
+                           {"source_id": second["id"], "source_kind": "provision"}]}]
+        draft = response_writer.accept({"units": units, "checklists": [{"checklist": [], "time_limit_ids": []}]},
+                                       ctx, sources, parts=[{"dispute_id": None, "units": 1}])
+        law_unit, = draft["units"]
+        assert law_unit["text"] == "It is enforceable under the provisions."  # no markup left over
+        assert [use["words"]["text"] for use in law_unit["uses"]] == ["under the provisions"] * 2

@@ -74,12 +74,14 @@ class MissingWorkModel(ScriptedModel):
                     "mismatch": "The independent request for questions has no delivered result or limit."}]
                     if missing else []}
         if prompt.operation == "core_response_writer":
-            # Writer v5 (17 Oct 2026): each use names the words of its unit it supports; v6
-            # (18 Oct): each part returns its checklist, here none.
+            # Writer v7 (18 Oct 2026): each source is linked from the unit's own words, here
+            # the whole unit; each part returns its checklist, here none.
+            from tests.test_core_response_writer import linked
             for unit in out["units"]:
                 for selected in unit["uses"]:
                     selected.setdefault("words", unit["text"])
-            out.update(checklist=[], time_limits=[])
+            linked(out["units"])
+            out.update(checklist=[], time_limit_ids=[])
         return replace(result, data=out)
 
 
@@ -152,6 +154,7 @@ def test_address_and_support_stay_distinct_for_review_and_correction_binding():
     assert not rejected["accepted"] and validate(rejected, ctx, record, sources, draft) == rejected
     corrected = deepcopy(proposal)
     corrected["units"][0]["uses"] = [use(latest["source_id"])]
+    corrected["units"][0]["text"] = "Your corrected reported quantity is five crates."  # its link, made again
     repaired = accept_draft(corrected, ctx, sources)
     accepted = review(Model(positive(repaired, requests=[request(ctx, repaired)])),
                       ctx, record, sources, repaired)

@@ -54,7 +54,7 @@ class ChecklistModel(PartModel):
         result = super().structured(prompt, schema, tier, **kwargs)
         dispute = (json.loads(prompt.user)["this_part"]["dispute"] or {}).get("id")
         result.data["checklist"] = deepcopy(self.given.get(dispute, []))
-        result.data["time_limits"] = list(self.limits.get(dispute, []))
+        result.data["time_limit_ids"] = list(self.limits.get(dispute, []))
         return result
 
 
@@ -69,7 +69,7 @@ def written(given=None, limits=None, time_limits=None, records=None):
 
 def test_each_dispute_returns_its_checklist_with_every_quote_checked():
     ctx, record, sources, draft = written()
-    assert draft["contract"] == response_writer.CONTRACT == "core_response_writer_v6"
+    assert draft["contract"] == response_writer.CONTRACT == "core_response_writer_v7"
     assert [len(part["items"]) for part in draft["checklists"]] == [0, 2, 1]  # the opening part has none
     first, second = draft["checklists"][1]["items"]
     provision = next(identity for identity, row in sources.items() if row["text"].startswith("Complete provision")
@@ -113,19 +113,25 @@ def test_a_checklist_item_is_admitted_only_on_exact_words_of_the_right_source(ca
         response_writer.write(ChecklistModel(sources, given), ctx, record, sources)
 
 
-def test_a_dispute_may_name_only_the_time_limits_code_worked_out():
-    with pytest.raises(SchemaViolation, match="did not work out: Last day to file"):
-        written(limits={"D1": ["Last day to file"]})
-    worked = {"state": "worked_out", "worked_out": [{"what": "Last day to file"}], "not_assessed": []}
-    _, _, _, draft = written(limits={"D1": ["Last day to file"]}, time_limits=worked)
-    assert [part["time_limits"] for part in draft["checklists"]] == [[], ["Last day to file"], []]
+def test_a_dispute_may_name_only_the_time_limits_code_worked_out_by_their_ids():
+    with pytest.raises(SchemaViolation, match="not in time_limits: T1. No time limit was worked out"):
+        written(limits={"D1": ["T1"]})
+    worked = {"state": "worked", "worked_out": [{"what": "Last day to file"}],
+              "not_assessed": [{"what": "Notice period", "why": "no date"}]}
+    with pytest.raises(SchemaViolation, match="not in time_limits: Last day to file. Use the IDs shown there: T1, T2"):
+        written(limits={"D1": ["Last day to file"]}, time_limits=worked)
+    ctx, record, sources, draft = written(limits={"D1": ["T2", "T1"]}, time_limits=worked)
+    assert [part["time_limit_ids"] for part in draft["checklists"]] == [[], ["T2", "T1"], []]
+    # The writer saw each time limit under its ID.
+    assert response_writer.limit_ids(worked)["not_assessed"][0]["id"] == "T2"
 
 
 def test_a_disputes_time_limits_are_kept_as_code_worked_them_out_and_shown_in_its_words():
     calculation = {"today": "2026-10-18", "not_assessed": [{"what": "Notice period", "why": "no date is given"}],
                    "calculations": [{"what": "Last day to file the suit", "provision_name": "Article 54",
                                      "working": {"last_day": "2027-01-10"}, "standing": {"state": "open", "days": 84}}]}
-    kept = checklist._limits(["Last day to file the suit", "Notice period", "Last day to file the suit"], calculation)
+    kept = checklist._limits({"time_limit_ids": ["T1", "T2", "T1", "T9"]}, calculation)
+    assert kept == checklist._limits({"time_limits": ["Last day to file the suit", "Notice period"]}, calculation)
     assert kept == [{"what": "Last day to file the suit", "provision": "Article 54", "last_day": "2027-01-10",
                      "standing": {"state": "open", "days": 84}, "as_of": "2026-10-18"},
                     {"what": "Notice period", "not_assessed": "no date is given"}]
@@ -143,26 +149,22 @@ def checked(ctx, record, sources, draft, data=None):
                                          authority_evidence=authorities)
 
 
-def test_the_review_judges_every_item_and_a_finding_on_one_concerns_only_its_section():
+def test_the_review_names_a_wrong_item_in_a_finding_and_it_concerns_only_its_section():
     ctx, record, sources, draft = written()
     model, review = checked(ctx, record, sources, draft)
-    assert review["contract"] == "core_response_review_v6" and review["accepted"]
+    assert review["contract"] == "core_response_review_v7" and review["accepted"]
     shown = json.loads(model.calls[0][0].user)["complete_draft_proposal"]["checklists"]
     assert [[item["id"] for item in part["items"]] for part in shown] == [[], ["C1", "C2"], ["C3"]]
     assert shown[1]["items"][0]["law"] == {"source_id": "P1", "quote": "including its exception"}
     assert shown[1]["items"][0]["evidence"] == {"source_id": "M1", "quote": "applicable law"}
-    assert "checklist item ID" in " ".join(response_review.SYSTEM.split())
-    # Every item needs its verdict.
-    data = positive(draft, requests=[request(ctx, draft)])
-    data["units"] = [row for row in data["units"] if row["unit_id"] != "t2:c3"]
-    with pytest.raises(SchemaViolation, match="checklist item"):
+    assert "naming any item" in " ".join(response_review.SYSTEM.split())
+    # Review v7: verdict rows are for the units; a row for an item is refused as unknown.
+    data = positive(draft, requests=[request(ctx, draft)], items=True)
+    with pytest.raises(SchemaViolation, match="unknown draft unit IDs"):
         checked(ctx, record, sources, draft, data)
-    # A rejected item, named by its short ID, concerns its own dispute's section alone.
+    # A wrong item, named by its short ID in a finding, concerns its own dispute's section alone.
     data = positive(draft, requests=[request(ctx, draft)])
     data["verdict"] = "reject"
-    for row in data["units"]:
-        if row["unit_id"] == "t2:c3":
-            row.update(unit_id="C3", verdict="rejected")
     data["findings"] = [{"category": "grounding", "unit_ids": ["C3"], "sources": [],
                          "mismatch": "C3 is not what the passage requires."}]
     _, rejected = checked(ctx, record, sources, draft, data)
@@ -261,3 +263,17 @@ def test_a_saved_turn_keeps_its_checklist_as_records_and_the_board_shows_it(stor
     rows_[0]["digest"] = digest({key: value for key, value in rows_[0].items() if key != "digest"})
     with pytest.raises(ConversationRefused):
         turn.saved_rows(replace(damaged, brain_chat=tuple(rows_)), "owner")
+
+
+def test_a_saved_v6_review_with_a_verdict_row_for_each_item_replays():
+    ctx, record, sources, draft = written()
+    authorities = response_authorities.check(ctx, record, sources, draft)
+    execution = turn.execution_record(record)
+    dependencies = response_review._dependencies(ctx, record, sources, draft, execution, authority_evidence=authorities,
+                                                 contract=response_review.CHECKLIST_CONTRACT)
+    saved = response_review._accept(positive(draft, requests=[request(ctx, draft)], items=True), dependencies,
+                                    contract=response_review.CHECKLIST_CONTRACT)
+    assert saved["accepted"] and saved["contract"] == "core_response_review_v6"
+    with pytest.raises(SchemaViolation, match="and every checklist item one"):
+        response_review._accept(positive(draft, requests=[request(ctx, draft)]), dependencies,
+                                contract=response_review.CHECKLIST_CONTRACT)

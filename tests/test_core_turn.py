@@ -69,26 +69,24 @@ class ScriptedModel:
                 treatment = next(s for s in data["held_passages"]["passages"] if "Court rejected" in s["text"])
                 uses = [{"source_id": source["id"], "source_kind": "judgment",
                     "role": "party_submission", "speaker": "Counsel",
-                    "court_treatment": {"status": "rejected", "source": {"source_id": treatment["id"]}},
-                    "words": "counsel's submission"}]
-                text = "The court rejected counsel's submission because its condition was unmet."
+                    "court_treatment": {"status": "rejected", "source": {"source_id": treatment["id"]}}}]
+                # Writer v7: the source is linked from the writer's own words.
+                text = f"The court rejected [counsel's submission]({source['id']}) because its condition was unmet."
             out = {"units": [{"kind": "law" if uses else "greeting", "text": text,
                               "addresses": [{"source_id": latest["source_id"]}], "uses": uses}],
-                   "checklist": [], "time_limits": []}
+                   "checklist": [], "time_limit_ids": []}
             if self.malformed_writer:
                 self.malformed_writer -= 1
                 out["units"][0]["addresses"][0]["quote"] = "Absent quotation"
         elif prompt.operation == "core_response_review":
             units = data["complete_draft_proposal"]["units"]
-            # Every checklist item has its verdict too (review v6, 18 Oct 2026).
-            items = [item for part in data["complete_draft_proposal"].get("checklists", []) for item in part["items"]]
             rejected = self.reject > 0
             self.reject -= int(rejected)
+            # Review v7 (18 Oct 2026): verdict rows for the units; a wrong checklist item
+            # would be named in a finding.
             out = {"verdict": "reject" if rejected else "accept",
                 "units": [{"unit_id": u["id"], "verdict": "rejected" if rejected else "supported",
-                           "reason": "Synthetic unit decision"} for u in units]
-                         + [{"unit_id": item["id"], "verdict": "supported", "reason": "Synthetic item decision"}
-                            for item in items],
+                           "reason": "Synthetic unit decision"} for u in units],
                 "request_coverage": [{"request": ref, "disposition": "addressed",
                     "unit_ids": [u["id"] for u in units], "reason": "Synthetic coverage"}],
                 "findings": [{"category": "attribution", "unit_ids": [units[0]["id"]],
@@ -127,7 +125,7 @@ def test_four_actual_stage_calls_save_reopen_and_replay_without_reexecution(stor
     assert rows[0]["activities"]["contract"] == "core_turn_v5"
     # No held Acts were given to this turn, so no time limit was worked out (item 9).
     assert rows[0]["activities"]["calculation"]["state"] == "not_needed"
-    assert rows[0]["activities"]["review"]["contract"] == "core_response_review_v6"
+    assert rows[0]["activities"]["review"]["contract"] == "core_response_review_v7"
     assert rows[0]["activities"]["authority_evidence"]["contract"] == "core_response_authorities_v1"
     assert rows[0]["response"] == response
     source = response["elements"][0]["source"]
@@ -202,7 +200,7 @@ def test_a_turn_saved_under_an_earlier_rendering_reopens_unchanged_beside_a_curr
     assert second["committed"] == "committed"
     rows = saved_rows(store.load(chat_matter_id("owner", first["chat_id"])), "owner")
     assert [row["activities"]["rendering_contract"] for row in rows] == [
-        saved, "core_response_rendering_v11"]
+        saved, "core_response_rendering_v12"]
     assert rows[0]["response"]["elements"] == elements
     if saved not in ("core_response_rendering_v4", "core_response_rendering_v5", "core_response_rendering_v6",
                      "core_response_rendering_v7"):

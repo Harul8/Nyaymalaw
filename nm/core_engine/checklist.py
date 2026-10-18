@@ -68,20 +68,23 @@ def _item(item, earlier, sources, turn_id):
             "asked_in": asked, "noted_in": turn_id}
 
 
-def _limits(names, calculation):
-    """The time limits a dispute's section named, as code worked them out that turn."""
+def _limits(given, calculation):
+    """The time limits a dispute's section named, as code worked them out that turn: by
+    their IDs from writer v7 (T1, T2... over the worked-out limits, then those not
+    assessed, in code's order), by their names before."""
     calculation = calculation or {}
-    worked = {entry["what"]: entry for entry in calculation.get("calculations", [])}
-    unassessed = {entry["what"]: entry for entry in calculation.get("not_assessed", [])}
-    out = []
-    for name in dict.fromkeys(names):
-        if name in worked:
-            entry = worked[name]
-            out.append({"what": name, "provision": entry["provision_name"], "last_day": entry["working"]["last_day"],
-                        "standing": deepcopy(entry["standing"]), "as_of": calculation.get("today")})
-        elif name in unassessed:
-            out.append({"what": name, "not_assessed": unassessed[name]["why"]})
-    return out
+    ordered = ([(True, entry) for entry in calculation.get("calculations", [])]
+               + [(False, entry) for entry in calculation.get("not_assessed", [])])
+    if "time_limit_ids" in given:
+        numbers = [int(name[1:]) for name in dict.fromkeys(given["time_limit_ids"])
+                   if name[:1] == "T" and name[1:].isdigit()]
+        chosen = [ordered[number - 1] for number in numbers if 1 <= number <= len(ordered)]
+    else:
+        chosen = [next(row for row in ordered if row[1]["what"] == name)
+                  for name in dict.fromkeys(given["time_limits"]) if any(row[1]["what"] == name for row in ordered)]
+    return [{"what": entry["what"], "provision": entry["provision_name"], "last_day": entry["working"]["last_day"],
+             "standing": deepcopy(entry["standing"]), "as_of": calculation.get("today")} if worked
+            else {"what": entry["what"], "not_assessed": entry["why"]} for worked, entry in chosen]
 
 
 def records(context, activity):
@@ -111,7 +114,7 @@ def records(context, activity):
         given = written.get(dispute["id"])
         if given is not None:
             entry = {"id": dispute["id"], "name": dispute["name"], "answered_in": turn_id,
-                     "time_limits": _limits(given["time_limits"], activity.get("calculation")),
+                     "time_limits": _limits(given, activity.get("calculation")),
                      "items": [_item(item, earlier, activity["sources"], turn_id) for item in given["items"]]}
         elif (dispute["id"], dispute["name"]) in kept:
             entry = deepcopy(kept[(dispute["id"], dispute["name"])])

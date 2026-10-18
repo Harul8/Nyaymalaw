@@ -5,7 +5,9 @@ import json
 import pytest
 
 from nm.core_engine.answer_sources import build
-from nm.core_engine.response_writer import CONTRACT, LEGACY_CONTRACT, MAX_OUTPUT, PART_SCHEMA, validate, write
+from nm.core_engine.response_writer import (
+    CHECKLIST_CONTRACT, CONTRACT, LEGACY_CONTRACT, MAX_OUTPUT, PART_SCHEMA_V7, validate, write,
+)
 from nm.core_engine.response_writer import accept as admit
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import (
@@ -54,11 +56,36 @@ def unworded(uses):
     return uses
 
 
-def checklisted(proposal, parts=1):
+def checklisted(proposal, parts=1, *, limits="time_limit_ids"):
     """Writer v6 (18 Oct 2026): each part returns its checklist and the time limits it
-    names; a fixture's part returns none unless it says otherwise. In place."""
-    proposal.setdefault("checklists", [{"checklist": [], "time_limits": []} for _ in range(parts)])
+    names (v7: by their IDs); a fixture's part returns none unless it says otherwise. In
+    place."""
+    proposal.setdefault("checklists", [{"checklist": [], limits: []} for _ in range(parts)])
     return proposal
+
+
+def linked(units):
+    """Writer v7 (18 Oct 2026): a unit links each source from its own words, [words](ID).
+    A fixture's use that names its words is linked there instead, and uses naming the same
+    words share one link; in place."""
+    for unit in units if isinstance(units, list) else []:
+        if not isinstance(unit, dict) or not isinstance(unit.get("text"), str):
+            continue
+        spans = {}
+        for use in unit.get("uses") or []:
+            if isinstance(use, dict) and isinstance(use.get("words"), str):
+                spans.setdefault(use.pop("words"), []).append(use["source_id"])
+        text, chosen = unit["text"], []
+        for words, ids in spans.items():
+            start = text.find(words) if words.strip() else -1
+            if start >= 0 and not any(start < end and start + len(words) > begin for begin, end, _ in chosen):
+                chosen.append((start, start + len(words), ids))
+        out, last = [], 0
+        for begin, end, ids in sorted(chosen):
+            out += [text[last:begin], f"[{text[begin:end]}]({', '.join(ids)})"]
+            last = end
+        unit["text"] = "".join(out) + text[last:]
+    return units
 
 
 def unchecklisted(proposal):
@@ -68,17 +95,23 @@ def unchecklisted(proposal):
 
 
 def part_output(data):
-    """What one part's call returns under writer v6; in place."""
+    """What one part's call returns under writer v7, its links in its text; in place."""
     if isinstance(data, dict) and isinstance(data.get("units"), list):
+        linked(data["units"])
         data.setdefault("checklist", [])
-        data.setdefault("time_limits", [])
+        data.setdefault("time_limit_ids", [])
     return data
 
 
 def accept(proposal, ctx, sources, **kwargs):
-    """Admission as the writer's own, with a v6 proposal's checklists as checklisted gives."""
-    if kwargs.get("contract", CONTRACT) == CONTRACT and isinstance(proposal, dict):
-        checklisted(proposal, len(kwargs.get("parts") or [None]))
+    """Admission as the writer's own, with a v6 or v7 proposal's checklists as checklisted
+    gives and, for v7, its links as linked gives."""
+    contract = kwargs.get("contract", CONTRACT)
+    if contract in (CONTRACT, CHECKLIST_CONTRACT) and isinstance(proposal, dict):
+        checklisted(proposal, len(kwargs.get("parts") or [None]),
+                    limits="time_limit_ids" if contract == CONTRACT else "time_limits")
+        if contract == CONTRACT:
+            linked(proposal.get("units"))
     return admit(proposal, ctx, sources, **kwargs)
 
 
@@ -144,7 +177,7 @@ def test_complete_context_and_all_neighbouring_legal_words_reach_one_writer_call
     assert [q["work_id"] for q in payload["research"]["questions"]] == [w["id"] for w in record["plan"]["work"]]
     assert payload["this_part"] == {"part": 1, "of": 1, "opens_the_answer": True,
                                     "dispute": understood["disputes"][0], "other_parts": []}
-    assert tier is Tier.HARD and kwargs == {"max_tokens": MAX_OUTPUT} and schema == PART_SCHEMA
+    assert tier is Tier.HARD and kwargs == {"max_tokens": MAX_OUTPUT} and schema == PART_SCHEMA_V7
     assert prompt.operation == "core_response_writer"
     assert draft["contract"] == CONTRACT and draft["proposal"] == checklisted(proposed)
     assert draft["parts"] == [{"dispute_id": understood["disputes"][0]["id"], "units": 1}]
@@ -193,10 +226,11 @@ def test_whole_source_ids_resolve_full_attributed_accounts_without_recopied_word
     assert accepted["uses"][0]["text"] == history[0]["text"]
     assert accepted["uses"][0]["start"] == 0
     assert accepted["uses"][0]["end"] == len(history[0]["text"])
-    assert draft["proposal"]["units"][0]["uses"][0] == {
-        "source_id": "t1:advocate", "source_kind": "account",
-        "words": "The earlier account contains two affirmations."}
-    # Writer v5 (17 Oct 2026): the words become the link, placed where they stand.
+    assert draft["proposal"]["units"][0]["uses"][0] == {"source_id": "t1:advocate", "source_kind": "account"}
+    # Writer v7 (18 Oct 2026): the link the writer put in its own words becomes the source's
+    # link, placed where those words stand once the markup is taken out.
+    assert draft["proposal"]["units"][0]["text"] == "[The earlier account contains two affirmations.](t1:advocate)"
+    assert accepted["text"] == "The earlier account contains two affirmations."
     assert accepted["uses"][0]["words"] == {"text": "The earlier account contains two affirmations.",
                                             "start": 0, "end": len("The earlier account contains two affirmations.")}
     assert validate(draft, ctx, sources) == draft

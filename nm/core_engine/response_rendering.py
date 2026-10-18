@@ -39,8 +39,13 @@ HELD_CONTRACT = "core_response_rendering_v10"
 #: v10 with each source linked at the words its use names and no markers after a
 #: paragraph, and each dispute's summary opening the answer under "In short" (owner
 #: decisions, 17 Oct 2026; writer v5).
-CONTRACT = "core_response_rendering_v11"
-_HOLDS = (HELD_CONTRACT, CONTRACT)
+WORDS_CONTRACT = "core_response_rendering_v11"
+#: v11 listing after a paragraph each source it uses but does not link (18 Oct 2026, writer
+#: v7, where a source is linked from the writer's own words only where it chose to).
+CONTRACT = "core_response_rendering_v12"
+#: The versions that link each source at its own words and open with "In short".
+_WORDED = (WORDS_CONTRACT, CONTRACT)
+_HOLDS = (HELD_CONTRACT, *_WORDED)
 _AS_OF = (AS_OF_CONTRACT, *_HOLDS)
 _WORKING = (WORKING_CONTRACT, *_AS_OF)
 _CITED = (CITED_WORDS_CONTRACT, HEADINGS_CONTRACT, SHORT_NAME_CONTRACT, DOCUMENT_PAGES_CONTRACT, *_WORKING)
@@ -193,11 +198,12 @@ def _short_names(source):
     return case_short_names(source["title"]) if source["kind"] == "judgment" else set()
 
 
-def _worded(unit, sources):
+def _worded(unit, sources, *, listed=False):
     """v11 (owner decisions, 17 Oct 2026): each shown source is linked at the words of the
     paragraph its use names, where they stand; no marker follows the paragraph. Where two
     sources name overlapping words the first keeps the link, and the reading pane opened
-    from it offers the others."""
+    from it offers the others. listed (v12): each shown source left without a link follows
+    the paragraph as a marker, which the page folds under "Sources"."""
     index = {source["id"]: number for number, source in enumerate(sources)}
     candidates = sorted((use["words"]["start"], use["words"]["end"], index[use["source_id"]])
                         for use in unit["uses"] if use.get("words") and use["source_id"] in index)
@@ -207,8 +213,10 @@ def _worded(unit, sources):
             continue
         chosen.append((start, end, number))
         linked.add(number)
+    markers = [{"source_id": source["id"], "source_index": number} for number, source in enumerate(sources)
+               if listed and number not in linked]
     return [{"text": unit["text"][start:end], "source_id": sources[number]["id"], "source_index": number,
-             "start": start, "end": end} for start, end, number in chosen], []
+             "start": start, "end": end} for start, end, number in chosen], markers
 
 
 def _cited_words(text, sources, authority, *, short=False):
@@ -523,17 +531,21 @@ def render(context, research_record, sources, draft, review, execution=None, *,
     else:
         if authority_evidence is None or review.get("contract") not in {
                 response_review.AUTHORITY_CONTRACT, response_review.ALIAS_CONTRACT,
-                response_review.RESPECTED_CONTRACT, response_review.PARTS_CONTRACT, response_review.CONTRACT}:
+                response_review.RESPECTED_CONTRACT, response_review.PARTS_CONTRACT,
+                response_review.CHECKLIST_CONTRACT, response_review.CONTRACT}:
             raise ValueError("Current rendering requires an authority-bound current review")
         checked_authorities = response_authorities.validate(authority_evidence, context,
             research_record, sources, checked_draft)
         checked_review = response_review.validate(review, context, research_record,
             sources, checked_draft, execution=execution, authority_evidence=checked_authorities,
             time_limits=calculation.for_answer(time_limits) if time_limits is not None else None)
-    if contract == CONTRACT and checked_draft["contract"] not in response_writer.WORDED:
+    if contract == WORDS_CONTRACT and checked_draft["contract"] not in response_writer.WORDED:
         # Otherwise every source would be shown unlinked, with nothing to say so.
         raise ValueError("A v11 rendering links each source at the words its use names, "
-                         "which only a writer v5 or later draft gives")
+                         "which only a writer v5 or v6 draft gives")
+    if contract == CONTRACT and checked_draft["contract"] != response_writer.CONTRACT:
+        raise ValueError("A v12 rendering lists the sources a paragraph does not link, as a writer v7 draft "
+                         "leaves them")
     if held is not None and contract not in _HOLDS:
         raise ValueError("Only a v10 or later rendering may hold sections back")
     held_parts, date_findings = _release(checked_draft, checked_review, held)
@@ -565,8 +577,9 @@ def render(context, research_record, sources, draft, review, execution=None, *,
             "source": deepcopy(legal_sources[0]) if legal_sources else None,
             "sources": legal_sources,
             "refs": list(dict.fromkeys(source["locator"] for source in legal_sources))}
-        if contract == CONTRACT:
-            element["inline_citations"], element["citation_markers"] = _worded(unit, legal_sources)
+        if contract in _WORDED:
+            element["inline_citations"], element["citation_markers"] = _worded(
+                unit, legal_sources, listed=contract == CONTRACT)
         elif contract in _CITED:
             element["inline_citations"], element["citation_markers"] = _cited_words(
                 unit["text"], legal_sources, authorities[unit["id"]],
@@ -587,7 +600,7 @@ def render(context, research_record, sources, draft, review, execution=None, *,
             break
         start += part["units"]
     lifted = [position for position, unit in enumerate(checked_draft["units"])
-              if contract == CONTRACT and lift_at is not None and unit["kind"] == "summary"
+              if contract in _WORDED and lift_at is not None and unit["kind"] == "summary"
               and position not in held_units]
     for position, unit in enumerate(checked_draft["units"]):
         if position == lift_at:
@@ -609,7 +622,7 @@ def render(context, research_record, sources, draft, review, execution=None, *,
     if contract in _WORKING and time_limits is not None:
         # The Working boxes follow the answer's opening paragraph; from v11, "In short".
         summaries = [i for i, element in enumerate(elements) if element["kind"] == "SUMMARY"]
-        first = summaries[-1] if contract == CONTRACT and summaries else next(
+        first = summaries[-1] if contract in _WORDED and summaries else next(
             (i for i, element in enumerate(elements) if element["kind"] not in NOT_PARAGRAPHS), 0)
         elements[first + 1:first + 1] = _working(time_limits, as_of=contract in _AS_OF)
     return elements

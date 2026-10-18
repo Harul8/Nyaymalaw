@@ -54,10 +54,10 @@ class DocumentModel(ScriptedModel):
             data = json.loads(prompt.user)
             page = data["original_context"]["documents"][0]
             assert data["source_kinds"][page["source_id"]] == "document"
-            result.data["units"] = [{"kind": "account", "text": "memo.pdf page 1 records the return unpaid.",
+            result.data["units"] = [{"kind": "account",
+                                     "text": f"memo.pdf page 1 [records the return unpaid]({page['source_id']}).",
                                      "addresses": [{"source_id": data["original_context"]["latest"]["source_id"]}],
-                                     "uses": [{"source_kind": "document", "source_id": page["source_id"],
-                                               "words": "records the return unpaid"}]}]
+                                     "uses": [{"source_kind": "document", "source_id": page["source_id"]}]}]
         return result
 
 

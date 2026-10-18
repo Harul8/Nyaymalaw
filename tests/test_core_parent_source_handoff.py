@@ -16,7 +16,7 @@ from nm.core_engine.conversation import chat_matter_id
 from nm.core_engine.retrieval import HybridSearcher, validate_search
 from tests.test_core_answer_sources import fixture
 from tests.test_core_research import Model, proposal, work
-from tests.test_core_response_writer import source_use_v2, unit, worded
+from tests.test_core_response_writer import linked, source_use_v2, unit, worded
 from tests.test_core_response_writer import accept as writer_fixture_accept
 from tests.test_core_served import OWNER, served, source_url, successful
 from tests.test_core_statute_readback import _local, _row
@@ -173,6 +173,7 @@ def test_parent_source_is_saved_served_and_replayed_without_fresh_law_or_model_c
         proposal = deepcopy(result.data)
         proposal["units"][0].update(kind="law", text=source["text"],
                                   uses=worded([source_use_v2(source)], source["text"]))
+        linked(proposal["units"][:1])
         return replace(result, data=proposal)
 
     monkeypatch.setattr(served.model, "structured", write_parent)

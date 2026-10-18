@@ -8,7 +8,7 @@ from nm.core_engine import answer_sources, response_writer as candidate
 from nm.core_engine import response_authorities, response_rendering, response_review, turn
 from nm.shared.model_port import SchemaViolation, on_the_wire
 from tests.test_core_answer_sources import fixture
-from tests.test_core_response_writer import Model, checklisted, source_use_v1, unit, unit_v1
+from tests.test_core_response_writer import Model, accept as admitted, checklisted, source_use_v1, unit, unit_v1
 from tests.test_core_response_review import Model as ReviewModel, positive, request
 from tests.test_core_response_rendering import ready, legacy_render
 
@@ -62,7 +62,9 @@ def test_wire_shape_is_transport_safe_and_legacy_shape_unchanged():
 def test_nonjudgments_derive_provenance_without_requesting_court_metadata(kind):
     ctx, _, sources = setup()
     source = next(s for s in sources.values() if s["kind"] == kind)
+    from tests.test_core_response_writer import linked
     supplied = proposal(sources, [use(source)])
+    linked(supplied["units"])  # writer v7: the source linked from the unit's own words
     before = deepcopy(supplied)
     draft = candidate.accept(supplied, ctx, sources)
     checked = draft["units"][0]["uses"][0]
@@ -82,7 +84,7 @@ def test_nonjudgment_cannot_claim_court_metadata(kind, extra):
     bad = use(source)
     bad[extra] = {"role": "court_reasoning", "speaker": "Court",
                   "court_treatment": {"status": "adopted", "source": None}}[extra]
-    with pytest.raises(SchemaViolation): candidate.accept(proposal(sources, [bad]), ctx, sources)
+    with pytest.raises(SchemaViolation): admitted(proposal(sources, [bad]), ctx, sources)
 
 
 @pytest.mark.parametrize("actual", ["account", "nm_context", "service", "provision", "judgment"])
@@ -92,7 +94,7 @@ def test_declared_source_kind_cannot_promote_or_demote_an_owned_source(actual):
     false_kind = "account" if actual != "account" else "provision"
     bad = {"source_kind": false_kind, **ref(source)}
     with pytest.raises(SchemaViolation, match="owned catalogue kind"):
-        candidate.accept(proposal(sources, [bad]), ctx, sources)
+        admitted(proposal(sources, [bad]), ctx, sources)
 
 
 @pytest.mark.parametrize("status", ["adopted", "rejected", "qualified"])
@@ -100,7 +102,7 @@ def test_judgment_treatment_preserves_separate_exact_same_case_support(status):
     ctx, _, sources = setup()
     rows = [s for s in sources.values() if s["kind"] == "judgment"]
     selected = use(rows[0], speaker="Counsel", court_treatment={"status": status, "source": ref(rows[1])})
-    draft = candidate.accept(proposal(sources, [selected], kind="law"), ctx, sources)
+    draft = admitted(proposal(sources, [selected], kind="law"), ctx, sources)
     resolved = draft["units"][0]["uses"][0]
     assert resolved["role"] == "party_submission"
     assert resolved["treatment"] == status
@@ -114,7 +116,7 @@ def test_judgment_treatment_preserves_separate_exact_same_case_support(status):
 def test_judgment_can_report_unshown_or_inapplicable_treatment_without_inventing_source(status, role):
     ctx, _, sources = setup()
     row = next(s for s in sources.values() if s["kind"] == "judgment")
-    draft = candidate.accept(proposal(sources, [use(row, role=role, speaker="  ",
+    draft = admitted(proposal(sources, [use(row, role=role, speaker="  ",
         court_treatment={"status": status})]), ctx, sources)
     resolved = draft["units"][0]["uses"][0]
     assert resolved["speaker"] is None and resolved["treatment_source"] is None
@@ -142,7 +144,7 @@ def test_invalid_judgment_treatment_rejects_within_existing_bound(damage):
     elif damage == "empty_with_null": treatment.update(status="not_applicable", source=None)
     elif damage == "wrong_role": selected["role"] = "provision"
     elif damage == "paraphrased_treatment": treatment["source"]["quote"] = "A paraphrased rejection."
-    with pytest.raises(SchemaViolation): candidate.accept(proposal(sources, [selected]), ctx, sources)
+    with pytest.raises(SchemaViolation): admitted(proposal(sources, [selected]), ctx, sources)
 
 
 @pytest.mark.parametrize("damage", ["text", "speaker", "record_role", "source_identity"])
@@ -151,13 +153,13 @@ def test_original_support_cannot_be_replaced_by_changed_catalogue(damage):
     selected = use(sources["t1:advocate"])
     sources["t1:advocate"][damage] = "Unowned change"
     with pytest.raises(ValueError, match="original conversation"):
-        candidate.accept(proposal(sources, [selected]), ctx, sources)
+        admitted(proposal(sources, [selected]), ctx, sources)
 
 
 def test_exact_original_account_selection_preserves_complete_qualified_words():
     ctx, _, sources = setup()
     row = sources["t1:advocate"]
-    draft = candidate.accept(proposal(sources, [use(row)]), ctx, sources)
+    draft = admitted(proposal(sources, [use(row)]), ctx, sources)
     assert draft["units"][0]["uses"][0]["text"] == row["text"]
     assert draft["units"][0]["uses"][0]["start"] == 0
     assert draft["units"][0]["uses"][0]["end"] == len(row["text"])
@@ -168,11 +170,11 @@ def test_nm_context_may_be_selected_but_cannot_become_original_or_legal_evidence
     ctx, _, sources = setup()
     row = sources["t1:nm"]
     selected = use(row)
-    assert candidate.accept(proposal(sources, [selected]), ctx, sources)["units"][0]["uses"][0]["role"] == "uncertain"
+    assert admitted(proposal(sources, [selected]), ctx, sources)["units"][0]["uses"][0]["role"] == "uncertain"
     with pytest.raises(SchemaViolation, match="held legal"):
-        candidate.accept(proposal(sources, [selected], kind="law"), ctx, sources)
+        admitted(proposal(sources, [selected], kind="law"), ctx, sources)
     selected["source_kind"] = "account"
-    with pytest.raises(SchemaViolation): candidate.accept(proposal(sources, [selected]), ctx, sources)
+    with pytest.raises(SchemaViolation): admitted(proposal(sources, [selected]), ctx, sources)
 
 
 def test_existing_v1_projection_and_legacy_rendering_are_unchanged(monkeypatch):
@@ -190,10 +192,10 @@ def test_existing_v1_projection_and_legacy_rendering_are_unchanged(monkeypatch):
     assert old["units"][0]["uses"][0]["speaker"] is None
 
 
-@pytest.mark.parametrize("contract", ["unknown", "core_response_writer_v7"])
+@pytest.mark.parametrize("contract", ["unknown", "core_response_writer_v8"])
 def test_unknown_saved_contract_fails_without_fallback(contract):
     ctx, _, sources = setup()
-    saved = candidate.accept(proposal(sources, [use(sources["t2:advocate"])]), ctx, sources)
+    saved = admitted(proposal(sources, [use(sources["t2:advocate"])]), ctx, sources)
     saved["contract"] = contract
     with pytest.raises(ValueError): candidate.validate(saved, ctx, sources)
 
@@ -201,7 +203,7 @@ def test_unknown_saved_contract_fails_without_fallback(contract):
 def test_current_authority_review_and_rendering_accept_unchanged_canonical_use_shape(monkeypatch):
     ctx, record, sources = setup()
     statute = next(s for s in sources.values() if s["kind"] == "provision")
-    draft = candidate.accept(proposal(sources, [use(statute)], kind="law"), ctx, sources)
+    draft = admitted(proposal(sources, [use(statute)], kind="law"), ctx, sources)
     for module in (response_rendering, response_review, response_authorities):
         monkeypatch.setattr(module, "response_writer", candidate)
     execution = turn.execution_record(record)
@@ -229,7 +231,7 @@ def test_fresh_writer_remains_one_routine_call_and_transmits_complete_context():
     assert sent["source_kinds"] == {offered.get(identity, identity): row["kind"]
                                     for identity, row in sources.items()}
     assert sent["held_passages"] == answer_sources.presentation(sources, aliased=True, compact=True)
-    assert schema == candidate.PART_SCHEMA
+    assert schema == candidate.PART_SCHEMA_V7
     assert kwargs == {"max_tokens": candidate.MAX_OUTPUT}
     assert result["contract"] == candidate.CONTRACT
 
@@ -241,7 +243,7 @@ def test_fresh_calls_never_select_legacy_contract_from_a_model_proposal():
     with pytest.raises(SchemaViolation):
         candidate.write(model, ctx, record, sources)
     assert len(model.calls) == 1
-    assert model.calls[0][1] == candidate.PART_SCHEMA
+    assert model.calls[0][1] == candidate.PART_SCHEMA_V7
     # Legacy selection is an explicit reconstruction argument, not model-controlled input.
     saved = candidate.accept(old, ctx, sources, contract=candidate.LEGACY_CONTRACT)
     assert candidate.validate(saved, ctx, sources) == saved
@@ -260,7 +262,7 @@ def test_v2_references_do_not_offer_free_text_to_retype_or_repair(quote, field):
     if field == "address": data["units"][0]["addresses"][0]["quote"] = quote
     elif field == "support": selected["quote"] = quote
     else: selected["court_treatment"]["source"]["quote"] = quote
-    with pytest.raises(SchemaViolation): candidate.accept(data, ctx, sources)
+    with pytest.raises(SchemaViolation): admitted(data, ctx, sources)
 
 
 def test_full_passages_preserve_newlines_unicode_and_repeated_words_exactly():
@@ -268,7 +270,7 @@ def test_full_passages_preserve_newlines_unicode_and_repeated_words_exactly():
     ctx, record = fixture(history=[{"source_id": "t1:advocate", "turn_id": "t1",
         "speaker": "advocate", "record_role": "original_account", "text": text}])
     sources = answer_sources.build(ctx, record)
-    selected = candidate.accept(proposal(sources, [use(sources["t1:advocate"])]), ctx, sources)
+    selected = admitted(proposal(sources, [use(sources["t1:advocate"])]), ctx, sources)
     support = selected["units"][0]["uses"][0]
     assert support["text"] == text and support["end"] == len(text)
 
@@ -286,20 +288,25 @@ def test_v3_and_v4_select_legal_passages_by_alias_and_replay_from_the_saved_cata
     treated = aliased(judgments[0], sources, court_treatment={
         "status": "rejected", "source": {"source_id": offered[judgments[1]["id"]]}})
     supplied = proposal(sources, [aliased(provision, sources), treated], kind="law")
-    draft = candidate.accept(supplied, ctx, sources)
+    base = deepcopy(supplied)  # the words as v5 and v6 named them
+    draft = admitted(supplied, ctx, sources)
     first, second = draft["units"][0]["uses"]
     assert (first["source_id"], second["source_id"]) == (provision["id"], judgments[0]["id"])
     assert second["treatment_source"]["source_id"] == judgments[1]["id"]
-    assert draft["contract"] == candidate.CONTRACT == "core_response_writer_v6"
+    assert draft["contract"] == candidate.CONTRACT == "core_response_writer_v7"
     assert draft["proposal"] == supplied, "the saved proposal keeps the offered aliases"
+    assert supplied["units"][0]["text"].startswith("[Synthetic attribution test.](P1, J1)")
     assert candidate.validate(deepcopy(draft), ctx, deepcopy(sources)) == draft
-    # A saved v5 draft names its words but returns no checklists, and replays as saved.
+    # Saved v6 and v5 drafts name their words beside the text, and replay as saved.
     from tests.test_core_response_writer import checklisted, unchecklisted, unworded
-    saved_v5 = candidate.accept(unchecklisted(deepcopy(supplied)), ctx, sources, contract=candidate.WORDS_CONTRACT)
-    assert saved_v5["units"] == draft["units"] and "checklists" not in saved_v5
+    saved_v6 = candidate.accept(checklisted(unchecklisted(deepcopy(base)), limits="time_limits"), ctx, sources,
+                                contract=candidate.CHECKLIST_CONTRACT)
+    saved_v5 = candidate.accept(unchecklisted(deepcopy(base)), ctx, sources, contract=candidate.WORDS_CONTRACT)
+    assert saved_v6["units"] == saved_v5["units"] == draft["units"] and "checklists" not in saved_v5
     assert candidate.validate(deepcopy(saved_v5), ctx, deepcopy(sources)) == saved_v5
+    assert candidate.validate(deepcopy(saved_v6), ctx, deepcopy(sources)) == saved_v6
     # Saved v3 and v4 drafts name no words and replay under their own versions.
-    earlier = unchecklisted(deepcopy(supplied))
+    earlier = unchecklisted(deepcopy(base))
     unworded(earlier["units"][0]["uses"])
     without = [{key: value for key, value in use.items() if key != "words"} for use in draft["units"][0]["uses"]]
     saved_v4 = candidate.accept(earlier, ctx, sources, contract=candidate.PARTS_CONTRACT)
@@ -308,19 +315,19 @@ def test_v3_and_v4_select_legal_passages_by_alias_and_replay_from_the_saved_cata
     saved_v3 = candidate.accept(earlier, ctx, sources, contract=candidate.ALIAS_CONTRACT)
     assert saved_v3["units"] == saved_v4["units"] and "parts" not in saved_v3
     assert candidate.validate(deepcopy(saved_v3), ctx, deepcopy(sources)) == saved_v3
-    # An earlier version never takes words, and the current one always needs them.
+    # An earlier version never takes words, and the current one takes links, not words.
     with pytest.raises(SchemaViolation):
-        candidate.accept(unchecklisted(deepcopy(supplied)), ctx, sources, contract=candidate.PARTS_CONTRACT)
-    with pytest.raises(SchemaViolation, match="words"):
-        candidate.accept(checklisted(deepcopy(earlier)), ctx, sources)
+        candidate.accept(unchecklisted(deepcopy(base)), ctx, sources, contract=candidate.PARTS_CONTRACT)
+    with pytest.raises(SchemaViolation, match="undeclared properties"):
+        candidate.accept(deepcopy(base), ctx, sources, contract=candidate.CONTRACT)
 
 
 def test_v3_refuses_an_unoffered_alias_and_keeps_exact_owned_tags():
     ctx, _, sources = setup()
     provision = next(s for s in sources.values() if s["kind"] == "provision")
     with pytest.raises(SchemaViolation):
-        candidate.accept(proposal(sources, [use(provision) | {"source_id": "P99"}], kind="law"), ctx, sources)
-    exact = candidate.accept(proposal(sources, [use(provision)], kind="law"), ctx, sources)
+        admitted(proposal(sources, [use(provision) | {"source_id": "P99"}], kind="law"), ctx, sources)
+    exact = admitted(proposal(sources, [use(provision)], kind="law"), ctx, sources)
     assert exact["units"][0]["uses"][0]["source_id"] == provision["id"]
 
 

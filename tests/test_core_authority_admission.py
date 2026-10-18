@@ -48,14 +48,12 @@ def use_statute(served, outcome):
                       if row["kind"] == "provision")
         output = deepcopy(result.data)
         unresolved = outcome in {"unavailable", "ambiguous", "not_held"}
-        # Writer v5: the use names the words it supports, so an answer is refused or kept
-        # for its source, never for a missing link.
+        # Writer v7: the provision is linked from the writer's own words.
         output["units"][0].update(
             kind="limitation" if unresolved else "law",
-            text="The applicable provision remains unresolved in the available material."
-                 if unresolved else "The selected provision includes a condition.",
-            uses=[{"source_id": source["id"], "source_kind": "provision",
-                   "words": "The applicable provision" if unresolved else "The selected provision"}])
+            text=f"[The applicable provision]({source['id']}) remains unresolved in the available material."
+                 if unresolved else f"[The selected provision]({source['id']}) includes a condition.",
+            uses=[{"source_id": source["id"], "source_kind": "provision"}])
         return replace(result, data=output)
 
     served.model.structured = structured

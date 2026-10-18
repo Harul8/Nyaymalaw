@@ -21,10 +21,12 @@ def accept_draft(proposal, *args, **kwargs):
     fixture's use supports its whole unit unless it names its own words. Writer v6 (18 Oct
     2026): each part returns its checklist, none unless the fixture gives one."""
     if kwargs.get("contract", WRITER_CONTRACT) == WRITER_CONTRACT:
+        from tests.test_core_response_writer import linked
         for unit in proposal.get("units", []):
             for use in unit.get("uses", []):
                 use.setdefault("words", unit["text"])
-        proposal.setdefault("checklists", [{"checklist": [], "time_limits": []}
+        linked(proposal.get("units"))  # writer v7: links in the unit's own words
+        proposal.setdefault("checklists", [{"checklist": [], "time_limit_ids": []}
                                            for _ in kwargs.get("parts") or [None]])
     return _accept_draft(proposal, *args, **kwargs)
 from nm.shared.budget_contracts import Completion
@@ -79,10 +81,10 @@ def setup(*, legal=False, text="Hello.", history=None, count=1):
     return ctx, record, sources, accept_draft(proposal, ctx, sources)
 
 
-def positive(draft, *, requests=None):
-    # From review v6 every checklist item has its verdict too (18 Oct 2026).
-    reviewed = [unit["id"] for unit in draft["units"]] + [
-        item["id"] for part in draft.get("checklists", ()) for item in part["items"]]
+def positive(draft, *, requests=None, items=False):
+    # Review v7 (18 Oct 2026): verdict rows for the units; items (review v6) rows too.
+    reviewed = [unit["id"] for unit in draft["units"]] + ([
+        item["id"] for part in draft.get("checklists", ()) for item in part["items"]] if items else [])
     return {"verdict": "accept", "units": [{"unit_id": identity,
         "verdict": "supported", "reason": "Fixture verdict for review wiring."}
         for identity in reviewed], "request_coverage": requests or [], "findings": []}
@@ -504,7 +506,7 @@ def test_authority_checks_are_separate_compact_model_input_and_full_bound_eviden
     model = Model(positive(args[-1]))
     receipt = review_checked(model, *args, execution, authority_evidence=authority)
     payload = json.loads(model.calls[0][0].user)
-    assert receipt["contract"] == CONTRACT == "core_response_review_v6"
+    assert receipt["contract"] == CONTRACT == "core_response_review_v7"
     assert authority["readbacks"]
     from nm.core_engine.answer_sources import aliases
     from nm.core_engine.response_review import _aliased
@@ -618,7 +620,7 @@ def restriction_review(draft, ctx, disposition, unit_ids):
 def test_v4_admits_a_restriction_respected_by_absence_without_reply_units():
     ctx, record, sources, draft = setup()
     receipt = review(Model(restriction_review(draft, ctx, "respected", [])), ctx, record, sources, draft)
-    assert receipt["contract"] == CONTRACT == "core_response_review_v6" and receipt["accepted"] is True
+    assert receipt["contract"] == CONTRACT == "core_response_review_v7" and receipt["accepted"] is True
     assert validate(receipt, ctx, record, sources, draft) == receipt
 
 

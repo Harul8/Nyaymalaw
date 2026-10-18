@@ -31,9 +31,13 @@ RESPECTED_CONTRACT = "core_response_review_v4"
 PARTS_CONTRACT = "core_response_review_v5"
 #: v5 checking each dispute's checklist as it checks each paragraph (owner decisions, 17 Oct
 #: 2026; writer v6): every checklist item has a verdict and a finding may name one.
-CONTRACT = "core_response_review_v6"
-CONTRACTS = (LEGACY_CONTRACT, AUTHORITY_CONTRACT, ALIAS_CONTRACT, RESPECTED_CONTRACT, PARTS_CONTRACT, CONTRACT)
-_CURRENT = (RESPECTED_CONTRACT, PARTS_CONTRACT, CONTRACT)
+CHECKLIST_CONTRACT = "core_response_review_v6"
+#: v6 judging the checklist through its findings (18 Oct 2026, writer v7): a finding names a
+#: wrong item and an item left out is an omission; verdict rows are for the units alone.
+CONTRACT = "core_response_review_v7"
+CONTRACTS = (LEGACY_CONTRACT, AUTHORITY_CONTRACT, ALIAS_CONTRACT, RESPECTED_CONTRACT, PARTS_CONTRACT,
+             CHECKLIST_CONTRACT, CONTRACT)
+_CURRENT = (RESPECTED_CONTRACT, PARTS_CONTRACT, CHECKLIST_CONTRACT, CONTRACT)
 #: Verdicts for every unit of a long reply; reasoning counts towards it.
 MAX_OUTPUT = 16000
 SYSTEM = """Message: You receive the complete original attributed conversation, the
@@ -96,12 +100,14 @@ advocate's link to it: check that the source supports them.
 A dispute's part may also carry its checklist: what the case needs as the held law
 requires it, each item with the law words that require it (or carried by its id from
 the matter's checklist in current records), where it stands and the words that show it.
-Check each item as you check a unit: that its law words require it, or would strengthen
-the case, as it is grouped; that where it stands is what the messages and documents show
-(in hand only where the quoted words hold it; coming or unclear, and not available, in
-the advocate's own words); that the time limits the part names concern its dispute; and
-that the list leaves out nothing the held law plainly requires for the relief or
-defence. Raise a missing item as an omission naming that dispute's summary unit.
+Check the items as you check the units: that each item's law words require it, or would
+strengthen the case, as it is grouped; that where it stands is what the messages and
+documents show (in hand only where the quoted words hold it; coming or unclear, and not
+available, in the advocate's own words); that the time limits the part names (by their
+IDs in owned_time_limits) concern its dispute; and that the list leaves out nothing the
+held law plainly requires for the relief or defence. Raise a finding naming any item
+(C1, C2...) that is wrong, and an omission naming that dispute's summary unit for an
+item the list leaves out.
 Examine the authority checks for each unit against its actual legal use. A direct case
 citation must agree with the case relied on. A selected judgment may instead mention
 another authority: determine from the passage who cited it and whether the draft reports
@@ -135,8 +141,10 @@ rejected. Reject a unit when its own content or treatment of its request is defe
 Raise findings only for consequential defects, with exact sources and a precise mismatch.
 
 Outcome: Return accept or reject; one supported or rejected verdict with a reason for
-every supplied draft unit ID and checklist item ID. Account for any consequential
-authority-check discrepancy or unresolved association in that unit's reason or finding. Return one request_coverage
+every supplied draft unit ID. Account for any consequential authority-check discrepancy
+or unresolved association in that unit's reason or finding. A finding's unit_ids name
+reply units (U1...) and checklist items (C1...); its sources name only messages,
+document pages and legal passages (M1, DOC1, P1, J1...). Return one request_coverage
 entry per independent requested
 result. Select the original advocate words identifying that result, name only its
 relevant reply units, and explain its disposition as addressed, justified_limit,
@@ -260,9 +268,12 @@ def _accept(proposal, dependencies, *, contract=LEGACY_CONTRACT):
     require_schema(data, schema)
     sources, draft = dependencies["sources"], dependencies["draft"]
     offered = answer_sources.aliases(sources) if contract in {ALIAS_CONTRACT, *_CURRENT} else {}
-    # From v6 a checklist item is reviewed like a unit (18 Oct 2026).
-    known = set().union(*response_writer.part_ids(draft)) if "checklists" in draft else {
-        unit["id"] for unit in draft["units"]}
+    # v6 gives a checklist item its own verdict row like a unit; v7 names a wrong item in a
+    # finding, so its verdict rows are for the units alone (18 Oct 2026).
+    units = {unit["id"] for unit in draft["units"]}
+    named_items = set().union(*response_writer.part_ids(draft)) - units if "checklists" in draft else set()
+    known = units | named_items
+    rows = units if contract == CONTRACT else known
     # A reply unit named by its short ID is the unit it was shown for (16 Oct 2026); the
     # saved proposal keeps the owned unit IDs, so replay maps nothing and is exact.
     named = unit_aliases(draft)
@@ -272,9 +283,10 @@ def _accept(proposal, dependencies, *, contract=LEGACY_CONTRACT):
     for item in [*data["request_coverage"], *data["findings"]]:
         item["unit_ids"] = [named.get(identity, identity) for identity in item["unit_ids"]]
     reviewed = [unit["unit_id"] for unit in data["units"]]
-    _ids(reviewed, known)
-    if set(reviewed) != known:
-        raise SchemaViolation("Review must account for every complete draft unit and checklist item")
+    _ids(reviewed, rows)
+    if set(reviewed) != rows:
+        raise SchemaViolation("Review must give every complete draft unit one verdict"
+                              + (" and every checklist item one" if rows != units else ""))
     for item in [*data["units"], *data["request_coverage"], *data["findings"]]:
         text = item.get("reason", item.get("mismatch", ""))
         if not text.strip():
@@ -310,7 +322,7 @@ def _accept(proposal, dependencies, *, contract=LEGACY_CONTRACT):
                    for finding in data["findings"]))
             for request, unit_ids in missing):
         raise SchemaViolation("Rejected units and missing requests need corresponding precise findings")
-    if affected - rejected:
+    if affected - rejected - (named_items if contract == CONTRACT else set()):
         raise SchemaViolation("A consequential finding cannot label its affected reply unit supported")
     accepted = data["verdict"] == "accept"
     if accepted != (not data["findings"] and not rejected and not missing):
@@ -353,7 +365,9 @@ def _draft_presentation(draft, sources, *, aliased=False, saved=None):
             return {"carried_from": item["carries"], "words": kept.get("words"),
                     "source": " ".join(filter(None, (kept.get("title"), kept.get("locator"))))}
 
-        layout["checklists"] = [{"part": index + 1, "time_limits": list(part["time_limits"]), "items": [{
+        layout["checklists"] = [{"part": index + 1, **({"time_limit_ids": list(part["time_limit_ids"])}
+                                                        if "time_limit_ids" in part else
+                                                        {"time_limits": list(part["time_limits"])}), "items": [{
             "id": units.get(item["id"], item["id"]), "need": item["need"], "group": item["group"], "law": law(item),
             "status": item["status"], "evidence": reference(item["evidence"]) if item["evidence"] else None}
             for item in part["items"]]} for index, part in enumerate(draft["checklists"])]
@@ -401,7 +415,8 @@ def review(model, context, research_record, sources, draft, execution=None, *,
             "contract": dependencies["authority_evidence"]["contract"],
             "units": _aliased(deepcopy(dependencies["authority_evidence"]["units"]), shown)}}
     if time_limits is not None:
-        payload["owned_time_limits"] = _aliased(deepcopy(dependencies["time_limits"]), shown)
+        # Shown under the same IDs the writer named them by (T1, T2...).
+        payload["owned_time_limits"] = response_writer.limit_ids(_aliased(deepcopy(dependencies["time_limits"]), shown))
     # Full readbacks remain in durable binding; the source catalogue already holds
     # the exact legal passages. Present only their checks and remaining limits here.
     prompt = Prompt(system=SYSTEM, user=json.dumps(payload, ensure_ascii=False),
