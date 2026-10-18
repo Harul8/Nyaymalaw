@@ -543,9 +543,9 @@ def render(context, research_record, sources, draft, review, execution=None, *,
         # Otherwise every source would be shown unlinked, with nothing to say so.
         raise ValueError("A v11 rendering links each source at the words its use names, "
                          "which only a writer v5 or v6 draft gives")
-    if contract == CONTRACT and checked_draft["contract"] != response_writer.CONTRACT:
-        raise ValueError("A v12 rendering lists the sources a paragraph does not link, as a writer v7 draft "
-                         "leaves them")
+    if contract == CONTRACT and checked_draft["contract"] not in response_writer.LINKED:
+        raise ValueError("A v12 rendering lists the sources a paragraph does not link, as a writer v7 or later "
+                         "draft leaves them")
     if held is not None and contract not in _HOLDS:
         raise ValueError("Only a v10 or later rendering may hold sections back")
     held_parts, date_findings = _release(checked_draft, checked_review, held)

@@ -26,6 +26,8 @@ def accept_draft(proposal, *args, **kwargs):
             for use in unit.get("uses", []):
                 use.setdefault("words", unit["text"])
         linked(proposal.get("units"))  # writer v7: links in the unit's own words
+        for unit in proposal.get("units", []):  # writer v8: code records the latest message as the address
+            unit.pop("addresses", None)
         proposal.setdefault("checklists", [{"checklist": [], "time_limit_ids": []}
                                            for _ in kwargs.get("parts") or [None]])
     return _accept_draft(proposal, *args, **kwargs)

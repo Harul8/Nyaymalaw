@@ -72,12 +72,12 @@ class ScriptedModel:
                     "court_treatment": {"status": "rejected", "source": {"source_id": treatment["id"]}}}]
                 # Writer v7: the source is linked from the writer's own words.
                 text = f"The court rejected [counsel's submission]({source['id']}) because its condition was unmet."
-            out = {"units": [{"kind": "law" if uses else "greeting", "text": text,
-                              "addresses": [{"source_id": latest["source_id"]}], "uses": uses}],
+            # Writer v8: a unit names no address; code records the latest message.
+            out = {"units": [{"kind": "law" if uses else "greeting", "text": text, "uses": uses}],
                    "checklist": [], "time_limit_ids": []}
             if self.malformed_writer:
                 self.malformed_writer -= 1
-                out["units"][0]["addresses"][0]["quote"] = "Absent quotation"
+                out["units"][0]["text"] += " [An unoffered source](P999)."  # a link to no offered source
         elif prompt.operation == "core_response_review":
             units = data["complete_draft_proposal"]["units"]
             rejected = self.reject > 0

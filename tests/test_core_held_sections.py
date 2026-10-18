@@ -146,7 +146,7 @@ class Rounds(PartModel):
         return result
 
 
-def scripted_turn(monkeypatch, reviews):
+def scripted_turn(monkeypatch, reviews, model=None):
     """prepare() with the real rewrite loop, release and rendering; the stages before the
     writing and the two model calls are scripted. reviews: per review call, the flagged
     positions, or an exception to raise."""
@@ -159,7 +159,7 @@ def scripted_turn(monkeypatch, reviews):
 
     def scripted_write(calls, context, record_, sources_, *, keep=None, **kw):
         counter["writes"] += 1
-        return write(Rounds(sources_, counter), context, record_, sources_, keep=keep)
+        return write((model or Rounds)(sources_, counter), context, record_, sources_, keep=keep)
 
     def scripted_review(calls, context, record_, sources_, draft, *, execution, authority_evidence, **kw):
         step = reviews[counter["reviews"]]
@@ -175,6 +175,30 @@ def scripted_turn(monkeypatch, reviews):
         def context_budget(self, tier): return 100_000
     elements, activity, metrics = turn.prepare(Calls(), ctx, searcher=None)
     return ctx, elements, activity, metrics, counter
+
+
+class Breaking(Rounds):
+    """The first write's Dispute 2 section links a source it does not use; every section
+    called is noted with the write that called it."""
+    def structured(self, prompt, schema, tier, **kwargs):
+        import json
+        result = super().structured(prompt, schema, tier, **kwargs)
+        dispute = (json.loads(prompt.user)["this_part"]["dispute"] or {}).get("id", "opening")
+        self.counter.setdefault("called", []).append((self.counter["writes"], dispute))
+        if dispute == "D2" and self.counter["writes"] == 1:
+            result.data["units"][0]["text"] += " [An unoffered source](P999)."
+        return result
+
+
+def test_a_shape_correction_rewrites_only_the_section_that_failed(monkeypatch):
+    """The fifth live run (18 Oct 2026): a rewrite of every section, after one section's
+    misquotation, brought a new slip into one that had passed, and the answer was lost."""
+    ctx, elements, activity, metrics, counter = scripted_turn(monkeypatch, [[]], model=Breaking)
+    assert counter["writes"] == 2 and metrics["draft_corrections"] == 1
+    assert sorted(called for write, called in counter["called"] if write == 2) == ["D2"]
+    assert [unit["text"] for unit in activity["draft"]["units"]] == [
+        "Answer for opening (round 1)?", "Answer for D1 (round 1)?", "Answer for D2 (round 2)?"]
+    assert activity["release"] is None and turn.validate_activity(activity, ctx, elements) == activity
 
 
 def test_the_turn_releases_the_checked_sections_after_the_rewrites_and_replays_them(monkeypatch):

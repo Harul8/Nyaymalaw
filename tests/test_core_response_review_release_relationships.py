@@ -53,7 +53,7 @@ class MissingWorkModel(ScriptedModel):
                  "addresses": [deepcopy(address)], "uses": [use(latest["source_id"])]},
             ]}
             if self.consume_shape_correction and self.writes == 1:
-                out["units"][0]["addresses"][0]["quote"] = "Words absent from the source"
+                out["units"][0]["text"] += " [An unoffered source](P999)."  # writer v8 refuses a link to no source
             elif self.writes > 1 and not (self.reject_repair or self.consume_shape_correction):
                 out["units"].append({"kind": "question", "text": "When was the delivery?",
                                      "addresses": [deepcopy(address)], "uses": []})
@@ -80,7 +80,8 @@ class MissingWorkModel(ScriptedModel):
             for unit in out["units"]:
                 for selected in unit["uses"]:
                     selected.setdefault("words", unit["text"])
-            linked(out["units"])
+            from tests.test_core_response_writer import unaddressed
+            unaddressed(linked(out["units"]))
             out.update(checklist=[], time_limit_ids=[])
         return replace(result, data=out)
 

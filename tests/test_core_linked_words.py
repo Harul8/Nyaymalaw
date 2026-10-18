@@ -15,7 +15,7 @@ from nm.shared.model_port import ModelResult, SchemaViolation, Usage
 from tests.test_core_response_authorities import Reader
 from tests.test_core_response_rendering import Model as LegacyReviewModel, ready
 from tests.test_core_response_review import Model as ReviewModel, positive, request
-from tests.test_core_response_writer import PartModel, accept, reference, two_disputes, unit
+from tests.test_core_response_writer import PartModel, accept, reference, two_disputes, unaddressed, unit
 
 pytestmark = pytest.mark.class_a
 
@@ -37,7 +37,8 @@ class LinkedModel(PartModel):
                 use.update(role="court_reasoning", speaker=None, court_treatment={"status": "not_applicable"})
             units = [unit(self.sources, kind="summary", text=f"Act on {dispute} in time; I need the dates."),
                      {"kind": "law", "text": f"For {dispute}, [the stated rule]({passage['id']}) applies to these facts.",
-                      "addresses": [reference(self.sources["t2:advocate"])], "uses": [use]}]
+                      "uses": [use]}]
+        unaddressed(units)
         return ModelResult(None, {"units": deepcopy(units), "checklist": [], "time_limit_ids": []}, tier,
                            "synthetic", "fixture", Usage(1, 1, 0), 0, completion=Completion.COMPLETE)
 
@@ -52,7 +53,7 @@ def answer():
 
 def test_each_source_is_linked_from_the_writers_own_words_where_they_stand():
     ctx, record, sources, draft, _, _ = answer()
-    assert draft["contract"] == response_writer.CONTRACT == "core_response_writer_v7"
+    assert draft["contract"] == response_writer.CONTRACT == "core_response_writer_v8"
     law = next(unit for unit in draft["units"] if unit["kind"] == "law")
     assert law["text"] == "For D1, the stated rule applies to these facts."  # the markup taken out
     words, = [use["words"] for use in law["uses"]]
@@ -158,7 +159,6 @@ def test_a_source_the_writer_does_not_link_is_listed_after_its_paragraph():
     ctx, record, sources = two_disputes()
     first, second = [row for row in sources.values() if row["kind"] == "provision"][:2]
     units = [{"kind": "law", "text": "[The provision](%s) applies to what you asked." % first["id"],
-              "addresses": [reference(sources["t2:advocate"])],
               "uses": [{"source_id": first["id"], "source_kind": "provision"},
                        {"source_id": second["id"], "source_kind": "provision"}]}]
     draft = response_writer.accept({"units": units, "checklists": [{"checklist": [], "time_limit_ids": []}]},
@@ -184,7 +184,7 @@ def test_a_link_standing_alone_after_a_sentence_is_a_label_and_its_source_is_lis
     first, second = [row for row in sources.values() if row["kind"] == "provision"][:2]
     text = (f"The provision applies to what you asked. [The applicable rule]({first['id']}) "
             f"[Its exception]({second['id']}) It has an [exception]({second['id']}).")
-    units = [{"kind": "law", "text": text, "addresses": [reference(sources["t2:advocate"])],
+    units = [{"kind": "law", "text": text,
               "uses": [{"source_id": first["id"], "source_kind": "provision"},
                        {"source_id": second["id"], "source_kind": "provision"}]}]
     draft = response_writer.accept({"units": units, "checklists": [{"checklist": [], "time_limit_ids": []}]},
@@ -208,8 +208,7 @@ def test_a_link_may_name_its_sources_in_one_bracket_or_in_several():
     first, second = [row for row in sources.values() if row["kind"] == "provision"][:2]
     for written in (f"({first['id']}, {second['id']})", f"({first['id']})({second['id']})"):
         units = [{"kind": "law", "text": f"It is enforceable [under the provisions]{written}.",
-                  "addresses": [reference(sources["t2:advocate"])],
-                  "uses": [{"source_id": first["id"], "source_kind": "provision"},
+                      "uses": [{"source_id": first["id"], "source_kind": "provision"},
                            {"source_id": second["id"], "source_kind": "provision"}]}]
         draft = response_writer.accept({"units": units, "checklists": [{"checklist": [], "time_limit_ids": []}]},
                                        ctx, sources, parts=[{"dispute_id": None, "units": 1}])

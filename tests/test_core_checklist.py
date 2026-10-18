@@ -69,7 +69,7 @@ def written(given=None, limits=None, time_limits=None, records=None):
 
 def test_each_dispute_returns_its_checklist_with_every_quote_checked():
     ctx, record, sources, draft = written()
-    assert draft["contract"] == response_writer.CONTRACT == "core_response_writer_v7"
+    assert draft["contract"] == response_writer.CONTRACT == "core_response_writer_v8"
     assert [len(part["items"]) for part in draft["checklists"]] == [0, 2, 1]  # the opening part has none
     first, second = draft["checklists"][1]["items"]
     provision = next(identity for identity, row in sources.items() if row["text"].startswith("Complete provision")
@@ -292,3 +292,29 @@ def test_a_paragraph_or_item_given_among_a_findings_sources_is_what_the_finding_
     finding, = review["proposal"]["findings"]
     assert finding["unit_ids"] == ["t2:c3"] and [ref["source_id"] for ref in finding["sources"]] == ["M1"]
     assert response_rendering.held_sections(draft, review) == [2]
+
+
+def test_an_omission_may_name_the_supported_summary_it_is_missing_from():
+    """The review is asked to raise a missing item as an omission naming the dispute's
+    summary unit, whose own words may be right; the sixth live run (18 Oct 2026) was
+    refused for leaving that unit supported. A finding of any other kind still rejects
+    what it names."""
+    ctx, record, sources, draft = written()
+    summary = draft["units"][1]["id"]  # Dispute 1's unit
+    data = positive(draft, requests=[request(ctx, draft)])
+    data["verdict"] = "reject"
+    data["findings"] = [{"category": "omission", "unit_ids": [summary], "sources": [],
+                         "mismatch": "The checklist leaves out the court the complaint goes to."}]
+    _, review = checked(ctx, record, sources, draft, data)
+    assert not review["accepted"] and response_rendering.held_sections(draft, review) == [1]
+    data["findings"][0]["category"] = "grounding"
+    with pytest.raises(SchemaViolation, match="cannot label its affected reply unit supported"):
+        checked(ctx, record, sources, draft, data)
+
+
+def test_the_writer_keeps_short_ids_out_of_its_text_and_the_opening_quiet_about_law():
+    system = " ".join(response_writer.SYSTEM.split())
+    assert "never write one in your text, and call a time limit by what it is" in system
+    assert "Such an opening is given no legal passages and needs none: do not remark on that" in system
+    from nm.core_engine import calculation
+    assert 'leave them out altogether, not under "not_assessed" either' in calculation.SYSTEM

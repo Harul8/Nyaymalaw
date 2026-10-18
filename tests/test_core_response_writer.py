@@ -6,7 +6,7 @@ import pytest
 
 from nm.core_engine.answer_sources import build
 from nm.core_engine.response_writer import (
-    CHECKLIST_CONTRACT, CONTRACT, LEGACY_CONTRACT, MAX_OUTPUT, PART_SCHEMA_V7, validate, write,
+    CHECKLIST_CONTRACT, CONTRACT, LEGACY_CONTRACT, LINKS_CONTRACT, MAX_OUTPUT, PART_SCHEMA_V8, validate, write,
 )
 from nm.core_engine.response_writer import accept as admit
 from nm.shared.budget_contracts import Completion
@@ -94,10 +94,20 @@ def unchecklisted(proposal):
     return proposal
 
 
+def unaddressed(units):
+    """Writer v8 (18 Oct 2026): a unit names no address; code records the latest message.
+    In place."""
+    for unit in units if isinstance(units, list) else []:
+        if isinstance(unit, dict):
+            unit.pop("addresses", None)
+    return units
+
+
 def part_output(data):
-    """What one part's call returns under writer v7, its links in its text; in place."""
+    """What one part's call returns under writer v8: its links in its text, no addresses;
+    in place."""
     if isinstance(data, dict) and isinstance(data.get("units"), list):
-        linked(data["units"])
+        unaddressed(linked(data["units"]))
         data.setdefault("checklist", [])
         data.setdefault("time_limit_ids", [])
     return data
@@ -107,11 +117,13 @@ def accept(proposal, ctx, sources, **kwargs):
     """Admission as the writer's own, with a v6 or v7 proposal's checklists as checklisted
     gives and, for v7, its links as linked gives."""
     contract = kwargs.get("contract", CONTRACT)
-    if contract in (CONTRACT, CHECKLIST_CONTRACT) and isinstance(proposal, dict):
+    if contract in (CONTRACT, LINKS_CONTRACT, CHECKLIST_CONTRACT) and isinstance(proposal, dict):
         checklisted(proposal, len(kwargs.get("parts") or [None]),
-                    limits="time_limit_ids" if contract == CONTRACT else "time_limits")
-        if contract == CONTRACT:
+                    limits="time_limits" if contract == CHECKLIST_CONTRACT else "time_limit_ids")
+        if contract in (CONTRACT, LINKS_CONTRACT):
             linked(proposal.get("units"))
+        if contract == CONTRACT:
+            unaddressed(proposal.get("units"))
     return admit(proposal, ctx, sources, **kwargs)
 
 
@@ -177,9 +189,9 @@ def test_complete_context_and_all_neighbouring_legal_words_reach_one_writer_call
     assert [q["work_id"] for q in payload["research"]["questions"]] == [w["id"] for w in record["plan"]["work"]]
     assert payload["this_part"] == {"part": 1, "of": 1, "opens_the_answer": True,
                                     "dispute": understood["disputes"][0], "other_parts": []}
-    assert tier is Tier.HARD and kwargs == {"max_tokens": MAX_OUTPUT} and schema == PART_SCHEMA_V7
+    assert tier is Tier.HARD and kwargs == {"max_tokens": MAX_OUTPUT} and schema == PART_SCHEMA_V8
     assert prompt.operation == "core_response_writer"
-    assert draft["contract"] == CONTRACT and draft["proposal"] == checklisted(proposed)
+    assert draft["contract"] == CONTRACT and draft["proposal"] == checklisted(unaddressed(proposed["units"]) and proposed)
     assert draft["parts"] == [{"dispute_id": understood["disputes"][0]["id"], "units": 1}]
     assert draft["units"][0]["id"] == "t2:b1"
 
@@ -274,10 +286,14 @@ def test_earlier_original_request_can_be_addressed_without_losing_latest_binding
     sources = build(ctx, record)
     prior = unit(sources)
     prior["addresses"] = [reference(sources["t1:advocate"])]
-    draft = accept({"units": [prior, unit(sources)]}, ctx, sources)
+    # Up to writer v7 a unit named the message it answered, an earlier one among them.
+    draft = accept(deepcopy({"units": [prior, unit(sources)]}), ctx, sources, contract=LINKS_CONTRACT)
     assert draft["units"][0]["addresses"][0]["source_id"] == "t1:advocate"
     with pytest.raises(SchemaViolation, match="latest"):
-        accept({"units": [prior]}, ctx, sources)
+        accept(deepcopy({"units": [prior]}), ctx, sources, contract=LINKS_CONTRACT)
+    # From v8 code records the latest message as every unit's address (owner, 18 Oct 2026).
+    current = accept({"units": [prior]}, ctx, sources)
+    assert [address["source_id"] for address in current["units"][0]["addresses"]] == ["t2:advocate"]
 
 
 def test_legacy_factual_analysis_preserves_empty_optional_speaker_metadata():
@@ -431,7 +447,7 @@ class PartModel:
             self.seen.append(payload)
         dispute = (payload["this_part"]["dispute"] or {}).get("id", "opening")
         data = part_output({"units": [unit(self.sources, text=f"Answer for {dispute}?")]})
-        if dispute == self.broken:
+        if self.broken in (dispute, "every"):
             data["units"][0]["addresses"] = [{"source_id": "not offered"}]
         return ModelResult(None, data, tier, "synthetic", "fixture", Usage(1, 1, 0), 0,
                            completion=Completion.COMPLETE)
@@ -475,8 +491,19 @@ def test_a_correction_rewrites_only_the_part_a_finding_names():
 
 def test_a_malformed_part_refuses_the_whole_draft_for_correction():
     ctx, record, sources = two_disputes()
-    with pytest.raises(SchemaViolation):
+    with pytest.raises(SchemaViolation) as refused:
         write(PartModel(sources, broken="D2"), ctx, record, sources)
+    # The sections that pass code's checks on their own are kept for the correction, which
+    # then writes only the one that failed (owner, 18 Oct 2026).
+    assert sorted(refused.value.kept) == [0, 1]
+    again = PartModel(sources)
+    corrected = write(again, ctx, record, sources, keep=refused.value.kept)
+    assert [p["this_part"]["dispute"]["id"] for p in again.seen] == ["D2"]
+    assert [u["text"] for u in corrected["units"]] == ["Answer for opening?", "Answer for D1?", "Answer for D2?"]
+    # A fault in every section keeps none.
+    with pytest.raises(SchemaViolation) as everywhere:
+        write(PartModel(sources, broken="every"), ctx, record, sources)
+    assert everywhere.value.kept == {}
 
 
 @pytest.mark.parametrize("change", ["count", "dispute", "empty", "extra"])

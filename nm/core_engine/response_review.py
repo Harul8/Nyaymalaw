@@ -336,7 +336,12 @@ def _accept(proposal, dependencies, *, contract=LEGACY_CONTRACT):
                    for finding in data["findings"]))
             for request, unit_ids in missing):
         raise SchemaViolation("Rejected units and missing requests need corresponding precise findings")
-    if affected - rejected - (named_items if contract == CONTRACT else set()):
+    # v7: an omission may name a paragraph it is missing from - the summary unit of a dispute
+    # whose checklist leaves an item out, as asked - whose own content is supported (the sixth
+    # live run, 18 Oct 2026, was refused so); a finding of any other kind rejects what it names.
+    judged = ({identity for finding in data["findings"] if finding["category"] != "omission"
+               for identity in finding["unit_ids"]} if contract == CONTRACT else affected)
+    if judged - rejected - (named_items if contract == CONTRACT else set()):
         raise SchemaViolation("A consequential finding cannot label its affected reply unit supported")
     accepted = data["verdict"] == "accept"
     if accepted != (not data["findings"] and not rejected and not missing):

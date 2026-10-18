@@ -140,10 +140,20 @@ def prepare(model, context, searcher, *, case_index=None, provision_reader=None,
     sources = answer_sources.build(context, record)
     execution = execution_record(record)
 
+    # Sections that passed code's checks when a draft's shape was refused: the shape
+    # correction keeps them as written and rewrites only the rest (owner, 18 Oct 2026).
+    passed = {}
+
     def write(keep=None):
-        return response_writer.write(calls, context, record, sources,
-                                     interpretation=interpreted, execution=execution, keep=keep,
-                                     time_limits=time_limits)
+        try:
+            return response_writer.write(calls, context, record, sources,
+                                         interpretation=interpreted, execution=execution,
+                                         keep=keep if keep is not None else passed or None,
+                                         time_limits=time_limits)
+        except SchemaViolation as exc:
+            passed.clear()
+            passed.update(getattr(exc, "kept", None) or {})
+            raise
 
     report("writing")
     draft = calls.checked("core_response_writer", write)

@@ -62,9 +62,9 @@ def test_wire_shape_is_transport_safe_and_legacy_shape_unchanged():
 def test_nonjudgments_derive_provenance_without_requesting_court_metadata(kind):
     ctx, _, sources = setup()
     source = next(s for s in sources.values() if s["kind"] == kind)
-    from tests.test_core_response_writer import linked
+    from tests.test_core_response_writer import linked, unaddressed
     supplied = proposal(sources, [use(source)])
-    linked(supplied["units"])  # writer v7: the source linked from the unit's own words
+    unaddressed(linked(supplied["units"]))  # v7 links; v8 names no address
     before = deepcopy(supplied)
     draft = candidate.accept(supplied, ctx, sources)
     checked = draft["units"][0]["uses"][0]
@@ -192,7 +192,7 @@ def test_existing_v1_projection_and_legacy_rendering_are_unchanged(monkeypatch):
     assert old["units"][0]["uses"][0]["speaker"] is None
 
 
-@pytest.mark.parametrize("contract", ["unknown", "core_response_writer_v8"])
+@pytest.mark.parametrize("contract", ["unknown", "core_response_writer_v9"])
 def test_unknown_saved_contract_fails_without_fallback(contract):
     ctx, _, sources = setup()
     saved = admitted(proposal(sources, [use(sources["t2:advocate"])]), ctx, sources)
@@ -231,7 +231,7 @@ def test_fresh_writer_remains_one_routine_call_and_transmits_complete_context():
     assert sent["source_kinds"] == {offered.get(identity, identity): row["kind"]
                                     for identity, row in sources.items()}
     assert sent["held_passages"] == answer_sources.presentation(sources, aliased=True, compact=True)
-    assert schema == candidate.PART_SCHEMA_V7
+    assert schema == candidate.PART_SCHEMA_V8
     assert kwargs == {"max_tokens": candidate.MAX_OUTPUT}
     assert result["contract"] == candidate.CONTRACT
 
@@ -243,7 +243,7 @@ def test_fresh_calls_never_select_legacy_contract_from_a_model_proposal():
     with pytest.raises(SchemaViolation):
         candidate.write(model, ctx, record, sources)
     assert len(model.calls) == 1
-    assert model.calls[0][1] == candidate.PART_SCHEMA_V7
+    assert model.calls[0][1] == candidate.PART_SCHEMA_V8
     # Legacy selection is an explicit reconstruction argument, not model-controlled input.
     saved = candidate.accept(old, ctx, sources, contract=candidate.LEGACY_CONTRACT)
     assert candidate.validate(saved, ctx, sources) == saved
@@ -262,7 +262,9 @@ def test_v2_references_do_not_offer_free_text_to_retype_or_repair(quote, field):
     if field == "address": data["units"][0]["addresses"][0]["quote"] = quote
     elif field == "support": selected["quote"] = quote
     else: selected["court_treatment"]["source"]["quote"] = quote
-    with pytest.raises(SchemaViolation): admitted(data, ctx, sources)
+    # Addresses are named by the writer up to v7 (from v8 code records them).
+    with pytest.raises(SchemaViolation):
+        admitted(data, ctx, sources, **({"contract": candidate.LINKS_CONTRACT} if field == "address" else {}))
 
 
 def test_full_passages_preserve_newlines_unicode_and_repeated_words_exactly():
@@ -293,9 +295,10 @@ def test_v3_and_v4_select_legal_passages_by_alias_and_replay_from_the_saved_cata
     first, second = draft["units"][0]["uses"]
     assert (first["source_id"], second["source_id"]) == (provision["id"], judgments[0]["id"])
     assert second["treatment_source"]["source_id"] == judgments[1]["id"]
-    assert draft["contract"] == candidate.CONTRACT == "core_response_writer_v7"
+    assert draft["contract"] == candidate.CONTRACT == "core_response_writer_v8"
     assert draft["proposal"] == supplied, "the saved proposal keeps the offered aliases"
     assert supplied["units"][0]["text"].startswith("[Synthetic attribution test.](P1, J1)")
+    assert "addresses" not in supplied["units"][0]
     assert candidate.validate(deepcopy(draft), ctx, deepcopy(sources)) == draft
     # Saved v6 and v5 drafts name their words beside the text, and replay as saved.
     from tests.test_core_response_writer import checklisted, unchecklisted, unworded

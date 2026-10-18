@@ -41,14 +41,20 @@ CHECKLIST_CONTRACT = "core_response_writer_v6"
 #: unit links each source from its own words as a markdown link, [words](P1), which code
 #: takes out of the text; a source a unit uses but does not link is listed under it; a
 #: dispute names its time limits by their short IDs (T1, T2...).
-CONTRACT = "core_response_writer_v7"
+LINKS_CONTRACT = "core_response_writer_v7"
+#: v8 (owner, 18 Oct 2026): the writer no longer names the message each unit answers, a
+#: bookkeeping duty it slipped on in two of five live runs; every unit answers the latest
+#: message, which code records as its address.
+CONTRACT = "core_response_writer_v8"
 CONTRACTS = (LEGACY_CONTRACT, OWNED_TAG_CONTRACT, ALIAS_CONTRACT, PARTS_CONTRACT, WORDS_CONTRACT,
-             CHECKLIST_CONTRACT, CONTRACT)
-_IN_PARTS = (PARTS_CONTRACT, WORDS_CONTRACT, CHECKLIST_CONTRACT, CONTRACT)
+             CHECKLIST_CONTRACT, LINKS_CONTRACT, CONTRACT)
+_IN_PARTS = (PARTS_CONTRACT, WORDS_CONTRACT, CHECKLIST_CONTRACT, LINKS_CONTRACT, CONTRACT)
 #: The versions in which every source names the words of its unit that it supports.
 WORDED = (WORDS_CONTRACT, CHECKLIST_CONTRACT)
+#: The versions whose units link their sources in their own text, [words](P1).
+LINKED = (LINKS_CONTRACT, CONTRACT)
 #: The versions whose dispute parts return a checklist.
-CHECKLISTED = (CHECKLIST_CONTRACT, CONTRACT)
+CHECKLISTED = (CHECKLIST_CONTRACT, *LINKED)
 #: Each part's answer limit; reasoning counts towards it.
 MAX_OUTPUT = 16000
 SYSTEM = """Message: You receive the exact latest advocate message, complete attributed
@@ -79,7 +85,8 @@ separately, answer the other disputes it lists, including requests about them; d
 answer those here. When this_part names no dispute it opens a reply that covers several:
 give a brief opening, anything the advocate asked that belongs to no single dispute, and
 related points not tied to one dispute; the disputes and their law are answered in the
-other parts. A reply with one part is the whole answer.
+other parts. Such an opening is given no legal passages and needs none: do not remark on
+that. A reply with one part is the whole answer.
 
 Your dispute's checklist: beside its units, a dispute's part returns what the case
 needs as the held law requires it, so the advocate sees at a glance what is in hand.
@@ -152,12 +159,11 @@ that did not return a source shows neither that no such source is held nor that 
 such law exists. Without relevant held law, do the supported account or question
 work and explain that gap; never fill it with a legal standard from memory.
 
-Outcome: Return an ordered units array with natural text, kind, original-message
-addresses and source uses, and for a dispute's part its checklist and time_limit_ids.
-Separate independently assessable assertions; retain all conditions without an
-arbitrary length limit. Each unit addresses original advocate
-material; the draft must address the latest message. Each reference selects only an
-offered source_id; held legal passages are offered under short IDs such as P1 or J1.
+Outcome: Return an ordered units array with natural text, kind and source uses, and
+for a dispute's part its checklist and time_limit_ids. Separate independently
+assessable assertions; retain all conditions without an arbitrary length limit. Every
+unit answers the latest message. Each reference selects only an offered source_id;
+held legal passages are offered under short IDs such as P1 or J1.
 Code supplies the complete exact saved passage and its attribution;
 do not retype, paraphrase or shorten source text in a reference. The full passage and
 neighbouring context remain the basis for checking each assertion and its conditions.
@@ -170,7 +176,9 @@ the source supports, as a markdown link inside the sentence with the source's sh
 label after it ("... within six months. [The presentation period](P6)"). The advocate
 opens the source from those words, so a unit need not name its documents, pages or
 sources in its text; a label standing alone is taken out, and a source you use but do
-not link is listed beneath the paragraph. For every use, copy source_kind from the
+not link is listed beneath the paragraph. The short IDs (M1, P1, T1...) are only for
+links, source selections and time_limit_ids: never write one in your text, and call a
+time limit by what it is. For every use, copy source_kind from the
 supplied source_kinds catalogue:
 - account, nm_context, service and document: give only source_kind and source_id. Code
   preserves the original speaker and provenance. NM interpretations and service notices
@@ -273,6 +281,12 @@ _UNITS_V7 = {**SCHEMA["properties"]["units"], "items": _object({
 LIMIT_IDS = {"type": "array", "items": {**TEXT, "description": "The ID (T1, T2...) of a time limit in time_limits."}}
 PART_SCHEMA_V7 = _object({"units": _UNITS_V7, "checklist": CHECKLIST, "time_limit_ids": LIMIT_IDS})
 SCHEMA_V7 = _object({"units": _UNITS_V7, "checklists": {
+    "type": "array", "items": _object({"checklist": CHECKLIST, "time_limit_ids": LIMIT_IDS})}})
+#: v8: v7 without the addresses; code records the latest message as each unit's address.
+_UNITS_V8 = {**_UNITS_V7, "items": _object({key: value for key, value in _UNITS_V7["items"]["properties"].items()
+                                           if key != "addresses"})}
+PART_SCHEMA_V8 = _object({"units": _UNITS_V8, "checklist": CHECKLIST, "time_limit_ids": LIMIT_IDS})
+SCHEMA_V8 = _object({"units": _UNITS_V8, "checklists": {
     "type": "array", "items": _object({"checklist": CHECKLIST, "time_limit_ids": LIMIT_IDS})}})
 _LINK = re.compile(r"\[([^\[\]]+)\]((?:\([^()]*\))+)")
 _SENTENCE_END = ".;:!?"
@@ -465,31 +479,34 @@ def _checklists(given, layout, context, sources, offered, *, limits="time_limits
     return out
 
 
-def accept(proposal, context, sources, *, contract=CONTRACT, parts=None):
+def accept(proposal, context, sources, *, contract=CONTRACT, parts=None, whole=True):
     """Check exact dependencies only; no keyword-based semantic certification.
 
     A malformed unit rejects the draft for the turn owner's bounded correction.
     Nothing is silently salvaged or described as reviewed by this boundary.
+    whole=False checks one section on its own, which need not itself answer the latest
+    message (write uses it to find which sections a shape correction must rewrite).
     """
     if contract not in CONTRACTS:
         raise ValueError("Unknown response writer contract")
     if parts is not None and contract not in _IN_PARTS:
         raise ValueError("Only a v4 or later draft is written in parts")
     offered = answer_sources.aliases(sources) if contract in (ALIAS_CONTRACT, *_IN_PARTS) else {}
-    schema = (LEGACY_SCHEMA if contract == LEGACY_CONTRACT else SCHEMA_V7 if contract == CONTRACT
-              else SCHEMA_V6 if contract == CHECKLIST_CONTRACT else SCHEMA_V5 if contract == WORDS_CONTRACT
-              else SCHEMA)
+    schema = (LEGACY_SCHEMA if contract == LEGACY_CONTRACT else SCHEMA_V8 if contract == CONTRACT
+              else SCHEMA_V7 if contract == LINKS_CONTRACT else SCHEMA_V6 if contract == CHECKLIST_CONTRACT
+              else SCHEMA_V5 if contract == WORDS_CONTRACT else SCHEMA)
     data = canonical_schema_data(proposal, schema)
     require_schema(data, schema)
     originals = source_catalogue(context)
     latest_id = context["latest"]["source_id"]
     units, addresses_latest = [], False
     for number, item in enumerate(data["units"], 1):
-        text, links = _linked(item["text"], offered) if contract == CONTRACT else (item["text"], [])
+        text, links = _linked(item["text"], offered) if contract in LINKED else (item["text"], [])
         if not text.strip():
             raise SchemaViolation("A response unit needs nonblank text")
         addresses = []
-        for ref in item["addresses"]:
+        # v8: every unit answers the latest message, recorded by code as its address.
+        for ref in item["addresses"] if contract != CONTRACT else [{"source_id": latest_id}]:
             if ref.get("source_id") in offered:  # a short ID is mapped back (16 Oct 2026)
                 ref = {**ref, "source_id": offered[ref["source_id"]]}
             original = originals.get(ref["source_id"])
@@ -533,14 +550,14 @@ def accept(proposal, context, sources, *, contract=CONTRACT, parts=None):
         units.append({"id": context["latest"]["turn_id"] + f":b{number}",
                       "kind": item["kind"], "text": text,
                       "addresses": addresses, "uses": uses})
-    if not addresses_latest:
+    if whole and not addresses_latest:
         raise SchemaViolation("The response must address the latest advocate message")
     draft = {"contract": contract, "proposal": deepcopy(data), "units": units}
     if contract in _IN_PARTS:
         draft["parts"] = _layout(parts, len(units))
     if contract in CHECKLISTED:
         draft["checklists"] = _checklists(data["checklists"], draft["parts"], context, sources, offered,
-                                          limits="time_limit_ids" if contract == CONTRACT else "time_limits")
+                                          limits="time_limit_ids" if contract in LINKED else "time_limits")
     return draft
 
 
@@ -681,11 +698,11 @@ def _payload(context, record, sources, interpretation, execution, layout, index,
 def _write_part(model, payload):
     prompt = Prompt(system=SYSTEM, user=json.dumps(payload, ensure_ascii=False),
                     operation="core_response_writer")
-    if (estimate_tokens(SYSTEM + prompt.user + json.dumps(PART_SCHEMA_V7)) + MAX_OUTPUT
+    if (estimate_tokens(SYSTEM + prompt.user + json.dumps(PART_SCHEMA_V8)) + MAX_OUTPUT
             > model.context_budget(Tier.HARD)):
         raise ContextOverflow("Complete response context exceeds the model budget")
     try:
-        result = model.structured(prompt, PART_SCHEMA_V7, Tier.HARD, max_tokens=MAX_OUTPUT)
+        result = model.structured(prompt, PART_SCHEMA_V8, Tier.HARD, max_tokens=MAX_OUTPUT)
     except SchemaViolation as exc:
         if exc.rejected_result is None:
             raise
@@ -756,21 +773,43 @@ def write(model, context, research_record, sources, interpretation=None, executi
                                for part in written]}
     shape = [{"dispute_id": layout[index]["dispute_id"], "units": len(part["units"])}
              for index, part in enumerate(written)]
-    try:
-        if any(part["units"] < 1 for part in shape):
-            raise SchemaViolation("Each part of the reply needs at least one unit")
-        # Only the time limits code worked out may be named for a dispute, by their IDs.
-        given = {entry["id"] for key in ("worked_out", "not_assessed")
-                 for entry in (limit_ids(time_limits) or {}).get(key, [])}
-        unknown = [name for part in written for name in part["time_limit_ids"] or []
-                   if isinstance(name, str) and name not in given]
+    # Only the time limits code worked out may be named for a dispute, by their IDs.
+    given = {entry["id"] for key in ("worked_out", "not_assessed")
+             for entry in (limit_ids(time_limits) or {}).get(key, [])}
+
+    def limits_named(part):
+        unknown = [name for name in part["time_limit_ids"] or [] if isinstance(name, str) and name not in given]
         if unknown:
             raise SchemaViolation("Time limit IDs that are not in time_limits: " + ", ".join(dict.fromkeys(unknown))
                                   + (f". Use the IDs shown there: {', '.join(sorted(given))}." if given
                                      else ". No time limit was worked out for this answer; give none."))
+
+    try:
+        if any(part["units"] < 1 for part in shape):
+            raise SchemaViolation("Each part of the reply needs at least one unit")
+        for part in written:
+            limits_named(part)
         return accept(proposal, context, sources, parts=shape)
-    except SchemaViolation:
-        # A shape correction shows the writer the whole assembled draft it produced.
+    except SchemaViolation as exc:
+        # A shape correction shows the writer the whole assembled draft it produced, and
+        # keeps each section that passes code's checks on its own as written, so only the
+        # sections that failed are rewritten (owner, 18 Oct 2026; in the fifth live run a
+        # rewrite of every section brought a new slip into one that had passed).
         if hasattr(model, "last_output"):
             model.last_output = deepcopy(proposal)
+        passed = {}
+        for index, part in enumerate(written):
+            try:
+                if not isinstance(part["units"], list) or not part["units"]:
+                    continue
+                limits_named(part)
+                accept({"units": part["units"], "checklists": [{"checklist": part["checklist"],
+                                                                "time_limit_ids": part["time_limit_ids"]}]},
+                       context, sources, parts=[shape[index]], whole=False)
+            except (SchemaViolation, ValueError, KeyError, TypeError):
+                continue
+            passed[index] = {"dispute_id": layout[index]["dispute_id"], **deepcopy(part)}
+        # A fault no single section shows (the whole reply answering no latest message)
+        # leaves nothing to keep: every section is written again.
+        exc.kept = passed if len(passed) < len(written) else {}
         raise
