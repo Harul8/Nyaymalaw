@@ -115,3 +115,28 @@ def test_the_research_note_describes_the_provision_as_not_in_force():
     described = {source["title"] + " " + source["locator"]: source["described"] for source in note["sources"]}
     assert f"Statute, {MARK}" in described.values()
     assert any(source["heading"].endswith(f"— Statute, {MARK}") for source in note["sources"])
+
+
+def test_a_checklist_items_law_carries_the_mark_onto_the_board():
+    """P21's deferred part (built 20 Oct 2026, AN.2): an item resting on a provision of an Act
+    India Code does not list as in force carries the mark on the board, as the passage does
+    wherever it is shown. Records saved before carry none and re-derive so."""
+    from nm.core_engine import checklist
+    ctx, _, record, sources = researched()
+    marked = next(identity for identity, row in sources.items() if "in_force" in row)
+    item = {"id": "t2:c1", "need": "The notice under the provision", "why": "The provision requires it.",
+            "note": None, "group": "needed", "status": "not_given", "carries": None, "evidence": None,
+            "law": {"source_id": marked, "start": 0, "end": 12, "text": sources[marked]["text"][:12]}}
+    activity = {"research": record, "sources": sources, "calculation": None, "release": None,
+                "draft": {"parts": [{"dispute_id": None, "units": 1}, {"dispute_id": "D1", "units": 1}],
+                          "checklists": [{"items": [], "time_limit_ids": []},
+                                         {"items": [item], "time_limit_ids": []}]}}
+    made = checklist.records(ctx, activity)
+    law = made["checklist"]["disputes"][0]["items"][0]["law"]
+    assert made["checklist"]["contract"] == checklist.CONTRACT == "core_checklist_v2" and law["in_force"] == MARK
+    assert checklist.for_board(made, {})["D1"]["items"][0]["law"]["in_force"] == MARK
+    earlier = checklist.records(ctx, activity, contract=checklist.V1_CONTRACT)
+    assert earlier["checklist"]["contract"] == "core_checklist_v1"
+    assert "in_force" not in earlier["checklist"]["disputes"][0]["items"][0]["law"]
+    # What an ask in the answer opens is the item as the answer admitted it, unchanged.
+    assert "in_force" not in checklist.kept(item, ctx, sources)["law"]

@@ -216,5 +216,12 @@ assert.match(fold.textContent, /Any other route — It may be quicker\./);
   // A paragraph is drawn with its links when a source can be read or an ask opens an item.
   assert.deepEqual([context.linkedBody({ asks: [ask] }), context.linkedBody({ asks: [] }),
     context.linkedBody({ source: { brain: true } }), context.linkedBody({})], [true, false, true, false]);
+  // An item whose law is of an Act India Code does not list as in force says so (P21).
+  const repealed = { ...ask, item: { ...ask.item, law: { ...law, in_force: 'not in force according to India Code' } } };
+  context.openAskedItem({ chat_id: 'c2' }, repealed, 'opener');
+  view = shown.pop();
+  const why = view.content[1];
+  assert.equal(why.children.at(-1).className, 'source-role warn');
+  assert.equal(why.children.at(-1).textContent, 'Not in force according to India Code');
 }
 console.log('checklist board: ok');

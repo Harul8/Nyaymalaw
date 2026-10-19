@@ -3503,9 +3503,12 @@ function renderChecklistItem(item, dispute) {
   lawLink.addEventListener('click', () => openLaw(law, lawLink));
   const cite = make('p', 'req-law');
   cite.appendChild(lawLink);
+  // The law's Act, where India Code does not list it as in force (P21, 19 Oct 2026).
+  const force = typeof law.in_force === 'string' && law.in_force.trim() ? law.in_force.trim() : '';
+  const marked = force ? make('p', 'source-role warn', force.charAt(0).toUpperCase() + force.slice(1)) : null;
   // Before writer v9 an item gave no reason of its own: the law's words say why.
   out.push(block('Why it is needed', item.why ? make('p', '', item.why) : make('blockquote', 'quote', law.words || ''),
-    cite));
+    cite, ...(marked ? [marked] : [])));
   const stands = [];
   if (item.status === 'not_given') {
     stands.push(make('p', '', `Not in your messages or documents yet.${item.asked_at
@@ -3587,9 +3590,11 @@ function openLaw(law, opener) {
   };
   const passage = make('div', 'brain-source-text passage');
   passage.appendChild(make('mark', '', law.words || ''));
+  const force = typeof law.in_force === 'string' && law.in_force.trim() ? law.in_force.trim() : '';
   return window.NmBrainSources.showContent(law.title || 'The law', [make('p', 'source-where', law.locator || ''),
-    make('p', 'source-role', law.kind === 'judgment' ? 'Held judgment' : 'Legislative text'), passage], opener, false,
-  law.kind === 'judgment' ? 'Held judgment' : 'Held law');
+    make('p', 'source-role', law.kind === 'judgment' ? 'Held judgment' : 'Legislative text'),
+    ...(force ? [make('p', 'source-role warn', force.charAt(0).toUpperCase() + force.slice(1))] : []), passage],
+  opener, false, law.kind === 'judgment' ? 'Held judgment' : 'Held law');
 }
 
 // A DISPUTE IN DETAIL (owner, 16 Oct 2026), in the reading pane (18 Oct 2026): who it is

@@ -288,9 +288,11 @@ def saved_rows(matter, advocate_id):
             original = TurnContext(matter, row["chat_id"], row["turn_id"], row["message"], rows[:index],
                                    documents=tuple(row.get("documents", ())))
             validate_activity(row["activities"], original.payload(), row["response"]["elements"])
-            # From v5 the records a turn saved are exactly what its own activity gives.
+            # From v5 the records a turn saved are exactly what its own activity gives, under
+            # the checklist version they were saved under.
             if (row["activities"].get("contract") in (RECORDS_CONTRACT, CONTRACT)
-                    and row["records"] != checklist.records(original.payload(), row["activities"])):
+                    and row["records"] != checklist.records(original.payload(), row["activities"], contract=(
+                        row["records"].get("checklist") or {}).get("contract", checklist.CONTRACT))):
                 raise ValueError("Saved records differ from what the turn admitted")
     except (ValueError, KeyError, TypeError, SchemaViolation) as exc:
         raise ConversationRefused("This saved conversation could not be read reliably. "

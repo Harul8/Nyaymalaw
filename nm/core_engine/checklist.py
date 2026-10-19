@@ -17,14 +17,20 @@ from copy import deepcopy
 from nm.core_engine import research
 from nm.shared.citation_contracts import statute_title
 
-CONTRACT = "core_checklist_v1"
+V1_CONTRACT = "core_checklist_v1"
+#: v2 (owner decision P21, built 19 Oct 2026; the board's part of it 20 Oct): an item's law
+#: carries the store's mark where India Code does not list its Act as in force, as the
+#: passage itself does wherever it is shown. A turn's records keep the version they were
+#: saved under, and carry earlier disputes' items as they were.
+CONTRACT = "core_checklist_v2"
+CONTRACTS = (V1_CONTRACT, CONTRACT)
 GROUPS = ("needed", "would_strengthen")
 STATES = ("in_hand", "coming_or_unclear", "not_given", "not_available")
 
 
 def _current(context):
     record = (context.get("current_records") or {}).get("checklist")
-    return record if isinstance(record, dict) and record.get("contract") == CONTRACT else None
+    return record if isinstance(record, dict) and record.get("contract") in CONTRACTS else None
 
 
 def saved(context):
@@ -33,12 +39,14 @@ def saved(context):
     return {item["id"]: item for dispute in record.get("disputes", []) for item in dispute["items"]}
 
 
-def _law(selected, sources, turn_id):
+def _law(selected, sources, turn_id, marked=False):
     source = sources[selected["source_id"]]
     title = (statute_title(source["title"], source["source_identity"].get("act_id", ""))
              if source["kind"] == "provision" else source["title"])
     return {"kind": source["kind"], "title": title, "locator": source["locator"], "words": selected["text"],
-            "source_id": selected["source_id"], "held_in": turn_id}
+            "source_id": selected["source_id"], "held_in": turn_id,
+            # v2: the store's mark that India Code does not list the Act as in force (P21).
+            **({"in_force": source["in_force"]} if marked and "in_force" in source else {})}
 
 
 def _evidence(selected, sources):
@@ -53,11 +61,12 @@ def _same(law, other):
     return all(law.get(key) == other.get(key) for key in ("kind", "title", "locator", "words"))
 
 
-def _item(item, earlier, sources, turn_id):
+def _item(item, earlier, sources, turn_id, marked=False):
     """One admitted item as the matter keeps it. A not-yet-given item keeps the turn in
-    which NM first listed it, carried or re-tied to the same law words."""
+    which NM first listed it, carried or re-tied to the same law words. marked (v2): its law
+    carries the store's not-in-force mark (P21)."""
     carried = earlier.get(item["carries"]) if item["carries"] else None
-    law = deepcopy(carried["law"]) if carried else _law(item["law"], sources, turn_id)
+    law = deepcopy(carried["law"]) if carried else _law(item["law"], sources, turn_id, marked)
     before = carried or next((row for row in earlier.values() if _same(row["law"], law)), None)
     asked = None
     if item["status"] == "not_given":
@@ -125,12 +134,15 @@ def _written(activity):
     return written, left
 
 
-def records(context, activity):
+def records(context, activity, contract=CONTRACT):
     """The conversation's records after this turn. A dispute this answer covers takes the
     checklist its section returned; a dispute it does not cover (or whose section is held
     back, or stands as a note) keeps the checklist saved for it where the understanding
     still names it by the same id and name; the rest of the records is kept as it was. An
-    answer covering no dispute changes nothing."""
+    answer covering no dispute changes nothing. contract: the version the records are made
+    under; a saved turn's are re-made under the version it saved them under."""
+    if contract not in CONTRACTS:
+        raise ValueError("Unknown checklist contract")
     previous = deepcopy(context.get("current_records") or {})
     record = activity.get("research") or {}
     if record.get("contract") not in research.QUESTION_PLANS:
@@ -149,8 +161,8 @@ def records(context, activity):
         if given is not None:
             entry = {"id": dispute["id"], "name": dispute["name"], "answered_in": turn_id,
                      "time_limits": _limits(given, activity.get("calculation")),
-                     "items": [_item(item, earlier, activity["sources"], turn_id) for item in given["items"]
-                               if item["id"] not in left]}
+                     "items": [_item(item, earlier, activity["sources"], turn_id, contract == CONTRACT)
+                               for item in given["items"] if item["id"] not in left]}
         elif (dispute["id"], dispute["name"]) in kept:
             entry = deepcopy(kept[(dispute["id"], dispute["name"])])
         else:
@@ -159,7 +171,7 @@ def records(context, activity):
             number += 1
             item["id"] = f"K{number}"
         disputes.append(entry)
-    previous["checklist"] = {"contract": CONTRACT, "turn_id": turn_id, "disputes": disputes}
+    previous["checklist"] = {"contract": contract, "turn_id": turn_id, "disputes": disputes}
     return previous
 
 
@@ -167,7 +179,7 @@ def for_board(row_records, dates):
     """Each dispute's checklist as the board shows it, by dispute id; dates: when each
     turn was answered, so the board can say when NM asked and when words were given."""
     record = (row_records or {}).get("checklist")
-    if not isinstance(record, dict) or record.get("contract") != CONTRACT:
+    if not isinstance(record, dict) or record.get("contract") not in CONTRACTS:
         return {}
     shown = {}
     for dispute in record["disputes"]:

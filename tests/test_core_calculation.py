@@ -52,7 +52,8 @@ def step(id_, what, words, period, start, **extra):
     blank = {"what": "", "date": "", "quote": ""}
     return {"id": id_, "what": what, "act": extra.get("act", NI), "provision": extra.get("provision", "s.138"),
             "article": extra.get("article", ""), "part": "", "words": words, "period_words": period,
-            "start": start, "copies": [], "done": extra.get("done", blank),
+            # Calculation v5 (Q16): the step's own check of what its quoted words date.
+            "start": {"dated_event": "", "same_event": True, **start}, "copies": [], "done": extra.get("done", blank),
             "earliest_after": extra.get("earliest_after", ""), "reasoning": "From the Act's words.",
             "assumptions": ["The dates are as reported."], "missing": [], "may_extend": extra.get("may_extend", [])}
 
@@ -225,7 +226,7 @@ def test_a_refused_limit_gets_one_correction_that_faces_the_same_checks(store):
     assert boxes["Last day for the drawer to pay"]["last_day"] == "2026-09-13"  # checked first; stands
     row = saved_rows(store.load(chat_matter_id("owner", reply["chat_id"])), "owner")[0]
     record = row["activities"]["calculation"]
-    assert record["contract"] == calculation.CONTRACT == "core_calculation_v4"
+    assert record["contract"] == calculation.CONTRACT == "core_calculation_v5"
     assert record["correction"]["state"] == "corrected" and [r["id"] for r in record["correction"]["refused"]] == ["bad"]
     assert record["proposal"] == chain() and record["not_assessed"] == []
     assert saved_rows(store.load(chat_matter_id("owner", reply["chat_id"])), "owner")[0]["response"][
@@ -266,7 +267,8 @@ def test_a_missing_fact_spends_no_correction_and_what_waits_on_it_says_so_plainl
     could not be worked out names it in plain words, never by its internal ID."""
     proposal = chain()
     pay, complaint, _ = proposal["calculations"]
-    pay["start"] = {"after": "", "event": "the drawer receiving the notice", "date": "", "quote": ""}
+    pay["start"] = {"after": "", "event": "the drawer receiving the notice", "date": "", "quote": "",
+                    "dated_event": "", "same_event": False}
     pay["missing"] = ["The date the drawer received the notice."]
     proposal["calculations"] = [pay, complaint]  # nothing a correction could fix
     model = Calculating(proposal)
@@ -394,10 +396,39 @@ def test_a_missing_starting_date_is_said_before_any_quotation_is_checked(store):
     starting date nobody had given: the missing fact is what the advocate needs to hear."""
     proposal = chain()
     pay, complaint, _ = proposal["calculations"]
-    pay["start"] = {"after": "", "event": "the drawer receiving the notice", "date": "", "quote": ""}
+    pay["start"] = {"after": "", "event": "the drawer receiving the notice", "date": "", "quote": "",
+                    "dated_event": "", "same_event": False}
     pay["words"] = "words the Act does not say"
     proposal["calculations"] = [pay, complaint]
     model = Calculating(proposal)
     boxes = {e["text"]: e["working"] for e in turn(store, model)["elements"] if e["kind"] == "WORKING"}
     assert "correction" not in model.seen
     assert boxes["Last day for the drawer to pay"]["not_assessed"] == "the starting date is not given"
+
+
+def test_a_start_its_own_check_says_dates_another_event_is_not_given_and_spends_no_correction():
+    """Q16 (owner, 19 Oct 2026): in two of three live runs the step dated the payee's thirty
+    days for the demand notice from the bank's return of the cheque, not from the payee
+    receiving the bank's information. Where the step's own check says the words it quotes date
+    another event, the date stays not given and the limit is not worked out; the missing date
+    is a fact no correction can supply."""
+    from tests.test_core_understanding import context
+    notice = step("n1", "Last day for the demand notice",
+                  "within thirty days of the receipt of information by him from the bank regarding the return of "
+                  "the cheque as unpaid", "thirty days",
+                  {"after": "", "event": "the payee receiving the bank's information", "date": "2026-08-18",
+                   "quote": "18 August 2026", "dated_event": "the bank returning the cheque", "same_event": False})
+    model = Calculating({"needed": True, "why": "The advocate asks about the notice.", "not_assessed": [],
+                         "calculations": [notice]})
+    record = calculation.work_out(model, context(MESSAGE), Held())
+    assert record["calculations"] == [] and "correction" not in model.seen
+    assert record["not_assessed"] == [{"what": "Last day for the demand notice", "why": (
+        "the words quoted date the bank returning the cheque, not the event time runs from (the payee receiving the "
+        "bank's information), whose date is not given")}]
+    # Its own check confirming the very event, the same words are worked out.
+    notice["start"].update(dated_event="the payee receiving the bank's return memo", same_event=True)
+    confirmed = calculation.work_out(Calculating({"needed": True, "why": "", "not_assessed": [],
+                                                  "calculations": [notice]}), context(MESSAGE), Held())
+    assert [entry["working"]["last_day"] for entry in confirmed["calculations"]] == ["2026-09-17"]
+    assert "Check that the words you quote date that very event" in calculation.SYSTEM
+
