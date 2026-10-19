@@ -2,7 +2,6 @@
 the judgment pick, and the replay of every earlier plan version. These prove handoffs and mechanical contracts,
 not the model's legal judgment."""
 from copy import deepcopy
-import json
 import re
 
 import pytest
@@ -574,19 +573,6 @@ def test_original_queries_preserve_order_boundaries_and_repeated_words_across_tu
     assert "Advocate passage 1:" in previous["text"] and "Advocate passage 2:" in previous["text"]
 
 
-def test_served_v4_research_record_replays_with_its_labelled_queries():
-    from pathlib import Path
-    from nm.core_engine.research import WINDOWED_CONTRACT
-    root = (Path(__file__).resolve().parents[1] / "outputs/core-engine-build-20261010"
-            / "browser-gpt6-cache-v1-diagnostics/0842eaae89c44f4093705de0664dd9eb")
-    saved = json.loads((root / "008-research-retrieve-input.json").read_text(encoding="utf-8"))["value"]
-    record = json.loads((root / "009-research-retrieve-output.json").read_text(encoding="utf-8"))["value"]["result"]
-    assert record["contract"] == WINDOWED_CONTRACT
-    assert validate(record, record["plan"], saved["context"]) == record
-    labelled = [q for s in record["searches"].values() for q in s["queries"] if "Advocate passage 1:" in q["text"]]
-    assert labelled, "the served v4 serialisation is preserved, not rebuilt"
-
-
 def test_v6_concepts_are_not_silently_truncated():
     ctx = context("Explain the legal relationship in general.")
     item = work(None)
@@ -597,21 +583,6 @@ def test_v6_concepts_are_not_silently_truncated():
     item["enquiries"] *= 4
     rejected = accept({"work": [item]}, ctx, contract=V6)
     assert rejected["work"] == [] and rejected["issues"]
-
-
-def test_real_frozen_v2_search_replays_without_new_query_construction():
-    from pathlib import Path
-    root = Path(__file__).resolve().parents[1] / "outputs/core-engine-build-20261010"
-    captured = json.loads((root / "live-served-capacity-remeasurement-writer-1-input.json").read_text(encoding="utf-8"))
-    record = captured["research"]
-    assert record["contract"] == "core_research_v2"
-    assert validate(record, record["plan"], captured["context"]) == record
-    unknown = {**record, "contract": "unknown_research_version"}
-    with pytest.raises(ValueError, match="Unknown"): validate(unknown, record["plan"], captured["context"])
-    changed = deepcopy(record)
-    first = next(iter(changed["searches"].values()))
-    first["queries"][0]["text"] += " unowned addition"
-    with pytest.raises(ValueError): validate(changed, changed["plan"], captured["context"])
 
 
 def test_offered_passage_id_resolves_original_spelling_offsets_and_ownership():
@@ -627,18 +598,6 @@ def test_offered_passage_id_resolves_original_spelling_offsets_and_ownership():
         assert source["text"] == ctx["latest"]["text"][source["start"]:source["end"]]
     query = search_queries(admitted["work"][0], contract=V6)[0]["text"]
     assert "Hello." not in query and "Separately, the technician" in query
-
-
-def test_briefly_served_v3_broad_plan_preserves_captured_query_serialization():
-    from pathlib import Path
-    from nm.core_engine.research import PREVIOUS_CONTRACT
-    root = Path(__file__).resolve().parents[1] / "outputs/core-engine-build-20261010"
-    inputs = json.loads((root / "research-v3-runtime-ready-inputs.json").read_text(encoding="utf-8"))
-    outputs = json.loads((root / "research-v3-runtime-ready-results.json").read_text(encoding="utf-8"))
-    case, result = inputs["cases"][1], outputs["calls"][1]
-    saved = result["admitted_plan"]
-    assert accept(saved["proposal"], case["context"], contract=PREVIOUS_CONTRACT) == saved
-    assert {w["id"]: search_queries(w, contract=PREVIOUS_CONTRACT) for w in saved["work"]} == result["constructed_queries"]
 
 
 def test_saved_v5_plans_and_searches_replay_without_named_instruments():

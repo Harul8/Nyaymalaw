@@ -48,7 +48,6 @@ import subprocess
 
 import pytest
 
-from assurance.common.homes import tooling_sources
 
 pytestmark = pytest.mark.class_a
 
@@ -130,26 +129,6 @@ def test_no_hook_carries_its_own_copy_of_the_refresh():
             assert not pattern.search(code), (
                 f"assurance/hooks/{path.name} carries `{pattern.pattern}` "
                 f"itself; only {OWNER} may")
-
-
-def test_the_refresh_is_not_duplicated_outside_the_hooks_either():
-    """The embed command is INVOKED from exactly one place. `graph_vectors.py`
-    names itself in its own docstring and its own report -- that is the
-    tool saying what to run, not a second thing running it -- so it is the
-    one file excused, by name and for that reason."""
-    homes = set()
-    for path in tooling_sources("*"):
-        if not path.is_file() or path.suffix in (".pyc", ".md"):
-            continue
-        if path.name == "graph_vectors.py":
-            continue
-        text = path.read_text(encoding="utf8", errors="replace")
-        for ln in _code_lines(text):
-            if REFRESH_COMMANDS[1].search(ln):
-                homes.add(path.relative_to(ROOT).as_posix())
-    assert homes == {f"assurance/hooks/{OWNER}"}, (
-        f"`graph_vectors.py --embed` is invoked from {sorted(homes)}; "
-        f"one owner, and it is assurance/hooks/{OWNER}")
 
 
 # ============================================================ installation ===

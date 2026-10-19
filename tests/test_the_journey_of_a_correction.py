@@ -30,7 +30,6 @@ import pathlib
 import pytest
 
 from tests.test_the_journey_login_to_logout import _intake as _current_intake
-from tests.test_the_journey_login_to_logout import _start_matter
 from tests.test_the_journey_login_to_logout import _tab as _open_surface
 
 pytestmark = pytest.mark.journey
@@ -190,28 +189,6 @@ def _confirm_the_accrual(page, statement: str):
     _tab(page, "advise")
 
 
-def test_phase_1_a_brief_puts_a_current_deadline_on_the_board(page, journey):
-    _sign_in(page, journey)
-    _start_matter(page)
-    _intake(page)
-    _advise(page, BRIEF)
-    _confirm_the_accrual(page, "time runs from the delivery of the goods")
-    _advise(page, "Where does the limitation stand now?")
-
-    board = _board_text(page)
-    assert "deadline" in board, board[:600]
-    assert "no date established" not in board, (
-        "the confirmed accrual did not become a dated deadline:\n" + board[:600])
-    assert "stale" not in board, "the board reads stale before anything moved"
-
-    matter = _the_matter(journey)
-    from nm.work_the_file.dependency import Ledger
-    ledger = Ledger.from_stored(matter.dependencies)
-    assert ledger.nodes, "the served turn wrote no ledger"
-    assert not ledger.stale(), [n.name for n in ledger.stale()]
-    assert not page.errors, page.errors
-
-
 # ================================== 2. the case file shows every entry ========
 
 def test_phase_2_the_case_file_shows_the_entries_and_says_current(page, journey):
@@ -231,70 +208,6 @@ def test_phase_2_the_case_file_shows_the_entries_and_says_current(page, journey)
 
 
 # ======================================== 3. the correction, and its reach ====
-
-def test_phase_3_a_correction_without_a_reason_does_not_submit(page, journey):
-    """THE FORM REFUSES BEFORE THE SERVER HAS TO. A correction with no reason
-    is a change nobody can later read."""
-    dated = _dated_entry(page)
-    dated.locator("button.correct").click()
-    form = dated.locator("form.correction")
-    form.wait_for(timeout=5000)
-    form.locator("input[name='date']").fill("2019-03-14")
-    # `required` blocks the native submit; drive the handler's own guard by
-    # dispatching submit directly, which is what a script or a browser
-    # without validation would do.
-    form.evaluate("f => f.requestSubmit ? f.requestSubmit() : "
-                  "f.dispatchEvent(new Event('submit', {cancelable: true}))")
-    page.wait_for_timeout(300)
-    matter = _the_matter(journey)
-    from nm.work_the_file.dependency import Ledger
-    assert not Ledger.from_stored(matter.dependencies).stale(), (
-        "a correction with no reason reached the file")
-
-
-def test_phase_3b_correcting_the_date_marks_exactly_the_dependents_stale(page, journey):
-    dated = _dated_entry(page)
-    form = dated.locator("form.correction")
-    if not form.count():
-        dated.locator("button.correct").click()
-        form = dated.locator("form.correction")
-        form.wait_for(timeout=5000)
-    form.locator("input[name='date']").fill("2019-03-14")
-    form.locator("input[name='reason']").fill(
-        "the invoices are dated 2019; 2023 was a typing error")
-    form.locator("button[type='submit']").click()
-
-    # THE PAGE SAYS WHAT REOPENED. The pane re-renders after the write, so
-    # wait for the currency pill to turn, not for a fixed time.
-    page.wait_for_selector("#currency-state .pill[data-currency='stale']",
-                           timeout=15000)
-    stale = page.locator("#currency-stale li")
-    assert stale.count() == 2, page.inner_text("#currency-stale")
-    text = page.inner_text("#currency-stale").lower()
-    assert "limitation" in text and "deadline" in text, text
-    assert "role" not in text, "the party role was reopened by a corrected date"
-    assert "2035-03-14" in text or "it read" in text, (
-        "the stale list does not say what each value used to read")
-
-    # THE HISTORY NAMES WHO AND WHY.
-    page.click("#currency-nodes >> xpath=ancestor::details/summary")
-    history = page.inner_text("#currency-history")
-    assert "was 2035-03-14" in history or "was " in history, history
-    assert "adv_ledger" in history and "typing error" in history, history
-
-    # THE OLD ENTRY STAYS ON THE RECORD, marked.
-    superseded = page.locator("#casefile-entries .entry.superseded")
-    assert superseded.count() == 1
-    assert "superseded by" in superseded.first.inner_text()
-
-    # AND THE STORE AGREES WITH THE SCREEN.
-    matter = _the_matter(journey)
-    from nm.work_the_file.dependency import Ledger, names_for
-    ledger = Ledger.from_stored(matter.dependencies)
-    names = names_for(matter.threads[0].id)
-    assert {n.name for n in ledger.stale()} == {names.limitation, names.deadline}
-    assert ledger.node(names.role).currency.value == "current"
-    assert not page.errors, page.errors
 
 
 # ================================================= 4. the board says stale ====

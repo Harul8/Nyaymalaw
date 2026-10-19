@@ -24,35 +24,18 @@ adapter that touches nothing here.
 """
 from __future__ import annotations
 
-from datetime import date
 
 import pytest
 
-from nm.Archives.legal_brain.orchestrate.turn import TurnEngine, TurnInput
 from nm.shared.model_port import ModelPort, Prompt, Tier
 from nm.shared.model_scripted import ScriptedModelAdapter
 from nm.shared.model_traced import KEEP, Call, TracedModel, read_name
-from nm.shared.store_file_store import FileMatterStore
-from tests.test_turn_contract import KEY, _Evidence, _model_config, briefed
+from tests.test_turn_contract import _model_config
 
 pytestmark = pytest.mark.class_a
 
 OPENING = ("We act for the plaintiff at Hyderabad. The agreement is dated "
            "15 April 1984.")
-
-
-def _engine(tmp_path, inner=None):
-    store = FileMatterStore(tmp_path, key=KEY)
-    model = TracedModel(inner=inner or ScriptedModelAdapter(
-        _model_config(), responses={"__default__": "Issue the notice."}))
-    return briefed(TurnEngine(store=store, evidence=_Evidence(), model=model)), store
-
-
-def _trace(tmp_path, message=OPENING):
-    engine, store = _engine(tmp_path)
-    out = engine.run(TurnInput(advocate_id="adv_1", today=date(2026, 9, 5),
-                               message=message))
-    return store.transcripts_for(out.matter.id)[-1]
 
 
 # ============================ the wrapper is transparent ====================
@@ -82,33 +65,6 @@ def test_the_provider_and_the_model_are_the_inner_ones():
 
 
 # ================================ the record ================================
-
-def test_every_call_is_named_by_the_read_it_served(tmp_path):
-    """`llm_calls: 11` and eleven named reads are different records, and the
-    difference is the whole point."""
-    trace = _trace(tmp_path)["model_calls"]
-    reads = [c["read"] for c in trace["calls"]]
-    assert trace["count"] == len(reads) > 0
-    assert "dates" in reads and "posture" in reads, reads
-    assert "unnamed" not in reads, (
-        f"a schema reached the model with no x-nm-read marker: {reads}")
-
-
-def test_an_empty_answer_is_recorded_as_its_own_fact(tmp_path):
-    """THE FIELD THIS WAS BUILT FOR.
-
-    `ModelResult` refuses to hold neither text nor data, so an empty answer
-    arrives as an empty CONTAINER -- `{"events": []}` -- which is
-    indistinguishable downstream from a real "nothing happened". B-088 is
-    exactly that case, and it must be visible without re-deriving it from the
-    answer bytes.
-    """
-    trace = _trace(tmp_path)["model_calls"]
-    assert "empty" in trace
-    for call in trace["calls"]:
-        assert isinstance(call["empty"], bool)
-    empty = [c["read"] for c in trace["calls"] if c["empty"]]
-    assert trace["empty"] == len(empty)
 
 
 def test_a_call_that_raised_is_still_recorded():
@@ -146,77 +102,6 @@ def test_a_long_prompt_says_that_it_was_clipped():
 
 # ============================== drained per turn ============================
 
-def test_a_turn_does_not_carry_the_previous_turn_s_calls(tmp_path):
-    """An instance lives for the process. A trace that accumulated would put
-    one matter's words into another matter's transcript, which is a
-    disclosure and not a tidiness problem."""
-    engine, store = _engine(tmp_path)
-    first = engine.run(TurnInput(advocate_id="adv_1", today=date(2026, 9, 5),
-                                 message=OPENING))
-    engine.run(TurnInput(advocate_id="adv_1", matter_id=first.matter.id,
-                         today=date(2026, 9, 5),
-                         message="The notice was served on 2 January 2025."))
-
-    one, two = store.transcripts_for(first.matter.id)
-
-    # STATED AS THE DRAIN, not as a comparison of prompts. Two turns can
-    # legitimately send an identical prompt -- a read whose input did not
-    # change between them -- so a repeated prompt is not evidence of a leak
-    # and asserting on one would fail for a reason that is not the rule.
-    for transcript in (one, two):
-        assert transcript["model_calls"]["count"] == transcript["llm_calls"]
-    assert [c["n"] for c in two["model_calls"]["calls"]][:1] == [1], (
-        "the second turn's ordinals continue from the first, so its trace "
-        "was never drained and carries the earlier turn's calls")
-
-
-def test_the_two_counts_of_one_thing_must_agree(tmp_path):
-    """THE CHECK THAT WOULD HAVE CAUGHT IT IMMEDIATELY.
-
-    Measured on 5 September 2026: the tracer read `usage.input_tokens`, which
-    this port does not have. It raised inside every read; the reads' own
-    `except` correctly recorded four AttributeErrors as violations -- and the
-    transcript then reported that the turn made ZERO model calls, which is
-    exactly what a turn that made none looks like.
-
-    `llm_calls` is counted by the turn after a read returns; the trace is
-    written by the port as the call is made. Two routes to one number, so a
-    disagreement means one of them is lying about what happened.
-    """
-    transcript = _trace(tmp_path)
-    assert transcript["model_calls"]["count"] == transcript["llm_calls"] > 0
-    disagreements = [v for v in transcript.get("violations", ())
-                     if "disagree about how many" in str(v.get("detail"))]
-    assert not disagreements, disagreements
-
-
-def test_a_tracer_that_records_nothing_is_a_violation_and_not_a_silence(
-        tmp_path):
-    """THE POSITIVE CONTROL, planted on the real path.
-
-    A tracer that quietly stops recording is indistinguishable from a quiet
-    turn. Driven with one that drops everything, because the check has to be
-    shown failing in the direction that actually happened.
-    """
-    class Mute(TracedModel):
-        def take(self) -> dict:
-            super().take()
-            return {"calls": [], "count": 0, "empty": 0, "failed": 0,
-                    "dropped": 0}
-
-    store = FileMatterStore(tmp_path, key=KEY)
-    engine = briefed(TurnEngine(
-        store=store, evidence=_Evidence(),
-        model=Mute(inner=ScriptedModelAdapter(
-            _model_config(), responses={"__default__": "Issue the notice."}))))
-    out = engine.run(TurnInput(advocate_id="adv_1", today=date(2026, 9, 5),
-                               message=OPENING))
-
-    transcript = store.transcripts_for(out.matter.id)[-1]
-    assert any("disagree about how many" in str(v.get("detail"))
-               for v in transcript.get("violations", ())), (
-        "a trace recording nothing on a turn that made calls passed silently")
-
 
 # ============================= what is not traced ===========================
 
@@ -251,25 +136,3 @@ def test_a_schema_with_no_marker_is_named_rather_than_left_blank():
 
 # ============================== and it is sealed ============================
 
-def test_the_prompts_are_not_on_disk_in_the_clear(tmp_path):
-    """A prompt carries everything the advocate has said.
-
-    `file_store` already draws this line: `record_metrics` is plaintext
-    BECAUSE it carries no client words, and `record_turn` gets the matter
-    cipher because it does. The trace rides in the transcript, so it inherits
-    the cipher -- and that is worth asserting on the BYTES rather than
-    trusting, because the whole convention of the metrics directory is that
-    its contents are safe to read.
-    """
-    engine, store = _engine(tmp_path)
-    out = engine.run(TurnInput(advocate_id="adv_1", today=date(2026, 9, 5),
-                               message=OPENING))
-    assert store.transcripts_for(out.matter.id)[-1]["model_calls"]["count"] > 0
-
-    for path in tmp_path.rglob("*"):
-        if path.is_file():
-            blob = path.read_bytes()
-            assert b"15 April 1984" not in blob, (
-                f"the advocate's words are in the clear in {path.name}")
-            assert b"You extract" not in blob, (
-                f"a system prompt is in the clear in {path.name}")

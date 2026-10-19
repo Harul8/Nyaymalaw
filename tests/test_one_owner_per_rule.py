@@ -73,13 +73,6 @@ OWNED: dict[str, tuple[str, str | Callable[[str], bool], str]] = {
         "built to fill one provider's context does not port and the switch "
         "fails at switch time, which is when it is most expensive (B-002)"),
 
-    "how a court name is normalised": (
-        "nm/Archives/legal_brain/retrieve/jurisdiction_sources.py",
-        r"def normalise_court\b",
-        "one judgment in 33,791 carries `Supreme Court` where every other "
-        "carries `Supreme Court of India`; any second normaliser silently "
-        "drops a different row and the two disagree about what is binding"),
-
     "which values a structured response may take": (
         "nm/shared/model_port.py",
         r"def require_schema\b",

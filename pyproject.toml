@@ -120,12 +120,6 @@ markers = [
 [tool.ruff]
 line-length = 100
 target-version = "py311"
-# THE LINT POPULATION DID NOT CHANGE WITH THE LAYOUT. Before 14 September 2026
-# the gate linted nm/, tools/ and tests/; the specification generators under
-# spec/ were never in it. They now live in assurance/specification/, beside
-# tooling that IS linted, so they are excluded here by name rather than being
-# silently added to -- or silently dropped from -- the population.
-extend-exclude = ["assurance/specification"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "B"]
@@ -134,12 +128,6 @@ select = ["E", "F", "I", "N", "W", "B"]
 # they read better at the call site than StaleWriteError would. The names are
 # deliberate, so the rule is disabled with a reason rather than worked around.
 ignore = ["N818"]
-
-[tool.ruff.lint.per-file-ignores]
-# Hand-verified regex tables. Reflowing a regex is a change that fails
-# SILENTLY, and this project has already lost time to exactly that.
-"development_environment/one_off_tools/find_goldens2.py" = ["E501"]
-"pipeline/verify_set.py" = ["E501"]
 
 [tool.pylint.messages_control]
 # The rename sweep. pyflakes does not find these, and a stale call site after a

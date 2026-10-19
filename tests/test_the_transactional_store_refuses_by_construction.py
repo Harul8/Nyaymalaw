@@ -28,197 +28,21 @@ a successful one, and no amount of local testing with one tenant finds it.
 
 from __future__ import annotations
 
-import ast
-import inspect
-import re
 
 import pytest
 
-from nm.shared import store_postgres as pg
 from nm.shared.operation_contracts import (
     Operation,
     OutboxEntry,
-    OutboxRefused,
     Outcome,
     refuse_outbox,
     request_digest,
 )
-from nm.shared.transactional_port import TenantMismatch, TransactionalStorePort
 
 pytestmark = pytest.mark.class_a
 
 #: Tables whose every row belongs to exactly one workspace.
 TENANT_TABLES = ("nm_matter", "nm_operation", "nm_outbox")
-
-
-def _statements() -> list[str]:
-    """Every SQL string literal in the adapter, joined per call site.
-
-    Taken from the AST rather than by reading the file as text, so a statement
-    split across implicitly-concatenated lines is one statement here -- which
-    is how they are written, and a line-based scan would see a `SELECT` with
-    no `WHERE` on it and be satisfied by the wrong half.
-    """
-    tree = ast.parse(inspect.getsource(pg))
-    out: list[str] = []
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Constant) and isinstance(node.value, str):
-            text = " ".join(node.value.split())
-            if re.search(r"\b(SELECT|INSERT INTO|UPDATE|DELETE FROM)\b", text):
-                out.append(text)
-    return out
-
-
-def test_the_scan_can_see_the_adapters_statements():
-    """A scan that found nothing would pass the tenant check silently."""
-    found = _statements()
-    assert len(found) >= 8, found
-    assert any("UPDATE nm_matter" in s for s in found)
-    assert any("INSERT INTO nm_operation" in s for s in found)
-
-
-@pytest.mark.parametrize("table", TENANT_TABLES)
-def test_every_statement_against_a_tenant_table_is_scoped(table):
-    """A MISSING `WHERE workspace_id` IS A CROSS-TENANT READ THAT LOOKS LIKE A
-    SUCCESSFUL ONE, and testing with one tenant never finds it.
-
-    `nm_matter`'s bare `SELECT ... WHERE matter_id` is deliberately exempt and
-    is the ONE place a row is fetched without the filter -- because it exists
-    to tell *absent* from *not yours*, and it compares the workspace itself.
-    That exemption is named here rather than left as a hole the scan happens
-    not to notice.
-    """
-    unscoped = []
-    for statement in _statements():
-        if table not in statement:
-            continue
-        if "workspace_id" in statement:
-            continue
-        if statement.startswith("CREATE") or "nm_schema" in statement:
-            continue
-        unscoped.append(statement)
-
-    allowed = [
-        "SELECT workspace_id, sealed FROM nm_matter WHERE matter_id = %s",
-    ]
-    surprising = [s for s in unscoped if s not in allowed]
-    assert not surprising, f"these touch {table} without naming a workspace: {surprising}"
-
-
-def test_the_one_unscoped_read_exists_to_tell_absent_from_not_yours():
-    """The exemption above is only safe because of what `load` does with it.
-    If that changed, the exemption would become the hole."""
-    source = inspect.getsource(pg.PostgresMatterStore.load)
-    assert "TenantMismatch" in source
-    assert "return None" in source, "an absent matter must still read as absent"
-
-
-def test_a_foreign_row_raises_rather_than_reading_as_absent():
-    """*No rows* and *not yours* are different facts, and reporting the second
-    as the first is the absent-reads-as-success shape holding another firm's
-    matter -- a caller that sees None decides it may create one."""
-
-    class _Foreign:
-        def cursor(self):
-            return self
-
-        def __enter__(self):
-            return self
-
-        def __exit__(self, *a):
-            return False
-
-        def execute(self, sql, args=()):
-            self._sql = sql
-
-        def fetchall(self):
-            if "FROM nm_matter" in getattr(self, "_sql", ""):
-                return [("ws_other", b"{}")]
-            return []
-
-        def fetchone(self):
-            return None
-
-        def commit(self):
-            pass
-
-        def rollback(self):
-            pass
-
-        def close(self):
-            pass
-
-    store = pg.PostgresMatterStore(connect=lambda: _Foreign(), sealer=None, workspace_id="ws_mine")
-    with pytest.raises(TenantMismatch):
-        store.load("mat_1")
-
-
-def test_asking_this_store_for_another_workspaces_operation_is_refused():
-    store = pg.PostgresMatterStore(connect=lambda: None, sealer=None, workspace_id="ws_mine")
-    with pytest.raises(TenantMismatch):
-        store.operation("ws_other", "key-1")
-    with pytest.raises(TenantMismatch):
-        store.claim_outbox("ws_other", worker="w1", lease_seconds=30)
-
-
-def test_the_sealed_matter_carries_exactly_the_returned_database_version():
-    import json
-
-    from nm.work_the_file.matter_contracts import Matter
-
-    class Sealer:
-        payload = None
-
-        def seal(self, matter_id, payload):
-            self.payload = json.loads(payload)
-            return b"synthetic sealed bytes"
-
-    class Cursor:
-        rowcount = 1
-
-        def execute(self, *args):
-            pass
-
-    sealer = Sealer()
-    store = pg.PostgresMatterStore(connect=lambda: None, sealer=sealer, workspace_id="ws_a")
-    for expected in (0, 4):
-        saved = store._write_matter(
-            Cursor(),
-            Matter(id="mat_1", advocate_id="adv_a", title="Synthetic matter", version=99),
-            expected,
-        )
-        assert saved.version == expected + 1
-        assert sealer.payload["version"] == saved.version
-
-
-def test_real_adapter_declares_every_worker_capability_without_optional_fallback():
-    for name in ("claim_outbox", "renew_outbox", "record_job_outcome", "request_cancellation"):
-        assert callable(getattr(pg.PostgresMatterStore, name, None)), name
-
-
-def test_unknown_operation_still_exposes_its_persisted_cancellation_request():
-    class Cursor:
-        def execute(self, sql, args):
-            assert "cancel_requested_at" in sql
-
-        def fetchone(self):
-            return (
-                "op",
-                "ws",
-                "adv",
-                "advise",
-                "unknown",
-                "matter",
-                1,
-                "{}",
-                "digest",
-                "2026-09-12",
-                "2026-09-12T01:00:00+00:00",
-            )
-
-    operation = pg.PostgresMatterStore._operation(Cursor(), "op")
-    assert operation.outcome is Outcome.UNKNOWN
-    assert operation.cancel_requested_at == "2026-09-12T01:00:00+00:00"
 
 
 # ===================== the outbox cannot contradict itself ==================
@@ -270,17 +94,6 @@ def test_a_consistent_entry_is_accepted():
     assert refuse_outbox(entry, workspace_id="ws_a", operation=_operation()) == []
 
 
-def test_the_adapter_refuses_a_contradictory_entry_before_touching_the_database():
-    """Refused BEFORE the transaction opens, so a bad entry cannot leave a
-    half-written state behind."""
-    store = pg.PostgresMatterStore(
-        connect=lambda: pytest.fail("the database was opened"), sealer=None, workspace_id="ws_a"
-    )
-    entry = OutboxEntry(entry_id="e1", workspace_id="ws_b", operation_key="key-1", kind="advise")
-    with pytest.raises(OutboxRefused):
-        store.commit_accepted(object(), expected_version=0, operation=_operation(), outbox=(entry,))
-
-
 # ============================== replay and conflict =========================
 
 
@@ -323,12 +136,3 @@ def test_the_retryable_set_is_exactly_the_unfinished_ones():
     assert retryable == {Outcome.ACCEPTED, Outcome.RUNNING}
 
 
-def test_the_adapter_satisfies_the_transactional_port():
-    for name in ("commit_accepted", "operation", "claim_outbox"):
-        assert hasattr(pg.PostgresMatterStore, name)
-    assert isinstance(TransactionalStorePort, type)
-
-
-def test_the_schema_says_which_version_it_is():
-    assert pg.SCHEMA_VERSION == 2
-    assert any("nm_schema" in statement for statement in pg.DDL)

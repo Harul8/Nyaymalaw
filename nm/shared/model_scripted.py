@@ -21,7 +21,6 @@ import time
 from collections.abc import Callable, Mapping
 from typing import Any
 
-from nm.Archives.legal_brain.common.quotable_contracts import CONTEXT_HEADING, WORDS_HEADING
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_budget import estimate_tokens, guard_budget, guard_tool_budget
 from nm.shared.model_config import CONTEXT_BUDGET, ModelConfig, TierConfig
@@ -42,7 +41,13 @@ from nm.shared.model_port import (
     tool_request_text,
 )
 from nm.shared.text_contracts import snippet
-from nm.work_the_file.chronology import CHART_HEADING
+
+#: Prompt headings the scripted double looks for. Their owners (the archived
+#: quotable contracts and the chronology module) were deleted on 19 Oct 2026
+#: (P24); the double keeps the exact wording it was written against.
+WORDS_HEADING = "THE ADVOCATE'S OWN WORDS"
+CONTEXT_HEADING = "FOR CONTEXT ONLY"
+CHART_HEADING = "THE CHRONOLOGY SO FAR"
 
 Responder = Callable[[Prompt, Tier], str]
 

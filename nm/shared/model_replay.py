@@ -12,16 +12,6 @@ import hashlib
 import json
 from dataclasses import asdict
 
-from nm.Archives.legal_brain.orchestrate.loop_contracts import LoopRecord, StepKind
-from nm.Archives.legal_brain.orchestrate.tool_offers import OfferRefused, ToolOfferState
-from nm.Archives.legal_brain.orchestrate.tools import (
-    Assessment,
-    Availability,
-    Effect,
-    ToolEnvelope,
-    ToolKind,
-    ToolOutcome,
-)
 from nm.shared import model_port as port
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_budget import guard_budget, guard_tool_budget
@@ -154,173 +144,6 @@ def _usage_from_wire(row):
     return usage
 
 
-def records_from_loop(record: LoopRecord, tools, *, versions=None):
-    """Import the actual sealed call journal, using the adapter's request identity.
-
-    Incomplete dispatches cannot be replayed as successes or attempted again.
-    This importer only interprets already captured model calls; it does not
-    execute tool events and makes no claim about live provider quality.
-    """
-    if not isinstance(record, LoopRecord) or not record.terminal:
-        raise port.SchemaViolation("Replay requires a closed typed loop journal")
-    # Recheck every captured event as well as chain continuity at this boundary.
-    # Frozen records can still have been assembled by a caller with object hooks.
-    for event in record.events:
-        event.__post_init__()
-    record.__post_init__()
-    recorded_versions = {
-        "principles": record.identity.principles_version,
-        "tools": record.identity.tools_version,
-        "matter": str(record.identity.matter_version),
-    }
-    if versions is not None and dict(versions) != recorded_versions:
-        raise port.SchemaViolation(
-            "Current principles, tools/sources or matter differ from the journal"
-        )
-    captured_tools = record.events[0].payload.get("tools")
-    if captured_tools != json.loads(json.dumps([asdict(tool) for tool in tools])):
-        raise port.SchemaViolation("Replay tool definitions differ from the captured registry")
-    inventory = tuple(sorted(tools, key=lambda row: row.name))
-    offer_record = record.events[0].payload.get("tool_offer")
-    try:
-        state = (ToolOfferState.from_record(offer_record, inventory) if offer_record else
-                 ToolOfferState(inventory, record.identity.tools_version,
-                                tuple(row.name for row in inventory)))
-        if state.registry_version != record.identity.tools_version:
-            raise OfferRefused("The saved schema offer names another registered version.")
-    except (TypeError, ValueError) as exc:
-        raise port.SchemaViolation("The saved schema offer cannot be verified") from exc
-    rows, pending, pending_tools, active_calls = [], None, tools, {}
-    try:
-        for event in record.events:
-            payload = event.payload
-            if event.kind is StepKind.MODEL_STARTED:
-                if pending is not None:
-                    raise port.SchemaViolation("A saved model dispatch has no completion receipt")
-                prompt = port.Prompt(**payload["prompt"])
-                messages = _messages_from_wire(payload["messages"])
-                tier = port.Tier(payload["tier"])
-                if "tools" in payload:
-                    pending_tools = tuple(port.ToolDefinition(**row) for row in payload["tools"])
-                    state.require_offer(pending_tools)
-                elif offer_record:
-                    raise port.SchemaViolation("A saved dispatch omitted its exact offered schemas")
-                else:
-                    pending_tools = tools  # A legacy eager dispatch, not lazy-loading evidence.
-                port.require_tool_request(pending_tools, messages)
-                ceiling = payload["max_tokens"]
-                if type(ceiling) is not int or ceiling <= 0:
-                    raise port.SchemaViolation("A saved model call has no positive output ceiling")
-                pending = {
-                    "schema": 1,
-                    "fingerprint": _identity(
-                        "tool_call",
-                        versions=recorded_versions,
-                        prompt=prompt,
-                        tools=pending_tools,
-                        messages=messages,
-                        tier=tier,
-                        max_tokens=ceiling,
-                    ),
-                    "versions": dict(recorded_versions),
-                    "operation": "tool_call",
-                    "provider": payload.get("provider"),
-                    "model": payload.get("model"),
-                }
-            elif event.kind is StepKind.MODEL_RETURNED:
-                if pending is None:
-                    raise port.SchemaViolation("A saved model result has no dispatch record")
-                result = _decode(payload["result"])
-                if not isinstance(result, port.ToolCallResult):
-                    raise port.SchemaViolation(
-                        "The loop did not capture a neutral tool-call result"
-                    )
-                _usage_from_wire(payload["result"]["value"]["usage"])
-                if any(
-                    type(value) is not int or value < 0
-                    for value in (result.latency_ms, result.retries)
-                ):
-                    raise port.SchemaViolation("A saved model result has invalid accounting")
-                if result.tier is not tier:
-                    raise port.SchemaViolation("The saved result changed the requested tier")
-                port.require_tool_calls(result.calls, pending_tools, messages)
-                if (
-                    payload["text"],
-                    payload["calls"],
-                    payload["model"],
-                    payload["provider"],
-                    payload["completion"],
-                ) != (
-                    result.text,
-                    json.loads(json.dumps([asdict(call) for call in result.calls])),
-                    result.model,
-                    result.provider,
-                    result.completion.value,
-                ):
-                    raise port.SchemaViolation(
-                        "The journal's result and accounting receipt disagree"
-                    )
-                if pending["provider"] is not None and (pending["provider"], pending["model"]) != (
-                    result.provider,
-                    result.model,
-                ):
-                    raise port.SchemaViolation("A result changed the admitted provider or model")
-                pending.update(
-                    provider=result.provider, model=result.model, result=payload["result"]
-                )
-                _append_imported(rows, pending)
-                pending = None
-            elif event.kind is StepKind.TOOL_STARTED:
-                call = port.ToolCall(**payload["call"])
-                if call.call_id in active_calls:
-                    raise port.SchemaViolation("A saved tool invocation reused its identity")
-                active_calls[call.call_id] = call
-            elif event.kind is StepKind.TOOL_RETURNED:
-                call = active_calls.pop(payload["call_id"], None)
-                if call is None:
-                    raise port.SchemaViolation("A saved receipt has no matching invocation")
-                raw = payload["receipt"]
-                receipt = ToolEnvelope(**{**raw, "kind": ToolKind(raw["kind"]),
-                    "outcome": ToolOutcome(raw["outcome"]),
-                    "availability": Availability(raw["availability"]),
-                    "assessment": Assessment(raw["assessment"]), "effect": Effect(raw["effect"])})
-                state = state.loaded_by(call, receipt)
-            elif event.kind is StepKind.FAILURE and pending is not None:
-                error = payload.get("error")
-                if not isinstance(error, dict):
-                    raise port.SchemaViolation(
-                        "A saved model failure has no normalized error receipt"
-                    )
-                _known_error(
-                    error, operation="tool_call", tier=tier,
-                    provider=pending["provider"], model=pending["model"],
-                )
-                if not all(
-                    isinstance(pending[key], str) and pending[key].strip()
-                    for key in ("provider", "model")
-                ):
-                    raise port.SchemaViolation(
-                        "A failed call has no captured provider/model identity"
-                    )
-                pending["error"] = error
-                _append_imported(rows, pending)
-                pending = None
-            elif pending is not None:
-                raise port.SchemaViolation(
-                    "A saved model dispatch ended without a result or error receipt"
-                )
-    except (KeyError, TypeError, ValueError, OfferRefused) as exc:
-        raise port.SchemaViolation("The saved model journal is malformed") from exc
-    if pending is not None or not rows:
-        raise port.SchemaViolation("The loop has no complete replayable model-call population")
-    return tuple(rows), recorded_versions
-
-
-def _append_imported(rows, row):
-    row["record_digest"] = _record_digest(row)
-    rows.append(row)
-
-
 _ERRORS = {
     name: value
     for name, value in vars(port).items()
@@ -419,11 +242,6 @@ class ReplayModel:
         # Deep copy: editing a live recorder must not mutate a replay verdict.
         self.records = json.loads(json.dumps(records, allow_nan=False))
         self.versions, self.position = dict(versions), 0
-
-    @classmethod
-    def from_loop(cls, record: LoopRecord, tools, *, versions=None):
-        rows, captured_versions = records_from_loop(record, tools, versions=versions)
-        return cls(rows, versions=captured_versions)
 
     @property
     def provider(self):

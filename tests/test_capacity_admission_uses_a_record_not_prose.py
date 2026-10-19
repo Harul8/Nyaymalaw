@@ -7,13 +7,10 @@ holds the file until a person resolves it, and no prose ever clears it.
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 import pytest
 
-from nm.open_matter import screens
-from nm.open_matter.capacity_contracts import Capacity, CapacityPosition
-from nm.shared.traceability_contracts import refuses
 
 pytestmark = pytest.mark.class_a
 NOW = datetime(2026, 9, 12, 10, tzinfo=timezone.utc)
@@ -39,76 +36,10 @@ def _saved(client, response):
     return matter
 
 
-def _capacity_screen(matter):
-    return next(screen for screen in screens.from_stored(matter.screens)
-                if screen.kind is screens.ScreenKind.CAPACITY)
-
-
 def _states_the_limit(response, word: str) -> bool:
     """The reply says the limit out loud, as a disclosure the advocate reads."""
     return any(word in e["text"].lower() and e["disclosure"]
                for e in response.json()["elements"])
-
-
-@refuses("B6", 1)
-@pytest.mark.parametrize("state", list(Capacity))
-def test_each_explicit_state_reaches_the_actual_served_admission(client, monkeypatch, state):
-    from nm.app.api import application
-
-    engine = application().engine
-    monkeypatch.setattr(engine, "_clock", lambda: NOW)
-    original = engine._admit_facts
-    entered = []
-
-    def admit(*args, **kwargs):
-        entered.append(True)
-        return original(*args, **kwargs)
-
-    monkeypatch.setattr(engine, "_admit_facts", admit)
-    response = client.post("/api/turn", json=_request(capacity={
-        "state": state.value, "basis": "The advocate records this explicit assessment."}))
-    matter = _saved(client, response)
-    stored = matter.intake_answers["capacity"]
-    assert stored["state"] == state.value
-    assert stored["raised_by"] == "adv_demo"
-    assert stored["raised_at"] == NOW.isoformat()
-    assert stored["resolved_by"] == ("adv_demo" if state is Capacity.NOT_IN_DOUBT else "")
-    assert stored["next_step"]
-    screen = _capacity_screen(matter)
-    assert screen.clears is (state is Capacity.NOT_IN_DOUBT)
-    # IN DOUBT holds the file; UNASSESSED is worked with the limit stated.
-    assert bool(entered) is (state is not Capacity.IN_DOUBT)
-    if state is Capacity.IN_DOUBT:
-        assert response.json()["blocked"]
-        assert not matter.facts
-    if state is Capacity.NOT_ASSESSED:
-        assert _states_the_limit(response, "capacity"), (
-            "an unassessed capacity was worked around silently")
-
-
-@pytest.mark.parametrize("answer", ["yes", "not in doubt", "in doubt", "cannot instruct",
-                                       "the advocate confirms the client can give instructions"])
-def test_legacy_prose_never_grandfathers_a_capacity_clearance(client, answer):
-    response = client.post("/api/turn", json=_request(
-        release={"scope": "recovery advice", "capacity": answer}))
-    matter = _saved(client, response)
-    # PROSE NEVER CLEARS IT, whatever it says: the screen stays unassessed and
-    # the reply says so, while the file is worked.
-    assert _capacity_screen(matter).state is screens.ScreenState.NOT_ASSESSED
-    assert matter.intake_answers["capacity"]["answer"] == answer
-    assert _states_the_limit(response, "capacity")
-
-
-@refuses("B6", 0)
-@pytest.mark.parametrize("basis", ["The client is distressed", "The client is elderly",
-                                     "An unusual instruction was reported"])
-def test_personal_description_never_creates_a_capacity_finding(basis):
-    position = CapacityPosition.record(
-        {"state": "not_assessed", "basis": basis}, actor="adv", now=NOW)
-    assert position.state is Capacity.NOT_ASSESSED
-    assert not position.authorises_at(NOW)
-    assert not position.resolved_by
-    assert position.basis == basis
 
 
 @pytest.mark.parametrize("value", [
@@ -133,100 +64,6 @@ def test_two_competing_capacity_representations_are_refused(client):
     assert client.get("/api/matters").json()["matters"] == []
 
 
-def test_uncertainty_reopens_capacity_and_preserves_the_prior_assessment(client, monkeypatch):
-    from nm.app.api import application
-    from nm.shared.store_file_store import FileMatterStore
-    from tests.test_turn_contract import KEY
-
-    engine = application().engine
-    monkeypatch.setattr(engine, "_clock", lambda: NOW)
-    first = _saved(client, client.post("/api/turn", json=_request(capacity={
-        "state": "not_in_doubt", "basis": "The advocate's first assessment."})))
-    assert _capacity_screen(first).clears
-    prior = first.intake_answers["capacity"]
-    monkeypatch.setattr(engine, "_clock", lambda: NOW + timedelta(minutes=5))
-    changed = client.post("/api/turn", json=_request(
-        matter_id=first.id,
-        capacity={"state": "in_doubt", "basis": "New material requires human review."}))
-    current = _saved(client, changed)
-    assert changed.json()["blocked"]
-    assert current.facts == first.facts
-    assert _capacity_screen(current).state is screens.ScreenState.BLOCKED
-    assert current.intake_answers["capacity_history"][-1] == prior
-    fresh = FileMatterStore(application().store._root, key=KEY).load(first.id)
-    assert fresh.intake_answers["capacity"] == current.intake_answers["capacity"]
-    assert fresh.intake_answers["capacity_history"][-1] == prior
-    assert not screens.capacity_screen(fresh.intake_answers["capacity"], NOW).clears
-
-
-def test_a_later_explicit_resolution_can_open_capacity_without_erasing_the_question(client):
-    first = _saved(client, client.post("/api/turn", json=_request(capacity={
-        "state": "in_doubt", "basis": "An assessment is required."})))
-    assert not _capacity_screen(first).clears
-    second = _saved(client, client.post("/api/turn", json=_request(
-        matter_id=first.id,
-        capacity={"state": "not_in_doubt", "basis": "The advocate resolved the recorded doubt."})))
-    assert _capacity_screen(second).clears
-    assert second.intake_answers["capacity_history"][-1]["state"] == "in_doubt"
-    assert second.intake_answers["capacity"]["resolved_by"] == "adv_demo"
-
-
-def test_clear_capacity_does_not_clear_an_unanswered_scope(client):
-    response = client.post("/api/turn", json=_request(
-        release={}, capacity={"state": "not_in_doubt", "basis": "Explicit assessment."}))
-    matter = _saved(client, response)
-    assert _capacity_screen(matter).clears
-    scope = next(screen for screen in screens.from_stored(matter.screens)
-                 if screen.kind is screens.ScreenKind.SCOPE)
-    assert not scope.clears
-    # An unrecorded scope is a STEP gate too: stated, not a bar on the file.
-    assert _states_the_limit(response, "instruct")
-
-
-def test_future_or_damaged_stored_clearance_is_not_current():
-    future = CapacityPosition.record(
-        {"state": "not_in_doubt", "basis": "Explicit assessment."},
-        actor="adv", now=NOW + timedelta(days=1))
-    assert not screens.capacity_screen(future.as_dict(), NOW).clears
-    damaged = future.as_dict()
-    damaged["resolved_by"] = ""
-    assert CapacityPosition.from_stored(damaged).state is Capacity.NOT_ASSESSED
-    assert not screens.capacity_screen(damaged, NOW + timedelta(days=2)).clears
-
-
-def test_capacity_can_be_corrected_after_opening_without_a_model_call(client, monkeypatch):
-    from nm.app.api import application
-    first = _saved(client, client.post('/api/turn', json=_request(capacity={
-        'state': 'not_assessed', 'basis': 'Not yet assessed.'})))
-    receipt = first.turn_receipts
-    with monkeypatch.context() as patch:
-        engine = application().engine
-        patch.setattr(getattr(engine, 'inner', engine), 'run',
-                      lambda *a, **k: pytest.fail('paid call'))
-        result = client.post(f'/api/matters/{first.id}/capacity', json={
-            'expected_version': first.version, 'state': 'not_in_doubt',
-            'basis': 'The advocate has assessed these instructions.'})
-        assert result.status_code == 200, result.text
-    current = application().store.load(first.id)
-    assert current.turn_receipts == receipt
-    assert current.intake_answers['capacity_history'][-1]['state'] == 'not_assessed'
-    assert current.intake_answers['capacity']['raised_by'] == 'adv_demo'
-    assert client.post(f'/api/matters/{first.id}/capacity', json={
-        'expected_version': first.version, 'state': 'in_doubt', 'basis': 'Changed.'}
-    ).status_code == 409
-    cover = client.get(f'/api/matters/{first.id}/cover').json()
-    assert cover['capacity_assessment']['state'] == 'not_in_doubt'
-    # The real next-turn screen, not this endpoint, determines admission.
-    next_turn = _saved(client, client.post('/api/turn', json=_request(matter_id=first.id)))
-    assert _capacity_screen(next_turn).clears
-    revoked = client.post(f'/api/matters/{first.id}/capacity', json={
-        'expected_version': next_turn.version, 'state': 'in_doubt', 'basis': 'New concern.'})
-    assert revoked.status_code == 200
-    blocked = client.post('/api/turn', json=_request(matter_id=first.id))
-    assert blocked.status_code == 200 and blocked.json()['blocked']
-    assert not _capacity_screen(application().store.load(first.id)).clears
-
-
 @pytest.mark.parametrize('extra', [{'basis': ' '}, {'raised_by': 'forged'},
                                   {'raised_at': '2026-01-01'}, {'state': 'yes'}])
 def test_capacity_correction_rejects_forged_or_incomplete_records(client, extra):
@@ -240,27 +77,3 @@ def test_capacity_correction_rejects_forged_or_incomplete_records(client, extra)
         'basis': 'Explicit assessment.'}).status_code == 404
 
 
-@pytest.mark.parametrize('state', list(Capacity))
-def test_capacity_conversation_is_plain_language_without_losing_attribution(state):
-    position = CapacityPosition.record({'state': state.value, 'basis': 'The recorded human basis.'},
-                                       actor='adv_internal_identity', now=NOW)
-    said = position.said()
-    assert state.value not in said
-    assert 'adv_internal_identity' not in said
-    assert 'The recorded human basis.' in said
-    assert position.as_dict()['raised_by'] == 'adv_internal_identity'
-
-
-def test_the_served_negative_control_bites_when_capacity_admission_is_bypassed(client, monkeypatch):
-    def require_refusal():
-        response = client.post("/api/turn", json=_request(capacity={
-            "state": "in_doubt", "basis": "A human decision remains outstanding."}))
-        matter = _saved(client, response)
-        assert not _capacity_screen(matter).clears, "in-doubt capacity was cleared"
-
-    require_refusal()
-    monkeypatch.setattr(screens, "capacity_screen", lambda record, now: screens.Screen(
-        kind=screens.ScreenKind.CAPACITY, state=screens.ScreenState.CLEAR,
-        detail="mutated admission bypass"))
-    with pytest.raises(AssertionError, match="in-doubt capacity was cleared"):
-        require_refusal()

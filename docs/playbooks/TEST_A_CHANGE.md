@@ -257,20 +257,13 @@ BK-80 tracks the automated report-validity checks still to be implemented.
 
 ## Approval boundaries
 
-The ordinary per-task gate may run Class A and local non-judged tests. Golden,
+Ordinary work may run the offline (Class A) and local non-judged tests. Golden,
 served end-to-end scenario and Class-D judged runs require explicit approval
 for the named bounded run. Long ingest, index, training or similar jobs are
 prepared and reported, not started automatically.
 
 Routine repository commands are documented in `CLAUDE.md`. Select the checks for
-the changed contract there. The retained legacy control-plane commands below
-verify their historical inputs; they neither own the current work queue nor
-certify the new engine:
-
-```text
-python assurance/control_plane/backlog.py check
-python assurance/gate/check.py
-```
+the changed contract there.
 
 Do not add approval-only suites to an automatic path merely to make this stage
 look complete.
@@ -332,13 +325,3 @@ VERIFIED: yes / no, with exact claim supported:
 
 **Handoff to Sign-off:** provide the Start Record, Build Record and Evidence
 Pack. Sign-off decides the strongest claim the complete current evidence earns.
-
----
-
-<!-- THE RULES THIS PLAYBOOK CARRIES. `docs/backlog/build_rules.json`
-     is the registry; this manifest is how the card CLAIMS its rules.
-     Dropping one now means deleting an id here, which lint refuses --
-     because two rules were lost when the guide was split and nothing
-     noticed. Do not edit by hand except to add a genuinely new rule
-     to the registry first. -->
-<!-- BUILD_RULES: BG-011 BG-015 BG-016 BG-054 BG-055 BG-056 BG-070 BG-071 BG-072 BG-073 BG-074 BG-080 -->

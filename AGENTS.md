@@ -294,10 +294,10 @@ and remaining work (owner decisions, 10 October 2026, including P12). Take one
 slice at a time and record its agreed contract before building. The legal brain
 sheet keeps capability intent and detail; link execution records to it rather
 than maintaining another status record. Before Build, the Implementation Plan
-sheet's LB rows, the earlier PRD, backlog registries, PLAN.md and earlier plan
-workbooks are historical planning references, not competing build queues. Their
-existing checks remain until an explicit replacement or retirement is agreed;
-historical planning status does not prove current runtime behaviour.
+sheet's LB rows are historical planning references, not competing build queues.
+The earlier PRD, backlog registries, PLAN.md, earlier plan workbooks and their
+checks were deleted on 19 October 2026 (owner decision P24) and remain in Git
+history; historical planning status does not prove current runtime behaviour.
 Keep each repair atomic: change at most one model prompt and one production
 code file in a piece, with only the focused tests and documentation needed to
 prove it. Name the observable pass condition before editing. Do not move to

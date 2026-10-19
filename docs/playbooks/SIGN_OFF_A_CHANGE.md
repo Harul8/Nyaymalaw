@@ -87,9 +87,8 @@ dependency only when the current task authorises that change. Keep capability
 intent in legal brain and change a live gate or schema only at its owning source.
 
 Check stable IDs, dependencies and evidence links. Do not regenerate the old
-PRD, backlog board or end-to-end plan to record current core-engine work; P12
-made those planning artifacts historical. Retained tooling may still check their
-unchanged compatibility inputs. Such a result is not new-engine acceptance.
+PRD, backlog board or end-to-end plan to record current core-engine work; they
+were deleted on 19 October 2026 (P24) and remain only in Git history.
 
 ## 4. Apply the cumulative release ladder
 
@@ -261,13 +260,3 @@ Reason:
 
 The change is closed only at the level named in this record. A production
 signal may reopen it by invalidating the evidence on which that level depended.
-
----
-
-<!-- THE RULES THIS PLAYBOOK CARRIES. `docs/backlog/build_rules.json`
-     is the registry; this manifest is how the card CLAIMS its rules.
-     Dropping one now means deleting an id here, which lint refuses --
-     because two rules were lost when the guide was split and nothing
-     noticed. Do not edit by hand except to add a genuinely new rule
-     to the registry first. -->
-<!-- BUILD_RULES: BG-017 BG-018 BG-031 BG-032 BG-033 BG-034 BG-035 BG-036 BG-037 BG-038 BG-039 BG-040 BG-041 BG-042 BG-043 BG-044 BG-045 BG-057 BG-058 BG-059 BG-075 BG-076 BG-077 BG-081 -->

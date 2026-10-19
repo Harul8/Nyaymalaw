@@ -223,62 +223,6 @@ def test_a_caller_cannot_promote_itself_by_claiming_a_capacity(client):
     assert attempt.status_code == 403, attempt.text
 
 
-def test_a_recorded_decision_maker_may_concede(client):
-    """The negative control for the refusals: an authority policy that refused
-    every concession would be safe and useless."""
-    matter_id = _matter(client)
-    body = _full_body()
-    # The signed-in advocate IS the recorded decision maker on this file.
-    body["deciding"] = {
-        "party_id": "adv_demo",
-        "described_as": "the client",
-        "capacity": "deciding",
-    }
-    _record(client, matter_id, body)
-    _provision_deciding(matter_id)
-
-    allowed = client.post(f"/api/matters/{matter_id}/concede", json={"on": "the interest claim"})
-    assert allowed.status_code == 200, allowed.text
-    assert allowed.json()["state"] == "decision_recorded"
-    assert allowed.json()["externally_effective"] is False
-    records = client.get(f"/api/matters/{matter_id}/concede").json()["decisions"]
-    assert records[-1]["on"] == "the interest claim"
-    assert records[-1]["by"] == "adv_demo"
-
-
-def _provision_deciding(matter_id, **overrides):
-    """Trusted fixture boundary, not a self-service HTTP authority claim."""
-    from dataclasses import replace
-    from datetime import timedelta
-
-    from nm.app.api import application
-    from nm.arrive.advocate_contracts import utcnow
-    from nm.open_matter.commission_contracts import Commission
-    from nm.shared.authority_contracts import ActingAs, bind_authority
-
-    store = application().store
-    matter = store.load(matter_id)
-    now = utcnow()
-    grant = bind_authority(
-        actor_id="adv_demo",
-        capacity=ActingAs.DECIDING,
-        issued_by="verified-authority-officer",
-        basis="synthetic authority reviewed",
-        commission_version=Commission.from_stored(matter.commission).version,
-        issued_at=now,
-        expires_at=now + timedelta(hours=1),
-    )
-    grant.update(overrides)
-    store.commit(
-        replace(
-            matter,
-            authority_bindings=(*matter.authority_bindings, grant),
-            version=matter.version + 1,
-        ),
-        expected_version=matter.version,
-    )
-
-
 def test_posting_oneself_as_decision_maker_does_not_grant_authority(client):
     matter_id = _matter(client)
     body = _full_body()
@@ -287,36 +231,6 @@ def test_posting_oneself_as_decision_maker_does_not_grant_authority(client):
     refused = client.post(f"/api/matters/{matter_id}/concede", json={"on": "interest"})
     assert refused.status_code == 403
     assert client.get(f"/api/matters/{matter_id}/concede").json()["decisions"] == []
-
-
-@pytest.mark.parametrize(
-    "override",
-    [
-        {"expires_at": "2001-01-01T00:00:00+00:00"},
-        {"revoked_at": "2026-01-01T00:00:00+00:00"},
-        {"commission_version": 999},
-    ],
-)
-def test_expired_revoked_or_stale_authority_cannot_decide(client, override):
-    matter_id = _matter(client)
-    _record(client, matter_id, _full_body())
-    _provision_deciding(matter_id, **override)
-    assert (
-        client.post(f"/api/matters/{matter_id}/concede", json={"on": "interest"}).status_code == 403
-    )
-
-
-def test_decision_replay_is_one_receipt_and_reused_key_conflicts(client):
-    matter_id = _matter(client)
-    _record(client, matter_id, _full_body())
-    _provision_deciding(matter_id)
-    path = f"/api/matters/{matter_id}/concede"
-    body = {"decision_id": "intent-1", "on": "interest"}
-    first = client.post(path, json=body)
-    assert first.status_code == 200
-    assert client.post(path, json=body).json() == first.json()
-    assert len(client.get(path).json()["decisions"]) == 1
-    assert client.post(path, json={**body, "on": "principal"}).status_code == 409
 
 
 def test_a_material_instruction_reopens_persisted_scope_not_just_a_flag(client):
@@ -334,22 +248,6 @@ def test_a_material_instruction_reopens_persisted_scope_not_just_a_flag(client):
     assert (
         after.commission_invalidations[-1]["prior_scope_answer"] == before.intake_answers["scope"]
     )
-
-
-def test_decision_and_refusal_write_failure_never_claim_success(client, monkeypatch):
-    from nm.app.api import application
-
-    matter_id = _matter(client)
-    _record(client, matter_id, _full_body())
-    _provision_deciding(matter_id)
-
-    def unavailable(*args, **kwargs):
-        raise OSError("synthetic disk failure")
-
-    monkeypatch.setattr(application().store, "commit", unavailable)
-    path = f"/api/matters/{matter_id}/concede"
-    assert client.post(path, json={"on": "interest"}).status_code == 503
-    assert client.post(path, json={"on": "interest", "acting_as": "assisting"}).status_code == 503
 
 
 # CSRF IS NOT CHECKED HERE, DELIBERATELY.

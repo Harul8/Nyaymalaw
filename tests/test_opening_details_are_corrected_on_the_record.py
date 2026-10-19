@@ -7,7 +7,6 @@ each correction names who, when and what changed, a removed party stays in the
 history, a stale form cannot write over newer details, a retry is one
 correction, and the details now in force are read through one owner.
 """
-import re
 from pathlib import Path
 
 import pytest
@@ -109,25 +108,3 @@ def test_another_account_cannot_correct_the_opening(client):
     assert _correct(client, opened, stage='Hijack').status_code == 404
 
 
-def test_the_details_in_force_reach_the_model_and_the_conversation(client):
-    from nm.open_matter.opening_contracts import current_opening, instruction_context
-
-    opened = _open(client)
-    _correct(client, opened, proceedings='none')
-    held = _application().store.load(opened['matter_id'])
-    assert current_opening(held)['proceedings'] == 'none'
-    context = instruction_context(held)
-    assert '"proceedings": "none"' in context and 'proceedings: no proceedings' in context
-    notes = client.get(f"/api/matters/{opened['matter_id']}/transcript").json()['opening_changes']
-    assert notes and 'proceedings: no proceedings' in notes[0]['changes']
-
-
-def test_no_module_reads_the_original_opening_answer_around_its_owner():
-    """ONE READER. A caller reading the original record directly keeps acting
-    on details the advocate has since corrected -- the population is every
-    source file in the product, not the module where this was found."""
-    owner = ROOT / 'nm' / 'open_matter' / 'opening_contracts.py'
-    pattern = re.compile(r"intake_answers[^\n]*[\"']opening[\"']")
-    offenders = [str(path.relative_to(ROOT)) for path in (ROOT / 'nm').rglob('*.py')
-                 if path != owner and pattern.search(path.read_text(encoding='utf8'))]
-    assert not offenders, f'read the opening through current_opening/recorded_brief: {offenders}'

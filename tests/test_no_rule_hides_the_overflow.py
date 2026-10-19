@@ -40,7 +40,7 @@ from pathlib import Path
 
 import pytest
 
-from assurance.common.homes import browser_sources
+from nm.shared.source_layout import browser_assets
 
 pytestmark = pytest.mark.class_a
 
@@ -87,7 +87,7 @@ def hidden_overflow_on_a_scroller(css: str) -> list[str]:
 
 
 def _stylesheets() -> list[Path]:
-    return [path for path in browser_sources() if path.suffix == ".css"]
+    return sorted({path for path in browser_assets().values() if path.suffix == ".css"})
 
 
 def test_no_stylesheet_clips_the_document_scroll_width():

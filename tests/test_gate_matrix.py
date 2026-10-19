@@ -25,7 +25,6 @@ from nm.shared.gates_contracts import (
     gate,
     withholding,
 )
-from nm.shared.metrics_contracts import TurnMetrics
 from nm.shared.traceability_contracts import refuses
 
 pytestmark = pytest.mark.class_a
@@ -85,33 +84,6 @@ def test_an_unknown_gate_id_raises_rather_than_becoming_a_label():
         gate("G-TYPO")
 
 
-def test_the_response_is_read_from_the_matrix_not_passed_in():
-    """The call site reports the condition. The TABLE decides what happens.
-
-    Before this, each site decided for itself — which is exactly how the
-    specification came to claim one failure policy while nine sites implemented
-    others.
-    """
-    m = TurnMetrics(turn_id="t")
-    assert m.fire("G-POSTURE", "unresolved", "x") is Response.BLOCK
-    assert m.fire("G-GROUND", "unsupported", "y") is Response.WITHHOLD
-    assert m.fire("G-NOTHELD", "not_held", "z") is Response.DISCLOSE
-
-    # Only the WITHHOLD one becomes a gating violation, and the caller never
-    # said so.
-    assert [v.rule for v in m.gating_violations] == ["G-GROUND"]
-
-
-@refuses("D9", 3)
-def test_an_out_of_vocabulary_state_is_refused():
-    """PRD D9: an out-of-vocabulary facet value is blanked and re-derived,
-    never accepted. A gate that accepts any state string cannot be reported
-    on — every dashboard over it silently invents categories."""
-    m = TurnMetrics(turn_id="t")
-    with pytest.raises(ValueError, match="vocabulary"):
-        m.fire("G-POSTURE", "probably_fine", "x")
-
-
 def test_every_gate_names_a_feature_and_a_visible_response():
     for g in GATES:
         assert g.feature.strip(), f"{g.id} owns no feature"
@@ -150,44 +122,3 @@ def test_unbuilt_gates_are_declared_unbuilt():
         "regressed, and both need a deliberate edit here")
 
 
-def test_the_plaintext_metrics_record_carries_no_gate_detail():
-    """THE AUDIT TRAIL IS PRIVILEGED, AND THE METRICS DIRECTORY IS NOT.
-
-    `file_store.record_metrics` writes `as_dict()` in the clear, and its
-    docstring said "never containing client words" — a claim nothing measured.
-    It was true only for as long as no gate detail quoted the matter, and
-    P22's limitation reasoning ended that: `G-PREMISE` fires with "the period
-    was run from <the advocate's own chronology entry> because the cause
-    carries no curated accrual trigger", and the sentence landed in
-    `turn_<id>.json` beside the token counts.
-
-    THE POPULATION IS THE WHOLE MATRIX, not the gate that exposed it. Every
-    gate is fired here with a sentinel in its detail, so a gate written next
-    month is covered on the day it is added rather than on the day someone
-    remembers. The state comes from each gate's own vocabulary, because `fire`
-    refuses an out-of-vocabulary one.
-
-    BOTH DIRECTIONS. A redaction that also emptied the served response would
-    delete the audit panel the product argues for, and would pass the half of
-    this test that matters least — so the sentence is asserted PRESENT in
-    `as_served()` in the same breath as it is asserted absent from `as_dict()`.
-    """
-    secret = "THE-ADVOCATE-SAID-15-APRIL-1984"
-    m = TurnMetrics(turn_id="turn_1", matter_id="mat_1")
-    for g in GATES:
-        m.fire(g.id, g.states[0], f"{g.id}: {secret}")
-
-    plaintext = repr(m.as_dict())
-    assert secret not in plaintext, (
-        "a gate detail reached the plaintext metrics record. That file sits in "
-        "a directory whose whole convention is that its contents are safe to "
-        "read, and a detail is a sentence about the matter.")
-    assert not any("detail" in row for row in m.as_dict()["gates_fired"]), (
-        "`detail` survived the redaction under its own name; a field dropped "
-        "by value and kept by key comes back the first time one is empty")
-
-    served = repr(m.as_served())
-    assert served.count(secret) >= len(GATES), (
-        "the served record lost gate details. The advocate's own audit panel "
-        "renders them and this is the response that carries them; redacting "
-        "here would be deleting the disclosure rather than protecting it")

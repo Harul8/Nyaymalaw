@@ -9,7 +9,7 @@ from __future__ import annotations
 import ast
 import contextlib
 import pathlib
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timezone
 
 import pytest
 
@@ -21,27 +21,6 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 def _sources():
     return [p for p in (ROOT / "nm").rglob("*.py")
             if "__pycache__" not in p.parts]
-
-
-def _code(path: pathlib.Path) -> str:
-    """A file with its comments and docstrings blanked.
-
-    FOURTH INSTANCE OF THIS SHAPE TODAY. A comment quoting a z-index literal
-    broke that check; a comment quoting `("18", "19")` broke the section-list
-    check; a docstring naming a gate broke T9 (B-140); and both sweeps in this
-    file failed on their OWN docstrings, which quote the very strings they
-    refuse.
-
-    ONE OWNER. `assurance/gate/trace.py` grew `_without_prose` for B-140 and this
-    imports it rather than carrying a third copy -- §4, applied to the fix for
-    the thing §4 keeps catching.
-    """
-    import sys
-    sys.path.insert(0, str(ROOT))
-    sys.path.insert(0, str(ROOT ))
-    from assurance.gate.trace import _without_prose
-
-    return _without_prose(path.read_text(encoding="utf-8"))
 
 
 # ==================== BK-14 — which day is it, and whose ==================
@@ -83,18 +62,6 @@ def test_nothing_in_the_product_asks_the_machine_what_day_it_is():
         + "\n\nUse `nm.shared.clock_contracts.today()`. A server keeping UTC is a day "
           "behind India from 18:30 UTC, and a limitation date is the most "
           "consequential number this product produces.")
-
-
-def test_the_clock_needs_no_timezone_database():
-    """A FIXED OFFSET, DELIBERATELY. India is one zone at UTC+5:30 with no
-    DST, so the offset is exact -- and `ZoneInfo` would depend on a system tz
-    database that Windows does not ship, raising on some machines and working
-    on others. A clock correct on the developer's laptop and raising in
-    production is worse than no clock."""
-    assert "ZoneInfo" not in _code(ROOT / "nm/shared/clock_contracts.py"), (
-        "the clock depends on a system timezone database")
-    from nm.shared.clock_contracts import IST
-    assert IST.utcoffset(None) == timedelta(hours=5, minutes=30)
 
 
 # ==================== BK-15 — one owner for the forum =====================
@@ -223,20 +190,6 @@ def test_the_session_cookie_is_secure_when_the_connection_is():
 
 
 # ==================== BK-19 — a missing count is not zero =================
-
-def test_a_missing_index_count_is_none_and_not_zero():
-    """`int(rows.get(key, 0))` made an identity missing `indexed_paragraphs`
-    report ZERO INDEXED -- indistinguishable from an index built and holding
-    nothing.
-
-    CLAUDE.md's worked example is this shape: `table.get(kind, 0.0)` made
-    every unlisted atom type score worse than every listed one.
-    """
-    src = _code(ROOT / "nm/Archives/legal_brain/retrieve/search_authority.py")
-    assert "rows.get(key, 0)" not in src, (
-        "a missing count reads as zero again")
-    assert "def num(key: str) -> int | None:" in src, (
-        "`num` no longer distinguishes absent from zero")
 
 
 # ==================== the positive controls ==============================

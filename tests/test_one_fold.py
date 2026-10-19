@@ -149,24 +149,6 @@ def test_nothing_else_compiles_the_word_pattern():
 
 # =============================== the bound ==================================
 
-def test_a_composition_on_the_base_is_permitted():
-    """Not every fold is the same fold, and the rule must not say so.
-
-    `_citation_fold` normalises the case-name pivot, which is a fact about
-    citations: "K. Venkata Rao vs Sunkara" and "K. Venkata Rao v Sunkara" are
-    one case. Applying that to an advocate's sentence would merge "the notice
-    vs the reply" with "the notice v the reply", so it is right that it lives
-    in `grounding` and wrong that it would live in `text`.
-    """
-    from nm.Archives.legal_brain.verify.grounding import _citation_fold
-    from nm.shared.text_contracts import fold
-
-    assert _citation_fold("Rao vs Sunkara") == _citation_fold("Rao v Sunkara")
-    assert fold("Rao vs Sunkara") != fold("Rao v Sunkara"), (
-        "the base fold has taken on the citation pivot, so every module now "
-        "reads `vs` and `v` as one word -- including the ones comparing an "
-        "advocate's sentences")
-
 
 # ========================== the positive control ============================
 #

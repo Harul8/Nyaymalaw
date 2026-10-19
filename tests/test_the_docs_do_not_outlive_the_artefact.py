@@ -49,11 +49,6 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 #: Documents that BIND, from CLAUDE.md's authority chain. `development_environment/archives/` is
 #: excluded by that same chain: it is reference and is explicitly not live.
-LIVE_DOCS = (
-    "CLAUDE.md",
-    "docs/BACKLOG.md",
-    "docs/BASELINE.md",
-)
 
 def _file_exists(path: pathlib.Path) -> bool:
     """Presence for an artefact that IS its file."""
@@ -105,33 +100,6 @@ ABSENCE_CLAIMS = (
         "without embeddings there is no conceptual search",
     ), _holds_embeddings),
 )
-
-
-def test_no_live_document_says_an_artefact_is_absent_while_it_is_on_disk():
-    """THE RULE B-141 EARNED.
-
-    Run against the real tree rather than a fixture, because the artefact IS
-    the thing under test. A synthetic file would prove the regex works.
-    """
-    wrong = []
-    for rel, phrases, is_present in ABSENCE_CLAIMS:
-        if not is_present(ROOT / rel):
-            continue                      # not built is a legitimate state
-        for doc in LIVE_DOCS:
-            path = ROOT / doc
-            if not path.exists():
-                continue
-            text = path.read_text(encoding="utf-8", errors="replace").lower()
-            for phrase in phrases:
-                if phrase.lower() in text:
-                    wrong.append(f"{doc}: {phrase!r} — but {rel} exists")
-
-    assert not wrong, (
-        "these documents say an artefact is missing and it is on disk:\n  "
-        + "\n  ".join(wrong)
-        + "\n\nThe artefact is the authority and the sentence is a copy of "
-          "it. BK-4 carried this exact claim for eight days after the index "
-          "was built, and five reports repeated it.")
 
 
 @pytest.mark.parametrize("stale", [

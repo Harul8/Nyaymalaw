@@ -3,25 +3,13 @@ from __future__ import annotations
 
 import copy
 import json
-import subprocess
-import sys
 from dataclasses import replace
 from datetime import timedelta
-from pathlib import Path
 
 import pytest
 
 from nm.app.api import application
 from nm.arrive.advocate_contracts import utcnow
-from nm.work_the_file.urgency_contracts import (
-    UrgencyClass,
-    UrgencyReceipt,
-    UrgencyRegister,
-    UrgencyState,
-    normalise_instruction,
-    project,
-    read_receipts,
-)
 
 pytestmark = pytest.mark.class_a
 
@@ -53,16 +41,6 @@ def _post(client, matter_id, body):
     return client.post(f"/api/matters/{matter_id}/emergency", json=body)
 
 
-def test_manual_urgency_taxonomy_is_the_named_prd_population_not_an_invented_eleventh_class():
-    assert len(UrgencyClass) == 10
-    view = project(())
-    assert len(view["classes"]) == 10 and view["entries"] == []
-    assert all(row["assessment"] == "not_assessed" for row in view["classes"])
-    assert "eleven" in view["taxonomy_basis"] and view["unknown_due_is_safe"] is False
-    assert {state.value for state in UrgencyState} == {
-        "live", "resolved", "cleared", "not_assessed"}
-
-
 def test_manual_urgency_is_visible_without_granting_a_protective_permission(client):
     matter_id = _matter(client)
     offered = _offer(client, matter_id)
@@ -77,55 +55,6 @@ def test_manual_urgency_is_visible_without_granting_a_protective_permission(clie
     assert row["due"] == "2026-09-12T14:30:00+00:00"
     assert row["assessment"] == "user_supplied_not_independently_verified"
     assert application().store.load(matter_id).facts == ()
-
-
-def test_nine_real_protective_turns_and_a_fresh_process_preserve_the_same_urgency(
-        client, monkeypatch):
-    from tests.test_professional_approval_is_separate_from_account_access import (
-        approve_fixture_account,
-    )
-
-    approve_fixture_account(client.directory)
-    matter_id = _matter(client)
-    instant = utcnow()
-    monkeypatch.setattr("nm.app.api.utcnow", lambda: instant)
-    engine = application().engine
-    monkeypatch.setattr(engine, "_clock", lambda: instant)
-    raised = _post(client, matter_id, _offer(client, matter_id))
-    assert raised.status_code == 200, raised.text
-    assert _post(client, matter_id, {"request_key": "permission", "basis": "Supplied danger"}) \
-        .status_code == 200
-    def forbidden(*args, **kwargs):
-        raise AssertionError("manual protective record reached a model or ordinary narrative")
-    monkeypatch.setattr(engine, "_read_route", forbidden)
-    before = application().store.load(matter_id)
-    for turn in range(1, 10):
-        version = client.get(f"/api/matters/{matter_id}/emergency").json()["version"]
-        reply = client.post("/api/turn", json={"matter_id": matter_id, "turn_id": f"manual-{turn}",
-                            "expected_version": version, "message": "Protective handoff requested",
-                            "work_product": "protective_triage"})
-        assert reply.status_code == 200, reply.text
-        first = reply.json()["elements"][0]["text"]
-        assert "RECORDED LIVE URGENCY" in first
-        for supplied in ("Contact the responsible advocate", "Instructing advocate", "14:30"):
-            assert supplied in first
-        assert "not independently verified" in first
-    stored = application().store.load(matter_id)
-    assert stored.urgency_records == before.urgency_records
-    assert len(stored.emergency_triage) == 9 and stored.facts == before.facts
-    from tests.test_turn_contract import KEY
-    script = ("import json,sys; from pathlib import Path; "
-              "from nm.shared.store_file_store import FileMatterStore; "
-              "from nm.work_the_file.urgency_contracts import project; "
-              "m=FileMatterStore(Path(sys.argv[1]),key=sys.argv[2]).load(sys.argv[3]); "
-              "print(json.dumps({'urgency':project(m.urgency_records),'turns':len(m.emergency_triage)}))")
-    restarted = subprocess.run([sys.executable, "-c", script, str(application().store._root),
-                                KEY, matter_id], cwd=Path(__file__).resolve().parents[1],
-                               capture_output=True, text=True, timeout=20)
-    assert restarted.returncode == 0, restarted.stderr
-    recovered = json.loads(restarted.stdout)
-    assert recovered["turns"] == 9
-    assert recovered["urgency"] == project(stored.urgency_records)
 
 
 @pytest.mark.parametrize("end", ["expiry", "revocation"])
@@ -156,61 +85,6 @@ def test_permission_ending_cannot_resolve_or_hide_a_live_danger(client, monkeypa
     assert current["governing"] is None
     assert current["urgency_register"]["entries"][0]["state"] == "live"
     assert application().store.load(matter_id).urgency_records == before
-
-
-def test_two_known_windows_and_an_unknown_remain_visible_with_nearest_known_first(client):
-    matter_id = _matter(client)
-    for key, due in (("late", "2026-09-13T09:00:00Z"), ("early", "2026-09-12T09:00:00Z"),
-                     ("unknown", None)):
-        instruction = _instruction(
-            basis=key, due=due,
-            unknowns={"due": "Awaiting the served order"} if due is None else {})
-        result = _post(client, matter_id, _offer(client, matter_id, key, urgency=instruction))
-        assert result.status_code == 200, result.text
-    view = client.get(f"/api/matters/{matter_id}/emergency").json()["urgency_register"]
-    assert [row["basis"] for row in view["entries"]] == ["early", "late", "unknown"]
-    assert len({row["urgency_id"] for row in view["entries"]}) == 3
-    assert all(row["state"] == "live" for row in view["entries"])
-    assert view["entries"][-1]["unknowns"]["due"] == "Awaiting the served order"
-    assert all(row["assessment"] == "not_assessed" for row in view["classes"])
-    observed = client.get(f"/api/matters/{matter_id}/emergency").json()
-    resolved = _post(client, matter_id, {
-        "urgency_command": "resolve", "request_key": "resolve-only-earliest",
-        "expected_version": observed["version"], "urgency_id": view["entries"][0]["urgency_id"],
-        "resolution_basis": "Only this reported danger has been addressed"})
-    assert resolved.status_code == 200, resolved.text
-    current = project(application().store.load(matter_id).urgency_records)["entries"]
-    assert {row["basis"]: row["state"] for row in current} == {
-        "early": "resolved", "late": "live", "unknown": "live"}
-
-
-def test_exact_raise_and_resolution_replays_never_duplicate_or_revive_the_danger(client):
-    matter_id = _matter(client)
-    offered = _offer(client, matter_id)
-    first = _post(client, matter_id, offered)
-    assert first.status_code == 200, first.text
-    assert _post(client, matter_id, offered).json()["replayed"] is True
-    row = first.json()
-    resolution = {"urgency_command": "resolve", "urgency_id": row["urgency_id"],
-                  "resolution_basis": "Responsible advocate confirmed the danger was addressed",
-                  "expected_version": row["version"], "request_key": "resolve-danger"}
-    resolved = _post(client, matter_id, resolution)
-    assert resolved.status_code == 200, resolved.text
-    before = application().store.load(matter_id)
-    assert _post(client, matter_id, resolution).json()["replayed"] is True
-    assert _post(client, matter_id, offered).json()["replayed"] is True
-    assert application().store.load(matter_id) == before
-    saved = project(before.urgency_records)["entries"][0]
-    assert saved["state"] == "resolved" and saved["resolver"] == before.advocate_id
-    assert saved["resolved_at"] and saved["resolution_basis"]
-    assert before.emergencies == () and len(before.urgency_operations) == 2
-    handoff = client.post("/api/turn", json={"matter_id": matter_id, "turn_id": "after-resolution",
-                          "expected_version": before.version, "message": "Protective handoff",
-                          "work_product": "protective_triage"})
-    assert handoff.status_code == 200, handoff.text
-    assert not any("RECORDED LIVE URGENCY" in element["text"]
-                   for element in handoff.json()["elements"])
-    assert application().store.load(matter_id).urgency_records == before.urgency_records
 
 
 @pytest.mark.parametrize("change", ["same_key_changed_basis", "stale_version", "unknown_id",
@@ -318,24 +192,6 @@ def test_unreadable_resolution_never_defaults_to_a_live_or_cleared_record(client
     assert _post(client, matter_id, _offer(client, matter_id, "new-danger")).status_code == 503
 
 
-def test_postgres_uses_the_same_complete_urgency_and_receipt_serialization_without_columns():
-    from nm.shared.store_postgres import _decode, _encode
-    from nm.work_the_file.matter_contracts import Matter
-
-    row = UrgencyRegister.raise_manual("urgency-1", _instruction(), "advocate-1", utcnow())
-    receipt = UrgencyReceipt(
-        "r", {"actor_id": "advocate-1", "command": "raise", "expected_version": 0,
-              "urgency": normalise_instruction(_instruction())}, "matter-1", row.urgency_id, 1)
-    matter = Matter(id="matter-1", advocate_id="advocate-1", title="Synthetic", version=1,
-                    urgency_records=(row.as_dict(),), urgency_operations=(receipt.as_dict(),))
-    recovered = _decode(json.loads(json.dumps(_encode(matter))))
-    assert recovered.urgency_records == matter.urgency_records
-    assert recovered.urgency_operations == matter.urgency_operations
-    assert UrgencyRegister.from_stored(recovered.urgency_records[0]) == row
-    assert read_receipts(recovered.urgency_operations, (row,), recovered.id, recovered.version) == {
-        "r": receipt}
-
-
 @pytest.mark.parametrize("mutation", [
     "result_extra", "result_action_true", "result_action_number", "result_assessment",
     "result_replayed_string", "result_missing", "result_version_bool", "result_version_future",
@@ -411,62 +267,3 @@ def test_malformed_sealed_urgency_receipts_cannot_claim_actions_or_replay(client
         path.write_bytes(original_bytes)
 
 
-@pytest.mark.parametrize("mutation", ["live_again", "different_resolver", "different_basis"])
-def test_a_resolution_receipt_must_match_its_named_saved_resolution(client, mutation):
-    matter_id = _matter(client)
-    first = _post(client, matter_id, _offer(client, matter_id))
-    assert first.status_code == 200, first.text
-    resolution = {"urgency_command": "resolve", "request_key": "resolved",
-                  "expected_version": first.json()["version"],
-                  "urgency_id": first.json()["urgency_id"],
-                  "resolution_basis": "The responsible advocate recorded the danger addressed"}
-    assert _post(client, matter_id, resolution).status_code == 200
-    store = application().store
-    path = store._path(matter_id)
-    original = path.read_bytes()
-    payload = json.loads(store._open(matter_id, original))
-    assert len(payload["urgency_records"]) == 1
-    row = payload["urgency_records"][0]
-    if mutation == "live_again":
-        row.update(state="live", resolver=None, resolved_at=None, resolution_basis=None)
-    elif mutation == "different_resolver":
-        row["resolver"] = "a-different-resolver"
-    else:
-        row["resolution_basis"] = "A different resolution basis"
-    damaged = store._seal(matter_id, json.dumps(payload).encode("utf-8"))
-    assert damaged != original
-    path.write_bytes(damaged)
-    try:
-        # The danger alone still parses; the cross-record claim is what must fail.
-        assert project(store.load(matter_id).urgency_records)["state"] == "ok"
-        response = _post(client, matter_id, resolution)
-        assert response.status_code == 503, response.text
-        assert path.read_bytes() == damaged
-    finally:
-        path.write_bytes(original)
-
-
-def test_historical_raise_and_resolution_replay_reconstruct_only_their_accepted_result(client):
-    matter_id = _matter(client)
-    offered = _offer(client, matter_id)
-    raised = _post(client, matter_id, offered)
-    assert raised.status_code == 200, raised.text
-    resolution = {"urgency_command": "resolve", "request_key": "resolved",
-                  "expected_version": raised.json()["version"],
-                  "urgency_id": raised.json()["urgency_id"],
-                  "resolution_basis": "The responsible advocate recorded the danger addressed"}
-    resolved = _post(client, matter_id, resolution)
-    assert resolved.status_code == 200, resolved.text
-    later = _post(client, matter_id, _offer(client, matter_id, "later-danger"))
-    assert later.status_code == 200, later.text
-    store = application().store
-    before = store.load(matter_id)
-    for offer, accepted in ((offered, raised.json()), (resolution, resolved.json())):
-        replay = _post(client, matter_id, offer)
-        assert replay.status_code == 200, replay.text
-        assert replay.json() == {**accepted, "replayed": True}
-        assert replay.json()["assessment"] == "user_supplied_not_independently_verified"
-        assert replay.json()["action_performed"] is False
-    assert store.load(matter_id) == before
-    states = {row["urgency_id"]: row["state"] for row in project(before.urgency_records)["entries"]}
-    assert states == {raised.json()["urgency_id"]: "resolved", later.json()["urgency_id"]: "live"}

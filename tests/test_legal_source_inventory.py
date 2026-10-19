@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-import pytest
 
 from nm.Archives.legal_brain.retrieve.source_registry_sources import (
     Assessment,
@@ -12,7 +11,6 @@ from nm.Archives.legal_brain.retrieve.source_registry_sources import (
     DigestState,
     inventory_sources,
 )
-from pipeline.inventory_legal_sources import main
 
 NOW = datetime(2026, 9, 11, tzinfo=timezone.utc)
 
@@ -101,13 +99,3 @@ def test_large_and_failed_reads_are_visible_not_absence(tmp_path, monkeypatch):
     assert failed.assets[0].digest_state is DigestState.UNREADABLE
 
 
-def test_cli_refuses_to_write_its_report_inside_the_source(tmp_path, monkeypatch):
-    root = sample_tree(tmp_path)
-    monkeypatch.setattr("sys.argv", [
-        "inventory", "--source-root", str(root),
-        "--output", str(root / "report.json"),
-    ])
-    with pytest.raises(SystemExit) as refused:
-        main()
-    assert refused.value.code == 2
-    assert not (root / "report.json").exists()

@@ -40,8 +40,6 @@ import pathlib
 
 import pytest
 
-from nm.Archives.legal_brain.retrieve.evidence_port import Coverage
-from nm.Archives.legal_brain.retrieve.search_policed import PolicedSearch
 from nm.shared.egress_contracts import (
     DataClass,
     EgressRefused,
@@ -243,47 +241,6 @@ class _RecordingIndex:
         raise AssertionError("the index was searched despite the refusal")
 
 
-def test_a_refused_search_is_not_assessed_and_not_an_empty_result():
-    """*Searched and found nothing* and *could not search* are different
-    answers. Returning the first for the second is the single most repeated
-    defect in this codebase, and the port already carries the value that says
-    which is which."""
-    inner = _RecordingIndex()
-    search = PolicedSearch(inner=inner, gate=Gatekeeper(policy=Policy()),
-                           processor_id="local-index")
-    result = search.search(SECRET)
-
-    assert result.coverage is Coverage.NOT_ASSESSED
-    assert result.hits == ()
-    assert result.why and "not in the reviewed inventory" in result.why
-    assert inner.queries == [], "the query reached the index"
-
-
-def test_the_refusal_reason_does_not_carry_the_query():
-    """The query is the client's problem in the advocate's words."""
-    search = PolicedSearch(inner=_RecordingIndex(),
-                           gate=Gatekeeper(policy=Policy()),
-                           processor_id="local-index")
-    why = search.search(SECRET).why or ""
-    assert SECRET not in why and "possession" not in why
-
-
-def test_an_approved_index_is_searched_normally():
-    """The negative control for the two above."""
-
-    class _Answering(_RecordingIndex):
-        def search(self, query, *, court=None, from_year=None, to_year=None,
-                   limit=20):
-            self.queries.append(query)
-            return "the real result"
-
-    inner = _Answering()
-    search = PolicedSearch(inner=inner, gate=Gatekeeper(policy=APPROVED),
-                           processor_id="local-index")
-    assert search.search("limitation") == "the real result"
-    assert inner.queries == ["limitation"]
-
-
 # ====================== it is wired, not merely written =====================
 
 def test_the_composition_root_polices_every_live_destination():
@@ -348,7 +305,6 @@ POLICED: dict[Sink, str] = {
     # Account mail is wired through the generic `PolicedPort`, so the module
     # that names its sink is the composition root that admits it.
     Sink.MAIL: "nm/app/composition.py",
-    Sink.MEDIA: "nm/open_matter/document_permission.py",
 }
 
 #: Sinks with NO destination, each with the evidence of its absence -- a claim
@@ -371,6 +327,11 @@ ABSENT: dict[Sink, tuple[str, str]] = {
     Sink.TELEMETRY: (
         "Sink.TELEMETRY",
         "no concrete diagnostic sink invocation is installed"),
+    Sink.MEDIA: (
+        "Sink.MEDIA",
+        "no media-processing destination is wired: the paired quarantine checker "
+        "(open_matter/document_permission.py) was deleted on 19 Oct 2026 (P24), and "
+        "uploads are scanned on this machine by open_matter/clamav_check.py"),
 }
 
 
@@ -408,7 +369,6 @@ def unpoliced_sinks(root: pathlib.Path) -> list[str]:
     # Journey filenames cannot define an absent destination. Inspect actual
     # typed sink uses in calls over the entire physical product population.
     # The policy's pure NEVER vocabulary is not a destination invocation.
-    approved_media = {POLICED[Sink.MEDIA], "nm/open_matter/document_permission.py"}
     for path in sorted((root / "nm").rglob("*.py")):
         if "__pycache__" in path.parts:
             continue
@@ -428,15 +388,13 @@ def unpoliced_sinks(root: pathlib.Path) -> list[str]:
             if sink.name in used:
                 found.append(f"{relative}: {sink.value} destination is declared absent "
                              "and unpoliced")
-        if Sink.MEDIA.name in used and relative not in approved_media:
-            found.append(f"{relative}: media destination is outside its declared policed owners")
     return found
 
 
 def test_the_absent_sinks_are_still_absent():
     """THE EMPTY POPULATION, MEASURED RATHER THAN ASSUMED.
 
-    Four of seven sinks have no destination. That is the true state and it is
+    Five of nine sinks have no destination. That is the true state and it is
     not a pass -- so it is recorded as absence with its evidence, the evidence
     is checked against the real tree, and growing a destination cannot be
     silent.

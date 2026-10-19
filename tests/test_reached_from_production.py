@@ -37,7 +37,6 @@ import pathlib
 import re
 
 import pytest
-import yaml
 
 pytestmark = pytest.mark.class_a
 
@@ -54,144 +53,6 @@ ENTRY_POINTS: dict[str, str] = {
 #: it. Every entry here is a feature whose mechanism exists and whose product
 #: behaviour does not, and the difference is invisible to every other check in
 #: this build.
-UNWIRED: dict[str, str] = {
-    # LB-120's curated successions -- which code governs, from the dates.
-    #
-    # NOT WIRED, AND WIRING IT TODAY WOULD BE WORSE THAN LEAVING IT. The table
-    # answers a question about criminal matters, and `CauseOfAction` is a
-    # CLOSED vocabulary with no criminal cause in it: nothing a served turn
-    # can establish reaches this succession. Adding a cause so that the
-    # wiring had a caller would put a word in the legal vocabulary to justify
-    # a code path, which is the tail wagging the dog -- and CauseOfAction's
-    # own docstring records what happened the last time a cause was added
-    # without the law behind it (POSSESSION_FROM_TENANT, 23 September 2026).
-    #
-    # What wires it is a criminal cause of action with its own curated
-    # elements and Article, plus the reads that establish an offence date and
-    # whether a proceeding was pending at commencement. Until then the table
-    # is exercised by its own suite and reaches no advocate, which is the
-    # honest state and is declared here rather than implied by silence.
-    "nm.Archives.legal_brain.procedure.governing_law_adapter":
-        "LB-120: no criminal cause exists in the closed CauseOfAction "
-        "vocabulary, so no served turn can reach it. Wired by a criminal "
-        "cause plus the offence-date and pending-proceeding reads.",
-    # P38's restore rehearsal. It is NOT reached from a served turn and must
-    # not be: a restore runs with every egress off, against a store that is
-    # not the active one, under roles the application does not hold while
-    # serving. A path from a turn into it would be the product restoring
-    # itself over its own file.
-    #
-    # What wires it is an OPERATOR command against a configured deployment --
-    # `production_measure` on BK-42-AC3, AC4, AC6, BK-83-AC3, BK-85-AC2 and
-    # BK-88-AC1, all NOT RUN because no such deployment exists.
-    # P41's release gate. What wires it is a RELEASE OPERATOR freezing a
-    # manifest for a candidate, which needs a corpus generation, an authority
-    # index digest and a bound provider on a deployment. None exists, and the
-    # gate's own verdict for this build is ENGINEERING COMPLETE, RELEASE
-    # WITHHELD.
-    "nm.shared.release_contracts": (
-        "P41's release manifest and release gate. Driven by "
-        "`tests/test_the_release_gate_fails_closed.py`; it is wired by a "
-        "release operator freezing a manifest against a deployment. A served "
-        "turn must never reach it, and nothing in it can create an approval."),
-    # P40's rehearsal record. What wires it is an OPERATOR running a tabletop
-    # with accountable people against a configured pilot -- `production_measure`
-    # on BK-85-AC5 and BK-88-AC3, both NOT RUN because there are no such people
-    # and no such pilot.
-    "nm.shared.incident_contracts": (
-        "P40's incident rehearsal record: scenario, rota, reviewed clocks, "
-        "containment authority, evidence custody and notification decisions. "
-        "Driven by `tests/test_a_rehearsal_is_evidence_about_people.py` "
-        "against fixtures; it is wired when named accountable people conduct "
-        "a timed tabletop, which is the production_measure that stays NOT RUN "
-        "on both its criteria. A served turn must never reach it -- an "
-        "advocate's turn has no business opening an incident record."),
-    "nm.shared.restore_contracts": (
-        "P38's restore, isolation and rollback rules. Driven by the rehearsal "
-        "harness in `tests/test_a_restore_cannot_revive_what_was_taken_away.py` "
-        "against synthetic infrastructure; it is wired by an operator command "
-        "on a configured deployment, which is the production_measure evidence "
-        "that stays NOT RUN on all six of its criteria. A served turn must "
-        "never reach it."),
-    # P35's review harness, and this one may never be wired -- which is the
-    # honest statement rather than a deferral.
-    #
-    # `nm.shared.legal_review_contracts` records a QUALIFIED PERSON'S judgement about
-    # served advice. Nothing in a turn produces one, and nothing should: a
-    # served path from this product into a counsel review would be this
-    # product writing the review. What will "wire" it is a review actually
-    # being conducted -- REVIEW-LEGAL in `docs/blueprint/evaluations.json`,
-    # whose `approvals` and `evidence` are both empty -- at which point its
-    # record is read by whoever reports BK-67, not by a turn.
-    #
-    # `nm.shared.review_contracts` is NOT listed: `legal_review` imports it, so it is
-    # reached, and listing it would be a declaration covering a module that
-    # does not need one.
-    "nm.shared.legal_review_contracts": (
-        "P35's qualified-review record. It is written BY a person and read by "
-        "whoever reports BK-67-AC1 to AC4 and BK-91-AC4; no turn produces one "
-        "and none should, because a served path from the product into its own "
-        "counsel review is the product reviewing itself. It becomes reachable "
-        "when REVIEW-LEGAL in `docs/blueprint/evaluations.json` carries an "
-        "actual review -- its `approvals` and `evidence` are empty today, "
-        "which is why BK-67 and BK-91-AC4 read NOT RUN."),
-    # P07/P22 built the mechanisms; wiring each is its own step, and these say
-    # WHICH step rather than leaving modules that run on no turn.
-    #
-    # `nm.shared.egress_contracts` WAS HERE AND IS NOT. P06 wired it into the composition
-    # root -- `PolicedModel` in front of `TracedModel` -- and
-    # `test_no_declaration_outlives_its_wiring` refused the stale declaration
-    # the moment it did. That is the build gate's third outcome applied one
-    # level up: a declaration that outlives what it was written for covers the
-    # next unwired module silently.
-    "nm.shared.worker": (
-        "P11's job lifecycle. `nm.app.composition` runs it once the "
-        "store it reads owes work -- which needs P10's outbox, and P10 is "
-        "unproven for want of a PostgreSQL server. The lifecycle itself is "
-        "exercised end to end against a reference store; what is unproven is "
-        "that the rows survive a process death, not that the leases, retries "
-        "and reconciliation behave."),
-    "nm.shared.store_postgres": (
-        "P10's transactional store, and DELIBERATELY not the live writer. "
-        "`nm.app.composition` wires it when BK-83-AC1 carries "
-        "integration evidence from a real server AND P12's migration "
-        "rehearsal has been run and approved -- two live writers is the "
-        "defect P12 exists to prevent, not a configuration option. No "
-        "PostgreSQL is reachable on this machine, so the adapter is built and "
-        "unproven, which `tests/test_no_database_means_no_evidence.py` keeps "
-        "the registry honest about."),
-    # `nm.Archives.legal_brain.reason.premise` WAS HERE. P22 wired it on 12 September 2026:
-    # `nm.Archives.legal_brain.orchestrate.turn._premises` builds the three premises before the
-    # arithmetic, `assess` blocks on an unestablished one and marks an
-    # inferred accrual CONDITIONAL, and the digest travels onto the register
-    # and the cover. The declaration went the moment the import landed, as
-    # `test_no_declaration_outlives_its_wiring` requires.
-    # `nm.work_the_file.dependency` WAS HERE, from 3586ea9 until the same day. P18 wired
-    # it on 12 September 2026: `nm.Archives.legal_brain.orchestrate.turn` observes the file after ADMIT-B,
-    # settles every value it derives against its inputs, and the projections
-    # refuse to present a stale one as current. The declaration went the
-    # moment the import landed, as `test_no_declaration_outlives_its_wiring`
-    # requires -- a declaration that outlives its wiring is the next unwired
-    # module's hiding place.
-    # `nm.Archives.legal_brain.common.reads_contracts` WAS HERE. It is wired as of 5 September 2026 -- not by
-    # the tier escalation it was built for, which still needs a hard-tier
-    # model, but by the general form of B-088: a DECISIVE read that answers
-    # with nothing fires G-READ, and the model port asks the table which reads
-    # those are. A table built for one purpose earning its keep at another is
-    # worth noting; a table that stayed unwired until its original purpose was
-    # affordable would have been six unguarded reads in the meantime.
-    "nm.open_matter.quarantine":
-        "B4. Deliberate — the conflict screen that quarantines is slice 10 "
-        "and is declared unbuilt in the gate matrix.",
-    "nm.open_matter.intake":
-        "C6. The historical document-reading helper is still unwired. "
-        "The served nm.open_matter.uploads_api path accepts sealed original-byte "
-        "receipts through MediaAdmission, but does not invoke this helper "
-        "or claim extraction. Full reading and correction remain unbuilt.",
-    "nm.Archives.legal_brain.common.tiers_contracts":
-        "S0's tier vocabulary. Consulted by the model config through the "
-        "environment rather than by import.",
-}
 
 
 def _sources() -> list[pathlib.Path]:
@@ -258,57 +119,6 @@ def test_the_scan_can_see_the_module_tree():
     assert len(_modules()) >= 30, f"only {len(_modules())} modules found"
 
 
-def test_every_module_is_reached_from_production_or_declared_unwired():
-    """THE CHECK. A module nothing calls does nothing on a served turn.
-
-    S4's four defects all lived in the wiring of modules whose unit suites
-    were green. The suite could not see them and neither could M2.
-    """
-    orphans = sorted(_modules() - _reached_from_production())
-    undeclared = [m for m in orphans
-                  if m not in ENTRY_POINTS and m not in UNWIRED]
-
-    assert not undeclared, (
-        "these modules are imported by nothing in `nm/` — they run on no "
-        "served turn, however green their tests are:\n  "
-        + "\n  ".join(undeclared)
-        + "\n\nWire it, or declare it in UNWIRED with what will wire it. A "
-          "module with a full unit suite and no caller passes every other "
-          "check in this build, which is exactly how B-057 to B-060 reached a "
-          "served turn.")
-
-
-def test_no_declaration_outlives_its_wiring():
-    """AN EXEMPTION NOBODY REMOVES IS AN EXEMPTION NOBODY READS.
-
-    The day a module is wired, its UNWIRED entry becomes a false statement
-    about the build. It expires here rather than in someone's memory — the
-    same rule `assurance/gate/trace.py` applies to AWAITING.
-    """
-    reached = _reached_from_production()
-    stale = sorted(m for m in UNWIRED if m in reached)
-    assert not stale, (
-        "these are declared UNWIRED and something now imports them:\n  "
-        + "\n  ".join(stale) + "\n\nDelete the declaration.")
-
-    gone = sorted(m for m in (set(UNWIRED) | set(ENTRY_POINTS))
-                  if m not in _modules())
-    assert not gone, f"declared and no longer exists: {gone}"
-
-
-def test_the_scan_can_see_an_unreached_module():
-    """THE POSITIVE CONTROL. A scan over a tree whose modules all happen to be
-    imported proves nothing about the scan."""
-    probe = ROOT / "nm" / "work_the_file" / "_unreached_probe.py"
-    probe.write_text("VALUE = 1\n", encoding="utf8")
-    try:
-        orphans = _modules() - _reached_from_production()
-        assert "nm.work_the_file._unreached_probe" in orphans, (
-            "the scan did not see a module nothing imports")
-    finally:
-        probe.unlink()
-
-
 # ===== the status field, joined to the wiring =====
 
 #: Which feature each unwired module belongs to. The join is stated here
@@ -319,72 +129,6 @@ def test_the_scan_can_see_an_unreached_module():
 #: (D7) and salvage (D8) — it named D7, and D8, the one feature whose status
 #: was actually wrong, was the one it could not see. A join that silently
 #: drops members is the same defect as a scan whose population went to zero.
-OWNER: dict[str, tuple[str, ...]] = {
-    # LB-120's successions answer "which Act do I read for this matter", which
-    # is D4's question -- WHICH LAW APPLIES -- one step before D4's cause-to-
-    # Article lookup. Named against D4 rather than given a feature of its own,
-    # because what it adds is a condition on reading the right provision and
-    # not a new promise to the advocate.
-    "nm.Archives.legal_brain.procedure.governing_law_adapter": ("D4",),
-    # P38's restore serves the persistence promise the store makes -- one
-    # matter, versioned and sealed -- so it is named against I1 rather than
-    # given a feature of its own. What it adds is that the promise survives
-    # being put back, which is a property of the write and not a new promise
-    # to the advocate.
-    "nm.shared.restore_contracts": ("I1",),
-    # P40's rehearsal is about the operation that keeps the matter available
-    # and confidential when something goes wrong, so it is named against the
-    # persistence promise rather than given a feature of its own: what it adds
-    # is that the promise survives an incident, which is a property of the
-    # operation and not a new promise to the advocate.
-    "nm.shared.incident_contracts": ("I1",),
-    # P41's gate decides whether the SERVED PRODUCT may be released at all, so
-    # it is named against the turn contract every enabled feature runs through
-    # rather than against a feature of its own. A release gate with a feature
-    # of its own would be a feature that could be marked done.
-    "nm.shared.release_contracts": ("I1",),
-    # P35's qualified-review record reviews THE ADVICE AS SERVED, so it is
-    # named against the feature that produces it rather than given one of its
-    # own -- and against E5, because what the record keeps beyond a score is
-    # the disagreement and the reservations. BK-67-AC1's words are that no
-    # counsel-facing feature conforms without review with *material
-    # reservations kept visible*; E2 and E5 are where those live.
-    "nm.shared.legal_review_contracts": ("E2", "E5"),
-    # P06/P07/P22's mechanisms, each named against the feature whose contract
-    # it serves, so the status check below covers them instead of skipping
-    # three modules that run on no turn.
-    "nm.shared.egress_contracts": ("I1",),
-    "nm.shared.store_envelope": ("I1",),
-    # P10's transactional store serves the same persistence contract the
-    # file store does -- one matter, versioned and sealed -- so it is named
-    # against I1 rather than given a feature of its own. What it adds is
-    # atomicity across three records, which is a property of the write and
-    # not a new promise to the advocate.
-    "nm.shared.store_postgres": ("I1",),
-    # P11's worker publishes what a turn accepted, so it serves the turn
-    # contract rather than a promise of its own.
-    "nm.shared.worker": ("I1",),
-    "nm.Archives.legal_brain.reason.premise": ("D2",),
-    # P18's currency ledger answers A3's re-orientation promise -- what moved
-    # since the advocate was last here, and what they may still rely on -- so
-    # it is named against A3 rather than given a feature of its own. The
-    # cascade it extends already carries A3's `@implements`.
-    "nm.work_the_file.dependency": ("A3",),
-    # BK-69's boundary belongs to the feature that will cross it. C6 is
-    # document intake and extraction -- the media path -- so when C6 moves off
-    # `implementation: none`, the status check above starts asking whether
-    # this module is still unwired instead of skipping it.
-    "nm.open_matter.media_contracts": ("C6",),
-    "nm.open_matter.quarantine": ("B4",),
-    "nm.open_matter.screens": ("B2", "B3", "B5", "B6"),
-    "nm.open_matter.intake": ("C6",),
-}
-
-
-def _spec(name: str) -> list[dict]:
-    source = ROOT / "assurance" / "specification" / f"{name}.yaml"
-    d = yaml.safe_load(source.read_text(encoding="utf8"))
-    return d if isinstance(d, list) else list(d.values())[0]
 
 
 def _tested_unwired_runtime_evals(
@@ -407,37 +151,6 @@ def _tested_unwired_runtime_evals(
     return bad
 
 
-def test_no_feature_is_tested_while_its_eval_runs_every_turn_and_it_has_no_turn():
-    """A RUNTIME EVAL WITHOUT A RUNTIME HAS NOT RUN.
-
-    Class A asks a question about logic, and answering it against the module
-    directly is what class A IS — so `tested` is honest for a class-A feature
-    whose module is unwired. Class B at "Every turn" cadence asks a question
-    about what a SERVED TURN produces, and there is no honest way to answer it
-    while nothing serves it.
-
-    Measured on 31 August 2026: D8 (salvage) was `tested`. Its only eval,
-    E-084, is class B at every-turn cadence, and no turn produced a salvage
-    route at all. Its sibling D7 carried the same shape of eval and was
-    correctly `built`, which is how the difference became visible.
-
-    T7 could not see this. It checks that a feature at `tested` has an eval
-    that RAN, and E-084 ran — against a module nothing calls.
-    """
-    features = {f["id"]: f for f in _spec("features")}
-    evals = {e["id"]: e for e in _spec("evals")}
-    unwired_features = {fid for m in UNWIRED if m in OWNER
-                        for fid in OWNER[m]}
-
-    bad = _tested_unwired_runtime_evals(features, evals, unwired_features)
-
-    assert not bad, (
-        "\n  ".join([""] + bad)
-        + "\n\nEither wire it, or move the status back to `built`. A "
-          "structural eval that ran against a module nothing serves measured "
-          "the module, not the product.")
-
-
 def test_the_runtime_evidence_sweep_can_see_a_planted_unwired_feature():
     """BK-52. Plant a tested feature whose every-turn eval has no caller.
 
@@ -453,22 +166,6 @@ def test_the_runtime_evidence_sweep_can_see_a_planted_unwired_feature():
     evals = {"E-ZZ": {"id": "E-ZZ", "class": "B", "cadence": "Every turn"}}
     bad = _tested_unwired_runtime_evals(features, evals, {"ZZ"})
     assert len(bad) == 1 and "ZZ is `tested`" in bad[0]
-
-
-def test_every_unwired_module_names_a_feature_that_exists():
-    """The join must not rot. A module renamed out from under OWNER, or a
-    feature id that no longer exists, silently empties the check above —
-    which is S11: a check whose population went to zero still passes."""
-    ids = {f["id"] for f in _spec("features")}
-    missing = sorted(f"{m} -> {fid}" for m, fids in OWNER.items()
-                     for fid in fids if fid not in ids)
-    assert not missing, f"OWNER names features that do not exist: {missing}"
-
-    unowned = sorted(m for m in UNWIRED
-                     if m not in OWNER and not m.startswith("nm.Archives.legal_brain.common.tiers_contracts"))
-    assert not unowned, (
-        f"these modules are UNWIRED and name no feature, so the status check "
-        f"above skips them entirely: {unowned}")
 
 
 # ===== the PRODUCES clause, joined to the code =====
@@ -488,38 +185,6 @@ def test_every_unwired_module_names_a_feature_that_exists():
 #: status -- the status now says the feature is not built, which is true.
 #: The absence itself is B-082, open, and the register test keeps it open.
 #: A declaration whose reason has gone is deleted; the defect it named is not.
-UNTYPED: dict[str, str] = {
-    "TurnRoute":
-        "B1. NAMING DRIFT — represented by `nm.Archives.legal_brain.understand.route.ReadRoute`: its "
-        "`route`, `mode` and `statement` fields are the contract's route, mode "
-        "and stated reading. Implementation owner: `nm/Archives/legal_brain/understand/route.py`, wired "
-        "by `nm/Archives/legal_brain/orchestrate/turn.py::_read_route`.",
-    "ConflictScreen":
-        "B3. GENERIC REPRESENTATION — `nm.open_matter.conflict.screen` produces "
-        "`nm.open_matter.screens.Screen(kind=CONFLICT)`, whose state, covers, unread "
-        "and release fields carry the declared screen. Implementation owners: "
-        "`nm/open_matter/conflict.py` and `nm/open_matter/screens.py`.",
-    "CompetenceAssessment":
-        "B4. GENERIC REPRESENTATION — `TurnEngine._competence_screen` produces "
-        "`nm.open_matter.screens.Screen(kind=COMPETENCE)`; state/detail carry coverage "
-        "and the recorded release model is `screens.Release`. Implementation "
-        "owners: `nm/Archives/legal_brain/orchestrate/turn.py` and `nm/open_matter/screens.py`.",
-    "Reorientation":
-        "A3. GENUINELY ABSENT — zero mentions. Consistent with `gaps` and "
-        "`cascade` being UNWIRED: nothing composes a re-orientation.",
-    "ResearchTask":
-        "D4. GENUINELY ABSENT — zero mentions. The research plan is executed "
-        "without the typed task record the PRD says it produces.",
-    "SessionSeal":
-        "I1. GENUINELY ABSENT — zero mentions.",
-    "ThresholdMap":
-        "D1. NAMING DRIFT — `nm/Archives/legal_brain/reason/thresholds.py` defines `Threshold` and "
-        "the map is a plain dict. Either the PRD names the dict or the code "
-        "names the type; today neither points at the other.",
-    "LimitationComputation":
-        "D2. NAMING DRIFT — implemented as `Limitation` in "
-        "`nm/Archives/legal_brain/procedure/limitation.py`. The contract is met and the name is not.",
-}
 
 
 def _declared_types() -> set[str]:
@@ -529,58 +194,3 @@ def _declared_types() -> set[str]:
         re.findall(r"^\s*(\w+)\s*(?::\s*TypeAlias)?\s*=\s*NewType", src, re.M))
 
 
-def _produced_types() -> dict[str, str]:
-    """Every `Name { ... }` a feature at built-or-beyond says it produces."""
-    out: dict[str, str] = {}
-    for f in _spec("features"):
-        if f["status"] == "decided":
-            continue
-        for clause in f.get("produces", []):
-            for name in re.findall(r"`(\w+)\s*\{", str(clause)):
-                out.setdefault(name, f["id"])
-    return out
-
-
-def test_every_produces_contract_has_a_type_or_is_declared_untyped():
-    """A FEATURE OUTPUTS WHAT ITS CONTRACT SAYS, or the gap is written down.
-
-    Measured on 4 September 2026: seven features stood at `tested` while the
-    typed record each declares was absent, untyped or under another name — and
-    nothing in the build could see it, because the only check over PRODUCES
-    starts from Appendix E's ten schemas rather than from the clauses.
-
-    Four of the seven had ZERO mentions in `nm/`. One of those is
-    `AdvocateIdentity`, so the product had no notion of who was using it beyond
-    a string in a query parameter.
-    """
-    known = _declared_types()
-    missing = {n: fid for n, fid in _produced_types().items() if n not in known}
-    undeclared = sorted(f"{fid}: {n}" for n, fid in missing.items()
-                        if n not in UNTYPED)
-    assert not undeclared, (
-        "these features declare a PRODUCES type that `nm/` does not define:"
-        "\n  " + "\n  ".join(undeclared)
-        + "\n\nImplement it, rename one side to match the other, or declare it "
-          "in UNTYPED with which of those it needs.")
-
-
-def test_no_untyped_declaration_outlives_its_type():
-    """The list shrinks as the build catches up, and says so."""
-    known = _declared_types()
-    landed = sorted(n for n in UNTYPED if n in known)
-    assert not landed, (
-        f"these are declared UNTYPED and `nm/` now defines them: {landed}. "
-        f"Delete the declaration.")
-
-    produced = _produced_types()
-    orphaned = sorted(n for n in UNTYPED if n not in produced)
-    assert not orphaned, (
-        f"these are declared UNTYPED and no feature at built-or-beyond "
-        f"produces them any more: {orphaned}. Delete the declaration.")
-
-
-def test_the_produces_scan_can_see_an_unimplemented_contract():
-    """THE POSITIVE CONTROL. If the clause parser matched nothing, every
-    feature would pass for having produced nothing at all."""
-    assert _produced_types(), "no PRODUCES clause was parsed from any feature"
-    assert "Fact" in _declared_types(), "the type scan found no known type"

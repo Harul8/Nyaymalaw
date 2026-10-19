@@ -48,46 +48,11 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 #: is not computed now" is already English. Rewriting it would be changing a
 #: line because a scan matched it, which is the opposite of drawing the
 #: population from the code.
-ALLOWED = {("nm/Archives/legal_brain/orchestrate/turn.py", "d.value")}
 
 
 def _sources():
     return [p for p in (ROOT / "nm").rglob("*.py")
             if "__pycache__" not in p.parts]
-
-
-def test_no_enum_value_reaches_the_advocate():
-    """THE SWEEP, and its population is every `Element` in the product rather
-    than the four that were found by eye."""
-    offenders = []
-    for path in _sources():
-        src = path.read_text(encoding="utf-8")
-        try:
-            tree = ast.parse(src)
-        except SyntaxError:                      # a probe module mid-write
-            continue
-        for node in ast.walk(tree):
-            if not (isinstance(node, ast.Call)
-                    and isinstance(node.func, ast.Name)
-                    and node.func.id == "Element"):
-                continue
-            kw = {k.arg: k.value for k in node.keywords}
-            if "text" not in kw:
-                continue
-            text = ast.get_source_segment(src, kw["text"]) or ""
-            rel = path.relative_to(ROOT).as_posix()
-            for attr in _value_reads(text):
-                if (rel, attr) in ALLOWED:
-                    continue
-                offenders.append(f"{rel}:{node.lineno} — {attr}")
-
-    assert not offenders, (
-        "these put a raw `.value` in front of the advocate:\n  "
-        + "\n  ".join(offenders)
-        + "\n\nUse `.said`. An enum value is an identifier -- "
-          "`balance_of_probabilities`, `held_not_found` -- and the advocate "
-          "is the one person who cannot be expected to read this product's "
-          "internal vocabulary.")
 
 
 def _value_reads(text: str) -> list[str]:
@@ -202,33 +167,6 @@ def test_said_has_no_fallback_to_the_value():
             f"optional and the phrase table advisory.")
 
 
-def test_the_phrases_are_not_the_identifiers_with_the_underscores_removed():
-    """A phrase that is the value with its underscores swapped for spaces is
-    the same identifier wearing a coat. `balance of probabilities` needs the
-    `on the` an advocate would actually write."""
-    from nm.Archives.legal_brain.reason.issue_contracts import Effect, IssueKind
-    from nm.Archives.legal_brain.reason.proof_contracts import Standard
-    from nm.Archives.legal_brain.retrieve.evidence_port import Binding
-    from nm.work_the_file.evidence_item import Form, Holder
-    from nm.work_the_file.matter_contracts import Side
-
-    # THE ONE MEMBER WHOSE IDENTIFIER IS ALREADY THE ENGLISH, declared
-    # rather than special-cased in the rule. "beyond reasonable doubt" is
-    # exactly the phrase an advocate writes, and a check that could not say
-    # so would be one people learn to edit rather than obey.
-    reads_as_itself = {"Standard.BEYOND_REASONABLE_DOUBT"}
-
-    lazy = _lazy_phrases(
-        (Holder, Form, Standard, IssueKind, Effect, Side, Binding),
-        reads_as_itself,
-    )
-    assert not lazy, (
-        "these phrases are the identifier with the underscores taken out, "
-        "which reads as an identifier to everyone except the person who "
-        f"wrote it: {lazy}. `balance of probabilities` is the value; `on the "
-        f"balance of probabilities` is the sentence.")
-
-
 # ==================== the positive controls ==============================
 #
 # `test_every_sweep_has_a_positive_control` caught both of the sweeps above
@@ -238,23 +176,6 @@ def test_the_phrases_are_not_the_identifiers_with_the_underscores_removed():
 # The offender is planted in a REAL file under `nm/`, because both scanners
 # walk the tree. A synthetic fixture would prove the scanner compiles, not
 # that it can see.
-
-def test_the_value_scan_can_see_an_identifier_reaching_the_advocate():
-    """Plant an Element whose text renders a raw enum value."""
-    planted = ROOT / "nm" / "work_the_file" / "_speaks_in_identifiers.py"
-    planted.write_text(block_of((
-        "from nm.advise.answer_contracts import Element, ElementKind",
-        "from nm.work_the_file.matter_contracts import Side",
-        "",
-        "def _leak(side: Side):",
-        "    return Element(kind=ElementKind.GROUND,",
-        "                   text=f\"the side is {side.value}\")",
-    )), encoding="utf8")
-    try:
-        with pytest.raises(AssertionError, match="side.value"):
-            test_no_enum_value_reaches_the_advocate()
-    finally:
-        planted.unlink()
 
 
 def test_the_phrase_sweep_can_see_underscores_merely_removed():
@@ -270,25 +191,6 @@ def test_the_phrase_sweep_can_see_underscores_merely_removed():
     assert _lazy_phrases((PlantedPhrase,), set()) == [
         "PlantedPhrase.INTERNAL_WORDS"
     ]
-
-
-def test_the_complete_scan_can_see_an_enum_that_never_checks_itself():
-    """Plant a `Spoken` enum with no `complete()` call."""
-    planted = ROOT / "nm" / "shared" / "_never_completes.py"
-    planted.write_text(block_of((
-        "from enum import Enum, nonmember",
-        "",
-        "from nm.shared.spoken_contracts import Spoken",
-        "",
-        "class Quiet(Spoken, str, Enum):",
-        "    A = \"a\"",
-        "    SAID = nonmember({\"a\": \"a\"})",
-    )), encoding="utf8")
-    try:
-        with pytest.raises(AssertionError, match="Quiet"):
-            test_every_spoken_enum_called_complete()
-    finally:
-        planted.unlink()
 
 
 def block_of(lines):

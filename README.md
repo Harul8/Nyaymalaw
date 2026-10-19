@@ -34,11 +34,11 @@ The owner's current instructions govern scope. These records have distinct roles
 | [Build guide](docs/BUILD_GUIDE.md) | Four proportionate playbooks: Start, Build, Test and Sign-off |
 | [Baseline](docs/BASELINE.md), [defect shapes](docs/DEFECT_SHAPES.md), [golden set](docs/GOLDEN_SET.md) | Measured coverage, known failure mechanisms and evaluation design; check the stated date and scope |
 
-`development_environment/archives/` preserves the previous specification, journey, architecture,
-defect register and plan as historical evidence, not current authority.
-The earlier PRD, PLAN.md, backlog registries and older workbooks are historical
-planning inputs under P12. Some stay at their original paths because live tooling
-still reads them. They do not decide the current build or certify the new engine.
+On 19 October 2026 (owner decision P24) every tracked file the production
+pipeline does not use was deleted: the archived engines and their tests, the
+earlier PRD, PLAN.md, backlog registries, older workbooks, the old assurance
+control plane and dated reviews. They remain in Git history; none of them
+decides the current build.
 
 ---
 
@@ -68,24 +68,23 @@ See the Advocate build plan and [sign-off playbook](docs/playbooks/SIGN_OFF_A_CH
 
 | Folder | Holds |
 |---|---|
-| `nm/` | The advocate application, organised into shallow journey folders: Arrive, Open a matter, Legal brain, Work the file, Advise, Act, Carry, Close and Leave; `app/` wires and serves them, `shared/` owns common security and storage |
+| `nm/` | The advocate application: `app/` wires and serves it, `core_engine/` is the engine, `arrive/`, `open_matter/`, `work_the_file/`, `advise/` and `leave/` hold the journey code it uses, `shared/` owns common security, storage and model boundaries |
 | `operations/` | Human-run administration commands: enrolment, invitation, professional approval, outbox, store migration and re-keying; these are not model tools |
-| `pipeline/` | Flat, named offline legal-source acquisition, indexing and quality jobs, plus the curated Act manifest |
-| `assurance/` | How production is proven and permitted: `gate/` (the per-task gate), `journeys/` (served and browser runs), `control_plane/` (backlog, evidence, release obligations, the plan view), `hooks/`, `specification/` (PRD source and generated specs) and `common/`, which declares these homes once |
-| `docs/` | Current workbook and guidance, plus explicitly historical planning inputs retained for compatibility |
-| `tests/` | Retained live safeguards; archived-brain tests are preserved separately and not collected |
-| `development_environment/` | Archives, dated reviews, one-off and developer tooling, earlier worktrees — kept, not shipped. See its README |
+| `pipeline/` | The offline jobs that build the Act store and indexes the engine reads, plus the curated Act manifest |
+| `assurance/` | The Git hooks that keep the code graph current, the console helper the operator commands and jobs use, and three test helpers (source segments, layout geometry, the browser-journey harness) |
+| `docs/` | The plan workbook, build guide and playbooks, project map, baseline, defect shapes, golden set, review links, limitation scenarios, and the two blueprint files the app reads |
+| `tests/` | Tests that exercise the production code |
+| `development_environment/` | The code-graph launcher and vector refresh used by the hooks — not shipped |
 
 Start with [the journey-first project map](docs/PROJECT_STRUCTURE.md), then the
 README in the phase you want to review. Browser assets live beside their journey
 owners; the server exposes only the explicitly approved browser files, never the
-Python package. Each model tool has a `tool_<registered_name>.py` entry point.
+Python package.
 
 The package is not installed into the interpreter, so a worktree never imports
 another checkout's code. Tests set the path through `pyproject.toml`; scripts
 put the repository root on the path themselves; `start.ps1` sets
-`PYTHONPATH` for the server it starts. Run the gate from the root with
-`python assurance/gate/check.py`, and install the hooks by path with
+`PYTHONPATH` for the server it starts. Install the hooks by path with
 `git config core.hooksPath assurance/hooks`.
 
 ---

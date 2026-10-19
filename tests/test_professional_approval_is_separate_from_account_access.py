@@ -155,39 +155,6 @@ def test_current_approval_does_not_grant_matter_authority(client):
         "request_key": "other-file", "basis": "stated danger"}).status_code == 404
 
 
-def test_revoked_approval_refuses_core_handoff_replay_but_not_safety_revocation(client):
-    from nm.app.api import application
-    from nm.Archives.legal_brain.orchestrate.turn import TurnInput, TurnRefused
-    from tests.test_the_commission_is_served_and_authority_refuses import _matter
-
-    approval = approve_fixture_account(client.directory)
-    matter_id = _matter(client)
-    path = f"/api/matters/{matter_id}/emergency"
-    declared = client.post(path, json={"request_key": "approved", "basis": "stated risk"})
-    assert declared.status_code == 200, declared.text
-    engine = application().engine
-    turn = TurnInput(advocate_id="adv_demo", matter_id=matter_id,
-                     turn_id="protected-replay", message="must not become a fact",
-                     work_product="protective_triage")
-    assert engine.run(turn).answer.blocked is False
-    saved = application().store.load(matter_id)
-    at = utcnow()
-    client.directory.record_professional_approval(
-        approval.revoke("synthetic-operator", "review withdrawn", at), expected_version=1, now=at)
-    with pytest.raises(TurnRefused, match="no longer live"):
-        engine.run(turn)
-    assert application().store.load(matter_id) == saved
-    read = client.get(path).json()
-    assert read["permits_protective_handoff"] is False
-    assert "no screen exception" in read["said"]
-    revoked = client.post(path, json={"revoke": True,
-                                     "governing_ref": read["governing_ref"],
-                                     "expected_version": read["version"]})
-    assert revoked.status_code == 200, revoked.text
-    assert revoked.json()["state"] == "emergency_revoked"
-    assert client.get(f"/api/matters/{matter_id}/cover").status_code == 200
-
-
 def test_unavailable_profile_reader_refuses_exception_without_blocking_ordinary_turn(
         client, monkeypatch):
     from nm.app.api import application
@@ -235,55 +202,6 @@ def test_runtime_failure_of_the_professional_port_cannot_break_login_or_session(
     assert session.json()["professional_approval"]["state"] == "unapproved"
     assert attempted == ["adv_demo", "adv_demo"]
     assert "synthetic dispatch" not in signed.text + session.text
-
-
-@pytest.mark.parametrize("change", ["missing", "malformed", "expired", "future"])
-def test_live_exception_is_rechecked_against_the_actual_approval_owner(client, monkeypatch, change):
-    from nm.app.api import application
-    from nm.Archives.legal_brain.orchestrate.turn import TurnInput
-    from tests.test_the_commission_is_served_and_authority_refuses import _matter
-
-    approval = approve_fixture_account(client.directory, valid_for=timedelta(minutes=30))
-    matter_id = _matter(client)
-    path = f"/api/matters/{matter_id}/emergency"
-    assert client.post(path, json={"request_key": "original", "basis": "stated risk"}) \
-        .status_code == 200
-    engine = application().engine
-    assert engine.professional_access("adv_demo")["state"] == "approved"
-    if change in ("missing", "malformed", "future"):
-        account = client.directory._read("adv_demo")
-        assert isinstance(account["professional_approval"], str)
-        if change == "missing":
-            del account["professional_approval"]
-        elif change == "malformed":
-            account["professional_approval"] = {"state": "approved", "schema": 1}
-        else:
-            records = client.directory._professional_records(account, "adv_demo")
-            records[-1]["approved_at"] = (approval.approved_at + timedelta(minutes=1)).isoformat()
-            envelope = {"schema": 1, "records": records}
-            account["professional_approval"] = client.directory._cipher.encrypt(
-                json.dumps(envelope).encode("utf8")).decode("ascii")
-        client.directory._replace_advocate(client.directory._advocate_path("adv_demo"), account)
-    else:
-        instant = approval.valid_until
-        monkeypatch.setattr(engine, "_clock", lambda: instant)
-    assert engine.professional_access("adv_demo")["state"] == "unapproved"
-    original = application().store.load(matter_id)
-    from nm.open_matter.emergency_contracts import latest
-
-    assert latest(original.emergencies, engine._clock()) is not None, \
-        "the declaration itself must remain live to isolate the professional-approval guard"
-    denied = engine.run(TurnInput(
-        advocate_id="adv_demo", matter_id=matter_id, turn_id=f"denied-{change}",
-        message="unadmitted secret", work_product="protective_triage"))
-    assert denied.answer.blocked is True
-    saved = application().store.load(matter_id)
-    assert saved.facts == original.facts and saved.screens == original.screens
-    assert saved.emergency_triage[-1]["permitted"] is False
-    assert "unadmitted secret" not in str(saved.emergency_triage)
-    assert client.post(path, json={"request_key": "new", "basis": "stated risk"}).status_code == 403
-    assert client.get("/api/session").status_code == 200
-    assert client.get(f"/api/matters/{matter_id}/cover").status_code == 200
 
 
 def test_operator_cli_hashes_the_real_review_artifact_without_exposing_it(

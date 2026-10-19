@@ -119,43 +119,6 @@ def test_the_scanner_leaves_an_admission_alone():
             f"is asking for")
 
 
-def test_no_reasoning_function_accepts_media():
-    """THE SWEEP. Every module in the layers that draw legal conclusions."""
-    from assurance.common.module_roles import sources_for_roles
-
-    files = [p for p in sources_for_roles(*REASONING)
-             if "__pycache__" not in p.parts
-             and p.relative_to(ROOT).as_posix() not in EXEMPT]
-
-    # ONE EXEMPTION, NAMED. The module that DEFINES the boundary necessarily
-    # names the thing it bounds -- `admitted(media_id, kind)` is the
-    # constructor, not a leak. It was caught by this sweep on its first run
-    # against the real population, which is also the answer to whether an
-    # empty population makes this vacuous: it does not, because the boundary
-    # itself is in it.
-    #
-    # The list is asserted at length so a second file cannot join it quietly.
-    assert len(EXEMPT) == 1, (
-        f"the media sweep now exempts {sorted(EXEMPT)}. One exemption is the "
-        f"boundary defining itself; a second is a hole with a comment.")
-    assert len(files) > 30, (
-        f"only {len(files)} modules found across {REASONING}, so this sweep "
-        f"is reading a population too small to be the product")
-
-    offenders: list[str] = []
-    for path in files:
-        for hit in media_shaped_parameters(path.read_text(encoding="utf-8")):
-            offenders.append(f"{path.relative_to(ROOT)}: {hit}")
-
-    assert not offenders, (
-        "these draw legal conclusions and accept media rather than an "
-        "admission:\n  " + "\n  ".join(offenders)
-        + "\n\nMedia reaches reasoning as `nm.open_matter.media_contracts.MediaAdmission` -- "
-          "what was taken in, for what purpose, on whose authority, in what "
-          "quarantine state, processed by whom. The bytes stay behind the "
-          "boundary. See BK-69.")
-
-
 def test_the_boundary_refuses_what_it_says_it_refuses():
     """The type's own rule, in the three states that matter.
 

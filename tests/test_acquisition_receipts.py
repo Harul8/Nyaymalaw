@@ -21,7 +21,6 @@ from nm.Archives.legal_brain.retrieve.acquisition_sources import (
     stage_acquisition,
 )
 from nm.Archives.legal_brain.retrieve.source_registry_sources import RightsState
-from pipeline import reconcile_acquisition as reconcile_cli
 
 NOW = datetime(2026, 9, 11, tzinfo=timezone.utc)
 
@@ -236,17 +235,3 @@ def test_budget_exhaustion_is_reconciled_as_a_selection_decision(tmp_path):
     assert report.rejected == 2
 
 
-def test_reconciliation_command_reports_complete_and_non_complete(
-        tmp_path, monkeypatch, capsys):
-    run = _stage(tmp_path, run_id="cli")
-    monkeypatch.setattr("sys.argv", ["reconcile_acquisition", str(run)])
-    assert reconcile_cli.main() == 0
-    assert "complete: 2 staged" in capsys.readouterr().out
-
-    monkeypatch.setattr(
-        "sys.argv",
-        ["reconcile_acquisition", str(tmp_path / "missing"), "--json"],
-    )
-    assert reconcile_cli.main() == 2
-    report = json.loads(capsys.readouterr().out)
-    assert report["state"] == "not_assessed"

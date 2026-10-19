@@ -40,7 +40,6 @@ is False for every environment this build can create, and every
 from __future__ import annotations
 
 import inspect
-import json
 import pathlib
 
 import pytest
@@ -538,25 +537,6 @@ def test_the_refusal_audit_line_carries_no_client_material():
 
 # ===== 8. BK-85-AC6 / BK-88-AC2 -- one tenant cannot read another ==========
 
-def test_a_support_account_cannot_open_an_unrelated_matter():
-    """BK-85-AC6'S MUTATION: *use a support account to inspect an unrelated
-    matter*, driven through the SERVED entry path rather than a copy of it."""
-    import tempfile
-
-    from nm.open_matter.uploads_api import UploadRefused, UploadService
-    from nm.shared.store_file_store import FileMatterStore
-    from nm.work_the_file.matter_contracts import Matter, MatterId
-
-    with tempfile.TemporaryDirectory() as tmp:
-        store = FileMatterStore(pathlib.Path(tmp), key="a-test-seal-value")
-        store.commit(Matter(id=MatterId("m_owned"), advocate_id="adv_owner",
-                            title="Another advocate's matter", version=1),
-                     expected_version=0)
-        service = UploadService(store, store.upload_storage())
-        assert service.owned("m_owned", "adv_owner").id == MatterId("m_owned")
-        with pytest.raises(UploadRefused):
-            service.owned("m_owned", "support_desk")
-
 
 def test_a_worker_holding_one_matters_key_cannot_read_another():
     """*bypass the shared gateway from a worker.* There is no check to
@@ -590,85 +570,6 @@ def test_a_secret_bearing_artifact_is_found_by_the_same_digest_question():
 
 
 # ====== 9. BK-42-AC8 -- a log discloses nothing, a deletion is real =======
-
-def test_a_gate_detail_quoting_the_matter_never_reaches_the_plaintext_file():
-    """BK-42-AC8'S MUTATION: *place privileged content in a log.* Driven
-    through the projection `file_store.record_metrics` actually writes."""
-    from nm.shared.metrics_contracts import TurnMetrics
-
-    privileged = "the agreement is dated 15 April 1984 and the client says"
-    metrics = TurnMetrics(turn_id="t1", matter_id="m1")
-    metrics.fire("G-LIMITATION", "computed", privileged)
-    metrics.violate("a-rule", privileged)
-
-    assert privileged in json.dumps(metrics.as_served())
-    written = json.dumps(metrics.as_dict())
-    assert privileged not in written
-    assert "G-LIMITATION" in written and "a-rule" in written
-
-
-def test_a_deletion_cannot_be_claimed_complete_while_a_copy_is_outstanding():
-    """*retain an unauthorised derivative after a deletion claim.*"""
-    from nm.close.retention_contracts import (
-        AssetRef,
-        Copy,
-        RequestedAction,
-        RequestScope,
-        RetentionState,
-        advance,
-        refuse_transition,
-        request,
-    )
-
-    asked = request(
-        request_id="r1", matter_id="m1", requested_by="adv_1",
-        requested_at=TODAY, scope=RequestScope.SELECTED_ASSETS,
-        requested_action=RequestedAction.ERASE,
-        purpose="the client withdrew consent", authority_id="auth-1",
-        authority_version=1, assets=(AssetRef(id="a1", version=1),),
-        copies=(Copy(location="a1#derivative-index",
-                     kind="derivative"),))
-    working = advance(asked, RetentionState.APPROVED)
-    working = advance(working, RetentionState.IN_PROGRESS)
-    working = advance(working, RetentionState.ERASED_FROM_ACTIVE_SYSTEMS)
-    why = refuse_transition(working, RetentionState.COMPLETE_FOR_DECLARED_SCOPE)
-    assert "the declared scope is not gone" in why
-    assert "a1#derivative-index" in why
-
-
-def test_a_deletion_whose_copies_are_resolved_does_complete():
-    """THE POSITIVE CONTROL. A lifecycle that never completes is not a
-    lifecycle, and the advocate is owed the finished answer."""
-    from dataclasses import replace
-
-    from nm.close.retention_contracts import (
-        AssetRef,
-        Copy,
-        RequestedAction,
-        RequestScope,
-        RetentionState,
-        Tombstone,
-        advance,
-        refuse_transition,
-        request,
-    )
-
-    asked = request(
-        request_id="r2", matter_id="m1", requested_by="adv_1",
-        requested_at=TODAY, scope=RequestScope.SELECTED_ASSETS,
-        requested_action=RequestedAction.ERASE,
-        purpose="the client withdrew consent", authority_id="auth-1",
-        authority_version=1, assets=(AssetRef(id="a1", version=1),),
-        copies=(Copy(location="a1#derivative-index", kind="derivative",
-                     resolved_at=TODAY),))
-    working = advance(asked, RetentionState.APPROVED)
-    working = advance(working, RetentionState.IN_PROGRESS)
-    working = advance(working, RetentionState.ERASED_FROM_ACTIVE_SYSTEMS)
-    working = replace(working, tombstones=(
-        Tombstone(asset_id="a1", asset_version=1, erased_at=TODAY,
-                  request_id="r2"),))
-    assert refuse_transition(
-        working, RetentionState.COMPLETE_FOR_DECLARED_SCOPE) == ""
 
 
 # ========= 10. BK-88-AC4 -- nothing prohibited is asked or accepted ========

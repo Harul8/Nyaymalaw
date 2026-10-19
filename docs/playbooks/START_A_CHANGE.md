@@ -34,11 +34,9 @@ decision, 10 October 2026), and read the legal brain capabilities it names.
 
 - Read the owner's decisions it depends on, and any open question (`Q` rows)
   that blocks it.
-- For earlier evidence, read the backlog registries (`docs/backlog/status.yaml`,
-  `docs/BACKLOG.md`, `plan.json`, `steps.yaml`, `professional.json`) and
-  `assurance/specification/features.yaml`. They no longer decide what is built
-  next and are historical under P12. Retained checks may still consume their
-  original paths; that compatibility use does not make them planning owners.
+- The earlier backlog registries and feature specifications were deleted on
+  19 October 2026 (P24). Read them from Git history only as dated evidence;
+  they do not decide what is built next.
 
 If no row owns deliverable work, add one on that sheet before implementation, with
 its change contract (section 4). Do not leave work owned only by a chat, commit
@@ -254,13 +252,3 @@ READY: yes / no, with reason:
 **Handoff to Build:** link the closed Start Record. Build must return here if it
 needs to invent scope, policy, authority, state or acceptance during
 implementation.
-
----
-
-<!-- THE RULES THIS PLAYBOOK CARRIES. `docs/backlog/build_rules.json`
-     is the registry; this manifest is how the card CLAIMS its rules.
-     Dropping one now means deleting an id here, which lint refuses --
-     because two rules were lost when the guide was split and nothing
-     noticed. Do not edit by hand except to add a genuinely new rule
-     to the registry first. -->
-<!-- BUILD_RULES: BG-001 BG-003 BG-019 BG-020 BG-021 BG-022 BG-023 BG-024 BG-025 BG-026 BG-027 BG-028 BG-029 BG-030 BG-046 BG-047 BG-048 BG-049 BG-053 BG-061 BG-078 -->

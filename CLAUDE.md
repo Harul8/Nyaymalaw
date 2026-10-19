@@ -20,12 +20,11 @@ Owner decisions P7 and P12 of 10 October 2026 establish these roles:
 | docs/PROJECT_STRUCTURE.md | Code navigation. Verify actual source before changing behaviour. |
 | docs/BASELINE.md, docs/DEFECT_SHAPES.md, docs/GOLDEN_SET.md | Dated corpus measurements, defect mechanisms and evaluation materials; check present applicability. |
 
-Before Build, Implementation Plan LB rows, the earlier PRD/generated contracts,
-backlog registries, PLAN.md and older plan workbooks are historical planning
-inputs. They do not choose current work or certify its completion. Retain old
-inputs where live corpus, storage, authentication or assurance tools depend on
-them; record consumers in the archive map. Historical planning status does not
-retire a still-relevant safety check or justify regenerating obsolete status.
+Before Build and the Implementation Plan LB rows are historical. The earlier
+PRD/generated contracts, backlog registries, PLAN.md, older plan workbooks and
+the control-plane tools that read them were deleted on 19 October 2026 (owner
+decision P24) and remain in Git history. They do not choose current work or
+certify its completion, and historical status does not justify regenerating them.
 
 For each slice, use its plan row: trigger, original inputs, admitted output,
 decision owner, state effect, failure scope, bounded recovery and observable
@@ -39,10 +38,10 @@ launches it. nm/core_engine/ owns context, interpretation, research, grounded re
 writing, independent review, rendering and exact saved replay. Earlier conversations remain preserved.
 M1's unfinished candidate is kept in the private checkpoint named in the plan.
 
-nm/Archives/brain/ and nm/Archives/legal_brain/ contain reference engines.
-Some archived modules remain dependencies of live corpus jobs and tooling.
-Archived does not mean unused, safe to delete, or active on the served chat path.
-Check the archive dependency map and actual imports before moving anything.
+The archived engines were deleted on 19 October 2026 (P24) with every file the
+production pipeline does not use; they remain in Git history. nm/Archives/legal_brain/
+keeps only the nine retrieval helpers and the citation contracts that the Act-store
+corpus jobs in pipeline/ import. Check actual imports before moving them.
 
 Before borrowing archived or Agentified NM code, tell the owner exactly what
 will be reused, inspect its complete contract and validate current integration.
@@ -156,8 +155,9 @@ Preserve required tooling extras when changing installations.
 
 Run from checkout root. Avoid editable installs that import another worktree.
 Preserve nm/source_layout.json roles, dependency boundaries and the closed
-browser-asset allowlist. assurance/common/homes.py owns tooling population;
-do not add a competing directory registry. Configure hooks by path.
+browser-asset allowlist. nm/shared/source_layout.py owns the active source
+population and served assets; do not add a competing directory registry.
+Configure hooks by path.
 
 Use safe file-writing tools for escaped scripts. On Windows, inspect absolute
 paths and junction targets before moving/removing files; keep operations in one

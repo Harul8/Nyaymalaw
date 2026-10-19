@@ -1,15 +1,8 @@
-"""Records which evals actually RAN, so `trace.py` can refuse status inflation.
+"""Shared pytest setup: the import path, the superseded-test skips and the wired app.
 
-    @pytest.mark.eval_id("E-030", "E-031")
-    def test_...
-
-Without this the T4 check has nothing to check against, and "tested" would be a
-claim rather than a fact. The file it writes is the only evidence trace.py
-accepts that an eval has ever executed.
-
-`counterexamples_rejected` is written separately by the mutation runner, because
-running is not the same as biting: an eval that has run but never rejected its
-counterexample is an unexercised claim, and T6 reports it as one.
+The eval-result recorder and the Class-A evidence writer that once lived here fed
+the old trace and control-plane tools; both were deleted with those tools on
+19 October 2026 (owner decision P24).
 """
 from __future__ import annotations
 
@@ -33,10 +26,7 @@ except Exception as exc:  # noqa: BLE001 -- NOT ASSESSED, said as a value
     SESSION_TREE = f"unknown: {type(exc).__name__}"
 
 
-import json
 import os
-import platform
-from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -53,25 +43,10 @@ import pytest
 INVITED_BY = "fixture-operator"
 
 ROOT = Path(__file__).resolve().parents[1]
-RESULTS = ROOT / ".nm" / "eval_results.json"
-
-_ran: set[str] = set()
-_failed: set[str] = set()
-_class_a: dict[str, dict] = {}
-_class_a_started = datetime.now(timezone.utc).isoformat(timespec="seconds")
-_class_a_start_fingerprint = ""
-_class_a_full_selection = False
-_class_a_selection_problems: list[str] = []
-_class_a_evidence_path: Path | None = None
 
 
 def pytest_configure(config):
-    global _class_a_full_selection, _class_a_start_fingerprint
-    global _class_a_selection_problems, _class_a_evidence_path
     config.addinivalue_line("markers", "eval_id(*ids): eval ids this test exercises")
-    # The runner lends this session an output once. An application-environment
-    # test may clear NM_* or plant another value during its call phase; that
-    # must neither erase its outcome nor redirect this session's evidence.
     # A CHILD PROCESS IMPORTS FROM THE SAME PATH AS THIS SESSION. pytest puts
     # pyproject's `pythonpath` (the root and backend/) on sys.path, which a
     # `python -c "import nm..."` child does not inherit. Handing the same entries
@@ -80,17 +55,6 @@ def pytest_configure(config):
     configured = [str(p) for p in config.getini("pythonpath")]
     os.environ["PYTHONPATH"] = os.pathsep.join(
         dict.fromkeys([*configured, *inherited]))
-    lease = os.environ.get("NM_CLASS_A_EVIDENCE_FILE")
-    _class_a_evidence_path = Path(lease) if lease else None
-    if _class_a_evidence_path is not None:
-        from assurance.control_plane.evidence import (
-            class_a_selection_problems,
-            verification_fingerprint,
-        )
-
-        _class_a_start_fingerprint = verification_fingerprint()
-        _class_a_selection_problems = class_a_selection_problems(config)
-        _class_a_full_selection = not _class_a_selection_problems
 
 
 def pytest_collection_modifyitems(config, items):
@@ -117,110 +81,6 @@ def pytest_runtest_makereport(item, call):
     # module is silently not a hook, so the attribute was never set and every
     # phase errored in teardown instead of reporting.
     setattr(item, f"rep_{report.when}", report)
-    if (_class_a_evidence_path is not None
-            and item.get_closest_marker("class_a") is not None):
-        row = _class_a.setdefault(item.nodeid, {
-            "outcome": "not_run", "duration_ms": 0,
-        })
-        row["duration_ms"] = round(
-            row["duration_ms"] + report.duration * 1000, 3)
-        if report.failed:
-            row["outcome"] = "failed"
-        elif report.skipped and row["outcome"] != "failed":
-            row["outcome"] = "skipped"
-        elif (report.when == "call" and report.passed
-              and row["outcome"] == "not_run"):
-            row["outcome"] = "passed"
-    if report.when != "call":
-        return
-    marker = item.get_closest_marker("eval_id")
-    if marker is None:
-        return
-    for eid in marker.args:
-        _ran.add(eid)
-        if report.failed:
-            _failed.add(eid)
-
-
-def pytest_sessionfinish(session, exitstatus):
-    evidence_path = _class_a_evidence_path
-    if evidence_path is not None:
-        from assurance.control_plane.evidence import (
-            CLASS_A_COMMAND,
-            git_identity,
-            verification_fingerprint,
-        )
-
-        # A parameterised function is a legitimate acceptance reference only
-        # when EVERY collected case passed.  Record that aggregate explicitly;
-        # the linter still performs an exact dictionary lookup rather than a
-        # prefix match that could accept one convenient parameter.
-        grouped: dict[str, list[dict]] = {}
-        for nodeid, row in _class_a.items():
-            base = nodeid.rsplit("[", 1)[0] if nodeid.endswith("]") else nodeid
-            grouped.setdefault(base, []).append(row)
-        recorded = dict(_class_a)
-        for base, rows in grouped.items():
-            if base not in recorded:
-                recorded[base] = {
-                    "outcome": ("passed" if all(r["outcome"] == "passed"
-                                                for r in rows) else "failed"),
-                    "aggregate_of": len(rows),
-                    "duration_ms": round(sum(r["duration_ms"] for r in rows), 3),
-                }
-        target = Path(evidence_path)
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(json.dumps({
-            "schema": 1,
-            "kind": "class_a",
-            "source_fingerprint": _class_a_start_fingerprint,
-            "finished_fingerprint": verification_fingerprint(),
-            "started_at": _class_a_started,
-            "finished_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-            "runner": f"pytest {pytest.__version__}; Python {platform.python_version()}",
-            "command": CLASS_A_COMMAND,
-            "git": git_identity(),
-            "exit_code": exitstatus,
-            "selection": ("full_class_a" if _class_a_full_selection
-                          else "partial"),
-            "selection_problems": _class_a_selection_problems,
-            "complete": (exitstatus == 0 and bool(recorded)
-                         and _class_a_full_selection),
-            "tests": recorded,
-        }, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-
-    if not _ran:
-        return
-    if os.environ.get("NM_PARTIAL_RUN"):
-        # A NARROWED run must never overwrite the full record. The mutation
-        # runner executes one test at a time; letting each of those rewrite
-        # `evals_run` would shrink the evidence to whatever ran last, and
-        # trace.py would then report features as untested that are not.
-        return
-    RESULTS.parent.mkdir(parents=True, exist_ok=True)
-    existing = {}
-    if RESULTS.exists():
-        try:
-            existing = json.loads(RESULTS.read_text(encoding="utf8"))
-        except json.JSONDecodeError:
-            existing = {}
-
-    # Only evals that ran AND passed count as run. A failing eval has not
-    # established anything about the feature it is attached to.
-    passed_now = _ran - _failed
-
-    # MERGED, never replaced. A narrowed run -- two test files, one -k
-    # expression, one marker -- must not be able to delete evidence it simply
-    # did not exercise. `trace` T10 catches the risk this accepts: an id in the
-    # record that the spec no longer defines is stale evidence and fails.
-    passed = set(existing.get("evals_run", [])) | passed_now
-    failed = (set(existing.get("evals_failed", [])) | _failed) - passed_now
-
-    RESULTS.write_text(json.dumps({
-        "evals_run": sorted(passed),
-        "evals_failed": sorted(failed),
-        "counterexamples_rejected": existing.get("counterexamples_rejected", []),
-    }, indent=2), encoding="utf8")
 
 
 # --------------------------------------------------------------- the wire ---

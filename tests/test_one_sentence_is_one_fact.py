@@ -100,23 +100,6 @@ def test_the_identical_fact_twice_is_recorded_once():
     assert again.id == first.id
 
 
-def test_two_dates_for_one_sentence_are_both_kept():
-    """THE BOUND, and the reason this fix is safe.
-
-    A sentence held with two different dates is a CONFLICT. Collapsing it here
-    would resolve it silently and pick a date by arrival order — the failure
-    `chronology.conflicts` was written to prevent, arriving one layer below
-    where it looks for it.
-    """
-    from nm.work_the_file import chronology
-
-    m, _ = _matter().recording(_fact(on=date(1984, 4, 15)))
-    m, _ = m.recording(_fact(on=date(2024, 4, 15)))
-    assert len(m.facts) == 2, "a date conflict was resolved by deduplication"
-    assert len(chronology.conflicts(m.facts)) == 1, (
-        "both dates are on the file and the conflict is no longer visible")
-
-
 def test_an_undated_repeat_of_a_dated_fact_adds_nothing():
     m, first = _matter().recording(_fact(on=date(1984, 4, 15)))
     m, again = m.recording(_fact())

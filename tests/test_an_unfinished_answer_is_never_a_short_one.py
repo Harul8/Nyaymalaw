@@ -213,53 +213,7 @@ def test_refuse_partial_names_the_work_and_the_reason(state):
     assert "not accepted as a complete result" in why
 
 
-def test_the_one_read_funnel_refuses_before_returning():
-    """STRUCTURAL, over the compiled source. BK-29-AC2's words are *before
-    dependent legal work is accepted*, and `TurnEngine._read` is the one place
-    every structured read passes through -- so a read added next month is
-    covered without its author knowing this rule exists."""
-    import inspect
-
-    from nm.Archives.legal_brain.orchestrate.turn import TurnEngine
-
-    source = inspect.getsource(TurnEngine._read)
-    assert "refuse_partial" in source
-    assert "OutputTruncated" in source
-
-
 # ============= 3. BK-29-AC1 -- one schema-aware budget mechanism ============
-
-def test_the_ceiling_is_derived_for_an_echoing_read_and_stated_otherwise():
-    """The mechanism BK-29-AC1 asks for already exists; this keeps it. A read
-    that quotes gets room proportional to what it was shown, and a read whose
-    answer is a fixed shape gets a number stated once, in one table."""
-    from nm.Archives.legal_brain.common import ceiling
-    from nm.shared.model_port import Prompt
-
-    short = Prompt(system="s", user="a brief")
-    long = Prompt(system="s", user="a brief " * 400)
-    assert ceiling.for_echo(long) > ceiling.for_echo(short)
-    assert ceiling.for_read("route", long, echoes=False) == ceiling.FIXED["route"]
-    assert ceiling.for_read("route", long, echoes=True) == ceiling.for_echo(long)
-
-
-def test_an_unlisted_read_gets_the_floor_and_not_an_invented_number():
-    from nm.Archives.legal_brain.common import ceiling
-    from nm.shared.model_port import Prompt
-
-    assert ceiling.for_read("a_read_nobody_listed", Prompt(system="s", user="u"),
-                            echoes=False) == ceiling.FLOOR
-
-
-def test_the_derived_ceiling_is_bounded_at_both_ends():
-    """The floor stops a one-line brief producing a ceiling too small for the
-    JSON around an empty answer; the cap stops a pasted judgment producing a
-    request the provider refuses."""
-    from nm.Archives.legal_brain.common import ceiling
-    from nm.shared.model_port import Prompt
-
-    assert ceiling.for_echo(Prompt(system="", user="x")) == ceiling.FLOOR
-    assert ceiling.for_echo(Prompt(system="", user="x " * 100000)) == ceiling.CAP
 
 
 # ================ 4. BK-41-AC1 -- one budget, six exhaustions ===============

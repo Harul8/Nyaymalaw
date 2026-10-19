@@ -169,13 +169,6 @@ def test_no_advocate_facing_renderer_prints_one_of_our_keys():
 
 # ============================ positive controls ==============================
 
-def test_the_population_is_the_whole_product_and_is_not_empty():
-    """A sweep over nothing passes. This is what says it looked."""
-    population = _population()
-    assert len(population) > 100, len(population)
-    assert any(where == "nm/Archives/legal_brain/orchestrate/turn.py" for where, _ in population)
-    assert any(where.startswith("nm/edge/") for where, _ in population)
-
 
 def test_the_sweep_sees_a_leak_planted_in_a_rarely_exercised_branch():
     """THE BACKLOG'S NEGATIVE CONTROL: *emit an internal identifier through a
@@ -241,20 +234,6 @@ def test_the_record_renderers_are_exempt_and_the_exemption_is_named():
     assert _leaks_in(
         ast.parse("def as_line(self):\n"
                   "    return f'actor={self.actor_id}'\n"), "p.py") == []
-
-
-def test_the_advocate_facing_ruling_carries_no_account_id():
-    """AND THE EXEMPTION DOES NOT LICENSE A SCREEN. `Ruling.said()` is what an
-    advocate-facing caller reaches for, and it says the same thing without
-    naming a key."""
-    from nm.shared.authority_contracts import Act, ActingAs, permits
-
-    said = permits("adv_9f2c11", ActingAs.ADVISING, Act.CONCEDE).said()
-    assert "adv_9f2c11" not in said
-    assert "may not concede" in said
-    # AND THE RECORD STILL NAMES THEM.
-    assert "adv_9f2c11" in permits("adv_9f2c11", ActingAs.ADVISING,
-                                   Act.CONCEDE).as_line()
 
 
 def test_an_unlabelled_dispute_is_said_and_never_keyed():
@@ -381,50 +360,6 @@ def _names_a_label(expr: ast.expr) -> bool:
     if isinstance(expr, ast.Subscript) and isinstance(expr.value, ast.Name):
         return expr.value.id == "labels"
     return False
-
-
-def test_a_held_string_in_prose_is_never_read_as_a_quotation():
-    """THE RULE, on the renderer itself: whatever the string holds, the marks
-    around it are not ones G-QUOTE reads as quoting retrieved text."""
-    from nm.Archives.legal_brain.verify.grounding import quoted_spans
-    from nm.shared.spoken_contracts import dispute, named
-
-    for label in _LIVE_LABELS:
-        for rendered in (named(label), dispute(label),
-                         f"I am working on {dispute(label)}."):
-            assert quoted_spans(rendered) == [], (
-                f"{rendered!r} reads as a quotation to the grounding gate")
-        # THE DEFECT, stated so this test would have failed on it.
-        assert quoted_spans(f"working on {label!r}") != []
-
-
-def test_a_quotation_the_string_really_carries_is_still_checked():
-    """NEGATIVE CONTROL. `named` fixes the DELIMITER and leaves the content
-    alone: a double-quoted passage inside the string is a quotation that string
-    makes, and hiding it from the gate would be a loosening."""
-    from nm.Archives.legal_brain.verify.grounding import quoted_spans
-    from nm.shared.spoken_contracts import named
-
-    inner = 'the notice says "possession shall be handed over forthwith"'
-    assert quoted_spans(named(inner)) == [
-        "possession shall be handed over forthwith"]
-
-
-def test_the_file_memory_names_a_dispute_without_quoting_it():
-    """The served shape: the lines the model reads about a dispute. A model
-    shown a double-quoted label quotes it back, and G-QUOTE withholds."""
-    from dataclasses import replace
-
-    from nm.Archives.legal_brain.verify.grounding import quoted_spans
-    from nm.work_the_file.matter_contracts import Thread
-    from nm.work_the_file.summary_contracts import _established_on
-
-    thread = replace(Thread.create(label=_LIVE_LABELS[0]),
-                     identifiers={"suit_number": "O.S. 12/2026"},
-                     deferred_reason="awaiting the licence deed")
-    lines = _established_on(thread)
-    assert lines and all(_LIVE_LABELS[0] in line for line in lines)
-    assert [q for line in lines for q in quoted_spans(line)] == []
 
 
 def test_no_advocate_facing_renderer_delimits_by_repr():

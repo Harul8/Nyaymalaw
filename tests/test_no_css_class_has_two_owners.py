@@ -51,7 +51,7 @@ import re
 
 import pytest
 
-from assurance.common.homes import browser_sources
+from nm.shared.source_layout import browser_assets
 
 pytestmark = pytest.mark.class_a
 
@@ -123,7 +123,7 @@ def declarations(css: str) -> dict[str, list[str]]:
 
 
 def stylesheets() -> list[pathlib.Path]:
-    sheets = [path for path in browser_sources() if path.suffix == ".css"]
+    sheets = sorted({path for path in browser_assets().values() if path.suffix == ".css"})
     assert sheets, "the served stylesheet population must not disappear"
     return sheets
 

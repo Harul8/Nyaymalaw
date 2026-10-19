@@ -16,7 +16,7 @@ WHAT IT DELIBERATELY DOES NOT DO
 ----------------------------------
 It does not read the environment for a provider, a key or a corpus. Every
 value is passed in or defaulted to something that cannot reach a real system:
-a key that says it is not a secret, a scripted model, and an evidence double.
+a key that says it is not a secret and a scripted model.
 A harness that could silently pick up `NM_MODEL_API_KEY` would bill a real
 provider from a test run, and a harness that could pick up the production
 `NM_MATTER_KEY` would write test matters into a real store.
@@ -77,7 +77,7 @@ class Served:
 
 
 def served(root: Path, *, responses: dict | None = None,
-           evidence=None, model=None, search=None) -> Served:
+           model=None, search=None) -> Served:
     """The real composition root, wired to a temporary encrypted store."""
     from nm.app.composition import Application
     from nm.app.main import create_app
@@ -109,10 +109,6 @@ def served(root: Path, *, responses: dict | None = None,
         Tier.EMBED: TierConfig(Tier.EMBED, "scripted",
                                "text-embedding-3-large", None, None),
     })
-    if evidence is None:
-        from tests.test_turn_contract import _Evidence
-        evidence = _Evidence()
-
     directory = FileDirectory(root, key=KEY)
     # A complete runtime selection, not a patch to shared os.environ. Corpus
     # and search stay unavailable under this temporary root unless this
@@ -128,18 +124,17 @@ def served(root: Path, *, responses: dict | None = None,
         "NM_AUTHORITY_INDEX": str(root / "authority.db"),
         "NM_IDENTITY_INDEX": str(root / "identity.db"),
     }
+    searching = {} if search is None else {"legal_search": search}
     application = Application(
         store=FileMatterStore(root, key=KEY),
-        evidence=evidence,
         directory=directory,
         environment=environment,
         audit_root=root / "audit",
         model=model or ScriptedModelAdapter(config, responses=responses or {
             "__default__": "Issue the statutory notice and diarise the window."}),
         # P21. A SEARCH PORT THE CALLER SUPPLIES -- the synthetic indexes in the
-        # research suites. Absent, the composition root's default applies and
-        # says `unavailable_index` on a machine with no `.nm/authority.db`.
-        search=search,
+        # research suites. Absent, the composition root's default applies.
+        **searching,
     )
     return Served(app=create_app(application), application=application,
                   directory=directory, root=root)

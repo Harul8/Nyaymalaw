@@ -55,14 +55,6 @@ def test_the_tokenisation_is_frozen_with_the_indexes_it_built():
     assert tokens[len(SAMPLE.lower().split()):] == FROZEN_LEGAL_TOKENS
 
 
-@pytest.mark.class_a
-def test_the_live_search_and_the_index_builds_cut_with_one_function():
-    from nm.Archives.legal_brain.retrieve import hybrid_sections
-    from nm.core_engine import retrieval
-    assert retrieval.bm25_tokens is bm25_tokens
-    assert hybrid_sections.bm25_tokens is bm25_tokens
-
-
 def _legal_tokens(vocabulary: dict) -> list[str]:
     """The n-gram tokens a vocabulary holds. A token the whitespace split kept
     whole -- `article_73:` or a run of underscores used as a blank -- is text

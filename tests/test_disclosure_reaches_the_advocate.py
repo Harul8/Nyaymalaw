@@ -57,15 +57,6 @@ CARRIERS: tuple[str, ...] = (
 
 #: gate id -> "file::test". The named test must assert on a CARRIER.
 PROVEN: dict[str, str] = {
-    "G-COMPETENCE":
-        "test_turn_contract.py::"
-        "test_the_coverage_position_reaches_the_advocate_not_only_the_metrics",
-    "G-UNSCREENED":
-        "test_turn_contract.py::"
-        "test_every_screen_is_named_to_the_advocate_and_none_reads_as_clear",
-    "G-HELDNOTFOUND":
-        "test_turn_contract.py::"
-        "test_a_held_but_not_found_result_is_a_defect_not_a_disclosure",
     "G-CORRECTION":
         "test_correction_supersedes.py::"
         "test_a_missed_correction_becomes_a_blocking_question",
@@ -78,9 +69,6 @@ PROVEN: dict[str, str] = {
     "G-CASCADE":
         "test_gaps_and_cascade_on_a_served_turn.py::"
         "test_a_corrected_date_moves_the_value_and_says_what_it_was",
-    "G-NOTHELD":
-        "test_turn_contract.py::"
-        "test_a_not_held_result_names_what_is_missing",
     "G-SPLIT":
         "test_a_disclosure_is_served_not_recorded.py::"
         "test_the_disputes_not_advised_on_are_named_in_the_answer",
@@ -102,9 +90,6 @@ PROVEN: dict[str, str] = {
     "G-READ":
         "test_reads_registry.py::"
         "test_the_turn_discloses_which_read_came_back_empty",
-    "G-CURRENCY":
-        "test_a_correction_is_served_and_survives_restart.py::"
-        "test_a_stale_conclusion_is_labelled_stale_on_the_served_cover",
     "G-PREMISE":
         "test_premises_come_before_arithmetic.py::"
         "test_correct_arithmetic_never_certifies_the_law_the_disclosure_reaches_the_advocate",
@@ -113,6 +98,9 @@ PROVEN: dict[str, str] = {
         "test_a_run_limitation_makes_the_relief_late_and_reaches_the_advocate",
 }
 
+_ARCHIVED_PROOF = ("its proving test drove the archived turn engine and was deleted with it on 19 Oc"
+                   "t 2026 (P24); no test yet asserts this disclosure on a core-engine served answer")
+
 #: gate id -> WHY nothing proves the advocate sees it. Six of the thirteen,
 #: enumerated MECHANICALLY on 7 September 2026 rather than read off by eye --
 #: which matters, because the first pass at this table put G-HELDNOTFOUND and
@@ -120,14 +108,13 @@ PROVEN: dict[str, str] = {
 #: carrier assertion four lines further down. A wrong NOT_PROVEN row is worse
 #: than none: it invents work and it slanders a test that was doing its job.
 NOT_PROVEN: dict[str, str] = {
-    # EMPTY, as of 7 September 2026 -- all thirteen are proven on the
-    # advocate's own bytes. BK-9 closed the last five.
-    #
-    # THE TABLE STAYS. An empty exception list that has been deleted
-    # cannot record the next exception, and the next gate to be added
-    # with `disclose` and no served test needs somewhere honest to go --
-    # the accounting check below fails the build until it has one.
-    # Deleting this would turn that failure into a puzzle.
+    # The table stays even when empty: the next gate added with `disclose` and
+    # no served test needs somewhere honest to go.
+    "G-COMPETENCE": _ARCHIVED_PROOF,
+    "G-UNSCREENED": _ARCHIVED_PROOF,
+    "G-HELDNOTFOUND": _ARCHIVED_PROOF,
+    "G-NOTHELD": _ARCHIVED_PROOF,
+    "G-CURRENCY": _ARCHIVED_PROOF,
 }
 
 

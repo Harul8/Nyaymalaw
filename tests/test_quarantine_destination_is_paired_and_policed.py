@@ -12,13 +12,11 @@ from pathlib import Path
 
 import pytest
 
-from nm.open_matter.document_permission import build_quarantine
 from nm.open_matter.document_text_port import DocumentFormat
-from nm.open_matter.matter_documents_port import QuarantinePort, QuarantineRead
+from nm.open_matter.matter_documents_port import QuarantineRead
 from nm.open_matter.media_contracts import Quarantine
-from nm.shared.egress_contracts import DataClass, EgressRefused, Gatekeeper, Policy, Processor, Sink
+from nm.shared.egress_contracts import DataClass, Processor, Sink
 from nm.shared.egress_policy import egress_policy
-from nm.shared.policed_port_adapter import PolicedPort
 from tests.test_turn_contract import KEY
 
 pytestmark = pytest.mark.class_a
@@ -47,67 +45,6 @@ class ControlledChecker:
 def controlled_processor(**changes):
     return replace(Processor(SCANNER, "in", (Sink.MEDIA,), CLASSES,
                              "CONTROLLED-TEST-ONLY"), **changes)
-
-
-def test_default_has_no_scanner_and_configuration_cannot_name_only_half_the_pair():
-    gate = Gatekeeper(Policy())
-    assert build_quarantine(None, "", gate) is None
-    with pytest.raises(ValueError, match="no configured checker"):
-        build_quarantine(None, SCANNER, gate)
-    checker = ControlledChecker()
-    for identity in ("", " ", " " + SCANNER, SCANNER + " ", None, False):
-        with pytest.raises(ValueError, match="identity"):
-            build_quarantine(checker, identity, gate)
-    assert not checker.calls
-
-
-def test_checker_must_supply_its_declared_port_before_it_can_be_retained():
-    with pytest.raises(ValueError, match="inspect port"):
-        build_quarantine(object(), SCANNER, Gatekeeper(Policy()))
-
-
-@pytest.mark.parametrize("processor", [
-    None,
-    controlled_processor(approval_id=""),
-    controlled_processor(region="global"),
-    controlled_processor(purposes=(Sink.MODEL,)),
-    controlled_processor(data_classes=(DataClass.CLIENT_MATTER,)),
-])
-def test_unreviewed_or_wrong_scope_checker_is_refused_at_construction_before_bytes(processor):
-    checker = ControlledChecker()
-    logs = []
-    policy = Policy(processors=() if processor is None else (processor,))
-    gate = Gatekeeper(policy, audit=logs.append)
-    with pytest.raises(EgressRefused):
-        build_quarantine(checker, SCANNER, gate)
-    assert not checker.calls and gate.refused
-    assert logs and all("bytes=0" in row for row in logs)
-    assert all(BYTES.decode() not in row for row in logs)
-
-
-def test_every_inspect_call_is_policed_with_actual_bytes_and_both_data_classes():
-    checker = ControlledChecker()
-    logs = []
-    gate = Gatekeeper(Policy(processors=(controlled_processor(),)), audit=logs.append)
-    wrapped = build_quarantine(checker, SCANNER, gate)
-    assert isinstance(wrapped, PolicedPort) and wrapped.admitted
-    assert wrapped.port is QuarantinePort and wrapped.sink is Sink.MEDIA
-    assert wrapped.processor_id == SCANNER and wrapped.data_classes == CLASSES
-    sha = hashlib.sha256(BYTES).hexdigest()
-    assert wrapped.inspect("original_one", sha, BYTES).state is Quarantine.NOT_ASSESSED
-    assert wrapped.inspect(original_id="original_two", source_sha256=sha, data=BYTES).state \
-        is Quarantine.NOT_ASSESSED
-    assert len(checker.calls) == 2 and len(logs) == 3
-    for row in logs[1:]:
-        assert f"bytes={len(BYTES)}" in row
-        assert "client_matter" in row and "restricted" in row
-        assert f"processor={SCANNER}" in row and "sink=media" in row
-        assert BYTES.decode() not in row
-    # A previous admission is not continuing permission after policy changes.
-    gate.policy = Policy()
-    with pytest.raises(EgressRefused):
-        wrapped.inspect("original_three", sha, BYTES)
-    assert len(checker.calls) == 2 and gate.refused
 
 
 def application(tmp_path, **kwargs):

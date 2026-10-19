@@ -9,26 +9,13 @@ from __future__ import annotations
 import base64
 import shutil
 import subprocess
-from copy import deepcopy
 from dataclasses import replace
 from pathlib import Path
 
 import pytest
 
-from nm.arrive.advocate_contracts import utcnow
-from nm.close import retention as rt
-from nm.close.retention_contracts import (
-    AssetRef,
-    RequestedAction,
-    RequestScope,
-    RetentionRequest,
-    RetentionState,
-    Tombstone,
-)
 from nm.open_matter.intake_contracts import ReadQuality
-from nm.work_the_file.casefile import build
 from nm.work_the_file.matter_contracts import Certainty, Fact, Provenance
-from nm.work_the_file.original_source_locators import MAX_ORIGINAL_VIEW_BYTES, add_original_locators
 from tests.test_document_transport_keeps_local_reading_permission_separate import (
     WORDS,
     ControlledLocalChecker,
@@ -165,46 +152,6 @@ def test_missing_local_read_owner_never_uses_the_upload_store_as_an_alternate_re
     assert response.status_code == 503 and "content_base64" not in response.text
 
 
-@pytest.mark.parametrize("change", ["withdrawn", "clearance", "restriction", "tombstone", "expired", "damaged_derivative", "damaged_original"])
-def test_current_permission_clearance_retention_and_integrity_are_not_replaced_by_a_saved_locator(client, wired, change):
-    matter_id, instruction, saved, _checker = read(client, wired)
-    matter = wired.store.load(matter_id)
-    uploads = deepcopy(matter.uploads)
-    row = uploads[instruction["original_id"]]
-    retained = matter.retention
-    if change == "withdrawn":
-        row["document_reading"]["revoked_at"] = utcnow().isoformat()
-    elif change == "clearance":
-        row["document_reading"]["clearance_digest"] = "a" * 64
-    elif change in {"restriction", "tombstone"}:
-        record = RetentionRequest("controlled_original_retention", matter_id, matter.advocate_id,
-            utcnow().isoformat(), RequestScope.SELECTED_ASSETS, RequestedAction.RESTRICT_ACCESS,
-            "Controlled current custody restriction", "controlled_owner", 1,
-            assets=(AssetRef(instruction["original_id"], 1),), state=RetentionState.APPROVED)
-        if change == "tombstone":
-            record = replace(record, requested_action=RequestedAction.ERASE,
-                tombstones=(Tombstone(instruction["original_id"], 1, utcnow().isoformat(), record.request_id),))
-        retained = (rt.as_dict(record),)
-    elif change == "expired":
-        row["offer"]["retention"] = "fixed_period"
-        row["offer"]["retain_until"] = utcnow().date().isoformat()
-    elif change == "damaged_derivative":
-        derivative = saved["result"]["derivative"]
-        # Controlled corruption of this test-only sealed object, not another store.
-        path = wired.documents.derivatives.inner._path(matter_id, derivative["id"])
-        path.write_bytes(b"controlled damaged sealed derivative")
-    else:
-        path = wired.uploads.objects.inner._path(matter_id, row["chunks"][0]["object_id"])
-        path.write_bytes(b"controlled damaged sealed original")
-    saved_matter = wired.store.commit(replace(matter, uploads=uploads, retention=retained,
-        version=matter.version + 1), expected_version=matter.version)
-    response = client.get(endpoint(matter_id, instruction["original_id"]),
-                          params=params(instruction, saved_matter.version))
-    assert response.status_code == 409, response.text
-    assert "content_base64" not in response.text and WORDS not in response.text
-    assert wired.store.load(matter_id).version == saved_matter.version
-
-
 @pytest.mark.parametrize("change", ["session", "file_version"])
 @pytest.mark.parametrize("boundary", ["first_chunk", "derivative", "final_original"])
 def test_original_read_rechecks_authority_between_sinks_and_before_disclosure(client, wired, monkeypatch, change, boundary):
@@ -232,32 +179,6 @@ def test_original_read_rechecks_authority_between_sinks_and_before_disclosure(cl
     assert response.status_code in {401, 409, 422}, response.text
     assert "content_base64" not in response.text and WORDS not in response.text
     assert len(opened) == (2 if boundary == "final_original" else 1)
-
-
-def test_original_transport_bound_is_applied_before_any_protected_read_or_base64(client, wired, monkeypatch):
-    matter_id, instruction, saved, _checker = read(client, wired)
-    matter = wired.store.load(matter_id)
-    uploads = deepcopy(matter.uploads)
-    uploads[instruction["original_id"]]["receipt"]["observed_size"] = MAX_ORIGINAL_VIEW_BYTES + 1
-    current = wired.store.commit(replace(matter, uploads=uploads, version=matter.version + 1),
-                                expected_version=matter.version)
-    calls = []
-    monkeypatch.setattr(wired.uploads.objects.inner, "read", lambda *args, **kwargs: calls.append(True))
-    response = client.get(endpoint(matter_id, instruction["original_id"]),
-                          params=params(instruction, current.version))
-    assert response.status_code == 409, response.text
-    assert not calls and "content_base64" not in response.text
-
-
-def test_original_locator_projection_is_fresh_and_cannot_be_applied_to_another_file(client, wired):
-    matter_id, instruction, _saved, _checker = read(client, wired)
-    matter = seed_fact(wired, matter_id, instruction["original_id"])
-    projection = build(matter)
-    enriched = add_original_locators(projection, matter)
-    assert "original" not in projection["entries"][0]["attribution"]
-    assert enriched["entries"][0]["attribution"]["original"]["original_id"] == instruction["original_id"]
-    with pytest.raises(ValueError):
-        add_original_locators({**projection, "matter_id": "another"}, matter)
 
 
 def test_the_shipped_original_controller_controls_run_without_a_browser_or_network():

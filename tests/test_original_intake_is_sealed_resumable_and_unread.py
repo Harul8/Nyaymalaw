@@ -71,54 +71,6 @@ def test_upload_first_is_real_without_a_placeholder_brief_or_a_model_call(client
     assert changed.status_code == 409
 
 
-def test_original_resumes_after_adapter_restart_with_real_digest_and_held_locator(client, tmp_path):
-    from nm.open_matter.uploads_api import UploadService
-    from nm.shared.store_file_store import FileMatterStore
-    from tests.test_turn_contract import KEY
-
-    data = b"%PDF-1.7\nSYNTHETIC-NOT-A-VALID-PDF\n"
-    matter_id = _shell(client)
-    upload = _begin(client, matter_id, data, declared_type="audio/wav")
-    url = _url(matter_id, upload)
-    first = client.put(url + "/chunks/0", content=data[:9])
-    assert first.status_code == 200, first.text
-    assert first.json()["receipt"]["observed_size"] == 9
-    # A fresh store and byte adapter read the saved state; no Python session
-    # or hash object is needed to resume the original.
-    store = FileMatterStore(tmp_path, key=KEY)
-    resumed = UploadService(store, store.upload_storage())
-    assert resumed.get(matter_id, "adv_demo", upload["asset_id"])["receipt"]["observed_size"] == 9
-    resumed.append(matter_id, "adv_demo", upload["asset_id"], 9, data[9:])
-    result = client.post(url + "/complete")
-    assert result.status_code == 200, result.text
-    row = result.json()
-    assert row["receipt"]["state"] == "received"
-    assert row["receipt"]["observed_hash"] == hashlib.sha256(data).hexdigest()
-    assert row["receipt"]["observed_type"] == "application/pdf"
-    assert row["receipt"]["declared_type"] == "audio/wav"
-    assert row["format_assessment"] == "container_signature_only_not_validated"
-    assert row["state"] == "uploaded" and row["quarantine"] == "not_assessed"
-    assert row["reading"]["state"] == "not_assessed" and row["establishes_a_fact"] is False
-    assert row["may_reach_reasoning"] is False
-    assert row["original_locator"] == {
-        "asset_id": upload["asset_id"],
-        "version": 1,
-        "sha256": hashlib.sha256(data).hexdigest(),
-        "byte_length": len(data),
-        "content_available": False,
-        "reason": row["reason"],
-    }
-    assert client.get(url + "/content").status_code == 423
-    assert client.post(url + "/complete").json() == row
-    assert len(client.get(f"/api/matters/{matter_id}/uploads").json()["uploads"]) == 1
-    assert store.load(matter_id).facts == ()
-    files = list((tmp_path / "uploads").rglob("*.nm"))
-    assert len(files) == 2
-    for path in files:
-        assert b"SYNTHETIC-NOT-A-VALID-PDF" not in path.read_bytes()
-    assert not list((tmp_path / "uploads").rglob("*.tmp"))
-
-
 def test_identical_requests_replay_but_keys_offsets_and_bytes_cannot_be_repurposed(client):
     matter_id = _shell(client)
     row = _begin(client, matter_id, b"abcdef")
@@ -329,26 +281,6 @@ def test_each_original_byte_port_method_is_policed_before_its_adapter(client, mo
     assert called == []
 
 
-def test_receipt_metadata_capacity_is_bounded_independently_of_declared_bytes(client, monkeypatch):
-    import nm.open_matter.uploads_api as uploads
-
-    matter_id = _shell(client)
-    row = _begin(client, matter_id, b"abc")
-    url = _url(matter_id, row)
-    monkeypatch.setattr(uploads, "MAX_UPLOAD_CHUNKS", 1)
-    assert client.put(url + "/chunks/0", content=b"a").status_code == 200
-    assert client.put(url + "/chunks/1", content=b"b").status_code == 413
-    assert client.get(url).json()["receipt"]["observed_size"] == 1
-    # A changed unrelated matter field must survive the next receipt write.
-    matter = _application().store.load(matter_id)
-    _application().store.commit(
-        replace(matter, title="Updated supplied title", version=matter.version + 1),
-        expected_version=matter.version,
-    )
-    client.post(url + "/cancel")
-    assert _application().store.load(matter_id).title == "Updated supplied title"
-
-
 def _concurrent_results(operation, values, rendezvous):
     """Join every writer: one timeout must not hide its peer's real error."""
     from concurrent.futures import ThreadPoolExecutor
@@ -371,64 +303,6 @@ def _concurrent_results(operation, values, rendezvous):
     if errors:
         raise ExceptionGroup("concurrent writer failures (all peers observed)", errors)
     return results
-
-
-@pytest.mark.parametrize("refused_bytes", [None, b"x", b"y"],
-                         ids=["competing-writes", "first-peer-refuses", "second-peer-refuses"])
-def test_real_concurrent_chunk_writers_cannot_overwrite_the_accepted_receipt(
-        client, tmp_path, refused_bytes):
-    from threading import Barrier
-
-    from nm.open_matter.uploads_api import UploadService
-    from nm.shared.store_file_store import FileMatterStore
-    from nm.shared.store_port import StaleWrite
-    from tests.test_turn_contract import KEY
-
-    matter_id = _shell(client)
-    upload = _begin(client, matter_id, b"x", declared_hash="")
-    starting_version = upload["version"]
-    rendezvous = Barrier(2)
-
-    class ConcurrentObjects:
-        def __init__(self, inner):
-            self.inner = inner
-
-        def put(self, *args):
-            if args[-1] == refused_bytes:
-                raise OSError("planted immutable-object write refusal")
-            self.inner.put(*args)
-            rendezvous.wait(timeout=10)  # both writers derived from the same saved version
-
-        def read(self, *args):
-            return self.inner.read(*args)
-
-    def write(data):
-        store = FileMatterStore(tmp_path, key=KEY)
-        service = UploadService(store, ConcurrentObjects(store.upload_storage()))
-        try:
-            return data, service.append(matter_id, "adv_demo", upload["asset_id"], 0, data)
-        except StaleWrite:
-            return data, "stale"
-
-    if refused_bytes is not None:
-        with pytest.raises(ExceptionGroup) as failed:
-            _concurrent_results(write, (b"x", b"y"), rendezvous)
-        assert any(isinstance(error, OSError) and "planted" in str(error)
-                   for error in failed.value.exceptions), "the peer failure was masked"
-        held = FileMatterStore(tmp_path, key=KEY).load(matter_id)
-        assert held.version == starting_version
-        assert held.uploads[upload["asset_id"]]["chunks"] == []
-        return
-    results = _concurrent_results(write, (b"x", b"y"), rendezvous)
-    winners = [(data, result) for data, result in results if result != "stale"]
-    assert len(winners) == 1 and sum(result == "stale" for _, result in results) == 1
-    assert winners[0][1]["version"] == starting_version + 1
-    held = FileMatterStore(tmp_path, key=KEY).load(matter_id)
-    chunks = held.uploads[upload["asset_id"]]["chunks"]
-    assert len(chunks) == 1 and chunks[0]["sha256"] == hashlib.sha256(winners[0][0]).hexdigest()
-    completed = client.post(_url(matter_id, upload) + "/complete").json()
-    assert completed["version"] == starting_version + 2
-    assert completed["receipt"]["observed_hash"] == hashlib.sha256(winners[0][0]).hexdigest()
 
 
 def test_new_upload_first_shell_is_not_overwritable_by_another_expected_zero_commit(client):

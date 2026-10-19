@@ -29,13 +29,10 @@ added to a sibling module tomorrow is covered without this file being edited.
 from __future__ import annotations
 
 import ast
-import importlib
-import inspect
 from pathlib import Path
 
 import pytest
 
-from assurance.common.module_roles import source_module, sources_for_roles
 from nm.shared import optional_adapter as optional
 
 pytestmark = pytest.mark.class_a
@@ -59,29 +56,6 @@ def _import_path_lookups() -> list[str]:
             if name in ("find_spec", "find_module"):
                 found.append(f"{file.relative_to(ROOT).as_posix()}:{node.lineno}")
     return found
-
-
-def _speech_adapters() -> list[tuple[object, type]]:
-    """Every speech adapter class that answers `/api/health`, found by import."""
-    out: list[tuple[object, type]] = []
-    for path in sources_for_roles("adapters"):
-        module = importlib.import_module(source_module(path))
-        for _, cls in inspect.getmembers(module, inspect.isclass):
-            if (cls.__module__ == module.__name__ and callable(getattr(cls, "readiness", None))
-                    and any(callable(getattr(cls, member, None))
-                            for member in ("listen", "transcribe"))):
-                out.append((module, cls))
-    return out
-
-
-def test_the_scan_can_see_the_product():
-    """A guard on the guards below: an empty population passes both."""
-    assert _import_path_lookups(), (
-        "not one import-path lookup was found in nm/ -- the scan below "
-        "would then be asserting nothing over nothing")
-    assert len(_speech_adapters()) >= 2, (
-        "fewer than two speech adapters were discovered; the readiness rule "
-        "below would be asserting almost nothing")
 
 
 def test_only_one_module_may_ask_the_import_path():
@@ -141,26 +115,3 @@ def test_library_path_does_not_import_what_it_locates():
     assert here is not None and here.name == "nm"
 
 
-@pytest.mark.parametrize("state, reason", [
-    ("absent", None),
-    ("installed but unimportable", "ModuleNotFoundError: No module named 'srt'"),
-])
-def test_no_speech_adapter_reports_a_library_it_cannot_use_as_ready(monkeypatch, state, reason):
-    """Every speech adapter, including one added after this was written.
-
-    The health line for a library that cannot run must not begin the way a
-    working one does. That is S1 in one assertion: the third state is visible in
-    the OUTPUT, not merely representable in the type.
-    """
-    for module, cls in _speech_adapters():
-        unusable = optional.Library(name="stand-in", present=reason is not None, reason=reason)
-        monkeypatch.setattr(module, "library", lambda _name, answer=unusable: answer,
-                            raising=True)
-        said = cls().readiness()
-        assert said.startswith("NOT "), (
-            f"{cls.__module__}.{cls.__name__}.readiness() says {said!r} while its "
-            f"library is {state}")
-        if reason:
-            assert "srt" in said, (
-                f"{cls.__module__}.{cls.__name__}.readiness() hides why the library "
-                f"did not load: {said!r}")

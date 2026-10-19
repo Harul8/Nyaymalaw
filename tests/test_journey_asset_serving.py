@@ -11,7 +11,6 @@ from types import SimpleNamespace
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from starlette.routing import Mount
 
 from nm.app import api
 from nm.app.static_assets import BrowserAssetsRefused, browser_assets_router
@@ -19,22 +18,6 @@ from nm.shared.source_layout import LayoutRefused, browser_assets
 
 pytestmark = pytest.mark.class_a
 ROOT = Path(__file__).resolve().parents[1]
-ASSETS = {
-    "app.css": ("nm/app/app.css", "text/css"),
-    "app.js": ("nm/app/app.js", "text/javascript"),
-    "index.html": ("nm/app/index.html", "text/html"),
-    "brain-preview.html": ("nm/Archives/legal_brain/evaluate/brain-preview.html", "text/html"),
-    "brain-preview.js": ("nm/Archives/legal_brain/evaluate/brain-preview.js", "text/javascript"),
-    "source-reader.js": ("nm/Archives/legal_brain/communicate/source-reader.js", "text/javascript"),
-    "loop-progress.js": ("nm/Archives/legal_brain/communicate/loop-progress.js", "text/javascript"),
-    "matter-workspace.css": ("nm/Archives/legal_brain/communicate/matter-workspace.css", "text/css"),
-    "matter-workspace.js": ("nm/Archives/legal_brain/communicate/matter-workspace.js", "text/javascript"),
-    "advocate-preferences.js": ("nm/Archives/legal_brain/understand/advocate-preferences.js", "text/javascript"),
-    "draft-vault.js": ("nm/arrive/draft-vault.js", "text/javascript"),
-    "dictation-worklet.js": ("nm/open_matter/dictation-worklet.js", "text/javascript"),
-    "intake-materials.css": ("nm/open_matter/intake-materials.css", "text/css"),
-    "intake-materials.js": ("nm/open_matter/intake-materials.js", "text/javascript"),
-}
 
 
 @pytest.fixture
@@ -48,16 +31,6 @@ def http_boundary(client, monkeypatch):
     yield client
 
 
-def test_all_fourteen_declared_browser_assets_are_the_exact_shipped_population():
-    assert browser_assets(root=ROOT) == {
-        name: ROOT / path for name, (path, _media_type) in ASSETS.items()
-    }
-    assert len(ASSETS) == 14
-    # The old tree is migration evidence, not a runtime import or public root.
-    assert not any(isinstance(route, Mount) and route.path == "/static"
-                   for route in api.app.routes)
-
-
 def test_actual_served_application_owns_the_renderer_asset_population(http_boundary):
     from nm.app.composition import Application
 
@@ -66,19 +39,6 @@ def test_actual_served_application_owns_the_renderer_asset_population(http_bound
     assert dict(application.browser_asset_paths()) == browser_assets(root=ROOT)
     assert application.browser_asset_paths() is application.browser_asset_paths()
     assert http_boundary.get("/").content == (ROOT / "nm/app/index.html").read_bytes()
-
-
-@pytest.mark.parametrize("name", tuple(ASSETS))
-def test_every_real_asset_get_retains_exact_bytes_media_and_cache_headers(http_boundary, name):
-    path, media_type = ASSETS[name]
-    response = http_boundary.get(f"/static/{name}")
-    assert response.status_code == 200
-    assert response.content == (ROOT / path).read_bytes()
-    assert response.headers["content-type"] == f"{media_type}; charset=utf-8"
-    assert response.headers["content-length"] == str(len(response.content))
-    assert response.headers["cache-control"] == "no-cache, must-revalidate"
-    assert response.headers["x-content-type-options"] == "nosniff"
-    assert response.headers["etag"] and response.headers["last-modified"]
 
 
 @pytest.mark.parametrize("url", ("/", "/static/index.html", "/static/app.js",

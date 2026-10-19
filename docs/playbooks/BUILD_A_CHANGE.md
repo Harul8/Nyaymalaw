@@ -279,13 +279,3 @@ BUILT: yes / no, with reason:
 **Handoff to Test:** provide the closed Start and Build records plus a clean,
 reviewable change. Test independently decides whether the required claims are
 proved.
-
----
-
-<!-- THE RULES THIS PLAYBOOK CARRIES. `docs/backlog/build_rules.json`
-     is the registry; this manifest is how the card CLAIMS its rules.
-     Dropping one now means deleting an id here, which lint refuses --
-     because two rules were lost when the guide was split and nothing
-     noticed. Do not edit by hand except to add a genuinely new rule
-     to the registry first. -->
-<!-- BUILD_RULES: BG-002 BG-004 BG-005 BG-006 BG-007 BG-008 BG-009 BG-010 BG-012 BG-013 BG-014 BG-050 BG-051 BG-052 BG-060 BG-062 BG-063 BG-064 BG-065 BG-066 BG-067 BG-068 BG-069 BG-079 -->

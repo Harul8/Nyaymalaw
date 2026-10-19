@@ -1,3 +1,4 @@
+
 """Independent whole-evidence review; a verdict is not an execution receipt.
 
 The owning turn decides bounded repair and terminal gate scope. This module makes

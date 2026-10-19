@@ -92,8 +92,8 @@ finite test suite guarantees every future scenario or zero future regressions.
 ## The professional test
 
 Every stage must preserve the applicable decisions and capability intent in the
-current workbook. The older PA-01 to PA-20 registry is retained as historical
-evidence and a compatibility input, not a second planning owner. In practical terms, NM must:
+current workbook. The older PA-01 to PA-20 registry is historical (deleted on
+19 October 2026, P24), not a second planning owner. In practical terms, NM must:
 
 - understand the commission, role, decision-maker, objective and authority;
 - listen faithfully through typed, spoken and uploaded material;
@@ -120,22 +120,19 @@ remains unproved.
 | What is the user journey and capability intent? | legal brain: the stable capability IDs referenced by the selected slice |
 | What is built in which order? | Advocate build plan: engine slices, milestones and explicit prerequisites |
 | What is true now and what evidence supports it? | Advocate build plan: current status and linked evidence for the exact contract |
-| Why does the work exist and what was observed? | The selected workbook row and its linked dated evidence; older BACKLOG records remain historical |
+| Why does the work exist and what was observed? | The selected workbook row and its linked dated evidence |
 | What defines the professional behaviour? | Agreed workbook decisions and the referenced legal brain capability descriptions |
-| Which condition blocks, withholds or discloses? | `nm/shared/gates_contracts.py`, exported to `assurance/specification/gates.yaml` |
-| Which typed object must be produced? | The agreed slice contract and its owning live code schema; archived PRD schemas apply only to retained compatibility checks |
-| Which release thresholds bind? | `assurance/specification/release.yaml`; measured results are in `assurance/specification/coverage.yaml` |
+| Which condition blocks, withholds or discloses? | `nm/shared/gates_contracts.py` |
+| Which typed object must be produced? | The agreed slice contract and its owning live code schema |
+| Which release thresholds bind? | Those agreed on the Advocate build plan for the slice; the earlier release and coverage specifications were deleted (P24) |
 | What does the corpus actually hold? | `docs/BASELINE.md` |
 | Which recurring failure mechanisms must be considered? | `docs/DEFECT_SHAPES.md` |
 | Which representative conversations prove behaviour? | `docs/GOLDEN_SET.md` |
 
-The old PRD, backlog registries, PLAN.md and original/end-to-end workbooks are
-historical planning inputs under P12. Some remain at their original paths because
-retained assurance or corpus tools consume them. Their presence does not restore
-their former planning authority. The archive's
-[custody and dependency map](../development_environment/archives/planning-20261010/README.md)
-records what moved and why other inputs remain. Do not regenerate the older plans
-or update their status to record new core-engine work.
+The old PRD, backlog registries, PLAN.md, original/end-to-end workbooks and the
+tools that read them were deleted on 19 October 2026 (owner decision P24); they
+remain in Git history. Do not regenerate the older plans or use them to record
+new core-engine work.
 
 If two sources disagree, stop the affected work, classify the disagreement,
 resolve it in the owner above and reconcile affected documentation. An unchanged
@@ -164,34 +161,17 @@ will need more detail.
 
 ## What the machinery proves today
 
-The rule registry preserves rule IDs, playbook ownership and selected wording.
-A named runner means a check exists, not that the entire professional rule is
-automatically enforced. Human review remains necessary where the declared
-check covers only part of the promise.
-
-Execution-bound Class-A evidence now checks one canonical checked-tree identity
-and exact passing test outcomes. The identity covers the indexed repository
-population, including PRD source, applicable playbook/build rules, CI and hook
-configuration, delivery relations and semantic PRD output. Generated verdicts
-and evidence artifacts are excluded from the claim they judge so recording a
-result reaches a fixed point. A skipped, failed, malformed, duplicate, partial
-or stale Class-A population cannot be published as complete.
-
-The following is historical evidence about the retained control plane, not a
-current core-engine completion claim. It closed P01's local scope; it did not close BK-80. Structured
-counsel/model/production records still need P03's reviewer-authority,
-configuration, population and continuing-validity enforcement. Browser reports
-still need P03's complete expected-population contract. Record those additional
-facts in the selected current slice until its controls exist. A clean local or scoped result is not
-professional acceptance, operated-service proof or release permission. Keep
-volatile results and literal fingerprints in the excluded evidence artifacts,
-not in an identity-covered guide or completion narrative that would invalidate
-the identity it names.
+The earlier control plane (rule registry, per-task gate, Class-A evidence
+records and checked-tree identity) was deleted on 19 October 2026 (P24). The
+automated checks are now the tests in `tests/`, which exercise the production
+code. A passing test shows the behaviour it exercises, not the whole
+professional rule; human review remains necessary where a test covers only part
+of the promise, and a clean local result is not professional acceptance,
+operated-service proof or release permission.
 
 ## Approval boundaries
 
-Ordinary Class-A and local non-judged checks may run as part of the normal
-per-task gate. Golden, served end-to-end scenario and Class-D judged runs
+Ordinary offline tests may run as part of normal work. Golden, served end-to-end scenario and Class-D judged runs
 require explicit approval for the named bounded run. Long ingest, indexing,
 training or similar jobs are prepared and reported, not started automatically.
 One approval does not become standing permission.

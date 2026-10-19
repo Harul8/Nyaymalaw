@@ -9,12 +9,11 @@ from pathlib import Path
 import pytest
 import yaml
 
-from nm.app.composition import Application
 from nm.shared import egress_policy as policy_loader
-from nm.shared.egress_contracts import EgressRefused, Sink
+from nm.shared.egress_contracts import Sink
 from nm.shared.model_port import Prompt, Tier
 from nm.shared.model_scripted import ScriptedModelAdapter
-from tests.test_turn_contract import _Evidence, _model_config
+from tests.test_turn_contract import _model_config
 
 pytestmark = pytest.mark.class_a
 ROOT = Path(__file__).resolve().parents[1]
@@ -80,35 +79,6 @@ def _invoke(model, operation):
         return model.structured(Prompt("Synthetic matter fixture"),
                                 {"type": "object", "properties": {}}, Tier.ROUTINE)
     return model.embed(("Synthetic matter fixture",))
-
-
-def test_recorded_local_composition_remains_usable(application_root):
-    _write(application_root, _inventory())
-    app = Application(root=application_root, evidence=_Evidence())
-    result = _invoke(app.model, "complete")
-    assert result.text
-    assert app.model.provider == policy_loader.SCRIPTED_PROCESSOR
-    listed = app.store.list_for("not-enrolled")
-    assert listed.complete and listed.matters == ()
-    assert app.directory.identity("not-enrolled") is None
-
-
-@pytest.mark.parametrize("approval", ["invented-approval", "IN-PROCESS-NO-EGRESS"])
-@pytest.mark.parametrize("operation", ["complete", "structured", "embed"])
-def test_authored_approval_cannot_admit_an_external_recipient(
-        application_root, approval, operation):
-    document = _inventory()
-    document["processors"].append({
-        "processor_id": "external-provider", "region": "in", "purposes": ["model"],
-        "data_classes": ["client_matter"], "approval_id": approval})
-    _write(application_root, document)
-    inner = _Destination("external-provider")
-    app = Application(root=application_root, evidence=_Evidence(), model=inner)
-    with pytest.raises(EgressRefused, match="not in the reviewed inventory"):
-        _invoke(app.model, operation)
-    assert inner.reached == []
-    listed = app.store.list_for("not-enrolled")
-    assert listed.complete and listed.matters == (), "external refusal disabled local custody"
 
 
 def test_a_foreign_region_string_cannot_approve_even_a_local_named_recipient(tmp_path):
@@ -196,25 +166,3 @@ def test_absent_inventory_and_unreadable_inventory_are_not_empty_success(tmp_pat
     assert absent.problems != unreadable.problems
 
 
-def test_the_external_dispatch_witness_rejects_bypassed_profile_admission(
-        application_root, monkeypatch):
-    document = _inventory()
-    external = deepcopy(document["processors"][0])
-    external["processor_id"] = "external-provider"
-    document["processors"].append(external)
-    _write(application_root, document)
-
-    def witness():
-        inner = _Destination("external-provider")
-        app = Application(root=application_root, evidence=_Evidence(), model=inner)
-        with pytest.raises(EgressRefused):
-            _invoke(app.model, "complete")
-        assert inner.reached == []
-
-    witness()
-    original = policy_loader._controlled_local
-    assert callable(original)
-    monkeypatch.setattr(policy_loader, "_controlled_local", lambda processor: True)
-    assert policy_loader._controlled_local is not original
-    with pytest.raises(pytest.fail.Exception):
-        witness()

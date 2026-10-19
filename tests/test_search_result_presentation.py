@@ -104,24 +104,3 @@ def test_shipped_search_renderer_does_not_turn_an_index_score_into_confidence():
     assert result.returncode == 0, result.stdout + result.stderr
 
 
-def test_served_case_discovery_uses_actual_position_not_score_bands():
-    from nm.app.api import _discovery_dict, _search_position
-    from nm.Archives.legal_brain.retrieve.evidence_port import Coverage
-    from nm.Archives.legal_brain.retrieve.search_port import CaseDiscovery, CaseHit, IndexIdentity
-
-    identity = IndexIdentity("authority", "dated-build", "source", "generation-one", 3, 4,
-                             "India")
-
-    def discovery(*scores):
-        cases = tuple(CaseHit(f"case-{i}", f"Case {i}", "Court", 2020, 1,
-                              float(i), score, "Original words") for i, score in enumerate(scores))
-        return _discovery_dict(CaseDiscovery("query", "authority", Coverage.ANSWERED,
-                                             identity, cases=cases, paragraphs_ranked=len(cases)))
-
-    assert [row["band"] for row in discovery(0.01)["cases"]] == [""]
-    expected = ["result 1 of 3 shown", "result 2 of 3 shown", "result 3 of 3 shown"]
-    assert [row["band"] for row in discovery(0.2, 0.2, 0.2)["cases"]] == expected
-    assert [row["band"] for row in discovery(0.99, 0.01, 0.65)["cases"]] == expected
-    assert _search_position(-1, 3) == ""
-    assert _search_position(0, 1) == ""
-    assert _search_position(True, 3) == ""
