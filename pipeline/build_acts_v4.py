@@ -663,6 +663,12 @@ def index_stage() -> None:
     store = OUT / "acts_v4.db"
     if store.exists():
         raise SystemExit(f"{store} exists; give a new folder rather than overwrite")
+    # P21: each passage of an Act India Code does not list as in force says so, for the answer
+    # and the reading pane; its words, and so its vectors, are untouched.
+    standing = {act["act_id"]: act["standing"] for act in json.loads((OUT / "acts.json").read_text(encoding="utf-8"))}
+    for row in rows:
+        if standing.get(row["blob"]["act_id"]) == "not in force according to India Code":
+            row["blob"]["standing"] = "not in force according to India Code (checked 19 Oct 2026)"
     with sqlite3.connect(store) as db:
         db.execute("create table chunks (doc_type text, pos integer, chunk_id text, act_id text, case_id text, "
                    "parent_chunk_id text, atom_type text, section_number text, blob text, primary key (doc_type, pos))")
