@@ -19,7 +19,8 @@ from nm.core_engine.calls import CONFLICT_PURPOSE, GROUNDING_PURPOSE, TurnCalls
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import ModelResult, ProviderUnavailable, SchemaViolation, Usage
 from tests.test_core_response_writer import two_disputes
-from tests.test_core_served import served  # noqa: F401 - pytest fixture
+from tests.test_core_served import OWNER, served  # noqa: F401 - pytest fixture
+from tests.test_core_turn import store  # noqa: F401 - pytest fixture
 
 pytestmark = pytest.mark.class_a
 
@@ -66,9 +67,10 @@ class Scripted:
     """Writes each section from its script of rounds, reviews by the markers above, and
     names in the check across the sections each paragraph marked CONFLICT."""
 
-    def __init__(self, writes=None, *, overview=None, changes_advice=False, fail=()):
+    def __init__(self, writes=None, *, overview=None, changes_advice=False, fail=(), refuse=(), withhold=()):
         self.writes, self.overview, self.changes_advice = writes or {}, overview, changes_advice
         self.fail, self.lock, self.calls, self.rounds = set(fail), threading.Lock(), [], {}
+        self.refuse, self.withhold = set(refuse), set(withhold)
 
     def context_budget(self, tier): return 100_000
 
@@ -83,6 +85,12 @@ class Scripted:
             round_ = self.rounds.get(key)
         if prompt.operation in self.fail or (key, round_) in self.fail:
             raise ProviderUnavailable("Synthetic provider outage")
+        if prompt.operation in self.refuse:
+            from nm.shared.external_ai_contracts import ModelPermissionRefused
+            raise ModelPermissionRefused("External model permission is required.")
+        if prompt.operation in self.withhold:
+            from nm.core_engine.calls import ReleaseWithheld
+            raise ReleaseWithheld("G-CORE: synthetic owned evidence that cannot be trusted")
         if prompt.operation == "core_response_writer":
             script = self.writes.get(key)
             out = script(round_, payload) if script else written(key, round_)
@@ -406,6 +414,20 @@ def test_a_service_failure_for_every_section_saves_nothing():
         answered(Scripted(fail={"core_response_writer"}))
 
 
+def test_the_reading_pane_finds_each_paragraph_in_its_own_section():
+    # The saved-source route reads a paragraph's checks from its own section's draft (turn v6).
+    from nm.app import api
+    ctx, elements, activity, _ = answered(Scripted({"D1": corrected("File by Tuesday.")}))
+    shown = [index for index, element in enumerate(elements) if "unit" in element]
+    assert {elements[index]["section"] for index in shown} == {"overview", 1, 2}
+    for index in shown:
+        unit, evidence = api._shown_unit(activity, elements, index)
+        assert unit["text"] == elements[index]["text"]
+        assert [row["unit_id"] for row in evidence["units"]].count(unit["id"]) == 1
+    with pytest.raises(IndexError):
+        api._shown_unit(activity, elements, next(i for i, e in enumerate(elements) if e["kind"] == "EDITED"))
+
+
 def test_the_most_urgent_section_comes_first_on_the_answer_and_on_the_board():
     """Owner decision P26: sections by the earliest last day among the worked-out time
     limits each names, then in the understanding's order."""
@@ -505,3 +527,144 @@ def test_the_served_answer_shows_a_corrected_section_under_its_label(served):
     # The board lists the disputes as the answer shows them, each with its checklist.
     board = served.client.get(f"/api/chats/{resp.json()['chat_id']}/board").json()
     assert [dispute["id"] for dispute in board["disputes"]] == ["D1", "D2"]
+
+
+# --- saved as it is shown (owner decision P27) -----------------------------------------
+
+ANSWERING = ("core_response_writer", "core_response_overview", "core_response_review", "core_response_cross_check")
+
+
+def through_turns(scripted):
+    """The research of the turn tests for two disputes; the answering scripted."""
+    from tests.test_core_turn import ScriptedModel
+    model = ScriptedModel(legal=True, disputes=2)
+    research = model.structured
+
+    def structured(prompt, schema, tier, **kwargs):
+        if prompt.operation in ANSWERING:
+            return scripted.structured(prompt, schema, tier, **kwargs)
+        return research(prompt, schema, tier, **kwargs)
+    model.structured = structured
+    return model
+
+
+def held_now(store, turn_id="t1", chat_id=None):
+    from nm.core_engine.conversation import chat_matter_id, shown_of, stored_chat
+    return shown_of(store.load(chat_matter_id("owner", stored_chat("owner", chat_id, turn_id))))
+
+
+def test_each_part_is_saved_with_the_conversation_as_it_is_shown_and_the_commit_replaces_it(store):
+    from nm.core_engine.conversation import SHOWN, chat_matter_id
+    from tests.test_core_turn import run
+    seen, reported = {}, []
+
+    def overview(round_, payload):
+        seen["held"] = held_now(store)  # what the page can read while the overview is written
+        return [paragraph("summary", "Both disputes turn on the same agreement.")]
+    response = run(store, through_turns(Scripted(overview=overview)),
+                   progress=lambda stage, **detail: reported.append((stage, detail)))
+    held = seen["held"]
+    assert held["turn_id"] == "t1" and held["message"] == "Hello."
+    assert [saved["part"] for saved in held["activity"]["sections"]] == [1, 2]
+    assert held["activity"]["waiting"] == [] and held["activity"]["overview"] is None
+    assert [e["kind"] for e in held["elements"]].count("HEADING") == 2
+    shown = [detail for stage, detail in reported if stage == "shown"]
+    assert [detail["shown"] for detail in shown] == [1, 2, 3, 4] and {d["chat_id"] for d in shown} == {response["chat_id"]}
+    # The commit replaces what was shown, in the same write; the version counts the turn.
+    matter = store.load(chat_matter_id("owner", response["chat_id"]))
+    assert SHOWN not in matter.intake_answers and len(matter.brain_chat) == 1
+    assert matter.version == response["matter_version"] == matter.brain_chat[0]["state_version"]
+
+
+def test_a_turn_that_stopped_after_showing_part_of_its_answer_is_saved_with_what_it_showed(store):
+    from nm.core_engine.conversation import ConversationRefused
+    from nm.shared.external_ai_contracts import ModelPermissionRefused
+    from tests.test_core_turn import run
+    with pytest.raises(ModelPermissionRefused):
+        run(store, through_turns(Scripted(refuse={"core_response_overview"})))
+    held = held_now(store)
+    assert [saved["part"] for saved in held["activity"]["sections"]] == [1, 2]
+    # The next message of the conversation saves it first, with what it showed.
+    chat_id = held["request"]["chat_id"]
+    later = run(store, through_turns(Scripted()), chat_id=chat_id, turn_id="t2", message="And the second?")
+    assert later["committed"] == "committed" and held_now(store, "t2", chat_id) is None
+    from nm.core_engine.conversation import chat_matter_id
+    rows = turn.saved_rows(store.load(chat_matter_id("owner", chat_id)), "owner")
+    first = rows[0]
+    assert [row["turn_id"] for row in rows] == ["t1", "t2"]
+    assert first["response"]["elements"][0]["text"].startswith("NM stopped before finishing this answer.")
+    assert first["activities"]["overview"]["fallback"] == {"reason": "interrupted"}
+    assert any(e["kind"] == "NEXT_STEP" and "D1" in e["text"] for e in first["response"]["elements"])
+    # Sent again, the stopped message is the saved answer it showed, never a second one.
+    assert run(store, through_turns(Scripted()), chat_id=chat_id)["replayed"]
+    with pytest.raises(ConversationRefused):
+        run(store, through_turns(Scripted()), chat_id=chat_id, turn_id="t1", message="A different message.")
+
+
+def test_the_same_message_sent_again_after_a_stop_is_answered_afresh(store):
+    from nm.shared.external_ai_contracts import ModelPermissionRefused
+    from tests.test_core_turn import run
+    with pytest.raises(ModelPermissionRefused):
+        run(store, through_turns(Scripted(refuse={"core_response_overview"})))
+    chat_id = held_now(store)["request"]["chat_id"]
+    again = run(store, through_turns(Scripted()))  # the same request: chat and turn as before
+    assert again["committed"] == "committed" and again["chat_id"] == chat_id and held_now(store) is None
+    assert not any(e["text"].startswith("NM stopped before") for e in again["elements"])
+    assert [e["kind"] for e in again["elements"]][0] == "OPENING"
+
+
+def test_a_turn_withheld_whole_keeps_nothing_it_showed(store):
+    from nm.core_engine.conversation import ConversationRefused
+    from tests.test_core_turn import run
+    with pytest.raises(ConversationRefused) as refused:
+        run(store, through_turns(Scripted(withhold={"core_response_overview"})))
+    assert refused.value.code == "answer_withheld"
+    assert held_now(store) is None
+
+
+
+def test_the_page_reads_what_a_running_turn_has_shown_and_a_reopened_one_is_saved_with_it(served):
+    """P26-P27 through the HTTP API: the progress says how much the answer has shown and in
+    which conversation; the conversation holds what was shown while its turn is worked on;
+    reopened once the turn stopped, it is saved with what it showed."""
+    from nm.core_engine.conversation import stored_chat
+    scripted_answers(served, Scripted(refuse={"core_response_overview"}))
+    resp = served.client.post("/api/turn", json={"message": "Inspect this reported account.", "turn_id": "turn-1"})
+    assert resp.status_code == 403
+    chat_id = stored_chat(OWNER, None, "turn-1")
+    progress = served.client.get("/api/turn-progress?turn_id=turn-1").json()
+    assert progress["shown"] == 3 and progress["chat_id"] == chat_id
+    # While the turn is still being worked on, the conversation holds what it has shown.
+    served.app.turn_progress.report(OWNER, "turn-1", "writing_overview")
+    reading = served.client.get(f"/api/chats/{chat_id}").json()
+    assert reading["turns"] == [] and reading["pending"]["turn_id"] == "turn-1"
+    assert [e["text"] for e in reading["pending"]["elements"] if e["kind"] == "HEADING"] == ["Dispute 1", "Dispute 2"]
+    board = served.client.get(f"/api/chats/{chat_id}/board").json()
+    assert [dispute["id"] for dispute in board["disputes"]] == ["D1", "D2"]
+    assert all("checklist" in dispute for dispute in board["disputes"])
+    # Once it has stopped, reopening saves it with what it showed.
+    served.app.turn_progress.end(OWNER, "turn-1", "stopped")
+    reopened = served.client.get(f"/api/chats/{chat_id}").json()
+    assert "pending" not in reopened and len(reopened["turns"]) == 1
+    assert reopened["turns"][0]["elements"][0]["text"].startswith("NM stopped before finishing this answer.")
+    assert reopened["matter_version"] == reopened["turns"][0]["matter_version"]
+
+
+def test_a_page_that_knew_the_conversation_before_a_stop_can_send_the_message_again(store):
+    from nm.core_engine.conversation import ConversationRefused
+    from nm.shared.external_ai_contracts import ModelPermissionRefused
+    from tests.test_core_turn import run
+    first = run(store, through_turns(Scripted()))
+    chat_id, version = first["chat_id"], first["matter_version"]
+    with pytest.raises(ModelPermissionRefused):
+        run(store, through_turns(Scripted(refuse={"core_response_overview"})), chat_id=chat_id, turn_id="t2",
+            message="And next?", expected_version=version)
+    assert held_now(store, "t2", chat_id)["base_version"] == version
+    again = run(store, through_turns(Scripted()), chat_id=chat_id, turn_id="t2", message="And next?",
+                expected_version=version)
+    assert again["committed"] == "committed" and held_now(store, "t2", chat_id) is None
+    # A page that knew an older conversation is still told it changed.
+    with pytest.raises(ConversationRefused) as stale:
+        run(store, through_turns(Scripted()), chat_id=chat_id, turn_id="t3", message="Later?",
+            expected_version=version)
+    assert stale.value.code == "stale_version"

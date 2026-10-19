@@ -11,6 +11,7 @@ import re
 import threading
 
 from copy import deepcopy
+from datetime import datetime, timezone
 
 from concurrent.futures import ThreadPoolExecutor
 
@@ -19,12 +20,13 @@ from nm.core_engine import response_rendering
 from nm.core_engine import understanding
 from nm.core_engine.calls import CorrectionUnavailable, ReleaseWithheld, TurnCalls
 from nm.core_engine.conversation import (
-    ConversationRefused, TurnContext, checked_rows, commit_turn, open_turn,
-    digest,
+    ConversationRefused, TurnContext, chat_matter_id, checked_rows, commit_turn, committed_version, digest,
+    drop_shown, hold_shown, open_turn, shown_of, stored_chat,
 )
 from nm.shared.external_ai_contracts import ModelPermissionRefused
 from nm.shared.egress_contracts import EgressRefused
 from nm.shared.model_port import ContextOverflow, ModelError, SchemaViolation
+from nm.shared.store_port import StaleWrite
 from nm.shared.turn_attempt_port import AttemptRefused, TurnAttemptPort
 
 LEGACY_CONTRACT = "core_turn_v1"
@@ -139,25 +141,81 @@ def understood(calls, context, searcher, report, held_acts=None):
 
 
 def prepare(model, context, searcher, *, case_index=None, provision_reader=None, progress=None,
-            held_acts=None):
+            held_acts=None, shown=None):
     """Prepare and admit one response, dispute by dispute (turn v6, owner decisions P25-P27).
-    No persistence or external action occurs here."""
+    No persistence or external action occurs here. shown (P26): told, each time the answer
+    shows more, its elements so far and the activity they come from (its sections done, the
+    parts still being written under "waiting")."""
     report = _reporter(progress)
     calls = model if isinstance(model, TurnCalls) else TurnCalls(model)
     report("understanding")
     interpreted, record, limits = understood(calls, context, searcher, report, held_acts)
     sources = answer_sources.build(context, record)
     execution = execution_record(record)
+    base = {"contract": CONTRACT, "interpretation": interpreted, "research": record, "sources": sources,
+            "execution": execution, "calculation": limits,
+            "rendering_contract": response_rendering.BY_DISPUTE_CONTRACT}
+
+    def released(state):
+        if shown is None:
+            return
+        elements = response_rendering.render_sections(
+            context, record, sources, sections=state["sections"], cross_check=state["cross_check"],
+            overview=state["overview"], time_limits=limits, waiting=state["waiting"])
+        shown(elements, {**base, **state}, calls.metrics())
     sections, crossed, overview = answer_sections.answer(
         calls, context, record, sources, interpretation=interpreted, execution=execution, worked=limits,
-        case_index=case_index, provision_reader=provision_reader, report=report)
+        case_index=case_index, provision_reader=provision_reader, report=report, released=released)
     elements = response_rendering.render_sections(context, record, sources, sections=sections, cross_check=crossed,
                                                   overview=overview, time_limits=limits)
-    activity = {"contract": CONTRACT, "interpretation": interpreted, "research": record, "sources": sources,
-                "execution": execution, "calculation": limits,
-                "rendering_contract": response_rendering.BY_DISPUTE_CONTRACT,
-                "sections": sections, "cross_check": crossed, "overview": overview}
+    activity = {**base, "sections": sections, "cross_check": crossed, "overview": overview}
     return elements, activity, calls.metrics()
+
+
+def interrupted(held):
+    """A turn that stopped after showing part of its answer, as it is saved (P27): its
+    activity with the parts not finished marked so, and the answer rendered from it."""
+    activity = {key: deepcopy(value) for key, value in held.items() if key != "waiting"}
+    activity["sections"], activity["cross_check"], activity["overview"] = answer_sections.interrupted(
+        {"sections": held["sections"], "cross_check": held["cross_check"], "overview": held["overview"]},
+        held["research"])
+    return activity
+
+
+def recover(store, matter, advocate_id, *, running=lambda turn_id: False, session_current):
+    """Save a turn that stopped after showing part of its answer with what it showed (owner
+    decision P27, 19 Oct 2026: each section is saved when it is shown), unless that turn is
+    still running. What cannot be read reliably is withdrawn, never saved as shown. Returns
+    the conversation as it now stands."""
+    try:
+        held = shown_of(matter)
+    except ValueError:
+        held = {"turn_id": None}
+    if held is None or held["turn_id"] is not None and running(held["turn_id"]):
+        return matter
+    rows = checked_rows(matter, advocate_id)
+    try:
+        context = TurnContext(matter, held["request"]["chat_id"], held["turn_id"], held["message"], tuple(rows),
+                              documents=tuple(held["documents"]))
+        if context.request != held["request"] or any(row["turn_id"] == held["turn_id"] for row in rows):
+            raise ValueError("What was shown belongs to another request")
+        activity = interrupted(held["activity"])
+        original = context.payload()
+        record = research.validate(activity["research"], activity["research"]["plan"], original)
+        sources = answer_sources.build(original, record)
+        elements = response_rendering.render_sections(
+            original, record, sources, sections=activity["sections"], cross_check=activity["cross_check"],
+            overview=activity["overview"], time_limits=calculation.validate(activity["calculation"], original))
+        validate_activity(activity, original, elements)
+    except (ValueError, KeyError, TypeError, SchemaViolation) as exc:
+        log.warning("The unfinished parts of an answer could not be read reliably and were withdrawn: %s",
+                    type(exc).__name__)
+        drop_shown(store, TurnContext(matter, rows[0]["chat_id"] if rows else "", "", "", tuple(rows)))
+        return store.load(matter.id)
+    commit_turn(store, context, elements=elements, activities=activity,
+                records=checklist.records(original, activity), metrics=held["metrics"],
+                session_current=session_current)
+    return store.load(matter.id)
 
 
 def _validate_sections(activity, context, elements):
@@ -244,9 +302,23 @@ def saved_rows(matter, advocate_id):
 def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=None,
             matter_id=None, expected_version=None, session_current=lambda: False,
             attempts: TurnAttemptPort | None = None, case_index=None, provision_reader=None,
-            progress=None, documents=(), held_acts=None):
+            progress=None, documents=(), held_acts=None, running=lambda turn_id: False):
     if not session_current():
         raise ConversationRefused("Sign in again before continuing.", status=401)
+    if matter_id is None:
+        # Another turn of this conversation that stopped after showing part of its answer
+        # is saved first, with what it showed (P27); this same turn sent again starts afresh.
+        try:
+            stored = store.load(chat_matter_id(advocate_id, stored_chat(advocate_id, chat_id, turn_id)))
+        except (OSError, ValueError) as exc:
+            raise ConversationRefused("The conversation could not be loaded reliably.") from exc
+        if stored is not None and stored.advocate_id == advocate_id:
+            try:
+                held = shown_of(stored)
+            except ValueError:
+                held = {"turn_id": None}
+            if held is not None and held["turn_id"] != turn_id:
+                recover(store, stored, advocate_id, running=running, session_current=session_current)
     context = open_turn(store, advocate_id=advocate_id, message=message, turn_id=turn_id,
                         chat_id=chat_id, matter_id=matter_id, expected_version=expected_version,
                         documents=documents)
@@ -258,7 +330,9 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
         raise ConversationRefused("Conversation processing is not configured.", status=503,
                                   code="attempt_storage_unavailable")
     identity = digest([advocate_id, context.chat_id, turn_id])
-    binding = digest({"request": context.request, "version": context.matter.version,
+    # The committed conversation the request was made on: what a turn shows while it works
+    # is saved beside it, and a same request sent again still matches (P27).
+    binding = digest({"request": context.request, "version": committed_version(context.rows),
                       "previous": context.rows[-1]["digest"] if context.rows else None})
     try:
         claim = attempts.claim(identity, binding)
@@ -274,17 +348,51 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
 
     calls = TurnCalls(model, corrections_used=claim["corrections_used"],
                       reserve_correction=lambda: attempts.consume_correction(identity, token))
+    # What the answer shows as each part passes is saved beside the conversation then (P27),
+    # and the page told how much there is to show (P26).
+    holder, report = {"context": context, "shown": 0}, _reporter(progress)
+    try:
+        before = shown_of(context.matter)
+    except ValueError:
+        before = None
+    base = before["base_version"] if before and before["turn_id"] == turn_id else context.matter.version
+
+    def shown(elements, activity, metrics):
+        held = {"turn_id": turn_id, "request": context.request, "message": context.message,
+                "documents": deepcopy(list(context.documents)), "activity": activity, "elements": elements,
+                "metrics": metrics, "at": datetime.now(timezone.utc).isoformat(), "base_version": base}
+        try:
+            holder["context"] = hold_shown(store, holder["context"], held)
+        except (OSError, StaleWrite, ConversationRefused, ValueError):
+            # The answer goes on; its commit decides what is saved.
+            log.warning("What the answer showed could not be saved beside the conversation", exc_info=True)
+            return
+        holder["shown"] += 1
+        report("shown", shown=holder["shown"], chat_id=context.chat_id)
+
+    def withdraw():
+        """A turn withheld whole, or not answered at all, keeps nothing it showed. What an
+        earlier run of this same message showed is left as it was saved."""
+        if not holder["shown"]:
+            return
+        try:
+            holder["context"] = drop_shown(store, holder["context"])
+        except (OSError, StaleWrite):
+            log.warning("What an unanswered turn showed could not be withdrawn", exc_info=True)
     try:
         elements, activity, metrics = prepare(calls, context.payload(), searcher,
             case_index=case_index, provision_reader=provision_reader, progress=progress,
-            held_acts=held_acts)
+            held_acts=held_acts, shown=shown)
         validate_activity(activity, context.payload(), elements)
     except AttemptRefused as exc:
         raise _attempt_refusal(exc) from exc
     except ModelPermissionRefused:
+        # Never turned into an answer here; what was shown stays saved beside the
+        # conversation, and is saved with it unless this same message is sent again.
         finish("retryable", "model_permission_required")
         raise
     except ModelError as exc:
+        withdraw()
         if isinstance(exc, ContextOverflow):
             why = "This conversation exceeds the current processing capacity. Your saved conversation is unchanged."
             code = "context_capacity"
@@ -313,7 +421,7 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
         raise refusal from exc
     _reporter(progress)("saving")
     try:
-        response = commit_turn(store, context, elements=elements, activities=activity,
+        response = commit_turn(store, holder["context"], elements=elements, activities=activity,
                                records=checklist.records(context.payload(), activity),
                                metrics=metrics, session_current=session_current)
     except ConversationRefused as exc:

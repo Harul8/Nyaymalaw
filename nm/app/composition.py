@@ -154,6 +154,9 @@ class Application:
 
         def progress(stage, **detail):
             reported.append(stage)
+            if stage == 'shown':  # the answer showed more (owner decisions P26-P27)
+                self.turn_progress.shown(advocate_id, turn_id, detail.get('shown'), detail.get('chat_id'))
+                return
             self.turn_progress.report(advocate_id, turn_id, stage, detail)
 
         ended = 'stopped'
@@ -163,7 +166,8 @@ class Application:
                              held_acts=self.held_acts,
                              case_index=self.case_index,
                              provision_reader=getattr(self.legal_search, 'collections', {}).get('provision'),
-                             progress=progress, **request)
+                             progress=progress, running=lambda held: self.turn_running(advocate_id, held),
+                             **request)
             ended = 'finished'
             return result
         finally:
@@ -171,6 +175,10 @@ class Application:
             # refused while the first run works must not mark that run stopped.
             if reported:
                 self.turn_progress.end(advocate_id, turn_id, ended)
+
+    def turn_running(self, advocate_id, turn_id):
+        """Whether one of this advocate's turns is being worked on in this process now."""
+        return self.turn_progress.read(advocate_id, turn_id).get('state') == 'working'
 
     def browser_asset_paths(self):
         return browser_assets(root=ROOT)

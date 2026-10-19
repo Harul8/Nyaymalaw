@@ -1716,6 +1716,12 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visib
 .edited-original { margin-top: .3rem; }
 .edited-original summary { cursor: pointer; color: var(--accent); font-size: .85rem; min-height: 2rem; }
 .edited-original p { color: var(--ink-2); font-size: .88rem; max-width: 66ch; }
+/* What an answer has shown so far, while it is still being written (P26). */
+.shown-so-far { margin: .8rem 0 0; padding: .6rem 0 0; border-top: 1px dashed var(--rule); }
+.shown-so-far-label { margin: 0 0 .5rem; color: var(--ink-3); font-size: .8rem; }
+.shown-so-far-title { margin: .6rem 0 .2rem; font-size: .85rem; }
+.shown-so-far .el { margin: 0 0 .7rem; max-width: 66ch; font-size: .95rem; line-height: 1.6; }
+.shown-so-far .el.WAITING, .shown-so-far .el.NOTE { color: var(--ink-3); font-size: .85rem; }
 /* THE TOP BAR (owner, 16 Oct 2026): the name, + New matter and Conversation history,
    and who is signed in with the person menu, across the window on every page. */
 .top-actions { display: flex; align-items: center; gap: 0.25rem; margin-right: auto; margin-left: 1.5rem; }

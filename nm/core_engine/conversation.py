@@ -18,6 +18,15 @@ from nm.work_the_file.matter_contracts import Matter
 
 CONTRACT = "core_conversation_v1"
 HEADER = "core_conversation"
+#: What a turn has shown of its answer while it works, sealed with the conversation as each
+#: part passes (owner decision P27, 19 Oct 2026: each section is saved when it is shown).
+#: The turn's commit replaces it in the same write; a turn that stopped after showing part
+#: of its answer is saved later with what it showed (turn.recover). It is never a turn of
+#: the conversation itself; base_version is the conversation's version before the turn first
+#: saved what it showed, which the advocate's page still knows.
+SHOWN = "core_shown"
+_SHOWN_FIELDS = {"turn_id", "request", "message", "documents", "activity", "elements", "metrics", "at",
+                 "base_version"}
 
 
 class ConversationRefused(Exception):
@@ -176,6 +185,70 @@ class TurnContext:
         return context
 
 
+def stored_chat(advocate_id, chat_id, turn_id):
+    """The conversation a turn belongs to: the one named, or the one its first message opens."""
+    return chat_id or "new_" + digest([advocate_id, turn_id])[:32]
+
+
+def committed_version(rows):
+    """The conversation's version as its last committed turn left it."""
+    return rows[-1]["state_version"] if rows else 0
+
+
+def shown_of(matter):
+    """What a turn not yet committed has shown of its answer, as it was saved, or None."""
+    held = (matter.intake_answers or {}).get(SHOWN) if matter is not None else None
+    if held is None:
+        return None
+    if (not isinstance(held, dict) or set(held) != _SHOWN_FIELDS or not _nonempty(held["turn_id"])
+            or not isinstance(held["request"], dict) or not isinstance(held["elements"], list)
+            or type(held["base_version"]) is not int or held["base_version"] < 0
+            or any(type(e) is not dict or type(e.get("text")) is not str for e in held["elements"])):
+        raise ValueError("What a turn has shown could not be read reliably")
+    return deepcopy(held)
+
+
+def hold_shown(store, context, held):
+    """Save what this turn has shown so far beside its conversation, sealed with it, before
+    the turn is committed (P27). The conversation's turns are unchanged. Returns the turn's
+    context at the version written."""
+    metadata = {**context.matter.intake_answers, SHOWN: deepcopy(held)}
+    metadata.setdefault(HEADER, {"contract": CONTRACT, "chat_id": context.chat_id, "turn_count": 0,
+                                 "tail_digest": None})
+    candidate = replace(context.matter, intake_answers=metadata, version=context.matter.version + 1)
+    checked_rows(candidate, context.matter.advocate_id)
+    shown_of(candidate)
+    return replace(context, matter=_written(store, candidate, context.matter.version))
+
+
+def _written(store, candidate, expected_version):
+    """A write beside the conversation, confirmed: where its acknowledgement was lost, the
+    store is read back and the write counts only if exactly it is there."""
+    try:
+        return store.commit(candidate, expected_version=expected_version)
+    except (OSError, StaleWrite):
+        try:
+            current = store.load(candidate.id)
+        except (OSError, ValueError):
+            current = None
+        if (current is None or current.version != candidate.version
+                or digest(current.intake_answers) != digest(candidate.intake_answers)
+                or current.brain_chat != candidate.brain_chat):
+            raise
+        return current
+
+
+def drop_shown(store, context):
+    """Withdraw what this turn has shown, where the turn is withheld whole (G-CORE) or was
+    not answered at all. Returns the turn's context at the version written, or as it was
+    where nothing was held."""
+    if SHOWN not in context.matter.intake_answers:
+        return context
+    metadata = {key: value for key, value in context.matter.intake_answers.items() if key != SHOWN}
+    candidate = replace(context.matter, intake_answers=metadata, version=context.matter.version + 1)
+    return replace(context, matter=_written(store, candidate, context.matter.version))
+
+
 def open_turn(store, *, advocate_id, message, turn_id, chat_id=None, matter_id=None,
               expected_version=None, documents=()):
     if not all(_nonempty(v) for v in (advocate_id, message, turn_id)):
@@ -186,7 +259,7 @@ def open_turn(store, *, advocate_id, message, turn_id, chat_id=None, matter_id=N
         raise ConversationRefused("A valid conversation identity is required.", status=422)
     if expected_version is not None and (type(expected_version) is not int or expected_version < 0):
         raise ConversationRefused("A valid conversation version is required.", status=422)
-    identity = chat_id or "new_" + digest([advocate_id, turn_id])[:32]
+    identity = stored_chat(advocate_id, chat_id, turn_id)
     stored_id = chat_matter_id(advocate_id, identity)
     try:
         matter = store.load(stored_id)
@@ -205,7 +278,14 @@ def open_turn(store, *, advocate_id, message, turn_id, chat_id=None, matter_id=N
                 raise ConversationRefused("This request identity belongs to a different message.",
                                           code="request_conflict", committed="previously_committed")
             return replace(context, replay={**row["response"], "replayed": True})
-    if expected_version is not None and expected_version != matter.version:
+    # What a turn has shown and saved beside the conversation (P27) does not change what the
+    # advocate's page knew before it started.
+    try:
+        held = shown_of(matter) if rows or matter.version else None
+    except ValueError:
+        held = None
+    if expected_version is not None and expected_version not in (
+            matter.version, held["base_version"] if held else matter.version):
         raise ConversationRefused("The conversation changed. Reopen it before continuing.",
                                   code="stale_version")
     return context
@@ -239,7 +319,8 @@ def commit_turn(store, context, *, elements, activities, records=None, work=None
     if context.documents:
         row["documents"] = deepcopy(list(context.documents))
     row["digest"] = digest(row)
-    metadata = {**context.matter.intake_answers, HEADER: {
+    # The turn's commit replaces what it showed while it worked (P27), in the same write.
+    metadata = {**{key: value for key, value in context.matter.intake_answers.items() if key != SHOWN}, HEADER: {
         "contract": CONTRACT, "chat_id": context.chat_id,
         "turn_count": len(context.rows) + 1, "tail_digest": row["digest"]}}
     candidate = replace(context.matter, brain_chat=(*context.rows, row),

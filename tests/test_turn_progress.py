@@ -28,7 +28,7 @@ def test_the_record_keeps_stage_names_counts_and_times_only():
     clock.now += 3
     seen = progress.read("a", "t1")
     assert seen == {"state": "working", "stage": "searching", "label": STAGES["searching"],
-                    "detail": {"done": 2, "total": 9}, "elapsed_seconds": 7,
+                    "detail": {"done": 2, "total": 9}, "shown": 0, "chat_id": None, "elapsed_seconds": 7,
                     "steps": [{"label": STAGES["understanding"], "seconds": 4},
                               {"label": STAGES["searching"], "seconds": 3}]}
     progress.report("a", "t1", "searching", {"done": 3, "total": 9})  # the same stage moves on, not repeats
@@ -93,3 +93,24 @@ def test_a_refused_retry_does_not_close_the_progress_of_the_run_still_working(se
     with pytest.raises(ConversationRefused):
         served.app.run_turn(advocate_id=OWNER, session_current=lambda: True, message="m", turn_id="turn-1")
     assert served.app.turn_progress.read(OWNER, "turn-1")["state"] == "working"
+
+
+def test_a_turn_says_how_much_its_answer_has_shown_and_where_never_what():
+    # Owner decisions P26-P27, 19 Oct 2026: the answer shows each section as it passes; what
+    # it shows is saved with the conversation, and the progress says only that there is more.
+    progress = TurnProgress(clock=Clock(), keep_seconds=60)
+    progress.report("a", "t1", "reviewing")
+    progress.shown("a", "t1", 1, "new_0123abcd")
+    progress.report("a", "t1", "revising", {"done": 1})
+    progress.shown("a", "t1", 2, "new_0123abcd")
+    progress.shown("a", "t1", 1, "new_0123abcd")  # never backwards
+    for count, chat in ((0, "new_0123abcd"), (3, "client words here"), ("3", "new_0123abcd"), (3, None)):
+        progress.shown("a", "t1", count, chat)
+    seen = progress.read("a", "t1")
+    assert (seen["shown"], seen["chat_id"], seen["stage"]) == (2, "new_0123abcd", "revising")
+    progress.shown("a", "other-turn", 1, "new_0123abcd")  # a turn not reported is not created
+    assert progress.read("a", "other-turn") == {"state": "unknown"}
+    progress.end("a", "t1", "finished")
+    progress.shown("a", "t1", 5, "new_0123abcd")  # nothing after the turn ends
+    assert progress.read("a", "t1")["shown"] == 2
+

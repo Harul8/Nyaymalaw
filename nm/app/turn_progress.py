@@ -5,9 +5,14 @@ reads it while waiting and after a reload. Only stage names, counts and times ar
 kept, never message, legal or model content, and each advocate reads only their own
 turns. Entries are memory only and lapse KEEP_SECONDS after the turn ends; a reader
 that finds none is told the progress is unknown, never that the turn failed.
+
+From 19 Oct 2026 (owner decisions P26 and P27) a turn also says how many times its answer
+has shown more, and which conversation it belongs to: what it shows is saved, sealed,
+with that conversation, which the browser reads (never from here).
 """
 from __future__ import annotations
 
+import re
 import threading
 import time
 
@@ -31,6 +36,8 @@ STAGES = {
 }
 #: Counts a stage may report; anything else is dropped.
 DETAIL = ("done", "total", "round")
+#: A conversation's identity as the browser names it; anything else is dropped.
+_CHAT = re.compile(r"[A-Za-z0-9_-]{1,120}\Z")
 
 
 class TurnProgress:
@@ -58,6 +65,17 @@ class TurnProgress:
                 row["steps"].append({"stage": stage, "at": now})
             row["detail"] = counts
 
+    def shown(self, advocate_id, turn_id, count, chat_id):
+        """The turn's answer has shown more (P26): how many times so far, and the conversation
+        whose saved record holds what it shows. Never the content itself."""
+        if (type(count) is not int or count < 1 or not isinstance(chat_id, str) or not _CHAT.match(chat_id)
+                or not isinstance(advocate_id, str) or not isinstance(turn_id, str)):
+            return
+        with self._lock:
+            row = self._rows.get((advocate_id, turn_id))
+            if row is not None and row["ended"] is None:
+                row["shown"], row["chat_id"] = max(count, row.get("shown", 0)), chat_id
+
     def end(self, advocate_id, turn_id, state):
         """state is "finished" (an answer was saved or replayed) or "stopped"."""
         with self._lock:
@@ -78,6 +96,7 @@ class TurnProgress:
                     "stage": current["stage"] if current else None,
                     "label": STAGES[current["stage"]] if current else None,
                     "detail": dict(row.get("detail") or {}),
+                    "shown": row.get("shown", 0), "chat_id": row.get("chat_id"),
                     "elapsed_seconds": int(until - row["started"]),
                     "steps": [{"label": STAGES[step["stage"]],
                                "seconds": int((steps[i + 1]["at"] if i + 1 < len(steps) else until) - step["at"])}

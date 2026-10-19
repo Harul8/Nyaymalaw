@@ -2561,11 +2561,16 @@ function renderTurn(entry) {
         waiting.appendChild(row);
       });
     }
+    // WHAT THE ANSWER HAS SHOWN SO FAR (owner decisions P26-P27, 19 Oct 2026): each part as
+    // it passes its checks, saved with the conversation as it is shown.
+    const soFar = Array.isArray(entry.shownElements) && entry.shownElements.length
+      ? renderShownSoFar(entry.shownElements) : null;
     if (!progress || progress.state !== 'working') {
       const pending = document.createElement('div');
       pending.className = 'el ground';
       pending.textContent = 'Preparing a response…';
       wrap.appendChild(pending);
+      if (soFar) wrap.appendChild(soFar);
       if (waiting) wrap.appendChild(waiting);
       return wrap;
     }
@@ -2604,6 +2609,7 @@ function renderTurn(entry) {
     }
     if (waiting) box.appendChild(waiting);
     wrap.appendChild(box);
+    if (soFar) wrap.appendChild(soFar);
     return wrap;
   }
 
@@ -3014,7 +3020,7 @@ function syncBoardStatus() {
   const label = working && activeDelivery.entry.progress && activeDelivery.entry.progress.label;
   status.hidden = !working;
   status.textContent = working
-    ? `NM is working on your latest message${label ? `: ${label}.` : '…'} The board updates when the answer is ready.`
+    ? `NM is working on your latest message${label ? `: ${label}.` : '…'} The board updates as each dispute's section is checked.`
     : '';
 }
 
@@ -3024,8 +3030,7 @@ function renderBoardWaiting() {
     'The board fills in as NM understands this matter from your messages and the documents you send.'));
 }
 
-async function loadChatBoard() {
-  const chatId = activeIntent && activeIntent.chatId;
+async function loadChatBoard(chatId = activeIntent && activeIntent.chatId) {
   if (!chatId) { renderBoardWaiting(); return; }
   const host = $('matter-board-body');
   const generation = (state.boardGeneration = (state.boardGeneration || 0) + 1);
@@ -3042,7 +3047,9 @@ async function loadChatBoard() {
       + 'This is a failure to read, not an empty matter.'));
     return;
   }
-  if (generation !== state.boardGeneration || !activeIntent || activeIntent.chatId !== chatId) return;
+  // A first answer still being written names its conversation before it is saved (P26).
+  if (generation !== state.boardGeneration || !activeIntent
+      || (activeIntent.chatId && activeIntent.chatId !== chatId)) return;
   host.dataset.chatId = chatId;
   state.chatBoard = board;
   host.replaceChildren(...renderChatBoard(board));
@@ -3864,6 +3871,35 @@ function renderParts(into, elements, entry, render) {
   }
 }
 
+// WHAT AN ANSWER HAS SHOWN SO FAR, while it is still being written (owner decisions P26-P27,
+// 19 Oct 2026): each dispute's section as it passes its checks, drawn plainly - its sources
+// open from the answer once it is saved, which replaces this.
+function renderShownSoFar(elements) {
+  const make = (tag, className, text) => {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  };
+  const box = make('section', 'shown-so-far');
+  box.setAttribute('aria-label', 'Shown so far');
+  box.appendChild(make('p', 'shown-so-far-label', 'Shown as each part is checked; the full answer replaces this when it is ready.'));
+  for (const el of groupAnswerElements(elements)) {
+    if (el.kind === 'HEADING') { box.appendChild(make('h3', 'part-title', el.text)); continue; }
+    if (el.kind === 'IN_SHORT' || el.kind === 'NEEDS') {
+      box.appendChild(make('h4', 'shown-so-far-title', el.kind === 'IN_SHORT' ? 'In short' : el.text));
+      const list = make('ul', el.kind === 'IN_SHORT' ? 'in-short-list' : 'need-list');
+      for (const item of el.items) list.appendChild(make('li', '', item.text));
+      box.appendChild(list);
+      continue;
+    }
+    if (el.kind === 'TIME_LIMITS') { box.appendChild(renderTimeLimits(el.items)); continue; }
+    const text = el.kind === 'FALLBACK' ? String(el.text || '').split('\n')[0] : el.text;
+    box.appendChild(make('p', `el ${el.kind}${el.disclosure ? ' disclosure' : ''}`, text));
+  }
+  return box;
+}
+
 function repaint() {
   const t = $('thread');
   const follow = t.scrollHeight - t.scrollTop - t.clientHeight < 48;
@@ -4166,6 +4202,10 @@ function watchProgress(entry, onFinished) {
       const seen = await api(`/api/turn-progress?turn_id=${encodeURIComponent(entry.turnId)}`);
       if (stopped) return;
       entry.progress = seen;
+      if (Number.isInteger(seen.shown) && seen.shown > (entry.shownCount || 0) && seen.chat_id) {
+        entry.shownCount = seen.shown;
+        showSoFar(entry, seen.chat_id);
+      }
       repaint();
       if (onFinished && seen.state === 'finished') { stop(); onFinished(); return; }
       if (onFinished && seen.state !== 'working') { stop(); return; }
@@ -4177,6 +4217,21 @@ function watchProgress(entry, onFinished) {
   }
   timer = setTimeout(poll, onFinished ? 0 : PROGRESS_EVERY_MS);
   return { stop };
+}
+
+// WHAT AN ANSWER HAS SHOWN SO FAR (owner decisions P26-P27, 19 Oct 2026): saved with the
+// conversation as each part passes, and read from there - never from the progress, which
+// only says that there is more. The board is read again too, dispute by dispute.
+async function showSoFar(entry, chatId) {
+  try {
+    const chat = await api(`/api/chats/${encodeURIComponent(chatId)}`);
+    if (entry.answer || !chat.pending || chat.pending.turn_id !== entry.turnId) return;
+    entry.shownElements = chat.pending.elements;
+    repaint();
+    if (activeIntent && entry.context === activeIntent) loadChatBoard(activeIntent.chatId || chatId);
+  } catch (error) {
+    // Auxiliary while the answer is worked on: the answer, once saved, still decides.
+  }
 }
 
 /* ------------------------------------------------------------------ wire --- */

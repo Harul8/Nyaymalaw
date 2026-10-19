@@ -436,6 +436,22 @@ if (!editedBox || !editedBox.textContent.startsWith('Edited Edited after a check
   fails.push('an edited section lost its label, or its original is not kept to read under "See original"');
 }
 
+// While the answer is still being written, what it has shown so far is drawn under the
+// progress (owner decisions P26-P27), and nothing of it is folded away.
+const working = context.renderTurn({brief: 'Inspect this account.', turnId: 'turn-working', state: 'sending',
+  progress: {state: 'working', label: 'Reviewing the answer independently', detail: {}, elapsed_seconds: 30,
+    steps: [], shown: 1, chat_id: 'new_chat'},
+  shownElements: [plain('HEADING', 'The cheque'), plain('NEXT_STEP', 'File by Tuesday.'),
+    plain('WAITING', 'Still being written and checked: The lease.', {disclosure: true})]});
+const soFar = flat(working).find(node => node.className === 'shown-so-far');
+const workingFolds = [];
+walk(working, false, workingFolds);
+if (!soFar || !soFar.textContent.includes('File by Tuesday.')
+    || !soFar.textContent.includes('Still being written and checked: The lease.')
+    || workingFolds.some(row => row.folded)) {
+  fails.push('what the answer has shown so far is not drawn, in the open, while it is written');
+}
+
 // Reopening a saved matter restores the whole transcript in record order and
 // starts at the first turn, even when the conversation is taller than its pane.
 const thread = document.getElementById('thread');

@@ -26,7 +26,7 @@ from nm.arrive import attempts_contracts as attempts
 from nm.arrive.advocate_contracts import PASSWORD_RESET_MINUTES, SESSION_IDLE_MINUTES, csrf_token, utcnow
 from nm.arrive.directory_port import AccountBusy, AuthenticationUnavailable
 from nm.arrive.professional_access import read_professional_status
-from nm.core_engine.conversation import HEADER, ConversationRefused, chat_matter_id
+from nm.core_engine.conversation import HEADER, ConversationRefused, TurnContext, chat_matter_id, shown_of
 from nm.core_engine import documents as document_rules
 from nm.core_engine import research_note, voice
 from nm.core_engine.response_rendering import unit_index
@@ -36,7 +36,8 @@ from nm.core_engine.turn import CALCULATION_CONTRACT as CALCULATION_CORE_TURN
 from nm.core_engine.turn import RELEASE_CONTRACT as RELEASE_CORE_TURN
 from nm.core_engine.turn import RECORDS_CONTRACT as RECORDS_CORE_TURN
 from nm.core_engine import answer_sections
-from nm.core_engine.turn import LEGACY_CONTRACT as LEGACY_CORE_TURN, saved_rows
+from nm.core_engine.turn import LEGACY_CONTRACT as LEGACY_CORE_TURN, recover, saved_rows
+from nm.core_engine import checklist
 from nm.shared.external_ai_contracts import ModelPermissionRefused
 from nm.shared.model_port import ModelError
 from nm.shared.clock_contracts import FORUM
@@ -1320,7 +1321,9 @@ def _conversation_error(exc, req=None):
 
 
 def _read_chat(chat_id, advocate_id, request):
-    """One account-derived lookup and checked replay for both chat and sources."""
+    """One account-derived lookup and checked replay for both chat and sources. A turn that
+    stopped after showing part of its answer is saved first, with what it showed (owner
+    decision P27, 19 Oct 2026), unless it is still being worked on."""
     try:
         matter = application().store.load(chat_matter_id(advocate_id, chat_id))
     except (OSError, ValueError) as exc:
@@ -1330,6 +1333,10 @@ def _read_chat(chat_id, advocate_id, request):
     if matter is None or matter.advocate_id != advocate_id:
         raise HTTPException(404, 'Conversation not available.')
     try:
+        if HEADER in matter.intake_answers:
+            matter = recover(application().store, matter, advocate_id,
+                             running=lambda held: application().turn_running(advocate_id, held),
+                             session_current=lambda: _session_current(request, advocate_id))
         rows = saved_rows(matter, advocate_id)
     except ConversationRefused as exc:
         raise HTTPException(exc.status, _conversation_error(exc)) from exc
@@ -1379,8 +1386,21 @@ def chat(chat_id: str, advocate_id: Advocate, request: Request, response: Respon
     if not _session_current(request, advocate_id):
         raise HTTPException(401, 'not signed in')
     response.headers['Cache-Control'] = 'no-store'
+    # What the turn being worked on has shown so far (owner decisions P26-P27), saved with
+    # the conversation as each part passed; the committed answer replaces it.
+    held = _held(matter)
     return {'state': 'ok', 'chat_id': chat_id, 'matter_id': None,
-            'matter_version': matter.version, 'turns': turns}
+            'matter_version': matter.version, 'turns': turns,
+            **({'pending': {'turn_id': held['turn_id'], 'message': held['message'], 'elements': held['elements'],
+                            'at': held['at']}} if held else {})}
+
+
+def _held(matter):
+    """What a turn still being worked on has shown, as saved; None where there is none."""
+    try:
+        return shown_of(matter)
+    except ValueError:
+        return None
 
 
 def _sent_document(document):
@@ -1483,13 +1503,28 @@ def research_note_word(chat_id: str, turn_id: str, advocate_id: Advocate, reques
 
 @app.get('/api/chats/{chat_id}/board')
 def chat_board(chat_id: str, advocate_id: Advocate, request: Request, response: Response):
-    """The matter board from the conversation's saved understanding (15 Oct 2026)."""
-    _, rows = _read_chat(chat_id, advocate_id, request)
+    """The matter board from the conversation's saved understanding (15 Oct 2026). While a
+    turn is worked on, each dispute's section shown so far updates it (owner decision P26)."""
+    matter, rows = _read_chat(chat_id, advocate_id, request)
+    held = _held(matter)
+    if held is not None:
+        rows = [*rows, _held_row(matter, rows, held)]
     board = matter_board(rows)
     if not _session_current(request, advocate_id):
         raise HTTPException(401, 'not signed in')
     response.headers['Cache-Control'] = 'no-store'
     return {'chat_id': chat_id, **board}
+
+
+def _held_row(matter, rows, held):
+    """A turn still being worked on, as the board reads a saved turn: its understanding and
+    research, and the checklist of each dispute's section shown so far."""
+    context = TurnContext(matter, held['request']['chat_id'], held['turn_id'], held['message'], tuple(rows),
+                          documents=tuple(held['documents'])).payload()
+    activity = {key: value for key, value in held['activity'].items() if key != 'waiting'}
+    return {'turn_id': held['turn_id'], 'message': held['message'], 'documents': held['documents'],
+            'activities': activity, 'records': checklist.records(context, activity),
+            'response': {'at': held['at']}}
 
 
 def _document_desk():

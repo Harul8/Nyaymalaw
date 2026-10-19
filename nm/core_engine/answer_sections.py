@@ -21,7 +21,9 @@ drafts and reviews (validate).
 """
 from __future__ import annotations
 
+import threading
 from concurrent.futures import ThreadPoolExecutor
+from copy import deepcopy
 
 from nm.core_engine import calculation, response_authorities, response_review, response_writer
 from nm.core_engine.calls import (
@@ -335,20 +337,42 @@ class _Answering:
 
 
 def answer(calls, context, record, sources, *, interpretation, execution, worked, case_index=None,
-           provision_reader=None, report=None):
+           provision_reader=None, report=None, released=None):
     """Every section of the answer, side by side, then (for several disputes) the check
     across them with any correction, and the overview. Returns the sections in the
     answer's layout, the check across them (None, its record, or why it could not be
     made) and the overview (None for an answer with one section). Raises the service's own
     failure when no section could be answered for it, so that nothing is saved and the
-    message can be sent again."""
+    message can be sent again.
+
+    released (owner decisions P26 and P27, 19 Oct 2026): told what the answer shows each
+    time that changes - as each section passes, after the corrections the check across the
+    sections asked for, and when the overview lands - as {"sections": those done, in the
+    answer's layout, "waiting": the parts still being written, "cross_check", "overview"}."""
     answering = _Answering(calls, context, record, sources, interpretation=interpretation, execution=execution,
                            worked=worked, case_index=case_index, provision_reader=provision_reader, report=report)
     layout = answering.layout
     indices = list(range(1, len(layout))) if len(layout) > 1 else [0]
+    state, lock = {"sections": {}, "cross_check": None, "overview": None}, threading.Lock()
+
+    def publish():
+        # An answer with one section is whole when it passes; an answer's first showing is a
+        # section that passed, not a note alone.
+        if released is not None and len(indices) > 1 and any(shown(saved) is not None
+                                                             for saved in state["sections"].values()):
+            released({"sections": [deepcopy(state["sections"][index]) for index in indices if index in state["sections"]],
+                      "waiting": [index for index in indices if index not in state["sections"]],
+                      "cross_check": deepcopy(state["cross_check"]), "overview": deepcopy(state["overview"])})
+
+    def section(index):
+        saved = answering.section(index)
+        with lock:
+            state["sections"][index] = saved
+            publish()
+        return saved
     answering.report("writing")
     with ThreadPoolExecutor(max_workers=max(1, min(8, len(indices)))) as pool:
-        sections = list(pool.map(answering.section, indices))
+        sections = list(pool.map(section, indices))
     if all(saved["fallback"] is not None and saved["fallback"]["reason"] in ("service", "capacity")
            for saved in sections):
         raise next(answering.failures[f"s{index}"] for index in indices)
@@ -365,10 +389,44 @@ def answer(calls, context, record, sources, *, interpretation, execution, worked
                                       owners))
             for position, edit in zip(owners, edits):
                 sections[position]["edit"] = edit
+        with lock:
+            state["cross_check"] = crossed
+            publish()
     if many and any(shown(saved) is not None for saved in sections):
         answering.report("writing_overview")
         overview = answering.overview(sections)
+        with lock:
+            state["overview"] = overview
+            publish()
     return sections, crossed, overview
+
+
+def interrupted(shown_so_far, record):
+    """A turn that stopped after showing some of its answer, as it is saved (owner decision
+    P27, 19 Oct 2026: each section is saved when it is shown): the sections shown, and each
+    part not finished marked so - a section never written, the check across the sections
+    not made, the overview not written. shown_so_far: what answer() last released."""
+    layout = response_writer.parts(record)
+    many = len(layout) > 1
+    done = {saved["part"]: deepcopy(saved) for saved in shown_so_far["sections"]}
+    sections = [done.get(index) or {"part": index, "dispute_id": layout[index]["dispute_id"], "reviewed": None,
+                                    "trims": [], "fallback": {"reason": "interrupted"}, "edit": None}
+                for index in (range(1, len(layout)) if many else [0])]
+    before = sum(shown(saved, edited=False) is not None for saved in sections)
+    crossed = deepcopy(shown_so_far["cross_check"])
+    if crossed is None and many and before >= 2:
+        crossed = {"unavailable": "interrupted"}
+    overview = deepcopy(shown_so_far["overview"])
+    if overview is None and many and any(shown(saved) is not None for saved in sections):
+        overview = {"reviewed": None, "trims": [], "fallback": {"reason": "interrupted"}}
+    return sections, crossed, overview
+
+
+def was_interrupted(sections, crossed, overview):
+    """Whether a saved answer stopped before it was finished."""
+    return (any((saved["fallback"] or {}).get("reason") == "interrupted" for saved in sections)
+            or (crossed or {}).get("unavailable") == "interrupted"
+            or ((overview or {}).get("fallback") or {}).get("reason") == "interrupted")
 
 
 # --- replay -----------------------------------------------------------------------------
@@ -430,7 +488,8 @@ def _chain_valid(saved, context, record, sources, execution, time_limits, sectio
     ids = droppable(current)
     stuck = ids is None or len(trims) >= TRIMS or not [unit for unit in current["draft"]["units"]
                                                       if unit["id"] not in ids]
-    if fallback is None or (fallback["reason"] == "found") != stuck or not stuck and fallback["reason"] == "checks":
+    if fallback is None or fallback["reason"] != "found" if stuck else (
+            fallback is None or fallback["reason"] not in ("review", "service", "capacity")):
         raise ValueError("A section's note differs from what was found")
 
 
@@ -459,7 +518,7 @@ def validate(activity, context, record, sources, worked):
         if crossed is not None:
             raise ValueError("Only two or more sections shown are checked across")
     elif isinstance(crossed, dict) and set(crossed) == {"unavailable"}:
-        if crossed["unavailable"] not in ("review", "service", "capacity"):
+        if crossed["unavailable"] not in ("review", "service", "capacity", "interrupted"):
             raise ValueError("Unknown check across the sections")
     else:
         response_review.validate_cross(crossed, context, record, sources,

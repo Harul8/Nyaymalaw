@@ -329,7 +329,8 @@ def _cited_words(text, sources, authority, *, short=False):
 #: Shown elements that are not draft paragraphs: v5 headings, v8 Working boxes, v10 code's
 #: notices about sections held back, and v17 code's notes on a section, the note standing in
 #: a section's place and the label of a section edited after it was checked.
-NOT_PARAGRAPHS = frozenset({"HEADING", "WORKING", "NOTICE", "HELD", "NEEDS", "NOTE", "FALLBACK", "EDITED"})
+NOT_PARAGRAPHS = frozenset({"HEADING", "WORKING", "NOTICE", "HELD", "NEEDS", "NOTE", "FALLBACK", "EDITED",
+                            "WAITING"})
 #: v14: the heading under which every question to the advocate is gathered.
 NEEDS = "What I need from you"
 
@@ -960,10 +961,15 @@ _UNSHOWN = {"checks": "what NM wrote for it did not pass NM's own checks of its 
             "found": "after the rewrites NM may make, the checks still found problems in it that leaving statements "
                      "out could not settle",
             "service": "the AI service did not respond",
-            "capacity": "it was longer than NM can check in one go"}
+            "capacity": "it was longer than NM can check in one go",
+            "interrupted": "NM stopped before finishing it"}
 #: Why the check across the sections could not be made.
 _UNCROSSED = {"review": "the check could not be completed", "service": "the AI service did not respond",
-              "capacity": "the sections together were longer than NM can check in one go"}
+              "capacity": "the sections together were longer than NM can check in one go",
+              "interrupted": "NM stopped before it was made"}
+#: Atop an answer that stopped before it was finished (owner decision P27).
+_INTERRUPTED = ("NM stopped before finishing this answer. What is shown below was each checked before it was "
+                "shown; ask again to have the rest finished.")
 #: How much of a held passage's own words a note code builds shows.
 _NOTE_WORDS = 500
 
@@ -1129,10 +1135,13 @@ def _edited(original, conflicts, numbers):
                                         for unit in original["draft"]["units"]]})
 
 
-def render_sections(context, research_record, sources, *, sections, cross_check, overview, time_limits):
+def render_sections(context, research_record, sources, *, sections, cross_check, overview, time_limits,
+                    waiting=()):
     """v17: an answer written dispute by dispute (turn v6), from its records as the turn
     validated them (answer_sections.validate). No new prose: every paragraph is a reviewed
-    piece's own; every notice, note and label is code's."""
+    piece's own; every notice, note and label is code's. waiting (owner decision P26, while
+    the turn works): the parts of the answer's layout still being written, each shown as a
+    place it will fill; a saved answer has none."""
     names = _dispute_names(research_record)
     many = len(response_writer.parts(research_record)) > 1
     positions = answer_sections.order(sections, time_limits)
@@ -1161,13 +1170,17 @@ def render_sections(context, research_record, sources, *, sections, cross_check,
             elements.append(_notice("NOTICE", f"Corrected after a check across the sections: the advice on {name} "
                                     f"changed. What the check found: {said} The section on {name} below shows the "
                                     "correction, with the section as first shown kept under it."))
-    if isinstance(cross_check, dict) and "unavailable" in cross_check:
+    if answer_sections.was_interrupted(sections, cross_check, overview):
+        elements.append(_notice("NOTICE", _INTERRUPTED))
+    if isinstance(cross_check, dict) and "unavailable" in cross_check and cross_check["unavailable"] != "interrupted":
         elements.append(_notice("NOTICE", "NM could not check the sections against each other this time ("
                                 f"{_UNCROSSED[cross_check['unavailable']]}), so a conflict between them may not have "
                                 "been caught. Each section was checked on its own."))
     if overview is not None:
         piece = answer_sections.shown(overview)
-        if piece is None:
+        if piece is None and overview["fallback"]["reason"] == "interrupted":
+            pass  # said atop the answer
+        elif piece is None:
             elements.append(_notice("NOTE", "NM's overview of how the disputes fit together is left out: "
                                     f"{_UNSHOWN[overview['fallback']['reason']]}. Each dispute's section below was "
                                     "checked on its own."))
@@ -1232,6 +1245,13 @@ def render_sections(context, research_record, sources, *, sections, cross_check,
     first = summaries[-1] if summaries else next(
         (index for index, element in enumerate(elements) if element["kind"] not in NOT_PARAGRAPHS), 0)
     elements[first + 1:first + 1] = [box for number, box in enumerate(boxes, 1) if number not in placed]
+    names_waiting = [OPENING if dispute_id is None else names.get(dispute_id) or "this dispute"
+                     for dispute_id in (response_writer.parts(research_record)[index]["dispute_id"] for index in waiting)]
+    for name in names_waiting:
+        if many:
+            elements.append({"kind": "HEADING", "text": name, "source": None, "sources": [], "refs": [],
+                             "inline_citations": [], "citation_markers": []})
+        elements.append(_notice("WAITING", f"Still being written and checked: {name}."))
     if questions:
         elements.append({"kind": "NEEDS", "text": NEEDS, "source": None, "sources": [], "refs": [],
                          "inline_citations": [], "citation_markers": []})
