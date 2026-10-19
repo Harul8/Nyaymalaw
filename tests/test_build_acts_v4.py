@@ -7,7 +7,8 @@ from collections import Counter
 
 from pipeline.append_bare_acts import Act, Section, passages_for
 from pipeline.build_acts_v4 import (
-    check, cpc_orders, era, india_code_section, limitation_articles, reconcile, selection,
+    LISTED_UNDER_ANOTHER_TITLE, MARK, NOT_IN_FORCE, check, cpc_orders, era, india_code_section,
+    limitation_articles, reconcile, selection,
 )
 
 BREAK = '<br/><hr style="border: none; margin-bottom: 8px; margin-top: 0;"/>'
@@ -128,3 +129,84 @@ def test_the_choice_follows_the_owners_decisions():
     assert chosen["The Indian Penal Code, 1860"]["standing"] == "not in force according to India Code"
     assert chosen["Andhra Pradesh Municipalities Act, 1965"]["source"] is None  # P23
     assert chosen["The Mediation Act, 2023"]["added"].startswith("P22")
+
+
+def test_not_listed_is_checked_act_by_act_before_an_act_is_marked():
+    """P21's own condition, applied after the build of 19 Oct 2026: an Act India Code lists under
+    another title is another file of that Act, never not in force; a Finance or Appropriation Act,
+    of which India Code lists none, is not marked; an Act listed under no title is."""
+    renamed = "Union of India/1960_0_Banking Companies Act, 1949.txt"
+    assert LISTED_UNDER_ANOTHER_TITLE[renamed] == "AC_CEN_2_11_00002_194910_1517807317779"
+    inventory = [{"state": "CENTRAL", "act_id": LISTED_UNDER_ANOTHER_TITLE[renamed],
+                  "title": "The Banking Regulation Act, 1949", "year": "1949", "sections": 133}]
+    unlisted = "not in India Code's list of Acts in force: keep our text"
+    matches = [{"jurisdiction": "Union of India", "file": renamed.split("/", 1)[1], "title": "Banking Companies Act, 1949",
+                "act_year": "1949", "kind": "act", "verdict": unlisted}]
+    for title in ("The Finance Act, 1996", "Finance (No. 2) Act, 2014", "THE FINANCE ACT, 2021",
+                  "The Appropriation (No. 5) Act, 1995", "The Finance Commission (Miscellaneous Provisions) Act, 1951",
+                  "The Indian Penal Code, 1860"):
+        matches.append({"jurisdiction": "Union of India", "file": f"{title}.txt", "title": title,
+                        "act_year": title[-4:], "kind": "act", "verdict": unlisted})
+    chosen = {entry["title"]: entry for entry in selection(inventory, matches)}
+    earlier = chosen["Banking Companies Act, 1949"]
+    assert earlier["source"] is None and earlier["same_act_as"] == inventory[0]["act_id"]
+    assert chosen["The Banking Regulation Act, 1949"]["added"].startswith("P22")
+    assert [chosen[title]["standing"] for title in ("The Finance Act, 1996", "Finance (No. 2) Act, 2014",
+            "THE FINANCE ACT, 2021", "The Appropriation (No. 5) Act, 1995")] == [None] * 4
+    assert chosen["The Finance Commission (Miscellaneous Provisions) Act, 1951"]["standing"] == NOT_IN_FORCE
+    assert chosen["The Indian Penal Code, 1860"]["standing"] == NOT_IN_FORCE and MARK.startswith(NOT_IN_FORCE)
+
+
+def test_the_marks_stage_brings_a_built_stores_marks_to_the_check_and_keeps_the_store_as_it_was(tmp_path, monkeypatch):
+    import json
+    import sqlite3
+
+    from pipeline import build_acts_v4 as build
+    renamed = "Union of India/1960_0_Banking Companies Act, 1949.txt"
+    india = LISTED_UNDER_ANOTHER_TITLE[renamed]
+    unlisted = "not in India Code's list of Acts in force: keep our text"
+    evidence, out = tmp_path / "evidence", tmp_path / "acts_v4"
+    evidence.mkdir()
+    out.mkdir()
+    (evidence / "india_code_acts.json").write_text(json.dumps([{"state": "CENTRAL", "act_id": india,
+        "title": "The Banking Regulation Act, 1949", "year": "1949", "sections": 133}]), encoding="utf-8")
+    ours = [("Banking Companies Act, 1949", renamed.split("/", 1)[1]), ("The Finance Act, 1996", "1996_2_f.txt"),
+            ("The Indian Penal Code, 1860", "1860_45_ipc.txt")]
+    (evidence / "our_acts_vs_india_code.json").write_text(json.dumps([
+        {"jurisdiction": "Union of India", "file": file, "title": title, "act_year": title[-4:], "kind": "act",
+         "verdict": unlisted} for title, file in ours]), encoding="utf-8")
+    acts = [{"act_id": f"U_{title}", "title": title, "jurisdiction": "Union of India", "file": file,
+             "india_act_id": None, "source": "ours", "standing": NOT_IN_FORCE} for title, file in ours]
+    acts.append({"act_id": "U_BR", "title": "The Banking Regulation Act, 1949", "jurisdiction": "Union of India",
+                 "file": None, "india_act_id": india, "source": "india_code", "standing": "in force"})
+    (out / "acts.json").write_text(json.dumps(acts), encoding="utf-8")
+    with sqlite3.connect(out / "acts_v4.db") as db:
+        db.execute("create table chunks (doc_type text, pos integer, chunk_id text, act_id text, case_id text, "
+                   "parent_chunk_id text, atom_type text, section_number text, blob text, primary key (doc_type, pos))")
+        db.execute("create table acts (act_id text primary key, record text)")
+        for pos, act in enumerate(acts):
+            blob = {"chunk_id": f"c{pos}", "act_id": act["act_id"], "full_text": "Words.",
+                    **({"standing": MARK} if act["standing"] == NOT_IN_FORCE else {})}
+            db.execute("insert into chunks values ('bare_act',?,?,?,NULL,'','section_head','1',?)",
+                       (pos, f"c{pos}", act["act_id"], json.dumps(blob)))
+            db.execute("insert into acts values (?,?)", (act["act_id"], json.dumps(act)))
+    monkeypatch.setattr(build, "EVIDENCE", evidence)
+    monkeypatch.setattr(build, "OUT", out)
+    build.marks_stage()
+    with sqlite3.connect(out / "acts_v4.db") as db:
+        marks = {act_id: json.loads(blob).get("standing") for act_id, blob in db.execute("select act_id, blob from chunks")}
+        records = {act_id: json.loads(record) for act_id, record in db.execute("select act_id, record from acts")}
+    assert marks == {"U_Banking Companies Act, 1949": None, "U_The Finance Act, 1996": None,
+                     "U_The Indian Penal Code, 1860": MARK, "U_BR": None}
+    earlier = records["U_Banking Companies Act, 1949"]
+    assert earlier["standing"] is None and earlier["same_act_as"] == "U_BR" and earlier["left_out"]
+    assert records["U_The Finance Act, 1996"]["standing"] is None
+    assert json.loads((out / "acts.json").read_text(encoding="utf-8"))[0] == earlier
+    logged, = json.loads((out / "marks.json").read_text(encoding="utf-8"))
+    assert {change["act_id"] for change in logged["changes"]} == {"U_Banking Companies Act, 1949", "U_The Finance Act, 1996"}
+    assert logged["passages_changed"] == 2
+    before = sqlite3.connect(out / "acts_v4.before-marks.db")
+    assert sum(1 for (blob,) in before.execute("select blob from chunks") if "standing" in json.loads(blob)) == 3
+    before.close()
+    build.marks_stage()  # a second run finds nothing to change
+    assert len(json.loads((out / "marks.json").read_text(encoding="utf-8"))) == 1

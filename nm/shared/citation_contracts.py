@@ -94,6 +94,8 @@ CENTRAL_ACTS_NAMED_FOR_THE_STATE = frozenset(title.casefold() for title in (
     "The Andhra Pradesh And Mysore (Transfer Of Territory) Act, 1968",
     "The Andhra Pradesh Legislative Council Act, 2005",
     "Andhra State Act, 1953",
+    # Added with the Act store rebuilt from India Code (19 Oct 2026): Parliament's Act 6 of 2014.
+    "The Andhra Pradesh Reorganisation Act, 2014",
 ))
 
 

@@ -111,13 +111,50 @@ def test_a_central_act_held_only_in_the_state_collection_keeps_its_name():
 
 
 def test_a_new_central_act_the_rule_would_rename_is_flagged_before_writing():
-    register = build({"the_andhra_pradesh_reorganisation_act_2014": doc(
-        "The Andhra Pradesh Reorganisation Act", {"1": "a"}, "2014", parliament=True)})
+    register = build({"the_andhra_pradesh_example_act_2099": doc(
+        "The Andhra Pradesh Example Act", {"1": "a"}, "2099", parliament=True)})
     assert register["review"]["central_acts_the_naming_rule_would_rename"] == [
-        "The Andhra Pradesh Reorganisation Act, 2014"]
+        "The Andhra Pradesh Example Act, 2099"]
+    # Reviewed with the Act store of 19 Oct 2026: Parliament's Act keeps its own name.
+    reviewed = build({"the_andhra_pradesh_reorganisation_act_2014": doc(
+        "The Andhra Pradesh Reorganisation Act", {"1": "a"}, "2014", parliament=True)})
+    assert reviewed["review"]["central_acts_the_naming_rule_would_rename"] == []
+    assert reviewed["groups"][0]["shown_title"] == "The Andhra Pradesh Reorganisation Act, 2014"
 
 
 def test_a_state_rule_takes_the_telangana_name_and_its_year_from_the_identifier():
     register = build({"a_p_advocates_fee_rules_2010": doc("A.P. Advocates' Fee Rules", {"1": "b"}, "2010")})
     [group] = register["groups"]
     assert (group["jurisdiction"], group["shown_title"]) == ("state", "Telangana Advocates' Fee Rules, 2010")
+
+
+def test_india_codes_section_text_is_kept_and_an_earlier_file_of_a_renamed_act_is_removed():
+    """P20 (owner, 19 Oct 2026): where India Code publishes an Act section by section, its sections
+    are the Act's text - the copy kept even beside a copy of ours holding more sections - and a file
+    of ours holding an Act India Code lists under another title (the store records which) joins that
+    Act's group and is removed completely, whatever words it shares."""
+    ours = doc("Telangana 2016 30 Telangana Revenue Enquiries Act, 1893", {"1": "a", "2": "b", "3": "c", "4": "d", "5": "e"})
+    india = {**doc("Telangana 1983 5 The Telangana Revenue Enquiries Act, 1893", {"1": "a", "2": "b", "3": "c", "4": "d"}),
+             "source": "india_code"}
+    register = build({"TELANGANA_2016_30_TELANGANA REVENUE ENQUIRIES ACT, 1893": {**ours, "source": "ours"},
+                      "TELANGANA_1983_5_THE TELANGANA REVENUE ENQUIRIES ACT, 1893": india})
+    [group] = register["groups"]
+    assert group["kept"] == "TELANGANA_1983_5_THE TELANGANA REVENUE ENQUIRIES ACT, 1893"
+    assert register["documents"]["TELANGANA_2016_30_TELANGANA REVENUE ENQUIRIES ACT, 1893"]["kept_sections"] == ["5"]
+    renamed = build({
+        "UNION OF INDIA_1949_10_THE BANKING REGULATION ACT, 1949": {
+            **doc("Union Of India 1949 10 The Banking Regulation Act, 1949", {"1": "a", "2": "b"}), "source": "india_code"},
+        "UNION OF INDIA_1960_0_BANKING COMPANIES ACT, 1949": {
+            **doc("Union Of India 1960 0 Banking Companies Act, 1949", {"1": "a", "2": "b", "3": "c"}),
+            "source": "ours", "same_act_as": "UNION OF INDIA_1949_10_THE BANKING REGULATION ACT, 1949"}})
+    [group] = renamed["groups"]
+    assert group["kept"] == "UNION OF INDIA_1949_10_THE BANKING REGULATION ACT, 1949"
+    assert group["shown_title"] == "The Banking Regulation Act, 1949"
+    earlier = renamed["documents"]["UNION OF INDIA_1960_0_BANKING COMPANIES ACT, 1949"]
+    assert earlier["role"] == "copy" and earlier["kept_sections"] == []
+    assert next(m for m in group["members"] if m["role"] == "copy")["verdict"] == "different_version"
+    # A store that records neither keeps the earlier rule: the copy holding the most sections.
+    plain = build({key: {k: v for k, v in value.items() if k not in ("source", "same_act_as")}
+                   for key, value in {"TELANGANA_2016_30_TELANGANA REVENUE ENQUIRIES ACT, 1893": ours,
+                                      "TELANGANA_1983_5_THE TELANGANA REVENUE ENQUIRIES ACT, 1893": india}.items()})
+    assert plain["groups"][0]["kept"] == "TELANGANA_2016_30_TELANGANA REVENUE ENQUIRIES ACT, 1893"

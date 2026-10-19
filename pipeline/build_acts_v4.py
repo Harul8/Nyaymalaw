@@ -1,8 +1,10 @@
-"""Build the new Act store from India Code and the texts we hold. AN OFFLINE JOB; IT WRITES ONLY
-A NEW FOLDER AND A CANDIDATE LINEAGE RECORD - SEARCH KEEPS READING THE CURRENT STORE.
+"""Build the new Act store from India Code and the texts we hold. AN OFFLINE JOB; THE READ AND
+INDEX STAGES WRITE ONLY A NEW FOLDER AND A CANDIDATE LINEAGE RECORD. The marks stage corrects that
+folder's standing marks in place, keeping the store as it was beside it; stop the server first.
 
     .venv-arrive\\Scripts\\python.exe pipeline\\build_acts_v4.py --stage read      (Acts, passages, reports)
     .venv-arrive\\Scripts\\python.exe pipeline\\build_acts_v4.py --stage index     (vectors, words, lineage)
+    .venv-arrive\\Scripts\\python.exe pipeline\\build_acts_v4.py --stage marks     (P21's check, into the built store)
 
 Owner decisions of 19 Oct 2026 (the Advocate build plan, P20-P23):
 
@@ -14,7 +16,9 @@ Owner decisions of 19 Oct 2026 (the Advocate build plan, P20-P23):
     into notes; other States' amendments printed inside a central section come out into notes,
     Telangana's and Andhra Pradesh's marked as applying. Schedules stay ours (India Code holds
     them only as PDFs). An Act India Code holds only as a PDF, or not at all, keeps our text.
-  * P21 - an Act we hold that India Code does not list as in force is kept, marked not in force.
+  * P21 - an Act we hold that India Code does not list as in force is kept, marked not in force;
+    'not listed' checked Act by Act: an Act India Code lists under another title is another file
+    of that Act, and a Finance or Appropriation Act (India Code lists none) is not marked.
   * P22 - an Act India Code lists in force that we lack is added from it.
   * P23 - Telangana keeps what India Code lists under Telangana: the Andhra Pradesh-era Acts it
     does not list, and the Andhra Pradesh-era rules, regulations and orders, are left out.
@@ -56,6 +60,53 @@ CANDIDATE = ROOT / ".nm" / "retrieval" / "candidates" / "bare_acts_v4.lineage.js
 JURISDICTION = {"CENTRAL": "Union of India", "Telangana": "Telangana"}
 #: The States whose amendments to a central Act apply in Telangana.
 APPLYING = ("telangana", "andhra pradesh")
+#: P21: an instrument's standing, and the mark each of its passages carries.
+NOT_IN_FORCE = "not in force according to India Code"
+MARK = f"{NOT_IN_FORCE} (checked 19 Oct 2026)"
+#: P21's own check, Act by Act ("a title our files spell differently is not a repeal"), made
+#: after the build of 19 Oct 2026: our files holding an Act India Code lists under another title -
+#: renamed since, or our file's title spelt or cut short otherwise - each with that Act's India
+#: Code identifier (its number and year agree). Each is another file of that India Code Act, which
+#: is taken once, from India Code (P20); none is an Act not in force.
+LISTED_UNDER_ANOTHER_TITLE = {
+    # The Banking Regulation Act, 1949 (10 of 1949), so named in 1965.
+    "Union of India/1960_0_Banking Companies Act, 1949.txt": "AC_CEN_2_11_00002_194910_1517807317779",
+    # The Prohibition of Benami Property Transactions Act, 1988 (45 of 1988), so named in 2016.
+    "Union of India/1988_1_The Benami Transactions (Prohibition) Act, 1988.txt": "AC_CEN_2_2_00032_198845_1517807326369",
+    # The Recovery of Debts and Bankruptcy Act, 1993 (51 of 1993), so named in 2016.
+    "Union of India/1993_0_The Recovery Of Debts Due To Banks And Financial Institutions Act, 1993.txt":
+        "AC_CEN_2_33_00045_199351_1524048948493",
+    # The Pre-conception and Pre-natal Diagnostic Techniques (Prohibition of Sex Selection) Act, 1994
+    # (57 of 1994), so named in 2003.
+    "Union of India/1994_4_The Pre-Natal Diagnostic Techniques (Regulation And Prevention of misuse) Act, 1994.txt":
+        "AC_CEN_12_13_00013_199457_1517807323443",
+    # The National Commission for Minority Educational Institutions Act, 2004 (2 of 2005).
+    "Union of India/2004_2_The National Commission For Minority Educational Institutions Act, 2004.txt":
+        "AC_CEN_9_30_00003_200502_1517807320310",
+    # The Commercial Courts Act, 2015 (4 of 2016), so named in 2018.
+    "Union of India/2015_3_ï»¿The Commercial Courts, Commercial Division And Commercial Appellate "
+    "Division Of High Courts Act, 2015.txt": "AC_CEN_3_46_00008_201604_1517807328347",
+    # The Central Road and Infrastructure Fund Act, 2000 (54 of 2000), so named in 2018.
+    "Union of India/2018_7_Central Road Fund Act, 2000.txt": "AC_CEN_30_42_00004_200054_1517807323465",
+    # The Van (Sanrakshan Evam Samvardhan) Adhiniyam, 1980 (69 of 1980), so named in 2023.
+    "Union of India/1980_15_The Forest (Conservation) Act, 1980.txt": "AC_CEN_16_18_00008_198069_1517807325332",
+    # The Unified Waqf Management, Empowerment, Efficiency and Development Act, 1995 (43 of 1995),
+    # so named in 2025.
+    "Union of India/1980_9_The Wakf Act, 1995.txt": "AC_CEN_44_74_00001_199543_1517807323904",
+    # The Coal Mines Provident Fund and Miscellaneous Provisions Act, 1948 (46 of 1948).
+    "Union of India/1948_12_Coal Mines Provident Fund and Bonus Schemes Act, 1948.txt":
+        "AC_CEN_8_8_00009_194846_1517807326587",
+    # The Telangana Revenue Enquiries Act, 1893.
+    "Telangana/2016_30_Telangana Revenue Enquiries Act, 1893.txt": "AC_TS_86_767_00007_00007_1553234010701",
+    # The Telangana Prevention of Dangerous Activities of Boot-leggers, ... Act, 1986 (1 of 1986);
+    # our file's title stops part way.
+    "Telangana/2015_6_Telangana Prevention of Dangerous Activities of Boot-leggers, Dacoits, Drug-Offenders, "
+    "Goondas, Immoral Traffic Offenders Land-Grabbers, Spurious Seed Offenders.txt":
+        "AC_TS_86_750_00013_00013_1552906478626",
+}
+#: India Code lists no Finance Act and no Appropriation Act among the Acts in force, so its list
+#: says nothing of one: such an Act is not marked (not assessed).
+_UNLISTED_KIND = re.compile(r"^\W*(?:the\s+)?(?:finance|appropriation)(?:\s*\(no\.\s*\d+\))?\s+act\b", re.I)
 
 
 # ----------------------------------------------------------------------------- choosing
@@ -83,6 +134,12 @@ def selection(inventory: list[dict], matches: list[dict]) -> list[dict]:
         if not row["file"].endswith(".txt"):
             chosen.append({**entry, "source": None, "left_out": "not an Act's text (a PDF or a record file)"})
             continue
+        same = LISTED_UNDER_ANOTHER_TITLE.get(f"{folder}/{row['file']}")
+        if same:
+            chosen.append({**entry, "source": None, "same_act_as": same,
+                           "left_out": "another file of the same India Code Act, which India Code lists under "
+                                       "another title (P20, P21)"})
+            continue
         if folder == "Telangana" and not india and era(row["title"], row["act_year"]) == "andhra pradesh":
             chosen.append({**entry, "source": None, "left_out": "P23: an Andhra Pradesh-era instrument India Code "
                                                                  "does not list under Telangana"})
@@ -94,7 +151,8 @@ def selection(inventory: list[dict], matches: list[dict]) -> list[dict]:
             seen.add(india)
             chosen.append({**entry, "source": "india_code", "standing": "in force"})
         elif verdict.startswith("not in India Code"):
-            chosen.append({**entry, "source": "ours", "standing": "not in force according to India Code"})
+            chosen.append({**entry, "source": "ours",
+                           "standing": None if _UNLISTED_KIND.match(row["title"]) else NOT_IN_FORCE})
         else:
             chosen.append({**entry, "source": "ours",
                            "standing": "in force" if verdict.startswith("PDF only") else None})
@@ -667,8 +725,8 @@ def index_stage() -> None:
     # and the reading pane; its words, and so its vectors, are untouched.
     standing = {act["act_id"]: act["standing"] for act in json.loads((OUT / "acts.json").read_text(encoding="utf-8"))}
     for row in rows:
-        if standing.get(row["blob"]["act_id"]) == "not in force according to India Code":
-            row["blob"]["standing"] = "not in force according to India Code (checked 19 Oct 2026)"
+        if standing.get(row["blob"]["act_id"]) == NOT_IN_FORCE:
+            row["blob"]["standing"] = MARK
     with sqlite3.connect(store) as db:
         db.execute("create table chunks (doc_type text, pos integer, chunk_id text, act_id text, case_id text, "
                    "parent_chunk_id text, atom_type text, section_number text, blob text, primary key (doc_type, pos))")
@@ -716,6 +774,76 @@ def index_stage() -> None:
     print(json.dumps({"passages": len(rows), "verified": record["verified"], "candidate": str(CANDIDATE)}, indent=1))
 
 
+def marks_stage() -> None:
+    """P21's Act-by-Act check applied to the store already built (19 Oct 2026): each instrument's
+    standing as the selection now gives it goes into the store's Act records and its passages'
+    marks; an instrument the selection now leaves out as another file of an India Code Act keeps
+    its passages, recorded as left out with the stored India Code copy it is another file of, for
+    the one-copy register to hide. Words, vectors and the word index are untouched; every change
+    is listed in marks.json, and the store as it was is kept beside it."""
+    inventory = json.loads((EVIDENCE / "india_code_acts.json").read_text(encoding="utf-8"))
+    matches = json.loads((EVIDENCE / "our_acts_vs_india_code.json").read_text(encoding="utf-8"))
+    chosen = {(entry["jurisdiction"], entry["file"]): entry for entry in selection(inventory, matches)
+              if entry.get("file")}
+    acts = json.loads((OUT / "acts.json").read_text(encoding="utf-8"))
+    from_india_code = {act["india_act_id"]: act["act_id"] for act in acts
+                       if act["india_act_id"] and act["source"] in ("india_code", "india_code_pdf_text")}
+    changes = []
+    for act in acts:
+        entry = chosen.get((act["jurisdiction"], act["file"])) if act["file"] else None
+        if entry is None:
+            continue
+        if entry["source"] is None and entry.get("same_act_as"):
+            now = {"standing": None, "left_out": entry["left_out"],
+                   "same_act_as": from_india_code[entry["same_act_as"]]}
+        elif entry["source"] is None:
+            raise SystemExit(f"{act['title']}: the selection now leaves it out ({entry['left_out']}); rebuild instead")
+        else:
+            now = {"standing": entry["standing"]}
+        was = {key: act.get(key) for key in now}
+        if was != now:
+            changes.append({"act_id": act["act_id"], "title": act["title"], "was": was, "now": now})
+            act.update(now)
+    if not changes:
+        print("the store's marks already follow the selection; nothing changed")
+        return
+    store = OUT / "acts_v4.db"
+    kept = OUT / "acts_v4.before-marks.db"
+    if not kept.exists():
+        kept.write_bytes(store.read_bytes())
+        (OUT / "acts.before-marks.json").write_bytes((OUT / "acts.json").read_bytes())
+    records = {act["act_id"]: act for act in acts}
+    passages = 0
+    with sqlite3.connect(store) as db:
+        for change in changes:
+            act_id = change["act_id"]
+            db.execute("update acts set record=? where act_id=?",
+                       (json.dumps(records[act_id], ensure_ascii=False), act_id))
+            marked = records[act_id]["standing"] == NOT_IN_FORCE
+            for pos, blob in db.execute("select pos, blob from chunks where doc_type='bare_act' and act_id=?",
+                                        (act_id,)).fetchall():
+                item = json.loads(blob)
+                if marked == ("standing" in item):
+                    continue
+                if marked:
+                    item["standing"] = MARK
+                else:
+                    item.pop("standing")
+                db.execute("update chunks set blob=? where doc_type='bare_act' and pos=?",
+                           (json.dumps(item, ensure_ascii=False), pos))
+                passages += 1
+    (OUT / "acts.json").write_text(json.dumps(acts, ensure_ascii=False, indent=1), encoding="utf-8")
+    previous = json.loads((OUT / "marks.json").read_text(encoding="utf-8")) if (OUT / "marks.json").exists() else []
+    (OUT / "marks.json").write_text(json.dumps(previous + [{
+        "at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "why": "P21's Act-by-Act check after the build: Acts India Code lists under another title are other files "
+               "of the India Code Act (P20); India Code lists no Finance or Appropriation Act",
+        "passages_changed": passages, "changes": changes}], ensure_ascii=False, indent=1), encoding="utf-8")
+    print(json.dumps({"instruments changed": len(changes), "passages changed": passages,
+                      "marked now": sum(1 for act in acts if act["standing"] == NOT_IN_FORCE),
+                      "left out now": sum(1 for act in acts if act.get("left_out"))}, indent=1))
+
+
 def _sha256(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as stream:
@@ -726,14 +854,16 @@ def _sha256(path: Path) -> str:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--stage", choices=("read", "index"), required=True)
+    parser.add_argument("--stage", choices=("read", "index", "marks"), required=True)
     parser.add_argument("--only", help="titles or India Code act_ids, separated by '|': read these alone (a trial)")
     args = parser.parse_args()
     sys.stdout.reconfigure(encoding="utf-8")
     if args.stage == "read":
         read_stage(set(args.only.split("|")) if args.only else None)
-    else:
+    elif args.stage == "index":
         index_stage()
+    else:
+        marks_stage()
     return 0
 
 

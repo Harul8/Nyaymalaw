@@ -14,7 +14,10 @@ This job reads the passage store (never writes it) and, with --write, writes
     "Andhra Pradesh (Andhra Area) X Act" does not join them;
   * in each group the Telangana-adapted copy is kept, else the copy holding the most
     sections; every other copy is suppressed SECTION BY SECTION, so a section only a
-    secondary copy holding the same words keeps stays searchable there;
+    secondary copy holding the same words keeps stays searchable there; from the Act store of
+    19 Oct 2026 (owner decision P20), the copy read from India Code's sections is kept before
+    either, and an earlier file of an Act India Code lists under another title (the store
+    records which) joins that Act's group and is removed completely;
   * every copy is recorded against the kept one with how many shared sections hold the
     same words -- 'same_words', or 'different_version'; owner decision of 11 October
     2026: a different version is removed completely, its unique sections included;
@@ -113,20 +116,29 @@ def _jurisdiction(members: list[dict]) -> str:
 
 def build(documents: dict[str, dict]) -> dict:
     """documents: act_id -> {act_name, year, sections: {number: set(word hashes)},
-    enacted_by_parliament: bool}. Returns the register (without corpus binding)."""
+    enacted_by_parliament: bool, and, where the store records them (the Act store of 19 Oct
+    2026), source: where its text was read from, same_act_as: the stored India Code copy of the
+    Act this document is an earlier file of}. Returns the register (without corpus binding).
+
+    P20 (owner, 19 Oct 2026): where India Code publishes an Act section by section its sections
+    are the Act's text, so a group holding that copy keeps it; an earlier file of an Act India
+    Code lists under another title joins that Act's group and is never the copy kept."""
+    titles = {act_id: proper_title(raw.get("act_name") or act_id, act_id, raw.get("year") or "")
+              for act_id, raw in documents.items()}
     groups: dict[str, list[dict]] = defaultdict(list)
     for act_id, raw in documents.items():
         stored = raw.get("act_name") or act_id
-        title = proper_title(stored, act_id, raw.get("year") or "")
-        groups[group_key(title)].append({"act_id": act_id, "family": family(act_id), "title": title,
-                                         "stored": stored,
-                                         "sections": raw["sections"],
-                                         "enacted_by_parliament": bool(raw.get("enacted_by_parliament"))})
+        title = titles[act_id]
+        earlier = raw.get("same_act_as") if raw.get("same_act_as") in documents else None
+        groups[group_key(titles[earlier] if earlier else title)].append({
+            "act_id": act_id, "family": family(act_id), "title": title, "stored": stored,
+            "sections": raw["sections"], "enacted_by_parliament": bool(raw.get("enacted_by_parliament")),
+            "india_code_sections": raw.get("source") == "india_code", "earlier": bool(earlier)})
     register_groups, shown, unnamed_central = [], {}, []
     for key in sorted(groups):
         members = groups[key]
-        members.sort(key=lambda m: (not _adapted(m), -len(m["sections"]),
-                                    m["family"] == "other_source", m["act_id"]))
+        members.sort(key=lambda m: (m["earlier"], not m["india_code_sections"], not _adapted(m),
+                                    -len(m["sections"]), m["family"] == "other_source", m["act_id"]))
         kept, jurisdiction = members[0], _jurisdiction(members)
         name = statute_title(kept["stored"], kept["act_id"])
         if jurisdiction == "central" and name != statute_own_title(kept["stored"], kept["act_id"]):
@@ -144,7 +156,9 @@ def build(documents: dict[str, dict]) -> dict:
                 shared = set(m["sections"]) & set(kept["sections"])
                 same = sum(1 for s in shared if m["sections"][s] & kept["sections"][s])
                 share = same / len(shared) if shared else 0.0
-                verdict = "same_words" if shared and share >= SAME_WORDS else "different_version"
+                # An earlier file of the Act is an earlier version of it, whatever words it shares.
+                verdict = ("same_words" if shared and share >= SAME_WORDS and not m["earlier"]
+                           else "different_version")
                 unique = sorted(set(m["sections"]) - set(kept["sections"]), key=_order)
                 entry.update(role="copy", shared_sections=len(shared), same_words_share=round(share, 3),
                              verdict=verdict, unique_sections=len(unique),
@@ -163,7 +177,9 @@ def build(documents: dict[str, dict]) -> dict:
     return {
         "schema": SCHEMA,
         "rules": {"grouping": "own title, State name normalised, year kept",
-                  "kept_copy": "Telangana-adapted copy, else most sections, else India Code, else identifier",
+                  "kept_copy": "never an earlier file of an Act India Code lists under another title; the copy "
+                               "read from India Code's sections, else Telangana-adapted copy, else most "
+                               "sections, else India Code, else identifier",
                   "suppression": "a copy's passages are not searched unless their section is in its kept_sections; "
                                  "a different version keeps none; every copy of an excluded instrument is hidden",
                   "same_words_threshold": SAME_WORDS,
@@ -206,16 +222,22 @@ def _words(full_text: str) -> str:
 
 
 def read_documents(db: Path) -> dict[str, dict]:
-    """Section-head words per stored document; read-only."""
+    """Section-head words per stored document, with where the store says its text was read from
+    and what it is an earlier file of, where the store records that; read-only."""
     documents: dict[str, dict] = {}
     con = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
     try:
+        held = {name for (name,) in con.execute("select name from sqlite_master where type='table'")}
+        records = ({act_id: json.loads(record) for act_id, record in con.execute("select act_id, record from acts")}
+                   if "acts" in held else {})
         for act_id, section, blob in con.execute(
                 "select act_id, section_number, blob from chunks "
                 "where doc_type='bare_act' and atom_type='section_head'"):
             row = json.loads(blob)
+            record = records.get(act_id, {})
             doc = documents.setdefault(act_id, {"act_name": row.get("act_name"), "year": row.get("year"),
-                                                "sections": defaultdict(set)})
+                                                "sections": defaultdict(set), "source": record.get("source"),
+                                                "same_act_as": record.get("same_act_as")})
             doc["sections"][str(section)].add(_words(row.get("full_text", "")))
         named = [a for a, d in documents.items()
                  if STATE_NAME.search(proper_title(d["act_name"] or a, a, d["year"] or ""))
