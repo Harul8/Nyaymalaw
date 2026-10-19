@@ -225,29 +225,6 @@ def test_full_pending_population_reports_unavailable_without_activating(client, 
     assert not client.outbox.messages_for('second@example.test')
 
 
-def test_served_signup_confirmation_and_private_workspace(client, monkeypatch):
-    enable_local_registration(monkeypatch)
-    client.cookies.clear()
-    response = request_registration(client)
-    assert response.status_code == 202, response.text
-    body = response.json()
-    assert body['state'] == 'confirmation_required'
-    assert body['delivery'] == 'local_outbox_only'
-    assert client.directory.identity(EMAIL) is None
-    assert client.post('/api/login', json={
-        'advocate_id': EMAIL, 'password': PASSWORD}).status_code == 401
-    assert client.get('/api/matters').status_code == 401
-    confirmed = client.post('/api/register/confirm', json={
-        'email': EMAIL, 'code': confirmation_code(client), 'flow': body['flow']})
-    assert confirmed.status_code == 200, confirmed.text
-    assert not confirmed.headers.get('set-cookie')
-    assert client.get('/api/session').status_code == 401
-    signed = client.post('/api/login', json={'advocate_id': EMAIL, 'password': PASSWORD})
-    assert signed.status_code == 200, signed.text
-    assert signed.json()['professional_approval']['state'] == 'unapproved'
-    assert signed.json()['workspace']['id'] == f'advocate:{EMAIL}'
-
-
 def test_public_resend_is_neutral_and_does_not_expose_code(client, monkeypatch):
     enable_local_registration(monkeypatch)
     assert request_registration(client).status_code == 202

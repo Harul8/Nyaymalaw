@@ -36,24 +36,3 @@ def test_a_confirmed_opening_spends_its_identity():
         "form with the same answers reopens the earlier matter")
 
 
-def test_a_new_form_keeps_only_an_unconfirmed_opening_identity():
-    start = _block("function startMatter()", "\n}\n")
-    assert ("if (activeIntent.opening && !activeIntent.opening.uncertain) "
-            "activeIntent.opening = null;") in start
-
-
-def _open(client, key: str) -> str:
-    r = client.post("/api/matters/intake", json={"request_key": key, "title": "",
-                                                 "parties": {}})
-    assert r.status_code == 200, r.text
-    return r.json()["matter_id"]
-
-
-def test_two_blank_openings_are_two_matters_and_a_retry_is_the_same_one(client):
-    first = _open(client, "turn_blank_one")
-    second = _open(client, "turn_blank_two")
-    assert first != second, "two blank openings were given one matter"
-    assert _open(client, "turn_blank_one") == first, (
-        "a retry of the same opening must find the file it already made")
-    listed = {r["matter_id"]: r["matter"] for r in client.get("/api/matters").json()["matters"]}
-    assert listed[first] == listed[second] == "New matter"

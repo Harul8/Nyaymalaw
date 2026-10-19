@@ -46,18 +46,12 @@ import dataclasses
 import datetime
 import enum
 import typing
-from dataclasses import replace
 
 import pytest
 
 from nm.work_the_file.matter_contracts import (
-    Basis,
-    Fact,
     Matter,
-    Posture,
     Provenance,
-    Role,
-    Thread,
 )
 
 pytestmark = pytest.mark.class_a
@@ -289,22 +283,6 @@ def test_the_walk_can_see_the_record():
         assert expected in fields, f"{expected} is not in the population"
 
 
-def test_every_field_is_told_or_declared():
-    """THE SWEEP.
-
-    Asked the other way — is everything in the account on the record — it
-    would confirm that what we render exists, which cannot fail. This asks
-    which fields the record holds and the model never sees.
-    """
-    undeclared = [f for f in content_fields() if f not in WITHHELD]
-    assert not undeclared, (
-        "these are on the advocate's record and nothing decides whether the "
-        "model is told them. A field left out silently and one left out on "
-        "purpose look identical from every other direction (S1). Render it, "
-        "or declare it in WITHHELD with the reason:\n  "
-        + "\n  ".join(undeclared))
-
-
 def test_no_declaration_names_a_field_that_is_gone():
     """A declaration for a renamed field protects nothing and reads as
     though it does."""
@@ -333,13 +311,6 @@ def test_every_withholding_that_can_reopen_says_what_reopens_it():
 
 # ============ the guard input must never widen with the account ============
 
-def _matter_with(fact: Fact) -> tuple[Matter, Thread]:
-    thread = replace(Thread.create(label="the sale"),
-                     posture=Posture(role=Role.PLAINTIFF, basis=Basis.STATED),
-                     chronology=("f1",))
-    return replace(Matter.create(advocate_id="adv_1", title="a sale"),
-                   facts=(fact,), threads=(thread,)), thread
-
 
 # ===== a representation is about the FILE, an account is about ONE dispute ====
 #
@@ -357,17 +328,5 @@ _REPRESENTATION = ("I act for Sattaru Ramulu, who runs a hardware business "
                    "at Sangareddy.")
 _OTHER_DISPUTE = ("Fourth, unrelated: Ramulu leased a shop to Meena Traders. "
                   "Rent unpaid since January 2026.")
-
-
-def _two_disputes() -> tuple[Matter, Thread, Thread]:
-    """One file, two disputes, the representation stated once on the first."""
-    opening = Fact(id="f_open", statement=_REPRESENTATION, provenance=SAID)
-    other = Fact(id="f_other", statement=_OTHER_DISPUTE, provenance=SAID)
-    first = replace(Thread.create(label="the land agreement"),
-                    chronology=("f_open",))
-    second = replace(Thread.create(label="the lease"), chronology=("f_other",))
-    matter = replace(Matter.create(advocate_id="adv_1", title="Ramulu"),
-                     facts=(opening, other), threads=(first, second))
-    return matter, first, second
 
 

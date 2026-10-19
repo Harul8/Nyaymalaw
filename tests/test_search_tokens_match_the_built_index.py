@@ -87,3 +87,11 @@ def test_every_legal_token_a_built_index_holds_is_cut_by_the_shared_tokeniser(na
     # reproduces none of them, so this check can fail.
     assert not any(token in [t.replace("_", "-") for t in bm25_tokens(token.replace("_", " "))]
                    for token in held[:200])
+
+
+@pytest.mark.class_a
+def test_the_live_search_and_the_index_builds_cut_with_one_function():
+    from nm.Archives.legal_brain.retrieve import hybrid_sections
+    from nm.core_engine import retrieval
+    assert retrieval.bm25_tokens is bm25_tokens
+    assert hybrid_sections.bm25_tokens is bm25_tokens

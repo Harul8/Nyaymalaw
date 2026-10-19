@@ -226,3 +226,25 @@ def test_the_policy_answers_the_whole_port_it_wraps():
     assert model.provider == "scripted"
     assert model.context_budget(None) == 1000
     assert model.resolved_model(None) == "recording"
+
+
+def test_the_live_inventory_permits_only_what_it_records():
+    """The file this installation actually runs under, not a fixture."""
+    policy = egress_policy(ROOT)
+    assert policy.processors, "the inventory is empty, so this asserts nothing"
+    # THE RULE, NOT A SNAPSHOT OF THE LIST. `== {"scripted"}` asserted current
+    # behaviour, so adding the storage and index destinations broke it while
+    # breaking nothing it was written to protect -- CLAUDE.md section 2: a
+    # test that asserts current behaviour is not an invariant. What must hold
+    # is that NOTHING OUTSIDE THIS MACHINE has been approved, which is a
+    # property of each row rather than of the set.
+    assert policy.approved_foreign_regions == {}, (
+        "a foreign region is admitted; it needs a named legal review")
+    for row in policy.processors:
+        assert row.approval_id, f"{row.processor_id} is listed with no approval"
+        assert row.region == "in", f"{row.processor_id} operates elsewhere"
+        assert row.approval_id == "IN-PROCESS-NO-EGRESS", (
+            f"{row.processor_id} is approved under {row.approval_id!r}, which "
+            f"is not the in-process approval. A third-party processor needs "
+            f"CHOICE-03 adopted, and `assurance/control_plane/blueprint.py readiness` still "
+            f"reports it not_recorded.")

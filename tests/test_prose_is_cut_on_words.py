@@ -192,3 +192,95 @@ def test_the_scanner_leaves_the_owner_and_a_real_span_alone():
         assert not constant_prose_cuts(allowed), (
             f"the scanner flagged {allowed!r}, which is not the defect")
 
+
+EXEMPT: dict[tuple[str, str], str] = {
+}
+
+
+def sweep(root: pathlib.Path) -> tuple[list[str], set[tuple[str, str]], int]:
+    """Every offending cut under `root/nm`, the exemptions actually seen, and
+    the size of the population.
+
+    TAKES A ROOT so the control below can plant a real module into a real tree
+    and watch this report it. A control that only exercises `constant_prose_cuts`
+    proves the FINDER works and says nothing about the sweep wrapped around it
+    -- and the sweep is where an exemption keyed wrongly, or a population that
+    silently walks nothing, would swallow every offender there is.
+    """
+    files = [p for p in (root / "nm").rglob("*.py")
+             if "__pycache__" not in p.parts]
+    offenders: list[str] = []
+    seen_exempt: set[tuple[str, str]] = set()
+    for path in files:
+        rel = path.relative_to(root).as_posix()
+        for line, expr in constant_prose_cuts(path.read_text(encoding="utf-8")):
+            if (rel, expr) in EXEMPT:
+                seen_exempt.add((rel, expr))
+                continue
+            offenders.append(f"{rel}:{line}  {expr}")
+    return offenders, seen_exempt, len(files)
+
+
+def test_the_prose_sweep_can_see_a_planted_cut(tmp_path):
+    """THE CONTROL FOR THE SWEEP ITSELF, on a planted member.
+
+    Three things, and the second and third are the ones a finder-only control
+    cannot reach:
+
+    * a clean module produces no offender, so a pass means something;
+    * a planted one IS reported, with its path and line;
+    * an EXEMPT expression planted at a DIFFERENT path is still reported --
+      the exemptions are keyed on (file, expression), and if the key ever
+      degraded to the expression alone, six of them would quietly excuse every
+      module in the product.
+    """
+    core = tmp_path / "nm" / "work_the_file"
+    core.mkdir(parents=True)
+    (core / "clean.py").write_text(
+        "x = snippet(fact.statement, 70)\n", encoding="utf-8")
+    offenders, _seen, count = sweep(tmp_path)
+    assert count == 1 and offenders == [], (
+        f"the sweep reported {offenders} on a module with no character cut")
+
+    (core / "planted.py").write_text("y = fact.statement[:70]\n", encoding="utf-8")
+    offenders, _seen, _count = sweep(tmp_path)
+    assert offenders == ["nm/work_the_file/planted.py:1  fact.statement[:70]"], (
+        f"the sweep did not report the planted cut; it reported {offenders}")
+
+    # With no exemption left (19 Oct 2026), a representative cut stands in.
+    borrowed = next((expr for _path, expr in EXEMPT), "element.text[:400]")
+    (core / "borrowed.py").write_text(f"z = {borrowed}\n", encoding="utf-8")
+    offenders, _seen, _count = sweep(tmp_path)
+    assert any("borrowed.py" in line for line in offenders), (
+        f"{borrowed!r} is exempt at one named path and was excused at another; "
+        f"the exemption key has lost its file half")
+
+
+def test_no_sentence_an_advocate_reads_is_cut_to_a_character_count():
+    """THE SWEEP, over the whole package.
+
+    The population is drawn from `nm/` rather than from the modules that were
+    known to be wrong, because the site added tomorrow is in a sibling module
+    -- which is precisely how the fold count went from three to six.
+    """
+    offenders, seen_exempt, count = sweep(ROOT)
+    assert count > 100, (
+        f"only {count} modules found, so this sweep is reading a "
+        f"population too small to be the product")
+
+    assert not offenders, (
+        "these cut a sentence to a character count:\n  "
+        + "\n  ".join(offenders)
+        + "\n\nA sentence is made of words and an advocate reads the result. "
+          "`nm.shared.text_contracts.snippet(text, limit)` cuts on the last word that "
+          "fits and marks the elision, so the shortening is visible and the "
+          "remainder is not silently reported as absent.")
+
+    assert len(EXEMPT) == 2, (
+        f"the exemption list is now {len(EXEMPT)} long. Each entry is a cut "
+        f"nobody reads as English -- a model budget or a tuple of labels -- "
+        f"and a third needs the same argument made in writing.")
+    missing = set(EXEMPT) - seen_exempt
+    assert not missing, (
+        f"{sorted(missing)} is exempted and no longer exists. A stale "
+        f"exemption is a hole waiting for the next cut to land on that line.")

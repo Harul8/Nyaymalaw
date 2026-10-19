@@ -79,3 +79,6 @@ def test_the_check_can_see_a_feature_that_outran_its_gate():
     assert broken, "the check would not notice a feature that outran its gate"
 
 
+FEATURES = ROOT / "assurance" / "specification" / "features.yaml"
+
+

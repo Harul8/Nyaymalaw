@@ -118,3 +118,6 @@ def test_weight_defaults_to_not_assessed_rather_than_neutral():
 # ================== CaseSummary: partially built, and it SAYS SO ============
 
 
+SCHEMAS = ROOT / "assurance" / "specification" / "schemas.yaml"
+
+

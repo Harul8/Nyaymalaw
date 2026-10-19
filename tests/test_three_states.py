@@ -154,3 +154,134 @@ OFF_RECORD: frozenset[str] = frozenset({
 })
 
 
+CLOSED: dict[str, str] = {
+    "LoopMode": (
+        "WHICH trusted evaluation approval admitted the loop, recorded or "
+        "synthetic. There is intentionally no client mode or unknown mode that "
+        "a model could use to acquire authority. Unapproved matters are refused "
+        "before dispatch, not routed into a default evaluation."),
+    "StepKind": (
+        "WHICH durable event the runner actually records. The runner knows "
+        "whether it started, returned, failed or stopped. Missing or corrupted "
+        "events fail hash-chain validation; an unknown event cannot stand in "
+        "for an operation whose external outcome was not established."),
+    "ClaimKind": (
+        "WHAT a piece of security evidence asserts -- inventoried, scanned, "
+        "penetration tested, IAM enforced, credential rotated -- and whoever "
+        "wrote the claim down chose one. A claim that asserts nothing is not "
+        "a claim, and a sixth member meaning 'unclear' would be a sixth thing "
+        "to review rather than an honest unknown. The two third states this "
+        "packet needs are elsewhere and are both defaults: `Assessed."
+        "NOT_ASSESSED` says nobody enumerated a population, and `refuse_claim` "
+        "returns why a claim does not cover the candidate in front of you -- "
+        "which is the question a claim kind cannot answer about itself."),
+    "AcquisitionRoute": (
+        "the authorised transport named by an acquisition scope, not an "
+        "outcome. A run with no chosen API or web route is refused before "
+        "discovery; absence lives outside the route vocabulary and cannot "
+        "silently choose a network path."),
+    "Sink": (
+        "a destination vocabulary, not an outcome. There is no unknown sink a "
+        "dispatch could be sent to -- a route names where it is going or it is "
+        "refused before a sink is chosen, and that refusal lives in "
+        "`nm.shared.egress_contracts.refuse` rather than in this enum."),
+    "DataClass": (
+        "the unclassified state is the EMPTY SET, not a member. "
+        "`nm.shared.egress_contracts.refuse` refuses a dispatch declaring no data "
+        "classes at all -- an UNCLASSIFIED member would be a value a producer "
+        "could pick and dispatch under, which is the opposite of what the "
+        "absence means here."),
+    "Section": "It FILES an element, it does not judge one. BK-37 files every "
+               "line of an answer under the question it answers -- where this "
+               "stands, time, what cuts against us, next step -- and every "
+               "element answers exactly one of them by construction, because "
+               "`section_of` is total over the fields an `Element` already "
+               "carries. There is no element whose section could not be "
+               "determined, so there is nothing for a third state to mean. "
+               "An `unfiled` member would mean a line the advocate never "
+               "sees, which is the opposite of the safe direction; the "
+               "fallback is POSITION, the first section read, so anything "
+               "unexpected surfaces at the top rather than disappearing.",
+    "ElementKind": "the four permitted kinds, with deliberately no fifth. An "
+                   "element the product could not classify is not emitted at "
+                   "all, so there is no state to express.",
+    "Mode": "how the answer is shaped. The router always picks one, and a "
+            "shape nobody picked would render as nothing.",
+    "Route": "matter or not. Ambiguity resolves to MATTER BY DECISION (B1): a "
+             "workup on a question wastes time, and the reverse missed a "
+             "five-word emergency, which is the worse error.",
+    "Response": "the gate matrix's own vocabulary. Every row is authored and "
+                "the constructor refuses one without a response, so a gate "
+                "with no response cannot exist.",
+    "Scope": "as Response — what a gate refuses, authored per row and refused "
+             "by the constructor if absent.",
+    "Persistence": "as Response — whether a gate survives a restart, authored "
+                   "per row rather than discovered.",
+    "Certainty": "documented or asserted. ASSERTED is the conservative "
+                 "default: it is the WEAKER claim, so defaulting there "
+                 "understates the evidence rather than overstating it.",
+    "SourceKind": "what a Finding IS — a provision or an authority. A Finding "
+                  "that is neither cannot be constructed, because every field "
+                  "that makes it auditable differs between the two.",
+    "Tier": "model configuration. A step declares a tier or the build fails, "
+            "so there is no tier nobody chose.",
+    "Role": "the three registered delegation roles (autonomy.json). A task is "
+            "dispatched under exactly one, chosen by the lead; ORDINARY WORK "
+            "uses no specialist at all, which is the empty set of tasks rather "
+            "than a fourth role. The three-state answer for a delegated attempt "
+            "lives on ResultStatus, whose NOT_ESTABLISHED is the unrun-specialist "
+            "case, not on which role was asked.",
+}
+
+
+def test_every_outcome_enum_can_say_that_nothing_was_established():
+    """THREE STATES, NEVER TWO — checked over the whole vocabulary at once.
+
+    An enum that cannot express "not assessed" forces every producer to pick
+    one of the decisive answers, and whichever it picks the product is stating
+    a conclusion it never reached.
+    """
+    offenders: list[str] = []
+    for cls, qualified in sorted(_enums().items(), key=lambda kv: kv[1]):
+        if cls.__name__ in CLOSED:
+            continue
+        # AN ENUM MAY DECLARE ITS OWN ESCAPE, and that is the better answer
+        # wherever the word list would have to guess. `ThresholdState`'s escape
+        # is BLOCKED -- somebody must still answer it -- while NOT_APPLICABLE
+        # is a FINDING, and no vocabulary of substrings could tell those apart.
+        # A classmethod is not an enum member, so it declares without adding a
+        # value.
+        if callable(getattr(cls, "not_established", None)):
+            assert cls.not_established() in list(cls), (
+                f"{qualified}.not_established() does not return one of its own "
+                f"members, so the declaration points at nothing")
+            continue
+        names = [m.name.lower() for m in cls]
+        if not any(any(e in n for e in ESCAPES) for n in names):
+            offenders.append(f"{qualified}: {', '.join(m.name for m in cls)}")
+
+    assert not offenders, (
+        "these enums model an outcome and cannot say that nothing was "
+        "established:\n  " + "\n  ".join(offenders)
+        + "\n\nAdd the third member, or declare the enum CLOSED above with the "
+          "reason something always chose one of its values. An enum with two "
+          "states forces every producer to pick a decisive answer — and "
+          "whichever it picks, the product states a conclusion it never "
+          "reached (B-042, B-055).")
+
+
+def test_every_closed_vocabulary_declares_why_it_is_closed():
+    """The allowlist may not rot into a way of avoiding the rule.
+
+    An entry for an enum that no longer exists is a reason nobody re-examined,
+    and a blank reason is an exemption nobody made.
+    """
+    known = {c.__name__ for c in _enums()}
+    stale = sorted(set(CLOSED) - known)
+    assert not stale, (
+        f"CLOSED names enums that no longer exist: {stale}. An exemption for "
+        f"something gone is a decision nobody is re-examining.")
+    for name, reason in CLOSED.items():
+        assert len(reason) > 25, (
+            f"{name} is declared closed with no real reason. 'Something always "
+            f"chose it' has to be true and has to be said.")

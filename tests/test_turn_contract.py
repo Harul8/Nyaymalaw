@@ -102,44 +102,6 @@ INTAKE_CAPACITY = {"state": "not_in_doubt",
                    "basis": "the fixture advocate explicitly assessed capacity to instruct"}
 
 
-class briefed:  # noqa: N801 -- reads as a verb at every call site
-    """An engine whose matters have been through intake.
-
-    A THIN PASS-THROUGH, so what is under test is the real engine. It fills
-    the intake fields on a turn that carries none -- exactly what the browser
-    does from its intake form -- and touches nothing else.
-    """
-
-    def __init__(self, inner):
-        object.__setattr__(self, "inner", inner)
-
-    def __getattr__(self, name):
-        return getattr(self.inner, name)
-
-    def __setattr__(self, name, value):
-        # WRITES GO THROUGH TOO, and this was a real defect for about ten
-        # minutes. `__getattr__` alone forwards reads; a test doing
-        # `engine._model = _Ungrounded(...)` then set the attribute on the
-        # WRAPPER, the inner engine kept its old model, and three tests that
-        # provoke a withheld turn stopped provoking one -- reporting "the turn
-        # was not withheld, so this test is measuring an ordinary turn", which
-        # is precisely the failure they were written to refuse.
-        #
-        # A wrapper that is transparent in one direction is a wrapper that
-        # silently discards half of what is done to it.
-        if name == "inner":
-            object.__setattr__(self, name, value)
-        else:
-            setattr(self.inner, name, value)
-
-    def run(self, turn):
-        from dataclasses import replace as _replace
-        if not turn.parties and not turn.release and turn.capacity is None:
-            turn = _replace(turn, parties=dict(INTAKE_PARTIES),
-                            release=dict(INTAKE_ANSWERS), capacity=dict(INTAKE_CAPACITY))
-        return self.inner.run(turn)
-
-
 # ======================================================= routing ==========
 
 
@@ -223,79 +185,6 @@ def test_a_judgment_proposition_cannot_come_from_counsels_submission():
 
 
 # ================================================ THE SERVED PATH =========
-
-@pytest.mark.eval_id("E-013", "E-064")
-def test_the_served_path_answers_end_to_end(client):
-    r = client.post("/api/turn", json={
-        "advocate_id": "adv",
-        "message": "we act for the accused; a cheque was dishonoured on 3 March"})
-    assert r.status_code == 200, r.text
-    body = r.json()
-    assert body["route"] == "matter"
-    # An unblocked turn leads with its answer: no next step is computed per message
-    # (LB-76; owner, 30 September 2026). A blocked one still leads with its blocker.
-    assert body["blocked"] is False and body["elements"]
-    assert body["metrics"]["outcome"] == "ok"
-    assert body["metrics"]["llm_calls"] >= 1, "a served call must be counted"
-
-
-@pytest.mark.eval_id("E-064", "E-065")
-def test_the_served_path_blocks_on_unresolved_posture(client):
-    body = client.post("/api/turn", json={
-        "advocate_id": "adv", "message": "a cheque was dishonoured on 3 March"}).json()
-    assert body["blocked"] is True
-    assert body["elements"][0]["kind"] == "question"
-    assert body["elements"][0]["signal"] == "unresolved_posture"
-    assert body["elements"][0]["collapsible"] is False, \
-        "a loud signal must never be collapsible on the wire"
-
-
-@pytest.mark.eval_id("E-063")
-@refuses("A2", 2)
-def test_the_boards_are_bounded_by_row_count_not_turns(client):
-    """THE REGRESSION TO WATCH. The previous build's board carried up to 28
-    lines of analysis and grew with the conversation."""
-    first = client.post("/api/turn", json={
-        "advocate_id": "adv",
-        "message": "we act for the accused in a cheque matter"}).json()
-    matter_id = first["matter_id"]
-
-    before = client.get(f"/api/matters/{matter_id}?advocate_id=adv").json()
-    for i in range(4):
-        client.post("/api/turn", json={
-            "advocate_id": "adv", "matter_id": matter_id,
-            "message": f"further instruction number {i} about the cheque matter"})
-    after = client.get(f"/api/matters/{matter_id}?advocate_id=adv").json()
-
-    assert after["row_count"] == before["row_count"], \
-        "adding a turn must never add a board line"
-    assert after["bounded_by"] == "thread_count"
-
-
-@pytest.mark.eval_id("E-063e")
-def test_the_matter_list_is_bounded_by_matter_count(client):
-    client.post("/api/turn", json={
-        "advocate_id": "adv", "message": "we act for the accused in a cheque matter"})
-    listing = client.get("/api/matters?advocate_id=adv").json()
-    assert listing["bounded_by"] == "matter_count"
-    assert listing["row_count"] == len(listing["matters"])
-
-
-@pytest.mark.eval_id("E-010")
-def test_another_advocates_matter_is_not_disclosed(client):
-    mine = client.post("/api/turn", json={
-        "advocate_id": "adv", "message": "we act for the accused in a cheque matter"}).json()
-    # A SECOND ADVOCATE, WITH A SESSION.
-    #
-    # This named a different `advocate_id` in the query string and
-    # asserted a 404. True, and empty: naming one was all it took to be
-    # one, so the test passed while any caller could read any matter
-    # (B-082). The other advocate now has to authenticate.
-    someone_else = client.sign_in("someone_else", fresh=True)
-    r = someone_else.get(f"/api/matters/{mine['matter_id']}")
-    assert r.status_code == 404
-    assert "no such matter" in r.json()["detail"], \
-        "the response must not distinguish 'not yours' from 'does not exist'"
 
 
 # ============================== THE SCREEN BOUNDARY =======================

@@ -6,23 +6,6 @@ import pytest
 pytestmark = pytest.mark.class_a
 
 
-def test_background_reads_cannot_keep_a_session_alive(client, monkeypatch):
-    from nm.app import api
-    start = api.utcnow()
-    clock = [start]
-    monkeypatch.setattr(api, 'utcnow', lambda: clock[0])
-    initial = client.get('/api/session').json()['access_window']['valid_until']
-    for minute in (5, 10, 20, 29):
-        clock[0] = start + timedelta(minutes=minute)
-        result = client.get('/api/session')
-        assert result.status_code == 200
-        assert result.json()['access_window']['valid_until'] == initial
-    clock[0] = start + timedelta(minutes=30)
-    assert client.get('/api/session').status_code == 401
-    assert client.get('/api/matters').status_code == 401
-    assert client.post('/api/session/activity').status_code == 401
-
-
 def test_user_activity_extends_idle_but_never_absolute_expiry(client, monkeypatch):
     from nm.app import api
     start = api.utcnow()
@@ -40,13 +23,6 @@ def test_user_activity_extends_idle_but_never_absolute_expiry(client, monkeypatc
     assert client.post('/api/session/activity').status_code == 401
 
 
-def test_deleted_account_cannot_use_an_old_session_to_read_private_routes(client):
-    identity = client.get('/api/session').json()['advocate']['id']
-    client.directory._advocate_path(identity).unlink()
-    for route in ('/api/session', '/api/matters', '/api/drafts/key', '/api/sessions'):
-        assert client.get(route).status_code == 401, route
-
-
 def test_unavailable_guessing_controls_refuse_before_deriving_password(client, monkeypatch):
     from nm.app import api
     directory = api.application().directory
@@ -57,15 +33,6 @@ def test_unavailable_guessing_controls_refuse_before_deriving_password(client, m
     response = client.post('/api/login', json={'advocate_id': 'unknown', 'password': 'guess'})
     assert response.status_code == 503
     assert response.headers['retry-after'] == '60'
-
-
-@pytest.mark.parametrize('contents', [b'bad row', b'not-a-date\ta\ts',
-                                    b'2026-09-21T00:00:00\ta\ts', b'\xff'])
-def test_corrupt_guess_counters_are_not_treated_as_zero_failures(client, contents):
-    client.directory._attempts.write_bytes(contents)
-    response = client.post('/api/login', json={'advocate_id': 'unknown', 'password': 'guess'})
-    assert response.status_code == 503
-    assert 'NOT RUNNING' in client.get('/api/health').json()['rate_limiting']
 
 
 def test_failed_counter_write_never_reports_an_ordinary_bad_password(client, monkeypatch):

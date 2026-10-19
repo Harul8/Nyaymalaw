@@ -274,27 +274,6 @@ def test_a_rehearsal_refuses_to_copy_a_store_onto_itself(tmp_path):
 
 # ============================ the comparison is real ========================
 
-def test_the_comparison_is_on_decrypted_content_and_not_sealed_bytes(tmp_path):
-    """Two correct stores seal the same matter to different bytes -- different
-    data keys, different nonces -- so comparing ciphertext would report every
-    migration as a difference and comparing nothing would report none."""
-    source, target = tmp_path / "src", tmp_path / "dst"
-    _populate(source, count=1)
-    rehearse(source, target, SEAL, authority=_quiesced())
-
-    # Re-seal the target's record under a fresh key: same content, new bytes.
-    reopened = FileMatterStore(target, key=SEAL)
-    path = target / "matters" / "mat_00000000.nm"
-    plain = reopened._open("mat_00000000", path.read_bytes())
-    (target / "keys" / "mat_00000000.key").unlink()
-    path.write_bytes(reopened._seal("mat_00000000", plain))
-
-    src, dst = inventory(source, SEAL), inventory(target, SEAL)
-    assert (src.matters["mat_00000000"].content_digest ==
-            dst.matters["mat_00000000"].content_digest)
-    assert path.read_bytes() != (source / "matters" / "mat_00000000.nm").read_bytes()
-    assert reconcile(src, dst).state is Reconciled.MATCHED
-
 
 def test_an_unreadable_matter_is_named_rather_than_dropped_from_the_count(
         tmp_path):

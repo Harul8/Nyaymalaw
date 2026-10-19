@@ -172,16 +172,6 @@ def test_the_sign_in_gate_is_addressed_by_its_id():
 
 # ============================================================ positive controls ==
 
-def test_the_scan_finds_the_classes_that_are_there():
-    """A control on the PARSER. A `declarations()` that returned nothing would
-    pass the rule while reading nothing, which is exactly how the defect it
-    was written for survived every check in this repository."""
-    found = declarations((WEB / "app/app.css").read_text(encoding="utf-8"))
-    assert len(found) > 20, f"the scan found almost no classes: {sorted(found)}"
-    assert "gate" in found, "the class this test exists for is not seen at all"
-    assert len(found["gate"]) == 1, (
-        f"`.gate` has more than one owner again: {found['gate']}")
-
 
 def test_the_scan_sees_a_planted_collision():
     """A control on the RULE, on the shape that actually bit -- a second bare

@@ -94,7 +94,10 @@ def test_every_prohibited_operation_is_refused_before_any_bytes_leave(operation)
 def test_every_allowed_operation_is_permitted(operation):
     """THE NEGATIVE CONTROL. A policy that refused everything would satisfy
     each refusal above and the product would transcribe nothing."""
-    assert refuse_request(Route("vendor-z", (operation,)), CONTRACT) == []
+    # A local-only operation (owner decision, 15 Oct 2026) is permitted on a route
+    # established as on this machine, and only there.
+    local = False if operation in CONTRACT.local_only else None
+    assert refuse_request(Route("vendor-z", (operation,), off_premises=local), CONTRACT) == []
 
 
 def test_unavoidable_background_processing_rejects_the_route(self=None):

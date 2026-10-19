@@ -16,6 +16,7 @@ import sqlite3
 from pathlib import Path
 
 import pytest
+import subprocess
 
 
 pytestmark = pytest.mark.class_a
@@ -165,4 +166,68 @@ _PROBES = (
 
 
 # =========================== BK-51: the journey manifest stays honest ========
+
+
+def test_the_served_process_reports_which_code_it_loaded():
+    """A RUNNING PROCESS IS AN ARTEFACT AND CARRIES ITS IDENTITY.
+
+    Measured on 31 August 2026: five golden scenarios were run against an API
+    server started the previous evening. They made live model calls, found none
+    of the slice they existed to prove, and the run exited 0. Every element
+    printed was about code superseded that morning.
+
+    The fingerprint is captured at IMPORT, never per request. Read from disk
+    when the request arrives it would describe the working tree — which a stale
+    server matches perfectly while serving yesterday's code, so the check would
+    pass exactly when it needed to fail.
+    """
+    import nm.app.api as api
+    from nm.shared.identity_contracts import source_fingerprint
+
+    assert not api.SERVING.startswith("unknown"), api.SERVING
+
+    # HELD, NOT HELD, OR NOT ASSESSED -- and the third state is visible.
+    #
+    # Comparing SERVING against the tree is the check that caught B-061, and
+    # its home is `assurance/journeys/run_scenario.py`, where a LIVE SERVER is asked what it
+    # is running. In-process the same comparison can only fail if the tree
+    # changed between this module's import and this line -- which is what an
+    # editor does, not what a defect does. It fired that way three times in one
+    # session, and an alarm that is wrong in the direction of alarm is one
+    # people learn to overrule.
+    # AGAINST THE TREE AS IT WAS WHEN THE SESSION STARTED, not against two
+    # readings taken microseconds apart. The old guard caught a tree moving
+    # during those microseconds and nothing else, so an edit made partway
+    # through a two-minute run -- and finished before this line -- agreed with
+    # itself perfectly and reported the editor as a defect. It did exactly
+    # that twice on 6 September 2026, on correct code.
+    from tests.conftest import SESSION_TREE
+
+    now = source_fingerprint()
+    if SESSION_TREE.startswith("unknown") or now != SESSION_TREE:
+        pytest.skip(f"NOT ASSESSED: the tree moved during this session "
+                    f"({SESSION_TREE} -> {now}), so the comparison would "
+                    f"describe the editor and not the code. The live check is "
+                    f"assurance/journeys/run_scenario.py::server_fingerprint")
+    assert api.SERVING == now, (
+        "the module-level fingerprint does not match the tree it was imported "
+        "from, and the tree has not moved since this session began")
+
+    # IT IS A CONSTANT, not a call. The check depends on this: a property or a
+    # function evaluated per request would re-read the disk.
+    assert isinstance(api.SERVING, str)
+    assert "SERVING = source_fingerprint()" in (
+        Path(api.__file__).read_text(encoding="utf8")), (
+        "the fingerprint is no longer captured once at import — a per-request "
+        "computation describes the working tree, not the running process")
+
+
+def test_the_canonical_hook_is_tracked_as_executable():
+    row = subprocess.run(
+        ["git", "ls-files", "--stage", "assurance/hooks/pre-commit"],
+        cwd=ROOT, capture_output=True, text=True, check=True,
+    ).stdout.strip()
+    assert row.startswith("100755 "), (
+        "a POSIX checkout cannot execute the canonical hook; track it as 100755")
+
 

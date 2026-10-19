@@ -51,7 +51,7 @@ def _sources():
 
 
 def _rel(path) -> str:
-    return path.relative_to(PACKAGE.parents[1]).as_posix()
+    return path.relative_to(PACKAGE.parent).as_posix()
 
 
 def functions_named(sources, needle: str) -> dict[str, list[ast.FunctionDef]]:
@@ -125,40 +125,63 @@ def test_the_scan_catches_a_prompt_and_a_guard_that_disagree():
 # ============================== the behaviour ===============================
 
 
-def _matter_with_three_facts():
-    from dataclasses import replace
-    from datetime import date
+def containment_guards(sources) -> list[tuple[str, int]]:
+    """`fold(a) in fold(b)` — the exact shape all seven guards used.
 
-    from nm.work_the_file.matter_contracts import (
-        Certainty,
-        Fact,
-        Matter,
-        Provenance,
-        Thread,
-    )
+    Both sides folded with the BASE fold. `nm.Archives.legal_brain.verify.grounding` asks a different
+    question with `_citation_fold` — is this quotation in the retrieved
+    authority — and is not swept by this, which is why the check is on the
+    call and not on the word "in".
+    """
+    def _is_fold(node) -> bool:
+        return (isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+                and node.func.id == "fold")
 
-    matter = Matter.create(advocate_id="adv_1", title="t")
-    thread = Thread.create(label="the sale agreement")
-    matter = matter.with_thread(thread)
-    for text, on in (
-        ("We act for the plaintiff at Hyderabad.", None),
-        ("The agreement to sell is dated 15-4-2024.", date(2024, 4, 15)),
-        ("The defendant refused to execute the sale deed on 2-1-2025.",
-         date(2025, 1, 2)),
-    ):
-        matter, _ = matter.recording(Fact.create(
-            statement=text,
-            provenance=Provenance(kind="advocate_statement", turn="turn_1"),
-            certainty=Certainty.ASSERTED, date=on))
-    return matter.with_thread(
-        replace(thread, chronology=tuple(f.id for f in matter.facts)))
+    found = []
+    for path, tree in sources:
+        if path == HOME:
+            continue
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Compare) or len(node.ops) != 1:
+                continue
+            if not isinstance(node.ops[0], (ast.In, ast.NotIn)):
+                continue
+            if _is_fold(node.left) and _is_fold(node.comparators[0]):
+                found.append((_rel(path), node.lineno))
+    return found
 
 
-def _duplicated(file_text: str, context: str) -> int:
-    """Words the prompt carries TWICE: sentences in both blocks."""
-    from nm.shared.text_contracts import fold
+def test_nothing_decides_the_advocates_words_by_hand():
+    """ONE GUARD, AND IT IS `Quotable.accepts`.
 
-    return sum(len(fold(line).split()) for line in file_text.splitlines()
-               if fold(line) and fold(line) in fold(context))
+    Seven modules each had their own `fold(quoted) not in fold(...)`, and the
+    thing on the right differed at every one — which is the whole defect, and
+    was invisible because each looked correct where it stood.
+    """
+    stray = containment_guards(_sources())
+    assert not stray, (
+        f"these compare a quotation against text by hand instead of asking "
+        f"`Quotable.accepts`: {stray}. The prompt cannot then say what the "
+        f"guard will take, which is B-108.")
+
+
+def test_the_scan_catches_a_planted_hand_guard():
+    """S11. A scan that cannot fail is not a scan."""
+    planted = ast.parse('def read(said, account):\n'
+                        '    if fold(said) not in fold(account):\n'
+                        '        return None\n')
+    assert containment_guards([(PACKAGE / "planted.py", planted)]) \
+        == [("nm/planted.py", 2)]
+
+
+def test_the_scan_leaves_a_different_question_alone():
+    """THE BOUND. `nm.Archives.legal_brain.verify.grounding` asks whether a quotation is in the
+    RETRIEVED AUTHORITY, which is a different question with a different right
+    answer, and folds with `_citation_fold`. A scan that swept it would push
+    the citation pivot into the base fold to satisfy itself."""
+    planted = ast.parse('def verify(q, corpus):\n'
+                        '    if _citation_fold(q) not in _citation_fold(corpus):\n'
+                        '        return None\n')
+    assert containment_guards([(PACKAGE / "planted.py", planted)]) == []
 
 

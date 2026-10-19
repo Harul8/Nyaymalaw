@@ -155,3 +155,37 @@ def test_the_recorded_paragraph_count_matches_the_corpus_arithmetic():
         f"BASELINE.md states {stated:,} and its own rows sum to "
         f"{sum(rows.values()):,} ({rows}). The rows are measured; the total "
         f"is arithmetic, and it is the total that has been wrong.")
+
+
+LIVE_DOCS = (
+    "CLAUDE.md",
+    "docs/BACKLOG.md",
+    "docs/BASELINE.md",
+)
+
+
+def test_no_live_document_says_an_artefact_is_absent_while_it_is_on_disk():
+    """THE RULE B-141 EARNED.
+
+    Run against the real tree rather than a fixture, because the artefact IS
+    the thing under test. A synthetic file would prove the regex works.
+    """
+    wrong = []
+    for rel, phrases, is_present in ABSENCE_CLAIMS:
+        if not is_present(ROOT / rel):
+            continue                      # not built is a legitimate state
+        for doc in LIVE_DOCS:
+            path = ROOT / doc
+            if not path.exists():
+                continue
+            text = path.read_text(encoding="utf-8", errors="replace").lower()
+            for phrase in phrases:
+                if phrase.lower() in text:
+                    wrong.append(f"{doc}: {phrase!r} — but {rel} exists")
+
+    assert not wrong, (
+        "these documents say an artefact is missing and it is on disk:\n  "
+        + "\n  ".join(wrong)
+        + "\n\nThe artefact is the authority and the sentence is a copy of "
+          "it. BK-4 carried this exact claim for eight days after the index "
+          "was built, and five reports repeated it.")

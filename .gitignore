@@ -37,12 +37,7 @@ build/
 
 # Generated at run time
 .nm/
-assurance/specification/prd/node_modules/
-# Local generated artifacts and parallel worktrees, never source inputs.
-# Earlier codex/ worktrees and run output, kept for future use and never tracked.
-# Moved from outputs/ on 14 September 2026; tracked plan outputs live in docs/.
-/development_environment/worktrees/
-/development_environment/runs/
+# Local run output and evidence, never tracked.
 /outputs/
 
 # Stores written at runtime
@@ -52,11 +47,6 @@ assurance/specification/prd/node_modules/
 *.sqlite3
 .code-review-graph/
 
-# These local model-evaluation reports quote saved matter sentences and IDs.
-# Keep only the redacted measurement summary in Git.
-/docs/backlog/evidence/legal-brain-20260929/*
-!/docs/backlog/evidence/legal-brain-20260929/README.md
-
 # Editors and OS
 .vscode/
 .idea/
@@ -64,10 +54,3 @@ assurance/specification/prd/node_modules/
 Thumbs.db
 *.swp
 .nm/dev-matter-key
-
-# Golden evaluation documents: the bytes live in the bucket, the manifest
-# reconstitutes them exactly. Never commit the PDFs or the parquet cache.
-golden/docs/
-golden/manifest.json
-golden/_metadata_cache/
-golden/labels.json

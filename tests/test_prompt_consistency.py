@@ -10,6 +10,7 @@ from datetime import date
 import pytest
 
 from nm.work_the_file.matter_contracts import Basis, Posture, Role
+from pathlib import Path
 
 pytestmark = pytest.mark.class_a
 TODAY = date(2026, 9, 22)
@@ -164,3 +165,4 @@ def test_explicit_filing_progresses_but_inferred_progress_and_side_reversal_do_n
     assert opposite.role is Role.PLAINTIFF and opposite.conflicts
 
 
+ROOT = Path(__file__).resolve().parents[1]

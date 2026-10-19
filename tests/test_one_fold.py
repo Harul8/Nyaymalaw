@@ -51,7 +51,7 @@ PACKAGE = pathlib.Path(__file__).resolve().parents[1] / "nm"
 
 #: The one module allowed to define the base. Its docstring carries the
 #: argument; this carries the enforcement.
-HOME = PACKAGE / "domain" / "text.py"
+HOME = PACKAGE / "shared" / "text_contracts.py"
 
 #: The base fold's own pattern. A second compilation of it, under any name, is
 #: a second fold wearing a variable.
@@ -93,7 +93,7 @@ def folds_defined(sources) -> list[tuple[str, str, bool]]:
                 continue
             if "fold" not in node.name.lower():
                 continue
-            rel = path.relative_to(PACKAGE.parents[1]).as_posix()
+            rel = path.relative_to(PACKAGE.parent).as_posix()
             out.append((rel, node.name, "fold" in _calls(node)))
     return out
 
@@ -106,7 +106,7 @@ def word_patterns(sources) -> list[str]:
             continue
         for node in ast.walk(tree):
             if isinstance(node, ast.Constant) and node.value == WORD_PATTERN:
-                out.append(path.relative_to(PACKAGE.parents[1]).as_posix())
+                out.append(path.relative_to(PACKAGE.parent).as_posix())
                 break
     return out
 

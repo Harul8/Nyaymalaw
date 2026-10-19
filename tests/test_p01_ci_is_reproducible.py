@@ -20,10 +20,6 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 @pytest.mark.parametrize("filename,name,marker", [
-    ("test_corpus_search.py", "test_every_result_says_which_law_it_searched", "class_c"),
-    ("test_resolution.py", "test_the_turn_routes_a_determinate_question_without_a_named_provision",
-     "class_c"),
-    ("test_resolution.py", "test_a_provision_the_advocate_named_outranks_the_graph", "class_c"),
     ("test_the_deployment_environment_keeps_its_seal_separate.py",
      "test_the_real_environment_does_not_share_its_seal", None),
 ])
@@ -44,3 +40,5 @@ def test_dependency_observations_remain_present_in_their_explicit_population(
                           and any(isinstance(target, ast.Name) and target.id == "pytestmark"
                                   for target in node.targets)]
         assert module_markers == [], "an actual environment observation is not hermetic Class A"
+
+

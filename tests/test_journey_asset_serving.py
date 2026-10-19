@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import re
 import stat
 from pathlib import Path
 from types import SimpleNamespace
@@ -15,6 +14,7 @@ from fastapi.testclient import TestClient
 from nm.app import api
 from nm.app.static_assets import BrowserAssetsRefused, browser_assets_router
 from nm.shared.source_layout import LayoutRefused, browser_assets
+from starlette.routing import Mount
 
 pytestmark = pytest.mark.class_a
 ROOT = Path(__file__).resolve().parents[1]
@@ -31,18 +31,8 @@ def http_boundary(client, monkeypatch):
     yield client
 
 
-def test_actual_served_application_owns_the_renderer_asset_population(http_boundary):
-    from nm.app.composition import Application
-
-    application = api.application()
-    assert type(application) is Application
-    assert dict(application.browser_asset_paths()) == browser_assets(root=ROOT)
-    assert application.browser_asset_paths() is application.browser_asset_paths()
-    assert http_boundary.get("/").content == (ROOT / "nm/app/index.html").read_bytes()
-
-
 @pytest.mark.parametrize("url", ("/", "/static/index.html", "/static/app.js",
-                                 "/static/brain-preview.html", "/static/dictation-worklet.js"))
+                                 "/static/dictation-worklet.js"))
 @pytest.mark.parametrize("validator", ("etag", "weak_etag", "modified_since"))
 def test_real_page_and_scripts_revalidate_with_empty_304(http_boundary, url, validator):
     original = http_boundary.get(url)
@@ -70,27 +60,13 @@ def test_etag_mismatch_cannot_be_overridden_by_a_matching_date(http_boundary):
     assert response.content == original.content
 
 
-@pytest.mark.parametrize("url", ("/", "/static/app.css", "/static/brain-preview.html"))
+@pytest.mark.parametrize("url", ("/", "/static/app.css"))
 def test_head_retains_get_headers_without_a_body(http_boundary, url):
     original = http_boundary.get(url)
     response = http_boundary.head(url)
     assert response.status_code == 200 and response.content == b""
     for name in ("content-type", "content-length", "cache-control", "etag", "last-modified"):
         assert response.headers[name] == original.headers[name]
-
-
-def test_served_entry_pages_keep_their_existing_script_order(http_boundary):
-    index = http_boundary.get("/")
-    assert index.content == (ROOT / "nm/app/index.html").read_bytes()
-    assert re.findall(r'<script src="([^"]+)"', index.text) == [
-        "/static/advocate-preferences.js", "/static/draft-vault.js",
-        "/static/source-reader.js", "/static/loop-progress.js", "/static/app.js",
-        "/static/matter-workspace.js", "/static/intake-materials.js",
-    ]
-    preview = http_boundary.get("/static/brain-preview.html")
-    assert re.findall(r'<script src="([^"]+)" defer>', preview.text) == [
-        "/static/source-reader.js", "/static/brain-preview.js",
-    ]
 
 
 @pytest.mark.parametrize("name", (
@@ -250,3 +226,38 @@ def test_declared_alias_cannot_masquerade_as_another_media_or_file_name(tmp_path
     with _temporary_client(tmp_path) as client:
         with pytest.raises(BrowserAssetsRefused):
             client.get("/static/another.js")
+
+
+ASSETS = {
+    "app.css": ("nm/app/app.css", "text/css"),
+    "app.js": ("nm/app/app.js", "text/javascript"),
+    "index.html": ("nm/app/index.html", "text/html"),
+    "brain-sources.js": ("nm/app/brain-sources.js", "text/javascript"),
+    "draft-vault.js": ("nm/arrive/draft-vault.js", "text/javascript"),
+    "dictation-worklet.js": ("nm/open_matter/dictation-worklet.js", "text/javascript"),
+    "intake-materials.css": ("nm/open_matter/intake-materials.css", "text/css"),
+    "intake-materials.js": ("nm/open_matter/intake-materials.js", "text/javascript"),
+}
+
+
+def test_every_declared_browser_asset_is_the_exact_shipped_population():
+    assert browser_assets(root=ROOT) == {
+        name: ROOT / path for name, (path, _media_type) in ASSETS.items()
+    }
+    assert len(ASSETS) == 8
+    # The old tree is migration evidence, not a runtime import or public root.
+    assert not any(isinstance(route, Mount) and route.path == "/static"
+                   for route in api.app.routes)
+
+
+@pytest.mark.parametrize("name", tuple(ASSETS))
+def test_every_real_asset_get_retains_exact_bytes_media_and_cache_headers(http_boundary, name):
+    path, media_type = ASSETS[name]
+    response = http_boundary.get(f"/static/{name}")
+    assert response.status_code == 200
+    assert response.content == (ROOT / path).read_bytes()
+    assert response.headers["content-type"] == f"{media_type}; charset=utf-8"
+    assert response.headers["content-length"] == str(len(response.content))
+    assert response.headers["cache-control"] == "no-cache, must-revalidate"
+    assert response.headers["x-content-type-options"] == "nosniff"
+    assert response.headers["etag"] and response.headers["last-modified"]

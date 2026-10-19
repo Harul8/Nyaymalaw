@@ -370,7 +370,6 @@ def test_an_act_too_large_to_supply_whole_is_given_as_its_provisions_that_state_
     assert calculation._held_text({"title": NI, "text": TEXTS[NI]}) == f"=== {NI} (held text) ===\n{TEXTS[NI]}"
 
 
-
 def test_a_schedule_article_quoted_across_its_columns_is_read_as_its_own_words():
     # 17 Oct 2026, the owner's land matter: Articles 54, 59, 47 and 55 were proposed rightly and
     # all refused, because the period and its start were quoted joined by a semicolon, while

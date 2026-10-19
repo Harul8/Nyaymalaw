@@ -46,20 +46,6 @@ ROOT = Path(__file__).resolve().parents[1]
 #: sweep test  ->  the test that proves it can fail.
 #: A sweep with no control is a sweep that has never been shown to work.
 CONTROLS: dict[str, str] = {
-    # P42 -- evidence that resolves only on the machine that produced it.
-    # Found by checking out a fresh worktree: three rows bound their browser
-    # evidence to `.nm/journey/report.json`, which is gitignored. Its control
-    # plants that exact path and requires the prefix tuple to catch it, so
-    # emptying the tuple cannot silence the sweep.
-    "test_no_evidence_ref_points_at_a_path_a_fresh_checkout_does_not_have":
-        "test_the_stranded_ref_check_can_see_a_planted_one",
-    # BK-60-AC6's sweep over the step registry. Its control plants a step with
-    # half a contract, asserts the unmutated step is NOT reported first, and
-    # then requires the real lint to name the field that was removed.
-    "test_every_journey_step_states_what_it_does_refuses_and_recovers":
-        "test_the_lint_refuses_a_step_given_half_a_contract",
-    "test_every_committed_evidence_path_exists":
-        "test_the_stranded_ref_check_can_see_a_planted_one",
     # P36 / J-5 -- the identifier sweep whose population is the CODE rather
     # than one scripted conversation. Its control plants a leak in a branch no
     # fixture reaches, which is the whole reason the static population exists.
@@ -88,57 +74,10 @@ CONTROLS: dict[str, str] = {
         "test_registration_mismatch_clears_both_passwords",
     "test_every_write_of_account_material_states_its_generation_transition":
         "test_the_generation_sweep_can_see_a_planted_forgetful_write",
-    # BK-52 -- the admitted population is now zero. These controls were read
-    # against the exact accumulated value each sweep asserts empty; entries
-    # that only proved a scanner had a population gained a planted offender.
-    "test_no_sentence_an_advocate_reads_is_cut_to_a_character_count":
-        "test_the_prose_sweep_can_see_a_planted_cut",
     "test_a_read_that_builds_a_prompt_and_a_guard_uses_one_value":
         "test_the_scan_catches_a_prompt_and_a_guard_that_disagree",
-    "test_a_structured_prompt_does_not_carry_it":
-        "test_the_scan_can_see_a_prompt_that_lost_its_clause",
-    "test_a_withheld_turn_commits_none_of_what_it_derived":
-        "test_the_withheld_conclusion_sweep_can_see_a_planted_leak",
-    "test_every_answer_in_the_run_carries_the_trailing_disclosures":
-        "test_the_answer_coverage_check_can_see_an_uncovered_site",
-    "test_every_evidence_adapter_answers_the_whole_port":
-        "test_the_adapter_sweep_can_see_one_that_answers_only_fetch",
-    "test_every_read_schema_can_be_compiled_by_strict_mode":
-        "test_the_strict_schema_sweep_can_see_a_planted_invalid_object",
-    "test_every_recurring_shape_has_a_mechanism_more_than_one_defect_points_at":
-        "test_the_enumerator_scan_can_see_a_defect_that_ignores_its_sweep",
-    "test_every_schema_is_identified_by_an_exact_key_and_not_a_substring":
-        "test_the_schema_scan_can_see_a_schema_with_no_responder",
-    "test_no_binding_reason_reads_as_a_citation":
-        "test_the_composed_text_scan_can_see_a_planted_citation",
-    "test_no_feature_is_tested_while_its_eval_runs_every_turn_and_it_has_no_turn":
-        "test_the_runtime_evidence_sweep_can_see_a_planted_unwired_feature",
-    "test_no_gate_disclosure_reads_as_a_citation":
-        "test_the_composed_text_scan_can_see_a_planted_citation",
-    "test_no_model_name_or_provider_client_appears_in_the_core":
-        "test_the_core_provider_sweep_can_see_a_named_provider",
-    "test_no_module_outside_the_adapters_names_a_provider":
-        "test_the_provider_name_sweep_can_see_a_leak_outside_adapters",
-    "test_no_read_asks_for_the_hard_tier_while_none_is_earned":
-        "test_the_tier_sweep_can_see_a_planted_hard_read",
-    "test_the_core_imports_only_core_ports_and_domain":
-        "test_the_core_import_sweep_can_see_a_forbidden_layer",
-    "test_the_golden_suite_path_cannot_reach_a_model":
-        "test_the_model_scan_can_see_a_runner_that_would_spend",
-    "test_the_implemented_type_adds_nothing_the_contract_does_not_declare":
-        "test_the_undeclared_field_sweep_can_see_a_planted_extra_field",
-    "test_the_phrases_are_not_the_identifiers_with_the_underscores_removed":
-        "test_the_phrase_sweep_can_see_underscores_merely_removed",
-    "test_the_scripted_provider_answers_every_schema_the_core_declares":
-        "test_the_schema_scan_can_see_a_schema_with_no_responder",
     "test_every_sweep_names_a_control_that_proves_it_can_fail":
         "test_the_control_registry_can_see_an_unregistered_or_stale_claim",
-    # BK-69 -- media never reaches reasoning unadmitted, over nm/core,
-    # nm/domain and nm/knowledge. Its control plants five media-shaped
-    # parameters and asserts each is seen; the population is not empty even
-    # today, because the boundary module itself is in it.
-    "test_no_reasoning_function_accepts_media":
-        "test_the_scanner_sees_media_reaching_a_reasoning_function",
     # BK-44 -- a documented defect is marked strict, never called, over every
     # test file in the suite. Its control plants the `if` and `except` forms
     # that were actually in the journey file, and the `from pytest import`
@@ -147,12 +86,6 @@ CONTROLS: dict[str, str] = {
         "test_the_xfail_scan_can_see_a_planted_call",
     "test_every_xfail_marker_is_strict_and_names_its_row":
         "test_the_xfail_scan_can_see_a_planted_call",
-    # B-141 -- no live document says an artefact is absent while it is on
-    # disk. Verified 9 September 2026 rather than assumed: both ABSENCE_CLAIMS
-    # rows report present=True (so neither is vacuously skipped) and the
-    # control asserts the phrases match the sentences that actually went stale.
-    "test_no_live_document_says_an_artefact_is_absent_while_it_is_on_disk":
-        "test_the_check_can_see_a_stale_claim",
     # BK-43 -- no stylesheet clips the document scroll width, over every CSS
     # file the product serves. Its control plants the rule in all four forms
     # it could return in, including the `clip` replacement.
@@ -164,11 +97,6 @@ CONTROLS: dict[str, str] = {
     # application white after every turn.
     "test_no_class_is_declared_twice_at_the_top_level":
         "test_the_scan_sees_a_planted_collision",
-    # the attributable labels have one owner, over every literal
-    # collection in nm/ AND tools/ -- five of the six copies it
-    # replaced were in tools/
-    "test_only_one_module_writes_down_the_attributable_labels":
-        "test_the_checker_can_actually_fail",
     # a claim is never surrendered by a step that did not establish it --
     # one owner for removing a name, over every module in nm/. The three
     # second owners each decided for themselves what a failed removal meant,
@@ -180,17 +108,6 @@ CONTROLS: dict[str, str] = {
     # notice one appearing; its control plants all four conditions at once.
     "test_the_absent_sinks_are_still_absent":
         "test_the_absence_check_can_see_every_destination_that_could_appear",
-    # BK-83 -- no database criterion is claimed while no run is recorded, over
-    # the criteria that need a real server. The population is small and the
-    # sweep's real job is to notice a hopeful edit, so its control forges one.
-    "test_no_database_criterion_is_claimed_while_no_run_is_recorded":
-        "test_the_check_can_see_a_claim_with_no_run_behind_it",
-    # BK-63-AC1 -- one module decides who may act, over every module in nm/.
-    # Four callers ask the question and the moment two answer it there are two
-    # answers; the control plants both assignment forms because the probe was
-    # blind to one of them.
-    "test_only_one_module_decides_who_may_act":
-        "test_the_sweep_can_see_a_second_decider",
     # BK-17 -- no guard in nm/ is an assert, over every module
     "test_no_guard_in_the_product_is_an_assert":
         "test_the_assert_sweep_can_see_a_guard_it_would_delete",
@@ -200,97 +117,24 @@ CONTROLS: dict[str, str] = {
     # BK-15 -- the forum has one owner
     "test_the_jurisdiction_has_one_owner":
         "test_the_forum_sweep_can_see_a_second_owner",
-    # BK-13 -- no enum value reaches the advocate, over every Element in nm/
-    "test_no_enum_value_reaches_the_advocate":
-        "test_the_value_scan_can_see_an_identifier_reaching_the_advocate",
     # BK-13 -- every Spoken enum checks itself at import, over every class
     "test_every_spoken_enum_called_complete":
         "test_the_complete_scan_can_see_an_enum_that_never_checks_itself",
     # M1 -- length is not content, over every dataclass in nm/
     "test_no_required_string_field_accepts_a_value_made_of_whitespace":
         "test_blank_is_the_one_definition_of_carrying_nothing",
-    # M5 -- three states, over every enum in nm/
-    "test_every_outcome_enum_can_say_that_nothing_was_established":
-        "test_the_third_state_is_a_value_and_never_a_null",
-    # M2 -- every declared owner is reached, over every function in nm/
-    "test_no_function_in_the_product_is_defined_and_never_reached":
-        "test_the_scan_can_see_the_product",
-    # E-102's register, over every prompt constant in nm/core/
-    "test_every_advocate_facing_prompt_carries_the_clause":
-        "test_the_scan_can_see_a_prompt_that_lost_its_clause",
-    "test_every_prompt_is_declared_one_kind_or_the_other":
-        "test_the_scan_can_see_a_prompt_that_lost_its_clause",
-    # the register, over every defect row
-    "test_every_check_the_register_names_actually_exists":
-        "test_the_register_can_be_read_at_all",
-    "test_every_named_test_function_is_really_in_that_file":
-        "test_the_register_can_be_read_at_all",
-    # an enumerator owns its population, over every subsumed defect row
-    "test_every_defect_an_enumerator_subsumes_names_that_enumerator":
-        "test_the_enumerator_scan_can_see_a_defect_that_ignores_its_sweep",
-    # one owner for which reads are decisive, over every literal in nm/
-    "test_no_second_copy_of_the_decisive_set_exists":
-        "test_the_second_copy_scan_can_see_a_second_copy",
-    # an open row is a claim someone re-runs, over every open defect
-    "test_every_open_defect_can_be_reproduced_or_says_why_not":
-        "test_the_open_row_scan_can_see_an_undeclared_one",
-    "test_no_reproduction_declaration_outlives_its_row":
-        "test_the_stale_declaration_scan_can_see_a_closed_row",
-    # no internal key in advocate-facing text, over every served element
-    "test_no_internal_id_reaches_the_advocate":
-        "test_the_sweep_can_see_a_planted_leak",
-    # the manifest, over every declared Act
-    "test_every_declared_act_retrieves_at_least_one_intended_section":
-        "test_an_act_the_corpus_cannot_serve_is_caught",
     # A1 -- every matter route requires a session, over the ROUTE TABLE
     "test_every_matter_route_requires_a_session":
         "test_the_route_sweep_can_see_an_unguarded_route",
-    # the golden set -- the sweep B-049 was hiding in
-    "test_every_scenario_is_reachable_from_a_suite":
-        "test_every_scenario_is_reachable_from_a_suite",
-    # the persisted types
-    "test_every_persisted_type_is_covered_by_this_file":
-        "test_no_persisted_type_has_a_field_the_decoder_cannot_reach",
-    # the schemas
-    "test_every_declared_schema_is_satisfiable_when_nothing_was_established":
-        "test_every_declared_schema_is_satisfiable_when_nothing_was_established",
-    # Appendix E against the implementing types -- control planted inline
-    "test_every_required_field_exists_on_the_implementing_type":
-        "test_every_required_field_exists_on_the_implementing_type",
     # the second-provision-pattern scan -- control planted inline
     "test_no_module_defines_its_own_provision_pattern":
         "test_no_module_defines_its_own_provision_pattern",
-    # the document-fact tripwire -- control planted inline
-    "test_no_path_admits_a_document_fact_without_binding_it_to_a_thread":
-        "test_no_path_admits_a_document_fact_without_binding_it_to_a_thread",
     # M3 -- one rule, one owner. Its control asserts each registered pattern
     # matches INSIDE its own owner, so a pattern that matches nothing cannot
     # report a clean codebase. This entry was added because THIS FILE caught
     # M3 the moment it was written without one.
     "test_no_rule_has_a_second_home":
         "test_the_owner_actually_contains_the_rule",
-    # the mutation anchors -- a stale one means the mutation never ran, and
-    # SURVIVED then reads as a weak test rather than as an unswept rename.
-    "test_every_mutation_anchor_still_matches_the_source":
-        "test_the_anchor_check_can_see_a_stale_anchor",
-    # the console guard -- a tool whose report dies partway through on a dash
-    # looks like a verdict and is not one.
-    "test_every_tool_makes_its_console_survive_the_prose_it_prints":
-        "test_the_console_scan_can_see_a_tool_that_does_not_call_it",
-    # every metric reaches the record the release gate reads it from
-    "test_every_metric_field_survives_into_the_persisted_record":
-        "test_the_metric_scan_can_see_an_unserialised_field",
-    # P20 -- the same test holds one publisher at the durable candidate
-    # boundary, plants a competing publisher, and requires the lock to report
-    # it. The trailing empty failure list then proves the original writer did
-    # not fail while the planted collision was refused.
-    "test_concurrent_publisher_is_refused_while_first_writer_holds_lock":
-        "test_concurrent_publisher_is_refused_while_first_writer_holds_lock",
-    # the gate-vocabulary scan -- control planted inline: it requires
-    # `inspect` to REPORT `fire("G-GROUND", "matched", ...)` before it trusts
-    # an empty result over the product.
-    "test_literal_gate_calls_use_the_registered_vocabulary_across_the_product":
-        "test_literal_gate_calls_use_the_registered_vocabulary_across_the_product",
     # held strings set into prose by `repr` -- one planted site per shape the
     # sweep claims to catch, each a site that was in the product.
     "test_no_advocate_facing_renderer_delimits_by_repr":
@@ -308,6 +152,23 @@ CONTROLS: dict[str, str] = {
         "test_composer_is_reachable_and_ime_enter_is_not_a_send",
     "test_failed_receipt_protection_never_dispatches_or_loses_the_text":
         "test_failed_receipt_protection_never_dispatches_or_loses_the_text",
+    # BK-52 -- the admitted population is now zero. These controls were read
+    # against the exact accumulated value each sweep asserts empty; entries
+    # that only proved a scanner had a population gained a planted offender.
+    "test_no_sentence_an_advocate_reads_is_cut_to_a_character_count":
+        "test_the_prose_sweep_can_see_a_planted_cut",
+    # B-141 -- no live document says an artefact is absent while it is on
+    # disk. Verified 9 September 2026 rather than assumed: both ABSENCE_CLAIMS
+    # rows report present=True (so neither is vacuously skipped) and the
+    # control asserts the phrases match the sentences that actually went stale.
+    "test_no_live_document_says_an_artefact_is_absent_while_it_is_on_disk":
+        "test_the_check_can_see_a_stale_claim",
+    # BK-13 -- no enum value reaches the advocate, over every Element in nm/
+    "test_no_enum_value_reaches_the_advocate":
+        "test_the_value_scan_can_see_an_identifier_reaching_the_advocate",
+    # M5 -- three states, over every enum in nm/
+    "test_every_outcome_enum_can_say_that_nothing_was_established":
+        "test_the_third_state_is_a_value_and_never_a_null",
 }
 
 #: SWEEPS WITH NO VERIFIED CONTROL, declared 9 September 2026. BK-52.

@@ -548,7 +548,6 @@ def test_gap_scope_rule_reaches_the_review_call():
     assert "a gap stated as what this research returned is supported" in system
 
 
-
 def authority_setup():
     from tests.test_core_response_authorities import Reader
     ctx, research_record, sources, _ = setup(legal=True)

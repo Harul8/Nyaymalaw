@@ -56,65 +56,24 @@ CARRIERS: tuple[str, ...] = (
 )
 
 #: gate id -> "file::test". The named test must assert on a CARRIER.
-PROVEN: dict[str, str] = {
-    "G-CORRECTION":
-        "test_correction_supersedes.py::"
-        "test_a_missed_correction_becomes_a_blocking_question",
-    "G-PROOF":
-        "test_proof_on_a_served_turn.py::"
-        "test_an_unwired_element_table_says_so_rather_than_saying_nothing",
-    "G-COVERAGE":
-        "test_grounding_gate.py::"
-        "test_the_corpus_gap_is_disclosed_before_the_authority_search_not_after",
-    "G-CASCADE":
-        "test_gaps_and_cascade_on_a_served_turn.py::"
-        "test_a_corrected_date_moves_the_value_and_says_what_it_was",
-    "G-SPLIT":
-        "test_a_disclosure_is_served_not_recorded.py::"
-        "test_the_disputes_not_advised_on_are_named_in_the_answer",
-    "G-EXPOSURE":
-        "test_a_disclosure_is_served_not_recorded.py::"
-        "test_the_cross_file_pass_is_disclosed_once_on_every_file",
-    "G-MODEL":
-        "test_a_disclosure_is_served_not_recorded.py::"
-        "test_a_refused_read_is_named_to_the_advocate_and_not_only_to_the_metrics",
-    "G-NOTASSESSED":
-        "test_a_disclosure_is_served_not_recorded.py::"
-        "test_a_search_that_never_ran_says_so_and_borrows_no_neighbour",
-    "G-SALVAGE":
-        "test_a_disclosure_is_served_not_recorded.py::"
-        "test_a_salvage_pass_that_could_not_run_says_so_on_the_served_turn",
-    "G-ADVERSE":
-        "test_a_disclosure_is_served_not_recorded.py::"
-        "test_a_theory_that_could_not_be_formed_does_not_pass_as_one",
-    "G-READ":
-        "test_reads_registry.py::"
-        "test_the_turn_discloses_which_read_came_back_empty",
-    "G-PREMISE":
-        "test_premises_come_before_arithmetic.py::"
-        "test_correct_arithmetic_never_certifies_the_law_the_disclosure_reaches_the_advocate",
-    "G-REMEDY":
-        "test_relief_changes_the_recommendation.py::"
-        "test_a_run_limitation_makes_the_relief_late_and_reaches_the_advocate",
-}
+#: EMPTY since 19 Oct 2026: every earlier proof drove the archived turn engine and
+#: was deleted with it (P24). A core-engine test that asserts a disclosure on the
+#: served answer earns its gate a row here.
+PROVEN: dict[str, str] = {}
 
-_ARCHIVED_PROOF = ("its proving test drove the archived turn engine and was deleted with it on 19 Oc"
-                   "t 2026 (P24); no test yet asserts this disclosure on a core-engine served answer")
+_ARCHIVED_PROOF = ("its proving test drove the archived turn engine and was deleted with "
+                   "it on 19 Oct 2026 (P24); no test yet asserts this disclosure on a "
+                   "core-engine served answer")
 
-#: gate id -> WHY nothing proves the advocate sees it. Six of the thirteen,
-#: enumerated MECHANICALLY on 7 September 2026 rather than read off by eye --
-#: which matters, because the first pass at this table put G-HELDNOTFOUND and
-#: G-COVERAGE here on the strength of their first assertions and both had the
-#: carrier assertion four lines further down. A wrong NOT_PROVEN row is worse
-#: than none: it invents work and it slanders a test that was doing its job.
+#: gate id -> WHY nothing proves the advocate sees it.
 NOT_PROVEN: dict[str, str] = {
-    # The table stays even when empty: the next gate added with `disclose` and
-    # no served test needs somewhere honest to go.
-    "G-COMPETENCE": _ARCHIVED_PROOF,
-    "G-UNSCREENED": _ARCHIVED_PROOF,
-    "G-HELDNOTFOUND": _ARCHIVED_PROOF,
-    "G-NOTHELD": _ARCHIVED_PROOF,
-    "G-CURRENCY": _ARCHIVED_PROOF,
+    **{gate: _ARCHIVED_PROOF for gate in (
+        "G-ADVERSE", "G-CASCADE", "G-COMPETENCE", "G-CORRECTION", "G-COVERAGE",
+        "G-CURRENCY", "G-EXPOSURE", "G-HELDNOTFOUND", "G-MODEL", "G-NOTASSESSED",
+        "G-NOTHELD", "G-PREMISE", "G-PROOF", "G-READ", "G-REMEDY", "G-SALVAGE",
+        "G-SPLIT", "G-UNSCREENED")},
+    "G-INCOMPLETE": ("declared built with the core engine; no test yet asserts on a served "
+                     "core-engine answer that an incomplete answer is disclosed to the advocate"),
 }
 
 

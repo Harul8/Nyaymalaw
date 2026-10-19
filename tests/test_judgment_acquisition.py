@@ -176,3 +176,5 @@ def test_p44_adversarial_witness_covers_bias_scope_and_receipt_guards(tmp_path):
     report = reconcile_acquisition(run)
     assert report.state is ReconciliationState.REFUSED
     assert any("quarantine source state" in reason for reason in report.reasons)
+
+

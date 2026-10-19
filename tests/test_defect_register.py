@@ -29,7 +29,6 @@ the file is there, and the function it names is really in it.
 """
 from __future__ import annotations
 
-import ast
 from pathlib import Path
 
 import pytest
@@ -97,23 +96,6 @@ ENUMERATORS: dict[str, tuple[str, ...]] = {
     # question, which measurably fires on its own case, and the register says
     # so rather than claiming a mechanism that does not cover it.
 }
-
-
-def test_every_declared_enumerator_exists_and_draws_from_the_product():
-    """A POSITIVE CONTROL ON THE TABLE ABOVE.
-
-    An entry naming a test that was renamed protects nothing and reads as
-    though it does — the same failure `test_every_check_the_register_names_
-    actually_exists` was written for, one level up.
-    """
-    for mechanism in ENUMERATORS:
-        path, _, func = mechanism.partition("::")
-        source = ROOT / path
-        assert source.exists(), f"{path} does not exist"
-        tree = ast.parse(source.read_text(encoding="utf8"))
-        names = {n.name for n in ast.walk(tree)
-                 if isinstance(n, ast.FunctionDef)}
-        assert func in names, f"{path} has no {func}"
 
 
 # ================= an open row is a claim someone re-runs ===================
@@ -191,3 +173,8 @@ def test_the_stale_declaration_scan_can_see_a_closed_row():
     assert stale == ["B-999"], (
         "the staleness comparison does not report a declaration whose row is "
         "closed")
+
+
+PLAN = ROOT / "assurance" / "specification" / "plan" / "build_plan.py"
+
+

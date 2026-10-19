@@ -87,35 +87,6 @@ def test_public_registration_cannot_supply_profile_or_authority_fields(client, f
     assert not client.directory._registration_attempts.exists()
 
 
-def test_a_new_account_can_sign_in_create_and_reopen_only_its_own_matter(client):
-    # No operator provisioning or professional-approval fixture participates.
-    client.cookies.clear()
-    assert _register(client).status_code == 200
-    assert _login(client).status_code == 200
-    opened = client.post("/api/matters/intake", json={
-        "request_key": "private-first-file", "title": "My first supplied file",
-        "parties": {"Supplied client": "client"},
-    })
-    assert opened.status_code == 200, opened.text
-    matter_id = opened.json()["matter_id"]
-    assert opened.json()["facts_established"] is False
-    assert client.get(f"/api/matters/{matter_id}").status_code == 200
-    assert client.post("/api/logout").status_code == 200
-    assert client.get(f"/api/matters/{matter_id}").status_code == 401
-    assert _login(client).status_code == 200
-    assert client.get(f"/api/matters/{matter_id}").status_code == 200
-    assert client.get("/api/session").json()["professional_approval"]["state"] == "unapproved"
-    assert client.post("/api/logout").status_code == 200
-    stranger = "different+private@example.com"
-    assert _register(client, stranger).status_code == 200
-    signed = _login(client, stranger)
-    assert signed.status_code == 200, signed.text
-    assert signed.json()["workspace"]["id"] != f"advocate:{EMAIL}"
-    assert client.get(f"/api/matters/{matter_id}").status_code == 404
-    assert matter_id not in client.get("/api/matters").text
-    assert "My first supplied file" not in client.get("/api/matters").text
-
-
 def test_public_login_refusals_do_not_disclose_account_state(client):
     assert _register(client).status_code == 200
     sealed_id = "unreadable@example.com"

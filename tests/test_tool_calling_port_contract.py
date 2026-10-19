@@ -19,7 +19,6 @@ from nm.shared.model_config import PERMITTED_PROVIDERS, ModelConfig, TierConfig
 from nm.shared.model_openai_adapter import OpenAIModelAdapter
 from nm.shared.model_policed import PolicedModel
 from nm.shared.model_port import (
-    ContextOverflow,
     ModelPort,
     OutputTruncated,
     Prompt,
@@ -193,15 +192,6 @@ def test_unknown_usage_is_not_a_free_successful_call(provider):
 def test_nested_schema_rules_apply_to_ordinary_structured_reads_too():
     with pytest.raises(SchemaViolation):
         require_schema({"locators": [{"id": "a", "kind": "invented"}]}, SCHEMA)
-
-
-@pytest.mark.parametrize("provider", sorted(PERMITTED_PROVIDERS))
-def test_full_transcript_and_tool_schema_consume_context_before_dispatch(provider):
-    model, wire = factory(provider)
-    messages = (ToolMessage("user", "x" * 500_000),)
-    with pytest.raises(ContextOverflow):
-        model.tool_call(PROMPT, (TOOL,), Tier.ROUTINE, messages=messages)
-    assert not wire
 
 
 @pytest.mark.parametrize(

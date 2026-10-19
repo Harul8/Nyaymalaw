@@ -17,6 +17,7 @@ from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import ContextOverflow, ModelError, ModelResult, SchemaViolation, Usage
 from tests.test_core_understanding import context
 from tests.test_current_brain_retrieval import Collection
+import json
 
 pytestmark = pytest.mark.class_a
 V6 = INSTRUMENTED_CONTRACT
@@ -632,3 +633,33 @@ def test_an_interpretation_with_issues_never_spares_the_loop():
     model = Model()
     plan(model, context("Find the applicable law."), {"units": [{"kind": "courtesy"}], "issues": ["unchecked"]})
     assert model.calls
+
+
+def test_served_v4_research_record_replays_with_its_labelled_queries():
+    from pathlib import Path
+    from nm.core_engine.research import WINDOWED_CONTRACT
+    root = (Path(__file__).resolve().parents[1] / "outputs/core-engine-build-20261010"
+            / "browser-gpt6-cache-v1-diagnostics/0842eaae89c44f4093705de0664dd9eb")
+    saved = json.loads((root / "008-research-retrieve-input.json").read_text(encoding="utf-8"))["value"]
+    record = json.loads((root / "009-research-retrieve-output.json").read_text(encoding="utf-8"))["value"]["result"]
+    assert record["contract"] == WINDOWED_CONTRACT
+    assert validate(record, record["plan"], saved["context"]) == record
+    labelled = [q for s in record["searches"].values() for q in s["queries"] if "Advocate passage 1:" in q["text"]]
+    assert labelled, "the served v4 serialisation is preserved, not rebuilt"
+
+
+def test_real_frozen_v2_search_replays_without_new_query_construction():
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[1] / "outputs/core-engine-build-20261010"
+    captured = json.loads((root / "live-served-capacity-remeasurement-writer-1-input.json").read_text(encoding="utf-8"))
+    record = captured["research"]
+    assert record["contract"] == "core_research_v2"
+    assert validate(record, record["plan"], captured["context"]) == record
+    unknown = {**record, "contract": "unknown_research_version"}
+    with pytest.raises(ValueError, match="Unknown"): validate(unknown, record["plan"], captured["context"])
+    changed = deepcopy(record)
+    first = next(iter(changed["searches"].values()))
+    first["queries"][0]["text"] += " unowned addition"
+    with pytest.raises(ValueError): validate(changed, changed["plan"], captured["context"])
+
+

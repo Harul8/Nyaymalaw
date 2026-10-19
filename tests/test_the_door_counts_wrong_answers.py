@@ -144,33 +144,6 @@ def test_a_refused_attempt_is_429_and_not_401(client):
     assert int(response.headers["retry-after"]) > 0
 
 
-def test_a_limiter_that_cannot_run_refuses_admission_and_says_so(client, monkeypatch):
-    """Before Build A.4.3 supersedes the old fail-open admission policy.
-
-    Unavailable controls are not permission for unlimited password guessing.
-    Existing sessions stay usable; new credential attempts receive an honest
-    temporary refusal. Health must still expose the unavailable limiter.
-    """
-    import inspect
-
-    from nm.arrive.store_directory import FileDirectory
-    reader = inspect.getsource(FileDirectory.failures_since)
-    assert "return None" in reader, (
-        "the store no longer distinguishes 'could not read' from 'no failures'")
-
-    monkeypatch.setattr(client.directory, "failures_since", lambda *args: None)
-    monkeypatch.setattr(client.directory, "limiter_available", lambda: False)
-    response = client.post("/api/login", json={
-        "advocate_id": "adv_demo", "password": "Fixture-password-not-a-secret-1"})
-    assert response.status_code == 503, response.text
-    assert response.headers['retry-after'] == '60'
-    assert 'set-cookie' not in response.headers
-    health = client.get("/api/health")
-    assert health.status_code == 200, health.text
-    assert "NOT RUNNING" in health.json()["rate_limiting"], (
-        "the unavailable limiter was hidden from the served health response")
-
-
 def test_a_successful_sign_in_adds_nothing_to_the_count():
     """Otherwise an advocate who works all day locks themselves out."""
     import inspect

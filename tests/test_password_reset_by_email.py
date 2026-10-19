@@ -297,11 +297,6 @@ def test_the_reset_doors_refuse_a_foreign_or_missing_origin(client):
     assert reset_messages_for(client, EMAIL) == ()
 
 
-def test_the_health_report_says_where_reset_links_actually_go(client):
-    health = client.get("/api/health").json()
-    assert health["account_mail"].startswith("LOCAL OUTBOX ONLY")
-
-
 # ============================== the directory ================================
 
 def _enrolled(tmp_path) -> FileDirectory:

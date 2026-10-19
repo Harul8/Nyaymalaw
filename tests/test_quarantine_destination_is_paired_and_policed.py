@@ -47,7 +47,7 @@ def controlled_processor(**changes):
                              "CONTROLLED-TEST-ONLY"), **changes)
 
 
-def application(tmp_path, **kwargs):
+def _composed(tmp_path, **kwargs):
     from nm.app.composition import Application
     from nm.shared.model_config import ModelConfig, TierConfig
     from nm.shared.model_port import Tier
@@ -73,7 +73,7 @@ def test_the_application_reads_documents_only_after_a_check_on_this_machine(tmp_
     from nm.app.composition import Application
     from nm.open_matter.clamav_check import ClamAVCheck
 
-    composed = application(tmp_path)
+    composed = _composed(tmp_path)
     checker = composed.documents.checker
     assert isinstance(checker, ClamAVCheck)
     assert checker.check(BYTES) == ("unavailable", "no malware checker is set up on this installation")

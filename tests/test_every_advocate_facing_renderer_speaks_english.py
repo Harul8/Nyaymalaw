@@ -393,3 +393,11 @@ def test_the_repr_sweep_leaves_the_record_alone():
     assert _reprs_in(ast.parse("raise ValueError(f'unknown {kind!r}')"), "p") == []
     assert _reprs_in(ast.parse("metrics.fire('G', 's', f'said {phrase!r}')"), "p") == []
     assert _reprs_in(ast.parse("Node(shown=f'on {dispute(thread.label)}')"), "p") == []
+
+
+def test_the_population_is_the_whole_product_and_is_not_empty():
+    """A sweep over nothing passes. This is what says it looked."""
+    population = _population()
+    assert len(population) > 100, len(population)
+    assert any(where == "nm/core_engine/response_rendering.py" for where, _ in population)
+    assert any(where.startswith("nm/app/") for where, _ in population)

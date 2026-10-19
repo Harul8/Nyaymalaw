@@ -242,6 +242,11 @@ def written_precisely(package: str) -> tuple[set[str], set[str]]:
 
 # ========================== the declared reservations =======================
 
+_WRITER_DELETED = (
+    "its only writer was deleted on 19 Oct 2026 (P24) with the modules the served app "
+    "never reached; the field stays in the saved-record contract so matters saved "
+    "earlier still load, and SEQ.5-SEQ.9 decide whether it is written again or removed")
+
 RESERVED: dict[str, str] = {
     "Matter.authority_bindings":
         "OPEN (P13/BK-63). Trusted authority provisioning has no production "
@@ -279,9 +284,6 @@ RESERVED: dict[str, str] = {
         "fails loudly. Nothing writes it because nothing produces document "
         "facts yet -- `nm.open_matter.intake` is declared UNWIRED in "
         "test_reached_from_production.",
-    "Provenance.page":
-        "The same guard, the same clause. Written or refused together with "
-        "`document`; neither can arrive without the other.",
 
     # -- a third state, which is a VALUE and is the point of the field -------
     "Fact.weight":
@@ -294,10 +296,6 @@ RESERVED: dict[str, str] = {
         "`Fact.__post_init__` refuses a basis that NEEDS a source without "
         "one, so this cannot be empty for the states that require it. Empty "
         "is correct for the states that do not.",
-    "Fact.exact_words":
-        "`Fact.quoted` returns '' rather than guessing, and every quote gate "
-        "reads `quoted`. A fact with no verbatim record is one that may not "
-        "be quoted, which is the intended behaviour and not a gap.",
     # `Fact.material` WAS HERE. The case-file correction route (P18, 12
     # September 2026) carries it forward onto the replacement fact, so it has
     # a writer -- a correction to a fact nobody graded must not quietly grade
@@ -323,6 +321,47 @@ RESERVED: dict[str, str] = {
         "OPEN (B-091). `Posture.conflicts` is written; this flag on the "
         "conflict is not, so a conflict that has been acted on and one that "
         "has not are the same value. It is False for both.",
+    # Writers deleted on 19 Oct 2026 (P24) with the modules the served app never reached.
+    **{field: _WRITER_DELETED for field in (
+        "Matter.loop_records", "Matter.engagement", "Matter.commission",
+        "Matter.commission_history", "Matter.emergencies", "Matter.urgency_records",
+        "Matter.urgency_operations", "Matter.authority_refusals", "Matter.decisions",
+        "Matter.commission_invalidations", "Matter.emergency_triage", "Matter.uploads",
+        "Matter.intake_request_key", "Matter.intake_opening_offer", "Matter.screens",
+        "Matter.assessed", "Matter.intake_parties", "Matter.turn_receipts",
+        "Matter.last_activity", "Matter.service_authorities", "Matter.service_jobs",
+        "Matter.hearing_packs", "Matter.action_proposals", "Matter.handovers",
+        "Matter.closure", "Matter.drafting_packages", "Matter.source_bindings",
+        "Matter.comparisons", "Matter.advice_decisions", "Matter.research",
+        "Matter.brain_opening_summary", "Thread.identifiers", "Thread.parties",
+        "Thread.posture", "Thread.chronology", "Thread.event_observations",
+        "Thread.assessed",
+        "Thread.authorities",
+        "Thread.premises",
+        "Thread.premises_stated",
+        "Thread.deadlines",
+        "Thread.gaps",
+        "Thread.decisions",
+        "Thread.thresholds_told",
+        "Thread.evidence",
+        "Thread.proof",
+        "Thread.theory",
+        "Thread.objective",
+        "Thread.reliefs",
+        "Thread.recommendation",
+        "Thread.requirements",
+        "Thread.requirement_outcomes",
+        "Thread.requirement_reads",
+        "Thread.requirement_read_contexts",
+        "Thread.checklist_session",
+        "Posture.opponent",
+        "Posture.client_described_as",
+        "Fact.certainty",
+        "Fact.material",
+        "Fact.exact_words",
+        "Fact.read_quality",
+        "TurnReceipt.input_admitted",
+    )},
 }
 
 

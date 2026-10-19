@@ -531,7 +531,6 @@ def test_v11_the_review_sees_which_ask_opens_which_item():
     assert "asked_in" in " ".join(response_review.SYSTEM.split())
 
 
-
 def test_v16_an_ask_carries_the_item_it_opens_as_the_answer_admitted_it():
     """Rendering v16 (19 Oct 2026; the readability design): a question or summary carries
     each ask in it with the item it opens - as the matter keeps it, so the page can show it

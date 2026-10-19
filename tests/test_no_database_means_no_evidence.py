@@ -53,3 +53,11 @@ def test_the_skip_reason_names_what_is_missing():
              ).read_text(encoding="utf8")
     assert "NM_POSTGRES_DSN" in suite
     assert "a skip is not a pass" in suite
+
+
+STATUS = ROOT / "docs" / "backlog" / "status.yaml"
+
+
+RUN_RECORD = ROOT / "docs" / "backlog" / "evidence" / "postgres_integration.json"
+
+

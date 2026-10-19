@@ -198,3 +198,77 @@ def block_of(lines):
     because heredoc-mangled escapes have broken a file in this repo five
     times in one session."""
     return "".join(line + "\n" for line in lines)
+
+
+ALLOWED: set[tuple[str, str]] = set()
+
+
+def test_no_enum_value_reaches_the_advocate():
+    """THE SWEEP, and its population is every `Element` in the product rather
+    than the four that were found by eye."""
+    offenders = []
+    for path in _sources():
+        src = path.read_text(encoding="utf-8")
+        try:
+            tree = ast.parse(src)
+        except SyntaxError:                      # a probe module mid-write
+            continue
+        for node in ast.walk(tree):
+            if not (isinstance(node, ast.Call)
+                    and isinstance(node.func, ast.Name)
+                    and node.func.id == "Element"):
+                continue
+            kw = {k.arg: k.value for k in node.keywords}
+            if "text" not in kw:
+                continue
+            text = ast.get_source_segment(src, kw["text"]) or ""
+            rel = path.relative_to(ROOT).as_posix()
+            for attr in _value_reads(text):
+                if (rel, attr) in ALLOWED:
+                    continue
+                offenders.append(f"{rel}:{node.lineno} — {attr}")
+
+    assert not offenders, (
+        "these put a raw `.value` in front of the advocate:\n  "
+        + "\n  ".join(offenders)
+        + "\n\nUse `.said`. An enum value is an identifier -- "
+          "`balance_of_probabilities`, `held_not_found` -- and the advocate "
+          "is the one person who cannot be expected to read this product's "
+          "internal vocabulary.")
+
+
+def test_the_value_scan_can_see_an_identifier_reaching_the_advocate():
+    """Plant an Element whose text renders a raw enum value."""
+    planted = ROOT / "nm" / "work_the_file" / "_speaks_in_identifiers.py"
+    planted.write_text(block_of((
+        "from nm.advise.answer_contracts import Element, ElementKind",
+        "from nm.work_the_file.matter_contracts import Side",
+        "",
+        "def _leak(side: Side):",
+        "    return Element(kind=ElementKind.GROUND,",
+        "                   text=f\"the side is {side.value}\")",
+    )), encoding="utf8")
+    try:
+        with pytest.raises(AssertionError, match="side.value"):
+            test_no_enum_value_reaches_the_advocate()
+    finally:
+        planted.unlink()
+
+
+def test_the_complete_scan_can_see_an_enum_that_never_checks_itself():
+    """Plant a `Spoken` enum with no `complete()` call."""
+    planted = ROOT / "nm" / "shared" / "_never_completes.py"
+    planted.write_text(block_of((
+        "from enum import Enum, nonmember",
+        "",
+        "from nm.shared.spoken_contracts import Spoken",
+        "",
+        "class Quiet(Spoken, str, Enum):",
+        "    A = \"a\"",
+        "    SAID = nonmember({\"a\": \"a\"})",
+    )), encoding="utf8")
+    try:
+        with pytest.raises(AssertionError, match="Quiet"):
+            test_every_spoken_enum_called_complete()
+    finally:
+        planted.unlink()
