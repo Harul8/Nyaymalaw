@@ -1018,6 +1018,14 @@ def _location_order(position):
     return (0, position) if type(position) is int else (1, position)
 
 
+def in_force(row):
+    """The store's mark on a held provision whose Act India Code does not list as in force
+    (owner decision P21; the Act store of 19 Oct 2026), or None. No mark is no finding that
+    an Act is in force: earlier stores carry none, nor do instruments India Code does not hold."""
+    mark = row.get("standing") if isinstance(row, dict) else None
+    return mark if isinstance(mark, str) and mark.strip() else None
+
+
 def _candidate(kind, position, row, revision, score, query_ids, context):
     if (not isinstance(row, dict) or not isinstance(row.get("full_text"), str)
             or not row["full_text"].strip() or not isinstance(row.get("chunk_id"), str)

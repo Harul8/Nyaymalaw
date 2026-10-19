@@ -206,6 +206,22 @@ assert.equal(reader.appendBody(phraseBody, phraseAnswer, phraseElement), 1);
 assert.equal(phraseBody.textContent, phraseElement.text);
 assert.equal(descendants(phraseBody, 'a')[0].textContent, 'The condition');
 assert.equal(reader.appendReferences, undefined);
+// A provision of an Act India Code does not list as in force says so on its link (P21,
+// 19 Oct 2026); a link without the mark says nothing of it.
+{
+  const repealed = {...legalSource, id:'legal-repealed', digest:'legal-digest-repealed',
+    in_force:'not in force according to India Code (checked 19 Oct 2026)'};
+  const repealedElement = {...phraseElement, sources:[conversationSource, repealed],
+    inline_citations:[{text:'The condition', source_id:repealed.id, source_index:1}]};
+  const repealedBody = new Node('p');
+  assert.equal(reader.appendBody(repealedBody, {...answer, elements:[repealedElement]}, repealedElement), 1);
+  const link = descendants(repealedBody, 'a')[0];
+  assert.equal(link.title, 'Not in force according to India Code (checked 19 Oct 2026)');
+  assert.equal(link.attributes.get('aria-label'),
+    'Open saved passage: The condition, not in force according to India Code (checked 19 Oct 2026)');
+  assert.equal(descendants(phraseBody, 'a')[0].title, undefined);
+  assert.equal(descendants(phraseBody, 'a')[0].attributes.get('aria-label'), 'Open saved passage: The condition');
+}
 for (const invalid of [
   {...phraseElement, inline_citations:[{text:'absent words', source_id:legalSource.id, source_index:1}]},
   {...phraseElement, inline_citations:[{text:'The condition', source_id:'unowned', source_index:1}]},
@@ -678,6 +694,18 @@ console.log('PASS NM response versus source role, related source words, known-co
   assert.equal(passageText(), 'Three years from delivery.');
   assert.equal(passageOf(body()).children.length, 0, 'nothing marked when the words are the whole passage');
   assert.equal(byClass('brain-source-window passage'), undefined);
+  // A provision of an Act India Code does not list as in force says so under where it is
+  // from, as a warning (P21, 19 Oct 2026); one without the mark says nothing of it.
+  assert.equal(byClass('source-role warn'), undefined);
+  const repealed = {...untreated, id:'statute-420', digest:'d-420',
+    in_force:'not in force according to India Code (checked 19 Oct 2026)'};
+  const repealedElement = {...lawElement, source:repealed, sources:[repealed]};
+  const repealedOpening = reader.open({...lawAnswer, elements:[repealedElement]}, repealedElement, 0, 0, opener);
+  reads.at(-1).resolve({...repealed}); await repealedOpening;
+  assert.equal(byClass('source-role').textContent, 'Legislative text');
+  assert.equal(byClass('source-role warn').textContent, 'Not in force according to India Code (checked 19 Oct 2026)');
+  const said = body().children.map((child) => child.className);
+  assert.ok(said.indexOf('source-where') < said.indexOf('source-role warn'));
   reader.close(false);
   const reopening = reader.open(lawAnswer, lawElement, 0, 0, opener);
   reads.at(-1).resolve({...statute, authority_inspection:v4}); await reopening;

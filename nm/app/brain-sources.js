@@ -326,6 +326,10 @@ window.NmBrainSources = (() => {
     if (source.kind === 'document' && source.reading?.legible === 'part') {
       shown.push(make('p', 'source-role warn', 'Part of this page could not be read'));
     }
+    // So is a provision of an Act India Code does not list as in force (P21, 19 Oct 2026).
+    if (source.kind === 'provision' && words(source.in_force)) {
+      shown.push(make('p', 'source-role warn', capitalised(source.in_force)));
+    }
     // A qualification that only repeats the badge is not said twice.
     const repeats = legal(source) && words(source.qualification) && words(role)
       && source.qualification.trim().replace(/\.$/, '').toLowerCase() === role.toLowerCase();
@@ -464,6 +468,7 @@ window.NmBrainSources = (() => {
   // (rendering v7, 15 Oct 2026); only law carries citation identity checks.
   const cited = (source) => legal(source) || source?.kind === 'document';
   const words = (value) => typeof value === 'string' && Boolean(value.trim());
+  const capitalised = (value) => value.trim().charAt(0).toUpperCase() + value.trim().slice(1);
   const passageKey = (source) => JSON.stringify([
     source.kind, source.label, source.locator, source.text, source.digest,
   ]);
@@ -530,7 +535,11 @@ window.NmBrainSources = (() => {
   function responseLink(answer, element, entry, label, phrase = null) {
     const link = document.createElement('a');
     link.href = '#'; link.className = 'citation-link'; link.textContent = label;
-    link.setAttribute('aria-label', `Open saved passage: ${label}`);
+    // A provision of an Act India Code does not list as in force says so on its link too.
+    const force = entry.source?.kind === 'provision' && words(entry.source.in_force)
+      ? entry.source.in_force.trim() : '';
+    if (force) link.title = capitalised(force);
+    link.setAttribute('aria-label', `Open saved passage: ${label}${force ? `, ${force}` : ''}`);
     link.addEventListener('click', (event) => {
       event?.preventDefault?.();
       return open(answer, element, answer.elements.indexOf(element), entry.index, link, false, phrase);

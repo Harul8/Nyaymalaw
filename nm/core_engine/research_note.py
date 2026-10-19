@@ -68,6 +68,8 @@ def note(row, *, prepared_for):
                 described = ((source.get("qualification") or "").rstrip(".")
                              if source["kind"] == "judgment" else
                              "Voice note you sent" if recording else KINDS.get(source["kind"], source["kind"]))
+                if source.get("in_force"):
+                    described += f", {source['in_force']}"  # P21 (19 Oct 2026)
                 sources.append({"number": numbers[key], "kind": source["kind"], "title": title,
                                 "locator": key[2], "described": described, "read_by_ai": False,
                                 "recording": recording, "passages": []})

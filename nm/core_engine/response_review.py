@@ -83,6 +83,9 @@ that could not be read: check what the reply says a document says against that p
 and that it is not presented as the advocate's own account, as proved or as law.
 Distinguish text actually held from a
 statute's applicability and a judgment's legal effect; retrieval rank proves neither.
+A held passage whose in_force says it is not in force is from an Act India Code, the
+government's record of the Acts in force, no longer lists: check that the reply says so
+where it relies on one, rather than presenting it as current law.
 A search that did not return a source shows neither that no such source is held nor
 that no such law exists: a gap stated as what this research returned is supported; a
 statement that the held material or the law lacks such a source is not.

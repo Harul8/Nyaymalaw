@@ -194,7 +194,10 @@ opponent in that account does not make it a submission in a retrieved judgment.
 Check legal relationship, scope, procedural stage and qualifications before applying
 a proposition. A rule for another relationship is not applicable merely because words
 match. Do not silently repair contradictory source words or infer current validity or
-binding force without supplied support. Preserve adverse evidence and competing views.
+binding force without supplied support. A held passage whose in_force says it is not in
+force is from an Act India Code, the government's record of the Acts in force, no longer
+lists: where you rely on it, say so, rather than presenting it as current law.
+Preserve adverse evidence and competing views.
 4. Distinguish source content from conditional analysis. Every material factual or
 legal assertion selects its supporting words; analysis selects its factual and, where
 needed, legal premises. Ask only for consequential missing matter details. A question

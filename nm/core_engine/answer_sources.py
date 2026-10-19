@@ -10,7 +10,7 @@ from copy import deepcopy
 import json
 
 from nm.core_engine import research
-from nm.core_engine.retrieval import _candidate, _digest
+from nm.core_engine.retrieval import _candidate, _digest, in_force
 from nm.core_engine.understanding import (
     REFERENCE, conversation_aliases, renamed, select as select_original, source_catalogue,
 )
@@ -119,6 +119,10 @@ def build(context, research_record):
                     "coverage": [], "source_identity": {
                         "position": position, "corpus_revision": revision,
                         document_field: row[document_field], "chunk_id": row["chunk_id"]}})
+                # P21 (19 Oct 2026): a passage of an Act India Code does not list as in force
+                # carries the store's mark, which the writer, the review and the page read.
+                if kind == "provision" and in_force(row) is not None:
+                    units[-1]["in_force"] = in_force(row)
             identities = list(dict.fromkeys(unit["id"] for unit in units))
             coverage = {"work_id": work_id, "selected_source_id": selected["id"],
                 "scope": window["scope"], "bounded": window["bounded"],

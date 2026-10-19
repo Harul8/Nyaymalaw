@@ -14,7 +14,7 @@ import re
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 
-from nm.core_engine.retrieval import SearchUnavailable, validate_search
+from nm.core_engine.retrieval import SearchUnavailable, in_force, validate_search
 from nm.core_engine.understanding import REFERENCE, TEXT, select, source_catalogue
 from nm.shared import clock_contracts
 from nm.shared.model_port import (
@@ -122,7 +122,7 @@ PICK = """You are a senior Indian litigation lawyer. A matter has been broken in
 
 For each question, choose the provisions a lawyer must read to answer it: the ones that state the governing rule, right, liability, remedy, procedure, time limit, presumption or offence the question asks about. Most questions are answered by one to three provisions; choose more only when each one is needed. Put the most necessary first.
 
-Judge each provision by what it actually says, not by whether it shares words with the question. If no shown provision answers a question, choose none for it and say what is missing.
+Judge each provision by what it actually says, not by whether it shares words with the question. A provision whose Act India Code, the government's record of the Acts in force, no longer lists is marked not in force; weigh that as a lawyer would. If no shown provision answers a question, choose none for it and say what is missing.
 """
 JUDGMENT_PICK = """You are a senior Indian litigation lawyer. A matter has been broken into legal questions, and for each question a search of the judgments we hold, the Supreme Court of India and the High Court of Andhra Pradesh, has returned up to six paragraphs, each shown with its judgment, court, year, how many later judgments cite it, and the paragraph's words.
 
@@ -664,7 +664,10 @@ def _pick_text(plan, searches, labels):
             body = (source.get("full_text") or "").splitlines()
             opening = re.sub(r"\s+", " ", " ".join(body[1:] or body)).strip()[:220]
             heading = re.sub(r"\s+", " ", source.get("section_title") or "")[:140]
-            lines.append(f"  {label}.{number} {candidate['title']}, section {candidate['locator']}: {heading}. {opening}")
+            # P21 (19 Oct 2026): an Act India Code does not list as in force is said so.
+            mark = f" [{in_force(source)}]" if in_force(source) else ""
+            lines.append(f"  {label}.{number} {candidate['title']}, section {candidate['locator']}{mark}: "
+                         f"{heading}. {opening}")
     return "\n".join(lines)
 
 

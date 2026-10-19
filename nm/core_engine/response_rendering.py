@@ -154,6 +154,10 @@ def _sources(unit, catalogue, shown_names=False, documents=False):
             # This is a reader label, never an invented paragraph/section number.
             "locator": row["locator"] or "Saved passage", "text": row["text"],
             "qualification": labels[identity] + ".", "verification": verification})
+        if "in_force" in row:
+            # P21 (19 Oct 2026): the store's mark that India Code does not list the Act as in
+            # force goes wherever the passage is shown.
+            rendered[-1]["in_force"] = row["in_force"]
     return rendered
 
 
