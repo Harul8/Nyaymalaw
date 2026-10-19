@@ -32,8 +32,14 @@ pytestmark = pytest.mark.class_a
 
 def test_turn_and_need_withholding_have_explicit_distinct_owners():
     turn_withholding = {g.id for g in withholding() if g.scope is Scope.TURN}
-    assert turn_withholding == {
-        "G-GROUND", "G-ATTRIB", "G-QUOTE", "G-STALE", "G-CORE", "G-COMMIT"}
+    assert turn_withholding == {"G-STALE", "G-CORE", "G-COMMIT"}
+    # Owner decision P25, 19 Oct 2026: what the review still finds after a section's
+    # rewrites leaves the statement out; nothing is withheld whole for it.
+    for identity in ("G-GROUND", "G-ATTRIB", "G-QUOTE"):
+        assert (gate(identity).response, gate(identity).scope, gate(identity).recovery) == (
+            Response.WITHHOLD, Scope.NEED, Recovery.NONE)
+    assert (gate("G-FALLBACK").response, gate("G-FALLBACK").scope) == (Response.DISCLOSE, Scope.NEED)
+    assert (gate("G-EDITED").response, gate("G-EDITED").scope) == (Response.DISCLOSE, Scope.NEED)
     assert gate("G-EFFECT").response is Response.WITHHOLD
     assert gate("G-EFFECT").scope is Scope.NEED
     assert gate("G-INCOMPLETE").response is Response.DISCLOSE

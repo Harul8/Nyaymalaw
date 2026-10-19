@@ -6,7 +6,7 @@ else of its own, so no part is left a bare heading. Scripted fixtures exercise t
 and its exact replay; they do not show how a real writer divides its work."""
 import pytest
 
-from nm.core_engine import research_note, response_rendering, turn
+from nm.core_engine import answer_sections, research_note, response_rendering, turn
 from nm.core_engine.conversation import chat_matter_id
 from tests.test_core_calculation import Calculating, chain, turn as calculated
 from tests.test_core_turn import store  # noqa: F401 - pytest fixture
@@ -46,10 +46,11 @@ def test_a_disputes_time_limits_close_its_part_and_the_questions_end_the_answer(
     assert [elements[i]["text"] for i in (1, 2, 4)] == [
         "Last day to file the complaint", "A period misquoted", "Last day for the drawer to pay"]
     assert (elements[5]["text"], elements[6]["text"]) == ("What I need from you", ASK)
-    # Each paragraph still names its own draft paragraph; the heading names none.
+    # Each paragraph still names its own draft paragraph, in its own section from turn v6
+    # (answered dispute by dispute, 19 Oct 2026); the heading names none.
     saved, = rows(store, reply)
-    draft = saved["activities"]["draft"]
-    assert saved["activities"]["rendering_contract"] == response_rendering.CONTRACT == "core_response_rendering_v16"
+    assert saved["activities"]["rendering_contract"] == response_rendering.BY_DISPUTE_CONTRACT
+    draft = answer_sections.piece_of(saved["activities"], elements[6]["section"])["draft"]
     assert draft["units"][response_rendering.unit_index(elements, 6)]["text"] == ASK
     with pytest.raises(IndexError):
         response_rendering.unit_index(elements, 5)
@@ -67,12 +68,13 @@ def test_a_part_showing_nothing_else_keeps_its_question_and_unnamed_limits_follo
 
 
 def test_an_earlier_rendering_replays_in_its_own_layout(store):
-    reply = calculated(store, Laid())
-    saved, = rows(store, reply)
-    activity = saved["activities"]
-    from nm.core_engine.turn import TurnContext
-    matter = store.load(chat_matter_id("owner", reply["chat_id"]))
-    context = TurnContext(matter, saved["chat_id"], saved["turn_id"], saved["message"], []).payload()
+    # A turn as saved before 19 Oct 2026 (turn v5), shown under v13's layout.
+    from nm.core_engine.conversation import open_turn
+    from tests import core_whole_answer
+    from tests.test_core_calculation import MESSAGE, Held
+    from tests.test_core_turn import searcher
+    context = open_turn(store, advocate_id="owner", message=MESSAGE, turn_id="t1").payload()
+    _, activity, _ = core_whole_answer.prepare(Laid(), context, searcher(), held_acts=Held())
     earlier = response_rendering.render(context, activity["research"], activity["sources"], activity["draft"],
         activity["review"], execution=activity["execution"], authority_evidence=activity["authority_evidence"],
         contract=response_rendering.SECTIONS_CONTRACT, time_limits=activity["calculation"],

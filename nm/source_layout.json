@@ -29,6 +29,7 @@
     "nm.arrive.professional_access_contracts": "domain",
     "nm.arrive.store_directory": "adapters",
     "nm.arrive.store_pending_accounts": "adapters",
+    "nm.core_engine.answer_sections": "core",
     "nm.core_engine.answer_sources": "core",
     "nm.core_engine.calls": "core",
     "nm.core_engine.calculation": "core",
@@ -109,7 +110,7 @@
   "expected_roles": {
     "adapters": 26,
     "bootstrap": 5,
-    "core": 24,
+    "core": 25,
     "domain": 37,
     "edge": 2,
     "infrastructure": 1,

@@ -100,7 +100,8 @@ def test_the_answer_opens_then_says_in_short_then_each_dispute_with_its_links():
         assert law["citation_markers"] == []  # no chips after a paragraph
     # Each shown paragraph names its own draft paragraph, wherever it is placed.
     assert [response_rendering.unit_index(elements, i) for i in (0, 1, 2, 4, 6)] == [0, 1, 3, 2, 4]
-    assert turn.validate_activity({"contract": turn.CONTRACT, "interpretation": {"units": []}, "research": record,
+    assert turn.validate_activity({"contract": turn.RECORDS_CONTRACT, "interpretation": {"units": []},
+                                   "research": record,
         "sources": sources, "draft": draft, "review": review, "execution": execution,
         "rendering_contract": response_rendering.CONTRACT, "authority_evidence": authorities,
         "calculation": calculation.skipped(),

@@ -60,9 +60,12 @@ def test_short_gate_ids_round_trip_existing_document_and_trace_scanners():
 
 def test_withholding_scope_inventory_preserves_need_isolation_and_separates_wiring():
     turn_ids = {row.id for row in draft.withholding() if row.scope is draft.Scope.TURN}
-    assert turn_ids == {'G-GROUND', 'G-ATTRIB', 'G-QUOTE', 'G-STALE', 'G-CORE', 'G-COMMIT'}
+    assert turn_ids == {'G-STALE', 'G-CORE', 'G-COMMIT'}
     need_ids = {row.id for row in draft.withholding() if row.scope is draft.Scope.NEED}
-    # G-SECTION (owner decision, 17 Oct 2026): a section still flagged after the rewrites.
-    assert need_ids == {'G-DATE', 'G-INFORCE', 'G-BINDING', 'G-EFFECT', 'G-SECTION'}
+    # G-SECTION (owner decision, 17 Oct 2026): a section still flagged after the rewrites,
+    # as saved v4 and v5 turns show it. Since P25 (19 Oct 2026) the grounding family leaves
+    # out the statement the review still faults, not the turn.
+    assert need_ids == {'G-DATE', 'G-INFORCE', 'G-BINDING', 'G-EFFECT', 'G-SECTION',
+                        'G-GROUND', 'G-ATTRIB', 'G-QUOTE'}
     assert {row.id for row in draft.GATES if not row.built} == set()
     assert json.loads(json.dumps(draft.as_rows())) == draft.as_rows()

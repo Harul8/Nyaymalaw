@@ -5,7 +5,7 @@ import json
 
 import pytest
 
-from nm.core_engine.conversation import ConversationRefused, chat_matter_id
+from nm.core_engine.conversation import chat_matter_id
 from nm.core_engine.turn import saved_rows
 from nm.shared.store_file_store import FileMatterStore
 from tests.test_core_response_review import Model, accept_draft, positive, request, review, setup, validate
@@ -105,7 +105,8 @@ def test_missing_work_rewrites_once_preserving_supported_peer_then_rechecks_and_
     assert final_review["complete_draft_proposal"]["units"][1] == original_peer
     assert rewrite["original_context"] == final_review["original_context"]
     assert rewrite["original_context"]["latest"]["text"] == model.message
-    assert rewrite["correction"]["mismatch"][0]["unit_ids"] == []
+    # The rewrite is told what was found and the words it concerns: an omission concerns none.
+    assert rewrite["correction"]["mismatch"][0]["concerns"] == []
     assert rewrite["correction"]["mismatch"][0]["sources"][0]["quote"] == "List the unanswered questions."
     assert len(rewrite["correction"]["rejected_draft"]["units"]) == 2
     assert "correction" not in final_review
@@ -115,23 +116,23 @@ def test_missing_work_rewrites_once_preserving_supported_peer_then_rechecks_and_
     assert rows[0]["records"] == {} and rows[0]["work"] == []
 
 
-# Two corrections at most (owner decision, 17 Oct 2026), one of them at the review's request
-# (18 Oct 2026, for speed): a review that keeps finding the omission gets one rewrite, and a
-# shape repair still leaves the review its one.
+# A section's draft and two rewrites, whatever asks for them (owner decision P25, 19 Oct
+# 2026): a review that keeps finding the omission gets the section's rewrites, a shape repair
+# counting among them; what is still missing after them is said beside the answer, never a
+# reason to withhold it.
 @pytest.mark.parametrize("settings,expected_calls", [
-    ({"reject_repair": True}, 6), ({"consume_shape_correction": True}, 7)])
-def test_missing_work_cannot_reset_shared_correction_or_save_after_terminal_rejection(
-        tmp_path, settings, expected_calls):
+    ({"reject_repair": True}, 8), ({"consume_shape_correction": True}, 7)])
+def test_missing_work_still_missing_after_the_tries_is_said_beside_the_answer(tmp_path, settings, expected_calls):
     store = FileMatterStore(tmp_path, key="synthetic-release-relationships")
     model = MissingWorkModel(**settings)
-    with pytest.raises(ConversationRefused) as error:
-        run(store, model, message=model.message)
-    assert error.value.code == "answer_withheld" and not error.value.retryable
+    response = run(store, model, message=model.message)
+    assert response["committed"] == "committed" and response["metrics"]["draft_corrections"] == 2
     assert len(model.calls) == expected_calls
-    assert not store.list_for("owner").matters
-    with pytest.raises(ConversationRefused):
-        run(store, model, message=model.message)
-    assert len(model.calls) == expected_calls
+    note = response["elements"][-1]
+    assert note["kind"] == "NOTE" and note["text"] == (
+        "The independent check found that this answer may leave something out: The independent request for "
+        "questions has no delivered result or limit.")
+    assert run(store, model, message=model.message)["replayed"] and len(model.calls) == expected_calls
 
 
 def test_address_and_support_stay_distinct_for_review_and_correction_binding():

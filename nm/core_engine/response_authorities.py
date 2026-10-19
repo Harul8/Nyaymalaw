@@ -248,11 +248,14 @@ def check(context, research_record, sources, draft, *, case_index=None, provisio
     # source identity; unresolved lookups are not positive mismatches.
     if any(source["state"] == "different_snapshot"
            for unit in record["units"] for source in unit["selected_provisions"]):
-        owned = gate("G-GROUND")
+        # The held snapshot itself is then not to be trusted (G-CORE): no rewrite can
+        # mend it, and no section may rest on it (owner decision P25 left the turn
+        # withheld whole only for code's own checks such as this).
+        owned = gate("G-CORE")
         if (owned.response, owned.scope, owned.recovery) != (
-                Response.WITHHOLD, Scope.TURN, Recovery.NONE):
-            raise RuntimeError("Authority admission no longer matches its grounding gate")
-        raise ReleaseWithheld("G-GROUND: Selected provision differs from its exact source readback")
+                Response.WITHHOLD, Scope.TURN, Recovery.SYSTEM):
+            raise RuntimeError("Authority admission no longer matches its owned-evidence gate")
+        raise ReleaseWithheld("G-CORE: Selected provision differs from its exact source readback")
     return record
 
 

@@ -4,19 +4,57 @@ from __future__ import annotations
 import json
 import threading
 import time
+from contextlib import contextmanager
 from copy import deepcopy
 
 from nm.shared.model_port import ContextOverflow, ModelError, ModelResult, Prompt, SchemaViolation, estimate_tokens
 
-#: Corrections one turn may make (owner decision, 17 Oct 2026): any correction may be the
-#: first; only one the independent review asked for may be the second.
-ALLOWANCE = 2
-#: Rewrites the independent review may ask for in one turn (owner, 18 Oct 2026, for speed:
-#: once, not twice; what the second review still finds holds back its sections).
-REVIEW_REWRITES = 1
-#: The review may correct its own form with either of the turn's corrections (owner, 18 Oct
-#: 2026): a form slip by the review withheld two answers the writer had got right.
-REVIEW_OPERATION = "core_response_review"
+#: Corrections the turn's shared steps (understanding, research, time limits) may make
+#: between them: one, as before (owner decision, 17 Oct 2026).
+SHARED_ALLOWANCE = 1
+#: Corrections each section of an answer may make (owner decision P25, 19 Oct 2026: "At most
+#: we can do a third try"): its draft and up to two rewrites, whatever asked for them - the
+#: independent review, the date check or code's own checks of its form. A section that
+#: still fails after that is trimmed statement by statement, never withheld whole.
+SECTION_ALLOWANCE = 2
+#: A shown section the cross-check between sections asks to correct gets one rewrite
+#: (owner decision P27, 19 Oct 2026); if that does not pass, the section stays as shown.
+EDIT_ALLOWANCE = 1
+#: The corrections one turn may make in all, held durably so that a retried turn never
+#: receives a fresh allowance beyond it (the turn-attempt store's own limit). The review may
+#: correct its own form within its section's allowance (owner, 18 Oct 2026: a form slip by
+#: the review withheld two answers the writer had got right).
+ALLOWANCE = 32
+#: Plain instructions for a rewrite the independent review asked for (owner decision P25, 19
+#: Oct 2026: tell the model the answer is not grounded and ask it to ground the answer in the
+#: details shared).
+GROUNDING_PURPOSE = ("The independent review found the problems listed in mismatch in the rejected draft. "
+                     "Rewrite the section so that every statement rests on the advocate's messages, the "
+                     "documents they sent or the held sources supplied, exactly as those put it; where they do "
+                     "not support a point, say plainly what is missing instead of asserting it. Keep what the "
+                     "review did not fault.")
+#: Plain instructions for a correction the check across the sections asked for (owner
+#: decision P27, 19 Oct 2026).
+CONFLICT_PURPOSE = ("A check across the sections of this answer found the conflicts listed in mismatch between this "
+                    "section, as shown in rejected_draft, and another section of the same answer. Rewrite this "
+                    "section so that it is right and agrees with what the advocate's messages, the documents they "
+                    "sent and the held sources support, exactly as those put it; where they do not settle the "
+                    "point, say so plainly. Keep what the check did not fault.")
+
+
+def shape_mismatch(exc):
+    """What a correction is told when code refused a draft's shape. A quotation refused as
+    not the source's exact words is corrected with the source's own words nearest to it
+    (18 Oct 2026)."""
+    near = getattr(exc, "near", None)
+    mismatch = str(exc) + (f". The source's own words nearest to that quotation, exactly as they stand: "
+                           f"“{near}”" if near else "")
+    if hasattr(exc, "near"):
+        # The ninth live run (18 Oct 2026): shown the words, a writer still left a
+        # listed item out of the middle of its quotation.
+        mismatch += (". A quotation is one continuous stretch of its source, word for word, with nothing "
+                     "left out in the middle: quote a shorter stretch rather than skip words.")
+    return mismatch
 
 
 class CorrectionUnavailable(ModelError):
@@ -40,13 +78,13 @@ class TurnCalls:
             raise ValueError("Correction ownership must come from a checked attempt")
         self.inner = model
         self.calls = []
-        self.correction = None
         self.corrections_used = corrections_used
-        self.review_rewrites = 0
         self.reserve_correction = reserve_correction
-        # Stages may run beside each other (18 Oct 2026): each thread keeps its own last
-        # output, and the allowance is taken under a lock.
+        # Stages and sections run beside each other (18 and 19 Oct 2026): each thread keeps
+        # its own last output, its own correction feedback and the scope it corrects within;
+        # the allowances are taken under a lock.
         self._local, self._lock = threading.local(), threading.Lock()
+        self._used = {}
         self.last_output = None
         self.terminal = False
 
@@ -58,6 +96,34 @@ class TurnCalls:
     @last_output.setter
     def last_output(self, value):
         self._local.output = value
+
+    @property
+    def correction(self):
+        """The correction feedback this thread's next call of the corrected stage carries."""
+        return getattr(self._local, "correction", None)
+
+    @correction.setter
+    def correction(self, value):
+        self._local.correction = value
+
+    @contextmanager
+    def scope(self, name, allowance=SECTION_ALLOWANCE):
+        """Corrections made on this thread inside the block count against `name`'s own
+        allowance (a section of the answer, the overview, a cross-check edit), not the
+        turn's shared one. Every correction still counts towards the turn's durable total."""
+        if not isinstance(name, str) or not name or type(allowance) is not int or allowance < 0:
+            raise ValueError("A correction scope needs a name and an allowance")
+        before = getattr(self._local, "scope", None)
+        self._local.scope = (name, allowance)
+        try:
+            yield
+        finally:
+            self._local.scope = before
+
+    def used(self, name):
+        """How many corrections the named scope has made."""
+        with self._lock:
+            return self._used.get(name, 0)
 
     def context_budget(self, tier):
         return self.inner.context_budget(tier)
@@ -111,22 +177,24 @@ class TurnCalls:
                 "correction": feedback is not None and feedback["operation"] == prompt.operation,
                 "usage_confirmed": usage is not None})
 
-    def correct(self, operation, activity, *, mismatch, rejected=None, asked_by_review=False):
+    def correct(self, operation, activity, *, mismatch, rejected=None, asked_by_review=False, purpose=None):
         """Correct a typed owner-rejected draft; caller must revalidate the result.
 
         Operation-scoped feedback never enters an independent review call.
         It is untrusted draft data, not original evidence or an execution receipt.
-        asked_by_review: the independent review's findings ask for it, so it may be the
-        turn's second correction, as may a correction of the review's own form; any other
-        must be its first. The review asks at most REVIEW_REWRITES times.
+        Within a scope (a section of the answer, the overview, a cross-check edit) any
+        correction counts against that scope's allowance; outside one, against the turn's
+        shared allowance of one. asked_by_review: the independent review's findings ask for
+        it, so the writer is told plainly to ground the section (P25). purpose: what a
+        correction asked for by another check is for (CONFLICT_PURPOSE).
         """
         if self.terminal:
             raise ReleaseWithheld("This turn's release scope is withheld")
-        second = asked_by_review is True or operation == REVIEW_OPERATION
+        scope = getattr(self._local, "scope", None)
+        name, allowance = scope if scope is not None else ("", SHARED_ALLOWANCE)
         with self._lock:
-            if (self.corrections_used >= (ALLOWANCE if second else 1)
-                    or (asked_by_review is True and self.review_rewrites >= REVIEW_REWRITES)):
-                raise CorrectionUnavailable("This turn's draft corrections have been used")
+            if self._used.get(name, 0) >= allowance or self.corrections_used >= ALLOWANCE:
+                raise CorrectionUnavailable("These draft corrections have been used")
             if not isinstance(operation, str) or not operation or not mismatch:
                 raise ValueError("Correction requires an owning operation and precise mismatch")
             if self.reserve_correction is not None:
@@ -134,10 +202,11 @@ class TurnCalls:
                 # Never dispatch a corrective call before that ownership is confirmed.
                 self.reserve_correction()
             self.corrections_used += 1
-            if asked_by_review is True:
-                self.review_rewrites += 1
+            self._used[name] = self._used.get(name, 0) + 1
         self.correction = {"operation": operation,
-            "purpose": "Correct the rejected draft using the complete original input and declared output contract.",
+            "purpose": (purpose if isinstance(purpose, str) and purpose else
+                        GROUNDING_PURPOSE if asked_by_review is True else
+                        "Correct the rejected draft using the complete original input and declared output contract."),
             "mismatch": deepcopy(mismatch), "rejected_draft": deepcopy(rejected),
             "provenance": "Untrusted rejected output and owner feedback; neither is original evidence."}
         try:
@@ -146,21 +215,11 @@ class TurnCalls:
             self.correction = None
 
     def checked(self, operation, activity):
-        """A shape error may use the turn's first correction; outages/refusals never do.
-        A quotation refused as not the source's exact words is corrected with the source's
-        own words nearest to it (18 Oct 2026)."""
+        """A shape error may use the turn's first correction; outages/refusals never do."""
         try:
             return activity()
         except SchemaViolation as exc:
-            near = getattr(exc, "near", None)
-            mismatch = str(exc) + (f". The source's own words nearest to that quotation, exactly as they stand: "
-                                   f"“{near}”" if near else "")
-            if hasattr(exc, "near"):
-                # The ninth live run (18 Oct 2026): shown the words, a writer still left a
-                # listed item out of the middle of its quotation.
-                mismatch += (". A quotation is one continuous stretch of its source, word for word, with nothing "
-                             "left out in the middle: quote a shorter stretch rather than skip words.")
-            return self.correct(operation, activity, mismatch=mismatch, rejected=self.last_output)
+            return self.correct(operation, activity, mismatch=shape_mismatch(exc), rejected=self.last_output)
 
     def withhold(self, reason):
         self.terminal = True

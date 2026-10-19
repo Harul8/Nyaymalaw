@@ -2,9 +2,9 @@
 
 Code checks each date an answer states against the conversation and documents, the
 sources supplied, the time limits code worked out and today. A date found nowhere
-there goes back to the writer as a finding in the turn's one correction; one still
-there afterwards withholds the answer. Scripted writers prove the check and the loop,
-not how often a model invents dates.
+there goes back to the writer as a finding in its section's rewrites; one still there
+afterwards leaves its statement out (owner decision P25, 19 Oct 2026), never the answer.
+Scripted writers prove the check and the loop, not how often a model invents dates.
 """
 import json
 import sqlite3
@@ -12,7 +12,6 @@ import sqlite3
 import pytest
 
 from nm.core_engine import response_writer
-from nm.core_engine.conversation import ConversationRefused
 from tests.test_core_turn import ScriptedModel, run, store  # noqa: F401 - pytest fixture
 
 pytestmark = pytest.mark.class_a
@@ -81,15 +80,15 @@ def test_the_writer_is_told_once_and_a_corrected_answer_is_kept(store):
     assert finding["category"] == "grounding" and "13 September 2026" in finding["mismatch"]
 
 
-def test_a_date_still_worked_out_after_the_correction_withholds_the_answer(store, caplog):
-    with pytest.raises(ConversationRefused) as refused:
-        run(store, Dating(times=3))
-    assert refused.value.code == "answer_withheld"
-    # Why is kept with the attempt and logged, content-free (open items round, item b).
-    reason = "answer_withheld-G-GROUND-response_review"
-    assert refused.value.diagnosis == reason
+def test_a_date_still_worked_out_after_the_rewrites_is_never_shown(store):
+    reply = run(store, Dating(times=3))
+    # Here the date is the answer's only statement: code's note stands in its place.
+    assert reply["committed"] == "committed" and "13 September" not in json.dumps(reply["elements"])
+    note, = reply["elements"]
+    assert note["kind"] == "FALLBACK" and note["text"] == (
+        "NM could not give a reliable reply to this message: after the rewrites NM may make, the checks still found "
+        "problems in it that leaving statements out could not settle. What was found: A date was stated that is "
+        "not in your messages or documents, the sources or the time limits code worked out. You can send it again, "
+        "or narrow it.")
     with sqlite3.connect(store._root / "attempts.sqlite") as db:
-        assert db.execute("SELECT state, code FROM turn_attempts").fetchall() == [("terminal", reason)]
-    logged, = [r.getMessage() for r in caplog.records if r.getMessage().startswith("Message not answered")]
-    assert logged == f"Message not answered: {reason} (G-GROUND: grounding)"
-    assert "13 September" not in logged and "Hello" not in logged
+        assert db.execute("SELECT state FROM turn_attempts").fetchall() == [("finished",)]

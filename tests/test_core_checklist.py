@@ -320,7 +320,7 @@ def test_a_saved_turn_keeps_its_checklist_as_records_and_the_board_shows_it(stor
     assert reply["committed"] == "committed"
     matter = store.load(chat_matter_id("owner", reply["chat_id"]))
     rows = turn.saved_rows(matter, "owner")
-    assert rows[0]["activities"]["contract"] == turn.CONTRACT == "core_turn_v5"
+    assert rows[0]["activities"]["contract"] == turn.CONTRACT == "core_turn_v6"
     saved = rows[0]["records"]["checklist"]
     items = saved["disputes"][0]["items"]
     assert [(item["id"], item["status"], item["evidence"]["words"]) for item in items] == [
@@ -400,7 +400,10 @@ def test_an_omission_may_name_the_supported_summary_it_is_missing_from():
 def test_the_writer_keeps_short_ids_out_of_its_text_and_the_opening_quiet_about_law():
     system = " ".join(response_writer.SYSTEM.split())
     assert "never write one in your text, and call a time limit by what it is" in system
-    assert "Such an opening is given no legal passages and needs none: do not remark on that" in system
+    # From 19 Oct 2026 the opening is the overview, written after the sections (P26).
+    overview = " ".join(response_writer.OVERVIEW_SYSTEM.split())
+    assert "The overview is given no legal passages and needs none: do not remark on that" in overview
+    assert "Never write a short ID" in overview
     from nm.core_engine import calculation
     assert 'leave them out altogether, not under "not_assessed" either' in calculation.SYSTEM
 
@@ -556,7 +559,8 @@ def test_v16_an_ask_carries_the_item_it_opens_as_the_answer_admitted_it():
         [], []]
     # The ask lists no sources beneath it: the item it opens shows the law that requires it.
     assert asking["inline_citations"] == [] and asking["citation_markers"] == []
-    activity = {"contract": turn.CONTRACT, "interpretation": {"units": []}, "research": record, "sources": sources,
+    activity = {"contract": turn.RECORDS_CONTRACT, "interpretation": {"units": []}, "research": record,
+                "sources": sources,
                 "draft": draft, "review": review, "execution": execution,
                 "rendering_contract": response_rendering.CONTRACT, "authority_evidence": authorities,
                 "calculation": calculation.skipped(), "release": None}

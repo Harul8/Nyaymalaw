@@ -16,11 +16,12 @@ from pathlib import Path
 
 from nm.shared.turn_attempt_port import AttemptRefused
 
-VERSION = 2
-#: Corrections one turn may make (owner decision, 17 Oct 2026: when the second independent
-#: review still finds a problem, the flagged parts are rewritten once more). Held as a
-#: count, so a retried turn never receives fresh corrections.
-ALLOWANCE = 2
+VERSION = 3
+#: Corrections one turn may make in all, held as a count so a retried turn never receives
+#: fresh corrections. From version 3 (owner decision P25, 19 Oct 2026) each section of an
+#: answer has its own rewrites, so the turn's total is larger; nm.core_engine.calls owns how
+#: they are shared out.
+ALLOWANCE = 32
 _HASH = re.compile(r"[0-9a-f]{64}\Z")
 _CODE = re.compile(r"[A-Za-z][A-Za-z0-9_-]{0,79}\Z")
 _FINAL = {"retryable", "terminal", "finished", "unconfirmed"}
@@ -34,13 +35,22 @@ _SQL = f"""CREATE TABLE turn_attempts (
     code TEXT
 )"""
 _FIELDS = "identity,request_digest,token,corrections_used,state,code"
-#: Version 1 held one allowance, used or not. Exactly this table is carried over to
-#: version 2 with its records unchanged; any other schema is still refused.
+#: Version 1 held one allowance, used or not; version 2 held a count of at most two.
+#: Exactly these tables are carried over with their records unchanged; any other schema
+#: is still refused.
 _SQL_V1 = """CREATE TABLE turn_attempts (
     identity TEXT PRIMARY KEY NOT NULL CHECK(length(identity)=64),
     request_digest TEXT NOT NULL CHECK(length(request_digest)=64),
     token TEXT NOT NULL CHECK(length(token)=64),
     correction_used INTEGER NOT NULL CHECK(correction_used IN (0,1)),
+    state TEXT NOT NULL CHECK(state IN ('running','retryable','terminal','finished','unconfirmed')),
+    code TEXT
+)"""
+_SQL_V2 = """CREATE TABLE turn_attempts (
+    identity TEXT PRIMARY KEY NOT NULL CHECK(length(identity)=64),
+    request_digest TEXT NOT NULL CHECK(length(request_digest)=64),
+    token TEXT NOT NULL CHECK(length(token)=64),
+    corrections_used INTEGER NOT NULL CHECK(corrections_used BETWEEN 0 AND 2),
     state TEXT NOT NULL CHECK(state IN ('running','retryable','terminal','finished','unconfirmed')),
     code TEXT
 )"""
@@ -70,12 +80,13 @@ class FileTurnAttempts:
                 if version == 0 and not objects and not existed:
                     db.execute(_SQL)
                     db.execute(f"PRAGMA user_version={VERSION}")
-                elif version == 1 and self._is(objects, _SQL_V1):
-                    db.execute("ALTER TABLE turn_attempts RENAME TO turn_attempts_v1")
+                elif (version, True) in ((1, self._is(objects, _SQL_V1)), (2, self._is(objects, _SQL_V2))):
+                    used = "correction_used" if version == 1 else "corrections_used"
+                    db.execute("ALTER TABLE turn_attempts RENAME TO turn_attempts_earlier")
                     db.execute(_SQL)
                     db.execute(f"INSERT INTO turn_attempts ({_FIELDS}) SELECT identity,request_digest,"
-                               "token,correction_used,state,code FROM turn_attempts_v1")
-                    db.execute("DROP TABLE turn_attempts_v1")
+                               f"token,{used},state,code FROM turn_attempts_earlier")
+                    db.execute("DROP TABLE turn_attempts_earlier")
                     db.execute(f"PRAGMA user_version={VERSION}")
                 self._schema(db)
         except (OSError, sqlite3.Error, ValueError):

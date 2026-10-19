@@ -2777,6 +2777,73 @@ function renderTurn(entry) {
       into.appendChild(box);
       return;
     }
+    // A NOTE IN A SECTION'S PLACE (owner decision P25, 19 Oct 2026; rendering v17): where
+    // nothing of a dispute's section survived its rewrites, the server's own note, said to be
+    // no full answer: why, the facts as the advocate gave them, the provisions found in their
+    // own words, and what NM's working understanding says is still open.
+    if (el.kind === 'FALLBACK' && el.fallback) {
+      const box = document.createElement('section');
+      box.className = 'el FALLBACK disclosure';
+      box.setAttribute('aria-label', 'Not a full answer');
+      const why = document.createElement('p');
+      why.className = 'body';
+      why.textContent = String(el.text || '').split('\n')[0];
+      box.appendChild(why);
+      const listed = (title, items, draw) => {
+        if (!Array.isArray(items) || !items.length) return;
+        const label = document.createElement('p');
+        label.className = 'fallback-label';
+        label.textContent = title;
+        const list = document.createElement('ul');
+        list.className = 'fallback-list';
+        for (const item of items) {
+          const row = document.createElement('li');
+          draw(row, item);
+          list.appendChild(row);
+        }
+        box.append(label, list);
+      };
+      listed('What you told me', el.fallback.facts, (row, words) => { row.textContent = `“${words}”`; });
+      listed('Provisions found for this dispute', el.fallback.provisions, (row, provision) => {
+        const where = document.createElement('span');
+        where.className = 'fallback-where';
+        where.textContent = `${provision.title}, ${provision.locator}${provision.in_force ? ` (${provision.in_force})` : ''}`;
+        const words = document.createElement('blockquote');
+        words.className = 'fallback-words';
+        words.textContent = provision.words;
+        row.append(where, words);
+      });
+      listed('Still needed, as NM understands it', el.fallback.still_needed, (row, need) => { row.textContent = need; });
+      listed('Open questions', el.fallback.questions, (row, question) => { row.textContent = question; });
+      into.appendChild(box);
+      return;
+    }
+    // A SECTION EDITED AFTER IT WAS CHECKED (owner decision P27, 19 Oct 2026; rendering v17):
+    // the label says what the check across the sections found; the section as first shown
+    // stays to read under "See original".
+    if (el.kind === 'EDITED' && el.edited) {
+      const box = document.createElement('div');
+      box.className = 'el EDITED disclosure';
+      const label = document.createElement('p');
+      label.className = 'body';
+      const tag = document.createElement('span');
+      tag.className = 'edited-tag';
+      tag.textContent = 'Edited';
+      label.append(tag, document.createTextNode(` ${el.text}`));
+      const original = document.createElement('details');
+      original.className = 'edited-original';
+      const opener = document.createElement('summary');
+      opener.textContent = 'See original';
+      original.appendChild(opener);
+      for (const paragraph of el.edited.original || []) {
+        const shown = document.createElement('p');
+        shown.textContent = paragraph.text;
+        original.appendChild(shown);
+      }
+      box.append(label, original);
+      into.appendChild(box);
+      return;
+    }
     const d = document.createElement('div');
     // A loud signal is never collapsed, whatever the server says about
     // collapsibility -- the client does not get to quiet it.

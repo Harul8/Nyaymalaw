@@ -392,6 +392,50 @@ for (const entry of [{brief:saved.message, answer:brainSaved}, context.restoredT
   }
 }
 
+// ANSWERED DISPUTE BY DISPUTE (owner decisions P25-P27, 19 Oct 2026; rendering v17): the
+// note code builds in a section's place and every note on what was left out are disclosures,
+// shown in the open; an edited section's label stays in view, and only the section as first
+// shown is folded under "See original".
+const plain = (kind, text, extra = {}) => ({ kind, text, source: null, sources: [], refs: [],
+  inline_citations: [], citation_markers: [], ...extra });
+const sectioned = {...saved, matter_id: null, chat_id: 'pending_chat', composed: [], elements: [
+  plain('OPENING', 'Both disputes turn on the same agreement.', {section: 'overview', unit: 0}),
+  plain('SUMMARY', 'File the complaint first.', {section: 1, unit: 0, asks: []}),
+  plain('HEADING', 'The cheque'),
+  plain('EDITED', 'Edited after a check across the sections. What it found: the days differed.', {
+    disclosure: true, edited: {why: 'the days differed.', changes_advice: false,
+      original: [{kind: 'next_step', text: 'File by Monday.'}]}}),
+  plain('NEXT_STEP', 'File by Tuesday.', {section: 1, unit: 1}),
+  plain('NOTE', 'Left out of this section: 1 paragraph, because the check found a problem.', {disclosure: true}),
+  plain('HEADING', 'The lease'),
+  plain('FALLBACK', 'Not a full answer on The lease: the AI service did not respond.\nWhat you told me: “x”.', {
+    disclosure: true, fallback: {section: 'The lease', why: 'the AI service did not respond',
+      facts: ['The lease ended in March'], provisions: [{title: 'Rent Act', locator: 'Section 5',
+        words: 'The landlord may recover possession.'}], still_needed: ['The lease deed'],
+      questions: ['Was notice given?']}}),
+]};
+const sectionedReply = context.renderTurn({brief: saved.message, answer: sectioned});
+const opened = [];
+walk(sectionedReply, false, opened);
+const fallbackBox = flat(sectionedReply).find(node => String(node.className).includes('FALLBACK'));
+const editedBox = flat(sectionedReply).find(node => String(node.className).includes('EDITED'));
+const originalFold = editedBox && flat(editedBox).find(node => node.tagName === 'DETAILS');
+if (opened.length !== 3 || opened.some(row => row.folded)) {
+  fails.push(`the notes, the edited label and the note in a section's place must be shown in the open: ${JSON.stringify(opened)}`);
+}
+if (!fallbackBox || !fallbackBox.textContent.includes('Not a full answer on The lease')
+    || !fallbackBox.textContent.includes('“The lease ended in March”')
+    || !fallbackBox.textContent.includes('The landlord may recover possession.')
+    || !fallbackBox.textContent.includes('The lease deed') || !fallbackBox.textContent.includes('Was notice given?')
+    || fallbackBox.textContent.includes('What you told me: “x”')) {
+  fails.push('the note in a section\'s place lost its reason, the facts, the law found or what is open');
+}
+if (!editedBox || !editedBox.textContent.startsWith('Edited Edited after a check across the sections')
+    || !originalFold || originalFold.open || !originalFold.textContent.includes('File by Monday.')
+    || !sectionedReply.textContent.includes('File by Tuesday.')) {
+  fails.push('an edited section lost its label, or its original is not kept to read under "See original"');
+}
+
 // Reopening a saved matter restores the whole transcript in record order and
 // starts at the first turn, even when the conversation is taller than its pane.
 const thread = document.getElementById('thread');

@@ -1700,6 +1700,22 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visib
   border-left: 2px dashed var(--rule); padding-left: .8rem;
 }
 .thread .support .el { border-left: 2px solid var(--rule); padding-left: .8rem; }
+/* ANSWERED DISPUTE BY DISPUTE (owner decisions P25-P27, 19 Oct 2026; rendering v17): code's
+   notes on a section, the note standing in a section's place, and an edited section's label
+   with the section as first shown. */
+.thread .el.NOTE .body { color: var(--ink-2); font-size: .88rem; }
+.thread .el.FALLBACK { border-left: 2px dashed var(--signal); padding-left: .8rem; }
+.fallback-label { margin: .7rem 0 .2rem; font-size: .85rem; font-weight: 600; }
+.fallback-list { margin: .2rem 0 .4rem; padding-left: 1.2rem; font-size: .9rem; }
+.fallback-list li { margin: .25rem 0; overflow-wrap: anywhere; }
+.fallback-where { font-size: .85rem; font-weight: 600; }
+.fallback-words { margin: .2rem 0 .5rem; padding-left: .7rem; border-left: 2px solid var(--rule);
+  color: var(--ink-2); white-space: pre-wrap; }
+.edited-tag { display: inline-block; margin-right: .3rem; padding: 0 .4rem; border-radius: 4px;
+  background: var(--amber-w); color: var(--ink); font-size: .75rem; font-weight: 600; }
+.edited-original { margin-top: .3rem; }
+.edited-original summary { cursor: pointer; color: var(--accent); font-size: .85rem; min-height: 2rem; }
+.edited-original p { color: var(--ink-2); font-size: .88rem; max-width: 66ch; }
 /* THE TOP BAR (owner, 16 Oct 2026): the name, + New matter and Conversation history,
    and who is signed in with the person menu, across the window on every page. */
 .top-actions { display: flex; align-items: center; gap: 0.25rem; margin-right: auto; margin-left: 1.5rem; }

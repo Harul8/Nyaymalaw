@@ -25,13 +25,18 @@ leaves the turn standing; WITHHOLD on a TURN emits nothing at all.
 So §7.1's claim becomes precise and, as written before, it was wrong in one
 direction and right in the other:
 
-    The original primary-source grounding gates -- G-GROUND, G-ATTRIB and
-    G-QUOTE -- and the concurrency gate G-STALE withhold their TURN scope.
-    NMBrain also declares TURN withholding for untrusted code-owned evidence
-    (G-CORE) and an unconfirmed atomic save (G-COMMIT). A missing supported
-    result (G-EFFECT) withholds only its NEED; uncertain independent review
-    coverage (G-INCOMPLETE) discloses that NEED and cannot certify its review
-    completion. Each row's built flag records whether its owner is wired.
+    The concurrency gate G-STALE withholds its TURN scope. NMBrain also
+    declares TURN withholding for untrusted code-owned evidence (G-CORE) and
+    an unconfirmed atomic save (G-COMMIT). The primary-source grounding gates
+    -- G-GROUND, G-ATTRIB and G-QUOTE -- withheld their TURN until 19 October
+    2026; since the owner's decision P25 they withhold the STATEMENT the
+    independent review still faults after a section's rewrites, and nothing
+    is withheld whole for what a review finds (a section of which nothing
+    survives is replaced by a note code builds, G-FALLBACK). A missing
+    supported result (G-EFFECT) withholds only its NEED; uncertain independent
+    review coverage (G-INCOMPLETE) discloses that NEED and cannot certify its
+    review completion. Each row's built flag records whether its owner is
+    wired.
 
 Response, scope and recovery are read from this table. A unit-level mismatch
 cannot acquire TURN scope merely because it was detected inside a turn.
@@ -307,17 +312,27 @@ GATES: tuple[Gate, ...] = (
     ),
 
     # ---- DERIVE: the primary-source grounding family ---------------------
+    # Owner decision P25, 19 Oct 2026 ("whichever part is grounded we give that
+    # response"): after a section's draft and its two rewrites, what the independent
+    # review or the date check still finds in a statement leaves THAT STATEMENT out, and
+    # what remains is reviewed again without it. Until then these three withheld the
+    # turn. A finding that names no statement cannot be confined, so the whole section
+    # is replaced by the note code builds (G-FALLBACK); the turn still answers.
     Gate(
         id="G-GROUND",
         condition="A proposition in the answer is not supported by the span of a "
-                  "retrieved primary source.",
+                  "retrieved primary source, the advocate's words or the documents "
+                  "they sent, still after its section's rewrites -- including a date "
+                  "found nowhere it may come from, or framing its sources do not bear.",
         states=("supported", "unsupported"),
         response=Response.WITHHOLD,
-        scope=Scope.TURN,
+        scope=Scope.NEED,
         persistence=Persistence.TURN,
         recovery=Recovery.NONE,
-        visible="Nothing is emitted. The advocate is told the turn was withheld "
-                "and why -- never given the answer with a caveat.",
+        visible="The statement is left out; what remains of the section is "
+                "reviewed again without it and shown. At the end of the section a "
+                "note says how many paragraphs, or which checklist items, were left "
+                "out and what the check found -- never the unsupported words.",
         feature="P1",
         built=True,
     ),
@@ -368,11 +383,12 @@ GATES: tuple[Gate, ...] = (
                   "is not ratio, reasoning or order.",
         states=("attributable", "not_attributable"),
         response=Response.WITHHOLD,
-        scope=Scope.TURN,
+        scope=Scope.NEED,
         persistence=Persistence.TURN,
         recovery=Recovery.NONE,
-        visible="Nothing is emitted. Counsel's losing submission is 14.8% of the "
-                "case corpus and reads exactly like a holding.",
+        visible="The statement is never shown: it is left out, and the section "
+                "says so (P25). Counsel's losing submission is 14.8% of the case "
+                "corpus and reads exactly like a holding.",
         feature="P2",
         built=True,
     ),
@@ -382,19 +398,20 @@ GATES: tuple[Gate, ...] = (
                   "retrieved span.",
         states=("verbatim", "not_verbatim"),
         response=Response.WITHHOLD,
-        scope=Scope.TURN,
+        scope=Scope.NEED,
         persistence=Persistence.TURN,
         recovery=Recovery.NONE,
-        visible="Nothing is emitted. A paraphrase inside quotation marks is a "
-                "fabricated quotation whether or not it is accurate.",
+        visible="The statement is never shown: it is left out, and the section "
+                "says so (P25). A paraphrase inside quotation marks is a fabricated "
+                "quotation whether or not it is accurate.",
         feature="P1",
         built=True,
     ),
     # Owner decision, 17 Oct 2026: after the bounded rewrites, what the independent
     # review still finds inside one section of a several-dispute answer holds back
     # that section, not the whole answer. A finding that names no section, or one
-    # that leaves no dispute's section to release, still withholds the TURN under
-    # G-GROUND, G-ATTRIB or G-QUOTE.
+    # that leaves no dispute's section to release, withheld the TURN under
+    # G-GROUND, G-ATTRIB or G-QUOTE until 19 Oct 2026 (P25).
     Gate(
         id="G-SECTION",
         condition="After the bounded rewrites, the independent review or the date "
@@ -411,6 +428,48 @@ GATES: tuple[Gate, ...] = (
                 "to cover and what the check found; it ends by asking whether to try "
                 "the section again, continue without it, or supply what it needs. "
                 "The sections shown were checked by the independent review.",
+        feature="P1",
+        # Saved turns before 19 Oct 2026 (turn v4 and v5) are shown so on reopening. From
+        # turn v6 (owner decision P25) a statement is left out instead (G-GROUND, G-ATTRIB,
+        # G-QUOTE, G-EFFECT) and a note stands for a section of which nothing survives
+        # (G-FALLBACK).
+        built=True,
+    ),
+    # Owner decision P25, 19 Oct 2026: no answer is wholly withheld for what a review finds.
+    Gate(
+        id="G-FALLBACK",
+        condition="Nothing of a section survives its rewrites and the statements left "
+                  "out, its independent review cannot be completed, or the AI service "
+                  "fails for it while other sections are answered.",
+        states=("answered", "note", "not_assessed"),
+        response=Response.DISCLOSE,
+        scope=Scope.NEED,
+        persistence=Persistence.TURN,
+        recovery=Recovery.ADVOCATE,
+        visible="In the section's place, a note built by code alone and said to be no "
+                "full answer: why, the facts as the advocate gave them, the provisions "
+                "found for the dispute in their own words, and what NM's working "
+                "understanding says is still open. The other sections are shown as "
+                "checked.",
+        feature="P1",
+        built=True,
+    ),
+    # Owner decision P27, 19 Oct 2026: a section already shown may be corrected after the
+    # check across the sections, within the same turn, and says so.
+    Gate(
+        id="G-EDITED",
+        condition="A check across the sections of an answer finds a section in conflict "
+                  "with another, and its correction passes the independent review.",
+        states=("unchanged", "edited"),
+        response=Response.DISCLOSE,
+        scope=Scope.NEED,
+        persistence=Persistence.TURN,
+        recovery=Recovery.SYSTEM,
+        visible="The section is shown corrected under an Edited label saying what the "
+                "check found, with the section as first shown kept to read; a correction "
+                "that changes the advice is also said at the top of the answer. A "
+                "correction that does not pass is not used, and a note says what the "
+                "check found.",
         feature="P1",
         built=True,
     ),

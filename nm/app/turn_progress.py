@@ -24,6 +24,9 @@ STAGES = {
     "checking_authorities": "Checking the cited sources",
     "reviewing": "Reviewing the answer independently",
     "revising": "Revising the answer after review",
+    # Answering dispute by dispute (owner decisions P26 and P27, 19 Oct 2026).
+    "checking_across": "Checking the sections against each other",
+    "writing_overview": "Writing the overview",
     "saving": "Saving the answer",
 }
 #: Counts a stage may report; anything else is dropped.

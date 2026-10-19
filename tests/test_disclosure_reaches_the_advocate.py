@@ -56,10 +56,13 @@ CARRIERS: tuple[str, ...] = (
 )
 
 #: gate id -> "file::test". The named test must assert on a CARRIER.
-#: EMPTY since 19 Oct 2026: every earlier proof drove the archived turn engine and
-#: was deleted with it (P24). A core-engine test that asserts a disclosure on the
-#: served answer earns its gate a row here.
-PROVEN: dict[str, str] = {}
+#: Every earlier proof drove the archived turn engine and was deleted with it on 19 Oct
+#: 2026 (P24). A core-engine test that asserts a disclosure on the served answer earns its
+#: gate a row here: the first two came with answering dispute by dispute (P25-P27).
+PROVEN: dict[str, str] = {
+    "G-FALLBACK": "test_core_answer_sections.py::test_the_served_answer_shows_the_note_in_a_section_s_place",
+    "G-EDITED": "test_core_answer_sections.py::test_the_served_answer_shows_a_corrected_section_under_its_label",
+}
 
 _ARCHIVED_PROOF = ("its proving test drove the archived turn engine and was deleted with "
                    "it on 19 Oct 2026 (P24); no test yet asserts this disclosure on a "

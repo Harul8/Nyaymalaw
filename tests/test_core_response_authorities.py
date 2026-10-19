@@ -196,7 +196,7 @@ def test_newer_or_different_provision_text_cannot_certify_selected_snapshot(chan
     ctx, record, sources = setup()
     chosen = next(s for s in sources.values() if s["kind"] == "provision")
     draft = draft_for(ctx, sources, "The selected provision contains a qualification.", [chosen])
-    with pytest.raises(ReleaseWithheld, match="G-GROUND"):
+    with pytest.raises(ReleaseWithheld, match="G-CORE"):
         response_authorities.check(ctx, record, sources, draft,
                                   provision_reader=Reader(record, change=change))
 

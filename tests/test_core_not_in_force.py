@@ -44,7 +44,7 @@ def answered():
                                     authority_evidence=authorities)
     elements = response_rendering.render(ctx, record, sources, draft, review, execution,
                                          authority_evidence=authorities)
-    activity = {"contract": turn.CONTRACT, "interpretation": {"units": []}, "research": record,
+    activity = {"contract": turn.RECORDS_CONTRACT, "interpretation": {"units": []}, "research": record,
                 "sources": sources, "draft": draft, "review": review, "execution": execution,
                 "rendering_contract": response_rendering.CONTRACT, "authority_evidence": authorities,
                 "calculation": calculation.skipped(), "release": None}

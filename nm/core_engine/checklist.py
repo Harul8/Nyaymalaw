@@ -98,19 +98,23 @@ def _limits(given, calculation):
             else {"what": entry["what"], "not_assessed": entry["why"]} for worked, entry in chosen]
 
 
-def records(context, activity):
-    """The conversation's records after this turn. A dispute this answer covers takes the
-    checklist its section returned; a dispute it does not cover (or whose section is held
-    back) keeps the checklist saved for it where the understanding still names it by the
-    same id and name; the rest of the records is kept as it was. An answer covering no
-    dispute changes nothing."""
-    previous = deepcopy(context.get("current_records") or {})
-    draft, record = activity.get("draft") or {}, activity.get("research") or {}
-    if "checklists" not in draft or record.get("contract") not in research.QUESTION_PLANS:
-        return previous
-    turn_id = context["latest"]["turn_id"]
-    earlier = saved(context)
-    kept = {(dispute["id"], dispute["name"]): dispute for dispute in (_current(context) or {}).get("disputes", [])}
+def _written(activity):
+    """Each dispute's checklist as this turn's answer showed it, by dispute id, and the items
+    the review still found wrong that it left out. From turn v6 (answered dispute by
+    dispute, 19 Oct 2026) each section shown gives its own, its dropped items already gone;
+    a section a note stands in for gives none."""
+    if "sections" in activity:
+        # Imported here: the sections' owner reads the writer, which reads this module.
+        from nm.core_engine import answer_sections
+        written = {}
+        for section in activity["sections"]:
+            piece = answer_sections.shown(section)
+            if piece is not None and section["dispute_id"] is not None:
+                written.setdefault(section["dispute_id"], piece["draft"]["checklists"][0])
+        return written, set()
+    draft = activity.get("draft") or {}
+    if "checklists" not in draft:
+        return {}, set()
     held = set((activity.get("release") or {}).get("parts") or [])
     # The items the review still found wrong after the rewrites are left out (rendering v15).
     left = {identity for entry in (activity.get("release") or {}).get("left_out") or [] for identity in entry["items"]}
@@ -118,6 +122,23 @@ def records(context, activity):
     for index, (part, given) in enumerate(zip(draft["parts"], draft["checklists"])):
         if part["dispute_id"] is not None and index not in held:
             written.setdefault(part["dispute_id"], given)
+    return written, left
+
+
+def records(context, activity):
+    """The conversation's records after this turn. A dispute this answer covers takes the
+    checklist its section returned; a dispute it does not cover (or whose section is held
+    back, or stands as a note) keeps the checklist saved for it where the understanding
+    still names it by the same id and name; the rest of the records is kept as it was. An
+    answer covering no dispute changes nothing."""
+    previous = deepcopy(context.get("current_records") or {})
+    record = activity.get("research") or {}
+    if record.get("contract") not in research.QUESTION_PLANS:
+        return previous
+    turn_id = context["latest"]["turn_id"]
+    earlier = saved(context)
+    kept = {(dispute["id"], dispute["name"]): dispute for dispute in (_current(context) or {}).get("disputes", [])}
+    written, left = _written(activity)
     if not written:
         # An answer that covers no dispute (a courtesy, or every section held back)
         # leaves the matter's checklist as it was.

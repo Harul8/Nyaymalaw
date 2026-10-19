@@ -34,6 +34,8 @@ from nm.core_engine.matter_board import board as matter_board
 from nm.core_engine.turn import AUTHORITY_CONTRACT as AUTHORITY_CORE_TURN, CONTRACT as CORE_TURN
 from nm.core_engine.turn import CALCULATION_CONTRACT as CALCULATION_CORE_TURN
 from nm.core_engine.turn import RELEASE_CONTRACT as RELEASE_CORE_TURN
+from nm.core_engine.turn import RECORDS_CONTRACT as RECORDS_CORE_TURN
+from nm.core_engine import answer_sections
 from nm.core_engine.turn import LEGACY_CONTRACT as LEGACY_CORE_TURN, saved_rows
 from nm.shared.external_ai_contracts import ModelPermissionRefused
 from nm.shared.model_port import ModelError
@@ -1729,10 +1731,24 @@ def document_summary(document_ref: str, advocate_id: Advocate, request: Request,
     return document_rules.summary(record)
 
 
+def _shown_unit(activity, elements, element):
+    """The saved paragraph a rendered element shows, and the authority checks bound to its
+    draft. From turn v6 (answered dispute by dispute, 19 Oct 2026) each paragraph names its
+    section, whose shown piece holds both."""
+    position = unit_index(elements, element)
+    if activity['contract'] != CORE_TURN:
+        return activity['draft']['units'][position], activity.get('authority_evidence')
+    piece = answer_sections.piece_of(activity, elements[element].get('section'))
+    if piece is None:
+        raise IndexError('This rendered element shows no saved paragraph')
+    return piece['draft']['units'][position], piece['authority_evidence']
+
+
 def _source_authority_inspection(row, element, selected):
     """Presentation of this saved unit's checks, after complete replay validation."""
     activity = row['activities']
-    unit_id = activity['draft']['units'][unit_index(row['response']['elements'], element)]['id']
+    unit, evidence = _shown_unit(activity, row['response']['elements'], element)
+    unit_id = unit['id']
     view = {'contract': 'core_source_authority_view_v1',
             'activity_contract': activity['contract'], 'unit_id': unit_id,
             'source_id': selected['id'], 'state': 'not_assessed', 'reason': None,
@@ -1740,13 +1756,14 @@ def _source_authority_inspection(row, element, selected):
     if activity['contract'] == LEGACY_CORE_TURN:
         view['reason'] = 'Authority checks were not recorded for this earlier response.'
         return view
-    if activity['contract'] not in (AUTHORITY_CORE_TURN, CALCULATION_CORE_TURN, RELEASE_CORE_TURN, CORE_TURN):
+    if activity['contract'] not in (AUTHORITY_CORE_TURN, CALCULATION_CORE_TURN, RELEASE_CORE_TURN,
+                                    RECORDS_CORE_TURN, CORE_TURN):
         raise ValueError('Unknown saved source authority contract')
     if selected['kind'] == 'document':
         view['reason'] = ('A page of a document the advocate sent, shown exactly as it was read; '
                           'citation identity checks apply to held law.')
         return view
-    checked = next(unit for unit in activity['authority_evidence']['units']
+    checked = next(unit for unit in evidence['units']
                    if unit['unit_id'] == unit_id)
     view['limits'] = deepcopy(checked['limits'])
     view['provision_checks'] = deepcopy([check for check in checked['selected_provisions']

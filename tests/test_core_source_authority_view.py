@@ -5,8 +5,9 @@ from dataclasses import replace
 import pytest
 
 from nm.app import api
-from nm.core_engine import response_authorities, response_rendering, response_review, response_writer, turn
+from nm.core_engine import answer_sections, response_authorities, response_rendering, response_review, turn
 from nm.core_engine.conversation import HEADER, chat_matter_id, commit_turn, digest, open_turn
+from tests import core_whole_answer
 from tests.test_citation_check import _build
 from tests.test_core_authority_admission import use_statute
 from tests.test_core_response_authorities import Reader, draft_for, judgments, setup
@@ -19,7 +20,7 @@ pytestmark = pytest.mark.class_a
 
 
 def project(draft, evidence, selected, element=0):
-    row = {"activities": {"contract": turn.CONTRACT, "draft": draft,
+    row = {"activities": {"contract": turn.RECORDS_CONTRACT, "draft": draft,
                            "authority_evidence": evidence},
            "response": {"elements": [{"kind": unit["kind"].upper()} for unit in draft["units"]]}}
     return api._source_authority_inspection(row, element, selected)
@@ -44,7 +45,9 @@ def test_saved_provision_view_preserves_actual_outcome_without_new_checks(served
     assert inspected == reply["elements"][0]["source"]
     assert view["state"] == "recorded" and view["activity_contract"] == turn.CONTRACT
     assert view["source_id"] == inspected["id"]
-    expected = before.brain_chat[0]["activities"]["authority_evidence"]["units"][0]
+    # From turn v6 the checks are bound to the draft of the section the paragraph is in.
+    piece = answer_sections.piece_of(before.brain_chat[0]["activities"], reply["elements"][0]["section"])
+    expected = piece["authority_evidence"]["units"][0]
     assert view["provision_checks"] == expected["selected_provisions"]
     assert view["provision_checks"][0]["state"] == outcome
     assert view["provision_checks"][0]["legal_version"] == "not_assessed"
@@ -67,7 +70,7 @@ def test_retrieved_judgment_without_citation_check_is_not_assessed(served):
 def test_legacy_saved_source_explicitly_has_no_authority_check(served, monkeypatch):
     context = open_turn(served.store, advocate_id=OWNER, message="Earlier account.", turn_id="old")
     original = context.payload()
-    _, activity, metrics = turn.prepare(ScriptedModel(legal=True), original, searcher())
+    _, activity, metrics = core_whole_answer.prepare(ScriptedModel(legal=True), original, searcher())
     activity.pop("authority_evidence")
     activity.pop("calculation")
     activity.pop("release")

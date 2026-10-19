@@ -14,6 +14,7 @@ from nm.shared.egress_contracts import EgressRefused
 from nm.shared.model_port import ModelResult, ProviderUnavailable, Usage
 from nm.shared.store_file_store import FileMatterStore
 from nm.shared.turn_attempt_store import FileTurnAttempts
+from tests import core_whole_answer
 from tests.test_core_answer_sources import AdjacentJudgment
 from tests.test_core_research import Model as ResearchModel, understanding
 from tests.test_current_brain_retrieval import Collection
@@ -23,8 +24,8 @@ pytestmark = pytest.mark.class_a
 
 class ScriptedModel:
     """Payload-dependent wire fixture; never presented as an accurate model reviewer."""
-    def __init__(self, *, legal=False, reject=0, malformed_writer=0, failure=None):
-        self.legal, self.reject = legal, reject
+    def __init__(self, *, legal=False, reject=0, malformed_writer=0, failure=None, disputes=1):
+        self.legal, self.reject, self.disputes = legal, reject, disputes
         self.malformed_writer, self.failure, self.calls = malformed_writer, failure, []
 
     def context_budget(self, tier): return 100_000
@@ -44,7 +45,8 @@ class ScriptedModel:
             if prompt.operation == "core_research_understand":
                 latest = prompt.user.split("(the one we act on now):\n", 1)[1].split(
                     "\n\nCurrent records of this matter:", 1)[0]
-                self.research = ResearchModel(understanding(needs_research=self.legal, words=latest))
+                self.research = ResearchModel(understanding(disputes=self.disputes, needs_research=self.legal,
+                                                            words=latest))
             return self.research.structured(prompt, schema, tier, **kwargs)
         data = json.loads(prompt.user)
         self.calls.append((prompt.operation, data))
@@ -125,11 +127,15 @@ def test_four_actual_stage_calls_save_reopen_and_replay_without_reexecution(stor
     assert names[2:3] + names[7:] == ["core_research_check", "core_response_writer", "core_response_review"]
     stored = store.load(chat_matter_id("owner", response["chat_id"]))
     rows = saved_rows(stored, "owner")
-    assert rows[0]["activities"]["contract"] == "core_turn_v5"
+    # Answered dispute by dispute (owner decisions P25-P27, 19 Oct 2026): one dispute, one section.
+    assert rows[0]["activities"]["contract"] == "core_turn_v6"
     # No held Acts were given to this turn, so no time limit was worked out (item 9).
     assert rows[0]["activities"]["calculation"]["state"] == "not_needed"
-    assert rows[0]["activities"]["review"]["contract"] == "core_response_review_v8"
-    assert rows[0]["activities"]["authority_evidence"]["contract"] == "core_response_authorities_v1"
+    section, = rows[0]["activities"]["sections"]
+    assert section["reviewed"]["review"]["contract"] == "core_response_review_v9"
+    assert section["reviewed"]["authority_evidence"]["contract"] == "core_response_authorities_v1"
+    assert section["trims"] == [] and section["fallback"] is None and section["edit"] is None
+    assert rows[0]["activities"]["cross_check"] is None and rows[0]["activities"]["overview"] is None
     assert rows[0]["response"] == response
     source = response["elements"][0]["source"]
     assert source["verification"]["source_treatment"] == "rejected"
@@ -144,7 +150,7 @@ def test_mixed_legacy_and_current_history_reopens_without_fresh_authority_checks
     from nm.core_engine.conversation import commit_turn, open_turn
 
     context = open_turn(store, advocate_id="owner", message="Earlier account.", turn_id="old")
-    _, activity, metrics = turn.prepare(ScriptedModel(), context.payload(), searcher())
+    _, activity, metrics = core_whole_answer.prepare(ScriptedModel(), context.payload(), searcher())
     original = context.payload()
     activity.pop("authority_evidence")
     activity.pop("calculation")
@@ -177,7 +183,7 @@ def test_mixed_legacy_and_current_history_reopens_without_fresh_authority_checks
         raise AssertionError("Saved readback cannot consult current authority indexes")
     monkeypatch.setattr(response_authorities, "check", no_new_check)
     rows = saved_rows(store.load(chat_matter_id("owner", first["chat_id"])), "owner")
-    assert [row["activities"]["contract"] for row in rows] == ["core_turn_v1", "core_turn_v5"]
+    assert [row["activities"]["contract"] for row in rows] == ["core_turn_v1", "core_turn_v6"]
     assert rows[0]["response"]["elements"] == elements
     assert run(store, model, chat_id=first["chat_id"], turn_id="new", message="Continue.")["replayed"]
     assert len(model.calls) == 4
@@ -192,7 +198,7 @@ def test_a_turn_saved_under_an_earlier_rendering_reopens_unchanged_beside_a_curr
     from nm.core_engine.conversation import commit_turn, open_turn
 
     context = open_turn(store, advocate_id="owner", message="Earlier account.", turn_id="old")
-    _, activity, metrics = turn.prepare(ScriptedModel(), context.payload(), searcher())
+    _, activity, metrics = core_whole_answer.prepare(ScriptedModel(), context.payload(), searcher())
     original = context.payload()
     # A turn saved before item 9: no calculation, under the version with authority evidence.
     activity.pop("calculation")
@@ -208,7 +214,7 @@ def test_a_turn_saved_under_an_earlier_rendering_reopens_unchanged_beside_a_curr
     assert second["committed"] == "committed"
     rows = saved_rows(store.load(chat_matter_id("owner", first["chat_id"])), "owner")
     assert [row["activities"]["rendering_contract"] for row in rows] == [
-        saved, "core_response_rendering_v16"]
+        saved, "core_response_rendering_v17"]
     assert rows[0]["response"]["elements"] == elements
     if saved not in ("core_response_rendering_v4", "core_response_rendering_v5", "core_response_rendering_v6",
                      "core_response_rendering_v7"):
@@ -264,46 +270,52 @@ def test_reviewer_rejection_uses_one_rewrite_and_new_independent_review(store):
     assert "correction" not in answering(model)[3]
 
 
-def test_a_second_rejection_is_not_rewritten_again(store):
-    # Owner, 18 Oct 2026, for speed: the review asks for one rewrite, not two; what the
-    # second review still finds holds back its sections or, here, the answer.
+def test_a_section_has_three_tries_and_each_rewrite_is_told_to_ground_it(store):
+    # Owner decision P25, 19 Oct 2026: "At most we can do a third try"; each rewrite the
+    # review asks for is told plainly to rest every statement on the facts, the documents
+    # and the held sources.
+    from nm.core_engine.calls import GROUNDING_PURPOSE
     model = ScriptedModel(reject=2)
-    with pytest.raises(ConversationRefused) as error: run(store, model)
-    assert error.value.code == "answer_withheld"
-    assert error.value.metrics["llm_calls"] == 6 and error.value.metrics["draft_corrections"] == 1
-    assert ["correction" in payload for payload in answering(model)] == [False, False, True, False]
+    response = run(store, model)
+    assert response["committed"] == "committed"
+    assert response["metrics"]["llm_calls"] == 8 and response["metrics"]["draft_corrections"] == 2
+    assert ["correction" in payload for payload in answering(model)] == [False, False, True, False, True, False]
+    rewrites = [payload["correction"] for payload in answering(model) if "correction" in payload]
+    assert all(told["purpose"] == GROUNDING_PURPOSE for told in rewrites)
+    # The rewrite is told what was found with the words it concerns, not code's IDs alone.
+    assert rewrites[0]["mismatch"][0]["concerns"] == ["Hello. How can I help?"]
+    assert [element["kind"] for element in response["elements"]] == ["GREETING"]
 
 
-def test_repeated_rejection_withholds_entire_turn_without_save(store):
+def test_nothing_is_withheld_whole_a_note_stands_where_nothing_survives(store):
+    # Owner decision P25: after the third try the faulted statements are left out; here the
+    # only one is, so code's own note stands in the answer's place and is saved.
     model = ScriptedModel(reject=3)
-    with pytest.raises(ConversationRefused) as error: run(store, model)
-    assert error.value.code == "answer_withheld" and not error.value.retryable
-    assert error.value.metrics["llm_calls"] == 6
-    # The advocate is told what the check found and what can be done (17 Oct 2026): the
-    # kind of wrong words in code's words, never the reviewer's words about them.
-    assert error.value.why == (
-        "I could not provide a sufficiently reliable answer to this message. After the rewrites NM may make, "
-        "the independent check still found: A statement was attributed to a judgment from a passage that is not "
-        "the court's own reasoning. You can send the message again, narrow it, or add a fact or document it may "
-        "need. Your saved conversation is unchanged.")
-    assert "Synthetic attribution rejection" not in error.value.why
-    assert error.value.diagnosis == "answer_withheld-G-ATTRIB-response_review"
-    assert not store.list_for("owner").matters
-    with pytest.raises(ConversationRefused) as replay: run(store, model)
-    assert replay.value.code == "answer_withheld"
-    assert len(model.calls) == 6  # Model would accept now; the terminal owner refuses first.
-    assert run(store, model, turn_id="genuinely-new-turn")["committed"] == "committed"
+    response = run(store, model)
+    assert response["committed"] == "committed" and response["metrics"]["llm_calls"] == 8
+    note, = response["elements"]
+    assert note["kind"] == "FALLBACK" and note["disclosure"] and note["sources"] == []
+    # What the check found is said in code's words, never the reviewer's words about it.
+    assert note["text"] == (
+        "NM could not give a reliable reply to this message: after the rewrites NM may make, the checks still "
+        "found problems in it that leaving statements out could not settle. What was found: A statement was "
+        "attributed to a judgment from a passage that is not the court's own reasoning. You can send it again, or "
+        "narrow it.")
+    assert "Synthetic attribution rejection" not in str(note)
+    rows = saved_rows(store.load(chat_matter_id("owner", response["chat_id"])), "owner")
+    assert rows[0]["activities"]["sections"][0]["fallback"] == {"reason": "found"}
+    assert run(store, model) == {**response, "replayed": True} and len(model.calls) == 8
 
 
-def test_a_shape_repair_leaves_the_review_one_correction_and_no_more(store):
-    # A shape repair is the turn's first correction; the review may ask for the second.
+def test_a_shape_repair_counts_among_the_sections_tries(store):
+    # The section's draft and two rewrites, whatever asked for them (P25).
     model = ScriptedModel(malformed_writer=1, reject=1)
     assert run(store, model)["metrics"]["draft_corrections"] == 2
     assert len(model.calls) == 7
     model = ScriptedModel(malformed_writer=1, reject=2)
-    with pytest.raises(ConversationRefused) as error: run(store, model, turn_id="another-turn")
-    assert error.value.code == "answer_withheld"
-    assert len(model.calls) == 7
+    response = run(store, model, turn_id="another-turn")
+    assert len(model.calls) == 7 and response["metrics"]["draft_corrections"] == 2
+    assert [element["kind"] for element in response["elements"]] == ["FALLBACK"]
 
 
 def test_provider_outage_never_saves_an_empty_success(store, caplog):
@@ -332,13 +344,16 @@ def test_lost_acknowledgement_replays_saved_checked_response_once(store):
 
 def test_spent_correction_survives_retry_after_provider_outage(store):
     model = ScriptedModel(malformed_writer=1, failure="core_response_review")
-    with pytest.raises(ConversationRefused): run(store, model)
+    with pytest.raises(ConversationRefused) as outage: run(store, model)
+    # The service failed for the only section: nothing is saved and the message can be sent again.
+    assert outage.value.code == "response_unavailable" and outage.value.retryable
     assert len(model.calls) == 5
     model.failure, model.reject = None, 2
-    with pytest.raises(ConversationRefused) as retry: run(store, model)
-    assert retry.value.code == "answer_withheld"
-    # The resumed request keeps its spent correction: one review rewrite is left.
-    assert len(model.calls) == 11
+    retry = run(store, model)
+    # The resumed request keeps its spent correction in the turn's durable count; its
+    # section has its own tries again (owner decision P25).
+    assert retry["committed"] == "committed" and retry["metrics"]["draft_corrections"] == 3
+    assert len(model.calls) == 13
 
 
 def test_permission_loss_after_correction_does_not_reset_allowance(store):
@@ -351,9 +366,11 @@ def test_permission_loss_after_correction_does_not_reset_allowance(store):
     model.structured = guarded
     with pytest.raises(ModelPermissionRefused): run(store, model)
     model.structured, model.reject = original, 2
-    with pytest.raises(ConversationRefused) as rejected: run(store, model)
-    assert rejected.value.code == "answer_withheld"
-    assert len(model.calls) == 10  # Four before the denied review, then six: one review rewrite left.
+    resumed = run(store, model)
+    # Four calls before the denied review, then the section's three tries; the spent shape
+    # correction stays in the turn's durable count.
+    assert resumed["committed"] == "committed" and resumed["metrics"]["draft_corrections"] == 3
+    assert len(model.calls) == 12
 
 
 def test_known_pre_save_session_loss_allows_same_request_recovery(store):
@@ -387,7 +404,7 @@ def test_resealed_but_incompatible_saved_evidence_is_never_upgraded(store, damag
     matter = store.load(chat_matter_id("owner", first["chat_id"]))
     rows = deepcopy(matter.brain_chat)
     if damage == "rendering": rows[0]["activities"]["rendering_contract"] = "unknown_future"
-    elif damage == "review": rows[0]["activities"]["review"]["accepted"] = False
+    elif damage == "review": rows[0]["activities"]["sections"][0]["reviewed"]["review"]["accepted"] = False
     else: rows[0]["response"]["elements"][0]["text"] = "Altered response"
     rows[0]["digest"] = digest({k: v for k, v in rows[0].items() if k != "digest"})
     metadata = deepcopy(matter.intake_answers)
@@ -405,7 +422,7 @@ def test_a_turn_saved_before_sections_could_be_held_reopens_unchanged(store, sav
     from nm.core_engine.conversation import commit_turn, open_turn
 
     context = open_turn(store, advocate_id="owner", message="Earlier account.", turn_id="old")
-    _, activity, metrics = turn.prepare(ScriptedModel(), context.payload(), searcher())
+    _, activity, metrics = core_whole_answer.prepare(ScriptedModel(), context.payload(), searcher())
     original = context.payload()
     activity.pop("release")
     activity["contract"] = turn.CALCULATION_CONTRACT
@@ -418,7 +435,7 @@ def test_a_turn_saved_before_sections_could_be_held_reopens_unchanged(store, sav
     second = run(store, ScriptedModel(), chat_id=first["chat_id"], turn_id="new", message="Continue.")
     assert second["committed"] == "committed"
     rows = saved_rows(store.load(chat_matter_id("owner", first["chat_id"])), "owner")
-    assert [row["activities"]["contract"] for row in rows] == ["core_turn_v3", "core_turn_v5"]
+    assert [row["activities"]["contract"] for row in rows] == ["core_turn_v3", "core_turn_v6"]
     assert rows[0]["response"]["elements"] == elements
     assert all("unit" not in element for element in elements)
     assert all("unit" in element for element in rows[1]["response"]["elements"])

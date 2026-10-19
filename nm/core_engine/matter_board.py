@@ -8,7 +8,8 @@ by that turn's research loop, so the board presents it as NM's working understan
 and facts as the advocate or a document gave them, never as established. A question's
 status is what the saved research actually did for it, not a judgment that it was
 answered well. From turn v5 each dispute also carries its checklist, as the answer of
-that turn returned it and its checks admitted it (checklist.py).
+that turn returned it and its checks admitted it (checklist.py). From 19 Oct 2026 the
+disputes are listed most urgent first, as the answer shows its sections (P26).
 """
 from __future__ import annotations
 
@@ -50,6 +51,19 @@ def _where(words, rows):
     return {"from": "document", "places": places}
 
 
+def _urgent(disputes, checklists):
+    """The disputes, most urgent first, as the answer shows its sections (owner decision P26,
+    19 Oct 2026): by the earliest last day among the time limits worked out for a dispute's
+    checklist, then in the understanding's order."""
+    def key(pair):
+        position, dispute = pair
+        shown = checklists.get(dispute["id"])
+        days = [limit["last_day"] for limit in (shown or {}).get("time_limits", ())
+                if limit.get("last_day")] if shown and shown["name"] == dispute["name"] else []
+        return (0, min(days), position) if days else (1, "", position)
+    return [dispute for _, dispute in sorted(enumerate(disputes), key=key)]
+
+
 def board(rows):
     """The board for a conversation's checked saved rows, newest understanding first."""
     for index in range(len(rows) - 1, -1, -1):
@@ -89,7 +103,8 @@ def board(rows):
                 "still_needed": list(d["missing_facts"]), "rights_at_stake": list(d["rights_at_stake"]),
                 "relief_sought": list(d["relief_sought"]),
                 **({"checklist": checklists[d["id"]]} if d["id"] in checklists
-                   and checklists[d["id"]]["name"] == d["name"] else {})} for d in understanding["disputes"]],
+                   and checklists[d["id"]]["name"] == d["name"] else {})}
+                for d in _urgent(understanding["disputes"], checklists)],
             "related_points": [{"point": r["point"], "why": r["why_it_matters"], "dispute_id": r["dispute_id"] or None,
                                 "dispute": names.get(r["dispute_id"])} for r in understanding["related_points"]],
         }

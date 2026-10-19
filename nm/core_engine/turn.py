@@ -14,16 +14,14 @@ from copy import deepcopy
 
 from concurrent.futures import ThreadPoolExecutor
 
-from nm.core_engine import answer_sources, calculation, checklist, research, response_authorities
+from nm.core_engine import answer_sections, answer_sources, calculation, checklist, research
 from nm.core_engine import response_rendering
-from nm.core_engine import response_review
-from nm.core_engine import response_writer, understanding
+from nm.core_engine import understanding
 from nm.core_engine.calls import CorrectionUnavailable, ReleaseWithheld, TurnCalls
 from nm.core_engine.conversation import (
     ConversationRefused, TurnContext, checked_rows, commit_turn, open_turn,
     digest,
 )
-from nm.shared.gates_contracts import Recovery, Response, Scope, gate
 from nm.shared.external_ai_contracts import ModelPermissionRefused
 from nm.shared.egress_contracts import EgressRefused
 from nm.shared.model_port import ContextOverflow, ModelError, SchemaViolation
@@ -39,11 +37,20 @@ CALCULATION_CONTRACT = "core_turn_v3"
 RELEASE_CONTRACT = "core_turn_v4"
 #: v4 saving the matter's checklist with the turn as its current records, re-derived
 #: exactly from the turn's own activity when it is reopened (owner decisions, 17 Oct 2026).
-CONTRACT = "core_turn_v5"
-_RELEASED = (RELEASE_CONTRACT, CONTRACT)
+RECORDS_CONTRACT = "core_turn_v5"
+#: v6 (owner decisions P25-P27, 19 Oct 2026; plan AN.2): answered dispute by dispute. The
+#: activity keeps each section's last reviewed draft, its trimmed versions with their own
+#: reviews, why a note stands in its place where nothing of it survived, any correction
+#: after the check across the sections, that check, and the overview; reopening re-derives
+#: each from them (answer_sections.validate). Nothing is withheld whole for what a review
+#: finds.
+CONTRACT = "core_turn_v6"
+_RELEASED = (RELEASE_CONTRACT, RECORDS_CONTRACT)
 EXECUTION = "core_read_only_execution_v1"
 _ACTIVITY_FIELDS = {"contract", "interpretation", "research", "sources", "draft",
                     "review", "execution", "rendering_contract"}
+_SECTIONED_FIELDS = {"contract", "interpretation", "research", "sources", "execution", "calculation",
+                     "rendering_contract", "sections", "cross_check", "overview"}
 
 
 def execution_record(record):
@@ -60,50 +67,6 @@ def execution_record(record):
         searches.append({"work_id": identity, "state": state})
     return {"contract": EXECUTION, "operations": [], "record_changes": [],
             "external_actions": [], "searches": searches, "persistence": "not_yet_committed"}
-
-
-def _withhold(calls, findings, dated=()):
-    categories = {finding["category"] for finding in findings}
-    identity = ("G-QUOTE" if "quotation" in categories else
-                "G-ATTRIB" if "attribution" in categories else "G-GROUND")
-    owned = gate(identity)
-    if (owned.response, owned.scope, owned.recovery) != (
-            Response.WITHHOLD, Scope.TURN, Recovery.NONE):
-        raise RuntimeError("The release boundary no longer matches its gate contract")
-    # The categories are the review's fixed names, never its words about the draft.
-    try:
-        calls.withhold(f"{identity}: {', '.join(sorted(categories))}")
-    except ReleaseWithheld as exc:
-        # What the check found, for the advocate alone (owner decision, 17 Oct 2026);
-        # the attempt's diagnosis and the log keep only the fixed names.
-        exc.found = response_rendering.found_words(
-            [f for f in findings if not any(f is d for d in dated)], dated, where="the answer")
-        raise
-
-
-def _hold(calls, draft, reviewed, undated, findings):
-    """After the rewrites (owner decision, 17 Oct 2026): what is still found inside the
-    sections of a several-dispute answer holds back those sections under G-SECTION, and
-    the rest is released; anything else withholds the turn. The date findings are kept
-    with the release, as the date check reads today's date. What the review still finds
-    only in a dispute's checklist leaves the items it names out, or is noted beside the
-    answer, and holds nothing back (rendering v15; owner, 18 Oct 2026: "withhold only the
-    failed part and pass the remaining part")."""
-    parts = response_rendering.held_sections(draft, reviewed, undated, confined=True)
-    left_out, noted, _ = response_rendering.checklist_findings(draft, reviewed)
-    if parts is not None:
-        left_out = {index: ids for index, ids in left_out.items() if index not in parts}
-        noted = {index: rows for index, rows in noted.items() if index not in parts}
-    if not parts and not (parts == [] and (left_out or noted)):
-        _withhold(calls, findings, dated=undated)
-    owned = gate("G-SECTION")
-    if (owned.response, owned.scope, owned.recovery) != (Response.WITHHOLD, Scope.NEED, Recovery.ADVOCATE):
-        raise RuntimeError("The section boundary no longer matches its gate contract")
-    shown = draft["parts"]
-    return {"parts": parts, "date_findings": deepcopy(undated),
-            **({"left_out": [{"dispute_id": shown[index]["dispute_id"], "items": ids}
-                             for index, ids in sorted(left_out.items())]} if left_out else {}),
-            **({"noted": [shown[index]["dispute_id"] for index in sorted(noted)]} if noted else {})}
 
 
 def _diagnosis(code, exc, calls):
@@ -134,12 +97,11 @@ def _needs_research(plan):
     return understanding.get("needs_research") is True
 
 
-def prepare(model, context, searcher, *, case_index=None, provision_reader=None, progress=None,
-            held_acts=None):
-    """Prepare and admit one response. No persistence or external action occurs here."""
-    report = _reporter(progress)
-    calls = model if isinstance(model, TurnCalls) else TurnCalls(model)
-    report("understanding")
+def understood(calls, context, searcher, report, held_acts=None):
+    """The steps every answer shares: the message's interpretation and the matter's
+    understanding, side by side; the research; and the time limits, worked out beside the
+    search where research is needed. Returns the interpretation, the research record and
+    the calculation record."""
     # The matter's first understanding reads the conversation itself, so it is written
     # beside the message's interpretation (owner, 18 Oct 2026, for speed); its next step
     # waits for the interpretation, which says whether there is a matter to research at all.
@@ -173,111 +135,58 @@ def prepare(model, context, searcher, *, case_index=None, provision_reader=None,
                    if held_acts is not None and _needs_research(plan) else None)
         record = research.retrieve(plan, searcher, context, model=calls, progress=report)
         limits = working.result() if working is not None else calculation.skipped()
-    time_limits = calculation.for_answer(limits)
+    return interpreted, record, limits
+
+
+def prepare(model, context, searcher, *, case_index=None, provision_reader=None, progress=None,
+            held_acts=None):
+    """Prepare and admit one response, dispute by dispute (turn v6, owner decisions P25-P27).
+    No persistence or external action occurs here."""
+    report = _reporter(progress)
+    calls = model if isinstance(model, TurnCalls) else TurnCalls(model)
+    report("understanding")
+    interpreted, record, limits = understood(calls, context, searcher, report, held_acts)
     sources = answer_sources.build(context, record)
     execution = execution_record(record)
-
-    # Sections that passed code's checks when a draft's shape was refused, and what code
-    # found in the others: the shape correction keeps the first as written and rewrites
-    # only the rest (owner, 18 Oct 2026). Parts are numbered as the writer lays them out.
-    layout = response_writer.parts(record)
-    passed, found, trimmed, held_back = {}, {}, {}, {}
-
-    def write(keep=None):
-        try:
-            return response_writer.write(calls, context, record, sources,
-                                         interpretation=interpreted, execution=execution,
-                                         keep=keep if keep is not None else passed or None,
-                                         time_limits=time_limits, skip=held_back)
-        except SchemaViolation as exc:
-            for mine, theirs in ((passed, "kept"), (found, "found"), (trimmed, "trimmed")):
-                mine.clear()
-                mine.update(getattr(exc, theirs, None) or {})
-            raise
-
-    report("writing")
-    try:
-        draft = calls.checked("core_response_writer", write)
-    except (CorrectionUnavailable, SchemaViolation):
-        # G-SECTION for code's own checks (owner, 18 Oct 2026: "withhold only the failed
-        # part and pass the remaining part"): a section still refused after the rewrites NM
-        # may make goes on without the checklist items code refuses, when only they are at
-        # fault, and is otherwise held back for this turn; the sections that passed go on.
-        # With no dispute's section going on, nothing is released.
-        keep = {**passed, **{index: entry["part"] for index, entry in trimmed.items()}}
-        if not any(layout[index]["dispute_id"] is not None for index in keep):
-            raise
-        held_back.update({index: found.get(index, "checks") for index in range(len(layout)) if index not in keep})
-        draft = write(keep)  # every section left is one already checked
-    else:
-        trimmed.clear()
-    report("checking_authorities")
-    authorities = response_authorities.check(context, record, sources, draft,
-        case_index=case_index, provision_reader=provision_reader)
-    unwritten = [{"dispute_id": layout[index]["dispute_id"], "found": held_back[index]}
-                 for index in sorted(held_back)]
-    # The checklist items left out, by section (rendering v13 says so in the answer).
-    shortened = [{"dispute_id": layout[index]["dispute_id"], "items": len(trimmed[index]["dropped"]),
-                  "found": "quotation" if "quotation" in trimmed[index]["dropped"] else "checks"}
-                 for index in sorted(trimmed)]
-
-    def review():
-        return response_review.review(calls, context, record, sources, draft, execution=execution,
-                                      authority_evidence=authorities, time_limits=time_limits,
-                                      held_back=[entry["dispute_id"] for entry in unwritten] or None,
-                                      shortened=[[entry["dispute_id"], entry["items"]] for entry in shortened]
-                                      or None)
-
-    report("reviewing")
-    reviewed = calls.checked("core_response_review", review)
-    # Code's own check: the answer states no date it worked out itself (owner, 15 Oct 2026).
-    undated = response_writer.dates_not_given(draft, context, sources, time_limits)
-    # What the review or the date check finds is rewritten and the whole answer reviewed
-    # again; when that review still finds a problem, once more (owner decision, 17 Oct
-    # 2026). What is still found after that holds back its sections, or the turn.
-    release = None
-    # The last draft a review saw, with its authority checks, that review and the date
-    # findings: what is held back or withheld is always judged on a draft and its own review.
-    checked = (draft, authorities, reviewed, undated)
-    while not reviewed["accepted"] or undated:
-        findings = ([] if reviewed["accepted"] else reviewed["proposal"]["findings"]) + undated
-        try:
-            report("revising")
-            # Parts with no finding are kept as written; the rest are rewritten. A section
-            # held back by code's checks is not written again in this turn.
-            position = {part["dispute_id"]: index for index, part in enumerate(layout)}
-            keep = {position[part["dispute_id"]]: part
-                    for part in response_writer.kept_parts(draft, findings).values()}
-            draft = calls.correct("core_response_writer", lambda: write(keep),
-                                  mismatch=findings, rejected=draft["proposal"], asked_by_review=True)
-            authorities = response_authorities.check(context, record, sources, draft,
-                case_index=case_index, provision_reader=provision_reader)
-            report("reviewing")
-            reviewed = calls.checked("core_response_review", review)
-        except (CorrectionUnavailable, SchemaViolation):
-            draft, authorities, reviewed, undated = checked
-            release = _hold(calls, draft, reviewed, undated, findings)
-            break
-        undated = response_writer.dates_not_given(draft, context, sources, time_limits)
-        checked = (draft, authorities, reviewed, undated)
-    if unwritten or shortened:
-        # The release names the sections code's checks held back and the checklist items
-        # they left out (rendering v13).
-        release = {**(release or {"parts": [], "date_findings": []}),
-                   **({"unwritten": unwritten} if unwritten else {}), **({"trimmed": shortened} if shortened else {})}
-    elements = response_rendering.render(context, record, sources, draft, reviewed,
-        execution=execution, authority_evidence=authorities, time_limits=limits, held=release)
-    activity = {"contract": CONTRACT, "interpretation": interpreted, "research": record,
-                "sources": sources, "draft": draft, "review": reviewed, "execution": execution,
-                "rendering_contract": response_rendering.CONTRACT,
-                "authority_evidence": authorities, "calculation": limits, "release": release}
+    sections, crossed, overview = answer_sections.answer(
+        calls, context, record, sources, interpretation=interpreted, execution=execution, worked=limits,
+        case_index=case_index, provision_reader=provision_reader, report=report)
+    elements = response_rendering.render_sections(context, record, sources, sections=sections, cross_check=crossed,
+                                                  overview=overview, time_limits=limits)
+    activity = {"contract": CONTRACT, "interpretation": interpreted, "research": record, "sources": sources,
+                "execution": execution, "calculation": limits,
+                "rendering_contract": response_rendering.BY_DISPUTE_CONTRACT,
+                "sections": sections, "cross_check": crossed, "overview": overview}
     return elements, activity, calls.metrics()
+
+
+def _validate_sections(activity, context, elements):
+    """Replay of a v6 turn: its understanding, research and time limits as saved, every
+    section, trim, correction, cross-check and overview bound again (answer_sections), and
+    the answer rendered again exactly as it was shown."""
+    if (set(activity) != _SECTIONED_FIELDS
+            or activity.get("rendering_contract") != response_rendering.BY_DISPUTE_CONTRACT):
+        raise ValueError("Unknown saved turn or rendering contract")
+    limits = calculation.validate(activity["calculation"], context)
+    record = research.validate(activity["research"], activity["research"]["plan"], context)
+    sources = answer_sources.build(context, record)
+    if sources != activity["sources"] or execution_record(record) != activity["execution"]:
+        raise ValueError("Saved sources or operation evidence changed")
+    answer_sections.validate(activity, context, record, sources, limits)
+    rebuilt = response_rendering.render_sections(context, record, sources, sections=activity["sections"],
+                                                 cross_check=activity["cross_check"], overview=activity["overview"],
+                                                 time_limits=limits)
+    if rebuilt != elements:
+        raise ValueError("Saved response differs from its admitted rendering")
+    return deepcopy(activity)
 
 
 def validate_activity(activity, context, elements):
     """Replay uses the saved contract and snapshots; it never fetches newer law."""
-    version = activity.get("contract")
-    expected_fields = (_ACTIVITY_FIELDS if version == LEGACY_CONTRACT else
+    version = activity.get("contract") if isinstance(activity, dict) else None
+    if version == CONTRACT:
+        return _validate_sections(activity, context, elements)
+    expected_fields =(_ACTIVITY_FIELDS if version == LEGACY_CONTRACT else
                        _ACTIVITY_FIELDS | {"authority_evidence"} if version == AUTHORITY_CONTRACT else
                        _ACTIVITY_FIELDS | {"authority_evidence", "calculation"} if version == CALCULATION_CONTRACT
                        else _ACTIVITY_FIELDS | {"authority_evidence", "calculation", "release"})
@@ -322,7 +231,7 @@ def saved_rows(matter, advocate_id):
                                    documents=tuple(row.get("documents", ())))
             validate_activity(row["activities"], original.payload(), row["response"]["elements"])
             # From v5 the records a turn saved are exactly what its own activity gives.
-            if (row["activities"].get("contract") == CONTRACT
+            if (row["activities"].get("contract") in (RECORDS_CONTRACT, CONTRACT)
                     and row["records"] != checklist.records(original.payload(), row["activities"])):
                 raise ValueError("Saved records differ from what the turn admitted")
     except (ValueError, KeyError, TypeError, SchemaViolation) as exc:

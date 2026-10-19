@@ -12,7 +12,7 @@ from dataclasses import replace
 import pytest
 
 from nm.core_engine import matter_board, research, response_rendering
-from nm.core_engine.conversation import ConversationRefused, TurnContext, chat_matter_id, open_turn
+from nm.core_engine.conversation import ConversationRefused, chat_matter_id, open_turn
 from nm.core_engine.documents import DocumentRefused
 from nm.core_engine.turn import saved_rows
 from nm.shared.model_port import Prompt
@@ -145,12 +145,12 @@ def test_a_fact_may_rest_on_a_document_and_the_board_says_which_page(store):
 
 
 def test_an_earlier_rendering_never_shows_document_pages(store):
-    reply = run(store, DocumentModel(), message="Please look at the memo.", documents=material())
-    matter = store.load(chat_matter_id("owner", reply["chat_id"]))
-    row, = saved_rows(matter, "owner")
-    activity = row["activities"]
-    context = TurnContext(matter, reply["chat_id"], "t1", row["message"], (),
-                          documents=tuple(row["documents"])).payload()
+    # A turn as saved before 19 Oct 2026 (turn v5), shown under v6's rendering.
+    from tests import core_whole_answer
+    from tests.test_core_turn import searcher
+    context = open_turn(store, advocate_id="owner", message="Please look at the memo.", turn_id="t1",
+                        documents=material()).payload()
+    _, activity, _ = core_whole_answer.prepare(DocumentModel(), context, searcher())
     earlier = response_rendering.render(context, activity["research"], activity["sources"], activity["draft"],
                                         activity["review"], execution=activity["execution"],
                                         authority_evidence=activity["authority_evidence"],

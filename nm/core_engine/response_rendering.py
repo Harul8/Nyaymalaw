@@ -5,8 +5,8 @@ from copy import deepcopy
 from datetime import date
 import re
 
-from nm.core_engine import calculation, checklist, limitation, research, response_authorities, response_review
-from nm.core_engine import response_writer
+from nm.core_engine import answer_sections, calculation, checklist, limitation, research, response_authorities
+from nm.core_engine import response_review, response_writer
 from nm.shared.citation_contracts import case_short_names, statute_title
 
 LEGACY_CONTRACT = "core_response_rendering_v1"
@@ -67,6 +67,16 @@ CONFINED_CONTRACT = "core_response_rendering_v15"
 #: the opening: the live run of 19 Oct 2026); and code's notices about a dispute's checklist
 #: said at the end of that dispute's part, naming each item left out, not atop the answer.
 CONTRACT = "core_response_rendering_v16"
+#: v17 (owner decisions P25-P27, 19 Oct 2026; turn v6): an answer written dispute by dispute.
+#: Atop it, any correction after the check across the sections that changed the advice, and
+#: a notice where that check could not be made; then the overview (its summary shown as the
+#: opening), "In short" with each section's summary, and the time limits no section names;
+#: then each dispute's section, most urgent first, under its heading: an "Edited" label with
+#: the original where the check across the sections corrected it, its paragraphs, its time
+#: limits and code's notes on what was left out and why - or, where nothing of it survived,
+#: the note code builds in its place; and every question to the advocate gathered at the end
+#: under "What I need from you". Each paragraph names its section and its place in it.
+BY_DISPUTE_CONTRACT = "core_response_rendering_v17"
 #: The versions whose asks open the checklist items they ask for.
 _ASKED = (CONTRACT,)
 #: The versions in which what concerns only a dispute's checklist holds no section back.
@@ -316,9 +326,10 @@ def _cited_words(text, sources, authority, *, short=False):
     return anchors, markers
 
 
-#: Shown elements that are not draft paragraphs: v5 headings, v8 Working boxes and v10
-#: code's notices about sections held back.
-NOT_PARAGRAPHS = frozenset({"HEADING", "WORKING", "NOTICE", "HELD", "NEEDS"})
+#: Shown elements that are not draft paragraphs: v5 headings, v8 Working boxes, v10 code's
+#: notices about sections held back, and v17 code's notes on a section, the note standing in
+#: a section's place and the label of a section edited after it was checked.
+NOT_PARAGRAPHS = frozenset({"HEADING", "WORKING", "NOTICE", "HELD", "NEEDS", "NOTE", "FALLBACK", "EDITED"})
 #: v14: the heading under which every question to the advocate is gathered.
 NEEDS = "What I need from you"
 
@@ -326,7 +337,8 @@ NEEDS = "What I need from you"
 def unit_index(elements, element):
     """The draft paragraph a rendered element shows. Headings (v5), Working boxes (v8,
     17 Oct 2026: they had been counted as paragraphs) and notices have no paragraph of
-    their own; from v10 each paragraph names its own, as held sections are left out."""
+    their own; from v10 each paragraph names its own, as held sections are left out; from
+    v17 its place in its own section's draft, which the paragraph names too."""
     if not 0 <= element < len(elements) or elements[element].get("kind") in NOT_PARAGRAPHS:
         raise IndexError("This rendered element shows no draft paragraph")
     if "unit" in elements[element]:
@@ -933,4 +945,295 @@ def render(context, research_record, sources, draft, review, execution=None, *,
         first = summaries[-1] if contract in _WORDED and summaries else next(
             (i for i, element in enumerate(elements) if element["kind"] not in NOT_PARAGRAPHS), 0)
         elements[first + 1:first + 1] = _working(time_limits, as_of=contract in _AS_OF)
+    return elements
+
+
+# --- v17: an answer written dispute by dispute (owner decisions P25-P27, 19 Oct 2026) ----
+
+#: The short IDs the models are shown, as words a reader can follow (v17: time limits too).
+_V17_SHORT_IDS = re.compile(r"\b(?:U|DOC|M|P|J|C|K|T)\d+\b")
+_V17_SHORT_WORDS = {**_SHORT_WORDS, "T": "a time limit"}
+#: Why a section or the overview is not shown as written, in plain words.
+_UNSHOWN = {"checks": "what NM wrote for it did not pass NM's own checks of its form and sources, after the "
+                      "rewrites NM may make",
+            "review": "its independent check could not be completed",
+            "found": "after the rewrites NM may make, the checks still found problems in it that leaving statements "
+                     "out could not settle",
+            "service": "the AI service did not respond",
+            "capacity": "it was longer than NM can check in one go"}
+#: Why the check across the sections could not be made.
+_UNCROSSED = {"review": "the check could not be completed", "service": "the AI service did not respond",
+              "capacity": "the sections together were longer than NM can check in one go"}
+#: How much of a held passage's own words a note code builds shows.
+_NOTE_WORDS = 500
+
+
+def _plainly(text):
+    """A check's own words for the advocate, ending a sentence: the short IDs the models
+    are shown, as words."""
+    said = _V17_SHORT_IDS.sub(lambda m: _V17_SHORT_WORDS[m.group().rstrip("0123456789")], text.strip())
+    return said if said.endswith((".", "?", "!", "”", '"')) else said + "."
+
+
+def _shown_paragraph(unit, position, section, sources, asks, *, kind=None):
+    """One paragraph of a section or the overview, shown as v16 shows a paragraph, naming its
+    section (its part of the answer's layout, or the overview) and its place in that draft."""
+    legal = _sources(unit, sources, shown_names=True, documents=True)
+    kind = kind or unit["kind"].upper()
+    element = {"kind": kind, "text": unit["text"], "source": deepcopy(legal[0]) if legal else None,
+               "sources": legal, "refs": list(dict.fromkeys(source["locator"] for source in legal))}
+    element["inline_citations"], element["citation_markers"] = _worded(unit, legal, listed=True)
+    element["section"], element["unit"] = section, position
+    if kind in ("QUESTION", "SUMMARY"):
+        element["asks"] = sorted(asks.get(unit["id"], []), key=lambda ask: ask["start"])
+        if kind == "QUESTION" and element["asks"]:
+            # An ask lists no sources beneath it: the item it opens shows its law.
+            element["citation_markers"] = []
+    return element
+
+
+def _given_words(words, context):
+    """Whether a fact's quoted words are the advocate's own or a document's, as the board
+    finds them: only such words stand in a note code builds."""
+    pieces = research.fact_pieces(words)
+    said = research._bare(" ".join(
+        [row["text"] for row in context["conversation"] if row.get("record_role") == "original_account"]
+        + [context["latest"]["text"]] + [row["text"] for row in context.get("documents", ())]))
+    return bool(pieces) and all(piece in said for piece in pieces)
+
+
+def _cut(text, limit=_NOTE_WORDS):
+    """A held passage's own words, cut at the end of a word where it is long."""
+    if len(text) <= limit:
+        return text
+    space = max(text.rfind(" ", 0, limit), text.rfind("\n", 0, limit))
+    return text[:space if space > 0 else limit].rstrip() + " …"
+
+
+def _fallback(saved, name, context, research_record, sources):
+    """v17 (G-FALLBACK): in place of a section of which nothing survived, a note built by
+    code alone and said to be no full answer: why; the facts as the advocate gave them; the
+    provisions the research picked for the dispute, in their own words; and what NM's
+    working understanding says is still open."""
+    reason = saved["fallback"]["reason"]
+    found = ""
+    if reason == "found":
+        piece = answer_sections.last(saved)
+        review = piece["review"]
+        said = found_words([finding for finding in ([] if review["accepted"] else review["proposal"]["findings"])
+                            if finding["category"] != "omission"], piece["date_findings"], where="the section")
+        found = f" What was found: {said}"
+    understanding = (research_record["plan"]["proposal"]["understanding"]
+                     if research_record.get("contract") in research.QUESTION_PLANS else {})
+    dispute = next((dispute for dispute in understanding.get("disputes", [])
+                    if dispute["id"] == saved["dispute_id"]), None)
+    if dispute is None:
+        return _notice("FALLBACK", f"NM could not give a reliable reply to this message: {_UNSHOWN[reason]}.{found} "
+                       "You can send it again, or narrow it.",
+                       fallback={"section": None, "why": _UNSHOWN[reason], "facts": [], "provisions": [],
+                                 "still_needed": [], "questions": []})
+    facts = [fact["advocate_words"] for fact in understanding["facts"]
+             if fact["id"] in dispute["fact_ids"] and _given_words(fact["advocate_words"], context)]
+    picked, provisions, seen = (research_record.get("picks") or {}).get("chosen", {}), [], set()
+    for work in research_record["plan"]["work"]:
+        if work["dispute"]["id"] != dispute["id"]:
+            continue
+        for identity in picked.get(work["id"], []):
+            row = sources.get(identity)
+            if row is None or row["kind"] != "provision" or identity in seen:
+                continue
+            seen.add(identity)
+            provisions.append({"title": _title(row, True), "locator": row["locator"], "words": _cut(row["text"]),
+                               **({"in_force": row["in_force"]} if "in_force" in row else {})})
+    still = [need.strip().rstrip(".") for need in dispute["missing_facts"] if need.strip()]
+    questions = [question["question"].strip() for question in dispute["legal_questions"]
+                 if question["question"].strip()]
+    lines = [f"Not a full answer on {name}: {_UNSHOWN[reason]}.{found} In its place, NM's code sets out what it can "
+             "without writing the answer: the facts as you gave them, the provisions found for this dispute in their "
+             "own words, and what NM's working understanding says is still open."]
+    if facts:
+        lines.append("What you told me: " + "; ".join(f"“{words}”" for words in facts) + ".")
+    for provision in provisions:
+        marked = f" ({provision['in_force']})" if provision.get("in_force") else ""
+        lines.append(f"{provision['title']}, {provision['locator']}{marked}: “{provision['words']}”")
+    if still:
+        lines.append("Still needed, as NM understands it: " + "; ".join(still) + ".")
+    if questions:
+        lines.append("Open questions: " + " ".join(questions))
+    return _notice("FALLBACK", "\n".join(lines), fallback={
+        "section": name, "why": _UNSHOWN[reason], "facts": facts, "provisions": provisions,
+        "still_needed": still, "questions": questions})
+
+
+def _checker(found, dated):
+    """Which check found what was left out: the independent review, code's check of dates, or both."""
+    return ("the independent check" if not dated else "NM's check of dates" if not found
+            else "the independent check and NM's check of dates")
+
+
+def _left_out(saved, where, name):
+    """v17 (P25; G-GROUND, G-ATTRIB, G-QUOTE, G-EFFECT): what code left out of a section or the overview after its
+    rewrites and what the independent check found there, in code's words; the items left
+    out of a dispute's checklist named by what each needed, as v16 names them."""
+    pieces = [saved["reviewed"], *saved["trims"]]
+    units, items, unit_found, unit_dated, item_found, item_dated = [], [], [], [], [], []
+    for before, after in zip(pieces, pieces[1:]):
+        ids = set(after["draft"]["dropped"]) - set(before["draft"].get("dropped", ()))
+        paragraphs = {unit["id"] for unit in before["draft"]["units"] if unit["id"] in ids}
+        units += [unit for unit in before["draft"]["units"] if unit["id"] in ids]
+        items += [item for part in before["draft"]["checklists"] for item in part["items"] if item["id"] in ids]
+        review = before["review"]
+        for finding in [] if review["accepted"] else review["proposal"]["findings"]:
+            if finding["category"] != "omission" and set(finding["unit_ids"]) & paragraphs:
+                unit_found.append(finding)
+            if finding["category"] != "omission" and set(finding["unit_ids"]) & (ids - paragraphs):
+                item_found.append(finding)
+        for finding in before["date_findings"]:
+            if set(finding["unit_ids"]) & paragraphs:
+                unit_dated.append(finding)
+            elif set(finding["unit_ids"]) & ids:
+                item_dated.append(finding)
+    notes = []
+    if units:
+        many = len(units) > 1
+        them = "them" if many else "it"
+        said = found_words(unit_found, unit_dated, where="the paragraph")
+        notes.append(_notice("NOTE", f"Left out of {where}: {len(units)} {'paragraphs' if many else 'paragraph'}, "
+                             f"because after the rewrites NM may make {_checker(unit_found, unit_dated)} still found a "
+                             f"problem in {them}. What was found: {said} What remains was checked again without "
+                             f"{them}."))
+    if items:
+        them = "them" if len(items) > 1 else "it"
+        named = "; ".join(f"“{item['need']}”" for item in items)
+        said = found_words(item_found, item_dated, where="the item")
+        notes.append(_notice("NOTE", f"Left out of the checklist for {name}: {named}, because after the rewrites NM "
+                             f"may make {_checker(item_found, item_dated)} still found a problem in {them}. What was "
+                             f"found: {said} The rest of this section was checked again without {them}."))
+    return notes
+
+
+def _omitted(piece, where):
+    """v17: what the independent check found a piece shown may leave out, in its own words."""
+    return [_notice("NOTE", f"The independent check found that {where} may leave something out: "
+                    f"{_plainly(finding['mismatch'])}") for finding in answer_sections.omissions(piece)]
+
+
+def _edited(original, conflicts, numbers):
+    """v17 (G-EDITED): the label of a section corrected after the check across the sections,
+    saying what the check found, with the section as first shown kept to read."""
+    said = " ".join(_plainly(conflicts[number]["mismatch"]) for number in numbers)
+    return _notice("EDITED", f"Edited after a check across the sections. What it found: {said} The section as first "
+                   "shown is kept below.",
+                   edited={"why": said, "changes_advice": any(conflicts[number]["changes_advice"] for number in numbers),
+                           "original": [{"kind": unit["kind"], "text": unit["text"]}
+                                        for unit in original["draft"]["units"]]})
+
+
+def render_sections(context, research_record, sources, *, sections, cross_check, overview, time_limits):
+    """v17: an answer written dispute by dispute (turn v6), from its records as the turn
+    validated them (answer_sections.validate). No new prose: every paragraph is a reviewed
+    piece's own; every notice, note and label is code's."""
+    names = _dispute_names(research_record)
+    many = len(response_writer.parts(research_record)) > 1
+    positions = answer_sections.order(sections, time_limits)
+    pieces = [answer_sections.shown(saved) for saved in sections]
+    conflicts = (cross_check["proposal"]["conflicts"] if isinstance(cross_check, dict) and "proposal" in cross_check
+                 else [])
+
+    def called(saved):
+        return OPENING if saved["dispute_id"] is None else names.get(saved["dispute_id"]) or "this dispute"
+    # Each ask that opens a checklist item of a section shown, with the item as admitted.
+    asks = {}
+    for saved, piece in zip(sections, pieces):
+        for item in piece["draft"]["checklists"][0]["items"] if piece is not None else ():
+            kept = checklist.kept(item, context, sources)
+            for ask in item["asked"]:
+                asks.setdefault(ask["unit_id"], []).append({
+                    "start": ask["start"], "end": ask["end"], "text": ask["text"],
+                    "dispute": {"id": saved["dispute_id"], "name": called(saved)}, "item": deepcopy(kept)})
+    elements, questions = [], []
+    for position in positions:
+        edit = sections[position]["edit"]
+        if answer_sections.edit_accepted(edit) and any(conflicts[number]["changes_advice"]
+                                                       for number in edit["conflicts"]):
+            name = called(sections[position])
+            said = " ".join(_plainly(conflicts[number]["mismatch"]) for number in edit["conflicts"])
+            elements.append(_notice("NOTICE", f"Corrected after a check across the sections: the advice on {name} "
+                                    f"changed. What the check found: {said} The section on {name} below shows the "
+                                    "correction, with the section as first shown kept under it."))
+    if isinstance(cross_check, dict) and "unavailable" in cross_check:
+        elements.append(_notice("NOTICE", "NM could not check the sections against each other this time ("
+                                f"{_UNCROSSED[cross_check['unavailable']]}), so a conflict between them may not have "
+                                "been caught. Each section was checked on its own."))
+    if overview is not None:
+        piece = answer_sections.shown(overview)
+        if piece is None:
+            elements.append(_notice("NOTE", "NM's overview of how the disputes fit together is left out: "
+                                    f"{_UNSHOWN[overview['fallback']['reason']]}. Each dispute's section below was "
+                                    "checked on its own."))
+        else:
+            for index, unit in enumerate(piece["draft"]["units"]):
+                element = _shown_paragraph(unit, index, response_writer.OVERVIEW, sources, asks,
+                                           kind="OPENING" if unit["kind"] == "summary" else None)
+                (questions if unit["kind"] == "question" else elements).append(element)
+            elements.extend(_left_out(overview, "the overview", OPENING))
+            elements.extend(_omitted(piece, "the overview"))
+    # "In short": each dispute's summary, in the answer's order.
+    for position in positions:
+        saved, piece = sections[position], pieces[position]
+        if piece is not None and saved["dispute_id"] is not None:
+            elements.extend(_shown_paragraph(unit, index, saved["part"], sources, asks)
+                            for index, unit in enumerate(piece["draft"]["units"]) if unit["kind"] == "summary")
+    # Each time limit closes the first section shown that names it; the rest follow "In short"
+    # (or, where there is none, the answer's first paragraph), as v14 to v16 place them.
+    boxes = _working(time_limits, as_of=True) if time_limits is not None else []
+    claimed, placed = {}, set()
+    for position in positions:
+        for name in pieces[position]["draft"]["checklists"][0]["time_limit_ids"] if pieces[position] else ():
+            number = int(name[1:]) if name[:1] == "T" and name[1:].isdigit() else 0
+            if 1 <= number <= len(boxes) and number not in placed:
+                placed.add(number)
+                claimed.setdefault(position, []).append(boxes[number - 1])
+    for position in positions:
+        saved, piece = sections[position], pieces[position]
+        name, where = called(saved), "this section" if many else "this answer"
+        if many:
+            elements.append({"kind": "HEADING", "text": name, "source": None, "sources": [], "refs": [],
+                             "inline_citations": [], "citation_markers": []})
+        if piece is None:
+            elements.append(_fallback(saved, name, context, research_record, sources))
+            continue
+        edit = saved["edit"]
+        edited = answer_sections.edit_accepted(edit)
+        if edited:
+            elements.append(_edited(answer_sections.shown(saved, edited=False), conflicts, edit["conflicts"]))
+        body, asked = [], []
+        for index, unit in enumerate(piece["draft"]["units"]):
+            if unit["kind"] == "summary" and saved["dispute_id"] is not None:
+                continue  # shown under "In short"
+            element = _shown_paragraph(unit, index, saved["part"], sources, asks,
+                                       kind="OPENING" if unit["kind"] == "summary" else None)
+            (asked if unit["kind"] == "question" else body).append(element)
+        if body:
+            questions.extend(asked)
+        else:
+            body = asked  # a section that shows nothing else keeps its questions under its heading
+        elements.extend(body)
+        elements.extend(claimed.get(position, []))
+        if not edited:
+            elements.extend(_left_out(saved, where, name))
+        elements.extend(_omitted(piece, where))
+        if edit is not None and not edited:
+            said = " ".join(_plainly(conflicts[number]["mismatch"]) for number in edit["conflicts"])
+            elements.append(_notice("NOTE", f"A check across the sections found that {where} may not agree with "
+                                    f"another: {said} NM's correction did not pass the independent check, so {where} "
+                                    "is shown as first checked."))
+    summaries = [index for index, element in enumerate(elements) if element["kind"] == "SUMMARY"]
+    first = summaries[-1] if summaries else next(
+        (index for index, element in enumerate(elements) if element["kind"] not in NOT_PARAGRAPHS), 0)
+    elements[first + 1:first + 1] = [box for number, box in enumerate(boxes, 1) if number not in placed]
+    if questions:
+        elements.append({"kind": "NEEDS", "text": NEEDS, "source": None, "sources": [], "refs": [],
+                         "inline_citations": [], "citation_markers": []})
+        elements.extend(questions)
     return elements

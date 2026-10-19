@@ -3,7 +3,10 @@ import json
 
 import pytest
 
-from nm.core_engine.calls import CorrectionUnavailable, ReleaseWithheld, TurnCalls
+from nm.core_engine.calls import (
+    ALLOWANCE, EDIT_ALLOWANCE, GROUNDING_PURPOSE, SECTION_ALLOWANCE, SHARED_ALLOWANCE, CorrectionUnavailable,
+    ReleaseWithheld, TurnCalls,
+)
 from nm.shared.model_port import ContextOverflow, ModelError, Prompt, SchemaViolation, Tier, Usage
 from tests.test_core_understanding import Model, unit
 
@@ -56,20 +59,57 @@ def test_a_refused_quotation_is_corrected_with_the_sources_own_words_nearest_to_
         "than skip words.")
 
 
-def test_the_review_may_ask_for_one_rewrite_and_a_shape_repair_only_comes_first():
-    # Owner, 18 Oct 2026, for speed: the review asks for one rewrite, not two (17 Oct: two).
+def test_each_section_has_two_corrections_whatever_asks_and_the_shared_steps_one():
+    # Owner decision P25, 19 Oct 2026: a section's draft and up to two rewrites, whatever asks
+    # for them (the review, the date check, code's checks of form, the review's own form);
+    # the shared steps keep one correction between them, and a correction after the check
+    # across the sections one.
+    assert (SHARED_ALLOWANCE, SECTION_ALLOWANCE, EDIT_ALLOWANCE) == (1, 2, 1)
+    # The turn's total is the one the attempt store keeps durably.
+    from nm.shared.turn_attempt_store import ALLOWANCE as STORED
+    assert ALLOWANCE == STORED
     ledger = TurnCalls(Model({"units": [unit()]}))
-    ledger.correct("write", lambda: call(ledger), mismatch="review finding", asked_by_review=True)
-    with pytest.raises(CorrectionUnavailable):  # a shape repair is only ever the first
-        ledger.correct("write", lambda: call(ledger), mismatch="shape")
+    ledger.correct("write", lambda: call(ledger), mismatch="shared shape")
     with pytest.raises(CorrectionUnavailable):
-        ledger.correct("write", lambda: call(ledger), mismatch="second review finding", asked_by_review=True)
-    assert ledger.metrics()["draft_corrections"] == 1 and ledger.metrics()["llm_calls"] == 1
-    # A shape repair first leaves the review its one rewrite.
-    ledger = TurnCalls(Model({"units": [unit()]}))
-    ledger.correct("write", lambda: call(ledger), mismatch="shape")
-    ledger.correct("write", lambda: call(ledger), mismatch="review finding", asked_by_review=True)
-    assert ledger.metrics()["draft_corrections"] == 2
+        ledger.correct("write", lambda: call(ledger), mismatch="shared again")
+    with ledger.scope("s1"):
+        ledger.correct("core_response_writer", lambda: call(ledger), mismatch="writer shape")
+        ledger.correct("core_response_review", lambda: call(ledger), mismatch="review form")
+        with pytest.raises(CorrectionUnavailable):
+            ledger.correct("core_response_writer", lambda: call(ledger), mismatch="finding", asked_by_review=True)
+    with ledger.scope("s2"):  # another section has its own
+        ledger.correct("core_response_writer", lambda: call(ledger), mismatch="finding", asked_by_review=True)
+    with ledger.scope("e1", EDIT_ALLOWANCE):
+        ledger.correct("core_response_writer", lambda: call(ledger), mismatch="conflict")
+        with pytest.raises(CorrectionUnavailable):
+            ledger.correct("core_response_writer", lambda: call(ledger), mismatch="conflict again")
+    assert (ledger.used(""), ledger.used("s1"), ledger.used("s2"), ledger.used("e1")) == (1, 2, 1, 1)
+    assert ledger.metrics()["draft_corrections"] == 5 and ledger.metrics()["llm_calls"] == 5
+
+
+def test_sections_answered_side_by_side_keep_their_own_scope_and_feedback():
+    # Owner decision P26: the sections run at once; each rewrite carries its own section's
+    # findings, told plainly to ground the section (P25).
+    import threading
+    model = Model({"units": [unit()]})
+    ledger, seen, both = TurnCalls(model), {}, threading.Barrier(2)
+
+    def section(name):
+        with ledger.scope(name):
+            def rewrite():
+                both.wait(timeout=10)
+                seen[name] = ledger.correction["mismatch"]
+                call(ledger, "core_response_writer")
+            ledger.correct("core_response_writer", rewrite, mismatch=f"finding in {name}", asked_by_review=True)
+    threads = [threading.Thread(target=section, args=(name,)) for name in ("s1", "s2")]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+    assert seen == {"s1": "finding in s1", "s2": "finding in s2"} and ledger.correction is None
+    sent = [json.loads(prompt.user)["correction"] for prompt, *_ in model.calls]
+    assert sorted(told["mismatch"] for told in sent) == ["finding in s1", "finding in s2"]
+    assert all(told["purpose"] == GROUNDING_PURPOSE for told in sent)
 
 
 def test_each_stage_running_beside_another_keeps_its_own_last_output():
@@ -175,14 +215,13 @@ def test_durable_allowance_is_reserved_before_dispatch_and_cannot_reset():
     ledger = TurnCalls(Model({"units": [unit()]}), reserve_correction=lambda: events.append("reserved"))
     ledger.correct("write", lambda: events.append("dispatched"), mismatch="source mismatch")
     assert events == ["reserved", "dispatched"]
-    resumed = TurnCalls(ledger.inner, corrections_used=1)
-    with pytest.raises(CorrectionUnavailable):
-        resumed.correct("write", lambda: events.append("extra"), mismatch="source mismatch")
-    spent = TurnCalls(ledger.inner, corrections_used=2)
-    with pytest.raises(CorrectionUnavailable):
+    # A resumed turn carries what it spent: the turn's total, across its sections, never
+    # resets (owner decision P25, 19 Oct 2026).
+    spent = TurnCalls(ledger.inner, corrections_used=ALLOWANCE)
+    with pytest.raises(CorrectionUnavailable), spent.scope("s1"):
         spent.correct("write", lambda: events.append("extra"), mismatch="finding", asked_by_review=True)
     assert events == ["reserved", "dispatched"]
-    for bad in (True, -1, 3, "1"):
+    for bad in (True, -1, ALLOWANCE + 1, "1"):
         with pytest.raises(ValueError):
             TurnCalls(ledger.inner, corrections_used=bad)
 
@@ -195,15 +234,3 @@ def test_unconfirmed_durable_reservation_never_dispatches_repair():
     assert ledger.calls == []
 
 
-def test_the_review_may_fix_its_own_form_with_either_correction():
-    # Owner, 18 Oct 2026: a form slip by the review withheld two answers the writer had got right.
-    ledger = TurnCalls(Model({"units": [unit()]}))
-    ledger.correct("core_response_writer", lambda: call(ledger), mismatch="writer shape")
-    ledger.correct("core_response_review", lambda: call(ledger), mismatch="review form")
-    assert ledger.metrics()["draft_corrections"] == 2
-    with pytest.raises(CorrectionUnavailable):  # two corrections at most, as before
-        ledger.correct("core_response_review", lambda: call(ledger), mismatch="review form again")
-    ledger = TurnCalls(Model({"units": [unit()]}))
-    ledger.correct("core_response_review", lambda: call(ledger), mismatch="review form")
-    with pytest.raises(CorrectionUnavailable):  # any other form correction is only ever the first
-        ledger.correct("core_response_writer", lambda: call(ledger), mismatch="writer shape")

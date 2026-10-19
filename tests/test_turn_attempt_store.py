@@ -7,7 +7,7 @@ import sqlite3
 import pytest
 
 from nm.shared.turn_attempt_port import AttemptRefused, TurnAttemptPort
-from nm.shared.turn_attempt_store import _SQL_V1, ALLOWANCE, FileTurnAttempts
+from nm.shared.turn_attempt_store import _SQL_V1, _SQL_V2, ALLOWANCE, FileTurnAttempts
 
 pytestmark = pytest.mark.class_a
 
@@ -48,7 +48,7 @@ def test_changed_request_conflicts_even_after_explicit_retryable_finish(ledger):
 
 def test_retry_preserves_spent_allowance_and_changes_the_fencing_token(ledger):
     first = ledger.claim(IDENTITY, REQUEST)
-    # Two corrections (owner decision, 17 Oct 2026), and no more.
+    # The turn's total (owner decision P25, 19 Oct 2026: each section its own rewrites), and no more.
     for _ in range(ALLOWANCE):
         ledger.consume_correction(IDENTITY, first["token"])
     refused("terminal", lambda: ledger.consume_correction(IDENTITY, first["token"]))
@@ -74,7 +74,8 @@ def test_a_retry_keeps_the_count_of_corrections_already_made(ledger):
     ledger.finish(IDENTITY, first["token"], "retryable")
     second = ledger.claim(IDENTITY, REQUEST)
     assert second["corrections_used"] == 1
-    ledger.consume_correction(IDENTITY, second["token"])
+    for _ in range(ALLOWANCE - 1):
+        ledger.consume_correction(IDENTITY, second["token"])
     refused("terminal", lambda: ledger.consume_correction(IDENTITY, second["token"]))
 
 
@@ -135,7 +136,7 @@ def test_unknown_database_schema_is_refused_without_automatic_migration(ledger, 
     refused("storage", lambda: FileTurnAttempts(ledger.path))
 
 
-@pytest.mark.parametrize("field,value", [("state", "invented_state"), ("corrections_used", 7),
+@pytest.mark.parametrize("field,value", [("state", "invented_state"), ("corrections_used", ALLOWANCE + 1),
     ("request_digest", "private message"), ("token", "changed"), ("code", "not valid metadata")])
 def test_corrupt_attempt_never_becomes_a_new_claim(ledger, field, value):
     ledger.claim(IDENTITY, REQUEST)
@@ -218,9 +219,29 @@ def test_a_version_one_store_is_carried_over_with_its_records(tmp_path):
     ledger = FileTurnAttempts(path)
     claim = ledger.claim(IDENTITY, REQUEST)
     assert claim["corrections_used"] == 1
-    ledger.consume_correction(IDENTITY, claim["token"])
+    for _ in range(ALLOWANCE - 1):
+        ledger.consume_correction(IDENTITY, claim["token"])
     refused("terminal", lambda: ledger.consume_correction(IDENTITY, claim["token"]))
     refused("terminal", lambda: ledger.claim(OTHER, REQUEST))
     with sqlite3.connect(path) as db:
-        assert db.execute("PRAGMA user_version").fetchone()[0] == 2
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 3
         assert [r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE name NOT LIKE 'sqlite_%'")] == ["turn_attempts"]
+
+
+def test_a_version_two_store_is_carried_over_with_its_counts(tmp_path):
+    # 19 Oct 2026 (owner decision P25): version 2 held at most two corrections a turn; its
+    # records keep their state and count under the turn's larger total.
+    path = tmp_path / "turn-attempts.sqlite3"
+    with sqlite3.connect(path) as db:
+        db.execute(_SQL_V2)
+        db.execute("PRAGMA user_version=2")
+        db.execute("INSERT INTO turn_attempts VALUES (?,?,?,2,'retryable',NULL)", (IDENTITY, REQUEST, OTHER))
+        db.execute("INSERT INTO turn_attempts VALUES (?,?,?,1,'finished',NULL)", (OTHER, REQUEST, IDENTITY))
+    ledger = FileTurnAttempts(path)
+    claim = ledger.claim(IDENTITY, REQUEST)
+    assert claim["corrections_used"] == 2
+    ledger.consume_correction(IDENTITY, claim["token"])
+    refused("terminal", lambda: ledger.claim(OTHER, REQUEST))
+    with sqlite3.connect(path) as db:
+        assert db.execute("PRAGMA user_version").fetchone()[0] == 3
+        assert db.execute("SELECT corrections_used FROM turn_attempts WHERE identity=?", (IDENTITY,)).fetchone() == (3,)
