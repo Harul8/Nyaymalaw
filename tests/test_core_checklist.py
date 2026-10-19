@@ -482,6 +482,14 @@ def test_v11_each_ask_for_an_item_opens_it_from_the_writers_own_words():
                              "start": at, "end": len(second["text"]) - 1}]
     assert "words" not in first["uses"][0]  # the ask's link holds those words; the passage is listed
     assert response_writer.validate(deepcopy(draft), ctx, sources) == draft
+    # An ask goes to the item that named it first: every item's first asked words are placed
+    # before any item's second (the live run of 19 Oct 2026 named one question for two items).
+    ranked = deepcopy(given)
+    ranked[0]["asked_words"] = ["the exception", "send the words of the second provision"]
+    ranked[1]["asked_words"] = ["send the words of the second provision"]
+    one, two = drafted(items=ranked)["checklists"][0]["items"]
+    assert [ask["text"] for ask in one["asked"]] == ["the exception"]
+    assert [ask["text"] for ask in two["asked"]] == ["send the words of the second provision"]
     # The model must give asked_words (strict output names every field); admission takes an
     # item without them as one no ask is for.
     wire = response_writer.PART_SCHEMA_V11["properties"]["checklist"]["items"]
@@ -498,11 +506,14 @@ def test_v11_each_ask_for_an_item_opens_it_from_the_writers_own_words():
 
 
 class Asking(ChecklistModel):
-    """Dispute 1's part asks for its first item in its one question (writer v11)."""
+    """Dispute 1's part asks for its first item in its one question (writer v11), whose held
+    passage it names on the same words."""
     def structured(self, prompt, schema, tier, **kwargs):
         result = super().structured(prompt, schema, tier, **kwargs)
         if (json.loads(prompt.user)["this_part"]["dispute"] or {}).get("id") == "D1":
-            result.data["units"][0].update(kind="question", text="Can you send the exception it makes?")
+            result.data["units"][0].update(kind="question", text="Can you send the exception it makes?", uses=[
+                {"source_kind": "provision", "source_id": alias(self.sources, "provision", "Complete provision"),
+                 "link_words": "send the exception"}])
             result.data["checklist"][0]["asked_words"] = ["send the exception"]
         return result
 
@@ -544,6 +555,8 @@ def test_v16_an_ask_carries_the_item_it_opens_as_the_answer_admitted_it():
     assert ask["item"]["need"] == item["need"] and ask["item"]["law"]["held_in"] == ctx["latest"]["turn_id"]
     assert [element["asks"] for element in elements if element["kind"] == "QUESTION" and element is not asking] == [
         [], []]
+    # The ask lists no sources beneath it: the item it opens shows the law that requires it.
+    assert asking["inline_citations"] == [] and asking["citation_markers"] == []
     activity = {"contract": turn.CONTRACT, "interpretation": {"units": []}, "research": record, "sources": sources,
                 "draft": draft, "review": review, "execution": execution,
                 "rendering_contract": response_rendering.CONTRACT, "authority_evidence": authorities,
@@ -561,3 +574,4 @@ def test_v16_an_ask_carries_the_item_it_opens_as_the_answer_admitted_it():
     earlier = response_rendering.render(ctx, record, sources, draft, review, execution, authority_evidence=authorities,
                                         contract=response_rendering.CONFINED_CONTRACT)
     assert all("asks" not in element for element in earlier)
+    assert next(element for element in earlier if element["text"] == asking["text"])["citation_markers"]

@@ -407,22 +407,26 @@ def _placed(text, words):
     return (match.start(), match.end()) if match else None
 
 
-def _asks(given, units, taken):
-    """v11: where the asks for an item stand in its part - for each of its asked words, the
-    first question or summary of the part that holds them, placed as link words are, where
-    no other ask stands already (taken: the asks placed so far, by unit). Words not found
-    are no link; the item stays on the board."""
-    placed = []
-    for words in given if isinstance(given, list) else []:
-        for unit in units:
-            place = _placed(unit["text"], words) if unit["kind"] in ("question", "summary") else None
-            spans = taken.setdefault(unit["id"], [])
-            if place is None or any(place[0] < end and start < place[1] for start, end in spans):
-                continue
-            spans.append(place)
-            placed.append({"unit_id": unit["id"], "text": unit["text"][place[0]:place[1]],
-                           "start": place[0], "end": place[1]})
-            break
+def _asks(given, units):
+    """v11: where the asks for each item of a part stand in its questions or summary. given:
+    each item's asked words, in the part's order. Each is placed as link words are, in the
+    first question or summary that holds them where no other ask stands already; an ask goes
+    to the item that named it first - every item's first asked words are placed before any
+    item's second (the live run of 19 Oct 2026 named one question for two items). Words not
+    found are no link; the item stays on the board."""
+    lists = [words if isinstance(words, list) else [] for words in given]
+    placed, taken = [[] for _ in lists], {}
+    for rank in range(max(map(len, lists), default=0)):
+        for index, words in enumerate(lists):
+            for unit in units if rank < len(words) else ():
+                place = _placed(unit["text"], words[rank]) if unit["kind"] in ("question", "summary") else None
+                spans = taken.setdefault(unit["id"], [])
+                if place is None or any(place[0] < end and start < place[1] for start, end in spans):
+                    continue
+                spans.append(place)
+                placed[index].append({"unit_id": unit["id"], "text": unit["text"][place[0]:place[1]],
+                                      "start": place[0], "end": place[1]})
+                break
     return placed
 
 
@@ -602,7 +606,7 @@ def _checklists(given, layout, context, sources, offered, *, limits="time_limits
     stands in its part's questions or summary."""
     if len(given) != len(layout):
         raise SchemaViolation("Each part of the reply returns its own checklist")
-    saved, number, out, start, taken = checklist.saved(context), 0, [], 0, {}
+    saved, number, out, start = checklist.saved(context), 0, [], 0
     for part, written in zip(layout, given):
         if part["dispute_id"] is None and (written["checklist"] or written[limits]):
             raise SchemaViolation("A part that answers no single dispute has no checklist or time limits")
@@ -638,8 +642,9 @@ def _checklists(given, layout, context, sources, offered, *, limits="time_limits
                           "evidence": None if item["evidence"] is None else _quoted(
                               item["evidence"], sources, offered,
                               _HOLDS if item["status"] == "in_hand" else _SAYS, "Where a checklist item stands")})
-            if units is not None:
-                items[-1]["asked"] = _asks(item.get("asked_words"), mine, taken)
+        if units is not None:
+            for entry, asked in zip(items, _asks([item.get("asked_words") for item in written["checklist"]], mine)):
+                entry["asked"] = asked
         out.append({"items": items, limits: list(written[limits])})
     return out
 

@@ -400,7 +400,7 @@ button.board-card:focus-visible { outline: 2px solid var(--accent); outline-offs
   padding: 8px 10px; border-bottom: 1px solid var(--rule); }
 .time-limit-table tr:last-child td, .working-table tr:last-child th, .working-table tr:last-child td { border-bottom: 0; }
 .time-limit-table th { font-family: var(--f-mono); font-size: 0.66rem; letter-spacing: 0.07em; text-transform: uppercase;
-  color: var(--ink-3); font-weight: 500; }
+  color: var(--ink-3); font-weight: 500; white-space: nowrap; }
 .working-table th { font-weight: 500; color: var(--ink-3); white-space: nowrap; }
 .time-limit-table td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
 .limit-why { display: block; margin-top: 0.2rem; font-size: 0.78rem; color: var(--ink-3); }

@@ -61,7 +61,8 @@ LAID_OUT_CONTRACT = "core_response_rendering_v14"
 CONFINED_CONTRACT = "core_response_rendering_v15"
 #: v15 with each ask that opens a checklist item carried on its question or summary with the
 #: item as the answer admitted it (writer v11; the readability design as the owner approved
-#: it, 18 Oct 2026); "In short" holding the disputes' summaries alone (an opening part's
+#: it, 18 Oct 2026), a question that opens one listing no sources beneath it (the item shows
+#: the law that requires it); "In short" holding the disputes' summaries alone (an opening part's
 #: summary, which the writer is asked not to write, is shown where it was written as part of
 #: the opening: the live run of 19 Oct 2026); and code's notices about a dispute's checklist
 #: said at the end of that dispute's part, naming each item left out, not atop the answer.
@@ -868,6 +869,10 @@ def render(context, research_record, sources, draft, review, execution=None, *,
             element["unit"] = position
         if contract in _ASKED and kind in ("QUESTION", "SUMMARY"):
             element["asks"] = sorted(asks.get(unit["id"], []), key=lambda ask: ask["start"])
+            if kind == "QUESTION" and element["asks"]:
+                # An ask lists no sources beneath it, as the design's "What I need from you"
+                # shows: the item it opens shows the law that requires it.
+                element["citation_markers"] = []
         return element
 
     # v11: each dispute's summary, in order, under "In short": after the answer's opening
