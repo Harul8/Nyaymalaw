@@ -131,6 +131,9 @@ class Act:
     #: Where the text was read as something other than the Act's own sections, by line --
     #: for the owner to look at in a dry run before anything is appended.
     notes: list[str] = field(default_factory=list)
+    #: The non-empty lines after the last section - schedules, forms, annexures - which an
+    #: append does not keep and the Act store rebuild reads (19 Oct 2026).
+    back_matter: list[str] = field(default_factory=list)
 
 
 def parse_act(path: Path, jurisdiction: str) -> Act:
@@ -165,7 +168,14 @@ def parse_act(path: Path, jurisdiction: str) -> Act:
     # to reproduce all 1,600 held names of this identifier form.
     act_name = f"{' '.join(jurisdiction.split())} {year} {number} {title}".title()
     act_id = f"{jurisdiction.upper()}_{year}_{number}_{title.upper()}"
-    raw = path.read_text(encoding="utf8", errors="replace")
+    return read_act(path.read_text(encoding="utf8", errors="replace"), act_id=act_id, act_name=act_name,
+                    title=title, year=year, name=path.name)
+
+
+def read_act(raw: str, *, act_id: str, act_name: str, title: str, year: str, name: str) -> Act:
+    """`parse_act`'s reading of an Act's text, given its identity: for a text that is not a
+    library file, such as India Code's text of an Act's PDF (the Act store rebuild, owner
+    decisions P20-P23 of 19 Oct 2026). `name` is what a refusal names."""
     lines = [line.strip() for line in raw.splitlines()]
     tables: set[int] = set()
     candidates: list[tuple[int, Section]] = []
@@ -205,7 +215,7 @@ def parse_act(path: Path, jurisdiction: str) -> Act:
             continue
         i += 1
     if not candidates:
-        raise ValueError(f"{path.name}: no section 1 was found")
+        raise ValueError(f"{name}: no section 1 was found")
     numbers = [section.number for _, section in candidates]
     rows = _rows(numbers, looks, headings)
     chain = _chain(numbers, rows)
@@ -245,7 +255,8 @@ def parse_act(path: Path, jurisdiction: str) -> Act:
                 sections[-1].tables.add(len(sections[-1].lines))
             sections[-1].lines.append(lines[i])
         i += 1
-    return Act(act_id, act_name, title, year, sections, skipped, notes)
+    return Act(act_id, act_name, title, year, sections, skipped, notes,
+               [line for line in lines[end:] if line])
 
 
 #: How far a table's rows step, and how far past the section a run of rows interrupted
@@ -438,9 +449,21 @@ def passages_for(act: Act) -> list[dict]:
     chunker was wrong it is not copied: see `_is_numeral`, and `parse_act`, which reads
     the tables, lists and schedules the store cut as sections as rows."""
     rows = []
+    used: set[str] = set()
+
+    def fresh(identity: str) -> str:
+        """An identifier the Act has not used. A label printed twice - an (a) under each of
+        two exceptions of one section - takes its place in order: "_CLAUSE_a", then
+        "_CLAUSE_a_2" (the store's own chunker used 21,947 identifiers twice; 19 Oct 2026)."""
+        found, count = identity, 2
+        while found in used:
+            found, count = f"{identity}_{count}", count + 1
+        used.add(found)
+        return found
+
     for section in act.sections:
         n = section.number
-        head = _Open(n, f"{act.act_id}_SECTION_{n}", (f"section_{n}",))
+        head = _Open(n, fresh(f"{act.act_id}_SECTION_{n}"), (f"section_{n}",))
         rows.append(_row(act, section, "section_head",
                          "\n".join([*section.opening, *section.lines]),
                          chunk_id=head.id, owner=None, chain=head.chain))
@@ -463,20 +486,20 @@ def passages_for(act: Act) -> list[dict]:
                 continue
             if number:
                 label = number.group(1)
-                sub = _Open(label, f"{head.id}_SUB_{label}", (*head.chain, f"sub_section_{label}"))
+                sub = _Open(label, fresh(f"{head.id}_SUB_{label}"), (*head.chain, f"sub_section_{label}"))
                 clause = roman = None
                 current = _row(act, section, "sub_section", line, chunk_id=sub.id,
                                owner=head, chain=sub.chain, sub=sub)
             elif letters and _is_numeral(letters.group(1), clause, following[k]):
                 label, owner = letters.group(1), clause or sub or head
-                roman = _Open(label, f"{owner.id}_SUBCLAUSE_{label}",
+                roman = _Open(label, fresh(f"{owner.id}_SUBCLAUSE_{label}"),
                               (*owner.chain, f"sub_clause_{label}"))
                 current = _row(act, section, "sub_clause", line, chunk_id=roman.id,
                                owner=owner, chain=roman.chain, sub=sub, clause=clause,
                                roman=roman)
             elif letters and len(letters.group(1)) <= 2:
                 label, owner = letters.group(1), sub or head
-                clause = _Open(label, f"{owner.id}_CLAUSE_{label}",
+                clause = _Open(label, fresh(f"{owner.id}_CLAUSE_{label}"),
                                (*owner.chain, f"clause_{label}"))
                 roman = None
                 current = _row(act, section, "clause", line, chunk_id=clause.id,
@@ -485,7 +508,7 @@ def passages_for(act: Act) -> list[dict]:
                 kind, owner = _NOTE_KIND[note.group(1)], roman or clause or sub or head
                 count = counts[kind] = counts.get(kind, 0) + 1
                 current = _row(act, section, kind, line,
-                               chunk_id=f"{owner.id}_{kind.upper()}_{count}", owner=owner,
+                               chunk_id=fresh(f"{owner.id}_{kind.upper()}_{count}"), owner=owner,
                                chain=(*owner.chain, f"{kind}_{count}"), sub=sub,
                                clause=clause, roman=roman)
             elif current is not None:

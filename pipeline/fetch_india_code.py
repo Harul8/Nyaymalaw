@@ -140,15 +140,59 @@ def files_of(source: Source, record: dict, folder: Path) -> list[dict]:
     return saved
 
 
+def act_texts(source: Source, listed: set[str], out: Path) -> int:
+    """India Code's own text of each listed Act's official PDF - the third reading a few-word
+    difference between India Code's section and our text is settled by (owner, 19 Oct 2026;
+    P20) - into out/<state>/<act_id>/, English only, with a manifest."""
+    manifest = {"source": "India Code, indiacode.gov.in public data service: the TEXT bundle of each Act",
+                "started": datetime.now(timezone.utc).isoformat(timespec="seconds"), "acts": []}
+    for state in STATES:
+        acts = search(source, **{"f.identifier_collection": "ACT,equals", "f.identifier_state": f"{state},equals",
+                                 "sort": "dc.title,ASC"})
+        for act in acts:
+            act_id = first(act, "dc.identifier.act_id")
+            if act_id not in listed:
+                continue
+            saved = []
+            for bundle in source.json(f"/core/items/{act['uuid']}/bundles").get("_embedded", {}).get("bundles", []):
+                if bundle["name"] != "TEXT":
+                    continue
+                for stream in source.json(f"/core/bundles/{bundle['uuid']}/bitstreams").get("_embedded", {}) \
+                        .get("bitstreams", []):
+                    if stream["name"][:1] == "H" and stream["name"][1:2].isdigit():
+                        continue
+                    target = out / state / act_id / stream["name"]
+                    source.file(stream["_links"]["content"]["href"], target)
+                    saved.append({"name": stream["name"], "bytes": target.stat().st_size,
+                                  "sha256": hashlib.sha256(target.read_bytes()).hexdigest()})
+            manifest["acts"].append({"state": state, "act_id": act_id, "title": first(act, "dc.title"),
+                                     "texts": saved})
+            if len(manifest["acts"]) % 50 == 0:
+                print(f"   {len(manifest['acts'])} Acts ({source.asked} asked, {source.reused} from disk)", flush=True)
+    manifest["finished"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    (out / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=1), encoding="utf-8")
+    print(f"done: {len(manifest['acts'])} Acts, {sum(1 for act in manifest['acts'] if act['texts'])} with a text "
+          f"| {source.asked} asked, {source.reused} from disk", flush=True)
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--cache", type=Path, required=True)
     parser.add_argument("--files-for", type=Path, help="JSON with act_ids whose PDFs and schedules to fetch")
     parser.add_argument("--only", help="comma-separated India Code act_ids: fetch these Acts alone (a pilot)")
+    parser.add_argument("--act-texts", type=Path,
+                        help="JSON with act_ids: fetch only India Code's text of these Acts' PDFs, into --out")
     args = parser.parse_args()
     only = set(args.only.split(",")) if args.only else None
     sys.stdout.reconfigure(encoding="utf-8")
+    if args.act_texts:
+        if args.out.exists() and any(args.out.glob("manifest.json")):
+            print(f"{args.out} already holds a finished fetch; give a new folder.")
+            return 1
+        return act_texts(Source(args.cache), set(json.loads(args.act_texts.read_text(encoding="utf-8"))["act_ids"]),
+                         args.out)
     if args.out.exists() and any(args.out.glob("manifest.json")):
         print(f"{args.out} already holds a finished fetch; give a new folder.")
         return 1
