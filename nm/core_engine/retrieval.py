@@ -17,6 +17,7 @@ import sqlite3
 import struct
 import threading
 import traceback
+from collections import OrderedDict
 from copy import deepcopy
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import ExitStack, closing, contextmanager, nullcontext
@@ -38,9 +39,23 @@ RESULTS_PER_KIND = 6
 #: judgments kept 14 and missed the owner's fixed criterion of 15.
 RANK_DEPTH = {"provision": 40, "judgment": 100}
 RRF_K = 60
+#: v9 (owner decision P32, 20 Oct 2026): each returned provision is read whole, and with it
+#: the provisions its Act links to it in its own words and the provisions beside it, as
+#: connected candidates for the pick. v8 records replay unchanged.
+CONTRACT = "hybrid_retrieval_v9"
 #: v8 (owner decision, 14 Oct 2026): the reranker reads only the strongest candidates,
 #: the first RANK_DEPTH positions of each corpus's fused shortlist. v7 records replay.
-CONTRACT = "hybrid_retrieval_v8"
+RANK_DEPTH_CONTRACT = "hybrid_retrieval_v8"
+#: A section longer than this is read in part, the parts search found with its opening
+#: (P32, at the line P30 and P31 draw, about 8,000 tokens): 276 of 66,684 held sections.
+WHOLE_SECTION_CHARACTERS = 32000
+#: Links shown each way for one returned provision (99% of held sections name at most 9 and
+#: are named by at most 6); the rest are counted in the record, never dropped silently.
+LINKS_EACH_WAY = 10
+#: Acts whose links are kept in memory once worked out.
+LINKED_ACTS = 32
+#: How a connected provision is connected: it is named, or it is beside.
+CONNECTIONS = ("names", "beside")
 #: v7 (owner decision, 14 Oct 2026): judgment paragraphs are ordered by what makes them
 #: usable as authority (_judgment_order). v6 records replay unchanged.
 JUDGMENT_ORDER_CONTRACT = "hybrid_retrieval_v7"
@@ -64,6 +79,11 @@ MAX_CONTEXT_SEGMENTS = 500
 #: the few parts at once. The rows and their order are the same.
 SECTION_PARTS = ("select pos from chunks where doc_type=? and act_id=? and section_number=? "
                  "order by +pos limit ?")
+#: One stored part by its identity within its Act. Without planner statistics the store walked
+#: every passage of the Act through its Act-and-section index to find one part; the "+" leaves
+#: the part-identity index to find it (20 Oct 2026: 3.5 ms to 0.13 ms a lookup in the CPC, most
+#: of the time reading a section whole took). The rows are the same.
+PART_BY_ID = "select pos from chunks where +doc_type=? and +act_id=? and chunk_id=? limit 2"
 #: A matter's questions searched at once (owner, 20 Oct 2026: step 1). The reranker on the
 #: graphics card bounds a matter's search (62 s of the 13 questions of the first live run of
 #: answering dispute by dispute); four at a time searched them in 89 s instead of about 150 s,
@@ -96,7 +116,8 @@ def _log_stage_failure(kind, stage, exc, query_id=None):
 # The index's own tokenisation has one owner, shared with the index builds: a
 # query cut differently from the built index silently stops meeting its words.
 from nm.shared.citation_contracts import (  # noqa: E402
-    bm25_tokens, bind_provision_key, instrument_candidates, ProvisionKeyState,
+    bm25_tokens, bind_provision_key, instrument_candidates, ProvisionKeyState, provision_key_binder,
+    provisions_named, statute_own_title,
 )
 
 
@@ -308,6 +329,8 @@ class LocalCollection:
         self._instrument_positions = {}
         self._standing = None
         self._standing_lock = threading.Lock()
+        self._links = OrderedDict()
+        self._links_lock = threading.Lock()
 
     def _parent_path(self, record):
         # Contextual records have declared source keys, not vector positions.
@@ -820,6 +843,69 @@ class LocalCollection:
             result.update(state="unavailable", reason=str(exc), sources=[], provision_key=None)
         return result
 
+    def act_links(self, act_id: str) -> dict:
+        """One held Act's own links (owner decision P32, 20 Oct 2026): its provisions in the
+        Act's order, each with its heading and its one root part's position (None when it has
+        none or several), the provisions each names in its own words with those words, the
+        provisions naming each, and how many of each one's references bind to no single held
+        provision. Worked out from the held Act when it is first read, once per corpus
+        revision; nothing about another Act is read or bound."""
+        if self.doc_type != "bare_act" or not isinstance(act_id, str) or not act_id.strip():
+            raise ValueError("An Act's links need one owned Act")
+        _, db_path, _ = self._open()
+        key = (self._revision, act_id)
+        with self._links_lock:
+            if key in self._links:
+                self._links.move_to_end(key)
+                return self._links[key]
+        try:
+            with closing(sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)) as db:
+                rows = db.execute("select pos, section_number, parent_chunk_id, blob from chunks "
+                                  "where doc_type=? and act_id=? order by +pos", (self.doc_type, act_id)).fetchall()
+            order, titles, roots, texts = [], {}, {}, []
+            for position, section, parent, blob in rows:
+                item, section = json.loads(blob), str(section or "")
+                if not section or not isinstance(item, dict) or not isinstance(item.get("full_text"), str):
+                    continue
+                if section not in titles:
+                    order.append(section)
+                    titles[section] = item.get("section_title") if isinstance(item.get("section_title"), str) else ""
+                if not parent:
+                    roots.setdefault(section, []).append(int(position))
+                texts.append((section, item["full_text"], item.get("act_name") or ""))
+        except (sqlite3.Error, ValueError, TypeError) as exc:
+            raise SearchUnavailable("The Act's provisions cannot be read for its links") from exc
+        place, bind = {section: index for index, section in enumerate(order)}, provision_key_binder(tuple(order))
+        names, unbound = {}, {}
+        for section, text, title in texts:
+            for named in provisions_named(text, within=section, instrument=statute_own_title(title, act_id)):
+                if named.elsewhere:
+                    continue
+                first = bind(named.reference)
+                targets = [first.key] if first.state == ProvisionKeyState.BOUND else []
+                if targets and named.through:
+                    last = bind(named.through)
+                    targets = (list(order[place[first.key]:place[last.key] + 1])
+                               if last.state == ProvisionKeyState.BOUND and place[last.key] > place[first.key] else [])
+                if not targets:
+                    unbound[section] = unbound.get(section, 0) + 1
+                for target in targets:
+                    if target != section:
+                        names.setdefault(section, {}).setdefault(target, _link_words(text, named))
+        named_by = {}
+        for section in order:
+            for target, words in names.get(section, {}).items():
+                named_by.setdefault(target, {})[section] = words
+        links = {"order": tuple(order), "place": place, "titles": titles,
+                 "roots": {section: found[0] if len(found) == 1 else None for section, found in roots.items()},
+                 "names": names, "named_by": named_by, "unbound": unbound}
+        self._check_snapshot()
+        with self._links_lock:
+            self._links[key] = links
+            while len(self._links) > LINKED_ACTS:
+                self._links.popitem(last=False)
+        return links
+
     def rerank(self, pairs: list[tuple[str, str]], *, anchors: list[str] | None = None) -> list[float]:
         anchors = [""] * len(pairs) if anchors is None else anchors
         if len(anchors) != len(pairs) or any(not isinstance(anchor, str) for anchor in anchors):
@@ -866,7 +952,7 @@ class LocalCollection:
                 if self.doc_type != "bare_act" or not row.get("act_id") or not child.get("chunk_id"):
                     raise SearchUnavailable("Source ancestry has no owned provision identity")
                 own_matches = connection.execute(
-                    "select pos from chunks where doc_type=? and act_id=? and chunk_id=? limit 2",
+                    PART_BY_ID,
                     (self.doc_type, row["act_id"], child["chunk_id"])).fetchall()
                 if isinstance(child_position, str):
                     if (child_position != _parent_address(child) or own_matches
@@ -880,7 +966,7 @@ class LocalCollection:
                 if self.doc_type != "bare_act" or not isinstance(identity, str) or not row.get("act_id"):
                     raise SearchUnavailable("Parent source identity is invalid")
                 matches = connection.execute(
-                    "select pos from chunks where doc_type=? and act_id=? and chunk_id=? limit 2",
+                    PART_BY_ID,
                     (self.doc_type, row["act_id"], identity)).fetchall()
                 if len(matches) > 1:
                     raise SearchUnavailable("Parent source identity is ambiguous")
@@ -1126,6 +1212,132 @@ def _candidate(kind, position, row, revision, score, query_ids, context):
         "legal_status": "candidate_unassessed"}
 
 
+#: Where the words that name a provision begin: their own sentence, clause or heading.
+_LINK_START = re.compile(r"(?:[.;:\n—]\s*|^)(?=[^.;:\n—]*$)")
+
+
+def _link_words(text, named):
+    """The words in which a provision names another, from the start of their sentence or
+    clause (at most 160 characters before them), exactly as held but for spacing."""
+    start = max(0, named.start - 160)
+    lead = text[start:named.start]
+    begin = _LINK_START.search(lead)
+    lead = lead[begin.end():] if begin else lead
+    return ("" if begin or start == 0 else "…") + " ".join((lead + text[named.start:named.end]).split())
+
+
+def _whole_section(collection, position, row, touched, issues):
+    """A returned provision with all its parts (P32): the whole section when it is no longer
+    than WHOLE_SECTION_CHARACTERS, otherwise the parts search found with the section's
+    opening. Either way a gap is recorded, never hidden."""
+    alone = {"scope": "selected_indexed_segment", "bounded": True, "unread_positions": [],
+             "segments": [{"position": position, "row": row, "content_digest": _digest(row)}]}
+    try:
+        context = collection.context(position, row)
+    except _ContextGap as exc:
+        issues.append({"kind": "provision", "query_id": None, "stage": "context", "reason": str(exc), "position": position})
+        return exc.context
+    except Exception as exc:
+        _log_stage_failure("provision", "context", exc)
+        issues.append({"kind": "provision", "query_id": None, "stage": "context",
+                       "reason": str(exc) if isinstance(exc, SearchUnavailable) else type(exc).__name__,
+                       "position": position})
+        return {**(touched or alone), "bounded": True}
+    size = sum(len(segment["row"]["full_text"]) for segment in context["segments"])
+    if size <= WHOLE_SECTION_CHARACTERS:
+        return context
+    issues.append({"kind": "provision", "query_id": None, "stage": "context", "position": position,
+                   "reason": f"The whole section is {size:,} characters in {len(context['segments'])} parts, more than "
+                             f"the {WHOLE_SECTION_CHARACTERS:,} read whole; the parts search found are read with its opening"})
+    return {**(touched or alone), "bounded": True}
+
+
+def _connect(collection, revision, returned, issues):
+    """The provisions the returned ones are read with (P32): those each names in its own
+    words and those naming it, up to LINKS_EACH_WAY each way, and the provision before and
+    after it in its Act. Each is read whole as a connected candidate. Returns the connected
+    candidates, the connections (from the provision whose words name the other, or from the
+    earlier of two beside each other) and each returned provision's link counts."""
+    if not returned or not callable(getattr(collection, "act_links", None)):
+        return [], [], {}
+    try:
+        hidden = collection.suppressed_positions() if callable(getattr(collection, "suppressed_positions", None)) else frozenset()
+    except SearchUnavailable as exc:
+        _log_stage_failure("provision", "copy register", exc)
+        hidden = frozenset()
+    found = {candidate["position"]: candidate["id"] for candidate in returned}
+    wanted, edges, counts, tables = {}, [], {}, {}
+    for candidate in returned:
+        act_id, section = candidate["source"]["act_id"], str(candidate["source"].get("section_number") or "")
+        try:
+            if act_id not in tables:
+                tables[act_id] = collection.act_links(act_id)
+            table = tables[act_id]
+        except (SearchUnavailable, ValueError) as exc:
+            _log_stage_failure("provision", "links", exc)
+            issues.append({"kind": "provision", "query_id": None, "stage": "links", "reason": str(exc),
+                           "position": candidate["position"]})
+            continue
+        if section not in table["place"]:
+            issues.append({"kind": "provision", "query_id": None, "stage": "links", "position": candidate["position"],
+                           "reason": "The provision's own key is not among its Act's held provisions"})
+            continue
+        names, named_by = list(table["names"].get(section, {}).items()), list(table["named_by"].get(section, {}).items())
+        counts[candidate["id"]] = {"names": len(names), "named_by": len(named_by),
+                                   "unbound": table["unbound"].get(section, 0)}
+        index, order = table["place"][section], table["order"]
+        reach = ([(other, words, "names", True) for other, words in names[:LINKS_EACH_WAY]]
+                 + [(other, words, "names", False) for other, words in named_by[:LINKS_EACH_WAY]]
+                 + [(order[at], None, "beside", at > index) for at in (index - 1, index + 1) if 0 <= at < len(order)])
+        for other, words, how, outward in reach:
+            root = table["roots"].get(other)
+            if root is None:
+                issues.append({"kind": "provision", "query_id": None, "stage": "links", "position": candidate["position"],
+                               "reason": f"A connected provision ({other}) has no one root part in its Act"})
+                continue
+            if root in hidden:
+                continue
+            wanted.setdefault(root, None)
+            edges.append((candidate["position"], root, how, words) if outward else (root, candidate["position"], how, words))
+    reading = [root for root in wanted if root not in found]
+    try:
+        rows = collection.read(reading) if reading else {}
+    except Exception as exc:
+        _log_stage_failure("provision", "links", exc)
+        issues.append({"kind": "provision", "query_id": None, "stage": "links", "reason": type(exc).__name__})
+        rows = {}
+    connected = []
+    for root in reading:
+        row = rows.get(root)
+        if row is None or row.get("act_id") not in tables:
+            issues.append({"kind": "provision", "query_id": None, "stage": "links", "position": root,
+                           "reason": "A connected provision's words cannot be read"})
+            continue
+        try:
+            context = _whole_section(collection, root, row, None, issues)
+            candidate = _candidate("provision", root, row, revision, None, [], context)
+        except SearchUnavailable as exc:
+            issues.append({"kind": "provision", "query_id": None, "stage": "links", "reason": str(exc), "position": root})
+            continue
+        found[root] = candidate["id"]
+        connected.append(candidate)
+    connections, seen = [], set()
+    for start, end, how, words in edges:
+        if start not in found or end not in found:
+            continue
+        edge = {"from": found[start], "to": found[end], "how": how, "words": words}
+        if (edge["from"], edge["to"], how) not in seen:
+            seen.add((edge["from"], edge["to"], how))
+            connections.append(edge)
+    return connected, connections, counts
+
+
+def offered(record):
+    """Every candidate a search record offers: what search returned and, from v9, the
+    provisions connected to them (P32)."""
+    return [*record["candidates"], *record.get("connected", ())]
+
+
 class SearchPort(Protocol):
     """The held-law search as a destination: the queries carry the advocate's words, so
     the composition root polices every search like any other destination."""
@@ -1213,6 +1425,7 @@ class HybridSearcher:
             raise ValueError("Each kind returns between 1 and 50 candidates")
         named = [{"name": name, "candidates": []} for name in names]
         candidates, issues, stages, revisions = [], [], [], {}
+        connected, connections, links = [], [], {}
         for kind in ("provision", "judgment"):
             collection = self.collections.get(kind)
             revision = collection.revision() if collection is not None else None
@@ -1401,7 +1614,10 @@ class HybridSearcher:
             for position, score in selected:
                 try:
                     context = rank_contexts.get(position)
-                    if context is None:
+                    if kind == "provision":
+                        # v9 (P32): every returned provision is read whole.
+                        context = _whole_section(collection, position, rows[position], context, issues)
+                    elif context is None:
                         context = collection.context(position, rows[position])
                 except _ContextGap as exc:
                     context = exc.context
@@ -1419,23 +1635,33 @@ class HybridSearcher:
                         and issue.get("position") == position for issue in issues):
                     issues.append({"kind": kind, "query_id": None, "stage": "context", "reason": "Context has an explicit gap", "position": position})
                 candidates.append(_candidate(kind, position, rows[position], revision, score, associations[position], context))
+            if kind == "provision":
+                connected, connections, links = _connect(
+                    collection, revision, [c for c in candidates if c["kind"] == kind], issues)
             if collection.revision() != revision:
                 candidates = [c for c in candidates if c["kind"] != kind]
+                if kind == "provision":
+                    connected, connections, links = [], [], {}
                 issues.append({"kind": kind, "query_id": None, "stage": "identity", "reason": "Corpus changed during search"})
         state = "partial" if issues else "ready"
         return {"contract": CONTRACT, "state": state, "queries": deepcopy(queries), "instruments": named,
-                "corpus_revisions": revisions, "stages": stages, "candidates": candidates, "issues": issues}
+                "corpus_revisions": revisions, "stages": stages, "candidates": candidates, "issues": issues,
+                "connected": connected, "connections": connections, "links": links}
 
 
 def validate_search(record, queries, instruments=None):
     """Replay validates the saved exact snapshot, never reads a changed corpus.
     instruments are the Acts the plan named; a v6 or v7 record keeps them with the held
     candidates each proposed when it was searched."""
-    current = isinstance(record, dict) and record.get("contract") in (NAMED_CONTRACT, JUDGMENT_ORDER_CONTRACT, CONTRACT)
+    current = isinstance(record, dict) and record.get("contract") in (
+        NAMED_CONTRACT, JUDGMENT_ORDER_CONTRACT, RANK_DEPTH_CONTRACT, CONTRACT)
+    connecting = isinstance(record, dict) and record.get("contract") == CONTRACT
     fields = {"contract", "state", "queries", "corpus_revisions", "stages", "candidates", "issues"}
-    if (not isinstance(record, dict) or set(record) != (fields | {"instruments"} if current else fields)
+    if (not isinstance(record, dict) or set(record) != (
+            fields | {"instruments"} | ({"connected", "connections", "links"} if connecting else set()) if current else fields)
             or record["contract"] not in (LEGACY_CONTRACT, PARENT_TREE_CONTRACT, PREVIOUS_CONTRACT, PARENT_STORE_CONTRACT,
-                                          RERANK_ORDER_CONTRACT, NAMED_CONTRACT, JUDGMENT_ORDER_CONTRACT, CONTRACT)
+                                          RERANK_ORDER_CONTRACT, NAMED_CONTRACT, JUDGMENT_ORDER_CONTRACT,
+                                          RANK_DEPTH_CONTRACT, CONTRACT)
             or record["queries"] != queries
             or record["state"] != ("partial" if record["issues"] else "ready")
             or set(record["corpus_revisions"]) != {"provision", "judgment"}):
@@ -1474,7 +1700,10 @@ def validate_search(record, queries, instruments=None):
                 or issue["kind"] not in record["corpus_revisions"]
                 or issue["query_id"] is not None and issue["query_id"] not in query_ids
                 or issue["stage"] not in ("identity", *legs, "read", "rerank", "context", *(("instruments",) if current else ()),
-                                          *(("standing",) if record["contract"] in (JUDGMENT_ORDER_CONTRACT, CONTRACT) else ()))
+                                          *(("standing",) if record["contract"] in (
+                                              JUDGMENT_ORDER_CONTRACT, RANK_DEPTH_CONTRACT, CONTRACT) else ()),
+                                          *(("links",) if connecting else ()))
+                or issue["stage"] == "links" and (issue["kind"] != "provision" or issue["query_id"] is not None)
                 or issue["stage"].startswith("named_") and (issue["kind"] != "provision" or not proposed)
                 or issue["stage"] == "standing" and (issue["kind"] != "judgment" or issue["query_id"] is not None)
                 or not isinstance(issue["reason"], str) or not issue["reason"]):
@@ -1502,15 +1731,22 @@ def validate_search(record, queries, instruments=None):
         if not any((kind, None, stage) in failed for stage in ("read", "rerank")) and (kind, None, "rerank") not in evaluated:
             raise ValueError("Reranking has no execution disposition")
     identities = set()
-    for candidate in record["candidates"]:
+    returned = len(record["candidates"])
+    if connecting and (not isinstance(record["connected"], list) or not isinstance(record["connections"], list)
+                       or not isinstance(record["links"], dict)):
+        raise ValueError("Connected provisions must be explicit arrays")
+    for number, candidate in enumerate([*record["candidates"], *(record["connected"] if connecting else ())]):
+        # v9 (P32): a connected provision was found through a returned one, not by a query.
+        joined = number >= returned
         if record["contract"] not in (PARENT_STORE_CONTRACT, RERANK_ORDER_CONTRACT, NAMED_CONTRACT, JUDGMENT_ORDER_CONTRACT,
-                                      CONTRACT) and any(type(p) is not int for p in (
+                                      RANK_DEPTH_CONTRACT, CONTRACT) and any(type(p) is not int for p in (
                 candidate["position"], *(s["position"] for s in candidate["context"]["segments"]))):
             raise ValueError("Historical search cannot contain contextual parent addresses")
         if (candidate["kind"] not in record["corpus_revisions"]
                 or candidate["corpus_revision"] != record["corpus_revisions"][candidate["kind"]]
                 or not set(candidate["query_ids"]) <= {q["query_id"] for q in queries}
-                or not candidate["query_ids"] or candidate["id"] in identities):
+                or bool(candidate["query_ids"]) == joined or candidate["id"] in identities
+                or joined and (candidate["kind"] != "provision" or candidate["score"] is not None)):
             raise ValueError("Candidate has no owned source/query binding")
         expected = _candidate(candidate["kind"], candidate["position"], candidate["source"],
             candidate["corpus_revision"], candidate["score"], candidate["query_ids"], candidate["context"])
@@ -1539,7 +1775,8 @@ def validate_search(record, queries, instruments=None):
                 by_id.setdefault(segment["row"]["chunk_id"], []).append(segment["row"])
             root = candidate["source"]
             if (record["contract"] not in (PARENT_TREE_CONTRACT, PREVIOUS_CONTRACT, PARENT_STORE_CONTRACT, RERANK_ORDER_CONTRACT,
-                                           NAMED_CONTRACT, JUDGMENT_ORDER_CONTRACT, CONTRACT) or candidate["kind"] != "provision" or len(segments) < 2
+                                           NAMED_CONTRACT, JUDGMENT_ORDER_CONTRACT, RANK_DEPTH_CONTRACT, CONTRACT)
+                    or candidate["kind"] != "provision" or len(segments) < 2
                     or root.get("parent_chunk_id") or len(by_id[root["chunk_id"]]) != 1
                     or len({s["position"] for s in segments}) != len(segments)):
                 raise ValueError("Ranking context has no unique owned root")
@@ -1553,7 +1790,7 @@ def validate_search(record, queries, instruments=None):
                     seen.add(identity)
                     child = parents[0]
         if record["contract"] in (PREVIOUS_CONTRACT, PARENT_STORE_CONTRACT, RERANK_ORDER_CONTRACT, NAMED_CONTRACT,
-                                  JUDGMENT_ORDER_CONTRACT, CONTRACT) and candidate["kind"] == "provision":
+                                  JUDGMENT_ORDER_CONTRACT, RANK_DEPTH_CONTRACT, CONTRACT) and candidate["kind"] == "provision":
             segments = context["segments"]
             if context["scope"] == "selected_indexed_segment":
                 if len(segments) != 1:
@@ -1575,6 +1812,42 @@ def validate_search(record, queries, instruments=None):
             else:
                 raise ValueError("A provision cannot use unrelated adjacent source positions")
         identities.add(candidate["id"])
+    if connecting:
+        _validate_connections(record)
     return deepcopy(record)
+
+
+def _validate_connections(record):
+    """v9 (P32): each connection joins two offered provisions of one Act, at least one
+    returned by search, as the words of one name the other or as neighbours in their Act;
+    every connected provision is joined to a returned one; each returned provision's link
+    counts cover what is shown of them."""
+    returned = {c["id"]: c for c in record["candidates"] if c["kind"] == "provision"}
+    offered_by_id = {**returned, **{c["id"]: c for c in record["connected"]}}
+    seen, reached = set(), set()
+    shown = {identity: {"names": 0, "named_by": 0} for identity in returned}
+    for edge in record["connections"]:
+        if (not isinstance(edge, dict) or set(edge) != {"from", "to", "how", "words"}
+                or edge["how"] not in CONNECTIONS or edge["from"] not in offered_by_id or edge["to"] not in offered_by_id
+                or edge["from"] == edge["to"] or not ({edge["from"], edge["to"]} & returned.keys())
+                or (edge["from"], edge["to"], edge["how"]) in seen
+                or (edge["how"] == "names") != (isinstance(edge["words"], str) and bool(edge["words"].strip()))
+                or edge["how"] == "beside" and edge["words"] is not None):
+            raise ValueError("A connection has no owned pair of offered provisions")
+        if offered_by_id[edge["from"]]["source"].get("act_id") != offered_by_id[edge["to"]]["source"].get("act_id"):
+            raise ValueError("A connection crosses from one Act into another")
+        seen.add((edge["from"], edge["to"], edge["how"]))
+        for end, other in (("from", "to"), ("to", "from")):
+            if edge[end] in returned:
+                reached.add(edge[other])
+                if edge["how"] == "names":
+                    shown[edge[end]]["names" if end == "from" else "named_by"] += 1
+    if not (offered_by_id.keys() - returned.keys()) <= reached:
+        raise ValueError("A connected provision is joined to no returned provision")
+    for identity, counts in record["links"].items():
+        if (identity not in returned or not isinstance(counts, dict) or set(counts) != {"names", "named_by", "unbound"}
+                or any(type(value) is not int or value < 0 for value in counts.values())
+                or shown[identity]["names"] > counts["names"] or shown[identity]["named_by"] > counts["named_by"]):
+            raise ValueError("A returned provision's link counts do not cover its connections")
 
 

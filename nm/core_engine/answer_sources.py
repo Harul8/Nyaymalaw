@@ -10,7 +10,7 @@ from copy import deepcopy
 import json
 
 from nm.core_engine import research
-from nm.core_engine.retrieval import _candidate, _digest, in_force
+from nm.core_engine.retrieval import _candidate, _digest, in_force, offered
 from nm.core_engine.understanding import (
     REFERENCE, conversation_aliases, renamed, select as select_original, source_catalogue,
 )
@@ -94,7 +94,8 @@ def build(context, research_record):
     admitted = research.admitted_provisions(checked)
     picked = research.picked_judgments(checked)
     for work_id, search in checked["searches"].items():
-        for selected in search["candidates"]:
+        # From search v9 a pick may choose a provision connected to a returned one (P32).
+        for selected in offered(search):
             if admitted is not None and selected["kind"] == "provision" and selected["id"] not in admitted:
                 continue
             kind, revision = selected["kind"], selected["corpus_revision"]

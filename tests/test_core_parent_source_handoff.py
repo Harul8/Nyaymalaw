@@ -140,7 +140,9 @@ def test_legacy_snapshots_cannot_acquire_parent_locators_but_keep_their_numeric_
     statute.rows[0]["section_number"] = "Article_64"
     search = HybridSearcher({"provision": statute, "judgment": AdjacentJudgment()}).search(queries)
     search["contract"] = version
-    del search["instruments"]  # named instruments arrived with v6
+    # Named instruments arrived with search v6, connected provisions with v9 (P32).
+    for field in ("instruments", "connected", "connections", "links"):
+        del search[field]
     old_record = {"contract": research.INSTRUMENTED_CONTRACT, "plan": plan, "searches": {"t2:w1": search},
                   "failures": {}, "state": "partial" if search["issues"] else "evaluated"}
     original = deepcopy(old_record)

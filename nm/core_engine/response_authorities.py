@@ -12,7 +12,7 @@ from nm.core_engine import answer_sources, response_writer
 from nm.core_engine.calls import ReleaseWithheld
 from nm.core_engine.citations import CONTRACT as CITATION_CONTRACT
 from nm.core_engine.citations import IndexUnavailable, check_citations
-from nm.core_engine.retrieval import SearchUnavailable, _candidate, _digest
+from nm.core_engine.retrieval import SearchUnavailable, _candidate, _digest, offered
 from nm.shared.citation_contracts import (
     ANY_PROVISION, ProvisionKeyState, bind_provision_key, find_reporter_citations,
 )
@@ -37,7 +37,7 @@ def _dependencies(context, research_record, sources, draft):
 def _raw_sources(research_record):
     result = {}
     for search in research_record["searches"].values():
-        for selected in search["candidates"]:
+        for selected in offered(search):
             for position, row in [(selected["position"], selected["source"]),
                     *((s["position"], s["row"]) for s in selected["context"]["segments"])]:
                 unit = _candidate(selected["kind"], position, row,

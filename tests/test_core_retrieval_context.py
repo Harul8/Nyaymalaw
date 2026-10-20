@@ -6,6 +6,18 @@ import pytest
 from nm.core_engine.retrieval import (
     CONTRACT, HybridSearcher, SearchUnavailable, _candidate, validate_search,
 )
+
+#: What v9 (P32) added to a search record; a record saved before it has none of these.
+CONNECTED_FIELDS = ("connected", "connections", "links")
+
+
+def _saved_as(record, contract, *, named=False):
+    """A current search record as an earlier search version saved it."""
+    old = deepcopy(record)
+    old["contract"] = contract
+    for field in CONNECTED_FIELDS + (() if named else ("instruments",)):
+        del old[field]
+    return old
 from tests.test_core_statute_readback import _local, _row
 from tests.test_current_brain_retrieval import Collection, QUERIES
 
@@ -117,29 +129,29 @@ def test_v3_rejects_disconnected_context_but_replays_unchanged_v1_v2_snapshots()
     replacement = _candidate(source["kind"], source["position"], source["source"],
         source["corpus_revision"], source["score"], source["query_ids"], invalid_window)
     result["candidates"][result["candidates"].index(source)] = replacement
-    assert result["contract"] == CONTRACT == "hybrid_retrieval_v8"
+    assert result["contract"] == CONTRACT == "hybrid_retrieval_v9"
     with pytest.raises(ValueError, match="unique|connected|root"):
         validate_search(result, QUERIES)
-    saved_v4 = deepcopy(result)
-    saved_v4["contract"] = "hybrid_retrieval_v4"
-    del saved_v4["instruments"]  # named instruments arrived with v6
+    saved_v4 = _saved_as(result, "hybrid_retrieval_v4")  # named instruments arrived with v6
     with pytest.raises(ValueError, match="unique|connected|root"):
         validate_search(saved_v4, QUERIES)
     for version in ("hybrid_retrieval_v1", "hybrid_retrieval_v2"):
-        old = deepcopy(result)
-        old["contract"] = version
-        del old["instruments"]
+        old = _saved_as(result, version)
         assert validate_search(old, QUERIES) == old
 
 
 def test_legacy_v2_exact_parent_tree_still_replays(tmp_path, monkeypatch):
     originals = [_row("act-a", "4", chunk_id="root"),
                  _row("act-a", "4", "Exception.", chunk_id="child", parent="root")]
-    result = _search(_local(tmp_path, originals), monkeypatch, [1])
-    assert next(row for row in result["candidates"] if row["kind"] == "provision")["context"]["scope"] == "exact_parent_tree"
-    old = deepcopy(result)
-    old["contract"] = "hybrid_retrieval_v2"
-    del old["instruments"]
+    collection = _local(tmp_path, originals)
+    result = _search(collection, monkeypatch, [1])
+    source = next(row for row in result["candidates"] if row["kind"] == "provision")
+    # v9 reads a returned provision whole (P32); a v2 record kept the exact parent tree.
+    assert source["context"]["scope"] == "indexed_section_segments"
+    old = _saved_as(result, "hybrid_retrieval_v2")
+    old["candidates"][result["candidates"].index(source)] = _candidate(
+        "provision", source["position"], source["source"], source["corpus_revision"], source["score"],
+        source["query_ids"], collection.rank_context(1, originals[1]))
     assert validate_search(old, QUERIES[:1]) == old
 
 

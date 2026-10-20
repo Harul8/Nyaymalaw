@@ -91,3 +91,19 @@ def test_a_readback_inside_a_search_keeps_that_searchs_check(tmp_path):
         assert collection.read_provision("act-a", "section 4")["state"] == "found"
         assert collection._scope.active is True
     assert len(calls) == 2
+
+
+def test_a_part_is_found_through_its_own_identity_index(tmp_path, monkeypatch):
+    """20 Oct 2026 (P32): reading sections whole walks each part to its root; each step found
+    its part by walking the whole Act's passages, 3.5 ms a step in the CPC."""
+    collection, _ = _tree(tmp_path)
+    statements = _recorded(monkeypatch)
+    tree = collection.rank_context(2, collection.read([2])[2])
+    assert [segment["position"] for segment in tree["segments"]] == [0, 1, 2]
+    lookups = [sql for sql in statements if "chunk_id=?" in sql]
+    assert lookups and set(lookups) == {retrieval.PART_BY_ID}
+    with sqlite3.connect(tmp_path / "chunks.db") as connection:
+        plan = " ".join(str(step[-1]) for step in connection.execute(
+            "explain query plan " + retrieval.PART_BY_ID, ("bare_act", "act-a", "grandchild")))
+    connection.close()
+    assert "idx_chunks_chunk_id" in plan

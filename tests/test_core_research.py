@@ -576,6 +576,8 @@ def test_saved_v6_records_replay_and_cannot_pass_as_v7():
     instruments = search_instruments(admitted["work"][0], contract=V6)
     searched = HybridSearcher({"provision": Collection(), "judgment": Collection("judgment")}).search(queries, instruments)
     searched["contract"] = retrieval.NAMED_CONTRACT
+    for field in ("connected", "connections", "links"):  # search v9 added them (P32)
+        del searched[field]
     record = {"contract": V6, "plan": admitted, "searches": {"t2:w1": searched}, "failures": {}, "state": "evaluated"}
     assert validate(record, admitted, ctx) == record
     assert answer_sources.build(ctx, record)  # earlier records admit every returned provision
@@ -637,7 +639,8 @@ def test_saved_v5_plans_and_searches_replay_without_named_instruments():
     queries = search_queries(admitted["work"][0], contract=ACCOUNT_CONTRACT)
     searched = HybridSearcher({"provision": Collection(), "judgment": Collection("judgment")}).search(queries)
     searched["contract"] = retrieval.RERANK_ORDER_CONTRACT
-    del searched["instruments"]
+    for field in ("instruments", "connected", "connections", "links"):
+        del searched[field]
     record = {"contract": ACCOUNT_CONTRACT, "plan": admitted, "searches": {"t2:w1": searched},
               "failures": {}, "state": "evaluated"}
     assert validate(record, admitted, ctx) == record

@@ -54,7 +54,7 @@ def search(held, instruments, queries=QUERIES):
 def test_a_named_act_is_searched_inside_and_its_section_reaches_the_shortlist(tmp_path, monkeypatch):
     held, calls = collection(tmp_path, monkeypatch)
     result = search(held, ["Indian Contract Act"])
-    assert result["contract"] == retrieval.CONTRACT == "hybrid_retrieval_v8"
+    assert result["contract"] == retrieval.CONTRACT == "hybrid_retrieval_v9"
     assert result["instruments"] == [{"name": "Indian Contract Act", "candidates": ["indian contract act 1872"]}]
     assert ("words", [0]) in calls and ("vectors", [0]) in calls
     assert 0 in {c["position"] for c in result["candidates"] if c["kind"] == "provision"}
@@ -112,13 +112,17 @@ def test_the_record_keeps_the_names_its_plan_gave(tmp_path, monkeypatch):
         validate_search(result, QUERIES, ["Specific Relief Act"])
     with pytest.raises(ValueError, match="named"):
         validate_search(result, QUERIES)
-    for older in (retrieval.NAMED_CONTRACT, retrieval.JUDGMENT_ORDER_CONTRACT):  # v7 and v8 kept the record shape
+    # v6, v7 and v8 kept the record shape; v9 added the connected provisions (P32).
+    for older in (retrieval.NAMED_CONTRACT, retrieval.JUDGMENT_ORDER_CONTRACT, retrieval.RANK_DEPTH_CONTRACT):
         saved = deepcopy(result)
         saved["contract"] = older
+        for field in ("connected", "connections", "links"):
+            del saved[field]
         assert validate_search(saved, QUERIES, ["Indian Contract Act"]) == saved
     saved_v5 = deepcopy(result)
     saved_v5["contract"] = retrieval.RERANK_ORDER_CONTRACT
-    del saved_v5["instruments"]
+    for field in ("instruments", "connected", "connections", "links"):
+        del saved_v5[field]
     saved_v5["stages"] = [s for s in saved_v5["stages"] if not s["stage"].startswith("named_")]
     assert validate_search(saved_v5, QUERIES) == saved_v5
     with pytest.raises(ValueError, match="historical"):

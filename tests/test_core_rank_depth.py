@@ -36,7 +36,7 @@ def test_provisions_rank_only_the_first_positions_of_the_fused_shortlist():
     depth = retrieval.RANK_DEPTH["provision"]
     provisions = ManyProvisions(depth + 20)
     result = HybridSearcher({"provision": provisions, "judgment": Collection("judgment")}).search(QUERIES)
-    assert result["contract"] == retrieval.CONTRACT == "hybrid_retrieval_v8"
+    assert result["contract"] == retrieval.CONTRACT == "hybrid_retrieval_v9"
     assert provisions.read_positions == [list(range(depth))]
     assert provisions.ranked == depth
     assert result["state"] == "ready"
@@ -60,9 +60,12 @@ def test_judgments_rank_only_the_first_positions_and_v7_records_replay():
                | set(order[QUERIES[1]["text"]][:retrieval.PER_QUERY_POOL])) > depth
     assert len(reads) == 1 and len(reads[0]) == depth and len(ranked) == depth
     assert validate_search(result, QUERIES) == result
-    saved_v7 = deepcopy(result)
-    saved_v7["contract"] = retrieval.JUDGMENT_ORDER_CONTRACT
-    assert validate_search(saved_v7, QUERIES) == saved_v7
+    for older in (retrieval.JUDGMENT_ORDER_CONTRACT, retrieval.RANK_DEPTH_CONTRACT):
+        saved = deepcopy(result)
+        saved["contract"] = older
+        for field in ("connected", "connections", "links"):  # v9 added them (P32)
+            del saved[field]
+        assert validate_search(saved, QUERIES) == saved
 
 
 def test_a_caller_that_chooses_among_more_candidates_can_ask_for_them():

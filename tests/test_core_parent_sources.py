@@ -38,7 +38,9 @@ def test_exact_parent_words_are_ranked_and_selected_without_an_invented_vector_p
     for old in ("hybrid_retrieval_v1", "hybrid_retrieval_v2", "hybrid_retrieval_v3"):
         altered = deepcopy(result)
         altered["contract"] = old
-        del altered["instruments"]  # named instruments arrived with v6
+        # Named instruments arrived with v6, connected provisions with v9 (P32).
+        for field in ("instruments", "connected", "connections", "links"):
+            del altered[field]
         with pytest.raises(ValueError, match="Historical"):
             retrieval.validate_search(altered, altered["queries"])
 
