@@ -121,17 +121,18 @@ def test_missing_work_rewrites_once_preserving_supported_peer_then_rechecks_and_
     assert rows[0]["records"] == {} and rows[0]["work"] == []
 
 
-# A section's draft and two rewrites, whatever asks for them (owner decision P25, 19 Oct
-# 2026): a review that keeps finding the omission gets the section's rewrites, a shape repair
-# counting among them; what is still missing after them is said beside the answer, never a
-# reason to withhold it.
-@pytest.mark.parametrize("settings,expected_calls", [
-    ({"reject_repair": True}, 8), ({"consume_shape_correction": True}, 7)])
-def test_missing_work_still_missing_after_the_tries_is_said_beside_the_answer(tmp_path, settings, expected_calls):
+# A section's draft and two rewrites (owner decision P25, 19 Oct 2026), of which what could be
+# better asks for one (P33, 21 Oct 2026): a review that keeps finding the omission gets one
+# rewrite, besides any shape repair; what is still missing after it is said beside the answer,
+# never a reason to withhold it.
+@pytest.mark.parametrize("settings,expected_calls,corrections", [
+    ({"reject_repair": True}, 6, 1), ({"consume_shape_correction": True}, 7, 2)])
+def test_missing_work_still_missing_after_the_tries_is_said_beside_the_answer(tmp_path, settings, expected_calls,
+                                                                                corrections):
     store = FileMatterStore(tmp_path, key="synthetic-release-relationships")
     model = MissingWorkModel(**settings)
     response = run(store, model, message=model.message)
-    assert response["committed"] == "committed" and response["metrics"]["draft_corrections"] == 2
+    assert response["committed"] == "committed" and response["metrics"]["draft_corrections"] == corrections
     assert len(model.calls) == expected_calls
     note = response["elements"][-1]
     assert note["kind"] == "NOTE" and note["text"] == (

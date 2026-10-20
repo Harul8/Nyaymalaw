@@ -92,3 +92,15 @@ def test_one_binder_binds_exactly_as_each_binding_does():
         provision_key_binder(("3", "3"))
     with pytest.raises(ValueError):
         bind(" ")
+
+
+def test_a_lettered_order_keeps_its_letter():
+    """Q18 (21 Oct 2026): the rebuilt store holds Order XXXII-A's rules as Order_XXXIIA_Rule_1; a
+    reference to them binds there, never to Order XXXII's rules."""
+    keys = ("Order_XXXII_Rule_1", "Order_XXXIIA_Rule_1", "Order_XXA_Rule_1", "Order_XX_Rule_1", "Order_XL_Rule_1")
+    for reference, key in (("Order XXXIIA Rule 1", "Order_XXXIIA_Rule_1"), ("Order XXXII-A Rule 1", "Order_XXXIIA_Rule_1"),
+                           ("Order XXXII Rule 1", "Order_XXXII_Rule_1"), ("Order XXA Rule 1", "Order_XXA_Rule_1"),
+                           ("Order XL Rule 1", "Order_XL_Rule_1")):
+        assert bind_provision_key(reference, keys).key == key, reference
+    assert _read("under rule 3 of Order XXXII-A and rule 2", within="Order_XXXIIA_Rule_4") == [
+        ("Order XXXIIA Rule 3", None, False), ("Order XXXIIA Rule 2", None, False)]

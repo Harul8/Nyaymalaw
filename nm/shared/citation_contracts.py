@@ -549,12 +549,14 @@ FILED_UNDER = re.compile(
 
 # Explicit tool/curation keys, not patterns for inference from narrative text.
 # Keeping these here preserves the existing single provision-syntax owner.
+#: A lettered Order keeps its letter: Order XXXII-A, held as "Order_XXXIIA_Rule_1" (Q18, 21 Oct
+#: 2026). A and B are no Roman numerals, so the letter cannot be read as part of one.
 _EXPLICIT_ORDER_RULE = re.compile(
-    r"(?:Order|O)[_.\s]*([0-9]+|[IVXLCDM]+)[_.\s]*"
+    r"(?:Order|O)[_.\s]*([0-9]+|[IVXLCDM]+)(?:[-\s]?([AB]))?[_.\s]*"
     r"(?:Rule|R)[_.\s]*([0-9]+[A-Za-z]*)", re.I | re.ASCII,
 )
 _EXPLICIT_ORDER = re.compile(
-    r"(?:Order|O)[_.\s]*([0-9]+|[IVXLCDM]+)", re.I | re.ASCII,
+    r"(?:Order|O)[_.\s]*([0-9]+|[IVXLCDM]+)(?:[-\s]?([AB]))?", re.I | re.ASCII,
 )
 _EXPLICIT_UNIT = re.compile(
     r"(Section|Sec|S|Article|Art|Rule|R)[_.\s]*([0-9]+[A-Za-z]*)", re.I | re.ASCII,
@@ -611,15 +613,15 @@ def _explicit_key_identity(raw: str) -> tuple[str, ...]:
     if order_rule:
         numeral = order_rule[1]
         order = _designation(numeral) if numeral.isdecimal() else _roman_number(numeral)
-        rule = _designation(order_rule[2])
+        rule = _designation(order_rule[3])
         if order is not None and rule is not None:
-            return ("order_rule", order, rule)
+            return ("order_rule", order + (order_rule[2] or "").upper(), rule)
         return ("exact", text)
     order_only = _EXPLICIT_ORDER.fullmatch(text)
     if order_only:
         numeral = order_only[1]
         order = _designation(numeral) if numeral.isdecimal() else _roman_number(numeral)
-        return ("order", order) if order is not None else ("exact", text)
+        return ("order", order + (order_only[2] or "").upper()) if order is not None else ("exact", text)
     unit = _EXPLICIT_UNIT.fullmatch(text)
     if unit:
         kind = {"section": "section", "sec": "section", "s": "section",
@@ -708,7 +710,7 @@ _OWN_KIND = r"(?i:sections?|articles?|rules?)"
 _OWN_JOIN = r"(?:\s*,\s*(?:and\s+|or\s+)?|\s+(?:and|or|to)\s+|\s*[-–]\s*)"
 _OWN_ITEM = _OWN_UNIT + _OWN_PARTS
 _OWN_LIST = _OWN_ITEM + r"(?:" + _OWN_JOIN + r"(?:" + _OWN_KIND + r"\s+)?" + _OWN_ITEM + r")*"
-_OWN_ORDER = r"(?P<order>[IVXLC]+A?)(?![A-Za-z])"
+_OWN_ORDER = r"(?P<order>[IVXLC]+(?:-?A)?)(?![A-Za-z])"
 #: "section 138", "sections 4 to 24", "rule 3 of Order XXI"; never "sub-section (2)" or "sub-rule".
 NAMED_IN_TEXT = re.compile(
     r"(?<![\w-])(?P<kind>" + _OWN_KIND + r")\s+(?P<items>" + _OWN_LIST + r")"
@@ -769,7 +771,8 @@ def provisions_named(text: str, within: str | None = None, instrument: str = "")
             taken.append(match.span())
             elsewhere = bool(amending or _ELSEWHERE.match(text, match.end())
                              or _AFTER_AN_ACT.search(text, max(0, match.start() - 40), match.start()))
-            order = match.group("order") or (own_order[1] if own_order else None)
+            order = ((match.group("order") or "").replace("-", "")
+                     or (own_order[1] + (own_order[2] or "") if own_order else None))
             kind, previous, joined = match.group("kind").lower().rstrip("s"), None, None
             for piece in _OWN_PIECE.finditer(match.group("items")):
                 if piece.group("join"):
