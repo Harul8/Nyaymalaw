@@ -171,3 +171,25 @@ def test_an_unavailable_pick_keeps_only_what_search_returned(tmp_path, monkeypat
     returned = [c["id"] for c in record["searches"]["t2:w1"]["candidates"] if c["kind"] == "provision"]
     assert len(record["picks"]["chosen"]["t2:w1"]) == 5  # the one returned and its four connected
     assert _fallback_picks(record["searches"], {"t2:w1": "Q1"}) == {"t2:w1": returned}
+
+
+# --- the writer and the review read them together (answer sources) ----------------------
+
+def test_admitted_provisions_say_what_they_are_read_with(tmp_path, monkeypatch):
+    from nm.core_engine import answer_sources
+
+    ctx, _, record, _ = _researched(tmp_path, monkeypatch, lambda ids: [ids[0], ids[2]])
+    by_section = _by_section(record["searches"]["t2:w1"])
+    s138, s140 = by_section["138"]["id"], by_section["140"]["id"]
+    sources = answer_sources.build(ctx, record)
+    words = "It shall not be a defence in a prosecution for an offence under section 138"
+    assert sources[s138]["read_with"] == [{"source_id": s140, "how": "named_by", "words": words}]
+    assert sources[s140]["read_with"] == [{"source_id": s138, "how": "names", "words": words}]
+    # Only admitted provisions are named: s.139 was offered but not chosen.
+    assert all("read_with" not in row for identity, row in sources.items() if identity not in (s138, s140))
+    shown = answer_sources.presentation(sources, aliased=True, compact=True, work_ids=["t2:w1"])
+    alias = {tag: short for short, tag in answer_sources.aliases(sources).items()}
+    passage = next(p for p in shown["passages"] if p["id"] == alias[s138])
+    assert passage["read_with"] == [{"source_id": alias[s140], "how": "named_by", "words": words}]
+    elsewhere = answer_sources.presentation(sources, aliased=True, compact=True, work_ids=["another"])
+    assert not elsewhere["passages"]

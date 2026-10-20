@@ -133,7 +133,29 @@ def build(context, research_record):
                 unit["context_ids"] = [identity for identity in identities if identity != unit["id"]]
                 unit["coverage"] = [coverage]
                 _add(sources, unit)
+    _read_with(checked, sources)
     return sources
+
+
+#: How an admitted provision stands to one it is read with, seen from each end.
+_READ_WITH = {"names": ("names", "named_by"), "beside": ("beside", "beside")}
+
+
+def _read_with(checked, sources):
+    """Search v9 (owner decision P32, 20 Oct 2026): an admitted provision is read with the
+    admitted provisions its Act connects to it, each saying how: it names the other, the
+    other names it (with the words that do), or they stand beside each other. Catalogues of
+    earlier searches carry no such field."""
+    for search in checked["searches"].values():
+        for edge in search.get("connections", ()):
+            if edge["from"] not in sources or edge["to"] not in sources:
+                continue
+            forward, backward = _READ_WITH[edge["how"]]
+            for here, there, how in ((edge["from"], edge["to"], forward), (edge["to"], edge["from"], backward)):
+                relation = {"source_id": there, "how": how, "words": edge["words"]}
+                read = sources[here].setdefault("read_with", [])
+                if relation not in read:
+                    read.append(relation)
 
 
 def select(reference, sources, *, loose=False):
@@ -205,7 +227,8 @@ def presentation(sources, *, aliased=False, compact=False, work_ids=None):
     compact (writer v4, review v5): each passage without the identity fields code
     alone uses (store position, document key, record role, empty speaker). work_ids:
     only the passages serving those research work items, with their groups and
-    coverage, for writing one part of an answer; aliases stay those of the whole.
+    coverage, for writing one part of an answer; aliases stay those of the whole. A
+    provision's read_with (P32) names, by offered ID, the shown provisions it is read with.
     """
     offered = {tag: alias for alias, tag in aliases(sources).items()} if aliased else {}
     passages, coverage_by_id, coverage_keys = [], {}, {}
@@ -259,6 +282,13 @@ def presentation(sources, *, aliased=False, compact=False, work_ids=None):
                 coverage_by_id[identity] = shared
             passage["coverage_ids"].append(coverage_keys[coverage_key])
         passage["id"] = offered.get(row["id"], row["id"])
+        if "read_with" in passage:
+            # P32: the provisions it is read with that this presentation shows, by their offered IDs.
+            passage["read_with"] = [{**relation, "source_id": offered.get(relation["source_id"], relation["source_id"])}
+                                    for relation in row["read_with"] if work_ids is None
+                                    or set(sources[relation["source_id"]]["work_ids"]) & set(work_ids)]
+            if not passage["read_with"]:
+                del passage["read_with"]
         if compact:
             for field in ("source_identity", "record_role", "speaker"):
                 passage.pop(field)
