@@ -34,6 +34,14 @@ GROUNDING_PURPOSE = ("The independent review found the problems listed in mismat
                      "documents they sent or the held sources supplied, exactly as those put it; where they do "
                      "not support a point, say plainly what is missing instead of asserting it. Keep what the "
                      "review did not fault.")
+#: Plain instructions for a rewrite a v10 review asked for (owner decision P29, 20 Oct 2026):
+#: what would mislead the advocate, and what could be better.
+REVIEW_PURPOSE = ("The independent review found what is listed in mismatch in the rejected draft: statements that "
+                  "would mislead the advocate as they stand, and what the section could add or put better. Rewrite "
+                  "the section so that every statement rests on the advocate's messages, the documents they sent "
+                  "or the held sources supplied, exactly as those put it; where they do not support a point, say "
+                  "plainly what is missing instead of asserting it. Add or improve what the review suggests where "
+                  "those sources bear it out. Keep what the review did not fault.")
 #: Plain instructions for a correction the check across the sections asked for (owner
 #: decision P27, 19 Oct 2026).
 CONFLICT_PURPOSE = ("A check across the sections of this answer found the conflicts listed in mismatch between this "
@@ -41,6 +49,12 @@ CONFLICT_PURPOSE = ("A check across the sections of this answer found the confli
                     "section so that it is right and agrees with what the advocate's messages, the documents they "
                     "sent and the held sources support, exactly as those put it; where they do not settle the "
                     "point, say so plainly. Keep what the check did not fault.")
+
+
+def refusal_reason(exc):
+    """Why code refused an output, in the reason's own fixed words, up to the first quotation
+    or detail: never the words refused (the first live run of 20 Oct 2026)."""
+    return re.split(r"[:“\"'(\[{]", str(exc), maxsplit=1)[0].strip()[:120] or type(exc).__name__
 
 
 def shape_mismatch(exc):
@@ -189,7 +203,7 @@ class TurnCalls:
         first live run of 20 Oct 2026 could not tell why four reviews were refused)."""
         record = getattr(self._local, "record", None)
         if record is not None and record.get("refused") is None:
-            record["refused"] = re.split(r"[:“\"'(\[{]", str(exc), maxsplit=1)[0].strip()[:120] or type(exc).__name__
+            record["refused"] = refusal_reason(exc)
 
     def correct(self, operation, activity, *, mismatch, rejected=None, asked_by_review=False, purpose=None):
         """Correct a typed owner-rejected draft; caller must revalidate the result.
