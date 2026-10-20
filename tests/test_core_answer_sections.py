@@ -302,13 +302,13 @@ def test_a_checklist_item_still_faulted_is_left_out_by_what_it_needed():
 
 
 def test_what_a_section_still_leaves_out_after_its_tries_is_said_beside_it_and_holds_nothing_back():
-    # What the review finds missing is the model's to fix while the section's tries last
-    # (P25); after them it is said beside the section, and nothing is dropped for it.
+    # What the review finds missing asks for one rewrite (P33, 21 Oct 2026; P25 gave it every
+    # try); after it, it is said beside the section, and nothing is dropped for it.
     def leaving(round_, payload):
         return [paragraph("summary", "In short for D1."), paragraph("next_step", "LEAVES out the court.")]
     model = Scripted({"D1": leaving})
     ctx, elements, activity, calls = answered(model)
-    assert calls.used("s1") == 2 and len(model.payloads("core_response_writer", "D1")) == 3
+    assert calls.used("s1") == 1 and len(model.payloads("core_response_writer", "D1")) == 2
     assert activity["sections"][0]["trims"] == [] and activity["sections"][0]["fallback"] is None
     note = next(e for e in elements if e["kind"] == "NOTE")
     assert note["text"] == ("The independent check suggests this section could add or put this better: a paragraph "

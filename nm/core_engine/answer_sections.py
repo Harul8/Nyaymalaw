@@ -12,7 +12,8 @@ what a review finds. From review v10 (owner decision P29, 20 Oct 2026) only a st
 review finds would mislead the advocate, tied to a paragraph or checklist item, is left out;
 what could be better, a misleading statement tied to none, and a remark on a worked-out time
 limit are said beside the section or the limit (G-NOTED); a review's own slips are set aside,
-and a review code can use nothing of is tried once more on its own allowance.
+and a review code can use nothing of is tried once more on its own allowance. From 21 Oct 2026
+(P33) what could be better asks for one rewrite at most.
 
 An answer covering several disputes is then checked across its sections for conflicts. A
 section in conflict is corrected once; the correction is reviewed first and used only when
@@ -47,6 +48,11 @@ REVIEW = response_review.MISLEADS_CONTRACT
 #: A review with nothing code can use is tried once more, on its own allowance, never one of
 #: its section's rewrites (P29).
 REVIEW_RETRIES = 1
+#: A piece its review finds nothing misleading in, only what it could add or put better, is
+#: rewritten at most once for that; what is then still suggested is said beside it (P33, 21 Oct
+#: 2026: in live run 4 the first such rewrite did most of the work, the second cost 75-100 s for
+#: smaller points). A misleading finding keeps the piece's tries (P25).
+BETTER_REWRITES = 1
 #: Why a section, the overview or the check across the sections is not shown as written:
 #: code's own checks refused every try; its review could not be completed; the review still
 #: found problems after the trims; the AI service failed; it exceeds what NM can check at once.
@@ -291,8 +297,9 @@ class _Answering:
         to go on with, or None, and why no piece passed: the last piece a review saw, unless
         it has a fault and an earlier one had none (a rewrite asked for what an earlier draft
         left out may bring a fault of its own; the earlier draft is then kept, its omission
-        said beside it)."""
-        reviewed, passed, why = None, None, None
+        said beside it). A piece with nothing misleading is rewritten at most BETTER_REWRITES
+        times for what could be better (P33)."""
+        reviewed, passed, why, better = None, None, None, 0
 
         def kept():
             return passed if reviewed is not None and passed is not None and not acceptable(reviewed) else reviewed
@@ -330,6 +337,11 @@ class _Answering:
                 passed = piece
             if clear(piece) or self.calls.used(scope) >= allowance:
                 return kept(), None
+            if _read_v10(piece) and acceptable(piece) and all(
+                    finding["category"] == response_review.BETTER for finding in beside(piece)):
+                if better >= BETTER_REWRITES:
+                    return kept(), None
+                better += 1
             self.report("revising")
             correction = {"mismatch": _told(piece), "rejected": piece["draft"]["proposal"],
                           **({"purpose": REVIEW_PURPOSE} if _read_v10(piece) else {"asked_by_review": True})}
