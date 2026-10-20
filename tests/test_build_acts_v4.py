@@ -210,3 +210,57 @@ def test_the_marks_stage_brings_a_built_stores_marks_to_the_check_and_keeps_the_
     before.close()
     build.marks_stage()  # a second run finds nothing to change
     assert len(json.loads((out / "marks.json").read_text(encoding="utf-8"))) == 1
+
+
+def test_every_order_of_the_cpcs_schedule_is_read_as_printed():
+    """Q18 (20-21 Oct 2026): the build had dropped Orders XV, XVI-A, XX, XXVII-A, XXVIII, XXXII-A and
+    XXXIII, run unrecognised rules into the rule before them, and keyed rules by a footnote's
+    figure ("Order_XVIII_Rule_315"), without a word."""
+    lines = ["THE FIRST SCHEDULE",
+             "ORDER VII", "Plaint",
+             "1. Particulars.—The plaint shall contain the particulars.",
+             "2[9. Procedure on admitting plaint.—Where the Court orders that the summons be served.",
+             "310. Return of plaint.—(1) Subject to the provisions of rule 10A, the plaint shall be returned.",
+             "1[10A. Power of Court to fix a date of appearance in the Court where plaint is to be filed",
+             "after its return. —(1) Where, in any suit, the Court is of opinion that the plaint should be returned.",
+             "ORDER XX", "Judgment and decree",
+             "1[ 21. Judgment when pronounced.—3[(1) The Court shall pronounce judgment in open Court.]",
+             "2. Power to pronounce judgment written by judge's predecessor.—A Judge shall pronounce it.",
+             "*[ORDER XV", "Disposal of the Suit at the first hearing",
+             "1. Parties not at issue. —(1) The Court may at once pronounce judgment.",
+             "*[ORDER XI", "Disclosure in commercial disputes",
+             "1. Disclosure and discovery of documents.—(1) The plaintiff shall file a list of documents.",
+             "2[ORDER XXXII-A", "Suits relating to matters concerning the family",
+             "1. Application of the Order.—(1) The provisions of this Order shall apply to family suits.",
+             "1[1A.Proceedings to be held in camera.—The proceedings may be held in camera.",
+             "“ORDER XXI", "1. A State's own rule.—Not the Code's words.",
+             "ORDER XXXIII", "1[Suits by indigent persons]",
+             "1. Suits may be instituted by 2[indigent persons.]—Subject to the following provisions, any suit",
+             "may be instituted by an indigent person.",
+             "ORDER L", "1. Provincial Small Cause Courts.—The following rules shall not apply:—",
+             "Order II, rule 1 (frame of suit) ;", "Order X, rule 3 (record of examination of parties);",
+             "ORDER XI", "Discovery and inspection",
+             "1. Discovery by interrogatories.—In any suit the plaintiff may deliver interrogatories.",
+             "APPENDIX A"]
+    notes = []
+    rules = {rule.number: rule for rule in cpc_orders(lines, notes)}
+    assert sorted(rules) == sorted([
+        "Order_VII_Rule_1", "Order_VII_Rule_9", "Order_VII_Rule_10", "Order_VII_Rule_10A", "Order_XX_Rule_1",
+        "Order_XX_Rule_2", "Order_XV_Rule_1", "Order_XI_Rule_1", "Order_XXXIIA_Rule_1", "Order_XXXIIA_Rule_1A",
+        "Order_XXXIII_Rule_1", "Order_L_Rule_1"])
+    assert rules["Order_VII_Rule_10"].title == "Return of plaint"
+    assert not any("Return of plaint" in line for line in rules["Order_VII_Rule_9"].lines)
+    assert rules["Order_VII_Rule_10A"].title.endswith("where plaint is to be filed after its return")
+    assert rules["Order_XX_Rule_1"].title == "Judgment when pronounced"
+    assert rules["Order_XXXIII_Rule_1"].title == "Suits may be instituted by indigent persons"
+    assert not any("[" in line or "]" in line for rule in rules.values() for line in rule.lines)
+    # The second printing of Order XI (for commercial disputes) is said, not read; a State's Order is not read.
+    assert rules["Order_XI_Rule_1"].title == "Disclosure and discovery of documents"
+    assert notes == ["Order XI is printed a second time (ORDER XI); that text is not read"]
+    assert any("Order II, rule 1" in line for line in rules["Order_L_Rule_1"].lines)
+
+
+def test_an_order_whose_rules_cannot_be_read_is_said():
+    notes = []
+    assert cpc_orders(["ORDER IV", "Institution of suits", "Words without any rule.", "APPENDIX A"], notes) == []
+    assert notes == ["Order IV could not be read: Order IV: no section 1 was found"]

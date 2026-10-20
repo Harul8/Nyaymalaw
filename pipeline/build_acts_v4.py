@@ -6,6 +6,9 @@ folder's standing marks in place, keeping the store as it was beside it; stop th
     .venv-arrive\\Scripts\\python.exe pipeline\\build_acts_v4.py --stage index     (vectors, words, lineage)
     .venv-arrive\\Scripts\\python.exe pipeline\\build_acts_v4.py --stage marks     (P21's check, into the built store)
 
+`--out acts_v5` builds into a new folder beside the store search reads (Q18, 21 Oct 2026: the CPC's
+Orders read again); each stage is given the same folder.
+
 Owner decisions of 19 Oct 2026 (the Advocate build plan, P20-P23):
 
   * P20 - an Act India Code publishes section by section takes India Code's sections, each read
@@ -375,21 +378,64 @@ def limitation_articles(lines: list[str]) -> list[Article]:
     return [article for article in articles if article.description and article.period]
 
 
-_ORDER = re.compile(r"^(?:\d{1,2}\s*)?\[?\s*ORDER\s+([IVXL]+[A-Z]?)\b", re.I)
-_RULE = re.compile(r"^(?:\d{1,2}\s*)?\[?\s*(\d{1,3}[A-Z]{0,2})\.\s+(.{2,200}?)(?:\.\s*[-—–]+|[-—–]{1,2}|$)")
+#: An Order's heading as the Schedule prints it, alone on its line: "ORDER XXI", "ORDER XVI-A",
+#: "ORDER XXVII A]". In capitals: a sentence naming an Order is not its heading (Q18, 21 Oct 2026:
+#: the hyphen of "XXXII-A" had ended the numeral, so its rules were read as Order XXXII's repeats).
+_ORDER = re.compile(r"^(?:\d{1,2}\s*)?\[?\s*ORDER\s+([IVXL]+)(?:[-\s]?([A-Z]))?\s*\]?\s*$")
 
 
 #: An amendment's mark opening a printed line ("1[", "*[", "["), before a rule's number or an Order.
 _LEADING_MARK = re.compile(r"^(?:\d{1,2}|\*)?\[\s*(?=\d|ORDER\b)|^[“\"]\s*(?=ORDER\b)")
+#: An editor's mark of amendment inside a line ("3[(1)", "2[indigent persons.]"): not the Code's words.
+_MARK = re.compile(r"(?<![\w(])\d{1,2}\[\s?|\*\[\s?|\]")
+#: A rule's number opening its line, and where a rule's heading ends and its words begin.
+_RULE_OPENS = re.compile(r"^(\d{1,3})([A-Z]{0,2})\.\s+\S")
+_HEADING_END = re.compile(r"[.:]\s*[—–-]")
 
 
-def cpc_orders(lines: list[str]) -> list[Section]:
+def _rule_lines(body: list[str]) -> list[str]:
+    """One Order's lines as its rules can be read (Q18, 21 Oct 2026; the reader had dropped whole
+    Orders and single rules without a word): the editors' marks of amendment set aside; a rule's
+    heading printed over two lines joined ("1. Officers ... may authorise any person to sue or" /
+    "defend for them. —(1) Where"); and a footnote's figure printed against a rule's number
+    ("21. Judgment when pronounced" for rule 1, "315. Power to deal with evidence" for rule 15)
+    read as that number where the rule before it numbers it so; a rule's dot run into its heading
+    ("1A.When") spaced."""
+    lines = [re.sub(r"^(\d{1,3}[A-Z]{0,2})\.(?=[A-Za-z])", r"\1. ", " ".join(_MARK.sub("", line).split()))
+             for line in body]
+    joined, k = [], 0
+    while k < len(lines):
+        line = lines[k]
+        if (_RULE_OPENS.match(line) and not _HEADING_END.search(line[:260]) and k + 1 < len(lines)
+                and _HEADING_END.search(lines[k + 1][:160]) and not _RULE_OPENS.match(lines[k + 1])):
+            line, k = f"{line} {lines[k + 1]}", k + 1
+        joined.append(line)
+        k += 1
+    opens = [k for k, line in enumerate(joined) if _RULE_OPENS.match(line) and _HEADING_END.search(line[:260])]
+    expected = 1
+    for k in opens:
+        number, letters = _RULE_OPENS.match(joined[k]).groups()
+        figure = int(number)
+        # A figure out of the rules' order whose remainder is the next rule but one or two: the
+        # footnote's figure against the number ("315" where rule 15 follows rule 13).
+        if (not letters and not expected <= figure <= expected + 2 and len(number) > 1
+                and expected <= int(number[1:]) <= expected + 2):
+            joined[k] = number[1:] + joined[k][len(number):]
+            figure = int(number[1:])
+        if not letters and figure >= expected:
+            expected = figure + 1
+    return joined
+
+
+def cpc_orders(lines: list[str], notes: list[str] | None = None) -> list[Section]:
     """The Code of Civil Procedure's First Schedule as its rules, each keyed "Order_VII_Rule_11"
-    as the store already keys them. Each Order's rules are read as `read_act` reads an Act's
-    sections - the longest chain of numbers that only go up - so a number printed inside a rule
-    (a State's amendment, a list) stays its words; an amendment's mark opening a line is set
-    aside first ("1[11. Rejection of plaint" is rule 11)."""
-    orders: list[tuple[str, list[str]]] = []
+    as the store already keys them, a lettered Order as "Order_XXXIIA_Rule_1". Each Order's rules
+    are read as `read_act` reads an Act's sections - the longest chain of numbers that only go
+    up - so a number printed inside a rule (a State's amendment, a list) stays its words. An
+    Order a State's amendment prints (its heading quoted) is not read as the Code's; an Order
+    printed a second time (Order XI as the Commercial Courts Act amends it for commercial
+    disputes) is not read again. Each Order or second text not read is said in `notes`."""
+    orders: list[tuple[str, list[str] | None]] = []
     for line in lines:
         if _FOOTNOTE_LINE.match(line) or re.fullmatch(r"\d{1,4}", line):
             continue  # a footnote, or a page's number
@@ -398,17 +444,27 @@ def cpc_orders(lines: list[str]) -> list[Section]:
             break  # the First Schedule's end: the Code's other schedules, or its appendices of forms
         bare = _LEADING_MARK.sub("", line)
         heading = _ORDER.match(bare)
-        if heading and len(bare) < 40 and not line.startswith(("*", "“", "\"")):
-            orders.append((heading.group(1).upper().replace("-", ""), []))
-        elif orders:
+        if heading and not line.startswith(("“", "\"")):
+            name = heading.group(1) + (heading.group(2) or "")
+            if any(order == name for order, _ in orders):
+                orders.append((name, None))
+                if notes is not None:
+                    notes.append(f"Order {name} is printed a second time ({line.strip()[:40]}); that text is not read")
+                continue
+            orders.append((name, []))
+        elif orders and orders[-1][1] is not None:
             orders[-1][1].append(bare)
     rules: list[Section] = []
     seen: set[str] = set()
     for order, body in orders:
+        if body is None:
+            continue
         try:
-            read = read_act("\n".join(body), act_id="CPC", act_name="CPC", title="CPC", year="1908",
+            read = read_act("\n".join(_rule_lines(body)), act_id="CPC", act_name="CPC", title="CPC", year="1908",
                             name=f"Order {order}")
-        except ValueError:
+        except ValueError as error:
+            if notes is not None:
+                notes.append(f"Order {order} could not be read: {error}")
             continue
         for rule in read.sections:
             key = f"Order_{order}_Rule_{rule.number}"
@@ -479,11 +535,11 @@ def identity(entry: dict, act: dict | None) -> tuple[str, str, str, str]:
     return f"{jurisdiction.upper()}_{year}_{number}_{title.upper()}", act_name, title, year
 
 
-def schedules_from(back: list[str], title: str) -> tuple[list[Section], list[Article]]:
+def schedules_from(back: list[str], title: str, notes: list[str] | None = None) -> tuple[list[Section], list[Article]]:
     if "limitation act, 1963" in title.lower():
         return [], limitation_articles(back)
     if "code of civil procedure, 1908" in title.lower():
-        return cpc_orders(back), []
+        return cpc_orders(back, notes), []
     return schedule_blocks(back), []
 
 
@@ -513,7 +569,7 @@ def statute_words(section: Section) -> str:
 def read_entry(entry: dict, words: Counter) -> tuple[Act, list[Article], dict]:
     """One instrument read from its source, with its schedules and the record of how."""
     record: dict = {"source": entry["source"], "standing": entry.get("standing"), "notes": {}, "changed": [],
-                    "review": [], "schedule_source": None}
+                    "review": [], "schedule_source": None, "schedule_notes": []}
     ours = None
     if entry.get("file"):
         path = RAW / entry["jurisdiction"] / entry["file"]
@@ -530,7 +586,7 @@ def read_entry(entry: dict, words: Counter) -> tuple[Act, list[Article], dict]:
                 record["read_as"] = "text"
     if entry["source"] == "ours":
         act = ours
-        extra, articles = schedules_from(back_matter(act, entry["title"]), entry["title"])
+        extra, articles = schedules_from(back_matter(act, entry["title"]), entry["title"], record["schedule_notes"])
         act.sections.extend(extra)
         record["schedule_source"] = "ours" if extra or articles else None
         return act, articles, record
@@ -544,7 +600,7 @@ def read_entry(entry: dict, words: Counter) -> tuple[Act, list[Article], dict]:
             act = read_act(raw, act_id=act_id, act_name=act_name, title=title, year=year, name=title)
         except ValueError:
             act, record["read_as"] = text_blocks(raw, act_id, act_name, title, year), "text"
-        extra, articles = schedules_from(act.back_matter, title)
+        extra, articles = schedules_from(act.back_matter, title, record["schedule_notes"])
         act.sections.extend(extra)
         record["schedule_source"] = "India Code's PDF text" if extra or articles else None
         return act, articles, record
@@ -584,7 +640,7 @@ def read_entry(entry: dict, words: Counter) -> tuple[Act, list[Article], dict]:
         record["changed"].extend({"section": section.number, **change} for change in changed)
         record["review"].extend({"section": section.number, **item} for item in review)
     act = Act(act_id, act_name, title, year, sections)
-    extra, articles = schedules_from(our_back, title)
+    extra, articles = schedules_from(our_back, title, record["schedule_notes"])
     act.sections.extend(extra)
     record["schedule_source"] = "ours" if extra or articles else None
     return act, articles, record
@@ -682,6 +738,7 @@ def read_stage(only: set[str] | None) -> None:
                      "file": entry.get("file"), "source": entry["source"], "standing": record["standing"],
                      "kind": entry["kind"], "added": entry.get("added"), "sections": len(act.sections),
                      "articles": len(articles), "passages": len(made), "schedule_source": record["schedule_source"],
+                     "schedule_notes": record["schedule_notes"],
                      "notes": record["notes"], "changed": record["changed"], "read_as": record.get("read_as", "sections")})
         reviews.extend({"act": act.title, **item} for item in record["review"])
         if number % 100 == 0:
@@ -718,7 +775,7 @@ def index_stage() -> None:
     problems = check(rows)
     if problems:
         raise SystemExit("the passages do not hold together; nothing indexed: " + "; ".join(problems[:5]))
-    store = OUT / "acts_v4.db"
+    store = OUT / f"{OUT.name}.db"
     if store.exists():
         raise SystemExit(f"{store} exists; give a new folder rather than overwrite")
     # P21: each passage of an Act India Code does not list as in force says so, for the answer
@@ -745,9 +802,9 @@ def index_stage() -> None:
     vectors = np.asarray(encode(texts), dtype="float32")
     index = faiss.IndexFlatIP(vectors.shape[1])
     index.add(vectors)
-    index_path = OUT / "acts_v4.index"
+    index_path = OUT / f"{OUT.name}.index"
     faiss.write_index(index, str(index_path))
-    words_path = OUT / "acts_v4_bm25s"
+    words_path = OUT / f"{OUT.name}_bm25s"
     if _real_bm25([bm25_tokens(text) for text in texts], words_path) != len(rows):
         raise SystemExit("the word index does not hold every passage")
     sample = list(range(0, len(texts), max(1, len(texts) // 60)))[:60]
@@ -755,11 +812,11 @@ def index_stage() -> None:
     similarity = (again * vectors[sample]).sum(axis=1)
     record = {"schema": 1, "doc_type": "bare_act", "model": "BAAI/bge-large-en-v1.5", "dimensions": int(vectors.shape[1]),
               "metric": "inner product on normalised vectors", "passages": len(rows),
-              "vector_index": {"path": "acts_v4/acts_v4.index", "vectors": int(index.ntotal),
+              "vector_index": {"path": f"{OUT.name}/{index_path.name}", "vectors": int(index.ntotal),
                                "bytes": index_path.stat().st_size, "sha256": _sha256(index_path)},
-              "bm25": {"path": "acts_v4/acts_v4_bm25s", "num_docs": len(rows),
+              "bm25": {"path": f"{OUT.name}/{words_path.name}", "num_docs": len(rows),
                        "params_sha256": _sha256(words_path / "params.index.json")},
-              "passage_store": {"path": "acts_v4/acts_v4.db", "count": len(rows), "max_pos": len(rows) - 1},
+              "passage_store": {"path": f"{OUT.name}/{store.name}", "count": len(rows), "max_pos": len(rows) - 1},
               "verified": {"sampled": len(sample), "same_vector": int((similarity > 0.99).sum()),
                            "lowest_similarity": round(float(similarity.min()), 4),
                            "mean_similarity": round(float(similarity.mean()), 4),
@@ -807,8 +864,8 @@ def marks_stage() -> None:
     if not changes:
         print("the store's marks already follow the selection; nothing changed")
         return
-    store = OUT / "acts_v4.db"
-    kept = OUT / "acts_v4.before-marks.db"
+    store = OUT / f"{OUT.name}.db"
+    kept = OUT / f"{OUT.name}.before-marks.db"
     if not kept.exists():
         kept.write_bytes(store.read_bytes())
         (OUT / "acts.before-marks.json").write_bytes((OUT / "acts.json").read_bytes())
@@ -853,10 +910,17 @@ def _sha256(path: Path) -> str:
 
 
 def main() -> int:
+    global OUT, CANDIDATE
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--stage", choices=("read", "index", "marks"), required=True)
     parser.add_argument("--only", help="titles or India Code act_ids, separated by '|': read these alone (a trial)")
+    parser.add_argument("--out", default=OUT.name, help="the store's folder under legal_database/vector_store")
     args = parser.parse_args()
+    if args.out != OUT.name:
+        if not re.fullmatch(r"acts_v\d+", args.out):
+            raise SystemExit("--out names a folder such as acts_v5")
+        OUT = OUT.parent / args.out
+        CANDIDATE = CANDIDATE.with_name(f"bare_{args.out}.lineage.json")
     sys.stdout.reconfigure(encoding="utf-8")
     if args.stage == "read":
         read_stage(set(args.only.split("|")) if args.only else None)
