@@ -18,7 +18,8 @@ import struct
 import threading
 import traceback
 from copy import deepcopy
-from contextlib import ExitStack, closing, nullcontext
+from concurrent.futures import ThreadPoolExecutor
+from contextlib import ExitStack, closing, contextmanager, nullcontext
 from functools import lru_cache
 from pathlib import Path
 from typing import Protocol
@@ -63,6 +64,13 @@ MAX_CONTEXT_SEGMENTS = 500
 #: the few parts at once. The rows and their order are the same.
 SECTION_PARTS = ("select pos from chunks where doc_type=? and act_id=? and section_number=? "
                  "order by +pos limit ?")
+#: A matter's questions searched at once (owner, 20 Oct 2026: step 1). The reranker on the
+#: graphics card bounds a matter's search (62 s of the 13 questions of the first live run of
+#: answering dispute by dispute); four at a time searched them in 89 s instead of about 150 s,
+#: every result the same (in trials two at a time were slower than four, and six no faster).
+SIDE_BY_SIDE = 4
+#: Copies of each model's tokenizer that searches running side by side borrow to prepare text.
+TOKENIZER_COPIES = SIDE_BY_SIDE
 log = logging.getLogger(__name__)
 
 
@@ -155,6 +163,10 @@ class _Models:
         self.folder = folder
         self._loaded: dict | None = None
         self.lock = threading.RLock()
+        # Copies of each model's tokenizer that text preparation borrows (borrowed()).
+        self._spare: dict[str, list] = {}
+        self._made: dict[str, int] = {}
+        self._returned = threading.Condition()
 
     def _model(self, which):
         with self.lock:
@@ -179,20 +191,67 @@ class _Models:
             return self._loaded[which]
 
     def load(self):
-        return self._model("embedding"), self._model("reranking")
+        models = self._model("embedding"), self._model("reranking")
+        # The copies text preparation borrows are made here, on the startup thread: copying
+        # the reranker's tokenizer takes seconds, and a search should not wait for it.
+        for which in ("embedding", "reranking"):
+            spare = []
+            while self._made.get(which, 0) < TOKENIZER_COPIES:
+                spare.append(self._borrow(which))
+            for tokenizer in spare:
+                self._give_back(which, tokenizer)
+        return models
+
+    @contextmanager
+    def borrowed(self, which):
+        """A copy of a model's tokenizer for one search's text preparation, given back after.
+
+        Calling a tokenizer sets its truncation and padding, so threads sharing one spoil each
+        other's settings (20 Oct 2026: four searches at once lost a judgment ranking, "Unable
+        to create tensor"). The models keep their own tokenizers and use them only under the
+        lock; preparation borrows a copy, so searches running side by side never share one.
+        """
+        tokenizer = self._borrow(which)
+        try:
+            yield tokenizer
+        finally:
+            self._give_back(which, tokenizer)
+
+    def _borrow(self, which):
+        with self._returned:
+            while not self._spare.get(which) and self._made.get(which, 0) >= TOKENIZER_COPIES:
+                self._returned.wait()
+            if self._spare.get(which):
+                return self._spare[which].pop()
+            self._made[which] = self._made.get(which, 0) + 1
+        try:
+            model = self._model(which)
+            with self.lock:  # copied while no model call is using the original
+                return deepcopy(model.tokenizer)
+        except BaseException:
+            with self._returned:
+                self._made[which] -= 1
+                self._returned.notify()
+            raise
+
+    def _give_back(self, which, tokenizer):
+        with self._returned:
+            self._spare.setdefault(which, []).append(tokenizer)
+            self._returned.notify()
 
     @lru_cache(maxsize=8)
     def encode(self, queries: tuple[str, ...]):
         """Both corpus indices reuse one batch in their verified vector space."""
         encoder = self._model("embedding")
-        capacity = encoder.max_seq_length - len(encoder.tokenizer.encode(
-            QUERY_INSTRUCTION, add_special_tokens=False)) - 4
         slices, groups = [], []
-        for query in queries:
-            start = len(slices)
-            slices.extend(QUERY_INSTRUCTION + window[2] for window in token_windows(
-                query, encoder.tokenizer, capacity))
-            groups.append((start, len(slices)))
+        with self.borrowed("embedding") as tokenizer:
+            capacity = encoder.max_seq_length - len(tokenizer.encode(
+                QUERY_INSTRUCTION, add_special_tokens=False)) - 4
+            for query in queries:
+                start = len(slices)
+                slices.extend(QUERY_INSTRUCTION + window[2] for window in token_windows(
+                    query, tokenizer, capacity))
+                groups.append((start, len(slices)))
         with self.lock:
             vectors = encoder.encode(slices, normalize_embeddings=True, convert_to_numpy=True)
         return vectors, groups
@@ -771,20 +830,23 @@ class LocalCollection:
         try:
             windows, groups = [], []
             query_windows, passage_windows = {}, {}
-            for (query, passage), anchor in zip(pairs, anchors, strict=True):
-                first = len(windows)
-                if query not in query_windows:
-                    query_windows[query] = [(text, 512 - len(model.tokenizer.encode(
-                        text, add_special_tokens=False)) - model.tokenizer.num_special_tokens_to_add(pair=True))
-                        for _, _, text in token_windows(query, model.tokenizer, 160)]
-                for query_window, room in query_windows[query]:
-                    key = passage, room, anchor
-                    if key not in passage_windows:
-                        passage_windows[key] = _anchored_windows(passage, model.tokenizer, room, anchor)
-                    # Reuse preparation only inside this call. Repeated prediction
-                    # pairs retain their original order, count and score ownership.
-                    windows.extend((query_window, text) for text in passage_windows[key])
-                groups.append((first, len(windows)))
+            # Text is prepared with a borrowed copy of the tokenizer, never the model's own,
+            # which only the prediction below uses, under the lock.
+            with self.models.borrowed("reranking") as tokenizer:
+                for (query, passage), anchor in zip(pairs, anchors, strict=True):
+                    first = len(windows)
+                    if query not in query_windows:
+                        query_windows[query] = [(text, 512 - len(tokenizer.encode(
+                            text, add_special_tokens=False)) - tokenizer.num_special_tokens_to_add(pair=True))
+                            for _, _, text in token_windows(query, tokenizer, 160)]
+                    for query_window, room in query_windows[query]:
+                        key = passage, room, anchor
+                        if key not in passage_windows:
+                            passage_windows[key] = _anchored_windows(passage, tokenizer, room, anchor)
+                        # Reuse preparation only inside this call. Repeated prediction
+                        # pairs retain their original order, count and score ownership.
+                        windows.extend((query_window, text) for text in passage_windows[key])
+                    groups.append((first, len(windows)))
             if len(windows) > MAX_RERANK_PAIRS:
                 raise SearchUnavailable("The complete passage windows exceed the local rerank budget")
             with self.models.lock:
@@ -1071,6 +1133,9 @@ class SearchPort(Protocol):
     def search(self, queries, instruments=None, *, results=None) -> dict:
         ...
 
+    def search_many(self, searches, *, results=None, done=None) -> list:
+        ...
+
 
 class HybridSearcher:
     """Independent lexical/vector legs and exact source reads for both corpora."""
@@ -1113,6 +1178,24 @@ class HybridSearcher:
                 if callable(scope):
                     scopes.enter_context(scope())
             return self._search(queries, instruments, results)
+
+    def search_many(self, searches, *, results=None, done=None):
+        """Search a matter's questions side by side (owner, 20 Oct 2026: step 1), each exactly
+        as search() searches it alone: searches are (queries, instruments) pairs. Returns one
+        finished future per search, in order, holding its result or its own failure, so that
+        a failed question never takes its peers' work with it. done() is told as each
+        finishes. The reranker on the graphics card still reads one question at a time."""
+        searches = list(searches)
+        if not searches:
+            return []
+        with ThreadPoolExecutor(max_workers=min(SIDE_BY_SIDE, len(searches)),
+                                thread_name_prefix="search") as pool:
+            futures = [pool.submit(self.search, queries, instruments, results=results)
+                       for queries, instruments in searches]
+            for future in futures if done is not None else ():
+                # Told apart from the result: a failure to report progress changes no search.
+                future.add_done_callback(lambda _: done())
+        return futures
 
     def _search(self, queries, instruments=None, results=None):
         if (not isinstance(queries, list) or not queries or any(

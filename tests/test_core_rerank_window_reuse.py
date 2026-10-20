@@ -1,4 +1,5 @@
 """Exact rerank preparation parity and work counts; no neural inference or corpus."""
+from contextlib import contextmanager
 from copy import deepcopy
 import re
 import threading
@@ -81,7 +82,10 @@ def reference_anchored_rerank(pairs, anchors, model):
 
 
 def local(tmp_path, predictor):
-    models = SimpleNamespace(_model=lambda _: predictor, lock=threading.RLock())
+    @contextmanager
+    def borrowed(_):
+        yield predictor.tokenizer  # these counts are of preparation, whichever copy does it
+    models = SimpleNamespace(_model=lambda _: predictor, lock=threading.RLock(), borrowed=borrowed)
     return retrieval.LocalCollection(corpus_dir=tmp_path, lineage=tmp_path / "unused.json",
                                     doc_type="bare_act", models=models)
 
