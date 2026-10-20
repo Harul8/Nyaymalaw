@@ -316,8 +316,9 @@ GATES: tuple[Gate, ...] = (
     # response"): after a section's draft and its two rewrites, what the independent
     # review or the date check still finds in a statement leaves THAT STATEMENT out, and
     # what remains is reviewed again without it. Until then these three withheld the
-    # turn. A finding that names no statement cannot be confined, so the whole section
-    # is replaced by the note code builds (G-FALLBACK); the turn still answers.
+    # turn. Under review v9 a finding that names no statement could not be confined, so the
+    # whole section was replaced by the note code builds (G-FALLBACK); from review v10 (owner
+    # decision P29, 20 Oct 2026) it is said beside the section instead (G-NOTED).
     Gate(
         id="G-GROUND",
         condition="A proposition in the answer is not supported by the span of a "
@@ -451,6 +452,24 @@ GATES: tuple[Gate, ...] = (
                 "found for the dispute in their own words, and what NM's working "
                 "understanding says is still open. The other sections are shown as "
                 "checked.",
+        feature="P1",
+        built=True,
+    ),
+    # Owner decision P29, 20 Oct 2026: what the independent review says that is no reason to
+    # leave a statement out is said beside the section or the time limit it concerns.
+    Gate(
+        id="G-NOTED",
+        condition="After its section's rewrites, the independent review still says what the section "
+                  "could add or put better, finds a misleading statement it ties to no paragraph or "
+                  "checklist item, or remarks on a worked-out time limit.",
+        states=("none", "noted", "not_assessed"),
+        response=Response.DISCLOSE,
+        scope=Scope.NEED,
+        persistence=Persistence.TURN,
+        recovery=Recovery.ADVOCATE,
+        visible="A note beside the section says, in the review's own words, what it could add or put "
+                "better, or what may mislead in it though the review tied it to no one paragraph; a "
+                "remark on a time limit is shown beside that limit. Nothing is left out for them.",
         feature="P1",
         built=True,
     ),

@@ -77,6 +77,8 @@ NOT_PROVEN: dict[str, str] = {
         "G-SPLIT", "G-UNSCREENED")},
     "G-INCOMPLETE": ("declared built with the core engine; no test yet asserts on a served "
                      "core-engine answer that an incomplete answer is disclosed to the advocate"),
+    "G-NOTED": ("declared with owner decision P29 on 20 Oct 2026; today only the gate matrix module "
+                "asserts its row; its served proof arrives with answering's reading of review v10"),
 }
 
 
