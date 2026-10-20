@@ -18,7 +18,7 @@ import struct
 import threading
 import traceback
 from copy import deepcopy
-from contextlib import ExitStack, closing
+from contextlib import ExitStack, closing, nullcontext
 from functools import lru_cache
 from pathlib import Path
 from typing import Protocol
@@ -56,6 +56,13 @@ MAX_RERANK_PAIRS = 4096
 WINDOW_OVERLAP = 32
 COPY_REGISTER_SCHEMA = 1
 MAX_CONTEXT_SEGMENTS = 500
+#: A provision's stored parts, by its Act and section number, in stored order. The "+" keeps
+#: the order from choosing the index: the Acts store holds no planner statistics, and
+#: ordering by the stored position walked every stored Act passage for each lookup (1.75 s
+#: on average across 353,689 passages, 20 Oct 2026) where the Act-and-section index finds
+#: the few parts at once. The rows and their order are the same.
+SECTION_PARTS = ("select pos from chunks where doc_type=? and act_id=? and section_number=? "
+                 "order by +pos limit ?")
 log = logging.getLogger(__name__)
 
 
@@ -520,6 +527,12 @@ class LocalCollection:
         not before each of its hundreds of reads (this thread only)."""
         return _SnapshotScope(self)
 
+    def _readback_scope(self):
+        """One exact provision readback checks the loaded snapshot once and again at its end,
+        as one search does, unless a search on this thread already holds that check (20 Oct
+        2026: a check at every read made each readback about three times slower)."""
+        return nullcontext() if getattr(self._scope, "active", False) else self.snapshot_scope()
+
     def warm(self) -> None:
         """Load what a first search would otherwise wait for (the startup thread):
         indices, the copy register's hidden positions and the shared models."""
@@ -699,51 +712,51 @@ class LocalCollection:
                   "provision_key": None, "candidates": [], "sources": [],
                   "legal_version": "not_assessed", "reason": None}
         try:
-            _, db_path, _ = self._open()
-            with closing(sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)) as db:
-                keys = tuple(row[0] for row in db.execute(
-                    "select distinct section_number from chunks where doc_type=? and act_id=?",
-                    (self.doc_type, act_id)))
-                binding = bind_provision_key(reference, keys)
-                result.update(candidates=list(binding.candidate_keys), reason=binding.reason)
-                if binding.state != ProvisionKeyState.BOUND:
+            with self._readback_scope():
+                _, db_path, _ = self._open()
+                with closing(sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)) as db:
+                    keys = tuple(row[0] for row in db.execute(
+                        "select distinct section_number from chunks where doc_type=? and act_id=?",
+                        (self.doc_type, act_id)))
+                    binding = bind_provision_key(reference, keys)
+                    result.update(candidates=list(binding.candidate_keys), reason=binding.reason)
+                    if binding.state != ProvisionKeyState.BOUND:
+                        self._check_snapshot()
+                        result["state"] = "ambiguous" if binding.state == ProvisionKeyState.AMBIGUOUS else "not_held"
+                        return result
+                    positions = [row[0] for row in db.execute(
+                        SECTION_PARTS, (self.doc_type, act_id, binding.key, MAX_CONTEXT_SEGMENTS + 1))]
+                if len(positions) > MAX_CONTEXT_SEGMENTS:
+                    raise SearchUnavailable("Complete provision readback exceeds the indexed-segment resource bound")
+                rows = self.read(positions)
+                if not positions or set(rows) != set(positions):
+                    raise SearchUnavailable("Some indexed words of this provision cannot be read")
+                identities = [row["chunk_id"] for row in rows.values()]
+                roots = [position for position, row in rows.items() if not row.get("parent_chunk_id")]
+                if len(set(identities)) != len(identities) or len(roots) > 1:
                     self._check_snapshot()
-                    result["state"] = "ambiguous" if binding.state == ProvisionKeyState.AMBIGUOUS else "not_held"
+                    result.update(state="ambiguous", reason="The provision locator identifies distinct or repeated source roots")
                     return result
-                positions = [row[0] for row in db.execute(
-                    "select pos from chunks where doc_type=? and act_id=? and section_number=? order by pos limit ?",
-                    (self.doc_type, act_id, binding.key, MAX_CONTEXT_SEGMENTS + 1))]
-            if len(positions) > MAX_CONTEXT_SEGMENTS:
-                raise SearchUnavailable("Complete provision readback exceeds the indexed-segment resource bound")
-            rows = self.read(positions)
-            if not positions or set(rows) != set(positions):
-                raise SearchUnavailable("Some indexed words of this provision cannot be read")
-            identities = [row["chunk_id"] for row in rows.values()]
-            roots = [position for position, row in rows.items() if not row.get("parent_chunk_id")]
-            if len(set(identities)) != len(identities) or len(roots) > 1:
+                paths = [self.rank_context(position, row) for position, row in rows.items()]
+                checked_roots = {path["segments"][0]["position"] for path in paths}
+                if len(checked_roots) != 1:
+                    result.update(state="ambiguous", reason="The provision has distinct connected source occurrences")
+                    return result
+                connected = {}
+                for path in paths:
+                    for segment in path["segments"]:
+                        address = segment["position"]
+                        if address in connected and connected[address] != segment:
+                            raise SearchUnavailable("Provision readback has conflicting source records")
+                        connected[address] = segment
+                context = {"scope": "indexed_section_segments", "bounded": False, "unread_positions": [],
+                           "segments": [connected[p] for p in sorted(connected, key=_location_order)]}
+                sources = []
+                for segment in context["segments"]:
+                    sources.append(_candidate("provision", segment["position"], segment["row"],
+                                              self._revision, None, [], context))
                 self._check_snapshot()
-                result.update(state="ambiguous", reason="The provision locator identifies distinct or repeated source roots")
-                return result
-            paths = [self.rank_context(position, row) for position, row in rows.items()]
-            checked_roots = {path["segments"][0]["position"] for path in paths}
-            if len(checked_roots) != 1:
-                result.update(state="ambiguous", reason="The provision has distinct connected source occurrences")
-                return result
-            connected = {}
-            for path in paths:
-                for segment in path["segments"]:
-                    address = segment["position"]
-                    if address in connected and connected[address] != segment:
-                        raise SearchUnavailable("Provision readback has conflicting source records")
-                    connected[address] = segment
-            context = {"scope": "indexed_section_segments", "bounded": False, "unread_positions": [],
-                       "segments": [connected[p] for p in sorted(connected, key=_location_order)]}
-            sources = []
-            for segment in context["segments"]:
-                sources.append(_candidate("provision", segment["position"], segment["row"],
-                                          self._revision, None, [], context))
-            self._check_snapshot()
-            result.update(state="found", provision_key=binding.key, sources=sources)
+                result.update(state="found", provision_key=binding.key, sources=sources)
         except (SearchUnavailable, sqlite3.Error, ValueError) as exc:
             result.update(state="unavailable", reason=str(exc), sources=[], provision_key=None)
         return result
@@ -838,8 +851,7 @@ class LocalCollection:
             root = ancestry["segments"][0]["position"]
             with closing(sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)) as connection:
                 positions = [p[0] for p in connection.execute(
-                    "select pos from chunks where doc_type=? and act_id=? and section_number=? order by pos limit ?",
-                    (self.doc_type, row["act_id"], str(row["section_number"]), MAX_CONTEXT_SEGMENTS + 1)) ]
+                    SECTION_PARTS, (self.doc_type, row["act_id"], str(row["section_number"]), MAX_CONTEXT_SEGMENTS + 1))]
             limited = len(positions) > MAX_CONTEXT_SEGMENTS
             positions = positions[:MAX_CONTEXT_SEGMENTS]
             rows = self.read(positions)
