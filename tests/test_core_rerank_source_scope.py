@@ -4,7 +4,7 @@ from copy import deepcopy
 import pytest
 
 from nm.core_engine import retrieval
-from tests.test_core_rerank_window_reuse import Predictor, local
+from tests.test_core_rerank_window_reuse import Predictor, local, narrow_reading  # noqa: F401 - autouse
 from tests.test_current_brain_retrieval import Collection, QUERIES
 
 pytestmark = pytest.mark.class_a

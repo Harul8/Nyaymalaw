@@ -60,7 +60,7 @@ def test_a_range_names_every_provision_in_it(tmp_path):
 
 def test_a_provision_found_by_one_clause_is_returned_whole_with_what_its_act_links_to_it(tmp_path, monkeypatch):
     result = _search(_local(tmp_path, ROWS), monkeypatch, [CLAUSE_B])
-    assert result["contract"] == retrieval.CONTRACT == "hybrid_retrieval_v9"
+    assert result["contract"] == retrieval.CONTRACT == "hybrid_retrieval_v10"
     returned = next(c for c in result["candidates"] if c["kind"] == "provision")
     assert returned["position"] == S138
     assert [s["position"] for s in returned["context"]["segments"]] == [S138, CLAUSE_B]
@@ -75,6 +75,8 @@ def test_a_provision_found_by_one_clause_is_returned_whole_with_what_its_act_lin
     assert "420" not in sections
     assert result["links"] == {returned["id"]: {"names": 0, "named_by": 3, "unbound": 0}}
     assert validate_search(result, QUERIES[:1]) == result
+    saved_v9 = deepcopy(result) | {"contract": retrieval.CONNECTED_CONTRACT}  # v10 kept v9's shape (P30)
+    assert validate_search(saved_v9, QUERIES[:1]) == saved_v9
 
 
 def test_links_beyond_the_bound_are_counted_not_dropped(tmp_path, monkeypatch):

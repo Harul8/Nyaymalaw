@@ -14,6 +14,19 @@ from tests.test_current_brain_retrieval import Collection, QUERIES
 pytestmark = pytest.mark.class_a
 
 
+@pytest.fixture(autouse=True)
+def narrow_reading(monkeypatch):
+    """These tests hold how text is prepared for the reranker: every window keeps its identity
+    and every original word. They read at the 512-token capacity where a pair is cut into
+    several windows, and score every window in one call in its own order, so that a window's
+    score shows where it was predicted. How windows are batched and scored (P30, 20 Oct 2026)
+    is held in test_core_rerank_batches."""
+    monkeypatch.setattr(retrieval, "RERANK_TOKENS", 512)
+    monkeypatch.setattr(retrieval, "QUESTION_TOKENS", 160)
+    monkeypatch.setattr(retrieval, "_batched_scores", lambda model, windows: [
+        float(score) for score in model.predict(windows, batch_size=16, show_progress_bar=False)])
+
+
 class CountingTokenizer:
     def __init__(self):
         self.calls = 0

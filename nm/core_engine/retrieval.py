@@ -39,10 +39,13 @@ RESULTS_PER_KIND = 6
 #: judgments kept 14 and missed the owner's fixed criterion of 15.
 RANK_DEPTH = {"provision": 40, "judgment": 100}
 RRF_K = 60
+#: v10 (owner decision P30, 20 Oct 2026): the reranker reads a question and each passage in
+#: one reading of up to RERANK_TOKENS tokens. v9 records, of the same shape, replay unchanged.
+CONTRACT = "hybrid_retrieval_v10"
 #: v9 (owner decision P32, 20 Oct 2026): each returned provision is read whole, and with it
 #: the provisions its Act links to it in its own words and the provisions beside it, as
 #: connected candidates for the pick. v8 records replay unchanged.
-CONTRACT = "hybrid_retrieval_v9"
+CONNECTED_CONTRACT = "hybrid_retrieval_v9"
 #: v8 (owner decision, 14 Oct 2026): the reranker reads only the strongest candidates,
 #: the first RANK_DEPTH positions of each corpus's fused shortlist. v7 records replay.
 RANK_DEPTH_CONTRACT = "hybrid_retrieval_v8"
@@ -69,6 +72,19 @@ PREVIOUS_CONTRACT = "hybrid_retrieval_v3"
 PARENT_TREE_CONTRACT = "hybrid_retrieval_v2"
 LEGACY_CONTRACT = "hybrid_retrieval_v1"
 MAX_RERANK_PAIRS = 4096
+#: P30 (owner, 20 Oct 2026): a question and its passage are read together in one reading of
+#: up to RERANK_TOKENS tokens instead of 512, so a passage is cut into pieces only when it alone
+#: is longer (a handful of held passages); the question side, the legal question with its
+#: search phrases, is read in windows of QUESTION_TOKENS. Against the 14 Oct answer keys
+#: (round 2, offline): provisions about level, two more key judgments among the six, about the
+#: same search time.
+RERANK_TOKENS = 8192
+QUESTION_TOKENS = 380
+#: Pairs are scored shortest first, at most RERANK_BATCH_PAIRS pairs and RERANK_BATCH_CHARACTERS
+#: characters a batch: a short pair is not padded to a long one's length, and a batch of long ones
+#: stays below the graphics card's memory (P30: the batch where speed stops improving).
+RERANK_BATCH_PAIRS = 16
+RERANK_BATCH_CHARACTERS = 32000
 WINDOW_OVERLAP = 32
 COPY_REGISTER_SCHEMA = 1
 MAX_CONTEXT_SEGMENTS = 500
@@ -205,7 +221,7 @@ class _Models:
                 device = "cuda" if torch.cuda.is_available() else "cpu"
                 self._loaded[which] = (SentenceTransformer(str(folder), device=device, local_files_only=True)
                     if which == "embedding" else CrossEncoder(str(folder), device=device,
-                        max_length=512, local_files_only=True,
+                        max_length=RERANK_TOKENS, local_files_only=True,
                         model_kwargs={"torch_dtype": torch.float16} if device == "cuda" else {}))
             except (ImportError, OSError, RuntimeError, ValueError) as exc:
                 raise SearchUnavailable(f"Local {which} model cannot load") from exc
@@ -922,9 +938,9 @@ class LocalCollection:
                 for (query, passage), anchor in zip(pairs, anchors, strict=True):
                     first = len(windows)
                     if query not in query_windows:
-                        query_windows[query] = [(text, 512 - len(tokenizer.encode(
+                        query_windows[query] = [(text, RERANK_TOKENS - len(tokenizer.encode(
                             text, add_special_tokens=False)) - tokenizer.num_special_tokens_to_add(pair=True))
-                            for _, _, text in token_windows(query, tokenizer, 160)]
+                            for _, _, text in token_windows(query, tokenizer, QUESTION_TOKENS)]
                     for query_window, room in query_windows[query]:
                         key = passage, room, anchor
                         if key not in passage_windows:
@@ -936,8 +952,7 @@ class LocalCollection:
             if len(windows) > MAX_RERANK_PAIRS:
                 raise SearchUnavailable("The complete passage windows exceed the local rerank budget")
             with self.models.lock:
-                scores = model.predict(windows, batch_size=16,
-                                       show_progress_bar=False)
+                scores = _batched_scores(model, windows)
             return [max(float(s) for s in scores[start:end]) for start, end in groups]
         except (OSError, RuntimeError, ValueError) as exc:
             raise SearchUnavailable(f"{self.doc_type} reranking failed: {exc}") from exc
@@ -1045,6 +1060,25 @@ class LocalCollection:
         return {"scope": scope, "bounded": bounded, "unread_positions": [p for p in positions if p not in rows],
                 "segments": [{"position": p, "row": rows[p], "content_digest": _digest(rows[p])}
                              for p in positions if p in rows]}
+
+
+def _batched_scores(model, windows):
+    """Each pair's score, the pairs scored shortest first in batches of at most
+    RERANK_BATCH_PAIRS pairs and RERANK_BATCH_CHARACTERS characters (a pair longer than that
+    alone is a batch of its own), returned in the pairs' own order (P30)."""
+    order = sorted(range(len(windows)), key=lambda index: (len(windows[index][0]) + len(windows[index][1]), index))
+    scores, group, size = [None] * len(windows), [], 0
+    for index in [*order, None]:
+        length = 0 if index is None else len(windows[index][0]) + len(windows[index][1])
+        if group and (index is None or size + length > RERANK_BATCH_CHARACTERS or len(group) == RERANK_BATCH_PAIRS):
+            for position, score in zip(group, model.predict([windows[i] for i in group], batch_size=len(group),
+                                                           show_progress_bar=False), strict=True):
+                scores[position] = float(score)
+            group, size = [], 0
+        if index is not None:
+            group.append(index)
+            size += length
+    return scores
 
 
 def token_windows(text, tokenizer, capacity, overlap=WINDOW_OVERLAP):
@@ -1654,14 +1688,14 @@ def validate_search(record, queries, instruments=None):
     instruments are the Acts the plan named; a v6 or v7 record keeps them with the held
     candidates each proposed when it was searched."""
     current = isinstance(record, dict) and record.get("contract") in (
-        NAMED_CONTRACT, JUDGMENT_ORDER_CONTRACT, RANK_DEPTH_CONTRACT, CONTRACT)
-    connecting = isinstance(record, dict) and record.get("contract") == CONTRACT
+        NAMED_CONTRACT, JUDGMENT_ORDER_CONTRACT, RANK_DEPTH_CONTRACT, CONNECTED_CONTRACT, CONTRACT)
+    connecting = isinstance(record, dict) and record.get("contract") in (CONNECTED_CONTRACT, CONTRACT)
     fields = {"contract", "state", "queries", "corpus_revisions", "stages", "candidates", "issues"}
     if (not isinstance(record, dict) or set(record) != (
             fields | {"instruments"} | ({"connected", "connections", "links"} if connecting else set()) if current else fields)
             or record["contract"] not in (LEGACY_CONTRACT, PARENT_TREE_CONTRACT, PREVIOUS_CONTRACT, PARENT_STORE_CONTRACT,
                                           RERANK_ORDER_CONTRACT, NAMED_CONTRACT, JUDGMENT_ORDER_CONTRACT,
-                                          RANK_DEPTH_CONTRACT, CONTRACT)
+                                          RANK_DEPTH_CONTRACT, CONNECTED_CONTRACT, CONTRACT)
             or record["queries"] != queries
             or record["state"] != ("partial" if record["issues"] else "ready")
             or set(record["corpus_revisions"]) != {"provision", "judgment"}):
@@ -1701,7 +1735,7 @@ def validate_search(record, queries, instruments=None):
                 or issue["query_id"] is not None and issue["query_id"] not in query_ids
                 or issue["stage"] not in ("identity", *legs, "read", "rerank", "context", *(("instruments",) if current else ()),
                                           *(("standing",) if record["contract"] in (
-                                              JUDGMENT_ORDER_CONTRACT, RANK_DEPTH_CONTRACT, CONTRACT) else ()),
+                                              JUDGMENT_ORDER_CONTRACT, RANK_DEPTH_CONTRACT, CONNECTED_CONTRACT, CONTRACT) else ()),
                                           *(("links",) if connecting else ()))
                 or issue["stage"] == "links" and (issue["kind"] != "provision" or issue["query_id"] is not None)
                 or issue["stage"].startswith("named_") and (issue["kind"] != "provision" or not proposed)
@@ -1739,7 +1773,7 @@ def validate_search(record, queries, instruments=None):
         # v9 (P32): a connected provision was found through a returned one, not by a query.
         joined = number >= returned
         if record["contract"] not in (PARENT_STORE_CONTRACT, RERANK_ORDER_CONTRACT, NAMED_CONTRACT, JUDGMENT_ORDER_CONTRACT,
-                                      RANK_DEPTH_CONTRACT, CONTRACT) and any(type(p) is not int for p in (
+                                      RANK_DEPTH_CONTRACT, CONNECTED_CONTRACT, CONTRACT) and any(type(p) is not int for p in (
                 candidate["position"], *(s["position"] for s in candidate["context"]["segments"]))):
             raise ValueError("Historical search cannot contain contextual parent addresses")
         if (candidate["kind"] not in record["corpus_revisions"]
@@ -1775,7 +1809,7 @@ def validate_search(record, queries, instruments=None):
                 by_id.setdefault(segment["row"]["chunk_id"], []).append(segment["row"])
             root = candidate["source"]
             if (record["contract"] not in (PARENT_TREE_CONTRACT, PREVIOUS_CONTRACT, PARENT_STORE_CONTRACT, RERANK_ORDER_CONTRACT,
-                                           NAMED_CONTRACT, JUDGMENT_ORDER_CONTRACT, RANK_DEPTH_CONTRACT, CONTRACT)
+                                           NAMED_CONTRACT, JUDGMENT_ORDER_CONTRACT, RANK_DEPTH_CONTRACT, CONNECTED_CONTRACT, CONTRACT)
                     or candidate["kind"] != "provision" or len(segments) < 2
                     or root.get("parent_chunk_id") or len(by_id[root["chunk_id"]]) != 1
                     or len({s["position"] for s in segments}) != len(segments)):
@@ -1790,7 +1824,7 @@ def validate_search(record, queries, instruments=None):
                     seen.add(identity)
                     child = parents[0]
         if record["contract"] in (PREVIOUS_CONTRACT, PARENT_STORE_CONTRACT, RERANK_ORDER_CONTRACT, NAMED_CONTRACT,
-                                  JUDGMENT_ORDER_CONTRACT, RANK_DEPTH_CONTRACT, CONTRACT) and candidate["kind"] == "provision":
+                                  JUDGMENT_ORDER_CONTRACT, RANK_DEPTH_CONTRACT, CONNECTED_CONTRACT, CONTRACT) and candidate["kind"] == "provision":
             segments = context["segments"]
             if context["scope"] == "selected_indexed_segment":
                 if len(segments) != 1:

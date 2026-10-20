@@ -36,7 +36,7 @@ def test_provisions_rank_only_the_first_positions_of_the_fused_shortlist():
     depth = retrieval.RANK_DEPTH["provision"]
     provisions = ManyProvisions(depth + 20)
     result = HybridSearcher({"provision": provisions, "judgment": Collection("judgment")}).search(QUERIES)
-    assert result["contract"] == retrieval.CONTRACT == "hybrid_retrieval_v9"
+    assert result["contract"] == retrieval.CONTRACT == "hybrid_retrieval_v10"
     assert provisions.read_positions == [list(range(depth))]
     assert provisions.ranked == depth
     assert result["state"] == "ready"

@@ -8,7 +8,9 @@ from types import SimpleNamespace
 import pytest
 
 from nm.core_engine import retrieval
-from tests.test_core_rerank_window_reuse import CountingTokenizer, Predictor, long_pairs, reference_rerank
+from tests.test_core_rerank_window_reuse import (  # noqa: F401 - narrow_reading is autouse
+    CountingTokenizer, Predictor, long_pairs, narrow_reading, reference_rerank,
+)
 from tests.test_current_brain_retrieval import Collection, QUERIES
 
 pytestmark = pytest.mark.class_a

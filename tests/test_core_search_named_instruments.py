@@ -54,7 +54,7 @@ def search(held, instruments, queries=QUERIES):
 def test_a_named_act_is_searched_inside_and_its_section_reaches_the_shortlist(tmp_path, monkeypatch):
     held, calls = collection(tmp_path, monkeypatch)
     result = search(held, ["Indian Contract Act"])
-    assert result["contract"] == retrieval.CONTRACT == "hybrid_retrieval_v9"
+    assert result["contract"] == retrieval.CONTRACT == "hybrid_retrieval_v10"
     assert result["instruments"] == [{"name": "Indian Contract Act", "candidates": ["indian contract act 1872"]}]
     assert ("words", [0]) in calls and ("vectors", [0]) in calls
     assert 0 in {c["position"] for c in result["candidates"] if c["kind"] == "provision"}
