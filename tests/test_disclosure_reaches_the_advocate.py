@@ -62,6 +62,7 @@ CARRIERS: tuple[str, ...] = (
 PROVEN: dict[str, str] = {
     "G-FALLBACK": "test_core_answer_sections.py::test_the_served_answer_shows_the_note_in_a_section_s_place",
     "G-EDITED": "test_core_answer_sections.py::test_the_served_answer_shows_a_corrected_section_under_its_label",
+    "G-NOTED": "test_core_answer_sections.py::test_the_served_answer_says_what_could_be_better_beside_the_section",
 }
 
 _ARCHIVED_PROOF = ("its proving test drove the archived turn engine and was deleted with "
@@ -77,8 +78,6 @@ NOT_PROVEN: dict[str, str] = {
         "G-SPLIT", "G-UNSCREENED")},
     "G-INCOMPLETE": ("declared built with the core engine; no test yet asserts on a served "
                      "core-engine answer that an incomplete answer is disclosed to the advocate"),
-    "G-NOTED": ("declared with owner decision P29 on 20 Oct 2026; today only the gate matrix module "
-                "asserts its row; its served proof arrives with answering's reading of review v10"),
 }
 
 

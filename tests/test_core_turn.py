@@ -95,6 +95,10 @@ class ScriptedModel:
                     "sources": [ref], "mismatch": "Synthetic attribution rejection"}] if rejected else []}
             if "units" not in schema["properties"]:  # review v8 names only what is wrong
                 out.pop("units")
+            if "misleading" in schema["properties"]:  # review v10 (P29): what misleads, what could be better
+                out = {"misleading": [{"kind": "misattributed", "where": [units[0]["id"]], "evidence": [ref],
+                                       "why": "Synthetic attribution rejection"}] if rejected else [],
+                       "could_be_better": []}
         else:
             raise AssertionError(prompt.operation)
         return ModelResult(None, out, tier, "synthetic", "fixture", Usage(1, 1, 0), 0,
@@ -128,11 +132,11 @@ def test_four_actual_stage_calls_save_reopen_and_replay_without_reexecution(stor
     stored = store.load(chat_matter_id("owner", response["chat_id"]))
     rows = saved_rows(stored, "owner")
     # Answered dispute by dispute (owner decisions P25-P27, 19 Oct 2026): one dispute, one section.
-    assert rows[0]["activities"]["contract"] == "core_turn_v6"
+    assert rows[0]["activities"]["contract"] == "core_turn_v7"
     # No held Acts were given to this turn, so no time limit was worked out (item 9).
     assert rows[0]["activities"]["calculation"]["state"] == "not_needed"
     section, = rows[0]["activities"]["sections"]
-    assert section["reviewed"]["review"]["contract"] == "core_response_review_v9"
+    assert section["reviewed"]["review"]["contract"] == "core_response_review_v10"
     assert section["reviewed"]["authority_evidence"]["contract"] == "core_response_authorities_v1"
     assert section["trims"] == [] and section["fallback"] is None and section["edit"] is None
     assert rows[0]["activities"]["cross_check"] is None and rows[0]["activities"]["overview"] is None
@@ -183,7 +187,7 @@ def test_mixed_legacy_and_current_history_reopens_without_fresh_authority_checks
         raise AssertionError("Saved readback cannot consult current authority indexes")
     monkeypatch.setattr(response_authorities, "check", no_new_check)
     rows = saved_rows(store.load(chat_matter_id("owner", first["chat_id"])), "owner")
-    assert [row["activities"]["contract"] for row in rows] == ["core_turn_v1", "core_turn_v6"]
+    assert [row["activities"]["contract"] for row in rows] == ["core_turn_v1", "core_turn_v7"]
     assert rows[0]["response"]["elements"] == elements
     assert run(store, model, chat_id=first["chat_id"], turn_id="new", message="Continue.")["replayed"]
     assert len(model.calls) == 4
@@ -273,15 +277,15 @@ def test_reviewer_rejection_uses_one_rewrite_and_new_independent_review(store):
 def test_a_section_has_three_tries_and_each_rewrite_is_told_to_ground_it(store):
     # Owner decision P25, 19 Oct 2026: "At most we can do a third try"; each rewrite the
     # review asks for is told plainly to rest every statement on the facts, the documents
-    # and the held sources.
-    from nm.core_engine.calls import GROUNDING_PURPOSE
+    # and the held sources, and (P29) to add what the review suggests where they bear it out.
+    from nm.core_engine.calls import REVIEW_PURPOSE
     model = ScriptedModel(reject=2)
     response = run(store, model)
     assert response["committed"] == "committed"
     assert response["metrics"]["llm_calls"] == 8 and response["metrics"]["draft_corrections"] == 2
     assert ["correction" in payload for payload in answering(model)] == [False, False, True, False, True, False]
     rewrites = [payload["correction"] for payload in answering(model) if "correction" in payload]
-    assert all(told["purpose"] == GROUNDING_PURPOSE for told in rewrites)
+    assert all(told["purpose"] == REVIEW_PURPOSE for told in rewrites)
     # The rewrite is told what was found with the words it concerns, not code's IDs alone.
     assert rewrites[0]["mismatch"][0]["concerns"] == ["Hello. How can I help?"]
     assert [element["kind"] for element in response["elements"]] == ["GREETING"]
@@ -435,7 +439,7 @@ def test_a_turn_saved_before_sections_could_be_held_reopens_unchanged(store, sav
     second = run(store, ScriptedModel(), chat_id=first["chat_id"], turn_id="new", message="Continue.")
     assert second["committed"] == "committed"
     rows = saved_rows(store.load(chat_matter_id("owner", first["chat_id"])), "owner")
-    assert [row["activities"]["contract"] for row in rows] == ["core_turn_v3", "core_turn_v6"]
+    assert [row["activities"]["contract"] for row in rows] == ["core_turn_v3", "core_turn_v7"]
     assert rows[0]["response"]["elements"] == elements
     assert all("unit" not in element for element in elements)
     assert all("unit" in element for element in rows[1]["response"]["elements"])

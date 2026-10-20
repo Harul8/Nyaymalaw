@@ -152,6 +152,30 @@ def test_the_answer_carries_a_working_box_for_each_checked_limit_and_reports_the
     assert [a["title"] for a in row["activities"]["calculation"]["acts"]] == [LIMITATION, NI, CPC]
 
 
+def test_a_remark_on_a_worked_out_limit_is_shown_beside_it_and_asks_no_rewrite(store):
+    """Owner decision P29: what the independent check says about a worked-out time limit is
+    shown beside that limit; the writer cannot change code's arithmetic, so nothing is
+    rewritten or left out for it."""
+    class Remarking(Calculating):
+        def structured(self, prompt, schema, tier, **kwargs):
+            if prompt.operation == "core_response_review" and "misleading" in schema["properties"]:
+                self.seen.setdefault("core_response_review", []).append(prompt.user)
+                return ModelResult(None, {"misleading": [{"kind": "unsupported", "where": ["T2"], "evidence": [],
+                                                          "why": "T2 should run from the day the notice was "
+                                                                 "delivered."}], "could_be_better": []},
+                                   tier, "synthetic", "fixture", Usage(1, 1, 0), 0, completion=Completion.COMPLETE)
+            return super().structured(prompt, schema, tier, **kwargs)
+    model = Remarking(chain())
+    reply = turn(store, model)
+    assert [element["kind"] for element in reply["elements"]][1:5] == ["WORKING", "WORKING", "NOTE", "WORKING"]
+    assert reply["elements"][2]["text"] == "Last day to file the complaint"
+    assert reply["elements"][3]["text"] == ("The independent check remarked on this time limit: this time limit "
+                                            "should run from the day the notice was delivered.")
+    assert len(model.seen["core_response_writer"]) == 1 and reply["metrics"]["draft_corrections"] == 0
+    row = saved_rows(store.load(chat_matter_id("owner", reply["chat_id"])), "owner")[0]
+    assert row["response"]["elements"] == reply["elements"]
+
+
 def test_a_saved_limit_replays_without_the_corpus_and_a_changed_one_is_refused(store):
     held = Held()
     reply = turn(store, Calculating(chain()), held)

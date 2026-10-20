@@ -8,7 +8,11 @@ held sources (calls.GROUNDING_PURPOSE). What the review or the date check still 
 that is left out statement by statement, and what remains is reviewed again as trimmed, at
 most twice (G-GROUND, G-ATTRIB, G-QUOTE, G-EFFECT). Where nothing of a section survives, a
 note built by code alone stands in its place (G-FALLBACK). No answer is wholly withheld for
-what a review finds.
+what a review finds. From review v10 (owner decision P29, 20 Oct 2026) only a statement the
+review finds would mislead the advocate, tied to a paragraph or checklist item, is left out;
+what could be better, a misleading statement tied to none, and a remark on a worked-out time
+limit are said beside the section or the limit (G-NOTED); a review's own slips are set aside,
+and a review code can use nothing of is tried once more on its own allowance.
 
 An answer covering several disputes is then checked across its sections for conflicts. A
 section in conflict is corrected once; the correction is reviewed first and used only when
@@ -27,8 +31,8 @@ from copy import deepcopy
 
 from nm.core_engine import calculation, response_authorities, response_review, response_writer
 from nm.core_engine.calls import (
-    CONFLICT_PURPOSE, EDIT_ALLOWANCE, SECTION_ALLOWANCE, SHARED_ALLOWANCE, CorrectionUnavailable, ReleaseWithheld,
-    shape_mismatch,
+    CONFLICT_PURPOSE, EDIT_ALLOWANCE, REVIEW_PURPOSE, SECTION_ALLOWANCE, SHARED_ALLOWANCE, CorrectionUnavailable,
+    ReleaseWithheld, refusal_reason, shape_mismatch,
 )
 from nm.shared.egress_contracts import EgressRefused
 from nm.shared.external_ai_contracts import ModelPermissionRefused
@@ -37,6 +41,12 @@ from nm.shared.model_port import ContextOverflow, ModelError, SchemaViolation
 
 #: The trimmed reviews a section or the overview may have after its tries (owner decision P25).
 TRIMS = 2
+#: The review answering reads (owner decision P29, 20 Oct 2026): which statements would mislead
+#: the advocate as they stand, and what could be better. Sections saved under v9 replay so.
+REVIEW = response_review.MISLEADS_CONTRACT
+#: A review with nothing code can use is tried once more, on its own allowance, never one of
+#: its section's rewrites (P29).
+REVIEW_RETRIES = 1
 #: Why a section, the overview or the check across the sections is not shown as written:
 #: code's own checks refused every try; its review could not be completed; the review still
 #: found problems after the trims; the AI service failed; it exceeds what NM can check at once.
@@ -51,6 +61,14 @@ _LEFT_OUT = {"grounding": ("G-GROUND", Recovery.NONE), "framing": ("G-GROUND", R
              "effect": ("G-EFFECT", Recovery.SYSTEM)}
 _PIECE = {"draft", "authority_evidence", "review", "date_findings"}
 _SECTION = {"part", "dispute_id", "reviewed", "trims", "fallback", "edit"}
+#: From turn v7 (P29) each section, correction and overview also keeps what code refused or never
+#: had checked: what the writer or the review returned that code refused, and a draft code
+#: admitted that no review could be completed for, each with why, in code's own words.
+KEPT = "refused"
+_STEPS = ("writing", "review", "unreviewed")
+#: Why a draft code admitted was never checked, in code's own words.
+_UNCHECKED = {"review": "its independent check could not be completed", "service": "the AI service did not respond",
+              "capacity": "it was longer than NM can check in one go"}
 
 
 def _owned(identity, response, scope, recovery):
@@ -59,18 +77,47 @@ def _owned(identity, response, scope, recovery):
         raise RuntimeError(f"{identity} no longer matches its gate contract")
 
 
+def _refusal(step, returned, why):
+    return {"step": step, "returned": deepcopy(returned), "why": why}
+
+
+def _found(piece):
+    review = piece["review"]
+    return [] if review["accepted"] else review["proposal"]["findings"]
+
+
+def _read_v10(piece):
+    return piece["review"]["contract"] == response_review.MISLEADS_CONTRACT
+
+
+def review_faults(piece):
+    """What a piece's review still faults in it: from v10 (P29), each statement it found would
+    mislead the advocate that it ties to a paragraph or checklist item; under v9, everything it
+    found other than what the piece leaves out."""
+    if _read_v10(piece):
+        return [f for f in _found(piece) if f["category"] != response_review.BETTER and f["unit_ids"]]
+    return [f for f in _found(piece) if f["category"] != "omission"]
+
+
 def faults(piece):
-    """What a piece's review still finds other than what it leaves out, and what the date
-    check finds: what keeps it from being shown as it is."""
-    review = piece["review"]
-    found = [] if review["accepted"] else [f for f in review["proposal"]["findings"] if f["category"] != "omission"]
-    return found + list(piece["date_findings"])
+    """What keeps a piece from being shown as it is: what its review still faults in it, and
+    what the date check finds."""
+    return review_faults(piece) + list(piece["date_findings"])
 
 
-def omissions(piece):
-    """What a piece's review found it leaves out: said beside it, never a reason to drop it."""
-    review = piece["review"]
-    return [] if review["accepted"] else [f for f in review["proposal"]["findings"] if f["category"] == "omission"]
+def beside(piece):
+    """What is said beside a piece shown, never a reason to drop it: from v10 (P29), what it
+    could add or put better, and a misleading statement its review ties to no paragraph,
+    checklist item or time limit; under v9, what the review found it leaves out."""
+    if _read_v10(piece):
+        return [f for f in _found(piece) if f not in review_faults(piece) and not (f["limits"] and not f["unit_ids"])]
+    return [f for f in _found(piece) if f["category"] == "omission"]
+
+
+def remarks(piece):
+    """v10 (P29): what a piece's review says about worked-out time limits alone, by their IDs
+    (T1, T2...): said beside each limit, never a reason to drop the piece."""
+    return [f for f in _found(piece) if f["limits"] and not f["unit_ids"]] if _read_v10(piece) else []
 
 
 def acceptable(piece):
@@ -82,7 +129,10 @@ def acceptable(piece):
 def clear(piece):
     """A piece needs no rewrite when its review accepts it and the date check finds nothing.
     Whatever either still finds is the model's to fix while its tries last (P25), what it
-    leaves out included."""
+    leaves out included; a remark on a worked-out time limit alone asks nothing of the writer,
+    who cannot change code's arithmetic (P29)."""
+    if _read_v10(piece):
+        return not review_faults(piece) and not beside(piece) and not piece["date_findings"]
     return piece["review"]["accepted"] and not piece["date_findings"]
 
 
@@ -151,16 +201,31 @@ def _owners(sections, conflicts):
     return dict(sorted(owners.items()))
 
 
+#: What a rewrite is told each v10 finding is (P29), in plain words.
+_TOLD = {"grounding": "misleading: not borne out by the advocate's messages, the documents or the held passages",
+         "quotation": "misleading: words in quotation marks that are not their source's words",
+         "attribution": "misleading: put in the wrong speaker's or court's mouth",
+         "effect": "misleading: says or implies that NM did something",
+         response_review.BETTER: "could be better"}
+
+
 def _told(piece):
     """What a rewrite the review asked for is told: each finding, with the words of the
-    paragraphs and checklist items it names (their IDs are code's, not the writer's)."""
+    paragraphs and checklist items it names (their IDs are code's, not the writer's), and from
+    v10 the time limits it names."""
     draft = piece["draft"]
     words = {unit["id"]: unit["text"] for unit in draft["units"]}
     words.update({item["id"]: item["need"] for part in draft["checklists"] for item in part["items"]})
-    found = ([] if piece["review"]["accepted"] else piece["review"]["proposal"]["findings"]) + piece["date_findings"]
-    return [{"category": finding["category"], "mismatch": finding["mismatch"], "sources": finding["sources"],
-             "concerns": [words[identity] for identity in finding["unit_ids"] if identity in words]}
-            for finding in found]
+    v10 = _read_v10(piece)
+    told = [{"category": _TOLD[finding["category"]] if v10 else finding["category"],
+             "mismatch": finding["mismatch"], "sources": finding["sources"],
+             "concerns": [words[identity] for identity in finding["unit_ids"] if identity in words],
+             **({"time_limits": finding["limits"]} if v10 and finding["limits"] else {})}
+            for finding in _found(piece)]
+    # Code's own date findings are told as code found them.
+    return told + [{"category": finding["category"], "mismatch": finding["mismatch"], "sources": finding["sources"],
+                    "concerns": [words[identity] for identity in finding["unit_ids"] if identity in words]}
+                   for finding in piece["date_findings"]]
 
 
 def unanswered(sections, worked):
@@ -182,24 +247,45 @@ class _Answering:
         self.layout = response_writer.parts(record)
         #: The service failure that left each scope unanswered, should the whole turn fail so.
         self.failures = {}
+        self._reviews, self._lock = 0, threading.Lock()
 
     def _failed(self, scope, exc):
         self.failures.setdefault(scope, exc)
         return "capacity" if isinstance(exc, ContextOverflow) else "service"
 
-    def _review(self, draft, kwargs):
+    def _review(self, scope, draft, kwargs, refused):
         self.report("checking_authorities")
         authorities = response_authorities.check(self.context, self.record, self.sources, draft,
                                                  case_index=self.case_index, provision_reader=self.provision_reader)
         self.report("reviewing")
-        review = self.calls.checked("core_response_review", lambda: response_review.review(
-            self.calls, self.context, self.record, self.sources, draft, self.execution,
-            authority_evidence=authorities, time_limits=self.time_limits, **kwargs))
+
+        def judged():
+            return response_review.review(self.calls, self.context, self.record, self.sources, draft, self.execution,
+                                          authority_evidence=authorities, time_limits=self.time_limits,
+                                          contract=REVIEW, **kwargs)
+        with self._lock:
+            self._reviews += 1
+            number = self._reviews
+        # A review code can use nothing of is tried once more on its own allowance, never
+        # one of the section's rewrites (P29); each review has its own.
+        with self.calls.scope(f"{scope}.review{number}", REVIEW_RETRIES):
+            try:
+                review = judged()
+            except SchemaViolation as exc:
+                self.calls.refused(exc)
+                refused.append(_refusal("review", self.calls.last_output, refusal_reason(exc)))
+                try:
+                    review = self.calls.correct("core_response_review", judged, mismatch=shape_mismatch(exc),
+                                                rejected=self.calls.last_output)
+                except SchemaViolation as again:
+                    self.calls.refused(again)
+                    refused.append(_refusal("review", self.calls.last_output, refusal_reason(again)))
+                    raise
         # Code's own check that the answer works out no date itself (owner, 15 Oct 2026).
         return {"draft": draft, "authority_evidence": authorities, "review": review,
                 "date_findings": response_writer.dates_not_given(draft, self.context, self.sources, self.time_limits)}
 
-    def _tries(self, scope, allowance, operation, write, kwargs, correction=None):
+    def _tries(self, scope, allowance, operation, write, kwargs, refused, correction=None):
         """A piece's draft and its rewrites, each reviewed, within its scope's allowance,
         whatever asked for them (owner decision P25: at most a third try). Returns the piece
         to go on with, or None, and why no piece passed: the last piece a review saw, unless
@@ -215,6 +301,7 @@ class _Answering:
                 draft = write() if correction is None else self.calls.correct(operation, write, **correction)
             except SchemaViolation as exc:
                 self.calls.refused(exc)
+                refused.append(_refusal("writing", self.calls.last_output, refusal_reason(exc)))
                 why = "checks"
                 if self.calls.used(scope) >= allowance:
                     return kept(), why
@@ -227,23 +314,27 @@ class _Answering:
             except ModelError as exc:
                 return kept(), self._failed(scope, exc)
             try:
-                piece = self._review(draft, kwargs)
+                piece = self._review(scope, draft, kwargs, refused)
             except (SchemaViolation, CorrectionUnavailable) as exc:
                 self.calls.refused(exc)
+                refused.append(_refusal("unreviewed", draft["proposal"], _UNCHECKED["review"]))
                 return kept(), "review"
             except _STOP:
                 raise
             except ModelError as exc:
-                return kept(), self._failed(scope, exc)
+                why = self._failed(scope, exc)
+                refused.append(_refusal("unreviewed", draft["proposal"], _UNCHECKED[why]))
+                return kept(), why
             reviewed, why = piece, None
             if acceptable(piece):
                 passed = piece
             if clear(piece) or self.calls.used(scope) >= allowance:
                 return kept(), None
             self.report("revising")
-            correction = {"mismatch": _told(piece), "rejected": piece["draft"]["proposal"], "asked_by_review": True}
+            correction = {"mismatch": _told(piece), "rejected": piece["draft"]["proposal"],
+                          **({"purpose": REVIEW_PURPOSE} if _read_v10(piece) else {"asked_by_review": True})}
 
-    def _trims(self, scope, reviewed, kwargs):
+    def _trims(self, scope, reviewed, kwargs, refused):
         """After the tries, what the last review still faults is left out and the rest
         reviewed again as trimmed, at most TRIMS times. Returns the trimmed pieces and why
         nothing can be shown (None when the last piece passes)."""
@@ -257,7 +348,7 @@ class _Answering:
                 _owned(_LEFT_OUT[finding["category"]][0], Response.WITHHOLD, Scope.NEED,
                        _LEFT_OUT[finding["category"]][1])
             try:
-                current = self._review(response_writer.trim(current["draft"], ids), kwargs)
+                current = self._review(scope, response_writer.trim(current["draft"], ids), kwargs, refused)
             except (SchemaViolation, CorrectionUnavailable) as exc:
                 self.calls.refused(exc)
                 return trims, "review"
@@ -269,13 +360,18 @@ class _Answering:
         return trims, None
 
     def _piece(self, scope, operation, write, kwargs):
-        reviewed, why = self._tries(scope, SECTION_ALLOWANCE, operation, write, kwargs)
+        refused = []
+        reviewed, why = self._tries(scope, SECTION_ALLOWANCE, operation, write, kwargs, refused)
         trims = []
         if reviewed is not None:
-            trims, why = self._trims(scope, reviewed, kwargs)
+            trims, why = self._trims(scope, reviewed, kwargs, refused)
         if why is not None:
             _owned("G-FALLBACK", Response.DISCLOSE, Scope.NEED, Recovery.ADVOCATE)
-        return {"reviewed": reviewed, "trims": trims, "fallback": None if why is None else {"reason": why}}
+        elif beside(trims[-1] if trims else reviewed) or remarks(trims[-1] if trims else reviewed):
+            # What the review still says that is no reason to leave anything out (P29).
+            _owned("G-NOTED", Response.DISCLOSE, Scope.NEED, Recovery.ADVOCATE)
+        return {"reviewed": reviewed, "trims": trims, "fallback": None if why is None else {"reason": why},
+                KEPT: refused}
 
     def _write(self, index):
         return lambda: response_writer.write_section(
@@ -314,13 +410,14 @@ class _Answering:
                   "paragraphs": [unit["text"] for unit in base["draft"]["units"]
                                  if unit["id"] in conflicts[number]["unit_ids"]]} for number in numbers]
         _owned("G-EDITED", Response.DISCLOSE, Scope.NEED, Recovery.SYSTEM)
+        refused = []
         with self.calls.scope(scope, EDIT_ALLOWANCE):
             reviewed, _ = self._tries(
                 scope, EDIT_ALLOWANCE, "core_response_writer", self._write(index),
-                {"conflicts": [conflicts[number]["mismatch"] for number in numbers]},
+                {"conflicts": [conflicts[number]["mismatch"] for number in numbers]}, refused,
                 correction={"mismatch": found, "purpose": CONFLICT_PURPOSE, "rejected": {"paragraphs": [
                     {"kind": unit["kind"], "text": unit["text"]} for unit in base["draft"]["units"]]}})
-        return {"conflicts": list(numbers), "reviewed": reviewed}
+        return {"conflicts": list(numbers), "reviewed": reviewed, KEPT: refused}
 
     def overview(self, sections):
         """The overview that opens the answer, written last from the sections shown and
@@ -404,16 +501,18 @@ def answer(calls, context, record, sources, *, interpretation, execution, worked
     return sections, crossed, overview
 
 
-def interrupted(shown_so_far, record):
+def interrupted(shown_so_far, record, *, kept=True):
     """A turn that stopped after showing some of its answer, as it is saved (owner decision
     P27, 19 Oct 2026: each section is saved when it is shown): the sections shown, and each
     part not finished marked so - a section never written, the check across the sections
-    not made, the overview not written. shown_so_far: what answer() last released."""
+    not made, the overview not written. shown_so_far: what answer() last released. kept: the
+    parts keep what code refused (turn v7)."""
     layout = response_writer.parts(record)
     many = len(layout) > 1
+    unfinished = {KEPT: []} if kept else {}
     done = {saved["part"]: deepcopy(saved) for saved in shown_so_far["sections"]}
     sections = [done.get(index) or {"part": index, "dispute_id": layout[index]["dispute_id"], "reviewed": None,
-                                    "trims": [], "fallback": {"reason": "interrupted"}, "edit": None}
+                                    "trims": [], "fallback": {"reason": "interrupted"}, "edit": None, **unfinished}
                 for index in (range(1, len(layout)) if many else [0])]
     before = sum(shown(saved, edited=False) is not None for saved in sections)
     crossed = deepcopy(shown_so_far["cross_check"])
@@ -421,7 +520,7 @@ def interrupted(shown_so_far, record):
         crossed = {"unavailable": "interrupted"}
     overview = deepcopy(shown_so_far["overview"])
     if overview is None and many and any(shown(saved) is not None for saved in sections):
-        overview = {"reviewed": None, "trims": [], "fallback": {"reason": "interrupted"}}
+        overview = {"reviewed": None, "trims": [], "fallback": {"reason": "interrupted"}, **unfinished}
     return sections, crossed, overview
 
 
@@ -447,7 +546,8 @@ def _piece_valid(piece, context, record, sources, execution, time_limits, sectio
         raise ValueError("A saved section answers another part of the answer")
     response_writer.validate(draft, context, sources)
     response_authorities.validate(piece["authority_evidence"], context, record, sources, draft)
-    if not isinstance(piece["review"], dict) or piece["review"].get("contract") != response_review.SECTION_CONTRACT:
+    if (not isinstance(piece["review"], dict)
+            or piece["review"].get("contract") not in (response_review.SECTION_CONTRACT, REVIEW)):
         raise ValueError("A saved section is reviewed as a section")
     response_review.validate(piece["review"], context, record, sources, draft, execution,
                              authority_evidence=piece["authority_evidence"], time_limits=time_limits, **kwargs)
@@ -460,6 +560,19 @@ def _piece_valid(piece, context, record, sources, execution, time_limits, sectio
             or len(found["unit_ids"]) != 1 or not set(found["unit_ids"]) <= known or found["sources"] != []
             or not isinstance(found["mismatch"], str) for found in dates):
         raise ValueError("Unknown saved date findings")
+
+
+def _kept_valid(saved, kept):
+    """From turn v7 a part keeps what code refused or never had checked (P29), each with why in
+    code's own words; what was returned is evidence kept to trace a withholding, not re-derived."""
+    if not kept:
+        return
+    entries = saved[KEPT]
+    if not isinstance(entries, list) or any(
+            not isinstance(entry, dict) or set(entry) != {"step", "returned", "why"} or entry["step"] not in _STEPS
+            or not isinstance(entry["why"], str) or not entry["why"].strip() or len(entry["why"]) > 200
+            for entry in entries):
+        raise ValueError("Unknown record of what code refused")
 
 
 def _chain_valid(saved, context, record, sources, execution, time_limits, section, dispute_id, kwargs):
@@ -496,10 +609,12 @@ def _chain_valid(saved, context, record, sources, execution, time_limits, sectio
         raise ValueError("A section's note differs from what was found")
 
 
-def validate(activity, context, record, sources, worked):
-    """Replay of a v6 turn's answer: every saved section, trim, correction, check across the
-    sections and overview bound again to its exact evidence, and what code dropped, edited
-    or put in a section's place re-derived from them."""
+def validate(activity, context, record, sources, worked, *, kept=True):
+    """Replay of a v6 or v7 turn's answer: every saved section, trim, correction, check across
+    the sections and overview bound again to its exact evidence, and what code dropped, edited
+    or put in a section's place re-derived from them. kept: the parts keep what code refused
+    (turn v7, P29), checked for its shape."""
+    extra = {KEPT} if kept else set()
     layout = response_writer.parts(record)
     many, time_limits, execution = len(layout) > 1, calculation.for_answer(worked), activity["execution"]
     indices = list(range(1, len(layout))) if many else [0]
@@ -507,9 +622,10 @@ def validate(activity, context, record, sources, worked):
     if not isinstance(sections, list) or len(sections) != len(indices):
         raise ValueError("Saved sections differ from the answer's layout")
     for index, saved in zip(indices, sections):
-        if (not isinstance(saved, dict) or set(saved) != _SECTION or saved["part"] != index
+        if (not isinstance(saved, dict) or set(saved) != _SECTION | extra or saved["part"] != index
                 or saved["dispute_id"] != layout[index]["dispute_id"]):
             raise ValueError("Saved sections differ from the answer's layout")
+        _kept_valid(saved, kept)
         _chain_valid(saved, context, record, sources, execution, time_limits, index, saved["dispute_id"], {})
     if all(saved["fallback"] is not None and saved["fallback"]["reason"] in ("service", "capacity")
            for saved in sections):
@@ -535,8 +651,10 @@ def validate(activity, context, record, sources, worked):
             if edit is not None:
                 raise ValueError("Only a section the check across the sections names is corrected")
             continue
-        if not isinstance(edit, dict) or set(edit) != {"conflicts", "reviewed"} or edit["conflicts"] != owners[position]:
+        if (not isinstance(edit, dict) or set(edit) != {"conflicts", "reviewed"} | extra
+                or edit["conflicts"] != owners[position]):
             raise ValueError("A correction differs from the conflicts that asked for it")
+        _kept_valid(edit, kept)
         if edit["reviewed"] is not None:
             _piece_valid(edit["reviewed"], context, record, sources, execution, time_limits, saved["part"],
                          saved["dispute_id"], {"conflicts": [conflicts[number]["mismatch"] for number in edit["conflicts"]]})
@@ -545,8 +663,9 @@ def validate(activity, context, record, sources, worked):
         if overview is not None:
             raise ValueError("Only an answer covering several disputes opens with an overview")
         return
-    if not isinstance(overview, dict) or set(overview) != {"reviewed", "trims", "fallback"}:
+    if not isinstance(overview, dict) or set(overview) != {"reviewed", "trims", "fallback"} | extra:
         raise ValueError("Unknown saved overview")
+    _kept_valid(overview, kept)
     drafts = [shown(sections[position])["draft"] for position in order(sections, worked)
               if shown(sections[position]) is not None]
     missing = unanswered(sections, worked)

@@ -15,7 +15,7 @@ import pytest
 from nm.core_engine import (
     answer_sections, calculation, checklist, matter_board, response_rendering, response_writer, turn,
 )
-from nm.core_engine.calls import CONFLICT_PURPOSE, GROUNDING_PURPOSE, TurnCalls
+from nm.core_engine.calls import CONFLICT_PURPOSE, REVIEW_PURPOSE, TurnCalls
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import ModelResult, ProviderUnavailable, SchemaViolation, Usage
 from tests.test_core_response_writer import two_disputes
@@ -24,8 +24,8 @@ from tests.test_core_turn import store  # noqa: F401 - pytest fixture
 
 pytestmark = pytest.mark.class_a
 
-#: What the scripted review faults, by the marker a scripted writer puts in a paragraph.
-FAULTS = {"UNSUPPORTED": "grounding", "MISQUOTED": "quotation"}
+#: What the scripted review finds misleading, by the marker a scripted writer puts in a paragraph.
+FAULTS = {"UNSUPPORTED": "unsupported", "MISQUOTED": "misquoted"}
 
 
 def _result(data, tier):
@@ -43,24 +43,31 @@ def written(dispute, round_):
 
 
 def reviewed_as(payload):
-    """The scripted review: each paragraph or checklist item carrying a fault marker is
-    faulted; LEAVES marks something left out; WHOLE a fault naming no paragraph."""
-    draft, findings = payload["complete_draft_proposal"], []
+    """The scripted review (v10, P29): each paragraph or checklist item carrying a fault marker
+    misleads; LEAVES marks something it could add; WHOLE a misleading statement tied to no
+    paragraph; LIMIT a remark on the first time limit; SLIPS a review naming nothing real."""
+    draft, misleading, better = payload["complete_draft_proposal"], [], []
     for unit in draft["units"]:
-        findings += [{"category": category, "unit_ids": [unit["id"]], "sources": [],
-                      "mismatch": f"Synthetic {category} finding in {unit['id']}."}
-                     for marker, category in FAULTS.items() if marker in unit["text"]]
+        misleading += [{"kind": kind, "where": [unit["id"]], "evidence": [],
+                        "why": f"Synthetic {kind} finding in {unit['id']}."}
+                       for marker, kind in FAULTS.items() if marker in unit["text"]]
         if "LEAVES" in unit["text"]:
-            findings.append({"category": "omission", "unit_ids": [unit["id"]], "sources": [],
-                             "mismatch": "U1 does not say which court hears it, which M1 asks."})
+            better.append({"where": [unit["id"]], "what": "U1 does not say which court hears it, which M1 asks."})
         if "WHOLE" in unit["text"]:
-            findings.append({"category": "framing", "unit_ids": [], "sources": [],
-                             "mismatch": "The section frames the matter as settled."})
+            misleading.append({"kind": "unsupported", "where": [], "evidence": [],
+                               "why": "The section frames the matter as settled."})
+        if "LIMIT" in unit["text"]:
+            misleading.append({"kind": "unsupported", "where": ["T1"], "evidence": [],
+                               "why": "T1 should run from the day the memo reached the client."})
+        if "SLIPS" in unit["text"]:
+            misleading.append({"kind": "misquoted", "where": ["U9", "D2", unit["id"]],
+                               "evidence": [{"source_id": "P999", "quote": None}],
+                               "why": f"Synthetic misquoted finding in {unit['id']}."})
     for part in draft.get("checklists", ()):
-        findings += [{"category": "grounding", "unit_ids": [item["id"]], "sources": [],
-                      "mismatch": "Synthetic finding on the item."}
-                     for item in part["items"] if "UNSUPPORTED" in item["need"]]
-    return {"verdict": "reject" if findings else "accept", "request_coverage": [], "findings": findings}
+        misleading += [{"kind": "unsupported", "where": [item["id"]], "evidence": [],
+                        "why": "Synthetic finding on the item."}
+                       for item in part["items"] if "UNSUPPORTED" in item["need"]]
+    return {"misleading": misleading, "could_be_better": better}
 
 
 class Scripted:
@@ -197,7 +204,7 @@ def test_what_the_review_still_faults_after_three_tries_is_left_out_and_the_rest
     ctx, elements, activity, calls = answered(model)
     section = activity["sections"][1]
     rewrites = [payload["correction"] for payload in model.payloads("core_response_writer", "D2")[1:]]
-    assert len(rewrites) == 2 and all(told["purpose"] == GROUNDING_PURPOSE for told in rewrites)
+    assert len(rewrites) == 2 and all(told["purpose"] == REVIEW_PURPOSE for told in rewrites)
     assert rewrites[0]["mismatch"][0]["concerns"] == ["MISQUOTED and UNSUPPORTED step (round 1)."]
     trimmed, = section["trims"]
     assert trimmed["draft"]["dropped"] == ["t2:s2b2"] and section["fallback"] is None
@@ -220,11 +227,12 @@ def test_what_the_review_still_faults_after_three_tries_is_left_out_and_the_rest
 
 
 def test_where_nothing_survives_a_note_built_by_code_stands_in_the_section():
-    """Owner decision P25: where the review still faults the section as a whole, code's own
-    note takes its place: the facts as the advocate gave them, the law found in its own words,
-    and what is open. The other section is shown as checked; nothing is withheld whole."""
+    """Owner decision P25: where the review still faults every statement of the section,
+    code's own note takes its place: the facts as the advocate gave them, the law found in its
+    own words, and what is open. The other section is shown as checked; nothing is withheld
+    whole."""
     def whole(round_, payload):
-        return [paragraph("summary", f"WHOLE answer for D2 (round {round_}).")]
+        return [paragraph("summary", f"UNSUPPORTED answer for D2 (round {round_}).")]
     model = Scripted({"D2": whole})
     ctx, elements, activity, _ = answered(model)
     section = activity["sections"][1]
@@ -234,7 +242,7 @@ def test_where_nothing_survives_a_note_built_by_code_stands_in_the_section():
     assert note["disclosure"] and note["sources"] == []
     assert note["fallback"]["section"] == "Dispute 2" and note["fallback"]["facts"] == ["Find the applicable law"]
     assert note["fallback"]["questions"] == ["Which rule governs point 1 of dispute 2?"]
-    assert "WHOLE" not in json.dumps(elements)
+    assert "UNSUPPORTED" not in json.dumps(elements)
     record = two_disputes()[1]
     picked = {identity for work in record["plan"]["work"] if work["dispute"]["id"] == "D2"
               for identity in record["picks"]["chosen"].get(work["id"], [])}
@@ -252,13 +260,13 @@ def test_where_nothing_survives_a_note_built_by_code_stands_in_the_section():
 
 def test_the_note_names_the_reason_found_in_code_s_words():
     def whole(round_, payload):
-        return [paragraph("summary", f"WHOLE answer for D2 (round {round_}).")]
+        return [paragraph("summary", f"UNSUPPORTED answer for D2 (round {round_}).")]
     _, elements, _, _ = answered(Scripted({"D2": whole}))
     note = next(e for e in elements if e["kind"] == "FALLBACK")
     assert note["text"].split("\n")[0] == (
         "Not a full answer on Dispute 2: after the rewrites NM may make, the checks still found problems in it that "
-        "leaving statements out could not settle. What was found: The section framed the matter in a way its "
-        "sources do not support. In its place, NM's code sets out what it can without writing the answer: the facts "
+        "leaving statements out could not settle. What was found: A statement was not supported by the words it "
+        "relies on. In its place, NM's code sets out what it can without writing the answer: the facts "
         "as you gave them, the provisions found for this dispute in their own words, and what NM's working "
         "understanding says is still open.")
     assert note["text"].split("\n")[1] == "What you told me: “Find the applicable law”."
@@ -303,7 +311,7 @@ def test_what_a_section_still_leaves_out_after_its_tries_is_said_beside_it_and_h
     assert calls.used("s1") == 2 and len(model.payloads("core_response_writer", "D1")) == 3
     assert activity["sections"][0]["trims"] == [] and activity["sections"][0]["fallback"] is None
     note = next(e for e in elements if e["kind"] == "NOTE")
-    assert note["text"] == ("The independent check found that this section may leave something out: a paragraph "
+    assert note["text"] == ("The independent check suggests this section could add or put this better: a paragraph "
                             "does not say which court hears it, which a message asks.")
     assert turn.validate_activity(activity, ctx, elements) == activity
 
@@ -321,7 +329,7 @@ def test_a_rewrite_that_brings_a_fault_gives_way_to_the_earlier_draft_that_passe
     assert [unit["text"] for unit in section["reviewed"]["draft"]["units"]] == ["In short for D1.",
                                                                                 "LEAVES out the court."]
     assert "UNSUPPORTED" not in json.dumps(elements)
-    assert any(e["kind"] == "NOTE" and "may leave something out" in e["text"] for e in elements)
+    assert any(e["kind"] == "NOTE" and "could add or put this better" in e["text"] for e in elements)
     assert turn.validate_activity(activity, ctx, elements) == activity
 
 
@@ -389,7 +397,7 @@ def test_a_check_across_the_sections_that_could_not_be_made_is_said_atop_the_ans
 
 def test_an_overview_that_does_not_pass_is_left_out_and_said():
     def whole(round_, payload):
-        return [paragraph("summary", f"WHOLE overview (round {round_}).")]
+        return [paragraph("summary", f"UNSUPPORTED overview (round {round_}).")]
     model = Scripted(overview=whole)
     ctx, elements, activity, calls = answered(model)
     assert activity["overview"]["fallback"] == {"reason": "found"} and calls.used("o") == 2
@@ -397,7 +405,7 @@ def test_an_overview_that_does_not_pass_is_left_out_and_said():
         "NM's overview of how the disputes fit together is left out: after the rewrites NM may make, the checks "
         "still found problems in it that leaving statements out could not settle. Each dispute's section below was "
         "checked on its own.")
-    assert "WHOLE" not in json.dumps(elements)
+    assert "UNSUPPORTED" not in json.dumps(elements)
     assert turn.validate_activity(activity, ctx, elements) == activity
 
 
@@ -480,6 +488,107 @@ def test_the_overview_rests_on_the_sections_and_cites_no_held_law():
         response_writer.OVERVIEW_SYSTEM.split())
 
 
+# --- the review withholds only what misleads (owner decision P29, 20 Oct 2026) -----------
+
+
+def test_a_misleading_statement_tied_to_no_paragraph_is_said_beside_the_section_never_in_its_place():
+    """A finding the review ties to no paragraph is the writer's to settle while the section's
+    tries last; after them it is said beside the section, which is shown."""
+    def framed(round_, payload):
+        return [paragraph("summary", "In short for D2."), paragraph("next_step", f"WHOLE step (round {round_}).")]
+    ctx, elements, activity, calls = answered(Scripted({"D2": framed}))
+    section = activity["sections"][1]
+    assert section["fallback"] is None and section["trims"] == [] and calls.used("s2") == 2
+    assert any(e["text"] == "WHOLE step (round 3)." for e in elements)
+    note = next(e for e in elements if e["kind"] == "NOTE")
+    assert note["text"] == (
+        "The independent check found that this section may mislead, in a way it did not tie to one paragraph, and "
+        "the rewrites NM may make did not settle it: The section frames the matter as settled. Read this section "
+        "with this in mind.")
+    assert turn.validate_activity(activity, ctx, elements) == activity
+
+
+def test_a_review_s_slips_are_set_aside_and_never_cost_its_section():
+    """The forensic of 20 Oct 2026: an ID naming nothing, a dispute's ID and a source not
+    offered refused a v9 review whole. Under v10 each is set aside, saying why, and the
+    finding still stands for the paragraph it names."""
+    def slipping(round_, payload):
+        return [paragraph("summary", "In short for D1."), paragraph("next_step", f"SLIPS step (round {round_}).")]
+    ctx, elements, activity, calls = answered(Scripted({"D1": slipping}))
+    section = activity["sections"][0]
+    review = section["reviewed"]["review"]
+    assert review["contract"] == "core_response_review_v10" and section["fallback"] is None
+    assert [entry["why"] for entry in review["proposal"]["set_aside"]] == [
+        "names nothing in this piece: U9", "names nothing in this piece: D2", "points to a source not offered: P999"]
+    assert section["trims"][0]["draft"]["dropped"] == ["t2:s1b2"]  # the statement it misquotes, after the tries
+    assert all(call["refused"] is None for call in calls.metrics()["calls"]
+               if call["operation"] == "core_response_review")
+    assert turn.validate_activity(activity, ctx, elements) == activity
+
+
+class Unusable(Scripted):
+    """Dispute 1's review returns, the given number of times, output code can use nothing of."""
+
+    def __init__(self, times, **kwargs):
+        super().__init__(**kwargs)
+        self.times = times
+
+    def structured(self, prompt, schema, tier, **kwargs):
+        payload = json.loads(prompt.user)
+        if (prompt.operation == "core_response_review" and self.times
+                and (payload.get("what_you_review") or {}).get("dispute") == "Dispute 1"):
+            self.times -= 1
+            return _result({"misleading": "U1 misleads", "could_be_better": []}, tier)
+        return super().structured(prompt, schema, tier, **kwargs)
+
+
+def test_a_review_code_can_use_nothing_of_is_tried_once_more_on_its_own_allowance():
+    ctx, elements, activity, calls = answered(Unusable(1))
+    section = activity["sections"][0]
+    assert section["fallback"] is None and calls.used("s1") == 0  # none of the section's rewrites
+    reviews = [call for call in calls.metrics()["calls"] if call["operation"] == "core_response_review"]
+    assert sum(call["correction"] for call in reviews) == 1 and calls.metrics()["draft_corrections"] == 1
+    assert turn.validate_activity(activity, ctx, elements) == activity
+
+
+def test_a_review_that_stays_unusable_leaves_code_s_note_in_its_section_s_place():
+    ctx, elements, activity, calls = answered(Unusable(2))
+    section = activity["sections"][0]
+    assert section["fallback"] == {"reason": "review"} and calls.used("s1") == 0
+    note = next(e for e in elements if e["kind"] == "FALLBACK")
+    assert note["text"].startswith("Not a full answer on Dispute 1: its independent check could not be completed.")
+    # Both outputs code could use nothing of are kept, and the draft no review could check (P29).
+    assert [entry["step"] for entry in section["refused"]] == ["review", "review", "unreviewed"]
+    assert section["refused"][0]["returned"] == {"misleading": "U1 misleads", "could_be_better": []}
+    assert section["refused"][2]["why"] == "its independent check could not be completed"
+    assert section["refused"][2]["returned"]["units"][0]["text"] == "In short for D1."
+    assert turn.validate_activity(activity, ctx, elements) == activity
+
+
+def test_what_code_refused_is_kept_with_why_and_an_earlier_turn_replays_without_it():
+    def faulty(round_, payload):
+        out = written("D2", round_)
+        if round_ == 1:
+            out[1]["text"] += " [An unoffered source](P999)."
+        return out
+    ctx, elements, activity, _ = answered(Scripted({"D2": faulty}))
+    kept, = activity["sections"][1]["refused"]
+    assert kept["step"] == "writing" and kept["why"] == "The link"  # code's own words, never the writer's
+    assert "[An unoffered source](P999)" in kept["returned"]["units"][1]["text"]
+    assert activity["sections"][0]["refused"] == [] and activity["overview"]["refused"] == []
+    assert turn.validate_activity(activity, ctx, elements) == activity
+    refused(activity, ctx, elements, lambda forged: forged["sections"][1]["refused"][0].update(step="guessed"))
+    refused(activity, ctx, elements, lambda forged: forged["sections"][1]["refused"][0].update(why=" "))
+    refused(activity, ctx, elements, lambda forged: forged["sections"][0].pop("refused"))
+    # A turn saved before P29 (v6) keeps no such record and replays as it was.
+    earlier = deepcopy(activity)
+    earlier["contract"] = turn.BY_DISPUTE_CONTRACT
+    for part in [*earlier["sections"], earlier["overview"]]:
+        part.pop("refused")
+    assert turn.validate_activity(earlier, ctx, elements) == earlier
+    refused(earlier, ctx, elements, lambda forged: forged["sections"][0].update(refused=[]))
+
+
 # --- what the advocate receives, served -------------------------------------------------
 
 
@@ -527,6 +636,22 @@ def test_the_served_answer_shows_a_corrected_section_under_its_label(served):
     # The board lists the disputes as the answer shows them, each with its checklist.
     board = served.client.get(f"/api/chats/{resp.json()['chat_id']}/board").json()
     assert [dispute["id"] for dispute in board["disputes"]] == ["D1", "D2"]
+
+
+def test_the_served_answer_says_what_could_be_better_beside_the_section(served):
+    """G-NOTED (P29): the advocate receives, beside a section shown, what the independent check
+    says it could add or put better; nothing is left out for it."""
+    def leaving(round_, payload):
+        return [paragraph("summary", "In short for D1."), paragraph("next_step", "LEAVES out the court.")]
+    scripted_answers(served, Scripted({"D1": leaving}))
+    resp = served.client.post("/api/turn", json={"message": "Inspect this reported account.", "turn_id": "turn-1"})
+    assert resp.status_code == 200, resp.text
+    elements = resp.json()["elements"]
+    note, = [element for element in elements if element["kind"] == "NOTE"]
+    assert note["text"].startswith("The independent check suggests this section could add or put this better:")
+    assert any(element["text"] == "LEAVES out the court." for element in elements)
+    reopened = served.client.get(f"/api/chats/{resp.json()['chat_id']}").json()["turns"][0]
+    assert reopened["elements"] == elements
 
 
 # --- saved as it is shown (owner decision P27) -----------------------------------------

@@ -31,7 +31,7 @@ from nm.core_engine import documents as document_rules
 from nm.core_engine import research_note, voice
 from nm.core_engine.response_rendering import unit_index
 from nm.core_engine.matter_board import board as matter_board
-from nm.core_engine.turn import AUTHORITY_CONTRACT as AUTHORITY_CORE_TURN, CONTRACT as CORE_TURN
+from nm.core_engine.turn import AUTHORITY_CONTRACT as AUTHORITY_CORE_TURN, SECTIONED as SECTIONED_CORE_TURNS
 from nm.core_engine.turn import CALCULATION_CONTRACT as CALCULATION_CORE_TURN
 from nm.core_engine.turn import RELEASE_CONTRACT as RELEASE_CORE_TURN
 from nm.core_engine.turn import RECORDS_CONTRACT as RECORDS_CORE_TURN
@@ -1771,7 +1771,7 @@ def _shown_unit(activity, elements, element):
     draft. From turn v6 (answered dispute by dispute, 19 Oct 2026) each paragraph names its
     section, whose shown piece holds both."""
     position = unit_index(elements, element)
-    if activity['contract'] != CORE_TURN:
+    if activity['contract'] not in SECTIONED_CORE_TURNS:
         return activity['draft']['units'][position], activity.get('authority_evidence')
     piece = answer_sections.piece_of(activity, elements[element].get('section'))
     if piece is None:
@@ -1792,7 +1792,7 @@ def _source_authority_inspection(row, element, selected):
         view['reason'] = 'Authority checks were not recorded for this earlier response.'
         return view
     if activity['contract'] not in (AUTHORITY_CORE_TURN, CALCULATION_CORE_TURN, RELEASE_CORE_TURN,
-                                    RECORDS_CORE_TURN, CORE_TURN):
+                                    RECORDS_CORE_TURN, *SECTIONED_CORE_TURNS):
         raise ValueError('Unknown saved source authority contract')
     if selected['kind'] == 'document':
         view['reason'] = ('A page of a document the advocate sent, shown exactly as it was read; '

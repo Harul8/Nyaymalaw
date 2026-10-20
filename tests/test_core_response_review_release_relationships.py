@@ -75,6 +75,10 @@ class MissingWorkModel(ScriptedModel):
                     if missing else []}
             if "units" not in schema["properties"]:  # review v8 names only what is wrong
                 out.pop("units")
+            if "misleading" in schema["properties"]:  # review v10 (P29): what could be better
+                out = {"misleading": [], "could_be_better": [
+                    {"where": [], "what": "The independent request for questions has no delivered result or limit."}]
+                    if missing else []}
         if prompt.operation == "core_response_writer":
             # Writer v7 (18 Oct 2026): each source is linked from the unit's own words, here
             # the whole unit; each part returns its checklist, here none.
@@ -105,9 +109,10 @@ def test_missing_work_rewrites_once_preserving_supported_peer_then_rechecks_and_
     assert final_review["complete_draft_proposal"]["units"][1] == original_peer
     assert rewrite["original_context"] == final_review["original_context"]
     assert rewrite["original_context"]["latest"]["text"] == model.message
-    # The rewrite is told what was found and the words it concerns: an omission concerns none.
-    assert rewrite["correction"]["mismatch"][0]["concerns"] == []
-    assert rewrite["correction"]["mismatch"][0]["sources"][0]["quote"] == "List the unanswered questions."
+    # The rewrite is told what was found and the words it concerns: what it could add concerns none.
+    told, = rewrite["correction"]["mismatch"]
+    assert told["concerns"] == [] and told["category"] == "could be better"
+    assert told["mismatch"] == "The independent request for questions has no delivered result or limit."
     assert len(rewrite["correction"]["rejected_draft"]["units"]) == 2
     assert "correction" not in final_review
     rows = saved_rows(store.load(chat_matter_id("owner", response["chat_id"])), "owner")
@@ -130,7 +135,7 @@ def test_missing_work_still_missing_after_the_tries_is_said_beside_the_answer(tm
     assert len(model.calls) == expected_calls
     note = response["elements"][-1]
     assert note["kind"] == "NOTE" and note["text"] == (
-        "The independent check found that this answer may leave something out: The independent request for "
+        "The independent check suggests this answer could add or put this better: The independent request for "
         "questions has no delivered result or limit.")
     assert run(store, model, message=model.message)["replayed"] and len(model.calls) == expected_calls
 

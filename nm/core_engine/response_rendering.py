@@ -1025,9 +1025,7 @@ def _fallback(saved, name, context, research_record, sources):
     found = ""
     if reason == "found":
         piece = answer_sections.last(saved)
-        review = piece["review"]
-        said = found_words([finding for finding in ([] if review["accepted"] else review["proposal"]["findings"])
-                            if finding["category"] != "omission"], piece["date_findings"], where="the section")
+        said = found_words(answer_sections.review_faults(piece), piece["date_findings"], where="the section")
         found = f" What was found: {said}"
     understanding = (research_record["plan"]["proposal"]["understanding"]
                      if research_record.get("contract") in research.QUESTION_PLANS else {})
@@ -1088,11 +1086,10 @@ def _left_out(saved, where, name):
         paragraphs = {unit["id"] for unit in before["draft"]["units"] if unit["id"] in ids}
         units += [unit for unit in before["draft"]["units"] if unit["id"] in ids]
         items += [item for part in before["draft"]["checklists"] for item in part["items"] if item["id"] in ids]
-        review = before["review"]
-        for finding in [] if review["accepted"] else review["proposal"]["findings"]:
-            if finding["category"] != "omission" and set(finding["unit_ids"]) & paragraphs:
+        for finding in answer_sections.review_faults(before):
+            if set(finding["unit_ids"]) & paragraphs:
                 unit_found.append(finding)
-            if finding["category"] != "omission" and set(finding["unit_ids"]) & (ids - paragraphs):
+            if set(finding["unit_ids"]) & (ids - paragraphs):
                 item_found.append(finding)
         for finding in before["date_findings"]:
             if set(finding["unit_ids"]) & paragraphs:
@@ -1119,9 +1116,31 @@ def _left_out(saved, where, name):
 
 
 def _omitted(piece, where):
-    """v17: what the independent check found a piece shown may leave out, in its own words."""
-    return [_notice("NOTE", f"The independent check found that {where} may leave something out: "
-                    f"{_plainly(finding['mismatch'])}") for finding in answer_sections.omissions(piece)]
+    """v17: what the independent check found a piece shown may leave out, in its own words;
+    from review v10 (P29; G-NOTED), what it could add or put better, and what may mislead in it
+    though the check tied it to no one paragraph."""
+    if piece["review"]["contract"] != response_review.MISLEADS_CONTRACT:
+        return [_notice("NOTE", f"The independent check found that {where} may leave something out: "
+                        f"{_plainly(finding['mismatch'])}") for finding in answer_sections.beside(piece)]
+    return [_notice("NOTE", f"The independent check suggests {where} could add or put this better: "
+                    f"{_plainly(finding['mismatch'])}") if finding["category"] == response_review.BETTER
+            else _notice("NOTE", f"The independent check found that {where} may mislead, in a way it did not tie to "
+                         f"one paragraph, and the rewrites NM may make did not settle it: "
+                         f"{_plainly(finding['mismatch'])} Read {where} with this in mind.")
+            for finding in answer_sections.beside(piece)]
+
+
+def _remarked(pieces):
+    """v10 (P29; G-NOTED): what the independent check said about each worked-out time limit,
+    by its number, as notes to show beside it."""
+    notes = {}
+    for piece in pieces:
+        for finding in answer_sections.remarks(piece) if piece is not None else ():
+            for name in finding["limits"]:
+                said = re.sub(rf"\b{name}\b", "this time limit", finding["mismatch"])
+                notes.setdefault(int(name[1:]), []).append(_notice(
+                    "NOTE", f"The independent check remarked on this time limit: {_plainly(said)}"))
+    return notes
 
 
 def _edited(original, conflicts, numbers):
@@ -1200,13 +1219,15 @@ def render_sections(context, research_record, sources, *, sections, cross_check,
     # Each time limit closes the first section shown that names it; the rest follow "In short"
     # (or, where there is none, the answer's first paragraph), as v14 to v16 place them.
     boxes = _working(time_limits, as_of=True) if time_limits is not None else []
+    # What the independent check said about a time limit follows its box (v10, P29).
+    remarked = _remarked([*pieces, answer_sections.shown(overview) if overview is not None else None])
     claimed, placed = {}, set()
     for position in positions:
         for name in pieces[position]["draft"]["checklists"][0]["time_limit_ids"] if pieces[position] else ():
             number = int(name[1:]) if name[:1] == "T" and name[1:].isdigit() else 0
             if 1 <= number <= len(boxes) and number not in placed:
                 placed.add(number)
-                claimed.setdefault(position, []).append(boxes[number - 1])
+                claimed.setdefault(position, []).extend([boxes[number - 1], *remarked.get(number, [])])
     for position in positions:
         saved, piece = sections[position], pieces[position]
         name, where = called(saved), "this section" if many else "this answer"
@@ -1244,7 +1265,8 @@ def render_sections(context, research_record, sources, *, sections, cross_check,
     summaries = [index for index, element in enumerate(elements) if element["kind"] == "SUMMARY"]
     first = summaries[-1] if summaries else next(
         (index for index, element in enumerate(elements) if element["kind"] not in NOT_PARAGRAPHS), 0)
-    elements[first + 1:first + 1] = [box for number, box in enumerate(boxes, 1) if number not in placed]
+    elements[first + 1:first + 1] = [element for number, box in enumerate(boxes, 1) if number not in placed
+                                     for element in (box, *remarked.get(number, []))]
     names_waiting = [OPENING if dispute_id is None else names.get(dispute_id) or "this dispute"
                      for dispute_id in (response_writer.parts(research_record)[index]["dispute_id"] for index in waiting)]
     for name in names_waiting:

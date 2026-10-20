@@ -46,7 +46,13 @@ RECORDS_CONTRACT = "core_turn_v5"
 #: after the check across the sections, that check, and the overview; reopening re-derives
 #: each from them (answer_sections.validate). Nothing is withheld whole for what a review
 #: finds.
-CONTRACT = "core_turn_v6"
+BY_DISPUTE_CONTRACT = "core_turn_v6"
+#: v7 (owner decision P29, 20 Oct 2026): v6 reviewed under review v10, each section, correction
+#: and overview also keeping what code refused of what the writer or the review returned, and a
+#: draft code admitted that no review could be completed for, each with why (answer_sections.KEPT).
+CONTRACT = "core_turn_v7"
+#: The turns answered dispute by dispute.
+SECTIONED = (BY_DISPUTE_CONTRACT, CONTRACT)
 _RELEASED = (RELEASE_CONTRACT, RECORDS_CONTRACT)
 EXECUTION = "core_read_only_execution_v1"
 _ACTIVITY_FIELDS = {"contract", "interpretation", "research", "sources", "draft",
@@ -142,7 +148,7 @@ def understood(calls, context, searcher, report, held_acts=None):
 
 def prepare(model, context, searcher, *, case_index=None, provision_reader=None, progress=None,
             held_acts=None, shown=None):
-    """Prepare and admit one response, dispute by dispute (turn v6, owner decisions P25-P27).
+    """Prepare and admit one response, dispute by dispute (turn v7, owner decisions P25-P27, P29).
     No persistence or external action occurs here. shown (P26): told, each time the answer
     shows more, its elements so far and the activity they come from (its sections done, the
     parts still being written under "waiting")."""
@@ -178,7 +184,7 @@ def interrupted(held):
     activity = {key: deepcopy(value) for key, value in held.items() if key != "waiting"}
     activity["sections"], activity["cross_check"], activity["overview"] = answer_sections.interrupted(
         {"sections": held["sections"], "cross_check": held["cross_check"], "overview": held["overview"]},
-        held["research"])
+        held["research"], kept=held["contract"] == CONTRACT)
     return activity
 
 
@@ -219,7 +225,7 @@ def recover(store, matter, advocate_id, *, running=lambda turn_id: False, sessio
 
 
 def _validate_sections(activity, context, elements):
-    """Replay of a v6 turn: its understanding, research and time limits as saved, every
+    """Replay of a v6 or v7 turn: its understanding, research and time limits as saved, every
     section, trim, correction, cross-check and overview bound again (answer_sections), and
     the answer rendered again exactly as it was shown."""
     if (set(activity) != _SECTIONED_FIELDS
@@ -230,7 +236,7 @@ def _validate_sections(activity, context, elements):
     sources = answer_sources.build(context, record)
     if sources != activity["sources"] or execution_record(record) != activity["execution"]:
         raise ValueError("Saved sources or operation evidence changed")
-    answer_sections.validate(activity, context, record, sources, limits)
+    answer_sections.validate(activity, context, record, sources, limits, kept=activity["contract"] == CONTRACT)
     rebuilt = response_rendering.render_sections(context, record, sources, sections=activity["sections"],
                                                  cross_check=activity["cross_check"], overview=activity["overview"],
                                                  time_limits=limits)
@@ -242,7 +248,7 @@ def _validate_sections(activity, context, elements):
 def validate_activity(activity, context, elements):
     """Replay uses the saved contract and snapshots; it never fetches newer law."""
     version = activity.get("contract") if isinstance(activity, dict) else None
-    if version == CONTRACT:
+    if version in SECTIONED:
         return _validate_sections(activity, context, elements)
     expected_fields =(_ACTIVITY_FIELDS if version == LEGACY_CONTRACT else
                        _ACTIVITY_FIELDS | {"authority_evidence"} if version == AUTHORITY_CONTRACT else
@@ -290,7 +296,7 @@ def saved_rows(matter, advocate_id):
             validate_activity(row["activities"], original.payload(), row["response"]["elements"])
             # From v5 the records a turn saved are exactly what its own activity gives, under
             # the checklist version they were saved under.
-            if (row["activities"].get("contract") in (RECORDS_CONTRACT, CONTRACT)
+            if (row["activities"].get("contract") in (RECORDS_CONTRACT, *SECTIONED)
                     and row["records"] != checklist.records(original.payload(), row["activities"], contract=(
                         row["records"].get("checklist") or {}).get("contract", checklist.CONTRACT))):
                 raise ValueError("Saved records differ from what the turn admitted")
