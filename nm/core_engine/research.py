@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import re
+import threading
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 
@@ -752,18 +753,40 @@ def retrieve(plan, searcher, context, model=None, *, progress=None):
         raise ValueError("Research plan differs from its original sources")
     report = progress or (lambda stage, **detail: None)
     record = {"contract": CONTRACT, "plan": deepcopy(plan), "searches": {}, "failures": {}}
-    for number, work in enumerate(plan["work"], 1):
-        report("searching", done=number - 1, total=len(plan["work"]))
+    # The questions are searched side by side (owner, 20 Oct 2026: step 1), each as it would
+    # be alone; what each found, or why it failed, is kept in the plan's order.
+    asked, outcomes = [], {}
+    for work in plan["work"]:
         queries = search_queries(work)
         if not queries:
             continue
         try:
             if searcher is None:
                 raise SearchUnavailable("Held-law search is not configured")
-            instruments = search_instruments(work)
-            record["searches"][work["id"]] = validate_search(
-                searcher.search(queries, instruments, results={"provision": PROVISIONS_FOR_PICK}),
-                queries, instruments)
+            asked.append((work, queries, search_instruments(work)))
+        except (SearchUnavailable, ValueError, OSError, RuntimeError, KeyError, TypeError) as exc:
+            outcomes[work["id"]] = exc
+    finished, lock = [len(plan["work"]) - len(asked)], threading.Lock()
+    report("searching", done=finished[0], total=len(plan["work"]))
+
+    def searched():
+        with lock:  # counts are reported in order
+            finished[0] += 1
+            if finished[0] < len(plan["work"]):  # the last is followed by the next stage at once
+                report("searching", done=finished[0], total=len(plan["work"]))
+    futures = searcher.search_many([(queries, instruments) for _, queries, instruments in asked],
+                                   results={"provision": PROVISIONS_FOR_PICK}, done=searched) if asked else []
+    outcomes.update((work["id"], (future, queries, instruments))
+                    for (work, queries, instruments), future in zip(asked, futures, strict=True))
+    for work in plan["work"]:
+        if work["id"] not in outcomes:
+            continue
+        try:
+            outcome = outcomes[work["id"]]
+            if isinstance(outcome, Exception):
+                raise outcome
+            future, queries, instruments = outcome
+            record["searches"][work["id"]] = validate_search(future.result(), queries, instruments)
         except (SearchUnavailable, ValueError, OSError, RuntimeError, KeyError, TypeError) as exc:
             # This independent read-only adapter/snapshot failed. It supplies no
             # admitted evidence; peers remain available and the failure stays explicit.

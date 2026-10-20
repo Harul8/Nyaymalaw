@@ -3,6 +3,7 @@ the judgment pick, and the replay of every earlier plan version. These prove han
 not the model's legal judgment."""
 from copy import deepcopy
 import re
+import threading
 
 import pytest
 
@@ -448,12 +449,13 @@ def test_searches_bind_queries_and_preserve_independent_work_when_one_fails(fail
 
     def search(queries, instruments=None, **kw):
         seen.append(queries)
-        if len(seen) == 1: raise failure
+        # The questions run side by side, so the failing one is named, not taken by turn.
+        if queries[0]["query_id"].startswith("t2:w1:"): raise failure
         return original(queries, instruments, **kw)
 
     found.search = search
     record = retrieve(admitted, found, ctx, model=Model())
-    assert record["state"] == "partial"
+    assert len(seen) == 2 and record["state"] == "partial"
     assert set(record["searches"]) == {"t2:w2"} and set(record["failures"]) == {"t2:w1"}
     assert set(record["picks"]["chosen"]) == {"t2:w2"}
     assert validate(record, admitted, ctx) == record
@@ -470,6 +472,31 @@ def test_unconfigured_search_is_a_gap_and_not_empty_success():
     record = retrieve(accept(proposal(), ctx), None, ctx, model=Model())
     assert record["state"] == "partial" and record["failures"] and record["picks"]["state"] == "not_needed"
     assert record["judgment_picks"]["state"] == "not_needed"
+
+
+def test_questions_are_searched_side_by_side_each_as_alone_and_reported_as_each_finishes():
+    """Step 1 (owner, 20 Oct 2026): the matter's questions run at once, each finding exactly what
+    it finds searched alone, kept in the plan's order, the count reported as each finishes."""
+    ctx = context("Find the applicable law.")
+    admitted = accept(proposal(3), ctx)
+    found, together = searcher(), threading.Barrier(3, timeout=10)
+    original = found.search
+
+    def search(queries, instruments=None, **kw):
+        together.wait()  # all three in flight at once, or this fails
+        return original(queries, instruments, **kw)
+
+    found.search = search
+    seen = []
+    record = retrieve(admitted, found, ctx, model=Model(), progress=lambda stage, **detail: seen.append((stage, detail)))
+    alone = searcher()
+    assert record["searches"] == {work["id"]: alone.search(search_queries(work), search_instruments(work),
+                                                           results={"provision": PROVISIONS_FOR_PICK})
+                                  for work in admitted["work"]}
+    assert list(record["searches"]) == [work["id"] for work in admitted["work"]] and not record["failures"]
+    assert [detail for stage, detail in seen if stage == "searching"] == [
+        {"done": 0, "total": 3}, {"done": 1, "total": 3}, {"done": 2, "total": 3}]
+    assert validate(record, admitted, ctx) == record
 
 
 def test_replay_rebinds_source_provenance_to_original_context():
