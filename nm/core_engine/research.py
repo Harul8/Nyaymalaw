@@ -5,7 +5,9 @@ model sets out the matter, code checks it mechanically, the model reviews it aga
 the conversation and corrects it (at most MAX_REVISIONS times); search phrases are
 written per dispute in parallel beside one judgment-phrase call; each legal question is
 searched with every phrase and its named Acts; the model picks the provisions that
-answer each question and, from v8, the judgment paragraphs. Earlier plans replay unchanged.
+answer each question and, from v8, the judgment paragraphs. From search v9 (owner decision
+P32, 20 Oct 2026) the provision pick also chooses among the provisions the Acts connect to
+the results; a saved pick resolves against its own saved search. Earlier plans replay unchanged.
 """
 from __future__ import annotations
 
@@ -121,7 +123,9 @@ For each question give two or three search phrases in all, choosing the kinds th
 """
 PICK = """You are a senior Indian litigation lawyer. A matter has been broken into legal questions, and for each question a search of the statutes we hold has returned up to twenty provisions, each shown with its Act, section, heading and opening words.
 
-For each question, choose the provisions a lawyer must read to answer it: the ones that state the governing rule, right, liability, remedy, procedure, time limit, presumption or offence the question asks about. Most questions are answered by one to three provisions; choose more only when each one is needed. Put the most necessary first.
+After each question's search results come the provisions their Acts connect to them: provisions a result names in its own words, provisions that name a result, and the provisions printed beside a result, each shown with its heading and the words that connect them. A lawyer reads a rule with what its Act reads it with: its exceptions and provisos, the defences, presumptions and conditions that bear on it, its time limits and the procedure for enforcing it.
+
+For each question, choose the provisions a lawyer must read to answer it: the ones that state the governing rule, right, liability, remedy, procedure, time limit, presumption or offence the question asks about, and the connected provisions that qualify or complete them in a way the answer needs. Choose only what is needed, and put the most necessary first. Whatever you choose is read whole.
 
 Judge each provision by what it actually says, not by whether it shares words with the question. A provision whose Act India Code, the government's record of the Acts in force, no longer lists is marked not in force; weigh that as a lawyer would. If no shown provision answers a question, choose none for it and say what is missing.
 """
@@ -653,22 +657,60 @@ def _provisions(search):
     return _of_kind(search, "provision")
 
 
+def _offered(search, kind):
+    """What a pick chooses among: what search returned and, for provisions from search v9,
+    the provisions connected to them (owner decision P32, 20 Oct 2026). A fallback keeps
+    only what search returned."""
+    return [*_of_kind(search, kind), *(search.get("connected", ()) if kind == "provision" else ())]
+
+
+def _connections_said(search, shown):
+    """How each offered provision connects to what search returned, in its Act's words."""
+    returned, said = {c["id"] for c in _provisions(search)}, {}
+    for edge in search.get("connections", ()):
+        for here, there in ((edge["from"], edge["to"]), (edge["to"], edge["from"])):
+            if there not in returned or here not in shown:
+                continue
+            if edge["how"] == "beside":
+                text = f"beside {shown[there]} in its Act"
+            elif here == edge["from"]:
+                text = f'it names {shown[there]}: "{edge["words"]}"'
+            else:
+                text = f'{shown[there]} names it: "{edge["words"]}"'
+            said.setdefault(here, []).append(text)
+    return said
+
+
 def _pick_text(plan, searches, labels):
     lines = [f"Matter: {plan['proposal']['understanding']['summary']}"]
     for work in plan["work"]:
         if work["id"] not in searches:
             continue
-        label = labels[work["id"]]
+        label, search = labels[work["id"]], searches[work["id"]]
         lines.append(f"\n{label}: {work['question']}")
-        for number, candidate in enumerate(_provisions(searches[work["id"]]), 1):
+        offered, returned = _offered(search, "provision"), len(_provisions(search))
+        shown = {candidate["id"]: f"{label}.{number}" for number, candidate in enumerate(offered, 1)}
+        said = _connections_said(search, shown)
+        for number, candidate in enumerate(offered, 1):
+            if number == returned + 1:
+                lines.append("  Read with them, as their Acts connect them:")
             source = candidate["source"]
-            body = (source.get("full_text") or "").splitlines()
-            opening = re.sub(r"\s+", " ", " ".join(body[1:] or body)).strip()[:220]
             heading = re.sub(r"\s+", " ", source.get("section_title") or "")[:140]
             # P21 (19 Oct 2026): an Act India Code does not list as in force is said so.
             mark = f" [{in_force(source)}]" if in_force(source) else ""
-            lines.append(f"  {label}.{number} {candidate['title']}, section {candidate['locator']}{mark}: "
-                         f"{heading}. {opening}")
+            line = f"  {label}.{number} {candidate['title']}, section {candidate['locator']}{mark}: {heading}."
+            if number <= returned:
+                body = (source.get("full_text") or "").splitlines()
+                line += " " + re.sub(r"\s+", " ", " ".join(body[1:] or body)).strip()[:220]
+            if said.get(candidate["id"]):
+                line += " (" + "; ".join(said[candidate["id"]]) + ")"
+            counted = search.get("links", {}).get(candidate["id"])
+            more = counted and counted["names"] + counted["named_by"] - sum(
+                edge["how"] == "names" and candidate["id"] in (edge["from"], edge["to"])
+                for edge in search.get("connections", ()))
+            if more:
+                line += f" (its Act connects {more} more provisions to it, not shown)"
+            lines.append(line)
     return "\n".join(lines)
 
 
@@ -707,7 +749,7 @@ def _resolve_picks(choice, plan, searches, labels, kind="provision"):
             try:
                 if work_id is None or label != item["question_id"] or not number.isdigit() or int(number) < 1:
                     raise ValueError
-                candidate = _of_kind(searches[work_id], kind)[int(number) - 1]
+                candidate = _offered(searches[work_id], kind)[int(number) - 1]
             except (ValueError, IndexError):
                 unknown.append(shown)
                 continue

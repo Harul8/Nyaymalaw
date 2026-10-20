@@ -120,3 +120,54 @@ def test_a_saved_record_cannot_join_what_its_act_did_not(tmp_path, monkeypatch):
     with pytest.raises(ValueError, match="link counts"):
         validate_search(undercounted, QUERIES[:1])
 
+
+# --- the pick chooses among them (research) ---------------------------------------------
+
+def _researched(tmp_path, monkeypatch, choose):
+    from nm.core_engine.research import accept, retrieve
+    from nm.core_engine.retrieval import HybridSearcher
+    from tests.test_core_research import Model, judgments, proposal
+    from tests.test_core_understanding import context
+
+    held = _local(tmp_path, ROWS)
+    monkeypatch.setattr(held, "lexical", lambda query, depth: [CLAUSE_B])
+    monkeypatch.setattr(held, "semantic", lambda query, depth: [CLAUSE_B])
+    monkeypatch.setattr(held, "rerank", lambda pairs, *, anchors=None: [1.0] * len(pairs))
+    ctx = context("Find the applicable law.")
+    admitted = accept(proposal(), ctx)
+    model = Model(choose=choose)
+    record = retrieve(admitted, HybridSearcher({"provision": held, "judgment": judgments()}), ctx, model=model)
+    return ctx, admitted, record, model
+
+
+def test_the_pick_sees_the_connected_provisions_with_the_words_that_connect_them(tmp_path, monkeypatch):
+    _, _, record, model = _researched(tmp_path, monkeypatch, lambda ids: ids[:1])
+    shown = next(prompt.user for prompt in model.calls if prompt.operation == "core_research_pick")
+    assert "  Read with them, as their Acts connect them:" in shown
+    assert ('Q1.3 Held ni, section 140: Duty and exception. (it names Q1.1: "It shall not be a defence in a '
+            'prosecution for an offence under section 138")') in shown
+    assert "Q1.5 Held ni, section 137: Duty and exception. (beside Q1.1 in its Act)" in shown
+    assert "section 420" not in shown.split("Read with them")[1]
+
+
+def test_a_chosen_connected_provision_is_admitted_whole_and_replays(tmp_path, monkeypatch):
+    from nm.core_engine import answer_sources
+    from nm.core_engine.research import validate
+
+    ctx, admitted, record, _ = _researched(tmp_path, monkeypatch, lambda ids: [ids[0], ids[2]])
+    search = record["searches"]["t2:w1"]
+    by_section = _by_section(search)
+    assert record["picks"]["chosen"] == {"t2:w1": [by_section["138"]["id"], by_section["140"]["id"]]}
+    assert validate(record, admitted, ctx) == record
+    sources = answer_sources.build(ctx, record)
+    provisions = {row["source_identity"]["position"] for row in sources.values() if row["kind"] == "provision"}
+    assert provisions == {S138, CLAUSE_B, 4}  # s.138 whole, with clause (b), and s.140
+
+
+def test_an_unavailable_pick_keeps_only_what_search_returned(tmp_path, monkeypatch):
+    from nm.core_engine.research import _fallback_picks
+
+    _, _, record, _ = _researched(tmp_path, monkeypatch, lambda ids: ids)
+    returned = [c["id"] for c in record["searches"]["t2:w1"]["candidates"] if c["kind"] == "provision"]
+    assert len(record["picks"]["chosen"]["t2:w1"]) == 5  # the one returned and its four connected
+    assert _fallback_picks(record["searches"], {"t2:w1": "Q1"}) == {"t2:w1": returned}
