@@ -309,9 +309,21 @@ def _digest(dependencies):
 _LABEL = re.compile(r"(?:T|K|D)\d+")
 
 
-def _ids(values, known):
+def _ids(values, known, shown=None):
+    """IDs a review names: each once, and each of the draft's own. shown (v9): the short IDs
+    as the review was shown them, so that a refusal names what to change (the first live run
+    of answering dispute by dispute, 20 Oct 2026, lost both sections to a refusal that did
+    not say which ID was wrong)."""
     if len(values) != len(set(values)) or not set(values) <= known:
-        raise SchemaViolation("Review refers to duplicate or unknown draft unit IDs")
+        if shown is None:
+            raise SchemaViolation("Review refers to duplicate or unknown draft unit IDs")
+        unknown = sorted({shown.get(value, value) for value in values if value not in known}
+                         | {shown.get(value, value) for value in values if values.count(value) > 1})
+        raise SchemaViolation("Review names IDs that are not paragraphs or checklist items of this draft, or names one "
+                              f"twice: {', '.join(unknown)}. Name paragraphs as "
+                              f"{', '.join(sorted(alias for alias in shown.values() if alias[:1] == 'U'))} and checklist "
+                              f"items as {', '.join(sorted(alias for alias in shown.values() if alias[:1] == 'C')) or 'none'}"
+                              "; say anything else, such as a time limit, in mismatch")
 
 
 def _selection_key(reference, sources):
@@ -371,6 +383,12 @@ def _accept(proposal, dependencies, *, contract=LEGACY_CONTRACT):
         item["unit_ids"] = [named.get(identity, identity) for identity in item["unit_ids"]]
         if contract in _NAMED:  # v8: an ID given twice names one unit (18 Oct 2026)
             item["unit_ids"] = list(dict.fromkeys(item["unit_ids"]))
+        if contract == SECTION_CONTRACT:
+            # v9: a time limit, matter checklist item or dispute named among the paragraphs a
+            # finding concerns is none of them, as among its sources (v8); the finding's words
+            # still say what it is about.
+            item["unit_ids"] = [identity for identity in item["unit_ids"]
+                                if identity in known or not _LABEL.fullmatch(str(identity))]
     if contract in _FINDINGS:
         # A reply unit or checklist item given among a finding's sources (the reviewer did so
         # in two of four live runs, 18 Oct 2026, and the answer was lost) is what the finding
@@ -397,9 +415,10 @@ def _accept(proposal, dependencies, *, contract=LEGACY_CONTRACT):
         if not text.strip():
             raise SchemaViolation("Review needs a meaningful reason or precise mismatch")
 
+    shown_ids = {identity: alias for alias, identity in named.items()} if contract == SECTION_CONTRACT else None
     requests, missing = set(), []
     for item in data["request_coverage"]:
-        _ids(item["unit_ids"], known)
+        _ids(item["unit_ids"], known, shown_ids)
         key = _selection_key(_offered(item["request"], offered), sources)
         if sources[key[0]]["kind"] != "account" or sources[key[0]]["speaker"] != "advocate":
             raise SchemaViolation("Request coverage must select original advocate words")
@@ -418,17 +437,18 @@ def _accept(proposal, dependencies, *, contract=LEGACY_CONTRACT):
         cited = {_selection_key(_offered(ref, offered), sources) for finding in data["findings"]
                  for ref in finding["sources"]}
         for item in data["request_coverage"]:
-            if item["disposition"] != "missing" or item["unit_ids"]:
+            # v9: one naming the paragraphs it belongs in likewise (20 Oct 2026).
+            if item["disposition"] != "missing" or item["unit_ids"] and contract != SECTION_CONTRACT:
                 continue
             key = _selection_key(_offered(item["request"], offered), sources)
             if not any(_overlaps(key, source) for source in cited):
-                data["findings"].append({"category": "omission", "unit_ids": [],
+                data["findings"].append({"category": "omission", "unit_ids": list(item["unit_ids"]),
                                          "sources": [deepcopy(item["request"])], "mismatch": item["reason"]})
                 cited.add(key)
 
     affected, selected_findings = set(), set()
     for finding in data["findings"]:
-        _ids(finding["unit_ids"], known)
+        _ids(finding["unit_ids"], known, shown_ids)
         selections = {_selection_key(_offered(ref, offered), sources) for ref in finding["sources"]}
         # v8: a finding naming no paragraph concerns the whole answer, whatever it cites.
         if not finding["unit_ids"] and contract not in _NAMED and not any(
@@ -461,6 +481,10 @@ def _accept(proposal, dependencies, *, contract=LEGACY_CONTRACT):
     if contract in _NAMED and accepted and (data["findings"] or missing):
         # v8: what the review found outweighs a verdict written beside it.
         data["verdict"], accepted = "reject", False
+    if contract == SECTION_CONTRACT and not accepted and not data["findings"] and not missing:
+        # v9: and so does a review that found nothing (owner, 18 Oct 2026: "Review lists only
+        # problems"): a rejection naming no problem rejects nothing.
+        data["verdict"], accepted = "accept", True
     if accepted != (not data["findings"] and not rejected and not missing):
         raise SchemaViolation("Review verdict disagrees with its unit, request or finding dispositions")
     return {"contract": contract, "proposal": deepcopy(data), "accepted": accepted,

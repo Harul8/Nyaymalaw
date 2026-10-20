@@ -668,3 +668,56 @@ def test_a_page_that_knew_the_conversation_before_a_stop_can_send_the_message_ag
         run(store, through_turns(Scripted()), chat_id=chat_id, turn_id="t3", message="Later?",
             expected_version=version)
     assert stale.value.code == "stale_version"
+
+
+# --- the first live run, 20 Oct 2026 -----------------------------------------------------
+
+def section_review(proposal):
+    """A section of the two-dispute matter, and what code makes of a review of it."""
+    from nm.core_engine import response_authorities, response_review
+    ctx, record, sources = two_disputes()
+    draft = response_writer.accept({"units": [paragraph("summary", "In short."), paragraph("next_step", "A step.")],
+                                    "checklists": [{"checklist": [], "time_limit_ids": []}]}, ctx, sources,
+                                   contract=response_writer.SECTION_CONTRACT, parts=[{"dispute_id": "D1", "units": 2}],
+                                   section=1)
+    deps = response_review._dependencies(ctx, record, sources, draft, turn.execution_record(record),
+                                         authority_evidence=response_authorities.check(ctx, record, sources, draft),
+                                         contract=response_review.SECTION_CONTRACT)
+    return response_review._accept(proposal, deps, contract=response_review.SECTION_CONTRACT)
+
+
+def test_a_section_review_s_natural_slips_are_taken_as_meant_not_refused():
+    """The first live run of answering dispute by dispute (20 Oct 2026) lost both sections:
+    code refused each of four reviews, two after a correction. Offline, three natural slips
+    were refused - a time limit's ID among the paragraphs a finding concerns, a rejection
+    naming no problem, and a request called missing that names its paragraphs - two of them
+    with a reason a correction could not act on."""
+    from nm.shared.model_port import SchemaViolation as Refused
+    ask = {"source_id": "M1", "quote": "Find the applicable law."}
+    labelled = section_review({"verdict": "reject", "request_coverage": [], "findings": [
+        {"category": "framing", "unit_ids": ["U1", "T3", "D2"], "sources": [], "mismatch": "U1 misstates T3."}]})
+    assert labelled["proposal"]["findings"][0]["unit_ids"] == ["t2:s1b1"] and not labelled["accepted"]
+    nothing = section_review({"verdict": "reject", "request_coverage": [], "findings": []})
+    assert nothing["accepted"] and nothing["proposal"]["verdict"] == "accept"
+    missing = section_review({"verdict": "reject", "findings": [], "request_coverage": [
+        {"request": ask, "disposition": "missing", "unit_ids": ["U2"], "reason": "It names no Act."}]})
+    assert missing["proposal"]["findings"] == [{"category": "omission", "unit_ids": ["t2:s1b2"], "sources": [ask],
+                                                "mismatch": "It names no Act."}]
+    # An ID that names nothing is still refused, and the refusal says which and what to name.
+    with pytest.raises(Refused, match="Review names IDs that are not paragraphs or checklist items of this draft, or "
+                                      "names one twice: U9. Name paragraphs as U1, U2 and checklist items as none"):
+        section_review({"verdict": "reject", "request_coverage": [], "findings": [
+            {"category": "grounding", "unit_ids": ["U9"], "sources": [], "mismatch": "x"}]})
+
+
+def test_why_code_refused_an_output_is_kept_with_its_call_in_its_own_words_only():
+    # The first live run could not tell why four reviews were refused.
+    def faulty(round_, payload):
+        out = written("D2", round_)
+        if round_ == 1:
+            out[1]["text"] += " [An unoffered source](P999)."
+        return out
+    _, _, activity, calls = answered(Scripted({"D2": faulty}))
+    noted = [call["refused"] for call in calls.metrics()["calls"] if call["refused"]]
+    assert noted == ["The link"]  # never the words the writer wrote
+    assert all(call["refused"] is None for call in calls.metrics()["calls"] if call["operation"] != "core_response_writer")

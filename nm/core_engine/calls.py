@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import re
 import threading
 import time
 from contextlib import contextmanager
@@ -155,13 +156,16 @@ class TurnCalls:
             raise
         finally:
             usage = getattr(receipt, "usage", None)
+            record = {}
             # Report an actual port receipt, including a quarantined completed
             # result. A requested tier or configured default is not a receipt
             # for a failed request whose provider/model remains unknown.
             result = receipt if isinstance(receipt, ModelResult) else getattr(
                 receipt, "rejected_result", None)
             identity = result if isinstance(result, ModelResult) else None
-            self.calls.append({"operation": prompt.operation, "error": error,
+            self._local.record = record
+            self.calls.append(record)
+            record.update({"operation": prompt.operation, "error": error,
                 "provider": identity.provider if identity else None,
                 "model": identity.model if identity else None,
                 "tier": identity.tier.value if identity else None,
@@ -175,7 +179,17 @@ class TurnCalls:
                 "cost_usd": usage.cost_usd if usage else None,
                 "retries": getattr(receipt, "retries", 0),
                 "correction": feedback is not None and feedback["operation"] == prompt.operation,
-                "usage_confirmed": usage is not None})
+                "usage_confirmed": usage is not None,
+                # Why code refused what this call returned, if it did (refused()).
+                "refused": None})
+
+    def refused(self, exc):
+        """Note on this thread's latest call why code refused what it returned: the reason's
+        own fixed words, up to the first quotation or detail, never the words refused (the
+        first live run of 20 Oct 2026 could not tell why four reviews were refused)."""
+        record = getattr(self._local, "record", None)
+        if record is not None and record.get("refused") is None:
+            record["refused"] = re.split(r"[:“\"'(\[{]", str(exc), maxsplit=1)[0].strip()[:120] or type(exc).__name__
 
     def correct(self, operation, activity, *, mismatch, rejected=None, asked_by_review=False, purpose=None):
         """Correct a typed owner-rejected draft; caller must revalidate the result.
@@ -219,6 +233,7 @@ class TurnCalls:
         try:
             return activity()
         except SchemaViolation as exc:
+            self.refused(exc)
             return self.correct(operation, activity, mismatch=shape_mismatch(exc), rejected=self.last_output)
 
     def withhold(self, reason):

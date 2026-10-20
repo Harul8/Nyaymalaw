@@ -214,6 +214,7 @@ class _Answering:
             try:
                 draft = write() if correction is None else self.calls.correct(operation, write, **correction)
             except SchemaViolation as exc:
+                self.calls.refused(exc)
                 why = "checks"
                 if self.calls.used(scope) >= allowance:
                     return kept(), why
@@ -227,7 +228,8 @@ class _Answering:
                 return kept(), self._failed(scope, exc)
             try:
                 piece = self._review(draft, kwargs)
-            except (SchemaViolation, CorrectionUnavailable):
+            except (SchemaViolation, CorrectionUnavailable) as exc:
+                self.calls.refused(exc)
                 return kept(), "review"
             except _STOP:
                 raise
@@ -256,7 +258,8 @@ class _Answering:
                        _LEFT_OUT[finding["category"]][1])
             try:
                 current = self._review(response_writer.trim(current["draft"], ids), kwargs)
-            except (SchemaViolation, CorrectionUnavailable):
+            except (SchemaViolation, CorrectionUnavailable) as exc:
+                self.calls.refused(exc)
                 return trims, "review"
             except _STOP:
                 raise
