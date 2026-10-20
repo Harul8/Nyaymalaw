@@ -199,7 +199,10 @@ its document says: cite it for that, keep it apart from the advocate's own accou
 treat it as neither proved nor law. A page the AI read from a scan may hold [illegible]
 marks; say what could not be read where it matters. A voice note arrives the same way,
 as its recording's transcript made by the AI: what was said, by whoever is speaking.
-3. Read each legal source with its neighbouring context. For judgment passages,
+3. Read each legal source with its neighbouring context. A provision's read_with names
+the held provisions its Act reads it with and how: it names them, they name it in the
+words shown, or they stand beside it. Read them together, and state a rule with the
+provisos, exceptions, defences and conditions among them that bear on it. For judgment passages,
 distinguish a party's submission, quoted contract or authority, the deciding court's
 reasoning and its operative result. Source labels and ranking do not establish those
 roles. Court treatment means the deciding court's response to the selected proposition:
