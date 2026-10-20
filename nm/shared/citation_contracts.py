@@ -641,16 +641,42 @@ def bind_provision_key(reference: str, held_keys: tuple[str, ...]) -> ProvisionK
     missing keys and multiple equivalent keys never choose a neighbour or a
     fuller store. Historical narrative extraction above is deliberately unchanged.
     """
+    _check_reference(reference)
+    _check_held_keys(held_keys)
+    identity = _explicit_key_identity(reference)
+    return _binding(reference, tuple(sorted(key for key in held_keys if _explicit_key_identity(key) == identity)))
+
+
+def provision_key_binder(held_keys: tuple[str, ...]):
+    """bind_provision_key for one key population, many references: the held keys'
+    identities are worked out once (20 Oct 2026: binding the Income Tax Act's own
+    references one by one took 79 s). Each binding is the one bind_provision_key gives."""
+    _check_held_keys(held_keys)
+    by_identity = {}
+    for key in held_keys:
+        by_identity.setdefault(_explicit_key_identity(key), []).append(key)
+
+    def bind(reference: str) -> ProvisionKeyBinding:
+        _check_reference(reference)
+        return _binding(reference, tuple(sorted(by_identity.get(_explicit_key_identity(reference), ()))))
+    return bind
+
+
+def _check_reference(reference):
     if type(reference) is not str or not reference.strip():
         raise ValueError("a provision key is explicit nonblank text")
+
+
+def _check_held_keys(held_keys):
     if (
         type(held_keys) is not tuple
         or any(type(key) is not str or not key.strip() for key in held_keys)
         or len(set(held_keys)) != len(held_keys)
     ):
         raise ValueError("held provision keys are one exact typed distinct owner population")
-    identity = _explicit_key_identity(reference)
-    candidates = tuple(sorted(key for key in held_keys if _explicit_key_identity(key) == identity))
+
+
+def _binding(reference, candidates):
     if len(candidates) == 1:
         return ProvisionKeyBinding(
             reference, ProvisionKeyState.BOUND, candidates[0], candidates,
@@ -665,3 +691,102 @@ def bind_provision_key(reference: str, held_keys: tuple[str, ...]) -> ProvisionK
         reference, ProvisionKeyState.NOT_FOUND, None, (),
         "the exact provision identity is not held in this routed source's key population",
     )
+
+
+# --- The provisions a provision's own words name (owner decision P32, 20 Oct 2026) --------
+#
+# A statute links its provisions in words: "an offence under section 138", "subject to the
+# provisions contained in sections 4 to 24 (inclusive)", "the certificate referred to in
+# section 65B", "rule 3 of Order XXI". Research reads a provision with what its own Act links
+# it to. This reader only finds the words. Binding them to held provisions stays
+# bind_provision_key's, inside the one Act whose text it is. Words that name another
+# instrument's provision ("section 2 of the Indian Penal Code", "of that Act", "the said
+# Code") are marked, so that they are never bound inside this one.
+_OWN_UNIT = r"\d+[A-Z]{0,3}(?![A-Za-z])"
+_OWN_PARTS = r"(?:\s*\((?:\d+[A-Z]{0,2}|[a-z]{1,3}|[ivxl]{1,6})\))*"
+_OWN_KIND = r"(?i:sections?|articles?|rules?)"
+_OWN_JOIN = r"(?:\s*,\s*(?:and\s+|or\s+)?|\s+(?:and|or|to)\s+|\s*[-–]\s*)"
+_OWN_ITEM = _OWN_UNIT + _OWN_PARTS
+_OWN_LIST = _OWN_ITEM + r"(?:" + _OWN_JOIN + r"(?:" + _OWN_KIND + r"\s+)?" + _OWN_ITEM + r")*"
+_OWN_ORDER = r"(?P<order>[IVXLC]+A?)(?![A-Za-z])"
+#: "section 138", "sections 4 to 24", "rule 3 of Order XXI"; never "sub-section (2)" or "sub-rule".
+NAMED_IN_TEXT = re.compile(
+    r"(?<![\w-])(?P<kind>" + _OWN_KIND + r")\s+(?P<items>" + _OWN_LIST + r")"
+    r"(?:\s*,?\s+(?i:of\s+order)\s+" + _OWN_ORDER + r")?")
+#: "Order XXI, rule 3", "Order XXXIX rules 1 and 2".
+NAMED_ORDER_FIRST = re.compile(
+    r"(?<![\w-])(?i:order)\s+" + _OWN_ORDER + r"\s*,?\s+(?P<kind>(?i:rules?))\s+(?P<items>" + _OWN_LIST + r")")
+_OWN_PIECE = re.compile(r"(?:(?P<kind>" + _OWN_KIND + r")\s+)?(?P<unit>" + _OWN_UNIT + r")" + _OWN_PARTS
+                        + r"|(?P<join>" + _OWN_JOIN + r")")
+_INSTRUMENT_WORD = r"(?:Act|Code|Ordinance|Regulations?|Rules|Constitution|Sanhita|Adhiniyam)\b"
+#: What follows words naming another instrument's provision.
+_ELSEWHERE = re.compile(
+    r"\s*,?\s*(?:of|in|under|to|by)\s+(?:"
+    r"(?:the\s+)?(?:said|that|principal|corresponding|repealed|former|aforesaid)\s+" + _INSTRUMENT_WORD
+    + r"|the\s+(?:Act|Code|Constitution)\b"
+    r"|(?:the\s+)?(?:[A-Z][\w'&.\-]*,?\s+|(?:of|and|for|the|in|on|to)\s+|\(\s*|\)\s*){0,14}?" + _INSTRUMENT_WORD
+    + r"|(?:Central\s+|State\s+)?Act\s+(?:No\.\s*)?\d+\s+of\s+\d{4})")
+#: What precedes them in an editor's note of amendment: "[Inserted by Act 21 of 2000, Section 92 ...]".
+_AFTER_AN_ACT = re.compile(r"Act\s+(?:No\.\s*)?(?:\d+|[IVXLC]+)\s+of\s+\d{4}\s*,?\s*$")
+#: An instrument that amends others: its provisions name the principal Act's provisions.
+_AMENDING = re.compile(r"\(\s*Amendment\s*\)|\bAmendment\s+Act\b|\bFinance\s+(?:\(No\.\s*\d+\)\s+)?Act\b"
+                       r"|\bRepealing\b|\bValidation\b", re.I)
+#: Rules and regulations: their "section" is a section of the Act they are made under.
+_SUBORDINATE = re.compile(r"\b(?:Rules|Regulations|Bye-?laws|Scheme)\b(?:\s*,?\s*(?:1[6-9]|20)\d\d)?\s*$", re.I)
+
+
+@dataclass(frozen=True)
+class NamedProvision:
+    """Words in a provision that name a provision. `reference` is explicit key syntax that
+    bind_provision_key reads ("section 65B", "Article 65", "Order XXI Rule 3"); `through`
+    closes a range ("sections 4 to 24": section 4 through section 24); `elsewhere` marks
+    words naming another instrument's provision; `start` and `end` place the words."""
+    words: str
+    start: int
+    end: int
+    reference: str
+    through: str | None
+    elsewhere: bool
+
+
+def provisions_named(text: str, within: str | None = None, instrument: str = "") -> tuple[NamedProvision, ...]:
+    """The provisions a provision's words name, in order. `within` is the key of the
+    provision the text belongs to: a bare "rule 54" inside a rule of Order XXI names
+    Order XXI Rule 54. Sub-sections, clauses and provisos of a named provision belong to
+    it ("clause (b) of sub-section (1) of section 5" names section 5). `instrument` is the
+    held title: every reference in an amending instrument names the principal Act's
+    provision, and a "section" in rules or regulations names the parent Act's, so these
+    are marked elsewhere; their own rules are bare designations."""
+    text = text or ""
+    own_order = _EXPLICIT_ORDER_RULE.fullmatch((within or "").strip())
+    amending = bool(_AMENDING.search(instrument or ""))
+    subordinate = bool(_SUBORDINATE.search(instrument or ""))
+    found, taken = [], []
+    for pattern in (NAMED_ORDER_FIRST, NAMED_IN_TEXT):
+        for match in pattern.finditer(text):
+            if any(match.start() < end and start < match.end() for start, end in taken):
+                continue
+            taken.append(match.span())
+            elsewhere = bool(amending or _ELSEWHERE.match(text, match.end())
+                             or _AFTER_AN_ACT.search(text, max(0, match.start() - 40), match.start()))
+            order = match.group("order") or (own_order[1] if own_order else None)
+            kind, previous, joined = match.group("kind").lower().rstrip("s"), None, None
+            for piece in _OWN_PIECE.finditer(match.group("items")):
+                if piece.group("join"):
+                    joined = piece.group("join").strip(" ,")
+                    continue
+                kind = (piece.group("kind") or kind).lower().rstrip("s")
+                unit, parent = piece.group("unit"), elsewhere or (subordinate and kind == "section")
+                if kind == "rule" and order:
+                    reference = f"Order {order} Rule {unit}"
+                else:
+                    reference = unit if subordinate and kind == "rule" else f"{kind} {unit}"
+                if (joined in ("to", "-", "–") and previous is not None and previous.through is None
+                        and previous.elsewhere == parent):
+                    found[-1] = NamedProvision(previous.words, previous.start, previous.end,
+                                               previous.reference, reference, parent)
+                    previous, joined = found[-1], None
+                    continue
+                found.append(NamedProvision(match.group(0), match.start(), match.end(), reference, None, parent))
+                previous, joined = found[-1], None
+    return tuple(sorted(found, key=lambda named: named.start))
