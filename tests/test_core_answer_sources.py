@@ -149,8 +149,8 @@ def test_same_corpus_position_cannot_supply_contradictory_passages_across_work()
     search["candidates"][i] = _candidate("judgment", prior["position"], changed,
         prior["corpus_revision"], prior["score"], prior["query_ids"], window)
     # The saved judgment pick named the paragraph at this place in the list (v8).
-    record["judgment_picks"]["chosen"]["t2:w2"] = [search["candidates"][i]["id"] if c == prior["id"] else c
-                                                   for c in record["judgment_picks"]["chosen"]["t2:w2"]]
+    record["judgment_picks"]["D1"]["chosen"]["t2:w2"] = [search["candidates"][i]["id"] if c == prior["id"] else c
+                                                   for c in record["judgment_picks"]["D1"]["chosen"]["t2:w2"]]
     assert validate(record, record["plan"], ctx) == record
     with pytest.raises(ValueError, match="conflicting saved source"): build(ctx, record)
 
@@ -446,7 +446,7 @@ def test_a_picked_judgment_is_read_with_one_paragraph_either_side_and_every_othe
     searcher = HybridSearcher({"provision": Collection(), "judgment": LongJudgment()})
     record = retrieve(plan, searcher, ctx, model=Model(choose_judgments=lambda ids: ids[:1]))
     returned = [c for c in record["searches"]["t2:w1"]["candidates"] if c["kind"] == "judgment"]
-    picked = next(c for c in returned if c["id"] in record["judgment_picks"]["chosen"]["t2:w1"])
+    picked = next(c for c in returned if c["id"] in record["judgment_picks"]["D1"]["chosen"]["t2:w1"])
     other = next(c for c in returned if c["id"] != picked["id"])
     sources = build(ctx, record)
     read = sorted(int(r["source_identity"]["position"]) for r in sources.values() if r["kind"] == "judgment")

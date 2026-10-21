@@ -54,27 +54,15 @@ CONTRACT = "core_turn_v7"
 #: The turns answered dispute by dispute.
 SECTIONED = (BY_DISPUTE_CONTRACT, CONTRACT)
 _RELEASED = (RELEASE_CONTRACT, RECORDS_CONTRACT)
-EXECUTION = "core_read_only_execution_v1"
+EXECUTION = research.EXECUTION
 _ACTIVITY_FIELDS = {"contract", "interpretation", "research", "sources", "draft",
                     "review", "execution", "rendering_contract"}
 _SECTIONED_FIELDS = {"contract", "interpretation", "research", "sources", "execution", "calculation",
                      "rendering_contract", "sections", "cross_check", "overview"}
 
 
-def execution_record(record):
-    """Receipts describe what this code did, never whether the request is fulfilled."""
-    searches = []
-    for work in record["plan"]["work"]:
-        identity = work["id"]
-        if identity in record["failures"]:
-            state = "failed"
-        elif identity in record["searches"]:
-            state = "partial" if record["searches"][identity]["issues"] else "evaluated"
-        else:
-            state = "not_requested"
-        searches.append({"work_id": identity, "state": state})
-    return {"contract": EXECUTION, "operations": [], "record_changes": [],
-            "external_actions": [], "searches": searches, "persistence": "not_yet_committed"}
+#: Receipts describe what this code did, never whether the request is fulfilled (research owns them).
+execution_record = research.execution
 
 
 def _diagnosis(code, exc, calls):

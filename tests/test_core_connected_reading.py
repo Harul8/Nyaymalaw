@@ -159,7 +159,7 @@ def test_a_chosen_connected_provision_is_admitted_whole_and_replays(tmp_path, mo
     ctx, admitted, record, _ = _researched(tmp_path, monkeypatch, lambda ids: [ids[0], ids[2]])
     search = record["searches"]["t2:w1"]
     by_section = _by_section(search)
-    assert record["picks"]["chosen"] == {"t2:w1": [by_section["138"]["id"], by_section["140"]["id"]]}
+    assert record["picks"]["D1"]["chosen"] == {"t2:w1": [by_section["138"]["id"], by_section["140"]["id"]]}
     assert validate(record, admitted, ctx) == record
     sources = answer_sources.build(ctx, record)
     provisions = {row["source_identity"]["position"] for row in sources.values() if row["kind"] == "provision"}
@@ -171,7 +171,7 @@ def test_an_unavailable_pick_keeps_only_what_search_returned(tmp_path, monkeypat
 
     _, _, record, _ = _researched(tmp_path, monkeypatch, lambda ids: ids)
     returned = [c["id"] for c in record["searches"]["t2:w1"]["candidates"] if c["kind"] == "provision"]
-    assert len(record["picks"]["chosen"]["t2:w1"]) == 5  # the one returned and its four connected
+    assert len(record["picks"]["D1"]["chosen"]["t2:w1"]) == 5  # the one returned and its four connected
     assert _fallback_picks(record["searches"], {"t2:w1": "Q1"}) == {"t2:w1": returned}
 
 

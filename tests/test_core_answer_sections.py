@@ -13,7 +13,7 @@ from copy import deepcopy
 import pytest
 
 from nm.core_engine import (
-    answer_sections, calculation, checklist, matter_board, response_rendering, response_writer, turn,
+    answer_sections, calculation, checklist, matter_board, research, response_rendering, response_writer, turn,
 )
 from nm.core_engine.calls import CONFLICT_PURPOSE, REVIEW_PURPOSE, TurnCalls
 from nm.shared.budget_contracts import Completion
@@ -245,7 +245,7 @@ def test_where_nothing_survives_a_note_built_by_code_stands_in_the_section():
     assert "UNSUPPORTED" not in json.dumps(elements)
     record = two_disputes()[1]
     picked = {identity for work in record["plan"]["work"] if work["dispute"]["id"] == "D2"
-              for identity in record["picks"]["chosen"].get(work["id"], [])}
+              for identity in research.chosen(record).get(work["id"], [])}
     assert len(note["fallback"]["provisions"]) == len(picked)
     # The overview is told the dispute could not be written in full, and why.
     shown = model.payloads("core_response_overview")[0]["sections_shown"]

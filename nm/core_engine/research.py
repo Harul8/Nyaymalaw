@@ -42,14 +42,26 @@ PICKED_CONTRACT = "core_research_v7"
 JUDGMENT_PICKED_CONTRACT = "core_research_v8"
 #: v9 (owner decision, 16 Oct 2026): each dispute also says why it matters to the
 #: advocate's client, shown on the matter board. v7 and v8 records keep their own shape.
-CONTRACT = "core_research_v9"
+PURPOSED_CONTRACT = "core_research_v9"
+#: v10 (owner, 21 Oct 2026: step 4, P26 as first decided): each dispute's questions are picked
+#: apart from the other disputes', as soon as its own questions are searched, so that its
+#: section can be written while the others are still being researched. The record keeps each
+#: dispute's picks under its ID, and a dispute's part of the record reads on its own (part_of),
+#: exactly as its section was written from it. v9 and earlier records replay unchanged.
+CONTRACT = "core_research_v10"
 #: The plans that set out the matter as disputes and legal questions (v7 on).
-QUESTION_PLANS = (PICKED_CONTRACT, JUDGMENT_PICKED_CONTRACT, CONTRACT)
+QUESTION_PLANS = (PICKED_CONTRACT, JUDGMENT_PICKED_CONTRACT, PURPOSED_CONTRACT, CONTRACT)
 _QUESTION_PLANS = QUESTION_PLANS
 #: The records that pick judgment paragraphs and answer in parts per dispute (v8 on).
-JUDGMENT_PICKS = (JUDGMENT_PICKED_CONTRACT, CONTRACT)
+JUDGMENT_PICKS = (JUDGMENT_PICKED_CONTRACT, PURPOSED_CONTRACT, CONTRACT)
+#: The records that keep each dispute's picks apart (v10).
+BY_DISPUTE = (CONTRACT,)
 CONTRACTS = (LEGACY_CONTRACT, PREVIOUS_CONTRACT, WINDOWED_CONTRACT, ACCOUNT_CONTRACT,
-             INSTRUMENTED_CONTRACT, PICKED_CONTRACT, JUDGMENT_PICKED_CONTRACT, CONTRACT)
+             INSTRUMENTED_CONTRACT, PICKED_CONTRACT, JUDGMENT_PICKED_CONTRACT, PURPOSED_CONTRACT, CONTRACT)
+#: What a question's search records, and its dispute's picks, when the answer stopped first.
+UNFINISHED = "The answer stopped before this research was finished"
+#: The receipts of what research did (execution).
+EXECUTION = "core_read_only_execution_v1"
 #: One check-and-fix round, then the last check (owner, 18 Oct 2026, for speed: a second
 #: round took about 45 s in the eighth live run).
 MAX_REVISIONS = 1
@@ -559,7 +571,7 @@ def accept(proposal, context, *, contract=CONTRACT):
     if contract not in CONTRACTS:
         raise ValueError("Unknown research contract")
     if contract in _QUESTION_PLANS:
-        return _accept_v7(proposal, context, SCHEMA if contract == CONTRACT else SCHEMA_V8)
+        return _accept_v7(proposal, context, SCHEMA if contract in (PURPOSED_CONTRACT, CONTRACT) else SCHEMA_V8)
     schema = {LEGACY_CONTRACT: LEGACY_SCHEMA, PREVIOUS_CONTRACT: PREVIOUS_SCHEMA,
               WINDOWED_CONTRACT: ACCOUNT_SCHEMA, ACCOUNT_CONTRACT: ACCOUNT_SCHEMA,
               INSTRUMENTED_CONTRACT: INSTRUMENTED_SCHEMA}[contract]
@@ -787,16 +799,60 @@ def _picks_open(picks):
     return any(p["state"] == "unavailable" or p["unknown"] for p in picks)
 
 
-def retrieve(plan, searcher, context, model=None, *, progress=None):
-    """Independent work items retain checked snapshots or explicit read-only gaps; the
-    model then picks the provisions and the judgment paragraphs that answer each
-    question, both at once (v8)."""
+#: Each pick's field in a research record.
+_PICK_FIELDS = {"provision": "picks", "judgment": "judgment_picks"}
+
+
+def dispute_work(plan):
+    """The plan's work items by dispute, in the understanding's order: the parts of an answer
+    written dispute by dispute (response_writer.parts groups them the same way)."""
+    grouped = {}
+    disputes = (plan["proposal"].get("understanding") or {}).get("disputes", []) if isinstance(
+        plan.get("proposal"), dict) else []
+    for dispute in disputes:
+        items = [w for w in plan["work"] if w.get("dispute", {}).get("id") == dispute["id"]]
+        if items and dispute["id"] not in grouped:
+            grouped[dispute["id"]] = items
+    return grouped
+
+
+def _state(plan, searches, failures, picks):
+    return "partial" if (plan["issues"] or failures or _picks_open(picks) or any(
+        search["state"] == "partial" for search in searches.values())) else "evaluated"
+
+
+def _part(plan, dispute_id, searches, failures, chosen):
+    """One dispute's part of a v10 record: its questions' searches and gaps and its own picks."""
+    ids = [w["id"] for w in dispute_work(plan)[dispute_id]]
+    searches = {i: searches[i] for i in ids if i in searches}
+    failures = {i: failures[i] for i in ids if i in failures}
+    record = {"contract": CONTRACT, "plan": deepcopy(plan), "searches": deepcopy(searches),
+              "failures": deepcopy(failures), "part": dispute_id,
+              **{field: {dispute_id: deepcopy(chosen[kind])} for kind, field in _PICK_FIELDS.items()}}
+    record["state"] = _state(plan, searches, failures, [chosen[kind] for kind in _PICK_FIELDS])
+    return record
+
+
+def _picked(model, plan, searches, report):
+    """A dispute's two picks, beside each other; without a model each keeps the first six."""
+    if model is None:
+        labels = _labels(plan, searches)
+        return {kind: {"state": "unavailable", "proposal": None, "unknown": [], "reason": "No model for the pick",
+                       "chosen": _fallback_picks(searches, labels, kind)} for kind in _PICK_FIELDS}
+    if searches:
+        report("choosing_provisions")
+    with ThreadPoolExecutor(max_workers=len(_PICK_FIELDS)) as pool:
+        return dict(zip(_PICK_FIELDS, pool.map(lambda kind: pick(model, plan, searches, kind), _PICK_FIELDS)))
+
+
+def retrieve_parts(plan, searcher, context, model=None, *, progress=None):
+    """v10: every question searched side by side in the answer's order (owner, 20 Oct 2026:
+    step 1), and each dispute's provisions and judgment paragraphs picked as soon as its own
+    questions are searched (21 Oct 2026: step 4). Returns each dispute's part as a future, in
+    the answer's order; a part keeps what each of its questions found, or why it failed."""
     if accept(plan["proposal"], context) != plan:
         raise ValueError("Research plan differs from its original sources")
     report = progress or (lambda stage, **detail: None)
-    record = {"contract": CONTRACT, "plan": deepcopy(plan), "searches": {}, "failures": {}}
-    # The questions are searched side by side (owner, 20 Oct 2026: step 1), each as it would
-    # be alone; what each found, or why it failed, is kept in the plan's order.
     asked, outcomes = [], {}
     for work in plan["work"]:
         queries = search_queries(work)
@@ -820,44 +876,109 @@ def retrieve(plan, searcher, context, model=None, *, progress=None):
                                    results={"provision": PROVISIONS_FOR_PICK}, done=searched) if asked else []
     outcomes.update((work["id"], (future, queries, instruments))
                     for (work, queries, instruments), future in zip(asked, futures, strict=True))
-    for work in plan["work"]:
-        if work["id"] not in outcomes:
+
+    def researched(dispute_id, works):
+        searches, failures = {}, {}
+        for work in works:
+            if work["id"] not in outcomes:
+                continue
+            try:
+                outcome = outcomes[work["id"]]
+                if isinstance(outcome, Exception):
+                    raise outcome
+                future, queries, instruments = outcome
+                searches[work["id"]] = validate_search(future.result(), queries, instruments)
+            except (SearchUnavailable, ValueError, OSError, RuntimeError, KeyError, TypeError) as exc:
+                # This independent read-only adapter/snapshot failed. It supplies no
+                # admitted evidence; peers remain available and the failure stays explicit.
+                failures[work["id"]] = {"stage": "search", "reason": str(exc) or type(exc).__name__}
+        return _part(plan, dispute_id, searches, failures, _picked(model, plan, searches, report))
+    groups = dispute_work(plan)
+    pool = ThreadPoolExecutor(max_workers=max(1, len(groups)), thread_name_prefix="dispute")
+    parts = {dispute_id: pool.submit(researched, dispute_id, works) for dispute_id, works in groups.items()}
+    pool.shutdown(wait=False)
+    return parts
+
+
+def assemble(plan, parts, *, unfinished=None):
+    """The whole v10 record from its disputes' parts, in the answer's order. A dispute with no
+    part is refused, unless `unfinished` says why (a turn that stopped part way): its questions
+    then record that as their gap and its picks keep nothing."""
+    done = {part["part"]: part for part in parts}
+    searches, failures, chosen = {}, {}, {field: {} for field in _PICK_FIELDS.values()}
+    for dispute_id, works in dispute_work(plan).items():
+        part = done.get(dispute_id)
+        if part is None:
+            if unfinished is None:
+                raise ValueError("A dispute's research is missing")
+            failures.update((w["id"], {"stage": "search", "reason": unfinished}) for w in works if w["enquiries"])
+            for field in _PICK_FIELDS.values():
+                chosen[field][dispute_id] = {"state": "unavailable", "proposal": None, "chosen": {}, "unknown": [],
+                                             "reason": unfinished}
             continue
-        try:
-            outcome = outcomes[work["id"]]
-            if isinstance(outcome, Exception):
-                raise outcome
-            future, queries, instruments = outcome
-            record["searches"][work["id"]] = validate_search(future.result(), queries, instruments)
-        except (SearchUnavailable, ValueError, OSError, RuntimeError, KeyError, TypeError) as exc:
-            # This independent read-only adapter/snapshot failed. It supplies no
-            # admitted evidence; peers remain available and the failure stays explicit.
-            record["failures"][work["id"]] = {"stage": "search", "reason": str(exc) or type(exc).__name__}
-    kinds = {"provision": "picks", "judgment": "judgment_picks"}
-    if model is None:
-        labels = _labels(plan, record["searches"])
-        for kind, field in kinds.items():
-            record[field] = {"state": "unavailable", "proposal": None, "unknown": [], "reason": "No model for the pick",
-                             "chosen": _fallback_picks(record["searches"], labels, kind)}
-    else:
-        if record["searches"]:
-            report("choosing_provisions")
-        with ThreadPoolExecutor(max_workers=len(kinds)) as pool:
-            chosen = dict(zip(kinds, pool.map(lambda kind: pick(model, plan, record["searches"], kind), kinds)))
-        for kind, field in kinds.items():
-            record[field] = chosen[kind]
-    record["state"] = "partial" if (plan["issues"] or record["failures"]
-                                    or _picks_open([record[field] for field in kinds.values()]) or any(
-        search["state"] == "partial" for search in record["searches"].values())) else "evaluated"
+        searches.update(deepcopy(part["searches"]))
+        failures.update(deepcopy(part["failures"]))
+        for field in _PICK_FIELDS.values():
+            chosen[field][dispute_id] = deepcopy(part[field][dispute_id])
+    order = [w["id"] for w in plan["work"]]
+    record = {"contract": CONTRACT, "plan": deepcopy(plan),
+              "searches": {i: searches[i] for i in order if i in searches},
+              "failures": {i: failures[i] for i in order if i in failures}, **chosen}
+    record["state"] = _state(plan, record["searches"], record["failures"], picks_of(record))
     return record
 
 
+def part_of(record, dispute_id):
+    """A v10 record's part for one dispute, exactly as that dispute's section read it."""
+    return _part(record["plan"], dispute_id, record["searches"], record["failures"],
+                 {kind: record[field][dispute_id] for kind, field in _PICK_FIELDS.items()})
+
+
+def picks_of(record, kind=None):
+    """A record's picks as a list: each dispute's (v10), or the one pick of a kind (v7-v9)."""
+    kinds = [kind] if kind else [k for k in _PICK_FIELDS if _PICK_FIELDS[k] in record]
+    if record.get("contract") in BY_DISPUTE:
+        return [pick for k in kinds for pick in record[_PICK_FIELDS[k]].values()]
+    return [record[_PICK_FIELDS[k]] for k in kinds if _PICK_FIELDS[k] in record]
+
+
+def chosen(record, kind="provision"):
+    """What a record's picks of a kind chose, by work item."""
+    return {work_id: ids for pick in picks_of(record, kind) for work_id, ids in pick["chosen"].items()}
+
+
+def retrieve(plan, searcher, context, model=None, *, progress=None):
+    """The whole v10 research: every dispute's part, assembled (retrieve_parts)."""
+    parts = retrieve_parts(plan, searcher, context, model, progress=progress)
+    return assemble(plan, [future.result() for future in parts.values()])
+
+
+def execution(record):
+    """Receipts describe what this code did, never whether the request is fulfilled; a v10
+    dispute's part describes its own questions."""
+    ids = ({w["id"] for w in dispute_work(record["plan"])[record["part"]]} if "part" in record else None)
+    searches = []
+    for work in record["plan"]["work"]:
+        identity = work["id"]
+        if ids is not None and identity not in ids:
+            continue
+        if identity in record["failures"]:
+            state = "failed"
+        elif identity in record["searches"]:
+            state = "partial" if record["searches"][identity]["issues"] else "evaluated"
+        else:
+            state = "not_requested"
+        searches.append({"work_id": identity, "state": state})
+    return {"contract": EXECUTION, "operations": [], "record_changes": [],
+            "external_actions": [], "searches": searches, "persistence": "not_yet_committed"}
+
+
 def admitted_provisions(record):
-    """The provision candidates the answer may use: v7 and v8 admit only the pick;
+    """The provision candidates the answer may use: v7 and later admit only the pick;
     earlier records admit every returned provision."""
     if record.get("contract") not in _QUESTION_PLANS:
         return None
-    return {candidate_id for ids in record["picks"]["chosen"].values() for candidate_id in ids}
+    return {candidate_id for ids in chosen(record).values() for candidate_id in ids}
 
 
 def picked_judgments(record):
@@ -866,7 +987,7 @@ def picked_judgments(record):
     paragraph with its whole saved context."""
     if record.get("contract") not in JUDGMENT_PICKS:
         return None
-    return {candidate_id for ids in record["judgment_picks"]["chosen"].values() for candidate_id in ids}
+    return {candidate_id for ids in chosen(record, "judgment").values() for candidate_id in ids}
 
 
 def validate(record, plan, context):
@@ -881,18 +1002,23 @@ def validate(record, plan, context):
         raise ValueError("Saved research plan differs from its original sources")
     fields = ({"contract", "plan", "searches", "failures", "state"}
               | ({"picks"} if contract in _QUESTION_PLANS else set())
-              | ({"judgment_picks"} if contract in JUDGMENT_PICKS else set()))
+              | ({"judgment_picks"} if contract in JUDGMENT_PICKS else set())
+              | ({"part"} if contract in BY_DISPUTE and "part" in record else set()))
     if (not isinstance(record, dict)
             or set(record) != fields
             or record.get("plan") != plan or not isinstance(record.get("searches"), dict)
             or not isinstance(record.get("failures"), dict)):
         raise ValueError("Research snapshot does not belong to its plan")
+    groups = dispute_work(plan) if contract in BY_DISPUTE else {}
+    if "part" in fields and record["part"] not in groups:
+        raise ValueError("A research part names no dispute of its plan")
     for failure in record["failures"].values():
         if (not isinstance(failure, dict) or set(failure) != {"stage", "reason"}
                 or failure["stage"] != "search" or not isinstance(failure["reason"], str)
                 or not failure["reason"].strip()):
             raise ValueError("Research failure has no checked search disposition")
-    required = {work["id"] for work in plan["work"] if work["enquiries"]}
+    required = {work["id"] for work in (groups[record["part"]] if "part" in fields else plan["work"])
+                if work["enquiries"]}
     successes, failures = set(record["searches"]), set(record["failures"])
     if successes & failures or successes | failures != required:
         raise ValueError("Each research work item needs one execution disposition")
@@ -901,12 +1027,24 @@ def validate(record, plan, context):
             validate_search(record["searches"][work["id"]], search_queries(work, contract=contract),
                             search_instruments(work, contract=contract))
     picks = []
-    if contract in _QUESTION_PLANS:
-        _validate_picks(record["picks"], plan, record["searches"])
-        picks.append(record["picks"])
-    if contract in JUDGMENT_PICKS:
-        _validate_picks(record["judgment_picks"], plan, record["searches"], "judgment")
-        picks.append(record["judgment_picks"])
+    if contract in BY_DISPUTE:
+        # v10: each dispute's picks, labelled within that dispute's own searched questions.
+        disputes = [record["part"]] if "part" in fields else list(groups)
+        for kind, field in _PICK_FIELDS.items():
+            if not isinstance(record[field], dict) or set(record[field]) != set(disputes):
+                raise ValueError(f"The {kind} picks are not one for each dispute")
+            for dispute_id in disputes:
+                ids = {w["id"] for w in groups[dispute_id]}
+                own = {i: search for i, search in record["searches"].items() if i in ids}
+                _validate_picks(record[field][dispute_id], plan, own, kind)
+                picks.append(record[field][dispute_id])
+    else:
+        if contract in _QUESTION_PLANS:
+            _validate_picks(record["picks"], plan, record["searches"])
+            picks.append(record["picks"])
+        if contract in JUDGMENT_PICKS:
+            _validate_picks(record["judgment_picks"], plan, record["searches"], "judgment")
+            picks.append(record["judgment_picks"])
     expected = "partial" if (plan["issues"] or failures or _picks_open(picks) or any(
         search["state"] == "partial" for search in record["searches"].values())) else "evaluated"
     if record["state"] != expected:

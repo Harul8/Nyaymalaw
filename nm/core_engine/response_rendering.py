@@ -1045,7 +1045,8 @@ def _fallback(saved, name, context, research_record, sources):
                                  "still_needed": [], "questions": []})
     facts = [fact["advocate_words"] for fact in understanding["facts"]
              if fact["id"] in dispute["fact_ids"] and _given_words(fact["advocate_words"], context)]
-    picked, provisions, seen = (research_record.get("picks") or {}).get("chosen", {}), [], set()
+    # Research v10 keeps each dispute's picks apart; research.chosen reads every version's.
+    picked, provisions, seen = research.chosen(research_record), [], set()
     for work in research_record["plan"]["work"]:
         if work["dispute"]["id"] != dispute["id"]:
             continue

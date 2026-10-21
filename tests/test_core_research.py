@@ -139,6 +139,13 @@ class Model:
         return _result(data, tier, self.completion)
 
 
+def one_pick(record):
+    """A v10 record of one dispute in the shape of v7-v9, which kept one pick of each kind
+    for the whole matter (research v10, 21 Oct 2026, keeps each dispute's)."""
+    return {**{key: value for key, value in record.items() if key != "part"}, "contract": "core_research_v9",
+            "picks": record["picks"]["D1"], "judgment_picks": record["judgment_picks"]["D1"]}
+
+
 def operations(model):
     return [prompt.operation for prompt in model.calls]
 
@@ -317,10 +324,10 @@ def test_search_returns_twenty_provisions_and_the_pick_admits_only_its_choice():
     model = Model(choose=lambda ids: ids[:2])
     record = retrieve(admitted, found, ctx, model=model)
     assert asked == [{"results": {"provision": PROVISIONS_FOR_PICK}}]
-    assert record["contract"] == CONTRACT == "core_research_v9" and record["state"] == "evaluated"
+    assert record["contract"] == CONTRACT == "core_research_v10" and record["state"] == "evaluated"
     provisions = [c for c in record["searches"]["t2:w1"]["candidates"] if c["kind"] == "provision"]
     assert len(provisions) == PROVISIONS_FOR_PICK
-    assert record["picks"]["chosen"] == {"t2:w1": [provisions[0]["id"], provisions[1]["id"]]}
+    assert record["picks"]["D1"]["chosen"] == {"t2:w1": [provisions[0]["id"], provisions[1]["id"]]}
     assert validate(record, admitted, ctx) == record
     sources = answer_sources.build(ctx, record)
     assert sorted(r["id"] for r in sources.values() if r["kind"] == "provision") == sorted(
@@ -341,7 +348,7 @@ def test_the_judgment_pick_chooses_among_the_six_returned_and_records_its_choice
     assert (f"Q1.1 {first['case_name']} (Supreme Court of India, 2001, cited by {first['cited_by_count']}), "
             f"paragraph {first['paragraph_num']}: Paragraph") in shown
     assert "the court holds rule" in shown  # whole words, spacing collapsed
-    assert record["judgment_picks"]["chosen"] == {"t2:w1": [paragraphs[2]["id"], paragraphs[0]["id"]]}
+    assert record["judgment_picks"]["D1"]["chosen"] == {"t2:w1": [paragraphs[2]["id"], paragraphs[0]["id"]]}
     assert picked_judgments(record) == {paragraphs[2]["id"], paragraphs[0]["id"]}
     assert record["state"] == "evaluated" and validate(record, admitted, ctx) == record
     assert operations(model).count("core_research_judgment_pick") == 1
@@ -352,9 +359,9 @@ def test_an_unavailable_judgment_pick_keeps_the_six_and_marks_the_research_parti
     admitted = accept(proposal(), ctx)
     record = retrieve(admitted, searcher(), ctx, model=Model(fail={"core_research_judgment_pick"}))
     paragraphs = [c["id"] for c in record["searches"]["t2:w1"]["candidates"] if c["kind"] == "judgment"]
-    assert record["judgment_picks"]["state"] == "unavailable"
-    assert record["judgment_picks"]["chosen"] == {"t2:w1": paragraphs[:6]}
-    assert record["picks"]["state"] == "evaluated"  # the provision pick is independent
+    assert record["judgment_picks"]["D1"]["state"] == "unavailable"
+    assert record["judgment_picks"]["D1"]["chosen"] == {"t2:w1": paragraphs[:6]}
+    assert record["picks"]["D1"]["state"] == "evaluated"  # the provision pick is independent
     assert record["state"] == "partial" and validate(record, admitted, ctx) == record
 
 
@@ -363,9 +370,9 @@ def test_a_changed_judgment_pick_cannot_replay():
     admitted = accept(proposal(), ctx)
     record = retrieve(admitted, searcher(), ctx, model=Model(choose_judgments=lambda ids: ids[:1]))
     other = next(c["id"] for c in record["searches"]["t2:w1"]["candidates"] if c["kind"] == "judgment"
-                 and c["id"] not in record["judgment_picks"]["chosen"]["t2:w1"])
+                 and c["id"] not in record["judgment_picks"]["D1"]["chosen"]["t2:w1"])
     forged = deepcopy(record)
-    forged["judgment_picks"]["chosen"]["t2:w1"].append(other)
+    forged["judgment_picks"]["D1"]["chosen"]["t2:w1"].append(other)
     with pytest.raises(ValueError, match="judgment pick"): validate(forged, admitted, ctx)
     missing = deepcopy(record)
     del missing["judgment_picks"]
@@ -375,7 +382,7 @@ def test_a_changed_judgment_pick_cannot_replay():
 def test_saved_v7_records_replay_unchanged_and_admit_every_returned_judgment():
     ctx = context("Find the applicable law.")
     admitted = accept(proposal(why_it_matters=False), ctx, contract=PICKED_CONTRACT)
-    record = retrieve(accept(proposal(), ctx), searcher(), ctx, model=Model(choose_judgments=lambda ids: ids[:1]))
+    record = one_pick(retrieve(accept(proposal(), ctx), searcher(), ctx, model=Model(choose_judgments=lambda ids: ids[:1])))
     saved = {key: value for key, value in record.items() if key != "judgment_picks"}
     saved.update(contract=PICKED_CONTRACT, plan=admitted)
     assert validate(saved, admitted, ctx) == saved
@@ -390,7 +397,7 @@ def test_saved_v8_records_replay_unchanged_with_their_judgment_picks_and_parts()
     # Research v9 (16 Oct 2026) adds why each dispute matters; a v8 record keeps its shape.
     ctx = context("Find the applicable law.")
     admitted = accept(proposal(why_it_matters=False), ctx, contract=JUDGMENT_PICKED_CONTRACT)
-    record = retrieve(accept(proposal(), ctx), searcher(), ctx, model=Model(choose_judgments=lambda ids: ids[:1]))
+    record = one_pick(retrieve(accept(proposal(), ctx), searcher(), ctx, model=Model(choose_judgments=lambda ids: ids[:1])))
     saved = {**record, "contract": JUDGMENT_PICKED_CONTRACT, "plan": admitted}
     assert validate(saved, admitted, ctx) == saved
     assert picked_judgments(saved) == picked_judgments(record)
@@ -411,8 +418,8 @@ def test_shown_ids_alone_count_and_an_unknown_id_marks_the_research_partial():
     ctx = context("Find the applicable law.")
     admitted = accept(proposal(), ctx)
     record = retrieve(admitted, searcher(), ctx, model=Model(choose=lambda ids: [ids[0], "Q1.99", "Q7.1", "Q1.0"]))
-    assert len(record["picks"]["chosen"]["t2:w1"]) == 1
-    assert record["picks"]["unknown"] == ["Q1.99", "Q7.1", "Q1.0"] and record["state"] == "partial"
+    assert len(record["picks"]["D1"]["chosen"]["t2:w1"]) == 1
+    assert record["picks"]["D1"]["unknown"] == ["Q1.99", "Q7.1", "Q1.0"] and record["state"] == "partial"
     assert validate(record, admitted, ctx) == record
 
 
@@ -421,7 +428,7 @@ def test_an_unavailable_pick_keeps_each_questions_first_six_provisions():
     admitted = accept(proposal(), ctx)
     record = retrieve(admitted, searcher(), ctx, model=Model(fail={"core_research_pick"}))
     provisions = [c["id"] for c in record["searches"]["t2:w1"]["candidates"] if c["kind"] == "provision"]
-    assert record["picks"]["state"] == "unavailable" and record["picks"]["chosen"] == {"t2:w1": provisions[:6]}
+    assert record["picks"]["D1"]["state"] == "unavailable" and record["picks"]["D1"]["chosen"] == {"t2:w1": provisions[:6]}
     assert record["state"] == "partial" and validate(record, admitted, ctx) == record
 
 
@@ -430,9 +437,9 @@ def test_a_changed_pick_cannot_replay():
     admitted = accept(proposal(), ctx)
     record = retrieve(admitted, searcher(), ctx, model=Model(choose=lambda ids: ids[:1]))
     other = next(c["id"] for c in record["searches"]["t2:w1"]["candidates"] if c["kind"] == "provision"
-                 and c["id"] not in record["picks"]["chosen"]["t2:w1"])
+                 and c["id"] not in record["picks"]["D1"]["chosen"]["t2:w1"])
     forged = deepcopy(record)
-    forged["picks"]["chosen"]["t2:w1"].append(other)
+    forged["picks"]["D1"]["chosen"]["t2:w1"].append(other)
     with pytest.raises(ValueError, match="pick"): validate(forged, admitted, ctx)
     missing = deepcopy(record)
     del missing["picks"]
@@ -457,7 +464,7 @@ def test_searches_bind_queries_and_preserve_independent_work_when_one_fails(fail
     record = retrieve(admitted, found, ctx, model=Model())
     assert len(seen) == 2 and record["state"] == "partial"
     assert set(record["searches"]) == {"t2:w2"} and set(record["failures"]) == {"t2:w1"}
-    assert set(record["picks"]["chosen"]) == {"t2:w2"}
+    assert set(record["picks"]["D1"]["chosen"]) == {"t2:w2"}
     assert validate(record, admitted, ctx) == record
     broken = deepcopy(record)
     broken["failures"] = {}
@@ -470,8 +477,8 @@ def test_searches_bind_queries_and_preserve_independent_work_when_one_fails(fail
 def test_unconfigured_search_is_a_gap_and_not_empty_success():
     ctx = context("Find the applicable law.")
     record = retrieve(accept(proposal(), ctx), None, ctx, model=Model())
-    assert record["state"] == "partial" and record["failures"] and record["picks"]["state"] == "not_needed"
-    assert record["judgment_picks"]["state"] == "not_needed"
+    assert record["state"] == "partial" and record["failures"] and record["picks"]["D1"]["state"] == "not_needed"
+    assert record["judgment_picks"]["D1"]["state"] == "not_needed"
 
 
 def test_questions_are_searched_side_by_side_each_as_alone_and_reported_as_each_finishes():
