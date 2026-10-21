@@ -17,6 +17,7 @@ import threading
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 
+from nm.core_engine.replay_scope import known, once
 from nm.core_engine.retrieval import SearchUnavailable, _digest, _valid_location, in_force, validate_search
 from nm.core_engine.understanding import REFERENCE, TEXT, select, source_catalogue
 from nm.shared import clock_contracts
@@ -1051,10 +1052,12 @@ def assemble(plan, parts, *, unfinished=None):
 
 
 def part_of(record, dispute_id):
-    """A v10 or v11 record's part for one dispute, exactly as that dispute's section read it."""
-    return _part(record["plan"], dispute_id, record["searches"], record["failures"],
-                 {kind: record[field][dispute_id] for kind, field in _PICK_FIELDS.items()},
-                 (record.get("judgments") or {}).get(dispute_id, []), record["contract"])
+    """A v10 or v11 record's part for one dispute, exactly as that dispute's section read it
+    (once within a replay, P35)."""
+    return once(("part", id(record), dispute_id), (record,), lambda: _part(
+        record["plan"], dispute_id, record["searches"], record["failures"],
+        {kind: record[field][dispute_id] for kind, field in _PICK_FIELDS.items()},
+        (record.get("judgments") or {}).get(dispute_id, []), record["contract"]))
 
 
 def picks_of(record, kind=None):
@@ -1114,6 +1117,16 @@ def picked_judgments(record):
 
 
 def validate(record, plan, context):
+    """A saved research record checked against its plan and original sources; once within a
+    replay (P35, 21 Oct 2026), where every check of a saved turn validates the same record, and
+    a record validated is its own validation."""
+    checked = once(("research", id(record), id(plan), id(context)), (record, plan, context),
+                   lambda: _validate(record, plan, context))
+    known(("research", id(checked), id(checked["plan"]), id(context)), (checked, checked["plan"], context), checked)
+    return checked
+
+
+def _validate(record, plan, context):
     contract = record.get("contract") if isinstance(record, dict) else None
     if contract not in CONTRACTS:
         raise ValueError("Unknown research contract")

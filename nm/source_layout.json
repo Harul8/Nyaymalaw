@@ -40,6 +40,7 @@
     "nm.core_engine.limitation": "core",
     "nm.core_engine.matter_board": "core",
     "nm.core_engine.page_reading": "core",
+    "nm.core_engine.replay_scope": "core",
     "nm.core_engine.research": "core",
     "nm.core_engine.research_note": "core",
     "nm.core_engine.response_authorities": "core",

@@ -537,6 +537,30 @@ class FileMatterStore:
                     datetime.fromtimestamp(p.stat().st_mtime, tz=timezone.utc))))
         return MatterList(tuple(out), tuple(unreadable), tuple(saved_at))
 
+    def signature(self, matter_id: MatterId) -> tuple[int, int] | None:
+        """WHETHER A SAVED MATTER HAS CHANGED, without opening it: its file's write time and
+        size, or None when there is no such file. Every commit replaces the file whole, so a
+        read made of an unchanged file is still a read of what is saved (P35, 21 Oct 2026:
+        reading one long conversation again took seconds each time it was opened)."""
+        try:
+            stat = self._path(matter_id).stat()
+        except FileNotFoundError:
+            return None
+        return stat.st_mtime_ns, stat.st_size
+
+    def saved_files(self) -> tuple[tuple[str, tuple[int, int], str], ...]:
+        """Every saved matter's id, signature and when it was last saved, without opening any
+        (P35): a listing reopens only the files that changed since it last read them."""
+        out = []
+        for p in sorted(self._matters.glob("*.nm")):
+            try:
+                stat = p.stat()
+            except FileNotFoundError:
+                continue
+            out.append((p.stem, (stat.st_mtime_ns, stat.st_size),
+                        save_stamp(datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc))))
+        return tuple(out)
+
     def record_metrics(self, metrics: dict) -> None:
         """Written even when the turn failed, and never containing client words.
 

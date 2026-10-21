@@ -9,6 +9,8 @@ import hmac
 import logging
 import os
 import re
+import threading
+from collections import OrderedDict
 from copy import deepcopy
 from datetime import date
 from math import ceil
@@ -26,7 +28,8 @@ from nm.arrive import attempts_contracts as attempts
 from nm.arrive.advocate_contracts import PASSWORD_RESET_MINUTES, SESSION_IDLE_MINUTES, csrf_token, utcnow
 from nm.arrive.directory_port import AccountBusy, AuthenticationUnavailable
 from nm.arrive.professional_access import read_professional_status
-from nm.core_engine.conversation import HEADER, ConversationRefused, TurnContext, chat_matter_id, shown_of
+from nm.core_engine.conversation import (HEADER, SHOWN, ConversationRefused, TurnContext, chat_matter_id,
+                                         checked_rows, shown_of)
 from nm.core_engine import documents as document_rules
 from nm.core_engine import research_note, voice
 from nm.core_engine.response_rendering import unit_index
@@ -126,6 +129,9 @@ def application():
 def set_application(app_) -> None:
     global _application
     _application = app_
+    with _KEPT_LOCK:  # what was read from another application's store is not this one's
+        _READ.clear()
+        _LISTED.clear()
 
 
 class _Released(BaseModel):
@@ -1320,12 +1326,36 @@ def _conversation_error(exc, req=None):
     return detail
 
 
+#: The conversations this process has read and checked, each kept until its saved file changes
+#: (P35, 21 Oct 2026): reopening a conversation, its board, its files and each source opened in
+#: the reading pane read and checked the whole conversation again, seconds each for a long one.
+#: What is kept is only read; a conversation with a turn still being worked on is never kept.
+_READ: OrderedDict = OrderedDict()
+_READ_KEPT = 8
+#: Each saved file's line in the conversation history, kept until that file changes (P35).
+_LISTED: dict = {}
+_KEPT_LOCK = threading.Lock()
+
+
 def _read_chat(chat_id, advocate_id, request):
     """One account-derived lookup and checked replay for both chat and sources. A turn that
     stopped after showing part of its answer is saved first, with what it showed (owner
-    decision P27, 19 Oct 2026), unless it is still being worked on."""
+    decision P27, 19 Oct 2026), unless it is still being worked on. A conversation read and
+    checked before is read again only when its saved file has changed (P35)."""
+    store, matter_id = application().store, chat_matter_id(advocate_id, chat_id)
     try:
-        matter = application().store.load(chat_matter_id(advocate_id, chat_id))
+        signature = store.signature(matter_id)
+        with _KEPT_LOCK:
+            kept = _READ.get(matter_id)
+            if kept is not None and kept[0] != signature:
+                kept = None
+            if kept is not None:
+                _READ.move_to_end(matter_id)
+        if kept is not None:
+            if not _session_current(request, advocate_id):
+                raise HTTPException(401, 'not signed in')
+            return kept[1], kept[2]
+        matter = store.load(matter_id)
     except (OSError, ValueError) as exc:
         raise HTTPException(503, 'This conversation could not be read reliably.') from exc
     if not _session_current(request, advocate_id):
@@ -1334,7 +1364,7 @@ def _read_chat(chat_id, advocate_id, request):
         raise HTTPException(404, 'Conversation not available.')
     try:
         if HEADER in matter.intake_answers:
-            matter = recover(application().store, matter, advocate_id,
+            matter = recover(store, matter, advocate_id,
                              running=lambda held: application().turn_running(advocate_id, held),
                              session_current=lambda: _session_current(request, advocate_id))
         rows = saved_rows(matter, advocate_id)
@@ -1342,28 +1372,73 @@ def _read_chat(chat_id, advocate_id, request):
         raise HTTPException(exc.status, _conversation_error(exc)) from exc
     if not _session_current(request, advocate_id):
         raise HTTPException(401, 'not signed in')
+    # Kept only as read from a file that did not change while it was read and checked.
+    if SHOWN not in matter.intake_answers and signature is not None and store.signature(matter_id) == signature:
+        with _KEPT_LOCK:
+            _READ[matter_id] = (signature, matter, rows)
+            _READ.move_to_end(matter_id)
+            while len(_READ) > _READ_KEPT:
+                _READ.popitem(last=False)
     return matter, rows
+
+def _listed(store, matter_id, signature):
+    """One saved file's line in the conversation history: whose it is, and its conversation's
+    first message and turn count after the receipt checks, or its title as a historical matter;
+    kept until the file changes (P35). Opening a conversation replays its answers; the history
+    checks the receipts of what it lists. A file that cannot be read says so, as before."""
+    with _KEPT_LOCK:
+        kept = _LISTED.get(matter_id)
+    if kept is not None and kept[0] == signature:
+        return kept[1]
+    try:
+        matter = store.load(matter_id)
+        if matter is None:
+            return None
+        if matter.id != matter_id:
+            raise ValueError("the saved matter identity conflicts with its storage name")
+    except Exception:  # noqa: BLE001 -- named, never swallowed: listed as unreadable
+        line = {'owner': None}
+    else:
+        line = {'owner': matter.advocate_id}
+        if HEADER in matter.intake_answers:
+            try:
+                rows = checked_rows(matter, matter.advocate_id, copied=False)
+            except ConversationRefused:
+                line['unavailable'] = True
+            else:
+                line['chat'] = {'chat_id': rows[0]['chat_id'], 'preview': rows[0]['message'],
+                                'turn_count': len(rows)} if rows else None
+        else:
+            # Old records remain history; current replay never upgrades their contracts.
+            line['matter'] = {'matter_id': matter.id, 'matter': matter.title, 'state': 'historical'}
+    if store.signature(matter_id) == signature:
+        with _KEPT_LOCK:
+            _LISTED[matter_id] = (signature, line)
+    return line
+
 
 @app.get('/api/work')
 def work(advocate_id: Advocate, request: Request):
-    listing = application().store.list_for(advocate_id)
-    chats, matters, unavailable = [], [], list(listing.unreadable)
-    for matter in sorted(listing.matters, key=lambda m: listing.saved(m.id), reverse=True):
-        if matter.advocate_id != advocate_id:
-            raise HTTPException(503, 'Your work list could not be read reliably.')
-        if HEADER in matter.intake_answers:
-            try:
-                rows = saved_rows(matter, advocate_id)
-            except ConversationRefused:
-                unavailable.append(matter.id)
-                continue
-            if rows:
-                chats.append({'chat_id': rows[0]['chat_id'], 'preview': rows[0]['message'],
-                    'turn_count': len(rows), 'last_updated': listing.saved(matter.id)})
+    store = application().store
+    chats, matters, unavailable = [], [], []
+    saved = store.saved_files()
+    with _KEPT_LOCK:  # a file no longer saved leaves the history
+        for gone in set(_LISTED) - {matter_id for matter_id, _, _ in saved}:
+            del _LISTED[gone]
+    for matter_id, signature, saved_at in sorted(saved, key=lambda entry: entry[2], reverse=True):
+        line = _listed(store, matter_id, signature)
+        if line is None:
             continue
-        # Old records remain history; current replay never upgrades their contracts.
-        matters.append({'matter_id': matter.id, 'matter': matter.title,
-            'last_updated': listing.saved(matter.id), 'state': 'historical'})
+        if line['owner'] is None:
+            unavailable.append(matter_id)
+        elif line['owner'] != advocate_id:
+            continue
+        elif line.get('unavailable'):
+            unavailable.append(matter_id)
+        elif 'matter' in line:
+            matters.append({**line['matter'], 'last_updated': saved_at})
+        elif line['chat']:
+            chats.append({**line['chat'], 'last_updated': saved_at})
     if not _session_current(request, advocate_id):
         raise HTTPException(401, 'not signed in')
     return {'state': 'partial' if unavailable else 'ok', 'chats': chats, 'matters': matters,

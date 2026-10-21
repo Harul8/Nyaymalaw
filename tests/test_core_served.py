@@ -212,7 +212,8 @@ def test_revocation_after_atomic_save_withholds_reply_but_relogin_replays_once(s
 @pytest.mark.parametrize("route", ["chat", "source", "work"])
 def test_revocation_during_saved_read_prevents_disclosure(served, monkeypatch, route):
     reply = successful(served)
-    method = "list_for" if route == "work" else "load"
+    # The history reads the saved files' stamps first (P35); a reopening reads the conversation.
+    method = "saved_files" if route == "work" else "load"
     original = getattr(served.store, method)
     token = served.client.cookies.get("nm_session")
     def revoke(*args, **kwargs):
@@ -242,8 +243,10 @@ def test_unknown_saved_renderer_is_not_upgraded_or_released(served):
         assert response.json()["detail"]["code"] == "saved_response_unavailable"
         assert "Counsel" not in response.text
     assert send(served).status_code == 409
+    # The history checks the receipts of what it lists, which hold; opening the conversation
+    # replays it and says it cannot be read reliably (P35, 21 Oct 2026).
     work = served.client.get("/api/work").json()
-    assert work["state"] == "partial" and not work["chats"] and not work["matters"]
+    assert work["state"] == "ok" and [chat["chat_id"] for chat in work["chats"]] == [reply["chat_id"]]
     assert len(served.model.calls) == 9
 
 

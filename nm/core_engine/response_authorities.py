@@ -12,6 +12,7 @@ from nm.core_engine import answer_sources, response_writer
 from nm.core_engine.calls import ReleaseWithheld
 from nm.core_engine.citations import CONTRACT as CITATION_CONTRACT
 from nm.core_engine.citations import IndexUnavailable, check_citations
+from nm.core_engine.replay_scope import once
 from nm.core_engine.retrieval import SearchUnavailable, _candidate, _digest, offered
 from nm.shared.citation_contracts import (
     ANY_PROVISION, ProvisionKeyState, bind_provision_key, find_reporter_citations,
@@ -35,6 +36,11 @@ def _dependencies(context, research_record, sources, draft):
 
 
 def _raw_sources(research_record):
+    """Every passage the research offered, as its candidate (once within a replay, P35)."""
+    return once(("raw", id(research_record)), (research_record,), lambda: _offered_units(research_record))
+
+
+def _offered_units(research_record):
     result = {}
     for search in research_record["searches"].values():
         for selected in offered(search):
@@ -260,7 +266,14 @@ def check(context, research_record, sources, draft, *, case_index=None, provisio
 
 
 def validate(record, context, research_record, sources, draft):
-    """Bind saved reports to the original evidence without a new lookup or upgrade."""
+    """Bind saved reports to the original evidence without a new lookup or upgrade; once within
+    a replay (P35), where a section's checks and its review bind the same evidence."""
+    inputs = (record, context, research_record, sources, draft)
+    return once(("authorities", *map(id, inputs)), inputs,
+                lambda: _validate(record, context, research_record, sources, draft))
+
+
+def _validate(record, context, research_record, sources, draft):
     if (not isinstance(record, dict) or set(record) != {
             "contract", "dependency_digest", "units", "readbacks", "bound_digest"}
             or record["contract"] != CONTRACT

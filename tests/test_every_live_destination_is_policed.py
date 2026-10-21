@@ -88,6 +88,14 @@ class _RecordingStore:
         self.reached.append("list_for")
         return ()
 
+    def signature(self, matter_id):
+        self.reached.append("signature")
+        return None
+
+    def saved_files(self):
+        self.reached.append("saved_files")
+        return ()
+
     def record_turn(self, transcript):
         self.reached.append("record_turn")
 
@@ -166,6 +174,8 @@ def _arguments_for(method: str) -> tuple:
         "load": ("m-1",),
         "commit": (object(),),
         "list_for": ("advocate@example.test",),
+        "signature": ("m-1",),
+        "saved_files": (),
         "record_turn": ({"turn": 1},),
         "transcripts_for": ("m-1",),
         "record_metrics": ({"ok": True},),

@@ -16,7 +16,7 @@ from datetime import datetime, timezone
 from concurrent.futures import ThreadPoolExecutor
 
 from nm.core_engine import answer_sections, answer_sources, calculation, checklist, research
-from nm.core_engine import response_rendering
+from nm.core_engine import replay_scope, response_rendering
 from nm.core_engine import understanding
 from nm.core_engine.calls import CorrectionUnavailable, ReleaseWithheld, TurnCalls
 from nm.core_engine.conversation import (
@@ -63,6 +63,15 @@ _SECTIONED_FIELDS = {"contract", "interpretation", "research", "sources", "execu
 
 #: Receipts describe what this code did, never whether the request is fulfilled (research owns them).
 execution_record = research.execution
+
+#: The saved turns this process has already replayed exactly, by their chained digests (P35,
+#: 21 Oct 2026: one turn of live run 8 took half a minute to replay, and every read of its
+#: conversation - reopening it, its board, its files - replayed it again). A turn's digest
+#: covers the turn and, through the digest of the one before, the whole conversation up to it;
+#: the receipt checks recompute it on every read, and the code replaying it cannot change while
+#: the process runs, so a turn with that digest replays the same way every time.
+_REPLAYED: set[str] = set()
+_REPLAYED_LOCK = threading.Lock()
 
 
 def _diagnosis(code, exc, calls):
@@ -297,18 +306,24 @@ def validate_activity(activity, context, elements):
 
 
 def saved_rows(matter, advocate_id):
-    rows = checked_rows(matter, advocate_id)
+    rows = checked_rows(matter, advocate_id, copied=False)  # read only (P35)
     try:
         for index, row in enumerate(rows):
+            with _REPLAYED_LOCK:
+                if row["digest"] in _REPLAYED:
+                    continue
             original = TurnContext(matter, row["chat_id"], row["turn_id"], row["message"], rows[:index],
                                    documents=tuple(row.get("documents", ())))
-            validate_activity(row["activities"], original.payload(), row["response"]["elements"])
+            with replay_scope.replaying():  # what its checks share, derived once (P35)
+                validate_activity(row["activities"], original.payload(), row["response"]["elements"])
             # From v5 the records a turn saved are exactly what its own activity gives, under
             # the checklist version they were saved under.
             if (row["activities"].get("contract") in (RECORDS_CONTRACT, *SECTIONED)
                     and row["records"] != checklist.records(original.payload(), row["activities"], contract=(
                         row["records"].get("checklist") or {}).get("contract", checklist.CONTRACT))):
                 raise ValueError("Saved records differ from what the turn admitted")
+            with _REPLAYED_LOCK:
+                _REPLAYED.add(row["digest"])
     except (ValueError, KeyError, TypeError, SchemaViolation) as exc:
         raise ConversationRefused("This saved conversation could not be read reliably. "
             "Its records are unchanged.", code="saved_response_unavailable",

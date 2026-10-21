@@ -80,7 +80,10 @@ def _unread_pages(turn_id, documents):
             for document in documents for page in document["unread"]]
 
 
-def checked_rows(matter, advocate_id):
+def checked_rows(matter, advocate_id, *, copied=True):
+    """The conversation's turns, each receipt and the digest chain checked. copied=False
+    (P35, 21 Oct 2026) returns the matter's own turns, for a caller that only reads them or
+    only wants them checked: copying a long conversation took longer than checking it."""
     if matter.advocate_id != advocate_id:
         raise ConversationRefused("Conversation not available.", status=404)
     header = matter.intake_answers.get(HEADER)
@@ -133,7 +136,7 @@ def checked_rows(matter, advocate_id):
         raise ConversationRefused(
             "The saved conversation could not be read reliably. Its records are unchanged.",
             committed="previously_committed") from exc
-    return deepcopy(matter.brain_chat)
+    return deepcopy(matter.brain_chat) if copied else list(matter.brain_chat)
 
 
 @dataclass(frozen=True)
@@ -216,7 +219,7 @@ def hold_shown(store, context, held):
     metadata.setdefault(HEADER, {"contract": CONTRACT, "chat_id": context.chat_id, "turn_count": 0,
                                  "tail_digest": None})
     candidate = replace(context.matter, intake_answers=metadata, version=context.matter.version + 1)
-    checked_rows(candidate, context.matter.advocate_id)
+    checked_rows(candidate, context.matter.advocate_id, copied=False)
     shown_of(candidate)
     return replace(context, matter=_written(store, candidate, context.matter.version))
 
@@ -325,7 +328,7 @@ def commit_turn(store, context, *, elements, activities, records=None, work=None
         "turn_count": len(context.rows) + 1, "tail_digest": row["digest"]}}
     candidate = replace(context.matter, brain_chat=(*context.rows, row),
                         intake_answers=metadata, version=version)
-    checked_rows(candidate, context.matter.advocate_id)
+    checked_rows(candidate, context.matter.advocate_id, copied=False)
     try:
         committed = store.commit(candidate, expected_version=context.matter.version)
     except (OSError, StaleWrite):

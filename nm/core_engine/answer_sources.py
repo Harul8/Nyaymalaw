@@ -10,6 +10,7 @@ from copy import deepcopy
 import json
 
 from nm.core_engine import research
+from nm.core_engine.replay_scope import once
 from nm.core_engine.retrieval import _candidate, _digest, in_force, offered
 from nm.core_engine.understanding import (
     REFERENCE, conversation_aliases, renamed, select as select_original, source_catalogue,
@@ -64,7 +65,13 @@ def _window(selected, picked):
 
 
 def build(context, research_record):
-    """Validate original dependencies, then assign one tag per exact source unit."""
+    """Validate original dependencies, then assign one tag per exact source unit (once
+    within a replay, P35: every check of a saved turn needs the same sources)."""
+    return once(("sources", id(context), id(research_record)), (context, research_record),
+                lambda: _build(context, research_record))
+
+
+def _build(context, research_record):
     checked = research.validate(research_record, research_record["plan"], context)
     sources = {}
     for identity, original in source_catalogue(context).items():

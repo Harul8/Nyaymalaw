@@ -84,6 +84,15 @@ class StorePort(Protocol):
         """
         ...
 
+    def signature(self, matter_id: MatterId) -> tuple[int, int] | None:
+        """What changes whenever the saved matter changes (P35), read without opening it;
+        None when there is no such matter."""
+        ...
+
+    def saved_files(self) -> tuple[tuple[str, tuple[int, int], str], ...]:
+        """Every saved matter as (id, signature, when last saved), without opening any (P35)."""
+        ...
+
     def record_turn(self, transcript: dict) -> None:
         """The served turn, in full. Sealed -- it carries client words."""
         ...

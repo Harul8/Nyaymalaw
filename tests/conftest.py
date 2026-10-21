@@ -83,6 +83,17 @@ def pytest_runtest_makereport(item, call):
     setattr(item, f"rep_{report.when}", report)
 
 
+@pytest.fixture(autouse=True)
+def each_test_replays_saved_turns_afresh():
+    """P35 (21 Oct 2026): a process remembers the saved turns it has already replayed exactly.
+    Each test starts as a fresh process would, so a test that saves the same turn as another,
+    or changes what replay checks, sees its saved turns replayed."""
+    from nm.core_engine import turn
+
+    turn._REPLAYED.clear()
+    yield
+
+
 # --------------------------------------------------------------- the wire ---
 
 @pytest.fixture
