@@ -17,7 +17,7 @@ import threading
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 
-from nm.core_engine.retrieval import SearchUnavailable, in_force, validate_search
+from nm.core_engine.retrieval import SearchUnavailable, _digest, _valid_location, in_force, validate_search
 from nm.core_engine.understanding import REFERENCE, TEXT, select, source_catalogue
 from nm.shared import clock_contracts
 from nm.shared.model_port import (
@@ -48,16 +48,41 @@ PURPOSED_CONTRACT = "core_research_v9"
 #: section can be written while the others are still being researched. The record keeps each
 #: dispute's picks under its ID, and a dispute's part of the record reads on its own (part_of),
 #: exactly as its section was written from it. v9 and earlier records replay unchanged.
-CONTRACT = "core_research_v10"
+PER_DISPUTE_CONTRACT = "core_research_v10"
+#: v11 (owner decision P31, 20-21 Oct 2026): the research chooses judgments, not paragraphs.
+#: The judgments a dispute's pick chose, at most JUDGMENTS_PER_DISPUTE in the order chosen, are
+#: read whole when no longer than WHOLE_JUDGMENT_CHARACTERS (about 8,000 tokens, three in four
+#: held judgments); a longer one is read as an extract that says so - its opening and its order,
+#: the paragraphs search found with those beside them, and the paragraphs they name and where
+#: the court sets out the issues - and the paragraphs search found are marked either way.
+CONTRACT = "core_research_v11"
 #: The plans that set out the matter as disputes and legal questions (v7 on).
-QUESTION_PLANS = (PICKED_CONTRACT, JUDGMENT_PICKED_CONTRACT, PURPOSED_CONTRACT, CONTRACT)
+QUESTION_PLANS = (PICKED_CONTRACT, JUDGMENT_PICKED_CONTRACT, PURPOSED_CONTRACT, PER_DISPUTE_CONTRACT, CONTRACT)
 _QUESTION_PLANS = QUESTION_PLANS
 #: The records that pick judgment paragraphs and answer in parts per dispute (v8 on).
-JUDGMENT_PICKS = (JUDGMENT_PICKED_CONTRACT, PURPOSED_CONTRACT, CONTRACT)
-#: The records that keep each dispute's picks apart (v10).
-BY_DISPUTE = (CONTRACT,)
-CONTRACTS = (LEGACY_CONTRACT, PREVIOUS_CONTRACT, WINDOWED_CONTRACT, ACCOUNT_CONTRACT,
-             INSTRUMENTED_CONTRACT, PICKED_CONTRACT, JUDGMENT_PICKED_CONTRACT, PURPOSED_CONTRACT, CONTRACT)
+JUDGMENT_PICKS = (JUDGMENT_PICKED_CONTRACT, PURPOSED_CONTRACT, PER_DISPUTE_CONTRACT, CONTRACT)
+#: The records that keep each dispute's picks apart (v10 on).
+BY_DISPUTE = (PER_DISPUTE_CONTRACT, CONTRACT)
+#: The records that read the chosen judgments whole or as extracts (v11).
+JUDGMENTS_READ = (CONTRACT,)
+CONTRACTS = (LEGACY_CONTRACT, PREVIOUS_CONTRACT, WINDOWED_CONTRACT, ACCOUNT_CONTRACT, INSTRUMENTED_CONTRACT,
+             PICKED_CONTRACT, JUDGMENT_PICKED_CONTRACT, PURPOSED_CONTRACT, PER_DISPUTE_CONTRACT, CONTRACT)
+#: P31 (owner, 21 Oct 2026): four to five judgments a dispute; a judgment is read whole up to about
+#: 8,000 tokens; an extract keeps one or two paragraphs either side of each one found.
+JUDGMENTS_PER_DISPUTE = 5
+WHOLE_JUDGMENT_CHARACTERS = 32000
+AROUND_CHOSEN, AROUND_FOUND = 2, 1
+#: Why a paragraph of a long judgment is in its extract, in the order the extract keeps them
+#: when it must keep fewer: the opening (court, bench, parties), the conclusion and order, a
+#: paragraph the pick chose, one search found, one beside either, one they name by number, and
+#: one where the court sets out the issues.
+_WHY = ("opening", "order", "chosen", "found", "beside", "named", "issues")
+#: "para 14", "paragraphs 12 to 15", "para 7 and 9": a judgment naming its own paragraphs.
+_PARAGRAPH_NAMED = re.compile(r"\bpara(?:graph)?s?\.?\s*(\d{1,3})(?:\s*(?:to|-|\u2013|and|&)\s*(\d{1,3}))?", re.I)
+#: Where a court sets out the questions or issues it decides.
+_ISSUES = re.compile(r"\b(?:questions?|issues?|points?)\b[^.]{0,80}?\b(?:arises?|arise for|for (?:our )?"
+                     r"(?:consideration|determination|decision)|to be (?:decided|determined|considered)|that fall)",
+                     re.I)
 #: What a question's search records, and its dispute's picks, when the answer stopped first.
 UNFINISHED = "The answer stopped before this research was finished"
 #: The receipts of what research did (execution).
@@ -143,7 +168,7 @@ Judge each provision by what it actually says, not by whether it shares words wi
 """
 JUDGMENT_PICK = """You are a senior Indian litigation lawyer. A matter has been broken into legal questions, and for each question a search of the judgments we hold, the Supreme Court of India and the High Court of Andhra Pradesh, has returned up to six paragraphs, each shown with its judgment, court, year, how many later judgments cite it, and the paragraph's words.
 
-For each question, choose the paragraphs a lawyer would rely on to answer it: those where a court decides or authoritatively explains the point the question asks about. Most questions need one to three; choose more only when each adds something, and put the most useful first.
+For each question, choose the paragraphs a lawyer would rely on to answer it: those where a court decides or authoritatively explains the point the question asks about. Most questions need one to three; choose more only when each adds something, and put the most useful first. Each judgment whose paragraph you choose is then read whole, or, when it is long, as an extract around what was found, so choose the judgments a lawyer would rely on as much as the paragraphs.
 
 Judge each paragraph by what the court is doing in it. A paragraph that only quotes the statute, recites the facts of that case or reports a party's argument is rarely what a lawyer cites, unless the court adopts it as its own view. Weigh the court and the judgment's standing as a lawyer would, without passing over a recent judgment merely because few have cited it yet. If no shown paragraph answers a question, choose none for it and say what is missing.
 """
@@ -571,7 +596,8 @@ def accept(proposal, context, *, contract=CONTRACT):
     if contract not in CONTRACTS:
         raise ValueError("Unknown research contract")
     if contract in _QUESTION_PLANS:
-        return _accept_v7(proposal, context, SCHEMA if contract in (PURPOSED_CONTRACT, CONTRACT) else SCHEMA_V8)
+        return _accept_v7(proposal, context, SCHEMA if contract in (PURPOSED_CONTRACT, PER_DISPUTE_CONTRACT, CONTRACT)
+                          else SCHEMA_V8)
     schema = {LEGACY_CONTRACT: LEGACY_SCHEMA, PREVIOUS_CONTRACT: PREVIOUS_SCHEMA,
               WINDOWED_CONTRACT: ACCOUNT_SCHEMA, ACCOUNT_CONTRACT: ACCOUNT_SCHEMA,
               INSTRUMENTED_CONTRACT: INSTRUMENTED_SCHEMA}[contract]
@@ -821,16 +847,107 @@ def _state(plan, searches, failures, picks):
         search["state"] == "partial" for search in searches.values())) else "evaluated"
 
 
-def _part(plan, dispute_id, searches, failures, chosen):
-    """One dispute's part of a v10 record: its questions' searches and gaps and its own picks."""
+def _part(plan, dispute_id, searches, failures, chosen, judgments, contract=CONTRACT):
+    """One dispute's part of a v10 or v11 record: its questions' searches and gaps, its own
+    picks and (v11) the judgments it reads."""
     ids = [w["id"] for w in dispute_work(plan)[dispute_id]]
     searches = {i: searches[i] for i in ids if i in searches}
     failures = {i: failures[i] for i in ids if i in failures}
-    record = {"contract": CONTRACT, "plan": deepcopy(plan), "searches": deepcopy(searches),
+    record = {"contract": contract, "plan": deepcopy(plan), "searches": deepcopy(searches),
               "failures": deepcopy(failures), "part": dispute_id,
-              **{field: {dispute_id: deepcopy(chosen[kind])} for kind, field in _PICK_FIELDS.items()}}
+              **{field: {dispute_id: deepcopy(chosen[kind])} for kind, field in _PICK_FIELDS.items()},
+              **({"judgments": {dispute_id: deepcopy(judgments)}} if contract in JUDGMENTS_READ else {})}
     record["state"] = _state(plan, searches, failures, [chosen[kind] for kind in _PICK_FIELDS])
     return record
+
+
+def _chosen_cases(plan, searches, pick):
+    """The judgments a dispute's pick chose, in the order chosen, at most JUDGMENTS_PER_DISPUTE;
+    with what search found of each and what the pick chose of each, by stored position."""
+    returned = {c["id"]: c for search in searches.values() for c in _of_kind(search, "judgment")}
+    found, chosen = {}, {}
+    for candidate in returned.values():
+        if candidate["source"].get("case_id"):
+            found.setdefault(candidate["source"]["case_id"], set()).add(candidate["position"])
+    order = []
+    for work in plan["work"]:
+        for identity in pick["chosen"].get(work["id"], []) if work["id"] in searches else []:
+            candidate = returned.get(identity)
+            # A paragraph with no judgment of its own to read is no judgment chosen.
+            if candidate is not None and candidate["source"].get("case_id"):
+                order.append(candidate["source"]["case_id"])
+                chosen.setdefault(candidate["source"]["case_id"], set()).add(candidate["position"])
+    cases = list(dict.fromkeys(order))[:JUDGMENTS_PER_DISPUTE]
+    return [(case_id, found.get(case_id, set()), chosen.get(case_id, set())) for case_id in cases]
+
+
+def _extract(paragraphs, found, chosen):
+    """The paragraphs of a long judgment its extract keeps, each with why (P31)."""
+    positions = [position for position, _ in paragraphs]
+    rows = dict(paragraphs)
+    why = {}
+
+    def add(position, reason):
+        if position in rows and reason not in why.setdefault(position, []):
+            why[position].append(reason)
+    add(positions[0], "opening")
+    if len(rows[positions[0]]["full_text"]) < 400 and len(positions) > 1:
+        add(positions[1], "opening")
+    for position in positions[-2:]:
+        add(position, "order")
+    for position, row in paragraphs:
+        if row.get("paragraph_type") == "order":
+            add(position, "order")
+    for reason, around, marked in (("chosen", AROUND_CHOSEN, chosen), ("found", AROUND_FOUND, found - chosen)):
+        for position in marked:
+            add(position, reason)
+            at = positions.index(position) if position in rows else None
+            for near in [] if at is None else positions[max(0, at - around):at + around + 1]:
+                add(near, "beside")
+    numbered = {str(row.get("paragraph_num") or "").strip(): position for position, row in paragraphs}
+    for position in list(why):
+        for named in _PARAGRAPH_NAMED.finditer(rows[position]["full_text"]):
+            first, last = int(named.group(1)), int(named.group(2) or named.group(1))
+            for number in range(first, min(last, first + 10) + 1):
+                if str(number) in numbered and numbered[str(number)] != position:
+                    add(numbered[str(number)], "named")
+    for position, row in paragraphs:
+        if _ISSUES.search(row["full_text"]):
+            add(position, "issues")
+    # Kept within the whole judgment's bound, the more necessary first; the opening, the order
+    # and what the pick chose always stay.
+    rank = {position: min(_WHY.index(reason) for reason in reasons) for position, reasons in why.items()}
+    kept, size = set(), 0
+    for position in sorted(why, key=lambda p: (rank[p], positions.index(p))):
+        length = len(rows[position]["full_text"])
+        if rank[position] <= _WHY.index("chosen") or size + length <= WHOLE_JUDGMENT_CHARACTERS:
+            kept.add(position)
+            size += length
+    return {position: why[position] for position in positions if position in kept}
+
+
+def _read_judgments(searcher, plan, searches, pick):
+    """The judgments a dispute's answer reads (P31): each chosen judgment whole, or as an
+    extract of a long one; one that cannot be read is said, with why."""
+    read = []
+    for case_id, found, chosen in _chosen_cases(plan, searches, pick):
+        try:
+            if searcher is None or not callable(getattr(searcher, "read_judgment", None)):
+                raise SearchUnavailable("Held judgments cannot be read whole")
+            held = searcher.read_judgment(case_id)
+        except (SearchUnavailable, ValueError, OSError, RuntimeError) as exc:
+            read.append({"case_id": case_id, "unread": str(exc) or type(exc).__name__})
+            continue
+        paragraphs = held["paragraphs"]
+        size = sum(len(row["full_text"]) for _, row in paragraphs)
+        whole = size <= WHOLE_JUDGMENT_CHARACTERS
+        kept = ({position: [] for position, _ in paragraphs} if whole else _extract(paragraphs, found, chosen))
+        read.append({"case_id": case_id, "corpus_revision": held["corpus_revision"], "paragraphs": len(paragraphs),
+                     "first": paragraphs[0][0], "last": paragraphs[-1][0],
+                     "characters": size, "whole": whole, "found": sorted(found), "chosen": sorted(chosen),
+                     "read": [{"position": position, "row": deepcopy(row), "content_digest": _digest(row),
+                               "why": kept[position]} for position, row in paragraphs if position in kept]})
+    return read
 
 
 def _picked(model, plan, searches, report):
@@ -892,7 +1009,9 @@ def retrieve_parts(plan, searcher, context, model=None, *, progress=None):
                 # This independent read-only adapter/snapshot failed. It supplies no
                 # admitted evidence; peers remain available and the failure stays explicit.
                 failures[work["id"]] = {"stage": "search", "reason": str(exc) or type(exc).__name__}
-        return _part(plan, dispute_id, searches, failures, _picked(model, plan, searches, report))
+        picks = _picked(model, plan, searches, report)
+        return _part(plan, dispute_id, searches, failures, picks,
+                     _read_judgments(searcher, plan, searches, picks["judgment"]))
     groups = dispute_work(plan)
     pool = ThreadPoolExecutor(max_workers=max(1, len(groups)), thread_name_prefix="dispute")
     parts = {dispute_id: pool.submit(researched, dispute_id, works) for dispute_id, works in groups.items()}
@@ -906,6 +1025,7 @@ def assemble(plan, parts, *, unfinished=None):
     then record that as their gap and its picks keep nothing."""
     done = {part["part"]: part for part in parts}
     searches, failures, chosen = {}, {}, {field: {} for field in _PICK_FIELDS.values()}
+    judgments = {}
     for dispute_id, works in dispute_work(plan).items():
         part = done.get(dispute_id)
         if part is None:
@@ -915,23 +1035,26 @@ def assemble(plan, parts, *, unfinished=None):
             for field in _PICK_FIELDS.values():
                 chosen[field][dispute_id] = {"state": "unavailable", "proposal": None, "chosen": {}, "unknown": [],
                                              "reason": unfinished}
+            judgments[dispute_id] = []
             continue
         searches.update(deepcopy(part["searches"]))
         failures.update(deepcopy(part["failures"]))
         for field in _PICK_FIELDS.values():
             chosen[field][dispute_id] = deepcopy(part[field][dispute_id])
+        judgments[dispute_id] = deepcopy(part["judgments"][dispute_id])
     order = [w["id"] for w in plan["work"]]
     record = {"contract": CONTRACT, "plan": deepcopy(plan),
               "searches": {i: searches[i] for i in order if i in searches},
-              "failures": {i: failures[i] for i in order if i in failures}, **chosen}
+              "failures": {i: failures[i] for i in order if i in failures}, **chosen, "judgments": judgments}
     record["state"] = _state(plan, record["searches"], record["failures"], picks_of(record))
     return record
 
 
 def part_of(record, dispute_id):
-    """A v10 record's part for one dispute, exactly as that dispute's section read it."""
+    """A v10 or v11 record's part for one dispute, exactly as that dispute's section read it."""
     return _part(record["plan"], dispute_id, record["searches"], record["failures"],
-                 {kind: record[field][dispute_id] for kind, field in _PICK_FIELDS.items()})
+                 {kind: record[field][dispute_id] for kind, field in _PICK_FIELDS.items()},
+                 (record.get("judgments") or {}).get(dispute_id, []), record["contract"])
 
 
 def picks_of(record, kind=None):
@@ -1003,6 +1126,7 @@ def validate(record, plan, context):
     fields = ({"contract", "plan", "searches", "failures", "state"}
               | ({"picks"} if contract in _QUESTION_PLANS else set())
               | ({"judgment_picks"} if contract in JUDGMENT_PICKS else set())
+              | ({"judgments"} if contract in JUDGMENTS_READ else set())
               | ({"part"} if contract in BY_DISPUTE and "part" in record else set()))
     if (not isinstance(record, dict)
             or set(record) != fields
@@ -1038,6 +1162,10 @@ def validate(record, plan, context):
                 own = {i: search for i, search in record["searches"].items() if i in ids}
                 _validate_picks(record[field][dispute_id], plan, own, kind)
                 picks.append(record[field][dispute_id])
+                if kind == "judgment" and contract in JUDGMENTS_READ:
+                    _validate_judgments(record["judgments"], dispute_id, plan, own, record[field][dispute_id])
+        if contract in JUDGMENTS_READ and set(record["judgments"]) != set(disputes):
+            raise ValueError("The judgments read are not one list for each dispute")
     else:
         if contract in _QUESTION_PLANS:
             _validate_picks(record["picks"], plan, record["searches"])
@@ -1050,6 +1178,49 @@ def validate(record, plan, context):
     if record["state"] != expected:
         raise ValueError("Research status disagrees with actual search outcomes")
     return deepcopy(record)
+
+
+def _validate_judgments(judgments, dispute_id, plan, searches, pick):
+    """v11 (P31): the judgments a dispute reads are those its pick chose, in order and at most
+    JUDGMENTS_PER_DISPUTE; each read whole when no longer than the bound, else as an extract
+    keeping its opening, its order and what the pick chose; every paragraph kept exactly as
+    stored, and what search found and the pick chose marked as found and chosen."""
+    entries = judgments.get(dispute_id) if isinstance(judgments, dict) else None
+    expected = _chosen_cases(plan, searches, pick)
+    if not isinstance(entries, list) or [entry.get("case_id") for entry in entries] != [c for c, _, _ in expected]:
+        raise ValueError("The judgments read are not the ones the pick chose")
+    revisions = {search["corpus_revisions"].get("judgment") for search in searches.values()}
+    for entry, (case_id, found, chosen) in zip(entries, expected, strict=True):
+        if "unread" in entry:
+            if set(entry) != {"case_id", "unread"} or not isinstance(entry["unread"], str) or not entry["unread"]:
+                raise ValueError("A judgment not read says why")
+            continue
+        if (set(entry) != {"case_id", "corpus_revision", "paragraphs", "first", "last", "characters", "whole", "found",
+                           "chosen", "read"}
+                or entry["corpus_revision"] not in revisions or entry["found"] != sorted(found)
+                or entry["chosen"] != sorted(chosen) or type(entry["paragraphs"]) is not int
+                or type(entry["characters"]) is not int or type(entry["whole"]) is not bool
+                or entry["whole"] != (entry["characters"] <= WHOLE_JUDGMENT_CHARACTERS)):
+            raise ValueError("A judgment read differs from what its pick and search found")
+        read = entry["read"]
+        positions = [paragraph.get("position") for paragraph in read]
+        if (not read or positions != sorted(set(positions)) or entry["whole"] and len(read) != entry["paragraphs"]
+                or positions[0] != entry["first"] or positions[-1] != entry["last"]
+                or not entry["whole"] and ("opening" not in read[0].get("why", []) or not chosen <= set(positions))
+                or entry["whole"] and not set(entry["found"]) | set(entry["chosen"]) <= set(positions)):
+            raise ValueError("A judgment's paragraphs are not read as P31 reads them")
+        for paragraph in read:
+            row = paragraph.get("row")
+            if (not isinstance(paragraph, dict) or set(paragraph) != {"position", "row", "content_digest", "why"}
+                    or not isinstance(row, dict) or row.get("case_id") != case_id
+                    or row.get("doc_type", "case_law") != "case_law" or not row.get("full_text")
+                    or paragraph["content_digest"] != _digest(row)
+                    or not _valid_location("judgment", paragraph["position"], row)
+                    or not isinstance(paragraph["why"], list)
+                    or any(reason not in _WHY for reason in paragraph["why"])
+                    or entry["whole"] and paragraph["why"]
+                    or not entry["whole"] and not paragraph["why"]):
+                raise ValueError("A judgment's paragraph is not held as stored")
 
 
 def _validate_picks(picks, plan, searches, kind="provision"):

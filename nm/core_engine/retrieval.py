@@ -568,6 +568,24 @@ class LocalCollection:
         except (ImportError, OSError, RuntimeError, ValueError, AttributeError) as exc:
             raise SearchUnavailable(f"{self.doc_type} semantic search within named instruments failed: {exc}") from exc
 
+    def judgment_paragraphs(self, case_id: str) -> list[tuple[int, dict]]:
+        """Every held paragraph of one judgment, in stored order, each read and checked as a
+        search result is (owner decision P31, 21 Oct 2026: a judgment the research chooses is
+        read whole, or as an extract of a long one)."""
+        if self.doc_type != "case_law" or not isinstance(case_id, str) or not case_id.strip():
+            raise ValueError("A judgment is read by its own case identity")
+        _, db_path, count = self._open()
+        try:
+            with closing(sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)) as db:
+                positions = [row[0] for row in db.execute(
+                    "select pos from chunks where doc_type=? and case_id=? order by pos", (self.doc_type, case_id))]
+        except sqlite3.Error as exc:
+            raise SearchUnavailable("The judgment's paragraphs cannot be read") from exc
+        rows = self.read(positions)
+        if not positions or set(rows) != set(positions):
+            raise SearchUnavailable("Some paragraphs of the judgment cannot be read")
+        return [(position, rows[position]) for position in positions]
+
     def case_standing(self) -> dict:
         """Each held judgment's citation standing: the mid-rank share of held judgments
         of the same court and year that later judgments cite less, read once per corpus
@@ -1382,6 +1400,9 @@ class SearchPort(Protocol):
     def search_many(self, searches, *, results=None, done=None) -> list:
         ...
 
+    def read_judgment(self, case_id) -> dict:
+        ...
+
 
 class HybridSearcher:
     """Independent lexical/vector legs and exact source reads for both corpora."""
@@ -1444,6 +1465,23 @@ class HybridSearcher:
             future.add_done_callback(lambda _: done())
         pool.shutdown(wait=False)
         return futures
+
+    def read_judgment(self, case_id):
+        """One judgment's held paragraphs in stored order (owner decision P31, 21 Oct 2026),
+        read inside one checked snapshot of the judgment store: its corpus revision and the
+        (position, row) of each paragraph."""
+        collection = self.collections.get("judgment")
+        if collection is None or not callable(getattr(collection, "judgment_paragraphs", None)):
+            raise SearchUnavailable("Held judgments cannot be read")
+        revision = collection.revision()
+        if not revision:
+            raise SearchUnavailable("The judgment store's identity cannot be checked")
+        scope = getattr(collection, "snapshot_scope", None)
+        with scope() if callable(scope) else nullcontext():
+            paragraphs = collection.judgment_paragraphs(case_id)
+        if collection.revision() != revision:
+            raise SearchUnavailable("The judgment store changed while the judgment was read")
+        return {"corpus_revision": revision, "paragraphs": paragraphs}
 
     def _search(self, queries, instruments=None, results=None):
         if (not isinstance(queries, list) or not queries or any(

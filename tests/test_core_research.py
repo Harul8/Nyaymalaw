@@ -142,7 +142,8 @@ class Model:
 def one_pick(record):
     """A v10 record of one dispute in the shape of v7-v9, which kept one pick of each kind
     for the whole matter (research v10, 21 Oct 2026, keeps each dispute's)."""
-    return {**{key: value for key, value in record.items() if key != "part"}, "contract": "core_research_v9",
+    return {**{key: value for key, value in record.items() if key not in ("part", "judgments")},
+            "contract": "core_research_v9",
             "picks": record["picks"]["D1"], "judgment_picks": record["judgment_picks"]["D1"]}
 
 
@@ -324,7 +325,7 @@ def test_search_returns_twenty_provisions_and_the_pick_admits_only_its_choice():
     model = Model(choose=lambda ids: ids[:2])
     record = retrieve(admitted, found, ctx, model=model)
     assert asked == [{"results": {"provision": PROVISIONS_FOR_PICK}}]
-    assert record["contract"] == CONTRACT == "core_research_v10" and record["state"] == "evaluated"
+    assert record["contract"] == CONTRACT == "core_research_v11" and record["state"] == "evaluated"
     provisions = [c for c in record["searches"]["t2:w1"]["candidates"] if c["kind"] == "provision"]
     assert len(provisions) == PROVISIONS_FOR_PICK
     assert record["picks"]["D1"]["chosen"] == {"t2:w1": [provisions[0]["id"], provisions[1]["id"]]}
