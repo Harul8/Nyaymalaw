@@ -30,7 +30,9 @@ import threading
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 
-from nm.core_engine import calculation, response_authorities, response_review, response_writer
+from nm.core_engine import (
+    answer_sources, calculation, research, response_authorities, response_review, response_writer,
+)
 from nm.core_engine.calls import (
     CONFLICT_PURPOSE, EDIT_ALLOWANCE, REVIEW_PURPOSE, SECTION_ALLOWANCE, SHARED_ALLOWANCE, CorrectionUnavailable,
     ReleaseWithheld, refusal_reason, shape_mismatch,
@@ -240,17 +242,83 @@ def unanswered(sections, worked):
             for position in order(sections, worked) if shown(sections[position]) is None]
 
 
+class Researched:
+    """The research an answer is written from, each time as (record, sources, execution): a
+    section's, the whole answer's, and, while research still runs, what the page can show.
+    From research v10 (owner, 21 Oct 2026: step 4, P26 as first decided) each section of an
+    answer covering several disputes is written from its own dispute's part, as soon as that
+    part is ready; the check across the sections and the overview read the whole."""
+
+    def __init__(self, context, plan, parts=None, *, whole=None):
+        self.context, self.plan, self._parts, self._whole = context, plan, parts, whole
+        self.layout = response_writer.parts(whole[0] if whole else {"contract": research.CONTRACT, "plan": plan})
+        contract = whole[0].get("contract") if whole else research.CONTRACT
+        self._by_dispute = contract in research.BY_DISPUTE and len(self.layout) > 1
+        self._lock, self._made = threading.Lock(), {}
+
+    @classmethod
+    def ready(cls, context, record, sources, execution):
+        """Research done before answering began."""
+        return cls(context, record["plan"], whole=(record, sources, execution))
+
+    def part(self, index):
+        """A section's research, waiting for its dispute's part where it is still running."""
+        if not self._by_dispute:
+            return self.whole()
+        dispute_id = self.layout[index]["dispute_id"]
+        with self._lock:
+            if dispute_id in self._made:
+                return self._made[dispute_id]
+        part = (self._parts[dispute_id].result() if self._parts is not None
+                else research.part_of(self._whole[0], dispute_id))
+        made = (part, answer_sources.build(self.context, part), research.execution(part))
+        with self._lock:
+            return self._made.setdefault(dispute_id, made)
+
+    def whole(self):
+        """The whole answer's research, waiting for every part."""
+        with self._lock:
+            if self._whole is not None:
+                return self._whole
+        record = research.assemble(self.plan, [future.result() for future in self._parts.values()])
+        made = (record, answer_sources.build(self.context, record), research.execution(record))
+        with self._lock:
+            if self._whole is None:
+                self._whole = made
+            return self._whole
+
+    def provisional(self):
+        """What the page shows while some disputes are still being researched: the parts done,
+        and each question of the others recorded as not yet researched - what would be saved
+        should the turn stop there (P27)."""
+        if self._whole is not None or self._parts is None:
+            return self.whole()
+        done = [future.result() for future in self._parts.values() if future.done() and future.exception() is None]
+        if len(done) == len(self._parts):
+            return self.whole()
+        record = research.assemble(self.plan, done, unfinished=research.UNFINISHED)
+        return record, answer_sources.build(self.context, record), research.execution(record)
+
+
+def _research_for(context, record, sources, execution, layout, index):
+    """The research a saved section was written from: its dispute's part (research v10, an
+    answer covering several disputes), otherwise the whole answer's."""
+    if record.get("contract") in research.BY_DISPUTE and len(layout) > 1:
+        part = research.part_of(record, layout[index]["dispute_id"])
+        return part, answer_sources.build(context, part), research.execution(part)
+    return record, sources, execution
+
+
 class _Answering:
     """One turn's answering: what every section's thread shares."""
 
-    def __init__(self, calls, context, record, sources, *, interpretation, execution, worked, case_index,
-                 provision_reader, report):
-        self.calls, self.context, self.record, self.sources = calls, context, record, sources
-        self.interpretation, self.execution, self.worked = interpretation, execution, worked
+    def __init__(self, calls, context, researched, *, interpretation, worked, case_index, provision_reader, report):
+        self.calls, self.context, self.researched = calls, context, researched
+        self.interpretation, self.worked = interpretation, worked
         self.time_limits = calculation.for_answer(worked)
         self.case_index, self.provision_reader = case_index, provision_reader
         self.report = report or (lambda stage, **detail: None)
-        self.layout = response_writer.parts(record)
+        self.layout = researched.layout
         #: The service failure that left each scope unanswered, should the whole turn fail so.
         self.failures = {}
         self._reviews, self._lock = 0, threading.Lock()
@@ -259,14 +327,15 @@ class _Answering:
         self.failures.setdefault(scope, exc)
         return "capacity" if isinstance(exc, ContextOverflow) else "service"
 
-    def _review(self, scope, draft, kwargs, refused):
+    def _review(self, scope, draft, kwargs, refused, researched):
+        record, sources, execution = researched
         self.report("checking_authorities")
-        authorities = response_authorities.check(self.context, self.record, self.sources, draft,
+        authorities = response_authorities.check(self.context, record, sources, draft,
                                                  case_index=self.case_index, provision_reader=self.provision_reader)
         self.report("reviewing")
 
         def judged():
-            return response_review.review(self.calls, self.context, self.record, self.sources, draft, self.execution,
+            return response_review.review(self.calls, self.context, record, sources, draft, execution,
                                           authority_evidence=authorities, time_limits=self.time_limits,
                                           contract=REVIEW, **kwargs)
         with self._lock:
@@ -289,9 +358,9 @@ class _Answering:
                     raise
         # Code's own check that the answer works out no date itself (owner, 15 Oct 2026).
         return {"draft": draft, "authority_evidence": authorities, "review": review,
-                "date_findings": response_writer.dates_not_given(draft, self.context, self.sources, self.time_limits)}
+                "date_findings": response_writer.dates_not_given(draft, self.context, sources, self.time_limits)}
 
-    def _tries(self, scope, allowance, operation, write, kwargs, refused, correction=None):
+    def _tries(self, scope, allowance, operation, write, kwargs, refused, researched, correction=None):
         """A piece's draft and its rewrites, each reviewed, within its scope's allowance,
         whatever asked for them (owner decision P25: at most a third try). Returns the piece
         to go on with, or None, and why no piece passed: the last piece a review saw, unless
@@ -321,7 +390,7 @@ class _Answering:
             except ModelError as exc:
                 return kept(), self._failed(scope, exc)
             try:
-                piece = self._review(scope, draft, kwargs, refused)
+                piece = self._review(scope, draft, kwargs, refused, researched)
             except (SchemaViolation, CorrectionUnavailable) as exc:
                 self.calls.refused(exc)
                 refused.append(_refusal("unreviewed", draft["proposal"], _UNCHECKED["review"]))
@@ -346,7 +415,7 @@ class _Answering:
             correction = {"mismatch": _told(piece), "rejected": piece["draft"]["proposal"],
                           **({"purpose": REVIEW_PURPOSE} if _read_v10(piece) else {"asked_by_review": True})}
 
-    def _trims(self, scope, reviewed, kwargs, refused):
+    def _trims(self, scope, reviewed, kwargs, refused, researched):
         """After the tries, what the last review still faults is left out and the rest
         reviewed again as trimmed, at most TRIMS times. Returns the trimmed pieces and why
         nothing can be shown (None when the last piece passes)."""
@@ -360,7 +429,7 @@ class _Answering:
                 _owned(_LEFT_OUT[finding["category"]][0], Response.WITHHOLD, Scope.NEED,
                        _LEFT_OUT[finding["category"]][1])
             try:
-                current = self._review(scope, response_writer.trim(current["draft"], ids), kwargs, refused)
+                current = self._review(scope, response_writer.trim(current["draft"], ids), kwargs, refused, researched)
             except (SchemaViolation, CorrectionUnavailable) as exc:
                 self.calls.refused(exc)
                 return trims, "review"
@@ -371,12 +440,12 @@ class _Answering:
             trims.append(current)
         return trims, None
 
-    def _piece(self, scope, operation, write, kwargs):
+    def _piece(self, scope, operation, write, kwargs, researched):
         refused = []
-        reviewed, why = self._tries(scope, SECTION_ALLOWANCE, operation, write, kwargs, refused)
+        reviewed, why = self._tries(scope, SECTION_ALLOWANCE, operation, write, kwargs, refused, researched)
         trims = []
         if reviewed is not None:
-            trims, why = self._trims(scope, reviewed, kwargs, refused)
+            trims, why = self._trims(scope, reviewed, kwargs, refused, researched)
         if why is not None:
             _owned("G-FALLBACK", Response.DISCLOSE, Scope.NEED, Recovery.ADVOCATE)
         elif beside(trims[-1] if trims else reviewed) or remarks(trims[-1] if trims else reviewed):
@@ -385,26 +454,30 @@ class _Answering:
         return {"reviewed": reviewed, "trims": trims, "fallback": None if why is None else {"reason": why},
                 KEPT: refused}
 
-    def _write(self, index):
+    def _write(self, index, researched):
+        record, sources, execution = researched
         return lambda: response_writer.write_section(
-            self.calls, self.context, self.record, self.sources, index=index, interpretation=self.interpretation,
-            execution=self.execution, time_limits=self.time_limits)
+            self.calls, self.context, record, sources, index=index, interpretation=self.interpretation,
+            execution=execution, time_limits=self.time_limits)
 
     def section(self, index):
-        """One dispute's section, in its own scope of corrections (owner decision P26)."""
-        scope = f"s{index}"
+        """One dispute's section, in its own scope of corrections (owner decision P26), written
+        from its own dispute's research as soon as that is ready (step 4)."""
+        scope, researched = f"s{index}", self.researched.part(index)
+        self.report("writing")
         with self.calls.scope(scope):
-            piece = self._piece(scope, "core_response_writer", self._write(index), {})
+            piece = self._piece(scope, "core_response_writer", self._write(index, researched), {}, researched)
         return {"part": index, "dispute_id": self.layout[index]["dispute_id"], **piece, "edit": None}
 
     def across(self, sections):
         """The check across the sections shown, for conflicts between them (P26)."""
         drafts = [shown(sections[position], edited=False)["draft"] for position in order(sections, self.worked, edited=False)
                   if shown(sections[position], edited=False) is not None]
+        record, sources, execution = self.researched.whole()
         with self.calls.scope("x", SHARED_ALLOWANCE):
             try:
                 return self.calls.checked("core_response_cross_check", lambda: response_review.cross_check(
-                    self.calls, self.context, self.record, self.sources, drafts, self.execution,
+                    self.calls, self.context, record, sources, drafts, execution,
                     time_limits=self.time_limits))
             except (SchemaViolation, CorrectionUnavailable):
                 return {"unavailable": "review"}
@@ -417,7 +490,7 @@ class _Answering:
         """A shown section the check across the sections found in conflict, corrected once;
         the correction is reviewed like any section and used only if it passes (P27)."""
         index, base = saved["part"], shown(saved, edited=False)
-        scope = f"e{index}"
+        scope, researched = f"e{index}", self.researched.part(saved["part"])
         found = [{"conflict": conflicts[number]["mismatch"],
                   "paragraphs": [unit["text"] for unit in base["draft"]["units"]
                                  if unit["id"] in conflicts[number]["unit_ids"]]} for number in numbers]
@@ -425,8 +498,8 @@ class _Answering:
         refused = []
         with self.calls.scope(scope, EDIT_ALLOWANCE):
             reviewed, _ = self._tries(
-                scope, EDIT_ALLOWANCE, "core_response_writer", self._write(index),
-                {"conflicts": [conflicts[number]["mismatch"] for number in numbers]}, refused,
+                scope, EDIT_ALLOWANCE, "core_response_writer", self._write(index, researched),
+                {"conflicts": [conflicts[number]["mismatch"] for number in numbers]}, refused, researched,
                 correction={"mismatch": found, "purpose": CONFLICT_PURPOSE, "rejected": {"paragraphs": [
                     {"kind": unit["kind"], "text": unit["text"]} for unit in base["draft"]["units"]]}})
         return {"conflicts": list(numbers), "reviewed": reviewed, KEPT: refused}
@@ -437,19 +510,21 @@ class _Answering:
         drafts = [shown(sections[position])["draft"] for position in order(sections, self.worked)
                   if shown(sections[position]) is not None]
         missing = unanswered(sections, self.worked)
-        presented = response_review.shown_sections(drafts, self.record, missing)
+        researched = self.researched.whole()
+        record, sources, execution = researched
+        presented = response_review.shown_sections(drafts, record, missing)
 
         def write():
-            return response_writer.write_overview(self.calls, self.context, self.record, self.sources,
+            return response_writer.write_overview(self.calls, self.context, record, sources,
                                                   sections=presented, interpretation=self.interpretation,
-                                                  execution=self.execution, time_limits=self.time_limits)
+                                                  execution=execution, time_limits=self.time_limits)
         with self.calls.scope("o"):
             return self._piece("o", "core_response_overview", write,
-                               {"sections": drafts, "unanswered": missing or None})
+                               {"sections": drafts, "unanswered": missing or None}, researched)
 
 
 def answer(calls, context, record, sources, *, interpretation, execution, worked, case_index=None,
-           provision_reader=None, report=None, released=None):
+           provision_reader=None, report=None, released=None, researched=None):
     """Every section of the answer, side by side, then (for several disputes) the check
     across them with any correction, and the overview. Returns the sections in the
     answer's layout, the check across them (None, its record, or why it could not be
@@ -460,9 +535,13 @@ def answer(calls, context, record, sources, *, interpretation, execution, worked
     released (owner decisions P26 and P27, 19 Oct 2026): told what the answer shows each
     time that changes - as each section passes, after the corrections the check across the
     sections asked for, and when the overview lands - as {"sections": those done, in the
-    answer's layout, "waiting": the parts still being written, "cross_check", "overview"}."""
-    answering = _Answering(calls, context, record, sources, interpretation=interpretation, execution=execution,
-                           worked=worked, case_index=case_index, provision_reader=provision_reader, report=report)
+    answer's layout, "waiting": the parts still being written, "cross_check", "overview"}.
+
+    researched (step 4, 21 Oct 2026): the research to write from, each section's part as it
+    is ready (Researched); record, sources and execution are then None."""
+    researched = researched or Researched.ready(context, record, sources, execution)
+    answering = _Answering(calls, context, researched, interpretation=interpretation, worked=worked,
+                           case_index=case_index, provision_reader=provision_reader, report=report)
     layout = answering.layout
     indices = list(range(1, len(layout))) if len(layout) > 1 else [0]
     state, lock = {"sections": {}, "cross_check": None, "overview": None}, threading.Lock()
@@ -482,7 +561,7 @@ def answer(calls, context, record, sources, *, interpretation, execution, worked
             state["sections"][index] = saved
             publish()
         return saved
-    answering.report("writing")
+    # Each section starts writing as soon as its own research is ready (step 4).
     with ThreadPoolExecutor(max_workers=max(1, min(8, len(indices)))) as pool:
         sections = list(pool.map(section, indices))
     if all(saved["fallback"] is not None and saved["fallback"]["reason"] in ("service", "capacity")
@@ -638,7 +717,8 @@ def validate(activity, context, record, sources, worked, *, kept=True):
                 or saved["dispute_id"] != layout[index]["dispute_id"]):
             raise ValueError("Saved sections differ from the answer's layout")
         _kept_valid(saved, kept)
-        _chain_valid(saved, context, record, sources, execution, time_limits, index, saved["dispute_id"], {})
+        _chain_valid(saved, context, *_research_for(context, record, sources, execution, layout, index), time_limits,
+                     index, saved["dispute_id"], {})
     if all(saved["fallback"] is not None and saved["fallback"]["reason"] in ("service", "capacity")
            for saved in sections):
         raise ValueError("A turn the service could not answer is not saved")
@@ -668,7 +748,8 @@ def validate(activity, context, record, sources, worked, *, kept=True):
             raise ValueError("A correction differs from the conflicts that asked for it")
         _kept_valid(edit, kept)
         if edit["reviewed"] is not None:
-            _piece_valid(edit["reviewed"], context, record, sources, execution, time_limits, saved["part"],
+            _piece_valid(edit["reviewed"], context, *_research_for(context, record, sources, execution, layout,
+                                                                  saved["part"]), time_limits, saved["part"],
                          saved["dispute_id"], {"conflicts": [conflicts[number]["mismatch"] for number in edit["conflicts"]]})
     overview = activity["overview"]
     if not (many and any(shown(saved) is not None for saved in sections)):
