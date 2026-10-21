@@ -98,6 +98,19 @@ def understood(calls, context, searcher, report, held_acts=None):
     understanding, side by side; the research; and the time limits, worked out beside the
     search where research is needed. Returns the interpretation, the research record and
     the calculation record."""
+    interpreted, plan = _interpreted(calls, context, report)
+    # Time limits are worked out beside the search, only where research is needed.
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        working = (pool.submit(calculation.work_out, calls, context, held_acts)
+                   if held_acts is not None and _needs_research(plan) else None)
+        record = research.retrieve(plan, searcher, context, model=calls, progress=report)
+        limits = working.result() if working is not None else calculation.skipped()
+    return interpreted, record, limits
+
+
+def _interpreted(calls, context, report):
+    """The message's interpretation and the matter's understanding, side by side, and the
+    research plan; returns the interpretation and the plan."""
     # The matter's first understanding reads the conversation itself, so it is written
     # beside the message's interpretation (owner, 18 Oct 2026, for speed); its next step
     # waits for the interpretation, which says whether there is a matter to research at all.
@@ -125,13 +138,7 @@ def understood(calls, context, searcher, report, held_acts=None):
                 raise
     if not verdict["carries"]:
         plan = research.plan(calls, context, interpreted)  # the plan for no matter, without a call
-    # Time limits are worked out beside the search, only where research is needed.
-    with ThreadPoolExecutor(max_workers=1) as pool:
-        working = (pool.submit(calculation.work_out, calls, context, held_acts)
-                   if held_acts is not None and _needs_research(plan) else None)
-        record = research.retrieve(plan, searcher, context, model=calls, progress=report)
-        limits = working.result() if working is not None else calculation.skipped()
-    return interpreted, record, limits
+    return interpreted, plan
 
 
 def prepare(model, context, searcher, *, case_index=None, provision_reader=None, progress=None,
@@ -143,26 +150,40 @@ def prepare(model, context, searcher, *, case_index=None, provision_reader=None,
     report = _reporter(progress)
     calls = model if isinstance(model, TurnCalls) else TurnCalls(model)
     report("understanding")
-    interpreted, record, limits = understood(calls, context, searcher, report, held_acts)
-    sources = answer_sources.build(context, record)
-    execution = execution_record(record)
-    base = {"contract": CONTRACT, "interpretation": interpreted, "research": record, "sources": sources,
-            "execution": execution, "calculation": limits,
-            "rendering_contract": response_rendering.BY_DISPUTE_CONTRACT}
+    interpreted, plan = _interpreted(calls, context, report)
+    # Step 4 (owner, 21 Oct 2026; P26 as first decided): each dispute is researched as its own
+    # part, and its section is written as soon as that part is ready; the time limits are
+    # worked out beside the search, only where research is needed.
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        working = (pool.submit(calculation.work_out, calls, context, held_acts)
+                   if held_acts is not None and _needs_research(plan) else None)
+        parts = research.retrieve_parts(plan, searcher, context, model=calls, progress=report)
+        limits = working.result() if working is not None else calculation.skipped()
+    researched = answer_sections.Researched(context, plan, parts)
+
+    def base(record, sources, execution):
+        return {"contract": CONTRACT, "interpretation": interpreted, "research": record, "sources": sources,
+                "execution": execution, "calculation": limits,
+                "rendering_contract": response_rendering.BY_DISPUTE_CONTRACT}
 
     def released(state):
         if shown is None:
             return
+        # What would be saved should the turn stop here (P27): the disputes not yet researched
+        # are recorded so.
+        record, sources, execution = researched.provisional()
         elements = response_rendering.render_sections(
             context, record, sources, sections=state["sections"], cross_check=state["cross_check"],
             overview=state["overview"], time_limits=limits, waiting=state["waiting"])
-        shown(elements, {**base, **state}, calls.metrics())
+        shown(elements, {**base(record, sources, execution), **state}, calls.metrics())
     sections, crossed, overview = answer_sections.answer(
-        calls, context, record, sources, interpretation=interpreted, execution=execution, worked=limits,
-        case_index=case_index, provision_reader=provision_reader, report=report, released=released)
+        calls, context, None, None, interpretation=interpreted, execution=None, worked=limits,
+        case_index=case_index, provision_reader=provision_reader, report=report, released=released,
+        researched=researched)
+    record, sources, execution = researched.whole()
     elements = response_rendering.render_sections(context, record, sources, sections=sections, cross_check=crossed,
                                                   overview=overview, time_limits=limits)
-    activity = {**base, "sections": sections, "cross_check": crossed, "overview": overview}
+    activity = {**base(record, sources, execution), "sections": sections, "cross_check": crossed, "overview": overview}
     return elements, activity, calls.metrics()
 
 

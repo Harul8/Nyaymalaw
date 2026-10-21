@@ -1427,20 +1427,22 @@ class HybridSearcher:
 
     def search_many(self, searches, *, results=None, done=None):
         """Search a matter's questions side by side (owner, 20 Oct 2026: step 1), each exactly
-        as search() searches it alone: searches are (queries, instruments) pairs. Returns one
-        finished future per search, in order, holding its result or its own failure, so that
-        a failed question never takes its peers' work with it. done() is told as each
-        finishes. The reranker on the graphics card still reads one question at a time."""
+        as search() searches it alone: searches are (queries, instruments) pairs, taken in their
+        order. Returns one future per search at once, in order, each holding its result or its
+        own failure once it finishes, so that a failed question never takes its peers' work
+        with it and a dispute's questions can be read as soon as they are found (step 4, 21 Oct
+        2026). done() is told as each finishes. The reranker on the graphics card still reads
+        one question at a time."""
         searches = list(searches)
         if not searches:
             return []
-        with ThreadPoolExecutor(max_workers=min(SIDE_BY_SIDE, len(searches)),
-                                thread_name_prefix="search") as pool:
-            futures = [pool.submit(self.search, queries, instruments, results=results)
-                       for queries, instruments in searches]
-            for future in futures if done is not None else ():
-                # Told apart from the result: a failure to report progress changes no search.
-                future.add_done_callback(lambda _: done())
+        pool = ThreadPoolExecutor(max_workers=min(SIDE_BY_SIDE, len(searches)), thread_name_prefix="search")
+        futures = [pool.submit(self.search, queries, instruments, results=results)
+                   for queries, instruments in searches]
+        for future in futures if done is not None else ():
+            # Told apart from the result: a failure to report progress changes no search.
+            future.add_done_callback(lambda _: done())
+        pool.shutdown(wait=False)
         return futures
 
     def _search(self, queries, instruments=None, results=None):
