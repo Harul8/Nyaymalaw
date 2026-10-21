@@ -600,6 +600,13 @@ def _shown(working, earlier, as_of=None):
     row("Event", start.get("event"))
     if start.get("quote"):
         row("Whose words", f"“{start['quote']}”")
+    agreed = start.get("agreed")
+    if agreed:
+        # P34 (21 Oct 2026): the event is the end of a period the facts set, counted by code.
+        row("Period the facts set", f"“{agreed['period_words']}”")
+        row("Whose words for the period", f"“{agreed['period']['quote']}”")
+        row("Counted from", _date(agreed["runs_from"]["date"]))
+        row("Whose words for that date", f"“{agreed['runs_from']['quote']}”")
     row("Counting starts after", _date(working["counting_starts_after"]))
     row("Period ends", _date(working["period_end"]))
     for copy in working["copies"]:

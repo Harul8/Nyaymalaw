@@ -517,3 +517,15 @@ def test_an_agreed_period_not_in_the_words_quoted_for_it_is_not_worked_out():
     assert record["calculations"] == []
     assert record["not_assessed"][0]["why"].startswith("the agreed period is not within the words quoted")
 
+
+def test_the_working_box_shows_how_a_start_from_an_agreed_period_was_counted():
+    from tests.test_core_understanding import context
+    proposal = {"needed": True, "why": "A suit for the price.", "not_assessed": [], "calculations": [price_suit()]}
+    record = calculation.work_out(Calculating(proposal), context(CREDIT_SALE), CreditHeld())
+    (box,) = response_rendering._working(record)
+    rows = dict(box["working"]["rows"])
+    assert rows["Runs from"] == response_rendering._date("2024-04-09")
+    assert rows["Period the facts set"] == "“30 days”" and rows["Whose words for the period"] == "“on 30 days' credit”"
+    assert rows["Counted from"] == response_rendering._date("2024-03-10")
+    assert rows["Whose words for that date"] == "“delivered a consignment worth Rs 2,10,000 on 10 March 2024”"
+    assert rows["Last day"] == response_rendering._date("2027-04-09")
