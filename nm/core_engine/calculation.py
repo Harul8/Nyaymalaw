@@ -153,9 +153,10 @@ def _entry_words(text):
 
 
 def _nearest(quote, text):
-    """The Act's own words nearest to a quotation (owner, 16 Oct 2026: code locates; the
-    model judges what to quote), spacing closed up: this step compares an Act's words
-    without spacing, which its held texts got wrong in print."""
+    """A held text's own words nearest to a quotation, an Act's or what the advocate or a
+    document says (owner, 16 Oct 2026: code locates; the model judges what to quote), spacing
+    closed up: this step compares an Act's words without spacing, which its held texts got
+    wrong in print."""
     window = nearest(quote, text)
     if window is None:
         return None
@@ -201,7 +202,10 @@ def _facts_in(context, catalogue):
 def _fact(fact, catalogue, what, searched):
     """A date and the exact words it rests on: code finds the message or page holding
     the quoted words (typographic quotation marks, spacing and case aside) and keeps the
-    original's own words and place."""
+    original's own words and place. Words not found there are refused with the words
+    nearest to them, from the first text searched that holds any (live run 8, 21 Oct 2026:
+    a step quoted "I delivered" for the advocate's "my client delivered", and its
+    correction, told only that the words were not there, quoted them so again)."""
     quote, _ = _plain_map(fact["quote"].strip(" .,;:"))
     for identity in searched if quote else ():
         text = catalogue[identity]["text"]
@@ -211,7 +215,9 @@ def _fact(fact, catalogue, what, searched):
             start, end = where[found], where[found + len(quote) - 1] + 1
             return {"date": _day(fact["date"], what).isoformat(), "source_id": identity,
                     "quote": text[start:end], "start": start, "end": end}
-    raise _Unchecked(f"the words given for the {what} are not in the conversation or documents as quoted")
+    near = next((words for identity in searched if quote
+                 if (words := _nearest(fact["quote"], catalogue[identity]["text"]))), None)
+    raise _Unchecked(f"the words given for the {what} are not in the conversation or documents as quoted", near=near)
 
 
 def _provision(item, acts, entries):
@@ -230,9 +236,10 @@ def _provision(item, acts, entries):
         row = rows[0]
         # The period and its start are taken from the held columns below; the quoted words
         # only confirm that this entry was read.
-        held = _entry_words(" ".join((row["description"], row["period"], row["from"])))
-        if item["words"].strip() and _entry_words(item["words"]) not in held:
-            raise _Unchecked(f"the words quoted for Article {item['article']} are not in its held entry")
+        entry = " ".join(" ".join((row["description"], row["period"], row["from"])).split())
+        if item["words"].strip() and _entry_words(item["words"]) not in _entry_words(entry):
+            # The held entry is short: its own words are the words nearest to the quotation.
+            raise _Unchecked(f"the words quoted for Article {item['article']} are not in its held entry", near=entry)
         return {"act": act["title"], "sha256": act["sha256"], "article": row["article"], "part": row["part"],
                 "description": row["description"], "period_words": row["period"], "from": row["from"]}
     words = _flat(item["words"])

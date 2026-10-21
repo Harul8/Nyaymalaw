@@ -412,8 +412,10 @@ def test_a_schedule_article_quoted_across_its_columns_is_read_as_its_own_words()
     assert (provision["article"], provision["period_words"], provision["from"]) == (
         "19", "Three years", "When the loan is made.")
     for wrong in ("Three years; When the loan is repaid", "Two years; When the loan is made"):
-        with pytest.raises(calculation._Unchecked, match="not in its held entry"):
+        with pytest.raises(calculation._Unchecked, match="not in its held entry") as refused:
             calculation._provision({**item, "words": wrong}, acts, entries)
+        # The correction is shown the held entry's own words.
+        assert refused.value.near == "For money payable for money lent. Three years When the loan is made."
 
 
 def test_a_missing_starting_date_is_said_before_any_quotation_is_checked(store):
@@ -529,3 +531,29 @@ def test_the_working_box_shows_how_a_start_from_an_agreed_period_was_counted():
     assert rows["Counted from"] == response_rendering._date("2024-03-10")
     assert rows["Whose words for that date"] == "“delivered a consignment worth Rs 2,10,000 on 10 March 2024”"
     assert rows["Last day"] == response_rendering._date("2027-04-09")
+
+
+def test_a_fact_quoted_in_other_words_is_refused_with_the_words_the_advocate_wrote():
+    """Live run 8 (the owner's browser, 21 Oct 2026): the step quoted the delivery as "I delivered
+    a further consignment ..." where the advocate wrote "my client delivered ...", and its
+    correction, told only that the words were not there, quoted them so again; the suit's limit
+    was not worked out and the answer said the words were not available. The refusal now shows
+    the words the advocate wrote nearest to the quotation, as it does an Act's."""
+    from tests.test_core_understanding import context
+    misquoted = price_suit(quote="I delivered a consignment worth Rs 2,10,000 on 10 March 2024")
+    model = Calculating({"needed": True, "why": "A suit for the price.", "not_assessed": [], "calculations": [misquoted]},
+                        correction={"calculations": [price_suit()], "cannot": []})
+    ctx = context(CREDIT_SALE)
+    record = calculation.work_out(model, ctx, CreditHeld())
+    (prompt,) = model.seen["correction"]
+    assert ("- p1 (Suit for the price of the consignment): the words given for the date the agreed period runs from "
+            "are not in the conversation or documents as quoted. The held text nearest to the words you quoted reads: "
+            f"“{CREDIT_SALE}”") in prompt.user
+    assert [entry["working"]["last_day"] for entry in record["calculations"]] == ["2027-04-09"]
+    assert record["correction"]["refused"][0]["near"] == CREDIT_SALE
+    assert calculation.validate(record, ctx) == record
+    with pytest.raises(calculation._Unchecked) as nowhere:
+        calculation._fact({"date": "2024-03-10", "quote": "words the advocate never wrote at all"},
+                          calculation.source_catalogue(ctx), "starting event",
+                          calculation._facts_in(ctx, calculation.source_catalogue(ctx)))
+    assert nowhere.value.near is None
