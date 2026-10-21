@@ -23,7 +23,7 @@ _LEGAL = {"provision", "judgment"}
 _LAYOUT = _LEGAL | {"document"}
 _CONTEXT_ROLES = {"original_account": "account", "nm_interpretation": "nm_context",
                   "service_status": "service", "supplied_document": "document"}
-_LINK_FIELDS = {"context_ids", "work_ids", "coverage"}
+_LINK_FIELDS = {"context_ids", "work_ids", "coverage", "found_by"}
 
 
 def _add(sources, row):
@@ -35,8 +35,8 @@ def _add(sources, row):
             != {k: v for k, v in row.items() if k not in _LINK_FIELDS}):
         raise ValueError("Source identity has conflicting content or provenance")
     for field in _LINK_FIELDS:
-        for value in row[field]:
-            if value not in prior[field]:
+        for value in row.get(field, ()):
+            if value not in prior.setdefault(field, []):
                 prior[field].append(deepcopy(value))
 
 
@@ -93,10 +93,17 @@ def build(context, research_record):
     # admit every returned candidate. v8 narrows how much of each judgment is read.
     admitted = research.admitted_provisions(checked)
     picked = research.picked_judgments(checked)
+    # v11 (P31): the judgments chosen are read whole or as extracts (_judgments_read); a chosen
+    # judgment that could not be read keeps the paragraphs chosen of it, as v8 read them.
+    reads = checked["judgments"] if checked["contract"] in research.JUDGMENTS_READ else None
+    unread = {entry["case_id"] for entries in (reads or {}).values() for entry in entries if "unread" in entry}
     for work_id, search in checked["searches"].items():
         # From search v9 a pick may choose a provision connected to a returned one (P32).
         for selected in offered(search):
             if admitted is not None and selected["kind"] == "provision" and selected["id"] not in admitted:
+                continue
+            if reads is not None and selected["kind"] == "judgment" and (
+                    selected["id"] not in picked or selected["source"].get("case_id") not in unread):
                 continue
             kind, revision = selected["kind"], selected["corpus_revision"]
             window = _window(selected, picked)
@@ -133,8 +140,55 @@ def build(context, research_record):
                 unit["context_ids"] = [identity for identity in identities if identity != unit["id"]]
                 unit["coverage"] = [coverage]
                 _add(sources, unit)
+    if reads is not None:
+        _judgments_read(checked, reads, sources, positions)
     _read_with(checked, sources)
     return sources
+
+
+def _judgments_read(checked, reads, sources, positions):
+    """v11 (owner decision P31): each judgment a dispute chose, read whole or as an extract that
+    says so, one source unit per paragraph, the paragraphs of one judgment read together; each
+    marked with the questions whose search found it."""
+    groups = research.dispute_work(checked["plan"])
+    for dispute_id, entries in reads.items():
+        work_ids = [work["id"] for work in groups[dispute_id]]
+        for entry in entries:
+            if "unread" in entry:
+                continue
+            found_by = {}
+            for work_id in work_ids:
+                for candidate in (checked["searches"].get(work_id) or {}).get("candidates", []):
+                    if candidate["kind"] == "judgment" and candidate["source"].get("case_id") == entry["case_id"]:
+                        found_by.setdefault(candidate["position"], []).append(work_id)
+            owning = list(dict.fromkeys(w for found in found_by.values() for w in found)) or work_ids[:1]
+            revision, units = entry["corpus_revision"], []
+            for paragraph in entry["read"]:
+                position, row = paragraph["position"], paragraph["row"]
+                unit = _candidate("judgment", position, row, revision, None, [], {})
+                key = ("judgment", revision, position)
+                if key in positions and positions[key] != unit["id"]:
+                    raise ValueError("Corpus position has conflicting saved source content")
+                positions[key] = unit["id"]
+                units.append({"id": unit["id"], "kind": "judgment", "text": unit["text"], "speaker": None,
+                              "record_role": "retrieved_candidate", "title": unit["title"], "locator": unit["locator"],
+                              "digest": _digest(row), "context_ids": [], "work_ids": list(owning), "coverage": [],
+                              "source_identity": {"position": position, "corpus_revision": revision,
+                                                  "case_id": row["case_id"], "chunk_id": row["chunk_id"]},
+                              "found_by": list(found_by.get(position, []))})
+            identities = [unit["id"] for unit in units]
+            marked = [unit["id"] for unit in units if unit["found_by"]] or identities
+            coverage = {"work_id": owning[0], "selected_source_id": marked[0],
+                        "scope": "whole_judgment" if entry["whole"] else "judgment_extract",
+                        "bounded": not entry["whole"], "unread_positions": [],
+                        "held_paragraphs": entry["paragraphs"], "read_paragraphs": len(units),
+                        "gaps": [deepcopy(gap) for work_id in owning
+                                 for gap in (checked["searches"].get(work_id) or {}).get("issues", [])
+                                 if gap["kind"] == "judgment"]}
+            for unit in units:
+                unit["context_ids"] = [identity for identity in identities if identity != unit["id"]]
+                unit["coverage"] = [coverage]
+                _add(sources, unit)
 
 
 #: How an admitted provision stands to one it is read with, seen from each end.
@@ -282,6 +336,11 @@ def presentation(sources, *, aliased=False, compact=False, work_ids=None):
                 coverage_by_id[identity] = shared
             passage["coverage_ids"].append(coverage_keys[coverage_key])
         passage["id"] = offered.get(row["id"], row["id"])
+        if "found_by" in passage:
+            # P31: a paragraph of a judgment read whole or as an extract that search found.
+            found = passage.pop("found_by")
+            if found and (work_ids is None or set(found) & set(work_ids)):
+                passage["found"] = True
         if "read_with" in passage:
             # P32: the provisions it is read with that this presentation shows, by their offered IDs.
             passage["read_with"] = [{**relation, "source_id": offered.get(relation["source_id"], relation["source_id"])}

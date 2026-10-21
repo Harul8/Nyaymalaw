@@ -369,7 +369,11 @@ def test_document_title_alone_cannot_supply_legal_document_ownership():
         del row["case_id"]
     ctx, record = fixture(judgment=judgment)
     assert validate(record, record["plan"], ctx) == record
-    with pytest.raises(ValueError, match="owned document identity"): build(ctx, record)
+    # From research v11 (P31) a paragraph with no judgment of its own is no judgment chosen or read.
+    assert not any(row["kind"] == "judgment" for row in build(ctx, record).values())
+    before = before_judgments_read(record)
+    assert validate(before, before["plan"], ctx) == before
+    with pytest.raises(ValueError, match="owned document identity"): build(ctx, before)
 
 
 def test_statutes_are_presented_under_their_shown_name_while_the_catalogue_keeps_the_stored_one():
@@ -440,11 +444,17 @@ class LongJudgment(Collection):
                 "segments": [{"position": p, "row": deepcopy(self.rows[p])} for p in near]}
 
 
+def before_judgments_read(record):
+    """A v11 record as research v10 saved it, before the chosen judgments were read (P31)."""
+    return {**{key: value for key, value in record.items() if key != "judgments"}, "contract": "core_research_v10"}
+
+
 def test_a_picked_judgment_is_read_with_one_paragraph_either_side_and_every_other_alone():
+    # Research v8-v10 (15 Oct 2026); v11 reads the chosen judgments whole or as extracts (P31).
     ctx = context("Find the applicable law.")
     plan = accept(proposal(), ctx)
     searcher = HybridSearcher({"provision": Collection(), "judgment": LongJudgment()})
-    record = retrieve(plan, searcher, ctx, model=Model(choose_judgments=lambda ids: ids[:1]))
+    record = before_judgments_read(retrieve(plan, searcher, ctx, model=Model(choose_judgments=lambda ids: ids[:1])))
     returned = [c for c in record["searches"]["t2:w1"]["candidates"] if c["kind"] == "judgment"]
     picked = next(c for c in returned if c["id"] in record["judgment_picks"]["D1"]["chosen"]["t2:w1"])
     other = next(c for c in returned if c["id"] != picked["id"])
