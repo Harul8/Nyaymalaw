@@ -52,8 +52,9 @@ def step(id_, what, words, period, start, **extra):
     blank = {"what": "", "date": "", "quote": ""}
     return {"id": id_, "what": what, "act": extra.get("act", NI), "provision": extra.get("provision", "s.138"),
             "article": extra.get("article", ""), "part": "", "words": words, "period_words": period,
-            # Calculation v5 (Q16): the step's own check of what its quoted words date.
-            "start": {"dated_event": "", "same_event": True, **start}, "copies": [], "done": extra.get("done", blank),
+            # Calculation v5 (Q16): the step's own check of what its quoted words date; v6 (P34):
+            # a period the facts set, empty unless given.
+            "start": {"dated_event": "", "same_event": True, "period_words": "", "period_quote": "", **start}, "copies": [], "done": extra.get("done", blank),
             "earliest_after": extra.get("earliest_after", ""), "reasoning": "From the Act's words.",
             "assumptions": ["The dates are as reported."], "missing": [], "may_extend": extra.get("may_extend", [])}
 
@@ -250,7 +251,7 @@ def test_a_refused_limit_gets_one_correction_that_faces_the_same_checks(store):
     assert boxes["Last day for the drawer to pay"]["last_day"] == "2026-09-13"  # checked first; stands
     row = saved_rows(store.load(chat_matter_id("owner", reply["chat_id"])), "owner")[0]
     record = row["activities"]["calculation"]
-    assert record["contract"] == calculation.CONTRACT == "core_calculation_v5"
+    assert record["contract"] == calculation.CONTRACT == "core_calculation_v6"
     assert record["correction"]["state"] == "corrected" and [r["id"] for r in record["correction"]["refused"]] == ["bad"]
     assert record["proposal"] == chain() and record["not_assessed"] == []
     assert saved_rows(store.load(chat_matter_id("owner", reply["chat_id"])), "owner")[0]["response"][
@@ -292,7 +293,7 @@ def test_a_missing_fact_spends_no_correction_and_what_waits_on_it_says_so_plainl
     proposal = chain()
     pay, complaint, _ = proposal["calculations"]
     pay["start"] = {"after": "", "event": "the drawer receiving the notice", "date": "", "quote": "",
-                    "dated_event": "", "same_event": False}
+                    "dated_event": "", "same_event": False, "period_words": "", "period_quote": ""}
     pay["missing"] = ["The date the drawer received the notice."]
     proposal["calculations"] = [pay, complaint]  # nothing a correction could fix
     model = Calculating(proposal)
@@ -421,7 +422,7 @@ def test_a_missing_starting_date_is_said_before_any_quotation_is_checked(store):
     proposal = chain()
     pay, complaint, _ = proposal["calculations"]
     pay["start"] = {"after": "", "event": "the drawer receiving the notice", "date": "", "quote": "",
-                    "dated_event": "", "same_event": False}
+                    "dated_event": "", "same_event": False, "period_words": "", "period_quote": ""}
     pay["words"] = "words the Act does not say"
     proposal["calculations"] = [pay, complaint]
     model = Calculating(proposal)
@@ -441,7 +442,8 @@ def test_a_start_its_own_check_says_dates_another_event_is_not_given_and_spends_
                   "within thirty days of the receipt of information by him from the bank regarding the return of "
                   "the cheque as unpaid", "thirty days",
                   {"after": "", "event": "the payee receiving the bank's information", "date": "2026-08-18",
-                   "quote": "18 August 2026", "dated_event": "the bank returning the cheque", "same_event": False})
+                   "quote": "18 August 2026", "dated_event": "the bank returning the cheque", "same_event": False,
+                   "period_words": "", "period_quote": ""})
     model = Calculating({"needed": True, "why": "The advocate asks about the notice.", "not_assessed": [],
                          "calculations": [notice]})
     record = calculation.work_out(model, context(MESSAGE), Held())
@@ -455,4 +457,63 @@ def test_a_start_its_own_check_says_dates_another_event_is_not_given_and_spends_
                                                   "calculations": [notice]}), context(MESSAGE), Held())
     assert [entry["working"]["last_day"] for entry in confirmed["calculations"]] == ["2026-09-17"]
     assert "Check that the words you quote date that very event" in calculation.SYSTEM
+
+
+
+CREDIT_SALE = ("My client delivered a consignment worth Rs 2,10,000 on 10 March 2024 on 30 days' credit. Sai Traders "
+               "accepted the goods but never paid.")
+
+
+class CreditHeld(Held):
+    """The Limitation Act's Schedule with Article 15 beside Article 19."""
+
+    def read(self, title):
+        held = super().read(title)
+        if title == LIMITATION:
+            text = held["text"].replace("19\nFor money", (
+                "15\nFor the price of goods sold and delivered to be paid for after the expiry of a fixed period of "
+                "credit.\nThree years\nWhen the period of credit expires.\n19\nFor money"))
+            held = {**held, "text": text, "sha256": hashlib.sha256(text.encode()).hexdigest()}
+        return held
+
+
+def price_suit(**start):
+    return step("p1", "Suit for the price of the consignment", "Three years; When the period of credit expires",
+                "Three years", {"after": "", "event": "the period of credit expiring", "date": "2024-03-10",
+                                "quote": "delivered a consignment worth Rs 2,10,000 on 10 March 2024",
+                                "dated_event": "the delivery", "same_event": True, "period_words": "30 days",
+                                "period_quote": "on 30 days' credit", **start},
+                act=LIMITATION, provision="Article 15", article="15")
+
+
+def test_a_limit_running_from_the_end_of_a_period_the_facts_set_is_worked_out_from_both_facts():
+    """P34 (owner, 21 Oct 2026): live runs 2-4 left a suit for the price not worked out. Article 15
+    runs "when the period of credit expires"; the advocate gave the delivery date and the credit,
+    not the credit's end. Code counts the credit's end from both quoted facts; the Act's three
+    years run from it, and the record says how."""
+    from tests.test_core_understanding import context
+    proposal = {"needed": True, "why": "A suit for the price.", "not_assessed": [], "calculations": [price_suit()]}
+    ctx = context(CREDIT_SALE)
+    record = calculation.work_out(Calculating(proposal), ctx, CreditHeld())
+    (entry,) = record["calculations"]
+    assert entry["start"]["date"] == "2024-04-09" and entry["working"]["last_day"] == "2027-04-09"
+    agreed = entry["start"]["agreed"]
+    assert agreed["runs_from"]["date"] == "2024-03-10" and agreed["period"]["quote"] == "on 30 days' credit"
+    assert entry["assumptions"][-1] == ("The 30 days the facts set are counted from 2024-03-10, that day left out, "
+                                        "ending on 2024-04-09; the agreement's own terms may count them differently.")
+    assert calculation.validate(record, ctx) == record
+    moved = deepcopy(record)
+    moved["calculations"][0]["start"]["date"] = "2024-04-10"
+    with pytest.raises(ValueError, match="agreed period"):
+        calculation.validate(moved, ctx)
+    assert "a period of credit, a time agreed for payment or performance" in calculation.SYSTEM
+
+
+def test_an_agreed_period_not_in_the_words_quoted_for_it_is_not_worked_out():
+    from tests.test_core_understanding import context
+    proposal = {"needed": True, "why": "", "not_assessed": [],
+                "calculations": [price_suit(period_words="45 days")]}
+    record = calculation.work_out(Calculating(proposal), context(CREDIT_SALE), CreditHeld())
+    assert record["calculations"] == []
+    assert record["not_assessed"][0]["why"].startswith("the agreed period is not within the words quoted")
 
