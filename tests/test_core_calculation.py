@@ -139,7 +139,11 @@ def test_the_answer_carries_a_working_box_for_each_checked_limit_and_reports_the
         ["Court closed on the last day", "Limitation Act s.4 not applied: the court calendar is not held"]]
     assert [title for title, _ in complaint["working"]["lists"]] == ["Assumed", "May extend time (not counted)"]
     assert ["Whose words", "“Notice was delivered on 29 August 2026”"] in pay["working"]["rows"]
-    assert bad["text"] == "A period misquoted" and "not in its held text" in bad["working"]["not_assessed"]
+    # P36 (v7): the advocate is told plainly that NM's working failed code's check; code's
+    # own reason stays in the record.
+    assert bad["text"] == "A period misquoted" and bad["working"]["not_assessed"] == calculation.UNCHECKED_ACT
+    (kept,) = row["activities"]["calculation"]["not_assessed"]
+    assert "not in its held text" in kept["code"] and kept["why"] == calculation.UNCHECKED_ACT
     assert bad["working"]["rows"] == [["Not assessed", bad["working"]["not_assessed"]]]
     assert bad["working"]["lists"] == []
     # The writer and the reviewer were given the checked results, not the proposal.
@@ -221,11 +225,17 @@ def test_code_finds_the_quoted_words_and_refuses_what_it_cannot_check(store):
                                          earliest_after="c0"))
     reply = turn(store, Calculating(proposal))
     boxes = {e["text"]: e["working"] for e in reply["elements"] if e["kind"] == "WORKING"}
-    assert boxes["Last day for the drawer to pay"]["not_assessed"] == (
+    # P36 (v7): what the advocate reads says NM's working failed code's check, never that
+    # something they gave is missing; code's own reasons stay in the record.
+    assert boxes["Last day for the drawer to pay"]["not_assessed"] == calculation.UNCHECKED_FACT
+    assert boxes["Last day to file the complaint"]["not_assessed"] == calculation.UNCHECKED_WORKING
+    assert boxes["Last day to give notice"]["not_assessed"] == calculation.UNCHECKED_WORKING
+    codes = {entry["what"]: entry["code"] for entry in saved_rows(store.load(chat_matter_id(
+        "owner", reply["chat_id"])), "owner")[0]["activities"]["calculation"]["not_assessed"]}
+    assert codes["Last day for the drawer to pay"] == (
         "the words given for the starting event are not in the conversation or documents as quoted")
-    assert boxes["Last day to file the complaint"]["not_assessed"].endswith(
-        "which is not a time limit worked out before it")
-    assert boxes["Last day to give notice"]["not_assessed"].startswith(
+    assert codes["Last day to file the complaint"].endswith("which is not a time limit worked out before it")
+    assert codes["Last day to give notice"].startswith(
         "its earliest day (2026-10-15) falls after its last day (2026-09-17)")
 
 
@@ -251,7 +261,7 @@ def test_a_refused_limit_gets_one_correction_that_faces_the_same_checks(store):
     assert boxes["Last day for the drawer to pay"]["last_day"] == "2026-09-13"  # checked first; stands
     row = saved_rows(store.load(chat_matter_id("owner", reply["chat_id"])), "owner")[0]
     record = row["activities"]["calculation"]
-    assert record["contract"] == calculation.CONTRACT == "core_calculation_v6"
+    assert record["contract"] == calculation.CONTRACT == "core_calculation_v7"
     assert record["correction"]["state"] == "corrected" and [r["id"] for r in record["correction"]["refused"]] == ["bad"]
     assert record["proposal"] == chain() and record["not_assessed"] == []
     assert saved_rows(store.load(chat_matter_id("owner", reply["chat_id"])), "owner")[0]["response"][
@@ -282,7 +292,12 @@ def test_a_step_taken_quoted_from_the_event_time_runs_from_is_refused_then_corre
         {"id": "c1", "why": "The advocate gives no payment."}]})
     second = run(store, plain, message=MESSAGE, held_acts=Held(), turn_id="t-uncorrected")  # a new conversation
     boxes = {e["text"]: e["working"] for e in second["elements"] if e["kind"] == "WORKING"}
-    assert boxes["Last day for the drawer to pay"]["not_assessed"].startswith(
+    # P36 (v7): told plainly, with the model's own reason; code's reason kept in the record.
+    assert boxes["Last day for the drawer to pay"]["not_assessed"] == (
+        f"{calculation.UNCHECKED_WORKING}; on a second look: The advocate gives no payment.")
+    kept = {entry["what"]: entry for entry in saved_rows(store.load(chat_matter_id("owner", second["chat_id"])),
+                                                          "owner")[0]["activities"]["calculation"]["not_assessed"]}
+    assert kept["Last day for the drawer to pay"]["code"].startswith(
         "the step taken is quoted from the words of the event time runs from")
 
 
@@ -331,14 +346,14 @@ def test_a_limit_the_correction_cannot_work_out_stays_not_assessed_with_both_rea
     boxes = {e["text"]: e["working"] for e in reply["elements"] if e["kind"] == "WORKING"}
     assert boxes["Last day for the drawer to pay"]["last_day"] == "2026-09-13"
     why = boxes["A period misquoted"]["not_assessed"]
-    assert "not in its held text" in why and "on a second look: the held text gives no ninety-day period" in why
+    assert why == f"{calculation.UNCHECKED_ACT}; on a second look: the held text gives no ninety-day period for this step"
 
 
 def test_a_correction_that_fails_leaves_the_first_check_standing(store):
     model = Calculating(chain(), correction_fails=ProviderUnavailable("down"))
     reply = turn(store, model)
     boxes = {e["text"]: e["working"] for e in reply["elements"] if e["kind"] == "WORKING"}
-    assert "not in its held text" in boxes["A period misquoted"]["not_assessed"]
+    assert boxes["A period misquoted"]["not_assessed"] == calculation.UNCHECKED_ACT
     assert boxes["Last day to file the complaint"]["last_day"] == "2026-10-14"
     row = saved_rows(store.load(chat_matter_id("owner", reply["chat_id"])), "owner")[0]
     correction = row["activities"]["calculation"]["correction"]
@@ -517,7 +532,8 @@ def test_an_agreed_period_not_in_the_words_quoted_for_it_is_not_worked_out():
                 "calculations": [price_suit(period_words="45 days")]}
     record = calculation.work_out(Calculating(proposal), context(CREDIT_SALE), CreditHeld())
     assert record["calculations"] == []
-    assert record["not_assessed"][0]["why"].startswith("the agreed period is not within the words quoted")
+    assert record["not_assessed"][0]["why"] == calculation.UNCHECKED_WORKING
+    assert record["not_assessed"][0]["code"].startswith("the agreed period is not within the words quoted")
 
 
 def test_the_working_box_shows_how_a_start_from_an_agreed_period_was_counted():
@@ -557,3 +573,37 @@ def test_a_fact_quoted_in_other_words_is_refused_with_the_words_the_advocate_wro
                           calculation.source_catalogue(ctx), "starting event",
                           calculation._facts_in(ctx, calculation.source_catalogue(ctx)))
     assert nowhere.value.near is None
+
+
+def test_a_step_said_to_be_taken_without_its_date_is_taken_its_date_not_given(store):
+    """P36 (owner, 21 Oct 2026): live run 8 showed a cheque already presented and dishonoured as
+    "Open, 122 days left", the step giving the words saying so but no date. A step the facts say
+    was taken, but not when, is kept as taken: no days are counted and whether it was in time is
+    not known."""
+    proposal = chain()
+    complaint = proposal["calculations"][1]
+    complaint["done"] = {"what": "complaint filed", "date": "", "quote": "We filed the complaint"}
+    reply = turn(store, Calculating(proposal))
+    box = next(e["working"] for e in reply["elements"] if e["kind"] == "WORKING"
+               and e["text"] == "Last day to file the complaint")
+    assert box["standing"] == {"state": "taken", "days": None}
+    rows = dict(box["rows"])
+    assert rows["Taken on"] == "Not given" and rows["Whose words"] == "“We filed the complaint”"
+    assert rows["Result"] == "Taken; its date not given, so whether in time is not known"
+    assert not [label for label in rows if label.startswith("Days")]
+    matter = store.load(chat_matter_id("owner", reply["chat_id"]))
+    row = saved_rows(matter, "owner")[0]
+    record = row["activities"]["calculation"]
+    (taken,) = [entry for entry in record["calculations"] if entry["id"] == "c2"]
+    assert taken["done"]["date"] is None and taken["done"]["quote"] == "We filed the complaint"
+    (limit,) = [entry for entry in row["records"]["checklist"]["disputes"][0]["time_limits"]
+                if entry["what"] == "Last day to file the complaint"] or [None]
+    if limit is not None:  # the board's line for it, where the section named it
+        assert ["Result", rows["Result"]] in response_rendering.limit_rows(limit)
+    from nm.core_engine.conversation import TurnContext
+    original = TurnContext(matter, row["chat_id"], row["turn_id"], row["message"], ()).payload()
+    assert calculation.validate(record, original) == record
+    earlier = deepcopy(record) | {"contract": calculation.V6_CONTRACT}
+    with pytest.raises(ValueError, match="v7"):
+        calculation.validate(earlier, original)
+

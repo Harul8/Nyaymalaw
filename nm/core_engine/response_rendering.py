@@ -554,7 +554,10 @@ def _headings(research_record, draft, also=()):
 _MONTHS = ("January", "February", "March", "April", "May", "June", "July", "August", "September", "October",
            "November", "December")
 _WEEKDAYS = ("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
-_RESULTS = {"early": "Early", "in_time": "In time", "late": "Late", "open": "Open", "expired": "Passed"}
+#: "taken" (time-limit step v7, P36): the facts say the step was taken but not when, so whether
+#: it was in time is not known and no days are counted.
+_RESULTS = {"early": "Early", "in_time": "In time", "late": "Late", "open": "Open", "expired": "Passed",
+            "taken": "Taken; its date not given, so whether in time is not known"}
 _DAYS = {"early": "Days before the earliest day", "in_time": "Days to spare", "late": "Days late",
          "open": "Days left", "expired": "Days since the last day"}
 _COURT_CLOSED = "Limitation Act s.4 not applied: the court calendar is not held"
@@ -576,7 +579,8 @@ def limit_rows(entry):
     rows = [["Last day", _date(entry["last_day"])]]
     if entry.get("as_of"):
         rows.append(["As of", _date(entry["as_of"])])
-    return rows + [["Result", _RESULTS[state]], [_DAYS[state], str(entry["standing"]["days"])]]
+    rows.append(["Result", _RESULTS[state]])
+    return rows + ([[_DAYS[state], str(entry["standing"]["days"])]] if entry["standing"]["days"] is not None else [])
 
 
 def _shown(working, earlier, as_of=None):
@@ -617,13 +621,14 @@ def _shown(working, earlier, as_of=None):
     if working["earliest_day"]:
         row("Earliest day", _date(working["earliest_day"]))
     if working["step_taken"]:
-        row("Taken on", _date(working["step_taken"]["date"]))
+        row("Taken on", _date(working["step_taken"]["date"]) if working["step_taken"]["date"] else "Not given")
         row("Whose words", f"“{working['step_taken']['quote']}”")
     standing = working["standing"]
     if as_of:
         row("As of", _date(as_of))
     row("Result", _RESULTS[standing["state"]])
-    row(_DAYS[standing["state"]], standing["days"])
+    if standing["days"] is not None:
+        row(_DAYS[standing["state"]], standing["days"])
     row("Court closed on the last day", _COURT_CLOSED)
     lists = [[title, list(items)] for title, items in (
         ("Owner’s ruling applied", working["owner_rulings"]), ("Assumed", working["assumptions"]),

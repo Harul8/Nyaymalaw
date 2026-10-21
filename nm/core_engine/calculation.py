@@ -51,7 +51,13 @@ V5_CONTRACT = "core_calculation_v5"
 #: event the Act names is the end of a period the facts set, the step quotes the date that period
 #: runs from and the period itself, and code counts the period's end, from which the Act's period
 #: runs.
-CONTRACT = "core_calculation_v6"
+V6_CONTRACT = "core_calculation_v6"
+#: v7 (owner decision P36, 21 Oct 2026; live run 8 showed a cheque already presented and
+#: dishonoured as "Open, 122 days left", and a limit code could not check as code's own reason,
+#: which the answer turned into words the advocate had "not" given): a step the facts say was
+#: taken, without its date, is kept as taken with its date not given; a limit not worked out
+#: because NM's own working failed code's check says so plainly, code's reason kept beside it.
+CONTRACT = "core_calculation_v7"
 OPERATION = "core_calculation"
 CORRECTION_OPERATION = "core_calculation_correct"
 MAX_OUTPUT = 12000
@@ -65,7 +71,7 @@ SYSTEM = """You work with an Indian advocate on time limits: the limitation peri
 
 First decide whether what the advocate wants needs any time limit worked out. If it does not, say so and give no calculations.
 
-If it does, for each time limit that bears on it, go by what the Act says. Read the Act's own words to find the provision that governs the step, the period, and the event from which time runs. Under "words", quote the words that set the period and say what it runs from, exactly as they appear below; that phrase is enough, not the whole clause. Under "period_words", give the period itself as it stands inside those words, such as "thirty days". Where one provision sets more than one period, such as a period and an outer limit to which a court may extend it, give each period its own calculation with its own words. For an article of the Limitation Act's Schedule, give its number and, where it has lettered parts, the letter. Then find the date of that event in what the advocate or their documents say, and quote those words exactly as written there. Check that the words you quote date that very event, not one before or after it: the bank returning a cheque is not the payee receiving the bank's information about it, and posting a notice is not its delivery. Say under "dated_event", in a few words, what the quoted words date, and under "same_event" whether it is the event the Act's words name. Where the event the Act names is the end of a period the advocate or a document sets (a period of credit, a time agreed for payment or performance) and nothing dates that end itself, quote instead the date that period runs from as given (the delivery, the agreement), say under "same_event" whether the quoted words date the very event that period runs from, give the period under "period_words" as the facts state it, such as "30 days", and quote the words stating it under "period_quote"; code counts the period's end, and the Act's period runs from that day. Otherwise leave "period_words" and "period_quote" empty. Where nothing the advocate or a document says dates the event or the start of such a period, leave the date and quote empty and say under "missing" what date is needed. Where the Act lets time be left out for obtaining certified copies, give the dates the copy was applied for and was ready, if they are known. Where the steps form a chain (notice, the period to pay, then the complaint), give each step its own id. A period that runs from an event the advocate or a document dates (the drawer receiving the notice) starts from that date, quoted, even when the event belongs to an earlier step. Only a period that begins when an earlier period has run out (the complaint period, which begins once the period to pay has ended unpaid) names that earlier step's id in "after" and leaves the date empty; code then starts it the day after the earlier step's last day. Where a step is premature if taken before an earlier period has run out (a complaint filed before the period to pay ends), put that earlier step's id in "earliest_after"; a step that merely follows an earlier event in time needs nothing there. Under "done", give the step this time limit governs only if the advocate or a document says it has already been taken (the suit or complaint filed, the notice given, the payment made), with its date and the words saying so; otherwise leave it empty. The event time runs from is never the step itself: for a suit for the price, the delivery starts the time and filing the suit is the step; for the drawer's time to pay, the notice reaching the drawer starts it and the payment is the step. Write every date as YYYY-MM-DD. Name anything that may extend or restart time (a written acknowledgment, a part payment, time in a court without jurisdiction, a disability, fraud, condonation of delay) under "may_extend", with the provision; these are flagged for the advocate, not counted.
+If it does, for each time limit that bears on it, go by what the Act says. Read the Act's own words to find the provision that governs the step, the period, and the event from which time runs. Under "words", quote the words that set the period and say what it runs from, exactly as they appear below; that phrase is enough, not the whole clause. Under "period_words", give the period itself as it stands inside those words, such as "thirty days". Where one provision sets more than one period, such as a period and an outer limit to which a court may extend it, give each period its own calculation with its own words. For an article of the Limitation Act's Schedule, give its number and, where it has lettered parts, the letter. Then find the date of that event in what the advocate or their documents say, and quote those words exactly as written there. Check that the words you quote date that very event, not one before or after it: the bank returning a cheque is not the payee receiving the bank's information about it, and posting a notice is not its delivery. Say under "dated_event", in a few words, what the quoted words date, and under "same_event" whether it is the event the Act's words name. Where the event the Act names is the end of a period the advocate or a document sets (a period of credit, a time agreed for payment or performance) and nothing dates that end itself, quote instead the date that period runs from as given (the delivery, the agreement), say under "same_event" whether the quoted words date the very event that period runs from, give the period under "period_words" as the facts state it, such as "30 days", and quote the words stating it under "period_quote"; code counts the period's end, and the Act's period runs from that day. Otherwise leave "period_words" and "period_quote" empty. Where nothing the advocate or a document says dates the event or the start of such a period, leave the date and quote empty and say under "missing" what date is needed. Where the Act lets time be left out for obtaining certified copies, give the dates the copy was applied for and was ready, if they are known. Where the steps form a chain (notice, the period to pay, then the complaint), give each step its own id. A period that runs from an event the advocate or a document dates (the drawer receiving the notice) starts from that date, quoted, even when the event belongs to an earlier step. Only a period that begins when an earlier period has run out (the complaint period, which begins once the period to pay has ended unpaid) names that earlier step's id in "after" and leaves the date empty; code then starts it the day after the earlier step's last day. Where a step is premature if taken before an earlier period has run out (a complaint filed before the period to pay ends), put that earlier step's id in "earliest_after"; a step that merely follows an earlier event in time needs nothing there. Under "done", give the step this time limit governs only if the advocate or a document says it has already been taken (the suit or complaint filed, the notice given, the payment made), with its date and the words saying so; where they say it was taken but not when (a cheque returned unpaid was presented), quote the words saying so and leave its date empty; otherwise leave it empty. The event time runs from is never the step itself: for a suit for the price, the delivery starts the time and filing the suit is the step; for the drawer's time to pay, the notice reaching the drawer starts it and the payment is the step. Write every date as YYYY-MM-DD. Name anything that may extend or restart time (a written acknowledgment, a part payment, time in a court without jurisdiction, a disability, fraud, condonation of delay) under "may_extend", with the provision; these are flagged for the advocate, not counted.
 
 Do not count days yourself: give the starting date, the Act's words for the period and any copy dates, and the dates will be counted by code. Where a date is missing or uncertain, do not guess: list what is needed under "missing". Where two provisions could govern, give a calculation for each. If a time limit is set by an Act that is not given below, put it under "not_assessed" and say why. List only time limits, each a period within which a step must be taken; the documents, proof and other things a case needs are for the answer, not for you, so leave them out altogether, not under "not_assessed" either.
 
@@ -119,16 +125,29 @@ CORRECTION = {"type": "object", "additionalProperties": False, "required": ["cal
                                  "properties": {"id": TEXT, "why": TEXT}}}}}
 
 
+#: What the advocate and the writer are told of a limit NM's own working could not get past
+#: code's checks (P36): a limit of the working, never a gap in what the advocate gave.
+UNCHECKED_WORKING = ("NM's working of this time limit did not pass code's checks, so no date is given; this is a "
+                     "limit of NM's working, not missing information")
+UNCHECKED_FACT = ("NM could not tie the date its working used to the exact words of the conversation or documents, "
+                  "so no date is given; this is a limit of NM's working, not missing information")
+UNCHECKED_ACT = ("NM could not tie the period its working used to the Act's own words, so no date is given; this is "
+                 "a limit of NM's working, not missing information")
+
+
 class _Unchecked(ValueError):
     """One proposed time limit that code could not check; it is reported, not computed.
     `near` holds the Act's own words closest to a quotation code could not find, for
     the correction pass only. `correctable` is False for a fact that is missing, which
-    the correction pass cannot supply."""
+    the correction pass cannot supply. `said` is what the advocate is told (P36): for a fact
+    that is missing, code's own words, which name it; otherwise that NM's working failed
+    code's check."""
 
-    def __init__(self, why, near=None, *, correctable=True):
+    def __init__(self, why, near=None, *, correctable=True, said=None):
         super().__init__(why)
         self.near = near
         self.correctable = correctable
+        self.said = said or (why if not correctable else UNCHECKED_WORKING)
 
 
 def _flat(text):
@@ -200,31 +219,38 @@ def _facts_in(context, catalogue):
 
 
 def _fact(fact, catalogue, what, searched):
-    """A date and the exact words it rests on: code finds the message or page holding
-    the quoted words (typographic quotation marks, spacing and case aside) and keeps the
-    original's own words and place. Words not found there are refused with the words
-    nearest to them, from the first text searched that holds any (live run 8, 21 Oct 2026:
-    a step quoted "I delivered" for the advocate's "my client delivered", and its
-    correction, told only that the words were not there, quoted them so again)."""
-    quote, _ = _plain_map(fact["quote"].strip(" .,;:"))
+    """A date and the exact words it rests on (_words)."""
+    found = _words(fact["quote"], catalogue, what, searched)
+    return {"date": _day(fact["date"], what).isoformat(), **found}
+
+
+def _words(quoted, catalogue, what, searched):
+    """Where the quoted words stand: code finds the message or page holding them
+    (typographic quotation marks, spacing and case aside) and keeps the original's own words
+    and place. Words not found there are refused with the words nearest to them, from the
+    first text searched that holds any (live run 8, 21 Oct 2026: a step quoted "I delivered"
+    for the advocate's "my client delivered", and its correction, told only that the words
+    were not there, quoted them so again)."""
+    quote, _ = _plain_map(quoted.strip(" .,;:"))
     for identity in searched if quote else ():
         text = catalogue[identity]["text"]
         plain, where = _plain_map(text)
         found = plain.find(quote)
         if found >= 0:
             start, end = where[found], where[found + len(quote) - 1] + 1
-            return {"date": _day(fact["date"], what).isoformat(), "source_id": identity,
-                    "quote": text[start:end], "start": start, "end": end}
+            return {"source_id": identity, "quote": text[start:end], "start": start, "end": end}
     near = next((words for identity in searched if quote
-                 if (words := _nearest(fact["quote"], catalogue[identity]["text"]))), None)
-    raise _Unchecked(f"the words given for the {what} are not in the conversation or documents as quoted", near=near)
+                 if (words := _nearest(quoted, catalogue[identity]["text"]))), None)
+    raise _Unchecked(f"the words given for the {what} are not in the conversation or documents as quoted", near=near,
+                     said=UNCHECKED_FACT)
 
 
 def _provision(item, acts, entries):
     """The Act's own words for this step, checked against the held text."""
     act = acts.get(item["act"])
     if act is None:
-        raise _Unchecked(f"{item['act']} could not be read")
+        raise _Unchecked(f"{item['act']} could not be read",
+                         said=f"the held text of {item['act']} could not be read, so no date is given")
     if item["article"].strip():
         if item["act"] != "The Limitation Act, 1963":
             raise _Unchecked("only the Limitation Act's Schedule has articles")
@@ -239,13 +265,14 @@ def _provision(item, acts, entries):
         entry = " ".join(" ".join((row["description"], row["period"], row["from"])).split())
         if item["words"].strip() and _entry_words(item["words"]) not in _entry_words(entry):
             # The held entry is short: its own words are the words nearest to the quotation.
-            raise _Unchecked(f"the words quoted for Article {item['article']} are not in its held entry", near=entry)
+            raise _Unchecked(f"the words quoted for Article {item['article']} are not in its held entry", near=entry,
+                             said=UNCHECKED_ACT)
         return {"act": act["title"], "sha256": act["sha256"], "article": row["article"], "part": row["part"],
                 "description": row["description"], "period_words": row["period"], "from": row["from"]}
     words = _flat(item["words"])
     if not words or _letters(words) not in _letters(act["text"]):
         raise _Unchecked(f"the words quoted from {item['act']} are not in its held text",
-                         near=_nearest(words, act["text"]))
+                         near=_nearest(words, act["text"]), said=UNCHECKED_ACT)
     if not item["period_words"].strip() or _letters(item["period_words"]) not in _letters(words):
         raise _Unchecked("the period words are not within the quoted provision")
     return {"act": act["title"], "sha256": act["sha256"], "article": None, "part": None,
@@ -279,6 +306,9 @@ def _compute(entry, start, today):
                                 copies=[(date.fromisoformat(c["applied"]), date.fromisoformat(c["ready"]))
                                         for c in entry["copies"]])
     done = entry["done"]
+    if done and done["date"] is None:
+        # P36 (v7): taken, its date not given, so whether it was in time is not known.
+        return worked, {"state": "taken", "days": None}
     earliest = date.fromisoformat(entry["earliest"]) if entry["earliest"] else None
     standing = limitation.standing(date.fromisoformat(worked["last_day"]), today=today,
                                    done_on=date.fromisoformat(done["date"]) if done else None, earliest=earliest)
@@ -356,7 +386,11 @@ def _check(proposal, context, acts, today):
                                                  searched).items() if k != "date"}}
                       for c in item["copies"]]
             done = (_fact(item["done"], catalogue, "step taken", searched) | {"what": item["done"]["what"]}
-                    if item["done"]["date"].strip() else None)
+                    if item["done"]["date"].strip() else
+                    # P36: said to be taken, but not when.
+                    {"date": None, **_words(item["done"]["quote"], catalogue, "step taken", searched),
+                     "what": item["done"]["what"]}
+                    if item["done"]["quote"].strip() else None)
             if (done and origin.get("source_id") == done["source_id"]
                     and done["start"] < origin["end"] and origin["start"] < done["end"]):
                 # v4: the words of the event time runs from cannot also be the step taken.
@@ -378,11 +412,14 @@ def _check(proposal, context, acts, today):
                 raise _Unchecked(f"its earliest day ({earliest}) falls after its last day "
                                  f"({entry['working']['last_day']}), so the steps are not linked as the Act links them")
         except (_Unchecked, limitation.LimitationUnassessed) as exc:
-            not_assessed.append({"what": item["what"], "why": str(exc)})
+            # P36: the advocate and the writer are told plainly; code's own reason is kept.
+            said = getattr(exc, "said", UNCHECKED_WORKING)
+            not_assessed.append({"what": item["what"], "why": said,
+                                 **({"code": str(exc)} if said != str(exc) else {})})
             unassessed[item["id"]] = item["what"]
             if getattr(exc, "correctable", True):
                 refused.append({"id": item["id"], "what": item["what"], "why": str(exc),
-                                "near": getattr(exc, "near", None)})
+                                "near": getattr(exc, "near", None), "said": said})
             continue
         checked.append(entry)
         done_ids[item["id"]] = entry
@@ -400,7 +437,9 @@ def _corrected(proposal, correction, refused):
     merged["calculations"] = [deepcopy(fixes.get(item["id"], item)) for item in proposal["calculations"]
                               if item["id"] not in cannot]
     first = {row["id"]: row for row in refused}
-    dropped = [{"what": first[id_]["what"], "why": f"{first[id_]['why']}; on a second look: {why}"}
+    # P36 (v7): told plainly, code's own reason kept; a refusal saved before v7 said only code's.
+    dropped = [{"what": first[id_]["what"], "why": f"{first[id_].get('said', first[id_]['why'])}; on a second look: {why}",
+                **({"code": first[id_]["why"]} if "said" in first[id_] else {})}
                for id_, why in cannot.items()]
     return merged, dropped
 
@@ -493,9 +532,10 @@ def _correct(model, system, user, proposal, refused):
 def validate(record, context):
     """Replay: the saved record recomputed from its own inputs, without the corpus."""
     if not isinstance(record, dict) or record.get("contract") not in (V1_CONTRACT, V2_CONTRACT, V3_CONTRACT,
-                                                                      V4_CONTRACT, V5_CONTRACT, CONTRACT):
+                                                                      V4_CONTRACT, V5_CONTRACT, V6_CONTRACT, CONTRACT):
         raise ValueError("Unknown saved calculation contract")
-    correction = (record.get("correction") if record["contract"] in (V3_CONTRACT, V4_CONTRACT, V5_CONTRACT, CONTRACT)
+    correction = (record.get("correction") if record["contract"] in (V3_CONTRACT, V4_CONTRACT, V5_CONTRACT, V6_CONTRACT,
+                                                                      CONTRACT)
                   else None)
     if correction is not None and (
             not isinstance(correction, dict) or correction.get("state") not in ("corrected", "unavailable")
@@ -512,11 +552,14 @@ def validate(record, context):
         if agreed is not None:
             # P34 (v6): the period's end recounted from its two quoted facts.
             period = limitation.period_from_words(agreed["period_words"])
-            if (record["contract"] != CONTRACT or period is None or entry["start"]["date"] != limitation.end_of_period(
+            if (record["contract"] not in (V6_CONTRACT, CONTRACT) or period is None
+                    or entry["start"]["date"] != limitation.end_of_period(
                     date.fromisoformat(agreed["runs_from"]["date"]), period[0], period[1])[0].isoformat()):
                 raise ValueError("A saved calculation's agreed period does not recount to its start")
         starts = [agreed["runs_from"], agreed["period"]] if agreed else [
             entry["start"] if not entry["start"]["after"] else None]
+        if entry["done"] and entry["done"]["date"] is None and record["contract"] != CONTRACT:
+            raise ValueError("Only a v7 calculation keeps a step taken without its date")
         for fact in [*starts, entry["done"], *entry["copies"]]:
             if fact and catalogue.get(fact["source_id"], {}).get("text", "")[fact["start"]:fact["end"]] != fact["quote"]:
                 raise ValueError("A saved calculation's words are not in the saved conversation")
