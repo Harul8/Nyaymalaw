@@ -54,16 +54,23 @@ const opener = new Node(); opener.isConnected = true;
 
 const opened = reader.open(answer, element, 2, 0, opener);
 assert.equal(reads[0].url, '/api/chats/pending-chat/turns/source-turn/brain-sources/2/0');
+// AT ONCE (P37, 21 Oct 2026): the passage as the answer holds it, while the server confirms it.
+assert.equal(passageText(), source.text);
+assert.match(nodes.get('brain-source-status').textContent, /Confirming the saved passage/);
 reads[0].resolve(saved); await opened;
 assert.equal(passageText(), source.text);
+assert.equal(nodes.get('brain-source-status').textContent, '');
+assert.match(nodes.get('brain-source-body').textContent, /Reported account, not proof/);
 assert.equal(nodes.get('brain-source-reader').open, true);
 // Beside the conversation, not over it: not modal, and the window makes room.
 assert.equal(nodes.get('brain-source-reader').modal, false);
 assert.equal(windowClasses.has('reading'), true);
 reader.close();
 assert.equal(opener.focused, true);
-const emptied = () => nodes.get('brain-source-body').children.map((child) => child.className).join() === 'reader-empty';
-assert.ok(emptied(), 'a closed pane says what it shows');
+// Closed, the pane is not shown and holds nothing (P38: never always there).
+const emptied = () => nodes.get('brain-source-body').children.length === 0
+  && nodes.get('brain-source-reader').open === false;
+assert.ok(emptied(), 'a closed pane holds nothing');
 assert.equal(windowClasses.has('reading'), false);
 
 // Escape closes the pane.
@@ -88,7 +95,9 @@ reads[1].resolve({...saved, text:'Old selection'}); await stale;
 assert.equal(passageText(), source.text);
 
 const mismatch = reader.open(answer, element, 0, 0, opener);
+assert.equal(passageText(), source.text);
 reads[3].resolve({...saved, digest:'different'}); await mismatch;
+// Words the server does not confirm are taken away.
 assert.equal(nodes.get('brain-source-body').children.length, 0);
 assert.match(nodes.get('brain-source-status').textContent, /could not be matched/);
 
@@ -307,7 +316,7 @@ assert.doesNotMatch(nodes.get('brain-source-body').textContent, /historical chec
 
 reader.openRecordSource(checkedBoard, boardOpener);
 const afterBoardRead = reader.open(answer, element, 0, 0, opener);
-assert.equal(nodes.get('brain-source-body').children.length, 0);
+assert.equal(passageText(), source.text);
 reads.at(-1).resolve(saved); await afterBoardRead;
 assert.equal(passageText(), source.text);
 assert.doesNotMatch(nodes.get('brain-source-body').textContent, /Supporting words/);
@@ -383,8 +392,10 @@ choices[0].handlers.get('click')();
 assert.equal(reads.length, beforeCurrentClick);
 const readTreatment = choices[1].handlers.get('click')();
 assert.match(reads.at(-1).url, /brain-sources\/0\/1$/);
-assert.equal(nodes.get('brain-source-body').children.length, 0,
-  'Client-side related text is not displayed while the saved read is pending');
+// P37 (21 Oct 2026) replaces the rule that nothing shows while the saved read is pending: the
+// passage shows at once as the answer holds it, its checks being read, never the page's own.
+assert.equal(passageText(), treatmentSource.text);
+assert.match(nodes.get('brain-source-status').textContent, /Confirming the saved passage/);
 const afterTreatmentClick = reads.length;
 choices[2].handlers.get('click')();
 assert.equal(reads.length, afterTreatmentClick, 'A superseded selector cannot start a new read');
@@ -463,7 +474,10 @@ async function inspectAuthority(selected, inspection, clientInspection = null) {
   const response = {...answer, elements:[item]};
   const before = JSON.stringify(item);
   const pending = reader.open(response, item, 0, 0, opener);
-  assert.equal(nodes.get('brain-source-body').children.length, 0);
+  // Shown at once, its saved checks being read; checks the page holds are never shown.
+  assert.equal(passageText(), selected.text);
+  if (['provision', 'judgment'].includes(selected.kind)) assert.match(nodes.get('brain-source-body').textContent, /Source checks: Being read/);
+  assert.doesNotMatch(nodes.get('brain-source-body').textContent, /Provision readback|Citation lookup/);
   reads.at(-1).resolve({...selected, authority_inspection:inspection}); await pending;
   assert.equal(passageText(), selected.text);
   assert.equal(JSON.stringify(item), before, 'Display evidence must not mutate canonical response sources');
@@ -773,8 +787,44 @@ console.log('PASS NM response versus source role, related source words, known-co
   assert.deepEqual(plainly.children.map((child) => child.textContent), ['Words', 'Found on the page exactly as quoted']);
   reader.close();
   assert.equal(nodes.get('brain-source-back').disabled, true);
-  // Closed, the pane says what it shows (on a wide window it stays beside the answer).
-  assert.equal(body().children[0].className, 'reader-empty');
+  // Closed, the pane holds nothing and is not shown (P38, 21 Oct 2026).
+  assert.equal(body().children.length, 0);
+  assert.equal(nodes.get('brain-source-reader').open, false);
   assert.equal(nodes.get('brain-source-kind').textContent, '');
+
+  // P37 (21 Oct 2026): an answer saved dispute by dispute (turn v6 on) has its saved checks read,
+  // and a check that did not come out clean is said, as for earlier turns; a turn the page does
+  // not know as a core turn still has none.
+  for (const activity_contract of ['core_turn_v6', 'core_turn_v7', 'core_turn_v12']) {
+    const opening = reader.open(lawAnswer, lawElement, 0, 0, opener);
+    reads.at(-1).resolve({...statute, authority_inspection:{...v4, activity_contract}}); await opening;
+    assert.match(byClass('source-attention').textContent, /did not come out clean/, activity_contract);
+    assert.doesNotMatch(body().textContent, /saved check evidence is unavailable/, activity_contract);
+    assert.match(body().textContent, /Provision readback: Readback differs/, activity_contract);
+  }
+  for (const activity_contract of ['core_turn_v0', 'core_turn_7x', 'later_turn_v7']) {
+    const opening = reader.open(lawAnswer, lawElement, 0, 0, opener);
+    reads.at(-1).resolve({...statute, authority_inspection:{...v4, activity_contract}}); await opening;
+    assert.match(body().textContent, /saved check evidence is unavailable/, activity_contract);
+    assert.equal(byClass('source-attention'), undefined, activity_contract);
+  }
+
+  // When the checks arrive, the whole section the advocate opened, How NM checked this and
+  // where they scrolled stay as they were.
+  const slow = reader.open(lawAnswer, lawElement, 0, 0, opener);
+  assert.equal(passageText(), long);
+  assert.match(byClass('how-checked').textContent, /Source checks: Being read/);
+  assert.equal(byClass('source-attention'), undefined, 'no check is said before it is read');
+  byClass('source-expand').handlers.get('click')();
+  byClass('how-checked').open = true; byClass('how-checked').handlers.get('toggle')();
+  body().scrollTop = 240;
+  reads.at(-1).resolve({...statute, authority_inspection:{...v4, activity_contract:'core_turn_v7'}}); await slow;
+  assert.equal(passageOf(body()).hidden, false);
+  assert.equal(byClass('source-expand').textContent, 'Hide the whole section');
+  assert.equal(byClass('how-checked').open, true);
+  assert.equal(body().scrollTop, 240);
+  assert.match(byClass('source-attention').textContent, /did not come out clean/);
+  assert.equal(nodes.get('brain-source-status').textContent, '');
+  reader.close();
 }
-console.log('PASS the passage first, the whole document a click away, the checks folded, and Back');
+console.log('PASS the passage first, at once; the whole document a click away, the checks folded, and Back');

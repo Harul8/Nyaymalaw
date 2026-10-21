@@ -11,6 +11,10 @@ window.NmBrainSources = (() => {
   // newest last, and how to show again what is open now.
   let trail = [];
   let current = null;
+  // A passage shown at once, its saved checks still being read (P37, 21 Oct 2026); and what
+  // the advocate has opened in the pane, kept when the checks arrive.
+  const CHECKS_PENDING = Object.freeze({pending:true});
+  let opened = null;
   const node = (id) => document.getElementById(id);
 
   function configure(options) {
@@ -42,23 +46,14 @@ window.NmBrainSources = (() => {
     node('brain-source-body').replaceChildren();
   }
 
-  // Nothing open: on a wide window the pane stays beside the answer and says what it shows
-  // (the design, 18 Oct 2026).
-  function showEmpty() {
-    const hint = document.createElement('p');
-    hint.className = 'reader-empty';
-    hint.textContent = 'Open a dotted phrase in the answer, an item on the board or Files, and it is shown here.';
-    node('brain-source-body').replaceChildren(hint);
-  }
-
   // THE READING PANE ON THE RIGHT (owner, 16 Oct 2026): one pane for every link,
   // opened beside the conversation rather than over it, so the answer and its
-  // source can be read together. On a wide window it is always there (the design, 18
-  // Oct 2026); narrower, it opens over the answer and closes.
+  // source can be read together; over the answer on a narrower window. It is closed until
+  // something is opened in it, and Close or Escape closes it at every width (owner decision
+  // P38, 21 Oct 2026, replacing the 18 Oct design's pane always beside the answer).
   function close(restoreFocus = true) {
     const opener = active?.opener;
     clear();
-    showEmpty();
     trail = [];
     current = null;
     showBack();
@@ -80,8 +75,7 @@ window.NmBrainSources = (() => {
     node('pane-advise').classList.add('reading');
     const dialog = node('brain-source-reader');
     if (!dialog.open) dialog.show();
-    // The pane's Close is hidden where the pane stays beside the answer: the pane itself
-    // takes the focus there.
+    // Close takes the focus; where it cannot be seen, the pane itself does.
     const closer = node('brain-source-close');
     (closer.offsetParent === null ? node('brain-source-body') : closer).focus();
     return read;
@@ -96,11 +90,13 @@ window.NmBrainSources = (() => {
     node('brain-source-body').scrollTop = 0;
   }
 
+  // The checks of any core turn the server read are its view's to give (P37, 21 Oct 2026): a
+  // list of turn versions here stopped at v5, and every answer saved dispute by dispute (v6
+  // on) showed its saved checks as unavailable.
   function coreInspection(source, inspection) {
     return source?.brain === true && legal(source)
       && inspection?.contract === 'core_source_authority_view_v1'
-      && ['core_turn_v1', 'core_turn_v2', 'core_turn_v3', 'core_turn_v4', 'core_turn_v5']
-        .includes(inspection.activity_contract)
+      && /^core_turn_v[1-9]\d*$/.test(String(inspection.activity_contract))
       && inspection.source_id === source.id
       && ['recorded', 'not_assessed'].includes(inspection.state)
       && ['case_checks', 'provision_checks', 'provision_mentions']
@@ -130,6 +126,10 @@ window.NmBrainSources = (() => {
       detail.className = 'brain-source-excerpt'; detail.textContent = `${label}: ${text}`;
       section.appendChild(detail);
     };
+    if (inspection === CHECKS_PENDING) {
+      line('Source checks', 'Being read from the saved answer…');
+      return [section];
+    }
     if (!coreInspection(source, inspection)) {
       line('Source checks', 'Not assessed — saved check evidence is unavailable for this passage.');
       return [section];
@@ -302,9 +302,13 @@ window.NmBrainSources = (() => {
   // and where it is from, the supporting words marked in a little of their context, the
   // whole document, section or paragraph a click away, and how NM checked it folded below:
   // in a few words first, then every saved check. phrase: the words of the answer the
-  // source was opened from.
-  function populate(source, choices = null, inspection = null, responseText = null, answer = null, phrase = null) {
+  // source was opened from. kept: what the advocate had opened in the pane, and where they had
+  // scrolled, before its saved checks arrived (P37).
+  function populate(source, choices = null, inspection = null, responseText = null, answer = null, phrase = null,
+                    kept = null) {
     const coreResponse = coreInspection(source, inspection) && words(responseText);
+    opened = {whole:false, checks:false};
+    const view_ = opened;
     const make = (tag, className, text) => {
       const item = document.createElement(tag);
       if (className) item.className = className;
@@ -354,12 +358,18 @@ window.NmBrainSources = (() => {
       full.hidden = true;
       full.className = 'brain-source-text whole';
       const read = active;
-      expand.addEventListener('click', () => {
-        if (source.kind === 'document' && answer) return wholeDocument(answer, source, read, full, expand);
+      const toggle = () => {
+        if (source.kind === 'document' && answer) {
+          view_.whole = true;
+          return wholeDocument(answer, source, read, full, expand);
+        }
         full.hidden = !full.hidden;
+        view_.whole = !full.hidden;
         expand.textContent = `${full.hidden ? 'Show' : 'Hide'} the whole ${whole}`;
-      });
+      };
+      expand.addEventListener('click', toggle);
       shown.push(window_, expand);
+      if (kept?.whole) toggle();
     } else if (source.kind === 'document' && answer && /:d\d+p\d+$/.test(source.id || '')) {
       const expand = make('button', 'source-expand', 'Show the whole document');
       expand.type = 'button';
@@ -367,13 +377,18 @@ window.NmBrainSources = (() => {
       const page = full;
       const flow = make('div', 'document-flow whole');
       flow.hidden = true;
-      expand.addEventListener('click', () => wholeDocument(answer, source, read, flow, expand));
+      const toggle = () => { view_.whole = true; return wholeDocument(answer, source, read, flow, expand); };
+      expand.addEventListener('click', toggle);
       shown.push(page, expand, flow);
+      if (kept?.whole) toggle();
     }
     if (!shown.includes(full)) shown.push(full);
     if (choices) shown.push(choices);
     const checks = make('details', 'how-checked');
     checks.appendChild(make('summary', '', 'How NM checked this'));
+    checks.open = Boolean(kept?.checks);
+    view_.checks = checks.open;
+    checks.addEventListener('toggle', () => { view_.checks = checks.open; });
     // In a few words first (the design, 18 Oct 2026): what the source is used for, its words
     // and who checked it; every saved check follows.
     const plainly = make('dl', 'checked-plainly');
@@ -427,7 +442,7 @@ window.NmBrainSources = (() => {
     }
     shown.push(checks);
     node('brain-source-body').replaceChildren(...shown);
-    node('brain-source-body').scrollTop = 0;
+    node('brain-source-body').scrollTop = kept?.scroll || 0;
     node('brain-source-status').textContent = '';
   }
 
@@ -440,9 +455,19 @@ window.NmBrainSources = (() => {
       ? `matters/${encodeURIComponent(answer.matter_id)}`
       : `chats/${encodeURIComponent(answer.chat_id)}`;
     remember({show: (back) => open(answer, element, elementIndex, sourceIndex, opener, back, phrase)}, viaBack);
-    const read = begin(source.label, opener, 'Reading the saved passage…', kindOf(source));
+    const read = begin(source.label, opener, '', kindOf(source));
     const owns = () => active === read && generation === read.generation
       && JSON.stringify(scope()) === read.scope;
+    const shownAs = (passage) => ({...passage, qualification: (passage.qualification || '')
+      + (passage.verification_current === false
+        ? ' This historical check predates the current source review.' : '')});
+    // AT ONCE (owner decision P37, 21 Oct 2026): the passage as the answer on screen holds it,
+    // read with the answer from the conversation the server checked; the server then confirms
+    // it is the passage saved and gives NM's saved checks for it. Checks the page holds itself
+    // are never shown in their place, and words that do not match are taken away.
+    populate(shownAs(source), sourceChoices(answer, element, elementIndex, sourceIndex, opener, owns),
+      CHECKS_PENDING, element.text, answer, phrase);
+    node('brain-source-status').textContent = 'Confirming the saved passage and its checks…';
     try {
       const saved = await request(`/api/${owner}/turns/${encodeURIComponent(answer.turn_id)}`
         + `/brain-sources/${elementIndex}/${sourceIndex}`);
@@ -452,14 +477,14 @@ window.NmBrainSources = (() => {
           || saved.label !== source.label || saved.kind !== source.kind) {
         throw new Error('The saved passage could not be matched to this response.');
       }
-      populate({...saved, qualification: saved.qualification
-        + (saved.verification_current === false
-          ? ' This historical check predates the current source review.' : '')},
-        sourceChoices(answer, element, elementIndex, sourceIndex, opener, owns),
-        saved.authority_inspection, element.text, answer, phrase);
+      populate(shownAs(saved), sourceChoices(answer, element, elementIndex, sourceIndex, opener, owns),
+        saved.authority_inspection, element.text, answer, phrase,
+        {...opened, scroll:node('brain-source-body').scrollTop});
     } catch (error) {
-      if (owns()) node('brain-source-status').textContent =
-        `The saved passage could not be read. ${error.message}`;
+      if (owns()) {
+        node('brain-source-body').replaceChildren();
+        node('brain-source-status').textContent = `The saved passage could not be read. ${error.message}`;
+      }
     }
   }
 
@@ -717,8 +742,7 @@ window.NmBrainSources = (() => {
   node('brain-source-reader').addEventListener('close', () => {
     if (active && !node('brain-source-reader').open) close();
   });
-  // A pane beside the page has no dialog Escape of its own: Escape closes it (on a wide
-  // window it stays beside the answer, saying what it shows).
+  // A pane beside the page has no dialog Escape of its own: Escape closes it.
   document.addEventListener('keydown', (event) => {
     if (event.key !== 'Escape' || event.defaultPrevented || !node('brain-source-reader').open) return;
     event.preventDefault();
