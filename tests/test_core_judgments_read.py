@@ -130,3 +130,22 @@ def test_a_judgment_that_cannot_be_read_keeps_the_paragraphs_chosen_of_it(tmp_pa
     judged = [row for row in answer_sources.build(ctx, record).values() if row["kind"] == "judgment"]
     assert judged and {row["coverage"][0]["scope"] for row in judged} <= {"adjacent_indexed_segments",
                                                                            "selected_indexed_segment"}
+
+
+def test_a_quotation_of_the_paragraph_beside_is_refused_naming_where_it_stands(tmp_path):
+    """Live run 6 (21 Oct 2026): a writer named one paragraph of a judgment read whole for the
+    words of the paragraph beside it, three times, each time shown the nearest words of the
+    wrong one. The refusal now names, by its short ID, the passage read with it that holds them."""
+    from nm.shared.model_port import SchemaViolation
+    ctx, plan, record = researched(tmp_path, short_judgment())
+    sources = answer_sources.build(ctx, record)
+    alias = answer_sources.aliases(sources)
+    named = {row["text"]: short for short, tag in alias.items() for row in [sources[tag]] if row["kind"] == "judgment"}
+    fourth, fifth = named["Paragraph 4 of alpha. FOUND the rule applies."], named["Paragraph 5 of alpha."]
+    with pytest.raises(SchemaViolation) as refused:
+        answer_sources.select({"source_id": alias[fifth], "quote": "FOUND the rule applies"}, sources, loose=True)
+    assert str(refused.value).endswith(f"those words stand in {fourth!r}, read with it")
+    assert refused.value.near is None
+    with pytest.raises(SchemaViolation) as nowhere:
+        answer_sources.select({"source_id": alias[fifth], "quote": "words no paragraph holds at all"}, sources, loose=True)
+    assert "stand in" not in str(nowhere.value)

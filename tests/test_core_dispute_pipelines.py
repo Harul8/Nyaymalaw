@@ -118,3 +118,32 @@ def test_a_dispute_research_that_was_never_finished_cannot_pass_as_whole():
     assert research.validate(stopped, plan, ctx) == stopped
     whole = research.assemble(plan, [first, parts["D2"].result()])
     assert research.part_of(whole, "D1") == first and research.validate(first, plan, ctx) == first
+
+
+def test_the_overview_reads_each_section_by_the_catalogue_it_was_written_from():
+    """Live run 6 (21 Oct 2026): a section written from its dispute's part names its sources by
+    that part's short IDs; the overview's review re-bound them to the whole answer's IDs, found
+    its quotations in the wrong passages and could not be completed."""
+    ctx = context("Find the applicable law.")
+    plan = research.accept(proposal(1, 2), ctx)
+    researched = answer_sections.Researched(
+        ctx, plan, research.retrieve_parts(plan, TwoDisputeLibrary.searcher(), ctx, model=ResearchModel()))
+
+    def citing(round_, payload):
+        held = next(p for p in payload["held_passages"]["passages"] if p["kind"] == "judgment")
+        assert held["id"] == "J1"  # the second dispute's first judgment, J1 of its own part
+        return [{"kind": "summary", "text": "In short for D2.", "uses": []},
+                {"kind": "law", "text": "The court states the rule applies.",
+                 "uses": [{"source_kind": "judgment", "source_id": "J1", "role": "court_reasoning",
+                           "speaker": None, "court_treatment": {"status": "not_shown"},
+                           "link_words": "the rule applies"}]}]
+    worked = calculation.skipped()
+    sections, crossed, overview = answer_sections.answer(
+        TurnCalls(Scripted({"D2": citing})), ctx, None, None, interpretation={"units": []}, execution=None,
+        worked=worked, researched=researched)
+    assert overview["fallback"] is None and crossed is not None and "unavailable" not in crossed
+    record, sources, execution = researched.whole()
+    elements = response_rendering.render_sections(ctx, record, sources, sections=sections, cross_check=crossed,
+                                                  overview=overview, time_limits=worked)
+    activity = _activity(record, sources, execution, worked, sections, crossed, overview)
+    assert turn.validate_activity(activity, ctx, elements) == activity

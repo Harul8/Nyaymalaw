@@ -216,15 +216,63 @@ def select(reference, sources, *, loose=False):
     """Select exact unique words from an owned tag without normalising text. Held legal
     passages and document pages keep their page line breaks, which a quote may meet
     with spaces; loose places a quotation whatever its case, spacing or typographic
-    quotation marks (18 Oct 2026). The selection is still the source's own words."""
+    quotation marks (18 Oct 2026). The selection is still the source's own words.
+
+    A quotation not in the source named but in exactly one passage read with it (another
+    paragraph of the same judgment, another part of the same section) is refused naming
+    that passage by its short ID (live run 6, 21 Oct 2026: a writer named J28 for words of
+    the paragraph beside it three times, shown each time the nearest words of J28)."""
     require_schema(reference, REFERENCE)
     identity = reference["source_id"]
     source = sources.get(identity)
     if source is None or source.get("id") != identity:
         raise SchemaViolation(_unknown(identity, sources))
-    chosen = select_original(reference, {identity: {
-        "source_id": identity, "text": source["text"]}}, layout=source["kind"] in _LAYOUT, loose=loose)
+    try:
+        chosen = select_original(reference, {identity: {
+            "source_id": identity, "text": source["text"]}}, layout=source["kind"] in _LAYOUT, loose=loose)
+    except SchemaViolation as exc:
+        if not hasattr(exc, "near") or source["kind"] not in _LEGAL:
+            raise
+        raise _held_beside(exc, reference, source, sources, loose) from None
     return {key: chosen[key] for key in ("source_id", "start", "end", "text")}
+
+
+def _held_beside(refused, reference, source, sources, loose):
+    """A quotation refused, told by the short IDs the writer reads, with the one passage read
+    with the source named that holds those words exactly, if there is one."""
+    holders = []
+    for other in source.get("context_ids", ()):
+        row = sources.get(other)
+        if row is None:
+            continue
+        try:
+            select_original({"source_id": other, "quote": reference["quote"]},
+                            {other: {"source_id": other, "text": row["text"]}}, layout=row["kind"] in _LAYOUT,
+                            loose=loose)
+            holders.append(other)
+        except SchemaViolation:
+            continue
+    if len(holders) != 1:
+        return refused
+    offered = {tag: alias for alias, tag in aliases(sources).items()}
+    named, holder = offered.get(source["id"], source["id"]), offered.get(holders[0], holders[0])
+    told = SchemaViolation(f"Selected quote is not exact original source text: source_id={named!r}, "
+                           f"quote={reference['quote']!r}; those words stand in {holder!r}, read with it")
+    told.near = None
+    return told
+
+
+def section_catalogue(context, research_record, sources, draft):
+    """The catalogue a dispute's section was written from: its dispute's part of a research
+    record that keeps disputes apart (research v10 on, several disputes; step 4), otherwise
+    the whole answer's (live run 6: an overview's review re-bound a section's short IDs
+    to the whole catalogue's and found its quotations in the wrong passages)."""
+    parts = draft.get("parts") if isinstance(draft, dict) else None
+    dispute_id = parts[0].get("dispute_id") if isinstance(parts, list) and parts and isinstance(parts[0], dict) else None
+    if (research_record.get("contract") in research.BY_DISPUTE and dispute_id is not None
+            and len(research.dispute_work(research_record["plan"])) > 1):
+        return build(context, research.part_of(research_record, dispute_id))
+    return sources
 
 
 def _unknown(identity, sources):

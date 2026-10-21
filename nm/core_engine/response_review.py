@@ -371,7 +371,9 @@ def _dependencies(context, research_record, sources, draft, execution, *,
     if overview:
         if not isinstance(sections, list) or not all(isinstance(section, dict) for section in sections):
             raise ValueError("An overview is judged beside the sections shown")
-        dependencies["sections"] = [response_writer.validate(section, context, sources) for section in sections]
+        # Each section re-bound to the catalogue it was written from (step 4, 21 Oct 2026).
+        dependencies["sections"] = [response_writer.validate(section, context, answer_sources.section_catalogue(
+            context, research_record, sources, section)) for section in sections]
         if unanswered:
             dependencies["unanswered"] = [list(entry) for entry in unanswered]
     # v9: what the check across the sections found, for the correction it asked for.
@@ -927,7 +929,8 @@ def _cross_dependencies(context, research_record, sources, sections, execution, 
         raise ValueError("A check across the sections reads two or more disputes' sections")
     dependencies = {"original_context": deepcopy(context), "research_record": deepcopy(research_record),
                     "sources": deepcopy(sources),
-                    "sections": [response_writer.validate(section, context, sources) for section in sections],
+                    "sections": [response_writer.validate(section, context, answer_sources.section_catalogue(
+                        context, research_record, sources, section)) for section in sections],
                     "execution": deepcopy(execution)}
     if time_limits is not None:
         dependencies["time_limits"] = deepcopy(time_limits)
