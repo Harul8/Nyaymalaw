@@ -24,6 +24,11 @@ Feature: F-B-02 The live matter board beside the conversation
     Then the Files button beside the board's title lists the files and the research notes in the reading pane
     And a document opens in the reading pane on the right
 
+  Scenario: The board appears once it has something on it
+    Given the page script
+    And the page stylesheet
+    Then a new matter shows the conversation alone and the board appears once it has something on it
+
   Scenario: On a phone the board is behind a Matter board button
     Given the page
     And the page stylesheet

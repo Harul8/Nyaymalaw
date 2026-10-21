@@ -13,6 +13,7 @@ const source = between('async function restorePendingChat(', 'async function sho
   + between('function selectMatterRow(', 'function requirementsFor(')
   + between('function closeOpenMatter()', 'async function restorePendingChat(')
   + between('function startMatter(', '// F-A-18,')
+  + between('function fitBoard(', 'async function loadChatBoard(')
   + between('async function send(', 'async function deliver(');
 
 class Element {

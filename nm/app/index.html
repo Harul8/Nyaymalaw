@@ -383,8 +383,9 @@
   </aside>
 
   <!-- THE LIVE MATTER BOARD, on the left of the conversation (owner, 16 Oct 2026), laid
-       out as the readability design shows it (18 Oct 2026). A dispute, a checklist item
-       and the files open in the reading pane on the right. -->
+       out as the readability design shows it (18 Oct 2026), and shown once it has something
+       on it (P38, 21 Oct 2026). A dispute, a checklist item and the files open in the
+       reading pane on the right. -->
   <aside class="matter-board" id="matter-board" aria-labelledby="matter-board-title">
     <div class="rail-head board-head">
       <h2 id="matter-board-title">Matter board</h2>
@@ -557,9 +558,9 @@
     </form>
   </section>
 
-  <!-- ONE READING PANE ON THE RIGHT for every link (owner, 16 Oct 2026): always beside
-       the conversation on a wide screen, as the readability design shows it (18 Oct 2026);
-       over it on a narrower one and full screen on a phone. -->
+  <!-- ONE READING PANE ON THE RIGHT for every link (owner, 16 Oct 2026): closed until a
+       link opens it (P38, 21 Oct 2026), then beside the conversation on a wide screen, over
+       it on a narrower one and full screen on a phone. -->
   <dialog id="brain-source-reader" class="reading-pane" aria-labelledby="brain-source-title">
     <header class="reader-bar">
       <button type="button" id="brain-source-back" class="reader-btn" disabled>‹ Back</button>
@@ -572,7 +573,7 @@
     </div>
     <p id="brain-source-status" role="status" aria-live="polite"></p>
     <div id="brain-source-body" class="dispute-reader-body" tabindex="0"
-         aria-label="Reading pane"><p class="reader-empty">Open a dotted phrase in the answer, an item on the board or Files, and it is shown here.</p></div>
+         aria-label="Reading pane"></div>
   </dialog>
 </main>
 

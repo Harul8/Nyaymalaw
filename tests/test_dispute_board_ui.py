@@ -8,6 +8,7 @@ import pytest
 
 @pytest.mark.parametrize("script_name", [
     "dispute_board.mjs", "my_work_navigation.mjs", "brain_sources.mjs", "turn_refusal.mjs", "shown_so_far.mjs",
+    "board_shown.mjs",
 ])
 def test_dispute_board_and_matter_navigation(script_name):
     node = shutil.which("node")

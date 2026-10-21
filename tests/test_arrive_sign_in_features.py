@@ -1223,9 +1223,26 @@ def phone_board_button(app_page, stylesheet):
     toggle = re.search(r'<button id="board-toggle"[^>]*>\s*Matter board</button>', app_page)
     assert toggle and 'aria-controls="matter-board"' in toggle.group(0)
     phone = media_blocks(stylesheet, PHONE)
-    assert "#pane-advise.show-board > .matter-board { display: flex; }" in phone
-    assert "#pane-advise.show-board > .conversation { display: none; }" in phone
+    assert "#pane-advise.has-board.show-board > .matter-board { display: flex; }" in phone
+    assert "#pane-advise.has-board.show-board > .conversation { display: none; }" in phone
+    # The button appears with the board (P38, 21 Oct 2026).
+    assert '#pane-advise.has-board:not([data-view="list"]) .workspace-navigation { display: flex;' in phone
     assert "pane.classList.toggle('show-board', open);" in _function(_asset("app.js"), "toggleMatterBoard")
+
+
+@then("a new matter shows the conversation alone and the board appears once it has something on it")
+def board_once_it_has_something(page_script, stylesheet):
+    """P38 (owner, 21 Oct 2026); its behaviour in tests/js/board_shown.mjs."""
+    assert re.search(r"#pane-advise \{[^}]*grid-template-columns: minmax\(0, 1fr\); \}", stylesheet)
+    assert "#pane-advise > .matter-board { display: none;" in stylesheet
+    assert "#pane-advise.has-board > .matter-board { display: flex; }" in stylesheet
+    fit = _function(page_script, "fitBoard")
+    assert "$('pane-advise').classList.toggle('has-board', filled);" in fit
+    assert "state (empty|building)" in fit
+    load = _function(page_script, "loadChatBoard")
+    assert load.count("fitBoard();") == 3
+    assert "fitBoard();" in _function(page_script, "renderBoardWaiting")
+    assert "fitBoard();" in _function(page_script, "closeOpenMatter")
 
 
 # ---------------------------------------------------------------- F-B-03 ---
@@ -1253,18 +1270,35 @@ def choosing_a_conversation_restores_it(page_script):
     assert "loadChatBoard();" in _function(page_script, "startMatter")
 
 
-@then("the reading pane is part of the conversation window and stays beside the conversation on a wide screen")
+@then("the reading pane is part of the conversation window, closed until a link opens it")
 def reading_pane_beside(app_page, stylesheet):
     assert '<dialog id="brain-source-reader" class="reading-pane"' in pane_html(app_page, "advise")
     begin = _inner_function(_asset("brain-sources.js"), "begin")
     assert "node('pane-advise').classList.add('reading');" in begin
     assert "dialog.show();" in begin and "showModal" not in begin
-    assert re.search(r"#pane-advise\.reading \{ grid-template-columns: [^;]+ minmax\(0, 1fr\) [^;]+; \}", stylesheet)
-    # The design (18 Oct 2026): on a wide screen the three panes are always there.
-    wide = media_blocks(stylesheet, "(min-width: 1200px)")
-    assert re.search(r'#pane-advise:not\(\[data-view="list"\]\) \{\s*grid-template-columns: [^;]+ minmax\(0, 1fr\) '
-                     r'[^;]+; \}', wide)
-    assert '#pane-advise:not([data-view="list"]) > .reading-pane { display: flex; flex-direction: column; }' in wide
+    assert "#pane-advise.reading { grid-template-columns: minmax(0, 1fr) minmax(280px, 360px); }" in stylesheet
+    assert re.search(r"#pane-advise\.has-board\.reading \{ grid-template-columns: [^;]+ minmax\(0, 1fr\) [^;]+; \}",
+                     stylesheet)
+    # P38 (owner, 21 Oct 2026) replaces the 18 Oct design's pane always there on a wide screen:
+    # the pane shows only while open, and its Close is never hidden.
+    assert "#pane-advise > .reading-pane[open] { display: flex; flex-direction: column; }" in stylesheet
+    assert "(min-width: 1200px)" not in stylesheet
+    assert ".reader-close { display: none" not in stylesheet
+
+
+@then("each part of the conversation window scrolls on its own, its scroll bar shown only under the pointer")
+def each_part_scrolls_on_its_own(stylesheet):
+    """P38 (owner, 21 Oct 2026). Words kept for a screen reader inside the board's checklist
+    were placed from the whole board, outside the part that scrolls, and scrolled the page."""
+    parts = "#rail-body, #matter-board-body, #pane-advise .thread, #brain-source-body"
+    assert f"{parts} {{ position: relative; }}" in stylesheet
+    assert f"{parts}, #brain-source-body .whole {{\n  scrollbar-width: thin; scrollbar-color: transparent transparent; }}" \
+        in stylesheet
+    shown = stylesheet[stylesheet.index("#rail-body:hover"):]
+    shown = shown[:shown.index("}")]
+    for part in ("#rail-body", "#matter-board-body", "#pane-advise .thread", "#brain-source-body"):
+        assert f"{part}:hover" in shown and f"{part}:focus-within" in shown, part
+    assert "scrollbar-color: var(--ink-3) transparent;" in shown
 
 
 @then("the reading pane closes on Close or Escape")

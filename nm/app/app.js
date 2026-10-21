@@ -457,6 +457,7 @@ function clearPrivileged() {
    'search-results', 'history-body', 'who-name', 'profile-name', 'profile-email', 'profile-workspace',
    'who-detail', 'professional-approval', 'files-menu', 'search-index', 'search-state', 'history-state']
     .forEach((id) => { const el = $(id); if (el) el.textContent = ''; });
+  fitBoard();
   $('matter-heading').textContent = 'My work';
   $('matter-heading').removeAttribute('title');
   state.matterVersion = null;
@@ -810,7 +811,8 @@ function field(dl, label, value) {
 
 // The conversation window's views (owner, 16 Oct 2026): 'list' is the conversation
 // history; 'opening' a new or saved conversation and 'matter' an earlier matter
-// record, both with the matter board on the left and the conversation on the right.
+// record, both the conversation with the matter board on its left once the board has
+// something on it (P38, 21 Oct 2026).
 function setWorkView(view) {
   $('pane-advise').dataset.view = view;
   if (view === 'list') $('top-history').setAttribute('aria-current', 'page');
@@ -833,6 +835,7 @@ function closeOpenMatter() {
   $('thread').textContent = '';
   $('matter-board-body').replaceChildren();
   $('matter-board-meta').textContent = '';
+  fitBoard();
   toggleMatterBoard(false);
   selectMatterRow();
   $('pane-advise').dataset.matterId = '';
@@ -1048,6 +1051,7 @@ async function showThreadBoard(
     if (generation !== state.railGeneration) return;
     body.replaceChildren(stateBlock(
       'unbuildable', `The matter could not be loaded: ${e.message}`));
+    fitBoard();
     $('matter-board-meta').textContent = 'Matter could not be loaded';
     if (deferBoard) showOpeningBoardFailure(matterId,
       `The saved matter could not be read: ${e.message}`);
@@ -1090,6 +1094,7 @@ async function showThreadBoard(
 
   renderDisputeBoard(body, data.agenda, data.proposed_disputes,
     data.material_record, data.requirements_record);
+  fitBoard();
   const selected = selectMatterRow();
   if (selected) {
     selected.querySelector('.r-title').textContent = data.title || 'Untitled matter';
@@ -3028,6 +3033,18 @@ function renderBoardWaiting() {
   $('matter-board-meta').textContent = '';
   $('matter-board-body').replaceChildren(stateBlock('empty',
     'The board fills in as NM understands this matter from your messages and the documents you send.'));
+  fitBoard();
+}
+
+// THE BOARD ONLY WHEN IT HAS SOMETHING ON IT (owner decision P38, 21 Oct 2026): a new matter
+// shows the conversation alone, and the board appears once it holds what NM worked out - or
+// says it could not be read, as a failure to read is never hidden as an empty board. A board
+// waiting for its first content, or being read for the first time, is not shown. On a phone
+// the board's button goes with it; a board opened there stays open across its re-reads.
+function fitBoard() {
+  const filled = Array.from($('matter-board-body').children).some((child) =>
+    !/\bstate (empty|building)\b/.test(typeof child.className === 'string' ? child.className : ''));
+  $('pane-advise').classList.toggle('has-board', filled);
 }
 
 async function loadChatBoard(chatId = activeIntent && activeIntent.chatId) {
@@ -3037,6 +3054,7 @@ async function loadChatBoard(chatId = activeIntent && activeIntent.chatId) {
   // A board already shown stays in view while it is read again after an answer.
   if (!host.children.length || host.dataset.chatId !== chatId) {
     host.replaceChildren(stateBlock('building', 'Reading this matter’s board…'));
+    fitBoard();
   }
   let board;
   try {
@@ -3045,6 +3063,7 @@ async function loadChatBoard(chatId = activeIntent && activeIntent.chatId) {
     if (generation !== state.boardGeneration) return;
     host.replaceChildren(stateBlock('unbuildable', `The board could not be read: ${error.message}. `
       + 'This is a failure to read, not an empty matter.'));
+    fitBoard();
     return;
   }
   // A first answer still being written names its conversation before it is saved (P26).
@@ -3053,6 +3072,7 @@ async function loadChatBoard(chatId = activeIntent && activeIntent.chatId) {
   host.dataset.chatId = chatId;
   state.chatBoard = board;
   host.replaceChildren(...renderChatBoard(board));
+  fitBoard();
 }
 
 // THE FILES (owner decisions 4 and 5, 17 Oct 2026): the Files button beside the board's
@@ -5331,7 +5351,7 @@ function startMatter(chatId = null) {
   closeOpenMatter();
   state.turns = [...activeIntent.pending];
   repaint();
-  // The board beside the conversation: a saved conversation's, or a new one's waiting.
+  // The board beside the conversation: a saved conversation's; a new one shows none yet.
   loadChatBoard();
   $('mode-line').hidden = true;
   $('matter-heading').textContent = 'New matter';

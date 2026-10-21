@@ -189,16 +189,22 @@ main { display: grid; grid-template-columns: 19rem minmax(0, 1fr); flex: 1; min-
 .state.unbuildable{ color: var(--signal); border-color: var(--signal); }
 
 /* ---------------------------------------------------------- conversation --- */
-.conversation { display: flex; flex-direction: column; min-height: 0; background: var(--surface); }
+/* THE CONVERSATION USES ITS WHOLE COLUMN (owner, 21 Oct 2026, P38): the answer, its
+   paragraphs and the message box run the width the window gives the conversation, and
+   narrow with it when the reading pane opens beside it. --talk-gutter is the one side
+   margin the answer and the message box share. */
+.conversation { display: flex; flex-direction: column; min-height: 0; background: var(--surface);
+  --talk-gutter: 2.2rem; }
 .mode-line {
   padding: 0.5rem 1.5rem; font-size: 0.78rem; color: var(--ink-3);
   font-style: italic; border-bottom: 1px solid var(--rule); flex: none;
 }
-.thread { overflow-y: auto; flex: 1; min-height: 0; padding: 1.8rem 2.2rem 0.75rem; scrollbar-gutter: stable; }
+.thread { overflow-y: auto; flex: 1; min-height: 0; padding: 1.8rem var(--talk-gutter, 2.2rem) 0.75rem;
+  scrollbar-gutter: stable; }
 
-/* The answer at a reading measure, in line with the message box below it (the page checked
-   against the design, 18 Oct 2026: a later rule had let it run the window's full width). */
-.turn { min-width: 0; max-width: min(100%, 52rem); margin: 0 auto 2rem; line-height: 1.7; }
+/* The answer in line with the message box below it, across the conversation's column (P38,
+   replacing the 18 Oct design's reading measure). */
+.turn { min-width: 0; margin: 0 0 2rem; line-height: 1.7; }
 
 /* THE ADVOCATE'S OWN WORDS, set apart as theirs and set to the right.
    Everything else on this screen is something the product wrote, and a reader
@@ -439,7 +445,6 @@ button.board-card:focus-visible { outline: 2px solid var(--accent); outline-offs
   overflow-wrap: anywhere; }
 #brain-source-body { display: grid; align-content: start; gap: 14px; padding: 12px 18px 18px; font-size: 0.9rem; }
 #brain-source-body p { margin: 0; }
-.reader-empty { color: var(--ink-3); font-size: 0.85rem; }
 .reader-note { font-size: 0.82rem; color: var(--ink-3); }
 .source-where { margin: 0; font-size: 0.82rem; color: var(--ink-3); }
 .source-role { margin: 0; justify-self: start; display: inline-flex; gap: 6px; align-items: center; font-size: 0.78rem;
@@ -568,13 +573,13 @@ button.board-card:focus-visible { outline: 2px solid var(--accent); outline-offs
 .failure {
   border: 1px solid var(--signal); color: var(--signal);
   padding: 0.7rem 0.9rem; border-radius: 3px; font-size: 0.88rem;
-  max-width: 46rem; margin: 0 auto 1.6rem;
+  margin: 0 0 1.6rem;
 }
 
 /* -------------------------------------------------------------- composer --- */
 .composer {
-  flex: none; background: var(--surface); width: calc(100% - 2rem); max-width: 52rem;
-  margin: 0.35rem auto max(0.75rem, env(safe-area-inset-bottom));
+  flex: none; background: var(--surface);
+  margin: 0.35rem var(--talk-gutter, 2.2rem) max(0.75rem, env(safe-area-inset-bottom));
   padding: 0.55rem 0.8rem; border: 1px solid var(--rule); border-radius: 20px;
   box-shadow: 0 5px 20px rgba(0, 0, 0, 0.06);
 }
@@ -609,7 +614,7 @@ button.board-card:focus-visible { outline: 2px solid var(--accent); outline-offs
   text-align: left;
 }
 .plus-panel button:hover, .plus-panel button:focus-visible { background: var(--paper); color: var(--accent); }
-.dictation-state { color: var(--ink-3); font-size: 0.78rem; margin: 0.35rem auto 0; max-width: 46rem; }
+.dictation-state { color: var(--ink-3); font-size: 0.78rem; margin: 0.35rem 0 0; }
 .dictation-state:empty { display: none; }
 .hint { font-size: 0.72rem; color: var(--ink-3); }
 
@@ -628,43 +633,52 @@ button.primary:disabled { opacity: 0.5; cursor: default; }
 button.ghost { border: none; background: none; color: var(--accent); padding: 0.45rem 0.3rem; font-size: 0.78rem; }
 button.wide { margin: 0.5rem 0.6rem 0.8rem; }
 
-/* THE CONVERSATION WINDOW (owner, 16 Oct 2026): the matter board on the left, the
-   conversation on the right, and, while a link is open, the reading pane on the
-   right beside the conversation. Conversation history is its own view. On a phone
-   the board is behind its button (below). */
+/* THE CONVERSATION WINDOW (owner, 16 Oct 2026; P38, 21 Oct 2026): the conversation, with
+   the matter board on its left once the board has something on it (.has-board, set by the
+   page), and the reading pane on its right only while something is open in it (.reading).
+   A new matter shows the conversation alone. Conversation history is its own view. On a
+   phone the board is behind its button (below). */
 .workspace-navigation { display: none; }
 
 #pane-advise { background: var(--surface); grid-template-rows: minmax(0, 1fr);
-  grid-template-columns: clamp(16rem, 24vw, 22rem) minmax(0, 1fr); }
+  grid-template-columns: minmax(0, 1fr); }
 #pane-advise > .rail { display: none; }
-#pane-advise > .matter-board { display: flex; border-right: 1px solid var(--rule); }
+#pane-advise > .matter-board { display: none; border-right: 1px solid var(--rule); }
+#pane-advise.has-board > .matter-board { display: flex; }
+#pane-advise.has-board { grid-template-columns: clamp(16rem, 24vw, 22rem) minmax(0, 1fr); }
 #pane-advise[data-view="list"] { grid-template-columns: minmax(0, 1fr); }
 #pane-advise[data-view="list"] > .rail { border-right: 0; display: flex; width: 100%; }
 #pane-advise[data-view="list"] > .conversation,
 #pane-advise[data-view="list"] > .matter-board,
 #pane-advise[data-view="list"] > .reading-pane { display: none; }
-#pane-advise.reading { grid-template-columns: minmax(250px, 300px) minmax(0, 1fr) minmax(280px, 360px); }
-@media (min-width: 1200px) {
-  /* The three panes as the readability design shows them (18 Oct 2026): the board, the
-     answer and the reading pane, always there beside it; nothing to close. */
-  #pane-advise:not([data-view="list"]) {
-    grid-template-columns: minmax(250px, 300px) minmax(0, 1fr) minmax(280px, 360px); }
-  #pane-advise:not([data-view="list"]) > .reading-pane { display: flex; flex-direction: column; }
-  #pane-advise .reader-close { display: none; }
-}
+/* The conversation makes room when the reading pane opens, at every width but a phone's
+   (owner, 21 Oct 2026: the pane no longer lies over the conversation on a narrower window). */
+#pane-advise.reading { grid-template-columns: minmax(0, 1fr) minmax(280px, 360px); }
+#pane-advise.has-board.reading { grid-template-columns: minmax(250px, 300px) minmax(0, 1fr) minmax(280px, 360px); }
 #pane-advise[data-view="opening"] .workspace-heading { display: none; }
-/* The reading pane is a column of the window, not a cover over it. */
+/* The reading pane is a column of the window, not a cover over it, and closed until a
+   link, a board item or Files opens it (P38: never always there). */
 #pane-advise > .reading-pane { position: static; inset: auto; width: auto; height: auto; max-height: none;
   margin: 0; border: 0; border-left: 1px solid var(--rule); box-shadow: none; min-height: 0; }
 #pane-advise > .reading-pane[open] { display: flex; flex-direction: column; }
-@media (max-width: 1199px) and (min-width: 821px) {
-  /* Narrower windows: the reading pane lies over the conversation's right side. */
-  #pane-advise.reading { grid-template-columns: clamp(16rem, 24vw, 22rem) minmax(0, 1fr); }
-  #pane-advise > .reading-pane { position: fixed; top: 0; right: 0; bottom: 0; width: min(34rem, 60vw);
-    z-index: 50; box-shadow: -8px 0 36px rgba(0, 0, 0, .12); }
-}
+
+/* EACH PART SCROLLS ON ITS OWN AND THE WINDOW STAYS STILL (P38, owner 21 Oct 2026).
+   A part that scrolls is also what its absolutely placed words are placed from: the words
+   a board item keeps for a screen reader (.sr) were placed from the whole board, outside
+   the part that scrolls, so a long checklist ran past the window and the whole page
+   scrolled beside the parts' own scroll bars. Each part's scroll bar shows only while the
+   pointer is over that part, or something in it has the focus; it keeps its width, so
+   nothing moves when it shows. */
+#rail-body, #matter-board-body, #pane-advise .thread, #brain-source-body { position: relative; }
+#rail-body, #matter-board-body, #pane-advise .thread, #brain-source-body, #brain-source-body .whole {
+  scrollbar-width: thin; scrollbar-color: transparent transparent; }
+#rail-body:hover, #matter-board-body:hover, #pane-advise .thread:hover, #brain-source-body:hover,
+#brain-source-body .whole:hover, #rail-body:focus-within, #matter-board-body:focus-within,
+#pane-advise .thread:focus-within, #brain-source-body:focus-within {
+  scrollbar-color: var(--ink-3) transparent; }
 #pane-advise[data-view="opening"].empty-chat .conversation { justify-content: center; }
-#pane-advise[data-view="opening"].empty-chat .composer { margin-top: 0; margin-bottom: 0; }
+/* A new matter's first message box stays a centred box of its own width. */
+#pane-advise[data-view="opening"].empty-chat .composer { margin: 0 auto; width: min(52rem, calc(100% - 2rem)); }
 
 .opening-board-status { width: min(52rem, calc(100% - 2rem)); margin: 0 auto; }
 .opening-edit { width: min(46rem, calc(100% - 2rem)); padding: 0; }
@@ -724,14 +738,16 @@ button.wide { margin: 0.5rem 0.6rem 0.8rem; }
 
   /* A PHONE (owner, 16 Oct 2026): the conversation, with the board behind its
      button; the board's pane and the reading pane each fill the screen. */
-  #pane-advise, #pane-advise.reading { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
+  #pane-advise, #pane-advise.reading, #pane-advise.has-board, #pane-advise.has-board.reading {
+    grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
   #pane-advise[data-view="list"] { grid-template-rows: minmax(0, 1fr); }
-  #pane-advise:not([data-view="list"]) .workspace-navigation { display: flex; gap: .5rem; margin: .4rem .9rem; }
+  /* The Matter board button appears with the board (P38). */
+  #pane-advise.has-board:not([data-view="list"]) .workspace-navigation { display: flex; gap: .5rem; margin: .4rem .9rem; }
   #pane-advise > .rail, #pane-advise > .conversation, #pane-advise > .matter-board { grid-row: 2; grid-column: 1; }
   #pane-advise[data-view="list"] > .rail { grid-row: 1; }
-  #pane-advise > .matter-board { display: none; border-right: 0; }
-  #pane-advise.show-board > .matter-board { display: flex; }
-  #pane-advise.show-board > .conversation { display: none; }
+  #pane-advise > .matter-board, #pane-advise.has-board > .matter-board { display: none; border-right: 0; }
+  #pane-advise.has-board.show-board > .matter-board { display: flex; }
+  #pane-advise.has-board.show-board > .conversation { display: none; }
   #pane-advise > .reading-pane { position: fixed; inset: 0; width: 100vw; height: 100dvh;
     border-radius: 0; z-index: 60; }
 }
@@ -767,7 +783,7 @@ main > * { min-width: 0; }
   word-break: break-word;
 }
 .el .refs { display: block; }
-/* The answer itself keeps its reading measure (.turn, above). */
+/* The answer runs the conversation's column (.turn, above), never past it. */
 #thread, .el { max-width: 100%; min-width: 0; }
 
 /* NO `overflow-x: hidden` ON `body` OR `main`. BK-43.
@@ -1429,7 +1445,8 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visib
   .login { padding: 1.8rem; }
   .workspace-heading { padding-inline: .6rem; }
   .workspace-actions { gap: .2rem; }
-  .thread { padding: 1.2rem 1rem; }
+  .conversation { --talk-gutter: 1rem; }
+  .thread { padding-block: 1.2rem; }
   .intake { width: calc(100% - 1.5rem); padding: 1.3rem; }
   .history-head { align-items: stretch; flex-direction: column; }
   .history-head select { min-width: 0; width: 100%; }
@@ -1676,7 +1693,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visib
 #draft-dialog h2 { font-size: 1.2rem; margin: .5rem 0; }
 .draft-status {
   flex: none; font-size: .82rem; line-height: 1.5; color: var(--ink-2);
-  width: calc(100% - 2rem); max-width: 52rem; margin: 0 auto; padding: .4rem .5rem 0;
+  margin: 0 var(--talk-gutter, 2.2rem); padding: .4rem .5rem 0;
 }
 .opening-details { border-top: 1px solid #dce5df; padding: .8rem 0; margin-top: .65rem; }
 .opening-details summary { cursor: pointer; font-weight: 600; color: #234a40; padding: .25rem 0; }
@@ -1694,8 +1711,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visib
 
 .thread .el { border-left: 0; padding: 0; margin-bottom: 1.2rem; }
 .thread .el .body { margin: 0; }
-/* Paragraphs at the design's measure (18 Oct 2026). */
-.thread .turn .el .body { max-width: 66ch; font-size: 0.95rem; line-height: 1.6; }
+.thread .turn .el .body { font-size: 0.95rem; line-height: 1.6; }
 .thread .el.disclosure {
   border-left: 2px dashed var(--rule); padding-left: .8rem;
 }
@@ -1715,12 +1731,12 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visib
   background: var(--amber-w); color: var(--ink); font-size: .75rem; font-weight: 600; }
 .edited-original { margin-top: .3rem; }
 .edited-original summary { cursor: pointer; color: var(--accent); font-size: .85rem; min-height: 2rem; }
-.edited-original p { color: var(--ink-2); font-size: .88rem; max-width: 66ch; }
+.edited-original p { color: var(--ink-2); font-size: .88rem; }
 /* What an answer has shown so far, while it is still being written (P26). */
 .shown-so-far { margin: .8rem 0 0; padding: .6rem 0 0; border-top: 1px dashed var(--rule); }
 .shown-so-far-label { margin: 0 0 .5rem; color: var(--ink-3); font-size: .8rem; }
 .shown-so-far-title { margin: .6rem 0 .2rem; font-size: .85rem; }
-.shown-so-far .el { margin: 0 0 .7rem; max-width: 66ch; font-size: .95rem; line-height: 1.6; }
+.shown-so-far .el { margin: 0 0 .7rem; font-size: .95rem; line-height: 1.6; }
 .shown-so-far .el.WAITING, .shown-so-far .el.NOTE { color: var(--ink-3); font-size: .85rem; }
 /* THE TOP BAR (owner, 16 Oct 2026): the name, + New matter and Conversation history,
    and who is signed in with the person menu, across the window on every page. */
