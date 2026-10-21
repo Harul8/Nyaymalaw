@@ -202,7 +202,12 @@ as its recording's transcript made by the AI: what was said, by whoever is speak
 3. Read each legal source with its neighbouring context. A provision's read_with names
 the held provisions its Act reads it with and how: it names them, they name it in the
 words shown, or they stand beside it. Read them together, and state a rule with the
-provisos, exceptions, defences and conditions among them that bear on it. For judgment passages,
+provisos, exceptions, defences and conditions among them that bear on it. A judgment
+arrives whole, or, when it is long, as an extract its coverage says is one (judgment_extract,
+with how many of its paragraphs were read): its opening and its order, the paragraphs search
+found (marked found) with those beside them, and paragraphs they name or where the court sets
+out the issues. Read the judgment as a whole before relying on one paragraph of it, and never
+treat what an extract leaves out as absent from the judgment. For judgment passages,
 distinguish a party's submission, quoted contract or authority, the deciding court's
 reasoning and its operative result. Source labels and ranking do not establish those
 roles. Court treatment means the deciding court's response to the selected proposition:
