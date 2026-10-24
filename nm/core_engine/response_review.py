@@ -58,12 +58,20 @@ SECTION_CONTRACT = "core_response_review_v9"
 #: the review returned, sets the rest aside saying why, and keeps the review's own output,
 #: from which its admission replays.
 MISLEADS_CONTRACT = "core_response_review_v10"
+#: v11 (owner decisions P41 and P43, 24 Oct 2026; plan AN.6): v10 judging a section written
+#: for the advocate and placed as the page shows it (writer v13). Its second question also asks
+#: what could go - a point said again, what an advocate already knows, detail that does not
+#: change the advice - and it names any paragraph folded under "More on this" that the advice
+#: depends on, which code then shows.
+PRESENTED_CONTRACT = "core_response_review_v11"
+#: The versions that read a piece as v10 does: what misleads, and what could be better.
+READ_AS_V10 = (MISLEADS_CONTRACT, PRESENTED_CONTRACT)
 #: The versions that judge one piece of an answer written dispute by dispute.
-_PIECES = (SECTION_CONTRACT, MISLEADS_CONTRACT)
+_PIECES = (SECTION_CONTRACT, MISLEADS_CONTRACT, PRESENTED_CONTRACT)
 #: The check across the sections of an answer for conflicts between them (P26, P27).
 CROSS_CONTRACT = "core_response_cross_check_v1"
 CONTRACTS = (LEGACY_CONTRACT, AUTHORITY_CONTRACT, ALIAS_CONTRACT, RESPECTED_CONTRACT, PARTS_CONTRACT,
-             CHECKLIST_CONTRACT, ROWS_CONTRACT, CONTRACT, SECTION_CONTRACT, MISLEADS_CONTRACT)
+             CHECKLIST_CONTRACT, ROWS_CONTRACT, CONTRACT, SECTION_CONTRACT, MISLEADS_CONTRACT, PRESENTED_CONTRACT)
 _CURRENT = (RESPECTED_CONTRACT, PARTS_CONTRACT, CHECKLIST_CONTRACT, ROWS_CONTRACT, CONTRACT, SECTION_CONTRACT)
 #: The versions that judge a checklist through findings alone.
 _FINDINGS = (ROWS_CONTRACT, CONTRACT, SECTION_CONTRACT)
@@ -320,14 +328,52 @@ KINDS = {"unsupported": "grounding", "misquoted": "quotation", "misattributed": 
          "claims_an_action": "effect"}
 #: What the piece could add or put better: said beside it, never a reason to leave it out.
 BETTER = "better"
+#: v11 (P43): what could go from the piece - a point said again, what an advocate already knows,
+#: detail that does not change the advice. Like BETTER, it asks for a rewrite, never a removal.
+CUT = "could_go"
+#: The kinds of finding that ask for a better piece, never for leaving anything out.
+SUGGESTIONS = (BETTER, CUT)
 _WORDS = {"type": "string"}
 _PLACES = {"type": "array", "items": _WORDS}
 _POINTER = _object({"source_id": _WORDS, "quote": {"anyOf": [_WORDS, {"type": "null"}]}})
+SYSTEM_V11 = SYSTEM_V10.replace(
+    """2. What could the piece add or put better (could_be_better)? For example: something the
+advocate asked that this piece should answer and does not (other sections answer the matter's
+other disputes, and an overview leaves the detail to them); a condition or qualification the
+held law attaches; a point the held law plainly bears on that the piece leaves out; advice that
+could be clearer. Say where it belongs when there is a paragraph or checklist item for it.""",
+    """2. What could the piece add, put better, or let go (could_be_better)? For example: something
+the advocate asked that this piece should answer and does not (other sections answer the
+matter's other disputes, and an overview leaves the detail to them); a condition or
+qualification the held law attaches; a point the held law plainly bears on that the piece
+leaves out; advice that could be clearer (add_or_put_better). And what could go: a point said
+again elsewhere in the answer, something an advocate already knows, or detail that does not
+change the advice and could move under "More on this" (could_go). Say which each is, and
+where it belongs when there is a paragraph or checklist item for it. Letting something go
+never drops a condition the advice depends on: that would mislead.
+
+3. The advocate reads a dispute's section in a fixed order: its row in "In short" (what to
+do, row_action, and what to have ready, row_ready), a basis line, the advice, where, what
+could still go wrong (risks), the next steps, and last, folded under "More on this" where
+the advocate may never open it, the paragraphs placed more; questions (ask) are gathered at
+the end of the answer. Each paragraph shows its place. Name in keep_shown each paragraph
+placed more that the advice depends on, so that it is shown with the advice.""").replace(
+    "List only what you find. Empty lists mean the piece can be shown as it is.",
+    "List only what you find. Empty lists mean the piece can be shown as it is, its folds as placed.")
+assert SYSTEM_V11 != SYSTEM_V10 and "keep_shown" in SYSTEM_V11 and "shown as placed" not in SYSTEM_V10
 SCHEMA_V10 = _object({
     "misleading": {"type": "array", "items": _object({
         "kind": {"type": "string", "enum": list(KINDS)}, "where": _PLACES,
         "evidence": {"type": "array", "items": _POINTER}, "why": _WORDS})},
     "could_be_better": {"type": "array", "items": _object({"where": _PLACES, "what": _WORDS})}})
+#: v11: each suggestion says whether it adds or puts better, or could go; and the folded
+#: paragraphs the advice depends on.
+SCHEMA_V11 = _object({
+    "misleading": SCHEMA_V10["properties"]["misleading"],
+    "could_be_better": {"type": "array", "items": _object({
+        "where": _PLACES, "what": _WORDS, "change": {"type": "string", "enum": ["add_or_put_better", "could_go"]}})},
+    "keep_shown": {"type": "array", "items": _WORDS,
+                   "description": "The IDs (U1, U2...) of paragraphs placed more that the advice depends on."}})
 _TIME_LIMIT = re.compile(r"T\d+")
 
 
@@ -337,10 +383,13 @@ def _dependencies(context, research_record, sources, draft, execution, *,
     if answer_sources.build(context, research_record) != sources:
         raise ValueError("Review catalogue differs from its owned source snapshot")
     response_writer.validate(draft, context, sources)
-    # v9 and v10 judge one piece of an answer written dispute by dispute, and only they do.
-    piece = draft.get("contract") == response_writer.SECTION_CONTRACT
+    # v9 to v11 judge one piece of an answer written dispute by dispute, and only they do; a
+    # piece written for the advocate and placed (writer v13) is judged by v11, and only it is.
+    piece = draft.get("contract") in response_writer.SECTIONS
     overview = piece and draft.get("section") == response_writer.OVERVIEW
-    if ((contract in _PIECES) != piece or (sections is not None or unanswered) and not overview
+    if ((contract in _PIECES) != piece
+            or piece and (contract == PRESENTED_CONTRACT) != (draft["contract"] == response_writer.PRESENTED_CONTRACT)
+            or (sections is not None or unanswered) and not overview
             or conflicts and (not piece or overview) or (held_back or shortened) and piece):
         raise ValueError("Review version differs from the piece it judges")
     dependencies = {"original_context": deepcopy(context), "research_record": deepcopy(research_record),
@@ -348,7 +397,7 @@ def _dependencies(context, research_record, sources, draft, execution, *,
     if contract == LEGACY_CONTRACT:
         if authority_evidence is not None:
             raise ValueError("Legacy review cannot acquire fresh authority evidence")
-    elif contract in {AUTHORITY_CONTRACT, ALIAS_CONTRACT, *_CURRENT, MISLEADS_CONTRACT}:
+    elif contract in {AUTHORITY_CONTRACT, ALIAS_CONTRACT, *_CURRENT, *READ_AS_V10}:
         if authority_evidence is None:
             raise ValueError("Current review requires bound authority evidence")
         dependencies["authority_evidence"] = response_authorities.validate(
@@ -575,7 +624,7 @@ def _accept(proposal, dependencies, *, contract=LEGACY_CONTRACT):
             "bound_digest": _digest({"evidence": dependencies, "review_proposal": data})}
 
 
-def _accept_v10(returned, dependencies):
+def _accept_v10(returned, dependencies, contract=MISLEADS_CONTRACT):
     """v10 (owner decision P29, 20 Oct 2026): a review of a piece, admitted for what code can
     use. Each misleading statement keeps the paragraphs and checklist items it names, the time
     limits it names and the words it points to that code can place; each could-be-better point
@@ -585,8 +634,9 @@ def _accept_v10(returned, dependencies):
     fit the schema at all is refused: a review with nothing usable."""
     if "authority_evidence" not in dependencies:
         raise ValueError("Review version differs from its evidence contract")
-    data = canonical_schema_data(returned, SCHEMA_V10)
-    require_schema(data, SCHEMA_V10)
+    schema = SCHEMA_V11 if contract == PRESENTED_CONTRACT else SCHEMA_V10
+    data = canonical_schema_data(returned, schema)
+    require_schema(data, schema)
     sources, draft = dependencies["sources"], dependencies["draft"]
     offered, named = answer_sources.aliases(sources), unit_aliases(draft)
     known = set(named.values())
@@ -658,10 +708,23 @@ def _accept_v10(returned, dependencies):
         if not point["what"].strip():
             aside(where, "says nothing")
             continue
-        findings.append({"category": BETTER, "unit_ids": unit_ids, "limits": named_limits, "sources": [],
+        findings.append({"category": CUT if point.get("change") == "could_go" else BETTER,
+                         "unit_ids": unit_ids, "limits": named_limits, "sources": [],
                          "mismatch": point["what"].strip()})
     admitted = {"findings": findings, "set_aside": set_aside}
-    return {"contract": MISLEADS_CONTRACT, "returned": deepcopy(returned), "proposal": admitted,
+    if contract == PRESENTED_CONTRACT:
+        # v11 (P41): a folded paragraph the advice depends on is shown; a paragraph not folded
+        # needs no keeping.
+        folded = {unit["id"] for unit in draft["units"] if unit.get("place") == "more"}
+        admitted["keep_shown"] = []
+        for index, value in enumerate(data["keep_shown"]):
+            identity = named.get(value.strip(), value.strip())
+            if identity in folded:
+                if identity not in admitted["keep_shown"]:
+                    admitted["keep_shown"].append(identity)
+            else:
+                aside(f"keep shown {index + 1}", f"not a paragraph placed under More on this: {value}")
+    return {"contract": contract, "returned": deepcopy(returned), "proposal": admitted,
             "accepted": not findings,
             "bound_digest": _digest({"evidence": dependencies, "returned": returned, "review_proposal": admitted})}
 
@@ -702,7 +765,9 @@ def _draft_presentation(draft, sources, *, aliased=False, saved=None):
 
         layout["checklists"] = [{"part": index + 1, **({"time_limit_ids": list(part["time_limit_ids"])}
                                                         if "time_limit_ids" in part else
-                                                        {"time_limits": list(part["time_limits"])}), "items": [{
+                                                        {"time_limits": list(part["time_limits"])}),
+                                 # v13: the time limit that answers "by when".
+                                 **({"by_when": part["by_when"]} if "by_when" in part else {}), "items": [{
             "id": units.get(item["id"], item["id"]), "need": item["need"],
             # From writer v9, why the case needs it and where it stands (18 Oct 2026).
             **{key: item[key] for key in ("why", "note") if key in item},
@@ -713,7 +778,9 @@ def _draft_presentation(draft, sources, *, aliased=False, saved=None):
                              for ask in item["asked"]]} if item.get("asked") else {})}
             for item in part["items"]]} for index, part in enumerate(draft["checklists"])]
     return {"contract": draft["contract"], **layout, "units": [{
-        "id": units.get(unit["id"], unit["id"]), "kind": unit["kind"], "text": unit["text"],
+        "id": units.get(unit["id"], unit["id"]), "kind": unit["kind"],
+        # v13: where the paragraph stands in its section.
+        **({"place": unit["place"]} if "place" in unit else {}), "text": unit["text"],
         "addresses": [reference(selected) for selected in unit["addresses"]],
         "uses": [{**reference(use), **({"words": use["words"]["text"]} if "words" in use else {}),
                   "role": use["role"], "speaker": use["speaker"],
@@ -738,13 +805,24 @@ def _names(research_record):
     return {dispute["id"]: dispute["name"] for dispute in research_record["plan"]["proposal"]["understanding"]["disputes"]}
 
 
+def _row(section):
+    """v13: a dispute's row in "In short": what to do, what to have ready and the time limit
+    that answers by when (T1, T2...), as its section placed them."""
+    said = {unit["place"]: unit["text"] for unit in section["units"] if unit["place"] in response_writer.ROW}
+    return {"what_to_do": said.get("row_action"), "have_ready": said.get("row_ready"),
+            "by_when": section["checklists"][0]["by_when"]}
+
+
 def shown_sections(sections, research_record, unanswered=()):
     """v9: the sections of an answer as an overview's writer and review read them, in the
     answer's order: each dispute's name with its paragraphs and the time limits it names,
     then each dispute whose section could not be written in full, with why."""
     names = _names(research_record)
     return ([{"dispute": names.get(section["parts"][0]["dispute_id"]) or "this dispute",
-              "paragraphs": [{"kind": unit["kind"], "text": unit["text"]} for unit in section["units"]],
+              # v13: the dispute's row as "In short" shows it, and each paragraph's place.
+              **({"row": _row(section)} if section["contract"] == response_writer.PRESENTED_CONTRACT else {}),
+              "paragraphs": [{"kind": unit["kind"], **({"place": unit["place"]} if "place" in unit else {}),
+                              "text": unit["text"]} for unit in section["units"]],
               "time_limit_ids": list(section["checklists"][0]["time_limit_ids"])} for section in sections]
             + [{"dispute": names.get(identity) or "this dispute", "not_written_in_full": UNWRITTEN[reason]}
                for identity, reason in unanswered])
@@ -767,7 +845,7 @@ def review(model, context, research_record, sources, draft, execution=None, *,
     questions' held passages, told what code left out of it and what a check across the
     sections found; or the overview, beside the sections shown (sections, and unanswered:
     [dispute_id, reason] for each section not written in full)."""
-    piece = draft.get("contract") == response_writer.SECTION_CONTRACT
+    piece = draft.get("contract") in response_writer.SECTIONS
     contract = contract or (SECTION_CONTRACT if piece else CONTRACT)
     if contract not in (_PIECES if piece else (CONTRACT,)):
         raise ValueError("Review version differs from the piece it judges")
@@ -844,7 +922,8 @@ def review(model, context, research_record, sources, draft, execution=None, *,
                                                for identity, count in shortened]
     # Full readbacks remain in durable binding; the source catalogue already holds
     # the exact legal passages. Present only their checks and remaining limits here.
-    system, schema = (SYSTEM_V10, SCHEMA_V10) if contract == MISLEADS_CONTRACT else (SYSTEM, SCHEMA)
+    system, schema = ((SYSTEM_V11, SCHEMA_V11) if contract == PRESENTED_CONTRACT
+                      else (SYSTEM_V10, SCHEMA_V10) if contract == MISLEADS_CONTRACT else (SYSTEM, SCHEMA))
     prompt = Prompt(system=system, user=json.dumps(payload, ensure_ascii=False),
                     operation="core_response_review")
     if (estimate_tokens(system + prompt.user + json.dumps(schema)) + MAX_OUTPUT
@@ -854,25 +933,25 @@ def review(model, context, research_record, sources, draft, execution=None, *,
     if not result.usable or result.data is None:
         raise ModelError("Independent response review did not complete", usage=result.usage,
                          latency_ms=result.latency_ms, retries=result.retries)
-    if contract == MISLEADS_CONTRACT:
-        return _accept_v10(result.data, dependencies)
+    if contract in READ_AS_V10:
+        return _accept_v10(result.data, dependencies, contract)
     return _accept(result.data, dependencies, contract=contract)
 
 
 def validate(record, context, research_record, sources, draft, execution=None, *,
              authority_evidence=None, time_limits=None, held_back=None, shortened=None, sections=None,
              unanswered=None, conflicts=None):
-    if isinstance(record, dict) and record.get("contract") == MISLEADS_CONTRACT:
-        # v10 replays its admission from the review's own output.
+    if isinstance(record, dict) and record.get("contract") in READ_AS_V10:
+        # v10 and v11 replay their admission from the review's own output.
         if (set(record) != {"contract", "returned", "proposal", "accepted", "bound_digest"}
                 or type(record.get("accepted")) is not bool):
             raise ValueError("Unknown or malformed independent response review receipt")
         dependencies = _dependencies(context, research_record, sources, draft, execution,
-            authority_evidence=authority_evidence, contract=MISLEADS_CONTRACT, time_limits=time_limits,
+            authority_evidence=authority_evidence, contract=record["contract"], time_limits=time_limits,
             held_back=held_back, shortened=shortened, sections=sections, unanswered=unanswered,
             conflicts=conflicts)
         try:
-            checked = _accept_v10(record["returned"], dependencies)
+            checked = _accept_v10(record["returned"], dependencies, record["contract"])
         except SchemaViolation as exc:
             raise ValueError("A saved review's output does not fit its review contract") from exc
         if checked != record:
@@ -924,7 +1003,7 @@ def _cross_dependencies(context, research_record, sources, sections, execution, 
     if answer_sources.build(context, research_record) != sources:
         raise ValueError("Cross-check catalogue differs from its owned source snapshot")
     if not isinstance(sections, list) or len(sections) < 2 or any(
-            not isinstance(section, dict) or section.get("contract") != response_writer.SECTION_CONTRACT
+            not isinstance(section, dict) or section.get("contract") not in response_writer.SECTIONS
             or type(section.get("section")) is not int for section in sections):
         raise ValueError("A check across the sections reads two or more disputes' sections")
     dependencies = {"original_context": deepcopy(context), "research_record": deepcopy(research_record),
