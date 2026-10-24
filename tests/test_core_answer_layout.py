@@ -2,8 +2,10 @@
 way your artifact has presented"; rendering v14): each dispute's time limits close its own
 part, a limit no part names follows "In short", and every question to the advocate is
 gathered at the end under "What I need from you" - from each part that shows something
-else of its own, so no part is left a bare heading. Scripted fixtures exercise the layout
-and its exact replay; they do not show how a real writer divides its work."""
+else of its own, so no part is left a bare heading. From turn v8 (owner decisions P39-P45,
+24 Oct 2026) a live answer is laid out as rendering v18: "In short" first, each dispute's time
+limits closing its section and those no section names after the sections. Scripted fixtures
+exercise the layout and its exact replay; they do not show how a real writer divides its work."""
 import pytest
 
 from nm.core_engine import answer_sections, research_note, response_rendering, turn
@@ -42,29 +44,33 @@ def test_a_disputes_time_limits_close_its_part_and_the_questions_end_the_answer(
     reply = calculated(store, Laid())
     elements = reply["elements"]
     assert [element["kind"] for element in elements] == [
-        "SUMMARY", "WORKING", "WORKING", "LAW", "WORKING", "NEEDS", "QUESTION"]
-    assert [elements[i]["text"] for i in (1, 2, 4)] == [
-        "Last day to file the complaint", "A period misquoted", "Last day for the drawer to pay"]
-    assert (elements[5]["text"], elements[6]["text"]) == ("What I need from you", ASK)
+        "IN_SHORT", "ROW", "ROW_ACTION", "ADVICE", "WORKING", "WORKING", "WORKING", "NEEDS", "ASK"]
+    assert elements[2]["text"] == SUMMARY
+    # The limit the section names closes it; those it does not name stand outside the sections.
+    assert [(elements[i]["text"], elements[i].get("outside")) for i in (4, 5, 6)] == [
+        ("Last day for the drawer to pay", None), ("Last day to file the complaint", True),
+        ("A period misquoted", True)]
+    assert (elements[7]["text"], elements[8]["text"]) == ("What I need from you", ASK)
     # Each paragraph still names its own draft paragraph, in its own section from turn v6
     # (answered dispute by dispute, 19 Oct 2026); the heading names none.
     saved, = rows(store, reply)
-    assert saved["activities"]["rendering_contract"] == response_rendering.BY_DISPUTE_CONTRACT
-    draft = answer_sections.piece_of(saved["activities"], elements[6]["section"])["draft"]
-    assert draft["units"][response_rendering.unit_index(elements, 6)]["text"] == ASK
+    assert saved["activities"]["rendering_contract"] == response_rendering.PRESENTED_CONTRACT
+    draft = answer_sections.piece_of(saved["activities"], elements[8]["section"])["draft"]
+    assert draft["units"][response_rendering.unit_index(elements, 8)]["text"] == ASK
     with pytest.raises(IndexError):
-        response_rendering.unit_index(elements, 5)
+        response_rendering.unit_index(elements, 7)
     # The research note heads the questions as the answer does.
     note = research_note.note(saved, prepared_for="Owner")
     assert [block for block in note["blocks"] if block["kind"] == "heading"] == [
-        {"kind": "heading", "text": "What I need from you"}]
+        {"kind": "heading", "text": "In short"}, {"kind": "heading", "text": "What I need from you"}]
 
 
-def test_a_part_showing_nothing_else_keeps_its_question_and_unnamed_limits_follow_in_short(store):
+def test_a_section_showing_only_its_row_keeps_its_question_and_unnamed_limits_follow_the_sections(store):
     reply = calculated(store, Laid(names=(), law=False))
     assert [(element["kind"], element["text"]) for element in reply["elements"]] == [
-        ("SUMMARY", SUMMARY), ("WORKING", "Last day for the drawer to pay"),
-        ("WORKING", "Last day to file the complaint"), ("WORKING", "A period misquoted"), ("QUESTION", ASK)]
+        ("IN_SHORT", "In short"), ("ROW", "Dispute 1"), ("ROW_ACTION", SUMMARY),
+        ("WORKING", "Last day for the drawer to pay"), ("WORKING", "Last day to file the complaint"),
+        ("WORKING", "A period misquoted"), ("NEEDS", "What I need from you"), ("ASK", ASK)]
 
 
 def test_an_earlier_rendering_replays_in_its_own_layout(store):

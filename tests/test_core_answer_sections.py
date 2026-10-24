@@ -135,10 +135,11 @@ def answered(model):
     sections, crossed, overview = answer_sections.answer(
         calls, ctx, record, sources, interpretation={"units": []}, execution=execution, worked=worked)
     elements = response_rendering.render_sections(ctx, record, sources, sections=sections, cross_check=crossed,
-                                                  overview=overview, time_limits=worked)
+                                                  overview=overview, time_limits=worked,
+                                                  contract=response_rendering.PRESENTED_CONTRACT)
     activity = {"contract": turn.CONTRACT, "interpretation": {"units": []}, "research": record,
                 "sources": sources, "execution": execution, "calculation": worked,
-                "rendering_contract": response_rendering.BY_DISPUTE_CONTRACT,
+                "rendering_contract": response_rendering.PRESENTED_CONTRACT,
                 "sections": sections, "cross_check": crossed, "overview": overview}
     return ctx, elements, activity, calls
 
@@ -178,17 +179,22 @@ def test_each_dispute_is_answered_on_its_own_and_the_overview_is_written_last():
     assert activity["cross_check"]["proposal"] == {"conflicts": []}
     shown = model.payloads("core_response_overview")[0]["sections_shown"]
     assert [section["dispute"] for section in shown] == ["Dispute 1", "Dispute 2"]
-    assert shown[0]["paragraphs"][1] == {"kind": "next_step", "text": "Take the next step for D1 (round 1)."}
+    assert shown[0]["paragraphs"][1] == {"kind": "next_step", "place": "next_steps",
+                                         "text": "Take the next step for D1 (round 1)."}
+    # From turn v8 the overview sees each dispute's row (P40).
+    assert shown[0]["row"] == {"what_to_do": "In short for D1.", "have_ready": None, "by_when": None}
     overview_review = model.payloads("core_response_review")[-1]
     assert overview_review["what_you_review"]["piece"] == "the overview that opens the answer, written after its sections"
     assert overview_review["legal_sources"]["passages"] == [] and len(overview_review["sections_shown"]) == 2
     assert [unit["id"] for unit in activity["overview"]["reviewed"]["draft"]["units"]] == ["t2:ob1", "t2:ob2"]
-    # The overview opens the answer, "In short" follows, then each section under its heading.
-    assert kinds(elements) == ["OPENING", "NEXT_STEP", "SUMMARY", "SUMMARY", "HEADING", "NEXT_STEP",
-                               "HEADING", "NEXT_STEP"]
-    assert [elements[i]["text"] for i in (4, 6)] == ["Dispute 1", "Dispute 2"]
+    # Turn v8 (P40, P41): "In short" opens the answer with a row for each dispute and the line on
+    # what to do first, then each section under its name and what to do, in its fixed order.
+    assert kinds(elements) == ["IN_SHORT", "ROW", "ROW_ACTION", "ROW", "ROW_ACTION", "DO_FIRST", "TIES",
+                               "HEADING", "SUBHEAD", "STEP", "HEADING", "SUBHEAD", "STEP"]
+    assert [elements[i]["text"] for i in (7, 10)] == ["Dispute 1: In short for D1.", "Dispute 2: In short for D2."]
     assert [(e.get("section"), e.get("unit")) for e in elements] == [
-        ("overview", 0), ("overview", 1), (1, 0), (2, 0), (None, None), (1, 1), (None, None), (2, 1)]
+        (None, None), (None, None), (1, 0), (None, None), (2, 0), ("overview", 1), ("overview", 0),
+        (None, None), (1, None), (1, 1), (None, None), (2, None), (2, 1)]
     assert calls.metrics()["draft_corrections"] == 0
     assert turn.validate_activity(activity, ctx, elements) == activity
 
@@ -219,7 +225,7 @@ def test_what_the_review_still_faults_after_three_tries_is_left_out_and_the_rest
         "Left out of this section: 1 paragraph, because after the rewrites NM may make the independent check "
         "still found a problem in it. What was found: A statement was not supported by the words it relies on. A "
         "quotation did not match its source word for word. What remains was checked again without it.")
-    assert kinds(elements)[-3:] == ["HEADING", "LIMITATION", "NOTE"]
+    assert kinds(elements)[-4:] == ["HEADING", "SUBHEAD", "RISK", "NOTE"]
     assert calls.used("s2") == 2 and calls.used("s1") == 0
     assert turn.validate_activity(activity, ctx, elements) == activity
     refused(activity, ctx, elements, lambda forged: forged["sections"][1].update(trims=[]))
@@ -250,7 +256,10 @@ def test_where_nothing_survives_a_note_built_by_code_stands_in_the_section():
     # The overview is told the dispute could not be written in full, and why.
     shown = model.payloads("core_response_overview")[0]["sections_shown"]
     assert shown[-1]["dispute"] == "Dispute 2" and "still found problems" in shown[-1]["not_written_in_full"]
-    assert kinds(elements) == ["OPENING", "NEXT_STEP", "SUMMARY", "HEADING", "NEXT_STEP", "HEADING", "FALLBACK"]
+    assert kinds(elements) == ["IN_SHORT", "ROW", "ROW_ACTION", "ROW", "DO_FIRST", "TIES", "HEADING", "SUBHEAD", "STEP",
+                               "HEADING", "FALLBACK"]
+    # Its row in In short says why it is not a full answer (P40).
+    assert elements[3]["row"]["status"] == "note" and "still found problems" in elements[3]["row"]["why"]
     assert turn.validate_activity(activity, ctx, elements) == activity
     refused(activity, ctx, elements, lambda forged: forged["sections"][1].update(fallback={"reason": "service"}))
     # The board keeps the dispute's saved checklist, since its section gave none.
@@ -301,18 +310,19 @@ def test_a_checklist_item_still_faulted_is_left_out_by_what_it_needed():
     assert turn.validate_activity(activity, ctx, elements) == activity
 
 
-def test_what_a_section_still_leaves_out_after_its_tries_is_said_beside_it_and_holds_nothing_back():
+def test_what_a_section_still_leaves_out_after_its_tries_is_kept_under_how_nm_checked_it_and_holds_nothing_back():
     # What the review finds missing asks for one rewrite (P33, 21 Oct 2026; P25 gave it every
-    # try); after it, it is said beside the section, and nothing is dropped for it.
+    # try); after it, it is kept under "How NM checked this answer" (P39, 24 Oct 2026), and
+    # nothing is dropped for it.
     def leaving(round_, payload):
         return [paragraph("summary", "In short for D1."), paragraph("next_step", "LEAVES out the court.")]
     model = Scripted({"D1": leaving})
     ctx, elements, activity, calls = answered(model)
     assert calls.used("s1") == 1 and len(model.payloads("core_response_writer", "D1")) == 2
     assert activity["sections"][0]["trims"] == [] and activity["sections"][0]["fallback"] is None
-    note = next(e for e in elements if e["kind"] == "NOTE")
-    assert note["text"] == ("The independent check suggests this section could add or put this better: a paragraph "
-                            "does not say which court hears it, which a message asks.")
+    assert "NOTE" not in kinds(elements)
+    assert elements[-1]["kind"] == "CHECKED" and elements[-1]["checked"] == [{"part": "Dispute 1", "suggestions": [
+        {"kind": "better", "text": "a paragraph does not say which court hears it, which a message asks."}]}]
     assert turn.validate_activity(activity, ctx, elements) == activity
 
 
@@ -329,7 +339,7 @@ def test_a_rewrite_that_brings_a_fault_gives_way_to_the_earlier_draft_that_passe
     assert [unit["text"] for unit in section["reviewed"]["draft"]["units"]] == ["In short for D1.",
                                                                                 "LEAVES out the court."]
     assert "UNSUPPORTED" not in json.dumps(elements)
-    assert any(e["kind"] == "NOTE" and "could add or put this better" in e["text"] for e in elements)
+    assert elements[-1]["kind"] == "CHECKED" and "which court hears it" in json.dumps(elements[-1]["checked"])
     assert turn.validate_activity(activity, ctx, elements) == activity
 
 
@@ -364,7 +374,7 @@ def test_a_section_corrected_after_the_check_across_the_sections_says_so_and_kee
     assert label["edited"]["changes_advice"] is True
     assert [para["text"] for para in label["edited"]["original"]] == ["In short for D1.", "File by Monday. CONFLICT"]
     assert label["text"].startswith("Edited after a check across the sections. What it found:")
-    following = elements[elements.index(label) + 1]
+    following = next(e for e in elements[elements.index(label) + 1:] if e["kind"] == "STEP")
     assert following["text"] == "File by Tuesday." and following["section"] == 1
     assert turn.validate_activity(activity, ctx, elements) == activity
     refused(activity, ctx, elements, lambda forged: forged["sections"][0].update(edit=None))
@@ -401,10 +411,12 @@ def test_an_overview_that_does_not_pass_is_left_out_and_said():
     model = Scripted(overview=whole)
     ctx, elements, activity, calls = answered(model)
     assert activity["overview"]["fallback"] == {"reason": "found"} and calls.used("o") == 2
-    assert elements[0]["kind"] == "NOTE" and elements[0]["text"] == (
-        "NM's overview of how the disputes fit together is left out: after the rewrites NM may make, the checks "
+    note = next(e for e in elements if e["kind"] == "NOTE")
+    assert note["text"] == (
+        "NM's line on what to do first is left out: after the rewrites NM may make, the checks "
         "still found problems in it that leaving statements out could not settle. Each dispute's section below was "
         "checked on its own.")
+    assert kinds(elements)[:6] == ["IN_SHORT", "ROW", "ROW_ACTION", "ROW", "ROW_ACTION", "NOTE"]
     assert "UNSUPPORTED" not in json.dumps(elements)
     assert turn.validate_activity(activity, ctx, elements) == activity
 
@@ -517,7 +529,7 @@ def test_a_review_s_slips_are_set_aside_and_never_cost_its_section():
     ctx, elements, activity, calls = answered(Scripted({"D1": slipping}))
     section = activity["sections"][0]
     review = section["reviewed"]["review"]
-    assert review["contract"] == "core_response_review_v10" and section["fallback"] is None
+    assert review["contract"] == "core_response_review_v11" and section["fallback"] is None
     assert [entry["why"] for entry in review["proposal"]["set_aside"]] == [
         "names nothing in this piece: U9", "names nothing in this piece: D2", "points to a source not offered: P999"]
     assert section["trims"][0]["draft"]["dropped"] == ["t2:s1b2"]  # the statement it misquotes, after the tries
@@ -559,7 +571,7 @@ def test_a_review_that_stays_unusable_leaves_code_s_note_in_its_section_s_place(
     assert note["text"].startswith("Not a full answer on Dispute 1: its independent check could not be completed.")
     # Both outputs code could use nothing of are kept, and the draft no review could check (P29).
     assert [entry["step"] for entry in section["refused"]] == ["review", "review", "unreviewed"]
-    assert section["refused"][0]["returned"] == {"misleading": "U1 misleads", "could_be_better": []}
+    assert section["refused"][0]["returned"] == {"misleading": "U1 misleads", "could_be_better": [], "keep_shown": []}
     assert section["refused"][2]["why"] == "its independent check could not be completed"
     assert section["refused"][2]["returned"]["units"][0]["text"] == "In short for D1."
     assert turn.validate_activity(activity, ctx, elements) == activity
@@ -580,13 +592,13 @@ def test_what_code_refused_is_kept_with_why_and_an_earlier_turn_replays_without_
     refused(activity, ctx, elements, lambda forged: forged["sections"][1]["refused"][0].update(step="guessed"))
     refused(activity, ctx, elements, lambda forged: forged["sections"][1]["refused"][0].update(why=" "))
     refused(activity, ctx, elements, lambda forged: forged["sections"][0].pop("refused"))
-    # A turn saved before P29 (v6) keeps no such record and replays as it was.
+    # A turn saved before P29 (v6) keeps no such record and is read as it was saved (P46): its
+    # version and its rendering's are ones this code reads; a v8 turn is read with v18 only.
     earlier = deepcopy(activity)
-    earlier["contract"] = turn.BY_DISPUTE_CONTRACT
-    for part in [*earlier["sections"], earlier["overview"]]:
-        part.pop("refused")
-    assert turn.validate_activity(earlier, ctx, elements) == earlier
-    refused(earlier, ctx, elements, lambda forged: forged["sections"][0].update(refused=[]))
+    earlier.update(contract=turn.BY_DISPUTE_CONTRACT, rendering_contract=response_rendering.BY_DISPUTE_CONTRACT)
+    assert turn.known_activity(earlier) and turn.known_activity(activity)
+    assert not turn.known_activity({**activity, "rendering_contract": response_rendering.BY_DISPUTE_CONTRACT})
+    assert not turn.known_activity({**earlier, "rendering_contract": response_rendering.PRESENTED_CONTRACT})
 
 
 # --- what the advocate receives, served -------------------------------------------------
@@ -630,7 +642,7 @@ def test_the_served_answer_shows_a_corrected_section_under_its_label(served):
         "Corrected after a check across the sections: the advice on Dispute 1 changed.")
     label, = [element for element in elements if element["kind"] == "EDITED"]
     assert label["edited"]["original"][1]["text"] == "File by Monday. CONFLICT"
-    assert elements[elements.index(label) + 1]["text"] == "File by Tuesday."
+    assert next(e for e in elements[elements.index(label) + 1:] if e["kind"] == "STEP")["text"] == "File by Tuesday."
     reopened = served.client.get(f"/api/chats/{resp.json()['chat_id']}").json()["turns"][0]
     assert reopened["elements"] == elements
     # The board lists the disputes as the answer shows them, each with its checklist.
@@ -638,17 +650,18 @@ def test_the_served_answer_shows_a_corrected_section_under_its_label(served):
     assert [dispute["id"] for dispute in board["disputes"]] == ["D1", "D2"]
 
 
-def test_the_served_answer_says_what_could_be_better_beside_the_section(served):
-    """G-NOTED (P29): the advocate receives, beside a section shown, what the independent check
-    says it could add or put better; nothing is left out for it."""
+def test_the_served_answer_keeps_what_could_be_better_under_how_nm_checked_it(served):
+    """G-NOTED (P29, P39): the advocate receives, folded at the end of the answer, what the
+    independent check says a section could add or put better; nothing is left out for it."""
     def leaving(round_, payload):
         return [paragraph("summary", "In short for D1."), paragraph("next_step", "LEAVES out the court.")]
     scripted_answers(served, Scripted({"D1": leaving}))
     resp = served.client.post("/api/turn", json={"message": "Inspect this reported account.", "turn_id": "turn-1"})
     assert resp.status_code == 200, resp.text
     elements = resp.json()["elements"]
-    note, = [element for element in elements if element["kind"] == "NOTE"]
-    assert note["text"].startswith("The independent check suggests this section could add or put this better:")
+    assert not [element for element in elements if element["kind"] == "NOTE"]
+    checked, = [element for element in elements if element["kind"] == "CHECKED"]
+    assert checked["text"] == "How NM checked this answer" and checked["checked"][0]["part"] == "Dispute 1"
     assert any(element["text"] == "LEAVES out the court." for element in elements)
     reopened = served.client.get(f"/api/chats/{resp.json()['chat_id']}").json()["turns"][0]
     assert reopened["elements"] == elements
@@ -719,7 +732,7 @@ def test_a_turn_that_stopped_after_showing_part_of_its_answer_is_saved_with_what
     assert [row["turn_id"] for row in rows] == ["t1", "t2"]
     assert first["response"]["elements"][0]["text"].startswith("NM stopped before finishing this answer.")
     assert first["activities"]["overview"]["fallback"] == {"reason": "interrupted"}
-    assert any(e["kind"] == "NEXT_STEP" and "D1" in e["text"] for e in first["response"]["elements"])
+    assert any(e["kind"] == "STEP" and "D1" in e["text"] for e in first["response"]["elements"])
     # Sent again, the stopped message is the saved answer it showed, never a second one.
     assert run(store, through_turns(Scripted()), chat_id=chat_id)["replayed"]
     with pytest.raises(ConversationRefused):
@@ -735,7 +748,7 @@ def test_the_same_message_sent_again_after_a_stop_is_answered_afresh(store):
     again = run(store, through_turns(Scripted()))  # the same request: chat and turn as before
     assert again["committed"] == "committed" and again["chat_id"] == chat_id and held_now(store) is None
     assert not any(e["text"].startswith("NM stopped before") for e in again["elements"])
-    assert [e["kind"] for e in again["elements"]][0] == "OPENING"
+    assert [e["kind"] for e in again["elements"]][0] == "IN_SHORT"
 
 
 def test_a_turn_withheld_whole_keeps_nothing_it_showed(store):
@@ -763,7 +776,8 @@ def test_the_page_reads_what_a_running_turn_has_shown_and_a_reopened_one_is_save
     served.app.turn_progress.report(OWNER, "turn-1", "writing_overview")
     reading = served.client.get(f"/api/chats/{chat_id}").json()
     assert reading["turns"] == [] and reading["pending"]["turn_id"] == "turn-1"
-    assert [e["text"] for e in reading["pending"]["elements"] if e["kind"] == "HEADING"] == ["Dispute 1", "Dispute 2"]
+    assert [e["text"] for e in reading["pending"]["elements"] if e["kind"] == "HEADING"] == [
+        "Dispute 1: In short for D1.", "Dispute 2: In short for D2."]
     board = served.client.get(f"/api/chats/{chat_id}/board").json()
     assert [dispute["id"] for dispute in board["disputes"]] == ["D1", "D2"]
     assert all("checklist" in dispute for dispute in board["disputes"])

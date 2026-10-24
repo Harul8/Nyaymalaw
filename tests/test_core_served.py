@@ -77,7 +77,11 @@ def successful(served, **changes):
     return response.json()
 
 
-def source_url(reply, element=0, source=0):
+def source_url(reply, element=None, source=0):
+    """The reading pane's address of a saved passage: by default the first paragraph's that cites
+    one (from rendering v18 an answer opens with In short, which cites none)."""
+    if element is None:
+        element = next((index for index, shown in enumerate(reply.get("elements") or []) if shown.get("sources")), 0)
     return (f"/api/chats/{reply['chat_id']}/turns/{reply['turn_id']}"
             f"/brain-sources/{element}/{source}")
 
@@ -96,7 +100,9 @@ def test_public_turn_saves_exact_input_reopens_and_reads_exact_sources_without_c
     turn = reopened.json()["turns"][0]
     assert turn["message"] == message and turn["elements"] == reply["elements"]
     assert turn["committed"] is True and turn["release_state"] == "released"
-    for index, source in enumerate(reply["elements"][0]["sources"]):
+    cited = next(element for element in reply["elements"] if element.get("sources"))
+    assert cited["sources"]  # the loop below reads every saved passage the answer cites
+    for index, source in enumerate(cited["sources"]):
         read = served.client.get(source_url(reply, source=index))
         assert read.status_code == 200
         viewed = read.json()
@@ -114,16 +120,18 @@ def test_public_turn_saves_exact_input_reopens_and_reads_exact_sources_without_c
 def test_followup_preserves_complete_saved_context_at_every_stage(served):
     first = successful(served, message="The account is contested. Do not write to the supplier.")
     successful(served, turn_id="turn-2", chat_id=first["chat_id"], message="Hello again.")
+    # The earlier answer reaches later turns as the advocate saw it, every part of it in order.
+    said = "\n\n".join(element["text"] for element in first["elements"])
     for operation, payload in served.model.calls[9:]:
         if operation.startswith("core_research_"):
             # Research v7 reads the attributed conversation as text.
             if operation in ("core_research_understand", "core_research_check"):
                 assert "[1] Advocate: The account is contested. Do not write to the supplier." in payload
-                assert f"[2] Our research assistant (an earlier note, not the advocate's words): {first['elements'][0]['text']}" in payload
+                assert f"[2] Our research assistant (an earlier note, not the advocate's words): {said}" in payload
             continue
         context = payload if operation == "core_understanding" else payload["original_context"]
         assert context["conversation"][0]["text"] == "The account is contested. Do not write to the supplier."
-        assert context["conversation"][1]["text"] == first["elements"][0]["text"]
+        assert context["conversation"][1]["text"] == said
     assert served.client.get(f"/api/chats/{first['chat_id']}").json()["turns"][1]["turn_id"] == "turn-2"
 
 
@@ -314,7 +322,7 @@ def test_shape_and_semantic_repair_share_the_sections_tries_and_a_faulted_statem
     served.model.malformed_writer, served.model.reject = 1, 2
     response = send(served)
     assert response.status_code == 200, response.text
-    assert [element["kind"] for element in response.json()["elements"]] == ["FALLBACK"]
+    assert [element["kind"] for element in response.json()["elements"]] == ["IN_SHORT", "ROW", "FALLBACK"]
     assert "counsel's submission" not in response.text
     assert len(served.model.calls) == 12 and response.json()["metrics"]["draft_corrections"] == 2
 
@@ -322,7 +330,7 @@ def test_shape_and_semantic_repair_share_the_sections_tries_and_a_faulted_statem
 def test_a_turn_answered_with_a_note_replays_on_the_same_identity(served):
     served.model.reject = 3
     first = successful(served)
-    assert [element["kind"] for element in first["elements"]] == ["FALLBACK"]
+    assert [element["kind"] for element in first["elements"]] == ["IN_SHORT", "ROW", "FALLBACK"]
     assert len(served.model.calls) == 13  # the section's draft and two rewrites, each reviewed
     served.model.reject = 0
     assert successful(served) == {**first, "replayed": True} and len(served.model.calls) == 13
@@ -379,7 +387,7 @@ def test_saved_chat_replay_survives_unavailable_attempt_sidecar_after_restart(se
     assert served.client.get(f"/api/chats/{reply['chat_id']}").status_code == 200
     viewed = served.client.get(source_url(reply)).json()
     viewed.pop('authority_inspection')
-    assert viewed == reply["elements"][0]["source"]
+    assert viewed == next(element for element in reply["elements"] if element.get("sources"))["source"]
     assert successful(served)["replayed"] and len(served.model.calls) == 9
     fresh = send(served, turn_id="turn-2", chat_id=reply["chat_id"])
     assert fresh.status_code == 503 and fresh.json()["detail"]["code"] == "attempt_unconfirmed"

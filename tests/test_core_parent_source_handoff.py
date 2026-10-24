@@ -181,7 +181,7 @@ def test_parent_source_is_saved_served_and_replayed_without_fresh_law_or_model_c
     monkeypatch.setattr(served.model, "structured", write_parent)
     reply = successful(served, message="Find the applicable law.")
     assert reply["metrics"]["llm_calls"] == 9 and len(served.model.calls) == 9
-    source = reply["elements"][0]["source"]
+    source = next(element["source"] for element in reply["elements"] if element.get("source"))
     assert source["text"] == parent["full_text"]
     for operation, payload in served.model.calls:
         if operation not in {"core_response_writer", "core_response_review"}:

@@ -123,8 +123,8 @@ def test_missing_work_rewrites_once_preserving_supported_peer_then_rechecks_and_
 
 # A section's draft and two rewrites (owner decision P25, 19 Oct 2026), of which what could be
 # better asks for one (P33, 21 Oct 2026): a review that keeps finding the omission gets one
-# rewrite, besides any shape repair; what is still missing after it is said beside the answer,
-# never a reason to withhold it.
+# rewrite, besides any shape repair; what is still missing after it is kept under "How NM
+# checked this answer" (P39, 24 Oct 2026), never a reason to withhold it.
 @pytest.mark.parametrize("settings,expected_calls,corrections", [
     ({"reject_repair": True}, 6, 1), ({"consume_shape_correction": True}, 7, 2)])
 def test_missing_work_still_missing_after_the_tries_is_said_beside_the_answer(tmp_path, settings, expected_calls,
@@ -134,10 +134,9 @@ def test_missing_work_still_missing_after_the_tries_is_said_beside_the_answer(tm
     response = run(store, model, message=model.message)
     assert response["committed"] == "committed" and response["metrics"]["draft_corrections"] == corrections
     assert len(model.calls) == expected_calls
-    note = response["elements"][-1]
-    assert note["kind"] == "NOTE" and note["text"] == (
-        "The independent check suggests this answer could add or put this better: The independent request for "
-        "questions has no delivered result or limit.")
+    checked = response["elements"][-1]
+    assert checked["kind"] == "CHECKED" and checked["checked"] == [{"part": "this answer", "suggestions": [
+        {"kind": "better", "text": "The independent request for questions has no delivered result or limit."}]}]
     assert run(store, model, message=model.message)["replayed"] and len(model.calls) == expected_calls
 
 

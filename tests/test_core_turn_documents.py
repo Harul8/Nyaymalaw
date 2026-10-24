@@ -77,7 +77,7 @@ def test_every_stage_sees_the_pages_and_the_answer_cites_one(store):
     assert '["memo.pdf", page 3: not read (the AI could not make out this page)]' in research_text
     for operation in ("core_response_writer", "core_response_review"):
         assert calls[operation]["original_context"]["documents"] == understanding["documents"]
-    element, = reply["elements"]
+    element = next(element for element in reply["elements"] if element.get("sources"))
     source, = element["sources"]
     assert (source["kind"], source["title"], source["locator"], source["text"]) == (
         "document", "memo.pdf", "page 1", MEMO)

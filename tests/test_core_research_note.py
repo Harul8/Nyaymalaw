@@ -43,9 +43,11 @@ def test_the_note_keeps_the_question_answer_and_every_cited_source_word_for_word
     row = saved(store, ScriptedModel(legal=True), message="Was the submission rejected?\nPlease check.")
     note = research_note.note(row, prepared_for="A. Advocate")
     assert note["question"] == "Was the submission rejected?\nPlease check."
-    paragraph, = [block for block in note["blocks"] if block["kind"] == "paragraph"]
-    element, = row["response"]["elements"]
-    assert paragraph["text"] == element["text"] and paragraph["refs"] == list(range(1, len(note["sources"]) + 1))
+    # From rendering v18 the answer's one paragraph is its dispute's line on what to do.
+    paragraph, = [block for block in note["blocks"] if block["kind"] == "paragraph" and block["refs"]]
+    element, = [element for element in row["response"]["elements"] if element.get("sources")]
+    assert paragraph["text"] == "What to do: " + element["text"]
+    assert paragraph["refs"] == list(range(1, len(note["sources"]) + 1))
     cited = {" ".join(source["text"].split()) for source in element["sources"]}
     assert {passage for source in note["sources"] for passage in source["passages"]} == cited
     assert all(source["described"] for source in note["sources"])
@@ -63,7 +65,7 @@ def test_the_word_file_is_well_formed_and_holds_the_note_in_order(store):
     assert shown[0] == ("Research note", "Title")
     assert texts.index("Question") < texts.index("Please look at the memo.") < texts.index("Answer") < texts.index("Sources")
     assert "• memo.pdf — 2 pages read, 1 not read" in texts
-    assert "memo.pdf page 1 records the return unpaid. [1]" in texts
+    assert "What to do: memo.pdf page 1 records the return unpaid. [1]" in texts
     assert "[1] memo.pdf · page 1 — Document you sent" in texts
     assert texts[-1] == note["provenance"]
 

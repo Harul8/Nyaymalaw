@@ -49,7 +49,7 @@ class Writing(Scripted):
 
 def _activity(record, sources, execution, worked, sections, crossed, overview):
     return {"contract": turn.CONTRACT, "interpretation": {"units": []}, "research": record, "sources": sources,
-            "execution": execution, "calculation": worked, "rendering_contract": response_rendering.BY_DISPUTE_CONTRACT,
+            "execution": execution, "calculation": worked, "rendering_contract": response_rendering.PRESENTED_CONTRACT,
             "sections": sections, "cross_check": crossed, "overview": overview}
 
 
@@ -67,7 +67,8 @@ def test_a_disputes_section_is_written_while_another_is_still_being_researched()
     record, sources, execution = researched.whole()
     assert record["contract"] == research.CONTRACT and set(record["picks"]) == {"D1", "D2"}
     elements = response_rendering.render_sections(ctx, record, sources, sections=sections, cross_check=crossed,
-                                                  overview=overview, time_limits=worked)
+                                                  overview=overview, time_limits=worked,
+                                                  contract=response_rendering.PRESENTED_CONTRACT)
     activity = _activity(record, sources, execution, worked, sections, crossed, overview)
     assert turn.validate_activity(activity, ctx, elements) == activity
     # Each section was written from its own dispute's part alone.
@@ -102,7 +103,8 @@ def test_a_turn_stopped_while_a_dispute_is_researched_saves_what_it_showed():
     activity = turn.interrupted(held)
     elements = response_rendering.render_sections(
         ctx, activity["research"], activity["sources"], sections=activity["sections"],
-        cross_check=activity["cross_check"], overview=activity["overview"], time_limits=worked)
+        cross_check=activity["cross_check"], overview=activity["overview"], time_limits=worked,
+        contract=activity["rendering_contract"])
     assert [saved["fallback"] for saved in activity["sections"]] == [None, {"reason": "interrupted"}]
     assert turn.validate_activity(activity, ctx, elements) == activity
 
@@ -144,6 +146,7 @@ def test_the_overview_reads_each_section_by_the_catalogue_it_was_written_from():
     assert overview["fallback"] is None and crossed is not None and "unavailable" not in crossed
     record, sources, execution = researched.whole()
     elements = response_rendering.render_sections(ctx, record, sources, sections=sections, cross_check=crossed,
-                                                  overview=overview, time_limits=worked)
+                                                  overview=overview, time_limits=worked,
+                                                  contract=response_rendering.PRESENTED_CONTRACT)
     activity = _activity(record, sources, execution, worked, sections, crossed, overview)
     assert turn.validate_activity(activity, ctx, elements) == activity

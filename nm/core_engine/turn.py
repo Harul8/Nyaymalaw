@@ -18,7 +18,7 @@ from datetime import datetime, timezone
 from concurrent.futures import ThreadPoolExecutor
 
 from nm.core_engine import answer_sections, answer_sources, calculation, checklist, research
-from nm.core_engine import replay_scope, response_rendering
+from nm.core_engine import replay_scope, response_rendering, response_writer
 from nm.core_engine import understanding
 from nm.core_engine.calls import CorrectionUnavailable, ReleaseWithheld, TurnCalls
 from nm.core_engine.conversation import (
@@ -52,9 +52,15 @@ BY_DISPUTE_CONTRACT = "core_turn_v6"
 #: v7 (owner decision P29, 20 Oct 2026): v6 reviewed under review v10, each section, correction
 #: and overview also keeping what code refused of what the writer or the review returned, and a
 #: draft code admitted that no review could be completed for, each with why (answer_sections.KEPT).
-CONTRACT = "core_turn_v7"
+KEPT_CONTRACT = "core_turn_v7"
+#: v8 (owner decisions P39-P45, 24 Oct 2026; plan AN.6): v7 written for the advocate and laid
+#: out as they read it - each section by writer v13 and reviewed by review v11, the overview by
+#: writer v13 - and rendered as v18.
+CONTRACT = "core_turn_v8"
 #: The turns answered dispute by dispute.
-SECTIONED = (BY_DISPUTE_CONTRACT, CONTRACT)
+SECTIONED = (BY_DISPUTE_CONTRACT, KEPT_CONTRACT, CONTRACT)
+#: The turns that keep what code refused (P29): v7 on.
+_KEEPS = (KEPT_CONTRACT, CONTRACT)
 _RELEASED = (RELEASE_CONTRACT, RECORDS_CONTRACT)
 EXECUTION = research.EXECUTION
 _ACTIVITY_FIELDS = {"contract", "interpretation", "research", "sources", "draft",
@@ -166,7 +172,7 @@ def prepare(model, context, searcher, *, case_index=None, provision_reader=None,
     def base(record, sources, execution):
         return {"contract": CONTRACT, "interpretation": interpreted, "research": record, "sources": sources,
                 "execution": execution, "calculation": limits,
-                "rendering_contract": response_rendering.BY_DISPUTE_CONTRACT}
+                "rendering_contract": response_rendering.PRESENTED_CONTRACT}
 
     def released(state):
         if shown is None:
@@ -176,15 +182,19 @@ def prepare(model, context, searcher, *, case_index=None, provision_reader=None,
         record, sources, execution = researched.provisional()
         elements = response_rendering.render_sections(
             context, record, sources, sections=state["sections"], cross_check=state["cross_check"],
-            overview=state["overview"], time_limits=limits, waiting=state["waiting"])
+            overview=state["overview"], time_limits=limits, waiting=state["waiting"],
+            contract=response_rendering.PRESENTED_CONTRACT)
         shown(elements, {**base(record, sources, execution), **state}, calls.metrics())
+    # Turn v8 (P39-P45): each section written for the advocate and placed (writer v13), reviewed
+    # by review v11, and the answer laid out as rendering v18.
     sections, crossed, overview = answer_sections.answer(
         calls, context, None, None, interpretation=interpreted, execution=None, worked=limits,
         case_index=case_index, provision_reader=provision_reader, report=report, released=released,
-        researched=researched)
+        researched=researched, contract=response_writer.PRESENTED_CONTRACT)
     record, sources, execution = researched.whole()
     elements = response_rendering.render_sections(context, record, sources, sections=sections, cross_check=crossed,
-                                                  overview=overview, time_limits=limits)
+                                                  overview=overview, time_limits=limits,
+                                                  contract=response_rendering.PRESENTED_CONTRACT)
     activity = {**base(record, sources, execution), "sections": sections, "cross_check": crossed, "overview": overview}
     return elements, activity, calls.metrics()
 
@@ -195,7 +205,7 @@ def interrupted(held):
     activity = {key: deepcopy(value) for key, value in held.items() if key != "waiting"}
     activity["sections"], activity["cross_check"], activity["overview"] = answer_sections.interrupted(
         {"sections": held["sections"], "cross_check": held["cross_check"], "overview": held["overview"]},
-        held["research"], kept=held["contract"] == CONTRACT)
+        held["research"], kept=held["contract"] in _KEEPS)
     return activity
 
 
@@ -225,7 +235,8 @@ def recover(store, matter, advocate_id, *, running=lambda turn_id: False, sessio
             sources = answer_sources.build(original, record)
             elements = response_rendering.render_sections(
                 original, record, sources, sections=activity["sections"], cross_check=activity["cross_check"],
-                overview=activity["overview"], time_limits=calculation.validate(activity["calculation"], original))
+                overview=activity["overview"], time_limits=calculation.validate(activity["calculation"], original),
+                contract=activity["rendering_contract"])
             validate_activity(activity, original, elements)
     except (ValueError, KeyError, TypeError, SchemaViolation) as exc:
         log.warning("The unfinished parts of an answer could not be read reliably and were withdrawn: %s",
@@ -249,10 +260,10 @@ def _validate_sections(activity, context, elements):
     sources = answer_sources.build(context, record)
     if sources != activity["sources"] or execution_record(record) != activity["execution"]:
         raise ValueError("Saved sources or operation evidence changed")
-    answer_sections.validate(activity, context, record, sources, limits, kept=activity["contract"] == CONTRACT)
+    answer_sections.validate(activity, context, record, sources, limits, kept=activity["contract"] in _KEEPS)
     rebuilt = response_rendering.render_sections(context, record, sources, sections=activity["sections"],
                                                  cross_check=activity["cross_check"], overview=activity["overview"],
-                                                 time_limits=limits)
+                                                 time_limits=limits, contract=activity["rendering_contract"])
     if rebuilt != elements:
         raise ValueError("Saved response differs from its admitted rendering")
     return deepcopy(activity)
@@ -265,7 +276,8 @@ def known_activity(activity):
     version = activity.get("contract") if isinstance(activity, dict) else None
     rendering = activity.get("rendering_contract") if isinstance(activity, dict) else None
     if version in SECTIONED:
-        return set(activity) == _SECTIONED_FIELDS and rendering == response_rendering.BY_DISPUTE_CONTRACT
+        return set(activity) == _SECTIONED_FIELDS and rendering == (
+            response_rendering.PRESENTED_CONTRACT if version == CONTRACT else response_rendering.BY_DISPUTE_CONTRACT)
     expected_fields =(_ACTIVITY_FIELDS if version == LEGACY_CONTRACT else
                        _ACTIVITY_FIELDS | {"authority_evidence"} if version == AUTHORITY_CONTRACT else
                        _ACTIVITY_FIELDS | {"authority_evidence", "calculation"} if version == CALCULATION_CONTRACT

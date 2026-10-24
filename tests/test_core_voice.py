@@ -81,7 +81,7 @@ def test_an_answer_cites_a_voice_note_as_its_recording(store):
                  "pages": [{"number": 1, "text": SAID, "read_by": "ai", "model": "hearing-1", "legible": "all"}],
                  "unread": []}]
     reply = run(store, DocumentModel(), message="Please listen to the note.", documents=material)
-    source, = reply["elements"][0]["sources"]
+    source, = next(element for element in reply["elements"] if element.get("sources"))["sources"]
     assert (source["kind"], source["title"], source["locator"], source["text"]) == (
         "document", "note.wav", "recording", SAID)
     row = saved_rows(store.load(chat_matter_id("owner", reply["chat_id"])), "owner")[0]

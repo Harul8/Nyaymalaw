@@ -83,6 +83,92 @@ def pytest_runtest_makereport(item, call):
     setattr(item, f"rep_{report.when}", report)
 
 
+# ----------------------------------------------- scripted writers, turn v8 ---
+
+def placed_as_v13(operation, payload, data):
+    """A scripted writer's output written for writer v12, as writer v13 asks for it (AN.6,
+    24 Oct 2026): the turn now writes each section for the advocate and placed. Only output
+    that names no place at all is given places - a script that places its units, or leaves out
+    the row on purpose, is left as written - and nothing is reworded: a dispute's first summary
+    (or its first unit that is no question) is its row's line on what to do, a question an ask,
+    a next step a next step, a limitation what could still go wrong, the rest advice. An
+    overview's greeting becomes a summary, and its first next step (or its first unit) the line
+    on what to do first."""
+    from copy import deepcopy
+
+    if not isinstance(data, dict) or not isinstance(data.get("units"), list):
+        return data
+    units = [unit for unit in data["units"] if isinstance(unit, dict)]
+    if len(units) != len(data["units"]) or any("place" in unit for unit in units):
+        return data
+    data = deepcopy(data)
+    if operation == "core_response_overview":
+        for unit in data["units"]:
+            if unit.get("kind") == "greeting":
+                unit["kind"] = "summary"
+        steps = [unit for unit in data["units"] if unit.get("kind") == "next_step"]
+        for unit in steps[1:]:
+            unit["kind"] = "summary"
+        if not steps and data["units"]:
+            data["units"][0]["kind"] = "next_step"
+        return data
+    dispute = (payload.get("this_part") or {}).get("dispute") is not None
+    row = next((unit for unit in data["units"] if unit.get("kind") == "summary"), None) or next(
+        (unit for unit in data["units"] if unit.get("kind") != "question"), None) if dispute else None
+    for unit in data["units"]:
+        unit["place"] = ("row_action" if unit is row else "ask" if unit.get("kind") == "question"
+                         else "next_steps" if unit.get("kind") == "next_step"
+                         else "risks" if unit.get("kind") == "limitation" else "advice")
+    data.setdefault("by_when", None)
+    return data
+
+
+def read_as_v11(data):
+    """A scripted review written for review v10, as review v11 asks for it: each suggestion is to
+    add or put better, and no folded paragraph is kept shown. A script written for v11, or one
+    that is malformed on purpose, is left as written."""
+    from copy import deepcopy
+
+    if (not isinstance(data, dict) or "keep_shown" in data or not isinstance(data.get("could_be_better"), list)
+            or not all(isinstance(point, dict) for point in data["could_be_better"])):
+        return data
+    data = deepcopy(data)
+    data["keep_shown"] = []
+    for point in data["could_be_better"]:
+        point.setdefault("change", "add_or_put_better")
+    return data
+
+
+@pytest.fixture(autouse=True)
+def scripted_writers_write_as_v13(monkeypatch):
+    """Every scripted writer reached through a turn's calls is read as writer v13 asks
+    (placed_as_v13), so the tests of the loop, the turn and the served app run the live path."""
+    import dataclasses
+    import json
+
+    from nm.core_engine import calls, response_writer
+
+    original = calls.TurnCalls.structured
+
+    from nm.core_engine import response_review
+
+    def structured(self, prompt, schema, tier, *, max_tokens):
+        receipt = original(self, prompt, schema, tier, max_tokens=max_tokens)
+        if schema == response_review.SCHEMA_V11 and receipt.usable:
+            reviewed = read_as_v11(receipt.data)
+            if reviewed is not receipt.data:
+                receipt = dataclasses.replace(receipt, data=reviewed)
+                self.last_output = reviewed
+        if schema in (response_writer.PART_SCHEMA_V13, response_writer.OVERVIEW_SCHEMA_V13) and receipt.usable:
+            placed = placed_as_v13(prompt.operation, json.loads(prompt.user), receipt.data)
+            if placed is not receipt.data:
+                receipt = dataclasses.replace(receipt, data=placed)
+                self.last_output = placed
+        return receipt
+    monkeypatch.setattr(calls.TurnCalls, "structured", structured)
+    yield
+
+
 # --------------------------------------------------------------- the wire ---
 
 @pytest.fixture

@@ -42,11 +42,12 @@ def test_saved_provision_view_preserves_actual_outcome_without_new_checks(served
     assert read.status_code == 200, read.text
     inspected = read.json()
     view = inspected.pop("authority_inspection")
-    assert inspected == reply["elements"][0]["source"]
+    assert inspected == next(element for element in reply["elements"] if element.get("sources"))["source"]
     assert view["state"] == "recorded" and view["activity_contract"] == turn.CONTRACT
     assert view["source_id"] == inspected["id"]
     # From turn v6 the checks are bound to the draft of the section the paragraph is in.
-    piece = answer_sections.piece_of(before.brain_chat[0]["activities"], reply["elements"][0]["section"])
+    cited = next(element for element in reply["elements"] if element.get("sources"))
+    piece = answer_sections.piece_of(before.brain_chat[0]["activities"], cited["section"])
     expected = piece["authority_evidence"]["units"][0]
     assert view["provision_checks"] == expected["selected_provisions"]
     assert view["provision_checks"][0]["state"] == outcome
@@ -58,7 +59,9 @@ def test_saved_provision_view_preserves_actual_outcome_without_new_checks(served
 
 def test_retrieved_judgment_without_citation_check_is_not_assessed(served):
     reply = successful(served)
-    for index, selected in enumerate(reply["elements"][0]["sources"]):
+    cited = next(element for element in reply["elements"] if element.get("sources"))
+    assert cited["sources"]
+    for index, selected in enumerate(cited["sources"]):
         read = served.client.get(source_url(reply, source=index)).json()
         view = read["authority_inspection"]
         assert view["source_id"] == selected["id"] and view["state"] == "not_assessed"

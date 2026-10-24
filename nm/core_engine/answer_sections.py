@@ -13,7 +13,10 @@ review finds would mislead the advocate, tied to a paragraph or checklist item, 
 what could be better, a misleading statement tied to none, and a remark on a worked-out time
 limit are said beside the section or the limit (G-NOTED); a review's own slips are set aside,
 and a review code can use nothing of is tried once more on its own allowance. From 21 Oct 2026
-(P33) what could be better asks for one rewrite at most.
+(P33) what could be better asks for one rewrite at most. From turn v8 (owner decisions P39-P45, 24
+Oct 2026) each section and the overview are written for the advocate and placed (writer v13) and
+reviewed by review v11, which also says what could go and keeps shown a folded paragraph the
+advice depends on.
 
 An answer covering several disputes is then checked across its sections for conflicts. A
 section in conflict is corrected once; the correction is reviewed first and used only when
@@ -324,8 +327,11 @@ def _research_for(context, record, sources, execution, layout, index):
 class _Answering:
     """One turn's answering: what every section's thread shares."""
 
-    def __init__(self, calls, context, researched, *, interpretation, worked, case_index, provision_reader, report):
+    def __init__(self, calls, context, researched, *, interpretation, worked, case_index, provision_reader, report,
+                 contract=response_writer.PRESENTED_CONTRACT):
         self.calls, self.context, self.researched = calls, context, researched
+        #: The writer version this answer is written in: v12, or v13 from turn v8.
+        self.writer = contract
         self.interpretation, self.worked = interpretation, worked
         self.time_limits = calculation.for_answer(worked)
         self.case_index, self.provision_reader = case_index, provision_reader
@@ -349,7 +355,9 @@ class _Answering:
         def judged():
             return response_review.review(self.calls, self.context, record, sources, draft, execution,
                                           authority_evidence=authorities, time_limits=self.time_limits,
-                                          contract=REVIEW, **kwargs)
+                                          contract=(response_review.PRESENTED_CONTRACT
+                                                    if draft["contract"] == response_writer.PRESENTED_CONTRACT
+                                                    else REVIEW), **kwargs)
         with self._lock:
             self._reviews += 1
             number = self._reviews
@@ -470,7 +478,7 @@ class _Answering:
         record, sources, execution = researched
         return lambda: response_writer.write_section(
             self.calls, self.context, record, sources, index=index, interpretation=self.interpretation,
-            execution=execution, time_limits=self.time_limits)
+            execution=execution, time_limits=self.time_limits, contract=self.writer)
 
     def section(self, index):
         """One dispute's section, in its own scope of corrections (owner decision P26), written
@@ -513,7 +521,8 @@ class _Answering:
                 scope, EDIT_ALLOWANCE, "core_response_writer", self._write(index, researched),
                 {"conflicts": [conflicts[number]["mismatch"] for number in numbers]}, refused, researched,
                 correction={"mismatch": found, "purpose": CONFLICT_PURPOSE, "rejected": {"paragraphs": [
-                    {"kind": unit["kind"], "text": unit["text"]} for unit in base["draft"]["units"]]}})
+                    {"kind": unit["kind"], **({"place": unit["place"]} if "place" in unit else {}),
+                     "text": unit["text"]} for unit in base["draft"]["units"]]}})
         return {"conflicts": list(numbers), "reviewed": reviewed, KEPT: refused}
 
     def overview(self, sections):
@@ -529,14 +538,16 @@ class _Answering:
         def write():
             return response_writer.write_overview(self.calls, self.context, record, sources,
                                                   sections=presented, interpretation=self.interpretation,
-                                                  execution=execution, time_limits=self.time_limits)
+                                                  execution=execution, time_limits=self.time_limits,
+                                                  contract=self.writer)
         with self.calls.scope("o"):
             return self._piece("o", "core_response_overview", write,
                                {"sections": drafts, "unanswered": missing or None}, researched)
 
 
 def answer(calls, context, record, sources, *, interpretation, execution, worked, case_index=None,
-           provision_reader=None, report=None, released=None, researched=None):
+           provision_reader=None, report=None, released=None, researched=None,
+           contract=response_writer.PRESENTED_CONTRACT):
     """Every section of the answer, side by side, then (for several disputes) the check
     across them with any correction, and the overview. Returns the sections in the
     answer's layout, the check across them (None, its record, or why it could not be
@@ -550,10 +561,14 @@ def answer(calls, context, record, sources, *, interpretation, execution, worked
     answer's layout, "waiting": the parts still being written, "cross_check", "overview"}.
 
     researched (step 4, 21 Oct 2026): the research to write from, each section's part as it
-    is ready (Researched); record, sources and execution are then None."""
+    is ready (Researched); record, sources and execution are then None.
+
+    contract: the writer version (v12, or v13 from turn v8: P39-P45); its pieces are reviewed by
+    review v10 or v11 to match."""
     researched = researched or Researched.ready(context, record, sources, execution)
     answering = _Answering(calls, context, researched, interpretation=interpretation, worked=worked,
-                           case_index=case_index, provision_reader=provision_reader, report=report)
+                           case_index=case_index, provision_reader=provision_reader, report=report,
+                           contract=contract)
     layout = answering.layout
     indices = list(range(1, len(layout))) if len(layout) > 1 else [0]
     state, lock = {"sections": {}, "cross_check": None, "overview": None}, threading.Lock()
