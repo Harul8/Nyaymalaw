@@ -1338,10 +1338,11 @@ _KEPT_LOCK = threading.Lock()
 
 
 def _read_chat(chat_id, advocate_id, request):
-    """One account-derived lookup and checked replay for both chat and sources. A turn that
-    stopped after showing part of its answer is saved first, with what it showed (owner
-    decision P27, 19 Oct 2026), unless it is still being worked on. A conversation read and
-    checked before is read again only when its saved file has changed (P35)."""
+    """One account-derived lookup and the record's checks for both chat and sources (P46: what
+    is saved is shown, never rebuilt). A turn that stopped after showing part of its answer is
+    saved first, with what it showed (owner decision P27, 19 Oct 2026), unless it is still being
+    worked on. A conversation read and checked before is read again only when its saved file
+    has changed (P35)."""
     store, matter_id = application().store, chat_matter_id(advocate_id, chat_id)
     try:
         signature = store.signature(matter_id)
@@ -1384,8 +1385,9 @@ def _read_chat(chat_id, advocate_id, request):
 def _listed(store, matter_id, signature):
     """One saved file's line in the conversation history: whose it is, and its conversation's
     first message and turn count after the receipt checks, or its title as a historical matter;
-    kept until the file changes (P35). Opening a conversation replays its answers; the history
-    checks the receipts of what it lists. A file that cannot be read says so, as before."""
+    kept until the file changes (P35). Opening a conversation checks its record and shows its
+    saved answers (P46); the history checks the receipts of what it lists. A file that cannot be
+    read says so, as before."""
     with _KEPT_LOCK:
         kept = _LISTED.get(matter_id)
     if kept is not None and kept[0] == signature:
@@ -1409,7 +1411,7 @@ def _listed(store, matter_id, signature):
                 line['chat'] = {'chat_id': rows[0]['chat_id'], 'preview': rows[0]['message'],
                                 'turn_count': len(rows)} if rows else None
         else:
-            # Old records remain history; current replay never upgrades their contracts.
+            # Old records remain history; reading never upgrades their contracts.
             line['matter'] = {'matter_id': matter.id, 'matter': matter.title, 'state': 'historical'}
     if store.signature(matter_id) == signature:
         with _KEPT_LOCK:
@@ -1538,7 +1540,7 @@ def document_original(document_ref: str, advocate_id: Advocate, request: Request
 
 
 def _research_note(chat_id, turn_id, advocate_id, request):
-    """One saved answer as a research note, after the conversation's replay checks."""
+    """One saved answer as a research note, after the checks of the conversation's record."""
     _, rows = _read_chat(chat_id, advocate_id, request)
     row = next((item for item in rows if item['turn_id'] == turn_id), None)
     if row is None:
@@ -1855,7 +1857,7 @@ def _shown_unit(activity, elements, element):
 
 
 def _source_authority_inspection(row, element, selected):
-    """Presentation of this saved unit's checks, after complete replay validation."""
+    """Presentation of this saved unit's checks, read from the saved record (P46)."""
     activity = row['activities']
     unit, evidence = _shown_unit(activity, row['response']['elements'], element)
     unit_id = unit['id']

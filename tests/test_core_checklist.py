@@ -334,7 +334,8 @@ def test_a_saved_turn_keeps_its_checklist_as_records_and_the_board_shows_it(stor
                                                               ("It proves the date of posting.", "promised")]
     assert [(item["why"], item["note"]) for item in shown["items"]] == [("Service must be shown.", None),
                                                                        ("It proves the date of posting.", "promised")]
-    # Records that differ from what the turn admitted are refused on reopening.
+    # Records changed after saving are refused on reopening: the turn's own digest is made whole
+    # here, but the chain's tail no longer matches (P46: the record is checked, never rebuilt).
     damaged = deepcopy(matter)
     rows_ = list(damaged.brain_chat)
     rows_[0] = {**rows_[0], "records": {**rows_[0]["records"], "checklist": {**saved, "disputes": []}}}

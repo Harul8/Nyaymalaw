@@ -1,8 +1,10 @@
-"""One authenticated turn owns preparation, bounded repair, release and replay.
+"""One authenticated turn owns preparation, bounded repair, release and the check of what it saves.
 
 Drafts and reviewer judgments cannot write matter facts or announce execution.
 The sealed conversation owner commits the exact checked answer and its evidence
 together. This initial flow performs read-only research; record editing is separate.
+A saved answer is checked once, when it is saved, and read back exactly as saved: reopening
+never rebuilds it (owner decision P46, 24 Oct 2026).
 """
 from __future__ import annotations
 
@@ -63,15 +65,6 @@ _SECTIONED_FIELDS = {"contract", "interpretation", "research", "sources", "execu
 
 #: Receipts describe what this code did, never whether the request is fulfilled (research owns them).
 execution_record = research.execution
-
-#: The saved turns this process has already replayed exactly, by their chained digests (P35,
-#: 21 Oct 2026: one turn of live run 8 took half a minute to replay, and every read of its
-#: conversation - reopening it, its board, its files - replayed it again). A turn's digest
-#: covers the turn and, through the digest of the one before, the whole conversation up to it;
-#: the receipt checks recompute it on every read, and the code replaying it cannot change while
-#: the process runs, so a turn with that digest replays the same way every time.
-_REPLAYED: set[str] = set()
-_REPLAYED_LOCK = threading.Lock()
 
 
 def _diagnosis(code, exc, calls):
@@ -225,12 +218,15 @@ def recover(store, matter, advocate_id, *, running=lambda turn_id: False, sessio
             raise ValueError("What was shown belongs to another request")
         activity = interrupted(held["activity"])
         original = context.payload()
-        record = research.validate(activity["research"], activity["research"]["plan"], original)
-        sources = answer_sources.build(original, record)
-        elements = response_rendering.render_sections(
-            original, record, sources, sections=activity["sections"], cross_check=activity["cross_check"],
-            overview=activity["overview"], time_limits=calculation.validate(activity["calculation"], original))
-        validate_activity(activity, original, elements)
+        # Saving what an unfinished turn showed is when it is checked (P46): what its checks
+        # share is derived once (P35).
+        with replay_scope.replaying():
+            record = research.validate(activity["research"], activity["research"]["plan"], original)
+            sources = answer_sources.build(original, record)
+            elements = response_rendering.render_sections(
+                original, record, sources, sections=activity["sections"], cross_check=activity["cross_check"],
+                overview=activity["overview"], time_limits=calculation.validate(activity["calculation"], original))
+            validate_activity(activity, original, elements)
     except (ValueError, KeyError, TypeError, SchemaViolation) as exc:
         log.warning("The unfinished parts of an answer could not be read reliably and were withdrawn: %s",
                     type(exc).__name__)
@@ -243,11 +239,10 @@ def recover(store, matter, advocate_id, *, running=lambda turn_id: False, sessio
 
 
 def _validate_sections(activity, context, elements):
-    """Replay of a v6 or v7 turn: its understanding, research and time limits as saved, every
-    section, trim, correction, cross-check and overview bound again (answer_sections), and
-    the answer rendered again exactly as it was shown."""
-    if (set(activity) != _SECTIONED_FIELDS
-            or activity.get("rendering_contract") != response_rendering.BY_DISPUTE_CONTRACT):
+    """The check of a v6 or v7 turn as it is saved: its understanding, research and time limits,
+    every section, trim, correction, cross-check and overview bound to their evidence
+    (answer_sections), and the answer rendered from them exactly as it is to be shown."""
+    if not known_activity(activity):
         raise ValueError("Unknown saved turn or rendering contract")
     limits = calculation.validate(activity["calculation"], context)
     record = research.validate(activity["research"], activity["research"]["plan"], context)
@@ -263,11 +258,14 @@ def _validate_sections(activity, context, elements):
     return deepcopy(activity)
 
 
-def validate_activity(activity, context, elements):
-    """Replay uses the saved contract and snapshots; it never fetches newer law."""
+def known_activity(activity):
+    """Whether a saved turn's activity is of a turn version this code reads, with the fields and
+    the rendering version that turn version was saved with: a check of the record's form, which
+    rebuilds nothing. A record a later version wrote is never shown or upgraded by this code."""
     version = activity.get("contract") if isinstance(activity, dict) else None
+    rendering = activity.get("rendering_contract") if isinstance(activity, dict) else None
     if version in SECTIONED:
-        return _validate_sections(activity, context, elements)
+        return set(activity) == _SECTIONED_FIELDS and rendering == response_rendering.BY_DISPUTE_CONTRACT
     expected_fields =(_ACTIVITY_FIELDS if version == LEGACY_CONTRACT else
                        _ACTIVITY_FIELDS | {"authority_evidence"} if version == AUTHORITY_CONTRACT else
                        _ACTIVITY_FIELDS | {"authority_evidence", "calculation"} if version == CALCULATION_CONTRACT
@@ -286,10 +284,19 @@ def validate_activity(activity, context, elements):
                   {response_rendering.WORDS_CONTRACT, response_rendering.LISTED_CONTRACT,
                    response_rendering.SECTIONS_CONTRACT, response_rendering.LAID_OUT_CONTRACT,
                    response_rendering.CONFINED_CONTRACT, response_rendering.CONTRACT})
-    rendering = activity.get("rendering_contract") if isinstance(activity, dict) else None
-    if (version not in {LEGACY_CONTRACT, AUTHORITY_CONTRACT, CALCULATION_CONTRACT, *_RELEASED}
-            or set(activity) != expected_fields or rendering not in renderings):
+    return (version in {LEGACY_CONTRACT, AUTHORITY_CONTRACT, CALCULATION_CONTRACT, *_RELEASED}
+            and set(activity) == expected_fields and rendering in renderings)
+
+
+def validate_activity(activity, context, elements):
+    """The check of a turn as it is saved: rebuilt from its saved contract and snapshots,
+    never fetching newer law, it must give exactly the answer to be saved."""
+    version = activity.get("contract") if isinstance(activity, dict) else None
+    if version in SECTIONED:
+        return _validate_sections(activity, context, elements)
+    if not known_activity(activity):
         raise ValueError("Unknown saved turn or rendering contract")
+    rendering = activity["rendering_contract"]
     limits = (calculation.validate(activity["calculation"], context)
               if version in (CALCULATION_CONTRACT, *_RELEASED) else None)
     record = research.validate(activity["research"], activity["research"]["plan"], context)
@@ -306,28 +313,17 @@ def validate_activity(activity, context, elements):
 
 
 def saved_rows(matter, advocate_id):
-    rows = checked_rows(matter, advocate_id, copied=False)  # read only (P35)
-    try:
-        for index, row in enumerate(rows):
-            with _REPLAYED_LOCK:
-                if row["digest"] in _REPLAYED:
-                    continue
-            original = TurnContext(matter, row["chat_id"], row["turn_id"], row["message"], rows[:index],
-                                   documents=tuple(row.get("documents", ())))
-            with replay_scope.replaying():  # what its checks share, derived once (P35)
-                validate_activity(row["activities"], original.payload(), row["response"]["elements"])
-            # From v5 the records a turn saved are exactly what its own activity gives, under
-            # the checklist version they were saved under.
-            if (row["activities"].get("contract") in (RECORDS_CONTRACT, *SECTIONED)
-                    and row["records"] != checklist.records(original.payload(), row["activities"], contract=(
-                        row["records"].get("checklist") or {}).get("contract", checklist.CONTRACT))):
-                raise ValueError("Saved records differ from what the turn admitted")
-            with _REPLAYED_LOCK:
-                _REPLAYED.add(row["digest"])
-    except (ValueError, KeyError, TypeError, SchemaViolation) as exc:
+    """A saved conversation's turns exactly as saved (owner decision P46, 24 Oct 2026: reopening
+    from history shows what is saved and never rebuilds it). What is checked is the record
+    itself: the matter file's seal, which the store opens, each turn's receipt, the chain of
+    digests and the owner (conversation.checked_rows), and that each turn is of a version this
+    code reads. Each answer and the records it saved were checked once, when the turn was saved
+    (validate_activity, commit). Read only."""
+    rows = checked_rows(matter, advocate_id, copied=False)
+    if not all(known_activity(row["activities"]) for row in rows):
         raise ConversationRefused("This saved conversation could not be read reliably. "
             "Its records are unchanged.", code="saved_response_unavailable",
-            committed="previously_committed") from exc
+            committed="previously_committed")
     return rows
 
 
@@ -415,7 +411,10 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
         elements, activity, metrics = prepare(calls, context.payload(), searcher,
             case_index=case_index, provision_reader=provision_reader, progress=progress,
             held_acts=held_acts, shown=shown)
-        validate_activity(activity, context.payload(), elements)
+        # The one check of the answer, as it is saved (P46): what its checks share is derived
+        # once (P35).
+        with replay_scope.replaying():
+            validate_activity(activity, context.payload(), elements)
     except AttemptRefused as exc:
         raise _attempt_refusal(exc) from exc
     except ModelPermissionRefused:

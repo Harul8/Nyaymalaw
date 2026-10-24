@@ -402,7 +402,13 @@ def test_post_commit_auxiliary_policy_failure_cannot_hide_saved_response(store):
 
 
 @pytest.mark.parametrize("damage", ["rendering", "review", "text"])
-def test_resealed_but_incompatible_saved_evidence_is_never_upgraded(store, damage):
+def test_a_resealed_record_is_read_as_saved_and_one_of_an_unknown_version_is_never_upgraded(store, damage):
+    # P46 (24 Oct 2026): reading a saved conversation checks the record - its seal, receipts,
+    # digest chain, owner and versions - and never rebuilds an answer. A record resealed with
+    # its digests made whole is read exactly as saved; one of a version this code does not
+    # read is refused.
+    from nm.core_engine import turn
+
     model = ScriptedModel()
     first = run(store, model)
     matter = store.load(chat_matter_id("owner", first["chat_id"]))
@@ -415,7 +421,12 @@ def test_resealed_but_incompatible_saved_evidence_is_never_upgraded(store, damag
     metadata["core_conversation"]["tail_digest"] = rows[0]["digest"]
     store.commit(replace(matter, brain_chat=rows, intake_answers=metadata, version=matter.version + 1),
                  expected_version=matter.version)
-    with pytest.raises(ConversationRefused, match="read reliably"): run(store, model)
+    resealed = store.load(matter.id)
+    if damage == "rendering":
+        with pytest.raises(ConversationRefused, match="read reliably"): run(store, model)
+        with pytest.raises(ConversationRefused, match="read reliably"): turn.saved_rows(resealed, "owner")
+    else:
+        assert list(turn.saved_rows(resealed, "owner")) == list(rows)
     assert len(model.calls) == 4
 
 
