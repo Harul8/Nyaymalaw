@@ -1440,10 +1440,13 @@ def _render_presented(context, research_record, sources, *, sections, cross_chec
                                     f"{_UNSHOWN[overview['fallback']['reason']]}. Each dispute's section below was "
                                     "checked on its own."))
         elif opening is not None:
-            for index, unit in enumerate(opening["draft"]["units"]):
-                element = _shown_paragraph(unit, index, response_writer.OVERVIEW, sources, asks, kind={
-                    "do_first": "DO_FIRST", "ties": "TIES", "ask": "ASK"}[unit["place"]])
-                (calls if unit["place"] == "ask" else elements).append(element)
+            # The line on what to do first comes first under the rows, then what ties the disputes.
+            units = list(enumerate(opening["draft"]["units"]))
+            for place, kind in (("do_first", "DO_FIRST"), ("ties", "TIES"), ("ask", "ASK")):
+                for index, unit in units:
+                    if unit["place"] == place:
+                        (calls if place == "ask" else elements).append(
+                            _shown_paragraph(unit, index, response_writer.OVERVIEW, sources, asks, kind=kind))
             elements.extend(_left_out(overview, "the opening", OPENING))
             elements.extend(_misleads_beside(opening, "the opening"))
     # Each time limit closes the first section shown that names it, as v17 places them.
