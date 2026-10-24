@@ -77,6 +77,19 @@ CONTRACT = "core_response_rendering_v16"
 #: the note code builds in its place; and every question to the advocate gathered at the end
 #: under "What I need from you". Each paragraph names its section and its place in it.
 BY_DISPUTE_CONTRACT = "core_response_rendering_v17"
+#: v18 (owner decisions P39-P41 and P44, 24 Oct 2026; plan AN.6; writer v13, review v11): an
+#: answer laid out as the advocate reads it. Atop it, code's notices as v17; then "In short": a
+#: row for each dispute, most urgent first - its name, the writer's two row lines (what to do,
+#: what to have ready) and by when as code worked it out, or why a dispute is not shown in full
+#: or is still being written - and under the rows the overview's line on what to do first and
+#: what ties the disputes together. Then each dispute's section under a heading of its name and
+#: what to do: the basis, the advice (with any folded paragraph the review keeps shown), where,
+#: "What could still go wrong", "Next steps", its time limits, code's notes and the warnings that
+#: stay visible, and "More on this" folded last. Then the time limits no section names; "What I
+#: need from you", each dispute's asked checklist items once and its questions that ask for no
+#: item as written, then the advocate's choices under "Your call"; and last, folded, "How NM
+#: checked this answer" with the independent check's remaining suggestions by part.
+PRESENTED_CONTRACT = "core_response_rendering_v18"
 #: The versions whose asks open the checklist items they ask for.
 _ASKED = (CONTRACT,)
 #: The versions in which what concerns only a dispute's checklist holds no section back.
@@ -330,7 +343,9 @@ def _cited_words(text, sources, authority, *, short=False):
 #: notices about sections held back, and v17 code's notes on a section, the note standing in
 #: a section's place and the label of a section edited after it was checked.
 NOT_PARAGRAPHS = frozenset({"HEADING", "WORKING", "NOTICE", "HELD", "NEEDS", "NOTE", "FALLBACK", "EDITED",
-                            "WAITING"})
+                            "WAITING",
+                            # v18: code's labels and rows, the items asked for and the checks folded.
+                            "IN_SHORT", "ROW", "SUBHEAD", "NEED_GROUP", "NEED_ITEM", "YOUR_CALL", "CHECKED"})
 #: v14: the heading under which every question to the advocate is gathered.
 NEEDS = "What I need from you"
 
@@ -1002,9 +1017,10 @@ def _shown_paragraph(unit, position, section, sources, asks, *, kind=None):
                "sources": legal, "refs": list(dict.fromkeys(source["locator"] for source in legal))}
     element["inline_citations"], element["citation_markers"] = _worded(unit, legal, listed=True)
     element["section"], element["unit"] = section, position
-    if kind in ("QUESTION", "SUMMARY"):
+    # v18: an ask stands in a question (ASK) or the row's line on what to have ready.
+    if kind in ("QUESTION", "SUMMARY", "ASK", "ROW_READY"):
         element["asks"] = sorted(asks.get(unit["id"], []), key=lambda ask: ask["start"])
-        if kind == "QUESTION" and element["asks"]:
+        if kind in ("QUESTION", "ASK") and element["asks"]:
             # An ask lists no sources beneath it: the item it opens shows its law.
             element["citation_markers"] = []
     return element
@@ -1168,12 +1184,18 @@ def _edited(original, conflicts, numbers):
 
 
 def render_sections(context, research_record, sources, *, sections, cross_check, overview, time_limits,
-                    waiting=()):
+                    waiting=(), contract=BY_DISPUTE_CONTRACT):
     """v17: an answer written dispute by dispute (turn v6), from its records as the turn
     validated them (answer_sections.validate). No new prose: every paragraph is a reviewed
     piece's own; every notice, note and label is code's. waiting (owner decision P26, while
     the turn works): the parts of the answer's layout still being written, each shown as a
-    place it will fill; a saved answer has none."""
+    place it will fill; a saved answer has none. contract: v17, or v18 for sections written for
+    the advocate and placed (writer v13, review v11)."""
+    if contract == PRESENTED_CONTRACT:
+        return _render_presented(context, research_record, sources, sections=sections, cross_check=cross_check,
+                                 overview=overview, time_limits=time_limits, waiting=waiting)
+    if contract != BY_DISPUTE_CONTRACT:
+        raise ValueError("An answer written dispute by dispute is rendered as v17 or v18")
     names = _dispute_names(research_record)
     many = len(response_writer.parts(research_record)) > 1
     positions = answer_sections.order(sections, time_limits)
@@ -1291,4 +1313,218 @@ def render_sections(context, research_record, sources, *, sections, cross_check,
         elements.append({"kind": "NEEDS", "text": NEEDS, "source": None, "sources": [], "refs": [],
                          "inline_citations": [], "citation_markers": []})
         elements.extend(questions)
+    return elements
+
+
+# --- v18: the answer as the advocate reads it (owner decisions P39-P41, P44; plan AN.6) ---
+
+#: v18's labels, in code's words.
+IN_SHORT = "In short"
+_RISKS = "What could still go wrong"
+_STEPS = "Next steps"
+_YOUR_CALL = "Your call"
+_CHECKED = "How NM checked this answer"
+#: A section's paragraphs, by their place, as v18 shows them.
+_SHOWN_AS = {"basis": "BASIS", "advice": "ADVICE", "where": "WHERE", "risks": "RISK", "next_steps": "STEP",
+             "more": "MORE"}
+
+
+def _label(kind, text, **extra):
+    """One of code's labels or rows: structure, never a disclosure and never advice."""
+    return {"kind": kind, "text": text, "source": None, "sources": [], "refs": [], "inline_citations": [],
+            "citation_markers": [], **extra}
+
+
+def _by_when(piece, boxes):
+    """v18 (P40): the time limit a section names as answering "by when", as code worked it out
+    and as of the day it did; why it was not worked out; or None where the section names none."""
+    name = piece["draft"]["checklists"][0].get("by_when")
+    number = int(name[1:]) if isinstance(name, str) and name[:1] == "T" and name[1:].isdigit() else 0
+    if not 1 <= number <= len(boxes):
+        return None
+    working = boxes[number - 1]["working"]
+    if "not_assessed" in working:
+        return {"what": working["what"], "not_assessed": working["not_assessed"]}
+    standing, rows = working["standing"], dict(working["rows"])
+    return {"what": working["what"], "last_day": working["last_day"], "day": _date(working["last_day"]),
+            "result": _RESULTS[standing["state"]], "days": standing["days"],
+            "days_label": _DAYS.get(standing["state"]), "as_of": rows.get("As of")}
+
+
+def _misleads_beside(piece, where):
+    """v18 (P39): what the independent check found may mislead though it tied it to no one
+    paragraph stays beside the piece, as v17 says it; its suggestions are folded at the end."""
+    return [_notice("NOTE", f"The independent check found that {where} may mislead, in a way it did not tie to "
+                    f"one paragraph, and the rewrites NM may make did not settle it: "
+                    f"{_plainly(finding['mismatch'])} Read {where} with this in mind.")
+            for finding in answer_sections.beside(piece) if finding["category"] not in response_review.SUGGESTIONS]
+
+
+def _suggested(piece):
+    """v18 (P39, P43): what the independent check still suggests could be added, put better or
+    go, in its own words, for "How NM checked this answer"."""
+    return [{"kind": finding["category"], "text": _plainly(finding["mismatch"])}
+            for finding in answer_sections.beside(piece) if finding["category"] in response_review.SUGGESTIONS]
+
+
+def _render_presented(context, research_record, sources, *, sections, cross_check, overview, time_limits,
+                      waiting=()):
+    """v18: an answer written dispute by dispute for the advocate (writer v13, review v11), laid
+    out as PRESENTED_CONTRACT says. No new prose: every paragraph is a reviewed piece's own;
+    every label, row, notice and note is code's."""
+    names = _dispute_names(research_record)
+    many = len(response_writer.parts(research_record)) > 1
+    positions = answer_sections.order(sections, time_limits)
+    pieces = [answer_sections.shown(saved) for saved in sections]
+    opening = answer_sections.shown(overview) if overview is not None else None
+    if any(piece is not None and piece["draft"]["contract"] != response_writer.PRESENTED_CONTRACT
+           for piece in (*pieces, opening)):
+        raise ValueError("Rendering v18 shows sections written for the advocate and placed (writer v13)")
+    conflicts = (cross_check["proposal"]["conflicts"] if isinstance(cross_check, dict) and "proposal" in cross_check
+                 else [])
+
+    def called(saved):
+        return OPENING if saved["dispute_id"] is None else names.get(saved["dispute_id"]) or "this dispute"
+    # Each ask that opens a checklist item of a section shown, with the item as admitted (v16).
+    asks = {}
+    for saved, piece in zip(sections, pieces):
+        for item in piece["draft"]["checklists"][0]["items"] if piece is not None else ():
+            kept = checklist.kept(item, context, sources)
+            for ask in item["asked"]:
+                asks.setdefault(ask["unit_id"], []).append({
+                    "start": ask["start"], "end": ask["end"], "text": ask["text"],
+                    "dispute": {"id": saved["dispute_id"], "name": called(saved)}, "item": deepcopy(kept)})
+    elements = []
+    # Code's notices atop the answer, as v17 says them.
+    for position in positions:
+        edit = sections[position]["edit"]
+        if answer_sections.edit_accepted(edit) and any(conflicts[number]["changes_advice"]
+                                                       for number in edit["conflicts"]):
+            name = called(sections[position])
+            said = " ".join(_plainly(conflicts[number]["mismatch"]) for number in edit["conflicts"])
+            elements.append(_notice("NOTICE", f"Corrected after a check across the sections: the advice on {name} "
+                                    f"changed. What the check found: {said} The section on {name} below shows the "
+                                    "correction, with the section as first shown kept under it."))
+    if answer_sections.was_interrupted(sections, cross_check, overview):
+        elements.append(_notice("NOTICE", _INTERRUPTED))
+    if isinstance(cross_check, dict) and "unavailable" in cross_check and cross_check["unavailable"] != "interrupted":
+        elements.append(_notice("NOTICE", "NM could not check the sections against each other this time ("
+                                f"{_UNCROSSED[cross_check['unavailable']]}), so a conflict between them may not have "
+                                "been caught. Each section was checked on its own."))
+    boxes = _working(time_limits, as_of=True) if time_limits is not None else []
+    # "In short" (P40): a row for each dispute, most urgent first, then the line on what to do first.
+    rows = []
+    for position in positions:
+        saved, piece = sections[position], pieces[position]
+        if saved["dispute_id"] is None:
+            continue
+        if piece is None:
+            rows.append(_label("ROW", called(saved), row={"status": "note",
+                                                          "why": _UNSHOWN[saved["fallback"]["reason"]]}))
+            continue
+        rows.append(_label("ROW", called(saved), row={"status": "shown", "by_when": _by_when(piece, boxes)}))
+        rows.extend(_shown_paragraph(unit, index, saved["part"], sources, asks,
+                                     kind="ROW_ACTION" if unit["place"] == "row_action" else "ROW_READY")
+                    for index, unit in enumerate(piece["draft"]["units"]) if unit["place"] in response_writer.ROW)
+    layout = response_writer.parts(research_record)
+    still = [index for index in waiting if layout[index]["dispute_id"] is not None]
+    rows.extend(_label("ROW", names.get(layout[index]["dispute_id"]) or "this dispute", row={"status": "waiting"})
+                for index in still)
+    calls = []
+    if rows:
+        elements.append(_label("IN_SHORT", IN_SHORT))
+        elements.extend(rows)
+    if overview is not None:
+        if opening is None and overview["fallback"]["reason"] != "interrupted":
+            elements.append(_notice("NOTE", "NM's line on what to do first is left out: "
+                                    f"{_UNSHOWN[overview['fallback']['reason']]}. Each dispute's section below was "
+                                    "checked on its own."))
+        elif opening is not None:
+            for index, unit in enumerate(opening["draft"]["units"]):
+                element = _shown_paragraph(unit, index, response_writer.OVERVIEW, sources, asks, kind={
+                    "do_first": "DO_FIRST", "ties": "TIES", "ask": "ASK"}[unit["place"]])
+                (calls if unit["place"] == "ask" else elements).append(element)
+            elements.extend(_left_out(overview, "the opening", OPENING))
+            elements.extend(_misleads_beside(opening, "the opening"))
+    # Each time limit closes the first section shown that names it, as v17 places them.
+    remarked = _remarked([*pieces, opening])
+    claimed, placed = {}, set()
+    for position in positions:
+        for name in pieces[position]["draft"]["checklists"][0]["time_limit_ids"] if pieces[position] else ():
+            number = int(name[1:]) if name[:1] == "T" and name[1:].isdigit() else 0
+            if 1 <= number <= len(boxes) and number not in placed:
+                placed.add(number)
+                claimed.setdefault(position, []).extend([boxes[number - 1], *remarked.get(number, [])])
+    needs = []
+    for position in positions:
+        saved, piece = sections[position], pieces[position]
+        name, where = called(saved), "this section" if many else "this answer"
+        if piece is None:
+            if many:
+                elements.append(_label("HEADING", name))
+            elements.append(_fallback(saved, name, context, research_record, sources))
+            continue
+        units = list(enumerate(piece["draft"]["units"]))
+        action = next((unit["text"] for _, unit in units if unit["place"] == "row_action"), None)
+        if many:
+            elements.append(_label("HEADING", f"{name}: {action}" if action else name, dispute=name))
+        edit = saved["edit"]
+        edited = answer_sections.edit_accepted(edit)
+        if edited:
+            elements.append(_edited(answer_sections.shown(saved, edited=False), conflicts, edit["conflicts"]))
+        # A folded paragraph the review says the advice depends on is shown with the advice (P41).
+        kept = set(answer_sections.kept_shown(piece))
+
+        def shown_as(place, kind):
+            return [_shown_paragraph(unit, index, saved["part"], sources, asks, kind=kind) for index, unit in units
+                    if unit["place"] == place and unit["id"] not in kept
+                    or place == "advice" and unit["id"] in kept]
+        for place in ("basis", "advice", "where"):
+            elements.extend(shown_as(place, _SHOWN_AS[place]))
+        for place, title in (("risks", _RISKS), ("next_steps", _STEPS)):
+            shown = shown_as(place, _SHOWN_AS[place])
+            if shown:
+                elements.append(_label("SUBHEAD", title))
+                elements.extend(shown)
+        elements.extend(claimed.get(position, []))
+        if not edited:
+            elements.extend(_left_out(saved, where, name))
+        elements.extend(_misleads_beside(piece, where))
+        if edit is not None and not edited:
+            said = " ".join(_plainly(conflicts[number]["mismatch"]) for number in edit["conflicts"])
+            elements.append(_notice("NOTE", f"A check across the sections found that {where} may not agree with "
+                                    f"another: {said} NM's correction did not pass the independent check, so {where} "
+                                    "is shown as first checked."))
+        elements.extend(shown_as("more", "MORE"))
+        # What I need from you (P44): the items this section asks for, each once, then its
+        # questions that ask for no item, as written.
+        group = [_label("NEED_ITEM", item["need"], item=deepcopy(checklist.kept(item, context, sources)),
+                        dispute={"id": saved["dispute_id"], "name": name})
+                 for item in piece["draft"]["checklists"][0]["items"] if item.get("asked")]
+        group += [_shown_paragraph(unit, index, saved["part"], sources, asks, kind="ASK") for index, unit in units
+                  if unit["place"] == "ask" and not asks.get(unit["id"])]
+        if group:
+            needs.extend([_label("NEED_GROUP", name)] if many and saved["dispute_id"] is not None else [])
+            needs.extend(group)
+    # The time limits no section names follow the sections (P40: In short gives by when).
+    elements.extend(element for number, box in enumerate(boxes, 1) if number not in placed
+                    for element in (box, *remarked.get(number, [])))
+    for index in waiting:
+        name = OPENING if layout[index]["dispute_id"] is None else names.get(layout[index]["dispute_id"]) or "this dispute"
+        if many:
+            elements.append(_label("HEADING", name))
+        elements.append(_notice("WAITING", f"Still being written and checked: {name}."))
+    if needs or calls:
+        elements.append(_label("NEEDS", NEEDS))
+        elements.extend(needs)
+        if calls:
+            elements.append(_label("YOUR_CALL", _YOUR_CALL))
+            elements.extend(calls)
+    # How NM checked this answer (P39): what the check still suggests, by part, folded last.
+    checked = [{"part": part, "suggestions": said} for part, said in (
+        [("the opening", _suggested(opening))] if opening is not None else []) + [
+        (called(sections[position]) if many else "this answer", _suggested(pieces[position]))
+        for position in positions if pieces[position] is not None] if said]
+    if checked:
+        elements.append(_label("CHECKED", _CHECKED, checked=checked))
     return elements
