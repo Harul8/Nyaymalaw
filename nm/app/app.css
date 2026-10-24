@@ -205,6 +205,12 @@ main { display: grid; grid-template-columns: 19rem minmax(0, 1fr); flex: 1; min-
 /* The answer in line with the message box below it, across the conversation's column (P38,
    replacing the 18 Oct design's reading measure). */
 .turn { min-width: 0; margin: 0 0 2rem; line-height: 1.7; }
+/* THE ANSWER'S READING WIDTH (owner decision P45, 24 Oct 2026): the column keeps its full
+   width, but the answer's paragraphs and lists wrap at about 70 to 75 characters a line -
+   33em at their own size, measured on answer text in Chrome at 1920 px: 72 a line on average,
+   80 at most, against 174 before. It only wraps the text. Tables, the time limits and the
+   Working boxes keep the column's width, and a phone's column is narrower than this. */
+.thread .turn .el .body, .thread .turn .fallback-list, .thread .shown-so-far p { max-width: 33em; }
 
 /* THE ADVOCATE'S OWN WORDS, set apart as theirs and set to the right.
    Everything else on this screen is something the product wrote, and a reader
