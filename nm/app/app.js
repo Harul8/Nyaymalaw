@@ -2737,6 +2737,86 @@ function renderTurn(entry) {
     into.appendChild(d);
   }
 
+  // ONE PARAGRAPH OF THE ANSWER, its links kept; lead: words of code's own before it.
+  function answerParagraph(el, lead) {
+    const d = document.createElement('div');
+    d.className = `el ${el.kind}`;
+    const body = document.createElement('p');
+    body.className = 'body';
+    if (lead) {
+      const strong = document.createElement('strong');
+      strong.textContent = `${lead} `;
+      body.appendChild(strong);
+    }
+    if (linkedBody(el)) window.NmBrainSources.appendBody(body, entry.answer, el);
+    else body.appendChild(document.createTextNode(el.text));
+    d.appendChild(body);
+    return d;
+  }
+
+  function renderInShortTable(el) {
+    const make = (tag, className, text) => {
+      const node = document.createElement(tag);
+      if (className) node.className = className;
+      if (text !== undefined) node.textContent = text;
+      return node;
+    };
+    const box = make('section', 'in-short');
+    box.setAttribute('aria-label', el.text);
+    box.appendChild(make('h3', 'in-short-title', el.text));
+    const table = make('table', 'in-short-table');
+    const head = make('tr');
+    for (const label of ['Dispute', 'What to do', 'By when', 'Have ready']) head.appendChild(make('th', '', label));
+    const thead = make('thead');
+    thead.appendChild(head);
+    const body = make('tbody');
+    const asOf = new Set();
+    const cell = (paragraph) => {
+      const td = make('td', 'in-short-cell');
+      if (!paragraph) td.textContent = '—';
+      else if (linkedBody(paragraph)) window.NmBrainSources.appendBody(td, entry.answer, paragraph);
+      else td.textContent = paragraph.text;
+      return td;
+    };
+    const byWhen = (by) => {
+      const td = make('td', 'in-short-when');
+      if (!by) { td.textContent = '—'; return td; }
+      if (by.not_assessed) { td.appendChild(make('span', 'limit-why', `Not worked out: ${by.not_assessed}`)); return td; }
+      td.appendChild(make('strong', 'in-short-day', dayDate(by.last_day) || by.day));
+      if (Number.isInteger(by.days) && by.days_label) {
+        const count = `${by.days} ${by.days === 1 ? 'day' : 'days'} ${by.days_label.slice(5)}`;
+        td.appendChild(make('span', 'in-short-left', by.result === 'Open' ? count : `${by.result} · ${count}`));
+      } else if (by.result) {
+        td.appendChild(make('span', 'in-short-left', by.result));
+      }
+      if (by.as_of) asOf.add(by.as_of);
+      return td;
+    };
+    for (const { row, action, ready } of el.rows) {
+      const line = make('tr');
+      const name = make('th', 'in-short-dispute', row.text);
+      name.scope = 'row';
+      line.appendChild(name);
+      const info = row.row || {};
+      if (info.status === 'shown') {
+        line.append(cell(action), byWhen(info.by_when), cell(ready));
+      } else {
+        const note = make('td', 'in-short-note', info.status === 'waiting' ? 'Still being written and checked.'
+          : `Not a full answer: ${info.why}.`);
+        note.colSpan = 3;
+        line.appendChild(note);
+      }
+      body.appendChild(line);
+    }
+    table.append(thead, body);
+    const scroll = make('div', 'in-short-scroll');
+    scroll.appendChild(table);
+    box.appendChild(scroll);
+    if (asOf.size === 1) box.appendChild(make('p', 'time-limit-note', `Days are counted as of ${[...asOf][0]}.`));
+    for (const line of el.lines) box.appendChild(answerParagraph(line, line.kind === 'DO_FIRST' ? 'Do first:' : ''));
+    return box;
+  }
+
   function renderElement(into, el) {
     if (el.kind === 'WORKING' && el.working) {
       into.appendChild(renderWorking(el));
@@ -2768,6 +2848,72 @@ function renderTurn(entry) {
       into.appendChild(renderTimeLimits(el.items));
       return;
     }
+    // "IN SHORT" AS ONE TABLE (owner decision P40, 24 Oct 2026; rendering v18): a row for each
+    // dispute - what to do, by when as code worked it out, what to have ready - then the line on
+    // what to do first and what ties the disputes together. Each cell keeps its own links.
+    if (el.kind === 'IN_SHORT_TABLE') {
+      into.appendChild(renderInShortTable(el));
+      return;
+    }
+    if (el.kind === 'SUBHEAD') {
+      const title = document.createElement('h4');
+      title.className = 'answer-subhead';
+      title.textContent = el.text;
+      into.appendChild(title);
+      return;
+    }
+    // What could still go wrong as a list, the next steps numbered (P41).
+    if (el.kind === 'RISKS' || el.kind === 'STEPS') {
+      const list = document.createElement(el.kind === 'STEPS' ? 'ol' : 'ul');
+      list.className = `answer-list ${el.kind === 'STEPS' ? 'steps' : 'risks'}`;
+      for (const item of el.items) {
+        const point = document.createElement('li');
+        renderElement(point, item);
+        list.appendChild(point);
+      }
+      into.appendChild(list);
+      return;
+    }
+    // MORE ON THIS (P41): reasoning that does not change the advice, folded; every paragraph in
+    // it keeps its links. A paragraph the review says the advice depends on is never here.
+    if (el.kind === 'MORE_FOLD') {
+      const fold = document.createElement('details');
+      fold.className = 'more-fold';
+      const opener = document.createElement('summary');
+      opener.textContent = 'More on this';
+      fold.appendChild(opener);
+      for (const item of el.items) renderElement(fold, item);
+      into.appendChild(fold);
+      return;
+    }
+    // HOW NM CHECKED THIS ANSWER (P39): what the independent check still suggests could be
+    // added, put better or go, in its own words, by part, folded at the end.
+    if (el.kind === 'CHECKED' && Array.isArray(el.checked)) {
+      const fold = document.createElement('details');
+      fold.className = 'answer-checked';
+      const opener = document.createElement('summary');
+      opener.textContent = el.text;
+      fold.appendChild(opener);
+      const said = { better: 'Could add or put better', could_go: 'Could go' };
+      for (const part of el.checked) {
+        const name = document.createElement('p');
+        name.className = 'checked-part';
+        name.textContent = part.part;
+        const list = document.createElement('ul');
+        list.className = 'checked-list';
+        for (const suggestion of part.suggestions || []) {
+          const point = document.createElement('li');
+          const kind = document.createElement('span');
+          kind.className = 'checked-kind';
+          kind.textContent = `${said[suggestion.kind] || 'Suggested'}: `;
+          point.append(kind, document.createTextNode(suggestion.text));
+          list.appendChild(point);
+        }
+        fold.append(name, list);
+      }
+      into.appendChild(fold);
+      return;
+    }
     // WHAT I NEED FROM YOU (the design of 17 Oct 2026; rendering v14): the questions to the
     // advocate, together at the end of the answer, each keeping its own links.
     if (el.kind === 'NEEDS' && Array.isArray(el.items)) {
@@ -2777,14 +2923,39 @@ function renderTurn(entry) {
       const title = document.createElement('h3');
       title.className = 'need-title';
       title.textContent = el.text;
-      const asks = document.createElement('ul');
-      asks.className = 'need-list';
+      // From rendering v18 (P44): each dispute's items asked for, once, each opening its item,
+      // and its questions for no item; then the advocate's choices under "Your call".
+      const parts = [];
+      let asks = null;
       for (const item of el.items) {
+        if (item.kind === 'NEED_GROUP' || item.kind === 'YOUR_CALL') {
+          const label = document.createElement('p');
+          label.className = 'need-group';
+          label.textContent = item.text;
+          parts.push(label);
+          asks = null;
+          continue;
+        }
+        if (!asks) {
+          asks = document.createElement('ul');
+          asks.className = 'need-list';
+          parts.push(asks);
+        }
         const ask = document.createElement('li');
-        renderElement(ask, item);
+        if (item.kind === 'NEED_ITEM' && item.item) {
+          const open = document.createElement('button');
+          open.type = 'button';
+          open.className = 'cite need-item';
+          open.textContent = item.text;
+          open.setAttribute('aria-label', `Open the checklist item: ${item.text}`);
+          open.addEventListener('click', () => openAskedItem(entry.answer, { dispute: item.dispute, item: item.item }, open));
+          ask.appendChild(open);
+        } else {
+          renderElement(ask, item);
+        }
         asks.appendChild(ask);
       }
-      box.append(title, asks);
+      box.append(title, ...parts);
       into.appendChild(box);
       return;
     }
@@ -3741,16 +3912,36 @@ function renderWorking(el) {
 // time-limit boxes as one small table, and the questions the server gathers under "What I
 // need from you" (rendering v14) as one block. Nothing is dropped or reordered; runs are
 // only gathered.
+// THE ANSWER AS THE ADVOCATE READS IT (owner decisions P39-P41 and P44, 24 Oct 2026; rendering
+// v18): "In short" as one table, a row for each dispute, with the line on what to do first under
+// it; each section's risks and next steps as lists; "More on this" folded; what NM needs grouped
+// by dispute. Earlier answers group as before.
 function groupAnswerElements(elements) {
+  const IN_SHORT_PARTS = new Set(['ROW', 'ROW_ACTION', 'ROW_READY', 'DO_FIRST', 'TIES']);
+  const NEED_PARTS = new Set(['QUESTION', 'NEED_GROUP', 'NEED_ITEM', 'ASK', 'YOUR_CALL']);
+  const ANSWER_RUNS = { RISK: 'RISKS', STEP: 'STEPS', MORE: 'MORE_FOLD' };
   const out = [];
   for (const el of elements) {
     const last = out[out.length - 1];
     if (el.kind === 'NEEDS') { out.push({ kind: 'NEEDS', text: el.text, items: [] }); continue; }
-    if (el.kind === 'QUESTION' && last && last.kind === 'NEEDS' && Array.isArray(last.items)) {
+    if (NEED_PARTS.has(el.kind) && last && last.kind === 'NEEDS' && Array.isArray(last.items)) {
       last.items.push(el);
       continue;
     }
-    const kind = el.kind === 'SUMMARY' ? 'IN_SHORT' : (el.kind === 'WORKING' && el.working ? 'TIME_LIMITS' : null);
+    if (el.kind === 'IN_SHORT' && !Array.isArray(el.items)) {
+      out.push({ kind: 'IN_SHORT_TABLE', text: el.text, rows: [], lines: [] });
+      continue;
+    }
+    if (IN_SHORT_PARTS.has(el.kind) && last && last.kind === 'IN_SHORT_TABLE') {
+      const row = last.rows[last.rows.length - 1];
+      if (el.kind === 'ROW') last.rows.push({ row: el, action: null, ready: null });
+      else if (el.kind === 'ROW_ACTION' && row) row.action = el;
+      else if (el.kind === 'ROW_READY' && row) row.ready = el;
+      else last.lines.push(el);
+      continue;
+    }
+    const kind = el.kind === 'SUMMARY' ? 'IN_SHORT'
+      : (el.kind === 'WORKING' && el.working ? 'TIME_LIMITS' : ANSWER_RUNS[el.kind] || null);
     if (kind && last && last.kind === kind) last.items.push(el);
     else if (kind) out.push({ kind, items: [el] });
     else out.push(el);
@@ -3875,7 +4066,10 @@ function renderParts(into, elements, entry, render) {
   for (const el of elements) {
     // Code's notices about the whole answer, and what NM needs from the advocate, stand
     // outside the parts (17 and 18 Oct 2026).
-    if (el.kind === 'NOTICE' || el.kind === 'NEEDS') { render(into, el); continue; }
+    // From rendering v18 the checks folded last and the time limits no section names stand
+    // outside the parts too (P39, P40).
+    if (el.kind === 'NOTICE' || el.kind === 'NEEDS' || el.kind === 'CHECKED' || el.outside
+        || (el.kind === 'TIME_LIMITS' && el.items.every((item) => item.outside))) { render(into, el); continue; }
     if (el.kind !== 'HEADING') { render(body, el); continue; }
     number += 1;
     const section = document.createElement('section');
@@ -3919,6 +4113,27 @@ function renderShownSoFar(elements) {
       continue;
     }
     if (el.kind === 'TIME_LIMITS') { box.appendChild(renderTimeLimits(el.items)); continue; }
+    // Rendering v18: In short's rows as lines, lists as lists; the checks wait for the answer.
+    if (el.kind === 'IN_SHORT_TABLE') {
+      box.appendChild(make('h4', 'shown-so-far-title', el.text));
+      const list = make('ul', 'in-short-list');
+      for (const { row, action } of el.rows) {
+        const waiting = row.row && row.row.status === 'waiting';
+        list.appendChild(make('li', '', action ? `${row.text}: ${action.text}`
+          : waiting ? `${row.text}: still being written and checked` : row.text));
+      }
+      box.appendChild(list);
+      for (const line of el.lines) box.appendChild(make('p', `el ${line.kind}`, line.text));
+      continue;
+    }
+    if (el.kind === 'RISKS' || el.kind === 'STEPS' || el.kind === 'MORE_FOLD') {
+      if (el.kind === 'MORE_FOLD') box.appendChild(make('h4', 'shown-so-far-title', 'More on this'));
+      const list = make(el.kind === 'STEPS' ? 'ol' : 'ul', 'need-list');
+      for (const item of el.items) list.appendChild(make('li', '', item.text));
+      box.appendChild(list);
+      continue;
+    }
+    if (el.kind === 'CHECKED') continue;
     const text = el.kind === 'FALLBACK' ? String(el.text || '').split('\n')[0] : el.text;
     box.appendChild(make('p', `el ${el.kind}${el.disclosure ? ' disclosure' : ''}`, text));
   }
