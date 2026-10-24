@@ -1484,7 +1484,8 @@ def _render_presented(context, research_record, sources, *, sections, cross_chec
         for place, title in (("risks", _RISKS), ("next_steps", _STEPS)):
             shown = shown_as(place, _SHOWN_AS[place])
             if shown:
-                elements.append(_label("SUBHEAD", title))
+                # Named by its section, so that each section's labels stay its own on the page.
+                elements.append(_label("SUBHEAD", title, section=saved["part"]))
                 elements.extend(shown)
         elements.extend(claimed.get(position, []))
         if not edited:
@@ -1506,8 +1507,8 @@ def _render_presented(context, research_record, sources, *, sections, cross_chec
         if group:
             needs.extend([_label("NEED_GROUP", name)] if many and saved["dispute_id"] is not None else [])
             needs.extend(group)
-    # The time limits no section names follow the sections (P40: In short gives by when).
-    elements.extend(element for number, box in enumerate(boxes, 1) if number not in placed
+    # The time limits no section names follow the sections, outside them (P40: In short gives by when).
+    elements.extend({**element, "outside": True} for number, box in enumerate(boxes, 1) if number not in placed
                     for element in (box, *remarked.get(number, [])))
     for index in waiting:
         name = OPENING if layout[index]["dispute_id"] is None else names.get(layout[index]["dispute_id"]) or "this dispute"
