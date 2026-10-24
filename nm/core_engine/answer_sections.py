@@ -95,7 +95,9 @@ def _found(piece):
 
 
 def _read_v10(piece):
-    return piece["review"]["contract"] == response_review.MISLEADS_CONTRACT
+    """Whether a piece's review reads as v10 does (P29): v10, and v11 for a section written for
+    the advocate and placed (writer v13; P41, P43)."""
+    return piece["review"]["contract"] in response_review.READ_AS_V10
 
 
 def review_faults(piece):
@@ -103,7 +105,7 @@ def review_faults(piece):
     mislead the advocate that it ties to a paragraph or checklist item; under v9, everything it
     found other than what the piece leaves out."""
     if _read_v10(piece):
-        return [f for f in _found(piece) if f["category"] != response_review.BETTER and f["unit_ids"]]
+        return [f for f in _found(piece) if f["category"] not in response_review.SUGGESTIONS and f["unit_ids"]]
     return [f for f in _found(piece) if f["category"] != "omission"]
 
 
@@ -120,6 +122,13 @@ def beside(piece):
     if _read_v10(piece):
         return [f for f in _found(piece) if f not in review_faults(piece) and not (f["limits"] and not f["unit_ids"])]
     return [f for f in _found(piece) if f["category"] == "omission"]
+
+
+def kept_shown(piece):
+    """v11 (P41): the paragraphs placed under "More on this" that the review says the advice
+    depends on, which are shown with the advice; none before v11."""
+    review = piece["review"]
+    return list(review["proposal"].get("keep_shown", ())) if review["contract"] == response_review.PRESENTED_CONTRACT else []
 
 
 def remarks(piece):
@@ -214,7 +223,10 @@ _TOLD = {"grounding": "misleading: not borne out by the advocate's messages, the
          "quotation": "misleading: words in quotation marks that are not their source's words",
          "attribution": "misleading: put in the wrong speaker's or court's mouth",
          "effect": "misleading: says or implies that NM did something",
-         response_review.BETTER: "could be better"}
+         response_review.BETTER: "could be better",
+         # v11 (P43): what could go, which a rewrite may shorten.
+         response_review.CUT: ("could go: said again elsewhere in the answer, something an advocate already knows, "
+                               "or detail that does not change the advice, which could move under More on this")}
 
 
 def _told(piece):
@@ -407,7 +419,7 @@ class _Answering:
             if clear(piece) or self.calls.used(scope) >= allowance:
                 return kept(), None
             if _read_v10(piece) and acceptable(piece) and all(
-                    finding["category"] == response_review.BETTER for finding in beside(piece)):
+                    finding["category"] in response_review.SUGGESTIONS for finding in beside(piece)):
                 if better >= BETTER_REWRITES:
                     return kept(), None
                 better += 1
@@ -631,14 +643,15 @@ def _piece_valid(piece, context, record, sources, execution, time_limits, sectio
     if not isinstance(piece, dict) or set(piece) != _PIECE:
         raise ValueError("Unknown saved section")
     draft = piece["draft"]
-    if (not isinstance(draft, dict) or draft.get("contract") != response_writer.SECTION_CONTRACT
+    if (not isinstance(draft, dict) or draft.get("contract") not in response_writer.SECTIONS
             or draft.get("section") != section or not isinstance(draft.get("parts"), list)
             or not draft["parts"] or draft["parts"][0].get("dispute_id") != dispute_id):
         raise ValueError("A saved section answers another part of the answer")
     response_writer.validate(draft, context, sources)
     response_authorities.validate(piece["authority_evidence"], context, record, sources, draft)
     if (not isinstance(piece["review"], dict)
-            or piece["review"].get("contract") not in (response_review.SECTION_CONTRACT, REVIEW)):
+            or piece["review"].get("contract") not in (response_review.SECTION_CONTRACT, REVIEW,
+                                                       response_review.PRESENTED_CONTRACT)):
         raise ValueError("A saved section is reviewed as a section")
     response_review.validate(piece["review"], context, record, sources, draft, execution,
                              authority_evidence=piece["authority_evidence"], time_limits=time_limits, **kwargs)

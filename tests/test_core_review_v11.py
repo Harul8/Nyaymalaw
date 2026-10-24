@@ -100,3 +100,20 @@ def test_the_overview_and_the_cross_check_see_a_v13_section_s_row_and_places():
     assert shown["row"] == {"what_to_do": "Criminal complaint under section 138", "have_ready": None,
                             "by_when": None}
     assert [paragraph["place"] for paragraph in shown["paragraphs"]] == ["row_action", "advice", "more"]
+
+
+def test_the_section_loop_reads_what_could_go_as_a_suggestion_never_a_fault():
+    """AN.6 piece 5a: answer_sections reads a v11 review as v10 is read (P29), what could go
+    among the suggestions, and keeps shown what the review keeps shown."""
+    from nm.core_engine import answer_sections
+
+    record, draft = admitted({"misleading": [], "keep_shown": ["U3"], "could_be_better": [
+        {"where": ["U2"], "what": "Say which court hears it.", "change": "add_or_put_better"},
+        {"where": ["U3"], "what": "The affidavit point repeats itself.", "change": "could_go"}]})
+    reviewed = {"draft": draft, "authority_evidence": None, "review": record, "date_findings": []}
+    assert answer_sections.review_faults(reviewed) == [] and answer_sections.acceptable(reviewed)
+    assert [finding["category"] for finding in answer_sections.beside(reviewed)] == ["better", "could_go"]
+    assert not answer_sections.clear(reviewed)  # what could be better or could go asks for the one rewrite
+    assert answer_sections.kept_shown(reviewed) == [draft["units"][2]["id"]]
+    told = answer_sections._told(reviewed)
+    assert told[1]["category"].startswith("could go")
