@@ -117,3 +117,51 @@ def test_only_the_owner_can_fetch_a_note_and_the_word_file_downloads_as_word(ser
     other = served.login(OTHER)
     assert other.get(base).status_code == 404 and other.get(base + ".docx").status_code == 404
     assert served.client.get(base.replace("/t1/", "/missing/")).status_code == 404
+
+
+def test_an_answer_laid_out_for_the_advocate_keeps_its_order_with_its_folds_opened(store):
+    """Rendering v18 (AN.6 piece 7; O13): In short as a line for each dispute, the line on what to
+    do first, each section's sub-headings, points and numbered steps, More on this opened out under
+    its heading, what NM needs by dispute and How NM checked this answer at the end."""
+    from copy import deepcopy
+
+    row = deepcopy(saved(store, ScriptedModel(legal=True)))
+    plain = {"source": None, "sources": [], "refs": [], "inline_citations": [], "citation_markers": []}
+    row["response"]["elements"] = [{**plain, **element} for element in [
+        {"kind": "IN_SHORT", "text": "In short"},
+        {"kind": "ROW", "text": "Cheque", "row": {"status": "shown", "by_when": {
+            "day": "4 November 2026 (Wednesday)", "days": 14, "days_label": "Days left",
+            "as_of": "21 October 2026 (Wednesday)"}}},
+        {"kind": "ROW_ACTION", "text": "Criminal complaint under section 138"},
+        {"kind": "ROW_READY", "text": "The cheque and the return memo"},
+        {"kind": "ROW", "text": "Goods", "row": {"status": "note", "why": "the AI service did not respond"}},
+        {"kind": "DO_FIRST", "text": "File the cheque complaint first."},
+        {"kind": "HEADING", "text": "Cheque: Criminal complaint under section 138"},
+        {"kind": "ADVICE", "text": "File by Wednesday."},
+        {"kind": "SUBHEAD", "text": "Next steps"},
+        {"kind": "STEP", "text": "Collect the originals."}, {"kind": "STEP", "text": "File the complaint."},
+        {"kind": "MORE", "text": "Proof by affidavit."}, {"kind": "MORE", "text": "A civil suit is separate."},
+        {"kind": "NEEDS", "text": "What I need from you"}, {"kind": "NEED_GROUP", "text": "Cheque"},
+        {"kind": "NEED_ITEM", "text": "The cheque and the return memo"},
+        {"kind": "YOUR_CALL", "text": "Your call"}, {"kind": "ASK", "text": "Pursue both debts together?"},
+        {"kind": "CHECKED", "text": "How NM checked this answer", "checked": [
+            {"part": "Cheque", "suggestions": [{"kind": "could_go", "text": "A paragraph repeats itself."}]}]}]]
+    note = research_note.note(row, prepared_for="A. Advocate")
+    assert [(block["kind"], block["text"]) for block in note["blocks"]] == [
+        ("heading", "In short"),
+        ("paragraph", "Cheque: by 4 November 2026 (Wednesday), 14 days left, as of 21 October 2026 (Wednesday)."),
+        ("paragraph", "What to do: Criminal complaint under section 138"),
+        ("paragraph", "Have ready: The cheque and the return memo"),
+        ("paragraph", "Goods: not a full answer, because the AI service did not respond."),
+        ("paragraph", "Do first: File the cheque complaint first."),
+        ("heading", "Cheque: Criminal complaint under section 138"),
+        ("paragraph", "File by Wednesday."),
+        ("subheading", "Next steps"), ("paragraph", "1. Collect the originals."), ("paragraph", "2. File the complaint."),
+        ("subheading", "More on this"), ("paragraph", "Proof by affidavit."), ("paragraph", "A civil suit is separate."),
+        ("heading", "What I need from you"), ("subheading", "Cheque"),
+        ("paragraph", "• The cheque and the return memo"),
+        ("subheading", "Your call"), ("paragraph", "• Pursue both debts together?"),
+        ("heading", "How NM checked this answer"), ("subheading", "Cheque"),
+        ("paragraph", "Could go: A paragraph repeats itself.")]
+    shown = paragraphs(research_note.docx(note, row["response"]["at"]))
+    assert ("More on this", "Heading3") in shown and ("How NM checked this answer", "Heading2") in shown

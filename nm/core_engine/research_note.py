@@ -8,7 +8,12 @@ any time limit's Working rows, each paragraph followed by the numbers of the sou
 it cites, and each source quoted
 exactly as saved (a judgment's stray line breaks closed up); passages of one provision,
 judgment paragraph or document page share its number. The Word file is written here directly (a .docx is zipped XML); the
-PDF is the browser's print of the same note.
+PDF is the browser's print of the same note. An answer laid out as the advocate reads it
+(rendering v18, owner decisions P39-P41, P44 and O13, 24 Oct 2026) keeps its order: In short
+as a line for each dispute with what to do, by when and what to have ready, then the line on
+what to do first; each section's sub-headings, its points and numbered steps; "More on this"
+opened out under its heading, as a document cannot fold; what NM needs by dispute; and "How
+NM checked this answer" at the end.
 """
 from __future__ import annotations
 
@@ -37,6 +42,31 @@ def _when(response):
     return moment, f"{moment.day} {moment:%B %Y}, {moment:%I:%M %p}".replace(" 0", " ") + " IST"
 
 
+#: v18: words of code's own that say what a line of the answer is, as the page shows them.
+_LEADS = {"ROW_ACTION": "What to do: ", "ROW_READY": "Have ready: ", "DO_FIRST": "Do first: ",
+          "RISK": "• ", "NEED_ITEM": "• ", "ASK": "• "}
+_SUGGESTED = {"better": "Could add or put better", "could_go": "Could go"}
+
+
+def _row(element):
+    """v18: a dispute's row in In short, as a line: its name, and by when as code worked it out,
+    or why it is not shown in full or is still being written."""
+    row = element.get("row") or {}
+    if row.get("status") == "waiting":
+        return f"{element['text']}: still being written and checked."
+    if row.get("status") != "shown":
+        return f"{element['text']}: not a full answer, because {row.get('why')}."
+    by = row.get("by_when")
+    if not by:
+        return element["text"]
+    if by.get("not_assessed"):
+        return f"{element['text']}: by when not worked out ({by['not_assessed']})."
+    left = (f", {by['days']} {'day' if by['days'] == 1 else 'days'} {by['days_label'][5:]}"
+            if isinstance(by.get("days"), int) and by.get("days_label") else "")
+    since = f", as of {by['as_of']}" if by.get("as_of") else ""
+    return f"{element['text']}: by {by['day']}{left}{since}."
+
+
 def note(row, *, prepared_for):
     """The note of one checked saved turn."""
     response = row["response"]
@@ -46,11 +76,34 @@ def note(row, *, prepared_for):
     documents = row.get("documents") or []
     pages = {f"{row['turn_id']}:d{index}p{page['number']}": (page, bool(document.get("recording")))
              for index, document in enumerate(documents, 1) for page in document["pages"]}
-    numbers, sources, blocks, quoted = {}, [], [], set()
+    numbers, sources, blocks, quoted, steps, folded = {}, [], [], set(), 0, False
     for element in elements:
+        kind = element.get("kind")
+        # v18: a section's numbered steps count from one; "More on this" heads its run once.
+        steps = steps + 1 if kind == "STEP" else 0
+        if kind != "MORE":
+            folded = False
         # "What I need from you" (rendering v14) heads the questions gathered under it.
-        if element.get("kind") in ("HEADING", "NEEDS"):
+        if kind in ("HEADING", "NEEDS", "IN_SHORT"):
             blocks.append({"kind": "heading", "text": element["text"]})
+            continue
+        # A sub-heading carries no references; the page's note view draws it as a line of its own.
+        if kind in ("SUBHEAD", "NEED_GROUP", "YOUR_CALL"):
+            blocks.append({"kind": "subheading", "text": element["text"], "refs": []})
+            continue
+        if kind == "MORE" and not folded:
+            blocks.append({"kind": "subheading", "text": "More on this", "refs": []})
+            folded = True
+        if kind == "ROW":
+            blocks.append({"kind": "paragraph", "text": _row(element), "refs": []})
+            continue
+        if kind == "CHECKED":
+            blocks.append({"kind": "heading", "text": element["text"]})
+            for part in element.get("checked") or []:
+                blocks.append({"kind": "subheading", "text": part["part"], "refs": []})
+                blocks.extend({"kind": "paragraph", "refs": [],
+                               "text": f"{_SUGGESTED.get(said['kind'], 'Suggested')}: {said['text']}"}
+                              for said in part["suggestions"])
             continue
         if element.get("kind") == "WORKING":
             # The same labelled rows and lists the answer showed (item 9).
@@ -85,7 +138,8 @@ def note(row, *, prepared_for):
                 entry["read_by_ai"] |= bool(page and page["read_by"] == "ai")
             if numbers[key] not in refs:
                 refs.append(numbers[key])
-        blocks.append({"kind": "paragraph", "text": element["text"], "refs": refs})
+        lead = f"{steps}. " if kind == "STEP" else _LEADS.get(kind, "")
+        blocks.append({"kind": "paragraph", "text": lead + element["text"], "refs": refs})
     for source in sources:
         source["heading"] = _source_heading(source)
     moment, shown = _when(response)
@@ -150,6 +204,9 @@ def _document_xml(note):
         if block["kind"] == "heading":
             body.append(_paragraph("Heading2", block["text"]))
             continue
+        if block["kind"] == "subheading":
+            body.append(_paragraph("Heading3", block["text"]))
+            continue
         if block["kind"] == "working":
             body.append(_paragraph("SourceTitle", f"Working: {block['text']}"))
             body.extend(f'<w:p><w:pPr><w:pStyle w:val="Working"/></w:pPr>{_runs(label + ": ", "<w:rPr><w:b/></w:rPr>")}'
@@ -179,6 +236,7 @@ _STYLES = f'''<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:style w:type="paragraph" w:styleId="Title"><w:name w:val="Title"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:qFormat/><w:pPr><w:spacing w:after="80"/></w:pPr><w:rPr><w:rFonts w:ascii="Cambria" w:hAnsi="Cambria"/><w:color w:val="185748"/><w:sz w:val="40"/><w:szCs w:val="40"/></w:rPr></w:style>
 <w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="heading 1"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:qFormat/><w:pPr><w:keepNext/><w:spacing w:before="320" w:after="120"/><w:outlineLvl w:val="0"/></w:pPr><w:rPr><w:b/><w:color w:val="185748"/><w:sz w:val="28"/><w:szCs w:val="28"/></w:rPr></w:style>
 <w:style w:type="paragraph" w:styleId="Heading2"><w:name w:val="heading 2"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:qFormat/><w:pPr><w:keepNext/><w:spacing w:before="240" w:after="100"/><w:outlineLvl w:val="1"/></w:pPr><w:rPr><w:b/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr></w:style>
+<w:style w:type="paragraph" w:styleId="Heading3"><w:name w:val="heading 3"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:qFormat/><w:pPr><w:keepNext/><w:spacing w:before="160" w:after="60"/><w:outlineLvl w:val="2"/></w:pPr><w:rPr><w:b/><w:color w:val="555555"/><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr></w:style>
 <w:style w:type="paragraph" w:styleId="SourceTitle"><w:name w:val="Source title"/><w:basedOn w:val="Normal"/><w:next w:val="Quote"/><w:pPr><w:keepNext/><w:spacing w:before="200" w:after="60"/></w:pPr><w:rPr><w:b/><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr></w:style>
 <w:style w:type="paragraph" w:styleId="Quote"><w:name w:val="Quote"/><w:basedOn w:val="Normal"/><w:pPr><w:pBdr><w:left w:val="single" w:sz="12" w:space="8" w:color="BBBBBB"/></w:pBdr><w:ind w:left="397"/></w:pPr><w:rPr><w:color w:val="333333"/><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr></w:style>
 <w:style w:type="paragraph" w:styleId="Working"><w:name w:val="Working"/><w:basedOn w:val="Normal"/><w:pPr><w:spacing w:after="40"/><w:ind w:left="397"/></w:pPr><w:rPr><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr></w:style>
