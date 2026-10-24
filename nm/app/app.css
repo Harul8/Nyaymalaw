@@ -422,6 +422,40 @@ button.board-card:focus-visible { outline: 2px solid var(--accent); outline-offs
 .need-list { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
 .thread .need .el { margin: 0; }
 .thread .need .el .body { font-size: 0.92rem; }
+/* RENDERING v18 ON THE PAGE (owner decisions P39-P41 and P44, 24 Oct 2026; plan AN.6): In short as
+   one table with the line on what to do first under it; a section's sub-headings, lists and its
+   "More on this" fold; what NM needs grouped by dispute; the check's suggestions folded last.
+   A narrow screen scrolls the table inside its box, as it does the time limits. */
+.in-short-scroll { overflow-x: auto; border: 1px solid var(--rule); border-radius: 8px; background: var(--surface); }
+.in-short-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; line-height: 1.45; }
+.in-short-table th, .in-short-table td { text-align: left; vertical-align: top; padding: 8px 10px;
+  border-bottom: 1px solid var(--rule); }
+.in-short-table tbody tr:last-child th, .in-short-table tbody tr:last-child td { border-bottom: 0; }
+.in-short-table thead th { font-family: var(--f-mono); font-size: 0.66rem; letter-spacing: 0.07em;
+  text-transform: uppercase; color: var(--ink-3); font-weight: 500; white-space: nowrap; }
+.in-short-dispute { font-weight: 600; min-width: 8rem; }
+.in-short-when { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.in-short-day { display: block; color: var(--signal); }
+.in-short-left { display: block; font-size: 0.78rem; color: var(--ink-3); }
+.in-short-note { color: var(--ink-2); font-style: italic; }
+.thread .in-short .el.DO_FIRST, .thread .in-short .el.TIES { margin: 0; }
+.thread .in-short .el.DO_FIRST .body, .thread .in-short .el.TIES .body { font-size: 0.92rem; }
+.answer-subhead { margin: 1rem 0 0.35rem; font-family: var(--f-mono); font-size: 0.7rem; letter-spacing: 0.07em;
+  text-transform: uppercase; color: var(--ink-3); font-weight: 500; }
+.answer-list { margin: 0 0 0.8rem; padding-left: 1.3rem; display: grid; gap: 0.25rem; }
+.thread .answer-list .el { margin: 0; }
+.thread .el.BASIS .body { font-size: 0.85rem; color: var(--ink-3); }
+.more-fold { margin: 0.6rem 0 1rem; border: 1px solid var(--rule); border-radius: 8px; padding: 0.45rem 0.8rem; }
+.more-fold > summary { cursor: pointer; font-size: 0.88rem; color: var(--accent); }
+.more-fold[open] > summary { margin-bottom: 0.4rem; }
+.need-group { margin: 0.4rem 0 0; font-family: var(--f-mono); font-size: 0.68rem; letter-spacing: 0.07em;
+  text-transform: uppercase; color: var(--ink-3); }
+.need-item { text-align: left; }
+.answer-checked { margin: 1.2rem 0 0.4rem; font-size: 0.85rem; color: var(--ink-2); }
+.answer-checked > summary { cursor: pointer; color: var(--ink-3); }
+.checked-part { margin: 0.6rem 0 0.2rem; font-weight: 600; }
+.checked-list { margin: 0; padding-left: 1.2rem; display: grid; gap: 0.2rem; max-width: 33em; }
+.checked-kind { color: var(--ink-3); }
 /* A dotted link in prose that is not a source - the working of a time limit, an item's law. */
 .cite { display: inline; font: inherit; color: var(--accent); background: none; border: 0; padding: 0; min-height: 0;
   cursor: pointer; text-decoration: underline dotted; text-decoration-thickness: 1px; text-underline-offset: 3px; }
