@@ -152,3 +152,49 @@ def test_a_v12_section_is_still_written_as_before():
     assert prompt.system == response_writer.SYSTEM and schema == response_writer.PART_SCHEMA_V11
     assert draft["contract"] == response_writer.SECTION_CONTRACT and "place" not in draft["units"][0]
     assert "by_when" not in draft["checklists"][0]
+
+
+# --- the overview, v13 (P40, AN.6 piece 3) ------------------------------------------------
+
+def overview(units, contract=response_writer.PRESENTED_CONTRACT):
+    ctx, record, sources = two_disputes()
+    model = Writer(lambda payload: {"units": units})
+    sections = [{"dispute": "Dispute 1", "paragraphs": [{"kind": "summary", "text": "File by Wednesday."}]}]
+    draft = response_writer.write_overview(model, ctx, record, sources, sections=sections, contract=contract)
+    return model, draft, (ctx, sources)
+
+
+def test_a_v13_overview_writes_the_line_on_what_to_do_first_and_what_ties_the_disputes():
+    model, draft, (ctx, sources) = overview([
+        {"kind": "next_step", "text": "File the cheque complaint first: it is the only time running.", "uses": []},
+        {"kind": "summary", "text": "Both debts are owed by the same buyer.", "uses": []},
+        {"kind": "question", "text": "Pursue both debts together, or separately?", "uses": []}])
+    prompt, schema, _ = model.seen[0]
+    assert prompt.system == response_writer.OVERVIEW_SYSTEM_V13 and schema == response_writer.OVERVIEW_SCHEMA_V13
+    assert [(unit["kind"], unit["place"]) for unit in draft["units"]] == [
+        ("next_step", "do_first"), ("summary", "ties"), ("question", "ask")]
+    assert draft["section"] == response_writer.OVERVIEW and draft["checklists"][0]["by_when"] is None
+    assert response_writer.validate(draft, ctx, sources) == draft
+
+
+@pytest.mark.parametrize("units", [
+    [{"kind": "summary", "text": "Both debts are owed by the same buyer.", "uses": []}],
+    [{"kind": "next_step", "text": "File the complaint first.", "uses": []},
+     {"kind": "next_step", "text": "Then sue for the price.", "uses": []}]])
+def test_a_v13_overview_says_once_what_to_do_first(units):
+    with pytest.raises(SchemaViolation, match="what to do first"):
+        overview(units)
+
+
+def test_a_v13_overview_greets_no_one():
+    from nm.shared.model_port import require_schema
+    with pytest.raises(SchemaViolation):
+        require_schema({"units": [{"kind": "greeting", "text": "Hello.", "uses": []}]},
+                       response_writer.OVERVIEW_SCHEMA_V13)
+
+
+def test_a_v12_overview_is_still_written_as_before():
+    model, draft, _ = overview([{"kind": "greeting", "text": "Hello.", "uses": []}],
+                               contract=response_writer.SECTION_CONTRACT)
+    assert model.seen[0][0].system == response_writer.OVERVIEW_SYSTEM
+    assert draft["contract"] == response_writer.SECTION_CONTRACT and "place" not in draft["units"][0]
