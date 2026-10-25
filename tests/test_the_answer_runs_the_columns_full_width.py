@@ -5,6 +5,10 @@ text ended well short of the window's edge while the headings and tables ran to 
 chose the whole window. This reads the served stylesheet and refuses any rule that gives an
 element of the answer a width of its own; it does not draw the page, which the owner's browser
 shows.
+
+P50 AMENDED (owner, O22 item 5, 25 Oct 2026; plan AN.13): "keep it at full 80% width, with 10%
+left on left and right sides". The answer still has no width of its own; the one side margin the
+answer and the message box share is 10% of the conversation's column, and 1rem on a phone.
 """
 from __future__ import annotations
 
@@ -48,6 +52,21 @@ def test_no_rule_of_the_served_stylesheet_caps_the_width_of_the_answer():
     assert sheets, "the served stylesheet must not disappear"
     found = [rule for sheet in sheets for rule in capped_rules(sheet.read_text(encoding="utf-8"))]
     assert not found, "the answer runs the column's full width (P50), but these cap it: " + "; ".join(found)
+
+
+def _rule(css: str, selector: str) -> str:
+    found = re.search(r"(?:^|\})\s*" + re.escape(selector) + r"\s*\{([^}]*)\}", css)
+    return found.group(1) if found else ""
+
+
+def test_the_answer_and_the_message_box_keep_a_tenth_of_the_column_on_each_side():
+    """P50 amended (O22 item 5): one shared side margin, a tenth of the column, on every part that
+    lines up with the answer - the thread, the message box, the draft's status and the matter's title."""
+    css = re.sub(r"/\*.*?\*/", " ", browser_assets()["app.css"].read_text(encoding="utf-8"), flags=re.S)
+    assert "--talk-gutter: 10%" in _rule(css, ".conversation"), "the conversation's side margin is not 10%"
+    for selector in (".thread", ".composer", ".draft-status", ".workspace-heading"):
+        assert "var(--talk-gutter" in _rule(css, selector), f"{selector} no longer keeps the shared margin"
+    assert ".conversation { --talk-gutter: 1rem; }" in css, "a phone no longer keeps its narrow margin"
 
 
 @pytest.mark.parametrize("rule", [

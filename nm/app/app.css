@@ -1,46 +1,44 @@
 /* Advocate-facing design system and responsive shell for the journey screens. */
+/* THE SIGNED-OFF DESIGN (owner decisions P52 and O23, 25 Oct 2026; plan AN.13): ivory paper, white
+   surfaces, the blue brand, brass for small marks, and red, amber and green only for what they
+   mean. Light only: dark versions are not required now (O23), so no dark override can fall out of
+   step with the light one. */
 :root {
-  /* Locally available fonts and shared tokens: rendering never sends a
-     request to a font service from an advocate's workspace. */
-  --paper:      #ffffff;
+  /* Fonts are named, never fetched: rendering never sends a request to a font service from an
+     advocate's workspace. Source Serif 4 and Source Sans 3 are used where the device has them and
+     the fonts it already has stand in; serving them from this app is AN.18. */
+  --paper:      #fbf8f1;
   --surface:    #ffffff;
-  --surface-2:  #edf1ed;
-  --ink:        #3b3b3b;
-  --ink-2:      #494949;
-  --ink-3:      #606060;
-  --rule:       #ddddda;
-  --board:      #fbf8f1;
-  --user-message: #f2f2f2;
-  --accent:     #185748;
-  --accent-2:   #0d4034;
-  --accent-w:   #e4efe8;
-  --signal:     #96382f;
-  --signal-w:   #f3e3e1;
-  --good:       #2f6b4f;
-  --good-w:     #dceae2;
-  --amber:      #6a4e1f;
-  --amber-w:    #f3ebdc;
-  --f-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  --surface-2:  #f4f0e6;
+  --ink:        #1b2029;
+  --ink-2:      #39424f;
+  --ink-3:      #5a6573;
+  --rule:       #e4decf;
+  --rule-2:     #cfc8b4;
+  --field:      #8d8670;
+  --board:      #f4f0e6;
+  --user-message: #e6eef8;
+  --accent:     #1f4b8f;
+  --accent-2:   #163a70;
+  --accent-w:   #e6eef8;
+  --accent-b:   #b9cbe6;
+  --deep:       #12305a;
+  --brass:      #8a6a22;
+  --brass-w:    #f4ecd6;
+  --signal:     #9a3328;
+  --signal-w:   #f7e6e2;
+  --good:       #2b6a4c;
+  --good-w:     #dcebe2;
+  --amber:      #7a5a12;
+  --amber-w:    #f6ecd2;
+  --f-sans: "Source Sans 3", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
   --f-mono: ui-monospace, Consolas, monospace;
-  --f-serif: Georgia, "Times New Roman", serif;
-  /* File-type tiles: white letters on a mid tone, the same in both themes. */
+  --f-serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+  /* File-type tiles: white letters on a mid tone. */
   --tile-ink: #ffffff; --tile-pdf: #a8443a; --tile-doc: #2f5d9a; --tile-img: #2f6b4f;
   --tile-audio: #6a4e1f; --tile-other: #5d6366;
   --mark: #fbeeb4;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    /* The same flattening, one ground rather than three. */
-    --paper: #0e1216; --surface: #0e1216; --surface-2: #0e1216;
-    --board: #171b1e; --user-message: #242a30;
-    --ink: #e6ebef; --ink-2: #b3bec6; --ink-3: #7f8b94; --rule: #2c353d;
-    --accent: #6fb3c0; --accent-2: #8fc9d4; --accent-w: #16292f;
-    --signal: #d98c82; --signal-w: #2c1d1b;
-    --good: #7fbe9c; --good-w: #17261f;
-    --amber: #d8bd8a; --amber-w: #2a2318;
-    --mark: #4a4120;
-  }
+  --shadow: 0 1px 2px rgba(27, 32, 41, .06), 0 8px 24px rgba(27, 32, 41, .10);
 }
 
 * { box-sizing: border-box; }
@@ -65,9 +63,9 @@ body {
    the top of every page without a `position: fixed` bar covering anything. */
 .masthead {
   display: flex; flex-direction: column; gap: 0.35rem;
-  padding: 0.55rem 1.2rem;
+  padding: 0.6rem 1.25rem;
   background: var(--surface);
-  border-bottom: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule-2);
   flex: none;
 }
 .ribbon-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; min-width: 0; }
@@ -75,24 +73,24 @@ body {
 .brand { display: flex; align-items: center; gap: 0.6rem; flex: none; }
 .mark {
   font-family: var(--f-serif); font-size: 0.9rem; font-weight: 600;
-  letter-spacing: -0.08em; color: #fff; background: #185748;
+  letter-spacing: -0.06em; color: #fff; background: var(--accent);
   padding: 0.55rem 0.5rem; border-radius: 8px;
 }
-.name { font-family: var(--f-serif); font-size: 1.2rem; letter-spacing: -0.01em; }
+.name { font-family: var(--f-serif); font-size: 1.25rem; font-weight: 600; letter-spacing: -0.01em; }
 /* THE PERSON MENU (F-A-17): the profile, signed-in devices and Sign out. */
 .account-menu { position: relative; flex: none; }
 .account-toggle {
-  align-items: center; background: var(--paper); border: 1px solid var(--rule);
+  align-items: center; background: var(--surface); border: 1px solid var(--rule-2);
   border-radius: 999px; color: var(--ink); display: inline-flex; gap: 0.3rem;
-  min-height: 38px; padding: 0.3rem 0.6rem;
+  min-height: 44px; padding: 0.3rem 0.7rem;
 }
 .account-toggle:hover, .account-toggle[aria-expanded="true"] { border-color: var(--accent); color: var(--accent); }
 .account-toggle[aria-expanded="true"] .menu-arrow { transform: rotate(180deg); }
 .account-panel {
-  background: var(--surface); border: 1px solid var(--rule); border-radius: 10px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.14); display: flex; flex-direction: column;
-  gap: 0.6rem; padding: 0.9rem 1rem 0.8rem; position: absolute; right: 0;
-  top: calc(100% + 0.5rem); width: min(20rem, calc(100vw - 2rem)); z-index: 60;
+  background: var(--surface); border: 1px solid var(--rule-2); border-radius: 12px;
+  box-shadow: var(--shadow); display: flex; flex-direction: column;
+  gap: 0.6rem; padding: 1rem 1.1rem 0.9rem; position: absolute; right: 0;
+  top: calc(100% + 0.5rem); width: min(22rem, calc(100vw - 2rem)); z-index: 60;
 }
 .account-panel-title {
   color: var(--ink-3); font-size: 0.66rem; font-weight: 650; letter-spacing: 0.12em;
@@ -130,7 +128,7 @@ main { display: grid; grid-template-columns: 19rem minmax(0, 1fr); flex: 1; min-
   padding: 1.5rem 1.2rem 0.6rem;
 }
 .rail-head h2 {
-  margin: 0; font-family: var(--f-serif); font-size: 1.02rem; font-weight: 500;
+  margin: 0; font-family: var(--f-serif); font-size: 1.15rem; font-weight: 600;
 }
 .rail-meta {
   padding: 0 1.2rem 1rem; font-size: 0.76rem; color: var(--ink-3);
@@ -149,13 +147,13 @@ main { display: grid; grid-template-columns: 19rem minmax(0, 1fr); flex: 1; min-
 .matter-list-row.selected { background: var(--accent-w); border-color: var(--accent); }
 
 .row {
-  border: 1px solid var(--rule); border-radius: 10px; background: var(--surface);
-  padding: 0.85rem; margin-bottom: 0.65rem; cursor: pointer;
+  border: 1px solid var(--rule-2); border-radius: 12px; background: var(--surface);
+  padding: 0.9rem 1.1rem; margin-bottom: 0.65rem; cursor: pointer;
   display: grid; gap: 0.25rem;
 }
 .row:hover { border-color: var(--accent); }
 .row.static { cursor: default; }
-.row .r-title { font-weight: 600; font-size: 0.9rem; }
+.row .r-title { font-weight: 600; font-size: 1rem; }
 .row .r-fields {
   display: grid; grid-template-columns: 5.4rem 1fr; gap: 0.1rem 0.5rem;
   font-size: 0.78rem; color: var(--ink-2);
@@ -181,8 +179,8 @@ main { display: grid; grid-template-columns: 19rem minmax(0, 1fr); flex: 1; min-
 /* Board states. An unbuildable board is an EXPLICIT failure, never an empty
    one -- rendering empty would tell the advocate they have no matters. */
 .state {
-  margin: 0.4rem 0.4rem 0; padding: 0.7rem 0.8rem; border-radius: 3px;
-  font-size: 0.82rem; border: 1px solid var(--rule); color: var(--ink-2);
+  margin: 0.4rem 0.4rem 0; padding: 0.7rem 0.8rem; border-radius: 8px;
+  font-size: 0.85rem; border: 1px solid var(--rule-2); color: var(--ink-2);
 }
 .state.empty      { background: var(--paper); }
 .state.building   { color: var(--accent); }
@@ -192,9 +190,10 @@ main { display: grid; grid-template-columns: 19rem minmax(0, 1fr); flex: 1; min-
 /* THE CONVERSATION USES ITS WHOLE COLUMN (owner, 21 Oct 2026, P38): the answer, its
    paragraphs and the message box run the width the window gives the conversation, and
    narrow with it when the reading pane opens beside it. --talk-gutter is the one side
-   margin the answer and the message box share. */
-.conversation { display: flex; flex-direction: column; min-height: 0; background: var(--surface);
-  --talk-gutter: 2.2rem; }
+   margin the answer and the message box share: 10% of the column on each side (owner,
+   O22 item 5, amending P50), so a wide window never stretches a line across the screen. */
+.conversation { display: flex; flex-direction: column; min-height: 0; background: var(--paper);
+  --talk-gutter: 10%; }
 .mode-line {
   padding: 0.5rem 1.5rem; font-size: 0.78rem; color: var(--ink-3);
   font-style: italic; border-bottom: 1px solid var(--rule); flex: none;
@@ -204,7 +203,7 @@ main { display: grid; grid-template-columns: 19rem minmax(0, 1fr); flex: 1; min-
 
 /* The answer in line with the message box below it, across the conversation's column (P38,
    replacing the 18 Oct design's reading measure). */
-.turn { min-width: 0; margin: 0 0 2rem; line-height: 1.7; }
+.turn { min-width: 0; margin: 0 0 2rem; line-height: 1.7; counter-reset: part; }
 /* THE ANSWER'S WIDTH (owner decision P50, 25 Oct 2026, replacing P45's 70 to 75 characters a
    line): everything in the answer - its paragraphs, lists, folds and checks as much as its
    headings, tables and time limits - runs the full width of the conversation's column and
@@ -218,10 +217,10 @@ main { display: grid; grid-template-columns: 19rem minmax(0, 1fr); flex: 1; min-
 .brief {
   /* Separate attributed user text without turning NM's reply into a card (the design's
      bubble, 18 Oct 2026). */
-  background: var(--user-message); border: 1px solid transparent; border-radius: 12px 12px 2px 12px;
-  padding: 10px 14px; max-width: 84%;
-  white-space: pre-wrap; font-size: 0.9rem; line-height: 1.55;
-  color: var(--ink-2);
+  background: var(--user-message); border: 1px solid var(--accent-b); border-radius: 12px 12px 2px 12px;
+  padding: 12px 16px; max-width: 84%;
+  white-space: pre-wrap; font-size: 0.95rem; line-height: 1.6;
+  color: var(--ink);
 }
 
 /* THE SUPPORT, FOLDED. Retrieved statutory text and quoted paragraphs are the
@@ -230,7 +229,7 @@ main { display: grid; grid-template-columns: 19rem minmax(0, 1fr); flex: 1; min-
 .support { margin: 0.2rem 0 1rem; }
 .support > summary {
   cursor: pointer; list-style: none;
-  font-family: var(--f-mono); font-size: 0.68rem; letter-spacing: 0.06em;
+  font-family: var(--f-sans); font-size: 0.72rem; font-weight: 600; letter-spacing: 0.1em;
   text-transform: uppercase; color: var(--ink-3);
   padding: 0.3rem 0.5rem; border-radius: 5px;
   display: inline-flex; align-items: center; gap: 0.45rem;
@@ -246,8 +245,8 @@ main { display: grid; grid-template-columns: 19rem minmax(0, 1fr); flex: 1; min-
 /* The four element kinds, and nothing else can be rendered. */
 .el { border-left: 3px solid var(--rule); padding: 0.15rem 0 0.15rem 0.85rem; margin-bottom: 0.85rem; }
 .el .k {
-  font-family: var(--f-mono); font-size: 0.6rem; font-weight: 600;
-  text-transform: uppercase; letter-spacing: 0.1em; display: block;
+  font-family: var(--f-sans); font-size: 0.68rem; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.12em; display: block;
   margin-bottom: 0.2rem;
 }
 .el .body { white-space: pre-wrap; }
@@ -260,31 +259,31 @@ main { display: grid; grid-template-columns: 19rem minmax(0, 1fr); flex: 1; min-
 .el.finding .k { color: var(--amber); }
 .el.ground   { border-left-color: var(--rule); color: var(--ink-2); font-size: 0.88rem; }
 /* A reply answering several disputes: each dispute's name before its part (15 Oct 2026). */
-.el.HEADING { border-left: none; padding-left: 0; margin: 1.25rem 0 0.35rem; }
-.el.HEADING .body { font-weight: 600; font-size: 1.02rem; }
+.el.HEADING { border-left: none; padding-left: 0; margin: 1.75rem 0 0.5rem; }
+.el.HEADING .body { font-family: var(--f-serif); font-weight: 600; font-size: 1.25rem; line-height: 1.35; }
 /* A reply answering several disputes: each part under its numbered heading, all open (the
    readability design, 18 Oct 2026). */
 .answer-part { margin-top: 1.1rem; }
 .part-h { display: flex; align-items: baseline; gap: 0.6rem; border-bottom: 1px solid var(--rule);
   padding-bottom: 0.35rem; margin-bottom: 0.7rem; }
-.part-h .n { font-family: var(--f-mono); font-size: 0.75rem; color: var(--ink-3); }
-.part-title { margin: 0; font-family: var(--f-serif); font-size: 1.08rem; font-weight: 500; line-height: 1.35; }
+.part-h .n { font-family: var(--f-serif); font-size: 0.9rem; font-weight: 600; color: var(--brass); }
+.part-title { margin: 0; font-family: var(--f-serif); font-size: 1.25rem; font-weight: 600; line-height: 1.35; }
 .part-body { padding-top: 0.1rem; }
 /* THE MATTER BOARD on the left of the conversation (owner, 16 Oct 2026). */
 #matter-board-body { display: flex; flex-direction: column; gap: 1rem; padding: 0 0.8rem 1.5rem; }
-.board-progress { margin: 0 0.8rem 0.6rem; padding: 0.5rem 0.7rem; border-radius: 8px; font-size: 0.82rem;
-  color: var(--accent-2); background: var(--accent-w); }
+.board-progress { margin: 0 0.8rem 0.6rem; padding: 0.55rem 0.75rem; border-radius: 8px; font-size: 0.85rem;
+  color: var(--accent-2); background: var(--accent-w); border: 1px solid var(--accent-b); }
 .board-why { font-size: 0.86rem; line-height: 1.45; color: var(--ink-2); }
 .board-lede { margin: 0; color: var(--ink-3); font-size: 0.82rem; }
 .board-section { display: flex; flex-direction: column; gap: 0.6rem; }
 .board-h { margin: 0; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-3); }
-.board-card { border: 1px solid var(--rule); border-radius: 12px; padding: 0.75rem 0.85rem; background: var(--surface);
+.board-card { border: 1px solid var(--rule-2); border-radius: 12px; padding: 0.75rem 0.85rem; background: var(--surface);
   display: flex; flex-direction: column; gap: 0.3rem; }
 button.board-card { width: 100%; text-align: left; font: inherit; color: var(--ink); cursor: pointer; }
 button.board-card:hover, button.board-card[aria-pressed="true"] { border-color: var(--accent); }
 button.board-card[aria-pressed="true"] { background: var(--accent-w); }
 button.board-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.board-dispute { margin: 0; font-family: var(--f-serif); font-size: 1.02rem; font-weight: 500; }
+.board-dispute { margin: 0; font-family: var(--f-serif); font-size: 1.05rem; font-weight: 600; }
 .detail-section { margin: 0.9rem 0 0; }
 .detail-h { margin: 0 0 0.35rem; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em;
   text-transform: uppercase; color: var(--ink-3); }
@@ -305,8 +304,8 @@ button.board-card:focus-visible { outline: 2px solid var(--accent); outline-offs
 .board-certainty.confirmed { background: var(--good-w); color: var(--good); }
 /* Documents attached to a message and sent in a matter (15 Oct 2026). */
 .attachments { list-style: none; margin: 0.4rem 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.4rem; }
-.attachment { display: flex; align-items: center; gap: 0.5rem; max-width: 100%; padding: 0.25rem 0.25rem 0.25rem 0.7rem;
-  border: 1px solid var(--rule); border-radius: 8px; background: var(--board); font-size: 0.85rem; }
+.attachment { display: flex; align-items: center; gap: 0.5rem; max-width: 100%; padding: 0.25rem 0.25rem 0.25rem 0.75rem;
+  border: 1px solid var(--rule-2); border-radius: 8px; background: var(--paper); font-size: 0.88rem; }
 .attachment-name { font-weight: 600; overflow-wrap: anywhere; }
 .attachment-status { color: var(--ink-3); overflow-wrap: anywhere; }
 .attachment.uploading .attachment-status, .attachment.reading_scans .attachment-status { color: var(--accent); }
@@ -322,7 +321,7 @@ button.board-card:focus-visible { outline: 2px solid var(--accent); outline-offs
 .attachments-status:empty { display: none; }
 .brief-documents { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px;
   font-size: 0.76rem; white-space: normal; }
-.brief-documents li { border: 1px solid var(--rule); border-radius: 6px; padding: 1px 7px; background: var(--paper); }
+.brief-documents li { border: 1px solid var(--accent-b); border-radius: 999px; padding: 1px 9px; background: var(--surface); }
 .document-page summary { cursor: pointer; min-height: 2.75rem; display: flex; align-items: center; font-size: 0.9rem; }
 .document-text { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 0.88rem; line-height: 1.5;
   padding: 0.6rem 0.75rem; border-left: 3px solid var(--rule); background: var(--paper); }
@@ -348,9 +347,9 @@ button.board-card:focus-visible { outline: 2px solid var(--accent); outline-offs
    hand; what it needs under Needed and Would strengthen, each item a short line with its
    mark; the facts, instructions and related points folded below. */
 .board-head { justify-content: space-between; }
-.files-btn { display: inline-flex; align-items: center; gap: 0.35rem; min-height: 2rem; padding: 0.15rem 0.7rem;
-  font-size: 0.82rem; font-weight: 500; color: var(--accent); background: none; border: 1px solid var(--rule);
-  border-radius: 999px; cursor: pointer; }
+.files-btn { display: inline-flex; align-items: center; gap: 0.35rem; min-height: 2.5rem; padding: 0.15rem 0.8rem;
+  font-size: 0.85rem; font-weight: 600; color: var(--ink-2); background: var(--surface); border: 1px solid var(--rule-2);
+  border-radius: 8px; cursor: pointer; }
 .files-btn:hover { border-color: var(--accent); }
 .legend { margin: 0; display: flex; flex-wrap: wrap; gap: 0.25rem 0.75rem; font-size: 0.74rem; color: var(--ink-3); }
 .legend-entry { display: inline-flex; align-items: center; gap: 0.3rem; }
@@ -362,29 +361,33 @@ button.board-card:focus-visible { outline: 2px solid var(--accent); outline-offs
 .st--coming_or_unclear { border: 1.8px solid var(--amber);
   background: linear-gradient(90deg, transparent 50%, var(--amber) 50%); }
 .st--not_given { border: 1.8px solid var(--ink-3); }
-.st--not_available { background: var(--signal); }
-.st--not_available::after { content: "\2715"; }
-.board-disputes { display: grid; gap: 0; }
-.dispute { display: grid; gap: 0.5rem; padding: 0.85rem 0 0.9rem; border-top: 1px solid var(--rule); }
-.dispute:first-child { border-top: 0; padding-top: 0.2rem; }
-.dtitle { all: unset; box-sizing: border-box; cursor: pointer; font-family: var(--f-serif); font-size: 1rem;
-  line-height: 1.35; color: var(--ink); border-radius: 4px; }
+/* Not available is a dashed ring with a dash, as the design draws it: something that cannot be
+   had is not an error, so it is not drawn in red. */
+.st--not_available { border: 1.8px dashed var(--ink-3); color: var(--ink-3); line-height: 12.4px; }
+.st--not_available::after { content: "\2013"; }
+/* Each dispute a white card on the board (the signed-off design). */
+.board-disputes { display: grid; gap: 0.75rem; }
+.dispute { display: grid; gap: 0.5rem; padding: 0.85rem 0.75rem 0.6rem; background: var(--surface);
+  border: 1px solid var(--rule-2); border-radius: 10px; }
+.dtitle { all: unset; box-sizing: border-box; cursor: pointer; font-family: var(--f-serif); font-size: 1.05rem;
+  font-weight: 600; line-height: 1.35; color: var(--ink); border-radius: 4px; }
 .dtitle:hover { color: var(--accent); }
 .dtitle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .dmeta { margin: 0; display: flex; flex-wrap: wrap; gap: 0.35rem 0.5rem; align-items: center; font-size: 0.78rem;
   color: var(--ink-3); }
-.chip { display: inline-flex; align-items: center; padding: 0.05rem 0.55rem; border-radius: 999px; font-size: 0.75rem;
-  font-variant-numeric: tabular-nums; }
-.chip.deadline { background: var(--accent-w); color: var(--accent-2); font-weight: 600; }
-.chip.quiet { background: var(--surface-2); color: var(--ink-3); }
+.chip { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.1rem 0.6rem; border-radius: 999px;
+  font-size: 0.78rem; font-variant-numeric: tabular-nums; border: 1px solid transparent; }
+.chip.deadline { background: var(--accent-w); color: var(--accent-2); border-color: var(--accent-b); font-weight: 600; }
+.chip.quiet { background: var(--surface-2); color: var(--ink-3); border-color: var(--rule-2); }
 .count { color: var(--ink-3); }
-.group { margin: 0.15rem 0 0; font-family: var(--f-mono); font-size: 0.66rem; letter-spacing: 0.08em;
+.group { margin: 0.15rem 0 0; font-family: var(--f-sans); font-size: 0.7rem; font-weight: 600; letter-spacing: 0.12em;
   text-transform: uppercase; color: var(--ink-3); }
 .checklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
 .item { all: unset; box-sizing: border-box; width: 100%; cursor: pointer; display: grid;
   grid-template-columns: 18px minmax(0, 1fr); gap: 8px; align-items: start; padding: 5px 6px; border-radius: 6px;
   font-size: 0.88rem; line-height: 1.4; color: var(--ink); }
-.item:hover, .item[aria-current="true"] { background: var(--paper); box-shadow: inset 0 0 0 1px var(--rule); }
+.item:hover { background: var(--surface-2); }
+.item[aria-current="true"] { background: var(--accent-w); box-shadow: inset 0 0 0 1px var(--accent-b); }
 .item:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .item .st { margin-top: 2px; }
 .item .t { text-decoration: underline; text-decoration-color: var(--rule); text-underline-offset: 3px; }
@@ -397,26 +400,28 @@ button.board-card:focus-visible { outline: 2px solid var(--accent); outline-offs
 .folded > :not(summary) { margin-top: 0.45rem; }
 .folded .board-fact, .folded .board-list { color: var(--ink-2); }
 /* "In short", the time limits and what NM needs (owner decisions, 17 Oct 2026; the design). */
-.in-short { border: 1px solid var(--rule); border-radius: 8px; background: var(--surface-2); padding: 14px 16px;
-  margin: 0.75rem 0 1.1rem; display: grid; gap: 8px; }
-.in-short-title { margin: 0; font-family: var(--f-serif); font-size: 0.98rem; font-weight: 500; }
+/* In short opens the answer under its own title, the table in a white card of its own (the
+   signed-off design), so the box itself draws no frame around the frame. */
+.in-short { padding: 0; margin: 0.5rem 0 1.4rem; display: grid; gap: 10px; }
+.in-short-title { margin: 0; font-family: var(--f-serif); font-size: 1.35rem; font-weight: 600; line-height: 1.3; }
 .thread .in-short .el { margin: 0; }
 .in-short-list { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
 .thread .in-short .el .body { font-size: 0.92rem; }
 .time-limits { margin: 0.4rem 0 1.1rem; }
-.time-limit-scroll { overflow-x: auto; border: 1px solid var(--rule); border-radius: 8px; }
+.time-limit-scroll { overflow-x: auto; border: 1px solid var(--rule-2); border-radius: 10px; background: var(--surface); }
 .time-limit-table, .working-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; line-height: 1.45; }
 .time-limit-table th, .time-limit-table td, .working-table th, .working-table td { text-align: left; vertical-align: top;
   padding: 8px 10px; border-bottom: 1px solid var(--rule); }
 .time-limit-table tr:last-child td, .working-table tr:last-child th, .working-table tr:last-child td { border-bottom: 0; }
-.time-limit-table th { font-family: var(--f-mono); font-size: 0.66rem; letter-spacing: 0.07em; text-transform: uppercase;
-  color: var(--ink-3); font-weight: 500; white-space: nowrap; }
+.time-limit-table th { font-family: var(--f-sans); font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--ink-3); font-weight: 600; white-space: nowrap; background: var(--surface-2); }
 .working-table th { font-weight: 500; color: var(--ink-3); white-space: nowrap; }
 .time-limit-table td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
 .limit-why { display: block; margin-top: 0.2rem; font-size: 0.78rem; color: var(--ink-3); }
 .time-limit-note { margin: 0.4rem 0 0; font-size: 0.8rem; color: var(--ink-3); }
-.need { border-left: 3px solid var(--accent); padding: 4px 0 4px 12px; margin: 1.2rem 0 0.4rem; display: grid; gap: 6px; }
-.need-title { margin: 0; font-size: 0.95rem; font-weight: 700; font-family: var(--f-sans); }
+.need { border: 1px solid var(--rule-2); border-radius: 12px; background: var(--surface); padding: 16px 20px;
+  margin: 1.4rem 0 0.4rem; display: grid; gap: 8px; }
+.need-title { margin: 0; font-size: 1.25rem; font-weight: 600; font-family: var(--f-serif); }
 .need-list { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
 .thread .need .el { margin: 0; }
 .thread .need .el .body { font-size: 0.92rem; }
@@ -424,33 +429,43 @@ button.board-card:focus-visible { outline: 2px solid var(--accent); outline-offs
    one table with the line on what to do first under it; a section's sub-headings, lists and its
    "More on this" fold; what NM needs grouped by dispute; the check's suggestions folded last.
    A narrow screen scrolls the table inside its box, as it does the time limits. */
-.in-short-scroll { overflow-x: auto; border: 1px solid var(--rule); border-radius: 8px; background: var(--surface); }
-.in-short-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; line-height: 1.45; }
-.in-short-table th, .in-short-table td { text-align: left; vertical-align: top; padding: 8px 10px;
+.in-short-scroll { overflow-x: auto; border: 1px solid var(--rule-2); border-radius: 10px; background: var(--surface); }
+.in-short-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; line-height: 1.5; }
+.in-short-table th, .in-short-table td { text-align: left; vertical-align: top; padding: 12px 14px;
   border-bottom: 1px solid var(--rule); }
 .in-short-table tbody tr:last-child th, .in-short-table tbody tr:last-child td { border-bottom: 0; }
-.in-short-table thead th { font-family: var(--f-mono); font-size: 0.66rem; letter-spacing: 0.07em;
-  text-transform: uppercase; color: var(--ink-3); font-weight: 500; white-space: nowrap; }
+.in-short-table thead th { font-family: var(--f-sans); font-size: 0.7rem; letter-spacing: 0.1em; background: var(--surface-2);
+  text-transform: uppercase; color: var(--ink-3); font-weight: 600; white-space: nowrap; }
 .in-short-dispute { font-weight: 600; min-width: 8rem; }
 .in-short-when { white-space: nowrap; font-variant-numeric: tabular-nums; }
-.in-short-day { display: block; color: var(--signal); }
-.in-short-left { display: block; font-size: 0.78rem; color: var(--ink-3); }
+.in-short-day { display: block; color: var(--ink); font-weight: 600; }
+.in-short-left { display: block; font-size: 0.8rem; color: var(--ink-3); }
 .in-short-note { color: var(--ink-2); font-style: italic; }
 .thread .in-short .el.DO_FIRST, .thread .in-short .el.TIES { margin: 0; }
 .thread .in-short .el.DO_FIRST .body, .thread .in-short .el.TIES .body { font-size: 0.92rem; }
-.answer-subhead { margin: 1rem 0 0.35rem; font-family: var(--f-mono); font-size: 0.7rem; letter-spacing: 0.07em;
-  text-transform: uppercase; color: var(--ink-3); font-weight: 500; }
-.answer-list { margin: 0 0 0.8rem; padding-left: 1.3rem; display: grid; gap: 0.25rem; }
+.answer-subhead { margin: 1.1rem 0 0.4rem; font-family: var(--f-sans); font-size: 0.72rem; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+.answer-list { margin: 0 0 0.8rem; padding-left: 1.3rem; display: grid; gap: 0.35rem; }
+/* Next steps numbered in small blue rings (the signed-off design). */
+.answer-list.steps { list-style: none; padding-left: 0; counter-reset: step; }
+.answer-list.steps > li { counter-increment: step; display: grid; grid-template-columns: 1.9rem minmax(0, 1fr);
+  gap: 0.4rem; align-items: start; }
+.answer-list.steps > li::before { content: counter(step); display: inline-flex; align-items: center;
+  justify-content: center; min-width: 1.5rem; height: 1.5rem; padding: 0 0.3rem; box-sizing: border-box;
+  margin-top: 0.2rem; border-radius: 999px; background: var(--accent-w); color: var(--accent-2);
+  font: 600 0.8rem/1 var(--f-sans); }
 .thread .answer-list .el { margin: 0; }
 .thread .el.BASIS .body { font-size: 0.85rem; color: var(--ink-3); }
-.more-fold { margin: 0.6rem 0 1rem; border: 1px solid var(--rule); border-radius: 8px; padding: 0.45rem 0.8rem; }
-.more-fold > summary { cursor: pointer; font-size: 0.88rem; color: var(--accent); }
+.more-fold { margin: 0.6rem 0 1rem; border: 1px solid var(--rule-2); border-radius: 10px; padding: 0.6rem 0.9rem;
+  background: var(--surface); }
+.more-fold > summary { cursor: pointer; font-size: 0.92rem; font-weight: 600; color: var(--ink-2); }
 .more-fold[open] > summary { margin-bottom: 0.4rem; }
-.need-group { margin: 0.4rem 0 0; font-family: var(--f-mono); font-size: 0.68rem; letter-spacing: 0.07em;
+.need-group { margin: 0.5rem 0 0; font-family: var(--f-sans); font-size: 0.72rem; font-weight: 600; letter-spacing: 0.12em;
   text-transform: uppercase; color: var(--ink-3); }
 .need-item { text-align: left; }
-.answer-checked { margin: 1.2rem 0 0.4rem; font-size: 0.85rem; color: var(--ink-2); }
-.answer-checked > summary { cursor: pointer; color: var(--ink-3); }
+.answer-checked { margin: 1.2rem 0 0.4rem; font-size: 0.9rem; color: var(--ink-2); border: 1px solid var(--rule-2);
+  border-radius: 10px; padding: 0.6rem 0.9rem; background: var(--surface); }
+.answer-checked > summary { cursor: pointer; color: var(--ink-2); font-weight: 600; }
 .checked-part { margin: 0.6rem 0 0.2rem; font-weight: 600; }
 .checked-list { margin: 0; padding-left: 1.2rem; display: grid; gap: 0.2rem; }
 .checked-kind { color: var(--ink-3); }
@@ -476,10 +491,10 @@ button.board-card:focus-visible { outline: 2px solid var(--accent); outline-offs
 .reader-btn:hover:not(:disabled) { color: var(--accent); border-color: var(--accent); }
 .reader-btn:disabled { opacity: 0.45; cursor: default; }
 .reader-head { flex: 0 0 auto; padding: 14px 18px 0; display: grid; gap: 4px; }
-.reader-head .kind { margin: 0; font-family: var(--f-mono); font-size: 0.66rem; letter-spacing: 0.08em;
-  text-transform: uppercase; color: var(--accent); }
+.reader-head .kind { margin: 0; font-family: var(--f-sans); font-size: 0.72rem; font-weight: 600; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--ink-3); }
 .reader-head .kind:empty { display: none; }
-.rtitle { margin: 0; font-family: var(--f-serif); font-size: 1.1rem; font-weight: 500; line-height: 1.3;
+.rtitle { margin: 0; font-family: var(--f-serif); font-size: 1.3rem; font-weight: 600; line-height: 1.3;
   overflow-wrap: anywhere; }
 #brain-source-body { display: grid; align-content: start; gap: 14px; padding: 12px 18px 18px; font-size: 0.9rem; }
 #brain-source-body p { margin: 0; }
@@ -489,8 +504,9 @@ button.board-card:focus-visible { outline: 2px solid var(--accent); outline-offs
   font-weight: 600; color: var(--accent-2); background: var(--accent-w); border-radius: 999px; padding: 2px 10px; }
 .source-role.warn { color: var(--signal); background: var(--signal-w); }
 .source-attention { margin: 0; font-size: 0.85rem; color: var(--signal); }
-.passage { white-space: pre-wrap; overflow-wrap: anywhere; font-family: var(--f-serif); font-size: 0.98rem;
-  line-height: 1.65; color: var(--ink); background: var(--board); border-radius: 8px; padding: 14px 16px; }
+.passage { white-space: pre-wrap; overflow-wrap: anywhere; font-family: var(--f-serif); font-size: 1rem;
+  line-height: 1.65; color: var(--ink); background: var(--paper); border: 1px solid var(--rule-2); border-radius: 10px;
+  padding: 14px 16px; }
 .passage .ctx { color: var(--ink-3); }
 .brain-source-window mark, .brain-source-text mark, .document-text mark { background: var(--mark); color: inherit;
   border-radius: 2px; padding: 0 1px; }
@@ -507,25 +523,25 @@ button.board-card:focus-visible { outline: 2px solid var(--accent); outline-offs
 /* A checklist item in the pane. */
 .req-status { display: flex; gap: 8px; align-items: center; font-weight: 600; font-size: 0.9rem; }
 .req-block { display: grid; gap: 6px; }
-.req-block h4 { margin: 0; font-family: var(--f-mono); font-size: 0.66rem; letter-spacing: 0.08em;
-  text-transform: uppercase; color: var(--ink-3); font-weight: 500; }
+.req-block h4 { margin: 0; font-family: var(--f-sans); font-size: 0.72rem; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
 .req-block p, .req-block li { font-size: 0.9rem; color: var(--ink-2); }
 .quote { margin: 0; font-family: var(--f-serif); border-left: 3px solid var(--rule); padding-left: 10px; color: var(--ink-2); }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; }
-.act { font: inherit; font-size: 0.85rem; min-height: 0; border-radius: 6px; padding: 6px 12px; cursor: pointer;
-  border: 1px solid var(--accent); }
-.act.primary { background: var(--accent); color: var(--paper); }
+.act { font: inherit; font-size: 0.9rem; font-weight: 600; min-height: 44px; border-radius: 6px; padding: 6px 14px;
+  cursor: pointer; border: 1px solid var(--accent); }
+.act.primary { background: var(--accent); color: #fff; }
 /* Over the page's own plain ghost buttons, which have no border. */
 .act.ghost { background: none; color: var(--accent); border: 1px solid var(--accent); padding: 6px 12px;
   font-size: 0.85rem; }
 .dispute-why { color: var(--ink); }
 /* What NM read, as one document (owner decision 5, 17 Oct 2026). */
 .document-flow { display: grid; gap: 0.5rem; }
-.page-mark { font-family: var(--f-mono); font-size: 0.66rem; letter-spacing: 0.06em; text-transform: uppercase;
-  color: var(--ink-3); border-top: 1px dashed var(--rule); padding-top: 0.35rem; }
-/* A time limit's working, as code did it (item 9, 15 Oct 2026). */
-.working-box { border: 1px solid var(--rule); border-left: 4px solid var(--accent); border-radius: 10px;
-  padding: 0.75rem 1rem; margin: 0.75rem 0; background: var(--board); font-size: 0.92rem; }
+.page-mark { font-family: var(--f-sans); font-size: 0.7rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--ink-3); border-top: 1px dashed var(--rule-2); padding-top: 0.35rem; }
+/* A time limit's working, as code did it (item 9, 15 Oct 2026), in a white card. */
+.working-box { border: 1px solid var(--rule-2); border-radius: 10px;
+  padding: 0.85rem 1.1rem; margin: 0.75rem 0; background: var(--surface); font-size: 0.92rem; }
 .working-label { margin: 0.35rem 0 0.15rem; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em;
   text-transform: uppercase; color: var(--ink-3); }
 .working-result { margin: 0 0 0.4rem; font-weight: 600; }
@@ -609,8 +625,8 @@ button.board-card:focus-visible { outline: 2px solid var(--accent); outline-offs
 .el.disclosure .k { color: var(--ink-3); }
 
 .failure {
-  border: 1px solid var(--signal); color: var(--signal);
-  padding: 0.7rem 0.9rem; border-radius: 3px; font-size: 0.88rem;
+  border: 1px solid #e3b8b0; color: #6f241c; background: var(--signal-w);
+  padding: 0.85rem 1rem; border-radius: 10px; font-size: 0.92rem;
   margin: 0 0 1.6rem;
 }
 
@@ -618,16 +634,19 @@ button.board-card:focus-visible { outline: 2px solid var(--accent); outline-offs
 .composer {
   flex: none; background: var(--surface);
   margin: 0.35rem var(--talk-gutter, 2.2rem) max(0.75rem, env(safe-area-inset-bottom));
-  padding: 0.55rem 0.8rem; border: 1px solid var(--rule); border-radius: 20px;
-  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.06);
+  padding: 0.55rem 0.8rem; border: 1px solid var(--field); border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(27, 32, 41, 0.05);
 }
+/* The box itself shows the focus: a blue edge and a pale ring, so the ring is never drawn
+   inside the box it belongs to. */
+.composer:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-w); }
 .composer textarea {
   width: 100%; margin: 0; display: block; min-height: 44px; max-height: min(160px, 20dvh);
   font-family: var(--f-sans); font-size: 1rem; line-height: 1.6;
   padding: 0.5rem; border: 0; border-radius: 8px; overflow-y: auto;
   background: var(--surface); color: var(--ink); resize: none;
 }
-.composer textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+.composer textarea:focus { outline: none; }
 .composer-row {
   margin: 0.5rem auto 0; display: flex;
   align-items: center; justify-content: space-between; gap: 1rem;
@@ -636,14 +655,14 @@ button.board-card:focus-visible { outline: 2px solid var(--accent); outline-offs
 .composer-tools { align-items: center; display: flex; flex-wrap: wrap; gap: 0.4rem; min-width: 0; }
 .tool-button {
   align-items: center; border-radius: 999px; display: inline-flex; justify-content: center;
-  min-height: 44px; padding: 0; width: 44px;
+  min-height: 44px; padding: 0; width: 44px; border-color: transparent; background: transparent; color: var(--ink-2);
 }
-.tool-button:hover, .tool-button[aria-expanded="true"] { border-color: var(--accent); color: var(--accent); }
+.tool-button:hover, .tool-button[aria-expanded="true"] { background: var(--surface-2); color: var(--accent); }
 .tool-button.recording { background: var(--surface); border-color: var(--signal); color: var(--signal); }
 .plus-menu { position: relative; }
 .plus-panel {
-  background: var(--surface); border: 1px solid var(--rule); border-radius: 10px;
-  bottom: calc(100% + 0.4rem); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.14); display: flex;
+  background: var(--surface); border: 1px solid var(--rule-2); border-radius: 10px;
+  bottom: calc(100% + 0.4rem); box-shadow: var(--shadow); display: flex;
   flex-direction: column; left: 0; max-width: min(18rem, calc(100vw - 2rem)); padding: 0.35rem;
   position: absolute; width: max-content; z-index: 60;
 }
@@ -651,22 +670,22 @@ button.board-card:focus-visible { outline: 2px solid var(--accent); outline-offs
   background: none; border: 0; border-radius: 6px; min-height: 44px; padding: 0.45rem 0.7rem;
   text-align: left;
 }
-.plus-panel button:hover, .plus-panel button:focus-visible { background: var(--paper); color: var(--accent); }
+.plus-panel button:hover, .plus-panel button:focus-visible { background: var(--surface-2); color: var(--accent); }
 .dictation-state { color: var(--ink-3); font-size: 0.78rem; margin: 0.35rem 0 0; }
 .dictation-state:empty { display: none; }
 .hint { font-size: 0.72rem; color: var(--ink-3); }
 
 button {
-  font-family: var(--f-sans); font-size: 0.85rem; font-weight: 500;
-  padding: 0.62rem 1rem; border-radius: 8px; cursor: pointer; min-height: 40px;
-  border: 1px solid var(--rule); background: var(--paper); color: var(--ink);
+  font-family: var(--f-sans); font-size: 0.9rem; font-weight: 500;
+  padding: 0.62rem 1rem; border-radius: 6px; cursor: pointer; min-height: 44px;
+  border: 1px solid var(--rule-2); background: var(--surface); color: var(--ink);
 }
 button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 button.primary {
-  background: #185748; border-color: #185748;
+  background: var(--accent); border-color: var(--accent);
   color: #fff; font-weight: 600;
 }
-button.primary:hover { background: #0d4034; color: #fff; }
+button.primary:hover { background: var(--accent-2); border-color: var(--accent-2); color: #fff; }
 button.primary:disabled { opacity: 0.5; cursor: default; }
 button.ghost { border: none; background: none; color: var(--accent); padding: 0.45rem 0.3rem; font-size: 0.78rem; }
 button.wide { margin: 0.5rem 0.6rem 0.8rem; }
@@ -1084,8 +1103,9 @@ main.single {
 
 .login {
   background: var(--surface);
-  border: 1px solid var(--rule);
-  border-radius: 16px;
+  border: 1px solid var(--rule-2);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -1096,30 +1116,34 @@ main.single {
 
 
 .login-lede {
-  color: var(--ink-3);
-  font-size: 13px;
+  color: var(--ink-2);
+  font-size: 15px;
   margin: 0 0 14px;
 }
 
+/* Labels in sentence case at reading size (the signed-off design). */
 .login label {
-  color: var(--ink-3);
-  font-size: 11px;
-  letter-spacing: .07em;
-  margin-top: 8px;
-  text-transform: uppercase;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0;
+  margin-top: 10px;
+  text-transform: none;
 }
 
 .login input {
-  background: var(--paper);
-  border: 1px solid var(--rule);
-  border-radius: 3px;
+  background: var(--surface);
+  border: 1px solid var(--field);
+  border-radius: 6px;
   font: inherit;
-  font-size: 14px;
-  padding: 9px 11px;
+  font-size: 16px;
+  min-height: 44px;
+  padding: 9px 12px;
 }
 
 .login input:focus {
   border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-w);
   outline: none;
 }
 
@@ -1129,8 +1153,8 @@ main.single {
   gap: 10px;
   margin: 8px 0;
   padding: 16px;
-  border: 1px solid var(--rule);
-  border-radius: 8px;
+  border: 1px solid var(--rule-2);
+  border-radius: 10px;
 }
 .login fieldset input { width: 100%; min-width: 0; box-sizing: border-box; }
 .login fieldset legend { padding: 0 6px; font-weight: 600; }
@@ -1166,15 +1190,15 @@ main.single {
    set in small capitals is a consent nobody reads. */
 .privacy-notice {
   background: var(--paper);
-  border: 1px solid var(--rule);
-  border-radius: 8px;
+  border: 1px solid var(--rule-2);
+  border-radius: 10px;
   color: var(--ink-2);
-  font-size: 12.5px;
+  font-size: 13.5px;
   line-height: 1.55;
   margin-top: 14px;
-  padding: 10px 12px;
+  padding: 12px 14px;
 }
-.privacy-notice-title { color: var(--ink); font-size: 13px; font-weight: 600; margin: 0 0 4px; }
+.privacy-notice-title { color: var(--ink); font-family: var(--f-serif); font-size: 15px; font-weight: 600; margin: 0 0 4px; }
 .privacy-notice p { margin: 6px 0; }
 .privacy-notice ul { display: grid; gap: 3px; margin: 4px 0; padding-left: 18px; }
 .privacy-notice a { color: var(--accent); overflow-wrap: anywhere; }
@@ -1182,7 +1206,8 @@ main.single {
   align-items: start;
   color: var(--ink-2);
   display: grid;
-  font-size: 13px;
+  font-size: 14px;
+  font-weight: 400;
   gap: 10px;
   grid-template-columns: 18px minmax(0, 1fr);
   letter-spacing: 0;
@@ -1190,16 +1215,16 @@ main.single {
   margin-top: 10px;
   text-transform: none;
 }
-.login .consent input { accent-color: var(--accent); height: 16px; margin: 2px 0 0; padding: 0; width: 16px; }
+.login .consent input { accent-color: var(--accent); height: 18px; margin: 2px 0 0; min-height: 0; padding: 0; width: 18px; }
 
-.req { color: #b3261e; font-weight: 600; }
+.req { color: var(--signal); font-weight: 600; }
 .opt { color: var(--ink-2, #5a6472); font-weight: 400; font-size: 12px; }
 
-.login-alt { margin-top: 10px; text-align: right; font-size: 13px; }
+.login-alt { margin-top: 10px; text-align: right; font-size: 15px; font-weight: 500; }
 /* F-A-01: Forgot password on the left, Register on the right, in one row
    exactly as wide as the Sign in button above it. */
 .login-alt-split { display: flex; justify-content: space-between; }
-.login-alt a { color: var(--ink-2, #5a6472); text-decoration: none; }
+.login-alt a { color: var(--accent); text-decoration: none; }
 .login-alt a:hover, .login-alt a:focus { text-decoration: underline; }
 
 .login-state:empty { display: none; }
@@ -1235,12 +1260,12 @@ main.single {
   z-index: 200;
 }
 .build-warning.unknown { background: #6A4E1F; }
-.account-dialog { width: min(36rem, calc(100% - 2rem)); max-height: 85dvh; padding: 1.5rem;
-  color: var(--ink); background: var(--surface); border: 1px solid var(--rule); border-radius: 14px;
-  box-shadow: 0 20px 70px #102b2930; }
-.account-dialog::backdrop { background: #12242170; }
+.account-dialog { width: min(36rem, calc(100% - 2rem)); max-height: 85dvh; padding: 1.6rem 1.75rem;
+  color: var(--ink); background: var(--surface); border: 1px solid var(--rule-2); border-radius: 14px;
+  box-shadow: var(--shadow); }
+.account-dialog::backdrop { background: rgba(18, 48, 90, .35); }
 .dialog-heading { display: flex; align-items: start; justify-content: space-between; gap: 1rem; }
-.dialog-heading h2 { margin: 0; font: 500 1.6rem/1.3 var(--f-serif); }
+.dialog-heading h2 { margin: 0; font: 600 1.6rem/1.3 var(--f-serif); }
 .session-row { border-block-start: 1px solid var(--rule); padding: 0.85rem 0; overflow-wrap: anywhere; }
 .session-row p { margin: 0.2rem 0; font-size: 0.85rem; color: var(--ink-2); }
 .build-warning code {
@@ -1255,8 +1280,8 @@ main.single {
   letter-spacing: -0.01em;
   margin: 14px 0 6px;
 }
-.outcome-title.good { color: #146c2e; }
-.outcome-title.bad  { color: #b3261e; }
+.outcome-title.good { color: var(--good); }
+.outcome-title.bad  { color: var(--signal); }
 
 .outcome-body {
   overflow-wrap: anywhere;
@@ -1285,7 +1310,7 @@ main.single {
 
 /* ------------------------------------------------- who is signed in --- */
 
-.who-name { font-size: 13px; font-weight: 600; min-width: 0; overflow-wrap: anywhere; max-width: 16rem; }
+.who-name { font-size: 14px; font-weight: 600; min-width: 0; overflow-wrap: anywhere; max-width: 16rem; }
 
 
 /* ===================== B3-B5 — THE INTAKE FORM ===================== */
@@ -1295,28 +1320,29 @@ main.single {
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
-  padding: 1.8rem 2rem 2rem;
+  padding: 2rem 2.2rem 2.2rem;
   margin: 1.3rem auto; width: calc(100% - 3rem); max-width: 44rem;
-  background: var(--surface); border: 1px solid var(--rule); border-radius: 14px;
+  background: var(--surface); border: 1px solid var(--rule-2); border-radius: 14px;
   flex: none;
 }
 .intake h2 {
-  font-family: var(--f-serif); font-size: 1.65rem; font-weight: 400;
+  font-family: var(--f-serif); font-size: 2rem; font-weight: 600; letter-spacing: -0.01em;
   margin: 0;
 }
-.intake-lede { color: var(--ink-3); font-size: 0.82rem; margin: 0 0 0.5rem; }
+.intake-lede { color: var(--ink-2); font-size: 0.95rem; margin: 0 0 0.6rem; }
+/* Labels in sentence case at reading size (the signed-off design). */
 .intake label {
-  color: var(--ink-3); font-size: 0.68rem; letter-spacing: 0.07em;
-  margin-top: 0.5rem; text-transform: uppercase;
+  color: var(--ink); font-size: 0.9rem; font-weight: 600; letter-spacing: 0;
+  margin-top: 0.75rem; text-transform: none;
 }
 .intake label .opt {
-  letter-spacing: 0; text-transform: none; font-size: 0.72rem;
+  letter-spacing: 0; text-transform: none; font-size: 0.85rem;
 }
 .intake input[type="text"], .intake input:not([type]) {
-  background: var(--paper); border: 1px solid var(--rule); border-radius: 3px;
-  font: inherit; font-size: 0.9rem; padding: 0.45rem 0.6rem;
+  background: var(--surface); border: 1px solid var(--field); border-radius: 6px;
+  font: inherit; font-size: 1rem; padding: 0.55rem 0.75rem; min-height: 44px;
 }
-.intake input:focus { border-color: var(--accent); outline: none; }
+.intake input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-w); outline: none; }
 .intake label.check {
   align-items: center; display: flex; gap: 0.5rem;
   font-size: 0.85rem; letter-spacing: 0; text-transform: none;
@@ -1390,18 +1416,26 @@ button.ghost.cancel { margin-right: 0.6rem; }
 .skip-link { position: fixed; top: -5rem; left: 1rem; z-index: 300; padding: 0.8rem;
   background: var(--surface); color: var(--accent); border: 2px solid var(--accent); }
 .skip-link:focus { top: 1rem; }
-.eyebrow { color: var(--ink-3); font-size: 0.66rem; font-weight: 650; letter-spacing: 0.12em; margin: 0 0 0.65rem; }
-.arrival-story { width: min(43vw, 540px); padding: 2rem; }
-.arrival-wordmark { display: flex; align-items: center; gap: 0.8rem; font-size: 0.75rem; letter-spacing: 0.12em; margin-bottom: 5rem; }
-.arrival-story h1 { font: 400 clamp(2.4rem, 4.2vw, 4rem)/1.13 var(--f-serif); letter-spacing: -0.04em; margin: 1rem 0 1.6rem; }
-.arrival-story > p:not(.eyebrow) { color: var(--ink-2); line-height: 1.9; }
-.arrival-note { border-top: 1px solid var(--rule); margin-top: 3rem; padding-top: 1.2rem; font-size: 0.8rem; }
-.arrival-note span { margin: 0 0.6rem; color: var(--ink-3); }
-.login-title { font: 400 1.9rem/1.25 var(--f-serif); margin: 1.4rem 0 0.2rem; }
+.eyebrow { color: var(--ink-3); font-size: 0.72rem; font-weight: 600; letter-spacing: 0.14em; margin: 0 0 0.65rem; }
+/* THE STORY PANEL in deep blue, the mark on ivory (the signed-off sign-in page). */
+.arrival-story { width: min(43vw, 540px); padding: 2.5rem; background: var(--deep); color: #f3efe4;
+  border-radius: 16px; }
+.arrival-wordmark { display: flex; align-items: center; gap: 0.8rem; font-size: 0.8rem; font-weight: 600; letter-spacing: 0.12em; margin-bottom: 5rem; }
+.arrival-wordmark .mark { background: #f3efe4; color: var(--deep); }
+.arrival-story .eyebrow { color: #c5d2e4; }
+.arrival-story h1 { font: 600 clamp(2.3rem, 4vw, 3.6rem)/1.12 var(--f-serif); letter-spacing: -0.02em; margin: 1rem 0 1.6rem;
+  color: #fff; }
+.arrival-story > p:not(.eyebrow) { color: #d5e0ef; line-height: 1.8; }
+.arrival-note { border-top: 1px solid rgba(243, 239, 228, .25); margin-top: 3rem; padding-top: 1.2rem; font-size: 0.85rem;
+  color: #d5e0ef; }
+.arrival-note span { margin: 0 0.6rem; color: #c5d2e4; }
+.login-title { font: 600 2rem/1.25 var(--f-serif); margin: 1.4rem 0 0.2rem; letter-spacing: -0.01em; }
+/* The open matter's title, on the paper, in line with the answer's margins (P50 amended). */
 .workspace-heading { display: flex; align-items: center; justify-content: space-between; gap: .5rem;
-  padding: 0 1rem; min-height: 44px; background: var(--surface); border-bottom: 1px solid var(--rule); flex: none; }
+  padding: 0.35rem var(--talk-gutter, 1rem); min-height: 56px; background: var(--paper);
+  border-bottom: 1px solid var(--rule); flex: none; }
 .workspace-title { flex: 1; min-width: 0; }
-.workspace-heading h1 { font: 500 .94rem/1.4 var(--f-sans); margin: 0;
+.workspace-heading h1 { font: 600 1.2rem/1.4 var(--f-serif); margin: 0;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rehearsal-warning { flex: none; padding: 0.4rem 1rem; font-size: 0.76rem; color: var(--amber);
   background: var(--amber-w); border-bottom: 1px solid var(--rule); }
@@ -1465,7 +1499,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visib
 @media (max-width: 1024px) and (min-width: 821px) {
   .ribbon-account > .who-name { max-width: 10rem; }
   #gate { gap: 2.5rem; }
-  .arrival-story { padding: 1rem; width: min(38vw, 400px); }
+  .arrival-story { padding: 1.75rem; width: min(38vw, 400px); }
   .arrival-wordmark { margin-bottom: 2.5rem; }
   .arrival-story h1 { font-size: 2.3rem; }
 }
@@ -1476,7 +1510,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visib
 @media (max-width: 820px) {
   #gate { flex-direction: column; gap: 1.25rem; justify-content: flex-start; }
   #gate > * { margin: 0 auto; }
-  .arrival-story { padding: 0; width: min(100%, 420px); }
+  .arrival-story { padding: 0.9rem 1.1rem; width: min(100%, 420px); border-radius: 12px; }
   .arrival-story > :not(.arrival-wordmark) { display: none; }
   .arrival-wordmark { margin-bottom: 0; }
   :root { --gate-padding: 1.5rem 1rem; }
@@ -1733,23 +1767,32 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visib
   flex: none; font-size: .82rem; line-height: 1.5; color: var(--ink-2);
   margin: 0 var(--talk-gutter, 2.2rem); padding: .4rem .5rem 0;
 }
-.opening-details { border-top: 1px solid #dce5df; padding: .8rem 0; margin-top: .65rem; }
-.opening-details summary { cursor: pointer; font-weight: 600; color: #234a40; padding: .25rem 0; }
-.opening-details summary:focus-visible { outline: 2px solid #1a6252; outline-offset: 4px; }
+.opening-details { border-top: 1px solid var(--rule-2); padding: .8rem 0; margin-top: .65rem; }
+.opening-details summary { cursor: pointer; font-weight: 600; color: var(--ink); padding: .25rem 0; min-height: 2.5rem;
+  display: flex; align-items: center; }
+.opening-details summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
 #intake textarea, #intake select {
-  width: 100%; box-sizing: border-box; border: 1px solid var(--rule);
-  border-radius: 7px; background: var(--paper); color: var(--ink);
+  width: 100%; box-sizing: border-box; border: 1px solid var(--field);
+  border-radius: 6px; background: var(--surface); color: var(--ink);
   font: inherit; padding: .7rem .8rem; min-height: 44px;
 }
 #intake textarea { resize: vertical; line-height: 1.5; }
 #intake textarea:focus-visible, #intake select:focus-visible {
-  outline: 2px solid #1a6252; outline-offset: 2px;
+  outline: 2px solid var(--accent); outline-offset: 2px;
 }
 #opening-fields dd { overflow-wrap: anywhere; white-space: pre-wrap; }
 
 .thread .el { border-left: 0; padding: 0; margin-bottom: 1.2rem; }
 .thread .el .body { margin: 0; }
-.thread .turn .el .body { font-size: 0.95rem; line-height: 1.6; }
+/* The answer's prose in the serif, at reading size (the signed-off design); code's notes, the
+   line on what to do first and the table stay in the sans. */
+.thread .turn .el .body { font-family: var(--f-serif); font-size: 1.0625rem; line-height: 1.7; }
+/* A dispute's heading, numbered with the section sign in brass. */
+.thread .turn .el.HEADING .body { font-family: var(--f-serif); font-size: 1.25rem; font-weight: 600; line-height: 1.35; }
+.thread .turn .el.HEADING .body::before { counter-increment: part; content: "\00A7\00A0" counter(part);
+  margin-right: 0.6em; color: var(--brass); font-size: 0.85em; }
+.thread .turn .in-short .el.DO_FIRST .body, .thread .turn .in-short .el.TIES .body {
+  font-family: var(--f-sans); font-size: 0.95rem; line-height: 1.55; }
 .thread .el.disclosure {
   border-left: 2px dashed var(--rule); padding-left: .8rem;
 }
@@ -1757,7 +1800,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visib
 /* ANSWERED DISPUTE BY DISPUTE (owner decisions P25-P27, 19 Oct 2026; rendering v17): code's
    notes on a section, the note standing in a section's place, and an edited section's label
    with the section as first shown. */
-.thread .el.NOTE .body { color: var(--ink-2); font-size: .88rem; }
+.thread .el.NOTE .body { color: var(--ink-2); font-family: var(--f-sans); font-size: .9rem; }
 .thread .el.FALLBACK { border-left: 2px dashed var(--signal); padding-left: .8rem; }
 .fallback-label { margin: .7rem 0 .2rem; font-size: .85rem; font-weight: 600; }
 .fallback-list { margin: .2rem 0 .4rem; padding-left: 1.2rem; font-size: .9rem; }
@@ -1766,7 +1809,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visib
 .fallback-words { margin: .2rem 0 .5rem; padding-left: .7rem; border-left: 2px solid var(--rule);
   color: var(--ink-2); white-space: pre-wrap; }
 .edited-tag { display: inline-block; margin-right: .3rem; padding: 0 .4rem; border-radius: 4px;
-  background: var(--amber-w); color: var(--ink); font-size: .75rem; font-weight: 600; }
+  background: var(--amber-w); color: var(--ink); font-family: var(--f-sans); font-size: .75rem; font-weight: 600; }
 .edited-original { margin-top: .3rem; }
 .edited-original summary { cursor: pointer; color: var(--accent); font-size: .85rem; min-height: 2rem; }
 .edited-original p { color: var(--ink-2); font-size: .88rem; }
@@ -1778,18 +1821,23 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visib
 .shown-so-far .el.WAITING, .shown-so-far .el.NOTE { color: var(--ink-3); font-size: .85rem; }
 /* THE TOP BAR (owner, 16 Oct 2026): the name, + New matter and Conversation history,
    and who is signed in with the person menu, across the window on every page. */
-.top-actions { display: flex; align-items: center; gap: 0.25rem; margin-right: auto; margin-left: 1.5rem; }
+.top-actions { display: flex; align-items: center; gap: 0.4rem; margin-right: auto; margin-left: 1.5rem; }
 .top-action { min-height: 2.75rem; padding: 0 0.8rem; border-radius: 8px; font-size: 0.9rem; font-weight: 600; }
-.top-action:hover { background: var(--accent-w); }
+/* Over the page's plain ghost buttons: New matter outlined in the brand, the history quiet. */
+.top-actions .top-action { padding: 0 0.95rem; border-radius: 6px; font-size: 0.95rem; color: var(--ink-2); }
+.top-actions .top-action:hover { background: var(--surface-2); color: var(--ink); }
+.top-actions #top-new { border: 1px solid var(--accent); color: var(--accent); }
+.top-actions #top-new:hover { background: var(--accent-w); color: var(--accent-2); }
 .top-action[aria-current="page"] { background: var(--accent-w); color: var(--accent-2); }
 @media (max-width: 820px) {
   .masthead .brand .name { display: none; }
   .top-actions { margin-left: 0.4rem; gap: 0; }
   .top-action { padding: 0 0.45rem; font-size: 0.82rem; white-space: nowrap; }
+  .top-actions .top-action { padding: 0 0.5rem; font-size: 0.85rem; }
 }
 /* Every dispute stays a short label on the board; details open separately. */
 .dispute-focus { text-align: left; white-space: normal; overflow-wrap: anywhere; }
-.dispute-focus[aria-pressed="true"] { background: #e3eee8; color: #174f44; }
+.dispute-focus[aria-pressed="true"] { background: var(--accent-w); color: var(--accent-2); }
 .dispute-proposal-list { margin: .3rem 0 .8rem; padding-left: 1.3rem; }
 .dispute-proposal-item { padding: .2rem .35rem; margin: .2rem 0; }
 .dispute-proposal-item.uncertain { background: #f1f2f0; border-radius: 6px; }
@@ -1816,7 +1864,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visib
 .brain-source-links ul { list-style: none; margin: .3rem 0; padding-left: .8rem; }
 .brain-source-links li { margin: .2rem 0; }
 .brain-legal-source-links { margin: .2rem 0 .4rem; font-size: .8rem; line-height: 1.4; }
-#dispute-reader::backdrop, #brain-source-reader::backdrop { background: #12242170; }
+#dispute-reader::backdrop, #brain-source-reader::backdrop { background: rgba(18, 48, 90, .35); }
 .dispute-reader-head { display: flex; justify-content: space-between;
   align-items: start; gap: .75rem; flex: 0 0 auto; padding: 1rem 1.15rem;
   border-bottom: 1px solid var(--rule); }
@@ -1855,7 +1903,7 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visib
   gap: .1rem .45rem; align-items: baseline; padding: .4rem 0;
   border-top: 1px solid var(--line, #deded8); }
 .requirement-mark { font-size: .9rem; line-height: 1.3; }
-.requirement--held .requirement-mark { color: #1f6f4a; }
+.requirement--held .requirement-mark { color: var(--good); }
 .requirement--promised .requirement-mark { color: var(--amber); }
 .requirement--unavailable .requirement-mark { color: var(--signal); }
 .requirement--outstanding .requirement-mark { color: var(--ink-2); }
@@ -1873,8 +1921,10 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visib
   color: var(--ink-2); }
 .requirement-summary { font-size: .78rem; font-weight: 600; margin: .45rem 0 .2rem; }
 
-/* A turn in progress: the stage reached, the time so far, the stages done. */
-.turn-progress .progress-now { font-weight: 600; }
+/* A turn in progress: the stage reached, the time so far, the stages done, in a white card. */
+.thread .el.turn-progress { border: 1px solid var(--rule-2); border-radius: 12px; background: var(--surface);
+  padding: 14px 18px; }
+.turn-progress .progress-now { font-family: var(--f-serif); font-size: 1.1rem; font-weight: 600; }
 .turn-progress .progress-time { opacity: 0.75; font-size: 0.92em; margin-top: 0.15rem; }
 .turn-progress .progress-steps { margin: 0.4rem 0 0; padding-left: 1.2rem; opacity: 0.75; font-size: 0.92em; }
 /* What was added while a question is worked on, sent next (15 Oct 2026). */
