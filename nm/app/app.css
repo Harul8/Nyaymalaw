@@ -378,6 +378,15 @@ button.board-card:focus-visible { outline: 2px solid var(--accent); outline-offs
 .chip { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.1rem 0.6rem; border-radius: 999px;
   font-size: 0.78rem; font-variant-numeric: tabular-nums; border: 1px solid transparent; }
 .chip.deadline { background: var(--accent-w); color: var(--accent-2); border-color: var(--accent-b); font-weight: 600; }
+/* How near a last day is (plan AN.14): blue beyond a month, amber within a month, red within a
+   week, a red ring once passed - the words beside it always say which. */
+.chip.deadline.soon { background: var(--amber-w); color: #5c440d; border-color: #e2cd97; }
+.chip.deadline.urgent { background: var(--signal-w); color: #7a261d; border-color: #e3b8b0; }
+.chip.deadline.expired { background: var(--surface); color: var(--signal); border-color: var(--signal); }
+.chip.deadline::before { content: ""; flex: none; width: 0.62rem; height: 0.62rem; border: 1.6px solid currentColor;
+  border-radius: 50%; box-sizing: border-box; }
+.chip.deadline.urgent::before { content: "!"; width: auto; height: auto; border: 0; font-weight: 700; line-height: 1; }
+.chip.deadline.expired::before { content: "\2715"; width: auto; height: auto; border: 0; font-size: 0.7rem; line-height: 1; }
 .chip.quiet { background: var(--surface-2); color: var(--ink-3); border-color: var(--rule-2); }
 .count { color: var(--ink-3); }
 .group { margin: 0.15rem 0 0; font-family: var(--f-sans); font-size: 0.7rem; font-weight: 600; letter-spacing: 0.12em;
