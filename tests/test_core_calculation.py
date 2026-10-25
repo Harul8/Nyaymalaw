@@ -607,3 +607,35 @@ def test_a_step_said_to_be_taken_without_its_date_is_taken_its_date_not_given(st
     with pytest.raises(ValueError, match="v7"):
         calculation.validate(earlier, original)
 
+
+
+def test_the_prompt_says_words_that_a_step_is_not_yet_taken_leave_done_empty():
+    """P47 (owner, 25 Oct 2026): live run 4 returned, for a message saying no execution petition had
+    been filed yet, a 'done' step whose words were those very words, and the answer showed the
+    petition as taken. The step's prompt now says words that a step has not been taken, or not yet,
+    are not words saying it was, and that done is then left empty."""
+    text = " ".join(calculation.SYSTEM.split())
+    assert "Words saying the step has not been taken, or not yet, are not words saying it was" in text
+    assert 'leave "done" empty (its what, date and quote all empty)' in text
+    # The rule it refines stays: a step taken but not when is given with its words and no date.
+    assert "quote the words saying so and leave its date empty" in text
+
+
+def test_a_step_the_facts_say_is_not_yet_taken_stands_open_with_its_days_left():
+    """With 'done' left empty, as the prompt now asks, a step not yet taken stands open as of the
+    day it was worked out, with its days left: never 'taken'. The same limit with the step said to be
+    taken but not when still shows as taken (P36 (a), unchanged)."""
+    from datetime import datetime, timezone
+    from tests.test_core_understanding import context
+    ctx = context(CREDIT_SALE + " No suit has been filed yet.")
+    now = datetime(2026, 10, 25, 9, 0, tzinfo=timezone.utc)
+    unfiled = {"needed": True, "why": "A suit for the price.", "not_assessed": [], "calculations": [price_suit()]}
+    (entry,) = calculation.work_out(Calculating(unfiled), ctx, CreditHeld(), now=now)["calculations"]
+    assert entry["done"] is None
+    assert entry["standing"] == {"state": "open", "days": 166}  # 25 Oct 2026 to the last day, 9 April 2027
+    taken = deepcopy(unfiled)
+    taken["calculations"][0]["done"] = {"what": "Suit filed", "date": "", "quote": "No suit has been filed yet"}
+    (entry,) = calculation.work_out(Calculating(taken), ctx, CreditHeld(), now=now)["calculations"]
+    # Code cannot tell words saying a step was taken from words saying it was not: that is the
+    # prompt's to keep right. What code keeps is the rule it was given for a step said to be taken.
+    assert entry["standing"] == {"state": "taken", "days": None}
