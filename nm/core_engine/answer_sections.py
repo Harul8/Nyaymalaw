@@ -43,7 +43,7 @@ from nm.core_engine.calls import (
 from nm.shared.egress_contracts import EgressRefused
 from nm.shared.external_ai_contracts import ModelPermissionRefused
 from nm.shared.gates_contracts import Recovery, Response, Scope, gate
-from nm.shared.model_port import ContextOverflow, ModelError, SchemaViolation
+from nm.shared.model_port import USAGE_LIMIT_WORDS, ContextOverflow, ModelError, SchemaViolation, UsageLimitReached
 
 #: The trimmed reviews a section or the overview may have after its tries (owner decision P25).
 TRIMS = 2
@@ -60,7 +60,8 @@ REVIEW_RETRIES = 1
 BETTER_REWRITES = 1
 #: Why a section, the overview or the check across the sections is not shown as written:
 #: code's own checks refused every try; its review could not be completed; the review still
-#: found problems after the trims; the AI service failed; it exceeds what NM can check at once.
+#: found problems after the trims; the AI service failed or its account has no credit left (P51); it
+#: exceeds what NM can check at once.
 REASONS = tuple(response_review.UNWRITTEN)
 #: Wherever they happen, these stop the turn: a permission or egress refusal, and a terminal
 #: release boundary (an authority readback differing from its held source, G-CORE).
@@ -79,7 +80,11 @@ KEPT = "refused"
 _STEPS = ("writing", "review", "unreviewed")
 #: Why a draft code admitted was never checked, in code's own words.
 _UNCHECKED = {"review": "its independent check could not be completed", "service": "the AI service did not respond",
-              "capacity": "it was longer than NM can check in one go"}
+              "usage": USAGE_LIMIT_WORDS, "capacity": "it was longer than NM can check in one go"}
+#: The reasons a part of an answer was not made that are no fault of what NM wrote: the AI service
+#: failed, its account has no credit left (P51), or the part was too long to check. A turn all of
+#: whose sections are lost so is not saved, and a part lost so is noted, never taken for checked.
+NOT_MADE = ("service", "usage", "capacity")
 
 
 def _owned(identity, response, scope, recovery):
@@ -343,7 +348,8 @@ class _Answering:
 
     def _failed(self, scope, exc):
         self.failures.setdefault(scope, exc)
-        return "capacity" if isinstance(exc, ContextOverflow) else "service"
+        return ("capacity" if isinstance(exc, ContextOverflow) else "usage" if isinstance(exc, UsageLimitReached)
+                else "service")
 
     def _review(self, scope, draft, kwargs, refused, researched):
         record, sources, execution = researched
@@ -591,7 +597,7 @@ def answer(calls, context, record, sources, *, interpretation, execution, worked
     # Each section starts writing as soon as its own research is ready (step 4).
     with ThreadPoolExecutor(max_workers=max(1, min(8, len(indices)))) as pool:
         sections = list(pool.map(section, indices))
-    if all(saved["fallback"] is not None and saved["fallback"]["reason"] in ("service", "capacity")
+    if all(saved["fallback"] is not None and saved["fallback"]["reason"] in NOT_MADE
            for saved in sections):
         raise next(answering.failures[f"s{index}"] for index in indices)
     many, crossed, overview = len(layout) > 1, None, None
@@ -724,7 +730,7 @@ def _chain_valid(saved, context, record, sources, execution, time_limits, sectio
     stuck = ids is None or len(trims) >= TRIMS or not [unit for unit in current["draft"]["units"]
                                                       if unit["id"] not in ids]
     if fallback is None or fallback["reason"] != "found" if stuck else (
-            fallback is None or fallback["reason"] not in ("review", "service", "capacity")):
+            fallback is None or fallback["reason"] not in ("review", *NOT_MADE)):
         raise ValueError("A section's note differs from what was found")
 
 
@@ -747,7 +753,7 @@ def validate(activity, context, record, sources, worked, *, kept=True):
         _kept_valid(saved, kept)
         _chain_valid(saved, context, *_research_for(context, record, sources, execution, layout, index), time_limits,
                      index, saved["dispute_id"], {})
-    if all(saved["fallback"] is not None and saved["fallback"]["reason"] in ("service", "capacity")
+    if all(saved["fallback"] is not None and saved["fallback"]["reason"] in NOT_MADE
            for saved in sections):
         raise ValueError("A turn the service could not answer is not saved")
     before = [position for position in order(sections, worked, edited=False)
@@ -757,7 +763,7 @@ def validate(activity, context, record, sources, worked, *, kept=True):
         if crossed is not None:
             raise ValueError("Only two or more sections shown are checked across")
     elif isinstance(crossed, dict) and set(crossed) == {"unavailable"}:
-        if crossed["unavailable"] not in ("review", "service", "capacity", "interrupted"):
+        if crossed["unavailable"] not in ("review", *NOT_MADE, "interrupted"):
             raise ValueError("Unknown check across the sections")
     else:
         response_review.validate_cross(crossed, context, record, sources,

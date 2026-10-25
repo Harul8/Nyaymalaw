@@ -797,6 +797,8 @@ UNWRITTEN = {"checks": "what was written did not pass NM's own checks of its for
              "review": "its independent review could not be completed",
              "found": "the independent review still found problems in it after its rewrites",
              "service": "the AI service did not respond",
+             # P51: the provider's account has no credit left, which is neither an outage nor a rate limit.
+             "usage": "the AI account's usage limit was reached",
              "capacity": "it was longer than NM can check in one go",
              # P27: a turn that stopped after showing some sections is saved with them.
              "interrupted": "NM stopped before finishing it"}

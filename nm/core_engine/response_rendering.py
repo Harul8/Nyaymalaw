@@ -8,6 +8,7 @@ import re
 from nm.core_engine import answer_sections, calculation, checklist, limitation, research, response_authorities
 from nm.core_engine import response_review, response_writer
 from nm.shared.citation_contracts import case_short_names, statute_title
+from nm.shared.model_port import USAGE_LIMIT_WORDS
 
 LEGACY_CONTRACT = "core_response_rendering_v1"
 #: Authority-bound rendering with each source under its stored title.
@@ -988,10 +989,13 @@ _UNSHOWN = {"checks": "what NM wrote for it did not pass NM's own checks of its 
             "found": "after the rewrites NM may make, the checks still found problems in it that leaving statements "
                      "out could not settle",
             "service": "the AI service did not respond",
+            # P51: the owner's words for an account with no credit left, said where a lost step is explained.
+            "usage": USAGE_LIMIT_WORDS,
             "capacity": "it was longer than NM can check in one go",
             "interrupted": "NM stopped before finishing it"}
 #: Why the check across the sections could not be made.
 _UNCROSSED = {"review": "the check could not be completed", "service": "the AI service did not respond",
+              "usage": USAGE_LIMIT_WORDS,
               "capacity": "the sections together were longer than NM can check in one go",
               "interrupted": "NM stopped before it was made"}
 #: Atop an answer that stopped before it was finished (owner decision P27).
