@@ -2469,6 +2469,16 @@ function renderTurn(entry) {
       settings.textContent = 'Review AI data sharing';
       settings.addEventListener('click', openAiSharing);
       f.append(why, settings);
+    } else if (refusal?.code === 'usage_limit') {
+      // THE AI ACCOUNT'S USAGE IS USED UP (owner decisions O18 and P51, 25 Oct 2026; plan AN.11
+      // piece 4, AN.14): the owner's words as the server sent them, said plainly - not as a
+      // message NM failed to complete. Whether the message was saved follows below, as for any
+      // refusal.
+      f.className = 'failure limit';
+      const head = document.createElement('p');
+      head.className = 'refusal-head';
+      head.textContent = refusal.why;
+      f.appendChild(head);
     } else if (refusal && refusal.withheld_by && refusal.withheld_by.length) {
       const h = document.createElement('div');
       h.className = 'refusal-head';

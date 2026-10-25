@@ -107,3 +107,40 @@ for (const text of ['', ' \t\r\n', '\u2003\u00a0',
   '\n  Hello.\t\r\n', '\u2003My note: ‘A’ and ‘B’ differ.\u00a0']) {
   await composed(text);
 }
+
+// THE AI ACCOUNT'S USAGE IS USED UP (owner decisions O18 and P51; plan AN.11 piece 4, AN.14): the
+// owner's words as the server sent them, said plainly, then whether the message was saved and the
+// way to send it again - never "I couldn't complete this message". Offline substitutes for the DOM.
+{
+  const el = (tag) => ({
+    tagName: tag.toUpperCase(), className: '', children: [], handlers: {}, _text: '', type: '',
+    set textContent(v) { this._text = String(v); }, get textContent() { return this._text; },
+    append(...kids) { this.children.push(...kids); }, appendChild(kid) { this.children.push(kid); return kid; },
+    addEventListener(name, fn) { this.handlers[name] = fn; },
+  });
+  const texts = (n) => [n._text, ...(n.children || []).flatMap(texts)].filter(Boolean);
+  const find = (n, test) => (test(n) ? n : (n.children || []).map((c) => find(c, test)).find(Boolean));
+  const renderStart = app.indexOf('function renderTurn(entry) {');
+  const renderEnd = app.indexOf('function showConversationFromStart()', renderStart);
+  assert.ok(renderStart >= 0 && renderEnd > renderStart, 'The shipped turn renderer must be available');
+  const render = vm.createContext({document: {createElement: el}, Number, Math, Array,
+    deliver() {}, openAiSharing() {}, repaint() {}});
+  vm.runInContext(app.slice(renderStart, renderEnd), render);
+  const why = 'You have run out of your usage limits. Please upgrade to continue accessing NM. '
+    + 'Your saved conversation is unchanged.';
+  const shown = render.renderTurn({brief: 'Question', turnId: 't1', state: 'not_committed', error: why,
+    refusal: {code: 'usage_limit', why, committed: 'not_committed', retryable: true}});
+  const box = find(shown, (n) => typeof n.className === 'string' && n.className.split(' ').includes('failure'));
+  assert.equal(box.className, 'failure limit');
+  const said = texts(box);
+  assert.ok(said.includes(why), said.join(' | '));
+  assert.ok(!said.some((text) => text.startsWith("I couldn't")), said.join(' | '));
+  assert.ok(said.some((text) => text.startsWith('Your brief was NOT saved.')), said.join(' | '));
+  assert.ok(said.includes('Send this brief again'), said.join(' | '));
+
+  // Any other refusal still says it could not complete the message.
+  const other = render.renderTurn({brief: 'Question', turnId: 't2', state: 'not_committed', error: 'The AI service did not respond.',
+    refusal: {code: 'response_unavailable', why: 'The AI service did not respond.', committed: 'not_committed', retryable: true}});
+  const plain = find(other, (n) => n.className === 'failure');
+  assert.ok(texts(plain).some((text) => text.startsWith("I couldn't complete this message:")));
+}
