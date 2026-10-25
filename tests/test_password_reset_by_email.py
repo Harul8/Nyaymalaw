@@ -52,7 +52,7 @@ PASSWORD = "Cinder-lantern-42"
 NEW_PASSWORD = "Harbour-meadow-17!"
 OTHER_PASSWORD = "Quarry-willow-55!"
 EMAIL = "forgot@example.com"
-LINK = re.compile(r"(https?://\S+?/#reset=([A-Za-z0-9_-]+))")
+LINK = re.compile(r"(https?://\S+?/app#reset=([A-Za-z0-9_-]+))")
 
 
 def _register(client, email=EMAIL, password=PASSWORD):
@@ -153,7 +153,7 @@ def test_a_link_resets_the_password_once_and_ends_every_session(client):
     two = client.sign_in(EMAIL, password=PASSWORD, fresh=True)
     assert _forgot(client).status_code == 202
     link, token = reset_link_for(client)
-    assert link == f"http://testserver/#reset={token}"
+    assert link == f"http://testserver/app#reset={token}"
 
     done = _reset(client, token)
     assert done.status_code == 200, done.text
@@ -233,7 +233,7 @@ def test_a_configured_public_url_wins_over_the_request_host(client, monkeypatch)
         "host": "attacker.example", "origin": "http://attacker.example"})
     assert poisoned.status_code == 202, poisoned.text
     text = client.outbox.messages_for(EMAIL)[-1]["text"]
-    assert "https://nyaymalaw.example/#reset=" in text
+    assert "https://nyaymalaw.example/app#reset=" in text
     assert "attacker.example" not in text
 
 
@@ -262,7 +262,7 @@ def test_a_mailbox_channel_without_a_public_url_sends_nothing(client, monkeypatc
                         {"NM_PUBLIC_URL": "https://nyaymalaw.example"})
     assert _forgot(client).status_code == 202
     assert len(mailbox.sent) == 1
-    assert "https://nyaymalaw.example/#reset=" in mailbox.sent[0].text
+    assert "https://nyaymalaw.example/app#reset=" in mailbox.sent[0].text
 
 
 def test_reset_requests_are_limited_per_address_whether_or_not_it_exists(client):

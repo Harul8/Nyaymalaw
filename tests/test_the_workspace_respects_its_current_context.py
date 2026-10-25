@@ -405,7 +405,7 @@ def test_the_live_workspace_is_local_and_keyboard_navigable_at_each_width(
     page, journey, width, height,
 ):
     page.set_viewport_size({"width": width, "height": height})
-    page.goto(journey["base"] + "/")
+    page.goto(journey["base"] + "/app")
     page.wait_for_selector("#login-go", state="visible")
     assert page.title().strip() and page.evaluate("typeof window.fetch === 'function'")
     _assert_no_overflow(page)
@@ -631,7 +631,7 @@ def _sign_in_without_reloading(page, journey):
 
 
 def test_opening_waits_for_its_device_draft_key_before_sending(page, journey):
-    page.goto(journey["base"])
+    page.goto(journey["base"] + "/app")
     page.wait_for_selector("#login-go")
     held = _HeldReply(page, "**/api/drafts/key")
     _sign_in_without_reloading(page, journey)

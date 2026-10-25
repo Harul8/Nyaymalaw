@@ -906,7 +906,9 @@ def _send_reset_link(email: str, configured: str, fallback: str, now) -> None:
             _mail_log.error("password reset link not sent: NM_PUBLIC_URL is not "
                             "configured for a mailbox-delivering channel")
             return
-        mail.send(password_reset_mail(email, f"{base}/#reset={token}"))
+        # The link opens the app, which lives at /app now that nyaymalaw.in opens the public
+        # homepage (plan AN.16); the token stays in the fragment, never sent to the server.
+        mail.send(password_reset_mail(email, f"{base}/app#reset={token}"))
     except (OSError, EgressRefused) as exc:
         _mail_log.error("password reset link not delivered: %s", type(exc).__name__)
     except Exception:  # noqa: BLE001 -- a programming error, reported as one

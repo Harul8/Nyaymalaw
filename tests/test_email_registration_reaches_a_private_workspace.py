@@ -18,7 +18,7 @@ page = support.page
 
 
 def _registration(page, journey, email):
-    page.goto(journey["base"] + "/")
+    page.goto(journey["base"] + "/app")
     page.click("#show-register")
     assert page.locator("#reg-invitation").count() == 0
     page.fill("#reg-email", email)

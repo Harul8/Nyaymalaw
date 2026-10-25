@@ -134,7 +134,7 @@ def page(journey, request):
 
 def _sign_in(page, journey, width=1280, height=900):
     page.set_viewport_size({"width": width, "height": height})
-    page.goto(journey["base"] + "/")
+    page.goto(journey["base"] + "/app")
     page.wait_for_selector("#gate:not([hidden])", timeout=15000)
     page.fill("#login-id", journey["advocate"])
     page.fill("#login-password", journey["password"])
@@ -1038,7 +1038,7 @@ def test_the_journey_is_actually_driving_a_browser(page, journey):
     proves the browser reached the product and ran its script, so an empty
     result means a failure rather than a harness that quietly did nothing.
     """
-    page.goto(journey["base"] + "/")
+    page.goto(journey["base"] + "/app")
     page.wait_for_selector("#gate:not([hidden])", timeout=15000)
 
     assert page.title().strip(), "the page has no title"

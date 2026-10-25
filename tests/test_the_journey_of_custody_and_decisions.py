@@ -155,7 +155,7 @@ def _sign_in(page, journey) -> None:
     than guessed. The selectors are `#login-id` and `#login-password`; an
     earlier version of this file invented `#login-advocate` and timed out
     against a form that was working perfectly."""
-    page.goto(journey["base"] + "/")
+    page.goto(journey["base"] + "/app")
     page.wait_for_selector("#gate:not([hidden])", timeout=15000)
     page.fill("#login-id", journey["advocate"])
     page.fill("#login-password", journey["password"])

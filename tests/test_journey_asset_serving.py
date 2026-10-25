@@ -270,3 +270,39 @@ def test_every_real_asset_get_retains_exact_bytes_media_and_cache_headers(http_b
     assert response.headers["cache-control"] == "no-cache, must-revalidate"
     assert response.headers["x-content-type-options"] == "nosniff"
     assert response.headers["etag"] and response.headers["last-modified"]
+
+#: Each address the app serves a page at, and the page it is (owner decisions P52, O19, O23; plan AN.16).
+ADDRESSES = {
+    "/": "nm/site/home.html",
+    "/app": "nm/app/index.html",
+    "/how-it-works": "nm/site/how-it-works.html",
+    "/what-it-holds": "nm/site/what-it-holds.html",
+    "/trust": "nm/site/trust.html",
+    "/plans": "nm/site/plans.html",
+    "/about": "nm/site/about.html",
+    "/legal": "nm/site/legal.html",
+}
+
+
+@pytest.mark.parametrize("address", tuple(ADDRESSES))
+def test_each_address_serves_its_own_declared_page(http_boundary, address):
+    response = http_boundary.get(address)
+    assert response.status_code == 200
+    assert response.content == (ROOT / ADDRESSES[address]).read_bytes()
+    assert response.headers["content-type"] == "text/html; charset=utf-8"
+    assert response.headers["cache-control"] == "no-cache, must-revalidate"
+
+
+def test_the_homepage_is_not_the_app_and_other_addresses_are_unknown(http_boundary):
+    assert http_boundary.get("/").content != (ROOT / "nm/app/index.html").read_bytes()
+    for address in ("/nope", "/index.html", "/home.html", "/pricing", "/app.html"):
+        assert http_boundary.get(address).status_code == 404, address
+
+
+def test_an_address_whose_page_is_not_declared_is_a_plain_404(tmp_path):
+    _temporary_browser_root(tmp_path)
+    with _temporary_client(tmp_path) as client:
+        assert client.get("/app").content == b"<p>Public entry page</p>"
+        for address in ("/", "/trust", "/plans"):
+            response = client.get(address)
+            assert response.status_code == 404 and response.json() == {"detail": "Not Found"}

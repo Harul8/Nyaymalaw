@@ -35,3 +35,5 @@ This index follows the shipped [source-layout manifest](../source_layout.json). 
 - [index.html](index.html) — Main browser document and journey screen containers.
 
 Only the exact declared `/static/<name>` URLs are public; Python and private files in the same folders are never a static population.
+
+Pages have their own addresses (plan AN.16): `/` is the public homepage, `/how-it-works`, `/what-it-holds`, `/trust`, `/plans`, `/about` and `/legal` are the public site's pages ([../site/](../site/)), and the app itself is at `/app`. Each address names one declared page in `static_assets.PAGES`; a password-reset link opens `/app#reset=…`.

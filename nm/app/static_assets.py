@@ -25,6 +25,20 @@ _HEADERS = {
     "cache-control": "no-cache, must-revalidate",
     "x-content-type-options": "nosniff",
 }
+#: The addresses pages are served at (owner decisions P52, O19 and O23, 25 Oct 2026; plan AN.16):
+#: nyaymalaw.in opens the public homepage, each public page has its own address, and the app is at
+#: /app. Each names one declared page; an address whose page is not declared is the same 404 as any
+#: unknown name. No page here reads a session or a matter.
+PAGES = MappingProxyType({
+    "/": "home.html",
+    "/app": "index.html",
+    "/how-it-works": "how-it-works.html",
+    "/what-it-holds": "what-it-holds.html",
+    "/trust": "trust.html",
+    "/plans": "plans.html",
+    "/about": "about.html",
+    "/legal": "legal.html",
+})
 # Reuse the framework's conditional-header semantics, not its path lookup or
 # serving entry point. This validator has no directory or package population.
 _REVALIDATION = StaticFiles()
@@ -114,8 +128,12 @@ def browser_assets_router(*, asset_paths: Callable[[], Mapping[str, Path]],
     def asset(request: Request, asset_name: str) -> Response:
         return response_for(request, asset_name)
 
-    @router.api_route("/", methods=["GET", "HEAD"], include_in_schema=False)
-    def index(request: Request) -> Response:
-        return response_for(request, "index.html")
+    def page(name: str) -> Callable[[Request], Response]:
+        def serve(request: Request) -> Response:
+            return response_for(request, name)
+        return serve
+
+    for address, name in PAGES.items():
+        router.add_api_route(address, page(name), methods=["GET", "HEAD"], include_in_schema=False)
 
     return router

@@ -16,7 +16,7 @@ page = _base_page
 @pytest.mark.parametrize("delivery", ["unavailable", "empty", "aborted"])
 def test_navigation_refuses_an_undelivered_required_script(page, journey, delivery):
     target = "/static/matter-workspace.js"
-    document = page.request.get(journey["base"] + "/")
+    document = page.request.get(journey["base"] + "/app")
     assert document.status == 200
     assert f'<script src="{target}"></script>' in document.text()
     intercepted = []
@@ -32,7 +32,7 @@ def test_navigation_refuses_an_undelivered_required_script(page, journey, delive
 
     page.route("**" + target, mutate)
     with pytest.raises(AssertionError, match="Required local asset delivery failed") as refused:
-        page.goto(journey["base"] + "/")
+        page.goto(journey["base"] + "/app")
     assert len(intercepted) == 1, "a control that changed no real request proves nothing"
     assert target in str(refused.value)
     navigation = page.asset_navigations[-1]

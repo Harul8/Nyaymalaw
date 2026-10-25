@@ -109,7 +109,7 @@ def _artifact_on_failure(request, page):
 
 
 def _sign_in(page, journey):
-    page.goto(journey["base"] + "/")
+    page.goto(journey["base"] + "/app")
     page.wait_for_selector("#gate:not([hidden])", timeout=15000)
     page.fill("#login-id", journey["advocate"])
     page.fill("#login-password", journey["password"])
