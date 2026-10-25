@@ -125,6 +125,14 @@
     "draft-vault.js": "nm/arrive/draft-vault.js",
     "dictation-worklet.js": "nm/open_matter/dictation-worklet.js",
     "intake-materials.css": "nm/open_matter/intake-materials.css",
-    "intake-materials.js": "nm/open_matter/intake-materials.js"
+    "intake-materials.js": "nm/open_matter/intake-materials.js",
+    "site.css": "nm/site/site.css",
+    "home.html": "nm/site/home.html",
+    "how-it-works.html": "nm/site/how-it-works.html",
+    "what-it-holds.html": "nm/site/what-it-holds.html",
+    "trust.html": "nm/site/trust.html",
+    "plans.html": "nm/site/plans.html",
+    "about.html": "nm/site/about.html",
+    "legal.html": "nm/site/legal.html"
   }
 }
