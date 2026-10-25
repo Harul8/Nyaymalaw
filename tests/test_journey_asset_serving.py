@@ -235,6 +235,26 @@ def test_a_font_may_be_declared_and_no_other_new_kind_of_file(tmp_path):
             browser_assets(root=tmp_path)
 
 
+def test_a_declared_font_is_served_as_a_font_with_its_exact_bytes(tmp_path):
+    """The server reads the layout owner's media types (plan AN.18): a font goes out as
+    font/woff2, byte for byte, with the same revalidation and no-sniffing as every asset."""
+    product = _temporary_browser_root(tmp_path)
+    target = tmp_path / "nm" / "source_layout.json"
+    layout = json.loads(target.read_text(encoding="utf-8"))
+    font = b"wOF2\x00\x01\x00\x00 binary test font \xff\xfe"
+    (product / "face.woff2").write_bytes(font)
+    layout["browser_assets"]["face.woff2"] = "nm/app/face.woff2"
+    target.write_text(json.dumps(layout), encoding="utf-8")
+    with _temporary_client(tmp_path) as client:
+        response = client.get("/static/face.woff2")
+        assert response.status_code == 200 and response.content == font
+        assert response.headers["content-type"] == "font/woff2"
+        assert response.headers["cache-control"] == "no-cache, must-revalidate"
+        assert response.headers["x-content-type-options"] == "nosniff"
+        again = client.get("/static/face.woff2", headers={"if-none-match": response.headers["etag"]})
+        assert again.status_code == 304 and again.content == b""
+
+
 def test_declared_alias_cannot_masquerade_as_another_media_or_file_name(tmp_path):
     _temporary_browser_root(tmp_path)
     target = tmp_path / "nm" / "source_layout.json"

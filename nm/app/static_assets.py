@@ -15,12 +15,8 @@ from fastapi import APIRouter, HTTPException, Request
 from starlette.responses import FileResponse, Response
 from starlette.staticfiles import NotModifiedResponse, StaticFiles
 
-_MEDIA_TYPES = {
-    ".css": "text/css",
-    ".html": "text/html",
-    ".js": "text/javascript",
-    ".svg": "image/svg+xml",
-}
+from nm.shared.source_layout import MEDIA_TYPES
+
 _HEADERS = {
     "cache-control": "no-cache, must-revalidate",
     "x-content-type-options": "nosniff",
@@ -70,7 +66,7 @@ def browser_assets_router(*, asset_paths: Callable[[], Mapping[str, Path]],
             paths, resolved_paths = {}, {}
             for name, path in declared.items():
                 if (not isinstance(name, str) or not isinstance(path, Path)
-                        or name != path.name or path.suffix not in _MEDIA_TYPES
+                        or name != path.name or path.suffix not in MEDIA_TYPES
                         or "/" in name or "\\" in name):
                     raise BrowserAssetsRefused("A browser URL must name its exact browser file")
                 # The admitted identity is the declared physical path, not a
@@ -113,7 +109,7 @@ def browser_assets_router(*, asset_paths: Callable[[], Mapping[str, Path]],
         response = FileResponse(
             path,
             stat_result=info,
-            media_type=_MEDIA_TYPES[path.suffix],
+            media_type=MEDIA_TYPES[path.suffix],
             headers=_HEADERS,
         )
         if _REVALIDATION.is_not_modified(response.headers, request.headers):
