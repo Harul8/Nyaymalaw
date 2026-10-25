@@ -205,12 +205,10 @@ main { display: grid; grid-template-columns: 19rem minmax(0, 1fr); flex: 1; min-
 /* The answer in line with the message box below it, across the conversation's column (P38,
    replacing the 18 Oct design's reading measure). */
 .turn { min-width: 0; margin: 0 0 2rem; line-height: 1.7; }
-/* THE ANSWER'S READING WIDTH (owner decision P45, 24 Oct 2026): the column keeps its full
-   width, but the answer's paragraphs and lists wrap at about 70 to 75 characters a line -
-   33em at their own size, measured on answer text in Chrome at 1920 px: 72 a line on average,
-   80 at most, against 174 before. It only wraps the text. Tables, the time limits and the
-   Working boxes keep the column's width, and a phone's column is narrower than this. */
-.thread .turn .el .body, .thread .turn .fallback-list, .thread .shown-so-far p { max-width: 33em; }
+/* THE ANSWER'S WIDTH (owner decision P50, 25 Oct 2026, replacing P45's 70 to 75 characters a
+   line): everything in the answer - its paragraphs, lists, folds and checks as much as its
+   headings, tables and time limits - runs the full width of the conversation's column and
+   follows the window as it is resized. Nothing inside the answer sets a width of its own. */
 
 /* THE ADVOCATE'S OWN WORDS, set apart as theirs and set to the right.
    Everything else on this screen is something the product wrote, and a reader
@@ -445,10 +443,7 @@ button.board-card:focus-visible { outline: 2px solid var(--accent); outline-offs
 .answer-list { margin: 0 0 0.8rem; padding-left: 1.3rem; display: grid; gap: 0.25rem; }
 .thread .answer-list .el { margin: 0; }
 .thread .el.BASIS .body { font-size: 0.85rem; color: var(--ink-3); }
-/* The boxes that hold the answer's text keep near its reading width; the table may run wider. */
-.thread .turn .in-short { max-width: 60rem; }
-.more-fold { margin: 0.6rem 0 1rem; border: 1px solid var(--rule); border-radius: 8px; padding: 0.45rem 0.8rem;
-  max-width: 36rem; }
+.more-fold { margin: 0.6rem 0 1rem; border: 1px solid var(--rule); border-radius: 8px; padding: 0.45rem 0.8rem; }
 .more-fold > summary { cursor: pointer; font-size: 0.88rem; color: var(--accent); }
 .more-fold[open] > summary { margin-bottom: 0.4rem; }
 .need-group { margin: 0.4rem 0 0; font-family: var(--f-mono); font-size: 0.68rem; letter-spacing: 0.07em;
@@ -457,7 +452,7 @@ button.board-card:focus-visible { outline: 2px solid var(--accent); outline-offs
 .answer-checked { margin: 1.2rem 0 0.4rem; font-size: 0.85rem; color: var(--ink-2); }
 .answer-checked > summary { cursor: pointer; color: var(--ink-3); }
 .checked-part { margin: 0.6rem 0 0.2rem; font-weight: 600; }
-.checked-list { margin: 0; padding-left: 1.2rem; display: grid; gap: 0.2rem; max-width: 33em; }
+.checked-list { margin: 0; padding-left: 1.2rem; display: grid; gap: 0.2rem; }
 .checked-kind { color: var(--ink-3); }
 /* A dotted link in prose that is not a source - the working of a time limit, an item's law. */
 .cite { display: inline; font: inherit; color: var(--accent); background: none; border: 0; padding: 0; min-height: 0;
