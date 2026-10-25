@@ -67,6 +67,22 @@ class RateLimited(ModelError):
     """Transient. Bounded retry with backoff, and the retries are counted."""
 
 
+class UsageLimitReached(ModelError):
+    """The provider's account has no credit or quota left (owner decision P51, 25 Oct 2026).
+
+    NOT A RATE LIMIT: waiting does not help, so it is never retried, and the engine names it
+    where it would otherwise say the service did not respond. What NM tells an advocate is
+    USAGE_LIMIT_MESSAGE; the provider's own words stay in the diagnostics.
+    """
+
+
+#: What NM tells an advocate when that happens (owner, 25 Oct 2026: like Claude's own usage
+#: limits message), as a sentence and as the clause where a lost step is explained. These two
+#: are the only places the words are written.
+USAGE_LIMIT_MESSAGE = "You have run out of your usage limits. Please upgrade to continue accessing NM."
+USAGE_LIMIT_WORDS = "you have run out of your usage limits; please upgrade to continue accessing NM"
+
+
 class ProviderUnavailable(ModelError):
     """The provider could not be reached. Fail the NEED, never the turn."""
 
