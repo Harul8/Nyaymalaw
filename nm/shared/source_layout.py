@@ -8,11 +8,23 @@ from __future__ import annotations
 import json
 from collections import Counter
 from pathlib import Path
+from types import MappingProxyType
 
 ROOT = Path(__file__).resolve().parents[2]
 LAYOUT = "nm/source_layout.json"
 ROLES = frozenset({"domain", "ports", "core", "adapters", "knowledge",
                    "infrastructure", "edge", "drafting", "obs", "bootstrap"})
+#: The only kinds of file a browser asset may be, and the media type each is served as: one
+#: owner, read by the declaration check below and by the server (nm/app/static_assets.py). Fonts
+#: joined on 25 Oct 2026 (owner decision O24, plan AN.18): the design's fonts are served by the
+#: app itself, so nothing is asked of a font service.
+MEDIA_TYPES = MappingProxyType({
+    ".css": "text/css",
+    ".html": "text/html",
+    ".js": "text/javascript",
+    ".svg": "image/svg+xml",
+    ".woff2": "font/woff2",
+})
 
 
 class LayoutRefused(ValueError):
@@ -92,7 +104,7 @@ def browser_assets(*, root: Path = ROOT) -> dict[str, Path]:
     for name, relative in rows.items():
         if (not isinstance(name, str) or Path(name).name != name or "/" in name
                 or "\\" in name or not isinstance(relative, str)
-                or Path(relative).suffix not in {".js", ".css", ".html", ".svg"}):
+                or Path(relative).suffix not in MEDIA_TYPES):
             raise LayoutRefused("Only exact named browser assets may be served")
         path = root / relative
         if (not relative.startswith("nm/") or not path.is_file() or path.is_symlink()

@@ -217,6 +217,24 @@ def test_python_cannot_become_public_even_if_declared_as_a_browser_name(tmp_path
         _temporary_client(tmp_path)
 
 
+def test_a_font_may_be_declared_and_no_other_new_kind_of_file(tmp_path):
+    """The design's fonts are served by the app (owner decision O24, plan AN.18): a .woff2 joins
+    the kinds a browser asset may be, and the list stays closed to every other kind."""
+    product = _temporary_browser_root(tmp_path)
+    target = tmp_path / "nm" / "source_layout.json"
+    layout = json.loads(target.read_text(encoding="utf-8"))
+    (product / "face.woff2").write_bytes(b"wOF2 test font")
+    layout["browser_assets"]["face.woff2"] = "nm/app/face.woff2"
+    target.write_text(json.dumps(layout), encoding="utf-8")
+    assert browser_assets(root=tmp_path)["face.woff2"] == product / "face.woff2"
+    for name in ("face.woff", "face.ttf", "face.otf", "notes.txt", "data.json"):
+        (product / name).write_bytes(b"not a browser asset")
+        refused = dict(layout, browser_assets=dict(layout["browser_assets"], **{name: f"nm/app/{name}"}))
+        target.write_text(json.dumps(refused), encoding="utf-8")
+        with pytest.raises(LayoutRefused):
+            browser_assets(root=tmp_path)
+
+
 def test_declared_alias_cannot_masquerade_as_another_media_or_file_name(tmp_path):
     _temporary_browser_root(tmp_path)
     target = tmp_path / "nm" / "source_layout.json"
