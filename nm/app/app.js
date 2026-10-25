@@ -7679,8 +7679,19 @@ function openReset() {
   $('reset-password').focus();
 }
 
+// THE HOMEPAGE'S "CREATE YOUR ACCOUNT" OPENS THIS PAGE with `#register` (plan AN.16, now that the
+// app is at /app and nyaymalaw.in opens the public homepage): the register card instead of the
+// sign-in card, for someone not signed in. Read once and removed from the address, as the reset
+// link is; someone already signed in simply opens their workspace.
+function takeRegisterLink() {
+  if (window.location.hash !== '#register') return false;
+  history.replaceState(null, '', window.location.pathname + window.location.search);
+  return true;
+}
+
 window.addEventListener('hashchange', () => {
   if (takeResetToken()) openReset();
+  else if (takeRegisterLink() && !state.advocate) showForm('register');
 });
 
 async function boot() {
@@ -7689,6 +7700,7 @@ async function boot() {
     openReset();
     return;
   }
+  const wantsRegister = takeRegisterLink();
   if (cookie('nm_retirement') === 'pending') {
     state.signOut = 'unconfirmed';
     const token = {session:state.sessionGeneration, accepting:true, task:null, online:null};
@@ -7706,6 +7718,7 @@ async function boot() {
     // that looks like a rejected password.
     showGate(err.status === 401 ? null
       : `The server could not be reached: ${err.message}`);
+    if (err.status === 401 && wantsRegister) showForm('register');
   }
 }
 
