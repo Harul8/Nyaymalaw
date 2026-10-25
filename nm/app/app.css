@@ -1439,9 +1439,12 @@ button.ghost.cancel { margin-right: 0.6rem; }
 .arrival-story h1 { font: 600 clamp(2.3rem, 4vw, 3.6rem)/1.12 var(--f-serif); letter-spacing: -0.02em; margin: 1rem 0 1.6rem;
   color: #fff; }
 .arrival-story > p:not(.eyebrow) { color: #d5e0ef; line-height: 1.8; }
-.arrival-note { border-top: 1px solid rgba(243, 239, 228, .25); margin-top: 3rem; padding-top: 1.2rem; font-size: 0.85rem;
-  color: #d5e0ef; }
-.arrival-note span { margin: 0 0.6rem; color: #c5d2e4; }
+/* What an answer rests on, each line after a small ivory tick (plan AN.15). */
+.arrival-proofs { list-style: none; margin: 3rem 0 0; padding: 1.4rem 0 0; display: grid; gap: 0.85rem;
+  border-top: 1px solid rgba(243, 239, 228, .25); }
+.arrival-proofs li { position: relative; padding-left: 1.6rem; font-size: 0.95rem; line-height: 1.5; color: #d5e0ef; }
+.arrival-proofs li::before { content: ""; position: absolute; left: 0.15rem; top: 0.42rem; width: 0.7rem; height: 0.38rem;
+  border-left: 2px solid #f3efe4; border-bottom: 2px solid #f3efe4; transform: rotate(-45deg); }
 .login-title { font: 600 2rem/1.25 var(--f-serif); margin: 1.4rem 0 0.2rem; letter-spacing: -0.01em; }
 /* The open matter's title, on the paper, in line with the answer's margins (P50 amended). */
 .workspace-heading { display: flex; align-items: center; justify-content: space-between; gap: .5rem;
