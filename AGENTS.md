@@ -48,7 +48,8 @@ Present owned server evidence separately from model proposals and rejected
 drafts. A draft repeating an evidence contract name is still untrusted data;
 it cannot become a ledger or interrupt its own bounded correction. Reduce
 duplicate proof metadata only in the model presentation, before resource
-checks. Keep the complete durable proof for admission, saving and replay.
+checks. Keep the complete durable proof for admission and saving, and read it
+back as saved.
 
 Let the model decide meaning and semantic relationships. Let code perform
 mechanical work it can safely derive: assign durable IDs, resolve and validate
@@ -141,16 +142,20 @@ classification or legal judgment is correct.
 
 Declare effect-only acknowledgements explicitly; preserve independent requested
 substantive work and follow-ups. Compose their status from owned checked results,
-and version the rendering contract used by durable replay. Preserve the saved
-contract and original dependency snapshot when replaying historical output;
-unknown versions fail rather than falling back or upgrading earlier replies.
-Fresh selectors, review proof and display fields cannot be supplied by replay
+and record with each saved answer the versions it was made under. An answer is
+checked once, when it is saved. A saved conversation is picked up again -
+reopened, continued, or read by the board, the files, the reading pane or a
+research note - exactly as saved, never reworked, rebuilt, re-checked or
+upgraded (owner decision P46, 24-25 Oct 2026). What is read back is checked as a
+record: its seal, digest chain, owner, and a version this code reads; a version
+it does not read fails rather than falling back or upgrading an earlier reply.
+Fresh selectors, review proof and display fields cannot be supplied by saved
 metadata from another owner. An interpreted delivery mode never certifies
 semantic fulfillment.
 Keep UI-only enrichment in separate presentation copies, outside canonical
 durable source and record rows. A canonical projection change must version all
-dependent replay bindings together: result catalogues, record deltas, mutation
-targets and seals. Preserve reconstruction under earlier versions; never ignore
+dependent saved bindings together: result catalogues, record deltas, mutation
+targets and seals. Keep earlier saved versions readable as saved; never ignore
 unknown saved fields wholesale or regenerate historical seals to hide drift.
 
 A tentative matter reply may be composed from checked proposed state. Commit
@@ -161,7 +166,8 @@ status under the existing gate/scope contract. It may report independently
 confirmed earlier results, but cannot claim this attempt saved input or
 applied/completed its failed or unconfirmed effect. Preserve accepted input and
 successful effects across bounded recovery. After a lost acknowledgement, use
-durable receipt lookup or idempotent replay; unknown persistence means
+durable receipt lookup or idempotent replay, which returns the saved answer to
+the same request and rebuilds nothing; unknown persistence means
 unconfirmed, not saved or unsaved. Retrying delivery must not repeat the effect.
 For external operations, use their owned execution and recovery contract;
 a local save does not prove an external action.

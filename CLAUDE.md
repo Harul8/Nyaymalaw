@@ -35,7 +35,9 @@ outcome. Reuse fitting contracts explicitly. Create no parallel tracker.
 The app serves the new engine in development verification. nm/app/api.py owns the authenticated
 HTTP boundary, nm/app/composition.py composes services and nm/app/main.py
 launches it. nm/core_engine/ owns context, interpretation, research, grounded response
-writing, independent review, rendering and exact saved replay. Earlier conversations remain preserved.
+writing, independent review, rendering and the one check of each answer as it is saved.
+A saved conversation is picked up again exactly as saved, never reworked or rebuilt
+(owner decision P46); earlier conversations remain preserved and readable as saved.
 M1's unfinished candidate is kept in the private checkpoint named in the plan.
 
 The archived engines were deleted on 19 October 2026 (P24) with every file the

@@ -18,7 +18,7 @@ Nyaymalaw/
   nm/
     app/            compose, serve and launch the application, plus the browser page
     core_engine/    the engine: understanding, research, retrieval, citations,
-                    grounded writing, independent review, rendering, saved replay,
+                    grounded writing, independent review, rendering, the check at saving,
                     documents, checklist, limitation, calculation, voice, matter board
     arrive/         accounts, invitations, sessions and the mail outbox
     open_matter/    uploads, document isolation and text, media contracts, file scanning
