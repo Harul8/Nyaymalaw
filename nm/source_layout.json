@@ -133,6 +133,14 @@
     "trust.html": "nm/site/trust.html",
     "plans.html": "nm/site/plans.html",
     "about.html": "nm/site/about.html",
-    "legal.html": "nm/site/legal.html"
+    "legal.html": "nm/site/legal.html",
+    "source-serif-4-latin-wght-normal.woff2": "nm/app/fonts/source-serif-4-latin-wght-normal.woff2",
+    "source-serif-4-latin-wght-italic.woff2": "nm/app/fonts/source-serif-4-latin-wght-italic.woff2",
+    "source-serif-4-latin-ext-wght-normal.woff2": "nm/app/fonts/source-serif-4-latin-ext-wght-normal.woff2",
+    "source-serif-4-latin-ext-wght-italic.woff2": "nm/app/fonts/source-serif-4-latin-ext-wght-italic.woff2",
+    "source-sans-3-latin-wght-normal.woff2": "nm/app/fonts/source-sans-3-latin-wght-normal.woff2",
+    "source-sans-3-latin-wght-italic.woff2": "nm/app/fonts/source-sans-3-latin-wght-italic.woff2",
+    "source-sans-3-latin-ext-wght-normal.woff2": "nm/app/fonts/source-sans-3-latin-ext-wght-normal.woff2",
+    "source-sans-3-latin-ext-wght-italic.woff2": "nm/app/fonts/source-sans-3-latin-ext-wght-italic.woff2"
   }
 }

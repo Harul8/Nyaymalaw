@@ -284,6 +284,10 @@ ASSETS = {
     "plans.html": ("nm/site/plans.html", "text/html"),
     "about.html": ("nm/site/about.html", "text/html"),
     "legal.html": ("nm/site/legal.html", "text/html"),
+    # The design's fonts, served by the app itself (owner decision O24; plan AN.18).
+    **{f"{face}-{subset}-wght-{style}.woff2": (f"nm/app/fonts/{face}-{subset}-wght-{style}.woff2", "font/woff2")
+       for face in ("source-serif-4", "source-sans-3") for subset in ("latin", "latin-ext")
+       for style in ("normal", "italic")},
 }
 
 
@@ -291,7 +295,7 @@ def test_every_declared_browser_asset_is_the_exact_shipped_population():
     assert browser_assets(root=ROOT) == {
         name: ROOT / path for name, (path, _media_type) in ASSETS.items()
     }
-    assert len(ASSETS) == 16
+    assert len(ASSETS) == 24
     # The old tree is migration evidence, not a runtime import or public root.
     assert not any(isinstance(route, Mount) and route.path == "/static"
                    for route in api.app.routes)
@@ -303,7 +307,9 @@ def test_every_real_asset_get_retains_exact_bytes_media_and_cache_headers(http_b
     response = http_boundary.get(f"/static/{name}")
     assert response.status_code == 200
     assert response.content == (ROOT / path).read_bytes()
-    assert response.headers["content-type"] == f"{media_type}; charset=utf-8"
+    # Text is declared UTF-8; a font is binary and carries no character set.
+    assert response.headers["content-type"] == (
+        f"{media_type}; charset=utf-8" if media_type.startswith("text/") else media_type)
     assert response.headers["content-length"] == str(len(response.content))
     assert response.headers["cache-control"] == "no-cache, must-revalidate"
     assert response.headers["x-content-type-options"] == "nosniff"
