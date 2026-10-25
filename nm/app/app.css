@@ -629,6 +629,10 @@ button.board-card:focus-visible { outline: 2px solid var(--accent); outline-offs
   padding: 0.85rem 1rem; border-radius: 10px; font-size: 0.92rem;
   margin: 0 0 1.6rem;
 }
+/* The AI account's usage used up (owner decisions O18, P51; plan AN.14): brass, as the design
+   draws a limit to act on, not red, which is for a fault. */
+.failure.limit { border-color: #dccb98; background: var(--brass-w); color: #4f3a10; }
+.failure.limit .refusal-head { color: #4f3a10; margin: 0 0 0.4rem; }
 
 /* -------------------------------------------------------------- composer --- */
 .composer {
