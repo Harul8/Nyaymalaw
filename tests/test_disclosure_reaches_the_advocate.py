@@ -62,7 +62,8 @@ CARRIERS: tuple[str, ...] = (
 PROVEN: dict[str, str] = {
     "G-FALLBACK": "test_core_answer_sections.py::test_the_served_answer_shows_the_note_in_a_section_s_place",
     "G-EDITED": "test_core_answer_sections.py::test_the_served_answer_shows_a_corrected_section_under_its_label",
-    "G-NOTED": "test_core_answer_sections.py::test_the_served_answer_says_what_could_be_better_beside_the_section",
+    # Renamed on 24 Oct 2026 (AN.6 piece 8): from v8 what could be better is kept under How NM checked it.
+    "G-NOTED": "test_core_answer_sections.py::test_the_served_answer_keeps_what_could_be_better_under_how_nm_checked_it",
 }
 
 _ARCHIVED_PROOF = ("its proving test drove the archived turn engine and was deleted with "
