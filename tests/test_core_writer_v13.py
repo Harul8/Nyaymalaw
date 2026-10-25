@@ -198,3 +198,16 @@ def test_a_v12_overview_is_still_written_as_before():
                                contract=response_writer.SECTION_CONTRACT)
     assert model.seen[0][0].system == response_writer.OVERVIEW_SYSTEM
     assert draft["contract"] == response_writer.SECTION_CONTRACT and "place" not in draft["units"][0]
+
+
+def test_the_writers_are_told_to_say_you_and_not_to_repeat_the_disputes_name():
+    """P48 (b) and (c), 25 Oct 2026: live runs 3 and 4 had headings that read 'Execution of the
+    Karimnagar money decree: File an execution petition for the Karimnagar money decree.' and a
+    basis line that said 'the advocate's account'."""
+    section = " ".join(response_writer.SYSTEM_V13.split())
+    assert 'Speak to the advocate as "you" and "your" (your account, what you reported), never as "the advocate"' in section
+    assert "use none of the words the name already gives: say what to do, not what the dispute is" in section
+    assert "goes by the facts and dates as you gave them" in section
+    assert "bears on the facts as you reported them" in section
+    overview = " ".join(response_writer.OVERVIEW_SYSTEM_V13.split())
+    assert 'and to the advocate as "you", never as "the advocate"' in overview

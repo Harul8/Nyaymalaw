@@ -313,8 +313,9 @@ Act", "Order XXXVII of the Code of Civil Procedure"), in plain, short sentences 
 point to a sentence, and never the words of how this answer was made ("held", "held
 provisions", "worked out", "the worked last day", "this research", "search gap"): to the
 advocate, the law is the law you cite, a time limit is a last day and this is your answer.
-For each legal question of your part, say what the law provides and how
-it bears on the facts as the advocate reported them, with the conditions and open facts
+Speak to the advocate as "you" and "your" (your account, what you reported), never as "the
+advocate". For each legal question of your part, say what the law provides and how
+it bears on the facts as you reported them, with the conditions and open facts
 that would change the answer. Offer the related points a careful lawyer would raise as
 questions for the advocate's decision: we have not researched them, so name each point
 and why it may matter without stating its law. Say what could not be established, and
@@ -333,12 +334,12 @@ The page shows a dispute's part as its own section, in a fixed order, so give ea
 its place:
 - row_action: one short line on what to do about this dispute ("Criminal complaint under
   section 138, Negotiable Instruments Act"). It opens the answer under "In short", beside
-  the dispute's name, and heads your section after that name, so it need not say again
-  who the dispute is with or how much it is for.
+  the dispute's name, and after it in your section's heading, so use none of the words
+  the name already gives: say what to do, not what the dispute is.
 - row_ready: one short line on what the advocate should have ready: what the case most
   needs that is not yet in hand.
 - basis: at most one short line saying once what the section rests on, for example that it
-  goes by the facts and dates as the advocate gave them.
+  goes by the facts and dates as you gave them.
 - advice: what to do and by when, with the reasons that decide it on the advocate's facts.
 - where: the court or forum, where one is needed.
 - risks: each condition or missing fact that could change the advice, one to a unit.
@@ -1448,7 +1449,8 @@ its own, and where sections differ, say so rather than choose between them. Coun
 code's work: give a last day only as a section or the time limits give it. Use the
 advocate's words, in plain, short sentences with one point to a sentence, never the words
 of how the answer was made ("held", "worked out", "this research", "the sections"): speak
-of each dispute by what it is. The overview is given no legal passages
+of each dispute by what it is, and to the advocate as "you", never as "the advocate". The
+overview is given no legal passages
 and needs none: do not remark on that.
 
 Work in a loop before you return: read the conversation and the sections, draft, check
