@@ -639,3 +639,27 @@ def test_a_step_the_facts_say_is_not_yet_taken_stands_open_with_its_days_left():
     # Code cannot tell words saying a step was taken from words saying it was not: that is the
     # prompt's to keep right. What code keeps is the rule it was given for a step said to be taken.
     assert entry["standing"] == {"state": "taken", "days": None}
+
+
+def test_the_prompt_defines_same_event_once_for_every_case():
+    """P49 (owner, 25 Oct 2026): on the step alone, 2 of 10 runs gave the decree's date, set same_event
+    false and wrote 'do not assume it is the date of the decree', so a quarter of the time the
+    execution deadline was not worked out; and a first wording that added a third statement of what
+    the flag means was followed by P34's credit-sale limit being worked out less often, the model
+    setting same_event false for the delivery. The flag is now defined once: true for the very event
+    the Act names; true for a status that follows at once from the event dated, on a stated
+    assumption; true, with a period the facts set, for the event that period runs from; false only
+    for another event, later by its nature, whose own date is still to be given."""
+    text = " ".join(calculation.SYSTEM.split())
+    assert ('under "same_event" whether they date the event the Act\'s words say time runs from: true if they date that '
+            'very event; also true where the Act\'s event is a status or consequence that follows at once from the event '
+            'they date and nothing the advocate or a document says suggests it came later') in text
+    assert ('in which case state under "assumptions" that you take the two to coincide and say under "missing" what would '
+            'show otherwise') in text
+    assert ('false only where they date another event, such as the later events in the examples above, whose own date '
+            'is still to be given') in text
+    # With a period the facts set (P34) the delivery or the agreement is the event the period runs from.
+    assert "(true when they date the delivery or the agreement the period runs from)" in text
+    # What it refines stays: the words must date that very event, and posting is not delivery.
+    assert "posting a notice is not its delivery" in text
+    assert text.count('under "same_event"') == 2  # the flag is explained at its two uses, each consistent with the other
