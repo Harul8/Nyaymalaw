@@ -105,7 +105,7 @@ const [title] = find(first, (node) => node.className === 'dtitle');
 assert.equal(title.textContent, '1 · Possession of the plot');
 const [meta] = find(first, (node) => node.className === 'dmeta');
 assert.deepEqual(meta.children.map((part) => [part.className, part.textContent]), [
-  ['chip deadline', 'By 10 Jan 2027'], ['chip quiet', 'Last day not worked out'], ['count', '1 of 4 in hand']]);
+  ['chip deadline open', 'By 10 Jan 2027 · 84 days left'], ['chip quiet', 'Last day not worked out'], ['count', '1 of 4 in hand']]);
 assert.equal(meta.children[0].title, 'Last day to file the suit: Open · 84 days left · as of 18 October 2026 (Sunday)');
 assert.deepEqual(find(first, (node) => node.className === 'group').map((node) => node.textContent),
   ['Needed', 'Would strengthen']);
@@ -188,8 +188,20 @@ assert.match(fold.textContent, /Any other route — It may be quicker\./);
     ['Last day', '1 October 2026 (Thursday)'], ['As of', '18 October 2026 (Sunday)'], ['Result', 'Passed'],
     ['Days since the last day', '17']] }];
   const card = context.renderDisputeCard(passed, board, null);
-  assert.equal(find(card, (node) => node.className === 'dmeta')[0].children[0].textContent, 'By 1 Oct 2026 · Passed');
+  const passedChip = find(card, (node) => node.className === 'dmeta')[0].children[0];
+  assert.deepEqual([passedChip.className, passedChip.textContent], ['chip deadline expired', 'By 1 Oct 2026 · Passed']);
   assert.equal(find(card, (node) => node.className === 'dtitle')[0].textContent, 'Possession of the plot');
+}
+// How near an open last day is, in words and colour (the signed-off design, plan AN.14): a month
+// or less, a week or less, one day; the days are the count code saved.
+{
+  const near = (left) => context.deadlineChips([{ what: 'Last day to reply', last_day: '2026-10-28', rows: [
+    ['Last day', '28 October 2026 (Wednesday)'], ['As of', '18 October 2026 (Sunday)'], ['Result', 'Open'],
+    ['Days left', String(left)]] }])[0];
+  assert.deepEqual([near(31).className, near(31).textContent], ['chip deadline open', 'By 28 Oct 2026 · 31 days left']);
+  assert.deepEqual([near(30).className, near(30).textContent], ['chip deadline soon', 'By 28 Oct 2026 · 30 days left']);
+  assert.deepEqual([near(7).className, near(8).className], ['chip deadline urgent', 'chip deadline soon']);
+  assert.equal(near(1).textContent, 'By 28 Oct 2026 · 1 day left');
 }
 // AN ASK OPENS WHAT IT ASKS FOR (rendering v16; the readability design): the item as the board
 // of the same conversation now holds it, else as the answer admitted it.

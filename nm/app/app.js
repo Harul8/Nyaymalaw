@@ -3583,9 +3583,13 @@ function renderCheckLegend() {
   return legend;
 }
 
-// Each last day code worked out, as a chip - 'By 10 Mar 2029', with 'Passed' or 'Late' where
-// so (the design's 'File by' is said only of a filing, and not every time limit is one) -
-// and a quiet word for those it could not work out.
+// Each last day code worked out, as a chip - 'By 10 Mar 2029 · 84 days left', with 'Passed' or
+// 'Late' where so (the design's 'File by' is said only of a filing, and not every time limit is
+// one) - and a quiet word for those it could not work out. How near the day is shows in words
+// and in the chip's colour (the signed-off design, plan AN.14): a week or less, a month or less,
+// further, or passed. The days are the count code saved; nothing is counted here.
+const NEAR_DAYS = { urgent: 7, soon: 30 };
+
 function deadlineChips(limits) {
   const make = (tag, className, text) => {
     const node = document.createElement(tag);
@@ -3599,8 +3603,14 @@ function deadlineChips(limits) {
     const rows = new Map(limit.rows || []);
     if (!rows.has('Last day')) { unworked += 1; continue; }
     const result = rows.get('Result');
-    const chip = make('span', 'chip deadline',
-      `By ${dayDate(limit.last_day) || rows.get('Last day')}${result && result !== 'Open' ? ` · ${result}` : ''}`);
+    const open = !result || result === 'Open';
+    const saved = rows.get('Days left');
+    const days = open && /^\d+$/.test(String(saved ?? '')) ? Number(saved) : null;
+    const near = !open ? 'expired' : days === null ? 'open'
+      : days <= NEAR_DAYS.urgent ? 'urgent' : days <= NEAR_DAYS.soon ? 'soon' : 'open';
+    const said = !open ? ` · ${result}` : days === null ? '' : ` · ${days} ${days === 1 ? 'day' : 'days'} left`;
+    const chip = make('span', `chip deadline ${near}`,
+      `By ${dayDate(limit.last_day) || rows.get('Last day')}${said}`);
     chip.title = `${limit.what}: ${timeLimitStanding(rows)}`;
     chips.push(chip);
   }
