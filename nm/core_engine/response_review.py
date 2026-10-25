@@ -357,7 +357,10 @@ do, row_action, and what to have ready, row_ready), a basis line, the advice, wh
 could still go wrong (risks), the next steps, and last, folded under "More on this" where
 the advocate may never open it, the paragraphs placed more; questions (ask) are gathered at
 the end of the answer. Each paragraph shows its place. Name in keep_shown each paragraph
-placed more that the advice depends on, so that it is shown with the advice.""").replace(
+placed more that the advice depends on, or without which the advocate would miss something
+that matters now (a period that has already run out, a step to take at once), so that it is
+shown with the advice. Saying in could_be_better that a paragraph should not be folded does
+not change what the advocate sees: only keep_shown does.""").replace(
     "List only what you find. Empty lists mean the piece can be shown as it is.",
     "List only what you find. Empty lists mean the piece can be shown as it is, its folds as placed.")
 assert SYSTEM_V11 != SYSTEM_V10 and "keep_shown" in SYSTEM_V11 and "shown as placed" not in SYSTEM_V10

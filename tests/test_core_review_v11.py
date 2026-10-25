@@ -117,3 +117,13 @@ def test_the_section_loop_reads_what_could_go_as_a_suggestion_never_a_fault():
     assert answer_sections.kept_shown(reviewed) == [draft["units"][2]["id"]]
     told = answer_sections._told(reviewed)
     assert told[1]["category"].startswith("could go")
+
+
+def test_the_review_is_told_that_only_keep_shown_changes_what_the_advocate_sees():
+    """P48 (a), 25 Oct 2026: in live run 3 the review wrote, among its suggestions, that a folded
+    paragraph about a period that had already run out should not be folded, and did not name it
+    in keep_shown, so it stayed folded."""
+    text = " ".join(response_review.SYSTEM_V11.split())
+    assert "or without which the advocate would miss something that matters now" in text
+    assert "Saying in could_be_better that a paragraph should not be folded does not change what the advocate sees" in text
+    assert "only keep_shown does" in text
