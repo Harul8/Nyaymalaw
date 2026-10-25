@@ -1433,7 +1433,8 @@ button.ghost.cancel { margin-right: 0.6rem; }
 /* THE STORY PANEL in deep blue, the mark on ivory (the signed-off sign-in page). */
 .arrival-story { width: min(43vw, 540px); padding: 2.5rem; background: var(--deep); color: #f3efe4;
   border-radius: 16px; }
-.arrival-wordmark { display: flex; align-items: center; gap: 0.8rem; font-size: 0.8rem; font-weight: 600; letter-spacing: 0.12em; margin-bottom: 5rem; }
+.arrival-wordmark { display: flex; align-items: center; gap: 0.8rem; font-size: 0.8rem; font-weight: 600; letter-spacing: 0.12em; margin-bottom: 5rem;
+  color: inherit; text-decoration: none; width: fit-content; }
 .arrival-wordmark .mark { background: #f3efe4; color: var(--deep); }
 .arrival-story .eyebrow { color: #c5d2e4; }
 .arrival-story h1 { font: 600 clamp(2.3rem, 4vw, 3.6rem)/1.12 var(--f-serif); letter-spacing: -0.02em; margin: 1rem 0 1.6rem;
