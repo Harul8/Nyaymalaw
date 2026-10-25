@@ -27,7 +27,7 @@ from nm.core_engine.conversation import (
 )
 from nm.shared.external_ai_contracts import ModelPermissionRefused
 from nm.shared.egress_contracts import EgressRefused
-from nm.shared.model_port import ContextOverflow, ModelError, SchemaViolation
+from nm.shared.model_port import USAGE_LIMIT_MESSAGE, ContextOverflow, ModelError, SchemaViolation, UsageLimitReached
 from nm.shared.store_port import StaleWrite
 from nm.shared.turn_attempt_port import AttemptRefused, TurnAttemptPort
 
@@ -439,6 +439,12 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
         if isinstance(exc, ContextOverflow):
             why = "This conversation exceeds the current processing capacity. Your saved conversation is unchanged."
             code = "context_capacity"
+        elif isinstance(exc, UsageLimitReached):
+            # The provider's account has no credit left (owner decision P51, 25 Oct 2026): said in
+            # the owner's words, status 402 for it, and the message can be sent again once that is
+            # put right; nothing waits on a retry that cannot succeed.
+            why = USAGE_LIMIT_MESSAGE + " Your saved conversation is unchanged."
+            code = "usage_limit"
         elif isinstance(exc, (ReleaseWithheld, CorrectionUnavailable, SchemaViolation)):
             # What the check still found, and what the advocate can do (owner decision,
             # 17 Oct 2026), where the release boundary itself withheld the answer.
@@ -451,8 +457,8 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
         else:
             why = "The response could not be completed at present. Your saved conversation is unchanged."
             code = "response_unavailable"
-        refusal = ConversationRefused(why, status=503, code=code,
-                                     retryable=code == "response_unavailable")
+        refusal = ConversationRefused(why, status=402 if code == "usage_limit" else 503, code=code,
+                                     retryable=code in ("response_unavailable", "usage_limit"))
         refusal.diagnosis = _diagnosis(code, exc, calls)
         # A gate's fixed names, or a provider failure's own kind and message (17 Oct 2026:
         # a failed call's reason was lost); never the message, a draft or the review's words.
