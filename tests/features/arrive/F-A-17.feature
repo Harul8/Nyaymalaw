@@ -2,9 +2,9 @@
 # Edit the sheet, then run `python assurance/control_plane/plan_scenarios.py --write`.
 Feature: F-A-17 The top bar and the person menu, the same on every page
 
-  Scenario: The top bar carries the logo, a new-matter button and the conversation history
+  Scenario: The top bar carries the logo, a Home link, a new-matter button and the conversation history
     Given the page
-    Then the top bar has the NM logo and Nyaymalaw, a New matter button and a Conversation history button
+    Then the top bar has the NM logo and Nyaymalaw, a Home link to the website, a New matter button and a Conversation history button
     And it names the signed-in advocate beside the person menu button
 
   Scenario: There are no top tabs
@@ -26,4 +26,4 @@ Feature: F-A-17 The top bar and the person menu, the same on every page
 
   Scenario: On a phone the top bar stays on one row
     Given the page stylesheet
-    Then at 820 px wide or narrower the top bar hides the wordmark and keeps its buttons on one row
+    Then at 820 px wide or narrower the top bar hides the wordmark, shows Home as its house alone and keeps its buttons on one row

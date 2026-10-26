@@ -329,7 +329,18 @@
       <span class="mark">NM</span>
       <span class="name">Nyaymalaw</span>
     </div>
-    <nav class="top-actions" aria-label="Matters">
+    <nav class="top-actions" aria-label="Workspace">
+      <!-- HOME (owner decision O28, plan AN.22): the website's home page, in the same tab. A link and not a
+           button, so it opens with a middle click and works without the script. Unsent writing is kept on
+           this device and an answer being prepared carries on in the server, as when the page is reloaded.
+           On a phone the house stands alone; the word stays for a screen reader. -->
+      <a id="top-home" class="ghost top-action" href="/">
+        <svg class="top-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
+          <path d="M4 11.5 12 4l8 7.5V20a1 1 0 0 1-1 1h-4.5v-6h-5v6H5a1 1 0 0 1-1-1z" fill="none"
+                stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
+        </svg>
+        <span class="top-label">Home</span>
+      </a>
       <button type="button" id="top-new" class="ghost top-action">+ New matter</button>
       <button type="button" id="top-history" class="ghost top-action" aria-controls="rail">Conversation history</button>
     </nav>

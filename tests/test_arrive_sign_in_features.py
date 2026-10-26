@@ -1027,10 +1027,17 @@ def _inner_function(script: str, name: str) -> str:
     return script[at:script.index("\n  }\n", at)]
 
 
-@then("the top bar has the NM logo and Nyaymalaw, a New matter button and a Conversation history button")
+@then("the top bar has the NM logo and Nyaymalaw, a Home link to the website, a New matter button and a "
+      "Conversation history button")
 def top_bar_brand_new_and_history(app_page):
     ribbon = ribbon_html(app_page)
     assert re.search(r'<span class="mark">NM</span>\s*<span class="name">Nyaymalaw</span>', ribbon)
+    # HOME (owner decision O28, plan AN.22): a link to the website's home page, first among the actions, with
+    # its house hidden from a screen reader and its word kept.
+    home = re.search(r'<a id="top-home" class="ghost top-action" href="/">(.*?)</a>', ribbon, re.S)
+    assert home, "the top bar has no Home link to the website's home page"
+    assert 'aria-hidden="true"' in home.group(1) and '<span class="top-label">Home</span>' in home.group(1)
+    assert ribbon.index('id="top-home"') < ribbon.index('id="top-new"') < ribbon.index('id="top-history"')
     assert '<button type="button" id="top-new" class="ghost top-action">+ New matter</button>' in ribbon
     assert re.search(r'<button type="button" id="top-history"[^>]*>Conversation history</button>', ribbon)
     script = _asset("app.js")
@@ -1113,11 +1120,16 @@ def session_end_clears_the_profile(page_script):
         assert detail in clear, detail
 
 
-@then("at 820 px wide or narrower the top bar hides the wordmark and keeps its buttons on one row")
+@then("at 820 px wide or narrower the top bar hides the wordmark, shows Home as its house alone and keeps "
+      "its buttons on one row")
 def phone_top_bar(stylesheet):
     phone = media_blocks(stylesheet, PHONE)
     assert ".masthead .brand .name { display: none; }" in phone
     assert re.search(r"\.top-action \{[^}]*white-space: nowrap;", phone)
+    # The house stands alone as a 44px target; the word stays for a screen reader, not drawn.
+    label = re.search(r"\.top-actions #top-home \.top-label \{([^}]*)\}", phone)
+    assert label and "clip-path: inset(50%)" in label.group(1) and "position: absolute" in label.group(1)
+    assert re.search(r"\.top-actions #top-home \{[^}]*min-width: 2\.75rem;", phone)
 
 
 # ---------------------------------------------------------------- F-A-18 ---
