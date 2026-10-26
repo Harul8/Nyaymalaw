@@ -285,6 +285,7 @@ ASSETS = {
     "about.html": ("nm/site/about.html", "text/html"),
     "legal.html": ("nm/site/legal.html", "text/html"),
     # The design's fonts, served by the app itself (owner decision O24; plan AN.18).
+    "fonts.css": ("nm/app/fonts/fonts.css", "text/css"),
     **{f"{face}-{subset}-wght-{style}.woff2": (f"nm/app/fonts/{face}-{subset}-wght-{style}.woff2", "font/woff2")
        for face in ("source-serif-4", "source-sans-3") for subset in ("latin", "latin-ext")
        for style in ("normal", "italic")},
@@ -295,7 +296,7 @@ def test_every_declared_browser_asset_is_the_exact_shipped_population():
     assert browser_assets(root=ROOT) == {
         name: ROOT / path for name, (path, _media_type) in ASSETS.items()
     }
-    assert len(ASSETS) == 24
+    assert len(ASSETS) == 25
     # The old tree is migration evidence, not a runtime import or public root.
     assert not any(isinstance(route, Mount) and route.path == "/static"
                    for route in api.app.routes)
