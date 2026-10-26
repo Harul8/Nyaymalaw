@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
@@ -40,6 +41,17 @@ def micro_usd(text: str) -> int:
     return int(amount)
 
 
+def open_usage():
+    """This installation's usage store, and nothing else: no model, mail or malware checker is
+    started for it, as composing the whole application would. Found by the application's own rule."""
+    from nm.app.composition import USAGE_FILE, storage_root
+    from nm.arrive.store_usage import FileUsage
+    from nm.shared.model_config import load_dotenv
+
+    load_dotenv(ROOT / ".env")
+    return FileUsage(storage_root(os.environ, ROOT) / USAGE_FILE)
+
+
 def described(standing: dict) -> dict:
     return {"granted": dollars(standing["granted"]), "spent": dollars(standing["spent"]),
             "left": f"{standing['left']}%", "last_notice_shown": standing["noticed"]}
@@ -58,9 +70,7 @@ def main(argv: list[str] | None = None) -> int:
     commands.add_parser("totals", help="every call's cost: overall, by model and by outcome")
     args = parser.parse_args(argv)
 
-    from nm.app.composition import Application
-
-    usage = Application().usage
+    usage = open_usage()
     try:
         if args.command == "status":
             print(json.dumps(described(usage.standing(args.account)), indent=2))

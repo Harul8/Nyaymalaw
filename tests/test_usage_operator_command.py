@@ -3,7 +3,6 @@ operator host only, and total every call's cost. Offline, against a temporary us
 from __future__ import annotations
 
 import json
-from types import SimpleNamespace
 
 import pytest
 
@@ -18,8 +17,20 @@ ACCOUNT = "advocate@chambers.in"
 @pytest.fixture
 def store(tmp_path, monkeypatch):
     usage = FileUsage(tmp_path / "usage.sqlite")
-    monkeypatch.setattr("nm.app.composition.Application", lambda: SimpleNamespace(usage=usage))
+    monkeypatch.setattr(command, "open_usage", lambda: usage)
     return usage
+
+
+def test_the_command_opens_the_usage_store_alone_where_the_application_keeps_it(tmp_path, monkeypatch):
+    """Not the whole application: composing it would start the malware checker's resident engine."""
+    def composed(*args, **kwargs):
+        raise AssertionError("the whole application was composed for one store")
+
+    monkeypatch.setattr("nm.app.composition.Application", composed)
+    monkeypatch.setenv("NM_MATTER_STORE", str(tmp_path / "records"))
+    opened = command.open_usage()
+    assert opened.path == (tmp_path / "records" / "usage.sqlite").resolve()
+    assert opened.standing(ACCOUNT)["left"] == 100
 
 
 def run(capsys, *argv):
