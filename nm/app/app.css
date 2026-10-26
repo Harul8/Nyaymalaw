@@ -4,9 +4,9 @@
    mean. Light only: dark versions are not required now (O23), so no dark override can fall out of
    step with the light one. */
 :root {
-  /* Fonts are named, never fetched: rendering never sends a request to a font service from an
-     advocate's workspace. Source Serif 4 and Source Sans 3 are used where the device has them and
-     the fonts it already has stand in; serving them from this app is AN.18. */
+  /* Source Serif 4 and Source Sans 3 come from this app's own server (fonts.css, linked first by
+     the page; owner decision O24, plan AN.18): rendering never sends a request to a font service
+     from an advocate's workspace, and the device's fonts named after them stand in until they load. */
   --paper:      #fbf8f1;
   --surface:    #ffffff;
   --surface-2:  #f4f0e6;
