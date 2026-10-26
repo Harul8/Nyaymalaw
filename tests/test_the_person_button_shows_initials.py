@@ -34,7 +34,8 @@ def test_the_circle_is_drawn_only_when_it_has_letters_and_stays_on_a_phone():
     circle = re.search(r"(?<![\w-])\.avatar\s*\{([^}]*)\}", STYLE).group(1)
     assert "border-radius: 50%" in circle and "width: 30px" in circle and "height: 30px" in circle
     assert re.search(r"\.avatar:empty\s*\{\s*display:\s*none;", STYLE), "an empty circle is drawn"
-    # The name gives way on a phone (F-A-17); the initials are what stay.
-    phone = STYLE[STYLE.index("@media (max-width: 820px) {"):]
-    phone = phone[:phone.index("\n}\n")]
-    assert ".ribbon-account > .who-name { display: none; }" in phone and ".avatar" not in phone
+    # The name gives way on a phone (F-A-17); the initials are what stay. The stylesheet has several
+    # phone blocks, so all of them are read.
+    phone = "".join(block.split("\n}\n")[0] for block in STYLE.split("@media (max-width: 820px) {")[1:])
+    assert ".ribbon-account > .who-name { display: none; }" in phone
+    assert ".avatar" not in phone, "a phone rule hides or resizes the initials"
