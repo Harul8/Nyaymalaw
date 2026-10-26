@@ -1160,6 +1160,11 @@ def logout(response: Response,
 
     outcome = end_session(application().directory, nm_session)
     response.delete_cookie("nm_session", path="/")
+    # THE READABLE HALF GOES TOO (plan AN.22). `nm_csrf` is the one sign-in cookie a page can read, and the
+    # website's pages read it to know, before any answer, that someone may be signed in. Left behind for the
+    # rest of its twelve hours it would say so about a visitor who has signed out. Without the session it
+    # opens nothing, so clearing it takes nothing away.
+    response.delete_cookie("nm_csrf", path="/")
     return {"signed_out": True, "outcome": outcome}
 
 
