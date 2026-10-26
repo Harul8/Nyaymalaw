@@ -19,7 +19,7 @@ PAGES = ("home.html", "how-it-works.html", "what-it-holds.html", "trust.html", "
          "legal.html")
 #: The addresses a public page may link to: the site's own pages, the app, and places on the same page.
 ADDRESSES = {"/", "/how-it-works", "/what-it-holds", "/trust", "/plans", "/about", "/legal", "/app",
-             "/app#register", "/static/site.css"}
+             "/app#register", "/static/site.css", "/static/fonts.css"}
 
 
 def _page(name: str) -> str:
@@ -51,4 +51,12 @@ def test_a_public_page_keeps_the_blanks_blank_and_speaks_of_usage_as_the_owner_d
 def test_the_public_style_sheet_names_its_fonts_and_fetches_none():
     css = browser_assets()["site.css"].read_text(encoding="utf-8")
     assert "Source Serif 4" in css and "Georgia" in css, "the serif and its stand-in are no longer named"
+    # The faces are declared once, in fonts.css, from this server (plan AN.18); the site's own sheet
+    # fetches nothing.
     assert "url(" not in css and "@import" not in css and "@font-face" not in css, "the site fetches a font"
+
+
+@pytest.mark.parametrize("name", PAGES)
+def test_a_public_page_loads_the_design_fonts_from_this_server_first(name):
+    sheets = re.findall(r'<link rel="stylesheet" href="([^"]+)">', _page(name))
+    assert sheets == ["/static/fonts.css", "/static/site.css"], f"{name} loads {sheets}"

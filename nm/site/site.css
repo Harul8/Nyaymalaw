@@ -1,5 +1,6 @@
 /* The public site's one style sheet (owner decisions P52, O23; plan AN.16), drawn from the signed-off
-   homepage. Fonts are named, never fetched: no page asks a font service for anything. */
+   homepage. The fonts come from this server through fonts.css, which every page links first: no page
+   asks a font service for anything. */
 :root{--paper:#FBF8F1;--surface:#FFFFFF;--sunken:#F4F0E6;--ink:#1B2029;--ink2:#39424F;--ink3:#5A6573;--rule:#E4DECF;--rule2:#CFC8B4;--field:#8D8670;--blue:#1F4B8F;--blue-d:#163A70;--blue-w:#E6EEF8;--blue-b:#B9CBE6;--deep:#12305A;--brass:#8A6A22;--brass-w:#F4ECD6;--brass-d:#6B5018;--red:#9A3328;--red-w:#F7E6E2;--amber-w:#F6ECD2;--good:#2B6A4C;--good-w:#DCEBE2;--serif:"Source Serif 4",Georgia,"Times New Roman",serif;--sans:"Source Sans 3","Segoe UI",system-ui,sans-serif}
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
