@@ -103,6 +103,9 @@ let restoredTimer = null;
 let usage = null;
 let usageRequest = 0;
 let usageNoticeTimer = null;
+// The Usage and plan window (AN.19); declared here, before boot() can reach a sign-out.
+let usagePlanRequest = 0;
+const TRIAL_NOTE = 'You are on the trial. Choose a plan below when you want more.';
 try { draftVault = new NMDraftVault(window.localStorage, window.crypto); }
 catch { /* Unavailable storage is reported before any durable-save claim. */ }
 
@@ -447,6 +450,7 @@ function clearPrivileged() {
   $('ai-sharing-accept').checked = false;
   $('dictation-setting-dialog').close();
   $('dictation-setting-status').textContent = '';
+  $('usage-plan-dialog').close();
   $('sessions-body').textContent = '';
   if (activeDelivery) {
     activeDelivery.entry.state = 'unknown';
@@ -7707,6 +7711,7 @@ function showUsage(seen) {
     // The allowance grew again (an operator added to it): sending resumes.
     hideUsageNotice();
   }
+  showUsagePlan(seen);
   updateWorkspace();
 }
 
@@ -7726,6 +7731,7 @@ function forgetUsage() {
   usageRequest += 1;
   hideUsageNotice();
   $('usage-chip').hidden = true;
+  resetUsagePlan();
 }
 
 $('usage-notice-close').addEventListener('click', hideUsageNotice);
@@ -7733,6 +7739,70 @@ $('usage-notice-close').addEventListener('click', hideUsageNotice);
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') loadUsage();
 });
+
+// USAGE AND PLAN (owner decisions O21-O24, O26; plans P53, AN.17, AN.19): a window over the workspace,
+// opened from the chip, from a notice's See plans, or from the person menu. It shows only what the
+// server says - the allowance's name and the percentage left, and at nothing left the owner's words;
+// the plans themselves are on the page, in the public Plans page's words. Pro and Elite cannot be
+// chosen yet (payment comes later, by UPI), so nothing here buys anything.
+function showUsagePlan(seen) {
+  $('usage-plan-allowance').textContent = `${seen.plan} allowance`;
+  $('usage-plan-left').textContent = `${seen.left}%`;
+  $('usage-plan-fill').style.width = `${Math.max(0, Math.min(100, seen.left))}%`;
+  $('usage-plan-fill').parentElement.dataset.level = usageLevel(seen.left);
+  $('usage-plan-name').textContent = seen.plan;
+  $('usage-plan-note').textContent = seen.limit || (seen.plan === 'Trial' ? TRIAL_NOTE : '');
+}
+
+function resetUsagePlan() {
+  usagePlanRequest += 1;
+  $('usage-plan-allowance').textContent = 'Trial allowance';
+  $('usage-plan-left').textContent = '—';
+  $('usage-plan-fill').style.width = '0';
+  $('usage-plan-fill').parentElement.dataset.level = '';
+  $('usage-plan-name').textContent = 'Trial';
+  $('usage-plan-note').textContent = TRIAL_NOTE;
+  $('usage-plan-status').textContent = '';
+}
+
+async function openUsagePlan() {
+  setAccountMenu(false);
+  const request = ++usagePlanRequest;
+  // What is known is shown at once; the server's current word replaces it.
+  if (usage) showUsagePlan(usage);
+  $('usage-plan-status').textContent = usage ? '' : 'Checking your usage…';
+  if (!$('usage-plan-dialog').open) $('usage-plan-dialog').showModal();
+  try {
+    const seen = await api('/api/usage');
+    if (request !== usagePlanRequest || !state.advocate) return;
+    $('usage-plan-status').textContent = '';
+    showUsage(seen);
+  } catch (err) {
+    if (!err.obsolete && request === usagePlanRequest) {
+      $('usage-plan-status').textContent = `Your usage could not be read just now. ${err.message}`;
+    }
+  }
+}
+
+// The chip and the notice are links to the public Plans page, which still work without this script; a
+// plain click opens the window instead, and a click with a modifier key keeps the link.
+function plainClick(ev) {
+  return !ev.defaultPrevented && ev.button === 0 && !(ev.metaKey || ev.ctrlKey || ev.shiftKey || ev.altKey);
+}
+$('usage-chip').addEventListener('click', (ev) => {
+  if (!plainClick(ev)) return;
+  ev.preventDefault();
+  openUsagePlan();
+});
+$('usage-notice').addEventListener('click', (ev) => {
+  const link = ev.target.closest ? ev.target.closest('.usage-notice-plans') : null;
+  if (!link || !plainClick(ev)) return;
+  ev.preventDefault();
+  openUsagePlan();
+});
+$('usage-plan').addEventListener('click', openUsagePlan);
+$('usage-plan-close').addEventListener('click', () => $('usage-plan-dialog').close());
+$('usage-plan-dialog').addEventListener('close', () => { ++usagePlanRequest; });
 
 // IS THE SERVER RUNNING THE CODE THAT IS ON DISK?
 //

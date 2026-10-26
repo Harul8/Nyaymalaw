@@ -36,7 +36,7 @@ function page() {
   const context = vm.createContext({
     $: node, state: { advocate: 'advocate@chambers.in' }, usage: null, usageRequest: 0, usageNoticeTimer: null,
     Math, JSON, updates: 0,
-    updateWorkspace() { context.updates += 1; },
+    updateWorkspace() { context.updates += 1; }, showUsagePlan(seen) { context.window = seen; }, resetUsagePlan() {},
     setTimeout: (fn, ms) => { timers.push(ms); return timers.length; }, clearTimeout() {},
     api: async (path, options) => { posted.push([path, options && JSON.parse(options.body)]); return {}; },
   });
@@ -56,6 +56,7 @@ const LIMIT = 'You have run out of your usage limits. Please upgrade to continue
   assert.equal(chip.querySelector('.usage-plan').textContent, 'Trial');
   assert.equal(chip.querySelector('.usage-meter i').style.width, '100%');
   assert.equal(chip.attributes['aria-label'], 'Trial allowance, 100% left. See plans.');
+  assert.equal(context.window.left, 100, 'the Usage and plan window is kept in step with the chip');
   assert.equal(node('usage-notice').hidden, true, 'no notice above 50%');
   assert.equal(posted.length, 0);
   assert.equal(context.usageUsedUp(), false);
