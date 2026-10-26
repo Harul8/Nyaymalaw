@@ -29,6 +29,7 @@
     "nm.arrive.professional_access_contracts": "domain",
     "nm.arrive.store_directory": "adapters",
     "nm.arrive.store_pending_accounts": "adapters",
+    "nm.arrive.usage_port": "ports",
     "nm.core_engine.answer_sections": "core",
     "nm.core_engine.answer_sources": "core",
     "nm.core_engine.calls": "core",
@@ -115,7 +116,7 @@
     "domain": 37,
     "edge": 2,
     "infrastructure": 1,
-    "ports": 9
+    "ports": 10
   },
   "browser_assets": {
     "app.css": "nm/app/app.css",
