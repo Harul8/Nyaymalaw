@@ -207,9 +207,10 @@ def main(argv: list[str] | None = None) -> int:
 
     warm_search = getattr(getattr(application, "legal_search", None), "warm", None)
     if callable(warm_search):
-        import threading
-
         threading.Thread(target=warm_search, name="search-warm", daemon=True).start()
+    # The conversation history's lines (owner decision O29), made ready in the background, newest first, so
+    # the first opening of the history after a start reads small lines and opens no large file.
+    threading.Thread(target=api.prepare_history, name="history-warm", daemon=True).start()
     print(json.dumps(health, indent=2))
     served = api.app
     if os.environ.get(IN_FLIGHT_FILE):
