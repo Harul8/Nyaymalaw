@@ -36,4 +36,8 @@ This index follows the shipped [source-layout manifest](../source_layout.json). 
 
 Only the exact declared `/static/<name>` URLs are public; Python and private files in the same folders are never a static population.
 
+Usage (plans AN.17 and AN.19): `GET /api/usage` tells the page the plan and the percentage of the allowance left, and the notice due; `POST /api/usage/notice` records that a notice was shown. Every model call made for an advocate is metered (`composition.py`), and once nothing is left new paid work is refused before it starts, in the owner's words; the Usage and plan window in [index.html](index.html) shows only what the server says.
+
+Fonts (plan AN.18): Source Serif 4 and Source Sans 3 are served from [fonts/](fonts/), with their open licence, through `fonts.css`; no font service is asked for anything.
+
 Pages have their own addresses (plan AN.16): `/` is the public homepage, `/how-it-works`, `/what-it-holds`, `/trust`, `/plans`, `/about` and `/legal` are the public site's pages ([../site/](../site/)), and the app itself is at `/app`. Each address names one declared page in `static_assets.PAGES`; a password-reset link opens `/app#reset=…`.

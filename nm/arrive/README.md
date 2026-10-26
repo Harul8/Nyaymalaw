@@ -30,6 +30,7 @@ This index follows the shipped [source-layout manifest](../source_layout.json). 
 
 - [directory_port.py](directory_port.py) — Defines account and session directory operations.
 - [mail_port.py](mail_port.py) — Defines how account confirmation and recovery messages are delivered.
+- [usage_port.py](usage_port.py) — Each account's usage of the paid AI service and the allowance it draws on: the trial, the percentage left, the notices (plan AN.17), and the content-free store port.
 
 ### Adapters
 
@@ -37,6 +38,7 @@ This index follows the shipped [source-layout manifest](../source_layout.json). 
 - [mail_outbox.py](mail_outbox.py) — Stores account messages in the sealed local test outbox without sending email.
 - [store_directory.py](store_directory.py) — Stores sealed accounts, sessions and professional status.
 - [store_pending_accounts.py](store_pending_accounts.py) — Sealed pending account records, with one transactional owner of code limits.
+- [store_usage.py](store_usage.py) — Keeps each account's allowance, what every paid call cost and the last notice shown, in one content-free sidecar store.
 
 ### Browser assets
 

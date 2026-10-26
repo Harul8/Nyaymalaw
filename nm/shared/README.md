@@ -48,6 +48,7 @@ This index follows the shipped [source-layout manifest](../source_layout.json). 
 - [model_budget.py](model_budget.py) — Enforces model context limits before sending a request.
 - [model_call_budget.py](model_call_budget.py) — Durable, conservative spending reservations for an explicitly bounded evaluation.
 - [model_config.py](model_config.py) — Tier -> provider + pinned model resolution, read from the environment.
+- [model_metered.py](model_metered.py) — Records every paid model call against its account, whatever its outcome, at the cost the provider's usage established (plan AN.17).
 - [model_openai_adapter.py](model_openai_adapter.py) — Adapts the OpenAI API to the provider-neutral model port.
 - [model_policed.py](model_policed.py) — Applies egress permissions to outbound model calls.
 - [model_replay.py](model_replay.py) — Exact model-call recording and offline replay, never a live-quality claim.
