@@ -360,12 +360,9 @@
       <div class="account-menu" id="account-menu">
         <button type="button" id="account-toggle" class="account-toggle"
                 aria-haspopup="true" aria-expanded="false" aria-controls="account-panel">
-          <svg class="person-icon" viewBox="0 0 24 24" width="20" height="20"
-               aria-hidden="true" focusable="false">
-            <circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/>
-            <path d="M4 20c1.4-3.6 4.4-5.5 8-5.5s6.6 1.9 8 5.5" fill="none"
-                  stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-          </svg>
+          <!-- The advocate's initials (plan AN.20), filled from the name the account holds; the
+               button's name is the words below, so the letters are not read out. -->
+          <span class="avatar" id="account-initials" aria-hidden="true"></span>
           <svg class="menu-arrow" viewBox="0 0 12 12" width="10" height="10"
                aria-hidden="true" focusable="false">
             <path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor"
