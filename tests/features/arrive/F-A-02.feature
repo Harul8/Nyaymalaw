@@ -2,12 +2,14 @@
 # Edit the sheet, then run `python assurance/control_plane/plan_scenarios.py --write`.
 Feature: F-A-02 Register a private account with email and password
 
-  Scenario: The register card shows the registration details and the privacy notice
+  Scenario: The register card takes the registration details in steps, as drawn
     Given the sign-in page
     Then the register card has exactly an email field, a password field, a retype-password field, two required privacy boxes and one optional OpenAI permission box
-    And the register card has a Register button and a Back to sign in link
+    And the register card shows its steps: the account, then privacy and AI permission, then confirming the email
+    And the account step has a Continue button and the privacy step a Back button and a Create account button
+    And the register card has a Back to sign in link
     And the register card states the password rules
-    And the register card carries only account details, delivery status and confirmation navigation
+    And the register card carries no logo and only the words of its steps
 
   Scenario: Email and password create an account without an invitation
     When a visitor registers "new@example.com" with a valid password typed twice

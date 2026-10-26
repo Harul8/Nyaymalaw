@@ -130,14 +130,30 @@
   <!-- SEPARATE FORM, NOT A MODE OF THE FIRST. A single form that changes
        meaning by a flag is one where a mis-set flag posts a password to the
        wrong route. -->
-  <!-- REGISTRATION DETAILS ONLY. Implementation Plan F-A-02: email, password,
-       retype password, Register -- and the password rules, so nobody is
-       refused without knowing why. -->
+  <!-- REGISTRATION IN STEPS (owner decision O24, 25 Oct 2026; plan AN.15), as the signed-off
+       design draws it: the account, then privacy and AI permission, then the emailed code on the
+       confirmation card below. STILL ONE FORM, posted once from its last step, so the details,
+       the consent and the AI choice travel together exactly as before (F-A-02, F-A-09, D-041),
+       and the password rules are stated where the password is chosen. The design's optional
+       professional-details step waits for its own decisions and is not shown. -->
   <form id="register" class="login" hidden autocomplete="on">
+    <ol class="reg-steps" aria-label="Registration steps">
+      <li data-step="1" aria-current="step"><span class="reg-step-n">1</span>
+        <span><b>Account</b> Email and password</span></li>
+      <li data-step="2"><span class="reg-step-n">2</span>
+        <span><b>Privacy and AI permission</b> What we keep, and what you allow</span></li>
+      <li data-step="3"><span class="reg-step-n">3</span>
+        <span><b>Confirm your email</b> A six-digit code</span></li>
+    </ol>
     <p id="registration-availability" role="status" aria-live="polite">Checking registration availability…</p>
+
+    <section class="reg-step" data-step="1" aria-labelledby="reg-account-title">
+    <p class="reg-step-count">Step 1 of 3</p>
+    <h2 id="reg-account-title" class="login-title">Create your account</h2>
     <label for="reg-email">Email <span class="req" aria-hidden="true">*</span></label>
     <input id="reg-email" name="email" type="email" required maxlength="254"
-           autocomplete="email" autocapitalize="none" spellcheck="false">
+           autocomplete="email" autocapitalize="none" spellcheck="false" aria-describedby="reg-email-hint">
+    <p class="reg-hint" id="reg-email-hint">It becomes your sign-in name, and we send a six-digit code to it.</p>
 
     <label for="reg-password">Password <span class="req" aria-hidden="true">*</span></label>
     <div class="pw-wrap">
@@ -163,6 +179,18 @@
       </button>
     </div>
 
+    <p class="login-foot">
+      <span class="req" aria-hidden="true">*</span> required. The password must be at
+      least 8 characters and contain an upper-case letter, a lower-case
+      letter, a numeral and a special character.
+    </p>
+    <p id="reg-account-state" class="login-state" role="status" aria-live="polite"></p>
+    <button type="button" class="primary wide" id="reg-continue">Continue</button>
+    </section>
+
+    <section class="reg-step" data-step="2" aria-labelledby="reg-privacy-title" hidden>
+    <p class="reg-step-count">Step 2 of 3</p>
+    <h2 id="reg-privacy-title" class="login-title">Your privacy, and your permission for AI</h2>
     <!-- THE PRIVACY NOTICE, ON THE CARD AND NOT BEHIND A LINK. Implementation Plan
          F-A-09; DPDP Rules 2025, Rule 3: each detail named with what it is for,
          how to withdraw, the advocate's rights, and how to complain to the
@@ -215,18 +243,26 @@
         Research and answers require it. Change your choice in Profile → AI data sharing.</p>
     </section>
 
-    <button type="submit" class="primary wide" id="register-go">Register</button>
+    <div class="reg-actions">
+      <button type="button" id="reg-back">Back</button>
+      <button type="submit" class="primary" id="register-go">Create account</button>
+    </div>
+    </section>
+
     <div class="login-alt"><a href="#" id="show-login">Back to sign in</a></div>
     <div class="login-alt"><a href="#" id="show-confirm">Already have a confirmation code?</a></div>
-
-    <p class="login-foot">
-      <span class="req" aria-hidden="true">*</span> required. The password must be at
-      least 8 characters and contain an upper-case letter, a lower-case
-      letter, a numeral and a special character.
-    </p>
   </form>
 
   <form id="confirm-email" class="login" hidden autocomplete="on">
+    <!-- The registration's third step (plan AN.15); also reached with a code already in hand. -->
+    <ol class="reg-steps" aria-label="Registration steps">
+      <li data-step="1"><span class="reg-step-n">1</span><span><b>Account</b> Email and password</span></li>
+      <li data-step="2"><span class="reg-step-n">2</span>
+        <span><b>Privacy and AI permission</b> What we keep, and what you allow</span></li>
+      <li data-step="3" aria-current="step"><span class="reg-step-n">3</span>
+        <span><b>Confirm your email</b> A six-digit code</span></li>
+    </ol>
+    <p class="reg-step-count">Step 3 of 3</p>
     <h2>Confirm your email</h2>
     <p id="confirmation-detail" role="status" aria-live="polite">
       Enter the six-digit code sent to your email. Your account is not active yet.

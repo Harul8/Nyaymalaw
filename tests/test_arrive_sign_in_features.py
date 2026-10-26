@@ -268,10 +268,50 @@ def register_card_inputs(sign_in_page):
         assert bool(re.search(r"\srequired\b", tag)) == (name != "reg-external-ai")
 
 
-@then("the register card has a Register button and a Back to sign in link")
-def register_card_actions(sign_in_page):
+#: The registration's steps as the signed-off design draws them (owner decision O24; plan AN.15).
+STEPS = ("Account", "Privacy and AI permission", "Confirm your email")
+
+
+def register_steps(page: str) -> tuple[str, str]:
+    """The register card's account step and its privacy step."""
+    register = card_html(page, "register")
+    first = register.index('<section class="reg-step" data-step="1"')
+    second = register.index('<section class="reg-step" data-step="2"')
+    return register[first:second], register[second:]
+
+
+@then("the register card shows its steps: the account, then privacy and AI permission, then "
+      "confirming the email")
+def register_card_steps(sign_in_page):
     register = card_html(sign_in_page, "register")
-    assert re.search(r'<button\b[^>]*id="register-go"[^>]*>\s*Register\s*</button>', register)
+    marks = re.findall(r'<li data-step="(\d)"[^>]*>.*?<b>([^<]+)</b>', register, re.S)
+    assert marks == [("1", STEPS[0]), ("2", STEPS[1]), ("3", STEPS[2])], marks
+    assert '<li data-step="1" aria-current="step">' in register
+    assert re.findall(r'<section class="reg-step" data-step="(\d)"', register) == ["1", "2"]
+    account, privacy = register_steps(sign_in_page)
+    for name in ("reg-email", "reg-password", "reg-password2"):
+        assert f'id="{name}"' in account, name
+    for name in ("reg-consent", "reg-adult", "reg-external-ai"):
+        assert f'id="{name}"' in privacy, name
+    assert re.search(r'<section class="reg-step" data-step="2"[^>]*\shidden\b', register), (
+        "the privacy step waits for the account step")
+    confirm = sign_in_page[sign_in_page.index('<form id="confirm-email"'):]
+    confirm = confirm[:confirm.index("</form>")]
+    assert '<li data-step="3" aria-current="step">' in confirm, "the code is the third step"
+
+
+@then("the account step has a Continue button and the privacy step a Back button and a Create "
+      "account button")
+def register_card_step_actions(sign_in_page):
+    account, privacy = register_steps(sign_in_page)
+    assert re.search(r'<button type="button"[^>]*id="reg-continue">\s*Continue\s*</button>', account)
+    assert re.search(r'<button type="button" id="reg-back">\s*Back\s*</button>', privacy)
+    assert re.search(r'<button type="submit"[^>]*id="register-go">\s*Create account\s*</button>', privacy)
+
+
+@then("the register card has a Back to sign in link")
+def register_card_back_link(sign_in_page):
+    register = card_html(sign_in_page, "register")
     assert re.search(r'<a\b[^>]*id="show-login"[^>]*>\s*Back to sign in\s*</a>', register)
 
 
@@ -281,26 +321,31 @@ RULES = ("The password must be at least 8 characters and contain an upper-case l
 
 @then("the register card states the password rules")
 def register_card_rules(sign_in_page):
-    assert RULES in visible_text(card_html(sign_in_page, "register"))
+    account, _ = register_steps(sign_in_page)
+    assert RULES in visible_text(account), "the rules are stated where the password is chosen"
 
 
-@then("the register card carries only account details, delivery status and confirmation navigation")
+@then("the register card carries no logo and only the words of its steps")
 def register_card_is_bare(sign_in_page):
     register = card_html(sign_in_page, "register")
     for forbidden in ('class="mark"', "login-brand", "login-lede", "field-help"):
         assert forbidden not in register, forbidden
-    # The notice and its two boxes are F-A-09's and are checked there.
+    # The notice and its boxes are F-A-09's and are checked there.
     register = re.sub(r'<section class="privacy-notice".*?</section>', " ", register, flags=re.S)
     register = re.sub(r'<label class="consent".*?</label>', " ", register, flags=re.S)
     remainder = visible_text(register)
-    for piece in (RULES, "Checking registration availability…",
-                  "Already have a confirmation code?", "required.", "Retype password",
-                  "Back to sign in", "Register",
-                  "Password", "Email"):
+    # Longer words first, so a shorter one is never taken out of a longer one.
+    for piece in ("Email and password", "Privacy and AI permission", "What we keep, and what you allow",
+                  "Confirm your email", "A six-digit code", "Account",
+                  "Checking registration availability…", "Step 1 of 3", "Step 2 of 3",
+                  "Create your account", "Your privacy, and your permission for AI",
+                  "It becomes your sign-in name, and we send a six-digit code to it.", RULES,
+                  "required.", "Retype password", "Password", "Email", "Continue", "Create account",
+                  "Back to sign in", "Back", "Already have a confirmation code?", "1", "2", "3"):
         assert piece in remainder, f"{piece!r} is missing from the register card"
         remainder = remainder.replace(piece, " ", 1)
     leftover = remainder.replace("*", " ").replace(EYE, " ").split()
-    assert not leftover, f"the register card says more than the details: {leftover}"
+    assert not leftover, f"the register card says more than its steps: {leftover}"
 
 
 @when(parsers.parse('a visitor registers "{email}" with a valid password typed twice'))
@@ -646,7 +691,7 @@ def boxes_start_unticked(sign_in_page):
     assert not [p for p in problems if "unticked box" in p], problems
 
 
-@then("the Register button stays unavailable until both boxes are ticked")
+@then("the Create account button stays unavailable until both boxes are ticked")
 def register_waits_for_boxes():
     script = _script()
     ready = _function(script, 'syncRegisterReady')

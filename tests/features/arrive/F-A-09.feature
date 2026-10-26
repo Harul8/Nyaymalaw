@@ -9,9 +9,9 @@ Feature: F-A-09 Privacy notice and consent at registration
     And the notice names Nyaymalaw, through Rahul Lambade, Founder & CEO, and the contact haaruln@gmail.com
     And the consent box and the 18-or-older box start unticked
 
-  Scenario: Register waits for both boxes and sends them with the notice version
+  Scenario: Create account waits for both boxes and sends them with the notice version
     Given the sign-in page
-    Then the Register button stays unavailable until both boxes are ticked
+    Then the Create account button stays unavailable until both boxes are ticked
     And the registration sends both boxes and the notice version the page shows
     And the notice version on the page is the one the server records
 
