@@ -56,6 +56,13 @@ def test_one_sheet_declares_each_font_once_and_only_from_this_server():
         assert "unicode-range:" in face, url
 
 
+def test_the_app_page_links_the_font_sheet_before_its_own():
+    page = browser_assets()["index.html"].read_text(encoding="utf-8")
+    sheets = re.findall(r'<link rel="stylesheet" href="([^"]+)">', page)
+    assert "/static/fonts.css" in sheets, "the app's page does not load the design's fonts"
+    assert sheets.index("/static/fonts.css") < sheets.index("/static/app.css")
+
+
 def test_the_open_font_licence_sits_beside_the_fonts_and_names_both():
     folders = {path.parent for path in _fonts().values()}
     assert len(folders) == 1, "the fonts are kept in one folder, with their licence"
