@@ -1072,13 +1072,16 @@ def person_menu_profile(app_page, page_script):
         assert f"$('{field}').textContent" in show, f"{field} is never filled"
 
 
-@then("the person menu has Signed-in devices, AI data sharing, Dictation and Sign out")
+@then("the person menu has Usage and plan, Signed-in devices, AI data sharing, Dictation and Sign out")
 def person_menu_actions(app_page):
     panel = app_page[app_page.index('<div id="account-panel"'):app_page.index('<nav class="tabs"')]
-    buttons = re.findall(r'<button id="([a-z-]+)" type="button" class="ghost"(?: hidden)?>([^<]+)</button>', panel)
+    # Any further attributes are allowed (Usage and plan says it opens a dialog), so no button is
+    # passed over for having one more than the others.
+    buttons = re.findall(r'<button id="([a-z-]+)" type="button" class="ghost"[^>]*>([^<]+)</button>', panel)
     shown = [(id_, label) for id_, label in buttons if id_ != "advocate-preferences"]
-    assert shown == [("devices", "Signed-in devices"), ("ai-sharing", "AI data sharing"),
-                     ("dictation-setting", "Dictation"), ("signout", "Sign out")], buttons
+    assert shown == [("usage-plan", "Usage and plan"), ("devices", "Signed-in devices"),
+                     ("ai-sharing", "AI data sharing"), ("dictation-setting", "Dictation"),
+                     ("signout", "Sign out")], buttons
 
 
 @then("the menu opens from its button and closes on Escape, on a click elsewhere, and when "
