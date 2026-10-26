@@ -161,6 +161,16 @@ main { display: grid; grid-template-columns: 19rem minmax(0, 1fr); flex: 1; min-
 #pane-advise[data-view="list"] > .rail .rail-meta,
 #pane-advise[data-view="list"] #rail-body { width: min(52rem, 100%); margin-inline: auto; }
 .matter-list-row.selected { background: var(--accent-w); border-color: var(--accent); }
+/* LOAD MORE under the conversation history (owner decision O29; plan AN.23): a line saying how many are shown of
+   how many, and the button that adds the next ten. */
+.rail-more { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.6rem 1rem; padding: 0.3rem 0.2rem 1.4rem; }
+.rail-more > p { margin: 0; }
+.rail-more-button {
+  min-height: 44px; padding: 0 1.2rem; border: 1px solid var(--accent); border-radius: 6px;
+  background: var(--surface); color: var(--accent); font-weight: 600; cursor: pointer;
+}
+.rail-more-button:hover:not(:disabled) { background: var(--accent-w); color: var(--accent-2); }
+.rail-more-button:disabled { opacity: 0.6; cursor: default; }
 
 .row {
   border: 1px solid var(--rule-2); border-radius: 12px; background: var(--surface);
