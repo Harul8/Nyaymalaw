@@ -52,13 +52,16 @@ class ClamAVCheck:
     name = NAME
 
     def __init__(self, executable, database, workdir, *, timeout: float = 180.0, freshclam_config=None):
-        self.executable = Path(executable) if executable else None
-        self.database = Path(database) if database else None
-        self.workdir, self.timeout = Path(workdir), timeout
+        # Every path a ClamAV program is given is absolute (plan AN.25): clamd refuses a configuration holding a relative
+        # one ("LogFile requires full path"), and an installation's store folder can be relative (.nm/matters), which
+        # left the resident engine unable to start and every scan reloading the definitions.
+        self.executable = Path(executable).absolute() if executable else None
+        self.database = Path(database).absolute() if database else None
+        self.workdir, self.timeout = Path(workdir).absolute(), timeout
         suffix = self.executable.suffix if self.executable else ""
         self.clamd = self.executable.with_name("clamd" + suffix) if self.executable else None
         self.freshclam = self.executable.with_name("freshclam" + suffix) if self.executable else None
-        self.freshclam_config = (Path(freshclam_config) if freshclam_config else
+        self.freshclam_config = (Path(freshclam_config).absolute() if freshclam_config else
                                  self.database.parent / "freshclam.conf" if self.database else None)
         # The command-line scanner loads the full definitions (about a gigabyte); one at a time.
         self._one_at_a_time = threading.Lock()

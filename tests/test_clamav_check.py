@@ -158,6 +158,39 @@ def test_the_resident_engine_is_started_beside_the_scanner_and_listens_only_here
     assert "TCPAddr 127.0.0.1" in config and f"DatabaseDirectory {installed.database}" in config
 
 
+def test_a_relative_store_folder_gives_every_clamav_program_absolute_paths_only(tmp_path, monkeypatch):
+    """Measured 26 Oct 2026 (plan AN.25): with the live NM_MATTER_STORE=.nm/matters the engine's configuration held relative
+    paths and clamd refused to start ("ERROR: LogFile requires full path"), so every upload reloaded all the definitions."""
+    from pathlib import Path
+    (tmp_path / "tools" / "database").mkdir(parents=True)
+    for name in ("clamscan.exe", "clamd.exe"):
+        (tmp_path / "tools" / name).write_bytes(b"")
+    monkeypatch.chdir(tmp_path)
+    started = []
+
+    class Process:
+        def poll(self):
+            return 0  # ends the readiness wait at once
+
+    monkeypatch.setattr(clamav_check.subprocess, "Popen", lambda command, **kwargs: started.append(command) or Process())
+    calls = scanner(monkeypatch, 0)
+    checker = ClamAVCheck("tools/clamscan.exe", "tools/database", Path("matters") / "scan",
+                          freshclam_config="tools/freshclam.conf")
+    checker.check(b"x")
+    config = dict(line.split(" ", 1) for line in (tmp_path / "matters" / "scan" / "clamd.conf").read_text("utf-8").splitlines()
+                  if line)
+    for key in ("DatabaseDirectory", "TemporaryDirectory", "LogFile"):
+        assert Path(config[key]).is_absolute(), f"{key} is {config[key]}"
+    (clamd, option), = started
+    assert Path(clamd).is_absolute() and Path(option.split("=", 1)[1]).is_absolute()
+    (command, _), = calls
+    assert Path(command[0]).is_absolute()
+    for part in command:
+        if part.startswith(("--database=", "--tempdir=")):
+            assert Path(part.split("=", 1)[1]).is_absolute(), part
+    assert checker.freshclam_config.is_absolute() and checker.freshclam.is_absolute()
+
+
 def test_definitions_are_refreshed_only_when_a_day_old_and_the_engine_reloads(installed, tmp_path):
     import os
     import time
