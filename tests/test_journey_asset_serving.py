@@ -278,6 +278,7 @@ ASSETS = {
     "intake-materials.js": ("nm/open_matter/intake-materials.js", "text/javascript"),
     # The public site at nyaymalaw.in (owner decisions P52, O19, O23; plan AN.16).
     "site.css": ("nm/site/site.css", "text/css"),
+    "site.js": ("nm/site/site.js", "text/javascript"),
     "home.html": ("nm/site/home.html", "text/html"),
     "how-it-works.html": ("nm/site/how-it-works.html", "text/html"),
     "what-it-holds.html": ("nm/site/what-it-holds.html", "text/html"),
@@ -297,7 +298,7 @@ def test_every_declared_browser_asset_is_the_exact_shipped_population():
     assert browser_assets(root=ROOT) == {
         name: ROOT / path for name, (path, _media_type) in ASSETS.items()
     }
-    assert len(ASSETS) == 26
+    assert len(ASSETS) == 27
     # The old tree is migration evidence, not a runtime import or public root.
     assert not any(isinstance(route, Mount) and route.path == "/static"
                    for route in api.app.routes)
