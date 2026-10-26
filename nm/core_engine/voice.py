@@ -14,7 +14,7 @@ import logging
 
 from nm.core_engine.documents import AUDIO
 from nm.shared.external_ai_contracts import ModelPermissionRefused
-from nm.shared.model_port import ModelError
+from nm.shared.model_port import USAGE_LIMIT_WORDS, ModelError, UsageLimitReached
 
 CONTRACT = "core_voice_v1"
 OPERATION = "core_voice_note"
@@ -40,6 +40,12 @@ def transcribe_note(model, name, data, fmt):
         heard = model.transcribe(data, file_name=name, media_type=AUDIO[fmt], prompt=NOTE_PROMPT)
     except ModelPermissionRefused:
         raise
+    except UsageLimitReached as exc:
+        # The AI account has no credit left (owner decision P51, 25 Oct 2026): said in the owner's
+        # words, and the recording keeps waiting to be transcribed when that is put right - not "just
+        # now", which promises a retry that cannot succeed. The provider's own words stay in the diagnosis.
+        log.warning("A recording waits to be transcribed again: %s: %s", type(exc).__name__, exc)
+        return {"number": 1, "state": "unread", "code": "audio", "reason": USAGE_LIMIT_WORDS}, None
     except ModelError as exc:
         # Expected provider outcomes (unavailable, refused, malformed): the recording waits.
         # Why is kept for diagnosis (17 Oct 2026): the failure's kind and message, no words heard.

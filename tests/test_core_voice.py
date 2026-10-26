@@ -19,7 +19,8 @@ from nm.shared.model_call_budget import CallBudget
 from nm.shared.model_config import ModelConfig, TierConfig
 from nm.shared.model_openai_adapter import OpenAIModelAdapter
 from nm.shared.model_policed import PolicedModel
-from nm.shared.model_port import ConfigurationError, ProviderUnavailable, Tier, Transcription
+from nm.shared.model_port import (USAGE_LIMIT_WORDS, ConfigurationError, ProviderUnavailable, Tier, Transcription,
+                                  UsageLimitReached)
 from tests.test_core_documents import ADVOCATE, OTHER, Checker, desk  # noqa: F401 - pytest fixture
 from tests.test_core_served import served  # noqa: F401 - pytest fixture
 from tests.test_core_turn import run, store  # noqa: F401 - pytest fixture
@@ -99,6 +100,18 @@ def test_a_recording_heard_as_nothing_or_not_heard_stays_unread_with_its_reason(
     # A provider failure's kind and message are kept for diagnosis (17 Oct 2026).
     waits = [r.getMessage() for r in caplog.records if "waits to be transcribed again" in r.getMessage()]
     assert waits == (["A recording waits to be transcribed again: ProviderUnavailable: down"] if code == "audio" else [])
+
+
+def test_a_recording_lost_to_the_used_up_ai_account_says_so_in_the_owners_words_and_keeps_waiting(desk, caplog):
+    """P51: the same words as for a page of a scan, and the recording waits to be heard again."""
+    hearing = Hearing(fails=UsageLimitReached("insufficient_quota"))
+    renewed, calls = desk.read_waiting(ADVOCATE, documents.reference(desk.receive(ADVOCATE, "note.wav", wav())), hearing)
+    page, = renewed["pages"]
+    assert (page["state"], page["code"], page["reason"]) == ("unread", "audio", USAGE_LIMIT_WORDS)
+    assert documents.needs_transcription(renewed) == [1] and calls == []
+    assert documents.summary(renewed)["unread"] == [{"number": 1, "reason": USAGE_LIMIT_WORDS}]
+    waits = [r.getMessage() for r in caplog.records if "waits to be transcribed again" in r.getMessage()]
+    assert waits == ["A recording waits to be transcribed again: UsageLimitReached: insufficient_quota"]
 
 
 def test_without_permission_nothing_is_transcribed_or_stored(desk, tmp_path):
