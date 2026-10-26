@@ -26,14 +26,15 @@ def wav(seconds=1, rate=16000):
 def test_the_page_is_told_the_percentage_left_and_never_an_amount(served):
     first = served.client.get("/api/usage")
     assert first.status_code == 200
-    assert first.json() == {"plan": "Trial", "left": 100, "notice": None}
+    assert first.json() == {"plan": "Trial", "left": 100, "notice": None, "limit": None}
     assert "granted" not in first.text and "spent" not in first.text and "300000" not in first.text
 
 
 def test_a_notice_is_due_at_its_step_once_and_says_whether_it_closes_itself(served):
     use_up(served, micro_usd=TRIAL_MICRO_USD // 2)
     due = served.client.get("/api/usage").json()
-    assert due == {"plan": "Trial", "left": 50, "notice": {"step": 50, "closes_after_seconds": 600}}
+    assert due == {"plan": "Trial", "left": 50, "notice": {"step": 50, "closes_after_seconds": 600},
+                   "limit": None}
     seen = served.client.post("/api/usage/notice", json={"step": 50})
     assert seen.status_code == 200 and seen.json()["notice"] is None
     assert served.client.get("/api/usage").json()["notice"] is None
@@ -52,9 +53,10 @@ def test_a_notice_is_recorded_only_from_the_page_and_only_for_a_real_step(served
     stranger.close()
 
 
-def test_used_up_the_chip_reads_nothing_left(served):
+def test_used_up_the_page_is_given_the_owners_words_in_place_of_a_notice(served):
     use_up(served)
-    assert served.client.get("/api/usage").json() == {"plan": "Trial", "left": 0, "notice": None}
+    assert served.client.get("/api/usage").json() == {"plan": "Trial", "left": 0, "notice": None,
+                                                      "limit": USAGE_LIMIT_MESSAGE}
 
 
 def test_dictation_says_the_owners_words_once_nothing_is_left(served):

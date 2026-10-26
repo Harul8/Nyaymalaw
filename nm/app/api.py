@@ -517,9 +517,11 @@ def _usage_view(standing: dict) -> dict:
     from nm.arrive.usage_port import SELF_CLOSING_SECONDS, SELF_CLOSING_STEPS, due_notice
 
     step = due_notice(standing["left"], standing["noticed"])
-    # There are no plans yet (payment comes later, by UPI): every allowance is the trial's.
+    # There are no plans yet (payment comes later, by UPI): every allowance is the trial's. At nothing
+    # left the page says the owner's words of P51, from their one owner, in place of a notice.
     return {"plan": "Trial", "left": standing["left"], "notice": None if step is None else {
-        "step": step, "closes_after_seconds": SELF_CLOSING_SECONDS if step in SELF_CLOSING_STEPS else None}}
+        "step": step, "closes_after_seconds": SELF_CLOSING_SECONDS if step in SELF_CLOSING_STEPS else None},
+        "limit": USAGE_LIMIT_MESSAGE if standing["left"] <= 0 else None}
 
 
 @app.get("/api/usage")
