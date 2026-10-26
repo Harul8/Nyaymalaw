@@ -652,6 +652,17 @@ button.board-card:focus-visible { outline: 2px solid var(--accent); outline-offs
 .failure.limit { border-color: #dccb98; background: var(--brass-w); color: #4f3a10; }
 .failure.limit .refusal-head { color: #4f3a10; margin: 0 0 0.4rem; }
 
+/* THE ANSWER'S OWN HEADER (plan AN.20; the signed-off design): the NM mark, Nyaymalaw and the time the
+   answer was made, above its first line. */
+.reply-head { display: flex; align-items: center; gap: 0.6rem; margin: 0.95rem 0 0.55rem; }
+.reply-head-mark {
+  display: inline-flex; align-items: center; justify-content: center; flex: none;
+  width: 26px; height: 26px; border-radius: 6px; background: var(--accent); color: #fff;
+  font: 600 11px/1 var(--f-serif); letter-spacing: -0.04em;
+}
+.reply-head-name { font: 600 0.88rem/1 var(--f-sans); color: var(--ink-2); }
+.reply-head-time { font: 400 0.82rem/1 var(--f-sans); color: var(--ink-3); }
+
 /* HOW MUCH USAGE IS LEFT (owner decisions O22, O23; plan P53): above the message box, inside the same
    margins - blue at 50%, amber from 25%, brass with the owner's words at nothing left. */
 .usage-notice {
