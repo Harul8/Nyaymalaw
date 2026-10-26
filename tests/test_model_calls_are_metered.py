@@ -211,3 +211,24 @@ def test_each_advocates_bound_model_is_metered_innermost_when_a_record_is_given(
     plain = model_permission.bind_text_model(adapter, directory=None, account_id="advocate@chambers.in",
                                              config=None, session_current=lambda: True)
     assert plain.inner.inner is adapter.bound  # without a record nothing is metered, as before
+
+
+def test_a_receipt_the_meter_cannot_read_never_fails_the_call_or_its_error():
+    """A double that answers without a receipt, or fails with one the meter cannot read: the call's
+    own answer or error goes on unchanged, and the record that could not be made is counted."""
+    class Bare:
+        provider = "scripted"
+
+        def structured(self, prompt, schema, tier, *, max_tokens=None):
+            return {"answered": True}
+
+    model = MeteredModel(inner=Bare(), record=lambda call: None)
+    assert model.structured(PROMPT, SCHEMA, Tier.ROUTINE) == {"answered": True}
+    assert model.dropped == 1
+
+    odd = OutputTruncated("cut short", usage=Usage(1, 1, 0.0))
+    model = MeteredModel(inner=Provider(odd), record=lambda call: None)
+    model.inner.resolved_model = None  # an adapter that cannot say which model it asked for
+    with pytest.raises(OutputTruncated):
+        model.structured(PROMPT, SCHEMA, Tier.ROUTINE)
+    assert model.dropped == 1

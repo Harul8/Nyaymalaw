@@ -112,13 +112,9 @@ class MeteredModel:
         except TierUnavailable:
             raise
         except ModelError as exc:
-            self._keep(self._failed("transcribe", "transcription", "", exc))
+            self._keep(lambda: self._failed("transcribe", "transcription", "", exc))
             raise
-        usage = heard.usage if isinstance(heard.usage, Mapping) else {}
-        seconds = usage.get("seconds") if usage.get("type") == "duration" else None
-        self._keep(self._call("transcribe", "transcription", "", heard.model, "ok", heard.retries,
-                              audio_seconds=seconds if type(seconds) in (int, float) else None,
-                              micro_usd=_audio_micro(heard.model, seconds)))
+        self._keep(lambda: self._heard(heard))
         return heard
 
     async def live_transcription(self, **request):
@@ -127,7 +123,7 @@ class MeteredModel:
         except TierUnavailable:
             raise
         except ModelError as exc:
-            self._keep(self._failed("live_transcription", "live_dictation", "", exc))
+            self._keep(lambda: self._failed("live_transcription", "live_dictation", "", exc))
             raise
         return _MeteredLive(session, self)
 
@@ -140,17 +136,29 @@ class MeteredModel:
         except TierUnavailable:
             raise  # NM's own refusal before anything was sent; the tracer may use the routine tier.
         except ModelError as exc:
-            self._keep(self._failed(kind, operation, tier.value, exc,
-                                    asked=lambda: self.inner.resolved_model(tier)))
+            self._keep(lambda: self._failed(kind, operation, tier.value, exc,
+                                            asked=lambda: self.inner.resolved_model(tier)))
             raise
+        self._keep(lambda: self._answered(kind, operation, tier.value, result))
+        return result
+
+    def _answered(self, kind, operation, tier, result):
+        """An answered call, at the cost the adapter established from the provider's usage report."""
         usage = result.usage
         extra = getattr(usage, "provider_extra", None) or {}
-        self._keep(self._call(kind, operation, tier.value, result.model, "ok", result.retries,
-                              tokens_in=usage.tokens_in, tokens_out=usage.tokens_out,
-                              cached_tokens=usage.cached_tokens,
-                              cache_write_tokens=_int(extra.get("cache_write_tokens")),
-                              micro_usd=_micro(usage.cost_usd)))
-        return result
+        return self._call(kind, operation, tier, result.model, "ok", result.retries,
+                          tokens_in=usage.tokens_in, tokens_out=usage.tokens_out,
+                          cached_tokens=usage.cached_tokens,
+                          cache_write_tokens=_int(extra.get("cache_write_tokens")),
+                          micro_usd=_micro(usage.cost_usd))
+
+    def _heard(self, heard):
+        """A recording heard, by the minute at the duration the provider reports."""
+        usage = heard.usage if isinstance(heard.usage, Mapping) else {}
+        seconds = usage.get("seconds") if usage.get("type") == "duration" else None
+        return self._call("transcribe", "transcription", "", heard.model, "ok", heard.retries,
+                          audio_seconds=seconds if type(seconds) in (int, float) else None,
+                          micro_usd=_audio_micro(heard.model, seconds))
 
     def _failed(self, kind, operation, tier, exc, asked=None):
         """A failed call: charged at the receipt it carries, if the provider answered (then the model is
@@ -176,13 +184,14 @@ class MeteredModel:
                 "cached_tokens": _int(cached_tokens), "cache_write_tokens": cache_write_tokens,
                 "audio_seconds": audio_seconds, "micro_usd": micro_usd}
 
-    def _keep(self, call: dict) -> None:
+    def _keep(self, build) -> None:
+        """Build one record and keep it. Both happen here, after the call: neither a receipt this
+        cannot read nor a store that cannot write may fail a call that was made and paid for."""
         try:
-            self.record(call)
+            self.record(build())
         except Exception:  # noqa: BLE001 -- a record must never fail a call that was made and paid for
             self.dropped += 1
-            log.warning("A paid call could not be recorded against its account (%s %s)",
-                        call.get("kind"), call.get("outcome"), exc_info=True)
+            log.warning("A paid call could not be recorded against its account", exc_info=True)
 
 
 class _MeteredLive:
@@ -200,9 +209,11 @@ class _MeteredLive:
         finally:
             if not self._kept:
                 self._kept = True
-                seconds = getattr(self._session, "seconds", None)
-                model = getattr(self._session, "model", "") or ""
-                self._meter._keep(self._meter._call(
-                    "live_transcription", "live_dictation", "", model, "ok", 0,
-                    audio_seconds=seconds if type(seconds) in (int, float) else None,
-                    micro_usd=_audio_micro(model, seconds)))
+                self._meter._keep(self._sent)
+
+    def _sent(self):
+        seconds = getattr(self._session, "seconds", None)
+        model = getattr(self._session, "model", "") or ""
+        return self._meter._call("live_transcription", "live_dictation", "", model, "ok", 0,
+                                 audio_seconds=seconds if type(seconds) in (int, float) else None,
+                                 micro_usd=_audio_micro(model, seconds))
