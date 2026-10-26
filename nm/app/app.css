@@ -1198,6 +1198,33 @@ main.single {
 .login button.primary { margin-top: 18px; }
 .login button:disabled { cursor: wait; opacity: .6; }
 
+/* REGISTRATION IN STEPS (owner decision O24; plan AN.15): the steps named at the top of the card -
+   the current one in blue, the ones done in green - and one step's fields shown at a time. */
+.reg-steps {
+  list-style: none; display: grid; gap: 8px;
+  margin: 0 0 6px; padding: 0 0 14px; border-bottom: 1px solid var(--rule);
+}
+.reg-steps li { display: flex; align-items: center; gap: 10px; color: var(--ink-3); font-size: 13px; line-height: 1.35; }
+.reg-steps b { display: block; color: var(--ink-2); font-size: 14px; font-weight: 600; }
+.reg-step-n {
+  flex: none; display: inline-flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; border-radius: 999px; border: 1.5px solid var(--rule-2);
+  background: var(--surface); color: var(--ink-3); font-size: 13px; font-weight: 600;
+}
+.reg-steps li[aria-current="step"] b { color: var(--ink); }
+.reg-steps li[aria-current="step"] .reg-step-n { border-color: var(--accent); background: var(--accent); color: #fff; }
+.reg-steps li.done .reg-step-n { border-color: var(--good); background: var(--good-w); color: var(--good); }
+.reg-step { display: flex; flex-direction: column; gap: 6px; }
+.reg-step-count {
+  margin: 10px 0 0; color: var(--brass); font-size: 12px; font-weight: 600;
+  letter-spacing: 0.12em; text-transform: uppercase;
+}
+.reg-step .login-title { margin-top: 0.3rem; font-size: 1.6rem; }
+.reg-hint { margin: 2px 0 0; color: var(--ink-3); font-size: 13px; line-height: 1.5; }
+.reg-actions { display: flex; gap: 10px; margin-top: 18px; }
+.reg-actions button { flex: 1; min-height: 44px; }
+.login .reg-actions button.primary { margin-top: 0; }
+
 /* RIGHT-ALIGNED UNDER THE BUTTON, which is where a returning user is not
    looking and a new one is. A register link with the same weight as the
    primary action competes with it; one that is invisible sends a new advocate
