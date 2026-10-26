@@ -1,7 +1,9 @@
-"""The public site at nyaymalaw.in is static, local and honest (owner decisions P52, O19, O21, O23; plan AN.16).
+"""The public site at nyaymalaw.in is static, local and honest (owner decisions P52, O19, O21, O23, O28; plans
+AN.16, AN.22).
 
-Each public page is a declared browser asset. It carries no script, so it can read no session and no
-matter; it loads nothing from any other host, the fonts included; its links go only to the site's own
+Each public page is a declared browser asset. It reads no matter: the only scripts it loads are two files from
+this server, the app's shared initials rule and the site's own, which asks only who is signed in, and it writes
+none of its own; it loads nothing from any other host, the fonts included; its links go only to the site's own
 addresses and the app; and it keeps what the owner left blank blank, with usage spoken of as a trial
 allowance, never in cents (O21). This reads the shipped files; the owner's browser shows the pages.
 """
@@ -22,14 +24,23 @@ ADDRESSES = {"/", "/how-it-works", "/what-it-holds", "/trust", "/plans", "/about
              "/app#register", "/static/site.css", "/static/fonts.css"}
 
 
+#: The only scripts a public page may load, in this order, as files from this server: the shared initials rule
+#: and the site's own (owner decision O28; plan AN.22).
+SCRIPTS = ["/static/person.js", "/static/site.js"]
+
+
 def _page(name: str) -> str:
     return browser_assets()[name].read_text(encoding="utf-8")
 
 
 @pytest.mark.parametrize("name", PAGES)
-def test_a_public_page_runs_no_script_and_loads_nothing_from_another_host(name):
+def test_a_public_page_runs_only_its_two_scripts_and_loads_nothing_from_another_host(name):
     page = _page(name)
-    assert "<script" not in page.lower(), f"{name} runs a script"
+    assert re.findall(r"<script\b[^>]*>", page, re.I) == [f'<script src="{src}">' for src in SCRIPTS], \
+        f"{name} loads a script it is not allowed"
+    assert re.findall(r"<script\b[^>]*>(.*?)</script>", page, re.I | re.S) == ["", ""], f"{name} writes a script"
+    assert not re.search(r"\son\w+\s*=", page, re.I), f"{name} has an inline event handler"
+    assert "javascript:" not in page.lower(), f"{name} has a script address"
     assert not re.search(r"\b(?:src|href)\s*=\s*\"(?:https?:)?//", page), f"{name} loads or links another host"
     assert "fonts.googleapis" not in page and "@import" not in page, f"{name} asks a font service"
     assert '<html lang="en">' in page and "<title>" in page and 'name="viewport"' in page

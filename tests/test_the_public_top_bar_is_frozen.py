@@ -1,6 +1,7 @@
-"""The public site's top bar stays at the top as the page scrolls, and the person control the website's script
-draws for a visitor who is signed in is styled (owner decision O28; plan AN.22). Reads the shipped style sheet
-and script; the owner's browser shows how it looks."""
+"""The public site's top bar stays at the top as the page scrolls, the person control the website's script draws
+for a visitor who is signed in is styled, and each of the seven pages carries the bar, the account bar the script
+works on and the two scripts (owner decision O28; plan AN.22). Reads the shipped style sheet, script and pages;
+the owner's browser shows how it looks."""
 from __future__ import annotations
 
 import re
@@ -76,3 +77,45 @@ def test_the_menu_hangs_from_the_control_and_never_runs_off_a_phone():
     assert "width:min(300px,calc(100vw-32px))" in panel
     assert "overflow" not in rule(".acct-toggle") + rule(".acct"), "the menu would be clipped by the control"
     assert rule(".acct") == "position:relative;flex:none"
+
+
+PAGES = ("home.html", "how-it-works.html", "what-it-holds.html", "trust.html", "plans.html", "about.html",
+         "legal.html")
+#: What the page bodies' own buttons say today. For a visitor who is signed in the script turns the first kind
+#: into "Open your workspace" and hides the second (owner decision O28); a button saying anything else is a new
+#: decision, not something the script should guess at.
+BODY_REGISTER_TEXTS = {"Create your account", "Choose Pro", "Choose Elite"}
+
+
+def _page(name: str) -> str:
+    return browser_assets()[name].read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize("name", PAGES)
+def test_every_page_freezes_its_bar_and_holds_the_buttons_the_script_puts_back(name):
+    page = _page(name)
+    # The header is the whole of the frozen bar.
+    assert len(re.findall(r'<div class="topbar">\s*<header class="wrap nav">', page)) == 1, name
+    assert len(re.findall(r"</header>\s*</div>", page)) == 1, name
+    # One account bar, inside it, holding the two buttons the script puts back for a visitor who is not signed in.
+    assert page.count('id="account"') == 1, name
+    assert page.index('<div class="topbar">') < page.index('id="account"') < page.index("</header>"), name
+    bar = re.search(r'<div class="right" id="account">(.*?)</div>', page, re.S).group(1)
+    assert re.findall(r'<a class="([^"]*)" href="([^"]*)">([^<]*)</a>', bar) == [
+        ("signin", "/app", "Sign in"), ("btn primary", "/app#register", "Create account")], name
+
+
+@pytest.mark.parametrize("name", PAGES)
+def test_every_page_loads_the_shared_rule_before_the_script_that_uses_it_at_the_end(name):
+    assert re.search(
+        r'<script src="/static/person.js"></script>\s*<script src="/static/site.js"></script>\s*</body>',
+        _page(name)), name
+
+
+@pytest.mark.parametrize("name", PAGES)
+def test_the_buttons_in_a_pages_body_are_the_ones_the_script_knows_how_to_change(name):
+    body = _page(name).split("</header>", 1)[1]
+    for text in re.findall(r'<a [^>]*href="/app#register"[^>]*>([^<]*)</a>', body):
+        assert text in BODY_REGISTER_TEXTS, f"{name}: a button saying {text!r} opens registration"
+    for text in re.findall(r'<a [^>]*href="/app"[^>]*>([^<]*)</a>', body):
+        assert text == "Sign in", f"{name}: a link saying {text!r} opens the app"
