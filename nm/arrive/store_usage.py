@@ -10,6 +10,7 @@ file can be, since a call's record holds only its kind, names and numbers.
 from __future__ import annotations
 
 import hashlib
+import logging
 import re
 import sqlite3
 from contextlib import closing, contextmanager
@@ -19,6 +20,9 @@ from pathlib import Path
 from nm.arrive.advocate_contracts import canonical_id
 from nm.arrive.usage_port import (CALL_FIELDS, CALL_KINDS, NOTICE_STEPS, TRIAL_MICRO_USD, UsageRefused,
                                   percent_left)
+from nm.shared.sqlite_creation import create_if_absent, why
+
+_log = logging.getLogger("nm.usage")
 
 VERSION = 1
 #: The most an operator may add in one grant, in millionths of a dollar: a typo of a few zeros is
@@ -104,19 +108,24 @@ class FileUsage:
 
     def __init__(self, path):
         self.path = Path(path).resolve()
-        existed = self.path.exists()
         try:
-            self.path.parent.mkdir(parents=True, exist_ok=True)
+            # Made complete beside its place and published whole, never built where it is to stay: a second
+            # caller must not find a file that exists and is empty, which this store refuses as a lost one
+            # (plan AN.24; measured: 12 of 600 first uses refused when four arrived together).
+            create_if_absent(self.path, self._build)
             with closing(sqlite3.connect(self.path, timeout=10)) as db, db:
                 db.execute("PRAGMA synchronous=FULL")
                 db.execute("BEGIN IMMEDIATE")
-                if db.execute("PRAGMA user_version").fetchone()[0] == 0 and not self._objects(db) and not existed:
-                    for sql in _SQL.values():
-                        db.execute(sql)
-                    db.execute(f"PRAGMA user_version={VERSION}")
                 self._schema(db)
-        except (OSError, sqlite3.Error, ValueError):
+        except (OSError, sqlite3.Error, ValueError) as exc:
+            _log.warning("The usage store could not be opened (%s).", why(exc))
             raise UsageRefused("storage") from None
+
+    @staticmethod
+    def _build(db):
+        for sql in _SQL.values():
+            db.execute(sql)
+        db.execute(f"PRAGMA user_version={VERSION}")
 
     @staticmethod
     def _objects(db):
@@ -138,7 +147,8 @@ class FileUsage:
                 db.execute("BEGIN IMMEDIATE")
                 self._schema(db)
                 yield db
-        except (OSError, sqlite3.Error, ValueError):
+        except (OSError, sqlite3.Error, ValueError) as exc:
+            _log.warning("A usage call was refused by the store (%s).", why(exc))
             raise UsageRefused("storage") from None
 
     @staticmethod
