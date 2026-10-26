@@ -19,6 +19,7 @@ not yet run.
 """
 from __future__ import annotations
 
+import asyncio
 import html
 import json
 import re
@@ -1632,7 +1633,10 @@ def live_words_turned_on(client):
 
 
 class _LiveLink:
-    """The provider's side of a live stream: deltas, then the committed item's words."""
+    """The provider's side of a live stream: the words as they are heard, then - once the page has
+    committed the audio, as a real provider waits for - the committed item's words. Answering everything
+    at once raced the page's "done" and lost the final words whenever the page was slow (found 26 Oct
+    2026, before any of that day's changes)."""
 
     def __init__(self):
         self.sent, self.closed = [], False
@@ -1644,13 +1648,18 @@ class _LiveLink:
         return self._events()
 
     async def _events(self):
-        events = [
+        heard = [
             {"type": "conversation.item.input_audio_transcription.delta", "item_id": "i1", "delta": "word1"},
-            {"type": "conversation.item.input_audio_transcription.delta", "item_id": "i1", "delta": " word2"},
+            {"type": "conversation.item.input_audio_transcription.delta", "item_id": "i1", "delta": " word2"}]
+        after_commit = [
             {"type": "input_audio_buffer.committed", "item_id": "i1"},
             {"type": "conversation.item.input_audio_transcription.completed", "item_id": "i1",
              "transcript": "word1 word2 and the last one"}]
-        for event in events:
+        for event in heard:
+            yield json.dumps(event)
+        while not any(sent["type"] == "input_audio_buffer.commit" for sent in self.sent):
+            await asyncio.sleep(0)
+        for event in after_commit:
             yield json.dumps(event)
 
     async def close(self):

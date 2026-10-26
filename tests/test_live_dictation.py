@@ -139,9 +139,28 @@ def test_live_audio_leaves_only_on_a_bound_route_and_is_charged_for_what_was_sen
         asyncio.run(pinned.live_transcription(connect=connect))
 
 
+class CommittingLink(Link):
+    """A provider that finalises only audio the page has committed, as a real one does: the words it has
+    heard so far arrive as they are heard, and the events that follow a commit arrive only after the page
+    has sent it. A stream that answered everything at once raced the page's "done" - the final words were
+    lost whenever the page was slow (found 26 Oct 2026, before any of that day's changes)."""
+
+    def __init__(self, heard, after_commit):
+        super().__init__(heard)
+        self.after_commit = list(after_commit)
+
+    async def _each(self):
+        async for event in super()._each():
+            yield event
+        while not any(sent["type"] == "input_audio_buffer.commit" for sent in self.sent):
+            await asyncio.sleep(0)
+        for event in self.after_commit:
+            yield json.dumps(event)
+
+
 class LiveModel:
-    def __init__(self, events):
-        self.link, self.sessions = Link(events), []
+    def __init__(self, heard, after_commit):
+        self.link, self.sessions = CommittingLink(heard, after_commit), []
 
     async def live_transcription(self, **request):
         session = LiveTranscription(self.link, model="gpt-live-transcribe", minutes=request["minutes"])
@@ -153,7 +172,8 @@ def test_the_page_s_socket_streams_live_words_only_for_an_advocate_who_turned_th
     with served.client.websocket_connect("/ws/dictation", headers=ORIGIN) as socket:
         assert socket.receive_json() == {"live": False, "why": "Live words are off in your dictation settings."}
     served.client.post("/api/account/dictation", json={"live": True, "expected_version": 0})
-    model = LiveModel([delta("i1", "Draft a reply"), {"type": "input_audio_buffer.committed", "item_id": "i1"},
+    model = LiveModel([delta("i1", "Draft a reply")],
+                      [{"type": "input_audio_buffer.committed", "item_id": "i1"},
                        completed("i1", "Draft a reply to the notice.")])
     monkeypatch.setattr(served.app, "live_dictation_reader", lambda advocate_id, *, session_current:
                         model if advocate_id == OWNER and session_current() else None)
