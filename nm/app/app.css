@@ -71,8 +71,12 @@ body {
   border-bottom: 1px solid var(--rule-2);
   flex: none;
 }
-.ribbon-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; min-width: 0; }
-.ribbon-account { display: flex; align-items: center; gap: 1rem; min-width: 0; }
+/* The row wraps by whole groups instead of squeezing one (owner decision O28; plan AN.22): the logo, Home, + New
+   matter, Conversation history, the usage chip, the name and the person menu need about 1000px on one row, and a
+   bar given less squeezed the name into a column 195px tall. Under that the person's group drops to a row of its
+   own at the right. */
+.ribbon-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.15rem 1rem; min-width: 0; }
+.ribbon-account { display: flex; align-items: center; gap: 1rem; margin-left: auto; min-width: 0; }
 .brand { display: flex; align-items: center; gap: 0.6rem; flex: none; }
 .mark {
   font-family: var(--f-serif); font-size: 0.9rem; font-weight: 600;
@@ -2027,6 +2031,14 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visib
     border: 0; clip-path: inset(50%); height: 1px; overflow: hidden; padding: 0; position: absolute;
     white-space: nowrap; width: 1px;
   }
+}
+/* THE TOP BAR ON A PHONE (owner decision O28; plan AN.22). Measured in a real browser, one row of it was 557px on a
+   390px screen, which put the person menu off the edge. So up to 600px the actions take a row of their own under
+   the logo, the chip and the person menu, which keep the top row. */
+@media (max-width: 600px) {
+  .ribbon-row { column-gap: 0.6rem; }
+  .ribbon-account { order: 2; gap: 0.5rem; }
+  .top-actions { order: 3; flex: 1 0 100%; margin: 0; }
 }
 /* Every dispute stays a short label on the board; details open separately. */
 .dispute-focus { text-align: left; white-space: normal; overflow-wrap: anywhere; }
