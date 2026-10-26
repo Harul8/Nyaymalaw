@@ -1076,7 +1076,8 @@
   <button type="button" id="ai-sharing-withdraw" class="ghost" disabled>Withdraw permission</button>
 </dialog>
 <!-- DICTATION (owner decision, 15 Oct 2026): gpt-transcribe by default; live words
-     while speaking (gpt-live-transcribe) only for an advocate who turns them on here. -->
+     while speaking (gpt-live-transcribe) only for an advocate who turns them on here. No
+     price is shown: usage is shown only as the percentage left (owner decisions O21, O22). -->
 <dialog id="dictation-setting-dialog" class="account-dialog" aria-labelledby="dictation-setting-title">
   <div class="dialog-heading"><h2 id="dictation-setting-title">Dictation</h2>
     <button type="button" id="dictation-setting-close" class="ghost">Close</button></div>
@@ -1085,13 +1086,12 @@
     <legend class="quiet">Speech model</legend>
     <label class="consent" for="dictation-standard">
       <input type="radio" name="dictation-model" id="dictation-standard" value="standard">
-      <span><strong>GPT Transcribe</strong> (default): the words appear when you stop speaking.
-        <span class="quiet" id="dictation-standard-price"></span></span>
+      <span><strong>GPT Transcribe</strong> (default): the words appear when you stop speaking.</span>
     </label>
     <label class="consent" for="dictation-live">
       <input type="radio" name="dictation-model" id="dictation-live" value="live">
       <span><strong>GPT Live Transcribe</strong>: the words appear as you speak. Your voice is streamed
-        to OpenAI while you speak. <span class="quiet" id="dictation-live-price"></span></span>
+        to OpenAI while you speak.</span>
     </label>
   </fieldset>
   <p id="dictation-setting-status" role="status" aria-live="polite"></p>
