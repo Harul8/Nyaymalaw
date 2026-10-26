@@ -35,6 +35,14 @@ ROOT = Path(__file__).resolve().parents[2]
 _CREDENTIAL_NAME = re.compile(r'KEY|SECRET|TOKEN|PASSWORD|CREDENTIAL', re.I)
 _SEAL = 'NM_MATTER_KEY'
 _DEFAULT_SEARCH = object()
+#: Each account's usage of the paid AI service, beside the turn attempts (plan AN.17).
+USAGE_FILE = 'usage.sqlite'
+
+
+def storage_root(settings: Mapping[str, str], root: Path) -> Path:
+    """Where this installation keeps its records: NM_MATTER_STORE, or .nm under its root. One rule,
+    read by the application and by an operator command that needs one store and not the rest."""
+    return Path(settings.get('NM_MATTER_STORE') or Path(root) / '.nm')
 
 def build_model(config):
     provider = config.for_tier(Tier.ROUTINE).provider
@@ -60,28 +68,28 @@ class Application:
         key = settings.get('NM_MATTER_KEY') or _ensure_local_key(self.root)
         _refuse_a_shared_seal(key, settings)
         self._gate = Gatekeeper(policy=egress_policy(self.root), audit=self._egress_audit)
-        storage_root = settings.get('NM_MATTER_STORE') or self.root / '.nm'
-        raw_store = store or FileMatterStore(storage_root, key=key)
+        storage = storage_root(settings, self.root)
+        raw_store = store or FileMatterStore(storage, key=key)
         self.store = PolicedPort(inner=raw_store,
             gate=self._gate, port=StorePort, sink=Sink.STORAGE, processor_id=STORAGE_PROCESSOR)
         # An advocate's documents (owner decisions, 15 Oct 2026): checked by ClamAV,
         # read on this installation, sealed under the advocate's own key.
-        self.documents = _document_desk(raw_store, Path(storage_root), self._gate, settings)
+        self.documents = _document_desk(raw_store, storage, self._gate, settings)
         self.turn_attempts = PolicedPort(inner=_DeferredAdapter(
-            lambda: FileTurnAttempts(Path(storage_root) / 'turn-attempts.sqlite')),
+            lambda: FileTurnAttempts(storage / 'turn-attempts.sqlite')),
             gate=self._gate, port=TurnAttemptPort, sink=Sink.STORAGE, processor_id=STORAGE_PROCESSOR,
             data_classes=(DataClass.OPERATIONAL,))
         # Each account's usage of the paid AI service and the allowance it draws on (owner decision
         # O24, plan AN.17): content-free, beside the turn attempts.
         self.usage = PolicedPort(inner=_DeferredAdapter(
-            lambda: FileUsage(Path(storage_root) / 'usage.sqlite')),
+            lambda: FileUsage(storage / USAGE_FILE)),
             gate=self._gate, port=UsagePort, sink=Sink.STORAGE, processor_id=STORAGE_PROCESSOR,
             data_classes=(DataClass.OPERATIONAL,))
-        self.directory = PolicedPort(inner=directory or FileDirectory(storage_root, key=key),
+        self.directory = PolicedPort(inner=directory or FileDirectory(storage, key=key),
             gate=self._gate, port=DirectoryPort, sink=Sink.STORAGE, processor_id=STORAGE_PROCESSOR,
             data_classes=(DataClass.OPERATIONAL, DataClass.RESTRICTED))
         mail_adapter, processor = ((mail, OUTBOX_PROCESSOR) if mail is not None else
-                                    build_mail(settings, storage_root, key, self._gate))
+                                    build_mail(settings, storage, key, self._gate))
         self.mail = PolicedPort(inner=mail_adapter, gate=self._gate, port=MailPort,
             sink=Sink.MAIL, processor_id=processor,
             data_classes=(DataClass.OPERATIONAL, DataClass.RESTRICTED))
@@ -229,7 +237,7 @@ class Application:
                     'response_writing', 'authority_checks', 'independent_review', 'atomic_release']}}
 
 
-def _document_desk(raw_store, storage_root, gate, settings):
+def _document_desk(raw_store, storage, gate, settings):
     """None where the store cannot seal originals (insecure test ciphers, fakes)."""
     if not all(hasattr(raw_store, name) for name in ('upload_storage', 'document_storage', 'prepare_custody')):
         return None
@@ -243,7 +251,7 @@ def _document_desk(raw_store, storage_root, gate, settings):
         originals, texts = raw_store.upload_storage(), raw_store.document_storage()
     except EncryptionNotConfigured:
         return None
-    checker = ClamAVCheck(settings.get('NM_CLAMSCAN'), settings.get('NM_CLAMAV_DATABASE'), storage_root / 'scan')
+    checker = ClamAVCheck(settings.get('NM_CLAMSCAN'), settings.get('NM_CLAMAV_DATABASE'), storage / 'scan')
     # The resident engine loads at start; definitions over a day old are refreshed at start
     # and daily (owner decision, 15 Oct 2026).
     checker.warm()
