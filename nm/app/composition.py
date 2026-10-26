@@ -2,6 +2,7 @@
 from __future__ import annotations
 import os
 import re
+import threading
 from collections.abc import Mapping
 from pathlib import Path
 from types import MappingProxyType
@@ -267,10 +268,15 @@ def _document_desk(raw_store, storage, gate, settings):
 class _DeferredAdapter:
     def __init__(self, factory):
         self.factory, self.inner = factory, None
+        self._building = threading.Lock()
 
     def _resolve(self):
+        # Callers arriving together at the first use build it once and all use the same one (plan AN.24): a
+        # store built twice at once is two callers racing to make one file. A build that fails is not kept.
         if self.inner is None:
-            self.inner = self.factory()
+            with self._building:
+                if self.inner is None:
+                    self.inner = self.factory()
         return self.inner
 
     def __getattr__(self, name):
