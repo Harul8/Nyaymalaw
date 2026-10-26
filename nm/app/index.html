@@ -386,6 +386,7 @@
           <!-- BK-31. WHERE ELSE AM I SIGNED IN, and end those. The case this
                exists for is a device the advocate no longer controls, so the
                control has to be reachable from the one they are holding. -->
+          <button id="usage-plan" type="button" class="ghost" aria-haspopup="dialog">Usage and plan</button>
           <button id="devices" type="button" class="ghost">Signed-in devices</button>
           <button id="ai-sharing" type="button" class="ghost">AI data sharing</button>
           <button id="dictation-setting" type="button" class="ghost">Dictation</button>
@@ -1110,6 +1111,72 @@
   </label>
   <button type="button" id="ai-sharing-save" class="primary" disabled>Enable OpenAI processing</button>
   <button type="button" id="ai-sharing-withdraw" class="ghost" disabled>Withdraw permission</button>
+</dialog>
+<!-- USAGE AND PLAN (owner decisions O21-O24 and O26; plans P53, AN.17, AN.19), as the signed-off
+     page draws it: what is left of the allowance, the plan, and the plans to choose from. A window
+     over the workspace, like AI data sharing and Dictation, so the open matter, the draft and any
+     answer in progress are untouched. Usage is shown only as the percentage left; the plans' words
+     are the public Plans page's, and tests/test_usage_plan_window.py keeps the two the same. -->
+<dialog id="usage-plan-dialog" class="account-dialog usage-plan-dialog" aria-labelledby="usage-plan-title">
+  <div class="dialog-heading"><h2 id="usage-plan-title">Usage and plan</h2>
+    <button type="button" id="usage-plan-close" class="ghost">Close</button></div>
+  <p class="usage-plan-lede">See what is left of your allowance, and choose a plan when you want more.</p>
+  <div class="usage-plan-panels">
+    <section class="usage-plan-panel" aria-labelledby="usage-plan-allowance">
+      <h3 class="usage-plan-eyebrow" id="usage-plan-allowance">Trial allowance</h3>
+      <p class="usage-plan-big"><span id="usage-plan-left">&mdash;</span></p>
+      <span class="usage-plan-meter" aria-hidden="true"><i id="usage-plan-fill"></i></span>
+      <p id="usage-plan-note" class="usage-plan-note">You are on the trial. Choose a plan below when you want more.</p>
+      <p id="usage-plan-status" class="usage-plan-note" role="status" aria-live="polite"></p>
+    </section>
+    <section class="usage-plan-panel" aria-labelledby="usage-plan-yours">
+      <h3 class="usage-plan-eyebrow" id="usage-plan-yours">Your plan</h3>
+      <p class="usage-plan-name" id="usage-plan-name">Trial</p>
+      <p class="usage-plan-note">You have no plan yet. Choose one below when you want more usage.</p>
+      <div class="usage-plan-empty">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg>
+        <h4>No invoices yet</h4>
+        <p>Invoices appear here once you choose a plan.</p>
+      </div>
+    </section>
+  </div>
+  <section class="usage-plan-choose" aria-labelledby="usage-plan-choose-title">
+    <h3 id="usage-plan-choose-title">Choose a plan</h3>
+    <p id="usage-plan-payment" class="usage-plan-hint">Payment is not open yet, so a plan cannot be chosen here for now.</p>
+    <div class="plan-options">
+      <section class="plan-option" aria-label="Pro">
+        <div><h4>Pro</h4><p class="plan-who">For an advocate in daily practice</p></div>
+        <div><p class="plan-price">₹5,000</p><p class="plan-per">per month, excluding GST</p></div>
+        <button type="button" class="primary plan-choose" aria-disabled="true" aria-describedby="usage-plan-payment">Choose Pro</button>
+        <ul class="plan-ticks">
+        <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>The whole product: sources beside every statement, time limits from the Act, and a checking pass</span></li>
+        <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span><span class="plan-blank">[XX]</span> usage credits each month</span></li>
+        <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Standard support</span></li>
+        </ul>
+      </section>
+      <section class="plan-option" aria-label="Elite">
+        <div><h4>Elite</h4><p class="plan-who">More room for more matters</p></div>
+        <div><p class="plan-price">₹10,000</p><p class="plan-per">per month, excluding GST</p></div>
+        <button type="button" class="primary plan-choose" aria-disabled="true" aria-describedby="usage-plan-payment">Choose Elite</button>
+        <ul class="plan-ticks">
+        <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Everything in Pro</span></li>
+        <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span><span class="plan-blank">[XX]</span> usage credits each month</span></li>
+        <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Priority support</span></li>
+        </ul>
+      </section>
+      <section class="plan-option" aria-label="Enterprise">
+        <div><h4>Enterprise</h4><p class="plan-who">For chambers and firms</p></div>
+        <div><p class="plan-price">Custom</p><p class="plan-per">From ₹15,000 a month, excluding GST</p></div>
+        <a class="plan-link" href="/about" target="_blank" rel="noopener">Talk to us</a>
+        <ul class="plan-ticks">
+        <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Everything in Elite</span></li>
+        <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Usage credits and terms agreed with you</span></li>
+        <li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span>Priority support</span></li>
+        </ul>
+      </section>
+    </div>
+    <p class="usage-plan-hint">All prices are per month and exclude GST. Your usage shows as a percentage left; when it runs out, NM says so and shows you the plans.</p>
+  </section>
 </dialog>
 <!-- DICTATION (owner decision, 15 Oct 2026): gpt-transcribe by default; live words
      while speaking (gpt-live-transcribe) only for an advocate who turns them on here. No
