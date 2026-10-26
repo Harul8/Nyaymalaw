@@ -225,6 +225,31 @@ def test_too_many_documents_are_refused_at_the_door(served):
     reply = served.client.post("/api/turn", json={"message": "Read.", "turn_id": "many",
                                                   "document_refs": ["doc_x"] * 11})
     assert reply.status_code == 422
+    # Refused before any work: said as not saved, with the limit in plain words, and no resend that cannot succeed (AN.26).
+    refusal = reply.json()["detail"]
+    assert refusal["code"] == "turn_not_accepted" and refusal["committed"] == "not_committed"
+    assert refusal["retryable"] is False
+    assert refusal["why"] == "A message can carry at most 10 documents. Send the rest in a second message."
+
+
+def test_ten_documents_are_not_refused_for_their_number(served):
+    reply = served.client.post("/api/turn", json={"message": "Read.", "turn_id": "ten", "document_refs": ["doc_x"] * 10})
+    assert reply.json()["detail"]["code"] == "document_refused"  # these ten are not this advocate's: refused on their merits
+
+
+@pytest.mark.parametrize("body,why", [
+    ({"message": "   ", "turn_id": "blank"}, "The message is empty."),
+    ({"turn_id": "no-message"}, "The message is empty."),
+    ({"message": "Read.", "turn_id": "odd", "expected_version": "Privileged client words"},
+     "This message could not be accepted as it was sent."),
+])
+def test_a_turn_refused_for_its_shape_is_said_not_saved_and_echoes_nothing(served, body, why):
+    reply = served.client.post("/api/turn", json=body)
+    refusal = reply.json()["detail"]
+    assert reply.status_code == 422 and refusal["why"] == why
+    assert refusal["code"] == "turn_not_accepted" and refusal["committed"] == "not_committed"
+    assert refusal["retryable"] is False and refusal["problems"]
+    assert "Privileged" not in reply.text
 
 
 def test_material_errors_are_refusals_not_crashes(desk):

@@ -78,6 +78,28 @@ try:
 except Exception as exc:
     SERVING = f'unknown: {type(exc).__name__}'
 
+#: Documents one message may carry (owner decisions, 15 Oct 2026). The page holds the same number (DOCUMENTS_PER_MESSAGE in
+#: nm/app/app.js, kept equal by a test) so that it never sends what is refused here.
+TURN_DOCUMENT_LIMIT = 10
+
+
+def _turn_not_accepted(problems):
+    """A turn that fails validation is refused before any work begins, so nothing was saved: said in the app's own refusal form
+    (as _conversation_error says the others), with a why in plain words and never the submitted material. The page then says
+    "not saved" and offers no resend that cannot succeed, where a bare list of problems left it saying "could not tell whether
+    your brief was saved" (plan AN.26)."""
+    loc, kind = (problems[0]["loc"], problems[0]["type"]) if problems else ([], "")
+    field = loc[1] if len(loc) > 1 else ""
+    if field == "document_refs" and len(loc) == 2 and kind == "too_long":
+        why = f"A message can carry at most {TURN_DOCUMENT_LIMIT} documents. Send the rest in a second message."
+    elif field == "message" and kind in ("missing", "string_too_short", "value_error"):
+        why = "The message is empty."
+    else:
+        why = "This message could not be accepted as it was sent."
+    return {"why": why, "code": "turn_not_accepted", "committed": "not_committed", "retryable": False,
+            "problems": problems}
+
+
 async def invalid_request(request: Request, exc: RequestValidationError):
     """Validation describes the rejected shape, never echoes submitted material.
 
@@ -104,6 +126,8 @@ async def invalid_request(request: Request, exc: RequestValidationError):
                     for part in error.get("loc", ())],
             "type": kind, "msg": reason,
         })
+    if getattr(route, "name", None) == "turn":
+        return JSONResponse(status_code=422, content={"detail": _turn_not_accepted(details)})
     return JSONResponse(status_code=422, content={"detail": details})
 
 
@@ -329,7 +353,7 @@ class TurnRequest(BaseModel):
     turn_id: str | None = None
     #: Documents sent with this message, by their exact references (owner decisions,
     #: 15 Oct 2026); each is read from the signed-in advocate's own space only.
-    document_refs: list[Annotated[str, Field(max_length=120)]] = Field(default_factory=list, max_length=10)
+    document_refs: list[Annotated[str, Field(max_length=120)]] = Field(default_factory=list, max_length=TURN_DOCUMENT_LIMIT)
     today: date | None = None
     jurisdiction: str = FORUM
     work_product: str = ""
