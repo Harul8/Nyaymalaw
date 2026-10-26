@@ -144,4 +144,14 @@ for (const text of ['', ' \t\r\n', '\u2003\u00a0',
     refusal: {code: 'response_unavailable', why: 'The AI service did not respond.', committed: 'not_committed', retryable: true}});
   const plain = find(other, (n) => n.className === 'failure');
   assert.ok(texts(plain).some((text) => text.startsWith("I couldn't complete this message:")));
+
+  // A turn refused for its shape (plan AN.26): its reason, that the brief was not saved, and no resend that cannot succeed.
+  const limit = 'A message can carry at most 10 documents. Send the rest in a second message.';
+  const shape = render.renderTurn({brief: 'Question', turnId: 't3', state: 'not_committed', error: limit,
+    refusal: {code: 'turn_not_accepted', why: limit, committed: 'not_committed', retryable: false, problems: []}});
+  const refusedShape = texts(find(shape, (n) => n.className === 'failure'));
+  assert.ok(refusedShape.includes(`I couldn't complete this message: ${limit}`), refusedShape.join(' | '));
+  assert.ok(refusedShape.includes('Your brief was NOT saved. Sending the same turn again will not resolve this limit.'),
+    refusedShape.join(' | '));
+  assert.ok(!refusedShape.some((text) => /could not tell whether|Send this brief again/.test(text)), refusedShape.join(' | '));
 }

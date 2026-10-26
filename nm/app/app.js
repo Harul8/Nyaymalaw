@@ -4717,7 +4717,15 @@ document.addEventListener('keydown', (ev) => {
 // message carries only documents that finished; one that was held or failed must be
 // removed before sending. The server owns every state shown here; this only reports it.
 const DOCUMENT_MAX_BYTES = 16 * 1024 * 1024;
+// A message carries at most this many documents. The server refuses more with HTTP 422 before anything is saved
+// (TURN_DOCUMENT_LIMIT in nm/app/api.py; a test holds the two equal), so more are refused here, where they are attached.
+const DOCUMENTS_PER_MESSAGE = 10;
 let attachments = [];
+
+// The documents a message would carry: all but those held or failed, which cannot be sent.
+function documentsCarried(except = null) {
+  return attachments.filter((item) => item !== except && !['held', 'failed'].includes(item.status)).length;
+}
 
 // VOICE NOTES (owner decisions, 15 Oct 2026). Recordings the transcription service
 // takes go as they are; any other recording this browser can play (WhatsApp .opus or
@@ -4898,6 +4906,9 @@ async function uploadAttachment(file) {
     item.note = note;
     if (attachments.includes(item)) renderAttachments();
   };
+  if (documentsCarried(item) >= DOCUMENTS_PER_MESSAGE) {
+    return settle('failed', `a message can carry ${DOCUMENTS_PER_MESSAGE} documents; send this one in your next message`);
+  }
   const limit = isRecording(file) ? AUDIO_MAX_BYTES : DOCUMENT_MAX_BYTES;
   if (file.size > limit) {
     return settle('failed', isRecording(file) ? 'a recording can be at most 25 MB' : 'a document can be at most 16 MB');
@@ -5005,6 +5016,10 @@ function attachmentsBlockSend() {
   }
   if (attachments.some((item) => ['held', 'failed'].includes(item.status))) {
     return 'Remove the documents that could not be used before sending.';
+  }
+  const carried = documentsCarried();
+  if (carried > DOCUMENTS_PER_MESSAGE) {
+    return `A message can carry at most ${DOCUMENTS_PER_MESSAGE} documents; remove ${carried - DOCUMENTS_PER_MESSAGE} before sending.`;
   }
   return null;
 }

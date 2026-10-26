@@ -129,6 +129,28 @@ const chip = (get, index = 0) => get('attachments').children[index];
   assert.equal(context.attachmentsBlockSend(), null);
 }
 
+// A message carries at most ten documents (the server's limit, plan AN.26): the eleventh is refused where it is attached,
+// without any request, and the chip says what to do; held and failed documents are not carried, so they do not count.
+{
+  const held = summary({ state: 'held', pages_read: 0, pages_total: null,
+    check: { state: 'held', reason: 'ClamAV reported a threat in this file', checker: 'clamav' } });
+  const { context, requests, get } = harness([held, ...Array.from({ length: 10 }, () => summary())]);
+  await context.attachFile(file('bad.pdf'));
+  for (let n = 1; n <= 10; n += 1) await context.attachFile(file(`doc${n}.pdf`));
+  assert.equal(requests.length, 11, 'a held document does not use up a place: all ten good ones were attached');
+  await context.attachFile(file('eleventh.pdf'));
+  assert.equal(requests.length, 11, 'the eleventh is not even sent to the server');
+  assert.match(chip(get, 11).textContent, /Not attached: a message can carry 10 documents; send this one in your next message/);
+  assert.equal(context.attachmentsBlockSend(), 'Remove the documents that could not be used before sending.');
+  chip(get, 11).children[2].click();
+  chip(get, 0).children[2].click();
+  assert.equal(get('attachments').children.length, 10);
+  assert.equal(context.attachmentsBlockSend(), null);
+  // The send gate holds the same line if more than ten ever get past the door.
+  vm.runInContext("attachments.push({ name: 'extra.pdf', status: 'ready', summary: null, note: '' })", context);
+  assert.equal(context.attachmentsBlockSend(), 'A message can carry at most 10 documents; remove 1 before sending.');
+}
+
 // The matter's files (owner decision 4, 17 Oct 2026): a plain list. Each name opens the
 // file as sent, a note appears only when something needs attention, and "Read here" opens
 // what NM read as one document (decision 5), each page marked where it begins.

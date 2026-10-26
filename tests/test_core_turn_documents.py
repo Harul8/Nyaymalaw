@@ -252,6 +252,17 @@ def test_a_turn_refused_for_its_shape_is_said_not_saved_and_echoes_nothing(serve
     assert "Privileged" not in reply.text
 
 
+def test_the_page_and_the_server_carry_the_same_number_of_documents():
+    import re
+    from pathlib import Path
+
+    from nm.app.api import TURN_DOCUMENT_LIMIT, TurnRequest
+
+    page = (Path(__file__).resolve().parents[1] / "nm" / "app" / "app.js").read_text(encoding="utf-8")
+    assert int(re.search(r"const DOCUMENTS_PER_MESSAGE = (\d+);", page).group(1)) == TURN_DOCUMENT_LIMIT
+    assert TurnRequest.model_json_schema()["properties"]["document_refs"]["maxItems"] == TURN_DOCUMENT_LIMIT
+
+
 def test_material_errors_are_refusals_not_crashes(desk):
     with pytest.raises(DocumentRefused):
         desk.load(ADVOCATE, "doc_unknown")
