@@ -42,7 +42,7 @@ from nm.core_engine import answer_sections
 from nm.core_engine.turn import LEGACY_CONTRACT as LEGACY_CORE_TURN, recover, saved_rows
 from nm.core_engine import checklist
 from nm.shared.external_ai_contracts import ModelPermissionRefused
-from nm.shared.model_port import ModelError
+from nm.shared.model_port import USAGE_LIMIT_MESSAGE, ModelError, UsageLimitReached
 from nm.shared.clock_contracts import FORUM
 from nm.shared.identity_contracts import source_fingerprint
 from nm.shared.traceability_contracts import implements
@@ -504,6 +504,48 @@ def set_dictation_setting(req: DictationSettingRequest, advocate_id: Advocate) -
     except AuthenticationUnavailable as exc:
         raise HTTPException(503, "The dictation setting was not saved.") from exc
     return _dictation_view(setting)
+
+
+class UsageNotice(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    step: int = Field(strict=True, ge=1, le=50)
+
+
+def _usage_view(standing: dict) -> dict:
+    """What an advocate is shown of their allowance (owner decision O21): the percentage left, never an
+    amount, and the notice due now, if any (P53), with how long it stays by itself."""
+    from nm.arrive.usage_port import SELF_CLOSING_SECONDS, SELF_CLOSING_STEPS, due_notice
+
+    step = due_notice(standing["left"], standing["noticed"])
+    # There are no plans yet (payment comes later, by UPI): every allowance is the trial's.
+    return {"plan": "Trial", "left": standing["left"], "notice": None if step is None else {
+        "step": step, "closes_after_seconds": SELF_CLOSING_SECONDS if step in SELF_CLOSING_STEPS else None}}
+
+
+@app.get("/api/usage")
+def usage(advocate_id: Advocate) -> dict:
+    """The signed-in advocate's allowance, as a percentage left (owner decisions O21-O24; plan AN.17).
+    The first read of an account gives it its trial."""
+    from nm.arrive.usage_port import UsageRefused
+
+    try:
+        return _usage_view(application().usage.standing(advocate_id))
+    except UsageRefused as exc:
+        raise HTTPException(503, "Your usage could not be read just now.") from exc
+
+
+@app.post("/api/usage/notice", dependencies=[CsrfProtected])
+def usage_notice(req: UsageNotice, advocate_id: Advocate) -> dict:
+    """The advocate has been shown this usage notice, wherever they sign in next (P53)."""
+    from nm.arrive.usage_port import NOTICE_STEPS, UsageRefused
+
+    if req.step not in NOTICE_STEPS:
+        raise HTTPException(422, "That is not one of the usage notices.")
+    try:
+        application().usage.noticed(advocate_id, req.step)
+        return _usage_view(application().usage.standing(advocate_id))
+    except UsageRefused as exc:
+        raise HTTPException(503, "The notice could not be recorded, so it may show again.") from exc
 
 
 class RegistrationConsent(BaseModel):
@@ -1664,6 +1706,12 @@ def read_document_waiting(document_ref: str, advocate_id: Advocate, request: Req
         if not _session_current(request, advocate_id):
             raise HTTPException(401, 'not signed in') from exc
         raise HTTPException(403, {'why': str(exc), 'code': 'model_permission_required'}) from exc
+    except UsageLimitReached as exc:
+        # The account's allowance is used up, or the AI account's (P51, AN.17): the owner's words.
+        raise HTTPException(402, {'why': USAGE_LIMIT_MESSAGE, 'code': 'usage_limit'}) from exc
+    except ModelError as exc:
+        raise HTTPException(503, {'why': 'The pages could not be read just now. Try again.',
+                                  'code': 'document_reading_unavailable'}) from exc
     except document_rules.DocumentRefused as exc:
         raise HTTPException(404, {'why': str(exc), 'code': 'document_unavailable'}) from exc
     except OSError as exc:
@@ -1719,6 +1767,8 @@ def _dictate(advocate_id, request, name, data):
         if not _session_current(request, advocate_id):
             raise HTTPException(401, 'not signed in') from exc
         raise HTTPException(403, {'why': str(exc), 'code': 'model_permission_required'}) from exc
+    except UsageLimitReached as exc:
+        raise HTTPException(402, {'why': USAGE_LIMIT_MESSAGE, 'code': 'usage_limit'}) from exc
     except ModelError as exc:
         raise HTTPException(503, {'why': 'The dictation could not be transcribed just now. Try again.',
                                   'code': 'dictation_unavailable'}) from exc
@@ -1780,6 +1830,8 @@ async def live_dictation(websocket: WebSocket):
         session = await model.live_transcription(prompt=voice.DICTATION_PROMPT, minutes=LIVE_MINUTES)
     except ModelPermissionRefused as exc:
         return await refuse(str(exc))
+    except UsageLimitReached:
+        return await refuse(USAGE_LIMIT_MESSAGE)
     except ModelError:
         return await refuse('Live words are not available just now.')
 
