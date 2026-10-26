@@ -10,13 +10,16 @@ from nm.arrive.directory_port import DirectoryPort
 from nm.arrive.mail_outbox import FileOutbox
 from nm.arrive.mail_port import MailPort
 from nm.arrive.store_directory import FileDirectory
+from nm.arrive.store_usage import FileUsage
+from nm.arrive.usage_port import AllowanceUsedUp, UsagePort, UsageRefused
 from nm.shared.deployment_contracts import shares_value_with
 from nm.shared.egress_contracts import DataClass, Gatekeeper, Sink
 from nm.shared.egress_policy import INDEX_PROCESSOR, OUTBOX_PROCESSOR, STORAGE_PROCESSOR, egress_policy
 from nm.shared.model_config import load, load_dotenv
+from nm.shared.model_metered import MeteredModel
 from nm.shared.model_openai_adapter import OpenAIModelAdapter
 from nm.shared.model_policed import PolicedModel
-from nm.shared.model_port import ModelPort, Tier
+from nm.shared.model_port import USAGE_LIMIT_MESSAGE, ModelPort, ProviderUnavailable, Tier
 from nm.shared.model_traced import TracedModel
 from nm.shared.policed_port_adapter import PolicedPort
 from nm.shared.source_layout import browser_assets
@@ -68,6 +71,12 @@ class Application:
             lambda: FileTurnAttempts(Path(storage_root) / 'turn-attempts.sqlite')),
             gate=self._gate, port=TurnAttemptPort, sink=Sink.STORAGE, processor_id=STORAGE_PROCESSOR,
             data_classes=(DataClass.OPERATIONAL,))
+        # Each account's usage of the paid AI service and the allowance it draws on (owner decision
+        # O24, plan AN.17): content-free, beside the turn attempts.
+        self.usage = PolicedPort(inner=_DeferredAdapter(
+            lambda: FileUsage(Path(storage_root) / 'usage.sqlite')),
+            gate=self._gate, port=UsagePort, sink=Sink.STORAGE, processor_id=STORAGE_PROCESSOR,
+            data_classes=(DataClass.OPERATIONAL,))
         self.directory = PolicedPort(inner=directory or FileDirectory(storage_root, key=key),
             gate=self._gate, port=DirectoryPort, sink=Sink.STORAGE, processor_id=STORAGE_PROCESSOR,
             data_classes=(DataClass.OPERATIONAL, DataClass.RESTRICTED))
@@ -107,16 +116,35 @@ class Application:
         self.live_transcription_model = (settings.get('NM_LIVE_TRANSCRIBE_MODEL') or 'gpt-live-transcribe').strip()
 
     def _model_for(self, advocate_id, *, session_current, page_images=False, audio_model=None):
+        # Every call made for an advocate is metered against their account (plan AN.17), on either route.
+        record = lambda call: self.usage.record(advocate_id, call)  # noqa: E731
         if isinstance(self._model_adapter, OpenAIModelAdapter):
             from nm.app.model_permission import bind_text_model
-            return bind_text_model(self._model_adapter, directory=self.directory,
+            model = bind_text_model(self._model_adapter, directory=self.directory,
                 account_id=advocate_id, config=self.config,
                 session_current=session_current, audit=self._egress_audit,
-                page_images=page_images, audio_model=audio_model)
-        # Fresh tracing per request prevents parallel conversations sharing traces.
-        return PolicedModel(inner=TracedModel(inner=self._model_adapter),
-            policy=self._gate.policy, audit=self._egress_audit,
-            authorize=lambda: _require_session(session_current))
+                page_images=page_images, audio_model=audio_model, record=record)
+        else:
+            # Fresh tracing per request prevents parallel conversations sharing traces.
+            model = PolicedModel(inner=TracedModel(inner=MeteredModel(inner=self._model_adapter, record=record)),
+                policy=self._gate.policy, audit=self._egress_audit,
+                authorize=lambda: _require_session(session_current))
+        # After the permission, so an advocate who has not allowed AI sharing is told that first.
+        self._require_allowance(advocate_id)
+        return model
+
+    def _require_allowance(self, advocate_id):
+        """Once nothing is left, new paid work is refused before it starts (owner, O24: "Once nothing is
+        left"): a turn's first call, a reading of pages, a voice note, dictation, live dictation. Raised as
+        the usage limit, in the owner's words of P51, so each says it as it says the provider's. Work
+        already running finishes and is charged; a saved answer reopens without coming here."""
+        try:
+            left = self.usage.standing(advocate_id)['left']
+        except UsageRefused as exc:
+            # Unknown usage is never free usage.
+            raise ProviderUnavailable("This account's usage could not be checked.") from exc
+        if left <= 0:
+            raise AllowanceUsedUp(USAGE_LIMIT_MESSAGE)
 
     def document_reader(self, advocate_id, *, session_current):
         """The model that reads one advocate's scanned pages and transcribes their voice

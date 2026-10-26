@@ -269,8 +269,10 @@ def test_the_composition_root_polices_every_live_destination():
     # LB-106 (29 September 2026): the held-law search sends the advocate's words to this
     # machine's models and index, so it is a destination, admitted like the rest; it is
     # policed again since the core engine's search (open items round, 16 Oct 2026).
+    # Each account's usage of the paid AI service (owner decision O24, plan AN.17) is a destination too:
+    # content-free, on this installation's storage, admitted like the turn attempts beside it.
     expected = {"StorePort", "TurnAttemptPort", "DirectoryPort", "MailPort", "SearchPort",
-                "UploadPort", "DocumentDerivativePort"}
+                "UploadPort", "DocumentDerivativePort", "UsagePort"}
     assert ports and len(ports) == len(calls) == len(set(ports)), (
         "Every actual wrapper must declare its unique port destination")
     assert set(ports) == expected, "The served destination inventory must remain fully policed"
