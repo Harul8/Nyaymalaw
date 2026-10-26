@@ -5,11 +5,13 @@
 
         powershell -ExecutionPolicy Bypass -File start.ps1
 
-    THERE IS ONE SERVER, NOT TWO. `nm.app.main` serves the API and the
-    advocate UI from the same process -- `/api/...` and the `/static` mount
-    with the `/` index -- so there is one thing to start and one port to wait
-    on. A script that pretended to start two would leave whoever read it
-    looking for the second.
+    THERE IS ONE SERVER, NOT TWO. `nm.app.main` serves the public site, the
+    advocate's workspace and the API from the same process -- the homepage at
+    `/` with the public pages beside it, the workspace at `/app`, `/static` and
+    `/api/...` -- so there is one thing to start, one port to wait on, and one
+    thing to deploy (owner, 25 Oct 2026: the site is not separate). A script
+    that pretended to start two would leave whoever read it looking for the
+    second.
 
     RESTART MEANS RESTART. Anything already listening on the port is stopped
     first, deliberately: a stale server is the B-114 defect wearing a helpful
@@ -199,7 +201,8 @@ try {
 
 if (-not $NoBrowser) {
     Write-Host ""
-    Write-Host "  opening $url"
+    # The homepage; Sign in and Create account on it open the workspace at /app.
+    Write-Host "  opening the homepage $url"
     Start-Process $url
 }
 
