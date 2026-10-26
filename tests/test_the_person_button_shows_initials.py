@@ -39,3 +39,9 @@ def test_the_circle_is_drawn_only_when_it_has_letters_and_stays_on_a_phone():
     phone = "".join(block.split("\n}\n")[0] for block in STYLE.split("@media (max-width: 820px) {")[1:])
     assert ".ribbon-account > .who-name { display: none; }" in phone
     assert ".avatar" not in phone, "a phone rule hides or resizes the initials"
+
+
+def test_the_shared_rule_is_loaded_before_the_script_that_uses_it():
+    """The initials rule is one file (plan AN.22) loaded by the page before the app's own script."""
+    scripts = re.findall(r'<script src="/static/([^"]+)"></script>', PAGE)
+    assert "person.js" in scripts and scripts.index("person.js") < scripts.index("app.js"), scripts

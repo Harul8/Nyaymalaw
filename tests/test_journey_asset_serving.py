@@ -270,6 +270,7 @@ ASSETS = {
     "app.css": ("nm/app/app.css", "text/css"),
     "app.js": ("nm/app/app.js", "text/javascript"),
     "index.html": ("nm/app/index.html", "text/html"),
+    "person.js": ("nm/app/person.js", "text/javascript"),
     "brain-sources.js": ("nm/app/brain-sources.js", "text/javascript"),
     "draft-vault.js": ("nm/arrive/draft-vault.js", "text/javascript"),
     "dictation-worklet.js": ("nm/open_matter/dictation-worklet.js", "text/javascript"),
@@ -296,7 +297,7 @@ def test_every_declared_browser_asset_is_the_exact_shipped_population():
     assert browser_assets(root=ROOT) == {
         name: ROOT / path for name, (path, _media_type) in ASSETS.items()
     }
-    assert len(ASSETS) == 25
+    assert len(ASSETS) == 26
     # The old tree is migration evidence, not a runtime import or public root.
     assert not any(isinstance(route, Mount) and route.path == "/static"
                    for route in api.app.routes)

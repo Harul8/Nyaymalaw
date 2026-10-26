@@ -125,6 +125,7 @@
     "app.js": "nm/app/app.js",
     "index.html": "nm/app/index.html",
     "brain-sources.js": "nm/app/brain-sources.js",
+    "person.js": "nm/app/person.js",
     "draft-vault.js": "nm/arrive/draft-vault.js",
     "dictation-worklet.js": "nm/open_matter/dictation-worklet.js",
     "intake-materials.css": "nm/open_matter/intake-materials.css",

@@ -6,12 +6,13 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 
 const app = fs.readFileSync(new URL('../../nm/app/app.js', import.meta.url), 'utf8');
-const start = app.indexOf('const NAME_TITLES =');
-const end = app.indexOf('function showApplication(advocate, workspace, professionalApproval) {', start);
-assert.ok(start >= 0 && end > start, 'the initials function must be shipped');
-const context = vm.createContext({ Array, String });
-vm.runInContext(app.slice(start, end), context);
-const initials = (name) => context.initialsOf(name);
+const shared = fs.readFileSync(new URL('../../nm/app/person.js', import.meta.url), 'utf8');
+// The rule lives in one shared file, loaded by the app's page and by the website's pages (plan AN.22).
+const context = vm.createContext({ Array, String, Object, window: {} });
+vm.runInContext(shared, context);
+assert.ok(context.window.NmPerson && Object.isFrozen(context.window.NmPerson), 'the shared rule must be shipped, and frozen');
+const initials = (name) => context.window.NmPerson.initialsOf(name);
+assert.ok(!app.includes('NAME_TITLES') && !app.includes('function initialsOf('), 'the app keeps no second copy of the rule');
 
 // The design's own example, a name with a title, and the ordinary shapes.
 assert.equal(initials('Adv. Meera Rao'), 'MR');
@@ -45,7 +46,7 @@ assert.equal(initials('— · —'), '');
 
 // It is put on at sign-in from the name shown, and taken off with the session.
 const show = app.slice(app.indexOf('function showApplication('), app.indexOf('// IS THE SERVER RUNNING THE CODE THAT IS ON DISK?'));
-assert.ok(show.indexOf("$('who-name').textContent = shownName;") < show.indexOf("$('account-initials').textContent = initialsOf(shownName);"));
+assert.ok(show.indexOf("$('who-name').textContent = shownName;") < show.indexOf("$('account-initials').textContent = window.NmPerson.initialsOf(shownName);"));
 assert.ok(show.includes("const shownName = advocate.name || advocate.email || advocate.id;"));
 const cleared = app.slice(app.indexOf('function clearPrivileged() {'), app.indexOf('/* ------------------------------------------------------- idle sign-out --- */'));
 assert.ok(/'who-name', 'account-initials', 'profile-name'/.test(cleared), 'the initials leave with the session');
