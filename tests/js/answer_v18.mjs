@@ -191,4 +191,34 @@ assert.ok(checked.textContent.includes('Could add or put better: Say which court
 assert.ok(checked.textContent.includes('Could go: A paragraph repeats itself.'));
 assert.ok(!find(has('part-body')).some(({ node }) => node.children.includes(checked)), 'the checks stand outside the parts');
 
+// The answer's own header (plan AN.20): the NM mark, Nyaymalaw and - only when the answer was saved
+// with one - the time it was made, between the advocate's message and the first line of the answer.
+{
+  const headOf = (node) => node.children.find((kid) => kid.className === 'reply-head');
+  const bare = headOf(turn);
+  assert.ok(bare, 'an answer opens with its header');
+  assert.deepEqual(bare.children.map((kid) => [kid.className, kid.textContent]),
+    [['reply-head-mark', 'NM'], ['reply-head-name', 'Nyaymalaw']], 'no time is made up for an answer saved without one');
+  assert.equal(bare.children[0].attributes['aria-hidden'], 'true', 'the mark is not read out');
+  const kinds = turn.children.map((kid) => kid.className);
+  assert.equal(kinds[0], 'said-row');
+  assert.equal(kinds[1], 'reply-head', 'the header follows the advocate message and leads the answer');
+
+  const timed = context.renderTurn({ brief: 'Two problems with one buyer.', answer: {
+    turn_id: 't2', chat_id: 'c1', at: '2026-10-25T05:16:00+00:00', elements: [label('IN_SHORT', 'In short')],
+    metrics: { gates_fired: [], outcome: 'ok', latency_ms: 1, llm_calls: 1, tokens: { in: 1, out: 1 }, cost_usd: 0,
+      violations: [], tier_downgrades: [] } } });
+  const stamped = headOf(timed);
+  const time = stamped.children[2];
+  assert.equal(time.tagName, 'TIME');
+  assert.equal(time.className, 'reply-head-time');
+  assert.equal(time.dateTime, '2026-10-25T05:16:00.000Z');
+  assert.ok(/2026/.test(time.textContent) && /Oct/.test(time.textContent) && !/Invalid/.test(time.textContent), time.textContent);
+
+  const odd = headOf(context.renderTurn({ brief: 'x', answer: { turn_id: 't3', chat_id: 'c1', at: 'not a time',
+    elements: [label('IN_SHORT', 'In short')], metrics: { gates_fired: [], outcome: 'ok', latency_ms: 1, llm_calls: 1,
+      tokens: { in: 1, out: 1 }, cost_usd: 0, violations: [], tier_downgrades: [] } } }));
+  assert.equal(odd.children.length, 2, 'a time that is not a time is not shown');
+}
+
 console.log('answer v18: ok');

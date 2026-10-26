@@ -2640,6 +2640,31 @@ function renderTurn(entry) {
     return wrap;
   }
 
+  // THE ANSWER'S OWN HEADER (plan AN.20; the signed-off design): who is speaking, and when this
+  // answer was made - the NM mark, Nyaymalaw and the time. The time is the one saved with the
+  // answer; an answer saved without one shows none, and nothing is made up in its place.
+  const head = document.createElement('div');
+  head.className = 'reply-head';
+  const headMark = document.createElement('span');
+  headMark.className = 'reply-head-mark';
+  headMark.setAttribute('aria-hidden', 'true');
+  headMark.textContent = 'NM';
+  const headName = document.createElement('span');
+  headName.className = 'reply-head-name';
+  headName.textContent = 'Nyaymalaw';
+  head.appendChild(headMark);
+  head.appendChild(headName);
+  const madeAt = Date.parse(entry.answer.at || '');
+  if (!Number.isNaN(madeAt)) {
+    const headTime = document.createElement('time');
+    headTime.className = 'reply-head-time';
+    headTime.dateTime = new Date(madeAt).toISOString();
+    headTime.textContent = new Date(madeAt).toLocaleString(undefined, {
+      day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    head.appendChild(headTime);
+  }
+  wrap.appendChild(head);
+
   // A READ-BACK TURN IS SHOWN AS IT WAS SERVED, without a notice (owner, 28
   // September 2026). A retry that recovered the earlier saved answer instead
   // of making a new one still says so: the advocate asked just now.
