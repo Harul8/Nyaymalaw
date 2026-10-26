@@ -21,10 +21,29 @@ def installed(tmp_path):
     return ClamAVCheck(executable, database, tmp_path / "scan")
 
 
-def scanner(monkeypatch, returncode=0, stdout=b"", raises=None):
-    calls = []
+#: What the scanner's own help says when it has the image fingerprinting option (ClamAV 1.2 and later).
+HELP = (b"Usage: clamscan [options] [file/directory/-]\n"
+        b"    --scan-pdf[=yes(*)/no]               Scan PDF files.\n"
+        b"    --scan-image-fuzzy-hash[=yes(*)/no]  Detect files by calculating image (graphics) fuzzy hashes.\n")
+
+
+class Calls(list):
+    """The scans made, each as (command, options); `asked` holds each time the scanner's own help was asked for."""
+
+    def __init__(self, help_raises):
+        super().__init__()
+        self.asked, self.help_raises = [], help_raises
+
+
+def scanner(monkeypatch, returncode=0, stdout=b"", raises=None, help_text=HELP, help_raises=None):
+    calls = Calls(help_raises)
 
     def run(command, **kwargs):
+        if "--help" in command:
+            calls.asked.append(command)
+            if calls.help_raises is not None:
+                raise calls.help_raises
+            return subprocess.CompletedProcess(command, 0, help_text, b"")
         calls.append((command, kwargs))
         if raises is not None:
             raise raises
@@ -177,8 +196,8 @@ def test_a_relative_store_folder_gives_every_clamav_program_absolute_paths_only(
     checker = ClamAVCheck("tools/clamscan.exe", "tools/database", Path("matters") / "scan",
                           freshclam_config="tools/freshclam.conf")
     checker.check(b"x")
-    config = dict(line.split(" ", 1) for line in (tmp_path / "matters" / "scan" / "clamd.conf").read_text("utf-8").splitlines()
-                  if line)
+    written = (tmp_path / "matters" / "scan" / "clamd.conf").read_text("utf-8").splitlines()
+    config = dict(line.split(" ", 1) for line in written if line)
     for key in ("DatabaseDirectory", "TemporaryDirectory", "LogFile"):
         assert Path(config[key]).is_absolute(), f"{key} is {config[key]}"
     (clamd, option), = started
@@ -189,6 +208,55 @@ def test_a_relative_store_folder_gives_every_clamav_program_absolute_paths_only(
         if part.startswith(("--database=", "--tempdir=")):
             assert Path(part.split("=", 1)[1]).is_absolute(), part
     assert checker.freshclam_config.is_absolute() and checker.freshclam.is_absolute()
+
+
+def stopped_engine(monkeypatch):
+    """clamd is 'started' as a process that has already ended, so the readiness wait ends at once."""
+    class Process:
+        def poll(self):
+            return 0
+
+    monkeypatch.setattr(clamav_check.subprocess, "Popen", lambda command, **kwargs: Process())
+
+
+def test_image_fingerprinting_is_switched_off_in_the_command_line_scan(installed, monkeypatch):
+    """Owner decision, 26 Oct 2026 (plan AN.25): with every page image hashed, a 20-page scanned PDF took 38 s to scan;
+    with it off, 3 s."""
+    calls = scanner(monkeypatch, 0, b"stdin: OK\r\n")
+    assert installed.check(b"x") == ("clear", "no threat found by ClamAV")
+    (command, _), = calls
+    assert "--scan-image-fuzzy-hash=no" in command and command[-1] == "-"
+
+
+def test_image_fingerprinting_is_switched_off_in_the_resident_engine(installed, monkeypatch, tmp_path):
+    (tmp_path / "clamd.exe").write_bytes(b"")
+    stopped_engine(monkeypatch)
+    scanner(monkeypatch, 0)
+    installed.check(b"x")
+    assert "ScanImageFuzzyHash no" in (installed.workdir / "clamd.conf").read_text(encoding="utf-8").splitlines()
+
+
+def test_an_older_clamav_without_the_option_is_not_given_it(installed, monkeypatch, tmp_path):
+    """ClamAV before 1.2 has no such option and refuses one it does not know, which would hold every document."""
+    (tmp_path / "clamd.exe").write_bytes(b"")
+    stopped_engine(monkeypatch)
+    calls = scanner(monkeypatch, 0, b"stdin: OK\r\n", help_text=b"Usage: clamscan [options]\n    --scan-pdf[=yes(*)/no]\n")
+    assert installed.check(b"x") == ("clear", "no threat found by ClamAV")
+    (command, _), = calls
+    assert not any("fuzzy" in part for part in command)
+    assert "fuzzy" not in (installed.workdir / "clamd.conf").read_text(encoding="utf-8").lower()
+
+
+@pytest.mark.parametrize("failure", [OSError("cannot start"), subprocess.TimeoutExpired("clamscan", 30)])
+def test_the_help_is_asked_once_and_a_help_that_could_not_be_read_is_asked_again(installed, monkeypatch, failure):
+    calls = scanner(monkeypatch, 0, b"stdin: OK\r\n", help_raises=failure)
+    installed.check(b"x")
+    assert not any("fuzzy" in part for part in calls[0][0]), "scanned as ClamAV does by default"
+    calls.help_raises = None
+    installed.check(b"x")
+    installed.check(b"x")
+    assert "--scan-image-fuzzy-hash=no" in calls[1][0] and "--scan-image-fuzzy-hash=no" in calls[2][0]
+    assert len(calls.asked) == 2, "a failed ask is repeated; an answer is remembered"
 
 
 def test_definitions_are_refreshed_only_when_a_day_old_and_the_engine_reloads(installed, tmp_path):

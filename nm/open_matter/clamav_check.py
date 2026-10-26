@@ -13,6 +13,12 @@ resident engine (clamd, beside the scanner) is started as a child of this proces
 listening only on this computer, and the bytes are streamed to it; no copy is written
 here. While it loads, or if it stops, the command-line scanner is used as before.
 
+Image fingerprinting (owner decision, 26 Oct 2026, plan AN.25): ClamAV 1.2 and later hash every
+page image of a file to match fingerprints of known-bad images, a phishing-lookalike defence. On a
+scanned 20-page PDF that took 38 s of a scan that takes 3 s without it, so it is switched off, in
+the resident engine and in the command-line scan alike. Every other check of a file is unchanged,
+and a file is still read only after the check clears it.
+
 Definitions (owner decision, 15 Oct 2026): the app refreshes them itself with ClamAV's
 freshclam (beside the scanner, using the configuration beside the definitions folder)
 when they are more than a day old, at start and then daily while it runs, and the
@@ -36,6 +42,9 @@ _CHUNK = 1 << 20
 #: Definitions older than this are refreshed.
 REFRESH_AFTER = 24 * 60 * 60
 _QUIET = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+#: The option that switches image fingerprinting, as the scanner's own help names it. An older ClamAV has no such
+#: option and refuses one it does not know, which would hold every document, so it is passed only where the help lists it.
+_FINGERPRINT_OPTION = "--scan-image-fuzzy-hash"
 
 
 def _signature(found):
@@ -70,6 +79,7 @@ class ClamAVCheck:
         self._port = None
         self._ready = False
         self._refresher = None
+        self._fingerprint_switch = None  # whether this ClamAV has the option; None until its help has been read
         self.refreshed = None  # what the last refresh did, for the installation's own view
 
     def available(self) -> bool:
@@ -86,6 +96,18 @@ class ClamAVCheck:
             if verdict is not None:
                 return verdict
         return self._scan_once(data)
+
+    def _fingerprints_off(self) -> bool:
+        """Whether this ClamAV can have image fingerprinting switched off, asked once of the scanner's own help. A help
+        that could not be read is not remembered: that scan runs as ClamAV does by default, and the next one asks again."""
+        if self._fingerprint_switch is None:
+            try:
+                helped = subprocess.run([str(self.executable), "--help"], capture_output=True, timeout=30,
+                                        check=False, creationflags=_QUIET)
+            except (OSError, subprocess.TimeoutExpired):
+                return False
+            self._fingerprint_switch = _FINGERPRINT_OPTION.encode() in (helped.stdout or b"") + (helped.stderr or b"")
+        return self._fingerprint_switch
 
     # --- the resident engine -------------------------------------------------------
 
@@ -114,6 +136,7 @@ class ClamAVCheck:
                     f"DatabaseDirectory {self.database}", f"TCPSocket {self._port}", "TCPAddr 127.0.0.1",
                     f"TemporaryDirectory {self.workdir / 'tmp'}", "StreamMaxLength 40M", "MaxFileSize 40M",
                     "MaxScanSize 160M", "AlertExceedsMax yes", "Foreground yes",
+                    *(["ScanImageFuzzyHash no"] if self._fingerprints_off() else []),
                     f"LogFile {self.workdir / 'clamd.log'}", ""]), encoding="utf-8")
                 self._process = subprocess.Popen([str(self.clamd), f"--config-file={config}"],
                                                  stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
@@ -185,7 +208,8 @@ class ClamAVCheck:
 
     def _scan_once(self, data):
         command = [str(self.executable), "--no-summary", "--stdout", f"--database={self.database}",
-                   f"--tempdir={self.workdir}", "--alert-exceeds-max=yes", "-"]
+                   f"--tempdir={self.workdir}", "--alert-exceeds-max=yes",
+                   *([f"{_FINGERPRINT_OPTION}=no"] if self._fingerprints_off() else []), "-"]
         try:
             self.workdir.mkdir(parents=True, exist_ok=True)
             with self._one_at_a_time:
