@@ -96,6 +96,13 @@ class _RecordingStore:
         self.reached.append("saved_files")
         return ()
 
+    def kept_line(self, matter_id, signature):
+        self.reached.append("kept_line")
+        return None
+
+    def keep_line(self, matter_id, signature, line):
+        self.reached.append("keep_line")
+
     def record_turn(self, transcript):
         self.reached.append("record_turn")
 
@@ -176,6 +183,8 @@ def _arguments_for(method: str) -> tuple:
         "list_for": ("advocate@example.test",),
         "signature": ("m-1",),
         "saved_files": (),
+        "kept_line": ("m-1", (1, 1)),
+        "keep_line": ("m-1", (1, 1), {"owner": "advocate@example.test"}),
         "record_turn": ({"turn": 1},),
         "transcripts_for": ("m-1",),
         "record_metrics": ({"ok": True},),

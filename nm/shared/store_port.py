@@ -93,6 +93,19 @@ class StorePort(Protocol):
         """Every saved matter as (id, signature, when last saved), without opening any (P35)."""
         ...
 
+    def kept_line(self, matter_id: MatterId, signature: tuple[int, int]) -> dict | None:
+        """The conversation history's line for exactly this version of this saved matter, if one
+        was kept (P35, O29): the small record the history needs, so listing does not open a large
+        file again and again. None when none is kept, when it was kept for another version of the
+        file, or when it will not open - never an error: the caller derives it from the file."""
+        ...
+
+    def keep_line(self, matter_id: MatterId, signature: tuple[int, int], line: dict) -> None:
+        """Keep a line derived from this version of this saved matter, sealed as the matter is.
+        A write that fails raises: the caller does not fail a request because a line could not be
+        kept."""
+        ...
+
     def record_turn(self, transcript: dict) -> None:
         """The served turn, in full. Sealed -- it carries client words."""
         ...

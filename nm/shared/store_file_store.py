@@ -35,6 +35,7 @@ from typing import Union, get_args, get_origin, get_type_hints
 
 from nm.shared.names_contracts import discard
 from nm.shared.operation_contracts import save_stamp
+from nm.shared.store_envelope import KeyUnavailable
 from nm.shared.store_port import MatterList, StaleWrite
 from nm.shared.store_sealing import MatterSealer, is_envelope
 from nm.shared.text_contracts import blank
@@ -298,6 +299,10 @@ def _transcript_payload(blob: bytes) -> dict:
     return document
 
 
+#: The shape of a kept history line's own record, changed when that shape changes; what the line
+#: says is versioned by the code that derives it (the API), not here.
+_LINE_FORMAT = 1
+
 #: The scheme name `_Cipher` reports when it fell back. The envelope is NOT
 #: built on that path: the opt-in exists so a developer with no `cryptography`
 #: wheel can run the suite, and dressing that in envelope encryption would
@@ -317,6 +322,8 @@ class FileMatterStore:
         # Made on the first rating, like the transcripts: an installation
         # nobody has rated a reply on keeps the directories it had.
         self._feedback = self._root / "feedback"
+        # Made on the first line kept, like the transcripts (P35, O29).
+        self._lines = self._root / "history-lines"
         self._keys = self._root / "keys"
         self._matters.mkdir(parents=True, exist_ok=True)
         self._metrics.mkdir(parents=True, exist_ok=True)
@@ -560,6 +567,69 @@ class FileMatterStore:
             out.append((p.stem, (stat.st_mtime_ns, stat.st_size),
                         save_stamp(datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc))))
         return tuple(out)
+
+    # ------------------------------------------------ the history's kept lines ---
+    #
+    # THE HISTORY'S LINE FOR EACH SAVED FILE (P35, O29, 26 Oct 2026). Whose a saved file is, and
+    # what the history shows of it, is known only by opening it - and a long conversation is
+    # tens of megabytes, so listing a store opened and checked every file, seconds on each first
+    # call. One small line per file, derived once per version of the file (its write time and
+    # size), lets the history read lines and open a large file only when it has changed.
+    #
+    # A LINE CARRIES CLIENT WORDS (the first message), so it is sealed as the matter is: under the
+    # matter's own key, which means erasing a matter's key makes its line unreadable too, or under
+    # the installation seal for a record saved before there were keys of their own. It is kept
+    # BESIDE the matter and never in it: a line written into the file would change the file's
+    # signature, and the signature is what says a line is still current.
+
+    def _line_path(self, matter_id: MatterId) -> Path:
+        return self._lines / f"{_storage_component(matter_id, kind='matter ID')}.nm"
+
+    def kept_line(self, matter_id: MatterId, signature: tuple[int, int]) -> dict | None:
+        """The line kept for exactly this version of this saved matter, or None.
+
+        NONE IS NEVER AN ERROR AND NEVER A STATEMENT ABOUT THE MATTER. A line is derived data: one
+        that is missing, was kept for another version of the file, will not open or is not what it
+        should be is simply no line, and the caller derives it again from the file itself - which
+        is where a real fault in the matter surfaces."""
+        path = self._line_path(matter_id)
+        try:
+            document = json.loads(self._open(str(matter_id), path.read_bytes()).decode("utf8"))
+        except Exception:  # noqa: BLE001 -- derived data that will not open is no line
+            return None
+        if (not isinstance(document, dict) or document.get("format") != _LINE_FORMAT
+                or document.get("matter_id") != str(matter_id)
+                or document.get("signature") != [signature[0], signature[1]]
+                or not isinstance(document.get("line"), dict)):
+            return None
+        return document["line"]
+
+    def keep_line(self, matter_id: MatterId, signature: tuple[int, int], line: dict) -> None:
+        """Keep a line derived from this version of this saved matter. It never creates a key.
+
+        A matter saved before there were keys of their own has none, and its line is sealed as its
+        file is. A matter whose file IS sealed under a key that is now gone has been erased: its
+        line is not kept under the installation seal, which would leave its first message readable
+        after the matter itself could not be."""
+        path = self._line_path(matter_id)
+        data = json.dumps({"format": _LINE_FORMAT, "matter_id": str(matter_id),
+                           "signature": [signature[0], signature[1]], "line": line}).encode("utf8")
+        try:
+            blob = self._seal(str(matter_id), data)
+        except KeyUnavailable:
+            with open(self._path(matter_id), "rb") as fh:
+                if is_envelope(fh.read(64)):
+                    raise
+            blob = self._cipher.encrypt(data)
+        self._lines.mkdir(parents=True, exist_ok=True)
+        fd, tmp = tempfile.mkstemp(dir=str(self._lines), suffix=".tmp")
+        try:
+            with os.fdopen(fd, "wb") as fh:
+                fh.write(blob)
+            os.replace(tmp, path)
+        except BaseException:
+            discard(Path(tmp))
+            raise
 
     def record_metrics(self, metrics: dict) -> None:
         """Written even when the turn failed, and never containing client words.
