@@ -8,13 +8,17 @@ owner; elapsed time never grants a fresh correction or repeats a possible effect
 """
 from __future__ import annotations
 
+import logging
 import re
 import secrets
 import sqlite3
 from contextlib import closing, contextmanager
 from pathlib import Path
 
+from nm.shared.sqlite_creation import create_if_absent, why
 from nm.shared.turn_attempt_port import AttemptRefused
+
+_log = logging.getLogger("nm.attempts")
 
 VERSION = 3
 #: Corrections one turn may make in all, held as a count so a retried turn never receives
@@ -69,18 +73,17 @@ class FileTurnAttempts:
 
     def __init__(self, path):
         self.path = Path(path).resolve()
-        existed = self.path.exists()
         try:
-            self.path.parent.mkdir(parents=True, exist_ok=True)
+            # Made complete beside its place and published whole, never built where it is to stay: a second
+            # caller must not find a file that exists and is empty, which this store refuses as a lost one
+            # (plan AN.24).
+            create_if_absent(self.path, self._build)
             with closing(sqlite3.connect(self.path, timeout=10)) as db, db:
                 db.execute("PRAGMA synchronous=FULL")
                 db.execute("BEGIN IMMEDIATE")
                 version = db.execute("PRAGMA user_version").fetchone()[0]
                 objects = self._objects(db)
-                if version == 0 and not objects and not existed:
-                    db.execute(_SQL)
-                    db.execute(f"PRAGMA user_version={VERSION}")
-                elif (version, True) in ((1, self._is(objects, _SQL_V1)), (2, self._is(objects, _SQL_V2))):
+                if (version, True) in ((1, self._is(objects, _SQL_V1)), (2, self._is(objects, _SQL_V2))):
                     used = "correction_used" if version == 1 else "corrections_used"
                     db.execute("ALTER TABLE turn_attempts RENAME TO turn_attempts_earlier")
                     db.execute(_SQL)
@@ -89,8 +92,18 @@ class FileTurnAttempts:
                     db.execute("DROP TABLE turn_attempts_earlier")
                     db.execute(f"PRAGMA user_version={VERSION}")
                 self._schema(db)
-        except (OSError, sqlite3.Error, ValueError):
+        except AttemptRefused as exc:
+            if exc.code == "storage":
+                _log.warning("The turn-attempt store holds something it did not make.")
+            raise
+        except (OSError, sqlite3.Error, ValueError) as exc:
+            _log.warning("The turn-attempt store could not be opened (%s).", why(exc))
             raise AttemptRefused("storage") from None
+
+    @staticmethod
+    def _build(db):
+        db.execute(_SQL)
+        db.execute(f"PRAGMA user_version={VERSION}")
 
     @staticmethod
     def _objects(db):
@@ -117,7 +130,12 @@ class FileTurnAttempts:
                 db.execute("BEGIN IMMEDIATE")
                 self._schema(db)
                 yield db
-        except (OSError, sqlite3.Error, ValueError):
+        except AttemptRefused as exc:
+            if exc.code == "storage":
+                _log.warning("The turn-attempt store holds something it did not make.")
+            raise
+        except (OSError, sqlite3.Error, ValueError) as exc:
+            _log.warning("A turn-attempt call was refused by the store (%s).", why(exc))
             raise AttemptRefused("storage") from None
 
     @staticmethod
