@@ -39,9 +39,19 @@ def test_the_bar_stays_at_the_top_with_a_colour_of_its_own():
 
 def test_the_pages_anchors_stop_below_the_bar():
     """The tallest thing in the bar, its padding and its rule: an anchored heading must land clear of them."""
-    padding = int(re.search(r"padding:(\d+)px", rule(".topbar .nav")).group(1))
+    bar = rule(".topbar .nav")
+    padding = int(re.search(r"padding-top:(\d+)px", bar).group(1))
+    assert padding == int(re.search(r"padding-bottom:(\d+)px", bar).group(1))
     tallest = pixels(rule(".btn"), "min-height")
     assert pixels(rule("html"), "scroll-padding-top") >= tallest + 2 * padding + 1
+
+
+def test_the_bar_sets_its_height_and_leaves_its_sides_to_the_page():
+    """The padding shorthand would also set the sides, which on a phone are the page's 24px: found in a real
+    browser, where it left the logo and the person control touching the screen's edges."""
+    bar = rule(".topbar .nav")
+    assert not re.search(r"(?:^|;)padding:", bar), bar
+    assert "padding-left" not in bar and "padding-right" not in bar and "padding-inline" not in bar
 
 
 def test_the_hidden_attribute_wins_over_a_layout_rule():

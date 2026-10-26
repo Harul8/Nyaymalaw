@@ -34,7 +34,8 @@ a{color:var(--blue)}a:hover{color:var(--blue-d)}
    the page's own colour, so what scrolls beneath it does not show through, and a thin rule sets it apart; the
    page's anchors stop below it (scroll-padding-top above). */
 .topbar{position:sticky;top:0;z-index:50;background:var(--paper);border-bottom:1px solid var(--rule)}
-.topbar .nav{padding:10px 0}
+/* Only the height of the bar is set here: its sides keep what the page gives them (.wrap, and on a phone its 24px). */
+.topbar .nav{padding-top:10px;padding-bottom:10px}
 .hero{padding:40px 0 88px}
 .hero-grid{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:56px;align-items:center}
 .hero h1{font:600 60px/1.05 var(--serif);letter-spacing:-0.025em;margin:18px 0 22px}
