@@ -129,26 +129,47 @@ const chip = (get, index = 0) => get('attachments').children[index];
   assert.equal(context.attachmentsBlockSend(), null);
 }
 
-// A message carries at most ten documents (the server's limit, plan AN.26): the eleventh is refused where it is attached,
-// without any request, and the chip says what to do; held and failed documents are not carried, so they do not count.
+// A message carries at most ten documents (the server's limit; owner decision, 26 Oct 2026, plan AN.26): what comes after the first
+// ten is not kept - no request is made for it and no chip is left to block sending - and the advocate is told plainly. Held and
+// failed documents are not carried, so they do not use up a place.
 {
+  const told = "You can't upload more than 10 documents at a time, so only the first 10 were kept.";
   const held = summary({ state: 'held', pages_read: 0, pages_total: null,
     check: { state: 'held', reason: 'ClamAV reported a threat in this file', checker: 'clamav' } });
   const { context, requests, get } = harness([held, ...Array.from({ length: 10 }, () => summary())]);
   await context.attachFile(file('bad.pdf'));
   for (let n = 1; n <= 10; n += 1) await context.attachFile(file(`doc${n}.pdf`));
   assert.equal(requests.length, 11, 'a held document does not use up a place: all ten good ones were attached');
+  assert.equal(get('attachments-status').textContent, '', 'nothing is said while there is room');
   await context.attachFile(file('eleventh.pdf'));
-  assert.equal(requests.length, 11, 'the eleventh is not even sent to the server');
-  assert.match(chip(get, 11).textContent, /Not attached: a message can carry 10 documents; send this one in your next message/);
-  assert.equal(context.attachmentsBlockSend(), 'Remove the documents that could not be used before sending.');
-  chip(get, 11).children[2].click();
-  chip(get, 0).children[2].click();
-  assert.equal(get('attachments').children.length, 10);
-  assert.equal(context.attachmentsBlockSend(), null);
+  await context.attachFile(file('twelfth.pdf'));
+  assert.equal(requests.length, 11, 'nothing after the first ten is sent to the server');
+  assert.equal(get('attachments').children.length, 11, 'and no chip is left for it (the ten and the held one)');
+  assert.equal(get('attachments-status').textContent, told);
+  // A recording that would need converting is not even started.
+  get('attachments-status').textContent = '';
+  await context.attachFile(file('call.opus'));
+  assert.equal(get('attachments').children.length, 11);
+  assert.equal(get('attachments-status').textContent, told);
+  chip(get, 0).children[2].click();  // the held one goes
+  assert.equal(context.attachmentsBlockSend(), null, 'nothing is left to block sending');
   // The send gate holds the same line if more than ten ever get past the door.
   vm.runInContext("attachments.push({ name: 'extra.pdf', status: 'ready', summary: null, note: '' })", context);
   assert.equal(context.attachmentsBlockSend(), 'A message can carry at most 10 documents; remove 1 before sending.');
+}
+
+// Twelve chosen at once, as the file picker delivers them: the first ten are kept, in order, and the advocate is told.
+{
+  const { requests, get } = harness(Array.from({ length: 10 }, (_, n) => summary({ name: `d${n + 1}.pdf` })));
+  get('attach-files').files = Array.from({ length: 12 }, (_, n) => file(`d${n + 1}.pdf`));
+  get('attach-files').listeners.change();
+  for (let wait = 0; wait < 20; wait += 1) await Promise.resolve();
+  assert.deepEqual(requests.map((request) => request.options.headers['X-NM-Document-Name']),
+    Array.from({ length: 10 }, (_, n) => `d${n + 1}.pdf`));
+  assert.equal(get('attachments').children.length, 10);
+  assert.equal(get('attachments-status').textContent,
+    "You can't upload more than 10 documents at a time, so only the first 10 were kept.");
+  assert.equal(get('attach-files').value, '');
 }
 
 // The matter's files (owner decision 4, 17 Oct 2026): a plain list. Each name opens the

@@ -4718,13 +4718,22 @@ document.addEventListener('keydown', (ev) => {
 // removed before sending. The server owns every state shown here; this only reports it.
 const DOCUMENT_MAX_BYTES = 16 * 1024 * 1024;
 // A message carries at most this many documents. The server refuses more with HTTP 422 before anything is saved
-// (TURN_DOCUMENT_LIMIT in nm/app/api.py; a test holds the two equal), so more are refused here, where they are attached.
+// (TURN_DOCUMENT_LIMIT in nm/app/api.py; a test holds the two equal), so the page keeps the first ones and says so.
 const DOCUMENTS_PER_MESSAGE = 10;
 let attachments = [];
 
 // The documents a message would carry: all but those held or failed, which cannot be sent.
-function documentsCarried(except = null) {
-  return attachments.filter((item) => item !== except && !['held', 'failed'].includes(item.status)).length;
+function documentsCarried() {
+  return attachments.filter((item) => !['held', 'failed'].includes(item.status)).length;
+}
+
+// Whether the message already carries all it can. If it does, the advocate is told, and what came after the first ones is not
+// kept: no request is made for it and no chip is left to block sending (owner decision, 26 Oct 2026, plan AN.26).
+function messageIsFull() {
+  if (documentsCarried() < DOCUMENTS_PER_MESSAGE) return false;
+  $('attachments-status').textContent = `You can't upload more than ${DOCUMENTS_PER_MESSAGE} documents at a time, `
+    + `so only the first ${DOCUMENTS_PER_MESSAGE} were kept.`;
+  return true;
 }
 
 // VOICE NOTES (owner decisions, 15 Oct 2026). Recordings the transcription service
@@ -4877,6 +4886,7 @@ async function attachFile(file) {
     await uploadAttachment(file);
     return;
   }
+  if (messageIsFull()) return;
   const item = { name: file.name, status: 'converting', summary: null, note: '' };
   attachments.push(item);
   renderAttachments();
@@ -4898,6 +4908,7 @@ async function attachFile(file) {
 }
 
 async function uploadAttachment(file) {
+  if (messageIsFull()) return;
   const item = { name: file.name, status: 'uploading', summary: null, note: '' };
   attachments.push(item);
   renderAttachments();
@@ -4906,9 +4917,6 @@ async function uploadAttachment(file) {
     item.note = note;
     if (attachments.includes(item)) renderAttachments();
   };
-  if (documentsCarried(item) >= DOCUMENTS_PER_MESSAGE) {
-    return settle('failed', `a message can carry ${DOCUMENTS_PER_MESSAGE} documents; send this one in your next message`);
-  }
   const limit = isRecording(file) ? AUDIO_MAX_BYTES : DOCUMENT_MAX_BYTES;
   if (file.size > limit) {
     return settle('failed', isRecording(file) ? 'a recording can be at most 25 MB' : 'a document can be at most 16 MB');
