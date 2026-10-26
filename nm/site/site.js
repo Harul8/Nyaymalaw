@@ -95,7 +95,7 @@
     const mail = make('p', 'acct-mail');
     const open = make('a', 'btn primary', 'Open the app');
     open.href = WORKSPACE;
-    const out = make('button', 'acct-signout', 'Sign out');
+    const out = make('button', 'btn secondary acct-signout', 'Sign out');
     out.type = 'button';
     const status = make('p', 'acct-status');
     status.setAttribute('role', 'status');
