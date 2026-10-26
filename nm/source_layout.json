@@ -95,6 +95,7 @@
     "nm.shared.source_excerpt_contracts": "domain",
     "nm.shared.source_layout": "infrastructure",
     "nm.shared.spoken_contracts": "domain",
+    "nm.shared.sqlite_creation": "adapters",
     "nm.shared.storage_errors_port": "ports",
     "nm.shared.held_acts": "adapters",
     "nm.shared.store_documents": "adapters",
@@ -112,7 +113,7 @@
     "nm.work_the_file.matter_contracts": "domain"
   },
   "expected_roles": {
-    "adapters": 28,
+    "adapters": 29,
     "bootstrap": 5,
     "core": 26,
     "domain": 37,
