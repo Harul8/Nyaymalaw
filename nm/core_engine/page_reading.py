@@ -14,7 +14,8 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 
 from nm.shared.external_ai_contracts import ModelPermissionRefused
-from nm.shared.model_port import ContentRefused, ModelError, PageImage, Prompt, Tier
+from nm.shared.model_port import (USAGE_LIMIT_WORDS, ContentRefused, ModelError, PageImage, Prompt, Tier,
+                                  UsageLimitReached)
 
 CONTRACT = "core_page_reading_v1"
 OPERATION = "core_page_reading"
@@ -63,6 +64,12 @@ def read_page(model, name, number, image: bytes):
     except ContentRefused:
         return {"number": number, "state": "unread", "code": "unreadable",
                 "reason": "the AI declined to read this page"}, None
+    except UsageLimitReached as exc:
+        # The AI account has no credit left (owner decision P51, 25 Oct 2026): said in the owner's
+        # words, and the page keeps waiting to be read again when that is put right - not "just now",
+        # which promises a retry that cannot succeed. The provider's own words stay in the diagnosis.
+        log.warning("A page waits to be read again: %s: %s", type(exc).__name__, exc)
+        return {"number": number, "state": "unread", "code": "scanned", "reason": USAGE_LIMIT_WORDS}, None
     except ModelError as exc:
         # Expected provider outcomes (unavailable, cut short, malformed): the page waits.
         # Why is kept for diagnosis (17 Oct 2026): the failure's kind and message, no page text.

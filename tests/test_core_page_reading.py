@@ -17,8 +17,8 @@ from nm.shared.external_ai_contracts import ModelPermissionRefused
 from nm.shared.model_config import ModelConfig, TierConfig
 from nm.shared.model_openai_adapter import OpenAIModelAdapter
 from nm.shared.model_policed import PolicedModel
-from nm.shared.model_port import (ContentRefused, ModelResult, PageImage, Prompt, ProviderUnavailable,
-                                  Tier, Usage)
+from nm.shared.model_port import (USAGE_LIMIT_WORDS, ContentRefused, ModelResult, PageImage, Prompt,
+                                  ProviderUnavailable, Tier, Usage, UsageLimitReached)
 from tests.test_core_documents import ADVOCATE, OTHER, desk, pdf  # noqa: F401 - pytest fixture
 from tests.test_model_openai_responses import SCHEMA, FakeClient, response
 
@@ -92,6 +92,26 @@ def test_a_page_the_ai_could_not_read_stays_unread_with_its_reason(desk, answer,
     # And its kind and message are kept for diagnosis (17 Oct 2026).
     waits = [r.getMessage() for r in caplog.records if "waits to be read again" in r.getMessage()]
     assert waits == (["A page waits to be read again: ProviderUnavailable: down"] if code == "scanned" else [])
+
+
+def test_a_page_lost_to_the_used_up_ai_account_says_so_in_the_owners_words_and_keeps_waiting(desk, caplog):
+    """P51: when the AI account's credit runs out part-way through a document, the pages already read
+    are kept, and each page not read says why - not 'just now' - and waits to be read again."""
+    first = desk.receive(ADVOCATE, "bundle.pdf", pdf(["", "", ""]))
+    model = PageModel({1: {"text": "Notice dated 3 October 2026", "readable": "all", "note": ""},
+                       2: UsageLimitReached("insufficient_quota"), 3: UsageLimitReached("insufficient_quota")})
+    renewed, calls = desk.read_waiting(ADVOCATE, documents.reference(first), model)
+    one, two, three = renewed["pages"]
+    assert one["state"] == "read" and one["text"] == "Notice dated 3 October 2026", "a page already read is kept"
+    for page in (two, three):
+        assert (page["state"], page["code"], page["reason"]) == ("unread", "scanned", USAGE_LIMIT_WORDS)
+    assert documents.needs_transcription(renewed) == [2, 3], "they wait to be read again once it is put right"
+    assert len(calls) == 1, "only the page that was read made a call that is kept"
+    shown = documents.summary(renewed)
+    assert shown["unread"] == [{"number": 2, "reason": USAGE_LIMIT_WORDS}, {"number": 3, "reason": USAGE_LIMIT_WORDS}]
+    # The provider's own kind and message are kept for diagnosis, as for any provider failure.
+    waits = [r.getMessage() for r in caplog.records if "waits to be read again" in r.getMessage()]
+    assert waits == ["A page waits to be read again: UsageLimitReached: insufficient_quota"] * 2
 
 
 def test_without_permission_nothing_is_read_or_stored(desk, tmp_path):
