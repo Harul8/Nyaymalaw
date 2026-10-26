@@ -56,13 +56,17 @@ def require_permission(directory, account_id: str, config) -> None:
 
 def bind_text_model(adapter, *, directory, account_id: str, config,
                     session_current, audit=None, page_images: bool = False,
-                    audio_model: str | None = None):
+                    audio_model: str | None = None, record=None):
     """One request-bound permission owner for author and independent verifier.
 
     The provider adapter rechecks this owner on every attempted dispatch,
     including retries. The outer existing policy wrapper also measures and
     polices the request. A configured key or an evaluation grant is not consent.
+
+    record: keeps each paid call's record against this account (plan AN.17); given, the bound
+    adapter is metered innermost, so every call it is asked to send is recorded, whatever its outcome.
     """
+    from nm.shared.model_metered import MeteredModel
     from nm.shared.model_policed import PolicedModel
     from nm.shared.model_traced import TracedModel
 
@@ -76,7 +80,7 @@ def bind_text_model(adapter, *, directory, account_id: str, config,
         require_permission(directory, account_id, config)
 
     authorize()
+    bound = adapter.for_matter_text(authorize, page_images=page_images, audio_model=audio_model)
     return PolicedModel(
-        inner=TracedModel(inner=adapter.for_matter_text(authorize, page_images=page_images,
-                                                        audio_model=audio_model)),
+        inner=TracedModel(inner=bound if record is None else MeteredModel(inner=bound, record=record)),
         policy=text_policy(), audit=audit, authorize=authorize)

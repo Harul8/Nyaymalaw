@@ -188,3 +188,26 @@ def test_a_recording_whose_duration_is_not_reported_is_kept_uncharged(kept):
     model = MeteredModel(inner=Speech(None), record=kept)
     model.transcribe(b"RIFF", file_name="note.wav", media_type="audio/wav")
     assert kept.records[0]["audio_seconds"] is None and kept.records[0]["micro_usd"] is None
+
+
+def test_each_advocates_bound_model_is_metered_innermost_when_a_record_is_given(monkeypatch):
+    """The OpenAI route's binding (nm/app/model_permission.py): the policy outside, the tracer inside
+    it, and the meter next to the bound adapter, so a refused dispatch is never metered."""
+    from nm.app import model_permission
+    from nm.shared.model_policed import PolicedModel
+    from nm.shared.model_traced import TracedModel
+
+    class Adapter:
+        def for_matter_text(self, authorize, *, page_images=False, audio_model=None):
+            self.bound = Provider(receipt())
+            return self.bound
+
+    monkeypatch.setattr(model_permission, "require_permission", lambda *args, **kwargs: None)
+    adapter, records = Adapter(), []
+    model = model_permission.bind_text_model(adapter, directory=None, account_id="advocate@chambers.in",
+                                             config=None, session_current=lambda: True, record=records.append)
+    assert isinstance(model, PolicedModel) and isinstance(model.inner, TracedModel)
+    assert isinstance(model.inner.inner, MeteredModel) and model.inner.inner.inner is adapter.bound
+    plain = model_permission.bind_text_model(adapter, directory=None, account_id="advocate@chambers.in",
+                                             config=None, session_current=lambda: True)
+    assert plain.inner.inner is adapter.bound  # without a record nothing is metered, as before
