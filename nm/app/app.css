@@ -1,22 +1,25 @@
 /* Advocate-facing design system and responsive shell for the journey screens. */
-/* THE SIGNED-OFF DESIGN (owner decisions P52 and O23, 25 Oct 2026; plan AN.13): ivory paper, white
-   surfaces, the blue brand, brass for small marks, and red, amber and green only for what they
-   mean. Light only: dark versions are not required now (O23), so no dark override can fall out of
-   step with the light one. */
+/* THE SIGNED-OFF DESIGN (owner decisions P52 and O23, 25 Oct 2026; plan AN.13), WITH WHITE FOR THE
+   PAPER (owner decision O27, 26 Oct 2026; plan AN.21: "I don't want the beige color as background
+   color, keep it white / transparent"): a white page, board and surfaces, told apart by their thin
+   borders; the blue brand, brass for small marks, and red, amber and green only for what they mean.
+   The few small tints (table headers, hover highlights, quiet labels) are a barely-there cool grey.
+   Light only: dark versions are not required now (O23), so no dark override can fall out of step
+   with the light one. */
 :root {
   /* Source Serif 4 and Source Sans 3 come from this app's own server (fonts.css, linked first by
      the page; owner decision O24, plan AN.18): rendering never sends a request to a font service
      from an advocate's workspace, and the device's fonts named after them stand in until they load. */
-  --paper:      #fbf8f1;
+  --paper:      #ffffff;
   --surface:    #ffffff;
-  --surface-2:  #f4f0e6;
+  --surface-2:  #f4f7fb;
   --ink:        #1b2029;
   --ink-2:      #39424f;
   --ink-3:      #5a6573;
   --rule:       #e4decf;
   --rule-2:     #cfc8b4;
   --field:      #8d8670;
-  --board:      #f4f0e6;
+  --board:      #ffffff;
   --user-message: #e6eef8;
   --accent:     #1f4b8f;
   --accent-2:   #163a70;
@@ -1594,11 +1597,11 @@ button.ghost.cancel { margin-right: 0.6rem; }
 .skip-link:focus { top: 1rem; }
 .eyebrow { color: var(--ink-3); font-size: 0.72rem; font-weight: 600; letter-spacing: 0.14em; margin: 0 0 0.65rem; }
 /* THE STORY PANEL in deep blue, the mark on ivory (the signed-off sign-in page). */
-.arrival-story { width: min(43vw, 540px); padding: 2.5rem; background: var(--deep); color: #f3efe4;
+.arrival-story { width: min(43vw, 540px); padding: 2.5rem; background: var(--deep); color: #ffffff;
   border-radius: 16px; }
 .arrival-wordmark { display: flex; align-items: center; gap: 0.8rem; font-size: 0.8rem; font-weight: 600; letter-spacing: 0.12em; margin-bottom: 5rem;
   color: inherit; text-decoration: none; width: fit-content; }
-.arrival-wordmark .mark { background: #f3efe4; color: var(--deep); }
+.arrival-wordmark .mark { background: #ffffff; color: var(--deep); }
 .arrival-story .eyebrow { color: #c5d2e4; }
 .arrival-story h1 { font: 600 clamp(2.3rem, 4vw, 3.6rem)/1.12 var(--f-serif); letter-spacing: -0.02em; margin: 1rem 0 1.6rem;
   color: #fff; }
@@ -1608,7 +1611,7 @@ button.ghost.cancel { margin-right: 0.6rem; }
   border-top: 1px solid rgba(243, 239, 228, .25); }
 .arrival-proofs li { position: relative; padding-left: 1.6rem; font-size: 0.95rem; line-height: 1.5; color: #d5e0ef; }
 .arrival-proofs li::before { content: ""; position: absolute; left: 0.15rem; top: 0.42rem; width: 0.7rem; height: 0.38rem;
-  border-left: 2px solid #f3efe4; border-bottom: 2px solid #f3efe4; transform: rotate(-45deg); }
+  border-left: 2px solid #ffffff; border-bottom: 2px solid #ffffff; transform: rotate(-45deg); }
 .login-title { font: 600 2rem/1.25 var(--f-serif); margin: 1.4rem 0 0.2rem; letter-spacing: -0.01em; }
 /* The open matter's title, on the paper, in line with the answer's margins (P50 amended). */
 .workspace-heading { display: flex; align-items: center; justify-content: space-between; gap: .5rem;
