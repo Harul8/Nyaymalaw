@@ -466,7 +466,7 @@ function clearPrivileged() {
   state.matterId = null;
   state.turns = [];
   ['thread', 'rail-body', 'rail-meta', 'matter-board-body', 'matter-board-meta',
-   'search-results', 'history-body', 'who-name', 'profile-name', 'profile-email', 'profile-workspace',
+   'search-results', 'history-body', 'who-name', 'account-initials', 'profile-name', 'profile-email', 'profile-workspace',
    'who-detail', 'professional-approval', 'files-menu', 'search-index', 'search-state', 'history-state']
     .forEach((id) => { const el = $(id); if (el) el.textContent = ''; });
   fitBoard();
@@ -7584,6 +7584,17 @@ function showGate(message) {
   $('login-id').focus();
 }
 
+// THE INITIALS ON THE PERSON BUTTON (plan AN.20): the first letters of the first and last words of the
+// name the account holds - after any title such as Adv. or Dr. When it holds no name the button shows
+// its email, one word, and so one letter. Nothing the page made up.
+const NAME_TITLES = /^(adv|advocate|dr|mr|mrs|ms|miss|shri|smt|sri|prof|justice|hon)\.?$/i;
+function initialsOf(name) {
+  const first = (word) => (Array.from(word).find((ch) => /[\p{L}\p{N}]/u.test(ch)) || '').toLocaleUpperCase();
+  const words = String(name || '').trim().split(/\s+/).filter(Boolean);
+  while (words.length > 1 && NAME_TITLES.test(words[0])) words.shift();
+  return [words[0] || '', words.length > 1 ? words[words.length - 1] : ''].map(first).join('');
+}
+
 function showApplication(advocate, workspace, professionalApproval) {
   if (!workspace || !workspace.id || !workspace.label) {
     clearPrivileged();
@@ -7608,6 +7619,7 @@ function showApplication(advocate, workspace, professionalApproval) {
   // blank, and never anything this page made up.
   const shownName = advocate.name || advocate.email || advocate.id;
   $('who-name').textContent = shownName;
+  $('account-initials').textContent = initialsOf(shownName);
   $('profile-name').textContent = shownName;
   $('profile-email').textContent = advocate.email || 'Not recorded';
   $('who-detail').textContent = [advocate.enrolment, advocate.practice]
