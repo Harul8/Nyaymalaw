@@ -17,7 +17,7 @@ from math import ceil
 from pathlib import Path
 from typing import Annotated
 from urllib.parse import quote, unquote
-from fastapi import (BackgroundTasks, Cookie, Depends, FastAPI, Header, HTTPException, Request, Response,
+from fastapi import (BackgroundTasks, Cookie, Depends, FastAPI, Header, HTTPException, Query, Request, Response,
                      WebSocket, WebSocketDisconnect)
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -28,8 +28,8 @@ from nm.arrive import attempts_contracts as attempts
 from nm.arrive.advocate_contracts import PASSWORD_RESET_MINUTES, SESSION_IDLE_MINUTES, csrf_token, utcnow
 from nm.arrive.directory_port import AccountBusy, AuthenticationUnavailable
 from nm.arrive.professional_access import read_professional_status
-from nm.core_engine.conversation import (HEADER, SHOWN, ConversationRefused, TurnContext, chat_matter_id,
-                                         checked_rows, shown_of)
+from nm.core_engine.conversation import (CONTRACT as CONVERSATION_CONTRACT, HEADER, SHOWN, ConversationRefused,
+                                         TurnContext, chat_matter_id, checked_rows, shown_of)
 from nm.core_engine import documents as document_rules
 from nm.core_engine import research_note, voice
 from nm.core_engine.response_rendering import unit_index
@@ -1321,7 +1321,7 @@ def _session_current(request, advocate_id):
                 and directory.identity(advocate_id) is not None)
 
 @app.post('/api/turn', dependencies=[CsrfProtected])
-def turn(req: TurnRequest, advocate_id: Advocate, request: Request) -> _Released:
+def turn(req: TurnRequest, advocate_id: Advocate, request: Request, background: BackgroundTasks) -> _Released:
     if not _session_current(request, advocate_id):
         raise HTTPException(401, 'not signed in')
     legacy = (req.thread_id, req.today, req.work_product, req.parties,
@@ -1352,7 +1352,10 @@ def turn(req: TurnRequest, advocate_id: Advocate, request: Request) -> _Released
             'retryable': False}) from exc
     if not _session_current(request, advocate_id):
         raise HTTPException(401, 'not signed in')
-    return _release(output)
+    released = _release(output)
+    if released.chat_id:  # once the answer has gone, the history's line of this conversation is made ready (O29)
+        background.add_task(_prepare_chat_line, advocate_id, released.chat_id)
+    return released
 
 
 @app.get('/api/turn-progress')
@@ -1386,6 +1389,12 @@ _READ_KEPT = 8
 #: Each saved file's line in the conversation history, kept until that file changes (P35).
 _LISTED: dict = {}
 _KEPT_LOCK = threading.Lock()
+#: What a line kept on disk was derived under (O29): its shape, and the conversation contract whose receipt
+#: checks it rests on. A line kept under anything else is derived again from its file.
+_LINE_VERSION = f'history-line-1/{CONVERSATION_CONTRACT}'
+#: The most a page of the history may ask for; the page asks for ten (O29, 26 Oct 2026).
+_HISTORY_PAGE_MAX = 100
+_history_log = logging.getLogger('nm.history')
 
 
 def _read_chat(chat_id, advocate_id, request):
@@ -1433,16 +1442,11 @@ def _read_chat(chat_id, advocate_id, request):
                 _READ.popitem(last=False)
     return matter, rows
 
-def _listed(store, matter_id, signature):
-    """One saved file's line in the conversation history: whose it is, and its conversation's
-    first message and turn count after the receipt checks, or its title as a historical matter;
-    kept until the file changes (P35). Opening a conversation checks its record and shows its
-    saved answers (P46); the history checks the receipts of what it lists. A file that cannot be
-    read says so, as before."""
-    with _KEPT_LOCK:
-        kept = _LISTED.get(matter_id)
-    if kept is not None and kept[0] == signature:
-        return kept[1]
+def _derived_line(store, matter_id):
+    """One saved file's line, derived by opening it: whose it is, and its conversation's first
+    message and turn count after the receipt checks, or its title as a historical matter. None when
+    there is no such file. Opening a conversation checks its record and shows its saved answers
+    (P46); the history checks the receipts of what it lists. A file that cannot be read says so."""
     try:
         matter = store.load(matter_id)
         if matter is None:
@@ -1450,28 +1454,97 @@ def _listed(store, matter_id, signature):
         if matter.id != matter_id:
             raise ValueError("the saved matter identity conflicts with its storage name")
     except Exception:  # noqa: BLE001 -- named, never swallowed: listed as unreadable
-        line = {'owner': None}
-    else:
-        line = {'owner': matter.advocate_id}
-        if HEADER in matter.intake_answers:
-            try:
-                rows = checked_rows(matter, matter.advocate_id, copied=False)
-            except ConversationRefused:
-                line['unavailable'] = True
-            else:
-                line['chat'] = {'chat_id': rows[0]['chat_id'], 'preview': rows[0]['message'],
-                                'turn_count': len(rows)} if rows else None
+        return {'v': _LINE_VERSION, 'owner': None}
+    line = {'v': _LINE_VERSION, 'owner': matter.advocate_id}
+    if HEADER in matter.intake_answers:
+        try:
+            rows = checked_rows(matter, matter.advocate_id, copied=False)
+        except ConversationRefused:
+            line['unavailable'] = True
         else:
-            # Old records remain history; reading never upgrades their contracts.
-            line['matter'] = {'matter_id': matter.id, 'matter': matter.title, 'state': 'historical'}
-    if store.signature(matter_id) == signature:
-        with _KEPT_LOCK:
-            _LISTED[matter_id] = (signature, line)
+            line['chat'] = {'chat_id': rows[0]['chat_id'], 'preview': rows[0]['message'],
+                            'turn_count': len(rows)} if rows else None
+    else:
+        # Old records remain history; reading never upgrades their contracts.
+        line['matter'] = {'matter_id': matter.id, 'matter': matter.title, 'state': 'historical'}
     return line
 
 
+def _keepable(line):
+    """Only a line that was read, checked and shows something is kept on disk: one that names its
+    owner and carries a conversation or a matter. A file that could not be read (no owner), a
+    conversation whose receipts did not hold (neither) and one with no turns (no conversation) may
+    each be so for a reason that is mended without the file changing, and a kept line would go on
+    saying it was. A line read back from disk is held to the same shape."""
+    return (isinstance(line, dict) and line.get('v') == _LINE_VERSION and isinstance(line.get('owner'), str)
+            and (isinstance(line.get('matter'), dict) or isinstance(line.get('chat'), dict)))
+
+
+def _listed(store, matter_id, signature):
+    """One saved file's line in the conversation history, kept until the file changes (P35): in
+    this process, and - for a line that was read and checked - on disk beside the file (O29), so a
+    first call after a start, or after an answer was prepared for, opens no large file. A line is
+    derived from its file only when none is kept for the file as it is now."""
+    with _KEPT_LOCK:
+        kept = _LISTED.get(matter_id)
+    if kept is not None and kept[0] == signature:
+        return kept[1]
+    line = store.kept_line(matter_id, signature)
+    derived = not _keepable(line)
+    if derived:
+        line = _derived_line(store, matter_id)
+        if line is None:
+            return None
+    if store.signature(matter_id) == signature:
+        with _KEPT_LOCK:
+            _LISTED[matter_id] = (signature, line)
+        if derived and _keepable(line):
+            try:
+                store.keep_line(matter_id, signature, line)
+            except OSError as exc:
+                # A line that could not be kept is derived again next time; the request goes on.
+                _history_log.warning('A history line could not be kept (%s).', type(exc).__name__)
+    return line
+
+
+def _prepare_line(store, matter_id):
+    """One file's line, ready before it is asked for. Only ever ahead-of-time work: whatever goes wrong
+    here the history meets again, and says, when it derives the line itself."""
+    try:
+        signature = store.signature(matter_id)
+        if signature is not None:
+            _listed(store, matter_id, signature)
+    except Exception as exc:  # noqa: BLE001 -- ahead-of-time work; named in the log, never in a response
+        _history_log.warning('A history line could not be prepared ahead of time (%s).', type(exc).__name__)
+
+
+def _prepare_chat_line(advocate_id, chat_id):
+    """The line of the conversation an answer has just changed, prepared once the answer has gone, so
+    the next opening of the history does not open the whole conversation for it (O29)."""
+    _prepare_line(application().store, chat_matter_id(advocate_id, chat_id))
+
+
+def prepare_history():
+    """Every saved file's line, newest first, ready before the history is asked for (O29). Started in
+    the background when the server starts; a line already kept is only read."""
+    try:
+        store = application().store
+        saved = sorted(store.saved_files(), key=lambda entry: entry[2], reverse=True)
+    except Exception as exc:  # noqa: BLE001 -- ahead-of-time work; named in the log
+        _history_log.warning('The history could not be prepared ahead of time (%s).', type(exc).__name__)
+        return
+    for matter_id, _signature, _saved_at in saved:
+        _prepare_line(store, matter_id)
+
+
 @app.get('/api/work')
-def work(advocate_id: Advocate, request: Request):
+def work(advocate_id: Advocate, request: Request,
+         limit: Annotated[int | None, Query(ge=1, le=_HISTORY_PAGE_MAX)] = None,
+         offset: Annotated[int, Query(ge=0)] = 0):
+    """The advocate's history: conversations first, then earlier matter records, each newest first.
+    With a limit, one page of it (owner decision O29, 26 Oct 2026: ten at a time): the counts are of
+    the whole history, and has_more and next_offset say whether, and where, the next page begins.
+    Without one, all of it."""
     store = application().store
     chats, matters, unavailable = [], [], []
     saved = store.saved_files()
@@ -1494,13 +1567,20 @@ def work(advocate_id: Advocate, request: Request):
             chats.append({**line['chat'], 'last_updated': saved_at})
     if not _session_current(request, advocate_id):
         raise HTTPException(401, 'not signed in')
-    return {'state': 'partial' if unavailable else 'ok', 'chats': chats, 'matters': matters,
+    total = len(chats) + len(matters)
+    start, end = (offset, offset + limit) if limit is not None else (0, total)
+    more = end < total
+    return {'state': 'partial' if unavailable else 'ok', 'chats': chats[start:end],
+            'matters': matters[max(start - len(chats), 0):max(end - len(chats), 0)],
             'chat_count': len(chats), 'row_count': len(matters), 'unreadable': unavailable,
-            'unavailable': unavailable}
+            'unavailable': unavailable, 'total': total, 'offset': start, 'has_more': more,
+            'next_offset': end if more else None}
 
 @app.get('/api/chats')
-def chats(advocate_id: Advocate, request: Request):
-    return work(advocate_id, request)
+def chats(advocate_id: Advocate, request: Request,
+          limit: Annotated[int | None, Query(ge=1, le=_HISTORY_PAGE_MAX)] = None,
+          offset: Annotated[int, Query(ge=0)] = 0):
+    return work(advocate_id, request, limit, offset)
 
 @app.get('/api/chats/{chat_id}')
 def chat(chat_id: str, advocate_id: Advocate, request: Request, response: Response):
