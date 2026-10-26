@@ -85,6 +85,15 @@ body {
   min-height: 44px; padding: 0.3rem 0.7rem;
 }
 .account-toggle:hover, .account-toggle[aria-expanded="true"] { border-color: var(--accent); color: var(--accent); }
+/* The advocate's initials in the person button (plan AN.20): a circle in the brand blue, empty (and so
+   not drawn) until the name the account holds is known. */
+.avatar {
+  display: inline-flex; align-items: center; justify-content: center; flex: none;
+  width: 30px; height: 30px; border-radius: 50%;
+  background: var(--accent-w); color: var(--accent-2); border: 1px solid var(--accent-b);
+  font: 600 0.78rem/1 var(--f-sans); letter-spacing: 0; text-transform: uppercase;
+}
+.avatar:empty { display: none; }
 .account-toggle[aria-expanded="true"] .menu-arrow { transform: rotate(180deg); }
 .account-panel {
   background: var(--surface); border: 1px solid var(--rule-2); border-radius: 12px;
