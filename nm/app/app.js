@@ -61,6 +61,8 @@ const state = {
 
 let registrationInFlight = false;
 let registrationCapabilities = null;
+// The registration this page made, until its email is confirmed: its email and AI choice (AN.15).
+let registeredHere = null;
 let confirmationFlow = null;
 let confirmationInFlight = false;
 let resendTimer = null;
@@ -8151,8 +8153,63 @@ function showForm(which) {
   $('outcome').hidden = which !== 'outcome';
   $('confirm-email').hidden = which !== 'confirm-email';
   $('login-state').textContent = '';
-  if (which === 'register') loadAccountCapabilities();
+  if (which === 'register') {
+    // The card opens on its first step; whatever was typed stays where it was.
+    showRegisterStep(1);
+    loadAccountCapabilities();
+  }
 }
+
+// REGISTRATION IN STEPS (owner decision O24; plan AN.15): the account, then privacy and AI
+// permission, then the emailed code on the confirmation card. ONE FORM STILL, posted once from its
+// last step, so moving between steps sends nothing. The account step checks only what cannot be
+// read two ways - a password typed, at least 8 characters, the same twice - and leaves the kinds of
+// character to the server, which names what is missing when the form is posted.
+function markSteps(card, current) {
+  card.querySelectorAll('.reg-steps li').forEach((mark) => {
+    const step = Number(mark.dataset.step);
+    if (step === current) mark.setAttribute('aria-current', 'step');
+    else mark.removeAttribute('aria-current');
+    mark.classList.toggle('done', step < current);
+  });
+}
+
+function showRegisterStep(step) {
+  document.querySelectorAll('#register .reg-step').forEach((section) => {
+    section.hidden = Number(section.dataset.step) !== step;
+  });
+  markSteps($('register'), step);
+  $('reg-account-state').textContent = '';
+}
+
+function accountStepProblem(password, again) {
+  if (password.length < 8) {
+    return 'The password must be at least 8 characters and contain an upper-case letter, a '
+      + 'lower-case letter, a numeral and a special character.';
+  }
+  if (password !== again) return 'The two passwords do not match.';
+  return null;
+}
+
+$('reg-continue').addEventListener('click', () => {
+  if (!$('reg-email').reportValidity()) return;
+  const problem = accountStepProblem($('reg-password').value, $('reg-password2').value);
+  if (problem) {
+    // A slip puts both passwords away, as a refused registration always has.
+    clearRegistrationPasswords();
+    $('reg-account-state').replaceChildren(stateBlock('loud', `${problem} Type it twice again.`));
+    $('reg-password').focus();
+    return;
+  }
+  showRegisterStep(2);
+  $('reg-privacy-title').tabIndex = -1;
+  $('reg-privacy-title').focus();
+});
+
+$('reg-back').addEventListener('click', () => {
+  showRegisterStep(1);
+  $('reg-email').focus();
+});
 
 // ONE WAY A PASSWORD IS PUT AWAY, for every card that has one (F-A-10). The
 // value goes, the field is masked again and its eye says so -- so no card can
@@ -8220,6 +8277,7 @@ function showConfirmation(email, flow = null, detail = '') {
   for (const id of ['confirm-password', 'confirm-password2']) $(id).required = !flow;
   $('confirmation-detail').textContent = detail || 'Enter your code and choose your password. No account is activated until confirmation succeeds.';
   showForm('confirm-email');
+  markSteps($('confirm-email'), 3);
   $('confirm-code').focus();
 }
 
@@ -8289,7 +8347,15 @@ $('confirm-email').addEventListener('submit', async (event) => {
     confirmationInFlight = false;
     confirmationFlow = null;
     $('login-id').value = result.advocate_id;
-    showOutcome('good', 'Email confirmed', result.detail, 'login');
+    // THE LAST STEP, READY (plan AN.15): the account is active, its trial is waiting (plan AN.17),
+    // and - when this page made the registration - whether research and answers can start yet.
+    const madeHere = registeredHere && registeredHere.email === result.advocate_id ? registeredHere : null;
+    showOutcome('good', 'Your account is ready', [result.detail,
+      'Your trial allowance is ready: 100% of it is left.',
+      madeHere ? (madeHere.ai ? 'AI data sharing is on, so research and answers can start.'
+        : 'AI data sharing is off: research and answers need your permission, which you can give '
+          + 'in Profile, under AI data sharing.') : ''].filter(Boolean).join(' '), 'login');
+    registeredHere = null;
   } catch (error) {
     $('confirmation-detail').textContent = error.status ? error.message
       : 'Confirmation could not be checked. Try signing in; if needed, confirm again. No automatic retry was sent.';
@@ -8492,6 +8558,8 @@ $('register').addEventListener('submit', async (ev) => {
         consent: consentGiven(),
       }),
     });
+    // Whether they allowed AI sharing, for the last step to say (AN.15); nothing else is kept.
+    registeredHere = { email: r.email, ai: $('reg-external-ai').checked };
     // THE BOXES BELONG TO THE PERSON WHO JUST REGISTERED. The next registration
     // on this screen ticks its own.
     $('reg-consent').checked = false;

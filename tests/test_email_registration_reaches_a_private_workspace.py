@@ -24,7 +24,10 @@ def _registration(page, journey, email):
     page.fill("#reg-email", email)
     page.fill("#reg-password", journey["password"])
     page.fill("#reg-password2", journey["password"])
-    # Implementation Plan F-A-09: Register waits for both privacy boxes.
+    # In steps (owner decision O24; plan AN.15): the account, then privacy and AI permission.
+    page.click("#reg-continue")
+    page.wait_for_selector('#register .reg-step[data-step="2"]:not([hidden])')
+    # Implementation Plan F-A-09: Create account waits for both privacy boxes.
     assert page.locator("#register-go").is_disabled()
     page.check("#reg-consent")
     page.check("#reg-adult")
@@ -53,7 +56,7 @@ def test_email_registration_opens_own_workspace_and_matter(page, journey, width)
     page.fill('#confirm-code', code)
     page.click('#confirm-go')
     page.wait_for_selector('#outcome:not([hidden])')
-    assert page.inner_text('#outcome-title') == 'Email confirmed'
+    assert page.inner_text('#outcome-title') == 'Your account is ready'
     # F-A-04: no recovery codes anywhere.
     assert page.locator("#recovery-code-list li").count() == 0
     assert page.input_value("#reg-password") == page.input_value("#reg-password2") == ""
@@ -103,7 +106,10 @@ def test_email_registration_opens_own_workspace_and_matter(page, journey, width)
 
 def test_registration_mismatch_clears_both_passwords(page, journey):
     email = "mismatch@example.test"
-    _registration(page, journey, email)
+    page.goto(journey["base"] + "/app")
+    page.click("#show-register")
+    page.fill("#reg-email", email)
+    page.fill("#reg-password", journey["password"])
     page.fill("#reg-password2", journey["password"] + "different")
     requests = []
 
@@ -112,9 +118,10 @@ def test_registration_mismatch_clears_both_passwords(page, journey):
 
     page.on("request", lambda request: requests.append(request.url)
             if request.url.endswith("/api/register") else None)
-    page.click("#register-go")
-    page.wait_for_selector("#outcome:not([hidden])")
-    assert "do not match" in page.inner_text("#outcome-body")
+    # The account step catches the slip itself (plan AN.15): nothing is sent and the step stays.
+    page.click("#reg-continue")
+    assert "do not match" in page.inner_text("#reg-account-state")
+    assert page.is_hidden('#register .reg-step[data-step="2"]')
     assert_no_registration_request()
     assert page.input_value("#reg-password") == page.input_value("#reg-password2") == ""
     # Prove the same recorder and absence assertion can see a real request.
@@ -129,7 +136,6 @@ def test_registration_mismatch_clears_both_passwords(page, journey):
     assert len(requests) == 1
     with pytest.raises(AssertionError, match="unexpected registration request"):
         assert_no_registration_request()
-    page.click("#outcome-back")
     assert page.input_value("#reg-email") == email
     page.fill("#reg-password", journey["password"])
     page.fill("#reg-password2", journey["password"])
@@ -199,7 +205,7 @@ def test_full_length_email_stays_readable_on_a_phone(page, journey):
     page.fill('#confirm-code', code)
     page.click('#confirm-go')
     page.wait_for_selector("#outcome:not([hidden])")
-    assert page.inner_text("#outcome-title") == "Email confirmed"
+    assert page.inner_text("#outcome-title") == "Your account is ready"
     assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
     page.click("#outcome-signin")
     page.fill("#login-password", journey["password"])

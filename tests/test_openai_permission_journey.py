@@ -77,7 +77,7 @@ def test_registration_acceptance_is_carried_through_real_email_confirmation(page
     code = re.search(r"\b[0-9]{6}\b", messages[-1]["text"]).group()
     page.fill("#confirm-code", code)
     page.click("#confirm-go")
-    page.get_by_text("Email confirmed", exact=True).wait_for()
+    page.get_by_text("Your account is ready", exact=True).wait_for()
     row = journey["box"].directory.model_permission(email)
     assert row and row.accepted and row.version == 1
     assert not page.is_checked("#reg-external-ai")
