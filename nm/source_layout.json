@@ -80,6 +80,7 @@
     "nm.shared.model_budget": "adapters",
     "nm.shared.model_call_budget": "adapters",
     "nm.shared.model_config": "adapters",
+    "nm.shared.model_metered": "adapters",
     "nm.shared.model_openai_adapter": "adapters",
     "nm.shared.model_policed": "adapters",
     "nm.shared.model_port": "ports",
@@ -111,7 +112,7 @@
     "nm.work_the_file.matter_contracts": "domain"
   },
   "expected_roles": {
-    "adapters": 27,
+    "adapters": 28,
     "bootstrap": 5,
     "core": 26,
     "domain": 37,
