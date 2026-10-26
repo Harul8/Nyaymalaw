@@ -4,8 +4,13 @@ Feature: F-B-03 Conversation history, and the conversation window it opens
 
   Scenario: Conversation history lists every saved conversation and says when it cannot be read
     Given the page script
-    Then the conversation history is read from the server and lists every saved conversation
+    Then the conversation history is read from the server ten at a time and lists every saved conversation as more is asked for
     And a list that cannot be read says so rather than looking empty
+
+  Scenario: Conversation history shows ten at a time and adds ten more on request
+    Given the page script
+    Then the first ten items are read at once and Load more adds the next ten, each once, until none remain
+    And a Load more that fails keeps what is shown and offers to try again
 
   Scenario: Opening a conversation from the history shows the same window as a live one
     Given the page script

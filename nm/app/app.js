@@ -903,17 +903,145 @@ function selectMatterRow() {
   return current;
 }
 
+// CONVERSATION HISTORY, TEN AT A TIME (owner decision O29, 26 Oct 2026): the first ten items come at once and
+// Load more adds the next ten, so a long history does not make the first sight of it wait.
+const HISTORY_PAGE = 10;
+
+function historyCounts(data) {
+  return `${data.chat_count} conversation${data.chat_count === 1 ? '' : 's'}`
+    + (data.row_count ? ` · ${data.row_count} earlier matter record${data.row_count === 1 ? '' : 's'}` : '');
+}
+
+function historyWhen(at) {
+  const when = at ? new Date(at) : null;
+  return when && !Number.isNaN(when.getTime())
+    ? ` · ${when.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}` : '';
+}
+
+// One saved conversation's row. The generation and the session are those of the list the row belongs to: a
+// row left over from an earlier listing, or from a session that has ended, may not paint over what replaced it.
+function historyChatRow(chat, generation, session) {
+  const row = document.createElement('div');
+  row.className = 'row';
+  row.dataset.chatId = chat.chat_id;
+  row.setAttribute('role', 'button');
+  row.tabIndex = 0;
+  row.setAttribute('aria-label', `Open conversation: ${chat.preview}`);
+  const title = document.createElement('div');
+  title.className = 'r-title';
+  title.textContent = chat.preview || 'Conversation';
+  const details = document.createElement('div');
+  details.className = 'hint';
+  details.textContent = `${chat.turn_count} message${chat.turn_count === 1 ? '' : 's'}`
+    + historyWhen(chat.last_updated);
+  row.append(title, details);
+  const open = () => {
+    const selection = restorePendingChat(chat.chat_id);
+    const selectedGeneration = state.railGeneration;
+    return selection.catch((error) => {
+      if (selectedGeneration !== state.railGeneration
+          || session !== state.sessionGeneration
+          || generation !== state.matterListGeneration) return;
+      $('rail-body').prepend(stateBlock('unbuildable', `The chat could not be read: ${error.message}`));
+    });
+  };
+  row.onclick = open;
+  row.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      open();
+    }
+  });
+  return row;
+}
+
+function historyMatterRow(m) {
+  const row = document.createElement('div');
+  row.className = 'row matter-list-row';
+  row.dataset.matterId = m.matter_id;
+  row.setAttribute('role', 'button');
+  row.tabIndex = 0;
+  row.setAttribute('aria-label', `Open ${m.matter}`);
+  const t = document.createElement('div');
+  t.className = 'r-title'; t.textContent = m.matter;
+  const kind = document.createElement('div');
+  kind.className = 'hint';
+  kind.textContent = `Earlier matter record${historyWhen(m.last_updated)}`;
+  row.append(t, kind);
+  row.onclick = () => showThreadBoard(m.matter_id);
+  row.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      showThreadBoard(m.matter_id);
+    }
+  });
+  return row;
+}
+
+// THE LOAD MORE BUTTON under the rows, with a line saying how many are shown of how many. Each press asks for
+// the next ten; a press that fails says so and leaves what is shown where it is.
+function offerMoreHistory(body, first, shownCount, rowsOf, stale) {
+  if (!first.has_more || first.next_offset === null) return;
+  const footer = document.createElement('div');
+  footer.className = 'rail-more';
+  const status = document.createElement('p');
+  status.className = 'hint';
+  status.setAttribute('role', 'status');
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'rail-more-button';
+  button.textContent = 'Load more';
+  footer.append(status, button);
+  body.append(footer);
+  let count = shownCount;
+  let total = first.total;
+  let next = first.next_offset;
+  status.textContent = `Showing ${count} of ${total}`;
+  button.addEventListener('click', async () => {
+    button.disabled = true;
+    status.textContent = 'Loading more…';
+    let page;
+    try {
+      page = await api(`/api/work?limit=${HISTORY_PAGE}&offset=${next}`);
+    } catch (e) {
+      if (stale()) return;
+      status.textContent = `More could not be loaded: ${e.message}. What is shown stays.`;
+      button.textContent = 'Try again';
+      button.disabled = false;
+      return;
+    }
+    if (stale()) return;
+    const rows = rowsOf(page);
+    footer.before(...rows);
+    count += rows.length;
+    total = page.total;
+    next = page.next_offset;
+    $('rail-meta').textContent = historyCounts(page);
+    selectMatterRow();
+    if (page.has_more && next !== null) {
+      status.textContent = `Showing ${count} of ${total}`;
+      button.textContent = 'Load more';
+      button.disabled = false;
+      if (!rows.length) button.focus();
+    } else {
+      footer.remove();
+    }
+    if (rows.length) rows[0].focus();
+  });
+}
+
 async function loadMatterList() {
   const generation = ++state.matterListGeneration;
   const session = state.sessionGeneration;
   const body = $('rail-body');
+  const stale = () => generation !== state.matterListGeneration || session !== state.sessionGeneration;
   body.replaceChildren(stateBlock('building', 'Loading your conversations…'));
 
   let data;
   try {
-    data = await api('/api/work');
+    data = await api(`/api/work?limit=${HISTORY_PAGE}&offset=0`);
   } catch (e) {
-    if (generation !== state.matterListGeneration || session !== state.sessionGeneration) return;
+    if (stale()) return;
     // NEVER render an unreadable board as an empty one.
     body.replaceChildren(stateBlock(
       'unbuildable',
@@ -922,10 +1050,9 @@ async function loadMatterList() {
     $('rail-meta').textContent = 'Matter list unavailable';
     return;
   }
-  if (generation !== state.matterListGeneration || session !== state.sessionGeneration) return;
+  if (stale()) return;
 
-  $('rail-meta').textContent = `${data.chat_count} conversation${data.chat_count === 1 ? '' : 's'}`
-    + (data.row_count ? ` · ${data.row_count} earlier matter record${data.row_count === 1 ? '' : 's'}` : '');
+  $('rail-meta').textContent = historyCounts(data);
   const incomplete = data.state !== 'ok';
   const notice = incomplete ? stateBlock('unbuildable',
     'Some work could not be loaded. This list may be incomplete. Retry before relying on it.') : null;
@@ -935,67 +1062,26 @@ async function loadMatterList() {
     return;
   }
 
-  const updated = (at) => {
-    const when = at ? new Date(at) : null;
-    return when && !Number.isNaN(when.getTime())
-      ? ` · ${when.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}` : '';
+  // An item is listed once: a conversation answered while the list was open moves to the top, and the page
+  // that follows would otherwise show the one it displaced again.
+  const shown = new Set();
+  const rowsOf = (page) => {
+    const rows = [];
+    for (const chat of page.chats) {
+      if (shown.has(`chat:${chat.chat_id}`)) continue;
+      shown.add(`chat:${chat.chat_id}`);
+      rows.push(historyChatRow(chat, generation, session));
+    }
+    for (const m of page.matters) {
+      if (shown.has(`matter:${m.matter_id}`)) continue;
+      shown.add(`matter:${m.matter_id}`);
+      rows.push(historyMatterRow(m));
+    }
+    return rows;
   };
-  const pendingRows = data.chats.map((chat) => {
-    const row = document.createElement('div');
-    row.className = 'row';
-    row.dataset.chatId = chat.chat_id;
-    row.setAttribute('role', 'button');
-    row.tabIndex = 0;
-    row.setAttribute('aria-label', `Open conversation: ${chat.preview}`);
-    const title = document.createElement('div');
-    title.className = 'r-title';
-    title.textContent = chat.preview || 'Conversation';
-    const details = document.createElement('div');
-    details.className = 'hint';
-    details.textContent = `${chat.turn_count} message${chat.turn_count === 1 ? '' : 's'}`
-      + updated(chat.last_updated);
-    row.append(title, details);
-    const open = () => {
-      const selection = restorePendingChat(chat.chat_id);
-      const selectedGeneration = state.railGeneration;
-      return selection.catch((error) => {
-        if (selectedGeneration !== state.railGeneration
-            || session !== state.sessionGeneration
-            || generation !== state.matterListGeneration) return;
-        body.prepend(stateBlock('unbuildable', `The chat could not be read: ${error.message}`));
-      });
-    };
-    row.onclick = open;
-    row.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter' || event.key === ' ') {
-        event.preventDefault();
-        open();
-      }
-    });
-    return row;
-  });
-  body.replaceChildren(...pendingRows, ...data.matters.map((m) => {
-    const row = document.createElement('div');
-    row.className = 'row matter-list-row';
-    row.dataset.matterId = m.matter_id;
-    row.setAttribute('role', 'button');
-    row.tabIndex = 0;
-    row.setAttribute('aria-label', `Open ${m.matter}`);
-    const t = document.createElement('div');
-    t.className = 'r-title'; t.textContent = m.matter;
-    const kind = document.createElement('div');
-    kind.className = 'hint';
-    kind.textContent = `Earlier matter record${updated(m.last_updated)}`;
-    row.append(t, kind);
-    row.onclick = () => showThreadBoard(m.matter_id);
-    row.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter' || event.key === ' ') {
-        event.preventDefault();
-        showThreadBoard(m.matter_id);
-      }
-    });
-    return row;
-  }));
+  const firstRows = rowsOf(data);
+  body.replaceChildren(...firstRows);
+  offerMoreHistory(body, data, firstRows.length, rowsOf, stale);
   if (notice) body.prepend(notice);
   selectMatterRow();
 }

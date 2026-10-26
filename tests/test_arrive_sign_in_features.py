@@ -1182,7 +1182,8 @@ def history_read_afresh(page_script):
     assert "showMatterList();" in _function(page_script, "openTab")
     assert "await loadMatterList();" in _function(page_script, "showMatterList")
     load = _function(page_script, "loadMatterList")
-    assert "const generation = ++state.matterListGeneration;" in load and "data = await api('/api/work');" in load
+    assert "const generation = ++state.matterListGeneration;" in load
+    assert "data = await api(`/api/work?limit=${HISTORY_PAGE}&offset=0`);" in load
 
 
 # ---------------------------------------------------------------- F-B-02 ---
@@ -1310,11 +1311,31 @@ def board_once_it_has_something(page_script, stylesheet):
 #
 # Conversation history, and the conversation window it opens (owner, 16 Oct 2026).
 
-@then("the conversation history is read from the server and lists every saved conversation")
+@then("the conversation history is read from the server ten at a time and lists every saved conversation as more is asked for")
 def list_from_the_server(page_script):
     load = _function(page_script, "loadMatterList")
-    assert "data = await api('/api/work');" in load
-    assert "data.chats.map((chat) =>" in load and "row.dataset.chatId = chat.chat_id;" in load
+    assert "data = await api(`/api/work?limit=${HISTORY_PAGE}&offset=0`);" in load
+    assert "const HISTORY_PAGE = 10;" in page_script and "api('/api/work')" not in page_script
+    assert "for (const chat of page.chats)" in load and "historyChatRow(chat, generation, session)" in load
+    assert "row.dataset.chatId = chat.chat_id;" in _function(page_script, "historyChatRow")
+
+
+@then("the first ten items are read at once and Load more adds the next ten, each once, until none remain")
+def ten_at_a_time(page_script):
+    load = _function(page_script, "loadMatterList")
+    more = _function(page_script, "offerMoreHistory")
+    assert "shown.has(`chat:${chat.chat_id}`)" in load and "shown.has(`matter:${m.matter_id}`)" in load
+    assert "button.textContent = 'Load more';" in more
+    assert "page = await api(`/api/work?limit=${HISTORY_PAGE}&offset=${next}`);" in more
+    assert "footer.before(...rows);" in more and "footer.remove();" in more
+    assert "status.textContent = `Showing ${count} of ${total}`;" in more
+
+
+@then("a Load more that fails keeps what is shown and offers to try again")
+def load_more_failure(page_script):
+    more = _function(page_script, "offerMoreHistory")
+    assert "What is shown stays." in more and "button.textContent = 'Try again';" in more
+    assert "button.disabled = false;" in more
 
 
 @then("a list that cannot be read says so rather than looking empty")
@@ -1325,8 +1346,8 @@ def unreadable_list_says_so(page_script):
 
 @then("choosing a conversation in the history restores it with its board beside it")
 def choosing_a_conversation_restores_it(page_script):
-    load = _function(page_script, "loadMatterList")
-    assert "const selection = restorePendingChat(chat.chat_id);" in load and "row.onclick = open;" in load
+    row = _function(page_script, "historyChatRow")
+    assert "const selection = restorePendingChat(chat.chat_id);" in row and "row.onclick = open;" in row
     assert "startMatter(chatId);" in _function(page_script, "restorePendingChat")
     assert "loadChatBoard();" in _function(page_script, "startMatter")
 

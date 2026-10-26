@@ -78,7 +78,7 @@ function fixture() {
 const matter = { matter_id: 'matter-current', matter: 'Saved matter heading' };
 const chats = ['chat-first', 'chat-latest'].map(chat_id => ({ chat_id, preview: chat_id, turn_count: 1 }));
 function resolveList(f, offset, matters = [matter], pending = chats) {
-  assert.equal(f.requests[offset].url, '/api/work');
+  assert.equal(f.requests[offset].url, '/api/work?limit=10&offset=0');   // ten at a time (O29)
   f.requests[offset].resolve({ state: 'ok', row_count: matters.length, matters,
     chat_count: pending.length, chats: pending });
 }
