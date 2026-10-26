@@ -27,7 +27,7 @@ async function refused(code, expectedState, expectedReloads) {
     state: {sessionGeneration: 1, matterId: 'synthetic-matter'},
     ownsIntent: () => true, $: node,
     document: {createElement: () => node('cancel')},
-    repaint() {}, updateWorkspace() {},
+    repaint() {}, updateWorkspace() {}, loadUsage() {},
     saveProtectedDraft: async () => true,
     api: async () => { throw Object.assign(new Error(friendly), {status: 409, detail}); },
     showThreadBoard: async () => { reloads += 1; },
@@ -70,6 +70,7 @@ async function composed(text) {
     matchesIntake: () => true,
     deliver: async (entry) => { outgoing.push(entry); },
     attachments: [], attachmentsBlockSend: () => null, renderAttachments() {},
+    usageUsedUp: () => false, loadUsage() {},
   });
   vm.runInContext(app.slice(sendStart, start) + app.slice(wireStart, wireEnd), context);
   handlers.get('submit')({preventDefault() {}});

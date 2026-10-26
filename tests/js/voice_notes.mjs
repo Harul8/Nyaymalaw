@@ -36,7 +36,7 @@ function harness(replies, { seconds = 2 } = {}) {
   }
   const context = vm.createContext({
     $: (id) => (elements[id] ||= new Element()), document: { createElement: () => new Element() },
-    encodeURIComponent, Blob, File, setPlusMenu() {},
+    encodeURIComponent, Blob, File, setPlusMenu() {}, loadUsage() {},
     window: { AudioContext: Playing }, OfflineAudioContext: Mixing,
     api: async (url, options) => {
       requests.push({ url, name: options?.headers?.['X-NM-Document-Name'], size: options?.body?.size,

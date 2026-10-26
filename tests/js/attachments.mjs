@@ -31,7 +31,7 @@ function harness(replies) {
   const requests = [];
   const context = vm.createContext({
     $: get, document: { createElement: (tag) => new Element(tag) }, encodeURIComponent,
-    setPlusMenu() {},
+    setPlusMenu() {}, loadUsage() {},
     api: async (url, options) => {
       requests.push({ url, options });
       const reply = replies.shift();

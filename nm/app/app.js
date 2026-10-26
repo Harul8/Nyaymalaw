@@ -97,6 +97,10 @@ let storedDraftCount = 0;
 let recoveryGeneration = 0;
 let checkpointTimer = null;
 let restoredTimer = null;
+// The signed-in advocate's allowance as the server last said it (plan AN.17); see loadUsage.
+let usage = null;
+let usageRequest = 0;
+let usageNoticeTimer = null;
 try { draftVault = new NMDraftVault(window.localStorage, window.crypto); }
 catch { /* Unavailable storage is reported before any durable-save claim. */ }
 
@@ -426,6 +430,8 @@ function clearPrivileged() {
   // The borrowed form holds this matter's details; they leave with the session.
   closeOpeningEdit({ restore: false });
   $('dictation-state').textContent = '';
+  // The allowance belongs to the advocate who signed in, and leaves with them.
+  forgetUsage();
   state.sessionGeneration += 1;
   state.searchGeneration += 1;
   state.historyGeneration += 1;
@@ -4195,7 +4201,8 @@ function updateWorkspace() {
   const filesShown = Boolean(state.matterId) || intakeOpen;
   $('matter-files').hidden = !filesShown;
   if (!filesShown) closeFilesMenu();
-  $('send').disabled = Boolean(activeDelivery || (state.matterId && !state.matterReady));
+  // Sending pauses once nothing is left (AN.17): the words stay in the box.
+  $('send').disabled = Boolean(activeDelivery || (state.matterId && !state.matterReady) || usageUsedUp());
   if (!activeDelivery) $('send').textContent = state.matterId && !state.matterReady
     ? 'Loading file…' : 'Send';
 }
@@ -4405,6 +4412,8 @@ async function deliver(entry) {
       btn.textContent = 'Send';
       $('message').placeholder = COMPOSER_PROMPT;
       updateWorkspace();
+      // An answer, made or not, may have used some of the allowance (P53).
+      loadUsage();
     }
     releaseQueued(entry);
   }
@@ -4503,6 +4512,8 @@ $('composer').addEventListener('submit', (ev) => {
   if (!text.trim()) return;
   // While a question is worked on, what is sent waits its turn (15 Oct 2026).
   if (activeDelivery) { queueAddition(text); return; }
+  // Once nothing is left sending pauses, and the words stay in the box (AN.17).
+  if (usageUsedUp()) { loadUsage(); return; }
   // deliver clears the typing field after minting the retry receipt, and
   // refuses network dispatch unless that receipt has been protected locally.
   send(text);
@@ -4810,6 +4821,7 @@ async function readWaiting(item) {
       : `${what}: ${error.message}`;
   }
   settle(item.summary.state === 'held' ? 'held' : 'ready');
+  loadUsage();
 }
 
 // RECORD A VOICE NOTE: the microphone starts and stops only when the advocate presses.
@@ -5095,6 +5107,7 @@ async function startDictation() {
       const words = await heard;
       dictation.busy = false;
       $('dictate').disabled = false;
+      loadUsage();
       if (session !== state.sessionGeneration) return;
       if (typeof words === 'string') {
         addDictated(words);
@@ -5145,6 +5158,7 @@ async function transcribeDictation(blob, session) {
   } finally {
     dictation.busy = false;
     $('dictate').disabled = false;
+    loadUsage();
   }
 }
 
@@ -5685,9 +5699,7 @@ function showDictationSetting(setting) {
   dictationSetting = setting;
   $('dictation-standard').checked = !setting.live;
   $('dictation-live').checked = setting.live === true;
-  const price = (rate) => (rate ? `$${rate} a minute.` : '');
-  $('dictation-standard-price').textContent = price(setting.per_minute?.standard);
-  $('dictation-live-price').textContent = price(setting.per_minute?.live);
+  // No price: usage is shown only as the percentage left (owner decisions O21, O22).
 }
 async function openDictationSetting() {
   setAccountMenu(false);
@@ -7612,6 +7624,7 @@ function showApplication(advocate, workspace, professionalApproval) {
   showTab('advise');
   if (!draftWaiting) startMatter();
   loadHealth();
+  loadUsage();
   // The landing page is Home. Loading every matter's checked register here
   // started a second, overlapping list request when the advocate chose My
   // work, and did work even when they resumed an already-open file. The list
@@ -7628,6 +7641,96 @@ function showApplication(advocate, workspace, professionalApproval) {
   state.draft = null;
   draftUnlock = unlockDrafts();
 }
+
+// HOW MUCH USAGE IS LEFT (owner decisions O21-O24; plans P53, AN.17). The server works out the
+// percentage left and which notice is due, and the page shows them: the chip in the top bar; a
+// notice above the message box at 50% and at 25% once, each closing itself after the time the
+// server gives, and from 10% down at every 1%, staying until the advocate closes it; at nothing left
+// the owner's words in its place, and sending pauses. The server refuses new paid work once nothing
+// is left whatever this page last heard, so a page that is behind can never spend.
+function usageUsedUp() {
+  return Boolean(usage && usage.left <= 0);
+}
+
+function usageLevel(left) {
+  return left <= 0 ? 'out' : left <= 10 ? 'crit' : left <= 25 ? 'low' : '';
+}
+
+function hideUsageNotice() {
+  clearTimeout(usageNoticeTimer);
+  usageNoticeTimer = null;
+  $('usage-notice').hidden = true;
+}
+
+function sayUsage(kind, title, line, { closable = true, urgent = false } = {}) {
+  const box = $('usage-notice');
+  clearTimeout(usageNoticeTimer);
+  usageNoticeTimer = null;
+  box.className = `usage-notice ${kind}`;
+  box.setAttribute('role', urgent ? 'alert' : 'status');
+  $('usage-notice-title').textContent = title;
+  $('usage-notice-text').textContent = line;
+  $('usage-notice-close').hidden = !closable;
+  box.hidden = false;
+}
+
+function showUsage(seen) {
+  usage = seen;
+  const chip = $('usage-chip');
+  const level = usageLevel(seen.left);
+  chip.className = level ? `usage ${level}` : 'usage';
+  chip.querySelector('.usage-plan').textContent = seen.plan;
+  chip.querySelector('.usage-left').textContent = seen.left > 0 ? `${seen.left}% left` : 'No usage left';
+  chip.querySelector('.usage-meter i').style.width = `${Math.max(0, Math.min(100, seen.left))}%`;
+  chip.setAttribute('aria-label', seen.left > 0
+    ? `${seen.plan} allowance, ${seen.left}% left. See plans.` : `${seen.plan} allowance used up. See plans.`);
+  chip.hidden = false;
+  if (seen.limit) {
+    sayUsage('limit', seen.limit, 'Sending is paused until you upgrade. Your message stays here, and your '
+      + 'saved matters stay open to read.', { closable: false, urgent: true });
+  } else if (seen.notice) {
+    const { step } = seen.notice;
+    const allowance = seen.plan === 'Trial' ? 'trial allowance' : `${seen.plan} allowance`;
+    sayUsage(step > 25 ? 'info' : 'warn', `${seen.left}% of your ${allowance} is left.`,
+      step === 25 ? 'See plans to keep going.'
+        : step <= 10 ? 'When it runs out, NM cannot research or answer until you upgrade.' : '',
+      { urgent: step <= 10 });
+    if (seen.notice.closes_after_seconds) {
+      usageNoticeTimer = setTimeout(hideUsageNotice, seen.notice.closes_after_seconds * 1000);
+    }
+    // Seen: it is not shown again, wherever the advocate signs in next.
+    api('/api/usage/notice', { method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ step }) }).catch(() => {});
+  } else if ($('usage-notice').classList.contains('limit')) {
+    // The allowance grew again (an operator added to it): sending resumes.
+    hideUsageNotice();
+  }
+  updateWorkspace();
+}
+
+async function loadUsage() {
+  if (!state.advocate) return;
+  const request = ++usageRequest;
+  try {
+    const seen = await api('/api/usage');
+    if (request === usageRequest && state.advocate) showUsage(seen);
+  } catch {
+    // The chip only informs; the server still refuses new work once nothing is left.
+  }
+}
+
+function forgetUsage() {
+  usage = null;
+  usageRequest += 1;
+  hideUsageNotice();
+  $('usage-chip').hidden = true;
+}
+
+$('usage-notice-close').addEventListener('click', hideUsageNotice);
+// Back on the tab after a while: the allowance may have moved (another tab's answer, an operator).
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') loadUsage();
+});
 
 // IS THE SERVER RUNNING THE CODE THAT IS ON DISK?
 //
