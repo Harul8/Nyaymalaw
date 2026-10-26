@@ -27,6 +27,7 @@ resident engine reloads them. No Windows setting is changed.
 from __future__ import annotations
 
 import atexit
+import os
 import re
 import socket
 import struct
@@ -57,6 +58,63 @@ def _verdict(signature):
     return "held", "ClamAV reported a threat in this file" + (f" ({signature})" if signature else "")
 
 
+def _kernel32():
+    import ctypes
+    from ctypes import wintypes
+
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.CreateJobObjectW.restype = wintypes.HANDLE
+    kernel32.CreateJobObjectW.argtypes = [ctypes.c_void_p, wintypes.LPCWSTR]
+    kernel32.SetInformationJobObject.restype = wintypes.BOOL
+    kernel32.SetInformationJobObject.argtypes = [wintypes.HANDLE, ctypes.c_int, ctypes.c_void_p, wintypes.DWORD]
+    kernel32.AssignProcessToJobObject.restype = wintypes.BOOL
+    kernel32.AssignProcessToJobObject.argtypes = [wintypes.HANDLE, wintypes.HANDLE]
+    kernel32.CloseHandle.restype, kernel32.CloseHandle.argtypes = wintypes.BOOL, [wintypes.HANDLE]
+    return kernel32
+
+
+def _end_with_this_process(process):
+    """Windows only: put a program this process started into a job that ends it when this process ends, however this
+    process ends. The development supervisor restarts the served child by terminating it, which runs nothing of ours, and
+    the resident engine then ran on, about a gigabyte for every restart (plan AN.25). Returns the job, kept while this
+    process owns the program; None where there is nothing to do or it could not be done, and the engine then outlives an
+    abrupt end as it always did. Elsewhere the process manager ends it (systemd stops the whole service)."""
+    handle = getattr(process, "_handle", None)
+    if os.name != "nt" or handle is None:
+        return None
+    import ctypes
+    from ctypes import wintypes
+
+    class Limits(ctypes.Structure):  # JOBOBJECT_EXTENDED_LIMIT_INFORMATION
+        class Basic(ctypes.Structure):
+            _fields_ = [("PerProcessUserTimeLimit", ctypes.c_int64), ("PerJobUserTimeLimit", ctypes.c_int64),
+                        ("LimitFlags", wintypes.DWORD), ("MinimumWorkingSetSize", ctypes.c_size_t),
+                        ("MaximumWorkingSetSize", ctypes.c_size_t), ("ActiveProcessLimit", wintypes.DWORD),
+                        ("Affinity", ctypes.c_size_t), ("PriorityClass", wintypes.DWORD),
+                        ("SchedulingClass", wintypes.DWORD)]
+
+        _fields_ = [("Basic", Basic), ("IoInfo", ctypes.c_uint64 * 6), ("ProcessMemoryLimit", ctypes.c_size_t),
+                    ("JobMemoryLimit", ctypes.c_size_t), ("PeakProcessMemoryUsed", ctypes.c_size_t),
+                    ("PeakJobMemoryUsed", ctypes.c_size_t)]
+
+    kernel32 = _kernel32()
+    job = kernel32.CreateJobObjectW(None, None)
+    if not job:
+        return None
+    limits = Limits()
+    limits.Basic.LimitFlags = 0x2000  # JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
+    if (kernel32.SetInformationJobObject(job, 9, ctypes.byref(limits), ctypes.sizeof(limits))  # 9: the extended limits
+            and kernel32.AssignProcessToJobObject(job, int(handle))):
+        return job
+    kernel32.CloseHandle(job)
+    return None
+
+
+def _close_job(job):
+    if job:
+        _kernel32().CloseHandle(job)
+
+
 class ClamAVCheck:
     name = NAME
 
@@ -76,6 +134,7 @@ class ClamAVCheck:
         self._one_at_a_time = threading.Lock()
         self._resident_lock = threading.Lock()
         self._process = None
+        self._job = None  # on Windows, the job that ends the engine with this process (_end_with_this_process)
         self._port = None
         self._ready = False
         self._refresher = None
@@ -144,6 +203,8 @@ class ClamAVCheck:
             except OSError:
                 self._process = None
                 return
+            _close_job(self._job)
+            self._job = _end_with_this_process(self._process)
             atexit.register(self.close)
             threading.Thread(target=self._await_resident, name="clamd-start", daemon=True).start()
 
@@ -203,6 +264,8 @@ class ClamAVCheck:
                 process.wait(timeout=10)
             except subprocess.TimeoutExpired:
                 process.kill()
+        job, self._job = self._job, None
+        _close_job(job)
 
     # --- the command-line scanner ----------------------------------------------------
 

@@ -3,7 +3,12 @@
 The scanner is replaced by recorded outcomes here: these prove how each outcome is
 read, not ClamAV's detection, which the scratch trial measured with EICAR.
 """
+import os
+import re
 import subprocess
+import sys
+import time
+from pathlib import Path
 
 import pytest
 
@@ -257,6 +262,78 @@ def test_the_help_is_asked_once_and_a_help_that_could_not_be_read_is_asked_again
     installed.check(b"x")
     assert "--scan-image-fuzzy-hash=no" in calls[1][0] and "--scan-image-fuzzy-hash=no" in calls[2][0]
     assert len(calls.asked) == 2, "a failed ask is repeated; an answer is remembered"
+
+
+def test_the_resident_engine_is_bound_to_this_process_when_started_and_released_when_replaced_or_closed(
+        installed, monkeypatch, tmp_path):
+    (tmp_path / "clamd.exe").write_bytes(b"")
+    started, bound, released = [], [], []
+
+    class Process:
+        def poll(self):
+            return 0  # ends the readiness wait at once, and is "not running" for the next start
+
+    monkeypatch.setattr(clamav_check.subprocess, "Popen", lambda command, **kwargs: started.append(Process()) or started[-1])
+    monkeypatch.setattr(clamav_check, "_end_with_this_process", lambda process: bound.append(process) or "a job")
+    monkeypatch.setattr(clamav_check, "_close_job", released.append)
+    scanner(monkeypatch, 0)
+    installed.check(b"x")
+    installed.check(b"x")  # the first engine "ended", so a second is started and the first one's job is released
+    assert bound == started and len(started) == 2 and installed._job == "a job"
+    installed.close()
+    assert released.count("a job") == 2 and installed._job is None
+
+
+def test_a_program_that_is_not_a_real_child_of_this_process_is_left_alone():
+    assert clamav_check._end_with_this_process(object()) is None
+
+
+OWNER = '''
+import os, subprocess, sys, time
+sys.path.insert(0, {root!r})
+from nm.open_matter import clamav_check
+sleeper = [sys.executable, "-c", "import time; time.sleep(120)"]
+bound, loose = subprocess.Popen(sleeper), subprocess.Popen(sleeper)
+assert clamav_check._end_with_this_process(bound) is not None
+open({pids!r} + ".tmp", "w").write(f"{{bound.pid}} {{loose.pid}}")
+os.replace({pids!r} + ".tmp", {pids!r})
+time.sleep(120)
+'''
+
+
+def running(pid):
+    shown = subprocess.run(["tasklist", "/FI", f"PID eq {pid}", "/NH"], capture_output=True, text=True).stdout
+    return re.search(rf"\b{pid}\b", shown) is not None
+
+
+@pytest.mark.skipif(os.name != "nt", reason="a job object is how Windows ends a program with its owner")
+def test_a_program_the_scanner_started_ends_with_its_owner_however_the_owner_ends(tmp_path):
+    """Measured 26 Oct 2026 (plan AN.25): the supervisor restarts the server by terminating it, which runs nothing of the
+    server's own, and every restart left a scanner of about 0.9 GB running. The owner here is ended the same way."""
+    pids = tmp_path / "pids"
+    root = str(Path(__file__).resolve().parents[1])
+    owner = subprocess.Popen([sys.executable, "-c", OWNER.format(root=root, pids=str(pids))])
+    bound = loose = None
+    try:
+        for _ in range(150):
+            if pids.exists():
+                bound, loose = map(int, pids.read_text().split())
+                break
+            time.sleep(0.2)
+        assert bound and running(bound) and running(loose)
+        owner.kill()  # TerminateProcess, as the supervisor ends the server
+        owner.wait()
+        for _ in range(50):
+            if not running(bound):
+                break
+            time.sleep(0.2)
+        assert not running(bound), "the program bound to its owner outlived it"
+        assert running(loose), "control: a program that was not bound does outlive an owner ended this way"
+    finally:
+        owner.kill()
+        for pid in (bound, loose):
+            if pid:
+                subprocess.run(["taskkill", "/F", "/PID", str(pid)], capture_output=True)
 
 
 def test_definitions_are_refreshed_only_when_a_day_old_and_the_engine_reloads(installed, tmp_path):
