@@ -23,7 +23,7 @@ from nm.core_engine.retrieval import SearchUnavailable, _digest, _valid_location
 from nm.core_engine.understanding import REFERENCE, TEXT, select, source_catalogue
 from nm.shared import clock_contracts
 from nm.shared.model_port import (
-    ModelError, Prompt, SchemaViolation, Tier, UsageLimitReached, canonical_schema_data, require_schema,
+    ModelError, OutputTruncated, Prompt, SchemaViolation, Tier, UsageLimitReached, canonical_schema_data, require_schema,
 )
 
 LEGACY_CONTRACT = "core_research_v2"
@@ -286,7 +286,7 @@ Look for:
 - Who says it. A document may record an event itself (an order's own date and directions) or report it (a recital of an earlier order, a party's account or pleading). Give the authority or party whose words they are, and keep a party's allegation as that party's.
 - The date as the page gives it, in the page's own form ("30-10-1985", "17 August 2019", "2008", "1961-62"); where the page gives none, say undated. Do not work out, convert or guess a date.
 - The figures and identifiers that belong to the event, such as extents, sums, and deed, case, file and survey numbers, exactly as the page gives them.
-- One event for each act and date. Do not merge events the page keeps apart, do not repeat an event the same page says twice, and do not add anything the page does not say.
+- One event for each act and date. Do not merge events the page keeps apart, do not repeat an event the same page says twice, and do not add anything the page does not say. A register or list of many similar entries (a line for each survey number, say) is one event for the whole list, naming its range and the figures that matter, with the words of its first entries.
 Work in a loop: list the events page by page, then read each page again against your list for any event or date you skipped or misread, and correct the list before you answer.
 
 Outcome: events, in the order of the pages. Each has: date; kind (transaction, order, filing, pending, or other); what (one plain sentence saying what happened, with its figures and identifiers); said_by (whose words they are: the document's own author, or the party or authority it reports); words (the exact words on a page that record it, copied exactly as the page gives them, without the reader's square-bracket notes - a sentence that runs over a page may be copied whole - or several passages joined with '...'; never reword)."""
@@ -630,7 +630,7 @@ _MONTHS = {name: number for number, names in enumerate((
     ("august", "aug"), ("september", "sept", "sep"), ("october", "oct"), ("november", "nov"), ("december", "dec")), 1)
     for name in names}
 _MONTH = "|".join(sorted(_MONTHS, key=len, reverse=True))
-_NUMBERED_DATE = re.compile(r"(?<!\d)(\d{1,2})\s*[-./]\s*(\d{1,2})\s*[-./]\s*(\d{4})(?!\d)")
+_NUMBERED_DATE = re.compile(r"(?<!\d)(\d{1,2})\s*[-./]\s*(\d{1,2})\s*[-./]\s*(\d{4}|\d{2})(?!\d)")
 _DAY_FIRST_NAMED = re.compile(rf"(?<!\d)(\d{{1,2}})\s*(?:st|nd|rd|th)?\s*(?:day\s+of\s+)?({_MONTH})\b\.?,?\s*(\d{{4}})(?!\d)")
 _MONTH_FIRST_NAMED = re.compile(rf"\b({_MONTH})\b\.?\s+(\d{{1,2}})\s*(?:st|nd|rd|th)?,?\s+(\d{{4}})(?!\d)")
 _MONTH_AND_YEAR = re.compile(rf"\b({_MONTH})\b\.?,?\s+(\d{{4}})(?!\d)")
@@ -646,6 +646,8 @@ def _day(year, month, day):
 
 def _numbered(match):
     first, second, year = (int(part) for part in match.groups())
+    if len(match.group(3)) == 2:  # "19/07/21": a paper's two-digit year is this century up to 2030, the last century after
+        year += 2000 if year <= 30 else 1900
     return _day(year, second, first) or (_day(year, first, second) if first <= 12 else "")
 
 
@@ -729,7 +731,7 @@ def chronology_of(model, context, *, wanted=None):
     tasks = [(document, window) for document in documents for window in _windows(document["pages"])]
     finders = {document["source"]: Pages(document["pages"]) for document in documents}
 
-    def read(task):
+    def read(task, depth=0):
         document, window = task
         try:
             data = _call(model, "core_research_chronology", CHRONOLOGY, _window_text(document, window), CHRONOLOGY_SCHEMA,
@@ -737,9 +739,14 @@ def chronology_of(model, context, *, wanted=None):
         except UsageLimitReached:
             raise
         except (ModelError, SchemaViolation) as exc:
+            if isinstance(exc, OutputTruncated) and len(window) > 1 and depth < 2:
+                # A stretch with more events than one answer holds is read again in two halves (twice at most).
+                middle = len(window) // 2
+                (one, lost), (two, also) = read((document, window[:middle]), depth + 1), read((document, window[middle:]), depth + 1)
+                return one + two, lost + also
             first, last = window[0]["page"], window[-1]["page"]
-            return [], {"document": document["name"], "pages": f"{first}-{last}" if first != last else f"{first}",
-                        "reason": type(exc).__name__}
+            return [], [{"document": document["name"], "pages": f"{first}-{last}" if first != last else f"{first}",
+                         "reason": type(exc).__name__}]
         events = []
         for item in data["events"]:
             words = item["words"].strip()
@@ -747,11 +754,11 @@ def chronology_of(model, context, *, wanted=None):
             events.append({"date": item["date"].strip(), "kind": item["kind"], "what": item["what"].strip(),
                            "said_by": item["said_by"].strip(), "document": document["name"], "source": document["source"],
                            "pages": pages, "words": words, "anchored": anchored})
-        return events, None
+        return events, []
 
     with ThreadPoolExecutor(max_workers=min(8, len(tasks))) as pool:
         done = list(pool.map(read, tasks))
-    failures = [failure for _, failure in done if failure]
+    failures = [failure for _, lost in done for failure in lost]
     events = [event for found, _ in done for event in found]
     for event in events:
         event["sort"] = read_date(event["date"])

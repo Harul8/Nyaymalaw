@@ -12,7 +12,7 @@ import pytest
 
 from nm.core_engine import research
 from nm.core_engine.research import chronology_of, read_date
-from nm.shared.model_port import SchemaViolation, UsageLimitReached
+from nm.shared.model_port import OutputTruncated, SchemaViolation, UsageLimitReached
 from tests.test_core_research import _result
 
 pytestmark = pytest.mark.class_a
@@ -208,3 +208,56 @@ def test_dates_are_read_by_code_day_first_and_never_guessed(words, expected):
 
 def test_a_date_sorts_as_the_papers_give_it_and_a_partial_date_before_a_full_one_of_its_year():
     assert sorted(["2008-03-17", "2008", "2007-12-31", "2008-01"]) == ["2007-12-31", "2008", "2008-01", "2008-03-17"]
+
+
+class Truncating(Reading):
+    """Answers with more events than the answer holds whenever it is shown more than `holds` pages."""
+
+    def __init__(self, script, holds):
+        super().__init__(script)
+        self.holds = holds
+
+    def structured(self, prompt, schema, tier, **kwargs):
+        if len(re.findall(r"^\[Page \d+\]", prompt.user, re.M)) > self.holds:
+            with self.lock:
+                self.calls.append((prompt.operation, "truncated", prompt.user))
+            raise OutputTruncated("stopped at the output ceiling")
+        return super().structured(prompt, schema, tier, **kwargs)
+
+
+def long_order(pages):
+    return context(*[row("t1", 1, "long.pdf", n, f"Page {n} of the long order: on {n}-1-2020 the court listed matter number {n}.")
+                     for n in range(1, pages + 1)])
+
+
+LONG = {"long.pdf": lambda seen: [event(f"{n}-1-2020", "order", f"Listed {n}.", f"on {n}-1-2020 the court listed matter number {n}")
+                                  for n in range(1, 13) if f"[Page {n}]" in seen]}
+
+
+def test_a_stretch_with_more_events_than_one_answer_holds_is_read_again_in_halves():
+    model = Truncating(LONG, holds=3)
+    events, failures = chronology_of(model, long_order(12))
+    assert failures == [] and [e["sort"] for e in events] == [f"2020-01-{n:02d}" for n in range(1, 13)]
+    assert all(e["anchored"] for e in events)
+
+
+def test_a_page_that_is_still_too_long_alone_is_a_failure_that_names_it_and_the_rest_is_kept():
+    model = Truncating(LONG, holds=0)
+    events, failures = chronology_of(model, long_order(2))
+    assert events == [] and [f["pages"] for f in failures] == ["1", "2"] and {f["reason"] for f in failures} == {"OutputTruncated"}
+
+
+def test_the_halving_stops_after_two_rounds():
+    model = Truncating(LONG, holds=0)
+    _, failures = chronology_of(model, long_order(12))
+    assert len(model.calls) == 7 and [f["pages"] for f in failures] == ["1-3", "4-6", "7-9", "10-12"]
+
+
+def test_the_prompt_gives_a_register_of_many_entries_as_one_event():
+    assert "is one event for the whole list" in research.CHRONOLOGY
+
+
+@pytest.mark.parametrize("words,expected", [("19/07/21", "2021-07-19"), ("5.1.80", "1980-01-05"), ("31/12/99", "1999-12-31"),
+                                            ("1-1-30", "2030-01-01"), ("1-1-31", "1931-01-01"), ("19/07/2021", "2021-07-19")])
+def test_a_two_digit_year_is_read_by_code(words, expected):
+    assert read_date(words) == expected
