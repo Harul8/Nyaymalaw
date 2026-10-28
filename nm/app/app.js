@@ -3609,6 +3609,78 @@ function factPlace(fact) {
   return 'Where these words were given was not found';
 }
 
+// THE TIMELINE OF THE PAPERS (plan AN.27, P10): what the papers record, event by event, in the order the server kept - the dated in
+// date order, then those the papers leave undated - with the paper and page of each, and what NM could read of each paper. The page
+// sorts, dates and locates nothing; an event whose words the server could not find on the page says so.
+const EVENTS_SHOWN = 12;
+
+function eventPlace(event) {
+  const pages = Array.isArray(event.pages) ? event.pages : [];
+  if (!pages.length) return event.document;
+  return `${event.document}, ${event.recording ? 'part' : 'page'}${pages.length > 1 ? 's' : ''} ${pages.join(', ')}`;
+}
+
+// The events as lists: the first few, and the rest folded under a line that says how many.
+function eventRows(events, make) {
+  const rows = (items) => {
+    const ul = make('ul', 'board-list board-events');
+    for (const event of items) {
+      const item = make('li', 'board-event');
+      if (event.dated) item.appendChild(make('span', 'board-when', `${event.date} `));
+      item.appendChild(make('span', '', event.what));
+      if (event.kind === 'pending') item.appendChild(make('span', 'board-certainty', 'Pending'));
+      const where = make('span', 'board-status', ` · ${eventPlace(event)}${event.said_by ? ` · said by ${event.said_by}` : ''}`);
+      where.title = event.words;
+      item.appendChild(where);
+      if (!event.located) {
+        item.appendChild(make('span', 'board-status search_failed', ' · NM could not find these words on the page; check the paper.'));
+      }
+      ul.appendChild(item);
+    }
+    return ul;
+  };
+  const out = [rows(events.slice(0, EVENTS_SHOWN))];
+  if (events.length > EVENTS_SHOWN) {
+    const rest = events.length - EVENTS_SHOWN;
+    const more = make('details', 'board-more');
+    more.appendChild(make('summary', '', `Show the other ${rest} ${rest === 1 ? 'event' : 'events'}`));
+    more.appendChild(rows(events.slice(EVENTS_SHOWN)));
+    out.push(more);
+  }
+  return out;
+}
+
+function renderTimeline(timeline, make) {
+  if (!timeline || timeline.state === 'none') return [];
+  if (timeline.state !== 'ready') {
+    return [make('p', 'board-lede', timeline.why || 'NM has no timeline of these papers to show.')];
+  }
+  const events = timeline.events || [];
+  const papers = timeline.documents || [];
+  const unfinished = papers.filter((paper) => paper.state !== 'read').length;
+  const fold = make('details', 'folded');
+  fold.appendChild(make('summary', '', `Timeline of your papers (${events.length} ${events.length === 1 ? 'event' : 'events'})`
+    + (unfinished ? ` · ${unfinished} ${unfinished === 1 ? 'paper' : 'papers'} not fully read` : '')));
+  fold.appendChild(make('p', 'board-lede', 'What your papers record, event by event, as NM read them. Each is as its paper says it, '
+    + 'not proved; check anything that matters against the paper itself.'));
+  fold.appendChild(make('h3', 'board-h', 'Papers read'));
+  const list = make('ul', 'board-list');
+  for (const paper of papers) {
+    const unit = paper.recording ? 'part' : 'page';
+    const item = make('li', '', `${paper.name}: ${paper.pages_read} ${unit}${paper.pages_read === 1 ? '' : 's'} read, `
+      + `${paper.events} ${paper.events === 1 ? 'event' : 'events'}`);
+    if (paper.why) item.appendChild(make('span', `board-status${paper.state === 'not_read' ? ' search_failed' : ''}`, ` · ${paper.why}`));
+    list.appendChild(item);
+  }
+  fold.appendChild(list);
+  const dated = events.filter((event) => event.dated);
+  const undated = events.filter((event) => !event.dated);
+  if (dated.length) fold.append(make('h3', 'board-h', 'In date order'), ...eventRows(dated, make));
+  if (undated.length) fold.append(make('h3', 'board-h', 'Not dated in the paper'), ...eventRows(undated, make));
+  if (!events.length) fold.appendChild(make('p', 'board-lede', 'NM listed no events from these papers.'));
+  return [fold];
+}
+
 // The board as NM understood the matter from the advocate's own words. Nothing on it is
 // presented as established: facts carry the certainty they were given with. The disputes
 // come first, under the marks' legend; how NM understood the matter, the facts, the
@@ -3645,6 +3717,7 @@ function renderChatBoard(board) {
   board.disputes.forEach((dispute, index) => disputes.appendChild(
     renderDisputeCard(dispute, board, board.disputes.length > 1 ? index + 1 : null)));
   out.push(disputes);
+  out.push(...renderTimeline(board.timeline, make));
   const points = (board.understanding && board.understanding.open_points) || [];
   const counted = [[board.facts.length, 'Facts as you gave them'], [board.instructions.length, 'Standing instructions'],
     [board.related_points.length, 'Related points'], [points.length, 'Points NM’s own check raised']]

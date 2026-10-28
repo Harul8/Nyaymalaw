@@ -163,4 +163,83 @@ const board = {
   }
 }
 
+// The timeline of the papers (plan AN.27, P10): the events in the order the server kept them, the dated first and the undated under
+// their own heading, with the paper and page of each, and every paper with what NM could read of it. An event whose words the server
+// could not locate says so; a long timeline shows its first events and folds the rest; a board without a timeline draws as before.
+{
+  const events = [
+    { id: 'E1', date: '30-10-1985', dated: true, kind: 'transaction', what: 'A sale of Ac.1.18 guntas.', said_by: 'the deed',
+      document: 'deed.pdf', pages: [1], words: 'Sale Deed No. 100', located: true },
+    { id: 'E2', date: '17 August 2019', dated: true, kind: 'order', what: 'The revision was allowed.',
+      said_by: 'the Joint Collector', document: 'order.pdf', pages: [1, 2], words: 'allowed the revision', located: true },
+    { id: 'E3', date: '1 January 2020', dated: true, kind: 'filing', what: 'A petition was filed.', said_by: 'a party',
+      document: 'order.pdf', pages: [], words: 'filed on a day the page lacks', located: false },
+    { id: 'E4', date: 'undated', dated: false, kind: 'pending', what: 'Two suits are pending.', said_by: 'the order',
+      document: 'order.pdf', pages: [2], words: 'Suits O.S. 891', located: true },
+    { id: 'E5', date: '1 May 2020', dated: true, kind: 'other', what: 'The sum was agreed.', said_by: 'a caller',
+      document: 'call.mp3', recording: true, pages: [1], words: 'we agreed the sum', located: true }];
+  const documents = [
+    { name: 'deed.pdf', pages_read: 2, events: 1, state: 'read', why: '' },
+    { name: 'order.pdf', pages_read: 1, events: 3, state: 'partly_read', why: 'NM could not read page 3 of this paper.' },
+    { name: 'scan.pdf', pages_read: 0, events: 0, state: 'not_read', why: 'NM could not read pages 1, 2 of this paper.' },
+    { name: 'call.mp3', pages_read: 1, events: 1, state: 'read', why: '', recording: true }];
+  const nodes = context.renderChatBoard({ ...structuredClone(board), timeline: { state: 'ready', events, documents } });
+  const fold = nodes.find((node) => node.tagName === 'DETAILS' && text(node).startsWith('Timeline of your papers'));
+  assert.ok(fold, 'a fold for the timeline');
+  assert.equal(nodes.indexOf(fold), nodes.findIndex((node) => node.className === 'board-disputes') + 1, 'it follows the disputes');
+  assert.equal(fold.children[0].textContent, 'Timeline of your papers (5 events) · 2 papers not fully read');
+  const said = text(fold);
+  for (const part of ['deed.pdf: 2 pages read, 1 event', 'order.pdf: 1 page read, 3 events', 'NM could not read page 3 of this paper.',
+    'scan.pdf: 0 pages read, 0 events', 'NM could not read pages 1, 2 of this paper.', 'call.mp3: 1 part read, 1 event',
+    '30-10-1985 A sale of Ac.1.18 guntas. · deed.pdf, page 1 · said by the deed',
+    '17 August 2019 The revision was allowed. · order.pdf, pages 1, 2 · said by the Joint Collector',
+    'call.mp3, part 1 · said by a caller', 'Not dated in the paper', 'Two suits are pending.Pending · order.pdf, page 2']) {
+    assert.ok(said.includes(part), part);
+  }
+  // The order is the server's: the dated events as kept, and the undated after them under their own heading.
+  const where = (part) => said.indexOf(part);
+  assert.ok(where('A sale of') < where('The revision') && where('The revision') < where('A petition') && where('A petition') < where('The sum')
+    && where('In date order') < where('A sale of') && where('The sum') < where('Not dated in the paper')
+    && where('Not dated in the paper') < where('Two suits'), 'as the server kept them');
+  // An event the server could not locate says so, and gives no page.
+  assert.ok(said.includes('A petition was filed. · order.pdf · said by a party · NM could not find these words on the page; check the paper.'));
+  assert.equal(said.split('NM could not find these words').length - 1, 1, 'only the one that was not located');
+  // The exact words are there for a pointer.
+  const spans = [];
+  const walk = (node) => { spans.push(node); (node.children || []).forEach(walk); };
+  walk(fold);
+  assert.ok(spans.some((node) => node.title === 'Sale Deed No. 100'));
+
+  // A long timeline shows its first events and folds the rest.
+  const many = Array.from({ length: 15 }, (_, n) => ({ ...events[0], id: `E${n + 1}`, what: `Event number ${n + 1}.` }));
+  const long = context.renderChatBoard({ ...structuredClone(board), timeline: { state: 'ready', events: many, documents } })
+    .find((node) => node.tagName === 'DETAILS' && text(node).startsWith('Timeline of your papers'));
+  const more = long.children.find((node) => node.className === 'board-more');
+  assert.equal(more.children[0].textContent, 'Show the other 3 events');
+  assert.ok(text(more).includes('Event number 13.') && text(more).includes('Event number 15.') && !text(more).includes('Event number 12.'));
+  const shown = long.children.find((node) => node.className === 'board-list board-events');
+  assert.ok(text(shown).includes('Event number 12.') && !text(shown).includes('Event number 13.'));
+  const one = context.renderChatBoard({ ...structuredClone(board), timeline: { state: 'ready', events: many.slice(0, 13), documents } })
+    .find((node) => node.tagName === 'DETAILS' && text(node).startsWith('Timeline of your papers'));
+  assert.equal(one.children.find((node) => node.className === 'board-more').children[0].textContent, 'Show the other 1 event');
+
+  // Papers with no event, and one paper not fully read, say so.
+  const none = context.renderChatBoard({ ...structuredClone(board), timeline: { state: 'ready', events: [], documents: [documents[0]] } })
+    .map(text).join('\n');
+  assert.ok(none.includes('Timeline of your papers (0 events)') && none.includes('NM listed no events from these papers.'));
+  assert.ok(!none.includes('not fully read') && !none.includes('In date order'));
+  const partly = context.renderChatBoard({ ...structuredClone(board), timeline: { state: 'ready', events: [events[0]], documents: [documents[1]] } })
+    .map(text).join('\n');
+  assert.ok(partly.includes('Timeline of your papers (1 event) · 1 paper not fully read'));
+
+  // An earlier conversation's board says none was made; a board with no papers, or no word on it, says nothing.
+  const why = 'NM did not make a timeline of the papers when it answered this conversation, so there is none to show.';
+  const earlier = context.renderChatBoard({ ...structuredClone(board), timeline: { state: 'not_made', why } });
+  assert.ok(earlier.map(text).join('\n').includes(why) && !earlier.some((node) => text(node).startsWith('Timeline of your papers')));
+  for (const quiet of [{ ...structuredClone(board), timeline: { state: 'none' } }, structuredClone(board)]) {
+    const read = context.renderChatBoard(quiet).map(text).join('\n');
+    assert.ok(!read.includes('Timeline of your papers') && !read.includes('timeline'));
+  }
+}
+
 console.log('chat board: ok');

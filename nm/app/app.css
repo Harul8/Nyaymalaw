@@ -328,6 +328,11 @@ button.board-card:focus-visible { outline: 2px solid var(--accent); outline-offs
   border-radius: 4px; padding: 1px 6px; background: var(--amber-w); color: var(--amber); }
 .board-certainty.disputed { background: var(--signal-w); color: var(--signal); }
 .board-certainty.confirmed { background: var(--good-w); color: var(--good); }
+/* The timeline of the papers on the board (plan AN.27, P10). */
+.board-events { gap: 0.55rem; }
+.board-event .board-when { font-weight: 700; color: var(--ink); }
+.board-event .board-certainty { margin-left: 0.35rem; }
+.board-more > summary { cursor: pointer; min-height: 2.75rem; display: flex; align-items: center; }
 /* Documents attached to a message and sent in a matter (15 Oct 2026). */
 .attachments { list-style: none; margin: 0.4rem 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.4rem; }
 .attachment { display: flex; align-items: center; gap: 0.5rem; max-width: 100%; padding: 0.25rem 0.25rem 0.25rem 0.75rem;

@@ -52,7 +52,7 @@ const context = vm.createContext({
   CERTAINTY: { reported: 'Reported' }, QUESTION_STATUS: { researched: 'researched' },
   factPlace: () => 'From your messages',
 });
-vm.runInContext(between('function renderChatBoard(board) {', '// A DISPUTE IN DETAIL'), context);
+vm.runInContext(between('// THE TIMELINE OF THE PAPERS', '// A DISPUTE IN DETAIL'), context);
 vm.runInContext(between('function timeLimitStanding(rows) {', '// What is left of a time limit'), context);
 vm.runInContext(between('function fileDate(iso) {', 'function fileAttention('), context);
 
