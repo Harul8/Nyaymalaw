@@ -445,8 +445,13 @@ class LongJudgment(Collection):
 
 
 def before_judgments_read(record):
-    """A v11 record as research v10 saved it, before the chosen judgments were read (P31)."""
-    return {**{key: value for key, value in record.items() if key != "judgments"}, "contract": "core_research_v10"}
+    """A v11 record as research v10 saved it, before the chosen judgments were read (P31) and before the plan kept the chronology
+    of the documents (P8c)."""
+    earlier = deepcopy(record["plan"])
+    for key in ("chronology", "chronology_failures"):
+        earlier["proposal"].pop(key)
+    return {**{key: value for key, value in record.items() if key != "judgments"}, "contract": "core_research_v10",
+            "plan": earlier}
 
 
 def test_a_picked_judgment_is_read_with_one_paragraph_either_side_and_every_other_alone():

@@ -57,18 +57,26 @@ PER_DISPUTE_CONTRACT = "core_research_v10"
 #: held judgments); a longer one is read as an extract that says so - its opening and its order,
 #: the paragraphs search found with those beside them, and the paragraphs they name and where
 #: the court sets out the issues - and the paragraphs search found are marked either way.
-CONTRACT = "core_research_v11"
+JUDGMENTS_READ_CONTRACT = "core_research_v11"
+#: v12 (plan AN.27, P8c; 28 Oct 2026): the plan also records the chronology of the documents the advocate sent - what each paper
+#: records, event by event, with its dates read by code and its words found in the paper (chronology_of) - and the stretches of
+#: a paper that could not be read. v11 and earlier records replay unchanged.
+CONTRACT = "core_research_v12"
 #: The plans that set out the matter as disputes and legal questions (v7 on).
-QUESTION_PLANS = (PICKED_CONTRACT, JUDGMENT_PICKED_CONTRACT, PURPOSED_CONTRACT, PER_DISPUTE_CONTRACT, CONTRACT)
+QUESTION_PLANS = (PICKED_CONTRACT, JUDGMENT_PICKED_CONTRACT, PURPOSED_CONTRACT, PER_DISPUTE_CONTRACT, JUDGMENTS_READ_CONTRACT,
+                  CONTRACT)
 _QUESTION_PLANS = QUESTION_PLANS
 #: The records that pick judgment paragraphs and answer in parts per dispute (v8 on).
-JUDGMENT_PICKS = (JUDGMENT_PICKED_CONTRACT, PURPOSED_CONTRACT, PER_DISPUTE_CONTRACT, CONTRACT)
+JUDGMENT_PICKS = (JUDGMENT_PICKED_CONTRACT, PURPOSED_CONTRACT, PER_DISPUTE_CONTRACT, JUDGMENTS_READ_CONTRACT, CONTRACT)
 #: The records that keep each dispute's picks apart (v10 on).
-BY_DISPUTE = (PER_DISPUTE_CONTRACT, CONTRACT)
-#: The records that read the chosen judgments whole or as extracts (v11).
-JUDGMENTS_READ = (CONTRACT,)
+BY_DISPUTE = (PER_DISPUTE_CONTRACT, JUDGMENTS_READ_CONTRACT, CONTRACT)
+#: The records that read the chosen judgments whole or as extracts (v11 on).
+JUDGMENTS_READ = (JUDGMENTS_READ_CONTRACT, CONTRACT)
+#: The records that also keep the chronology of the documents (v12 on).
+CHRONICLED = (CONTRACT,)
 CONTRACTS = (LEGACY_CONTRACT, PREVIOUS_CONTRACT, WINDOWED_CONTRACT, ACCOUNT_CONTRACT, INSTRUMENTED_CONTRACT,
-             PICKED_CONTRACT, JUDGMENT_PICKED_CONTRACT, PURPOSED_CONTRACT, PER_DISPUTE_CONTRACT, CONTRACT)
+             PICKED_CONTRACT, JUDGMENT_PICKED_CONTRACT, PURPOSED_CONTRACT, PER_DISPUTE_CONTRACT, JUDGMENTS_READ_CONTRACT,
+             CONTRACT)
 #: P31 (owner, 21 Oct 2026): four to five judgments a dispute; a judgment is read whole up to about
 #: 8,000 tokens; an extract keeps one or two paragraphs either side of each one found.
 JUDGMENTS_PER_DISPUTE = 5
@@ -96,7 +104,7 @@ MAX_REVISIONS = 1
 PROVISIONS_FOR_PICK = 20
 #: Answer limits per step. Calls in flight are budgeted at their limit.
 MAX_OUTPUT = {"understand": 12000, "check": 6000, "revise": 12000, "phrases": 6000,
-              "judgment_phrases": 8000, "pick": 8000, "judgment_pick": 8000, "chronology": 6000}
+              "judgment_phrases": 8000, "pick": 8000, "judgment_pick": 8000, "chronology": 12000}
 
 # The prompts below were developed and measured in outputs/decomposition-scratch
 # (13-14 Oct 2026). They state the purpose and the needed outcome in plain language
@@ -285,9 +293,16 @@ Outcome: events, in the order of the pages. Each has: date; kind (transaction, o
 EVENT = _object({"date": STRING, "kind": {"type": "string", "enum": list(EVENT_KINDS)}, "what": STRING, "said_by": STRING,
                  "words": STRING})
 CHRONOLOGY_SCHEMA = _object({"events": {"type": "array", "items": EVENT}})
+#: An event as the plan records it (v12): what the model said, and what code made of it - the sort date, the document and the
+#: turn's source it belongs to, the pages its words are on and whether they are found there, and its number.
+EVENT_RECORD = _object({"id": STRING, "date": STRING, "sort": STRING, "kind": EVENT["properties"]["kind"], "what": STRING,
+                        "said_by": STRING, "document": STRING, "source": STRING,
+                        "pages": {"type": "array", "items": {"type": "integer"}}, "words": STRING,
+                        "anchored": {"type": "boolean"}})
+CHRONOLOGY_FAILURE = _object({"document": STRING, "pages": STRING, "reason": STRING})
 
 
-def _record_schema(understanding):
+def _record_schema(understanding, chronology=False):
     return _object({
         "understanding": understanding,
         "review_rounds": {"type": "array", "items": _object({
@@ -298,11 +313,14 @@ def _record_schema(understanding):
             "dispute_id": STRING, "questions": STATUTE_PHRASES["properties"]["questions"]})},
         "judgment_phrases": JUDGMENT_PHRASE_SCHEMA["properties"]["questions"],
         "failures": {"type": "array", "items": FAILURE},
+        **({"chronology": {"type": "array", "items": EVENT_RECORD},
+            "chronology_failures": {"type": "array", "items": CHRONOLOGY_FAILURE}} if chronology else {}),
     })
 
 
 SCHEMA_V8 = _record_schema(UNDERSTANDING_V8)
 SCHEMA = _record_schema(UNDERSTANDING)
+SCHEMA_V12 = _record_schema(UNDERSTANDING, chronology=True)
 
 
 def _source_windows(context):
@@ -569,7 +587,8 @@ def _no_matter(context):
     return accept({"understanding": {"summary": "", "asked": [], "ruled_out": [], "needs_research": False,
                                      "no_research_reason": NO_NEW_MATTER, "parties": [], "facts": [],
                                      "disputes": [], "related_points": []},
-                   "review_rounds": [], "statute_phrases": [], "judgment_phrases": [], "failures": []}, context)
+                   "review_rounds": [], "statute_phrases": [], "judgment_phrases": [], "failures": [],
+                   "chronology": [], "chronology_failures": []}, context)
 
 
 def _phrases(model, understanding, report):
@@ -688,11 +707,19 @@ def _window_text(document, pages):
     return "\n".join(lines)
 
 
+def _anchor(words, pages):
+    """Where an event's words are found, by the one finder and never by the model (plan AN.27, P8 and P8c): whether every passage
+    of them is on the pages of its document, and the numbers of the pages they are on."""
+    held = [pages.holding(piece) for piece in fact_pieces(words)]
+    anchored = bool(held) and all(found is not None for found in held)
+    return anchored, (sorted({page["page"] for found in held if found for page in found}) if anchored else [])
+
+
 def chronology_of(model, context, *, wanted=None):
     """The chronology the documents of a turn record, as (events, failures) - plan AN.27, P8.
 
     One call for each document, or each stretch of a long one, all at once. The model says what a page records; code does the rest:
-    finds the event's words on the pages the model was shown (the one finder), records the pages, reads the date, orders the
+    finds the event's words in the document (the one finder), records the pages, reads the date, orders the
     events by it - the undated last, in the papers' order - and numbers them E1.... An event whose words are not found is kept,
     marked not anchored, never dropped and never to be cited as sourced. A stretch whose call failed is a failure, never an empty
     success; a usage limit still stops the turn. wanted: asked once before any call; False and nothing is read."""
@@ -700,6 +727,7 @@ def chronology_of(model, context, *, wanted=None):
     if not documents or (wanted is not None and not wanted()):
         return [], []
     tasks = [(document, window) for document in documents for window in _windows(document["pages"])]
+    finders = {document["source"]: Pages(document["pages"]) for document in documents}
 
     def read(task):
         document, window = task
@@ -712,15 +740,13 @@ def chronology_of(model, context, *, wanted=None):
             first, last = window[0]["page"], window[-1]["page"]
             return [], {"document": document["name"], "pages": f"{first}-{last}" if first != last else f"{first}",
                         "reason": type(exc).__name__}
-        pages = Pages(window)
         events = []
         for item in data["events"]:
-            held = [pages.holding(piece) for piece in fact_pieces(item["words"])]
-            anchored = bool(held) and all(found is not None for found in held)
+            words = item["words"].strip()
+            anchored, pages = _anchor(words, finders[document["source"]])
             events.append({"date": item["date"].strip(), "kind": item["kind"], "what": item["what"].strip(),
                            "said_by": item["said_by"].strip(), "document": document["name"], "source": document["source"],
-                           "pages": sorted({page["page"] for found in held if found for page in found}) if anchored else [],
-                           "words": item["words"].strip(), "anchored": anchored})
+                           "pages": pages, "words": words, "anchored": anchored})
         return events, None
 
     with ThreadPoolExecutor(max_workers=min(8, len(tasks))) as pool:
@@ -733,6 +759,39 @@ def chronology_of(model, context, *, wanted=None):
     return [{"id": f"E{number}", **event} for number, (_, event) in enumerate(ordered, 1)], failures
 
 
+def _chronology_issues(events, failures, context):
+    """The chronology a v12 plan records, checked against the documents of the turn (plan AN.27, P8c), and the issues it raises. It
+    must be what chronology_of makes of those papers: the events numbered E1... in the order of their dates, the undated last,
+    each the event of a document the turn holds, its date read as read_date reads it, and its words found on the pages recorded -
+    or on none, and marked not anchored - as the one finder finds them in that document; anything else raises SchemaViolation.
+    A stretch that could not be read is an issue, since part of a paper was not read; an event whose words are not found is marked
+    not anchored and is not an issue."""
+    documents = {document["source"]: document for document in _documents(context)}
+    finders = {source: Pages(document["pages"]) for source, document in documents.items()}
+    last = None
+    for number, event in enumerate(events, 1):
+        label = event["id"]
+        if label != f"E{number}":
+            raise SchemaViolation(f"Chronology event {number} is numbered {label}, not E{number}")
+        document = documents.get(event["source"])
+        if document is None or document["name"] != event["document"]:
+            raise SchemaViolation(f"Chronology event {label} belongs to no document of this turn")
+        if event["sort"] != read_date(event["date"]):
+            raise SchemaViolation(f"Chronology event {label} is dated otherwise than its date reads")
+        key = (0, event["sort"]) if event["sort"] else (1, "")
+        if last is not None and key < last:
+            raise SchemaViolation(f"Chronology event {label} is out of the order of dates")
+        last = key
+        if (event["anchored"], event["pages"]) != _anchor(event["words"], finders[event["source"]]):
+            raise SchemaViolation(f"Chronology event {label} is not anchored as its words are found in its document")
+    names = {document["name"] for document in documents.values()}
+    for failure in failures:
+        if failure["document"] not in names:
+            raise SchemaViolation("A chronology failure names no document of this turn")
+    return [{"work_id": None, "mismatch": f"chronology unavailable for {failure['document']} (pages {failure['pages']}): "
+                                          f"{failure['reason']}", "proposal": deepcopy(failure)} for failure in failures]
+
+
 def plan(model, context, interpretation=None, *, progress=None, wanted=None, restrictions=None):
     """The v7 reasoning loop. Expected model failures after the first understanding are
     recorded where they occur; independent work continues. The loop reads the
@@ -741,10 +800,25 @@ def plan(model, context, interpretation=None, *, progress=None, wanted=None, res
     loop runs beside the interpretation (18 Oct 2026); it may wait for the interpretation,
     and once it answers False the loop stops there with the plan for no matter. restrictions: asked once, after wanted has
     let the loop go on, what the advocate restricted in their latest message as the interpretation found it (a list of their
-    exact words) or None where that is not known; the check and the correction are told (plan AN.27, P4)."""
+    exact words) or None where that is not known; the check and the correction are told (plan AN.27, P4).
+    The chronology of the documents is read beside the loop (research v12, plan AN.27, P8c): it is started at once, asks
+    wanted before any call, and its result is taken last; a stretch that could not be read is recorded, and a usage limit
+    stops the turn."""
     if interpretation is not None and not carries_matter(interpretation):
         return _no_matter(context)
     still = wanted or (lambda: True)
+    with ThreadPoolExecutor(max_workers=1) as reading:
+        papers = reading.submit(chronology_of, model, context, wanted=still)
+        proposed = _proposal(model, context, still, progress, restrictions)
+        if proposed is None:
+            return _no_matter(context)
+        events, unread = papers.result()
+    return accept({**proposed, "chronology": events, "chronology_failures": unread}, context)
+
+
+def _proposal(model, context, still, progress, restrictions):
+    """What the v7 loop proposes - the understanding, its review and the search phrases - or None where the loop stopped because
+    there is no matter (still answered False)."""
     report = progress or (lambda stage, **detail: None)
     text = conversation_text(context)
     report("understanding_matter")
@@ -753,7 +827,7 @@ def plan(model, context, interpretation=None, *, progress=None, wanted=None, res
     with ThreadPoolExecutor(max_workers=1) as beside:
         for number in range(MAX_REVISIONS + 1):
             if not still():
-                return _no_matter(context)
+                return None
             if note is None:
                 note = _restrictions_note(restrictions() if restrictions is not None else None)
             mechanical = code_checks(understanding, context)
@@ -774,7 +848,7 @@ def plan(model, context, interpretation=None, *, progress=None, wanted=None, res
             if not problems or number == MAX_REVISIONS:
                 break
             if not still():
-                return _no_matter(context)
+                return None
             report("revising_understanding", round=number + 1)
             try:
                 revised = _call(model, "core_research_revise", REVISE, text + note + "\n\nYour understanding:\n"
@@ -788,11 +862,11 @@ def plan(model, context, interpretation=None, *, progress=None, wanted=None, res
         if phrasing is not None:
             statute, judgment, missed = phrasing.result()
         elif not still():
-            return _no_matter(context)
+            return None
         else:
             statute, judgment, missed = _phrases(model, understanding, report)
-    return accept({"understanding": understanding, "review_rounds": rounds, "statute_phrases": statute,
-                   "judgment_phrases": judgment, "failures": failures + missed}, context)
+    return {"understanding": understanding, "review_rounds": rounds, "statute_phrases": statute,
+            "judgment_phrases": judgment, "failures": failures + missed}
 
 
 def _accept_v7(proposal, context, schema=SCHEMA):
@@ -808,6 +882,8 @@ def _accept_v7(proposal, context, schema=SCHEMA):
     if rounds and (rounds[-1]["code_problems"] or rounds[-1]["verdict"] == "revise"):
         issues.append({"work_id": None, "mismatch": "The understanding kept open problems after review",
                        "proposal": deepcopy(rounds[-1])})
+    if "chronology" in data:
+        issues.extend(_chronology_issues(data["chronology"], data["chronology_failures"], context))
     questions = {q["id"]: (dispute, q) for dispute in understanding["disputes"] for q in dispute["legal_questions"]}
     statute, judgment = {}, {}
     for entry in data["statute_phrases"]:
@@ -851,7 +927,8 @@ def accept(proposal, context, *, contract=CONTRACT):
     if contract not in CONTRACTS:
         raise ValueError("Unknown research contract")
     if contract in _QUESTION_PLANS:
-        return _accept_v7(proposal, context, SCHEMA if contract in (PURPOSED_CONTRACT, PER_DISPUTE_CONTRACT, CONTRACT)
+        return _accept_v7(proposal, context, SCHEMA_V12 if contract in CHRONICLED
+                          else SCHEMA if contract in (PURPOSED_CONTRACT, PER_DISPUTE_CONTRACT, JUDGMENTS_READ_CONTRACT)
                           else SCHEMA_V8)
     schema = {LEGACY_CONTRACT: LEGACY_SCHEMA, PREVIOUS_CONTRACT: PREVIOUS_SCHEMA,
               WINDOWED_CONTRACT: ACCOUNT_SCHEMA, ACCOUNT_CONTRACT: ACCOUNT_SCHEMA,

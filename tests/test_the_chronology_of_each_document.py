@@ -140,15 +140,18 @@ def test_a_long_document_is_read_in_stretches_and_every_page_is_read_once(monkey
     assert all(e["anchored"] for e in events)
 
 
-def test_an_event_is_anchored_only_in_the_stretch_the_model_was_shown(monkeypatch):
+def test_an_event_is_anchored_by_its_words_in_its_own_document_and_never_in_another(monkeypatch):
     monkeypatch.setattr(research, "CHRONOLOGY_WINDOW", 130)
     pages = [(1, "The first page says the deed was signed on 3-3-1999 at the registry."),
              (2, "The second page says the order was passed on 4-4-2000 by the court.")]
     model = Reading({"long.pdf": lambda seen: [event("4-4-2000", "order", "An order.", "the order was passed on 4-4-2000 by the court")]
-                     if "[Page 1]" in seen else []})
-    events, _ = chronology_of(model, context(*[row("t1", 1, "long.pdf", n, text) for n, text in pages]))
-    (only,) = events
-    assert only["anchored"] is False, "words on a page the call was not shown are not anchored by it"
+                     if "[Page 1]" in seen else [],
+                     "other.pdf": [event("1999", "other", "A deed.", "the deed was signed on 3-3-1999 at the registry")]})
+    events, _ = chronology_of(model, context(*[row("t1", 1, "long.pdf", n, text) for n, text in pages],
+                                             row("t1", 2, "other.pdf", 1, "Nothing is said here of any deed.")))
+    by_document = {e["document"]: e for e in events}
+    assert (by_document["long.pdf"]["anchored"], by_document["long.pdf"]["pages"]) == (True, [2]), "anywhere in its own document"
+    assert by_document["other.pdf"]["anchored"] is False and by_document["other.pdf"]["pages"] == [], "not in another's"
 
 
 def test_two_files_of_one_name_are_two_documents():
@@ -184,7 +187,7 @@ def test_the_prompt_states_the_message_the_purpose_what_to_look_for_and_the_outc
     for part in ("Message:", "Purpose:", "Look for:", "Outcome:", "Do not work out, convert or guess a date",
                  "Work in a loop", "You are not judging which account is right", "Who says it."):
         assert part in prompt, part
-    assert research.MAX_OUTPUT["chronology"] == 6000 and research.EVENT_KINDS == (
+    assert research.MAX_OUTPUT["chronology"] == 12000 and research.EVENT_KINDS == (
         "transaction", "order", "filing", "pending", "other")
 
 

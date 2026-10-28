@@ -85,12 +85,14 @@ def judgment_phrases(subject):
                           for d in subject["disputes"] for q in d["legal_questions"]]}
 
 
-def proposal(questions=1, disputes=1, **kw):
+def proposal(questions=1, disputes=1, *, chronology=True, **kw):
+    """A proposal as the current research contract keeps it; chronology=False gives the shape before v12."""
     subject = understanding(questions, disputes, **kw)
     return {"understanding": subject,
             "review_rounds": [{"code_problems": [], "verdict": "sound", "problems": []}],
             "statute_phrases": [{"dispute_id": d["id"], **statute_phrases(d)} for d in subject["disputes"]],
-            "judgment_phrases": judgment_phrases(subject)["questions"], "failures": []}
+            "judgment_phrases": judgment_phrases(subject)["questions"], "failures": [],
+            **({"chronology": [], "chronology_failures": []} if chronology else {})}
 
 
 def _result(data, tier, completion=Completion.COMPLETE):
@@ -325,7 +327,7 @@ def test_search_returns_twenty_provisions_and_the_pick_admits_only_its_choice():
     model = Model(choose=lambda ids: ids[:2])
     record = retrieve(admitted, found, ctx, model=model)
     assert asked == [{"results": {"provision": PROVISIONS_FOR_PICK}}]
-    assert record["contract"] == CONTRACT == "core_research_v11" and record["state"] == "evaluated"
+    assert record["contract"] == CONTRACT == "core_research_v12" and record["state"] == "evaluated"
     provisions = [c for c in record["searches"]["t2:w1"]["candidates"] if c["kind"] == "provision"]
     assert len(provisions) == PROVISIONS_FOR_PICK
     assert record["picks"]["D1"]["chosen"] == {"t2:w1": [provisions[0]["id"], provisions[1]["id"]]}
@@ -382,7 +384,7 @@ def test_a_changed_judgment_pick_cannot_replay():
 
 def test_saved_v7_records_replay_unchanged_and_admit_every_returned_judgment():
     ctx = context("Find the applicable law.")
-    admitted = accept(proposal(why_it_matters=False), ctx, contract=PICKED_CONTRACT)
+    admitted = accept(proposal(why_it_matters=False, chronology=False), ctx, contract=PICKED_CONTRACT)
     record = one_pick(retrieve(accept(proposal(), ctx), searcher(), ctx, model=Model(choose_judgments=lambda ids: ids[:1])))
     saved = {key: value for key, value in record.items() if key != "judgment_picks"}
     saved.update(contract=PICKED_CONTRACT, plan=admitted)
@@ -397,7 +399,7 @@ def test_saved_v7_records_replay_unchanged_and_admit_every_returned_judgment():
 def test_saved_v8_records_replay_unchanged_with_their_judgment_picks_and_parts():
     # Research v9 (16 Oct 2026) adds why each dispute matters; a v8 record keeps its shape.
     ctx = context("Find the applicable law.")
-    admitted = accept(proposal(why_it_matters=False), ctx, contract=JUDGMENT_PICKED_CONTRACT)
+    admitted = accept(proposal(why_it_matters=False, chronology=False), ctx, contract=JUDGMENT_PICKED_CONTRACT)
     record = one_pick(retrieve(accept(proposal(), ctx), searcher(), ctx, model=Model(choose_judgments=lambda ids: ids[:1])))
     saved = {**record, "contract": JUDGMENT_PICKED_CONTRACT, "plan": admitted}
     assert validate(saved, admitted, ctx) == saved
@@ -412,7 +414,7 @@ def test_a_v9_dispute_says_why_it_matters():
     with pytest.raises(SchemaViolation, match="why_it_matters"):
         accept(proposal(why_it_matters=False), ctx)
     with pytest.raises(SchemaViolation, match="undeclared"):
-        accept(proposal(), ctx, contract=JUDGMENT_PICKED_CONTRACT)
+        accept(proposal(chronology=False), ctx, contract=JUDGMENT_PICKED_CONTRACT)
 
 
 def test_shown_ids_alone_count_and_an_unknown_id_marks_the_research_partial():
