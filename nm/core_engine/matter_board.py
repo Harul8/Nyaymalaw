@@ -26,6 +26,53 @@ def _status(record, work_id):
     return "researched" if work_id in record["searches"] else "not_researched"
 
 
+#: What the board says where the law has not been assessed for a dispute (plan AN.27, P6; invariant I3): never left to read as
+#: "nothing is required".
+_NO_QUESTIONS = "NM has not researched the law for this dispute, so what the law requires of it has not been assessed."
+_NOT_FINISHED = ("NM's research of the law for this dispute did not finish, so what the law requires of it has not been "
+                 "assessed.")
+#: The points NM's own check raised that the board shows, and how much of each.
+_OPEN_POINTS, _POINT_CHARACTERS = 5, 600
+
+
+def _law(questions, assessed):
+    """Whether the law has been assessed for a dispute: by a researched answer's checklist; researched, without one (an earlier
+    conversation's); or not at all, with why in plain words."""
+    if assessed:
+        return {"state": "assessed", "why": ""}
+    if any(question["status"] == "researched" for question in questions):
+        return {"state": "researched", "why": ""}
+    return {"state": "not_assessed", "why": _NOT_FINISHED if questions else _NO_QUESTIONS}
+
+
+def _confirmed(record):
+    """Whether NM's own check of its understanding was satisfied - its last round said sound, with no mechanical problem left -
+    and, where it was not, the points the check raised."""
+    rounds = record["plan"]["proposal"].get("review_rounds") or []
+    last = rounds[-1] if rounds else None
+    satisfied = last is not None and last["verdict"] == "sound" and not last["code_problems"]
+    points = [] if satisfied or last is None else [
+        problem["problem"][:_POINT_CHARACTERS] + ("..." if len(problem["problem"]) > _POINT_CHARACTERS else "")
+        for problem in last["problems"]][:_OPEN_POINTS]
+    return {"confirmed": satisfied, "open_points": points}
+
+
+def _dispute(d, record, work, checklists):
+    """One dispute as the board shows it: the facts it rests on, why each question was asked and what research did for it, why it
+    matters (research v9, 16 Oct 2026), its checklist where the answer gave one, and whether the law has been assessed."""
+    questions = [{"question": q["question"], "why": q["why_needed"], "open": q["open_alternative"],
+                  "status": _status(record, work.get(q["id"]))} for q in d["legal_questions"]]
+    listed = checklists.get(d["id"])
+    listed = listed if listed is not None and listed["name"] == d["name"] else None
+    return {"id": d["id"], "name": d["name"], "between": list(d["between"]),
+            **({"why_it_matters": d["why_it_matters"]} if d.get("why_it_matters", "").strip() else {}),
+            "fact_ids": list(d["fact_ids"]), "questions": questions,
+            "still_needed": list(d["missing_facts"]), "rights_at_stake": list(d["rights_at_stake"]),
+            "relief_sought": list(d["relief_sought"]),
+            **({"checklist": listed} if listed is not None else {}),
+            "law": _law(questions, listed is not None)}
+
+
 def _pages(rows):
     """The pages of the documents a conversation's saved turns carry, in reading order, as the finder holds them."""
     return research.Pages(
@@ -103,18 +150,8 @@ def board(rows):
                       for f in understanding["facts"]],
             # Each dispute with the facts it rests on (where it was picked up from), why each
             # question was asked, and, from research v9, why it matters (16 Oct 2026).
-            "disputes": [{
-                "id": d["id"], "name": d["name"], "between": list(d["between"]),
-                **({"why_it_matters": d["why_it_matters"]} if d.get("why_it_matters", "").strip() else {}),
-                "fact_ids": list(d["fact_ids"]),
-                "questions": [{"question": q["question"], "why": q["why_needed"], "open": q["open_alternative"],
-                               "status": _status(record, work.get(q["id"]))}
-                              for q in d["legal_questions"]],
-                "still_needed": list(d["missing_facts"]), "rights_at_stake": list(d["rights_at_stake"]),
-                "relief_sought": list(d["relief_sought"]),
-                **({"checklist": checklists[d["id"]]} if d["id"] in checklists
-                   and checklists[d["id"]]["name"] == d["name"] else {})}
-                for d in _urgent(understanding["disputes"], checklists)],
+            "disputes": [_dispute(d, record, work, checklists) for d in _urgent(understanding["disputes"], checklists)],
+            "understanding": _confirmed(record),
             "related_points": [{"point": r["point"], "why": r["why_it_matters"], "dispute_id": r["dispute_id"] or None,
                                 "dispute": names.get(r["dispute_id"])} for r in understanding["related_points"]],
         }
