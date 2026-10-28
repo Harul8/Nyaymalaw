@@ -16,13 +16,14 @@ import re
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
+from datetime import date
 
 from nm.core_engine.replay_scope import known, once
 from nm.core_engine.retrieval import SearchUnavailable, _digest, _valid_location, in_force, validate_search
 from nm.core_engine.understanding import REFERENCE, TEXT, select, source_catalogue
 from nm.shared import clock_contracts
 from nm.shared.model_port import (
-    ModelError, Prompt, SchemaViolation, Tier, canonical_schema_data, require_schema,
+    ModelError, Prompt, SchemaViolation, Tier, UsageLimitReached, canonical_schema_data, require_schema,
 )
 
 LEGACY_CONTRACT = "core_research_v2"
@@ -95,7 +96,7 @@ MAX_REVISIONS = 1
 PROVISIONS_FOR_PICK = 20
 #: Answer limits per step. Calls in flight are budgeted at their limit.
 MAX_OUTPUT = {"understand": 12000, "check": 6000, "revise": 12000, "phrases": 6000,
-              "judgment_phrases": 8000, "pick": 8000, "judgment_pick": 8000}
+              "judgment_phrases": 8000, "pick": 8000, "judgment_pick": 8000, "chronology": 6000}
 
 # The prompts below were developed and measured in outputs/decomposition-scratch
 # (13-14 Oct 2026). They state the purpose and the needed outcome in plain language
@@ -261,6 +262,29 @@ JUDGMENT_PHRASE_SCHEMA = _object({"questions": {"type": "array", "items": _objec
 CHOICE = _object({"questions": {"type": "array", "items": _object({
     "question_id": STRING, "chosen": STRINGS, "note": STRING})}})
 FAILURE = _object({"step": STRING, "scope": STRING, "reason": STRING})
+
+
+#: The chronology of each document (plan AN.27, P8; invariants I4, I5): what the papers record, event by event, so that nothing in
+#: them is overlooked when the matter's history is told. Never an answer to a legal question, and never a judgment of which account
+#: is right. A window is at most this many characters of one document's pages.
+CHRONOLOGY_WINDOW = 40000
+EVENT_KINDS = ("transaction", "order", "filing", "pending", "other")
+CHRONOLOGY = """Message: You receive one document an advocate sent about a client's matter, or one stretch of its pages, each page under its number, with the document's name. A page says what its document says: it is material the advocate supplied, not their own account, and what it reports is not thereby proved. A page read from a scan may carry [illegible] and square-bracket notes about stamps, signatures and handwriting; those are the reader's, not the document's.
+
+Purpose: Set out the document's own chronology for the advocate and for our research assistant: every event, order, direction, filing, transaction and proceeding it records or reports, with its date, so that nothing in the paper is overlooked when the matter's history is told. You are not judging which account is right, and you are not answering any legal question.
+
+Look for:
+- Each event the document records, whatever its date: a sale, partition or other deed, a mutation or entry in a revenue or other record, an order or direction of a court or authority, an appeal, revision, petition, suit, complaint, FIR or charge sheet, a notice, a hearing or listing, a payment, a death; and each proceeding it says is pending, with what it says of its stage.
+- Who says it. A document may record an event itself (an order's own date and directions) or report it (a recital of an earlier order, a party's account or pleading). Give the authority or party whose words they are, and keep a party's allegation as that party's.
+- The date as the page gives it, in the page's own form ("30-10-1985", "17 August 2019", "2008", "1961-62"); where the page gives none, say undated. Do not work out, convert or guess a date.
+- The figures and identifiers that belong to the event, such as extents, sums, and deed, case, file and survey numbers, exactly as the page gives them.
+- One event for each act and date. Do not merge events the page keeps apart, do not repeat an event the same page says twice, and do not add anything the page does not say.
+Work in a loop: list the events page by page, then read each page again against your list for any event or date you skipped or misread, and correct the list before you answer.
+
+Outcome: events, in the order of the pages. Each has: date; kind (transaction, order, filing, pending, or other); what (one plain sentence saying what happened, with its figures and identifiers); said_by (whose words they are: the document's own author, or the party or authority it reports); words (the exact words on a page that record it, copied exactly as the page gives them, without the reader's square-bracket notes - a sentence that runs over a page may be copied whole - or several passages joined with '...'; never reword)."""
+EVENT = _object({"date": STRING, "kind": {"type": "string", "enum": list(EVENT_KINDS)}, "what": STRING, "said_by": STRING,
+                 "words": STRING})
+CHRONOLOGY_SCHEMA = _object({"events": {"type": "array", "items": EVENT}})
 
 
 def _record_schema(understanding):
@@ -580,6 +604,133 @@ def _phrases(model, understanding, report):
             else:
                 judgment = data["questions"]
     return statute, judgment, failures
+
+
+_MONTHS = {name: number for number, names in enumerate((
+    ("january", "jan"), ("february", "feb"), ("march", "mar"), ("april", "apr"), ("may",), ("june", "jun"), ("july", "jul"),
+    ("august", "aug"), ("september", "sept", "sep"), ("october", "oct"), ("november", "nov"), ("december", "dec")), 1)
+    for name in names}
+_MONTH = "|".join(sorted(_MONTHS, key=len, reverse=True))
+_NUMBERED_DATE = re.compile(r"(?<!\d)(\d{1,2})\s*[-./]\s*(\d{1,2})\s*[-./]\s*(\d{4})(?!\d)")
+_DAY_FIRST_NAMED = re.compile(rf"(?<!\d)(\d{{1,2}})\s*(?:st|nd|rd|th)?\s*(?:day\s+of\s+)?({_MONTH})\b\.?,?\s*(\d{{4}})(?!\d)")
+_MONTH_FIRST_NAMED = re.compile(rf"\b({_MONTH})\b\.?\s+(\d{{1,2}})\s*(?:st|nd|rd|th)?,?\s+(\d{{4}})(?!\d)")
+_MONTH_AND_YEAR = re.compile(rf"\b({_MONTH})\b\.?,?\s+(\d{{4}})(?!\d)")
+_YEAR_ONLY = re.compile(r"(?<!\d)(1\d{3}|20\d{2})(?!\d)")
+
+
+def _day(year, month, day):
+    try:
+        return date(year, month, day).isoformat()
+    except ValueError:
+        return ""
+
+
+def _numbered(match):
+    first, second, year = (int(part) for part in match.groups())
+    return _day(year, second, first) or (_day(year, first, second) if first <= 12 else "")
+
+
+def _month_year(year, month):
+    return f"{year:04d}-{month:02d}" if 1 <= month <= 12 and 1000 <= year <= 2099 else ""
+
+
+def read_date(words):
+    """The date a page gives, as a sortable "YYYY-MM-DD", "YYYY-MM" or "YYYY", read by code and never guessed (plan AN.27, P8):
+    numbers day first, as an Indian paper writes them (month first only where that is the only way a day is a day); a month by its
+    name; a year alone, or the first year of "1961-62", where that is all the page gives. "" where there is none. Where the words hold
+    more than one date, the first."""
+    text = " ".join(str(words).casefold().split())
+    found = []
+    for pattern, build in (
+            (_NUMBERED_DATE, _numbered),
+            (_DAY_FIRST_NAMED, lambda m: _day(int(m.group(3)), _MONTHS[m.group(2)], int(m.group(1)))),
+            (_MONTH_FIRST_NAMED, lambda m: _day(int(m.group(3)), _MONTHS[m.group(1)], int(m.group(2)))),
+            (_MONTH_AND_YEAR, lambda m: _month_year(int(m.group(2)), _MONTHS[m.group(1)])),
+            (_YEAR_ONLY, lambda m: m.group(1))):
+        for match in pattern.finditer(text):
+            value = build(match)
+            if value:
+                found.append((match.start(), value))
+                break
+    return min(found)[1] if found else ""
+
+
+def _documents(context):
+    """The documents of a turn's context, each with its pages in reading order: a document is the pages that share a source - the
+    turn it was sent with and its place among that turn's documents - so two files of one name stay two documents."""
+    documents = {}
+    for row in context.get("documents", ()):
+        key = row["source_id"].rsplit("p", 1)[0]
+        about = row["document"]
+        documents.setdefault(key, {"source": key, "name": about["name"], "recording": bool(about.get("recording")),
+                                   "pages": []})["pages"].append(
+            {"document": about["name"], "page": about.get("page"), "text": row["text"]})
+    return list(documents.values())
+
+
+def _windows(pages):
+    """A document's pages in stretches of at most CHRONOLOGY_WINDOW characters, a page never cut; a page longer than that is a
+    stretch of its own."""
+    windows, current, size = [], [], 0
+    for page in pages:
+        if current and size + len(page["text"]) > CHRONOLOGY_WINDOW:
+            windows.append(current)
+            current, size = [], 0
+        current.append(page)
+        size += len(page["text"])
+    return windows + ([current] if current else [])
+
+
+def _window_text(document, pages):
+    lines = [f'Document: "{document["name"]}"' + (" (a recording, transcribed by AI)" if document["recording"] else "")]
+    for page in pages:
+        lines.append(f"\n[{'Part' if document['recording'] else 'Page'} {page['page']}]\n{page['text']}")
+    return "\n".join(lines)
+
+
+def chronology_of(model, context, *, wanted=None):
+    """The chronology the documents of a turn record, as (events, failures) - plan AN.27, P8.
+
+    One call for each document, or each stretch of a long one, all at once. The model says what a page records; code does the rest:
+    finds the event's words on the pages the model was shown (the one finder), records the pages, reads the date, orders the
+    events by it - the undated last, in the papers' order - and numbers them E1.... An event whose words are not found is kept,
+    marked not anchored, never dropped and never to be cited as sourced. A stretch whose call failed is a failure, never an empty
+    success; a usage limit still stops the turn. wanted: asked once before any call; False and nothing is read."""
+    documents = _documents(context)
+    if not documents or (wanted is not None and not wanted()):
+        return [], []
+    tasks = [(document, window) for document in documents for window in _windows(document["pages"])]
+
+    def read(task):
+        document, window = task
+        try:
+            data = _call(model, "core_research_chronology", CHRONOLOGY, _window_text(document, window), CHRONOLOGY_SCHEMA,
+                         "chronology")
+        except UsageLimitReached:
+            raise
+        except (ModelError, SchemaViolation) as exc:
+            first, last = window[0]["page"], window[-1]["page"]
+            return [], {"document": document["name"], "pages": f"{first}-{last}" if first != last else f"{first}",
+                        "reason": type(exc).__name__}
+        pages = Pages(window)
+        events = []
+        for item in data["events"]:
+            held = [pages.holding(piece) for piece in fact_pieces(item["words"])]
+            anchored = bool(held) and all(found is not None for found in held)
+            events.append({"date": item["date"].strip(), "kind": item["kind"], "what": item["what"].strip(),
+                           "said_by": item["said_by"].strip(), "document": document["name"], "source": document["source"],
+                           "pages": sorted({page["page"] for found in held if found for page in found}) if anchored else [],
+                           "words": item["words"].strip(), "anchored": anchored})
+        return events, None
+
+    with ThreadPoolExecutor(max_workers=min(8, len(tasks))) as pool:
+        done = list(pool.map(read, tasks))
+    failures = [failure for _, failure in done if failure]
+    events = [event for found, _ in done for event in found]
+    for event in events:
+        event["sort"] = read_date(event["date"])
+    ordered = sorted(enumerate(events), key=lambda pair: (0, pair[1]["sort"], pair[0]) if pair[1]["sort"] else (1, "", pair[0]))
+    return [{"id": f"E{number}", **event} for number, (_, event) in enumerate(ordered, 1)], failures
 
 
 def plan(model, context, interpretation=None, *, progress=None, wanted=None, restrictions=None):
