@@ -129,7 +129,7 @@ Check the understanding carefully against the conversation itself, the way you w
 - Have the events' other legal consequences (civil, criminal, under a special statute), and how each is pursued and proved, been considered, and asked where they bear on what the advocate wants?
 - Is any fact stated more strongly than the advocate or a document they sent put it, or added?
 - Are the related points genuinely useful to the advocate, and kept separate from what we research now?
-- Is research being started when the advocate has ruled it out, or skipped when it is needed? When the advocate only tells us what has happened, they want to know where the law stands on those events.
+- Is research being started when the advocate has ruled it out, or skipped when it is needed? Our purpose with every matter is to find where the law stands for each dispute in it, so that the advocate can see what the case needs. They do not have to ask for that: when they only tell us what has happened, or ask us to understand, summarise or set out the events, they still want to know where the law stands on them. Skipping research is a problem unless the advocate has told us not to research or the message needs none (thanks, or a request to tidy or transcribe text); starting it is a problem only when they have ruled it out. Where we could find instructions from the advocate limiting our work in their latest message, they are listed after the conversation; the conversation itself may hold earlier ones. Do not report research as a problem because the advocate's words did not literally ask for advice.
 
 Report only problems that matter: ones that would change what we research, or would leave us misunderstanding the matter or the advocate's instructions. Small differences of wording or emphasis do not matter. Give each real problem precisely, with what should change. If the understanding is sound, say so plainly. Do not invent problems to have something to say.
 """
@@ -518,6 +518,16 @@ def _call(model, operation, system, user, schema, step):
     return canonical_schema_data(receipt.data, schema)
 
 
+def _restrictions_note(found):
+    """What the advocate restricted in their latest message, as the interpretation step found it, for the steps that check and
+    correct the understanding (plan AN.27, P4): found is a list of their exact words (empty: nothing was restricted), or None
+    where that is not known, which says nothing rather than 'none'."""
+    if found is None:
+        return ""
+    head = "\n\nInstructions from the advocate limiting our work, as our reading of their latest message found them: "
+    return head + ("none." if not found else "\n" + "\n".join(f"- {words}" for words in found))
+
+
 #: Recorded when the loop is not run: a courtesy, a restriction alone, or thanks needs no law.
 NO_NEW_MATTER = "The interpretation found no new information or request in the latest message."
 
@@ -572,13 +582,15 @@ def _phrases(model, understanding, report):
     return statute, judgment, failures
 
 
-def plan(model, context, interpretation=None, *, progress=None, wanted=None):
+def plan(model, context, interpretation=None, *, progress=None, wanted=None, restrictions=None):
     """The v7 reasoning loop. Expected model failures after the first understanding are
     recorded where they occur; independent work continues. The loop reads the
     conversation itself; the interpretation only spares it for a message that carries
     no information or request. wanted: asked before each step after the first, when the
     loop runs beside the interpretation (18 Oct 2026); it may wait for the interpretation,
-    and once it answers False the loop stops there with the plan for no matter."""
+    and once it answers False the loop stops there with the plan for no matter. restrictions: asked once, after wanted has
+    let the loop go on, what the advocate restricted in their latest message as the interpretation found it (a list of their
+    exact words) or None where that is not known; the check and the correction are told (plan AN.27, P4)."""
     if interpretation is not None and not carries_matter(interpretation):
         return _no_matter(context)
     still = wanted or (lambda: True)
@@ -586,11 +598,13 @@ def plan(model, context, interpretation=None, *, progress=None, wanted=None):
     text = conversation_text(context)
     report("understanding_matter")
     understanding = _call(model, "core_research_understand", UNDERSTAND, text, UNDERSTANDING, "understand")
-    rounds, failures, phrasing = [], [], None
+    rounds, failures, phrasing, note = [], [], None, None
     with ThreadPoolExecutor(max_workers=1) as beside:
         for number in range(MAX_REVISIONS + 1):
             if not still():
                 return _no_matter(context)
+            if note is None:
+                note = _restrictions_note(restrictions() if restrictions is not None else None)
             mechanical = code_checks(understanding, context)
             report("checking_understanding", round=number + 1)
             if number == MAX_REVISIONS:
@@ -598,7 +612,7 @@ def plan(model, context, interpretation=None, *, progress=None, wanted=None):
                 # understanding are written beside it (18 Oct 2026).
                 phrasing = beside.submit(_phrases, model, understanding, report)
             try:
-                review = _call(model, "core_research_check", CHECK, text + "\n\nYour colleague's understanding:\n"
+                review = _call(model, "core_research_check", CHECK, text + note + "\n\nYour colleague's understanding:\n"
                                + json.dumps(understanding, ensure_ascii=False, indent=1), CHECKED, "check")
             except (ModelError, SchemaViolation) as exc:
                 rounds.append({"code_problems": mechanical, "verdict": "unavailable", "problems": []})
@@ -612,7 +626,7 @@ def plan(model, context, interpretation=None, *, progress=None, wanted=None):
                 return _no_matter(context)
             report("revising_understanding", round=number + 1)
             try:
-                revised = _call(model, "core_research_revise", REVISE, text + "\n\nYour understanding:\n"
+                revised = _call(model, "core_research_revise", REVISE, text + note + "\n\nYour understanding:\n"
                                 + json.dumps(understanding, ensure_ascii=False, indent=1)
                                 + "\n\nProblems found:\n" + json.dumps(problems, ensure_ascii=False, indent=1),
                                 REVISED, "revise")
