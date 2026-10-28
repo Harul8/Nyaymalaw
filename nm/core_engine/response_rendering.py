@@ -1032,12 +1032,14 @@ def _shown_paragraph(unit, position, section, sources, asks, *, kind=None):
 
 def _given_words(words, context):
     """Whether a fact's quoted words are the advocate's own or a document's, as the board
-    finds them: only such words stand in a note code builds."""
+    finds them (the one finder, research.Pages; plan AN.27, P3): only such words stand in a
+    note code builds."""
     pieces = research.fact_pieces(words)
-    said = research._bare(" ".join(
+    advocate = research._bare(" ".join(
         [row["text"] for row in context["conversation"] if row.get("record_role") == "original_account"]
-        + [context["latest"]["text"]] + [row["text"] for row in context.get("documents", ())]))
-    return bool(pieces) and all(piece in said for piece in pieces)
+        + [context["latest"]["text"]]))
+    pages = research.Pages.of_context(context)
+    return bool(pieces) and all(piece in advocate or pages.holding(piece) is not None for piece in pieces)
 
 
 def _cut(text, limit=_NOTE_WORDS):

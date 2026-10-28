@@ -6,7 +6,7 @@ was "not found", and the problem did not say which words failed. The papers here
 """
 import pytest
 
-from nm.core_engine import matter_board, research
+from nm.core_engine import matter_board, research, response_rendering
 from nm.core_engine.research import Pages
 
 pytestmark = pytest.mark.class_a
@@ -146,6 +146,15 @@ def test_the_board_builds_the_pages_once_for_all_its_facts(monkeypatch):
                             "advocate_words": "the petition is disposed of"} for n in range(5)]}}, "work": []}}}}]
     shown = matter_board.board(rows)
     assert [fact["from"] for fact in shown["facts"]] == ["document"] * 5 and len(built) == 1
+
+
+def test_the_fallback_note_shows_a_fact_whose_words_run_over_a_page_break_and_not_one_that_is_not_in_the_papers():
+    held = context(page("order.pdf", 8, FOOT), page("order.pdf", 9, HEAD), said="Please read the papers.")
+    assert response_rendering._given_words(SENTENCE, held)
+    assert not response_rendering._given_words(SENTENCE.replace("Ac.1.00", "Ac.2.00"), held)
+    assert response_rendering._given_words("please read the papers", held), "the advocate's own words stand in a note too"
+    assert not response_rendering._given_words("", held), "no words are no fact"
+    assert not response_rendering._given_words(SENTENCE, context(page("one.pdf", 8, FOOT), page("two.pdf", 9, HEAD)))
 
 
 def test_nothing_in_the_papers_is_found_for_words_that_are_not_there():
