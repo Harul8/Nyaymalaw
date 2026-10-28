@@ -26,28 +26,37 @@ def _status(record, work_id):
     return "researched" if work_id in record["searches"] else "not_researched"
 
 
-def _where(words, rows):
-    """Where a fact's quoted words appear: the advocate's messages, or one page of a
-    document they sent (owner decisions, 15 Oct 2026). Code finds this; the model's
-    understanding does not label it."""
+def _pages(rows):
+    """The pages of the documents a conversation's saved turns carry, in reading order, as the finder holds them."""
+    return research.Pages(
+        {"document": document["name"], "page": page["number"], "read_by": page["read_by"],
+         "recording": bool(document.get("recording")), "text": page["text"]}
+        for row in rows for document in row.get("documents", ()) for page in document["pages"])
+
+
+def _where(words, rows, pages=None):
+    """Where a fact's quoted words appear: the advocate's messages, or the page of a document they sent - or the two pages the
+    words run over (owner decisions, 15 Oct 2026; plan AN.27, P2). Code finds this, with the one finder research.Pages is;
+    the model's understanding does not label it. pages: the rows' pages as _pages gives them, when the caller has them."""
     pieces = research.fact_pieces(words)
     if not pieces:
         return {"from": "not_found"}
     said = research._bare(" ".join(row["message"] for row in rows))
     if all(piece in said for piece in pieces):
         return {"from": "advocate"}
-    pages = [(document, page) for row in rows for document in row.get("documents", ())
-             for page in document["pages"]]
+    if pages is None:
+        pages = _pages(rows)
     places = []
     # Each piece of the quotation may sit on its own page, even of another document.
     for piece in pieces:
-        found = next(((document, page) for document, page in pages if piece in research._bare(page["text"])), None)
-        if found is None:
+        held = pages.holding(piece)
+        if held is None:
             return {"from": "not_found"}
-        place = {"document": found[0]["name"], "page": found[1]["number"], "read_by": found[1]["read_by"],
-                 **({"recording": True} if found[0].get("recording") else {})}
-        if place not in places:
-            places.append(place)
+        for page in held:
+            place = {"document": page["document"], "page": page["page"], "read_by": page["read_by"],
+                     **({"recording": True} if page["recording"] else {})}
+            if place not in places:
+                places.append(place)
     return {"from": "document", "places": places}
 
 
@@ -76,6 +85,7 @@ def board(rows):
             continue
         work = {item["question_id"]: item["id"] for item in record["plan"]["work"]}
         names = {dispute["id"]: dispute["name"] for dispute in understanding["disputes"]}
+        pages = _pages(rows[:index + 1])
         # What each dispute needs, saved with this turn from its answer (turn v5, 18 Oct
         # 2026); a dispute's checklist is shown only under the same id and name.
         dates = {saved["turn_id"]: saved["response"]["at"] for saved in rows[:index + 1]}
@@ -89,7 +99,7 @@ def board(rows):
             "instructions": list(understanding["ruled_out"]),
             "parties": [{"who": p["who"], "role": p["role"]} for p in understanding["parties"]],
             "facts": [{"id": f["id"], "fact": f["fact"], "certainty": f["certainty"], "words": f["advocate_words"],
-                       **_where(f["advocate_words"], rows[:index + 1])}
+                       **_where(f["advocate_words"], rows[:index + 1], pages)}
                       for f in understanding["facts"]],
             # Each dispute with the facts it rests on (where it was picked up from), why each
             # question was asked, and, from research v9, why it matters (16 Oct 2026).

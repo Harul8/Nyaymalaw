@@ -6,7 +6,7 @@ was "not found", and the problem did not say which words failed. The papers here
 """
 import pytest
 
-from nm.core_engine import research
+from nm.core_engine import matter_board, research
 from nm.core_engine.research import Pages
 
 pytestmark = pytest.mark.class_a
@@ -110,6 +110,42 @@ def test_a_recording_has_no_pages_to_run_over_and_is_not_a_mistake():
     second = {"source_id": "call.mp3:2", "text": "five thousand rupees.", "document": {"name": "call.mp3", "recording": True}}
     assert problems("we agreed the sum was", first, second) == []
     assert problems("the sum was five thousand rupees", first, second), "two parts of a recording are not consecutive pages"
+
+
+def saved(name, pages, recording=False):
+    """A document as a saved turn keeps it: its pages, each with its number, its text and how it was read."""
+    return {"name": name, "pages": [{"number": number, "text": text, "read_by": "ai"} for number, text in pages],
+            **({"recording": True} if recording else {})}
+
+
+def test_the_board_traces_a_sentence_that_runs_over_a_page_break_to_both_pages():
+    rows = [{"message": "Please read the papers.", "documents": [saved("order.pdf", [(8, FOOT), (9, HEAD)])]}]
+    assert matter_board._where(SENTENCE, rows) == {"from": "document", "places": [
+        {"document": "order.pdf", "page": 8, "read_by": "ai"}, {"document": "order.pdf", "page": 9, "read_by": "ai"}]}
+    assert matter_board._where(SENTENCE.replace("Ac.1.00", "Ac.2.00"), rows) == {"from": "not_found"}
+
+
+def test_the_board_keeps_a_recordings_mark_and_finds_words_on_the_page_that_holds_them():
+    rows = [{"message": "Listen.", "documents": [saved("call.mp3", [(1, "We agreed the sum was five thousand rupees.")], True),
+                                                 saved("memo.pdf", [(1, "The sum was paid in full."), (2, "Nothing else.")])]}]
+    assert matter_board._where("the sum was five thousand", rows) == {"from": "document", "places": [
+        {"document": "call.mp3", "page": 1, "read_by": "ai", "recording": True}]}
+    assert matter_board._where("paid in full", rows) == {"from": "document", "places": [
+        {"document": "memo.pdf", "page": 1, "read_by": "ai"}]}
+
+
+def test_the_board_builds_the_pages_once_for_all_its_facts(monkeypatch):
+    built = []
+    real = matter_board._pages
+    monkeypatch.setattr(matter_board, "_pages", lambda rows: built.append(1) or real(rows))
+    rows = [{"turn_id": "t1", "message": "x", "documents": [saved("order.pdf", [(8, FOOT), (9, HEAD)])],
+             "response": {"at": "2026-10-28T10:00:00+00:00"}, "records": {},
+             "activities": {"research": {"contract": research.CONTRACT, "plan": {"proposal": {"understanding": {
+                 "summary": "s", "asked": [], "ruled_out": [], "parties": [], "related_points": [], "disputes": [],
+                 "facts": [{"id": f"F{n}", "fact": "A fact.", "certainty": "reported",
+                            "advocate_words": "the petition is disposed of"} for n in range(5)]}}, "work": []}}}}]
+    shown = matter_board.board(rows)
+    assert [fact["from"] for fact in shown["facts"]] == ["document"] * 5 and len(built) == 1
 
 
 def test_nothing_in_the_papers_is_found_for_words_that_are_not_there():
