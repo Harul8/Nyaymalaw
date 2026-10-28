@@ -3631,6 +3631,12 @@ function renderChatBoard(board) {
   // The understanding's own summary is not shown: it is written before research and
   // can state legal conclusions no check has seen (16 Oct 2026).
   const out = [];
+  // Where NM's own check of its understanding was not satisfied, say so (plan AN.27, P7): a working understanding, to be checked
+  // against the papers. A board without the server's word on it says nothing.
+  if (board.understanding && board.understanding.confirmed === false) {
+    out.push(make('p', 'board-lede', 'NM’s own check of this understanding was not satisfied, so treat it as a working '
+      + 'understanding and check it against your papers.'));
+  }
   if (board.disputes.some((dispute) => dispute.checklist && dispute.checklist.items.length)) {
     out.push(renderCheckLegend());
   }
@@ -3639,8 +3645,10 @@ function renderChatBoard(board) {
   board.disputes.forEach((dispute, index) => disputes.appendChild(
     renderDisputeCard(dispute, board, board.disputes.length > 1 ? index + 1 : null)));
   out.push(disputes);
+  const points = (board.understanding && board.understanding.open_points) || [];
   const counted = [[board.facts.length, 'Facts as you gave them'], [board.instructions.length, 'Standing instructions'],
-    [board.related_points.length, 'Related points']].filter(([count]) => count)
+    [board.related_points.length, 'Related points'], [points.length, 'Points NM’s own check raised']]
+    .filter(([count]) => count)
     .map(([count, title]) => `${title} (${count})`);
   const fold = make('details', 'folded');
   fold.appendChild(make('summary', '', counted.join(' · ') || 'How NM understood this matter'));
@@ -3663,6 +3671,10 @@ function renderChatBoard(board) {
   if (board.related_points.length) {
     fold.appendChild(make('h3', 'board-h', 'Related points for your decision'));
     fold.appendChild(list(board.related_points.map((r) => (r.why ? `${r.point} — ${r.why}` : r.point)), 'board-list'));
+  }
+  if (points.length) {
+    fold.appendChild(make('h3', 'board-h', 'Points NM’s own check raised'));
+    fold.appendChild(list(points, 'board-list'));
   }
   out.push(fold);
   return out;
@@ -3761,6 +3773,11 @@ function renderDisputeCard(dispute, board, number = null) {
   if (!listed) {
     // An earlier conversation's board, before checklists, says what it said then.
     if (dispute.why_it_matters) section.appendChild(make('p', 'board-why', dispute.why_it_matters));
+    // Where the law has not been assessed, say so rather than "0 legal questions" (plan AN.27, P7).
+    if (dispute.law && dispute.law.state === 'not_assessed') {
+      section.appendChild(make('p', 'check-none', `What the law requires: not yet assessed. ${dispute.law.why}`));
+      if (!dispute.questions.length) return section;
+    }
     const counts = {};
     for (const question of dispute.questions) counts[question.status] = (counts[question.status] || 0) + 1;
     const done = Object.entries(counts)
@@ -3957,6 +3974,9 @@ function renderDisputeDetail(dispute, board) {
   const out = [];
   if (dispute.between.length) out.push(make('p', 'source-where', `Between ${dispute.between.join(' · ')}`));
   if (dispute.why_it_matters) out.push(make('p', 'dispute-why', dispute.why_it_matters));
+  if (dispute.law && dispute.law.state === 'not_assessed') {
+    out.push(part('What the law requires', make('p', 'check-none', `Not yet assessed. ${dispute.law.why}`)));
+  }
   const limits = (dispute.checklist && dispute.checklist.time_limits) || [];
   const chips = deadlineChips(limits);
   if (chips.length) {

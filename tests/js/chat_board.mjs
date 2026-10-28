@@ -129,4 +129,38 @@ const board = {
   }
 }
 
+// What has not been assessed is said so (plan AN.27, P7): a dispute NM set no legal questions for does not read as "0 legal
+// questions", and a board whose own check was not satisfied says so, with the points the check raised folded under it.
+{
+  const why = 'NM has not researched the law for this dispute, so what the law requires of it has not been assessed.';
+  const unassessed = { ...structuredClone(board.disputes[0]), questions: [], law: { state: 'not_assessed', why } };
+  const shown = context.renderChatBoard({ ...structuredClone(board), disputes: [unassessed], understanding: {
+    confirmed: false, open_points: ['The understanding does not set out the chronology.'] } });
+  const all = shown.map(text).join('\n');
+  assert.ok(all.includes(`What the law requires: not yet assessed. ${why}`));
+  assert.ok(!all.includes('0 legal questions'), 'no count that reads as though the law had been looked at');
+  assert.equal(shown[0].className, 'board-lede');
+  assert.ok(shown[0].textContent.includes('NM’s own check of this understanding was not satisfied'));
+  assert.ok(all.includes('Points NM’s own check raised (1)') && all.includes('The understanding does not set out the chronology.'));
+  const section = shown.find((node) => node.className === 'board-disputes');
+  section.children[0].children.find((node) => node.tagName === 'BUTTON').handlers.click();
+  const pane = opened.at(-1).content.map(text).join('\n');
+  assert.ok(pane.includes('What the law requires') && pane.includes(`Not yet assessed. ${why}`));
+
+  // Questions set but not finished: the note and the count both stand.
+  const unfinished = { ...structuredClone(board.disputes[0]), law: { state: 'not_assessed',
+    why: 'NM’s research of the law for this dispute did not finish, so what the law requires of it has not been assessed.' } };
+  const again = context.renderChatBoard({ ...structuredClone(board), disputes: [unfinished] }).map(text).join('\n');
+  assert.ok(again.includes('What the law requires: not yet assessed. NM’s research of the law for this dispute did not finish'));
+  assert.ok(again.includes('2 legal questions · 1 researched · 1 search failed'));
+
+  // A confirmed board, an assessed dispute and a board without the server's word say nothing of the kind.
+  for (const quiet of [{ ...structuredClone(board), understanding: { confirmed: true, open_points: [] } },
+    { ...structuredClone(board), disputes: [{ ...structuredClone(board.disputes[0]), law: { state: 'researched', why: '' } }] },
+    structuredClone(board)]) {
+    const said = context.renderChatBoard(quiet).map(text).join('\n');
+    assert.ok(!said.includes('not yet assessed') && !said.includes('was not satisfied') && !said.includes('own check raised'));
+  }
+}
+
 console.log('chat board: ok');
