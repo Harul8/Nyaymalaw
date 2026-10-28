@@ -101,6 +101,15 @@ def _needs_research(plan):
     return understanding.get("needs_research") is True
 
 
+def _restrictions(interpretation):
+    """The exact words of what the advocate restricted in their latest message, as the interpretation found them (plan AN.27,
+    P5); None where the interpretation did not complete cleanly - what was not established is never 'none'."""
+    if (not isinstance(interpretation, dict) or interpretation.get("issues")
+            or not isinstance(interpretation.get("units"), list)):
+        return None
+    return [unit["source"]["text"] for unit in interpretation["units"] if unit.get("kind") == "restriction"]
+
+
 def understood(calls, context, searcher, report, held_acts=None):
     """The steps every answer shares: the message's interpretation and the matter's
     understanding, side by side; the research; and the time limits, worked out beside the
@@ -128,12 +137,18 @@ def _interpreted(calls, context, report):
         decided.wait()
         return verdict["carries"]
 
+    def restricted():
+        decided.wait()
+        return verdict.get("restrictions")
+
     with ThreadPoolExecutor(max_workers=1) as beside:
         planning = beside.submit(calls.checked, "core_research_plan",
-                                 lambda: research.plan(calls, context, progress=report, wanted=wanted))
+                                 lambda: research.plan(calls, context, progress=report, wanted=wanted,
+                                                       restrictions=restricted))
         try:
             interpreted = calls.checked("core_understanding", lambda: understanding.understand(calls, context))
             verdict["carries"] = research.carries_matter(interpreted)
+            verdict["restrictions"] = _restrictions(interpreted)
         except BaseException:
             verdict["carries"] = False
             raise
