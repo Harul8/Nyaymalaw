@@ -372,6 +372,92 @@ def _quoted_fragments(quote):
     return [p.strip(" .,;:\"'") for p in pieces if p.strip(" .,;:\"'")]
 
 
+#: How much of a page's foot or head - a stamp, a signature, a page number, the reader's marks - a sentence may run over when
+#: it goes on to the next page of the same document (plan AN.27, P1).
+PAGE_FURNITURE = 400
+_MARKS = re.compile(r"\[[^\[\]]*\]")
+
+
+def _reading(text):
+    """A page as quoted words are found in it: plain, as _bare gives it, and without the square-bracket marks the reader puts
+    in to say what the page shows - [signature], [stamp: ...], [Handwritten: ...] - which are not the page's words."""
+    marked = _bare(text)
+    while True:
+        plain = _MARKS.sub(" ", marked)
+        if plain == marked:
+            return " ".join(plain.split())
+        marked = plain
+
+
+class Pages:
+    """The pages of the documents the advocate sent, in reading order, and where quoted words are found in them. A page is
+    {"document": name, "page": number, "text": text, ...}. Words are found on one page, or run over a page break onto the next
+    page of the same document past what a page's foot and head hold; never across two documents, or across pages that are
+    not next to each other. One finder for every check of where a fact's words come from (plan AN.27, P1)."""
+
+    def __init__(self, pages):
+        self.pages = list(pages)
+        self._plain = [_bare(page["text"]) for page in self.pages]
+        self._read = [_reading(page["text"]) for page in self.pages]
+
+    @classmethod
+    def of_context(cls, context):
+        """The pages of a turn's context: each row is one page of one document the advocate sent."""
+        return cls({"document": row["document"]["name"], "page": row["document"].get("page"), "text": row["text"]}
+                   for row in context.get("documents", ()))
+
+    def holding(self, piece):
+        """The page, or the two pages the words run over, that hold these words (a piece as fact_pieces gives it); or None."""
+        for index, plain in enumerate(self._plain):
+            if piece in plain:
+                return [self.pages[index]]
+        words = _reading(piece)
+        if not words:
+            return None
+        for index, read in enumerate(self._read):
+            if words in read:
+                return [self.pages[index]]
+        for index in range(len(self.pages) - 1):
+            first, second = self.pages[index], self.pages[index + 1]
+            if (first["document"] == second["document"] and type(first["page"]) is int and type(second["page"]) is int
+                    and second["page"] == first["page"] + 1 and self._over(words, self._read[index], self._read[index + 1])):
+                return [first, second]
+        return None
+
+    @staticmethod
+    def _over(words, foot, head):
+        """Whether the words end one page and go on at the start of the next: some of them end the first page's foot, at a word's
+        end, and the rest begin the second's head, at a word's start, with no more than PAGE_FURNITURE characters beside them."""
+        parts = words.split(" ")
+        room = len(words) + PAGE_FURNITURE
+        foot, head = foot[-room:], head[:room]
+        if parts[0] not in foot or parts[-1] not in head:
+            return False
+        for cut in range(1, len(parts)):
+            ending, going = " ".join(parts[:cut]), " ".join(parts[cut:])
+            at_head = re.search(r"(?<!\S)" + re.escape(going), head)
+            if (at_head is not None and at_head.start() <= PAGE_FURNITURE
+                    and any(len(foot) - m.end() <= PAGE_FURNITURE for m in re.finditer(re.escape(ending) + r"(?!\S)", foot))):
+                return True
+        return False
+
+    def stops(self, piece):
+        """Where words that are not found stop matching, to say so: the words found as far as they go (their last few) and the
+        words from where they are not found (the next few), as a sentence for the model that quoted them."""
+        words = piece.split(" ")
+        found, lost = 0, len(words)
+        while lost - found > 1:
+            middle = (found + lost) // 2
+            if self.holding(" ".join(words[:middle])) is not None:
+                found = middle
+            else:
+                lost = middle
+        if found < 3:  # a word or two that happen to be on a page say nothing about where the quotation is from
+            return f"they are not found from their first words: {' '.join(words[:12])!r}"
+        gone = " ".join(words[found:found + 12])
+        return f"they match up to {('... ' if found > 6 else '') + ' '.join(words[max(0, found - 6):found])!r} and are not found from {gone!r}"
+
+
 def code_checks(understanding, context):
     """Mechanical checks only; meaning is the model's work."""
     problems = []
@@ -379,16 +465,19 @@ def code_checks(understanding, context):
                                if row.get("record_role") == "original_account"] + [context["latest"]["text"]]))
     # A fact may rest on a document the advocate sent; where its words appear is the
     # code's to establish (owner decisions, 15 Oct 2026).
-    supplied = _bare(" ".join(row["text"] for row in context.get("documents", ())))
+    pages = Pages.of_context(context)
     facts = {f["id"] for f in understanding["facts"]}
     if len(facts) != len(understanding["facts"]):
         problems.append({"problem": "Two facts share an id.", "fix": "Give each fact its own id."})
     for fact in understanding["facts"]:
-        if any(piece not in advocate and piece not in supplied
-               for piece in fact_pieces(fact["advocate_words"])):
+        missing = [piece for piece in fact_pieces(fact["advocate_words"])
+                   if piece not in advocate and pages.holding(piece) is None]
+        if missing:
             problems.append({"problem": f"Fact {fact['id']}: the quoted words do not appear in the advocate's "
-                                        f"messages or the documents they sent ({fact['advocate_words']!r}).",
-                             "fix": "Quote the exact words this fact rests on, or remove the fact if they were not given."})
+                                        f"messages or the documents they sent ({fact['advocate_words']!r}); "
+                                        f"{pages.stops(missing[0])}.",
+                             "fix": "Quote the exact words this fact rests on, as the page gives them (separate passages "
+                                    "joined with '...'), or remove the fact if they were not given."})
     disputes = {d["id"] for d in understanding["disputes"]}
     if len(disputes) != len(understanding["disputes"]):
         problems.append({"problem": "Two disputes share an id.", "fix": "Give each dispute its own id."})
