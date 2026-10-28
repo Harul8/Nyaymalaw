@@ -57,6 +57,59 @@ def _confirmed(record):
     return {"confirmed": satisfied, "open_points": points}
 
 
+#: Said where the board has no timeline to show for papers that were sent (plan AN.27, P9; invariant I3): never left to read as
+#: "nothing happened".
+_NOT_MADE = "NM did not make a timeline of the papers when it answered this conversation, so there is none to show."
+
+
+def _gaps(document, stretches):
+    """What NM could not read of a paper, in plain words: the pages its reader could not make out, and the stretches it could not
+    make a timeline from."""
+    word = "part" if document.get("recording") else "page"
+    said = []
+    unread = [str(page["number"]) for page in document.get("unread") or ()]
+    if unread:
+        said.append(f"NM could not read {word}{'s' if len(unread) > 1 else ''} {', '.join(unread)} of this paper.")
+    if stretches:
+        many = len(stretches) > 1 or "-" in stretches[0]
+        said.append(f"NM could not make a timeline from {word}{'s' if many else ''} {', '.join(stretches)} of this paper.")
+    return said
+
+
+def _timeline(record, rows):
+    """The timeline of the papers sent, as the plan of the turn the board shows kept it (plan AN.27, P9; invariant I4): its events in
+    its order, each with where its words are and whether they were located, and every paper with what NM read of it. 'none' where
+    no papers were sent; 'not_made' where they were but the plan kept no timeline (an earlier conversation's)."""
+    sent = {f"{row['turn_id']}:d{number}": document
+            for row in rows for number, document in enumerate(row.get("documents") or (), 1)}
+    if not sent:
+        return {"state": "none"}
+    proposal = record["plan"]["proposal"]
+    if "chronology" not in proposal:
+        return {"state": "not_made", "why": _NOT_MADE}
+    given, stretches = {}, {}
+    for event in proposal["chronology"]:
+        given[event["source"]] = given.get(event["source"], 0) + 1
+    for failure in proposal["chronology_failures"]:
+        stretches.setdefault(failure["document"], []).append(failure["pages"])
+    papers = []
+    for source, document in sent.items():
+        lost, count = stretches.get(document["name"], []), given.get(source, 0)
+        gaps = _gaps(document, lost)
+        state = "not_read" if not document["pages"] or (lost and not count) else "partly_read" if gaps else "read"
+        if state == "not_read" and not gaps:
+            gaps = ["NM could not read this paper."]
+        papers.append({"name": document["name"], "pages_read": len(document["pages"]), "events": count, "state": state,
+                       "why": " ".join(gaps), **({"recording": True} if document.get("recording") else {})})
+    return {"state": "ready", "documents": papers,
+            "events": [{"id": event["id"], "date": event["date"], "dated": bool(event["sort"]), "kind": event["kind"],
+                        "what": event["what"], "said_by": event["said_by"], "document": event["document"],
+                        "pages": list(event["pages"]),
+                        **({"recording": True} if sent.get(event["source"], {}).get("recording") else {}),
+                        "words": event["words"], "located": event["anchored"]}
+                       for event in proposal["chronology"]]}
+
+
 def _dispute(d, record, work, checklists):
     """One dispute as the board shows it: the facts it rests on, why each question was asked and what research did for it, why it
     matters (research v9, 16 Oct 2026), its checklist where the answer gave one, and whether the law has been assessed."""
@@ -152,6 +205,7 @@ def board(rows):
             # question was asked, and, from research v9, why it matters (16 Oct 2026).
             "disputes": [_dispute(d, record, work, checklists) for d in _urgent(understanding["disputes"], checklists)],
             "understanding": _confirmed(record),
+            "timeline": _timeline(record, rows[:index + 1]),
             "related_points": [{"point": r["point"], "why": r["why_it_matters"], "dispute_id": r["dispute_id"] or None,
                                 "dispute": names.get(r["dispute_id"])} for r in understanding["related_points"]],
         }
