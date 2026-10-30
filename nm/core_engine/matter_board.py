@@ -128,9 +128,10 @@ def _copies(pages):
 
 def _extents(record, pages):
     """The land extents the papers record, added up by code for each parcel (plan AN.27, P13d; invariant I6): the transfers the
-    plan kept, those whose words were found added by extents.py and the rest listed and never added, each parcel with its sum, what
-    a paper's stated whole extent leaves, and the caveat that a sum is only of what was found. One sale read on copies of a page is
-    one (P20 (b)): pages are those sent up to the turn shown. [] where the plan kept none."""
+    plan kept, those whose words were found added by extents.py and the rest listed and never added, each parcel seller by seller
+    (P20 (a)) with each seller's sum, what a paper's stated whole extent leaves after it or how far it goes beyond, and the caveat
+    that a sum is only of what was found. One sale read on copies of a page is one (P20 (b)): pages are those sent up to the turn
+    shown. [] where the plan kept none."""
     return extents.shown(record["plan"]["proposal"].get("transfers") or [], copy_figures.copies(pages))
 
 

@@ -439,13 +439,16 @@ differently, each with the short IDs of the two pages: give both readings and sa
 copies differ, never choose between them, and do not call it a disagreement in the papers
 themselves. Counting is code's work for extents as it is for days: do not add, subtract or
 convert acres, guntas or cents yourself. Where land_extents is given, code added the transfers of
-land NM found in the papers, parcel by parcel: use its sums, and what they leave of a stated
-whole extent, exactly as given; say what its caveat says - that they add every transfer the
-papers record, whoever states it, rival and repeated accounts included, so a sum is a figure to
-check and never the extent anyone holds or has transferred - and which transfers were not added
-and why; and name no remainder for a parcel whose complete is false. For any other total or
-remainder, give each extent as the paper gives it, and say what would be added or taken away
-and that it has not been worked out.
+land NM found in the papers, parcel by parcel and seller by seller: use a seller's sold, and what
+a stated whole extent leaves after it (leaves: if that seller held all of it) or how far it goes
+beyond it (exceeds), exactly as given, and never add one seller's sales to another's. Say what
+its caveat says - that the sums add every transfer the papers record, whoever states it, rival
+and repeated accounts included, so a sum is a figure to check and never the extent anyone holds
+or has transferred - and which transfers were not added and why. Where exceeds is given, say that
+the papers do not fit together on that seller's sales, as code found, and not which account is
+right. Name no remainder for a parcel whose complete is false, nor for a seller with no name.
+For any other total or remainder, give each extent as the paper gives it, and say what would be
+added or taken away and that it has not been worked out.
 3. Read each legal source with its neighbouring context. A provision's read_with names
 the held provisions its Act reads it with and how: it names them, they name it in the
 words shown, or they stand beside it. Read them together, and state a rule with the
@@ -1206,7 +1209,8 @@ def _shown_dates(draft, record, context=None):
     if record is None or draft.get("contract") != PRESENTED_CONTRACT:
         return []
     return [event["date"] for event in _chronology_shown(record, {}) or () if event["located"]] + [
-        moved["date"] for parcel in _extents_shown(record, context) or () for moved in parcel["transfers"]]
+        moved["date"] for parcel in _extents_shown(record, context) or () for seller in parcel["sellers"]
+        for moved in seller["transfers"] + seller["not_added"]]
 
 
 def dates_not_given(draft, context, sources, time_limits=None, record=None):
@@ -1386,9 +1390,10 @@ def _copies_shown(context, offered):
 
 def _extents_shown(record, context=None):
     """The land extents added up by code, as the current writer and the review are shown them (plan AN.27, P13d; invariant I6): for
-    each parcel the transfers found (each once, and once too where copies of a page report it, P20 (b): context gives the pages),
-    what could not be added and why, the sum, what a paper's stated whole extent leaves, and the caveat that a sum is only of the
-    transfers found. None where the plan kept no transfers."""
+    each parcel its sellers (P20 (a)), with the transfers found (each once, and once too where copies of a page report it, P20 (b):
+    context gives the pages), what could not be added and why, what each seller's sales add up to, what a paper's stated whole extent
+    leaves after them or how far they go beyond it, and the caveat that a sum is only of the transfers found. None where the plan
+    kept no transfers."""
     transfers = record["plan"]["proposal"].get("transfers") if record.get("contract") in research.CHRONICLED else None
     if not transfers:
         return None

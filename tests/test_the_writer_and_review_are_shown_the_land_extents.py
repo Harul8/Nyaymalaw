@@ -33,10 +33,11 @@ def test_the_current_writer_is_shown_each_parcel_added_up_by_code_with_its_cavea
     response_writer.write_section(model, ctx, record, sources, index=0, contract=response_writer.PRESENTED_CONTRACT)
     prompt, payload = model.seen[0]
     first, second = payload["land_extents"]
-    assert (first["parcel"], first["sum"], first["complete"]) == ("Sy.No.487", "1 acre 18 guntas (Ac.1.18)", False)
+    assert (first["parcel"], first["sellers"][0]["sold"], first["complete"]) == ("Sy.No.487", "1 acre 18 guntas (Ac.1.18)", False)
+    assert first["sellers"][0]["names"] == ["the vendor"] and "sum" not in first
     assert [(n["id"], n["why"]) for n in first["not_read"]] == [("X2", "its words were not found on the page")]
-    assert first["totals"][0]["as"] == "8 acres 24 guntas (Ac.8.24)" and first["totals"][0]["leaves"] is None
-    assert (second["parcel"], second["sum"], second["complete"]) == ("Sy.No.487/A", "29 guntas (Ac.0.29)", True)
+    assert first["totals"][0]["as"] == "8 acres 24 guntas (Ac.8.24)" and first["totals"][0]["by_seller"] == []
+    assert (second["parcel"], second["sellers"][0]["sold"], second["complete"]) == ("Sy.No.487/A", "29 guntas (Ac.0.29)", True)
     assert "makes the sum wrong" in first["caveat"] and prompt.system == response_writer.SYSTEM_V13
 
 
@@ -84,11 +85,13 @@ def copies_matter():
 def test_one_sale_read_on_two_copies_of_a_page_is_shown_once_to_the_writer_and_to_the_review():
     ctx, record, sources = copies_matter()
     (parcel,) = response_writer._extents_shown(record, ctx)
-    (only,) = parcel["transfers"]
-    assert parcel["sum"] == "6 acres 6 guntas (Ac.6.06)" and [p["document"] for p in only["papers"]] == ["deed.pdf", "scan.pdf"]
+    (seller,) = parcel["sellers"]
+    (only,) = seller["transfers"]
+    assert seller["sold"] == "6 acres 6 guntas (Ac.6.06)" and [p["document"] for p in only["papers"]] == ["deed.pdf", "scan.pdf"]
     assert only["to"] == "Kiran Rao" and only["also_read_as"] == ["Kiran Raao"]
     (twice,) = response_writer._extents_shown(record)
-    assert twice["sum"] == "12 acres 12 guntas (Ac.12.12)" and len(twice["transfers"]) == 2, "without the pages it is added twice"
+    assert twice["sellers"][0]["sold"] == "12 acres 12 guntas (Ac.12.12)" and len(twice["sellers"][0]["transfers"]) == 2, \
+        "without the pages it is added twice"
     model = Writer(quiet)
     draft = response_writer.write_section(model, ctx, record, sources, index=0, contract=response_writer.PRESENTED_CONTRACT)
     assert model.seen[0][1]["land_extents"] == [parcel]
@@ -109,18 +112,23 @@ def test_the_date_check_is_given_the_dates_of_the_transfers_as_the_writer_is_sho
 def test_the_prompts_say_to_use_the_sums_exactly_as_given_and_never_to_add_extents_itself():
     writer = " ".join(response_writer.SYSTEM_V13.split())
     for part in ("Counting is code's work for extents as it is for days: do not add, subtract or convert acres, guntas or cents yourself",
-                 "Where land_extents is given, code added the transfers of land NM found in the papers, parcel by parcel",
-                 "use its sums, and what they leave of a stated whole extent, exactly as given",
-                 "say what its caveat says - that they add every transfer the papers record, whoever states it, rival and repeated "
+                 "Where land_extents is given, code added the transfers of land NM found in the papers, parcel by parcel and seller by "
+                 "seller",
+                 "use a seller's sold, and what a stated whole extent leaves after it (leaves: if that seller held all of it) or how far "
+                 "it goes beyond it (exceeds), exactly as given, and never add one seller's sales to another's",
+                 "Say what its caveat says - that the sums add every transfer the papers record, whoever states it, rival and repeated "
                  "accounts included, so a sum is a figure to check and never the extent anyone holds or has transferred - and which "
                  "transfers were not added and why",
-                 "name no remainder for a parcel whose complete is false",
+                 "Where exceeds is given, say that the papers do not fit together on that seller's sales, as code found, and not which "
+                 "account is right",
+                 "Name no remainder for a parcel whose complete is false, nor for a seller with no name",
                  "say what would be added or taken away and that it has not been worked out"):
         assert part in writer, part
     review = " ".join(response_review.SYSTEM_V11.split())
     for part in ("adds, subtracts or converts extents (acres, guntas, cents) where the papers do not state the result",
-                 "Where land_extents is given, code added the transfers of land NM found",
-                 "said as what the transfers found add up to and not as an extent anyone holds or has transferred",
+                 "Where land_extents is given, code added the transfers of land NM found, seller by seller",
+                 "said as what that seller's transfers found add up to and not as an extent anyone holds or has transferred, and never "
+                 "as a sum across sellers",
                  "one for a parcel whose complete is false, or one the piece worked out itself, is not"):
         assert part in review, part
     assert "land_extents" not in response_writer.SYSTEM and "land_extents" not in response_review.SYSTEM_V10

@@ -33,6 +33,8 @@ SCRIPT = {
                         "The Court directs notice to the respondents")],
     "deed.pdf": [event("undated", "transaction", "A sale.", "the vendor sold Ac.3.10 guntas of Sy.No.201")]}
 SOLD = {"deed.pdf": [
+    transfer("3 March 1974", "Sy.No.201", "Ac.8.24", "the vendor sold Ac.3.10 guntas of Sy.No.201 to the purchasers", to="the co-owners",
+             kind="partition"),
     transfer("12 June 1991", "Sy.No.201", "Ac.3.10 guntas", "the vendor sold Ac.3.10 guntas of Sy.No.201 to the purchasers"),
     transfer("1 February 2019", "Sy.No.201", "Ac.0.10", "A sale made on a day the page lacks")]}
 
@@ -65,6 +67,9 @@ def test_a_date_of_a_transfer_of_land_the_writer_was_shown_is_given_and_one_not_
     ctx, record, sources = matter()
     sold = draft("The vendor sold Ac.3.10 guntas on 12 June 1991.")
     assert flagged(sold, ctx, sources) == ["t1:b1"] and flagged(sold, ctx, sources, record) == []
+    # A transfer listed and not added (a partition) is shown to the writer with its date, so its date is given too.
+    partitioned = draft("The land was partitioned on 3 March 1974.")
+    assert flagged(partitioned, ctx, sources) == ["t1:b1"] and flagged(partitioned, ctx, sources, record) == []
     # A transfer whose words were not found on the page was not shown with a date.
     unread = next(t for t in record["plan"]["proposal"]["transfers"] if t["date"] == "1 February 2019")
     assert unread["anchored"] is False

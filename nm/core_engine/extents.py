@@ -3,8 +3,9 @@
 The analysis of the reviewed bundle found that no step adds extents: a model was left to say whether a claim "can be matched", and a
 total less two smaller sales that comes to the claimed 6.06 acres was an inference nobody checked. Counting is code's work. This
 module reads an extent as a paper writes it - Ac.1.18 guntas, 6 acres 6 guntas, 29 guntas, 150 sq. yards - into guntas (40 to an
-acre, 121 square yards to a gunta), renders guntas back as the papers do, and sets out the transfers of each parcel with their sum
-and, where a paper states the parcel's whole extent, what that leaves. It reads, adds and subtracts; it decides nothing: a sum is
+acre, 121 square yards to a gunta), renders guntas back as the papers do, and sets out the transfers of each parcel seller by seller,
+each seller's sales added to that seller's alone (P20 (a)), with what a paper's stated whole extent leaves after them or how far they
+go beyond it. It reads, adds and subtracts; it decides nothing: a sum is
 only of the transfers it was given, each counted once where papers report the same date, parcel, extent and buyer - or the same
 date, extent and kind on pages that are copies of one page, however a name was read (P20 (b)) - and says so.
 """
@@ -114,18 +115,56 @@ def _copy_of(entry, sort, value, kind, source, places, copies):
     return None
 
 
+#: What a seller can be recorded as giving away by their own act and have it added to what they sold: a partition allots a share among
+#: those who held the land together and a decree is a court's order, so neither is a sale (P20 (a)).
+SOLD_KINDS = ("sale", "gift", "settlement")
+_NOT_ADDED = {"partition": "a partition allots a share; it is not a sale", "decree": "a court's decree is not the seller's sale",
+              "other": "not a sale, a gift or a settlement"}
+
+
+def _by_seller(transfers):
+    """The transfers of one parcel grouped by who is recorded as making them (P20 (a)): a seller's sales, gifts and settlements are
+    added to that seller's alone, never to another's - the papers' accounts of rival chains of title are not one holding. Two spellings
+    of a name are one seller only where the papers make them so - they are read as the seller of one transaction, such as a sale
+    reported on copies of one page, its seller's name read two ways - never because they look alike. A transfer whose seller is not
+    named is listed and added to no one."""
+    parent = {}
+
+    def find(key):
+        while parent.get(key, key) != key:
+            key = parent[key]
+        return key
+    for made in transfers:
+        keys = [_who(name) for name in made["sellers"] if _who(name)]
+        for other in keys[1:]:
+            parent[find(other)] = find(keys[0])
+    groups = {}
+    for made in transfers:
+        keys = [_who(name) for name in made["sellers"] if _who(name)]
+        group = groups.setdefault(find(keys[0]) if keys else "", {"names": [], "transfers": [], "not_added": [], "sold": None})
+        group["names"].extend(name for name in made["sellers"] if name not in group["names"])
+        group["transfers" if made["kind"] in SOLD_KINDS else "not_added"].append(made)
+    for key, group in groups.items():
+        if key and group["transfers"]:
+            group["sold"] = sum((made["guntas"] for made in group["transfers"]), Fraction(0))
+    return list(groups.values())
+
+
 def ledger(transfers, copies=()):
-    """The transfers of each parcel, added up. transfers: dicts with id, parcel, extent, total, to, sort, kind, document, pages (and
-    source, the turn's key of the document, where the plan gave it). copies: the pairs of pages that are copies of one page, each
-    {(key, page), (key, page)}, as copy_figures.copies finds them. A parcel with no key is left out. Returns one entry per parcel, in
-    the papers' order:
-      transfers - each distinct transfer once (the same date, parcel, extent and buyer reported by several papers is one, with every
-                  paper that reports it; so is the same date, extent and kind read on pages that are copies of one page, whatever
-                  the buyer's name was read as, every reading of it kept in names), its extent in guntas and how it was read;
+    """The transfers of each parcel, added up seller by seller. transfers: dicts with id, parcel, extent, total, from, to, sort, kind,
+    document, pages (and source, the turn's key of the document, where the plan gave it). copies: the pairs of pages that are copies
+    of one page, each {(key, page), (key, page)}, as copy_figures.copies finds them. A parcel with no key is left out. Returns one
+    entry per parcel, in the papers' order:
+      sellers - the parcel's transfers grouped by who made them (_by_seller), in the order they first appear. Each transfer once (the
+                same date, parcel, extent and buyer reported by several papers is one, with every paper that reports it; so is the
+                same date, extent and kind read on pages that are copies of one page, whatever the buyer's name was read as, every
+                reading of it kept in names), its extent in guntas and how it was read; the sales, gifts and settlements added in
+                'sold' (None for a seller with none, or with no name), the rest in 'not_added';
       unread - those whose extent could not be read, with why, never added;
-      sum - what the transfers read add up to, and 'complete' whether every transfer of the parcel was read;
-      totals - each different whole extent a paper states for the parcel, and what it leaves after the sum (only where every
-               transfer was read)."""
+      complete - whether every transfer of the parcel was read;
+      totals - each different whole extent a paper states for the parcel and, for each seller who sold, what it leaves after that
+               seller's sales (only where every transfer was read, and as if that seller held all of it) or how far their sales go
+               beyond it (named whether or not every transfer was read: more can only be more)."""
     parcels = {}
     for transfer in transfers:
         key = parcel_key(transfer.get("parcel", ""))
@@ -151,6 +190,7 @@ def ledger(transfers, copies=()):
                 k: who[k] for k in ("document", "pages")}})
             continue
         sort, name = transfer.get("sort", ""), " ".join(str(transfer.get("to", "")).split())
+        seller = " ".join(str(transfer.get("from", "")).split())
         source = transfer.get("source", transfer["document"])
         places = {(source, number) for number in transfer["pages"]}
         identity = (sort, value, _who(name))
@@ -160,53 +200,79 @@ def ledger(transfers, copies=()):
             seen["ids"].append(transfer["id"])
             if name and name not in seen["names"]:
                 seen["names"].append(name)
+            if seller and seller not in seen["sellers"]:
+                seen["sellers"].append(seller)
             where = entry["_where"][id(seen)]
             where["sources"].add(source)
             where["places"] |= places
             entry["_seen"].setdefault(identity, seen)
             continue
         made = {"ids": [transfer["id"]], "date": transfer.get("date", ""), "kind": transfer.get("kind", ""),
-                "to": transfer.get("to", ""), "names": [name] if name else [], "extent": " ".join(str(transfer["extent"]).split()),
-                "guntas": value, "how": how, "papers": [{k: who[k] for k in ("document", "pages")}]}
+                "to": transfer.get("to", ""), "names": [name] if name else [], "sellers": [seller] if seller else [],
+                "extent": " ".join(str(transfer["extent"]).split()), "guntas": value, "how": how,
+                "papers": [{k: who[k] for k in ("document", "pages")}]}
         entry["_seen"][identity] = made
         entry["_where"][id(made)] = {"sort": sort, "sources": {source}, "places": set(places)}
         entry["transfers"].append(made)
     out = []
     for entry in parcels.values():
-        total = sum((t["guntas"] for t in entry["transfers"]), Fraction(0))
         complete = not entry["unread"]
-        totals = [{"text": s["text"], "guntas": s["guntas"], "how": s["how"], "ids": s["ids"],
-                   "leaves": (s["guntas"] - total) if complete and s["guntas"] is not None else None}
-                  for s in entry["_totals"].values()]
-        out.append({"parcel": entry["parcel"], "transfers": entry["transfers"], "unread": entry["unread"], "sum": total,
-                    "complete": complete, "totals": totals})
+        sellers = _by_seller(entry["transfers"])
+        totals = []
+        for stated in entry["_totals"].values():
+            against = []
+            for group in sellers:
+                if group["sold"] is None or stated["guntas"] is None:
+                    continue
+                beyond = group["sold"] - stated["guntas"]
+                if beyond > 0:
+                    against.append({"seller": group["names"][0], "leaves": None, "exceeds": beyond})
+                elif complete:
+                    against.append({"seller": group["names"][0], "leaves": -beyond, "exceeds": None})
+            totals.append({"text": stated["text"], "guntas": stated["guntas"], "how": stated["how"], "ids": stated["ids"],
+                           "by_seller": against})
+        out.append({"parcel": entry["parcel"], "sellers": sellers, "unread": entry["unread"], "complete": complete, "totals": totals})
     return out
 
 
-#: What every ledger says of itself: a sum is only of what was found, and adds every account as the papers state it.
-CAVEAT = ("Extents are added as the papers state them, whoever states them, and only the transfers NM found are added, each counted once "
-          "where papers report the same date, parcel, extent and buyer. Transfers that are rival, overlapping or the same land described "
-          "twice are added as if each were separate and true, so a sum is a figure to check, not an extent anyone holds. A transfer NM "
-          "did not find, or a buyer named two ways, makes the sum wrong. Check it against the papers.")
+#: What every ledger says of itself: a sum is only of what was found, seller by seller, and adds every account as the papers state it.
+CAVEAT = ("Extents are added as the papers state them, whoever states them, seller by seller, and only the transfers NM found are added, "
+          "each counted once where papers report the same date, parcel, extent and buyer, or the same date, extent and kind on copies of "
+          "one page. A seller's sales are added to that seller's alone; nothing here says who held what or which account is right. "
+          "Transfers that are rival, overlapping or the same land described twice are added as if each were separate and true, so a sum "
+          "is a figure to check, not an extent anyone holds. A transfer NM did not find, or a buyer or seller named two ways, makes the "
+          "sum wrong. Check it against the papers.")
+
+
+def _in_words(made, **more):
+    return {"ids": made["ids"], "date": made["date"], "kind": made["kind"], "to": made["to"], "extent": made["extent"],
+            "in_guntas": render(made["guntas"]), "read_as": made["how"], "papers": made["papers"],
+            **({"also_read_as": made["names"][1:]} if len(made["names"]) > 1 else {}), **more}
 
 
 def shown(transfers, copies=()):
-    """The ledger in words, as the board, the writer and the review are given it: every extent and sum rendered as the papers write
-    it, how each was read, which papers report each transfer (and, where the buyer's name was read two ways on copies of a page,
-    both readings), and the caveat."""
+    """The ledger in words, as the board, the writer and the review are given it: for each parcel its sellers, each with the
+    transfers added, the ones listed and not added (and why), and what the seller's sales add up to; every extent rendered as the
+    papers write it, how each was read, which papers report each transfer (and, where the buyer's name was read two ways on copies
+    of a page, both readings); what could not be read; each stated whole extent with, for each seller, what it leaves or how far the
+    sales go beyond it; and the caveat. There is no figure for the parcel as a whole."""
     out = []
     for parcel in ledger(transfers, copies):
         out.append({
             "parcel": parcel["parcel"],
-            "transfers": [{"ids": t["ids"], "date": t["date"], "kind": t["kind"], "to": t["to"], "extent": t["extent"],
-                           "in_guntas": render(t["guntas"]), "read_as": t["how"], "papers": t["papers"],
-                           **({"also_read_as": t["names"][1:]} if len(t["names"]) > 1 else {})}
-                          for t in parcel["transfers"]],
+            "sellers": [{"names": group["names"],
+                         "transfers": [_in_words(made) for made in group["transfers"]],
+                         "not_added": [_in_words(made, why=_NOT_ADDED.get(made["kind"], _NOT_ADDED["other"]))
+                                       for made in group["not_added"]],
+                         "sold": render(group["sold"]) if group["sold"] is not None else None}
+                        for group in parcel["sellers"]],
             "not_read": parcel["unread"],
-            "sum": render(parcel["sum"]) if parcel["transfers"] else None,
             "complete": parcel["complete"],
             "totals": [{"text": s["text"], "read_as": s["how"], "as": render(s["guntas"]) if s["guntas"] is not None else None,
-                        "ids": s["ids"], "leaves": render(s["leaves"]) if s["leaves"] is not None else None}
+                        "ids": s["ids"],
+                        "by_seller": [{"seller": b["seller"], "leaves": render(b["leaves"]) if b["leaves"] is not None else None,
+                                       "exceeds": render(b["exceeds"]) if b["exceeds"] is not None else None}
+                                      for b in s["by_seller"]]}
                        for s in parcel["totals"]],
             "caveat": CAVEAT})
     return out

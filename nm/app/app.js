@@ -3712,32 +3712,53 @@ function renderExtents(parcels, make) {
   fold.appendChild(make('p', 'board-lede', 'Added up by NM’s code from the transfers of land it found in your papers, as the papers state '
     + 'them and whoever states them. Rival or repeated accounts are added as if each were true, so a sum is a figure to check against '
     + 'the papers, not an extent anyone holds.'));
+  // One line for a transfer, as the papers record it: where it is and - the same sale read on copies of one page, its buyer's name read
+  // two ways (P20 (b)) - both readings.
+  const said = (transfer) => {
+    const where = transfer.papers.map((paper) => paper.document + (paper.pages.length
+      ? `, page${paper.pages.length > 1 ? 's' : ''} ${paper.pages.join(', ')}` : '')).join('; ');
+    const alike = transfer.also_read_as && transfer.also_read_as.length
+      ? ` (also read as ${transfer.also_read_as.map((name) => `“${name}”`).join(' and ')})` : '';
+    return `${transfer.date} ${transfer.kind}: ${transfer.extent} (${transfer.in_guntas})`
+      + `${transfer.to ? ` to ${transfer.to}` : ''}${alike} · ${where}`;
+  };
   for (const parcel of parcels) {
     fold.appendChild(make('h3', 'board-h', parcel.parcel));
-    const list = make('ul', 'board-list');
-    for (const transfer of parcel.transfers) {
-      const where = transfer.papers.map((paper) => paper.document + (paper.pages.length
-        ? `, page${paper.pages.length > 1 ? 's' : ''} ${paper.pages.join(', ')}` : '')).join('; ');
-      // The same sale read on copies of one page, its buyer's name read two ways (P20 (b)): both readings are shown.
-      const alike = transfer.also_read_as && transfer.also_read_as.length
-        ? ` (also read as ${transfer.also_read_as.map((name) => `“${name}”`).join(' and ')})` : '';
-      list.appendChild(make('li', '', `${transfer.date} ${transfer.kind}: ${transfer.extent} (${transfer.in_guntas})`
-        + `${transfer.to ? ` to ${transfer.to}` : ''}${alike} · ${where}`));
+    // Seller by seller (P20 (a)): a seller's sales are added to that seller's alone; there is no figure for the parcel as a whole.
+    for (const seller of parcel.sellers) {
+      fold.appendChild(make('p', 'board-fact', `Seller: ${seller.names.length ? seller.names.join(' / ') : 'not named in the papers'}`));
+      const list = make('ul', 'board-list');
+      for (const transfer of seller.transfers) list.appendChild(make('li', '', said(transfer)));
+      for (const other of seller.not_added) {
+        list.appendChild(make('li', 'board-status search_failed', `Not added (${other.why}): ${said(other)}`));
+      }
+      fold.appendChild(list);
+      if (seller.sold) {
+        fold.appendChild(make('p', 'board-fact', `Added as stated: ${seller.sold}`
+          + (parcel.complete ? '' : ' (a transfer could not be read, so the whole is more)')));
+      }
     }
-    for (const missed of parcel.not_read) {
-      list.appendChild(make('li', 'board-status search_failed', `Not added: “${missed.extent}” (${missed.why}) · ${missed.document}`));
-    }
-    fold.appendChild(list);
-    if (parcel.sum) {
-      fold.appendChild(make('p', 'board-fact', `Added as stated: ${parcel.sum}`
-        + (parcel.complete ? '' : ' (a transfer could not be read, so the whole is more)')));
+    if (parcel.not_read.length) {
+      const list = make('ul', 'board-list');
+      for (const missed of parcel.not_read) {
+        list.appendChild(make('li', 'board-status search_failed', `Not added: “${missed.extent}” (${missed.why}) · ${missed.document}`));
+      }
+      fold.appendChild(list);
     }
     for (const total of parcel.totals) {
-      const aside = total.leaves ? `; the transfers found leave ${total.leaves}`
-        : !total.as ? '; it could not be read as an extent'
-        : !parcel.complete ? '; no remainder is named, because a transfer could not be read' : '';
       fold.appendChild(make('p', 'board-fact', `A paper states the parcel’s whole extent as “${total.text}”`
-        + `${total.as ? ` (${total.as})` : ''}${aside}`));
+        + `${total.as ? ` (${total.as})` : '; it could not be read as an extent'}`));
+      for (const against of total.by_seller) {
+        if (against.exceeds) {
+          fold.appendChild(make('p', 'board-status search_failed', `${against.seller}’s sales found add up to more than that whole, by `
+            + `${against.exceeds}: the papers cannot all be right.`));
+        } else if (against.leaves) {
+          fold.appendChild(make('p', 'board-fact', `If ${against.seller} held all of it, their sales found leave ${against.leaves}.`));
+        }
+      }
+      if (total.as && !parcel.complete && !total.by_seller.some((against) => against.exceeds)) {
+        fold.appendChild(make('p', 'board-fact', 'No remainder is named, because a transfer could not be read.'));
+      }
     }
     fold.appendChild(make('p', 'board-lede', parcel.caveat));
   }

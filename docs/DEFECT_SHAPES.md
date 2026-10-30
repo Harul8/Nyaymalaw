@@ -351,13 +351,16 @@ Two scans of one passage were read separately by the AI and gave 6.06 and 6.16; 
 reasoned from it. A model asked to add extents does arithmetic it cannot be held to. A check that read the phrasing of a request, not
 its purpose, cut the research the whole product exists to do.
 
-*Instances: AN.27 findings (1), (6) and (9).*
+*Instances: AN.27 findings (1), (6) and (9); and the land ledger of the reviewed bundle's replay (P20): a "sum" across a
+parcel's rival chains of title and a sale counted twice where a name was read two ways.*
 
 > **CHECK S13.** What is arithmetic or comparison of figures is code's: copies are found by their words and the figures in which
 > they differ are named with both readings (`copy_figures`), dates are read by code (`research.read_date`), and the model is told
 > to give each figure as the paper does and to say what has not been worked out. A check is told the point of the work and what the
 > advocate restricted, in code's words from the interpretation, and is never allowed to turn research off on a reading of how a
-> request was phrased.
+> request was phrased. A figure code adds is a sum of things that can be added: one transaction counted once, by where it is read
+> (the pages that are copies of one another) and not by how a name was read; one seller's sales added to that seller's alone, never
+> across sellers; and no figure at all for what rival accounts cannot make one.
 
 **Counterexample it must reject:** two pages that are copies of one another and give a figure differently, passed to the writer
 without saying so; or a research check that stops the research because the message did not literally ask for advice.
