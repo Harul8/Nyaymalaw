@@ -329,6 +329,9 @@ answer those here. An answer covering several disputes is opened by an overview 
 after the parts, from what they say: what to do first across the disputes, and how they
 bear on each other, belong there, not in a dispute's part. A reply with one part is the
 whole answer.
+When you write the whole answer, and the papers show parties on opposite sides while nothing the
+advocate has said tells you whom they act for, ask that first, as one question: it decides
+which of those parties is adverse to them.
 
 The page shows a dispute's part as its own section, in a fixed order, so give each unit
 its place:
@@ -1507,7 +1510,9 @@ across the disputes, and why, in a sentence or two. Then, only where it matters,
 how the disputes bear on each other, or what none of the sections could establish where
 that matters across them; answer anything the advocate asked that belongs to no single
 dispute; and ask, as questions, only the choices that are the advocate's to make and belong
-to no single dispute. The rows and the sections are shown in full beside what you write,
+to no single dispute. Where the papers show parties on opposite sides and nothing the advocate has said tells
+you whom they act for, that is the first such question: it decides which parties are adverse to them. The rows and the
+sections are shown in full beside what you write,
 so do not repeat them, and do not greet: the answer goes straight to the point. A dispute
 whose section could not be written in full is shown with why: say where it stands only
 where what to do first depends on it, without supplying its law.
