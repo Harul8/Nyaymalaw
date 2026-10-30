@@ -271,4 +271,52 @@ const board = {
   }
 }
 
+// Land extents by parcel (plan AN.27, P13d): the transfers found, their sum and what a stated whole extent leaves, as the server's
+// code worked them out; what could not be read listed and never added; nothing where the board has none.
+{
+  const caveat = 'Only the transfers NM found are added, each counted once where papers report the same date, parcel, extent and buyer.';
+  const extents = [
+    { parcel: 'Sy.No.487', transfers: [
+      { ids: ['X1'], date: '30-10-1985', kind: 'sale', to: 'Jelli Krishna', extent: 'Ac.1.18 guntas', in_guntas: '1 acre 18 guntas (Ac.1.18)',
+        read_as: 'acres.guntas', papers: [{ document: 'deed.pdf', pages: [1] }, { document: 'order.pdf', pages: [4, 5] }] },
+      { ids: ['X2'], date: '2 January 1986', kind: 'sale', to: '', extent: 'Ac.1.00', in_guntas: '1 acre (Ac.1.00)',
+        read_as: 'acres.guntas', papers: [{ document: 'deed.pdf', pages: [] }] }],
+      not_read: [{ id: 'X3', extent: 'part of the land', why: 'no extent in these words', document: 'deed.pdf', pages: [3] }],
+      sum: '2 acres 18 guntas (Ac.2.18)', complete: false,
+      totals: [{ text: 'Ac.8.24 guntas', read_as: 'acres.guntas', as: '8 acres 24 guntas (Ac.8.24)', ids: ['X1'], leaves: null }],
+      caveat },
+    { parcel: 'Sy.No.487/A', transfers: [
+      { ids: ['X4'], date: 'undated', kind: 'gift', to: 'Other', extent: 'Ac.0.29', in_guntas: '29 guntas (Ac.0.29)',
+        read_as: 'acres.guntas', papers: [{ document: 'order.pdf', pages: [2] }] }],
+      not_read: [], sum: '29 guntas (Ac.0.29)', complete: true,
+      totals: [{ text: 'Ac.2.00', read_as: 'acres.guntas', as: '2 acres (Ac.2.00)', ids: ['X4'], leaves: '1 acre 11 guntas (Ac.1.11)' },
+        { text: 'the whole survey number', read_as: 'no extent in these words', as: null, ids: ['X4'], leaves: null }],
+      caveat }];
+  const nodes = context.renderChatBoard({ ...structuredClone(board), extents });
+  const fold = nodes.find((node) => node.tagName === 'DETAILS' && text(node).startsWith('Land extents by parcel'));
+  assert.ok(fold, 'a fold for the extents');
+  assert.equal(fold.children[0].textContent, 'Land extents by parcel (2)');
+  const said = text(fold);
+  for (const part of ['A sum is only of the transfers found: check it against the papers.', 'Sy.No.487',
+    '30-10-1985 sale: Ac.1.18 guntas (1 acre 18 guntas (Ac.1.18)) to Jelli Krishna · deed.pdf, page 1; order.pdf, pages 4, 5',
+    '2 January 1986 sale: Ac.1.00 (1 acre (Ac.1.00)) · deed.pdf',
+    'Not added: “part of the land” (no extent in these words) · deed.pdf',
+    'Sum of the transfers found: 2 acres 18 guntas (Ac.2.18) (a transfer could not be read, so the whole is more)',
+    'A paper states the parcel’s whole extent as “Ac.8.24 guntas” (8 acres 24 guntas (Ac.8.24)); no remainder is named, because a transfer could not be read',
+    'Sy.No.487/A', 'undated gift: Ac.0.29 (29 guntas (Ac.0.29)) to Other · order.pdf, page 2', 'Sum of the transfers found: 29 guntas (Ac.0.29)',
+    'as “Ac.2.00” (2 acres (Ac.2.00)); the transfers found leave 1 acre 11 guntas (Ac.1.11)',
+    'as “the whole survey number”; it could not be read as an extent', caveat]) {
+    assert.ok(said.includes(part), part);
+  }
+  assert.ok(!said.includes('Sum of the transfers found: 29 guntas (Ac.0.29) ('), 'a complete sum has no aside');
+  assert.equal(nodes.indexOf(fold), nodes.findIndex((node) => node.className === 'board-disputes') + 1);
+  const with_copies = context.renderChatBoard({ ...structuredClone(board), extents, copies: [{ first: { document: 'a.pdf', page: 1 },
+    second: { document: 'b.pdf', page: 1 }, figures: [{ first: '6.06', second: '6.16', after: '' }] }] });
+  const at = (start) => with_copies.findIndex((node) => text(node).startsWith(start));
+  assert.ok(at('Figures two copies') >= 0 && at('Figures two copies') < at('Land extents by parcel'));
+  for (const quiet of [{ ...structuredClone(board), extents: [] }, structuredClone(board)]) {
+    assert.ok(!context.renderChatBoard(quiet).map(text).join('\n').includes('Land extents'));
+  }
+}
+
 console.log('chat board: ok');

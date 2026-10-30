@@ -3702,6 +3702,44 @@ function renderCopies(copies, make) {
   return [fold];
 }
 
+// LAND EXTENTS BY PARCEL (plan AN.27, P13d): the transfers of land NM found in the papers, added up by NM's code for each parcel - never
+// by a model - with what a paper's stated whole extent leaves, and the server's caveat that a sum is only of what was found. What
+// could not be read is listed and never added.
+function renderExtents(parcels, make) {
+  if (!Array.isArray(parcels) || !parcels.length) return [];
+  const fold = make('details', 'folded');
+  fold.appendChild(make('summary', '', `Land extents by parcel (${parcels.length})`));
+  fold.appendChild(make('p', 'board-lede', 'Added up by NM’s code from the transfers of land it found in your papers. A sum is only of '
+    + 'the transfers found: check it against the papers.'));
+  for (const parcel of parcels) {
+    fold.appendChild(make('h3', 'board-h', parcel.parcel));
+    const list = make('ul', 'board-list');
+    for (const transfer of parcel.transfers) {
+      const where = transfer.papers.map((paper) => paper.document + (paper.pages.length
+        ? `, page${paper.pages.length > 1 ? 's' : ''} ${paper.pages.join(', ')}` : '')).join('; ');
+      list.appendChild(make('li', '', `${transfer.date} ${transfer.kind}: ${transfer.extent} (${transfer.in_guntas})`
+        + `${transfer.to ? ` to ${transfer.to}` : ''} · ${where}`));
+    }
+    for (const missed of parcel.not_read) {
+      list.appendChild(make('li', 'board-status search_failed', `Not added: “${missed.extent}” (${missed.why}) · ${missed.document}`));
+    }
+    fold.appendChild(list);
+    if (parcel.sum) {
+      fold.appendChild(make('p', 'board-fact', `Sum of the transfers found: ${parcel.sum}`
+        + (parcel.complete ? '' : ' (a transfer could not be read, so the whole is more)')));
+    }
+    for (const total of parcel.totals) {
+      const aside = total.leaves ? `; the transfers found leave ${total.leaves}`
+        : !total.as ? '; it could not be read as an extent'
+        : !parcel.complete ? '; no remainder is named, because a transfer could not be read' : '';
+      fold.appendChild(make('p', 'board-fact', `A paper states the parcel’s whole extent as “${total.text}”`
+        + `${total.as ? ` (${total.as})` : ''}${aside}`));
+    }
+    fold.appendChild(make('p', 'board-lede', parcel.caveat));
+  }
+  return [fold];
+}
+
 // The board as NM understood the matter from the advocate's own words. Nothing on it is
 // presented as established: facts carry the certainty they were given with. The disputes
 // come first, under the marks' legend; how NM understood the matter, the facts, the
@@ -3740,6 +3778,7 @@ function renderChatBoard(board) {
   out.push(disputes);
   out.push(...renderTimeline(board.timeline, make));
   out.push(...renderCopies(board.copies, make));
+  out.push(...renderExtents(board.extents, make));
   const points = (board.understanding && board.understanding.open_points) || [];
   const counted = [[board.facts.length, 'Facts as you gave them'], [board.instructions.length, 'Standing instructions'],
     [board.related_points.length, 'Related points'], [points.length, 'Points NM’s own check raised']]

@@ -13,7 +13,7 @@ disputes are listed most urgent first, as the answer shows its sections (P26).
 """
 from __future__ import annotations
 
-from nm.core_engine import checklist, copy_figures, research, response_rendering
+from nm.core_engine import checklist, copy_figures, extents, research, response_rendering
 
 _UNDERSTOOD = research.QUESTION_PLANS
 
@@ -122,6 +122,13 @@ def _copies(rows):
              "figures": found["figures"]} for found in copy_figures.differences(pages)]
 
 
+def _extents(record):
+    """The land extents the papers record, added up by code for each parcel (plan AN.27, P13d; invariant I6): the transfers the
+    plan kept, those whose words were found added by extents.py and the rest listed and never added, each parcel with its sum, what
+    a paper's stated whole extent leaves, and the caveat that a sum is only of what was found. [] where the plan kept none."""
+    return extents.shown(record["plan"]["proposal"].get("transfers") or [])
+
+
 def _dispute(d, record, work, checklists):
     """One dispute as the board shows it: the facts it rests on, why each question was asked and what research did for it, why it
     matters (research v9, 16 Oct 2026), its checklist where the answer gave one, and whether the law has been assessed."""
@@ -219,6 +226,7 @@ def board(rows):
             "understanding": _confirmed(record),
             "timeline": _timeline(record, rows[:index + 1]),
             "copies": _copies(rows[:index + 1]),
+            "extents": _extents(record),
             "related_points": [{"point": r["point"], "why": r["why_it_matters"], "dispute_id": r["dispute_id"] or None,
                                 "dispute": names.get(r["dispute_id"])} for r in understanding["related_points"]],
         }
