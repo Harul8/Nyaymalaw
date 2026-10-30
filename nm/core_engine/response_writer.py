@@ -1550,6 +1550,16 @@ of each dispute by what it is, and to the advocate as "you", never as "the advoc
 overview is given no legal passages
 and needs none: do not remark on that.
 
+The papers' chronology (papers_chronology) comes with documents the advocate sent, as the sections'
+writers were shown it: each event with its date as the paper gives it, what happened, whose words
+they are (what a party alleges is that party's, not a finding), its paper and pages, and cite, the
+short IDs of those pages. Where the advocate asked for the history, the dates or a chronology of the
+papers, give one summary unit that sets out, in date order, the events that matter across the
+disputes - the orders, and the proceedings still pending among them - each with its date and, as a
+document use, the page it comes from; keep what a party alleges attributed to that party, rely on
+no event whose located is false, and leave the detail to the sections. Where the advocate did not
+ask, leave it unused.
+
 Work in a loop before you return: read the conversation and the sections, draft, check
 each statement against the section or message it rests on, and correct the draft.
 
@@ -1583,10 +1593,12 @@ def write_overview(model, context, research_record, sources, *, sections, interp
     if len(parts(research_record)) < 2:
         raise ValueError("Only an answer covering several disputes opens with an overview")
     offered = {tag: alias for alias, tag in answer_sources.aliases(sources).items()}
+    papers = _chronology_shown(research_record, offered) if presented else None
     payload = {"original_context": answer_sources.shown_context(context, sources),
                "setting": clock_contracts.setting(), "interpretation_proposal": interpretation,
                "understanding": research_record["plan"]["proposal"]["understanding"],
                "sections_shown": deepcopy(sections),
+               **({"papers_chronology": papers} if papers else {}),
                **({"time_limits": limit_ids(renamed(time_limits, offered))} if time_limits is not None else {}),
                "execution_evidence": execution,
                "source_kinds": {offered.get(identity, identity): row["kind"] for identity, row in sources.items()
