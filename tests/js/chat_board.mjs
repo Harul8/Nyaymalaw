@@ -309,6 +309,10 @@ const board = {
         not_added: [{ ids: ['X5'], date: '9-2-1974', kind: 'partition', to: 'Anil Kumar', extent: 'Ac.8.24', in_guntas: '8 acres 24 guntas (Ac.8.24)',
           read_as: 'acres.guntas', why: 'a partition allots a share; it is not a sale', papers: [{ document: 'order.pdf', pages: [6] }] }],
         sold: '2 acres 18 guntas (Ac.2.18)' },
+      { names: ['Anil Kumar'], transfers: [], not_added: [
+        { ids: ['X7'], date: '9-2-1974', kind: 'partition', to: 'his sons', extent: 'equal shares', in_guntas: null,
+          read_as: 'no extent in these words', why: 'a partition allots a share; it is not a sale', papers: [{ document: 'order.pdf', pages: [6] }] }],
+        sold: null },
       { names: [], transfers: [
         { ids: ['X6'], date: '3 March 1990', kind: 'sale', to: 'Mahesh Babu', extent: 'Ac.0.10', in_guntas: '10 guntas (Ac.0.10)',
           read_as: 'acres.guntas', papers: [{ document: 'order.pdf', pages: [7] }] }],
@@ -343,6 +347,8 @@ const board = {
     '2 January 1986 sale: Ac.1.00 (1 acre (Ac.1.00)) · deed.pdf',
     'Not added (a partition allots a share; it is not a sale): 9-2-1974 partition: Ac.8.24 (8 acres 24 guntas (Ac.8.24)) to Anil Kumar · order.pdf, page 6',
     'Added as stated: 2 acres 18 guntas (Ac.2.18) (a transfer could not be read, so the whole is more)',
+    'Seller: Anil Kumar',
+    'Not added (a partition allots a share; it is not a sale): 9-2-1974 partition: equal shares to his sons · order.pdf, page 6',
     'Seller: not named in the papers', '3 March 1990 sale: Ac.0.10 (10 guntas (Ac.0.10)) to Mahesh Babu · order.pdf, page 7',
     'Not added: “part of the land” (no extent in these words) · deed.pdf',
     'A paper states the parcel’s whole extent as “Ac.8.24 guntas” (8 acres 24 guntas (Ac.8.24))',
@@ -357,6 +363,7 @@ const board = {
   }
   assert.ok(!said.includes('Added as stated: 29 guntas (Ac.0.29) ('), 'a complete sum has no aside');
   assert.ok(!said.includes('Added as stated: null') && (said.match(/Added as stated:/g) || []).length === 2, 'a seller with no name is added to no one');
+  assert.ok(!said.includes('null') && !said.includes('undefined'), 'an extent that could not be read is shown as the paper writes it, and no more');
   assert.ok(!said.includes('held all of it, their sales found leave undefined'), 'nothing is said where there is nothing to say');
   assert.equal(nodes.indexOf(fold), nodes.findIndex((node) => node.className === 'board-disputes') + 1);
   const with_copies = context.renderChatBoard({ ...structuredClone(board), extents, copies: [{ first: { document: 'a.pdf', page: 1 },

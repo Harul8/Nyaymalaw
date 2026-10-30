@@ -18,13 +18,13 @@ GUNTAS_PER_ACRE = 40
 SQUARE_YARDS_PER_GUNTA = 121
 
 _NUMBER = r"\d+"
-#: Ac.1.18 guntas / Ac. 1-18 / Ac.0.29: acres, then guntas (under 40).
-_AC_DOT = re.compile(rf"\bac(?:res?)?\.?\s*({_NUMBER})\s*[.\-]\s*({_NUMBER})(?!\d)(?:\s*guntas?)?", re.I)
-#: 6 acres 6 guntas / 6 acres and 6 guntas / 6 ac. 6 g.
-_ACRES_GUNTAS = re.compile(rf"\b({_NUMBER})\s*(?:acres?|ac\.?)\s*(?:and\s*)?({_NUMBER})\s*(?:guntas?|gts?\.?)\b", re.I)
+#: Ac.1.18 guntas / Ac. 1-18 / Ac.0.29 / Acs.2-20 gts.: acres, then guntas (under 40), the papers' own abbreviations included.
+_AC_DOT = re.compile(rf"\bac(?:res?|s)?\.?\s*({_NUMBER})\s*[.\-]\s*({_NUMBER})(?!\d)(?:\s*(?:guntas?|gts?\.?))?", re.I)
+#: 6 acres 6 guntas / 6 acres and 6 guntas / 6 ac. 6 g. / 6 acs 6 gts.
+_ACRES_GUNTAS = re.compile(rf"\b({_NUMBER})\s*(?:acres?|acs?\.?)\s*(?:and\s*)?({_NUMBER})\s*(?:guntas?|gts?\.?)\b", re.I)
 #: 6.06 acres: acres and guntas written as a decimal, or decimal acres where the second part is 40 or more.
-_DECIMAL_ACRES = re.compile(rf"\b({_NUMBER})\.({_NUMBER})\s*(?:acres?|ac\b\.?)", re.I)
-_WHOLE_ACRES = re.compile(rf"\b({_NUMBER})\s*(?:acres?|ac\b\.?)(?!\s*(?:and\s*)?{_NUMBER}\s*guntas?)", re.I)
+_DECIMAL_ACRES = re.compile(rf"\b({_NUMBER})\.({_NUMBER})\s*(?:acres?|acs?\b\.?)", re.I)
+_WHOLE_ACRES = re.compile(rf"\b({_NUMBER})\s*(?:acres?|acs?\b\.?)(?!\s*(?:and\s*)?{_NUMBER}\s*guntas?)", re.I)
 _GUNTAS = re.compile(rf"\b({_NUMBER})\s*(?:guntas?|gts?\.?)\b", re.I)
 _YARDS = re.compile(rf"\b({_NUMBER}(?:\.\d+)?)\s*(?:sq\.?\s*(?:yards?|yds?\.?)|square\s+yards?)", re.I)
 
@@ -160,8 +160,8 @@ def ledger(transfers, copies=()):
                 same date, extent and kind read on pages that are copies of one page, whatever the buyer's name was read as, every
                 reading of it kept in names), its extent in guntas and how it was read; the sales, gifts and settlements added in
                 'sold' (None for a seller with none, or with no name), the rest in 'not_added';
-      unread - those whose extent could not be read, with why, never added;
-      complete - whether every transfer of the parcel was read;
+      unread - the sales, gifts and settlements whose extent could not be read, with why, never added;
+      complete - whether every sale, gift and settlement of the parcel was read;
       totals - each different whole extent a paper states for the parcel and, for each seller who sold, what it leaves after that
                seller's sales (only where every transfer was read, and as if that seller held all of it) or how far their sales go
                beyond it (named whether or not every transfer was read: more can only be more)."""
@@ -185,10 +185,12 @@ def ledger(transfers, copies=()):
                                                                                        "guntas": value, "how": how, "ids": []})
             stated["ids"].append(transfer["id"])
         value, how = parse(transfer["extent"])
-        if value is None:
+        if value is None and transfer.get("kind", "") in SOLD_KINDS:
             entry["unread"].append({"id": transfer["id"], "extent": " ".join(str(transfer["extent"]).split()), "why": how, **{
                 k: who[k] for k in ("document", "pages")}})
             continue
+        # A partition, a decree or anything but a sale, gift or settlement is never added, so an extent that cannot be read does not make
+        # the parcel incomplete (P20 (d)): it is listed with the extent as written, and why it could not be read.
         sort, name = transfer.get("sort", ""), " ".join(str(transfer.get("to", "")).split())
         seller = " ".join(str(transfer.get("from", "")).split())
         source = transfer.get("source", transfer["document"])
@@ -246,7 +248,8 @@ CAVEAT = ("Extents are added as the papers state them, whoever states them, sell
 
 def _in_words(made, **more):
     return {"ids": made["ids"], "date": made["date"], "kind": made["kind"], "to": made["to"], "extent": made["extent"],
-            "in_guntas": render(made["guntas"]), "read_as": made["how"], "papers": made["papers"],
+            "in_guntas": render(made["guntas"]) if made["guntas"] is not None else None, "read_as": made["how"],
+            "papers": made["papers"],
             **({"also_read_as": made["names"][1:]} if len(made["names"]) > 1 else {}), **more}
 
 

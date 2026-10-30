@@ -102,3 +102,12 @@ def test_one_sale_read_on_two_copies_of_a_page_is_added_once_and_both_readings_o
         sale["source"] = "t2:d1" if sale["document"] == "scan.pdf" else "t1:d1"
     (parcel,) = matter_board.board([first, second])["extents"]
     assert len(parcel["sellers"][0]["transfers"]) == 1 and parcel["sellers"][0]["sold"] == "6 acres 6 guntas (Ac.6.06)"
+
+
+def test_a_partition_with_no_extent_is_listed_under_its_seller_and_the_parcel_is_still_complete():
+    (parcel,) = extents_of([kept(1, "Sy.No.487", "Ac.1.18", total="Ac.8.24"),
+                            kept(2, "Sy.No.487", "equal shares", kind="partition", frm="Anil Kumar", to="his sons", sort="1974-02-09")])
+    assert parcel["complete"] is True and parcel["not_read"] == []
+    assert parcel["totals"][0]["by_seller"] == [{"seller": "Hari Prasad", "leaves": "7 acres 6 guntas (Ac.7.06)", "exceeds": None}]
+    (listed,) = parcel["sellers"][1]["not_added"]
+    assert (listed["extent"], listed["in_guntas"], listed["kind"]) == ("equal shares", None, "partition")

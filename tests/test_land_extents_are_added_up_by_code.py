@@ -298,3 +298,51 @@ def test_a_transfer_with_no_pages_is_never_taken_for_a_copy_and_the_turns_own_ke
     assert len(ledger(keyed, on_copies((("t1:d1", 1), ("t1:d2", 1))))[0]["sellers"][0]["transfers"]) == 1
     assert len(ledger([transfer(1, "Ac.6.06", document="deed.pdf", pages=()), transfer(2, "Ac.6.06", to="Two", document="scan.pdf", pages=())],
                       COPIED)[0]["sellers"][0]["transfers"]) == 2
+
+
+# The papers' own abbreviations, and a transfer that is never added (plan AN.27, P20 (d)): found by the replay of the reviewed bundle, where
+# two partitions written "Ac.8.24 gts" were not read - "gts" was not known after Ac.8.24, so "24 gts" was a second extent - and the
+# parcel they were in was called incomplete for them.
+@pytest.mark.parametrize("words,guntas,how", [
+    ("Ac.8.24 gts", 344, "acres.guntas"), ("Ac.8.24 gts.", 344, "acres.guntas"), ("Ac. 8-24 Gts.", 344, "acres.guntas"),
+    ("Acs.2-20 gts", 100, "acres.guntas"), ("Acs. 2.20 Gts.", 100, "acres.guntas"), ("an extent of Ac.1.18 gts in Sy.No.201", 58, "acres.guntas"),
+    ("6 acs 6 gts", 246, "acres and guntas"), ("6 Acs. 6 Gts.", 246, "acres and guntas"), ("6.5 acs", 260, "decimal acres"),
+    ("6 acs", 240, "acres")])
+def test_the_abbreviations_the_papers_use_are_read_as_the_extent_they_write(words, guntas, how):
+    assert parse(words) == (Fraction(guntas), how)
+
+
+@pytest.mark.parametrize("words", ["Ac.8.24 gts and Ac.1.18 gts", "Ac.8.24 gts (each Ac.0.29 gts)", "Acs.2-20 gts and 5 gts", "6 acs 6 gts and 4 acs"])
+def test_two_extents_written_with_the_abbreviations_are_still_two(words):
+    assert parse(words) == (None, "more than one extent in these words")
+
+
+def test_a_partition_or_a_decree_whose_extent_cannot_be_read_is_listed_and_does_not_make_the_parcel_incomplete():
+    (parcel,) = ledger([transfer(1, "Ac.1.18", total="Ac.8.24"),
+                        transfer(2, "equal shares", kind="partition", frm="Anil Kumar", to="his sons", sort="1974-02-09", date="9-2-1974"),
+                        transfer(3, "", kind="decree", frm="Anil Kumar", to="Priya Devi", sort="1990-01-01", date="1 January 1990")])
+    assert parcel["complete"] is True and parcel["unread"] == []
+    seller, other = parcel["sellers"]
+    assert (seller["names"], seller["sold"]) == (["Hari Prasad"], 58) and (other["names"], other["sold"]) == (["Anil Kumar"], None)
+    assert [(t["kind"], t["guntas"], t["how"]) for t in other["not_added"]] == [
+        ("partition", None, "no extent in these words"), ("decree", None, "no extent in these words")]
+    assert parcel["totals"][0]["by_seller"] == [{"seller": "Hari Prasad", "leaves": 286, "exceeds": None}], "a remainder is named"
+    (shown_parcel,) = shown([transfer(1, "Ac.1.18"), transfer(2, "equal shares", kind="partition", frm="Anil Kumar")])
+    (kept,) = shown_parcel["sellers"][1]["not_added"]
+    assert (kept["in_guntas"], kept["extent"], kept["read_as"]) == (None, "equal shares", "no extent in these words")
+    assert kept["why"] == "a partition allots a share; it is not a sale"
+    json.dumps(shown_parcel)
+
+
+def test_a_sale_gift_or_settlement_whose_extent_cannot_be_read_still_makes_the_parcel_incomplete():
+    for kind in ("sale", "gift", "settlement"):
+        (parcel,) = ledger([transfer(1, "Ac.1.18", total="Ac.8.24"), transfer(2, "part of the land", kind=kind, to="Mahesh Babu")])
+        assert parcel["complete"] is False and [u["id"] for u in parcel["unread"]] == ["X2"]
+        assert parcel["totals"][0]["by_seller"] == []
+
+
+def test_two_copies_of_a_partition_with_no_extent_are_one_partition():
+    copied = {frozenset({("deed.pdf", 1), ("scan.pdf", 1)})}
+    (parcel,) = ledger([transfer(1, "equal shares", kind="partition", frm="Anil Kumar", document="deed.pdf"),
+                        transfer(2, "equal shares", kind="partition", frm="Anil Kumar", document="scan.pdf")], copied)
+    assert [len(t["ids"]) for t in parcel["sellers"][0]["not_added"]] == [2]

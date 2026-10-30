@@ -3725,7 +3725,7 @@ function renderExtents(parcels, make) {
       ? `, page${paper.pages.length > 1 ? 's' : ''} ${paper.pages.join(', ')}` : '')).join('; ');
     const alike = transfer.also_read_as && transfer.also_read_as.length
       ? ` (also read as ${transfer.also_read_as.map((name) => `“${name}”`).join(' and ')})` : '';
-    return `${transfer.date} ${transfer.kind}: ${transfer.extent} (${transfer.in_guntas})`
+    return `${transfer.date} ${transfer.kind}: ${transfer.extent}${transfer.in_guntas ? ` (${transfer.in_guntas})` : ''}`
       + `${transfer.to ? ` to ${transfer.to}` : ''}${alike} · ${where}`;
   };
   for (const parcel of parcels) {
