@@ -417,6 +417,17 @@ its document says: cite it for that, keep it apart from the advocate's own accou
 treat it as neither proved nor law. A page the AI read from a scan may hold [illegible]
 marks; say what could not be read where it matters. A voice note arrives the same way,
 as its recording's transcript made by the AI: what was said, by whoever is speaking.
+The papers' chronology (papers_chronology) comes with documents the advocate sent: every event the
+papers record, the dated ones in date order and the undated after them, each with its date as
+the paper gives it, what happened, whose words they are (said_by: what a party alleges is that
+party's, not a finding), the paper and its pages, and cite, the short IDs of those pages, to
+select as document uses. It is the record of what the papers hold. When the advocate asks for
+the history, the dates or a summary of the papers, or the sequence of events bears on your
+part, set out the events that matter to it in date order, each with its date and the page it
+comes from, and leave out no order, direction or proceeding still pending that bears on it.
+Keep what a party alleges attributed to that party. An event whose located is false could not
+be found on its page: do not rely on it or cite it, and say it needs checking against the
+paper. State no date or event that is neither in the chronology nor on a page.
 3. Read each legal source with its neighbouring context. A provision's read_with names
 the held provisions its Act reads it with and how: it names them, they name it in the
 words shown, or they stand beside it. Read them together, and state a rule with the
@@ -1270,6 +1281,20 @@ def _worded_limits(time_limits):
     return time_limits
 
 
+def _chronology_shown(record, offered):
+    """The papers' chronology as the current writer is shown it (plan AN.27, P11): each event the plan kept, with the short IDs of
+    the pages its words are on to select as uses - none for an event whose words were not located - and without the sort date, the
+    exact words and the owned IDs. None where the plan kept none (research before v12, or no papers, or no events)."""
+    events = record["plan"]["proposal"].get("chronology") if record.get("contract") in research.CHRONICLED else None
+    if not events:
+        return None
+    return [{"id": event["id"], "date": event["date"], "kind": event["kind"], "what": event["what"],
+             "said_by": event["said_by"], "paper": event["document"], "pages": list(event["pages"]),
+             "cite": [offered[page] for page in (f"{event['source']}p{number}" for number in event["pages"])
+                      if event["anchored"] and page in offered],
+             "located": event["anchored"]} for event in events]
+
+
 def _payload(context, record, sources, interpretation, execution, layout, index, time_limits=None, *, worded=False):
     part = layout[index]
     disputes = {}
@@ -1284,8 +1309,10 @@ def _payload(context, record, sources, interpretation, execution, layout, index,
         time_limits = limit_ids(renamed(time_limits, offered))
         if worded:
             time_limits = _worded_limits(time_limits)
+    papers = _chronology_shown(record, offered) if worded else None
     return {"original_context": answer_sources.shown_context(context, sources), "setting": clock_contracts.setting(),
             "interpretation_proposal": interpretation,
+            **({"papers_chronology": papers} if papers else {}),
             "this_part": {"part": index + 1, "of": len(layout), "opens_the_answer": index == 0,
                           "dispute": disputes.get(part["dispute_id"]),
                           "other_parts": [disputes[p["dispute_id"]]["name"] for p in layout
