@@ -297,18 +297,20 @@ const board = {
   assert.ok(fold, 'a fold for the extents');
   assert.equal(fold.children[0].textContent, 'Land extents by parcel (2)');
   const said = text(fold);
-  for (const part of ['A sum is only of the transfers found: check it against the papers.', 'Sy.No.487',
+  for (const part of ['Added up by NM’s code from the transfers of land it found in your papers, as the papers state them and whoever '
+    + 'states them. Rival or repeated accounts are added as if each were true, so a sum is a figure to check against the papers, not an '
+    + 'extent anyone holds.', 'Sy.No.487',
     '30-10-1985 sale: Ac.1.18 guntas (1 acre 18 guntas (Ac.1.18)) to Jelli Krishna · deed.pdf, page 1; order.pdf, pages 4, 5',
     '2 January 1986 sale: Ac.1.00 (1 acre (Ac.1.00)) · deed.pdf',
     'Not added: “part of the land” (no extent in these words) · deed.pdf',
-    'Sum of the transfers found: 2 acres 18 guntas (Ac.2.18) (a transfer could not be read, so the whole is more)',
+    'Added as stated: 2 acres 18 guntas (Ac.2.18) (a transfer could not be read, so the whole is more)',
     'A paper states the parcel’s whole extent as “Ac.8.24 guntas” (8 acres 24 guntas (Ac.8.24)); no remainder is named, because a transfer could not be read',
-    'Sy.No.487/A', 'undated gift: Ac.0.29 (29 guntas (Ac.0.29)) to Other · order.pdf, page 2', 'Sum of the transfers found: 29 guntas (Ac.0.29)',
+    'Sy.No.487/A', 'undated gift: Ac.0.29 (29 guntas (Ac.0.29)) to Other · order.pdf, page 2', 'Added as stated: 29 guntas (Ac.0.29)',
     'as “Ac.2.00” (2 acres (Ac.2.00)); the transfers found leave 1 acre 11 guntas (Ac.1.11)',
     'as “the whole survey number”; it could not be read as an extent', caveat]) {
     assert.ok(said.includes(part), part);
   }
-  assert.ok(!said.includes('Sum of the transfers found: 29 guntas (Ac.0.29) ('), 'a complete sum has no aside');
+  assert.ok(!said.includes('Added as stated: 29 guntas (Ac.0.29) ('), 'a complete sum has no aside');
   assert.equal(nodes.indexOf(fold), nodes.findIndex((node) => node.className === 'board-disputes') + 1);
   const with_copies = context.renderChatBoard({ ...structuredClone(board), extents, copies: [{ first: { document: 'a.pdf', page: 1 },
     second: { document: 'b.pdf', page: 1 }, figures: [{ first: '6.06', second: '6.16', after: '' }] }] });

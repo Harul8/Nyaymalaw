@@ -3709,8 +3709,9 @@ function renderExtents(parcels, make) {
   if (!Array.isArray(parcels) || !parcels.length) return [];
   const fold = make('details', 'folded');
   fold.appendChild(make('summary', '', `Land extents by parcel (${parcels.length})`));
-  fold.appendChild(make('p', 'board-lede', 'Added up by NM’s code from the transfers of land it found in your papers. A sum is only of '
-    + 'the transfers found: check it against the papers.'));
+  fold.appendChild(make('p', 'board-lede', 'Added up by NM’s code from the transfers of land it found in your papers, as the papers state '
+    + 'them and whoever states them. Rival or repeated accounts are added as if each were true, so a sum is a figure to check against '
+    + 'the papers, not an extent anyone holds.'));
   for (const parcel of parcels) {
     fold.appendChild(make('h3', 'board-h', parcel.parcel));
     const list = make('ul', 'board-list');
@@ -3725,7 +3726,7 @@ function renderExtents(parcels, make) {
     }
     fold.appendChild(list);
     if (parcel.sum) {
-      fold.appendChild(make('p', 'board-fact', `Sum of the transfers found: ${parcel.sum}`
+      fold.appendChild(make('p', 'board-fact', `Added as stated: ${parcel.sum}`
         + (parcel.complete ? '' : ' (a transfer could not be read, so the whole is more)')));
     }
     for (const total of parcel.totals) {

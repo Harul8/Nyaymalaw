@@ -157,9 +157,11 @@ def ledger(transfers):
     return out
 
 
-#: What every ledger says of itself: a sum is only of what was found.
-CAVEAT = ("Only the transfers NM found are added, each counted once where papers report the same date, parcel, extent and buyer; a "
-          "transfer NM did not find, or a buyer named two ways, makes the sum wrong. Check it against the papers.")
+#: What every ledger says of itself: a sum is only of what was found, and adds every account as the papers state it.
+CAVEAT = ("Extents are added as the papers state them, whoever states them, and only the transfers NM found are added, each counted once "
+          "where papers report the same date, parcel, extent and buyer. Transfers that are rival, overlapping or the same land described "
+          "twice are added as if each were separate and true, so a sum is a figure to check, not an extent anyone holds. A transfer NM "
+          "did not find, or a buyer named two ways, makes the sum wrong. Check it against the papers.")
 
 
 def shown(transfers):

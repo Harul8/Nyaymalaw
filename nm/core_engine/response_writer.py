@@ -440,10 +440,12 @@ copies differ, never choose between them, and do not call it a disagreement in t
 themselves. Counting is code's work for extents as it is for days: do not add, subtract or
 convert acres, guntas or cents yourself. Where land_extents is given, code added the transfers of
 land NM found in the papers, parcel by parcel: use its sums, and what they leave of a stated
-whole extent, exactly as given; say that they are only of the transfers found, as its caveat
-does, and which transfers were not added and why; and name no remainder for a parcel whose
-complete is false. For any other total or remainder, give each extent as the paper gives it,
-and say what would be added or taken away and that it has not been worked out.
+whole extent, exactly as given; say what its caveat says - that they add every transfer the
+papers record, whoever states it, rival and repeated accounts included, so a sum is a figure to
+check and never the extent anyone holds or has transferred - and which transfers were not added
+and why; and name no remainder for a parcel whose complete is false. For any other total or
+remainder, give each extent as the paper gives it, and say what would be added or taken away
+and that it has not been worked out.
 3. Read each legal source with its neighbouring context. A provision's read_with names
 the held provisions its Act reads it with and how: it names them, they name it in the
 words shown, or they stand beside it. Read them together, and state a rule with the

@@ -375,8 +375,9 @@ When copies_read_differently is given, the piece must give both readings of such
 choose neither; one that gives only one reading, or that adds, subtracts or converts extents
 (acres, guntas, cents) where the papers do not state the result, states more than the papers
 bear out (unsupported). Where land_extents is given, code added the transfers of land NM found: a
-sum or remainder of extents is borne out only if it is the one land_extents gives, said as only of the
-transfers found; one for a parcel whose complete is false, or one the piece worked out itself, is not.
+sum or remainder of extents is borne out only if it is the one land_extents gives, said as what the
+transfers found add up to and not as an extent anyone holds or has transferred; one for a parcel
+whose complete is false, or one the piece worked out itself, is not.
 
 List only what you find. Empty lists mean the piece can be shown as it is, its folds as placed.""")
 assert SYSTEM_V11 != SYSTEM_V10 and "keep_shown" in SYSTEM_V11 and "shown as placed" not in SYSTEM_V10

@@ -128,5 +128,8 @@ def test_the_ledger_in_words_is_plain_data_and_says_it_is_only_of_what_was_found
     assert parcel["sum"] == "2 acres 18 guntas (Ac.2.18)" and parcel["complete"] is True
     assert parcel["totals"][0]["leaves"] == "6 acres 6 guntas (Ac.6.06)" and parcel["totals"][0]["as"] == "8 acres 24 guntas (Ac.8.24)"
     assert parcel["caveat"] == extents.CAVEAT and "makes the sum wrong" in parcel["caveat"]
+    # P20 (c): what a sum is, said once for every ledger - an addition of accounts as stated, not an extent anyone holds.
+    assert "whoever states them" in extents.CAVEAT and "rival, overlapping or the same land described twice" in extents.CAVEAT
+    assert "not an extent anyone holds" in extents.CAVEAT and "a buyer named two ways" in extents.CAVEAT
     assert parcel["transfers"][0]["in_guntas"] == "1 acre 18 guntas (Ac.1.18)" and parcel["transfers"][0]["read_as"] == "acres.guntas"
     assert shown([transfer(1, "nothing")])[0]["sum"] is None
