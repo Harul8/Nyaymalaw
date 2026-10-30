@@ -362,7 +362,15 @@ that matters now (a period that has already run out, a step to take at once), so
 shown with the advice. Saying in could_be_better that a paragraph should not be folded does
 not change what the advocate sees: only keep_shown does.""").replace(
     "List only what you find. Empty lists mean the piece can be shown as it is.",
-    "List only what you find. Empty lists mean the piece can be shown as it is, its folds as placed.")
+    """When papers_chronology is given, it lists the events the papers record, each with its paper and
+pages (cite names those pages by their DOC IDs) and whether its words were located. Judge the
+piece against it as well. The piece may leave out an order, direction, transaction or proceeding
+still pending that the advocate asked about or that bears on the piece (could_be_better, naming
+the events by their IDs). It misleads if it states a date or event that neither the chronology
+nor the pages bear out, or gives what a party alleges as established. An event whose located
+is false could not be found on its page and supports nothing.
+
+List only what you find. Empty lists mean the piece can be shown as it is, its folds as placed.""")
 assert SYSTEM_V11 != SYSTEM_V10 and "keep_shown" in SYSTEM_V11 and "shown as placed" not in SYSTEM_V10
 SCHEMA_V10 = _object({
     "misleading": {"type": "array", "items": _object({
@@ -907,6 +915,11 @@ def review(model, context, research_record, sources, draft, execution=None, *,
                                                                     if other is not part and other["dispute_id"] in names]}
         else:
             payload["what_you_review"] = {"piece": "the whole reply"}
+        # The events the papers record, as the writer of the piece was shown them (plan AN.27, P12).
+        papers = (response_writer._chronology_shown(research_record, shown)
+                  if contract == PRESENTED_CONTRACT and draft["section"] != response_writer.OVERVIEW else None)
+        if papers:
+            payload["papers_chronology"] = papers
         if "dropped" in draft:
             payload["removed_statements"] = _removed(draft, context, sources)
         if conflicts:
