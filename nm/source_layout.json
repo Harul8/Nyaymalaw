@@ -40,6 +40,7 @@
     "nm.core_engine.conversation": "core",
     "nm.core_engine.copy_figures": "core",
     "nm.core_engine.documents": "core",
+    "nm.core_engine.extents": "core",
     "nm.core_engine.limitation": "core",
     "nm.core_engine.matter_board": "core",
     "nm.core_engine.page_reading": "core",
@@ -116,7 +117,7 @@
   "expected_roles": {
     "adapters": 29,
     "bootstrap": 5,
-    "core": 27,
+    "core": 28,
     "domain": 37,
     "edge": 2,
     "infrastructure": 1,
