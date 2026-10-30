@@ -99,6 +99,14 @@ def test_an_extent_that_cannot_be_read_is_never_added_and_the_sum_says_it_is_not
     assert parcel["totals"][0]["leaves"] is None, "no remainder is named while a transfer is unread"
 
 
+def test_a_transfer_whose_words_were_not_found_on_its_page_is_never_added_nor_its_stated_extent_used():
+    (parcel,) = ledger([transfer(1, "Ac.1.18", total="Ac.8.24"), {**transfer(2, "Ac.1.00", to="Other", total="Ac.9.00"), "anchored": False},
+                        {**transfer(3, "Ac.0.10", to="Third"), "anchored": True}])
+    assert parcel["sum"] == 68 and not parcel["complete"]
+    assert [(u["id"], u["why"]) for u in parcel["unread"]] == [("X2", "its words were not found on the page")]
+    assert [s["text"] for s in parcel["totals"]] == ["Ac.8.24"] and parcel["totals"][0]["leaves"] is None
+
+
 def test_a_stated_extent_that_cannot_be_read_names_no_remainder_and_sales_beyond_the_whole_leave_less_than_nothing():
     (parcel,) = ledger([transfer(1, "Ac.1.18", total="the whole survey number")])
     assert parcel["totals"][0]["guntas"] is None and parcel["totals"][0]["leaves"] is None

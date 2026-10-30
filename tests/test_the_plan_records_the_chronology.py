@@ -5,6 +5,7 @@ understanding, as soon as the message is known to carry a matter, so it adds no 
 not be read; and a plan is refused if what it keeps is not what the papers show - the numbering, the order of the dates, the document,
 the date as code reads it, and the pages the words are on. A plan made before v12 is kept as it was. The papers are synthetic.
 """
+import re
 import threading
 from copy import deepcopy
 from functools import cache
@@ -29,14 +30,24 @@ class Beside(Model):
     """The research double that also reads papers from a script. With `meet`, its understanding and its reading of the papers each
     wait for the other to be in flight, so a plan that does one after the other fails here."""
 
-    def __init__(self, script=SCRIPT, *, unreadable=(), usage_limit=(), meet=None, **kw):
+    def __init__(self, script=SCRIPT, *, unreadable=(), usage_limit=(), meet=None, transfers=None, transfers_unreadable=(),
+                 transfers_usage_limit=(), **kw):
         super().__init__(**kw)
         self.papers, self.meet = Reading(script, fail=unreadable, usage_limit=usage_limit, meet=meet), meet
+        self.transfers, self.transfers_fail = transfers or {}, (set(transfers_unreadable), set(transfers_usage_limit))
 
     def structured(self, prompt, schema, tier, **kwargs):
         if prompt.operation == "core_research_chronology":
             self.calls.append(prompt)
             return self.papers.structured(prompt, schema, tier, **kwargs)
+        if prompt.operation == "core_research_transfers":
+            self.calls.append(prompt)
+            name = re.search(r'^Document: "(.*)"', prompt.user, re.M).group(1)
+            if name in self.transfers_fail[1]:
+                raise UsageLimitReached("the account has no credit")
+            if name in self.transfers_fail[0]:
+                raise SchemaViolation(f"scripted failure for {name}")
+            return _result({"transfers": self.transfers.get(name, [])}, tier)
         if prompt.operation == "core_research_understand" and self.meet is not None:
             self.meet.wait(timeout=10)
         return super().structured(prompt, schema, tier, **kwargs)

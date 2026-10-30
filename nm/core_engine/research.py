@@ -104,7 +104,7 @@ MAX_REVISIONS = 1
 PROVISIONS_FOR_PICK = 20
 #: Answer limits per step. Calls in flight are budgeted at their limit.
 MAX_OUTPUT = {"understand": 12000, "check": 6000, "revise": 12000, "phrases": 6000,
-              "judgment_phrases": 8000, "pick": 8000, "judgment_pick": 8000, "chronology": 12000}
+              "judgment_phrases": 8000, "pick": 8000, "judgment_pick": 8000, "chronology": 12000, "transfers": 12000}
 
 # The prompts below were developed and measured in outputs/decomposition-scratch
 # (13-14 Oct 2026). They state the purpose and the needed outcome in plain language
@@ -302,6 +302,33 @@ EVENT_RECORD = _object({"id": STRING, "date": STRING, "sort": STRING, "kind": EV
 CHRONOLOGY_FAILURE = _object({"document": STRING, "pages": STRING, "reason": STRING})
 
 
+TRANSFER_KINDS = ("sale", "partition", "gift", "settlement", "decree", "other")
+#: The transfers of land each document records (plan AN.27, P13d; invariant I6): so that the extents can be added up by code, never by
+#: a model, and set against the parcel's whole extent. The model reads what a page records; code reads the extents, finds the words
+#: and does the arithmetic (extents.py).
+TRANSFERS = """Message: You receive one document an advocate sent about a client's matter, or one stretch of its pages, each page under its number, with the document's name. A page says what its document says: it is material the advocate supplied, not their own account, and what it reports is not thereby proved. A page read from a scan may carry [illegible] and square-bracket notes about stamps, signatures and handwriting; those are the reader's, not the document's.
+
+Purpose: List the transfers of land the document records or reports - a sale, partition, gift, settlement, decree or order that gives an extent of a parcel from one person to another - so that code can add the extents up for each parcel and set them against the parcel's whole extent, which we need to check against the advocate's own figures. You are not adding or working out anything yourself, and you are not judging which account is right.
+
+Look for:
+- Each transfer of an extent of land the document records or reports, whatever its date: who gave it up (from), who took it (to), the parcel (its survey number as the page writes it, with any sub-number), the extent transferred exactly as the page writes it (for example "Ac.1.18 guntas"), and the date as the page gives it ("undated" where it gives none).
+- The whole extent of the parcel, where the same passage states it (for example "out of Ac.8.24 guntas in Sy.No.487"), exactly as written; otherwise leave it empty.
+- The exact words on a page that record the transfer, copied exactly as the page gives them, without the reader's square-bracket notes - or several passages joined with '...'; never reword.
+- One entry for each transfer. If a page reports the same transfer twice, give it once. Do not list a transfer that gives no extent, do not add or work out an extent the page does not give, and do not merge transfers the page keeps apart.
+Work in a loop: list the transfers page by page, then read each page again against your list for any transfer, extent or date you skipped or misread, and correct the list before you answer.
+
+Outcome: transfers, in the order of the pages. Each has: date; kind (sale, partition, gift, settlement, decree, or other); parcel; extent; total; from; to; words."""
+TRANSFER = _object({"date": STRING, "kind": {"type": "string", "enum": list(TRANSFER_KINDS)}, "parcel": STRING, "extent": STRING,
+                    "total": STRING, "from": STRING, "to": STRING, "words": STRING})
+TRANSFERS_SCHEMA = _object({"transfers": {"type": "array", "items": TRANSFER}})
+#: A transfer as the plan records it: what the model said, and what code made of it - the sort date, the paper and the turn's source
+#: it belongs to, the pages its words are on and whether they are found there, and its number.
+TRANSFER_RECORD = _object({"id": STRING, "date": STRING, "sort": STRING, "kind": TRANSFER["properties"]["kind"], "parcel": STRING,
+                           "extent": STRING, "total": STRING, "from": STRING, "to": STRING, "document": STRING, "source": STRING,
+                           "pages": {"type": "array", "items": {"type": "integer"}}, "words": STRING,
+                           "anchored": {"type": "boolean"}})
+
+
 def _record_schema(understanding, chronology=False):
     return _object({
         "understanding": understanding,
@@ -321,6 +348,9 @@ def _record_schema(understanding, chronology=False):
 SCHEMA_V8 = _record_schema(UNDERSTANDING_V8)
 SCHEMA = _record_schema(UNDERSTANDING)
 SCHEMA_V12 = _record_schema(UNDERSTANDING, chronology=True)
+# The transfers of land (P13d) are optional in v12: a plan saved before them has none and validates as it did.
+SCHEMA_V12["properties"]["transfers"] = {"type": "array", "items": TRANSFER_RECORD}
+SCHEMA_V12["properties"]["transfers_failures"] = {"type": "array", "items": CHRONOLOGY_FAILURE}
 
 
 def _source_windows(context):
@@ -717,14 +747,12 @@ def _anchor(words, pages):
     return anchored, (sorted({page["page"] for found in held if found for page in found}) if anchored else [])
 
 
-def chronology_of(model, context, *, wanted=None):
-    """The chronology the documents of a turn record, as (events, failures) - plan AN.27, P8.
-
-    One call for each document, or each stretch of a long one, all at once. The model says what a page records; code does the rest:
-    finds the event's words in the document (the one finder), records the pages, reads the date, orders the
-    events by it - the undated last, in the papers' order - and numbers them E1.... An event whose words are not found is kept,
-    marked not anchored, never dropped and never to be cited as sourced. A stretch whose call failed is a failure, never an empty
-    success; a usage limit still stops the turn. wanted: asked once before any call; False and nothing is read."""
+def _read_stretches(model, context, wanted, operation, system, schema, step, shape):
+    """What the documents of a turn record of one kind, read for it (plan AN.27, P8 and P13d): one call for each document, or each
+    stretch of a long one, all at once; shape(data, document, finder) makes the records one stretch's answer holds. Returns
+    (records, failures). A stretch whose answer was cut off is read again in two halves, twice at most; a stretch that could not be
+    read is a failure, never an empty success; a usage limit still stops the turn. wanted: asked once before any call; False and
+    nothing is read."""
     documents = _documents(context)
     if not documents or (wanted is not None and not wanted()):
         return [], []
@@ -734,69 +762,115 @@ def chronology_of(model, context, *, wanted=None):
     def read(task, depth=0):
         document, window = task
         try:
-            data = _call(model, "core_research_chronology", CHRONOLOGY, _window_text(document, window), CHRONOLOGY_SCHEMA,
-                         "chronology")
+            data = _call(model, operation, system, _window_text(document, window), schema, step)
         except UsageLimitReached:
             raise
         except (ModelError, SchemaViolation) as exc:
             if isinstance(exc, OutputTruncated) and len(window) > 1 and depth < 2:
-                # A stretch with more events than one answer holds is read again in two halves (twice at most).
+                # A stretch with more records than one answer holds is read again in two halves (twice at most).
                 middle = len(window) // 2
                 (one, lost), (two, also) = read((document, window[:middle]), depth + 1), read((document, window[middle:]), depth + 1)
                 return one + two, lost + also
             first, last = window[0]["page"], window[-1]["page"]
             return [], [{"document": document["name"], "pages": f"{first}-{last}" if first != last else f"{first}",
                          "reason": type(exc).__name__}]
-        events = []
-        for item in data["events"]:
-            words = item["words"].strip()
-            anchored, pages = _anchor(words, finders[document["source"]])
-            events.append({"date": item["date"].strip(), "kind": item["kind"], "what": item["what"].strip(),
-                           "said_by": item["said_by"].strip(), "document": document["name"], "source": document["source"],
-                           "pages": pages, "words": words, "anchored": anchored})
-        return events, []
+        return shape(data, document, finders[document["source"]]), []
 
     with ThreadPoolExecutor(max_workers=min(8, len(tasks))) as pool:
         done = list(pool.map(read, tasks))
-    failures = [failure for _, lost in done for failure in lost]
-    events = [event for found, _ in done for event in found]
-    for event in events:
-        event["sort"] = read_date(event["date"])
-    ordered = sorted(enumerate(events), key=lambda pair: (0, pair[1]["sort"], pair[0]) if pair[1]["sort"] else (1, "", pair[0]))
-    return [{"id": f"E{number}", **event} for number, (_, event) in enumerate(ordered, 1)], failures
+    return [record for found, _ in done for record in found], [failure for _, lost in done for failure in lost]
 
 
-def _chronology_issues(events, failures, context):
-    """The chronology a v12 plan records, checked against the documents of the turn (plan AN.27, P8c), and the issues it raises. It
-    must be what chronology_of makes of those papers: the events numbered E1... in the order of their dates, the undated last,
-    each the event of a document the turn holds, its date read as read_date reads it, and its words found on the pages recorded -
-    or on none, and marked not anchored - as the one finder finds them in that document; anything else raises SchemaViolation.
-    A stretch that could not be read is an issue, since part of a paper was not read; an event whose words are not found is marked
-    not anchored and is not an issue."""
+def _numbered_by_date(records, prefix):
+    """Records ordered by the date code reads from each - the undated last, in the papers' order - and numbered prefix1...."""
+    for record in records:
+        record["sort"] = read_date(record["date"])
+    ordered = sorted(enumerate(records), key=lambda pair: (0, pair[1]["sort"], pair[0]) if pair[1]["sort"] else (1, "", pair[0]))
+    return [{"id": f"{prefix}{number}", **record} for number, (_, record) in enumerate(ordered, 1)]
+
+
+def _events_in(data, document, finder):
+    events = []
+    for item in data["events"]:
+        words = item["words"].strip()
+        anchored, pages = _anchor(words, finder)
+        events.append({"date": item["date"].strip(), "kind": item["kind"], "what": item["what"].strip(),
+                       "said_by": item["said_by"].strip(), "document": document["name"], "source": document["source"],
+                       "pages": pages, "words": words, "anchored": anchored})
+    return events
+
+
+def chronology_of(model, context, *, wanted=None):
+    """The chronology the documents of a turn record, as (events, failures) - plan AN.27, P8.
+
+    The model says what a page records; code does the rest: finds the event's words in the document (the one finder), records the
+    pages, reads the date, orders the events by it - the undated last, in the papers' order - and numbers them E1.... An event
+    whose words are not found is kept, marked not anchored, never dropped and never to be cited as sourced."""
+    events, failures = _read_stretches(model, context, wanted, "core_research_chronology", CHRONOLOGY, CHRONOLOGY_SCHEMA,
+                                       "chronology", _events_in)
+    return _numbered_by_date(events, "E"), failures
+
+
+def _transfers_in(data, document, finder):
+    transfers = []
+    for item in data["transfers"]:
+        words = item["words"].strip()
+        anchored, pages = _anchor(words, finder)
+        transfers.append({"date": item["date"].strip(), "kind": item["kind"], "parcel": item["parcel"].strip(),
+                          "extent": item["extent"].strip(), "total": item["total"].strip(), "from": item["from"].strip(),
+                          "to": item["to"].strip(), "document": document["name"], "source": document["source"], "pages": pages,
+                          "words": words, "anchored": anchored})
+    return transfers
+
+
+def transfers_of(model, context, *, wanted=None):
+    """The transfers of land the documents of a turn record, as (transfers, failures) - plan AN.27, P13d. Read, anchored, dated,
+    ordered and numbered X1... exactly as the chronology's events are; the extents are read and added by extents.py, never here."""
+    transfers, failures = _read_stretches(model, context, wanted, "core_research_transfers", TRANSFERS, TRANSFERS_SCHEMA,
+                                          "transfers", _transfers_in)
+    return _numbered_by_date(transfers, "X"), failures
+
+
+def _stretch_issues(items, failures, context, *, prefix, label, noun, unavailable):
+    """What a v12 plan records of one kind that the papers were read for, checked against the documents of the turn (plan AN.27,
+    P8c and P13d), and the issues it raises. It must be what the reading makes of those papers: the items numbered prefix1... in
+    the order of their dates, the undated last, each of a document the turn holds, its date read as read_date reads it, and its
+    words found on the pages recorded - or on none, and marked not anchored - as the one finder finds them in that document;
+    anything else raises SchemaViolation. A stretch that could not be read is an issue, since part of a paper was not read; an item
+    whose words are not found is marked not anchored and is not an issue."""
     documents = {document["source"]: document for document in _documents(context)}
     finders = {source: Pages(document["pages"]) for source, document in documents.items()}
     last = None
-    for number, event in enumerate(events, 1):
-        label = event["id"]
-        if label != f"E{number}":
-            raise SchemaViolation(f"Chronology event {number} is numbered {label}, not E{number}")
-        document = documents.get(event["source"])
-        if document is None or document["name"] != event["document"]:
-            raise SchemaViolation(f"Chronology event {label} belongs to no document of this turn")
-        if event["sort"] != read_date(event["date"]):
-            raise SchemaViolation(f"Chronology event {label} is dated otherwise than its date reads")
-        key = (0, event["sort"]) if event["sort"] else (1, "")
+    for number, item in enumerate(items, 1):
+        name = item["id"]
+        if name != f"{prefix}{number}":
+            raise SchemaViolation(f"{label} {number} is numbered {name}, not {prefix}{number}")
+        document = documents.get(item["source"])
+        if document is None or document["name"] != item["document"]:
+            raise SchemaViolation(f"{label} {name} belongs to no document of this turn")
+        if item["sort"] != read_date(item["date"]):
+            raise SchemaViolation(f"{label} {name} is dated otherwise than its date reads")
+        key = (0, item["sort"]) if item["sort"] else (1, "")
         if last is not None and key < last:
-            raise SchemaViolation(f"Chronology event {label} is out of the order of dates")
+            raise SchemaViolation(f"{label} {name} is out of the order of dates")
         last = key
-        if (event["anchored"], event["pages"]) != _anchor(event["words"], finders[event["source"]]):
-            raise SchemaViolation(f"Chronology event {label} is not anchored as its words are found in its document")
+        if (item["anchored"], item["pages"]) != _anchor(item["words"], finders[item["source"]]):
+            raise SchemaViolation(f"{label} {name} is not anchored as its words are found in its document")
     names = {document["name"] for document in documents.values()}
     for failure in failures:
         if failure["document"] not in names:
-            raise SchemaViolation("A chronology failure names no document of this turn")
-    return [{"work_id": None, "mismatch": f"chronology unavailable for {failure['document']} (pages {failure['pages']}): "
+            raise SchemaViolation(f"A {noun} failure names no document of this turn")
+    return [{"work_id": None, "mismatch": f"{unavailable} unavailable for {failure['document']} (pages {failure['pages']}): "
                                           f"{failure['reason']}", "proposal": deepcopy(failure)} for failure in failures]
+
+
+def _chronology_issues(events, failures, context):
+    return _stretch_issues(events, failures, context, prefix="E", label="Chronology event", noun="chronology",
+                           unavailable="chronology")
+
+
+def _transfer_issues(transfers, failures, context):
+    return _stretch_issues(transfers, failures, context, prefix="X", label="Transfer", noun="transfer", unavailable="transfers")
 
 
 def plan(model, context, interpretation=None, *, progress=None, wanted=None, restrictions=None):
@@ -808,19 +882,22 @@ def plan(model, context, interpretation=None, *, progress=None, wanted=None, res
     and once it answers False the loop stops there with the plan for no matter. restrictions: asked once, after wanted has
     let the loop go on, what the advocate restricted in their latest message as the interpretation found it (a list of their
     exact words) or None where that is not known; the check and the correction are told (plan AN.27, P4).
-    The chronology of the documents is read beside the loop (research v12, plan AN.27, P8c): it is started at once, asks
-    wanted before any call, and its result is taken last; a stretch that could not be read is recorded, and a usage limit
-    stops the turn."""
+    The chronology of the documents, and the transfers of land they record (P13d), are read beside the loop (research v12, plan
+    AN.27, P8c): each is started at once, asks wanted before any call, and its result is taken last; a stretch that could not be
+    read is recorded, and a usage limit stops the turn."""
     if interpretation is not None and not carries_matter(interpretation):
         return _no_matter(context)
     still = wanted or (lambda: True)
-    with ThreadPoolExecutor(max_workers=1) as reading:
+    with ThreadPoolExecutor(max_workers=2) as reading:
         papers = reading.submit(chronology_of, model, context, wanted=still)
+        moved = reading.submit(transfers_of, model, context, wanted=still)
         proposed = _proposal(model, context, still, progress, restrictions)
         if proposed is None:
             return _no_matter(context)
         events, unread = papers.result()
-    return accept({**proposed, "chronology": events, "chronology_failures": unread}, context)
+        transfers, unmoved = moved.result()
+    return accept({**proposed, "chronology": events, "chronology_failures": unread,
+                   "transfers": transfers, "transfers_failures": unmoved}, context)
 
 
 def _proposal(model, context, still, progress, restrictions):
@@ -891,6 +968,8 @@ def _accept_v7(proposal, context, schema=SCHEMA):
                        "proposal": deepcopy(rounds[-1])})
     if "chronology" in data:
         issues.extend(_chronology_issues(data["chronology"], data["chronology_failures"], context))
+    if "transfers" in data:
+        issues.extend(_transfer_issues(data["transfers"], data.get("transfers_failures", []), context))
     questions = {q["id"]: (dispute, q) for dispute in understanding["disputes"] for q in dispute["legal_questions"]}
     statute, judgment = {}, {}
     for entry in data["statute_phrases"]:

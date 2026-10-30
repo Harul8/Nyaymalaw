@@ -118,6 +118,12 @@ def ledger(transfers):
         entry = parcels.setdefault(key, {"parcel": " ".join(str(transfer["parcel"]).split()), "_seen": {}, "transfers": [],
                                          "unread": [], "_totals": {}})
         who = {"document": transfer["document"], "pages": list(transfer["pages"]), "id": transfer["id"]}
+        if transfer.get("anchored") is False:
+            # Words the finder could not find on the paper's pages support no extent: listed, never added, and its stated total
+            # is not a stated total.
+            entry["unread"].append({"id": transfer["id"], "extent": " ".join(str(transfer["extent"]).split()),
+                                    "why": "its words were not found on the page", "document": who["document"], "pages": []})
+            continue
         if transfer.get("total", "").strip():
             value, how = parse(transfer["total"])
             stated = entry["_totals"].setdefault(" ".join(transfer["total"].split()), {"text": " ".join(transfer["total"].split()),
