@@ -447,6 +447,10 @@ def _quoted_fragments(quote):
 #: How much of a page's foot or head - a stamp, a signature, a page number, the reader's marks - a sentence may run over when
 #: it goes on to the next page of the same document (plan AN.27, P1).
 PAGE_FURNITURE = 400
+#: The most words of a refused quotation Pages.nearest will search the pages for (plan AN.27, P21).
+NEAREST_WORDS = 120
+#: How many words of the page it shows on each side of the run it found.
+NEAREST_AROUND = 8
 _MARKS = re.compile(r"\[[^\[\]]*\]")
 
 
@@ -513,9 +517,34 @@ class Pages:
                 return True
         return False
 
+    def nearest(self, piece):
+        """The page's own words nearest to a quotation that is not found (plan AN.27, P21): the longest run of at least four of the
+        quotation's words that one page holds, with a few words of the page on each side of it, as {"document", "page", "run",
+        "words"}; None where no page holds four in a row, or the quotation is longer than NEAREST_WORDS. A run that goes over a page
+        break is not guessed at: the longest run that one page holds is the one shown. Code finds the words; the model that
+        quoted is shown them and decides what to quote - and a quotation is still found exactly or not at all."""
+        words = piece.split(" ")
+        if len(words) > NEAREST_WORDS:
+            return None
+        for length in range(len(words) - 1, 3, -1):
+            for start in range(len(words) - length + 1):
+                run = " ".join(words[start:start + length])
+                held = self.holding(run)
+                if held is not None and len(held) == 1:
+                    index = next(i for i, page in enumerate(self.pages) if page is held[0])
+                    plain = self._plain[index]
+                    if run not in plain:
+                        plain, run = self._read[index], _reading(run)
+                    at = plain.find(run)
+                    first, last = plain[:at].count(" "), plain[:at + len(run)].count(" ") + 1
+                    around = " ".join(plain.split(" ")[max(0, first - NEAREST_AROUND):last + NEAREST_AROUND])
+                    return {"document": held[0]["document"], "page": held[0]["page"], "run": run, "words": around}
+        return None
+
     def stops(self, piece):
         """Where words that are not found stop matching, to say so: the words found as far as they go (their last few) and the
-        words from where they are not found (the next few), as a sentence for the model that quoted them."""
+        words from where they are not found (the next few), as a sentence for the model that quoted them - and, where a page holds
+        a run of them, the page's own words around that run (P21), so that what is quoted next can be copied."""
         words = piece.split(" ")
         found, lost = 0, len(words)
         while lost - found > 1:
@@ -524,10 +553,16 @@ class Pages:
                 found = middle
             else:
                 lost = middle
+        near = self.nearest(piece)
+        where = ""
+        if near:
+            page = f", page {near['page']}" if near["page"] else ""
+            where = f"; the nearest words on a page ({near['document']}{page}) read {near['words']!r}"
         if found < 3:  # a word or two that happen to be on a page say nothing about where the quotation is from
-            return f"they are not found from their first words: {' '.join(words[:12])!r}"
+            return f"they are not found from their first words: {' '.join(words[:12])!r}{where}"
         gone = " ".join(words[found:found + 12])
-        return f"they match up to {('... ' if found > 6 else '') + ' '.join(words[max(0, found - 6):found])!r} and are not found from {gone!r}"
+        return (f"they match up to {('... ' if found > 6 else '') + ' '.join(words[max(0, found - 6):found])!r} "
+                f"and are not found from {gone!r}{where}")
 
 
 def code_checks(understanding, context):
@@ -548,8 +583,9 @@ def code_checks(understanding, context):
             problems.append({"problem": f"Fact {fact['id']}: the quoted words do not appear in the advocate's "
                                         f"messages or the documents they sent ({fact['advocate_words']!r}); "
                                         f"{pages.stops(missing[0])}.",
-                             "fix": "Quote the exact words this fact rests on, as the page gives them (separate passages "
-                                    "joined with '...'), or remove the fact if they were not given."})
+                             "fix": "Quote the exact words this fact rests on, as the page gives them - copy them as they stand, a "
+                                    "misread letter or an odd spacing included, and keep what you add yourself outside the quotation "
+                                    "marks (separate passages joined with '...') - or remove the fact if they were not given."})
     disputes = {d["id"] for d in understanding["disputes"]}
     if len(disputes) != len(understanding["disputes"]):
         problems.append({"problem": "Two disputes share an id.", "fix": "Give each dispute its own id."})
