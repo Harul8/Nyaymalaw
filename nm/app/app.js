@@ -3681,6 +3681,27 @@ function renderTimeline(timeline, make) {
   return [fold];
 }
 
+// FIGURES TWO COPIES READ DIFFERENTLY (plan AN.27, P13): pages that are almost word for word the same but give a figure differently,
+// found by code from the saved pages. The page chooses between nothing: it gives both readings and the words before them.
+function renderCopies(copies, make) {
+  if (!Array.isArray(copies) || !copies.length) return [];
+  const fold = make('details', 'folded');
+  fold.appendChild(make('summary', '', `Figures two copies read differently (${copies.length})`));
+  fold.appendChild(make('p', 'board-lede', 'These pages are almost word for word the same, but a figure on one is not the figure on the '
+    + 'other. NM has not chosen between them: check the originals.'));
+  const list = make('ul', 'board-list');
+  for (const found of copies) {
+    const item = make('li', '', `${found.first.document}, page ${found.first.page} and ${found.second.document}, page ${found.second.page}: `);
+    found.figures.forEach((figure, index) => {
+      const before = figure.after ? ` (after “${figure.after}”)` : '';
+      item.appendChild(make('span', 'board-status', `${index ? '; ' : ''}“${figure.first}” and “${figure.second}”${before}`));
+    });
+    list.appendChild(item);
+  }
+  fold.appendChild(list);
+  return [fold];
+}
+
 // The board as NM understood the matter from the advocate's own words. Nothing on it is
 // presented as established: facts carry the certainty they were given with. The disputes
 // come first, under the marks' legend; how NM understood the matter, the facts, the
@@ -3718,6 +3739,7 @@ function renderChatBoard(board) {
     renderDisputeCard(dispute, board, board.disputes.length > 1 ? index + 1 : null)));
   out.push(disputes);
   out.push(...renderTimeline(board.timeline, make));
+  out.push(...renderCopies(board.copies, make));
   const points = (board.understanding && board.understanding.open_points) || [];
   const counted = [[board.facts.length, 'Facts as you gave them'], [board.instructions.length, 'Standing instructions'],
     [board.related_points.length, 'Related points'], [points.length, 'Points NM’s own check raised']]

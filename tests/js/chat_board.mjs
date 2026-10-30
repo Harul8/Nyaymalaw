@@ -242,4 +242,33 @@ const board = {
   }
 }
 
+// Figures two copies read differently (plan AN.27, P13): both readings and the words before them, never a choice; nothing where the
+// board has none or says nothing of them.
+{
+  const copies = [
+    { first: { document: 'deed.pdf', page: 3 }, second: { document: 'scan.pdf', page: 1 },
+      figures: [{ first: '6.06', second: '6.16', after: 'an extent of' }] },
+    { first: { document: 'a.pdf', page: 2 }, second: { document: 'b.pdf', page: 5 },
+      figures: [{ first: '596/80', second: '596/89', after: 'deed number' }, { first: '1980', second: '1986', after: '' }] }];
+  const nodes = context.renderChatBoard({ ...structuredClone(board), copies });
+  const fold = nodes.find((node) => node.tagName === 'DETAILS' && text(node).startsWith('Figures two copies read differently'));
+  assert.ok(fold, 'a fold for the copies');
+  assert.equal(fold.children[0].textContent, 'Figures two copies read differently (2)');
+  const said = text(fold);
+  for (const part of ['NM has not chosen between them: check the originals.',
+    'deed.pdf, page 3 and scan.pdf, page 1: “6.06” and “6.16” (after “an extent of”)',
+    'a.pdf, page 2 and b.pdf, page 5: “596/80” and “596/89” (after “deed number”); “1980” and “1986”']) {
+    assert.ok(said.includes(part), part);
+  }
+  assert.ok(!said.includes('1986 (after'), 'no words before: none given');
+  // It follows the disputes and, where there is one, the timeline.
+  assert.equal(nodes.indexOf(fold), nodes.findIndex((node) => node.className === 'board-disputes') + 1);
+  const both = context.renderChatBoard({ ...structuredClone(board), copies, timeline: { state: 'ready', events: [], documents: [] } });
+  const at = (start) => both.findIndex((node) => text(node).startsWith(start));
+  assert.ok(at('Timeline of your papers') >= 0 && at('Timeline of your papers') < at('Figures two copies'));
+  for (const quiet of [{ ...structuredClone(board), copies: [] }, structuredClone(board)]) {
+    assert.ok(!context.renderChatBoard(quiet).map(text).join('\n').includes('Figures two copies'));
+  }
+}
+
 console.log('chat board: ok');

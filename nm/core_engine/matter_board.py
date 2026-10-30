@@ -13,7 +13,7 @@ disputes are listed most urgent first, as the answer shows its sections (P26).
 """
 from __future__ import annotations
 
-from nm.core_engine import checklist, research, response_rendering
+from nm.core_engine import checklist, copy_figures, research, response_rendering
 
 _UNDERSTOOD = research.QUESTION_PLANS
 
@@ -108,6 +108,18 @@ def _timeline(record, rows):
                         **({"recording": True} if sent.get(event["source"], {}).get("recording") else {}),
                         "words": event["words"], "located": event["anchored"]}
                        for event in proposal["chronology"]]}
+
+
+def _copies(rows):
+    """The figures that copies of one page read differently, among the pages of the documents sent up to the turn the board shows
+    (plan AN.27, P13; invariant I6): found by code from the saved pages, never settled - each is both readings and the words before
+    it."""
+    pages = [{"document": document["name"], "key": f"{row['turn_id']}:d{number}", "page": page["number"], "text": page["text"],
+              **({"recording": True} if document.get("recording") else {})}
+             for row in rows for number, document in enumerate(row.get("documents") or (), 1) for page in document["pages"]]
+    return [{"first": {"document": found["first"]["document"], "page": found["first"]["page"]},
+             "second": {"document": found["second"]["document"], "page": found["second"]["page"]},
+             "figures": found["figures"]} for found in copy_figures.differences(pages)]
 
 
 def _dispute(d, record, work, checklists):
@@ -206,6 +218,7 @@ def board(rows):
             "disputes": [_dispute(d, record, work, checklists) for d in _urgent(understanding["disputes"], checklists)],
             "understanding": _confirmed(record),
             "timeline": _timeline(record, rows[:index + 1]),
+            "copies": _copies(rows[:index + 1]),
             "related_points": [{"point": r["point"], "why": r["why_it_matters"], "dispute_id": r["dispute_id"] or None,
                                 "dispute": names.get(r["dispute_id"])} for r in understanding["related_points"]],
         }
