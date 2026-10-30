@@ -273,6 +273,16 @@ is now the only module permitted to define such a pattern, and
 one. A grep is a weak enforcement mechanism and it is a great deal stronger
 than a memo.
 
+### It happened again, in this build, on 30 October 2026
+
+The check that an answer works out no date itself counted as *given* the dates in the conversation, the documents as written, the
+sources, the time limits and today. The plan later began to read the papers' dated events and transfers of land, and the writer to be
+shown them. A High Court paper that writes its date in words gave the plan "17 March 2022"; the writer was shown it; the check, never
+told, found the date nowhere and left the paragraph out of the overview and of both sections of a real first turn. **Two components
+each behaving correctly: what the writer is shown, and what the check counts as given.** The check now takes its given dates from
+the same two functions the writer's payload is built from, for a writer that was shown them
+(`tests/test_a_date_the_writer_was_shown_is_a_date_it_was_given.py`).
+
 ---
 
 ## S10 · A broad `except` that hides a programming error

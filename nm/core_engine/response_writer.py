@@ -1196,12 +1196,25 @@ def _strings(value):
             yield from _strings(item)
 
 
-def dates_not_given(draft, context, sources, time_limits=None):
+def _shown_dates(draft, record):
+    """The dates of the papers' events and of the transfers of land that the writer of this draft was shown (plan AN.27, P19): those
+    located on a page, taken from the functions its payload is built from, so that the check cannot drift from what is shown. A
+    paper may write a date in words, or give it on another page than the passage it belongs to, which the pages as written cannot
+    show; the plan's reading of it, which the writer was given, can. Nothing for a writer that was shown none of it."""
+    if record is None or draft.get("contract") != PRESENTED_CONTRACT:
+        return []
+    return [event["date"] for event in _chronology_shown(record, {}) or () if event["located"]] + [
+        moved["date"] for parcel in _extents_shown(record) or () for moved in parcel["transfers"]]
+
+
+def dates_not_given(draft, context, sources, time_limits=None, record=None):
     """Code's check that the answer works out no date itself (owner, 15 Oct 2026): each
     date a unit states must be in the conversation or documents, a source supplied to
-    the writer, the time limits code worked out, or today. Returns one finding per unit
+    the writer, the time limits code worked out, today, or (P19) a date of the papers'
+    chronology or transfers of land that the writer was shown. Returns one finding per unit
     stating a date found nowhere there, for the turn's shared correction."""
-    given = {day for text in _strings([context, sources, time_limits, clock_contracts.setting()["today"]])
+    given = {day for text in _strings([context, sources, time_limits, clock_contracts.setting()["today"],
+                                       _shown_dates(draft, record)])
              for day, _ in _dates(text)}
     days = {(d, m) for d, m, _ in given}
     findings = []

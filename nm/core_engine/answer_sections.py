@@ -384,7 +384,7 @@ class _Answering:
                     raise
         # Code's own check that the answer works out no date itself (owner, 15 Oct 2026).
         return {"draft": draft, "authority_evidence": authorities, "review": review,
-                "date_findings": response_writer.dates_not_given(draft, self.context, sources, self.time_limits)}
+                "date_findings": response_writer.dates_not_given(draft, self.context, sources, self.time_limits, record)}
 
     def _tries(self, scope, allowance, operation, write, kwargs, refused, researched, correction=None):
         """A piece's draft and its rewrites, each reviewed, within its scope's allowance,
