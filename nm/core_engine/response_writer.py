@@ -431,9 +431,11 @@ select as document uses. It is the record of what the papers hold. When the advo
 the history, the dates or a summary of the papers, or the sequence of events bears on your
 part, set out the events that matter to it in date order, each with its date and the page it
 comes from, and leave out no order, direction or proceeding still pending that bears on it.
-Keep what a party alleges attributed to that party. An event whose located is false could not
-be found on its page: do not rely on it or cite it, and say it needs checking against the
-paper. State no date or event that is neither in the chronology nor on a page.
+Keep what a party alleges attributed to that party. An event with also_in is one event that
+other papers record too, as a copy of a page does: set it out once, and cite whichever of its
+pages you rely on. An event whose located is false could not be found on its page: do not rely
+on it or cite it, and say it needs checking against the paper. State no date or event that is
+neither in the chronology nor on a page.
 Where copies_read_differently is given, it lists figures that two copies of one page read
 differently, each with the short IDs of the two pages: give both readings and say that the
 copies differ, never choose between them, and do not call it a disagreement in the papers
@@ -1208,7 +1210,7 @@ def _shown_dates(draft, record, context=None):
     show; the plan's reading of it, which the writer was given, can. Nothing for a writer that was shown none of it."""
     if record is None or draft.get("contract") != PRESENTED_CONTRACT:
         return []
-    return [event["date"] for event in _chronology_shown(record, {}) or () if event["located"]] + [
+    return [event["date"] for event in _chronology_shown(record, {}, context) or () if event["located"]] + [
         moved["date"] for parcel in _extents_shown(record, context) or () for seller in parcel["sellers"]
         for moved in seller["transfers"] + seller["not_added"]]
 
@@ -1355,18 +1357,29 @@ def _worded_limits(time_limits):
     return time_limits
 
 
-def _chronology_shown(record, offered):
+def _cited(event, offered):
+    """The short IDs of the pages an event's words are on - none for an event whose words were not located."""
+    return [offered[page] for page in (f"{event['source']}p{number}" for number in event["pages"])
+            if event["anchored"] and page in offered]
+
+
+def _chronology_shown(record, offered, context=None):
     """The papers' chronology as the current writer is shown it (plan AN.27, P11): each event the plan kept, with the short IDs of
     the pages its words are on to select as uses - none for an event whose words were not located - and without the sort date, the
-    exact words and the owned IDs. None where the plan kept none (research before v12, or no papers, or no events)."""
+    exact words and the owned IDs. An event that several papers record, as a copy of a page does (P22; context gives the pages to
+    find the copies among), is set out once with where else it is - also_in: the other paper, its pages and their short IDs. None
+    where the plan kept none (research before v12, or no papers, or no events)."""
     events = record["plan"]["proposal"].get("chronology") if record.get("contract") in research.CHRONICLED else None
     if not events:
         return None
-    return [{"id": event["id"], "date": event["date"], "kind": event["kind"], "what": event["what"],
-             "said_by": event["said_by"], "paper": event["document"], "pages": list(event["pages"]),
-             "cite": [offered[page] for page in (f"{event['source']}p{number}" for number in event["pages"])
-                      if event["anchored"] and page in offered],
-             "located": event["anchored"]} for event in events]
+    copied = copy_figures.copies(_copy_pages(context)) if context else ()
+    return [{"id": group["event"]["id"], "date": group["event"]["date"], "kind": group["event"]["kind"],
+             "what": group["event"]["what"], "said_by": group["event"]["said_by"], "paper": group["event"]["document"],
+             "pages": list(group["event"]["pages"]), "cite": _cited(group["event"], offered),
+             "located": group["event"]["anchored"],
+             **({"also_in": [{"paper": other["document"], "pages": list(other["pages"]), "cite": _cited(other, offered)}
+                             for other in group["also"]]} if group["also"] else {})}
+            for group in research.events_once(events, copied)]
 
 
 def _copy_pages(context):
@@ -1414,7 +1427,7 @@ def _payload(context, record, sources, interpretation, execution, layout, index,
         time_limits = limit_ids(renamed(time_limits, offered))
         if worded:
             time_limits = _worded_limits(time_limits)
-    papers = _chronology_shown(record, offered) if worded else None
+    papers = _chronology_shown(record, offered, context) if worded else None
     copies = _copies_shown(context, offered) if worded else None
     land = _extents_shown(record, context) if worded else None
     return {"original_context": answer_sources.shown_context(context, sources), "setting": clock_contracts.setting(),
@@ -1598,8 +1611,9 @@ short IDs of those pages. Where the advocate asked for the history, the dates or
 papers, give one summary unit that sets out, in date order, the events that matter across the
 disputes - the orders, and the proceedings still pending among them - each with its date and, as a
 document use, the page it comes from; keep what a party alleges attributed to that party, rely on
-no event whose located is false, and leave the detail to the sections. Where the advocate did not
-ask, leave it unused.
+no event whose located is false, and leave the detail to the sections. An event with also_in is
+one event that other papers record too: set it out once. Where the advocate did not ask, leave
+it unused.
 
 Work in a loop before you return: read the conversation and the sections, draft, check
 each statement against the section or message it rests on, and correct the draft.
@@ -1634,7 +1648,7 @@ def write_overview(model, context, research_record, sources, *, sections, interp
     if len(parts(research_record)) < 2:
         raise ValueError("Only an answer covering several disputes opens with an overview")
     offered = {tag: alias for alias, tag in answer_sources.aliases(sources).items()}
-    papers = _chronology_shown(research_record, offered) if presented else None
+    papers = _chronology_shown(research_record, offered, context) if presented else None
     payload = {"original_context": answer_sources.shown_context(context, sources),
                "setting": clock_contracts.setting(), "interpretation_proposal": interpretation,
                "understanding": research_record["plan"]["proposal"]["understanding"],
