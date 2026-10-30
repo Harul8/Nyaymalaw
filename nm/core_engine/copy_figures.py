@@ -51,15 +51,14 @@ def _place(page):
     return {key: page[key] for key in ("document", "page", "key", "id") if key in page}
 
 
-def differences(pages):
-    """The figures in which copies of one page read differently, as a list in the papers' order: each the two pages and, for each
-    figure, how each copy reads it and the words just before it. Empty where there are no copies, or they agree."""
+def _pairs(pages):
+    """Every two pages that are copies of one page, in the papers' order, each with the figures in which they differ (none where they
+    agree): the first, the second and a list of {"first", "second", "after"}."""
     held = []
     for page in pages:
         words = _words(page) if not page.get("recording") else []
         if len(words) >= MIN_WORDS:
             held.append((page, words, set(zip(words, words[1:], words[2:]))))
-    found = []
     for first in range(len(held)):
         for second in range(first + 1, len(held)):
             (one, left, runs), (two, right, other) = held[first], held[second]
@@ -75,6 +74,19 @@ def differences(pages):
                 if _digits(left[a:b]) != _digits(right[c:d]):
                     figures.append({"first": " ".join(left[a:b]), "second": " ".join(right[c:d]),
                                     "after": " ".join(left[max(0, a - 4):a])})
-            if figures and len(figures) <= max(FEW_FIGURES, MOST_FIGURES * sum(map(_figure, left))):
-                found.append({"first": _place(one), "second": _place(two), "figures": figures})
+            if len(figures) <= max(FEW_FIGURES, MOST_FIGURES * sum(map(_figure, left))):
+                yield one, two, figures
+
+
+def differences(pages):
+    """The figures in which copies of one page read differently, as a list in the papers' order: each the two pages and, for each
+    figure, how each copy reads it and the words just before it. Empty where there are no copies, or they agree."""
+    found = [{"first": _place(one), "second": _place(two), "figures": figures} for one, two, figures in _pairs(pages) if figures]
     return found[:MOST_FOUND]
+
+
+def copies(pages):
+    """Every pair of pages that are copies of one page, whether or not their figures agree (plan AN.27, P20 (b)): a set of
+    {(key, page), (key, page)}. What a transaction a paper reports is, where another paper reports it on a copy of the same page,
+    is for code to see by the pages' words, and for no reading of a name to hide."""
+    return {frozenset({(one["key"], one["page"]), (two["key"], two["page"])}) for one, two, _ in _pairs(pages)}

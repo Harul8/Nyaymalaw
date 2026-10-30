@@ -3718,8 +3718,11 @@ function renderExtents(parcels, make) {
     for (const transfer of parcel.transfers) {
       const where = transfer.papers.map((paper) => paper.document + (paper.pages.length
         ? `, page${paper.pages.length > 1 ? 's' : ''} ${paper.pages.join(', ')}` : '')).join('; ');
+      // The same sale read on copies of one page, its buyer's name read two ways (P20 (b)): both readings are shown.
+      const alike = transfer.also_read_as && transfer.also_read_as.length
+        ? ` (also read as ${transfer.also_read_as.map((name) => `“${name}”`).join(' and ')})` : '';
       list.appendChild(make('li', '', `${transfer.date} ${transfer.kind}: ${transfer.extent} (${transfer.in_guntas})`
-        + `${transfer.to ? ` to ${transfer.to}` : ''} · ${where}`));
+        + `${transfer.to ? ` to ${transfer.to}` : ''}${alike} · ${where}`));
     }
     for (const missed of parcel.not_read) {
       list.appendChild(make('li', 'board-status search_failed', `Not added: “${missed.extent}” (${missed.why}) · ${missed.document}`));

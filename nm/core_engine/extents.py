@@ -5,7 +5,8 @@ total less two smaller sales that comes to the claimed 6.06 acres was an inferen
 module reads an extent as a paper writes it - Ac.1.18 guntas, 6 acres 6 guntas, 29 guntas, 150 sq. yards - into guntas (40 to an
 acre, 121 square yards to a gunta), renders guntas back as the papers do, and sets out the transfers of each parcel with their sum
 and, where a paper states the parcel's whole extent, what that leaves. It reads, adds and subtracts; it decides nothing: a sum is
-only of the transfers it was given, each counted once where papers report the same date, parcel, extent and buyer, and says so.
+only of the transfers it was given, each counted once where papers report the same date, parcel, extent and buyer - or the same
+date, extent and kind on pages that are copies of one page, however a name was read (P20 (b)) - and says so.
 """
 from __future__ import annotations
 
@@ -101,11 +102,26 @@ def _who(name):
     return re.sub(r"[^a-z0-9]", "", str(name).casefold())
 
 
-def ledger(transfers):
-    """The transfers of each parcel, added up. transfers: dicts with id, parcel, extent, total, to, sort, kind, document, pages.
-    A parcel with no key is left out. Returns one entry per parcel, in the papers' order:
+def _copy_of(entry, sort, value, kind, source, places, copies):
+    """The transfer already kept that this one is the same as because they are read on pages that are copies of one page (P20 (b)): the
+    same date, extent and kind, reported by another paper than any that already reports it, on a page that copies one of the pages it
+    is read on. A name read two ways, as OCR does, cannot tell two papers' copies apart: the pages' words already have."""
+    for made in entry["transfers"]:
+        where = entry["_where"][id(made)]
+        if (where["sort"] == sort and made["guntas"] == value and made["kind"] == kind and source not in where["sources"]
+                and any(frozenset({kept, new}) in copies for kept in where["places"] for new in places)):
+            return made
+    return None
+
+
+def ledger(transfers, copies=()):
+    """The transfers of each parcel, added up. transfers: dicts with id, parcel, extent, total, to, sort, kind, document, pages (and
+    source, the turn's key of the document, where the plan gave it). copies: the pairs of pages that are copies of one page, each
+    {(key, page), (key, page)}, as copy_figures.copies finds them. A parcel with no key is left out. Returns one entry per parcel, in
+    the papers' order:
       transfers - each distinct transfer once (the same date, parcel, extent and buyer reported by several papers is one, with every
-                  paper that reports it), its extent in guntas and how it was read;
+                  paper that reports it; so is the same date, extent and kind read on pages that are copies of one page, whatever
+                  the buyer's name was read as, every reading of it kept in names), its extent in guntas and how it was read;
       unread - those whose extent could not be read, with why, never added;
       sum - what the transfers read add up to, and 'complete' whether every transfer of the parcel was read;
       totals - each different whole extent a paper states for the parcel, and what it leaves after the sum (only where every
@@ -116,7 +132,7 @@ def ledger(transfers):
         if not key:
             continue
         entry = parcels.setdefault(key, {"parcel": " ".join(str(transfer["parcel"]).split()), "_seen": {}, "transfers": [],
-                                         "unread": [], "_totals": {}})
+                                         "unread": [], "_totals": {}, "_where": {}})
         who = {"document": transfer["document"], "pages": list(transfer["pages"]), "id": transfer["id"]}
         if transfer.get("anchored") is False:
             # Words the finder could not find on the paper's pages support no extent: listed, never added, and its stated total
@@ -134,16 +150,26 @@ def ledger(transfers):
             entry["unread"].append({"id": transfer["id"], "extent": " ".join(str(transfer["extent"]).split()), "why": how, **{
                 k: who[k] for k in ("document", "pages")}})
             continue
-        identity = (transfer.get("sort", ""), value, _who(transfer.get("to", "")))
-        seen = entry["_seen"].get(identity)
+        sort, name = transfer.get("sort", ""), " ".join(str(transfer.get("to", "")).split())
+        source = transfer.get("source", transfer["document"])
+        places = {(source, number) for number in transfer["pages"]}
+        identity = (sort, value, _who(name))
+        seen = entry["_seen"].get(identity) or _copy_of(entry, sort, value, transfer.get("kind", ""), source, places, copies)
         if seen is not None:
             seen["papers"].append({k: who[k] for k in ("document", "pages")})
             seen["ids"].append(transfer["id"])
+            if name and name not in seen["names"]:
+                seen["names"].append(name)
+            where = entry["_where"][id(seen)]
+            where["sources"].add(source)
+            where["places"] |= places
+            entry["_seen"].setdefault(identity, seen)
             continue
         made = {"ids": [transfer["id"]], "date": transfer.get("date", ""), "kind": transfer.get("kind", ""),
-                "to": transfer.get("to", ""), "extent": " ".join(str(transfer["extent"]).split()), "guntas": value, "how": how,
-                "papers": [{k: who[k] for k in ("document", "pages")}]}
+                "to": transfer.get("to", ""), "names": [name] if name else [], "extent": " ".join(str(transfer["extent"]).split()),
+                "guntas": value, "how": how, "papers": [{k: who[k] for k in ("document", "pages")}]}
         entry["_seen"][identity] = made
+        entry["_where"][id(made)] = {"sort": sort, "sources": {source}, "places": set(places)}
         entry["transfers"].append(made)
     out = []
     for entry in parcels.values():
@@ -164,15 +190,17 @@ CAVEAT = ("Extents are added as the papers state them, whoever states them, and 
           "did not find, or a buyer named two ways, makes the sum wrong. Check it against the papers.")
 
 
-def shown(transfers):
+def shown(transfers, copies=()):
     """The ledger in words, as the board, the writer and the review are given it: every extent and sum rendered as the papers write
-    it, how each was read, which papers report each transfer, and the caveat."""
+    it, how each was read, which papers report each transfer (and, where the buyer's name was read two ways on copies of a page,
+    both readings), and the caveat."""
     out = []
-    for parcel in ledger(transfers):
+    for parcel in ledger(transfers, copies):
         out.append({
             "parcel": parcel["parcel"],
             "transfers": [{"ids": t["ids"], "date": t["date"], "kind": t["kind"], "to": t["to"], "extent": t["extent"],
-                           "in_guntas": render(t["guntas"]), "read_as": t["how"], "papers": t["papers"]}
+                           "in_guntas": render(t["guntas"]), "read_as": t["how"], "papers": t["papers"],
+                           **({"also_read_as": t["names"][1:]} if len(t["names"]) > 1 else {})}
                           for t in parcel["transfers"]],
             "not_read": parcel["unread"],
             "sum": render(parcel["sum"]) if parcel["transfers"] else None,

@@ -113,3 +113,24 @@ def test_a_note_the_reader_made_is_not_a_figure_of_the_page():
 
 def test_a_figure_in_words_in_one_copy_and_in_numerals_in_the_other_is_not_a_different_figure():
     assert differences([page("a.pdf", 1, passage("six")), page("b.pdf", 1, passage("6"))]) == []
+
+
+# Every pair of copies, whether or not their figures agree (plan AN.27, P20 (b)): a transaction two papers report on copies of one page is
+# one, and the pages' words say so.
+def test_copies_are_every_pair_of_pages_that_are_copies_of_one_page_whether_or_not_their_figures_agree():
+    pages = [page("deed.pdf", 3, passage("6.06"), key="t1:d1"), page("scan.pdf", 1, passage("6.06"), key="t1:d2"),
+             page("late.pdf", 2, passage("6.16"), key="t1:d3")]
+    assert copy_figures.copies(pages) == {frozenset({("t1:d1", 3), ("t1:d2", 1)}), frozenset({("t1:d1", 3), ("t1:d3", 2)}),
+                                          frozenset({("t1:d2", 1), ("t1:d3", 2)})}
+    assert differences(pages[:2]) == [], "the two that agree are copies, but there is nothing to flag"
+    assert [d["second"]["document"] for d in differences(pages)] == ["late.pdf", "late.pdf"]
+
+
+def test_pages_of_one_document_a_form_with_figures_of_its_own_a_short_page_and_a_recording_are_not_copies():
+    assert copy_figures.copies([page("deed.pdf", 1, passage()), page("deed.pdf", 2, passage())]) == set()
+    rows_a = " ".join(f"survey {n} extent {n}.{n % 40:02d} khata {n * 3}" for n in range(1, 25))
+    rows_b = " ".join(f"survey {n + 100} extent {n + 7}.{(n + 5) % 40:02d} khata {n * 3 + 1}" for n in range(1, 25))
+    assert copy_figures.copies([page("a.pdf", 1, rows_a), page("b.pdf", 1, rows_b)]) == set()
+    assert copy_figures.copies([page("a.pdf", 1, "extent 6.06 acres"), page("b.pdf", 1, "extent 6.06 acres")]) == set()
+    assert copy_figures.copies([page("a.mp3", 1, passage(), recording=True), page("b.mp3", 1, passage(), recording=True)]) == set()
+    assert copy_figures.copies([]) == set()

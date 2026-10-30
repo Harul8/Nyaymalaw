@@ -7,15 +7,17 @@ be read, or whose words were not found, is listed and never added. The board onl
 import pytest
 
 from nm.core_engine import matter_board
+from tests.test_copies_that_read_a_figure_differently import passage
 from tests.test_the_board_has_a_timeline import turn
+from tests.test_the_board_names_figures_copies_read_differently import paper
 
 pytestmark = pytest.mark.class_a
 
 
 def kept(number, parcel, extent, *, total="", to="Jelli Krishna", sort="1985-10-30", date="30-10-1985", anchored=True,
-         document="deed.pdf", pages=(1,), kind="sale"):
+         document="deed.pdf", pages=(1,), kind="sale", source="t1:d1"):
     return {"id": f"X{number}", "date": date, "sort": sort, "kind": kind, "parcel": parcel, "extent": extent, "total": total,
-            "from": "the vendor", "to": to, "document": document, "source": "t1:d1", "pages": list(pages) if anchored else [],
+            "from": "the vendor", "to": to, "document": document, "source": source, "pages": list(pages) if anchored else [],
             "words": f"words of {number}", "anchored": anchored}
 
 
@@ -49,3 +51,29 @@ def test_parcels_are_kept_apart_and_a_plan_with_no_transfers_or_before_them_has_
     assert extents_of([]) == []
     row = turn([], [])
     assert "transfers" not in row["activities"]["research"]["plan"]["proposal"] and matter_board.board([row])["extents"] == []
+
+
+def papers_with(transfers, *documents):
+    row = turn(list(documents), [])
+    row["activities"]["research"]["plan"]["proposal"]["transfers"] = transfers
+    return row
+
+
+def test_one_sale_read_on_two_copies_of_a_page_is_added_once_and_both_readings_of_the_buyer_are_shown():
+    sales = [kept(1, "Sy.No.487", "Ac.6.06", to="Kiran Rao", document="deed.pdf", source="t1:d1"),
+             kept(2, "Sy.No.487", "Ac.6.06", to="Kiran Raao", document="scan.pdf", source="t1:d2")]
+    (parcel,) = matter_board.board([papers_with(sales, paper("deed.pdf", passage()), paper("scan.pdf", passage()))])["extents"]
+    (only,) = parcel["transfers"]
+    assert parcel["sum"] == "6 acres 6 guntas (Ac.6.06)" and only["also_read_as"] == ["Kiran Raao"]
+    assert [p["document"] for p in only["papers"]] == ["deed.pdf", "scan.pdf"]
+    # Papers that are not copies of one another are two, as before; a copy sent in a later turn counts with the earlier one.
+    (parcel,) = matter_board.board([papers_with(sales, paper("deed.pdf", passage()),
+                                                paper("scan.pdf", "A different paper entirely, of other words. " * 12))])["extents"]
+    assert len(parcel["transfers"]) == 2 and parcel["sum"] == "12 acres 12 guntas (Ac.12.12)"
+    first = papers_with([sales[0]], paper("deed.pdf", passage()))
+    second = papers_with(sales, paper("scan.pdf", passage()))
+    second["turn_id"] = "t2"
+    for sale in second["activities"]["research"]["plan"]["proposal"]["transfers"]:
+        sale["source"] = "t2:d1" if sale["document"] == "scan.pdf" else "t1:d1"
+    (parcel,) = matter_board.board([first, second])["extents"]
+    assert len(parcel["transfers"]) == 1 and parcel["sum"] == "6 acres 6 guntas (Ac.6.06)"

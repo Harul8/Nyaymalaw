@@ -110,23 +110,28 @@ def _timeline(record, rows):
                        for event in proposal["chronology"]]}
 
 
-def _copies(rows):
+def _sent(rows):
+    """The pages of the documents sent up to the turn the board shows, as the copy finder holds them."""
+    return [{"document": document["name"], "key": f"{row['turn_id']}:d{number}", "page": page["number"], "text": page["text"],
+             **({"recording": True} if document.get("recording") else {})}
+            for row in rows for number, document in enumerate(row.get("documents") or (), 1) for page in document["pages"]]
+
+
+def _copies(pages):
     """The figures that copies of one page read differently, among the pages of the documents sent up to the turn the board shows
     (plan AN.27, P13; invariant I6): found by code from the saved pages, never settled - each is both readings and the words before
     it."""
-    pages = [{"document": document["name"], "key": f"{row['turn_id']}:d{number}", "page": page["number"], "text": page["text"],
-              **({"recording": True} if document.get("recording") else {})}
-             for row in rows for number, document in enumerate(row.get("documents") or (), 1) for page in document["pages"]]
     return [{"first": {"document": found["first"]["document"], "page": found["first"]["page"]},
              "second": {"document": found["second"]["document"], "page": found["second"]["page"]},
              "figures": found["figures"]} for found in copy_figures.differences(pages)]
 
 
-def _extents(record):
+def _extents(record, pages):
     """The land extents the papers record, added up by code for each parcel (plan AN.27, P13d; invariant I6): the transfers the
     plan kept, those whose words were found added by extents.py and the rest listed and never added, each parcel with its sum, what
-    a paper's stated whole extent leaves, and the caveat that a sum is only of what was found. [] where the plan kept none."""
-    return extents.shown(record["plan"]["proposal"].get("transfers") or [])
+    a paper's stated whole extent leaves, and the caveat that a sum is only of what was found. One sale read on copies of a page is
+    one (P20 (b)): pages are those sent up to the turn shown. [] where the plan kept none."""
+    return extents.shown(record["plan"]["proposal"].get("transfers") or [], copy_figures.copies(pages))
 
 
 def _dispute(d, record, work, checklists):
@@ -205,6 +210,7 @@ def board(rows):
         work = {item["question_id"]: item["id"] for item in record["plan"]["work"]}
         names = {dispute["id"]: dispute["name"] for dispute in understanding["disputes"]}
         pages = _pages(rows[:index + 1])
+        sent = _sent(rows[:index + 1])
         # What each dispute needs, saved with this turn from its answer (turn v5, 18 Oct
         # 2026); a dispute's checklist is shown only under the same id and name.
         dates = {saved["turn_id"]: saved["response"]["at"] for saved in rows[:index + 1]}
@@ -225,8 +231,8 @@ def board(rows):
             "disputes": [_dispute(d, record, work, checklists) for d in _urgent(understanding["disputes"], checklists)],
             "understanding": _confirmed(record),
             "timeline": _timeline(record, rows[:index + 1]),
-            "copies": _copies(rows[:index + 1]),
-            "extents": _extents(record),
+            "copies": _copies(sent),
+            "extents": _extents(record, sent),
             "related_points": [{"point": r["point"], "why": r["why_it_matters"], "dispute_id": r["dispute_id"] or None,
                                 "dispute": names.get(r["dispute_id"])} for r in understanding["related_points"]],
         }

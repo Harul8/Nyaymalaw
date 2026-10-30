@@ -277,8 +277,8 @@ const board = {
   const caveat = 'Only the transfers NM found are added, each counted once where papers report the same date, parcel, extent and buyer.';
   const extents = [
     { parcel: 'Sy.No.487', transfers: [
-      { ids: ['X1'], date: '30-10-1985', kind: 'sale', to: 'Jelli Krishna', extent: 'Ac.1.18 guntas', in_guntas: '1 acre 18 guntas (Ac.1.18)',
-        read_as: 'acres.guntas', papers: [{ document: 'deed.pdf', pages: [1] }, { document: 'order.pdf', pages: [4, 5] }] },
+      { ids: ['X1'], date: '30-10-1985', kind: 'sale', to: 'Kiran Rao', extent: 'Ac.1.18 guntas', in_guntas: '1 acre 18 guntas (Ac.1.18)',
+        read_as: 'acres.guntas', also_read_as: ['Kiran Raao'], papers: [{ document: 'deed.pdf', pages: [1] }, { document: 'order.pdf', pages: [4, 5] }] },
       { ids: ['X2'], date: '2 January 1986', kind: 'sale', to: '', extent: 'Ac.1.00', in_guntas: '1 acre (Ac.1.00)',
         read_as: 'acres.guntas', papers: [{ document: 'deed.pdf', pages: [] }] }],
       not_read: [{ id: 'X3', extent: 'part of the land', why: 'no extent in these words', document: 'deed.pdf', pages: [3] }],
@@ -300,7 +300,7 @@ const board = {
   for (const part of ['Added up by NM’s code from the transfers of land it found in your papers, as the papers state them and whoever '
     + 'states them. Rival or repeated accounts are added as if each were true, so a sum is a figure to check against the papers, not an '
     + 'extent anyone holds.', 'Sy.No.487',
-    '30-10-1985 sale: Ac.1.18 guntas (1 acre 18 guntas (Ac.1.18)) to Jelli Krishna · deed.pdf, page 1; order.pdf, pages 4, 5',
+    '30-10-1985 sale: Ac.1.18 guntas (1 acre 18 guntas (Ac.1.18)) to Kiran Rao (also read as “Kiran Raao”) · deed.pdf, page 1; order.pdf, pages 4, 5',
     '2 January 1986 sale: Ac.1.00 (1 acre (Ac.1.00)) · deed.pdf',
     'Not added: “part of the land” (no extent in these words) · deed.pdf',
     'Added as stated: 2 acres 18 guntas (Ac.2.18) (a transfer could not be read, so the whole is more)',

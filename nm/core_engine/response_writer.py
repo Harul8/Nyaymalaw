@@ -1198,7 +1198,7 @@ def _strings(value):
             yield from _strings(item)
 
 
-def _shown_dates(draft, record):
+def _shown_dates(draft, record, context=None):
     """The dates of the papers' events and of the transfers of land that the writer of this draft was shown (plan AN.27, P19): those
     located on a page, taken from the functions its payload is built from, so that the check cannot drift from what is shown. A
     paper may write a date in words, or give it on another page than the passage it belongs to, which the pages as written cannot
@@ -1206,7 +1206,7 @@ def _shown_dates(draft, record):
     if record is None or draft.get("contract") != PRESENTED_CONTRACT:
         return []
     return [event["date"] for event in _chronology_shown(record, {}) or () if event["located"]] + [
-        moved["date"] for parcel in _extents_shown(record) or () for moved in parcel["transfers"]]
+        moved["date"] for parcel in _extents_shown(record, context) or () for moved in parcel["transfers"]]
 
 
 def dates_not_given(draft, context, sources, time_limits=None, record=None):
@@ -1216,7 +1216,7 @@ def dates_not_given(draft, context, sources, time_limits=None, record=None):
     chronology or transfers of land that the writer was shown. Returns one finding per unit
     stating a date found nowhere there, for the turn's shared correction."""
     given = {day for text in _strings([context, sources, time_limits, clock_contracts.setting()["today"],
-                                       _shown_dates(draft, record)])
+                                       _shown_dates(draft, record, context)])
              for day, _ in _dates(text)}
     days = {(d, m) for d, m, _ in given}
     findings = []
@@ -1365,13 +1365,18 @@ def _chronology_shown(record, offered):
              "located": event["anchored"]} for event in events]
 
 
+def _copy_pages(context):
+    """The pages of the documents the advocate sent, as the copy finder holds them."""
+    return [{"document": row["document"]["name"], "key": row["source_id"].rsplit("p", 1)[0], "page": row["document"].get("page"),
+             "id": row["source_id"], "text": row["text"],
+             **({"recording": True} if row["document"].get("recording") else {})} for row in context.get("documents", ())]
+
+
 def _copies_shown(context, offered):
     """The figures that copies of one page read differently, as the current writer and the review are shown them (plan AN.27, P13;
     invariant I6): both readings and the words before them, with the short IDs of the two pages; found by code, chosen between by no
     one. None where there are none."""
-    pages = [{"document": row["document"]["name"], "key": row["source_id"].rsplit("p", 1)[0], "page": row["document"].get("page"),
-              "id": row["source_id"], "text": row["text"],
-              **({"recording": True} if row["document"].get("recording") else {})} for row in context.get("documents", ())]
+    pages = _copy_pages(context)
     found = [{"first": {"paper": one["document"], "page": one["page"], "cite": offered.get(one["id"])},
               "second": {"paper": two["document"], "page": two["page"], "cite": offered.get(two["id"])},
               "figures": [dict(figure) for figure in copy["figures"]]}
@@ -1379,12 +1384,15 @@ def _copies_shown(context, offered):
     return found or None
 
 
-def _extents_shown(record):
+def _extents_shown(record, context=None):
     """The land extents added up by code, as the current writer and the review are shown them (plan AN.27, P13d; invariant I6): for
-    each parcel the transfers found (each once), what could not be added and why, the sum, what a paper's stated whole extent
-    leaves, and the caveat that a sum is only of the transfers found. None where the plan kept no transfers."""
+    each parcel the transfers found (each once, and once too where copies of a page report it, P20 (b): context gives the pages),
+    what could not be added and why, the sum, what a paper's stated whole extent leaves, and the caveat that a sum is only of the
+    transfers found. None where the plan kept no transfers."""
     transfers = record["plan"]["proposal"].get("transfers") if record.get("contract") in research.CHRONICLED else None
-    return extents.shown(transfers) if transfers else None
+    if not transfers:
+        return None
+    return extents.shown(transfers, copy_figures.copies(_copy_pages(context)) if context else ())
 
 
 def _payload(context, record, sources, interpretation, execution, layout, index, time_limits=None, *, worded=False):
@@ -1403,7 +1411,7 @@ def _payload(context, record, sources, interpretation, execution, layout, index,
             time_limits = _worded_limits(time_limits)
     papers = _chronology_shown(record, offered) if worded else None
     copies = _copies_shown(context, offered) if worded else None
-    land = _extents_shown(record) if worded else None
+    land = _extents_shown(record, context) if worded else None
     return {"original_context": answer_sources.shown_context(context, sources), "setting": clock_contracts.setting(),
             "interpretation_proposal": interpretation,
             **({"papers_chronology": papers} if papers else {}),

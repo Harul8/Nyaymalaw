@@ -133,3 +133,89 @@ def test_the_ledger_in_words_is_plain_data_and_says_it_is_only_of_what_was_found
     assert "not an extent anyone holds" in extents.CAVEAT and "a buyer named two ways" in extents.CAVEAT
     assert parcel["transfers"][0]["in_guntas"] == "1 acre 18 guntas (Ac.1.18)" and parcel["transfers"][0]["read_as"] == "acres.guntas"
     assert shown([transfer(1, "nothing")])[0]["sum"] is None
+
+
+# One transaction is counted once by where it is read (plan AN.27, P20 (b)): the near-copy papers of the reviewed bundle each reported the
+# same sales, and a buyer's name read two ways was counted as two buyers.
+def on_copies(*pairs):
+    return {frozenset(pair) for pair in pairs}
+
+
+COPIED = on_copies((("deed.pdf", 1), ("scan.pdf", 1)))
+
+
+def test_one_sale_read_on_two_copies_of_a_page_is_one_whatever_the_buyers_name_was_read_as():
+    both = [transfer(1, "Ac.6.06", to="Anil Kumar", document="deed.pdf"),
+            transfer(2, "Ac.6.06", to="Anil Kumaar", document="scan.pdf")]
+    assert ledger(both)[0]["sum"] == 2 * 246, "without the pages' copies a name read two ways is two buyers (the caveat says so)"
+    (parcel,) = ledger(both, COPIED)
+    (only,) = parcel["transfers"]
+    assert parcel["sum"] == 246 and only["ids"] == ["X1", "X2"] and only["to"] == "Anil Kumar"
+    assert only["names"] == ["Anil Kumar", "Anil Kumaar"]
+    assert [p["document"] for p in only["papers"]] == ["deed.pdf", "scan.pdf"]
+    (parcel,) = shown(both, COPIED)
+    assert parcel["sum"] == "6 acres 6 guntas (Ac.6.06)" and parcel["transfers"][0]["also_read_as"] == ["Anil Kumaar"]
+    assert "also_read_as" not in shown([transfer(1, "Ac.6.06")], COPIED)[0]["transfers"][0]
+
+
+def test_papers_that_are_not_copies_of_one_another_are_told_apart_by_the_buyer_as_before():
+    both = [transfer(1, "Ac.6.06", to="Anil Kumar", document="deed.pdf"),
+            transfer(2, "Ac.6.06", to="Anil Kumaar", document="order.pdf")]
+    assert len(ledger(both, COPIED)[0]["transfers"]) == 2
+    assert len(ledger(both, on_copies((("deed.pdf", 1), ("order.pdf", 2))))[0]["transfers"]) == 2, "copies of another page"
+
+
+def test_copies_of_a_page_do_not_make_different_transactions_one():
+    for other in (transfer(2, "Ac.6.00", to="Anil Kumaar", document="scan.pdf"),
+                  transfer(2, "Ac.6.06", to="Anil Kumaar", document="scan.pdf", kind="gift"),
+                  transfer(2, "Ac.6.06", to="Anil Kumaar", document="scan.pdf", sort="1986-10-30", date="30-10-1986")):
+        assert len(ledger([transfer(1, "Ac.6.06", to="Anil Kumar", document="deed.pdf"), other], COPIED)[0]["transfers"]) == 2
+
+
+def test_two_sales_of_one_day_on_a_page_and_its_copy_are_two_not_one_and_not_four():
+    both_sales = [transfer(1, "Ac.0.29", to="Kiran Rao", document="deed.pdf"), transfer(2, "Ac.0.29", to="Mahesh Babu", document="deed.pdf"),
+                  transfer(3, "Ac.0.29", to="Kiran Raao", document="scan.pdf"), transfer(4, "Ac.0.29", to="Mahesh Babu", document="scan.pdf")]
+    (parcel,) = ledger(both_sales, COPIED)
+    assert len(parcel["transfers"]) == 2 and parcel["sum"] == 58
+    assert sorted(len(t["ids"]) for t in parcel["transfers"]) == [2, 2]
+    # Where the copy was read for only one of them, the other stays and the one copy joins one of the two.
+    (parcel,) = ledger(both_sales[:3], COPIED)
+    assert len(parcel["transfers"]) == 2 and parcel["sum"] == 58
+
+
+def test_a_third_paper_that_copies_a_page_of_the_second_joins_the_same_transaction():
+    copied = on_copies((("deed.pdf", 1), ("scan.pdf", 1)), (("scan.pdf", 1), ("late.pdf", 4)))
+    (parcel,) = ledger([transfer(1, "Ac.6.06", to="S. Prakash", document="deed.pdf"), transfer(2, "Ac.6.06", to="S. Praksh", document="scan.pdf"),
+                        transfer(3, "Ac.6.06", to="S Prakaash", document="late.pdf", pages=(4,))], copied)
+    (only,) = parcel["transfers"]
+    assert only["ids"] == ["X1", "X2", "X3"] and only["names"] == ["S. Prakash", "S. Praksh", "S Prakaash"] and parcel["sum"] == 246
+
+
+def test_a_copy_that_reports_two_of_a_kind_for_the_one_its_original_reports_is_one_and_one_more():
+    (parcel,) = ledger([transfer(1, "Ac.0.29", to="Kiran Rao", document="deed.pdf"),
+                        transfer(2, "Ac.0.29", to="Kiran Raao", document="scan.pdf"),
+                        transfer(3, "Ac.0.29", to="Mahesh Babu", document="scan.pdf")], COPIED)
+    assert len(parcel["transfers"]) == 2 and parcel["sum"] == 58
+
+
+def test_a_paper_that_is_no_copy_but_reads_the_buyer_as_the_copy_did_adds_nothing_to_the_sale_either():
+    copied = on_copies((("deed.pdf", 1), ("scan.pdf", 1)))
+    (parcel,) = ledger([transfer(1, "Ac.6.06", to="S. Prakash", document="deed.pdf"), transfer(2, "Ac.6.06", to="S. Praksh", document="scan.pdf"),
+                        transfer(3, "Ac.6.06", to="S. Praksh", document="order.pdf", pages=(2,))], copied)
+    (only,) = parcel["transfers"]
+    assert only["ids"] == ["X1", "X2", "X3"] and parcel["sum"] == 246
+
+
+def test_a_paper_never_counts_two_of_its_own_transfers_as_one_because_a_copy_reports_one():
+    (parcel,) = ledger([transfer(1, "Ac.0.29", to="Kiran Rao", document="deed.pdf"), transfer(2, "Ac.0.29", to="Mahesh Babu", document="deed.pdf"),
+                        transfer(3, "Ac.0.29", to="Kiran Raao", document="scan.pdf")], COPIED)
+    assert len(parcel["transfers"]) == 2 and parcel["sum"] == 58
+
+
+def test_a_transfer_with_no_pages_is_never_taken_for_a_copy_and_the_turns_own_key_of_a_document_is_what_the_pages_are_read_by():
+    keyed = [{**transfer(1, "Ac.6.06", to="One", document="deed.pdf"), "source": "t1:d1"},
+             {**transfer(2, "Ac.6.06", to="Two", document="scan.pdf"), "source": "t1:d2"}]
+    assert len(ledger(keyed, COPIED)[0]["transfers"]) == 2, "the pages are those of the turn's documents, not the file names"
+    assert len(ledger(keyed, on_copies((("t1:d1", 1), ("t1:d2", 1))))[0]["transfers"]) == 1
+    assert len(ledger([transfer(1, "Ac.6.06", document="deed.pdf", pages=()), transfer(2, "Ac.6.06", to="Two", document="scan.pdf", pages=())],
+                      COPIED)[0]["transfers"]) == 2

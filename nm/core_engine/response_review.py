@@ -932,7 +932,7 @@ def review(model, context, research_record, sources, draft, execution=None, *,
                   if contract == PRESENTED_CONTRACT and draft["section"] != response_writer.OVERVIEW else None)
         if copies:
             payload["copies_read_differently"] = copies
-        land = (response_writer._extents_shown(research_record)
+        land = (response_writer._extents_shown(research_record, context)
                 if contract == PRESENTED_CONTRACT and draft["section"] != response_writer.OVERVIEW else None)
         if land:
             payload["land_extents"] = land

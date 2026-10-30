@@ -9,9 +9,11 @@ import pytest
 
 from nm.core_engine import answer_sources, research, response_authorities, response_review, response_writer
 from nm.core_engine.research import plan, retrieve
+from tests.test_copies_that_read_a_figure_differently import passage
 from tests.test_core_research import Model, searcher
-from tests.test_the_plan_records_the_chronology import Beside, bundle
-from tests.test_the_plan_records_the_transfers import SOLD
+from tests.test_the_chronology_of_each_document import row
+from tests.test_the_plan_records_the_chronology import Beside, bundle, sent
+from tests.test_the_plan_records_the_transfers import SOLD, transfer
 from tests.test_the_review_is_shown_the_chronology import Reviewer
 from tests.test_the_writer_and_review_are_shown_copies_read_differently import quiet
 from tests.test_the_writer_is_shown_the_chronology import Writer
@@ -67,6 +69,41 @@ def test_the_review_of_a_section_is_shown_the_same_and_the_earlier_review_is_not
                            authority_evidence=response_authorities.check(ctx, record, sources, older),
                            contract=response_review.MISLEADS_CONTRACT)
     assert "land_extents" not in model.seen[0][1]
+
+
+def copies_matter():
+    """Two papers that hold a copy of one page, each read for the one sale it records, the buyer's name read two ways."""
+    ctx = sent(row("t1", 1, "deed.pdf", 1, passage()), row("t1", 2, "scan.pdf", 1, passage()))
+    said = "the vendor sold to the purchasers an extent of 6.06 acres"
+    transfers = {"deed.pdf": [transfer("5.1.1980", "Sy.No.487", "Ac.6.06", said, to="Kiran Rao")],
+                 "scan.pdf": [transfer("5.1.1980", "Sy.No.487", "Ac.6.06", said, to="Kiran Raao")]}
+    record = retrieve(plan(Beside({}, transfers=transfers), ctx), searcher(), ctx, model=Model())
+    return ctx, record, answer_sources.build(ctx, record)
+
+
+def test_one_sale_read_on_two_copies_of_a_page_is_shown_once_to_the_writer_and_to_the_review():
+    ctx, record, sources = copies_matter()
+    (parcel,) = response_writer._extents_shown(record, ctx)
+    (only,) = parcel["transfers"]
+    assert parcel["sum"] == "6 acres 6 guntas (Ac.6.06)" and [p["document"] for p in only["papers"]] == ["deed.pdf", "scan.pdf"]
+    assert only["to"] == "Kiran Rao" and only["also_read_as"] == ["Kiran Raao"]
+    (twice,) = response_writer._extents_shown(record)
+    assert twice["sum"] == "12 acres 12 guntas (Ac.12.12)" and len(twice["transfers"]) == 2, "without the pages it is added twice"
+    model = Writer(quiet)
+    draft = response_writer.write_section(model, ctx, record, sources, index=0, contract=response_writer.PRESENTED_CONTRACT)
+    assert model.seen[0][1]["land_extents"] == [parcel]
+    reviewer = Reviewer()
+    response_review.review(reviewer, ctx, record, sources, draft, research.execution(record),
+                           authority_evidence=response_authorities.check(ctx, record, sources, draft),
+                           contract=response_review.PRESENTED_CONTRACT)
+    assert reviewer.seen[0][1]["land_extents"] == [parcel]
+
+
+def test_the_date_check_is_given_the_dates_of_the_transfers_as_the_writer_is_shown_them_on_copies_too():
+    ctx, record, sources = copies_matter()
+    stated = {"contract": response_writer.PRESENTED_CONTRACT, "units": [{"id": "t1:b1", "text": "The vendor sold it."}]}
+    assert response_writer._shown_dates(stated, record, ctx) == ["5.1.1980"], "one sale, as the writer is shown it"
+    assert response_writer._shown_dates(stated, record) == ["5.1.1980", "5.1.1980"]
 
 
 def test_the_prompts_say_to_use_the_sums_exactly_as_given_and_never_to_add_extents_itself():
