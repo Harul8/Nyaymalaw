@@ -11,6 +11,7 @@ unread with its reason, never an empty success. A page that could not be read no
 from __future__ import annotations
 
 import logging
+import threading
 from concurrent.futures import ThreadPoolExecutor
 
 from nm.shared.external_ai_contracts import ModelPermissionRefused
@@ -21,8 +22,13 @@ CONTRACT = "core_page_reading_v1"
 OPERATION = "core_page_reading"
 MAX_OUTPUT = 12000
 log = logging.getLogger(__name__)
-#: Pages read at once for one document.
-AT_ONCE = 4
+#: Pages read at once for one document, and at once across every document being read in this process (plan AN.25, P3, 30 Oct
+#: 2026): one upload of a long scan no longer waits in waves of four, and many uploads together never ask the AI service for
+#: more than ALL_AT_ONCE reads. Chosen without a paid run (a bounded live run is still to confirm them): 20 pages are 3 waves
+#: of about 15 s, not 5.
+AT_ONCE = 8
+ALL_AT_ONCE = 16
+_SHARED = threading.BoundedSemaphore(ALL_AT_ONCE)
 
 SYSTEM = """You read pages of documents that an Indian advocate has shared about a client's matter. Each page reaches you as an image because it has no text layer: it is a scan or a photograph. What you write becomes that page's text. The research, the answer and every quotation from this page will rely on it, so it must say what the page says.
 
@@ -88,10 +94,16 @@ def read_page(model, name, number, image: bytes):
     return page, _call(result, number)
 
 
+def _read_within_the_shared_limit(model, name, number, image):
+    with _SHARED:
+        return read_page(model, name, number, image)
+
+
 def read_pages(model, name, images):
-    """Every drawn page, a few at a time: {number: page} and the calls made."""
+    """Every drawn page, a few at a time: {number: page} and the calls made. At most AT_ONCE for this document, and with every
+    other document being read, at most ALL_AT_ONCE."""
     numbers = sorted(images)
     with ThreadPoolExecutor(max_workers=min(AT_ONCE, max(1, len(numbers)))) as pool:
-        done = list(pool.map(lambda n: read_page(model, name, n, images[n]), numbers))
+        done = list(pool.map(lambda n: _read_within_the_shared_limit(model, name, n, images[n]), numbers))
     return ({page["number"]: page for page, _ in done},
             [call for _, call in done if call is not None])
