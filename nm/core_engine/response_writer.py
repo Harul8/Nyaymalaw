@@ -18,7 +18,7 @@ from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 from datetime import date
 
-from nm.core_engine import answer_sources, checklist, copy_figures, research
+from nm.core_engine import answer_sources, checklist, copy_figures, extents, research
 from nm.core_engine.understanding import REFERENCE, TEXT, renamed, source_catalogue
 from nm.shared import clock_contracts
 from nm.shared.model_port import (
@@ -438,9 +438,12 @@ Where copies_read_differently is given, it lists figures that two copies of one 
 differently, each with the short IDs of the two pages: give both readings and say that the
 copies differ, never choose between them, and do not call it a disagreement in the papers
 themselves. Counting is code's work for extents as it is for days: do not add, subtract or
-convert acres, guntas or cents yourself. Give each extent as the paper gives it, and where a
-total or a remainder matters, say what would be added or taken away and that it has not been
-worked out.
+convert acres, guntas or cents yourself. Where land_extents is given, code added the transfers of
+land NM found in the papers, parcel by parcel: use its sums, and what they leave of a stated
+whole extent, exactly as given; say that they are only of the transfers found, as its caveat
+does, and which transfers were not added and why; and name no remainder for a parcel whose
+complete is false. For any other total or remainder, give each extent as the paper gives it,
+and say what would be added or taken away and that it has not been worked out.
 3. Read each legal source with its neighbouring context. A provision's read_with names
 the held provisions its Act reads it with and how: it names them, they name it in the
 words shown, or they stand beside it. Read them together, and state a rule with the
@@ -1361,6 +1364,14 @@ def _copies_shown(context, offered):
     return found or None
 
 
+def _extents_shown(record):
+    """The land extents added up by code, as the current writer and the review are shown them (plan AN.27, P13d; invariant I6): for
+    each parcel the transfers found (each once), what could not be added and why, the sum, what a paper's stated whole extent
+    leaves, and the caveat that a sum is only of the transfers found. None where the plan kept no transfers."""
+    transfers = record["plan"]["proposal"].get("transfers") if record.get("contract") in research.CHRONICLED else None
+    return extents.shown(transfers) if transfers else None
+
+
 def _payload(context, record, sources, interpretation, execution, layout, index, time_limits=None, *, worded=False):
     part = layout[index]
     disputes = {}
@@ -1377,10 +1388,12 @@ def _payload(context, record, sources, interpretation, execution, layout, index,
             time_limits = _worded_limits(time_limits)
     papers = _chronology_shown(record, offered) if worded else None
     copies = _copies_shown(context, offered) if worded else None
+    land = _extents_shown(record) if worded else None
     return {"original_context": answer_sources.shown_context(context, sources), "setting": clock_contracts.setting(),
             "interpretation_proposal": interpretation,
             **({"papers_chronology": papers} if papers else {}),
             **({"copies_read_differently": copies} if copies else {}),
+            **({"land_extents": land} if land else {}),
             "this_part": {"part": index + 1, "of": len(layout), "opens_the_answer": index == 0,
                           "dispute": disputes.get(part["dispute_id"]),
                           "other_parts": [disputes[p["dispute_id"]]["name"] for p in layout
