@@ -375,11 +375,14 @@ item stands from the messages and documents: in_hand when a message or document 
 holds it, coming_or_unclear when the advocate has promised it, given only part of it or
 is unsure of it, not_available when the advocate says it cannot be had, and not_given
 when nothing yet answers it. For every state but not_given copy exactly the words that
-show it, the advocate's own words for coming_or_unclear and not_available. Where a
+show it, the advocate's own words for coming_or_unclear and not_available. A document page can show an item
+in_hand and nothing else: where a document speaks to an item without holding it, the item is
+not_given, with no words. Where a
 question of yours, or your row_ready line, asks the advocate for an item, give in its
 asked_words the words of each such ask, copied exactly from your text: the advocate
 clicks them to open the item and tell NM about it. List an item only where held law
-supports it; where none does, return no items. Under time_limit_ids give the IDs (T1,
+supports it; where none does, return no items. An item that no held passage requires is
+not on the checklist, however useful it would be: put it in your next steps instead. Under time_limit_ids give the IDs (T1,
 T2...) of the time limits in time_limits that concern this dispute.
 
 Work in a loop before you return: read the conversation and the passages, draft, check
@@ -895,15 +898,52 @@ def _plain(text):
     return _LINK.sub(lambda match: match.group(1), text)
 
 
+#: What a checklist item says where code could not confirm where it stands (plan AN.27, P17): the item is then not yet given.
+UNCONFIRMED = "NM could not confirm where this stands from your messages."
+
+
+def _grounded(items, saved, sources, offered, reasoned):
+    """P17 (30 Oct 2026; the current writer only): the checklist items of a section that stand on what can be checked, so that one
+    that cannot be does not cost the section. An item whose need or reason is blank, whose law is not exact held words, or that
+    rests on both or neither of held law and an item of the matter's checklist, is left out. An item whose status cannot be
+    confirmed - it names no words, or words that are not exact, or a document where only the advocate's own words can show it - is
+    kept as not yet given, with a note that says so. The checks that remain are the strict ones: everything returned here is
+    admitted by them, never instead of them."""
+    kept = []
+    for item in items:
+        try:
+            if not _plain(item["need"]).strip() or reasoned and not _plain(item["why"]).strip():
+                continue
+            if (item["law"] is None) == (item["carries"] is None) or (
+                    item["carries"] is not None and item["carries"] not in saved):
+                continue
+            if item["law"] is not None:
+                _quoted(item["law"], sources, offered, _LAW, "A checklist item's law")
+        except SchemaViolation:
+            continue
+        status, evidence = item["status"], item["evidence"]
+        if status == "not_given":
+            kept.append(item if evidence is None else {**item, "evidence": None})
+            continue
+        try:
+            if evidence is None:
+                raise SchemaViolation("No words show where the item stands")
+            _quoted(evidence, sources, offered, _HOLDS if status == "in_hand" else _SAYS, "Where a checklist item stands")
+        except SchemaViolation:
+            item = {**item, "status": "not_given", "evidence": None, **({"note": UNCONFIRMED} if reasoned else {})}
+        kept.append(item)
+    return kept
+
+
 def _checklists(given, layout, context, sources, offered, *, limits="time_limits", reasoned=False, units=None,
-                prefix=None, by_when=False):
+                prefix=None, by_when=False, lenient=False):
     """v6: each dispute part's checklist, every quote checked exactly (owner decisions, 17
     Oct 2026). No item is a manual tick: one in hand names the words that hold it. From
     v9 (reasoned) an item also says why the case needs it and, in a few words, where it
     stands. From v11 (units: the draft's admitted units) an item says where each ask for it
     stands in its part's questions or summary. prefix (v12): the IDs of the section's own.
     by_when (v13): the time limit, among the part's own, that answers "by when"; one it does
-    not name is none."""
+    not name is none. lenient (v13, P17): the items that stand on what can be checked are kept (_grounded)."""
     prefix = prefix if prefix is not None else f"{context['latest']['turn_id']}:"
     if len(given) != len(layout):
         raise SchemaViolation("Each part of the reply returns its own checklist")
@@ -914,7 +954,8 @@ def _checklists(given, layout, context, sources, offered, *, limits="time_limits
         mine = (units or [])[start:start + part["units"]]
         start += part["units"]
         items = []
-        for item in written["checklist"]:
+        listed = _grounded(written["checklist"], saved, sources, offered, reasoned) if lenient else written["checklist"]
+        for item in listed:
             number += 1
             # Written as a link, a need keeps its words (forensic review, 18 Oct 2026): its law
             # and evidence are given beside it.
@@ -944,7 +985,7 @@ def _checklists(given, layout, context, sources, offered, *, limits="time_limits
                               item["evidence"], sources, offered,
                               _HOLDS if item["status"] == "in_hand" else _SAYS, "Where a checklist item stands")})
         if units is not None:
-            for entry, asked in zip(items, _asks([item.get("asked_words") for item in written["checklist"]], mine)):
+            for entry, asked in zip(items, _asks([item.get("asked_words") for item in listed], mine)):
                 entry["asked"] = asked
         out.append({"items": items, limits: list(written[limits]), **({"by_when": (
             written["by_when"] if part["dispute_id"] is not None and written["by_when"] in written[limits] else None)}
@@ -1083,7 +1124,8 @@ def accept(proposal, context, sources, *, contract=CONTRACT, parts=None, whole=T
         draft["checklists"] = _checklists(data["checklists"], draft["parts"], context, sources, offered,
                                           limits="time_limit_ids" if contract in LINKED else "time_limits",
                                           reasoned=contract in REASONED, units=units if contract in ASKED else None,
-                                          prefix=_prefix(context, section), by_when=contract == PRESENTED_CONTRACT)
+                                          prefix=_prefix(context, section), by_when=contract == PRESENTED_CONTRACT,
+                                          lenient=contract == PRESENTED_CONTRACT)
     if contract in SECTIONS:
         draft["section"] = section
     if contract in ASKED:
