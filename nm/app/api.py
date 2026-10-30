@@ -1802,35 +1802,63 @@ def _receive_document(advocate_id, request, name, data):
     return document_rules.summary(record)
 
 
-@app.post('/api/documents/{document_ref}/read', dependencies=[CsrfProtected])
-def read_document_waiting(document_ref: str, advocate_id: Advocate, request: Request):
-    """The AI does what waits (owner decisions, 15 Oct 2026): reads scanned pages or
-    transcribes a recording, under the advocate's AI data-sharing permission; a new record."""
+_READING_FAILURES = (ModelPermissionRefused, UsageLimitReached, ModelError, document_rules.DocumentRefused, OSError)
+
+
+def _reading_error(exc):
+    """What a failed reading of scanned pages says, as the advocate is told it: {'status', 'why', 'code'}; None for a failure this
+    does not know, which is a defect to log and never an expected outcome (plan AN.25, P4)."""
+    if isinstance(exc, ModelPermissionRefused):
+        return {'status': 403, 'why': str(exc), 'code': 'model_permission_required'}
+    if isinstance(exc, UsageLimitReached):
+        return {'status': 402, 'why': USAGE_LIMIT_MESSAGE, 'code': 'usage_limit'}
+    if isinstance(exc, ModelError):
+        return {'status': 503, 'why': 'The pages could not be read just now. Try again.', 'code': 'document_reading_unavailable'}
+    if isinstance(exc, document_rules.DocumentRefused):
+        return {'status': 404, 'why': str(exc), 'code': 'document_unavailable'}
+    if isinstance(exc, OSError):
+        return {'status': 503, 'why': 'The pages that were read could not be kept safely. Try again.', 'code': 'document_storage'}
+    return None
+
+
+@app.post('/api/documents/{document_ref}/reading', dependencies=[CsrfProtected], status_code=202)
+def start_reading_document(document_ref: str, advocate_id: Advocate, request: Request):
+    """The AI does what waits (owner decisions, 15 Oct 2026): reads scanned pages or transcribes a recording, under the advocate's
+    AI data-sharing permission, which is checked before anything begins; a new record. It is a background job the page asks after
+    with page-by-page progress (plan AN.25, P4), in place of the one request that held the browser for the whole of a long scan.
+    Asking again while it runs says where it stands."""
     if not _session_current(request, advocate_id):
         raise HTTPException(401, 'not signed in')
     desk = _document_desk()
     try:
-        model = application().document_reader(
-            advocate_id, session_current=lambda: _session_current(request, advocate_id))
-        record, _ = desk.read_waiting(advocate_id, document_ref, model)
-    except ModelPermissionRefused as exc:
-        if not _session_current(request, advocate_id):
+        record = desk.load(advocate_id, document_ref)
+        waiting = document_rules.needs_transcription(record)
+        model = (application().document_reader(advocate_id, session_current=lambda: _session_current(request, advocate_id))
+                 if waiting else None)
+    except _READING_FAILURES as exc:
+        if isinstance(exc, ModelPermissionRefused) and not _session_current(request, advocate_id):
             raise HTTPException(401, 'not signed in') from exc
-        raise HTTPException(403, {'why': str(exc), 'code': 'model_permission_required'}) from exc
-    except UsageLimitReached as exc:
-        # The account's allowance is used up, or the AI account's (P51, AN.17): the owner's words.
-        raise HTTPException(402, {'why': USAGE_LIMIT_MESSAGE, 'code': 'usage_limit'}) from exc
-    except ModelError as exc:
-        raise HTTPException(503, {'why': 'The pages could not be read just now. Try again.',
-                                  'code': 'document_reading_unavailable'}) from exc
-    except document_rules.DocumentRefused as exc:
-        raise HTTPException(404, {'why': str(exc), 'code': 'document_unavailable'}) from exc
-    except OSError as exc:
-        raise HTTPException(503, {'why': 'The pages that were read could not be kept safely. Try again.',
-                                  'code': 'document_storage'}) from exc
+        error = _reading_error(exc)
+        raise HTTPException(error['status'], {'why': error['why'], 'code': error['code']}) from exc
+    if not waiting:
+        return {'state': 'done', 'done': 0, 'total': 0, 'document': document_rules.summary(record)}
+
+    def work(progress):
+        renewed, _ = desk.read_waiting(advocate_id, document_ref, model, progress=progress)
+        return document_rules.summary(renewed)
+    return desk.jobs.start(advocate_id, document_ref, len(waiting), work, _reading_error)
+
+
+@app.get('/api/documents/{document_ref}/reading')
+def reading_document_status(document_ref: str, advocate_id: Advocate, request: Request):
+    """Where this advocate's reading of the document stands: reading (pages done of pages to read), done (with the document as it
+    now is) or failed (with why)."""
     if not _session_current(request, advocate_id):
         raise HTTPException(401, 'not signed in')
-    return document_rules.summary(record)
+    shown = _document_desk().jobs.status(advocate_id, document_ref)
+    if shown is None:
+        raise HTTPException(404, {'why': 'No reading of this document is running.', 'code': 'reading_not_found'})
+    return JSONResponse(shown, headers={'Cache-Control': 'no-store'})
 
 
 @app.get('/api/documents/{document_ref}/recording')

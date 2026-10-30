@@ -4948,6 +4948,9 @@ async function wavParts(file) {
   return parts;
 }
 
+// How often the page asks after a reading of scanned pages (plan AN.25, P4).
+const READING_POLL_MS = 1000;
+
 function documentStatus(item) {
   if (item.status === 'recording') {
     const seconds = Math.floor((Date.now() - item.started) / 1000);
@@ -4956,7 +4959,10 @@ function documentStatus(item) {
   if (item.status === 'converting') return 'Converting the recording in this browser…';
   if (item.status === 'uploading') return 'Checking for malware and reading…';
   if (item.status === 'reading_scans') {
-    return item.summary && item.summary.recording ? 'Transcribing the recording with AI…'
+    if (item.summary && item.summary.recording) return 'Transcribing the recording with AI…';
+    const progress = item.progress;
+    return progress && progress.total
+      ? `Reading scanned pages with AI… ${progress.done} of ${progress.total} page${progress.total === 1 ? '' : 's'} read`
       : 'Reading scanned pages with AI…';
   }
   if (item.status === 'failed') return `Not attached: ${item.note}`;
@@ -5100,16 +5106,30 @@ async function readWaiting(item) {
     if (attachments.includes(item)) renderAttachments();
   };
   item.note = '';
+  item.progress = null;
   settle('reading_scans');
   const what = item.summary.recording ? 'The recording was not transcribed' : 'Scanned pages were not read';
+  const address = `/api/documents/${encodeURIComponent(item.summary.document_ref)}/reading`;
   try {
-    item.summary = await api(
-      `/api/documents/${encodeURIComponent(item.summary.document_ref)}/read`, { method: 'POST' });
+    // A background job (plan AN.25, P4): started once, then asked after until it ends, so no request is held for the whole of a
+    // long scan and the chip can say how many pages are read.
+    let job = await api(address, { method: 'POST' });
+    while (job.state === 'reading') {
+      item.progress = { done: job.done, total: job.total };
+      if (attachments.includes(item)) renderAttachments();
+      await new Promise((resolve) => setTimeout(resolve, READING_POLL_MS));
+      if (!attachments.includes(item)) return;
+      job = await api(address);
+    }
+    if (job.state === 'failed') throw Object.assign(new Error(job.error.why), { status: job.error.status });
+    item.summary = job.document;
   } catch (error) {
     item.note = error.status === 403
       ? `${what}: accept AI data sharing in your profile to allow it.`
+      : error.status === 404 ? `${what}: the reading was interrupted; read it again.`
       : `${what}: ${error.message}`;
   }
+  item.progress = null;
   settle(item.summary.state === 'held' ? 'held' : 'ready');
   loadUsage();
 }

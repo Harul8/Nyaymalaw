@@ -4,6 +4,7 @@ request body and sees what was checked and read; nobody else can see it.
 The malware checker is a recorded outcome; the reader, the sealed store, sign-in and
 CSRF are the served ones.
 """
+import time
 from urllib.parse import quote
 
 from fastapi.testclient import TestClient
@@ -20,6 +21,17 @@ pytestmark = pytest.mark.class_a
 def upload(client, data=b"The cheque was returned on 3 October 2026.", name="note.txt", **headers):
     return client.post("/api/documents", content=data,
                        headers={"x-nm-document-name": quote(name), **headers})
+
+
+def reading_ended(client, url, seconds=8):
+    """Asks after a reading - a background job (plan AN.25, P4) - until it is no longer reading, and says how it stands."""
+    end = time.monotonic() + seconds
+    while True:
+        shown = client.get(url)
+        assert shown.status_code == 200, shown.text
+        if shown.json()["state"] != "reading" or time.monotonic() > end:
+            return shown.json()
+        time.sleep(0.02)
 
 
 @pytest.fixture
@@ -89,13 +101,15 @@ def test_the_advocate_has_waiting_scanned_pages_read_under_their_own_permission(
         return PageModel({2: {"text": "Scanned words", "readable": "all", "note": ""}})
 
     monkeypatch.setattr(served.app, "document_reader", document_reader)
-    url = f"/api/documents/{shown['document_ref']}/read"
+    url = f"/api/documents/{shown['document_ref']}/reading"
     assert served.client.post(url, headers={"x-nm-csrf": "wrong"}).status_code == 403
     assert served.login(OTHER).post(url).status_code == 404
-    read = served.client.post(url)
-    assert read.status_code == 200, read.text
-    assert read.json()["pages_read_by_ai"] == 1 and read.json()["document_ref"] != shown["document_ref"]
-    assert "Scanned words" not in read.text and bound[-1] == (OWNER, True)
+    started = served.client.post(url)
+    assert started.status_code == 202, started.text
+    read = reading_ended(served.client, url)
+    assert read["state"] == "done", read
+    assert read["document"]["pages_read_by_ai"] == 1 and read["document"]["document_ref"] != shown["document_ref"]
+    assert "Scanned words" not in str(read) and bound[-1] == (OWNER, True)
 
 
 def test_reading_scans_without_ai_permission_is_refused_plainly(served, desk, monkeypatch):
@@ -107,7 +121,7 @@ def test_reading_scans_without_ai_permission_is_refused_plainly(served, desk, mo
 
     monkeypatch.setattr(served.app, "document_reader", document_reader)
     ref = upload(served.client, data=pdf(["Typed page.", ""]), name="memo.pdf").json()["document_ref"]
-    refused = served.client.post(f"/api/documents/{ref}/read")
+    refused = served.client.post(f"/api/documents/{ref}/reading")
     assert refused.status_code == 403 and refused.json()["detail"]["code"] == "model_permission_required"
 
 

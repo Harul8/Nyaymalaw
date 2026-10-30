@@ -12,6 +12,9 @@ import json
 import logging
 import re
 import secrets
+import threading
+import time
+from copy import deepcopy
 
 from nm.arrive.advocate_contracts import utcnow
 from nm.core_engine import documents, page_reading, voice
@@ -35,10 +38,79 @@ def space(advocate_id):
     return "docs_" + hashlib.sha256(advocate_id.encode("utf-8")).hexdigest()[:40]
 
 
+class ReadingJobs:
+    """What waits for the AI read as a background job the page asks after, with page-by-page progress (plan AN.25, P4): one request
+    no longer holds the browser for the 80 seconds or more a long scan takes, which a proxy that cuts requests at 60 would refuse.
+    A job is the advocate's own - keyed by them and the document - and is kept for KEPT seconds after it ends, so the page that asks
+    after it can read how it ended."""
+
+    KEPT = 600.0
+
+    def __init__(self, clock=time.monotonic):
+        self._jobs, self._lock, self._clock = {}, threading.Lock(), clock
+
+    def start(self, advocate_id, ref, total, work, explain):
+        """Begin work(progress) -> the document's summary, unless this document is already being read, and say where it stands.
+        explain(exc): a failure the reading is known to end in, as {'status', 'why', 'code'}; None for any other, which is logged
+        with its traceback and told plainly, never hidden."""
+        key = (advocate_id, ref)
+        with self._lock:
+            self._forget()
+            job = self._jobs.get(key)
+            if job is not None and job["state"] == "reading":
+                return self._shown(job)
+            job = {"state": "reading", "done": 0, "total": total, "document": None, "error": None, "ended": None}
+            self._jobs[key] = job
+
+        def progress(done, count):
+            with self._lock:
+                job["done"], job["total"] = done, count
+
+        def run():
+            document, error = None, None
+            try:
+                document = work(progress)
+            except Exception as exc:  # noqa: BLE001 - a job must end, however it ended; what it was is kept below
+                error = explain(exc)
+                if error is None:
+                    _log.exception("Reading a document ended on an error nobody expected")
+                    error = {"status": 500, "why": "The pages could not be read just now. Try again.",
+                             "code": "document_reading_failed"}
+            with self._lock:
+                job.update(state="failed" if error else "done", document=document, error=error, ended=self._clock())
+
+        threading.Thread(target=run, daemon=True, name="nm-document-reading").start()
+        with self._lock:
+            return self._shown(job)
+
+    def status(self, advocate_id, ref):
+        """Where this advocate's reading of the document stands, or None where there is none (never begun, long over, or lost when
+        the server restarted)."""
+        with self._lock:
+            self._forget()
+            job = self._jobs.get((advocate_id, ref))
+            return None if job is None else self._shown(job)
+
+    def _forget(self):
+        now = self._clock()
+        for key in [key for key, job in self._jobs.items() if job["ended"] is not None and now - job["ended"] > self.KEPT]:
+            del self._jobs[key]
+
+    @staticmethod
+    def _shown(job):
+        shown = {"state": job["state"], "done": job["done"], "total": job["total"]}
+        if job["state"] == "done":
+            shown["document"] = deepcopy(job["document"])
+        if job["state"] == "failed":
+            shown["error"] = dict(job["error"])
+        return shown
+
+
 class DocumentDesk:
     def __init__(self, *, prepare_space, originals, texts, checker, reader, clock=utcnow):
         self.prepare_space, self.originals, self.texts = prepare_space, originals, texts
         self.checker, self.reader, self.clock = checker, reader, clock
+        self.jobs = ReadingJobs()
 
     def receive(self, advocate_id, name, data):
         name = documents.document_name(name)
@@ -135,7 +207,7 @@ class DocumentDesk:
                       "reason": "this document has no words to read"}]
         return pages, (1 if fmt == "docx" else len(pages))
 
-    def read_waiting(self, advocate_id, ref, model):
+    def read_waiting(self, advocate_id, ref, model, progress=None):
         """The document again, with what waits for the AI done (owner decisions, 15 Oct
         2026): scanned pages read, or a recording transcribed; stored as a new immutable
         record; and the calls made."""
@@ -151,7 +223,7 @@ class DocumentDesk:
             images, undrawn = self.reader.page_images(
                 self._admitted(advocate_id, record["document_id"], record["format"], data, record["sha256"]),
                 numbers)
-            read, calls = page_reading.read_pages(model, record["name"], images)
+            read, calls = page_reading.read_pages(model, record["name"], images, progress=progress)
             for number, reason in undrawn.items():
                 read[number] = {"number": number, "state": "unread", "code": "unreadable", "reason": reason}
         renewed = documents.receipt(

@@ -38,6 +38,7 @@ function harness(replies, { seconds = 2 } = {}) {
     $: (id) => (elements[id] ||= new Element()), document: { createElement: () => new Element() },
     encodeURIComponent, Blob, File, setPlusMenu() {}, loadUsage() {},
     window: { AudioContext: Playing }, OfflineAudioContext: Mixing,
+    setTimeout: (callback) => { callback(); return 0; },
     api: async (url, options) => {
       requests.push({ url, name: options?.headers?.['X-NM-Document-Name'], size: options?.body?.size,
         type: options?.body?.type });
@@ -58,13 +59,15 @@ const recording = (changes = {}) => ({
   unread: [{ number: 1, reason: 'a recording, waiting to be transcribed' }], failure: null, ...changes,
 });
 const heard = recording({ state: 'read', pages_read: 1, pages_read_by_ai: 1, waiting_for_ai: 0, unread: [] });
+// A reading is a background job (plan AN.25, P4): its reply says it is done, with the document.
+const done = (document) => ({ state: 'done', done: 1, total: 1, document });
 
 // A recording the service takes goes as it is, and is transcribed after upload.
 {
-  const { context, requests, chips } = harness([recording(), heard]);
+  const { context, requests, chips } = harness([recording(), done(heard)]);
   await context.attachFile(new File([new Uint8Array(100)], 'note.m4a', { type: 'audio/mp4' }));
   assert.deepEqual(requests.map((r) => r.url), ['/api/documents',
-    `/api/documents/${encodeURIComponent(heard.document_ref)}/read`]);
+    `/api/documents/${encodeURIComponent(heard.document_ref)}/reading`]);
   assert.equal(requests[0].name, 'note.m4a');
   assert.match(chips()[0], /note\.m4aTranscribed by AI×/);
   assert.equal(context.attachmentsBlockSend(), null);
@@ -73,7 +76,7 @@ const heard = recording({ state: 'read', pages_read: 1, pages_read_by_ai: 1, wai
 // A WhatsApp voice note is converted here to 16 kHz mono WAV before it leaves.
 {
   const { context, requests, rendered, chips } = harness([recording({ name: 'PTT-01.opus.wav', format: 'wav' }),
-    recording({ name: 'PTT-01.opus.wav', format: 'wav', state: 'read', pages_read: 1, waiting_for_ai: 0, unread: [] })]);
+    done(recording({ name: 'PTT-01.opus.wav', format: 'wav', state: 'read', pages_read: 1, waiting_for_ai: 0, unread: [] }))]);
   await context.attachFile(new File([new Uint8Array(50)], 'PTT-01.opus', { type: 'audio/ogg' }));
   assert.deepEqual(rendered, [{ channels: 1, length: 32000, rate: 16000 }]);
   assert.equal(requests[0].name, 'PTT-01.opus.wav');
@@ -84,7 +87,8 @@ const heard = recording({ state: 'read', pages_read: 1, pages_read_by_ai: 1, wai
 
 // A long recording is converted into parts of at most ten minutes, each its own chip.
 {
-  const replies = [recording(), heard, recording(), heard];
+  // The two parts are uploaded together, then read together: both uploads answer first, then both readings.
+  const replies = [recording(), recording(), done(heard), done(heard)];
   const { context, requests } = harness(replies, { seconds: 650 });
   await context.attachFile(new File([new Uint8Array(50)], 'call.aac', { type: 'audio/aac' }));
   const names = requests.filter((r) => r.url === '/api/documents').map((r) => decodeURIComponent(r.name)).sort();
@@ -94,7 +98,7 @@ const heard = recording({ state: 'read', pages_read: 1, pages_read_by_ai: 1, wai
 // Video is refused before anything leaves; a recording that cannot be heard says why.
 {
   const { context, requests, chips } = harness([recording(),
-    recording({ unread: [{ number: 1, reason: 'no speech was heard in this recording' }], waiting_for_ai: 0 })]);
+    done(recording({ unread: [{ number: 1, reason: 'no speech was heard in this recording' }], waiting_for_ai: 0 }))]);
   await context.attachFile(new File([new Uint8Array(10)], 'clip.mp4', { type: 'video/mp4' }));
   assert.equal(requests.length, 0);
   assert.match(chips()[0], /Not attached: video is not read/);

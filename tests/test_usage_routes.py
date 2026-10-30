@@ -80,6 +80,6 @@ def test_reading_scanned_pages_says_the_owners_words_once_nothing_is_left(served
     served.app.documents.checker = Checker()
     ref = upload(served.client, data=pdf(["Typed page.", ""]), name="memo.pdf").json()["document_ref"]
     use_up(served)
-    refused = served.client.post(f"/api/documents/{ref}/read")
+    refused = served.client.post(f"/api/documents/{ref}/reading")
     assert refused.status_code == 402
     assert refused.json()["detail"] == {"why": USAGE_LIMIT_MESSAGE, "code": "usage_limit"}

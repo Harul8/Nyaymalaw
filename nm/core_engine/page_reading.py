@@ -99,11 +99,22 @@ def _read_within_the_shared_limit(model, name, number, image):
         return read_page(model, name, number, image)
 
 
-def read_pages(model, name, images):
+def read_pages(model, name, images, progress=None):
     """Every drawn page, a few at a time: {number: page} and the calls made. At most AT_ONCE for this document, and with every
-    other document being read, at most ALL_AT_ONCE."""
+    other document being read, at most ALL_AT_ONCE. progress(done, total): told after each page is read (plan AN.25, P4), from
+    whichever thread read it, one at a time."""
     numbers = sorted(images)
+    finished, lock = [0], threading.Lock()
+
+    def read(number):
+        page = _read_within_the_shared_limit(model, name, number, images[number])
+        if progress is not None:
+            with lock:
+                finished[0] += 1
+                progress(finished[0], len(numbers))
+        return page
+
     with ThreadPoolExecutor(max_workers=min(AT_ONCE, max(1, len(numbers)))) as pool:
-        done = list(pool.map(lambda n: _read_within_the_shared_limit(model, name, n, images[n]), numbers))
+        done = list(pool.map(read, numbers))
     return ({page["number"]: page for page, _ in done},
             [call for _, call in done if call is not None])

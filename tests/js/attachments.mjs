@@ -29,18 +29,20 @@ function harness(replies) {
   const elements = {};
   const get = (id) => (elements[id] ||= new Element('div'));
   const requests = [];
+  const delays = [];
   const context = vm.createContext({
     $: get, document: { createElement: (tag) => new Element(tag) }, encodeURIComponent,
     setPlusMenu() {}, loadUsage() {},
+    setTimeout: (callback, ms) => { delays.push(ms); callback(); return 0; },
     api: async (url, options) => {
-      requests.push({ url, options });
+      requests.push({ url, options, shown: get('attachments').children[0] ? get('attachments').children[0].textContent : '' });
       const reply = replies.shift();
       if (reply instanceof Error) throw reply;
-      return reply;
+      return typeof reply === 'function' ? reply() : reply;
     },
   });
   vm.runInContext(between('// DOCUMENTS WITH A MESSAGE', '// F-C-02. THE MIC'), context);
-  return { context, requests, get };
+  return { context, requests, get, delays };
 }
 
 const summary = (changes = {}) => ({
@@ -51,19 +53,23 @@ const summary = (changes = {}) => ({
 });
 const file = (name = 'memo.pdf', size = 1000) => ({ name, size });
 const chip = (get, index = 0) => get('attachments').children[index];
+// A reading is a background job: its replies say where it stands (plan AN.25, P4).
+const done = (document, pages = 1) => ({ state: 'done', done: pages, total: pages, document });
+const reading = (finished, total) => ({ state: 'reading', done: finished, total });
 
 // A scanned page waits for the AI after upload, then the chip reports what was read.
 {
   const scanned = summary({ state: 'partly_read', pages_read: 1, waiting_for_ai: 1,
     unread: [{ number: 2, reason: 'a scanned page with no text layer' }] });
-  const { context, requests, get } = harness([scanned, summary({ pages_read_by_ai: 1, pages_partly_legible: 1 })]);
+  const { context, requests, get } = harness([scanned, done(summary({ pages_read_by_ai: 1, pages_partly_legible: 1 }))]);
   const pending = context.attachFile(file());
   assert.match(chip(get).textContent, /Checking for malware and reading/);
   assert.equal(context.attachmentsBlockSend(), 'Wait until the attached documents have been read.');
   await pending;
   assert.equal(requests[0].url, '/api/documents');
   assert.equal(requests[0].options.headers['X-NM-Document-Name'], 'memo.pdf');
-  assert.equal(requests[1].url, `/api/documents/${encodeURIComponent(scanned.document_ref)}/read`);
+  assert.equal(requests[1].url, `/api/documents/${encodeURIComponent(scanned.document_ref)}/reading`);
+  assert.equal(requests[1].options.method, 'POST');
   assert.match(chip(get).textContent, /Read · 2 pages \(1 by AI\) · 1 page partly legible/);
   assert.equal(context.attachmentsBlockSend(), null);
 }
@@ -83,8 +89,8 @@ const chip = (get, index = 0) => get('attachments').children[index];
   const waiting = [1, 2].map((number) => ({ number, reason: 'the AI could not read this page just now; it can be read again' }));
   const { context, requests, get } = harness([
     summary({ state: 'not_read', pages_read: 0, waiting_for_ai: 2 }),
-    summary({ state: 'not_read', pages_read: 0, waiting_for_ai: 2, unread: waiting }),
-    summary({ pages_read_by_ai: 2 })]);
+    done(summary({ state: 'not_read', pages_read: 0, waiting_for_ai: 2, unread: waiting }), 2),
+    done(summary({ pages_read_by_ai: 2 }), 2)]);
   await context.attachFile(file('fir-scan.pdf'));
   assert.equal(chip(get).textContent,
     'fir-scan.pdfNo page could be read: the AI could not read this page just now; it can be read againRead again×');
@@ -103,11 +109,53 @@ const chip = (get, index = 0) => get('attachments').children[index];
 // A recording waiting to be transcribed offers to transcribe it again.
 {
   const { context, get } = harness([summary({ recording: true, state: 'not_read', pages_read: 0, waiting_for_ai: 1 }),
-    summary({ recording: true, state: 'not_read', pages_read: 0, waiting_for_ai: 1,
-      unread: [{ number: 1, reason: 'the recording could not be transcribed just now; it can be tried again' }] })]);
+    done(summary({ recording: true, state: 'not_read', pages_read: 0, waiting_for_ai: 1,
+      unread: [{ number: 1, reason: 'the recording could not be transcribed just now; it can be tried again' }] }))]);
   await context.attachFile(file('call.mp3'));
   assert.match(chip(get).textContent, /Not transcribed: the recording could not be transcribed just now/);
   assert.equal(chip(get).children[2].textContent, 'Transcribe again');
+}
+
+// Reading scans is a background job (plan AN.25, P4): started once, asked after until it ends, the chip saying how many pages are read,
+// and no request held for the whole of a long scan. A job that failed says why; one lost when the server restarted says it was
+// interrupted; both leave the chip offering to read again. Removing the chip stops the asking.
+{
+  const scanned = summary({ state: 'partly_read', pages_read: 1, pages_total: 4, waiting_for_ai: 3,
+    unread: [2, 3, 4].map((number) => ({ number, reason: 'a scanned page with no text layer' })) });
+  const address = `/api/documents/${encodeURIComponent(scanned.document_ref)}/reading`;
+  const { context, requests, get, delays } = harness([scanned, reading(0, 3), reading(2, 3),
+    done(summary({ pages_total: 4, pages_read: 4, pages_read_by_ai: 3 }), 3)]);
+  await context.attachFile(file('long-scan.pdf'));
+  assert.deepEqual(requests.map((request) => [request.url, request.options && request.options.method || 'GET']),
+    [['/api/documents', 'POST'], [address, 'POST'], [address, 'GET'], [address, 'GET']]);
+  assert.deepEqual(delays, [1000, 1000], 'the page waits a second before each time it asks');
+  assert.match(requests[2].shown, /Reading scanned pages with AI… 0 of 3 pages read/);
+  assert.match(requests[3].shown, /Reading scanned pages with AI… 2 of 3 pages read/);
+  assert.match(chip(get).textContent, /Read · 4 pages \(3 by AI\)/);
+  assert.equal(context.attachmentsBlockSend(), null);
+  const one = harness([scanned, reading(0, 1), done(summary({ pages_read_by_ai: 1 }), 1)]);
+  await one.context.attachFile(file('one.pdf'));
+  assert.match(one.requests[2].shown, /0 of 1 page read/);
+}
+{
+  const scanned = summary({ state: 'partly_read', pages_read: 1, waiting_for_ai: 1,
+    unread: [{ number: 2, reason: 'a scanned page with no text layer' }] });
+  const failed = { state: 'failed', done: 1, total: 3, error: { status: 402, why: 'You have used all your AI usage.', code: 'usage_limit' } };
+  const one = harness([scanned, reading(1, 3), failed]);
+  await one.context.attachFile(file('scan.pdf'));
+  assert.match(chip(one.get).textContent, /Scanned pages were not read: You have used all your AI usage\./);
+  assert.equal(chip(one.get).children[2].textContent, 'Read again');
+  const lost = harness([scanned, reading(1, 3), Object.assign(new Error('No reading of this document is running.'), { status: 404 })]);
+  await lost.context.attachFile(file('scan.pdf'));
+  assert.match(chip(lost.get).textContent, /Scanned pages were not read: the reading was interrupted; read it again\./);
+  assert.equal(chip(lost.get).children[2].textContent, 'Read again');
+  // Taking the chip away stops the asking: no request after the one that was in flight.
+  const away = harness([scanned, reading(0, 3), () => {
+    vm.runInContext('attachments.length = 0', away.context);
+    return reading(1, 3);
+  }, reading(2, 3)]);
+  await away.context.attachFile(file('scan.pdf'));
+  assert.equal(away.requests.length, 3, 'it did not go on asking after the chip was removed');
 }
 
 // A held or failed document blocks sending until it is removed; an oversized one is
