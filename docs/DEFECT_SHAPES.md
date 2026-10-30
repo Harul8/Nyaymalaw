@@ -353,7 +353,8 @@ its purpose, cut the research the whole product exists to do.
 
 *Instances: AN.27 findings (1), (6) and (9); the land ledger of the reviewed bundle's replay (P20): a "sum" across a
 parcel's rival chains of title and a sale counted twice where a name was read two ways; and the same replay's understanding (P23):
-two passbooks "totalled" to an extent whose guntas were over 39, a slip that reached the answer as a disagreement of the papers.*
+two passbooks "totalled" to an extent whose guntas were over 39, a slip that began in NM's own check, was adopted by the
+understanding and reached the answer as a disagreement of the papers (P24).*
 
 > **CHECK S13.** What is arithmetic or comparison of figures is code's: copies are found by their words and the figures in which
 > they differ are named with both readings (`copy_figures`), dates are read by code (`research.read_date`), and the model is told
@@ -363,7 +364,9 @@ two passbooks "totalled" to an extent whose guntas were over 39, a slip that rea
 > it is read (the pages that are copies of one another) and not by how a name or a quotation was read; one seller's sales added to
 > that seller's alone, never across sellers; and no figure at all for what rival accounts cannot make one. An extent a model
 > states in its understanding is one the advocate's messages or the documents give, in whatever notation they write it
-> (`research.code_checks`): a total, a difference or an estimate it worked out is refused to it, and left out when it revises.
+> (`research.code_checks`): a total, a difference or an estimate it worked out is refused to it, and left out when it revises. The
+> step that checks the understanding is told what the step that writes the answer is told: counting extents is code's work, and
+> figures that do not seem to add up are not reported as a disagreement (P24).
 
 **Counterexample it must reject:** two pages that are copies of one another and give a figure differently, passed to the writer
 without saying so; or a research check that stops the research because the message did not literally ask for advice; or an
