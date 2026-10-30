@@ -358,9 +358,9 @@ parcel's rival chains of title and a sale counted twice where a name was read tw
 > they differ are named with both readings (`copy_figures`), dates are read by code (`research.read_date`), and the model is told
 > to give each figure as the paper does and to say what has not been worked out. A check is told the point of the work and what the
 > advocate restricted, in code's words from the interpretation, and is never allowed to turn research off on a reading of how a
-> request was phrased. A figure code adds is a sum of things that can be added: one transaction counted once, by where it is read
-> (the pages that are copies of one another) and not by how a name was read; one seller's sales added to that seller's alone, never
-> across sellers; and no figure at all for what rival accounts cannot make one.
+> request was phrased. A figure code adds is a sum of things that can be added: one transaction (or event) counted once, by where
+> it is read (the pages that are copies of one another) and not by how a name or a quotation was read; one seller's sales added to
+> that seller's alone, never across sellers; and no figure at all for what rival accounts cannot make one.
 
 **Counterexample it must reject:** two pages that are copies of one another and give a figure differently, passed to the writer
 without saying so; or a research check that stops the research because the message did not literally ask for advice.

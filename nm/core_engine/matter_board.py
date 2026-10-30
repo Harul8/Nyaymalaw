@@ -76,10 +76,24 @@ def _gaps(document, stretches):
     return said
 
 
-def _timeline(record, rows):
+def _event(group, sent):
+    """One event of the timeline: the plan's event that stands for the group (research.events_once) and, where other papers record the
+    same event on copies of its page (plan AN.27, P22), where else it is."""
+    event = group["event"]
+    return {"id": event["id"], "date": event["date"], "dated": bool(event["sort"]), "kind": event["kind"],
+            "what": event["what"], "said_by": event["said_by"], "document": event["document"],
+            "pages": list(event["pages"]),
+            **({"recording": True} if sent.get(event["source"], {}).get("recording") else {}),
+            "words": event["words"], "located": event["anchored"],
+            **({"also_in": [{"document": other["document"], "pages": list(other["pages"])} for other in group["also"]]}
+               if group["also"] else {})}
+
+
+def _timeline(record, rows, copies=()):
     """The timeline of the papers sent, as the plan of the turn the board shows kept it (plan AN.27, P9; invariant I4): its events in
-    its order, each with where its words are and whether they were located, and every paper with what NM read of it. 'none' where
-    no papers were sent; 'not_made' where they were but the plan kept no timeline (an earlier conversation's)."""
+    its order - an event that several papers record, as a copy of a page does, listed once (P22; copies are the pairs of pages that
+    are copies of one page) - each with where its words are and whether they were located, and every paper with what NM read of it.
+    'none' where no papers were sent; 'not_made' where they were but the plan kept no timeline (an earlier conversation's)."""
     sent = {f"{row['turn_id']}:d{number}": document
             for row in rows for number, document in enumerate(row.get("documents") or (), 1)}
     if not sent:
@@ -102,12 +116,7 @@ def _timeline(record, rows):
         papers.append({"name": document["name"], "pages_read": len(document["pages"]), "events": count, "state": state,
                        "why": " ".join(gaps), **({"recording": True} if document.get("recording") else {})})
     return {"state": "ready", "documents": papers,
-            "events": [{"id": event["id"], "date": event["date"], "dated": bool(event["sort"]), "kind": event["kind"],
-                        "what": event["what"], "said_by": event["said_by"], "document": event["document"],
-                        "pages": list(event["pages"]),
-                        **({"recording": True} if sent.get(event["source"], {}).get("recording") else {}),
-                        "words": event["words"], "located": event["anchored"]}
-                       for event in proposal["chronology"]]}
+            "events": [_event(group, sent) for group in research.events_once(proposal["chronology"], copies)]}
 
 
 def _sent(rows):
@@ -231,7 +240,7 @@ def board(rows):
             # question was asked, and, from research v9, why it matters (16 Oct 2026).
             "disputes": [_dispute(d, record, work, checklists) for d in _urgent(understanding["disputes"], checklists)],
             "understanding": _confirmed(record),
-            "timeline": _timeline(record, rows[:index + 1]),
+            "timeline": _timeline(record, rows[:index + 1], copy_figures.copies(sent)),
             "copies": _copies(sent),
             "extents": _extents(record, sent),
             "related_points": [{"point": r["point"], "why": r["why_it_matters"], "dispute_id": r["dispute_id"] or None,

@@ -11,6 +11,7 @@ the results; a saved pick resolves against its own saved search. Earlier plans r
 """
 from __future__ import annotations
 
+import difflib
 import json
 import re
 import threading
@@ -845,6 +846,65 @@ def chronology_of(model, context, *, wanted=None):
     events, failures = _read_stretches(model, context, wanted, "core_research_chronology", CHRONOLOGY, CHRONOLOGY_SCHEMA,
                                        "chronology", _events_in)
     return _numbered_by_date(events, "E"), failures
+
+
+#: How much of the shorter of two quotations the longer must hold, but for scan noise, for them to be one passage quoted to different
+#: lengths (plan AN.27, P22). On the replay of the reviewed bundle the events that are the same passage hold 0.86 to 1.0 of it, and
+#: those that are not - however near in day, kind and page - held no more than 0.37; the line is between, nearer the scan noise a
+#: copy may carry than the likeness of two orders of one day.
+SAME_PASSAGE = 0.75
+#: A quotation of fewer words says too little about which event it is.
+SAME_PASSAGE_WORDS = 4
+_PASSAGE_WORD = re.compile(r"[^\W_]+")
+
+
+def _held_in(left, right):
+    """How much of the shorter quotation the longer holds, 0 to 1: the words of the shorter that stand in runs of two or more beside
+    the same words of the longer, over the words of the shorter. A passage quoted to different lengths holds all of itself, a scan's
+    noise costs a word or two, and two sentences that share only the words of any order hold little. 0 where the shorter has fewer
+    than SAME_PASSAGE_WORDS words."""
+    shorter, longer = sorted((_PASSAGE_WORD.findall(left.casefold()), _PASSAGE_WORD.findall(right.casefold())), key=len)
+    if len(shorter) < SAME_PASSAGE_WORDS:
+        return 0.0
+    blocks = difflib.SequenceMatcher(None, shorter, longer, autojunk=False).get_matching_blocks()
+    return sum(block.size for block in blocks if block.size >= 2) / len(shorter)
+
+
+def events_once(events, copies):
+    """The chronology's events with an event that several papers record counted once (plan AN.27, P22): what a paper that is a copy of
+    another says again is the same event, and it is shown once with the other papers named. events: the plan's events, in its order.
+    copies: the pairs of pages that are copies of one page, as copy_figures.copies finds them - {(a paper's key, a page), (a paper's
+    key, a page)}. Returns [{"event": the one that stands for them, "also": the others}] in the order of the first of each.
+
+    Two events are one when they have the same day as code reads it (or both are undated) and the same kind; are read in different
+    papers, and not in a paper that already has one of the group; are on pages that are copies of one another; and the shorter
+    quotation is, but for scan noise, wholly inside the longer. An event joins the group it is likeliest to belong to, and stands
+    alone if it matches none - as does one whose words were not found on a page. The fullest quotation stands for the group. The
+    plan is never changed: each paper's own reading stays as it was made."""
+    copies = copies or ()
+    groups, buckets = [], {}
+    for event in events:
+        places = {(event["source"], number) for number in event["pages"]} if event["anchored"] else set()
+        joins, likeness = None, 0.0
+        if places:
+            for group in buckets.get((event["sort"], event["kind"]), ()):
+                if event["source"] in group["sources"] or not any(frozenset({kept, new}) in copies for kept in group["places"] for new in places):
+                    continue
+                held = max(_held_in(event["words"], member["words"]) for member in group["members"])
+                if held >= SAME_PASSAGE and held > likeness:
+                    joins, likeness = group, held
+        if joins is None:
+            joins = {"members": [], "sources": set(), "places": set()}
+            groups.append(joins)
+            buckets.setdefault((event["sort"], event["kind"]), []).append(joins)
+        joins["members"].append(event)
+        joins["sources"].add(event["source"])
+        joins["places"] |= places
+    shown = []
+    for group in groups:
+        stands = max(group["members"], key=lambda member: len(member["words"]))
+        shown.append({"event": stands, "also": [member for member in group["members"] if member is not stands]})
+    return shown
 
 
 def _transfers_in(data, document, finder):

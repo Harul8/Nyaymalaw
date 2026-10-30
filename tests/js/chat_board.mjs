@@ -242,6 +242,29 @@ const board = {
   }
 }
 
+// An event that a copy of its page records again is listed once, with where else it is (plan AN.27, P22); nothing is said of it, and the
+// lede does not mention it, where no event is repeated.
+{
+  const repeated = [
+    { id: 'E1', date: '5-1-1980', dated: true, kind: 'transaction', what: 'A sale.', said_by: 'the deed', document: 'scan.pdf', pages: [1],
+      words: 'Sale deed', located: true, also_in: [{ document: 'deed.pdf', pages: [3] }, { document: 'copy.pdf', pages: [1, 2] }] },
+    { id: 'E2', date: '6-1-1980', dated: true, kind: 'order', what: 'An order.', said_by: 'the court', document: 'deed.pdf', pages: [4],
+      words: 'Order', located: true }];
+  const documents = [{ name: 'deed.pdf', pages_read: 4, events: 2, state: 'read', why: '' },
+    { name: 'scan.pdf', pages_read: 1, events: 1, state: 'read', why: '' }];
+  const foldOf = (events) => context.renderChatBoard({ ...structuredClone(board), timeline: { state: 'ready', events, documents } })
+    .find((node) => node.tagName === 'DETAILS' && text(node).startsWith('Timeline of your papers'));
+  const said = text(foldOf(repeated));
+  assert.ok(said.includes('A sale. · scan.pdf, page 1 · said by the deed · also in deed.pdf, page 3; copy.pdf, pages 1, 2'));
+  assert.ok(said.includes('An order. · deed.pdf, page 4 · said by the court') && !said.includes('said by the court · also in'));
+  assert.equal(said.split('also in').length - 1, 1, 'only the event that is repeated names where else it is');
+  assert.ok(said.includes('An event that more than one paper records, as a copy of a page does, is listed once, with the other papers named.'));
+  assert.ok(text(foldOf(repeated)).includes('Timeline of your papers (2 events)'));
+  assert.ok(!text(foldOf([repeated[1]])).includes('listed once'), 'nothing is said where no event is repeated');
+  const emptied = text(foldOf([{ ...repeated[0], also_in: [] }]));
+  assert.ok(!emptied.includes('listed once') && !emptied.includes('also in'), 'an empty list says nothing either');
+}
+
 // Figures two copies read differently (plan AN.27, P13): both readings and the words before them, never a choice; nothing where the
 // board has none or says nothing of them.
 {

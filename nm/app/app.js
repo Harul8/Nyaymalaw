@@ -3632,6 +3632,10 @@ function eventRows(events, make) {
       const where = make('span', 'board-status', ` · ${eventPlace(event)}${event.said_by ? ` · said by ${event.said_by}` : ''}`);
       where.title = event.words;
       item.appendChild(where);
+      // The same event, recorded again by a paper that is a copy of this one's page (plan AN.27, P22): where else it is.
+      if (Array.isArray(event.also_in) && event.also_in.length) {
+        item.appendChild(make('span', 'board-status', ` · also in ${event.also_in.map(eventPlace).join('; ')}`));
+      }
       if (!event.located) {
         item.appendChild(make('span', 'board-status search_failed', ' · NM could not find these words on the page; check the paper.'));
       }
@@ -3661,8 +3665,10 @@ function renderTimeline(timeline, make) {
   const fold = make('details', 'folded');
   fold.appendChild(make('summary', '', `Timeline of your papers (${events.length} ${events.length === 1 ? 'event' : 'events'})`
     + (unfinished ? ` · ${unfinished} ${unfinished === 1 ? 'paper' : 'papers'} not fully read` : '')));
+  const repeated = events.some((event) => Array.isArray(event.also_in) && event.also_in.length);
   fold.appendChild(make('p', 'board-lede', 'What your papers record, event by event, as NM read them. Each is as its paper says it, '
-    + 'not proved; check anything that matters against the paper itself.'));
+    + 'not proved; check anything that matters against the paper itself.'
+    + (repeated ? ' An event that more than one paper records, as a copy of a page does, is listed once, with the other papers named.' : '')));
   fold.appendChild(make('h3', 'board-h', 'Papers read'));
   const list = make('ul', 'board-list');
   for (const paper of papers) {
