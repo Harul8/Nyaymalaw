@@ -18,7 +18,7 @@ from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 from datetime import date
 
-from nm.core_engine import answer_sources, checklist, research
+from nm.core_engine import answer_sources, checklist, copy_figures, research
 from nm.core_engine.understanding import REFERENCE, TEXT, renamed, source_catalogue
 from nm.shared import clock_contracts
 from nm.shared.model_port import (
@@ -434,6 +434,13 @@ comes from, and leave out no order, direction or proceeding still pending that b
 Keep what a party alleges attributed to that party. An event whose located is false could not
 be found on its page: do not rely on it or cite it, and say it needs checking against the
 paper. State no date or event that is neither in the chronology nor on a page.
+Where copies_read_differently is given, it lists figures that two copies of one page read
+differently, each with the short IDs of the two pages: give both readings and say that the
+copies differ, never choose between them, and do not call it a disagreement in the papers
+themselves. Counting is code's work for extents as it is for days: do not add, subtract or
+convert acres, guntas or cents yourself. Give each extent as the paper gives it, and where a
+total or a remainder matters, say what would be added or taken away and that it has not been
+worked out.
 3. Read each legal source with its neighbouring context. A provision's read_with names
 the held provisions its Act reads it with and how: it names them, they name it in the
 words shown, or they stand beside it. Read them together, and state a rule with the
@@ -1340,6 +1347,20 @@ def _chronology_shown(record, offered):
              "located": event["anchored"]} for event in events]
 
 
+def _copies_shown(context, offered):
+    """The figures that copies of one page read differently, as the current writer and the review are shown them (plan AN.27, P13;
+    invariant I6): both readings and the words before them, with the short IDs of the two pages; found by code, chosen between by no
+    one. None where there are none."""
+    pages = [{"document": row["document"]["name"], "key": row["source_id"].rsplit("p", 1)[0], "page": row["document"].get("page"),
+              "id": row["source_id"], "text": row["text"],
+              **({"recording": True} if row["document"].get("recording") else {})} for row in context.get("documents", ())]
+    found = [{"first": {"paper": one["document"], "page": one["page"], "cite": offered.get(one["id"])},
+              "second": {"paper": two["document"], "page": two["page"], "cite": offered.get(two["id"])},
+              "figures": [dict(figure) for figure in copy["figures"]]}
+             for copy in copy_figures.differences(pages) for one, two in [(copy["first"], copy["second"])]]
+    return found or None
+
+
 def _payload(context, record, sources, interpretation, execution, layout, index, time_limits=None, *, worded=False):
     part = layout[index]
     disputes = {}
@@ -1355,9 +1376,11 @@ def _payload(context, record, sources, interpretation, execution, layout, index,
         if worded:
             time_limits = _worded_limits(time_limits)
     papers = _chronology_shown(record, offered) if worded else None
+    copies = _copies_shown(context, offered) if worded else None
     return {"original_context": answer_sources.shown_context(context, sources), "setting": clock_contracts.setting(),
             "interpretation_proposal": interpretation,
             **({"papers_chronology": papers} if papers else {}),
+            **({"copies_read_differently": copies} if copies else {}),
             "this_part": {"part": index + 1, "of": len(layout), "opens_the_answer": index == 0,
                           "dispute": disputes.get(part["dispute_id"]),
                           "other_parts": [disputes[p["dispute_id"]]["name"] for p in layout

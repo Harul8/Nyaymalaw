@@ -370,6 +370,11 @@ the events by their IDs). It misleads if it states a date or event that neither 
 nor the pages bear out, or gives what a party alleges as established. An event whose located
 is false could not be found on its page and supports nothing.
 
+When copies_read_differently is given, the piece must give both readings of such a figure and
+choose neither; one that gives only one reading, or that adds, subtracts or converts extents
+(acres, guntas, cents) where the papers do not state the result, states more than the papers
+bear out (unsupported).
+
 List only what you find. Empty lists mean the piece can be shown as it is, its folds as placed.""")
 assert SYSTEM_V11 != SYSTEM_V10 and "keep_shown" in SYSTEM_V11 and "shown as placed" not in SYSTEM_V10
 SCHEMA_V10 = _object({
@@ -920,6 +925,10 @@ def review(model, context, research_record, sources, draft, execution=None, *,
                   if contract == PRESENTED_CONTRACT and draft["section"] != response_writer.OVERVIEW else None)
         if papers:
             payload["papers_chronology"] = papers
+        copies = (response_writer._copies_shown(context, shown)
+                  if contract == PRESENTED_CONTRACT and draft["section"] != response_writer.OVERVIEW else None)
+        if copies:
+            payload["copies_read_differently"] = copies
         if "dropped" in draft:
             payload["removed_statements"] = _removed(draft, context, sources)
         if conflicts:
