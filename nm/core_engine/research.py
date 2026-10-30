@@ -19,6 +19,7 @@ from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 from datetime import date
 
+from nm.core_engine import extents
 from nm.core_engine.replay_scope import known, once
 from nm.core_engine.retrieval import SearchUnavailable, _digest, _valid_location, in_force, validate_search
 from nm.core_engine.understanding import REFERENCE, TEXT, select, source_catalogue
@@ -566,6 +567,74 @@ class Pages:
                 f"and are not found from {gone!r}{where}")
 
 
+#: Where an understanding's own words are, as the model that wrote them is told (plan AN.27, P23): by field, and by ID for the facts,
+#: disputes and legal questions.
+_PLACES = {"asked": "what was asked", "ruled_out": "what was ruled out", "no_research_reason": "the reason given for no research"}
+_ITEMS = {"facts": "fact", "disputes": "dispute", "legal_questions": "legal question"}
+#: What the model is told when its understanding states an extent that none of the advocate's messages and none of the documents give.
+EXTENT_FIX = ("Do not work out an extent yourself: use one the advocate or a paper gives, copied as it stands, or say that the extent "
+              "has not been worked out. Code adds up the extents of the papers' transfers of land.")
+
+
+def _extents_written(text):
+    """Each extent some words write, as (the words as written, its guntas - None where the notation cannot be an extent, as Ac.0.55
+    cannot: 40 guntas make an acre - and the extent itself: its guntas, or for such a notation its acres and guntas as written, so that
+    a paper's own slip is the same slip). The finder and the reading are extents.py's own, so that the notations stay in one place."""
+    found = []
+    for _, _, how, match in extents._extents_in(" ".join(text.split())):
+        value = extents._guntas(how, match.groups())[0]
+        found.append((match.group(0), value, value if value is not None else tuple(int(part) for part in match.groups())))
+    return found
+
+
+def _words_of(value, place, key=""):
+    """Each string in a part of an understanding with where it is - the fact, dispute or legal question it belongs to, by its ID, else
+    the field - and without the quotations of facts, which have their own check."""
+    if isinstance(value, str):
+        yield place, value
+    elif isinstance(value, list):
+        for item in value:
+            yield from _words_of(item, place, key)
+    elif isinstance(value, dict):
+        if key in _ITEMS and value.get("id"):
+            place = f"{_ITEMS[key]} {value['id']}"
+        for name, item in value.items():
+            if name != "advocate_words":
+                yield from _words_of(item, place, name)
+
+
+def _extent_problems(understanding, context):
+    """The extents the understanding states that none of the advocate's messages and none of the documents they sent give (plan AN.27,
+    P23; invariant I6). Counting is code's work (extents.py adds the papers' transfers of land): a total, a difference or an estimate
+    that a model worked out is refused to it, in words, and left out when it revises. An extent is the same extent however it is written
+    (Ac.1.10, 1 acre 10 guntas and 50 guntas), and one that no paper can write - guntas of 40 or more - is refused unless a paper
+    itself writes those figures. One problem for each extent, naming every place it is stated. What an earlier note of ours or a
+    record of the matter holds is not a message or a paper."""
+    sources = [row["text"] for row in context["conversation"] if row.get("record_role") == "original_account"]
+    sources += [context["latest"]["text"]] + [row["text"] for row in context.get("documents", ())]
+    given = {extent for text in sources for _, _, extent in _extents_written(text)}
+    stated = {}
+    for name, item in understanding.items():
+        for place, text in _words_of(item, _PLACES.get(name, f"the {name.replace('_', ' ')}"), name):
+            for words, value, extent in _extents_written(text):
+                if extent not in given:
+                    kept = stated.setdefault(extent, {"words": words, "value": value, "places": []})
+                    if place not in kept["places"]:
+                        kept["places"].append(place)
+    problems = []
+    for kept in stated.values():
+        where = ", ".join(kept["places"])
+        if kept["value"] is None:
+            said = (f"The understanding writes the extent {kept['words']!r} ({where}), which cannot be an extent as a paper writes it - 40 "
+                    "guntas make an acre, so the guntas after the acres are under 40 - and is in none of the advocate's messages or the "
+                    "documents they sent.")
+        else:
+            said = (f"The understanding states the extent {kept['words']!r} ({where}), which is in none of the advocate's messages or the "
+                    "documents they sent; it reads as a total, a difference or an estimate that was worked out.")
+        problems.append({"problem": said, "fix": EXTENT_FIX})
+    return problems
+
+
 def code_checks(understanding, context):
     """Mechanical checks only; meaning is the model's work."""
     problems = []
@@ -605,7 +674,7 @@ def code_checks(understanding, context):
     if not understanding["needs_research"] and questions:
         problems.append({"problem": "Research is marked as not needed, yet legal questions are listed for research.",
                          "fix": "Either research is needed (say so) or the questions belong with the known disputes for later."})
-    return problems
+    return problems + _extent_problems(understanding, context)
 
 
 def _matter_text(understanding, disputes):

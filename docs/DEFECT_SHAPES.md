@@ -351,8 +351,9 @@ Two scans of one passage were read separately by the AI and gave 6.06 and 6.16; 
 reasoned from it. A model asked to add extents does arithmetic it cannot be held to. A check that read the phrasing of a request, not
 its purpose, cut the research the whole product exists to do.
 
-*Instances: AN.27 findings (1), (6) and (9); and the land ledger of the reviewed bundle's replay (P20): a "sum" across a
-parcel's rival chains of title and a sale counted twice where a name was read two ways.*
+*Instances: AN.27 findings (1), (6) and (9); the land ledger of the reviewed bundle's replay (P20): a "sum" across a
+parcel's rival chains of title and a sale counted twice where a name was read two ways; and the same replay's understanding (P23):
+two passbooks "totalled" to an extent whose guntas were over 39, a slip that reached the answer as a disagreement of the papers.*
 
 > **CHECK S13.** What is arithmetic or comparison of figures is code's: copies are found by their words and the figures in which
 > they differ are named with both readings (`copy_figures`), dates are read by code (`research.read_date`), and the model is told
@@ -360,10 +361,13 @@ parcel's rival chains of title and a sale counted twice where a name was read tw
 > advocate restricted, in code's words from the interpretation, and is never allowed to turn research off on a reading of how a
 > request was phrased. A figure code adds is a sum of things that can be added: one transaction (or event) counted once, by where
 > it is read (the pages that are copies of one another) and not by how a name or a quotation was read; one seller's sales added to
-> that seller's alone, never across sellers; and no figure at all for what rival accounts cannot make one.
+> that seller's alone, never across sellers; and no figure at all for what rival accounts cannot make one. An extent a model
+> states in its understanding is one the advocate's messages or the documents give, in whatever notation they write it
+> (`research.code_checks`): a total, a difference or an estimate it worked out is refused to it, and left out when it revises.
 
 **Counterexample it must reject:** two pages that are copies of one another and give a figure differently, passed to the writer
-without saying so; or a research check that stops the research because the message did not literally ask for advice.
+without saying so; or a research check that stops the research because the message did not literally ask for advice; or an
+understanding that totals two extents to a figure no paper gives (guntas of 40 or more among them) and keeps it.
 
 ---
 
