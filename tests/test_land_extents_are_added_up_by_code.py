@@ -346,3 +346,16 @@ def test_two_copies_of_a_partition_with_no_extent_are_one_partition():
     (parcel,) = ledger([transfer(1, "equal shares", kind="partition", frm="Anil Kumar", document="deed.pdf"),
                         transfer(2, "equal shares", kind="partition", frm="Anil Kumar", document="scan.pdf")], copied)
     assert [len(t["ids"]) for t in parcel["sellers"][0]["not_added"]] == [2]
+
+
+def test_a_stated_whole_written_two_ways_is_one_stated_whole_and_two_that_differ_are_two():
+    (parcel,) = ledger([transfer(1, "Ac.1.18", total="Ac.8.24 guntas"), transfer(2, "Ac.1.00", total="Ac.8.24 gts", to="Mahesh Babu"),
+                        transfer(3, "Ac.0.10", total="8 acres 24 guntas", to="Anil Kumar"), transfer(4, "Ac.0.20", total="Ac.9.00", to="Priya Devi")])
+    assert [(t["text"], t["guntas"], t["ids"]) for t in parcel["totals"]] == [
+        ("Ac.8.24 guntas", 344, ["X1", "X2", "X3"]), ("Ac.9.00", 360, ["X4"])]
+    assert len(parcel["totals"][0]["by_seller"]) == 1, "told once, not once for each way it was written"
+    (parcel,) = ledger([transfer(1, "Ac.1.18", total="the whole survey number"), transfer(2, "Ac.1.00", total="the whole  survey number",
+                                                                                      to="Mahesh Babu")])
+    assert [(t["text"], t["ids"]) for t in parcel["totals"]] == [("the whole survey number", ["X1", "X2"])], "unreadable ones by their words"
+    (parcel,) = ledger([transfer(1, "Ac.1.18", total="the whole survey number"), transfer(2, "Ac.1.00", total="the entire field", to="Mahesh Babu")])
+    assert [t["text"] for t in parcel["totals"]] == ["the whole survey number", "the entire field"], "unreadable ones that differ are two"

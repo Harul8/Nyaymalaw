@@ -162,7 +162,8 @@ def ledger(transfers, copies=()):
                 'sold' (None for a seller with none, or with no name), the rest in 'not_added';
       unread - the sales, gifts and settlements whose extent could not be read, with why, never added;
       complete - whether every sale, gift and settlement of the parcel was read;
-      totals - each different whole extent a paper states for the parcel and, for each seller who sold, what it leaves after that
+      totals - each different whole extent a paper states for the parcel (one extent however it is written) and, for each seller who
+               sold, what it leaves after that
                seller's sales (only where every transfer was read, and as if that seller held all of it) or how far their sales go
                beyond it (named whether or not every transfer was read: more can only be more)."""
     parcels = {}
@@ -181,8 +182,10 @@ def ledger(transfers, copies=()):
             continue
         if transfer.get("total", "").strip():
             value, how = parse(transfer["total"])
-            stated = entry["_totals"].setdefault(" ".join(transfer["total"].split()), {"text": " ".join(transfer["total"].split()),
-                                                                                       "guntas": value, "how": how, "ids": []})
+            written = " ".join(transfer["total"].split())
+            # One stated whole is one extent however it is written (Ac.8.24 guntas, Ac.8.24 gts): by its value where it can be read.
+            stated = entry["_totals"].setdefault(value if value is not None else written,
+                                                 {"text": written, "guntas": value, "how": how, "ids": []})
             stated["ids"].append(transfer["id"])
         value, how = parse(transfer["extent"])
         if value is None and transfer.get("kind", "") in SOLD_KINDS:
