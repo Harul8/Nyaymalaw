@@ -316,9 +316,47 @@ its source's and which still answers queries.
 
 ---
 
+## S12 · One part that cannot be checked costs the whole
+
+A land bundle's largest dispute was refused three times and replaced by a code note - its narrative of the civil route and the
+dated orders lost - because one checklist item failed its grounding each time: a status resting on a document page where only the
+advocate's own words can show it, a quotation that was not exact, an item resting on neither held law nor the matter's checklist.
+The same shape: a quotation that ran over a page break could never be found, so it spent the loop's only revision.
+
+*Instances: AN.27 findings (3) and the second live measurement.*
+
+> **CHECK S12.** Admission **prunes** what cannot be checked and the strict checks that remain **admit** everything kept; it never
+> loosens a check and never admits instead of one. What is pruned is kept as the weaker true thing (a status that cannot be
+> confirmed is *not yet given*, with a note) or left out (law that is not held words); a saved section replays exactly because
+> the proposal is kept whole and the pruning is derived. One finder owns what "found" means for quoted words (`research.Pages`).
+
+**Counterexample it must reject:** a checklist item whose status rests on a document page, or whose quotation is not exact,
+that refuses the section it sits in; or a quotation across a page break past a stamp that is reported as not found.
+
+---
+
+## S13 · A model is left to settle what code should flag
+
+Two scans of one passage were read separately by the AI and gave 6.06 and 6.16; NM called it a disagreement in the papers and then
+reasoned from it. A model asked to add extents does arithmetic it cannot be held to. A check that read the phrasing of a request, not
+its purpose, cut the research the whole product exists to do.
+
+*Instances: AN.27 findings (1), (6) and (9).*
+
+> **CHECK S13.** What is arithmetic or comparison of figures is code's: copies are found by their words and the figures in which
+> they differ are named with both readings (`copy_figures`), dates are read by code (`research.read_date`), and the model is told
+> to give each figure as the paper does and to say what has not been worked out. A check is told the point of the work and what the
+> advocate restricted, in code's words from the interpretation, and is never allowed to turn research off on a reading of how a
+> request was phrased.
+
+**Counterexample it must reject:** two pages that are copies of one another and give a figure differently, passed to the writer
+without saying so; or a research check that stops the research because the message did not literally ask for advice.
+
+---
+
 ## How a new control is designed
 
-Before writing one, read the eleven headings. **A new control that has one of
+Before writing one, read the thirteen headings. **A new control that has one of
 these shapes is not new.** Then state, in one line each:
 
 1. which shape it could take;
