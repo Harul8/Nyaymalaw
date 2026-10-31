@@ -47,8 +47,12 @@ def test_each_documents_transfers_are_anchored_dated_ordered_and_numbered():
     first = found[0]
     assert (first["parcel"], first["extent"], first["total"], first["from"], first["to"], first["kind"]) == (
         "Sy.No.487", "Ac.1.18 guntas", "Ac.8.24 guntas", "the vendor", "the purchasers", "sale")
-    reads = [prompt.user for prompt in model.calls if prompt.operation == "core_research_transfers"]
+    reads = [prompt.user for prompt in model.calls if prompt.operation == "core_research_transfers" and '"to_check"' not in prompt.user]
     assert len(reads) == 2 and all(sum(f'Document: "{name}"' in text for name in ("deed.pdf", "order.pdf")) == 1 for text in reads)
+    # Research v13 (AN.28, D2): each paper with a transaction code cannot use as listed is looked at again once - here a whole and a
+    # figure on no page, and words not found.
+    checks = [prompt.user for prompt in model.calls if '"to_check"' in prompt.user]
+    assert sorted(text.split('"')[1] for text in checks) == ["deed.pdf", "order.pdf"]
     assert transfers_of(model, bundle(), wanted=lambda: False) == ([], []) and transfers_of(model, typed("Hello.")) == ([], [])
 
 
@@ -74,8 +78,9 @@ def test_the_readings_of_the_papers_and_the_understanding_are_all_in_flight_toge
             self.gate = threading.Barrier(3)
 
         def structured(self, prompt, schema, tier, **kwargs):
-            if prompt.operation in ("core_research_understand", "core_research_chronology", "core_research_transfers"):
-                self.gate.wait(timeout=10)
+            if (prompt.operation in ("core_research_understand", "core_research_chronology", "core_research_transfers")
+                    and '"to_check"' not in prompt.user):
+                self.gate.wait(timeout=10)          # the look again comes after the readings, on its own
             return super().structured(prompt, schema, tier, **kwargs)
     made = plan(Trio({"deed.pdf": SCRIPT["deed.pdf"]}, transfers={"deed.pdf": SOLD["deed.pdf"]}),
                 sent(*[row("t1", 1, "deed.pdf", n, text) for n, text in DEED]))
@@ -137,8 +142,12 @@ def test_the_transfers_of_the_plan_are_added_up_by_extents_and_only_those_whose_
     (parcel, other) = extents.ledger(kept()["proposal"]["transfers"])
     assert parcel["parcel"] == "Sy.No.487" and parcel["sellers"][0]["added"] == {"area": 58} and not parcel["complete"]
     assert [(u["id"], u["why"]) for u in parcel["unread"]] == [("X2", "its words were not found on the page")]
-    assert parcel["totals"][0]["text"] == "Ac.8.24 guntas" and parcel["totals"][0]["by_seller"] == []
-    assert other["parcel"] == "Sy.No.487/A" and other["sellers"][0]["added"] == {"area": 29} and other["complete"]
+    # Research v13 (AN.28, D3): the whole the model gave and the order's figure stand in none of the words that record their
+    # transactions - they are on no page - so the whole is listed and not used, and the figure is not added.
+    assert parcel["totals"][0]["text"] == "Ac.8.24 guntas" and parcel["totals"][0]["value"] is None
+    assert parcel["totals"][0]["how"] == "its figure is not in the words that record it" and parcel["totals"][0]["by_seller"] == []
+    assert other["parcel"] == "Sy.No.487/A" and other["sellers"] == [] and not other["complete"]
+    assert [(u["id"], u["why"]) for u in other["unread"]] == [("X3", "its figure is not in the words that record it")]
 
 
 def test_the_prompt_states_the_message_the_purpose_what_to_look_for_and_the_outcome():

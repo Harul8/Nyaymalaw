@@ -24,7 +24,8 @@ pytestmark = pytest.mark.class_a
 
 ORDER = [(1, "THURSDAY, THE NINTH DAY OF JUNE\nTWO THOUSAND AND TWENTY TWO\nORDER. The Court directs notice to the respondents."),
          (2, "The matter stands posted to 15.09.2022. A petition was filed on a day no page gives.")]
-DEED = [(1, "SALE. Made on the twelfth day of June nineteen ninety one, the vendor sold Ac.3.10 guntas of Sy.No.201 to the purchasers.")]
+DEED = [(1, "SALE. Made on the twelfth day of June nineteen ninety one, the vendor sold Ac.3.10 guntas of Sy.No.201 to the purchasers."),
+        (2, "The land had been partitioned among the co-owners on the third day of March nineteen seventy four.")]
 SCRIPT = {
     "order.pdf": [event("9 June 2022", "order", "The Court directed notice to the respondents.",
                         "THE NINTH DAY OF JUNE\nTWO THOUSAND AND TWENTY TWO"),
@@ -33,7 +34,8 @@ SCRIPT = {
                         "The Court directs notice to the respondents")],
     "deed.pdf": [event("undated", "transaction", "A sale.", "the vendor sold Ac.3.10 guntas of Sy.No.201")]}
 SOLD = {"deed.pdf": [
-    transfer("3 March 1974", "Sy.No.201", "Ac.8.24", "the vendor sold Ac.3.10 guntas of Sy.No.201 to the purchasers", to="the co-owners",
+    transfer("3 March 1974", "Sy.No.201", "Ac.8.24", "partitioned among the co-owners on the third day of March nineteen seventy four",
+             to="the co-owners",
              kind="partition"),
     transfer("12 June 1991", "Sy.No.201", "Ac.3.10 guntas", "the vendor sold Ac.3.10 guntas of Sy.No.201 to the purchasers"),
     transfer("1 February 2019", "Sy.No.201", "Ac.0.10", "A sale made on a day the page lacks")]}
@@ -74,6 +76,19 @@ def test_a_date_of_a_transfer_of_land_the_writer_was_shown_is_given_and_one_not_
     unread = next(t for t in record["plan"]["proposal"]["transfers"] if t["date"] == "1 February 2019")
     assert unread["anchored"] is False
     assert flagged(draft("A sale on 1 February 2019."), ctx, sources, record) == ["t1:b1"]
+
+
+def test_a_date_no_page_of_its_paper_gives_is_not_kept_for_a_transaction_and_so_is_not_given():
+    # Research v13 (plan AN.28, D3), invented: a transaction found on a page, dated by a date its paper nowhere gives.
+    ctx = sent(*[row("t1", 1, "deed.pdf", n, text) for n, text in DEED])
+    made = plan(Beside({}, transfers={"deed.pdf": [transfer("5 May 1985", "Sy.No.201", "Ac.3.10 guntas",
+                                                            "the vendor sold Ac.3.10 guntas of Sy.No.201 to the purchasers")]},
+                       subject=understanding(1, 2)), ctx)
+    (sold,) = made["proposal"]["transfers"]
+    assert (sold["date"], sold["sort"], sold["anchored"]) == ("undated", "", True)
+    record = retrieve(made, searcher(), ctx, model=Model())
+    sources = answer_sources.build(ctx, record)
+    assert flagged(draft("The vendor sold it on 5 May 1985."), ctx, sources, record) == ["t1:b1"]
 
 
 def test_an_event_whose_words_were_not_found_gives_no_date_and_a_date_found_nowhere_stays_a_finding():

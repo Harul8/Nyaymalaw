@@ -121,7 +121,7 @@ PROVISIONS_FOR_PICK = 20
 #: Answer limits per step. Calls in flight are budgeted at their limit.
 MAX_OUTPUT = {"understand": 12000, "check": 6000, "revise": 12000, "phrases": 6000,
               "judgment_phrases": 8000, "pick": 8000, "judgment_pick": 8000, "chronology": 12000, "transfers": 12000,
-              "chronology_check": 8000}
+              "chronology_check": 8000, "transfers_check": 8000}
 
 # The prompts below were developed and measured in outputs/decomposition-scratch
 # (13-14 Oct 2026). They state the purpose and the needed outcome in plain language
@@ -322,6 +322,8 @@ CHRONOLOGY_FAILURE = _object({"document": STRING, "pages": STRING, "reason": STR
 
 
 TRANSFER_KINDS = ("sale", "partition", "gift", "settlement", "decree", "other")
+#: v13 (AN.28, D7): the transactions of any matter - land or other property, money, shares, goods or a right.
+TRANSACTION_KINDS = (*TRANSFER_KINDS[:-1], "lease", "mortgage", "loan", "payment", "other")
 #: The transfers of land each document records (plan AN.27, P13d; invariant I6): so that the extents can be added up by code, never by
 #: a model, and set against the parcel's whole extent. The model reads what a page records; code reads the extents, finds the words
 #: and does the arithmetic (extents.py).
@@ -370,6 +372,17 @@ SCHEMA_V12 = _record_schema(UNDERSTANDING, chronology=True)
 # The transfers of land (P13d) are optional in v12: a plan saved before them has none and validates as it did.
 SCHEMA_V12["properties"]["transfers"] = {"type": "array", "items": TRANSFER_RECORD}
 SCHEMA_V12["properties"]["transfers_failures"] = {"type": "array", "items": CHRONOLOGY_FAILURE}
+#: v13 (AN.28, D3, D7, B16): a transaction of any kind, with the model's plain reading of its figure and the number of the document
+#: that records it, as the plan records it.
+TRANSACTION = _object({"date": STRING, "kind": {"type": "string", "enum": list(TRANSACTION_KINDS)}, "parcel": STRING,
+                       "extent": STRING, "reading": STRING, "total": STRING, "from": STRING, "to": STRING, "instrument": STRING,
+                       "words": STRING})
+TRANSACTIONS_SCHEMA = _object({"transfers": {"type": "array", "items": TRANSACTION}})
+TRANSACTION_RECORD = _object({**TRANSFER_RECORD["properties"], "kind": TRANSACTION["properties"]["kind"],
+                              "reading": STRING, "instrument": STRING})
+SCHEMA_V13 = _record_schema(UNDERSTANDING, chronology=True)
+SCHEMA_V13["properties"]["transfers"] = {"type": "array", "items": TRANSACTION_RECORD}
+SCHEMA_V13["properties"]["transfers_failures"] = {"type": "array", "items": CHRONOLOGY_FAILURE}
 
 
 def _source_windows(context):
@@ -984,9 +997,10 @@ NOT_CARRIED_MOST = 20
 
 
 def _numbers(words):
-    """The numbers some words hold, a month written as a name counted as its number, and a two-digit year as the years it may
-    stand for: what a date's numbers must be found among (v13)."""
-    found = {int(n) for n in re.findall(r"\d+", str(words))}
+    """The numbers some words hold, a month written as a name counted as its number, a number written in words as its number (the
+    twelfth day of June nineteen ninety one: extents.numbers_in_words), and a two-digit year as the years it may stand for: what a
+    date's numbers must be found among (v13)."""
+    found = {int(n) for n in re.findall(r"\d+", str(words))} | extents.numbers_in_words(words)
     found |= {_MONTHS[name] for name in re.findall(rf"\b({_MONTH})\b", str(words).casefold())}
     return found | {n % 100 for n in found if n >= 1000} | {2000 + n for n in found if n < 100} | {1900 + n for n in found if n < 100}
 
@@ -1161,15 +1175,95 @@ def _transfers_in(data, document, finder):
         transfers.append({"date": item["date"].strip(), "kind": item["kind"], "parcel": item["parcel"].strip(),
                           "extent": item["extent"].strip(), "total": item["total"].strip(), "from": item["from"].strip(),
                           "to": item["to"].strip(), "document": document["name"], "source": document["source"], "pages": pages,
-                          "words": words, "anchored": anchored})
+                          "words": words, "anchored": anchored,
+                          # v13 (AN.28): the model's plain reading of the figure and the document that records it.
+                          "reading": item.get("reading", "").strip(), "instrument": item.get("instrument", "").strip()})
     return transfers
 
 
+#: v13 (AN.28, D1, D3, D7, B16): the transactions of one paper, of any kind, read with the whole file in view.
+TRANSACTIONS_V13 = """Message: You receive an advocate's messages to us about a client's matter, the documents they sent, and the pages of one paper you read for now: the rest of the file comes first, page by page under each paper's name, and the pages you read for last, under "The pages you read for". A page says what its document says: it is material the advocate supplied, not their own account, and what it reports is not thereby proved. Square-bracket notes are the reader's, not the document's. The rest of the file is there so that you know what the matter is about and who is who: list only what the pages you read for record.
+
+Purpose: List the transactions those pages record or report - whatever moves property, money, shares, goods or a right from one person to another: a sale, partition, gift, settlement, decree, lease, mortgage, loan or payment - so that code can add the figures up for each property, account or subject and set them against any whole the papers state. You are not adding or working out anything yourself, and you are not judging which account is right.
+
+Look for:
+- Each transaction, whatever its date: who gave it up (from), who took it (to), what it concerns (parcel: the property, account or subject as the page names it - a survey, house or account number, with any sub-number), the figure transferred exactly as the page writes it (extent: an area, a sum, a share), the same figure in plain words with its unit, so that it reads only one way - acres and guntas, or acres and cents, as the paper means them (reading: for example "3 acres 12 guntas", "1 acre 18 cents", "Rs 200000", "a one-third share"), the number of the document that records it as the page writes it (instrument: a deed, agreement, cheque or order number, with its year; empty where none is given), and the date as the page gives it ("undated" where it gives none).
+- The whole of what the transaction concerns, where the same passage states it (for example "out of Ac.8.00 in the plot", invented), exactly as written; otherwise leave it empty.
+- The exact words on a page that record the transaction, copied exactly as the page gives them, without the reader's square-bracket notes - or several passages joined with '...'; never reword.
+- One entry for each transaction. A paper that reports the same transaction again records one: give it once. Do not list a transaction that gives no figure, do not add or work out a figure the page does not give, and do not merge transactions the page keeps apart.
+Work in a loop: list the transactions page by page, then read each page again against your list for any transaction, figure, document number or date you skipped or misread, and correct the list before you answer.
+
+Outcome: transfers, in the order of the pages. Each has: date; kind (sale, partition, gift, settlement, decree, lease, mortgage, loan, payment, or other); parcel; extent; reading; total; from; to; instrument; words."""
+
+
+#: v13 (AN.28, D2 and D3): one look again at a paper's transactions where code found what it could not use.
+TRANSACTIONS_CHECK = """Message: You listed the transactions one paper an advocate sent records; you receive that paper's pages, each under its number, and what code found when it checked your list (to_check): transactions whose words it could not find on the pages, whose figure or whole is not in those words, whose figure code reads otherwise than your reading of it, or whose date is in neither their words nor their pages - each with why and, where code found them, the page's own words nearest to yours. A page says what its document says; square-bracket notes are the reader's, not the document's.
+
+Purpose: Look again so that every transaction is listed as the paper records it, with words that stand on its pages and a figure and a whole that stand in those words.
+
+For each transaction in to_check: give it again, corrected - its words copied exactly from the page as they stand, a misread letter included, and long enough to hold its figure and any whole it gives; its figure and whole exactly as those words write them, with your plain reading of the figure and its unit, so that it reads only one way; its date the date the paper gives for this transaction - or leave it out if the paper does not record it as you listed it.
+Work in a loop: read the pages again, decide each, check what you write against the page, and correct it.
+
+Outcome: transfers: only those you give again, each as before - date; kind; parcel; extent; reading; total; from; to; instrument; words."""
+
+
+def _transfer_fault(transfer, finder):
+    """Why code cannot use a v13 transaction as the model listed it, or None: its words not on the pages, its figure or whole as
+    extents.fault finds them, or its date in neither its words nor its paper's pages."""
+    if not transfer["anchored"]:
+        return "its words are not found on the pages"
+    return extents.fault(transfer) or (None if _traceable(transfer, finder) else "its date is in neither its words nor its pages")
+
+
+def _checked_transfers(model, transfers, documents, finders):
+    """v13 (AN.28, D2 and D3): each paper's transactions checked by code and, for a paper where some cannot be used as listed, one
+    check call that looks again; what it gives replaces those at fault. One still at fault is kept as it is - the ledger lists it and
+    never adds it - and one whose date is still not in its paper keeps its words and loses its date ("undated")."""
+    out = []
+    for document in documents:
+        mine = [transfer for transfer in transfers if transfer["source"] == document["source"]]
+        finder = finders[document["source"]]
+        failing = [(transfer, why) for transfer in mine if (why := _transfer_fault(transfer, finder))]
+        if failing:
+            to_check = [{**{key: transfer[key] for key in ("date", "kind", "parcel", "extent", "reading", "total", "from", "to",
+                                                          "instrument", "words")}, "why": why,
+                         **({"nearest_words": near["words"]} if not transfer["anchored"]
+                            and (near := finder.nearest(transfer["words"])) else {})} for transfer, why in failing]
+            user = (_window_text(document, document["pages"]) + "\n\n"
+                    + json.dumps({"to_check": to_check}, ensure_ascii=False))
+            try:
+                data = _call(model, "core_research_transfers", TRANSACTIONS_CHECK, user, TRANSACTIONS_SCHEMA, "transfers_check")
+                kept = [transfer for transfer in mine if all(transfer is not wrong for wrong, _ in failing)]
+                # A model that gives the paper's whole list again adds only what is new: one already kept is not kept twice.
+                held = {_same_transfer(transfer) for transfer in kept}
+                mine = kept + [transfer for transfer in _transfers_in(data, document, finder) if _same_transfer(transfer) not in held]
+            except UsageLimitReached:
+                raise
+            except (ModelError, SchemaViolation):
+                pass
+        for transfer in mine:
+            if transfer["anchored"] and not _traceable(transfer, finder):
+                transfer["date"] = "undated"
+        out += mine
+    return out
+
+
+def _same_transfer(transfer):
+    return tuple(transfer[key] for key in ("date", "kind", "parcel", "extent", "words"))
+
+
 def transfers_of(model, context, *, wanted=None):
-    """The transfers of land the documents of a turn record, as (transfers, failures) - plan AN.27, P13d. Read, anchored, dated,
-    ordered and numbered X1... exactly as the chronology's events are; the extents are read and added by extents.py, never here."""
-    transfers, failures = _read_stretches(model, context, wanted, "core_research_transfers", TRANSFERS, TRANSFERS_SCHEMA,
-                                          "transfers", _transfers_in)
+    """The transactions the documents of a turn record, as (transfers, failures) - plan AN.27, P13d; from research v13 of any kind
+    (AN.28, D7). Read, anchored, dated, ordered and numbered X1... exactly as the chronology's events are, each paper read with the
+    whole file in view and looked at again once where code cannot use what it found (D2, D3); the figures are read and added by
+    extents.py, never here."""
+    documents = _documents(context)
+    if not documents or (wanted is not None and not wanted()):
+        return [], []
+    transfers, failures = _read_stretches(model, context, None, "core_research_transfers", TRANSACTIONS_V13, TRANSACTIONS_SCHEMA,
+                                          "transfers", _transfers_in, whole=_whole_file(context, documents))
+    transfers = _checked_transfers(model, transfers, documents, {document["source"]: Pages(document["pages"])
+                                                                 for document in documents})
     return _numbered_by_date(transfers, "X", months=True), failures
 
 
@@ -1357,7 +1451,7 @@ def accept(proposal, context, *, contract=CONTRACT):
     if contract not in CONTRACTS:
         raise ValueError("Unknown research contract")
     if contract in _QUESTION_PLANS:
-        return _accept_v7(proposal, context, SCHEMA_V12 if contract in CHRONICLED
+        return _accept_v7(proposal, context, SCHEMA_V13 if contract in WHOLE_FILE else SCHEMA_V12 if contract in CHRONICLED
                           else SCHEMA if contract in (PURPOSED_CONTRACT, PER_DISPUTE_CONTRACT, JUDGMENTS_READ_CONTRACT)
                           else SCHEMA_V8, contract)
     schema = {LEGACY_CONTRACT: LEGACY_SCHEMA, PREVIOUS_CONTRACT: PREVIOUS_SCHEMA,

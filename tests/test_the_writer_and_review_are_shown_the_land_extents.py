@@ -36,8 +36,12 @@ def test_the_current_writer_is_shown_each_parcel_added_up_by_code_with_its_cavea
     assert (first["parcel"], first["sellers"][0]["added"], first["complete"]) == ("Sy.No.487", "1 acre 18 guntas (Ac.1.18)", False)
     assert first["sellers"][0]["names"] == ["the vendor"] and "sum" not in first
     assert [(n["id"], n["why"]) for n in first["not_read"]] == [("X2", "its words were not found on the page")]
-    assert first["totals"][0]["as"] == "8 acres 24 guntas (Ac.8.24)" and first["totals"][0]["by_seller"] == []
-    assert (second["parcel"], second["sellers"][0]["added"], second["complete"]) == ("Sy.No.487/A", "29 guntas (Ac.0.29)", True)
+    # Research v13 (AN.28, D3): the whole the model gave is on no page, so it is listed and not used; the order's figure stands in
+    # none of the words that record its transaction, so it is not added.
+    assert (first["totals"][0]["as"], first["totals"][0]["read_as"]) == (None, "its figure is not in the words that record it")
+    assert first["totals"][0]["by_seller"] == []
+    assert (second["parcel"], second["sellers"], second["complete"]) == ("Sy.No.487/A", [], False)
+    assert [(n["id"], n["why"]) for n in second["not_read"]] == [("X3", "its figure is not in the words that record it")]
     assert "makes the sum wrong" in first["caveat"] and prompt.system == response_writer.SYSTEM_V13
 
 
