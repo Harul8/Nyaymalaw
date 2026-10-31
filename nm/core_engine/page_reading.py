@@ -66,7 +66,7 @@ SCHEMA = {
 
 #: Plan AN.28, piece 4c (findings A8, A9): the figures two copies of one page read differently, looked at again on both images.
 RELOOK_OPERATION = "core_page_relook"
-RELOOK_OUTPUT = 4000
+RELOOK_OUTPUT = 8000
 RELOOK = """You receive the images of two pages that code found to be copies of one page, read separately, and the figures in which the two readings differ, each with the words just before it. Look at each image at that place and write the figure exactly as that image shows it - figures, letters and punctuation as written - or "unclear" where the image cannot settle it. Say what each image shows: do not choose between the copies, and do not correct one by the other.
 Work in a loop: find each place on both images, write what each shows, compare what you wrote with the images, and correct it before you answer."""
 RELOOK_SCHEMA = {"type": "object", "additionalProperties": False, "required": ["figures"], "properties": {"figures": {

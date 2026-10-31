@@ -307,7 +307,7 @@ def test_the_look_again_prompt_says_what_code_found_and_asks_for_the_pages_own_w
                  "whose figure code reads otherwise than your reading of it", "copied exactly from the page as they stand",
                  "so that it reads only one way", "or leave it out if the paper does not record it as you listed it", "Work in a loop"):
         assert part in prompt, part
-    assert research.MAX_OUTPUT["transfers_check"] == 8000
+    assert research.MAX_OUTPUT["transfers_check"] == 12000
 
 
 

@@ -134,9 +134,9 @@ OVERVIEW_KINDS = ("greeting", "summary", "next_step", "question", "limitation")
 #: (question). It greets no one: the answer goes straight to the point.
 OVERVIEW_KINDS_V13 = ("summary", "next_step", "question", "limitation")
 #: Each part's answer limit; reasoning counts towards it.
-MAX_OUTPUT = 16000
+MAX_OUTPUT = 24000
 #: The overview's answer limit (v12): a short opening, with reasoning.
-OVERVIEW_OUTPUT = 8000
+OVERVIEW_OUTPUT = 16000
 SYSTEM = """Message: You receive the exact latest advocate message, complete attributed
 conversation, current authorised records and saved work, where and when the advocate
 works (their forum and today's date), our understanding of the matter (its disputes,
@@ -2045,7 +2045,7 @@ def _repair_schema(paragraph):
 REPAIR_SCHEMA = _repair_schema(_units_v13(True)["items"])
 OVERVIEW_REPAIR_SCHEMA = _repair_schema(OVERVIEW_SCHEMA_V13["properties"]["units"]["items"])
 #: The second look's answer limit: only the paragraphs at fault, with reasoning.
-REPAIR_OUTPUT = 12000
+REPAIR_OUTPUT = 20000
 
 
 def repair(model, context, research_record, sources, proposal, faults, *, section, interpretation=None,

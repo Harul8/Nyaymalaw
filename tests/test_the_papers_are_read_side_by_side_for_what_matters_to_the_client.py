@@ -139,7 +139,7 @@ def test_the_prompts_say_what_to_look_for_and_that_no_legal_question_is_answered
                  "dated after a party's death", "that the advocate has not mentioned", "Work in a loop",
                  "client_appears, against_client, after_death, after_time_limit, further_subject, or other"):
         assert part in prompt, part
-    assert "Look again" in research.CONNECTIONS_CHECK and research.MAX_OUTPUT["connections"] == 8000
+    assert "Look again" in research.CONNECTIONS_CHECK and research.MAX_OUTPUT["connections"] == 16000
 
 
 def test_the_board_shows_each_partys_part_the_subjects_the_points_read_side_by_side_and_where_the_clients_people_appear():

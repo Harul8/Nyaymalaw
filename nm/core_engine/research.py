@@ -119,9 +119,11 @@ MAX_REVISIONS = 1
 #: The pick chooses from each question's first PROVISIONS_FOR_PICK provisions.
 PROVISIONS_FOR_PICK = 20
 #: Answer limits per step. Calls in flight are budgeted at their limit.
-MAX_OUTPUT = {"understand": 12000, "check": 6000, "revise": 12000, "phrases": 6000,
-              "judgment_phrases": 8000, "pick": 8000, "judgment_pick": 8000, "chronology": 12000, "transfers": 12000,
-              "chronology_check": 8000, "transfers_check": 8000, "connections": 8000, "connections_check": 6000}
+#: From research v13 (plan AN.28, D4) the steps that reason at medium or high spend output on their reasoning too, so their limits
+#: make room for it (the first paid probe of 31 Oct 2026 stopped the understanding at its old 12,000).
+MAX_OUTPUT = {"understand": 32000, "check": 12000, "revise": 32000, "phrases": 6000,
+              "judgment_phrases": 8000, "pick": 8000, "judgment_pick": 8000, "chronology": 24000, "transfers": 16000,
+              "chronology_check": 16000, "transfers_check": 12000, "connections": 16000, "connections_check": 12000}
 
 # The prompts below were developed and measured in outputs/decomposition-scratch
 # (13-14 Oct 2026). They state the purpose and the needed outcome in plain language

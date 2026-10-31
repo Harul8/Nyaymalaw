@@ -200,7 +200,7 @@ def test_the_prompt_states_the_message_the_purpose_what_to_look_for_and_the_outc
     for part in ("Message:", "Purpose:", "Look for:", "Outcome:", "Do not work out, convert or guess a date",
                  "Work in a loop", "You are not judging which account is right", "Who says it."):
         assert part in prompt, part
-    assert research.MAX_OUTPUT["chronology"] == 12000 and research.EVENT_KINDS == (
+    assert research.MAX_OUTPUT["chronology"] == 24000 and research.EVENT_KINDS == (
         "transaction", "order", "filing", "pending", "other")
 
 

@@ -86,7 +86,7 @@ _FINDINGS = (ROWS_CONTRACT, CONTRACT, SECTION_CONTRACT)
 #: The versions that name only what is wrong.
 _NAMED = (CONTRACT, SECTION_CONTRACT)
 #: A long reply's findings and coverage; reasoning counts towards it.
-MAX_OUTPUT = 16000
+MAX_OUTPUT = 24000
 #: The check across the sections: its conflicts, with reasoning.
 CROSS_OUTPUT = 8000
 SYSTEM = """Message: You receive the complete original attributed conversation, the

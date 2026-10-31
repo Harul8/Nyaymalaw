@@ -157,5 +157,5 @@ def test_the_prompt_states_the_message_the_purpose_what_to_look_for_and_the_outc
                  "Do not list a transfer that gives no extent, do not add or work out an extent the page does not give",
                  "Work in a loop"):
         assert part in prompt, part
-    assert research.MAX_OUTPUT["transfers"] == 12000 and research.TRANSFER_KINDS == (
+    assert research.MAX_OUTPUT["transfers"] == 16000 and research.TRANSFER_KINDS == (
         "sale", "partition", "gift", "settlement", "decree", "other")
