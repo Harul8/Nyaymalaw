@@ -294,84 +294,102 @@ const board = {
   }
 }
 
-// Land extents by parcel (plan AN.27, P13d and P20): the transfers found, seller by seller, each seller's sales added by the server's code and
-// set against a stated whole extent - what it leaves if that seller held all of it, or how far the sales go beyond it; what could not be
-// read or is not a sale listed and never added; nothing where the board has none.
+// Transactions by property or account (plan AN.27, P13d and P20; AN.28, D7): the transactions found, giver by giver, each giver's figures
+// added by the server's code and set against a stated whole - what it leaves if all of it was that giver's, or how far the figures go beyond
+// it; what could not be read or is not added listed and never added; nothing where the board has none.
 {
   const caveat = 'Extents are added as the papers state them, whoever states them, seller by seller.';
   const extents = [
     { parcel: 'Sy.No.487', sellers: [
       { names: ['Hari Prasad', 'Hari Prasaad'], transfers: [
-        { ids: ['X1'], date: '30-10-1985', kind: 'sale', to: 'Kiran Rao', extent: 'Ac.1.18 guntas', in_guntas: '1 acre 18 guntas (Ac.1.18)',
+        { ids: ['X1'], date: '30-10-1985', kind: 'sale', to: 'Kiran Rao', extent: 'Ac.1.18 guntas', as: '1 acre 18 guntas (Ac.1.18)',
           read_as: 'acres.guntas', also_read_as: ['Kiran Raao'], papers: [{ document: 'deed.pdf', pages: [1] }, { document: 'order.pdf', pages: [4, 5] }] },
-        { ids: ['X2'], date: '2 January 1986', kind: 'sale', to: '', extent: 'Ac.1.00', in_guntas: '1 acre (Ac.1.00)',
+        { ids: ['X2'], date: '2 January 1986', kind: 'sale', to: '', extent: 'Ac.1.00', as: '1 acre (Ac.1.00)',
           read_as: 'acres.guntas', papers: [{ document: 'deed.pdf', pages: [] }] }],
-        not_added: [{ ids: ['X5'], date: '9-2-1974', kind: 'partition', to: 'Anil Kumar', extent: 'Ac.8.24', in_guntas: '8 acres 24 guntas (Ac.8.24)',
+        not_added: [{ ids: ['X5'], date: '9-2-1974', kind: 'partition', to: 'Anil Kumar', extent: 'Ac.8.24', as: '8 acres 24 guntas (Ac.8.24)',
           read_as: 'acres.guntas', why: 'a partition allots a share; it is not a sale', papers: [{ document: 'order.pdf', pages: [6] }] }],
-        sold: '2 acres 18 guntas (Ac.2.18)' },
+        added: '2 acres 18 guntas (Ac.2.18)' },
       { names: ['Anil Kumar'], transfers: [], not_added: [
-        { ids: ['X7'], date: '9-2-1974', kind: 'partition', to: 'his sons', extent: 'equal shares', in_guntas: null,
+        { ids: ['X7'], date: '9-2-1974', kind: 'partition', to: 'his sons', extent: 'equal shares', as: null,
           read_as: 'no extent in these words', why: 'a partition allots a share; it is not a sale', papers: [{ document: 'order.pdf', pages: [6] }] }],
-        sold: null },
+        added: null },
       { names: [], transfers: [
-        { ids: ['X6'], date: '3 March 1990', kind: 'sale', to: 'Mahesh Babu', extent: 'Ac.0.10', in_guntas: '10 guntas (Ac.0.10)',
+        { ids: ['X6'], date: '3 March 1990', kind: 'sale', to: 'Mahesh Babu', extent: 'Ac.0.10', as: '10 guntas (Ac.0.10)',
           read_as: 'acres.guntas', papers: [{ document: 'order.pdf', pages: [7] }] }],
-        not_added: [], sold: null }],
+        not_added: [], added: null }],
       not_read: [{ id: 'X3', extent: 'part of the land', why: 'no extent in these words', document: 'deed.pdf', pages: [3] }],
       complete: false,
-      totals: [{ text: 'Ac.8.24 guntas', read_as: 'acres.guntas', as: '8 acres 24 guntas (Ac.8.24)', ids: ['X1'], by_seller: [] }],
+      totals: [{ text: 'Ac.8.24 guntas', measure: 'area', read_as: 'acres.guntas', as: '8 acres 24 guntas (Ac.8.24)', ids: ['X1'], by_seller: [] }],
       caveat },
     { parcel: 'Sy.No.487/A', sellers: [
       { names: ['Syed Alam'], transfers: [
-        { ids: ['X4'], date: 'undated', kind: 'gift', to: 'Other', extent: 'Ac.0.29', in_guntas: '29 guntas (Ac.0.29)',
+        { ids: ['X4'], date: 'undated', kind: 'gift', to: 'Other', extent: 'Ac.0.29', as: '29 guntas (Ac.0.29)',
           read_as: 'acres.guntas', papers: [{ document: 'order.pdf', pages: [2] }] }],
-        not_added: [], sold: '29 guntas (Ac.0.29)' }],
+        not_added: [], added: '29 guntas (Ac.0.29)' }],
       not_read: [], complete: true,
       totals: [
-        { text: 'Ac.2.00', read_as: 'acres.guntas', as: '2 acres (Ac.2.00)', ids: ['X4'],
+        { text: 'Ac.2.00', measure: 'area', read_as: 'acres.guntas', as: '2 acres (Ac.2.00)', ids: ['X4'],
           by_seller: [{ seller: 'Syed Alam', leaves: '1 acre 11 guntas (Ac.1.11)', exceeds: null }] },
-        { text: 'Ac.0.20', read_as: 'acres.guntas', as: '20 guntas (Ac.0.20)', ids: ['X4'],
+        { text: 'Ac.0.20', measure: 'area', read_as: 'acres.guntas', as: '20 guntas (Ac.0.20)', ids: ['X4'],
           by_seller: [{ seller: 'Syed Alam', leaves: null, exceeds: '9 guntas (Ac.0.09)' }] },
-        { text: 'the whole survey number', read_as: 'no extent in these words', as: null, ids: ['X4'], by_seller: [] }],
+        { text: 'the whole survey number', measure: null, read_as: 'no extent in these words', as: null, ids: ['X4'], by_seller: [] }],
+      caveat },
+    { parcel: 'Loan account 12', sellers: [
+      { names: ['Bank of Somewhere'], transfers: [
+        { ids: ['X8'], date: '1-1-2010', kind: 'loan', to: 'Ravi Teja', extent: 'Rs.2,00,000/-', as: 'Rs 2,00,000',
+          read_as: 'rupees in figures', papers: [{ document: 'loan.pdf', pages: [1] }] }],
+        not_added: [], added: 'Rs 2,00,000' },
+      { names: ['Ravi Teja'], transfers: [
+        { ids: ['X9'], date: '1-1-2011', kind: 'payment', to: 'Bank of Somewhere', extent: 'Rs.50,000', as: 'Rs 50,000',
+          read_as: 'rupees in figures', papers: [{ document: 'loan.pdf', pages: [2] }] }],
+        not_added: [], added: 'Rs 50,000' }],
+      not_read: [], complete: true,
+      totals: [{ text: 'Rs.2,00,000/-', measure: 'money', read_as: 'rupees in figures', as: 'Rs 2,00,000', ids: ['X8'],
+                 by_seller: [{ seller: 'Bank of Somewhere', leaves: 'Rs 0', exceeds: null },
+                             { seller: 'Ravi Teja', leaves: 'Rs 1,50,000', exceeds: null }] }],
       caveat }];
   const nodes = context.renderChatBoard({ ...structuredClone(board), extents });
-  const fold = nodes.find((node) => node.tagName === 'DETAILS' && text(node).startsWith('Land extents by parcel'));
+  const fold = nodes.find((node) => node.tagName === 'DETAILS' && text(node).startsWith('Transactions by property'));
   assert.ok(fold, 'a fold for the extents');
-  assert.equal(fold.children[0].textContent, 'Land extents by parcel (2)');
+  assert.equal(fold.children[0].textContent, 'Transactions by property or account (3)');
   const said = text(fold);
-  for (const part of ['Added up by NM’s code from the transfers of land it found in your papers, as the papers state them and whoever '
-    + 'states them. Rival or repeated accounts are added as if each were true, so a sum is a figure to check against the papers, not an '
-    + 'extent anyone holds.', 'Sy.No.487',
-    'Seller: Hari Prasad / Hari Prasaad',
+  for (const part of ['Added up by NM’s code from the transactions it found in your papers - areas with areas, sums of money with sums of '
+    + 'money - as the papers state them and whoever states them. Rival or repeated accounts are added as if each were true, so a sum is a '
+    + 'figure to check against the papers, not what anyone holds, owes or has paid.', 'Sy.No.487',
+    'From: Hari Prasad / Hari Prasaad',
     '30-10-1985 sale: Ac.1.18 guntas (1 acre 18 guntas (Ac.1.18)) to Kiran Rao (also read as “Kiran Raao”) · deed.pdf, page 1; order.pdf, pages 4, 5',
     '2 January 1986 sale: Ac.1.00 (1 acre (Ac.1.00)) · deed.pdf',
     'Not added (a partition allots a share; it is not a sale): 9-2-1974 partition: Ac.8.24 (8 acres 24 guntas (Ac.8.24)) to Anil Kumar · order.pdf, page 6',
-    'Added as stated: 2 acres 18 guntas (Ac.2.18) (a transfer could not be read, so the whole is more)',
-    'Seller: Anil Kumar',
+    'Added as stated: 2 acres 18 guntas (Ac.2.18) (a transaction could not be added, so the whole is more)',
+    'From: Anil Kumar',
     'Not added (a partition allots a share; it is not a sale): 9-2-1974 partition: equal shares to his sons · order.pdf, page 6',
-    'Seller: not named in the papers', '3 March 1990 sale: Ac.0.10 (10 guntas (Ac.0.10)) to Mahesh Babu · order.pdf, page 7',
+    'From: not named in the papers', '3 March 1990 sale: Ac.0.10 (10 guntas (Ac.0.10)) to Mahesh Babu · order.pdf, page 7',
     'Not added: “part of the land” (no extent in these words) · deed.pdf',
-    'A paper states the parcel’s whole extent as “Ac.8.24 guntas” (8 acres 24 guntas (Ac.8.24))',
-    'No remainder is named, because a transfer could not be read.',
-    'Sy.No.487/A', 'Seller: Syed Alam', 'undated gift: Ac.0.29 (29 guntas (Ac.0.29)) to Other · order.pdf, page 2',
+    'A paper states the whole as “Ac.8.24 guntas” (8 acres 24 guntas (Ac.8.24))',
+    'No remainder is named, because a transaction could not be added.',
+    'Sy.No.487/A', 'From: Syed Alam', 'undated gift: Ac.0.29 (29 guntas (Ac.0.29)) to Other · order.pdf, page 2',
     'Added as stated: 29 guntas (Ac.0.29)',
-    'A paper states the parcel’s whole extent as “Ac.2.00” (2 acres (Ac.2.00))',
-    'If Syed Alam held all of it, their sales found leave 1 acre 11 guntas (Ac.1.11).',
-    'Syed Alam’s sales found add up to more than that whole, by 9 guntas (Ac.0.09): the papers cannot all be right.',
-    'A paper states the parcel’s whole extent as “the whole survey number”; it could not be read as an extent', caveat]) {
+    'A paper states the whole as “Ac.2.00” (2 acres (Ac.2.00))',
+    'If Syed Alam held all of it, what they transferred, as found, leaves 1 acre 11 guntas (Ac.1.11).',
+    'What Syed Alam gave, as found, adds up to more than that whole, by 9 guntas (Ac.0.09): the papers cannot all be right.',
+    'A paper states the whole as “the whole survey number”; not used (no extent in these words)',
+    'Loan account 12', 'From: Bank of Somewhere', '1-1-2010 loan: Rs.2,00,000/- (Rs 2,00,000) to Ravi Teja · loan.pdf, page 1',
+    'From: Ravi Teja', '1-1-2011 payment: Rs.50,000 (Rs 50,000) to Bank of Somewhere · loan.pdf, page 2',
+    'Set against that sum, what Ravi Teja paid or lent, as found, leaves Rs 1,50,000.', caveat]) {
     assert.ok(said.includes(part), part);
   }
   assert.ok(!said.includes('Added as stated: 29 guntas (Ac.0.29) ('), 'a complete sum has no aside');
-  assert.ok(!said.includes('Added as stated: null') && (said.match(/Added as stated:/g) || []).length === 2, 'a seller with no name is added to no one');
+  assert.ok(!said.includes('Added as stated: null') && (said.match(/Added as stated:/g) || []).length === 4, 'a giver with no name is added to no one');
   assert.ok(!said.includes('null') && !said.includes('undefined'), 'an extent that could not be read is shown as the paper writes it, and no more');
-  assert.ok(!said.includes('held all of it, their sales found leave undefined'), 'nothing is said where there is nothing to say');
+  assert.ok(!said.includes('leaves undefined') && !said.includes('If Ravi Teja held all of it'), 'nothing is said where there is nothing to say, '
+    + 'and a sum is not spoken of as land');
   assert.equal(nodes.indexOf(fold), nodes.findIndex((node) => node.className === 'board-disputes') + 1);
   const with_copies = context.renderChatBoard({ ...structuredClone(board), extents, copies: [{ first: { document: 'a.pdf', page: 1 },
     second: { document: 'b.pdf', page: 1 }, figures: [{ first: '6.06', second: '6.16', after: '' }] }] });
   const at = (start) => with_copies.findIndex((node) => text(node).startsWith(start));
-  assert.ok(at('Figures two copies') >= 0 && at('Figures two copies') < at('Land extents by parcel'));
+  assert.ok(at('Figures two copies') >= 0 && at('Figures two copies') < at('Transactions by property or account'));
   for (const quiet of [{ ...structuredClone(board), extents: [] }, structuredClone(board)]) {
-    assert.ok(!context.renderChatBoard(quiet).map(text).join('\n').includes('Land extents'));
+    assert.ok(!context.renderChatBoard(quiet).map(text).join('\n').includes('Transactions by property'));
   }
 }
 

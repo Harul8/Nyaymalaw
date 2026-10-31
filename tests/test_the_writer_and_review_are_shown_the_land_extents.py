@@ -33,11 +33,11 @@ def test_the_current_writer_is_shown_each_parcel_added_up_by_code_with_its_cavea
     response_writer.write_section(model, ctx, record, sources, index=0, contract=response_writer.PRESENTED_CONTRACT)
     prompt, payload = model.seen[0]
     first, second = payload["land_extents"]
-    assert (first["parcel"], first["sellers"][0]["sold"], first["complete"]) == ("Sy.No.487", "1 acre 18 guntas (Ac.1.18)", False)
+    assert (first["parcel"], first["sellers"][0]["added"], first["complete"]) == ("Sy.No.487", "1 acre 18 guntas (Ac.1.18)", False)
     assert first["sellers"][0]["names"] == ["the vendor"] and "sum" not in first
     assert [(n["id"], n["why"]) for n in first["not_read"]] == [("X2", "its words were not found on the page")]
     assert first["totals"][0]["as"] == "8 acres 24 guntas (Ac.8.24)" and first["totals"][0]["by_seller"] == []
-    assert (second["parcel"], second["sellers"][0]["sold"], second["complete"]) == ("Sy.No.487/A", "29 guntas (Ac.0.29)", True)
+    assert (second["parcel"], second["sellers"][0]["added"], second["complete"]) == ("Sy.No.487/A", "29 guntas (Ac.0.29)", True)
     assert "makes the sum wrong" in first["caveat"] and prompt.system == response_writer.SYSTEM_V13
 
 
@@ -87,10 +87,10 @@ def test_one_sale_read_on_two_copies_of_a_page_is_shown_once_to_the_writer_and_t
     (parcel,) = response_writer._extents_shown(record, ctx)
     (seller,) = parcel["sellers"]
     (only,) = seller["transfers"]
-    assert seller["sold"] == "6 acres 6 guntas (Ac.6.06)" and [p["document"] for p in only["papers"]] == ["deed.pdf", "scan.pdf"]
+    assert seller["added"] == "6 acres 6 guntas (Ac.6.06)" and [p["document"] for p in only["papers"]] == ["deed.pdf", "scan.pdf"]
     assert only["to"] == "Kiran Rao" and only["also_read_as"] == ["Kiran Raao"]
     (twice,) = response_writer._extents_shown(record)
-    assert twice["sellers"][0]["sold"] == "12 acres 12 guntas (Ac.12.12)" and len(twice["sellers"][0]["transfers"]) == 2, \
+    assert twice["sellers"][0]["added"] == "12 acres 12 guntas (Ac.12.12)" and len(twice["sellers"][0]["transfers"]) == 2, \
         "without the pages it is added twice"
     model = Writer(quiet)
     draft = response_writer.write_section(model, ctx, record, sources, index=0, contract=response_writer.PRESENTED_CONTRACT)

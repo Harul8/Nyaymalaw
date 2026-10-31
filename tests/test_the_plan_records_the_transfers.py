@@ -135,10 +135,10 @@ def test_no_documents_make_no_transfers_without_a_call_and_a_plan_saved_before_t
 
 def test_the_transfers_of_the_plan_are_added_up_by_extents_and_only_those_whose_words_were_found():
     (parcel, other) = extents.ledger(kept()["proposal"]["transfers"])
-    assert parcel["parcel"] == "Sy.No.487" and parcel["sellers"][0]["sold"] == 58 and not parcel["complete"]
+    assert parcel["parcel"] == "Sy.No.487" and parcel["sellers"][0]["added"] == {"area": 58} and not parcel["complete"]
     assert [(u["id"], u["why"]) for u in parcel["unread"]] == [("X2", "its words were not found on the page")]
     assert parcel["totals"][0]["text"] == "Ac.8.24 guntas" and parcel["totals"][0]["by_seller"] == []
-    assert other["parcel"] == "Sy.No.487/A" and other["sellers"][0]["sold"] == 29 and other["complete"]
+    assert other["parcel"] == "Sy.No.487/A" and other["sellers"][0]["added"] == {"area": 29} and other["complete"]
 
 
 def test_the_prompt_states_the_message_the_purpose_what_to_look_for_and_the_outcome():

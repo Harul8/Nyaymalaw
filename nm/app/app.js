@@ -3708,16 +3708,16 @@ function renderCopies(copies, make) {
   return [fold];
 }
 
-// LAND EXTENTS BY PARCEL (plan AN.27, P13d): the transfers of land NM found in the papers, added up by NM's code for each parcel - never
-// by a model - with what a paper's stated whole extent leaves, and the server's caveat that a sum is only of what was found. What
-// could not be read is listed and never added.
+// TRANSACTIONS BY PROPERTY OR ACCOUNT (plan AN.27, P13d; AN.28, D7): the transactions NM found in the papers, their figures added up
+// by NM's code - never by a model - areas with areas and sums of money with sums, giver by giver, with what a paper's stated whole
+// leaves, and the server's caveat that a sum is only of what was found. What could not be read or added is listed and never added.
 function renderExtents(parcels, make) {
   if (!Array.isArray(parcels) || !parcels.length) return [];
   const fold = make('details', 'folded');
-  fold.appendChild(make('summary', '', `Land extents by parcel (${parcels.length})`));
-  fold.appendChild(make('p', 'board-lede', 'Added up by NM’s code from the transfers of land it found in your papers, as the papers state '
-    + 'them and whoever states them. Rival or repeated accounts are added as if each were true, so a sum is a figure to check against '
-    + 'the papers, not an extent anyone holds.'));
+  fold.appendChild(make('summary', '', `Transactions by property or account (${parcels.length})`));
+  fold.appendChild(make('p', 'board-lede', 'Added up by NM’s code from the transactions it found in your papers - areas with areas, '
+    + 'sums of money with sums of money - as the papers state them and whoever states them. Rival or repeated accounts are added as if '
+    + 'each were true, so a sum is a figure to check against the papers, not what anyone holds, owes or has paid.'));
   // One line for a transfer, as the papers record it: where it is and - the same sale read on copies of one page, its buyer's name read
   // two ways (P20 (b)) - both readings.
   const said = (transfer) => {
@@ -3725,23 +3725,23 @@ function renderExtents(parcels, make) {
       ? `, page${paper.pages.length > 1 ? 's' : ''} ${paper.pages.join(', ')}` : '')).join('; ');
     const alike = transfer.also_read_as && transfer.also_read_as.length
       ? ` (also read as ${transfer.also_read_as.map((name) => `“${name}”`).join(' and ')})` : '';
-    return `${transfer.date} ${transfer.kind}: ${transfer.extent}${transfer.in_guntas ? ` (${transfer.in_guntas})` : ''}`
+    return `${transfer.date} ${transfer.kind}: ${transfer.extent}${transfer.as ? ` (${transfer.as})` : ''}`
       + `${transfer.to ? ` to ${transfer.to}` : ''}${alike} · ${where}`;
   };
   for (const parcel of parcels) {
     fold.appendChild(make('h3', 'board-h', parcel.parcel));
-    // Seller by seller (P20 (a)): a seller's sales are added to that seller's alone; there is no figure for the parcel as a whole.
+    // Giver by giver (P20 (a)): a giver's figures are added to that giver's alone; there is no figure for the property as a whole.
     for (const seller of parcel.sellers) {
-      fold.appendChild(make('p', 'board-fact', `Seller: ${seller.names.length ? seller.names.join(' / ') : 'not named in the papers'}`));
+      fold.appendChild(make('p', 'board-fact', `From: ${seller.names.length ? seller.names.join(' / ') : 'not named in the papers'}`));
       const list = make('ul', 'board-list');
       for (const transfer of seller.transfers) list.appendChild(make('li', '', said(transfer)));
       for (const other of seller.not_added) {
         list.appendChild(make('li', 'board-status search_failed', `Not added (${other.why}): ${said(other)}`));
       }
       fold.appendChild(list);
-      if (seller.sold) {
-        fold.appendChild(make('p', 'board-fact', `Added as stated: ${seller.sold}`
-          + (parcel.complete ? '' : ' (a transfer could not be read, so the whole is more)')));
+      if (seller.added) {
+        fold.appendChild(make('p', 'board-fact', `Added as stated: ${seller.added}`
+          + (parcel.complete ? '' : ' (a transaction could not be added, so the whole is more)')));
       }
     }
     if (parcel.not_read.length) {
@@ -3752,18 +3752,20 @@ function renderExtents(parcels, make) {
       fold.appendChild(list);
     }
     for (const total of parcel.totals) {
-      fold.appendChild(make('p', 'board-fact', `A paper states the parcel’s whole extent as “${total.text}”`
-        + `${total.as ? ` (${total.as})` : '; it could not be read as an extent'}`));
+      fold.appendChild(make('p', 'board-fact', `A paper states the whole as “${total.text}”`
+        + `${total.as ? ` (${total.as})` : `; not used (${total.read_as})`}`));
       for (const against of total.by_seller) {
         if (against.exceeds) {
-          fold.appendChild(make('p', 'board-status search_failed', `${against.seller}’s sales found add up to more than that whole, by `
-            + `${against.exceeds}: the papers cannot all be right.`));
+          fold.appendChild(make('p', 'board-status search_failed', `What ${against.seller} gave, as found, adds up to more than that `
+            + `whole, by ${against.exceeds}: the papers cannot all be right.`));
         } else if (against.leaves) {
-          fold.appendChild(make('p', 'board-fact', `If ${against.seller} held all of it, their sales found leave ${against.leaves}.`));
+          fold.appendChild(make('p', 'board-fact', total.measure === 'money'
+            ? `Set against that sum, what ${against.seller} paid or lent, as found, leaves ${against.leaves}.`
+            : `If ${against.seller} held all of it, what they transferred, as found, leaves ${against.leaves}.`));
         }
       }
       if (total.as && !parcel.complete && !total.by_seller.some((against) => against.exceeds)) {
-        fold.appendChild(make('p', 'board-fact', 'No remainder is named, because a transfer could not be read.'));
+        fold.appendChild(make('p', 'board-fact', 'No remainder is named, because a transaction could not be added.'));
       }
     }
     fold.appendChild(make('p', 'board-lede', parcel.caveat));
