@@ -969,7 +969,7 @@ def _removed(draft, context, sources):
 
 def review(model, context, research_record, sources, draft, execution=None, *,
            authority_evidence=None, time_limits=None, held_back=None, shortened=None, sections=None,
-           unanswered=None, conflicts=None, contract=None, writer_notes=None, revised=False):
+           unanswered=None, conflicts=None, contract=None, writer_notes=None):
     """One independent review. A whole answer written in parts (writer v11) is judged as one
     reply (v8); one piece of an answer written dispute by dispute (writer v12) is judged as
     that piece (v9, or v10 when the caller reads it so - P29): a section with its own
@@ -1084,10 +1084,9 @@ def review(model, context, research_record, sources, draft, execution=None, *,
                    **{key: value for key, value in payload.items() if key not in response_writer.SHARED_KEYS}}
     user = json.dumps(payload, ensure_ascii=False)
     # v12 (AN.28, D4 and 6c): the review reasons at medium, and the material it shares is marked for the cache.
-    # How hard it reasons is reasoning.py's (plan AN.30): a piece that was changed since its last review - what was added is
-    # its riskiest part - is looked at again a level higher (revised).
+    # How hard it reasons is reasoning.py's (plan AN.30).
     prompt = Prompt(system=system, user=user, operation="core_response_review",
-                    effort=reasoning.effort("review", tokens=estimate_tokens(user), again=revised) if worded else None,
+                    effort=reasoning.effort("review") if worded else None,
                     cache_through=response_writer.shared_material(user, payload) if worded else 0)
     if (estimate_tokens(system + prompt.user + json.dumps(schema)) + MAX_OUTPUT
             > model.context_budget(Tier.JUDGE)):

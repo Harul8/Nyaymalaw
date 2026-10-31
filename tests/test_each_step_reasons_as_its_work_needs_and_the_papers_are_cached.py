@@ -55,7 +55,7 @@ class Echo:
         return ModelResult(None, {"answer": "supported"}, tier, "synthetic", "fixture", Usage(1, 1, 0), 0)
 
 
-def test_a_correction_looks_again_a_level_higher_and_keeps_its_shared_material_where_that_still_leads():
+def test_a_correction_keeps_the_effort_of_the_call_it_corrects_and_its_shared_material_where_that_still_leads():
     inner = Echo()
     calls = TurnCalls(inner)
     user = json.dumps({"original_context": {"pages": "the papers"}, "task": "write"})
@@ -65,12 +65,12 @@ def test_a_correction_looks_again_a_level_higher_and_keeps_its_shared_material_w
     calls.structured(Prompt(user=user, operation="core_response_writer", effort="medium", cache_through=shared), SCHEMA,
                      Tier.ROUTINE, max_tokens=10)
     sent, = inner.prompts
-    assert (sent.effort, sent.cache_through) == ("high", shared) and '"correction"' in sent.user, "a level above the call it corrects"
-    for given, raised in (("low", "medium"), ("high", "high"), (None, None)):
+    assert (sent.effort, sent.cache_through) == ("medium", shared) and '"correction"' in sent.user, "the call it corrects"
+    for given in ("low", "high", None):
         calls.correction = {"operation": "core_response_writer", "mismatch": "fix it"}
         calls.structured(Prompt(user=user, operation="core_response_writer", effort=given, cache_through=shared), SCHEMA,
                          Tier.ROUTINE, max_tokens=10)
-        assert inner.prompts[-1].effort == raised, "never above high; a call that opted in to no effort stays the release's own"
+        assert inner.prompts[-1].effort == given, "a correction asks no more thought than the call it corrects: its answer is as large"
     assert response_writer.shared_material('{"task": 1}', {"task": 1}) == 0, "a payload that does not open with them marks none"
 
 

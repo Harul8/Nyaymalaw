@@ -4,18 +4,19 @@ optimize costs"; AN.28, D4).
 Input, not thought, drives what a turn costs. Three paid replays (31 Oct 2026) fitted $0.10 per million fresh input tokens, $0.01 cached
 and $0.50 output; a turn's spend was 71% fresh input, 4% cached input and 25% output, the reasoning included. A big pass - a section
 written, a review, a take-up - carries 100,000 to 200,000 tokens and costs about a cent and a half, while 4,000 more tokens of reasoning
-cost a fifth of a cent. Of 36 writing and review calls for seven pieces, 22 were repeats. So reasoning is given where it can prevent a
-repeated pass or a wrong answer, and withheld where thought cannot change the result:
+cost a fifth of a cent. So reasoning is given where it can prevent a repeated pass or a wrong answer and costs little, and withheld where
+thought cannot change the result or costs more than it can save:
 
   - the search steps (phrases, picks) run at the release's own setting (owner decision, 14 Oct 2026): thought does not change what they find;
   - the steps that read the papers or understand the matter run at medium, and a step that reads a large file runs a level higher (AN.28);
   - the steps whose miss reaches the advocate and that ran at the release's own setting - the reading of the advocate's message, the check
-    across the sections, the time limits - run at medium;
-  - writing runs at medium, and at high where its material is large: it must take up a long coverage list, and its first writing is where
-    a repeated pass is prevented;
-  - a call that looks again at work already done runs a level above its step: the revising of an understanding, the looks again at papers,
-    the repair of a paragraph, the take-up, a rewrite a review asked for, the re-check of a revision, and the review of a piece that has
-    been changed, since what was added to it is its riskiest part.
+    across the sections, the time limits - run at medium, for they are small;
+  - a call that looks again at work already done runs a level above its step where its answer is small: the revising of an understanding,
+    the re-check of a revision, the looks again at papers, the repair of a paragraph, the take-up, the correction of a time limit;
+  - writing and reviewing stay at medium. Their answers are large, and the first paid run of the new build (1 Nov 2026) measured them at
+    high: a writing came to 27,600 tokens against about nine thousand at medium and took 194 seconds against about 90, a review 12,600 against
+    6,100 and 137 seconds against 66, the answer stage took twice as long (32 minutes against 16), and one writing in six was lost to the
+    service after more than four minutes. Nothing shows that so much thought prevents a repeated pass.
 
 Never above high: nothing measured has earned more. Every call's reasoning tokens are recorded in its usage (the adapter), so that a run
 shows what each level cost, step by step, and this table can be tuned by measurement and not by belief.
@@ -40,7 +41,7 @@ STEPS = {
     # Research: the measured search steps stay at the release's own setting (owner decision, 14 Oct 2026).
     "phrases": (None, False), "judgment_phrases": (None, False), "pick": (None, False), "judgment_pick": (None, False),
     # The answer: a section and the overview, the review, the check across the sections, and the second looks.
-    "write": ("medium", True), "overview": ("medium", True), "review": ("medium", False), "cross_check": ("medium", False),
+    "write": ("medium", False), "overview": ("medium", False), "review": ("medium", False), "cross_check": ("medium", False),
     "repair": ("high", False), "take_up": ("high", False),
     # The time limits and their correction.
     "calculate": ("medium", False), "calculate_correct": ("high", False),

@@ -1780,8 +1780,8 @@ def shared_material(user, payload):
 
 def _write_part(model, payload, *, system=SYSTEM, schema=PART_SCHEMA_V11, step=None):
     user = json.dumps(payload, ensure_ascii=False)
-    # How hard it reasons is reasoning.py's (plan AN.30): from v14, by what the part must read.
-    effort = reasoning.effort(step, tokens=estimate_tokens(user)) if step else None
+    # How hard it reasons is reasoning.py's (plan AN.30): from v14.
+    effort = reasoning.effort(step) if step else None
     prompt = Prompt(system=system, user=user, operation="core_response_writer", effort=effort,
                     cache_through=shared_material(user, payload) if effort else 0)
     if (estimate_tokens(system + prompt.user + json.dumps(schema)) + MAX_OUTPUT
@@ -2008,7 +2008,7 @@ def write_overview(model, context, research_record, sources, *, sections, interp
     user = json.dumps(payload, ensure_ascii=False)
     v14 = contract == REPAIRED_CONTRACT
     prompt = Prompt(system=system, user=user, operation="core_response_overview",
-                    effort=reasoning.effort("overview", tokens=estimate_tokens(user)) if v14 else None,
+                    effort=reasoning.effort("overview") if v14 else None,
                     cache_through=shared_material(user, payload) if v14 else 0)
     if (estimate_tokens(system + prompt.user + json.dumps(schema)) + OVERVIEW_OUTPUT
             > model.context_budget(Tier.HARD)):

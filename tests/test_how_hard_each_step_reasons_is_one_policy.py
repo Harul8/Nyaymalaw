@@ -3,10 +3,11 @@ used to optimize costs").
 
 Input, not thought, drives what a turn costs: a big pass (a section written, a review, a take-up) carries 100,000 to 200,000 tokens and costs
 about a cent and a half, while 4,000 more tokens of reasoning cost a fifth of a cent. So reasoning is given where it can prevent a
-repeated pass or a wrong answer - the first writing of a piece that must take up a long coverage list from a large file, every second look
-a level above its step, the review of a piece that was changed, and the steps whose miss reaches the advocate - and withheld where thought
-cannot change the result (the search steps stay at the release's own setting). reasoning.py holds the table; every call asks it. Fakes stand
-in for the models: this pins what each call asks, not how a model reasons.
+repeated pass or a wrong answer and costs little - every second look whose answer is small a level above its step, and the steps whose
+miss reaches the advocate - and withheld where thought cannot change the result (the search steps stay at the release's own setting) or
+costs more than it saves: the first paid run of the new build (1 Nov 2026) measured writing and reviewing at high at three times the
+output and twice the time, so they stay at medium. reasoning.py holds the table; every call asks it. Fakes stand in for the models: this
+pins what each call asks, not how a model reasons.
 """
 import json
 import re
@@ -19,7 +20,7 @@ from nm.core_engine.research import plan
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import ModelResult, Usage, estimate_tokens
 from tests.test_a_total_the_model_worked_out_is_not_a_figure_the_papers_give import SAID, stating
-from tests.test_core_calculation import Calculating, Held, chain, fixed_bad, turn
+from tests.test_core_calculation import Calculating, chain, fixed_bad, turn
 from tests.test_core_research import Model, operations
 from tests.test_core_turn import store  # noqa: F401 - pytest fixture
 from tests.test_core_understanding import Model as Understood, context as typed, unit
@@ -36,7 +37,7 @@ TABLE = {
     "chronology": ("medium", True), "transfers": ("medium", True), "connections": ("medium", True),
     "chronology_check": ("high", True), "transfers_check": ("high", True), "connections_check": ("high", True),
     "phrases": (None, False), "judgment_phrases": (None, False), "pick": (None, False), "judgment_pick": (None, False),
-    "write": ("medium", True), "overview": ("medium", True), "review": ("medium", False), "cross_check": ("medium", False),
+    "write": ("medium", False), "overview": ("medium", False), "review": ("medium", False), "cross_check": ("medium", False),
     "repair": ("high", False), "take_up": ("high", False),
     "calculate": ("medium", False), "calculate_correct": ("high", False),
     "read_page": (None, False), "read_again": ("medium", False), "relook": ("medium", False),
@@ -110,7 +111,8 @@ class Spy:
                            completion=Completion.COMPLETE)
 
 
-def test_the_writer_reasons_at_medium_and_at_high_where_its_material_is_large_and_the_older_writers_ask_nothing():
+def test_the_writer_reasons_at_medium_however_large_its_material_and_the_older_writers_ask_nothing():
+    """A writing at high measured 27,600 tokens and 194 seconds against about nine thousand and 90 at medium (1 Nov 2026): size does not raise it."""
     small, large = {"original_context": "word " * 100}, {"original_context": "word " * 80_000}
     assert estimate_tokens(json.dumps(small)) < reasoning.LARGE_FILE_TOKENS < estimate_tokens(json.dumps(large))
     efforts = []
@@ -118,7 +120,7 @@ def test_the_writer_reasons_at_medium_and_at_high_where_its_material_is_large_an
         spy = Spy({"units": []})
         response_writer._write_part(spy, payload, step=step)
         efforts.append((spy.prompts[0].effort, bool(spy.prompts[0].cache_through)))
-    assert efforts == [("medium", True), ("high", True), (None, False)]
+    assert efforts == [("medium", True), ("medium", True), (None, False)]
 
 
 class Watching(Opening):
@@ -133,21 +135,21 @@ class Watching(Opening):
         return super().structured(prompt, schema, tier, **kwargs)
 
 
-def test_the_answer_asks_the_table_the_take_up_looks_again_and_the_review_of_a_changed_piece_a_level_higher():
+def test_the_answer_asks_the_table_the_take_up_looks_again_and_the_writing_and_the_reviews_stay_at_medium():
     model = Watching(taking_up)
     answered_two(model)
     by = {}
     for prompt in model.prompts:
         by.setdefault(prompt.operation, []).append(prompt.effort)
-    assert by["core_response_writer"] == ["medium", "medium"], "a section of a small matter reasons at medium"
+    assert by["core_response_writer"] == ["medium", "medium"]
     assert by["core_response_overview"] == ["medium"]
     assert by["core_response_take_up"] == ["high"]
     assert by["core_response_cross_check"] == ["medium"]
-    # Two sections and the overview are reviewed once each at medium; the overview, changed by its take-up, is reviewed again at high.
-    assert sorted(by["core_response_review"]) == ["high", "medium", "medium", "medium"]
+    # Two sections and the overview are reviewed once each; the overview, changed by its take-up, is reviewed again - at medium too.
+    assert by["core_response_review"] == ["medium"] * 4
 
 
-def test_the_review_reasons_at_medium_and_a_level_higher_for_a_piece_that_was_changed_and_the_older_reviews_ask_nothing():
+def test_the_review_reasons_at_medium_and_the_older_reviews_ask_nothing():
     from nm.core_engine import response_authorities
     from tests.test_the_answer_takes_up_every_order_and_point_or_says_why import V14, matter
     from tests.test_the_review_is_shown_the_chronology import Reviewer
@@ -157,19 +159,16 @@ def test_the_review_reasons_at_medium_and_a_level_higher_for_a_piece_that_was_ch
     ctx, record, sources = matter()
     draft = response_writer.write_section(Writer(quiet), ctx, record, sources, index=0, contract=V14)
     evidence = response_authorities.check(ctx, record, sources, draft)
-    asked = {}
-    for revised in (False, True):
-        reviewer = Reviewer()
-        response_review.review(reviewer, ctx, record, sources, draft, research.execution(record), authority_evidence=evidence,
-                               contract=response_review.WORDED_CONTRACT, revised=revised)
-        asked[revised] = reviewer.seen[0][0].effort
-    assert asked == {False: "medium", True: "high"}
+    reviewer = Reviewer()
+    response_review.review(reviewer, ctx, record, sources, draft, research.execution(record), authority_evidence=evidence,
+                           contract=response_review.WORDED_CONTRACT)
+    assert reviewer.seen[0][0].effort == "medium", "a review measured at high took twice as long for twice the output (1 Nov 2026)"
     earlier = response_writer.write_section(Writer(quiet), ctx, record, sources, index=0, contract=response_writer.PRESENTED_CONTRACT)
     reviewer = Reviewer()
     response_review.review(reviewer, ctx, record, sources, earlier, research.execution(record),
                            authority_evidence=response_authorities.check(ctx, record, sources, earlier),
-                           contract=response_review.PRESENTED_CONTRACT, revised=True)
-    assert reviewer.seen[0][0].effort is None, "an earlier review asks the release's own setting, changed or not"
+                           contract=response_review.PRESENTED_CONTRACT)
+    assert reviewer.seen[0][0].effort is None, "an earlier review asks the release's own setting"
 
 
 def test_the_message_is_read_at_medium():

@@ -8,7 +8,6 @@ import time
 from contextlib import contextmanager
 from copy import deepcopy
 
-from nm.core_engine import reasoning
 from nm.shared.model_port import ContextOverflow, ModelError, ModelResult, Prompt, SchemaViolation, estimate_tokens
 
 #: Corrections the turn's shared steps (understanding, research, time limits) may make
@@ -152,10 +151,9 @@ class TurnCalls:
             payload = json.loads(prompt.user)
             payload["correction"] = deepcopy(feedback)
             user = json.dumps(payload, ensure_ascii=False)
-            # The correction joins the end: the call keeps its shared material where that still leads, and - looking again at
-            # work already done - reasons a level higher (plan AN.30).
+            # The correction joins the end: the call keeps its effort, and its shared material where that still leads.
             shared = prompt.cache_through if user[:prompt.cache_through] == prompt.user[:prompt.cache_through] else 0
-            prompt = Prompt(system=prompt.system, user=user, operation=prompt.operation, effort=reasoning.raised(prompt.effort),
+            prompt = Prompt(system=prompt.system, user=user, operation=prompt.operation, effort=prompt.effort,
                             cache_through=shared)
         if (estimate_tokens((prompt.system or "") + prompt.user + json.dumps(schema))
                 + max_tokens > self.context_budget(tier)):
