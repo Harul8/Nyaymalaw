@@ -18,7 +18,7 @@ from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 from datetime import date
 
-from nm.core_engine import answer_sources, checklist, copy_figures, figures, research
+from nm.core_engine import answer_sources, checklist, copy_figures, figures, reasoning, research
 from nm.core_engine.understanding import REFERENCE, TEXT, renamed, source_catalogue
 from nm.shared import clock_contracts
 from nm.shared.model_port import (
@@ -134,9 +134,9 @@ OVERVIEW_KINDS = ("greeting", "summary", "next_step", "question", "limitation")
 #: (question). It greets no one: the answer goes straight to the point.
 OVERVIEW_KINDS_V13 = ("summary", "next_step", "question", "limitation")
 #: Each part's answer limit; reasoning counts towards it.
-MAX_OUTPUT = 24000
+MAX_OUTPUT = 40000
 #: The overview's answer limit (v12): a short opening, with reasoning.
-OVERVIEW_OUTPUT = 16000
+OVERVIEW_OUTPUT = 24000
 SYSTEM = """Message: You receive the exact latest advocate message, complete attributed
 conversation, current authorised records and saved work, where and when the advocate
 works (their forum and today's date), our understanding of the matter (its disputes,
@@ -1758,11 +1758,6 @@ def _payload(context, record, sources, interpretation, execution, layout, index,
                              if row["kind"] not in {"provision", "judgment"} or offered.get(identity) in shown}}
 
 
-#: How hard v14's writing reasons (plan AN.28, D4): a part and the overview at medium, the second look at its failing paragraphs a
-#: level above.
-WRITING_EFFORT, SECOND_LOOK_EFFORT = "medium", "high"
-
-
 #: What every writing and review call of a turn carries alike, in the order its payload leads with them (plan AN.28, 6c).
 SHARED_KEYS = ("original_context", "setting", "interpretation_proposal", "papers_chronology", "copies_read_differently",
                "figures_added", "coverage")
@@ -1783,8 +1778,10 @@ def shared_material(user, payload):
     return len(prefix) if user.startswith(prefix) else 0
 
 
-def _write_part(model, payload, *, system=SYSTEM, schema=PART_SCHEMA_V11, effort=None):
+def _write_part(model, payload, *, system=SYSTEM, schema=PART_SCHEMA_V11, step=None):
     user = json.dumps(payload, ensure_ascii=False)
+    # How hard it reasons is reasoning.py's (plan AN.30): from v14, by what the part must read.
+    effort = reasoning.effort(step, tokens=estimate_tokens(user)) if step else None
     prompt = Prompt(system=system, user=user, operation="core_response_writer", effort=effort,
                     cache_through=shared_material(user, payload) if effort else 0)
     if (estimate_tokens(system + prompt.user + json.dumps(schema)) + MAX_OUTPUT
@@ -1859,7 +1856,7 @@ def write_section(model, context, research_record, sources, *, index, interpreta
                                                 general=contract == REPAIRED_CONTRACT),
                                 **({"system": SYSTEM_V14 if contract == REPAIRED_CONTRACT else SYSTEM_V13,
                                     "schema": PART_SCHEMA_V13} if presented else {}),
-                                **({"effort": WRITING_EFFORT} if contract == REPAIRED_CONTRACT else {})))
+                                **({"step": "write"} if contract == REPAIRED_CONTRACT else {})))
     _named_limits(part, _limit_names(time_limits))
     if hasattr(model, "last_output"):
         # A shape correction shows the writer the section it wrote.
@@ -2010,7 +2007,8 @@ def write_overview(model, context, research_record, sources, *, sections, interp
                                 presented, general=contract == REPAIRED_CONTRACT)
     user = json.dumps(payload, ensure_ascii=False)
     v14 = contract == REPAIRED_CONTRACT
-    prompt = Prompt(system=system, user=user, operation="core_response_overview", effort=WRITING_EFFORT if v14 else None,
+    prompt = Prompt(system=system, user=user, operation="core_response_overview",
+                    effort=reasoning.effort("overview", tokens=estimate_tokens(user)) if v14 else None,
                     cache_through=shared_material(user, payload) if v14 else 0)
     if (estimate_tokens(system + prompt.user + json.dumps(schema)) + OVERVIEW_OUTPUT
             > model.context_budget(Tier.HARD)):
@@ -2103,7 +2101,7 @@ def _repair_schema(paragraph):
 REPAIR_SCHEMA = _repair_schema(_units_v13(True)["items"])
 OVERVIEW_REPAIR_SCHEMA = _repair_schema(OVERVIEW_SCHEMA_V13["properties"]["units"]["items"])
 #: The second look's answer limit: only the paragraphs at fault, with reasoning.
-REPAIR_OUTPUT = 20000
+REPAIR_OUTPUT = 24000
 
 
 def repair(model, context, research_record, sources, proposal, faults, *, section, interpretation=None,
@@ -2138,7 +2136,7 @@ def repair(model, context, research_record, sources, proposal, faults, *, sectio
     payload["to_check"] = [grouped[position] for position in sorted(grouped)]
     schema = OVERVIEW_REPAIR_SCHEMA if overview else REPAIR_SCHEMA
     user = json.dumps(payload, ensure_ascii=False)
-    prompt = Prompt(system=REPAIR_SYSTEM, user=user, operation="core_response_repair", effort=SECOND_LOOK_EFFORT,
+    prompt = Prompt(system=REPAIR_SYSTEM, user=user, operation="core_response_repair", effort=reasoning.effort("repair"),
                     cache_through=shared_material(user, payload))
     if estimate_tokens(REPAIR_SYSTEM + prompt.user + json.dumps(schema)) + REPAIR_OUTPUT > model.context_budget(Tier.HARD):
         raise ContextOverflow("Complete second look exceeds the model budget")
@@ -2247,7 +2245,7 @@ against its source, and correct it.
 Outcome: additions, each with items (the IDs it takes up) and paragraph (whole); declined, each with items and why
 (one or two plain sentences). Every item in to_take_up is in one of them. Never write a short ID (M1, P1, T1...)
 in your text except as a link, and claim nothing NM saved, filed or did."""
-TAKE_UP_OUTPUT = 20000
+TAKE_UP_OUTPUT = 24000
 
 
 def _take_up_schema(paragraph):
@@ -2293,7 +2291,7 @@ def take_up(model, context, research_record, sources, proposal, wanted, *, secti
                               "cited_by": cited_by(proposal, held[entry["id"]])} for entry in wanted if entry["id"] in held]
     schema = OVERVIEW_TAKE_UP_SCHEMA if overview else TAKE_UP_SCHEMA
     user = json.dumps(payload, ensure_ascii=False)
-    prompt = Prompt(system=TAKE_UP_SYSTEM, user=user, operation="core_response_take_up", effort=SECOND_LOOK_EFFORT,
+    prompt = Prompt(system=TAKE_UP_SYSTEM, user=user, operation="core_response_take_up", effort=reasoning.effort("take_up"),
                     cache_through=shared_material(user, payload))
     if estimate_tokens(TAKE_UP_SYSTEM + prompt.user + json.dumps(schema)) + TAKE_UP_OUTPUT > model.context_budget(Tier.HARD):
         raise ContextOverflow("Complete take-up exceeds the model budget")

@@ -19,7 +19,7 @@ from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 from datetime import date
 
-from nm.core_engine import figures
+from nm.core_engine import figures, reasoning
 from nm.core_engine.replay_scope import known, once
 from nm.core_engine.retrieval import SearchUnavailable, _digest, _valid_location, in_force, validate_search
 from nm.core_engine.understanding import REFERENCE, TEXT, select, source_catalogue
@@ -121,7 +121,7 @@ PROVISIONS_FOR_PICK = 20
 #: Answer limits per step. Calls in flight are budgeted at their limit.
 #: From research v13 (plan AN.28, D4) the steps that reason at medium or high spend output on their reasoning too, so their limits
 #: make room for it (the first paid probe of 31 Oct 2026 stopped the understanding at its old 12,000).
-MAX_OUTPUT = {"understand": 32000, "check": 12000, "revise": 32000, "phrases": 6000,
+MAX_OUTPUT = {"understand": 48000, "check": 16000, "revise": 48000, "phrases": 6000,
               "judgment_phrases": 8000, "pick": 8000, "judgment_pick": 8000, "chronology": 24000, "transfers": 16000,
               "chronology_check": 16000, "transfers_check": 12000, "connections": 16000, "connections_check": 12000}
 
@@ -748,24 +748,14 @@ def _matter_text(understanding, disputes):
     return "\n".join(lines)
 
 
-#: How hard each step reasons (plan AN.28, D4): judgement over the whole matter at medium, a second look a level above its step,
-#: the measured search steps at the release's own setting (None: low, owner decision of 14 Oct 2026); and a step that reads more
-#: than LARGE_FILE_TOKENS a level higher, never above high.
-EFFORT = {"understand": "medium", "check": "medium", "revise": "medium", "chronology": "medium", "transfers": "medium",
-          "connections": "medium", "chronology_check": "high", "transfers_check": "high", "connections_check": "high"}
-LARGE_FILE_TOKENS = 60_000
-_LEVELS = ("low", "medium", "high")
+def _effort(step, user, again=False):
+    """How hard a research step reasons: reasoning.py owns the policy (plan AN.30) - by the step, by what it reads, and by whether it
+    looks again at work already done (again)."""
+    return reasoning.effort(step, tokens=estimate_tokens(user), again=again)
 
 
-def _effort(step, user):
-    level = EFFORT.get(step)
-    if level is not None and estimate_tokens(user) > LARGE_FILE_TOKENS:
-        level = _LEVELS[min(_LEVELS.index(level) + 1, len(_LEVELS) - 1)]
-    return level
-
-
-def _call(model, operation, system, user, schema, step):
-    receipt = model.structured(Prompt(system=system, user=user, operation=operation, effort=_effort(step, user)),
+def _call(model, operation, system, user, schema, step, again=False):
+    receipt = model.structured(Prompt(system=system, user=user, operation=operation, effort=_effort(step, user, again)),
                                schema, Tier.ROUTINE, max_tokens=MAX_OUTPUT[step])
     if not receipt.usable or receipt.data is None:
         raise ModelError(f"Research step {step} did not complete", usage=receipt.usage,
@@ -1640,8 +1630,9 @@ def _proposal(model, context, still, progress, restrictions):
                 # understanding are written beside it (18 Oct 2026).
                 phrasing = beside.submit(_phrases, model, understanding, report)
             try:
+                # The check of a revision looks again at what the first check found (plan AN.30).
                 review = _call(model, "core_research_check", CHECK, text + note + "\n\nYour colleague's understanding:\n"
-                               + json.dumps(understanding, ensure_ascii=False, indent=1), CHECKED, "check")
+                               + json.dumps(understanding, ensure_ascii=False, indent=1), CHECKED, "check", again=number > 0)
             except (ModelError, SchemaViolation) as exc:
                 rounds.append({"code_problems": mechanical, "verdict": "unavailable", "problems": []})
                 failures.append({"step": "check", "scope": f"round {number + 1}", "reason": type(exc).__name__})

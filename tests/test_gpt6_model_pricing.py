@@ -22,6 +22,7 @@ def test_authorized_release_names_resolve_without_inventing_dated_snapshots():
 @pytest.mark.parametrize("model,rates", [
     ("gpt-6-luna", (100, 10, 125, 500)),
     ("gpt-6.1-sol", (2000, 100, 2500, 10000)),
+    ("gpt-6.1-terra", (1000, 50, 1000 * 5 // 4, 5000)),
 ])
 def test_pricing_partitions_input_without_charging_cache_writes_twice(model, rates):
     p = token_pricing(model)
@@ -56,3 +57,19 @@ def test_unestablished_write_price_and_model_are_not_free():
         TokenPricing(Decimal(1), Decimal(1)).cost_micro_usd(100, 0, cache_write_tokens=1)
     with pytest.raises(ConfigurationError):
         token_pricing("unknown")
+
+
+def test_terra_is_a_published_release_with_the_prices_of_openais_pages_and_is_ten_times_luna():
+    """Plan AN.30: GPT-6.1 Terra, read on OpenAI's model and pricing pages on 1 Nov 2026 ($1.00 input, $0.05 cached input, $1.25 cache
+    write and $5.00 output per million; twice the input and cache rates and 1.5 times the output above 272,000 input tokens)."""
+    cfg = load({"NM_MODEL_PROVIDER": "openai", "NM_MODEL_ROUTINE": "gpt-6-luna", "NM_MODEL_HARD": "gpt-6-luna",
+                "NM_MODEL_JUDGE": "gpt-6.1-terra", "NM_EMBED_MODEL": "text-embedding-3-large"})
+    assert cfg.for_tier(Tier.JUDGE).model == "gpt-6.1-terra" and cfg.for_tier(Tier.HARD).model == "gpt-6-luna"
+    terra, luna = token_pricing("gpt-6.1-terra"), token_pricing("gpt-6-luna")
+    assert terra.cost_micro_usd(272000, 100) == 272500
+    assert terra.cost_micro_usd(272001, 100) == 544752
+    assert terra.reserve_micro_usd(272001, 100) == 680753
+    assert terra.cost_micro_usd(1000, 1000) == 10 * luna.cost_micro_usd(1000, 1000)
+    from nm.shared.model_config import BILLING_CONTEXT, MAX_OUTPUT, reservation_micro_usd
+    assert (MAX_OUTPUT["gpt-6.1-terra"], BILLING_CONTEXT["gpt-6.1-terra"]) == (128_000, 1_050_000)
+    assert reservation_micro_usd("gpt-6.1-terra") > reservation_micro_usd("gpt-6-luna")

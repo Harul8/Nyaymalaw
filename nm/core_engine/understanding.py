@@ -6,13 +6,14 @@ import re
 from copy import deepcopy
 from functools import lru_cache
 
+from nm.core_engine import reasoning
 from nm.shared.model_port import (
     ContextOverflow, ModelError, Prompt, SchemaViolation, Tier, canonical_schema_data,
     estimate_tokens, require_schema,
 )
 
 CONTRACT = "core_understanding_v2"
-MAX_OUTPUT = 6000
+MAX_OUTPUT = 16000
 #: Text read from a document's pages keeps the page's line breaks, which are layout,
 #: not words; the advocate's own typed messages stay strictly exact.
 LAYOUT_ROLES = frozenset({"supplied_document"})
@@ -317,7 +318,7 @@ def understand(model, context):
     shown = {identity: alias for alias, identity in context_aliases(context).items()}
     payload = renamed({key: deepcopy(value) for key, value in context.items() if key != "position"}, shown)
     prompt = Prompt(system=system, user=json.dumps(payload, ensure_ascii=False),
-                    operation="core_understanding")
+                    operation="core_understanding", effort=reasoning.effort("message"))
     if (estimate_tokens(system + prompt.user + json.dumps(SCHEMA)) + MAX_OUTPUT
             > model.context_budget(Tier.ROUTINE)):
         raise ContextOverflow("The complete conversation exceeds the model context budget")

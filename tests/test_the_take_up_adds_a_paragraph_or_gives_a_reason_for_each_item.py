@@ -11,7 +11,7 @@ from copy import deepcopy
 
 import pytest
 
-from nm.core_engine import response_writer
+from nm.core_engine import reasoning, response_writer
 from nm.shared.budget_contracts import Completion
 from nm.shared.model_port import ContextOverflow, ModelError, ModelResult, SchemaViolation, Tier, Usage
 from tests.test_the_answer_takes_up_every_order_and_point_or_says_why import items_of, matter
@@ -134,7 +134,7 @@ def test_the_call_is_shown_only_the_items_asked_about_in_full_beside_everything_
     assert returned == {"additions": [], "declined": []}
     (prompt, schema, tier, kwargs), = model.seen
     assert prompt.system == response_writer.TAKE_UP_SYSTEM and prompt.operation == "core_response_take_up"
-    assert prompt.effort == response_writer.SECOND_LOOK_EFFORT and schema == response_writer.TAKE_UP_SCHEMA
+    assert prompt.effort == reasoning.effort("take_up") == "high" and schema == response_writer.TAKE_UP_SCHEMA
     assert tier == Tier.HARD and kwargs == {"max_tokens": response_writer.TAKE_UP_OUTPUT}
     payload = json.loads(prompt.user)
     asked = payload["to_take_up"]

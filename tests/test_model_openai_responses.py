@@ -65,7 +65,7 @@ def adapter(model="gpt-6.1-sol", result=None, budget=None):
     client = FakeClient(result or response(model=model))
     return Adapter(config, client=client, call_budget=budget), client
 
-@pytest.mark.parametrize("model,effort", [("gpt-6.1-sol", "low"), ("gpt-6-luna", "low")])
+@pytest.mark.parametrize("model,effort", [("gpt-6.1-sol", "low"), ("gpt-6-luna", "low"), ("gpt-6.1-terra", "low")])
 def test_exact_responses_payload_is_counted_without_trimming(model, effort):
     session = FakeSession()
     port, client = adapter(model=model, budget=session)
@@ -181,3 +181,36 @@ def test_legacy_chat_shape_and_cached_read_cost_remain_supported():
     assert "messages" in client.calls[0] and "input" not in client.calls[0]
     assert not client.counts
     assert result.usage.cost_usd==port._config.for_tier(Tier.ROUTINE).cost(100,10,cached_tokens=30)
+
+
+def test_terra_chat_tools_fail_before_dispatch_or_reservation():
+    session = FakeSession()
+    port, client = adapter(model="gpt-6.1-terra", budget=session)
+    with pytest.raises(ConfigurationError, match="tool calling"):
+        port.tool_call(Prompt("Exact text"), (ToolDefinition("read", "Read", SCHEMA),), Tier.ROUTINE, max_tokens=200)
+    assert not client.calls and not client.counts and not session.requests
+
+
+@pytest.mark.parametrize("model", ["gpt-6.1-terra", "gpt-6-luna", "gpt-6.1-sol"])
+def test_a_calls_own_effort_is_sent_where_the_product_asks_one_and_the_releases_own_where_it_does_not(model):
+    port, client = adapter(model=model)
+    port.structured(Prompt("Exact text", effort="high"), SCHEMA, Tier.ROUTINE, max_tokens=200)
+    port.structured(Prompt("Exact text"), SCHEMA, Tier.ROUTINE, max_tokens=200)
+    assert [call["reasoning"] for call in client.calls] == [{"effort": "high"}, {"effort": "low"}]
+
+
+def test_the_reasoning_tokens_a_provider_reports_are_recorded_in_the_usage_and_change_no_cost():
+    # Plan AN.30: part of the output tokens already priced, kept so that a run shows what each level of effort cost, step by step.
+    port, client = adapter(model="gpt-6.1-terra", result=response(model="gpt-6.1-terra", outgoing=900))
+    client.result.usage.output_tokens_details = N(reasoning_tokens=640)
+    result = port.structured(Prompt("Exact text"), SCHEMA, Tier.ROUTINE, max_tokens=2000)
+    assert result.usage.provider_extra["reasoning_tokens"] == 640
+    plain, _ = adapter(model="gpt-6.1-terra", result=response(model="gpt-6.1-terra", outgoing=900))
+    assert plain.structured(Prompt("Exact text"), SCHEMA, Tier.ROUTINE, max_tokens=2000).usage.cost_usd == result.usage.cost_usd
+
+
+@pytest.mark.parametrize("reported", [None, True, -1, 901, 1.5, "640"])
+def test_a_figure_for_reasoning_that_cannot_be_right_is_not_recorded(reported):
+    port, client = adapter(model="gpt-6-luna", result=response(model="gpt-6-luna", outgoing=900))
+    client.result.usage.output_tokens_details = N(reasoning_tokens=reported)
+    assert "reasoning_tokens" not in port.structured(Prompt("Exact text"), SCHEMA, Tier.ROUTINE, max_tokens=2000).usage.provider_extra

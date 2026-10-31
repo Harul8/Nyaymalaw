@@ -16,6 +16,7 @@ import re
 import threading
 from concurrent.futures import ThreadPoolExecutor
 
+from nm.core_engine import reasoning
 from nm.shared.external_ai_contracts import ModelPermissionRefused
 from nm.shared.model_port import (USAGE_LIMIT_WORDS, ContentRefused, ModelError, PageImage, Prompt, Tier,
                                   UsageLimitReached)
@@ -104,7 +105,7 @@ def relook(model, first, second, figures):
             f'"{second["name"]}".\n\n' + json.dumps({"figures": [{"after": figure["after"], "first_reads": figure["first"],
                                                                    "second_reads": figure["second"]} for figure in figures]},
                                                      ensure_ascii=False))
-    prompt = Prompt(system=RELOOK, operation=RELOOK_OPERATION, user=user, effort="medium",
+    prompt = Prompt(system=RELOOK, operation=RELOOK_OPERATION, user=user, effort=reasoning.effort("relook"),
                     images=(PageImage("image/jpeg", first["image"]), PageImage("image/jpeg", second["image"])))
     result = model.structured(prompt, RELOOK_SCHEMA, Tier.ROUTINE, max_tokens=RELOOK_OUTPUT)
     shown = list(result.data["figures"])
@@ -170,7 +171,8 @@ def _read_once(model, name, number, image, *, first=None, found=()):
         user += ("\n\nYour first reading:\n" + first + "\n\nWhat code found in it: " + "; ".join(found) + ".")
     # A second look reasons a level above the first reading's own setting (plan AN.28, D4).
     prompt = Prompt(system=SYSTEM + (LOOK_AGAIN if first is not None else ""), operation=OPERATION, user=user,
-                    images=(PageImage("image/jpeg", image),), effort="medium" if first is not None else None)
+                    images=(PageImage("image/jpeg", image),),
+                    effort=reasoning.effort("read_again" if first is not None else "read_page"))
     try:
         result = model.structured(prompt, SCHEMA, Tier.ROUTINE, max_tokens=MAX_OUTPUT)
     except ModelPermissionRefused:

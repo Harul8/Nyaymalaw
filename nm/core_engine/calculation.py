@@ -21,7 +21,7 @@ import re
 from copy import deepcopy
 from datetime import date
 
-from nm.core_engine import limitation, research
+from nm.core_engine import limitation, reasoning, research
 from nm.core_engine.understanding import TYPOGRAPHY as _TYPOGRAPHY, nearest, source_catalogue
 from nm.shared import clock_contracts
 from nm.shared.held_acts import ActUnavailable
@@ -60,7 +60,7 @@ V6_CONTRACT = "core_calculation_v6"
 CONTRACT = "core_calculation_v7"
 OPERATION = "core_calculation"
 CORRECTION_OPERATION = "core_calculation_correct"
-MAX_OUTPUT = 12000
+MAX_OUTPUT = 24000
 #: The Acts whose held text the step reads, all three listed as current.
 SUPPLIED = ("The Limitation Act, 1963", "The Negotiable Instruments Act, 1881", "The Code of Civil Procedure, 1908")
 #: An Act longer than this (the Code of Civil Procedure, about 1.1 million characters) is
@@ -482,8 +482,8 @@ def work_out(model, context, held_acts, *, now=None):
     system = SYSTEM + "\n\n" + "\n\n".join(_held_text(act) for act in acts.values())
     user = research.conversation_text(context)
     try:
-        result = model.structured(Prompt(system=system, user=user, operation=OPERATION), SCHEMA, Tier.ROUTINE,
-                                  max_tokens=MAX_OUTPUT)
+        result = model.structured(Prompt(system=system, user=user, operation=OPERATION, effort=reasoning.effort("calculate")),
+                                  SCHEMA, Tier.ROUTINE, max_tokens=MAX_OUTPUT)
     except ModelError as exc:
         return unavailable(f"the time limits could not be worked out ({type(exc).__name__})")
     if not result.usable or result.data is None:
@@ -516,8 +516,9 @@ def _correct(model, system, user, proposal, refused):
             f"Not checked:\n{reasons}\n\n{CORRECT}")
     made = {"refused": deepcopy(refused), "state": "unavailable", "why": None, "proposal": None}
     try:
-        result = model.structured(Prompt(system=system, user=text, operation=CORRECTION_OPERATION), CORRECTION,
-                                  Tier.ROUTINE, max_tokens=MAX_OUTPUT)
+        result = model.structured(Prompt(system=system, user=text, operation=CORRECTION_OPERATION,
+                                         effort=reasoning.effort("calculate_correct")), CORRECTION, Tier.ROUTINE,
+                                  max_tokens=MAX_OUTPUT)
     except (ModelError, SchemaViolation) as exc:
         return {**made, "why": type(exc).__name__}
     if not result.usable or result.data is None:

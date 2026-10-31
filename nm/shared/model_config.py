@@ -48,6 +48,8 @@ PRICES: dict[str, tuple[float, float]] = {
     # these release IDs without dated snapshots. Standard processing prices.
     "gpt-6-luna": (0.10, 0.50),
     "gpt-6.1-sol": (2.00, 10.00),
+    # Read on OpenAI's model and pricing pages on 1 November 2026 (plan AN.30): ten times Luna, half of Sol.
+    "gpt-6.1-terra": (1.00, 5.00),
     "gpt-4o-mini-2024-07-18": (0.15, 0.60),
     # THE OWNER'S MODEL FROM 29 SEPTEMBER 2026 ("from here on use 4.1 mini only"),
     # checked that day against the official model page: $0.40 input, $0.10 cached
@@ -80,6 +82,7 @@ AUDIO_PRICE_PER_MINUTE: dict[str, str] = {
 MAX_OUTPUT: dict[str, int] = {
     "gpt-6-luna": 128_000,
     "gpt-6.1-sol": 128_000,
+    "gpt-6.1-terra": 128_000,
     "gpt-4o-mini-2024-07-18": 16_384,
     "gpt-4.1-mini-2025-04-14": 32_768,
     "gpt-5.1": 128_000,
@@ -92,6 +95,7 @@ MAX_OUTPUT: dict[str, int] = {
 BILLING_CONTEXT: dict[str, int] = {
     "gpt-6-luna": 1_050_000,
     "gpt-6.1-sol": 1_050_000,
+    "gpt-6.1-terra": 1_050_000,
     "gpt-4o-mini-2024-07-18": 128_000,
     "gpt-4.1-mini-2025-04-14": 1_047_576,
     "gpt-5.1": 400_000,
@@ -105,7 +109,7 @@ RETURNED_MODEL_ALIASES: dict[str, tuple[str, ...]] = {
 }
 
 # Exact published release IDs, not permission to accept arbitrary family aliases.
-PUBLISHED_RELEASES = frozenset({"gpt-6-luna", "gpt-6.1-sol"})
+PUBLISHED_RELEASES = frozenset({"gpt-6-luna", "gpt-6.1-sol", "gpt-6.1-terra"})
 
 
 @dataclass(frozen=True)
@@ -170,7 +174,8 @@ def token_pricing(model: str) -> TokenPricing:
     incoming, outgoing = (Decimal(str(value)) for value in PRICES[model])
     if model in PUBLISHED_RELEASES:
         cached, write = {"gpt-6-luna": ("0.01", "0.125"),
-                         "gpt-6.1-sol": ("0.10", "2.50")}[model]
+                         "gpt-6.1-sol": ("0.10", "2.50"),
+                         "gpt-6.1-terra": ("0.05", "1.25")}[model]
         return TokenPricing(incoming, outgoing, Decimal(cached), Decimal(write),
                             272_000, Decimal(2), Decimal("1.5"))
     return TokenPricing(incoming, outgoing)

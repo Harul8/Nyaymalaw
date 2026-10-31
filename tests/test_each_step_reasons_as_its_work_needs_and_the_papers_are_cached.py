@@ -3,13 +3,14 @@
 Every call reasoned at one setting, and 1.5% of the reviewed turn's input was read from the cache: only each call's instructions
 were marked for reuse, never the conversation with its papers that every writer, review and second look carries alike. The port
 now carries a call's effort and where its shared material ends; the OpenAI transport sends both; each step asks the effort its work
-needs - judgement at medium, a second look a level above, a large file a level higher. Fakes stand in for the provider.
+needs - judgement at medium, a second look a level above, a large file a level higher (since AN.30 all from reasoning.py, whose own
+test pins the table). Fakes stand in for the provider.
 """
 import json
 
 import pytest
 
-from nm.core_engine import page_reading, research, response_writer
+from nm.core_engine import page_reading, reasoning, research, response_writer
 from nm.core_engine.calls import TurnCalls
 from nm.shared.model_port import EFFORTS, Prompt, Tier
 from tests.test_model_openai_responses import SCHEMA, adapter
@@ -54,7 +55,7 @@ class Echo:
         return ModelResult(None, {"answer": "supported"}, tier, "synthetic", "fixture", Usage(1, 1, 0), 0)
 
 
-def test_a_correction_keeps_the_calls_effort_and_its_shared_material_where_that_still_leads():
+def test_a_correction_looks_again_a_level_higher_and_keeps_its_shared_material_where_that_still_leads():
     inner = Echo()
     calls = TurnCalls(inner)
     user = json.dumps({"original_context": {"pages": "the papers"}, "task": "write"})
@@ -64,19 +65,24 @@ def test_a_correction_keeps_the_calls_effort_and_its_shared_material_where_that_
     calls.structured(Prompt(user=user, operation="core_response_writer", effort="medium", cache_through=shared), SCHEMA,
                      Tier.ROUTINE, max_tokens=10)
     sent, = inner.prompts
-    assert (sent.effort, sent.cache_through) == ("medium", shared) and '"correction"' in sent.user
+    assert (sent.effort, sent.cache_through) == ("high", shared) and '"correction"' in sent.user, "a level above the call it corrects"
+    for given, raised in (("low", "medium"), ("high", "high"), (None, None)):
+        calls.correction = {"operation": "core_response_writer", "mismatch": "fix it"}
+        calls.structured(Prompt(user=user, operation="core_response_writer", effort=given, cache_through=shared), SCHEMA,
+                         Tier.ROUTINE, max_tokens=10)
+        assert inner.prompts[-1].effort == raised, "never above high; a call that opted in to no effort stays the release's own"
     assert response_writer.shared_material('{"task": 1}', {"task": 1}) == 0, "a payload that does not open with them marks none"
 
 
-def test_each_step_asks_the_effort_its_work_needs_and_a_large_file_a_level_more():
+def test_each_research_step_asks_the_effort_its_work_needs_and_a_large_file_a_level_more():
     assert [research._effort(step, "short") for step in ("understand", "check", "revise", "chronology", "transfers", "connections",
                                                            "chronology_check", "transfers_check", "connections_check", "phrases",
                                                            "pick")] == [
-        "medium", "medium", "medium", "medium", "medium", "medium", "high", "high", "high", None, None]
-    large = "word " * (research.LARGE_FILE_TOKENS * 2)
+        "medium", "medium", "high", "medium", "medium", "medium", "high", "high", "high", None, None]
+    large = "word " * (reasoning.LARGE_FILE_TOKENS * 2)
     assert (research._effort("chronology", large), research._effort("chronology_check", large),
             research._effort("pick", large)) == ("high", "high", None), "never above high; the measured steps stay as they were"
-    assert (response_writer.WRITING_EFFORT, response_writer.SECOND_LOOK_EFFORT) == ("medium", "high")
+    assert research._effort("check", "short", again=True) == "high", "the check of a revision looks again"
 
 
 def test_the_second_reading_of_a_page_and_the_look_again_at_copies_reason_at_medium():

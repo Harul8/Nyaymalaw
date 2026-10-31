@@ -17,7 +17,7 @@ import json
 import re
 from copy import deepcopy
 
-from nm.core_engine import answer_sources, checklist, research, response_authorities, response_writer
+from nm.core_engine import answer_sources, checklist, reasoning, research, response_authorities, response_writer
 from nm.core_engine.understanding import REFERENCE, TEXT
 from nm.shared import clock_contracts
 from nm.shared.model_port import (
@@ -86,7 +86,7 @@ _FINDINGS = (ROWS_CONTRACT, CONTRACT, SECTION_CONTRACT)
 #: The versions that name only what is wrong.
 _NAMED = (CONTRACT, SECTION_CONTRACT)
 #: A long reply's findings and coverage; reasoning counts towards it.
-MAX_OUTPUT = 24000
+MAX_OUTPUT = 32000
 #: The check across the sections: its conflicts, with reasoning.
 CROSS_OUTPUT = 8000
 SYSTEM = """Message: You receive the complete original attributed conversation, the
@@ -969,7 +969,7 @@ def _removed(draft, context, sources):
 
 def review(model, context, research_record, sources, draft, execution=None, *,
            authority_evidence=None, time_limits=None, held_back=None, shortened=None, sections=None,
-           unanswered=None, conflicts=None, contract=None, writer_notes=None):
+           unanswered=None, conflicts=None, contract=None, writer_notes=None, revised=False):
     """One independent review. A whole answer written in parts (writer v11) is judged as one
     reply (v8); one piece of an answer written dispute by dispute (writer v12) is judged as
     that piece (v9, or v10 when the caller reads it so - P29): a section with its own
@@ -1084,7 +1084,10 @@ def review(model, context, research_record, sources, draft, execution=None, *,
                    **{key: value for key, value in payload.items() if key not in response_writer.SHARED_KEYS}}
     user = json.dumps(payload, ensure_ascii=False)
     # v12 (AN.28, D4 and 6c): the review reasons at medium, and the material it shares is marked for the cache.
-    prompt = Prompt(system=system, user=user, operation="core_response_review", effort="medium" if worded else None,
+    # How hard it reasons is reasoning.py's (plan AN.30): a piece that was changed since its last review - what was added is
+    # its riskiest part - is looked at again a level higher (revised).
+    prompt = Prompt(system=system, user=user, operation="core_response_review",
+                    effort=reasoning.effort("review", tokens=estimate_tokens(user), again=revised) if worded else None,
                     cache_through=response_writer.shared_material(user, payload) if worded else 0)
     if (estimate_tokens(system + prompt.user + json.dumps(schema)) + MAX_OUTPUT
             > model.context_budget(Tier.JUDGE)):
@@ -1217,7 +1220,7 @@ def cross_check(model, context, research_record, sources, sections, execution=No
     if time_limits is not None:
         payload["owned_time_limits"] = response_writer.limit_ids(_aliased(deepcopy(dependencies["time_limits"]), shown))
     prompt = Prompt(system=CROSS_SYSTEM, user=json.dumps(payload, ensure_ascii=False),
-                    operation="core_response_cross_check")
+                    operation="core_response_cross_check", effort=reasoning.effort("cross_check"))
     if (estimate_tokens(CROSS_SYSTEM + prompt.user + json.dumps(CROSS_SCHEMA)) + CROSS_OUTPUT
             > model.context_budget(Tier.JUDGE)):
         raise ContextOverflow("The sections checked together exceed the model budget")

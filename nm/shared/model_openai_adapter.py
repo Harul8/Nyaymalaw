@@ -73,7 +73,7 @@ from nm.shared.text_contracts import blank
 # (question breakdown, search phrases, picks) ran at low, and reasoning splits
 # disputes properly where "none" did not; the owner's standing rule gives reasoning
 # time where a step needs judgement.
-_RESPONSES_EFFORT = {"gpt-6-luna": "low", "gpt-6.1-sol": "low"}
+_RESPONSES_EFFORT = {"gpt-6-luna": "low", "gpt-6.1-sol": "low", "gpt-6.1-terra": "low"}
 
 _FINISH_REASONS: dict[str, Completion] = {
     "stop": Completion.COMPLETE,
@@ -411,7 +411,7 @@ class OpenAIModelAdapter:
             raise ModelPermissionRefused("Page images are not sent with tool calls.")
         guard_tool_budget(prompt, tools, tier, messages, max_tokens)
         cfg = self._cfg(tier)
-        if cfg.model == "gpt-6.1-sol":
+        if cfg.model in ("gpt-6.1-sol", "gpt-6.1-terra"):
             raise ConfigurationError("This model does not support Chat Completions tool calling")
         request_budget, max_tokens = self._budget_for(cfg.model, max_tokens)
         started = time.perf_counter()
@@ -513,11 +513,15 @@ class OpenAIModelAdapter:
                 usage=Usage(incoming, outgoing, cfg.cost(incoming, outgoing),
                             provider_extra={"response_id": str(getattr(response, "id", "")),
                                             "cache_accounting_invalid": True}))
+        # What the model spent thinking, where the provider says (plan AN.30): a diagnostic - it is part of the output tokens
+        # already priced, and nothing here depends on it.
+        thought = getattr(getattr(usage, "completion_tokens_details", None), "reasoning_tokens", None)
         return Usage(incoming, outgoing,
                      cfg.cost(incoming, outgoing, cached_tokens=cached,
                               cache_write_tokens=written), cached,
                      {"response_id": str(getattr(response, "id", "")),
-                      "cache_write_tokens": written, "usage_established": True})
+                      "cache_write_tokens": written, "usage_established": True,
+                      **({"reasoning_tokens": thought} if type(thought) is int and 0 <= thought <= outgoing else {})})
 
     def embed(self, texts: tuple[str, ...]) -> EmbeddingResult:
         if self._before_dispatch is not None or self._call_budget is not None:
@@ -686,7 +690,8 @@ class OpenAIModelAdapter:
             usage=SimpleNamespace(
                 prompt_tokens=getattr(usage, "input_tokens", None),
                 completion_tokens=getattr(usage, "output_tokens", None),
-                prompt_tokens_details=getattr(usage, "input_tokens_details", None)))
+                prompt_tokens_details=getattr(usage, "input_tokens_details", None),
+                completion_tokens_details=getattr(usage, "output_tokens_details", None)))
 
     @classmethod
     def _responses_as_chat(cls, response):

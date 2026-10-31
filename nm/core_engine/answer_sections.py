@@ -724,8 +724,11 @@ class _Answering:
                 return finish(self._failed(scope, exc))
             # 2. Its review.
             try:
-                piece = self._review(scope, draft, {**kwargs, **({"writer_notes": deepcopy(notes)} if notes else {})},
-                                     refused, researched, accepted=list(accepted))
+                # A piece changed since it was last written - a second look, a take-up, a rewrite, a cut - is reviewed a level
+                # higher (plan AN.30): what was added to it is its riskiest part.
+                changed = bool(looks) or better > 0 or state["blocking"] or any(entry["step"] == "writing" for entry in refused)
+                piece = self._review(scope, draft, {**kwargs, **({"writer_notes": deepcopy(notes)} if notes else {}),
+                                                    "revised": changed}, refused, researched, accepted=list(accepted))
             except (SchemaViolation, CorrectionUnavailable) as exc:
                 self.calls.refused(exc)
                 refused.append(_refusal("unreviewed", draft["proposal"], _UNCHECKED["review"]))
