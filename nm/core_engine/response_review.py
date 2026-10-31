@@ -418,8 +418,11 @@ SYSTEM_V12 = SYSTEM_V11.replace(
     "When removed_statements is present,",
     "When writer_notes is present, the writer looked again at words an earlier check or review\nfound at fault and "
     "says why it kept them as they stand (the same figure, name or date written\nanother way, say): weigh that "
-    "against the sources, which alone are evidence. When\nremoved_statements is present,")
+    "against the sources, which alone are evidence. When\nremoved_statements is present,").replace(
+    "bear out (unsupported). Where land_extents is given, code added the transfers of land NM found,\nseller by seller: a sum or remainder of extents is borne out only if it is one land_extents gives,\nsaid as what that seller's transfers found add up to and not as an extent anyone holds or has\ntransferred, and never as a sum across sellers; one for a parcel whose complete is false, or one\nthe piece worked out itself, is not.",
+    "bear out (unsupported). Where figures_added is given, code added up the transactions NM found,\ngiver by giver: a sum or remainder of figures is borne out only if it is one figures_added gives,\nsaid as what that giver's transactions found add up to and not as what anyone holds, owes or has\npaid, and never as a sum across givers; one for a property or account whose complete is false,\nor one the piece worked out itself, is not.")
 assert SYSTEM_V12.count("words: the shortest stretch") == 1 and "writer_notes" in SYSTEM_V12 and "guntas" not in SYSTEM_V12
+assert "figures_added" in SYSTEM_V12 and "land_extents" not in SYSTEM_V12
 SCHEMA_V12 = _object({
     "misleading": {"type": "array", "items": _object({
         **SCHEMA_V10["properties"]["misleading"]["items"]["properties"],
@@ -1008,7 +1011,8 @@ def review(model, context, research_record, sources, draft, execution=None, *,
         land = (response_writer._extents_shown(research_record, context)
                 if contract in PRESENTED and draft["section"] != response_writer.OVERVIEW else None)
         if land:
-            payload["land_extents"] = land
+            # v12 (AN.28, D7): the figures of the transactions of any matter.
+            payload["figures_added" if contract == WORDED_CONTRACT else "land_extents"] = land
         if "dropped" in draft or "cut" in draft:
             payload["removed_statements"] = _removed(draft, context, sources)
         if conflicts:
