@@ -90,13 +90,16 @@ def _page(page):
             raise ValueError("A read page carries its text and who read it")
         if page["read_by"] == "local" and set(page) != {"number", "state", "text", "read_by"}:
             raise ValueError("A page read here carries only its text")
-        # A page the AI read keeps which model read it, how much was legible and any note.
+        # A page the AI read keeps which model read it, how much was legible and any note - and, where it was read again
+        # against its image (plan AN.28, piece 4a), its first reading beside the second.
         if page["read_by"] == "ai" and (
                 not {"number", "state", "text", "read_by", "model", "legible"} <= set(page)
-                <= {"number", "state", "text", "read_by", "model", "legible", "note"}
+                <= {"number", "state", "text", "read_by", "model", "legible", "note", "first_reading"}
                 or not isinstance(page["model"], str) or not page["model"].strip()
                 or page["legible"] not in ("all", "part")
-                or ("note" in page and (not isinstance(page["note"], str) or not page["note"].strip()))):
+                or ("note" in page and (not isinstance(page["note"], str) or not page["note"].strip()))
+                or ("first_reading" in page and (not isinstance(page["first_reading"], str)
+                                                 or not page["first_reading"].strip()))):
             raise ValueError("A page the AI read carries the model, its legibility and any note")
     elif (set(page) != {"number", "state", "code", "reason"} or not str(page["reason"]).strip()
           or page["code"] not in ("scanned", "audio", "unreadable", "not_checked")):
@@ -180,7 +183,8 @@ def turn_material(records):
     for record in records:
         if record["check"]["state"] != "clear":
             raise DocumentRefused(f'"{record["name"]}" was not cleared by the malware check, so it is not read.')
-        pages = [{key: value for key, value in page.items() if key != "state"}
+        # A page's first reading stays with the document (piece 4a): the question carries the page's text as it was read last.
+        pages = [{key: value for key, value in page.items() if key not in ("state", "first_reading")}
                  for page in record["pages"] if page["state"] == "read"]
         total += sum(len(page["text"]) for page in pages)
         material.append({"document_ref": reference(record), "name": record["name"], "pages": pages,

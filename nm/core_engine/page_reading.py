@@ -11,6 +11,7 @@ unread with its reason, never an empty success. A page that could not be read no
 from __future__ import annotations
 
 import logging
+import re
 import threading
 from concurrent.futures import ThreadPoolExecutor
 
@@ -38,6 +39,18 @@ Give the text in reading order and in the language or languages it is written in
 
 Then say how much of the page you could read: all of it, part of it, or none (a blank page, or one too unclear to read). Add a short note only if the advocate should know something about this page, such as an edge cut off in the photograph; otherwise leave the note empty."""
 
+#: Plan AN.28, piece 4a (finding B6): a reading that may leave the page's text incomplete is read again once, against the image -
+#: ILLEGIBLE_MOST places marked [illegible] or more than ILLEGIBLE_SHARE of its words, a place where the reader says it left text out,
+#: or a page only partly read. The first reading is kept beside the second.
+ILLEGIBLE_MOST = 3
+ILLEGIBLE_SHARE = 0.02
+_ILLEGIBLE = re.compile(r"\[\s*illegible[^\]]*\]", re.I)
+_LEFT_OUT = re.compile(r"\[\s*(?:\.{3,}|…|[^\]]{0,60}?\b(?:omitted|not transcribed|not reproduced|continues|continued|remaining|rest of|"
+                       r"truncated|and so on|etc)\b[^\]]{0,60}?)\]|^\s*(?:\.\s*){3,}$|^\s*…\s*$", re.I | re.M)
+LOOK_AGAIN = """
+
+You read this page before. Your first reading follows the page's name, with what code found in it that may leave the page's text incomplete. Look at the image again, place by place: write what the page says where you marked it unreadable or left text out, keeping [illegible] only where the image truly cannot be made out, and leave nothing out - a long table or a repeated entry is written out in full. Compare your text with the image line by line and correct it before you answer."""
+
 SCHEMA = {
     "type": "object",
     "additionalProperties": False,
@@ -58,10 +71,48 @@ def _call(result, number):
             "latency_ms": result.latency_ms, "retries": result.retries}
 
 
+def doubts(reading):
+    """What code finds in a reading that may leave the page's text incomplete (plan AN.28, piece 4a): places marked [illegible] -
+    ILLEGIBLE_MOST or more, or more than ILLEGIBLE_SHARE of the words - places where the reader says it left text out, and a page
+    said to be only partly readable. Empty where there is none."""
+    text = reading["text"]
+    marked, words, left = len(_ILLEGIBLE.findall(text)), len(text.split()), len(_LEFT_OUT.findall(text))
+    found = []
+    if marked and (marked >= ILLEGIBLE_MOST or marked / max(words, 1) > ILLEGIBLE_SHARE):
+        found.append(f"{marked} place{'s' if marked != 1 else ''} marked [illegible]")
+    if left:
+        found.append(f"{left} place{'s' if left != 1 else ''} where the reading says text was left out")
+    if reading["readable"] == "part":
+        found.append("the reading says only part of the page could be read")
+    return found
+
+
 def read_page(model, name, number, image: bytes):
-    """One page as the record keeps it, and the call that read it (None if none returned)."""
-    prompt = Prompt(system=SYSTEM, operation=OPERATION,
-                    user=f'Page {number} of the document "{name}".',
+    """One page as the record keeps it, and the calls that read it. A reading code finds may be incomplete (doubts) is read again
+    once against the image (plan AN.28, piece 4a, D2): the second reading is the page's text, the first kept beside it where they
+    differ; a second look that fails leaves the first reading as it was."""
+    page, call = _read_once(model, name, number, image)
+    if call is None or page["state"] != "read" or not page.get("_doubts"):
+        page.pop("_doubts", None)
+        return page, [call] if call is not None else []
+    found = page.pop("_doubts")
+    again, second = _read_once(model, name, number, image, first=page["text"], found=found)
+    calls = [call] + ([second] if second is not None else [])
+    if second is None or again["state"] != "read":
+        return page, calls
+    again.pop("_doubts", None)
+    if again["text"] != page["text"]:
+        again["first_reading"] = page["text"]
+    return again, calls
+
+
+def _read_once(model, name, number, image, *, first=None, found=()):
+    """One reading of a page as the record keeps it (with what code doubts in it, under "_doubts"), and the call that read it (None
+    if none returned). first: the first reading, for a second look, with what code found in it."""
+    user = f'Page {number} of the document "{name}".'
+    if first is not None:
+        user += ("\n\nYour first reading:\n" + first + "\n\nWhat code found in it: " + "; ".join(found) + ".")
+    prompt = Prompt(system=SYSTEM + (LOOK_AGAIN if first is not None else ""), operation=OPERATION, user=user,
                     images=(PageImage("image/jpeg", image),))
     try:
         result = model.structured(prompt, SCHEMA, Tier.ROUTINE, max_tokens=MAX_OUTPUT)
@@ -88,7 +139,7 @@ def read_page(model, name, number, image: bytes):
         reason = "the AI could not make out this page" + (f" ({note})" if note else "")
         return {"number": number, "state": "unread", "code": "unreadable", "reason": reason}, _call(result, number)
     page = {"number": number, "state": "read", "text": text, "read_by": "ai", "model": result.model,
-            "legible": reading["readable"]}
+            "legible": reading["readable"], "_doubts": doubts({"text": text, "readable": reading["readable"]})}
     if note:
         page["note"] = note
     return page, _call(result, number)
@@ -117,4 +168,4 @@ def read_pages(model, name, images, progress=None):
     with ThreadPoolExecutor(max_workers=min(AT_ONCE, max(1, len(numbers)))) as pool:
         done = list(pool.map(read, numbers))
     return ({page["number"]: page for page, _ in done},
-            [call for _, call in done if call is not None])
+            [call for _, calls in done for call in calls])
