@@ -68,6 +68,13 @@ REVIEW_RETRIES = 1
 #: 2026: in live run 4 the first such rewrite did most of the work, the second cost 75-100 s for
 #: smaller points). A misleading finding keeps the piece's tries (P25).
 BETTER_REWRITES = 1
+#: v14 (AN.28, stage 5): a piece the review finds passes over an item of its coverage list in silence is rewritten once for it.
+COVERAGE_REWRITES = 1
+COVERAGE_PURPOSE = ("The independent review found items of coverage - the orders, directions, pending proceedings and points the "
+                    "papers read side by side show - that bear on the piece but that it neither takes up nor names as left out "
+                    "with a reason; they are listed in mismatch with anything else it found. Rewrite the piece so that it takes "
+                    "up each, citing its pages, or says in a limitation unit why it is left out, and keep everything that was "
+                    "right.")
 #: Why a section, the overview or the check across the sections is not shown as written:
 #: code's own checks refused every try; its review could not be completed; the review still
 #: found problems after the trims; the AI service failed or its account has no credit left (P51); it
@@ -250,6 +257,8 @@ _TOLD = {"grounding": "misleading: not borne out by the advocate's messages, the
          "attribution": "misleading: put in the wrong speaker's or court's mouth",
          "effect": "misleading: says or implies that NM did something",
          response_review.BETTER: "could be better",
+         # v12 (AN.28, stage 5): an item of coverage passed over in silence.
+         response_review.LEFT_OUT: "left out: an item of coverage that bears on the piece, neither taken up nor named as left out",
          # v11 (P43): what could go, which a rewrite may shorten.
          response_review.CUT: ("could go: said again elsewhere in the answer, something an advocate already knows, "
                                "or detail that does not change the advice, which could move under More on this")}
@@ -553,7 +562,7 @@ class _Answering:
         overview = section == response_writer.OVERVIEW
         refused, looks, accepted, notes, trims = [], [], [], [], []
         state = {"proposal": None, "cut": {}, "left_out": [], "items": [], "undo": None, "blocking": False}
-        reviewed, passed, correction, better = None, None, None, 0
+        reviewed, passed, correction, better, covered = None, None, None, 0, 0
 
         def finish(why):
             if why is not None:
@@ -687,6 +696,17 @@ class _Answering:
             if not faults and not items:
                 if not state["blocking"]:
                     passed = piece
+                    if (covered < COVERAGE_REWRITES and any(finding["category"] == response_review.LEFT_OUT
+                                                            for finding in beside(piece))
+                            and self.calls.used(scope) < SECTION_ALLOWANCE):
+                        # Stage 5: rewritten once for what of its coverage it passed over; should the rewrite bring a fault
+                        # of its own, the piece that passed stays, with what it left out said beside it.
+                        covered += 1
+                        self.report("revising")
+                        state.update(proposal=None, cut={}, left_out=[], items=[])
+                        correction = {"mismatch": _told(piece), "rejected": piece["draft"]["proposal"],
+                                      "purpose": COVERAGE_PURPOSE}
+                        continue
                     if (better < BETTER_REWRITES and _read_v10(piece) and beside(piece)
                             and all(finding["category"] in response_review.SUGGESTIONS for finding in beside(piece))
                             and self.calls.used(scope) < SECTION_ALLOWANCE):

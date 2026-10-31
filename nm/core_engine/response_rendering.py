@@ -1422,7 +1422,16 @@ def _misleads_beside(piece, where):
     return [_notice("NOTE", f"The independent check found that {where} may mislead, in a way it did not tie to "
                     f"one paragraph, and the rewrites NM may make did not settle it: "
                     f"{_plainly(finding['mismatch'])} Read {where} with this in mind.")
-            for finding in answer_sections.beside(piece) if finding["category"] not in response_review.SUGGESTIONS]
+            for finding in answer_sections.beside(piece)
+            if finding["category"] not in (*response_review.SUGGESTIONS, response_review.LEFT_OUT)]
+
+
+def _left_out_beside(piece, where):
+    """v19 (AN.28, stage 5): what the independent check found a piece passes over of the papers' record that bears on it, which the
+    rewrite NM made for it did not settle, said beside the piece in the check's own words."""
+    return [_notice("NOTE", f"The independent check found that {where} does not take up something your papers record that "
+                    f"bears on it, and the rewrite NM made for it did not settle that: {_plainly(finding['mismatch'])}")
+            for finding in answer_sections.beside(piece) if finding["category"] == response_review.LEFT_OUT]
 
 
 def _suggested(piece):
@@ -1515,7 +1524,7 @@ def _render_presented(context, research_record, sources, *, sections, cross_chec
                         (calls if place == "ask" else elements).append(
                             _shown_paragraph(unit, index, response_writer.OVERVIEW, sources, asks, kind=kind))
             elements.extend(left_out(overview, "the opening", OPENING))
-            elements.extend(_misleads_beside(opening, "the opening"))
+            elements.extend(_misleads_beside(opening, "the opening") + _left_out_beside(opening, "the opening"))
     # Each time limit closes the first section shown that names it, as v17 places them.
     remarked = _remarked([*pieces, opening])
     claimed, placed = {}, set()
@@ -1560,7 +1569,7 @@ def _render_presented(context, research_record, sources, *, sections, cross_chec
         elements.extend(claimed.get(position, []))
         if not edited:
             elements.extend(left_out(saved, where, name))
-        elements.extend(_misleads_beside(piece, where))
+        elements.extend(_misleads_beside(piece, where) + _left_out_beside(piece, where))
         if edit is not None and not edited:
             said = " ".join(_plainly(conflicts[number]["mismatch"]) for number in edit["conflicts"])
             elements.append(_notice("NOTE", f"A check across the sections found that {where} may not agree with "
