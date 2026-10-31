@@ -10,6 +10,7 @@ unread with its reason, never an empty success. A page that could not be read no
 """
 from __future__ import annotations
 
+import json
 import logging
 import re
 import threading
@@ -61,6 +62,61 @@ SCHEMA = {
         "note": {"type": "string"},
     },
 }
+
+
+#: Plan AN.28, piece 4c (findings A8, A9): the figures two copies of one page read differently, looked at again on both images.
+RELOOK_OPERATION = "core_page_relook"
+RELOOK_OUTPUT = 4000
+RELOOK = """You receive the images of two pages that code found to be copies of one page, read separately, and the figures in which the two readings differ, each with the words just before it. Look at each image at that place and write the figure exactly as that image shows it - figures, letters and punctuation as written - or "unclear" where the image cannot settle it. Say what each image shows: do not choose between the copies, and do not correct one by the other.
+Work in a loop: find each place on both images, write what each shows, compare what you wrote with the images, and correct it before you answer."""
+RELOOK_SCHEMA = {"type": "object", "additionalProperties": False, "required": ["figures"], "properties": {"figures": {
+    "type": "array", "items": {"type": "object", "additionalProperties": False, "required": ["after", "first_shows", "second_shows"],
+                               "properties": {"after": {"type": "string"}, "first_shows": {"type": "string"},
+                                              "second_shows": {"type": "string"}}}}}}
+
+
+def corrected(text, read, shows, after):
+    """A page's text with one figure as its image shows it (piece 4c), or the text unchanged: where the image shows a figure, it differs
+    from the reading, and the reading's figure stands in the text once - or once after the words before it. A figure of more than one
+    word, or one that cannot be placed, is left as read."""
+    shows, read = " ".join(str(shows).split()), " ".join(str(read).split())
+    if (not shows or shows.casefold() == "unclear" or not any(c.isdigit() for c in shows) or " " in read or " " in shows
+            or shows.casefold() == read.casefold()):
+        return text
+    alone = rf"(?<![\w./-]){re.escape(read)}(?![\w./-])"
+    spans = [(match.start(), match.end()) for match in re.finditer(alone, text, re.I)]
+    if len(spans) != 1 and after.split():
+        before = r"\W+".join(map(re.escape, after.split()))
+        spans = [(match.start(1), match.end(1)) for match in re.finditer(before + r"\W+(" + alone + ")", text, re.I)]
+    if len(spans) != 1:
+        return text
+    start, end = spans[0]
+    # The page's own letters before the figure (Ac. of Ac.6.16) stay where the image is read for the figure alone.
+    lead = re.match(r"\D*", text[start:end]).group(0)
+    return text[:start] + (lead + shows if shows[:1].isdigit() else shows) + text[end:]
+
+
+def relook(model, first, second, figures):
+    """Figures two copies of one page read differently, looked at again on both images (plan AN.28, piece 4c, D2 and D3). first,
+    second: {"name", "number", "image", "text"}; figures: as copy_figures.differences gives them. Returns (the first page's text as
+    corrected, or None where unchanged; the second's; the call). What each image shows is the model's to read; code places it."""
+    user = (f'The first image is page {first["number"]} of "{first["name"]}"; the second is page {second["number"]} of '
+            f'"{second["name"]}".\n\n' + json.dumps({"figures": [{"after": figure["after"], "first_reads": figure["first"],
+                                                                   "second_reads": figure["second"]} for figure in figures]},
+                                                     ensure_ascii=False))
+    prompt = Prompt(system=RELOOK, operation=RELOOK_OPERATION, user=user,
+                    images=(PageImage("image/jpeg", first["image"]), PageImage("image/jpeg", second["image"])))
+    result = model.structured(prompt, RELOOK_SCHEMA, Tier.ROUTINE, max_tokens=RELOOK_OUTPUT)
+    shown = list(result.data["figures"])
+    if len(shown) != len(figures):
+        by_after = {item["after"].casefold(): item for item in shown}
+        shown = [by_after.get(figure["after"].casefold()) for figure in figures]
+    one, two = first["text"], second["text"]
+    for figure, seen in zip(figures, shown):
+        if seen is not None:
+            one = corrected(one, figure["first"], seen["first_shows"], figure["after"])
+            two = corrected(two, figure["second"], seen["second_shows"], figure["after"])
+    return (one if one != first["text"] else None, two if two != second["text"] else None, _call(result, first["number"]))
 
 
 def _call(result, number):

@@ -17,7 +17,7 @@ import time
 from copy import deepcopy
 
 from nm.arrive.advocate_contracts import utcnow
-from nm.core_engine import documents, page_reading, voice
+from nm.core_engine import copy_figures, documents, page_reading, voice
 from nm.core_engine.documents import DocumentRefused
 from nm.open_matter.document_local import DocumentParserDefect, ExtractionRefused
 from nm.open_matter.document_text_port import AdmittedDocument, DocumentFormat, TextState
@@ -236,6 +236,64 @@ class DocumentDesk:
             raise DocumentRefused("This document holds more text than can be kept for one document. "
                                   "Send the relevant pages instead.")
         self.texts.put(space(advocate_id), documents.reference(renewed), body)
+        return renewed, calls
+
+    def relook(self, advocate_id, refs, model_factory):
+        """The documents a message carries, with figures two copies of one page read differently looked at again on both images
+        (plan AN.28, piece 4c): a page the AI read whose figure its image shows otherwise is corrected there, its first reading kept
+        beside it, and the document stored as a new record. A page read from a text layer is the document's own words and is never
+        changed. Returns (the records, in the order given, renewed where corrected; the calls made). model_factory: the reading
+        model, built only where there is something to look at again."""
+        records = [self.load(advocate_id, ref) for ref in refs]
+        by_id = {record["document_id"]: record for record in records}
+        pages = [{"document": record["name"], "key": record["document_id"], "page": page["number"], "text": page["text"]}
+                 for record in records for page in record["pages"] if page["state"] == "read"]
+
+        def page_of(place):
+            return next(page for page in by_id[place["key"]]["pages"] if page["number"] == place["page"])
+        found = [difference for difference in copy_figures.differences(pages)
+                 if any(page_of(difference[side]).get("read_by") == "ai" for side in ("first", "second"))
+                 and all(by_id[difference[side]["key"]]["format"] in ("pdf", "image") for side in ("first", "second"))]
+        if not found:
+            return records, []
+        model, texts, calls = model_factory(), {}, []
+        for difference in found:
+            sides = []
+            for side in ("first", "second"):
+                record, number = by_id[difference[side]["key"]], difference[side]["page"]
+                images, _ = self.reader.page_images(self._admitted(advocate_id, record["document_id"], record["format"],
+                                                                   self._original(advocate_id, record), record["sha256"]), [number])
+                if number not in images:
+                    break
+                key = (record["document_id"], number)
+                sides.append({"name": record["name"], "number": number, "image": images[number],
+                              "text": texts.get(key, page_of(difference[side])["text"]), "key": key,
+                              "ai": page_of(difference[side]).get("read_by") == "ai"})
+            if len(sides) != 2:
+                continue
+            first, second, call = page_reading.relook(model, sides[0], sides[1], difference["figures"])
+            calls.append(call)
+            for side, text in zip(sides, (first, second)):
+                if text is not None and side["ai"]:
+                    texts[side["key"]] = text
+        renewed = []
+        for record in records:
+            mine = {number: text for (document_id, number), text in texts.items() if document_id == record["document_id"]}
+            if not mine:
+                renewed.append(record)
+                continue
+            pages = [{**page, "text": mine[page["number"]], "first_reading": page.get("first_reading", page["text"])}
+                     if page["number"] in mine else page for page in record["pages"]]
+            again = documents.receipt(document_id=record["document_id"], name=record["name"], fmt=record["format"],
+                                      sha256=record["sha256"], size=record["size"], received_at=record["received_at"],
+                                      check=record["check"], pages=pages, observed_pages=record["observed_pages"],
+                                      failure=record["failure"])
+            body = json.dumps(again, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+            if len(body) > MAX_DERIVATIVE_BYTES:
+                renewed.append(record)
+                continue
+            self.texts.put(space(advocate_id), documents.reference(again), body)
+            renewed.append(again)
         return renewed, calls
 
     def _original(self, advocate_id, record):

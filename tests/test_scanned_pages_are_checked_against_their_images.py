@@ -7,11 +7,14 @@ their place among pages already paired and the figures they share, not only by t
 two copies read differently are looked at again on both images, a page the AI read corrected where its image shows otherwise (4c).
 The pages and figures here are invented.
 """
+from pathlib import Path
+
 import pytest
 
 from nm.core_engine import copy_figures, documents, page_reading
 from nm.shared.model_port import ModelResult, ProviderUnavailable, Usage
 from tests.test_core_documents import ADVOCATE, desk, pdf  # noqa: F401 - pytest fixture
+from tests.test_core_served import served  # noqa: F401 - pytest fixture
 
 pytestmark = pytest.mark.class_a
 
@@ -115,3 +118,63 @@ def test_a_page_at_the_same_place_is_no_copy_without_figures_in_common_or_a_pair
     assert frozenset({("d1", 2), ("d2", 2)}) not in copy_figures.copies(first + second)
     lone = paper("copy.pdf", "d2", other_page(1, "1.10"), "Indenture ... survey number 12 extent 6.16 acres document 77 of 2003")
     assert frozenset({("d1", 2), ("d2", 2)}) not in copy_figures.copies(first[:2] + lone), "one pair is no offset to go by"
+
+
+class Relook:
+    """Answers a look again at two images with what `shows` says each image shows."""
+
+    def __init__(self, shows):
+        self.shows, self.prompts = shows, []
+
+    def structured(self, prompt, schema, tier, *, max_tokens=None):
+        self.prompts.append(prompt)
+        return ModelResult(text=None, data={"figures": self.shows}, tier=tier, provider="scripted", model="page-model-1",
+                           usage=Usage(1200, 80, 0.001), latency_ms=5)
+
+
+def side(text, number=1, name="deed.pdf"):
+    return {"name": name, "number": number, "image": b"\xff\xd8\xffimage", "text": text}
+
+
+def test_figures_two_copies_read_differently_are_looked_at_again_on_both_images_and_placed_by_code():
+    figures = [{"first": "6.06", "second": "6.16", "after": "survey number 12 extent"}]
+    one, two, call = page_reading.relook(Relook([{"after": "survey number 12 extent", "first_shows": "6.06", "second_shows": "6.06"}]),
+                                         side(page_text("6.06")), side(page_text("6.16"), name="copy.pdf"), figures)
+    assert one is None and two == page_text("6.06") and call["operation"] == page_reading.OPERATION
+    model = Relook([{"after": "survey number 12 extent", "first_shows": "6.06", "second_shows": "unclear"}])
+    assert page_reading.relook(model, side(page_text("6.06")), side(page_text("6.16")), figures)[:2] == (None, None)
+    prompt, = model.prompts
+    assert prompt.operation == page_reading.RELOOK_OPERATION and len(prompt.images) == 2 and prompt.system == page_reading.RELOOK
+    assert '"first_reads": "6.06"' in prompt.user and '"second_reads": "6.16"' in prompt.user
+
+
+def test_before_a_message_goes_a_page_the_ai_read_is_corrected_where_its_image_shows_otherwise_and_a_text_layer_never_is(desk):
+    typed = desk.receive(ADVOCATE, "deed.pdf", pdf([page_text("6.06")]))
+    scan = desk.receive(ADVOCATE, "copy.pdf", pdf([""]))
+    scan, _ = desk.read_waiting(ADVOCATE, documents.reference(scan),
+                                Pages({1: {"text": page_text("6.16"), "readable": "all", "note": ""}}))
+    refs = [documents.reference(typed), documents.reference(scan)]
+    built = []
+    model = Relook([{"after": "survey number 12 extent", "first_shows": "6.16", "second_shows": "6.06"}])
+    records, calls = desk.relook(ADVOCATE, refs, lambda: built.append(1) or model)
+    kept, corrected = records
+    assert kept == typed, "a page read from a text layer is the document's own words"
+    assert corrected["pages"][0]["text"] == page_text("6.06") and corrected["pages"][0]["first_reading"] == page_text("6.16")
+    assert desk.load(ADVOCATE, documents.reference(corrected)) == corrected and len(calls) == 1 and built == [1]
+    again, calls = desk.relook(ADVOCATE, [documents.reference(typed), documents.reference(corrected)], lambda: built.append(1) or model)
+    assert again == [typed, corrected] and calls == [] and built == [1], "copies that agree need no model and no call"
+
+
+def test_the_page_asks_for_the_look_again_before_a_message_goes_and_gets_each_document_as_it_now_is(served):
+    # The route (piece 4c): documents whose copies agree come back as they were, with no model asked for.
+    from urllib.parse import quote
+    from tests.test_core_documents import Checker
+    served.app.documents.checker = Checker()
+    refs = [served.client.post("/api/documents", content=f"Note {n}: the cheque was returned on 3 October 2026.".encode(),
+                               headers={"x-nm-document-name": quote(f"note{n}.txt")}).json()["document_ref"] for n in (1, 2)]
+    reply = served.client.post("/api/documents/relook", json={"refs": refs})
+    assert reply.status_code == 200, reply.text
+    assert [shown["document_ref"] for shown in reply.json()["documents"]] == refs and reply.headers["cache-control"] == "no-store"
+    assert served.client.post("/api/documents/relook", json={"refs": ["not-a-ref"]}).status_code == 404
+    page = (Path(__file__).resolve().parents[1] / "nm" / "app" / "app.js").read_text(encoding="utf8")
+    assert "if (attachments.length > 1) await relookAttachments();" in page, "the page asks before a message with documents goes"

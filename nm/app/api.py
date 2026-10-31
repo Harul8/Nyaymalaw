@@ -1849,6 +1849,30 @@ def start_reading_document(document_ref: str, advocate_id: Advocate, request: Re
     return desk.jobs.start(advocate_id, document_ref, len(waiting), work, _reading_error)
 
 
+class RelookRequest(BaseModel):
+    refs: list[Annotated[str, Field(max_length=120)]] = Field(max_length=TURN_DOCUMENT_LIMIT)
+
+
+@app.post('/api/documents/relook', dependencies=[CsrfProtected])
+def relook_documents(req: RelookRequest, advocate_id: Advocate, request: Request):
+    """Before a message goes with its documents (plan AN.28, piece 4c): figures two copies of one page read differently are looked
+    at again on both images under the advocate's AI data-sharing permission, and each document comes back as it now is - a new
+    record where a page the AI read was corrected. The page sends the message with whatever comes back, or with the documents as
+    they were if this cannot be done."""
+    if not _session_current(request, advocate_id):
+        raise HTTPException(401, 'not signed in')
+    try:
+        records, _ = _document_desk().relook(advocate_id, list(req.refs), lambda: application().document_reader(
+            advocate_id, session_current=lambda: _session_current(request, advocate_id)))
+    except _READING_FAILURES as exc:
+        if isinstance(exc, ModelPermissionRefused) and not _session_current(request, advocate_id):
+            raise HTTPException(401, 'not signed in') from exc
+        error = _reading_error(exc)
+        raise HTTPException(error['status'], {'why': error['why'], 'code': error['code']}) from exc
+    return JSONResponse({'documents': [document_rules.summary(record) for record in records]},
+                        headers={'Cache-Control': 'no-store'})
+
+
 @app.get('/api/documents/{document_ref}/reading')
 def reading_document_status(document_ref: str, advocate_id: Advocate, request: Request):
     """Where this advocate's reading of the document stands: reading (pages done of pages to read), done (with the document as it

@@ -4613,6 +4613,7 @@ async function send(message, { workProduct, keepInMatter = false } = {}) {
   // The documents attached under the brief travel with this message only.
   const blocked = attachmentsBlockSend();
   if (blocked) { $('attachments-status').textContent = blocked; return; }
+  if (attachments.length > 1) await relookAttachments();
   const documents = attachments.map((item) => ({ document_ref: item.summary.document_ref,
     name: item.summary.name, recording: Boolean(item.summary.recording), pages_read: item.summary.pages_read,
     pages_read_by_ai: item.summary.pages_read_by_ai, pages_unread: item.summary.unread.length }));
@@ -5192,6 +5193,22 @@ async function uploadAttachment(file) {
 // The AI reads what waits for it: scanned pages, or a recording. While anything still
 // waits (the AI could not read it just now, or AI data sharing was off), the chip
 // offers to read it again (17 Oct 2026); what was already read stays.
+// COPIES LOOKED AT AGAIN (plan AN.28, piece 4c): before a message goes with two documents or more, figures that copies of one page
+// were read differently are looked at again on their images by the server; a document whose reading was corrected comes back as its
+// new record. The message goes with the documents as they were read if this cannot be done.
+async function relookAttachments() {
+  const status = $('attachments-status');
+  status.textContent = 'Checking copies of a page against their images…';
+  try {
+    const answer = await api('/api/documents/relook', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refs: attachments.map((item) => item.summary.document_ref) }) });
+    if (answer && Array.isArray(answer.documents) && answer.documents.length === attachments.length) {
+      answer.documents.forEach((summary, index) => { attachments[index].summary = summary; });
+    }
+  } catch { /* the documents go as they were read */ }
+  status.textContent = '';
+}
+
 async function readWaiting(item) {
   const settle = (status) => {
     item.status = status;
