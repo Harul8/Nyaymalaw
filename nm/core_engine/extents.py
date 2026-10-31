@@ -27,6 +27,12 @@ _DECIMAL_ACRES = re.compile(rf"\b({_NUMBER})\.({_NUMBER})\s*(?:acres?|acs?\b\.?)
 _WHOLE_ACRES = re.compile(rf"\b({_NUMBER})\s*(?:acres?|acs?\b\.?)(?!\s*(?:and\s*)?{_NUMBER}\s*guntas?)", re.I)
 _GUNTAS = re.compile(rf"\b({_NUMBER})\s*(?:guntas?|gts?\.?)\b", re.I)
 _YARDS = re.compile(rf"\b({_NUMBER}(?:\.\d+)?)\s*(?:sq\.?\s*(?:yards?|yds?\.?)|square\s+yards?)", re.I)
+#: Acre 7 / Acres 7 / Ac. 7: whole acres written with the word before the number (plan AN.28, B15); a number that runs on into
+#: guntas or a point is not this.
+_ACRES_FIRST = re.compile(rf"\bac(?:res?|s)?\.?\s*({_NUMBER})(?![\d.\-])(?!\s*(?:guntas?|gts?)\b)", re.I)
+#: Every way a paper or its reading writes a dash between acres and guntas, read as the hyphen (plan AN.28, B14): hyphen, non-breaking
+#: hyphen, figure dash, en and em dashes, horizontal bar and minus sign.
+_DASHES = re.compile("[‐‑‒–—―−]")
 
 
 def _extents_in(text):
@@ -34,7 +40,7 @@ def _extents_in(text):
     second extent."""
     found = []
     for pattern, how in ((_AC_DOT, "acres.guntas"), (_ACRES_GUNTAS, "acres and guntas"), (_DECIMAL_ACRES, "decimal"),
-                         (_WHOLE_ACRES, "acres"), (_GUNTAS, "guntas"), (_YARDS, "square yards")):
+                         (_WHOLE_ACRES, "acres"), (_ACRES_FIRST, "acres"), (_GUNTAS, "guntas"), (_YARDS, "square yards")):
         found += [(match.start(), match.end(), how, match) for match in pattern.finditer(text)]
     found.sort(key=lambda item: (item[0], -(item[1] - item[0])))
     kept = []
@@ -68,7 +74,7 @@ def parse(words):
     writes it and no other way; where two readings are possible the way is said (6.06 acres is 6 acres 6 guntas, a paper's own
     notation, unless the part after the point is 40 or more, when it is decimal acres); more than one extent in the words, or none, is
     not read."""
-    kept = _extents_in(" ".join(str(words).split()))
+    kept = _extents_in(_DASHES.sub("-", " ".join(str(words).split())))
     if not kept:
         return None, "no extent in these words"
     if len(kept) > 1:

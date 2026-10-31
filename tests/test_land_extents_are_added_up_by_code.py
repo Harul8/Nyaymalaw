@@ -359,3 +359,11 @@ def test_a_stated_whole_written_two_ways_is_one_stated_whole_and_two_that_differ
     assert [(t["text"], t["ids"]) for t in parcel["totals"]] == [("the whole survey number", ["X1", "X2"])], "unreadable ones by their words"
     (parcel,) = ledger([transfer(1, "Ac.1.18", total="the whole survey number"), transfer(2, "Ac.1.00", total="the entire field", to="Mahesh Babu")])
     assert [t["text"] for t in parcel["totals"]] == ["the whole survey number", "the entire field"], "unreadable ones that differ are two"
+
+
+@pytest.mark.parametrize("words,guntas", [
+    ("Ac 3 – 12 Guntas", 132), ("Ac 3 — 12 gts", 132), ("Ac. 3−12", 132), ("Acre 7", 280), ("Acres 7", 280),
+    ("Ac 7", 280), ("Acre 7 guntas", 7)])
+def test_an_extent_is_read_whatever_its_dash_and_with_the_unit_before_a_whole_number(words, guntas):
+    # Plan AN.28, B14 and B15 (invented figures): a long dash between acres and guntas, and the word before a whole number of acres.
+    assert extents.parse(words)[0] == guntas
