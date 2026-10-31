@@ -1076,8 +1076,11 @@ def review(model, context, research_record, sources, draft, execution=None, *,
     system, schema = ((SYSTEM_V12, SCHEMA_V12) if contract == WORDED_CONTRACT
                       else (SYSTEM_V11, SCHEMA_V11) if contract == PRESENTED_CONTRACT
                       else (SYSTEM_V10, SCHEMA_V10) if contract == MISLEADS_CONTRACT else (SYSTEM, SCHEMA))
-    prompt = Prompt(system=system, user=json.dumps(payload, ensure_ascii=False),
-                    operation="core_response_review")
+    user = json.dumps(payload, ensure_ascii=False)
+    # v12 (AN.28, D4 and 6c): the review reasons at medium, and the conversation with its papers is marked for the cache.
+    worded = contract == WORDED_CONTRACT
+    prompt = Prompt(system=system, user=user, operation="core_response_review", effort="medium" if worded else None,
+                    cache_through=response_writer.shared_material(user, payload) if worded else 0)
     if (estimate_tokens(system + prompt.user + json.dumps(schema)) + MAX_OUTPUT
             > model.context_budget(Tier.JUDGE)):
         raise ContextOverflow("Complete independent response review exceeds the model budget")

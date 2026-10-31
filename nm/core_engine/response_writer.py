@@ -1722,9 +1722,24 @@ def _payload(context, record, sources, interpretation, execution, layout, index,
                              if row["kind"] not in {"provision", "judgment"} or offered.get(identity) in shown}}
 
 
-def _write_part(model, payload, *, system=SYSTEM, schema=PART_SCHEMA_V11):
-    prompt = Prompt(system=system, user=json.dumps(payload, ensure_ascii=False),
-                    operation="core_response_writer")
+#: How hard v14's writing reasons (plan AN.28, D4): a part and the overview at medium, the second look at its failing paragraphs a
+#: level above.
+WRITING_EFFORT, SECOND_LOOK_EFFORT = "medium", "high"
+
+
+def shared_material(user, payload):
+    """How many leading characters of a call's words are the conversation with its papers (original_context), which every call of
+    a kind carries alike and a provider may cache (plan AN.28, 6c); 0 where the payload does not begin with it."""
+    if not payload or next(iter(payload)) != "original_context":
+        return 0
+    prefix = json.dumps({"original_context": payload["original_context"]}, ensure_ascii=False)[:-1]
+    return len(prefix) if user.startswith(prefix) else 0
+
+
+def _write_part(model, payload, *, system=SYSTEM, schema=PART_SCHEMA_V11, effort=None):
+    user = json.dumps(payload, ensure_ascii=False)
+    prompt = Prompt(system=system, user=user, operation="core_response_writer", effort=effort,
+                    cache_through=shared_material(user, payload) if effort else 0)
     if (estimate_tokens(system + prompt.user + json.dumps(schema)) + MAX_OUTPUT
             > model.context_budget(Tier.HARD)):
         raise ContextOverflow("Complete response context exceeds the model budget")
@@ -1796,7 +1811,8 @@ def write_section(model, context, research_record, sources, *, index, interpreta
                                                 layout, index, time_limits, worded=presented,
                                                 general=contract == REPAIRED_CONTRACT),
                                 **({"system": SYSTEM_V14 if contract == REPAIRED_CONTRACT else SYSTEM_V13,
-                                    "schema": PART_SCHEMA_V13} if presented else {})))
+                                    "schema": PART_SCHEMA_V13} if presented else {}),
+                                **({"effort": WRITING_EFFORT} if contract == REPAIRED_CONTRACT else {})))
     _named_limits(part, _limit_names(time_limits))
     if hasattr(model, "last_output"):
         # A shape correction shows the writer the section it wrote.
@@ -1934,8 +1950,10 @@ def write_overview(model, context, research_record, sources, *, sections, interp
         raise ValueError("Only an answer covering several disputes opens with an overview")
     payload = _overview_payload(context, research_record, sources, sections, interpretation, execution, time_limits,
                                 presented, general=contract == REPAIRED_CONTRACT)
-    prompt = Prompt(system=system, user=json.dumps(payload, ensure_ascii=False),
-                    operation="core_response_overview")
+    user = json.dumps(payload, ensure_ascii=False)
+    v14 = contract == REPAIRED_CONTRACT
+    prompt = Prompt(system=system, user=user, operation="core_response_overview", effort=WRITING_EFFORT if v14 else None,
+                    cache_through=shared_material(user, payload) if v14 else 0)
     if (estimate_tokens(system + prompt.user + json.dumps(schema)) + OVERVIEW_OUTPUT
             > model.context_budget(Tier.HARD)):
         raise ContextOverflow("Complete overview context exceeds the model budget")
@@ -2061,7 +2079,9 @@ def repair(model, context, research_record, sources, proposal, faults, *, sectio
                 entry[key].append(value)
     payload["to_check"] = [grouped[position] for position in sorted(grouped)]
     schema = OVERVIEW_REPAIR_SCHEMA if overview else REPAIR_SCHEMA
-    prompt = Prompt(system=REPAIR_SYSTEM, user=json.dumps(payload, ensure_ascii=False), operation="core_response_repair")
+    user = json.dumps(payload, ensure_ascii=False)
+    prompt = Prompt(system=REPAIR_SYSTEM, user=user, operation="core_response_repair", effort=SECOND_LOOK_EFFORT,
+                    cache_through=shared_material(user, payload))
     if estimate_tokens(REPAIR_SYSTEM + prompt.user + json.dumps(schema)) + REPAIR_OUTPUT > model.context_budget(Tier.HARD):
         raise ContextOverflow("Complete second look exceeds the model budget")
     try:

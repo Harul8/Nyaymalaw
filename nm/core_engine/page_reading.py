@@ -104,7 +104,7 @@ def relook(model, first, second, figures):
             f'"{second["name"]}".\n\n' + json.dumps({"figures": [{"after": figure["after"], "first_reads": figure["first"],
                                                                    "second_reads": figure["second"]} for figure in figures]},
                                                      ensure_ascii=False))
-    prompt = Prompt(system=RELOOK, operation=RELOOK_OPERATION, user=user,
+    prompt = Prompt(system=RELOOK, operation=RELOOK_OPERATION, user=user, effort="medium",
                     images=(PageImage("image/jpeg", first["image"]), PageImage("image/jpeg", second["image"])))
     result = model.structured(prompt, RELOOK_SCHEMA, Tier.ROUTINE, max_tokens=RELOOK_OUTPUT)
     shown = list(result.data["figures"])
@@ -168,8 +168,9 @@ def _read_once(model, name, number, image, *, first=None, found=()):
     user = f'Page {number} of the document "{name}".'
     if first is not None:
         user += ("\n\nYour first reading:\n" + first + "\n\nWhat code found in it: " + "; ".join(found) + ".")
+    # A second look reasons a level above the first reading's own setting (plan AN.28, D4).
     prompt = Prompt(system=SYSTEM + (LOOK_AGAIN if first is not None else ""), operation=OPERATION, user=user,
-                    images=(PageImage("image/jpeg", image),))
+                    images=(PageImage("image/jpeg", image),), effort="medium" if first is not None else None)
     try:
         result = model.structured(prompt, SCHEMA, Tier.ROUTINE, max_tokens=MAX_OUTPUT)
     except ModelPermissionRefused:

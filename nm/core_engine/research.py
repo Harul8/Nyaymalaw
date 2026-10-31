@@ -766,8 +766,24 @@ def _matter_text(understanding, disputes):
     return "\n".join(lines)
 
 
+#: How hard each step reasons (plan AN.28, D4): judgement over the whole matter at medium, a second look a level above its step,
+#: the measured search steps at the release's own setting (None: low, owner decision of 14 Oct 2026); and a step that reads more
+#: than LARGE_FILE_TOKENS a level higher, never above high.
+EFFORT = {"understand": "medium", "check": "medium", "revise": "medium", "chronology": "medium", "transfers": "medium",
+          "connections": "medium", "chronology_check": "high", "transfers_check": "high", "connections_check": "high"}
+LARGE_FILE_TOKENS = 60_000
+_LEVELS = ("low", "medium", "high")
+
+
+def _effort(step, user):
+    level = EFFORT.get(step)
+    if level is not None and estimate_tokens(user) > LARGE_FILE_TOKENS:
+        level = _LEVELS[min(_LEVELS.index(level) + 1, len(_LEVELS) - 1)]
+    return level
+
+
 def _call(model, operation, system, user, schema, step):
-    receipt = model.structured(Prompt(system=system, user=user, operation=operation),
+    receipt = model.structured(Prompt(system=system, user=user, operation=operation, effort=_effort(step, user)),
                                schema, Tier.ROUTINE, max_tokens=MAX_OUTPUT[step])
     if not receipt.usable or receipt.data is None:
         raise ModelError(f"Research step {step} did not complete", usage=receipt.usage,
