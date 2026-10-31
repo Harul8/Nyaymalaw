@@ -55,3 +55,15 @@ def test_the_purpose_the_check_already_had_is_unchanged():
     assert "Our purpose with every matter is to find where the law stands for each dispute in it" in check
     assert "Do not report research as a problem because the advocate's words did not literally ask for advice" in check
     assert "Do not invent problems to have something to say." in check
+
+
+def test_an_understanding_that_lists_legal_questions_with_nothing_ruled_out_is_researched():
+    # The second paid replay (1 Nov 2026): a last revision said no research was needed, though it listed legal questions and the
+    # advocate had ruled nothing out; the owner's standing purpose researches every matter unless the advocate rules it out.
+    from tests.test_core_research import understanding as scripted
+    quiet = {**scripted(), "needs_research": False, "no_research_reason": "Confined to the papers."}
+    made = plan(Model(quiet, revisions=[quiet]), context("Find the applicable law."))
+    assert made["proposal"]["understanding"]["needs_research"] is True and made["work"]
+    ruled = {**quiet, "ruled_out": ["do not research yet"]}
+    kept = plan(Model(ruled, revisions=[ruled]), context("Find the applicable law. Do not research yet."))
+    assert kept["proposal"]["understanding"]["needs_research"] is False and kept["work"] == [], "what the advocate rules out stands"

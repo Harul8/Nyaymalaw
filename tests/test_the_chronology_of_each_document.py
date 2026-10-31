@@ -328,3 +328,21 @@ def test_the_v13_prompt_dates_an_event_by_when_it_happened_and_lists_a_recited_a
                  "records one event: list it once", "Work in a loop", "Do not work out, convert or guess a date"):
         assert part in prompt, part
     assert "Look again" in research.CHRONOLOGY_CHECK and "not_carried" in research.CHRONOLOGY_CHECK
+
+
+
+def test_the_papers_looks_again_run_at_once_not_one_after_another():
+    # The first paid replay of research v13 waited seven minutes for eight looks again in turn.
+    meet = threading.Barrier(2)
+
+    def answer(name):
+        def respond(seen):
+            if '"to_check"' in seen:
+                meet.wait(timeout=10)       # both papers' looks again must be in flight together, or this raises
+                return []
+            return [event("3-3-1999", "other", "A deed.", "words no page holds")]
+        return respond
+    model = Reading({"deed.pdf": answer("deed.pdf"), "order.pdf": answer("order.pdf")})
+    chronology_of(model, context(row("t1", 1, "deed.pdf", 1, "The deed of 3-3-1999 was signed."),
+                                 row("t2", 1, "order.pdf", 1, "The order of 3-3-1999 was passed.")))
+    assert len([call for call in model.calls if '"to_check"' in call[2]]) == 2

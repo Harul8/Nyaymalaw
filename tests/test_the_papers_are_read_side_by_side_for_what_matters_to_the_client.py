@@ -167,3 +167,23 @@ def test_the_board_shows_each_partys_part_the_subjects_the_points_read_side_by_s
     assert shown["connections"][0]["why"] == "She is one of the clients." and shown["connections_failures"] == []
     assert [a["name"] for a in shown["appearances"]] == ["Sarala Kulkarni", "Leela Kulkarni"]
     assert "connections" not in matter_board.board([turn([paper("deed.pdf", DEATH)], [])]), "a plan without them shows none"
+
+
+
+def test_a_point_keeps_the_passages_of_its_words_that_stand_on_the_pages_and_loses_only_those_that_do_not():
+    # Plan AN.28, D2 (the first paid replay): a point quoted from several passages, one of them misnumbered, is not lost whole.
+    slip = {"client_people": [], "connections": [
+        {"kind": "client_appears", "point": "Leela Kulkarni is a respondent in a pending writ appeal.", "why_it_matters": "A client.",
+         "words": "the respondents include Leela Kulkarni ... 7. Leela Kulkarni, respondent in another appeal"}]}
+    (kept,), _, _, _ = connections_of(SideBySide(points=slip, again=slip), papers())
+    assert kept["anchored"] and kept["words"] == "the respondents include Leela Kulkarni"
+    assert [(place["document"], place["page"]) for place in kept["places"]] == [("order.pdf", 1)]
+
+
+def test_each_of_the_clients_people_is_named_once_and_a_listed_name_is_no_near_spelling_of_another():
+    many = {"client_people": ["Leela Kulkarni", "LEELA KULKARNI", "Sarala Kulkarni", "Leela Kulkarny"], "connections": []}
+    _, people, appearances, _ = connections_of(SideBySide(points=many), papers())
+    assert people == ["Leela Kulkarni", "Sarala Kulkarni", "Leela Kulkarny"], "once, letter case aside, as first written"
+    leela = next(one for one in appearances if one["name"] == "Leela Kulkarni")
+    assert leela["near"] == [], "the spelling a page writes is listed itself, so it is not offered again as near"
+    assert research._appearances(["Kulkarni"], research._documents(papers()))[0]["near"] == [], "one word: exact only"

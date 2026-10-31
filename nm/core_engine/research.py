@@ -157,7 +157,7 @@ Check the understanding carefully against the conversation itself, the way you w
 - Does each legal question ask about one legal point, or would answering it need two different rules? Taken together, would the questions let us do what the advocate asked? Are any of them duplicates, or so general that no particular law answers them?
 - Have the events' other legal consequences (civil, criminal, under a special statute), and how each is pursued and proved, been considered, and asked where they bear on what the advocate wants?
 - Is any fact stated more strongly than the advocate or a document they sent put it, or added?
-- Is anyone's part in a proceeding the papers name, or a subject the papers identify, missed or misread?
+- Is anyone's part in a proceeding the papers name, or a subject the papers identify, missed or misread? The papers' chronology is set out by another step, from the papers themselves: the understanding need not set it out, and its absence is no problem.
 - Are the related points genuinely useful to the advocate, and kept separate from what we research now?
 - Is research being started when the advocate has ruled it out, or skipped when it is needed? Our purpose with every matter is to find where the law stands for each dispute in it, so that the advocate can see what the case needs. They do not have to ask for that: when they only tell us what has happened, or ask us to understand, summarise or set out the events, they still want to know where the law stands on them. Skipping research is a problem unless the advocate has told us not to research or the message needs none (thanks, or a request to tidy or transcribe text); starting it is a problem only when they have ruled it out. Where we could find instructions from the advocate limiting our work in their latest message, they are listed after the conversation; the conversation itself may hold earlier ones. Do not report research as a problem because the advocate's words did not literally ask for advice.
 
@@ -1123,8 +1123,7 @@ def _checked(model, context, events, documents, finders, failures=()):
     where some are not or a date on its pages is carried by none, one check call that looks again; its events replace those
     that failed and add those it finds. An event still untraceable keeps its words and loses its date ("undated"); one whose
     words are still not found stays, marked not anchored."""
-    out = []
-    for document in documents:
+    def one(document):
         mine = [event for event in events if event["source"] == document["source"]]
         finder = finders[document["source"]]
         failing = [event for event in mine if not event["anchored"] or not _traceable(event, finder)]
@@ -1153,8 +1152,11 @@ def _checked(model, context, events, documents, finders, failures=()):
         for event in mine:
             if event["anchored"] and not _traceable(event, finder):
                 event["date"] = "undated"
-        out += mine
-    return out
+        return mine
+    # Each paper's look again is its own: all at once, in the papers' order (the first paid replay waited seven minutes for them
+    # one after another).
+    with ThreadPoolExecutor(max_workers=max(1, min(8, len(documents)))) as pool:
+        return [event for mine in pool.map(one, documents) for event in mine]
 
 
 def chronology_of(model, context, *, wanted=None):
@@ -1338,11 +1340,24 @@ def _anchor_across(words, finder):
     return anchored, places
 
 
-def _connections_in(data, finder):
+def _verified(words, finder):
+    """A point's words with only the passages that stand on the pages, joined as the model joined them (plan AN.28, D2: only the
+    failing piece is blocked); the words as given where none stands. Each passage keeps its own letters."""
+    passages = (part.strip(" .,;:\"'") for part in re.split(r"\.\.\.|…", " ".join(str(words).split())))
+    found = [passage for passage in passages if _bare(passage) and finder.holding(_bare(passage)) is not None]
+    return " ... ".join(found) if found else words
+
+
+def _connections_in(data, finder, *, keep_found=False):
+    """The points one answer of the side-by-side reading gives. keep_found: a point whose words are not all found keeps the passages
+    that are (after the look again)."""
     out = []
     for item in data["connections"]:
         words = item["words"].strip()
         anchored, places = _anchor_across(words, finder)
+        if keep_found and not anchored:
+            words = _verified(words, finder)
+            anchored, places = _anchor_across(words, finder)
         out.append({"kind": item["kind"], "point": item["point"].strip(), "why_it_matters": item["why_it_matters"].strip(),
                     "words": words, "anchored": anchored, "places": places})
     return out
@@ -1353,6 +1368,11 @@ def _appearances(names, documents):
     words, letter case and punctuation aside; and, for a name of two words or more, runs of as many words that read nearly as the
     name (NEAR_NAME of their letters alike) - candidates only, never taken to be the name, NEAR_MOST at most."""
     pages = [(document, page, _NAME_WORD.findall(page["text"])) for document in documents for page in document["pages"]]
+    listed = [[word.casefold() for word in _NAME_WORD.findall(name)] for name in names]
+
+    def holds_a_listed_name(run):
+        return any(run[start:start + len(other)] == other for other in listed if other
+                   for start in range(len(run) - len(other) + 1))
     out = []
     for name in names:
         wanted = [word.casefold() for word in _NAME_WORD.findall(name)]
@@ -1367,7 +1387,7 @@ def _appearances(names, documents):
                 if run == wanted:
                     if place not in places:
                         places.append(place)
-                elif len(wanted) > 1 and len(near) < NEAR_MOST:
+                elif len(wanted) > 1 and len(near) < NEAR_MOST and not holds_a_listed_name(run):
                     alike = difflib.SequenceMatcher(None, " ".join(run), joined)
                     if alike.real_quick_ratio() >= NEAR_NAME and alike.quick_ratio() >= NEAR_NAME and alike.ratio() >= NEAR_NAME:
                         near.append({"as_written": " ".join(words[start:start + len(wanted)]), **place})
@@ -1406,12 +1426,20 @@ def connections_of(model, context, *, wanted=None):
                           "connections_check")
             kept = [item for item in found if item["anchored"]]
             held = {(item["kind"], item["point"], item["words"]) for item in kept}
-            found = kept + [item for item in _connections_in(again, finder) if (item["kind"], item["point"], item["words"]) not in held]
+            found = kept + [item for item in _connections_in(again, finder, keep_found=True)
+                            if (item["kind"], item["point"], item["words"]) not in held]
         except UsageLimitReached:
             raise
         except (ModelError, SchemaViolation):
-            pass
-    people = list(dict.fromkeys(" ".join(name.split()) for name in data["client_people"] if name.strip()))
+            found = [item for item in found if item["anchored"]] + [
+                {**item, **dict(zip(("anchored", "places"), _anchor_across(_verified(item["words"], finder), finder))),
+                 "words": _verified(item["words"], finder)} for item in found if not item["anchored"]]
+    # Each of the client's people once, letter case and spacing aside, as the papers first write the name.
+    people = {}
+    for name in data["client_people"]:
+        if name.strip():
+            people.setdefault(" ".join(name.split()).casefold(), " ".join(name.split()))
+    people = list(people.values())
     return ([{"id": f"C{number}", **item} for number, item in enumerate(found, 1)], people, _appearances(people, documents), [])
 
 
@@ -1447,8 +1475,7 @@ def _checked_transfers(model, transfers, documents, finders):
     """v13 (AN.28, D2 and D3): each paper's transactions checked by code and, for a paper where some cannot be used as listed, one
     check call that looks again; what it gives replaces those at fault. One still at fault is kept as it is - the ledger lists it and
     never adds it - and one whose date is still not in its paper keeps its words and loses its date ("undated")."""
-    out = []
-    for document in documents:
+    def one(document):
         mine = [transfer for transfer in transfers if transfer["source"] == document["source"]]
         finder = finders[document["source"]]
         failing = [(transfer, why) for transfer in mine if (why := _transfer_fault(transfer, finder))]
@@ -1472,8 +1499,9 @@ def _checked_transfers(model, transfers, documents, finders):
         for transfer in mine:
             if transfer["anchored"] and not _traceable(transfer, finder):
                 transfer["date"] = "undated"
-        out += mine
-    return out
+        return mine
+    with ThreadPoolExecutor(max_workers=max(1, min(8, len(documents)))) as pool:
+        return [transfer for mine in pool.map(one, documents) for transfer in mine]
 
 
 def _same_transfer(transfer):
@@ -1613,6 +1641,15 @@ def _proposal(model, context, still, progress, restrictions):
                 failures.append({"step": "revise", "scope": f"round {number + 1}", "reason": type(exc).__name__})
                 break
             understanding = revised["understanding"]
+        if (not understanding["needs_research"] and not understanding["ruled_out"]
+                and any(dispute["legal_questions"] for dispute in understanding["disputes"])):
+            # The owner's standing purpose (the check is told it): every matter is researched for where the law stands on each
+            # dispute unless the advocate rules it out. An understanding that lists legal questions, with nothing ruled out, is
+            # researched even where its last revision said none was needed (the second paid replay of 1 Nov 2026).
+            understanding = {**understanding, "needs_research": True, "no_research_reason": ""}
+            if phrasing is not None:
+                phrasing.result()
+                phrasing = None
         if phrasing is not None:
             statute, judgment, missed = phrasing.result()
         elif not still():
