@@ -88,10 +88,12 @@ def test_a_sound_last_check_with_no_mechanical_problem_confirms_it_and_names_no_
     assert board([dispute(1)], [REVISE, SOUND])["understanding"] == {"confirmed": True, "open_points": []}
 
 
-def test_a_mechanical_problem_left_after_a_sound_check_leaves_it_unconfirmed_without_naming_the_check_s_points():
+def test_a_mechanical_problem_left_after_a_sound_check_leaves_it_unconfirmed_and_names_code_s_point():
+    # Plan AN.28, B11 (owner, 31 Oct 2026): "not confirmed" never stands without its reason; code's own point is named.
     left = {"code_problems": [{"problem": "Fact F1: the quoted words do not appear", "fix": "Quote them."}],
             "verdict": "sound", "problems": []}
-    assert board([dispute(1)], [left])["understanding"] == {"confirmed": False, "open_points": []}
+    assert board([dispute(1)], [left])["understanding"] == {
+        "confirmed": False, "open_points": ["Fact F1: the quoted words do not appear"]}
 
 
 @pytest.mark.parametrize("rounds", [[], [{"code_problems": [], "verdict": "unavailable", "problems": []}]])

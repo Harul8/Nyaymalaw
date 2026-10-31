@@ -47,13 +47,14 @@ def _law(questions, assessed):
 
 def _confirmed(record):
     """Whether NM's own check of its understanding was satisfied - its last round said sound, with no mechanical problem left -
-    and, where it was not, the points the check raised."""
+    and, where it was not, the points left open: code's own (a quotation not found, say) as well as the model's, so that "not
+    confirmed" never stands without its reason (plan AN.28, B11)."""
     rounds = record["plan"]["proposal"].get("review_rounds") or []
     last = rounds[-1] if rounds else None
     satisfied = last is not None and last["verdict"] == "sound" and not last["code_problems"]
     points = [] if satisfied or last is None else [
         problem["problem"][:_POINT_CHARACTERS] + ("..." if len(problem["problem"]) > _POINT_CHARACTERS else "")
-        for problem in last["problems"]][:_OPEN_POINTS]
+        for problem in [*last["code_problems"], *last["problems"]]][:_OPEN_POINTS]
     return {"confirmed": satisfied, "open_points": points}
 
 
