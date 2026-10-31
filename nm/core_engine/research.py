@@ -25,7 +25,8 @@ from nm.core_engine.retrieval import SearchUnavailable, _digest, _valid_location
 from nm.core_engine.understanding import REFERENCE, TEXT, select, source_catalogue
 from nm.shared import clock_contracts
 from nm.shared.model_port import (
-    ModelError, OutputTruncated, Prompt, SchemaViolation, Tier, UsageLimitReached, canonical_schema_data, require_schema,
+    ModelError, OutputTruncated, Prompt, SchemaViolation, Tier, UsageLimitReached, canonical_schema_data, estimate_tokens,
+    require_schema,
 )
 
 LEGACY_CONTRACT = "core_research_v2"
@@ -63,22 +64,35 @@ JUDGMENTS_READ_CONTRACT = "core_research_v11"
 #: v12 (plan AN.27, P8c; 28 Oct 2026): the plan also records the chronology of the documents the advocate sent - what each paper
 #: records, event by event, with its dates read by code and its words found in the paper (chronology_of) - and the stretches of
 #: a paper that could not be read. v11 and earlier records replay unchanged.
-CONTRACT = "core_research_v12"
+CHRONICLED_CONTRACT = "core_research_v12"
+#: v13 (plan AN.28, D1-D3, 31 Oct 2026): each paper's chronology is read with the whole file in view - the advocate's messages
+#: and every paper - by a call that answers for one paper; an event is dated by when it happened, an order said with what it
+#: found and directed, a proceeding with who brought it and who answers it, an act a paper recites again listed once. Code checks
+#: each event: its words found on its pages, and its date's numbers found in its words or on those pages; where an event fails or
+#: a date on a paper's pages is carried by none of its events, one check call for that paper looks again. A numbered month and
+#: year with no day ("-09-2017", invented) is read as that month. v12 and earlier records replay unchanged.
+CONTRACT = "core_research_v13"
 #: The plans that set out the matter as disputes and legal questions (v7 on).
 QUESTION_PLANS = (PICKED_CONTRACT, JUDGMENT_PICKED_CONTRACT, PURPOSED_CONTRACT, PER_DISPUTE_CONTRACT, JUDGMENTS_READ_CONTRACT,
-                  CONTRACT)
+                  CHRONICLED_CONTRACT, CONTRACT)
 _QUESTION_PLANS = QUESTION_PLANS
 #: The records that pick judgment paragraphs and answer in parts per dispute (v8 on).
-JUDGMENT_PICKS = (JUDGMENT_PICKED_CONTRACT, PURPOSED_CONTRACT, PER_DISPUTE_CONTRACT, JUDGMENTS_READ_CONTRACT, CONTRACT)
+JUDGMENT_PICKS = (JUDGMENT_PICKED_CONTRACT, PURPOSED_CONTRACT, PER_DISPUTE_CONTRACT, JUDGMENTS_READ_CONTRACT,
+                  CHRONICLED_CONTRACT, CONTRACT)
 #: The records that keep each dispute's picks apart (v10 on).
-BY_DISPUTE = (PER_DISPUTE_CONTRACT, JUDGMENTS_READ_CONTRACT, CONTRACT)
+BY_DISPUTE = (PER_DISPUTE_CONTRACT, JUDGMENTS_READ_CONTRACT, CHRONICLED_CONTRACT, CONTRACT)
 #: The records that read the chosen judgments whole or as extracts (v11 on).
-JUDGMENTS_READ = (JUDGMENTS_READ_CONTRACT, CONTRACT)
+JUDGMENTS_READ = (JUDGMENTS_READ_CONTRACT, CHRONICLED_CONTRACT, CONTRACT)
 #: The records that also keep the chronology of the documents (v12 on).
-CHRONICLED = (CONTRACT,)
+CHRONICLED = (CHRONICLED_CONTRACT, CONTRACT)
+#: The records whose papers are read with the whole file in view, their dates checked by code (v13 on).
+WHOLE_FILE = (CONTRACT,)
 CONTRACTS = (LEGACY_CONTRACT, PREVIOUS_CONTRACT, WINDOWED_CONTRACT, ACCOUNT_CONTRACT, INSTRUMENTED_CONTRACT,
              PICKED_CONTRACT, JUDGMENT_PICKED_CONTRACT, PURPOSED_CONTRACT, PER_DISPUTE_CONTRACT, JUDGMENTS_READ_CONTRACT,
-             CONTRACT)
+             CHRONICLED_CONTRACT, CONTRACT)
+#: The papers a record step sees whole (D1, the owner: "a safe fixed limit like 100k tokens"): above it, each call sees the paper
+#: it answers for, with the advocate's messages.
+WHOLE_FILE_TOKENS = 100_000
 #: P31 (owner, 21 Oct 2026): four to five judgments a dispute; a judgment is read whole up to about
 #: 8,000 tokens; an extract keeps one or two paragraphs either side of each one found.
 JUDGMENTS_PER_DISPUTE = 5
@@ -106,7 +120,8 @@ MAX_REVISIONS = 1
 PROVISIONS_FOR_PICK = 20
 #: Answer limits per step. Calls in flight are budgeted at their limit.
 MAX_OUTPUT = {"understand": 12000, "check": 6000, "revise": 12000, "phrases": 6000,
-              "judgment_phrases": 8000, "pick": 8000, "judgment_pick": 8000, "chronology": 12000, "transfers": 12000}
+              "judgment_phrases": 8000, "pick": 8000, "judgment_pick": 8000, "chronology": 12000, "transfers": 12000,
+              "chronology_check": 8000}
 
 # The prompts below were developed and measured in outputs/decomposition-scratch
 # (13-14 Oct 2026). They state the purpose and the needed outcome in plain language
@@ -773,6 +788,8 @@ _DAY_FIRST_NAMED = re.compile(rf"(?<!\d)(\d{{1,2}})\s*(?:st|nd|rd|th)?\s*(?:day\
 _MONTH_FIRST_NAMED = re.compile(rf"\b({_MONTH})\b\.?\s+(\d{{1,2}})\s*(?:st|nd|rd|th)?,?\s+(\d{{4}})(?!\d)")
 _MONTH_AND_YEAR = re.compile(rf"\b({_MONTH})\b\.?,?\s+(\d{{4}})(?!\d)")
 _YEAR_ONLY = re.compile(r"(?<!\d)(1\d{3}|20\d{2})(?!\d)")
+#: v13 (AN.28, B10): a month and year in numbers with no day - "-09-2017", "09/2017" (invented) - read as that month.
+_NUMBERED_MONTH = re.compile(r"(?<![\d./-])[-./]?\s*(\d{1,2})\s*[-./]\s*(\d{4})(?!\d)")
 
 
 def _day(year, month, day):
@@ -793,7 +810,7 @@ def _month_year(year, month):
     return f"{year:04d}-{month:02d}" if 1 <= month <= 12 and 1000 <= year <= 2099 else ""
 
 
-def read_date(words):
+def read_date(words, *, months=False):
     """The date a page gives, as a sortable "YYYY-MM-DD", "YYYY-MM" or "YYYY", read by code and never guessed (plan AN.27, P8):
     numbers day first, as an Indian paper writes them (month first only where that is the only way a day is a day); a month by its
     name; a year alone, or the first year of "1961-62", where that is all the page gives. "" where there is none. Where the words hold
@@ -805,6 +822,7 @@ def read_date(words):
             (_DAY_FIRST_NAMED, lambda m: _day(int(m.group(3)), _MONTHS[m.group(2)], int(m.group(1)))),
             (_MONTH_FIRST_NAMED, lambda m: _day(int(m.group(3)), _MONTHS[m.group(1)], int(m.group(2)))),
             (_MONTH_AND_YEAR, lambda m: _month_year(int(m.group(2)), _MONTHS[m.group(1)])),
+            *(((_NUMBERED_MONTH, lambda m: _month_year(int(m.group(2)), int(m.group(1)))),) if months else ()),
             (_YEAR_ONLY, lambda m: m.group(1))):
         for match in pattern.finditer(text):
             value = build(match)
@@ -855,7 +873,32 @@ def _anchor(words, pages):
     return anchored, (sorted({page["page"] for found in held if found for page in found}) if anchored else [])
 
 
-def _read_stretches(model, context, wanted, operation, system, schema, step, shape):
+def _file_context(context, documents, document, window, whole):
+    """What a v13 record step is shown before the pages it reads for (plan AN.28, D1): the advocate's messages, oldest first, and,
+    where the file is within WHOLE_FILE_TOKENS, every other page of it under its paper's name - so that the step knows what the
+    matter is about and who is who while it answers for its own pages."""
+    said = [row["text"] for row in context.get("conversation", ()) if row.get("record_role") == "original_account"]
+    latest = (context.get("latest") or {}).get("text")
+    lines = ["The advocate's messages, oldest first:", *(f"- {words}" for words in [*said, *([latest] if latest else [])])]
+    focus = {page["page"] for page in window}
+    rest = [(other, page) for other in documents for page in other["pages"]
+            if not (other["source"] == document["source"] and page["page"] in focus)] if whole else []
+    if rest:
+        lines += ["", "The rest of the file, for context - the pages you do not read for:"]
+        lines += [f'Paper "{other["name"]}", {"part" if other["recording"] else "page"} {page["page"]}: {page["text"]}'
+                  for other, page in rest]
+    return "\n".join(lines)
+
+
+def _whole_file(context, documents):
+    """Whether the whole file is shown to each call of a v13 record step: its pages and the advocate's messages within
+    WHOLE_FILE_TOKENS (D1: "a safe fixed limit like 100k tokens"); above it, each call sees the pages it reads for."""
+    said = " ".join(row["text"] for row in context.get("conversation", ()) if row.get("record_role") == "original_account")
+    pages = " ".join(page["text"] for document in documents for page in document["pages"])
+    return estimate_tokens(said + " " + pages) <= WHOLE_FILE_TOKENS
+
+
+def _read_stretches(model, context, wanted, operation, system, schema, step, shape, whole=None):
     """What the documents of a turn record of one kind, read for it (plan AN.27, P8 and P13d): one call for each document, or each
     stretch of a long one, all at once; shape(data, document, finder) makes the records one stretch's answer holds. Returns
     (records, failures). A stretch whose answer was cut off is read again in two halves, twice at most; a stretch that could not be
@@ -869,8 +912,12 @@ def _read_stretches(model, context, wanted, operation, system, schema, step, sha
 
     def read(task, depth=0):
         document, window = task
+        first, last = window[0]["page"], window[-1]["page"]
+        user = (_window_text(document, window) if whole is None else
+                _file_context(context, documents, document, window, whole) + "\n\nThe pages you read for:\n"
+                + _window_text(document, window))
         try:
-            data = _call(model, operation, system, _window_text(document, window), schema, step)
+            data = _call(model, operation, system, user, schema, step)
         except UsageLimitReached:
             raise
         except (ModelError, SchemaViolation) as exc:
@@ -879,7 +926,6 @@ def _read_stretches(model, context, wanted, operation, system, schema, step, sha
                 middle = len(window) // 2
                 (one, lost), (two, also) = read((document, window[:middle]), depth + 1), read((document, window[middle:]), depth + 1)
                 return one + two, lost + also
-            first, last = window[0]["page"], window[-1]["page"]
             return [], [{"document": document["name"], "pages": f"{first}-{last}" if first != last else f"{first}",
                          "reason": type(exc).__name__}]
         return shape(data, document, finders[document["source"]]), []
@@ -889,10 +935,11 @@ def _read_stretches(model, context, wanted, operation, system, schema, step, sha
     return [record for found, _ in done for record in found], [failure for _, lost in done for failure in lost]
 
 
-def _numbered_by_date(records, prefix):
-    """Records ordered by the date code reads from each - the undated last, in the papers' order - and numbered prefix1...."""
+def _numbered_by_date(records, prefix, months=False):
+    """Records ordered by the date code reads from each - the undated last, in the papers' order - and numbered prefix1....
+    months: v13 reads a numbered month and year as that month."""
     for record in records:
-        record["sort"] = read_date(record["date"])
+        record["sort"] = read_date(record["date"], months=months)
     ordered = sorted(enumerate(records), key=lambda pair: (0, pair[1]["sort"], pair[0]) if pair[1]["sort"] else (1, "", pair[0]))
     return [{"id": f"{prefix}{number}", **record} for number, (_, record) in enumerate(ordered, 1)]
 
@@ -908,15 +955,143 @@ def _events_in(data, document, finder):
     return events
 
 
+#: v13 (AN.28, D1-D3): the chronology of one paper, read with the whole file in view.
+CHRONOLOGY_V13 = """Message: You receive an advocate's messages to us about a client's matter, the documents they sent, and the pages of one paper you read for now: the rest of the file comes first, page by page under each paper's name, and the pages you read for last, under "The pages you read for". A page says what its document says: it is material the advocate supplied, not their own account, and what it reports is not thereby proved. A page read from a scan may carry [illegible] and square-bracket notes about stamps, signatures and handwriting; those are the reader's, not the document's. The rest of the file is there so that you know what the matter is about and who is who: list only what the pages you read for record.
+
+Purpose: Set out that paper's own chronology for the advocate and for our research assistant: every event, order, direction, filing, transaction and proceeding it records or reports, so that nothing in it is overlooked when the matter's history is told. You are not judging which account is right, and you are not answering any legal question.
+
+Look for:
+- Each event the paper records, whatever its date: a sale, partition or other deed, a mutation or entry in a revenue or other record, an order or direction of a court or authority, an appeal, revision, petition, suit, complaint, FIR or charge sheet, a notice, a hearing or listing, a payment, a death; and each proceeding it says is pending, with its stage.
+- When the event happened, as the page gives it ("30-10-1985", "17 August 2019", "2008", "1961-62"). A sentence often names the date of an earlier order, deed or filing it mentions: that date is that earlier act's, not this event's. Where the page gives no date for this event, say undated. Do not work out, convert or guess a date.
+- For an order or direction: what the authority found and what it directed, as the page records them. For a filing, appeal or proceeding: who brought it and who answers it, as the page names them.
+- Who says it: the paper's own author, or the party or authority it reports; a party's allegation stays that party's.
+- The figures and identifiers that belong to the event - extents, sums, and deed, case, file, account or survey numbers - exactly as the page gives them.
+- One event for each act. A paper that recites the same act again - a party's account and its written arguments, an order's own recital - records one event: list it once. Do not merge events the paper keeps apart, and add nothing the page does not say. A register or list of many similar entries is one event for the whole list, naming its range and the figures that matter.
+Work in a loop: list the events page by page, then read each page again against your list for any event you skipped or misread, or any date you gave to the wrong act, and correct the list before you answer.
+
+Outcome: events, in the order of the pages. Each has: date; kind (transaction, order, filing, pending, or other); what (plain sentences saying what happened, with its figures and identifiers - what an order found and directed, who brought and who answers a proceeding); said_by (whose words they are: the document's own author, or the party or authority it reports); words (the exact words on a page that record it, copied exactly as the page gives them, without the reader's square-bracket notes - a sentence that runs over a page may be copied whole - or several passages joined with '...'; never reword)."""
+#: v13 (AN.28, D2): one look again at a paper's events where code found what it could not check.
+CHRONOLOGY_CHECK = """Message: You listed the events one paper an advocate sent records; you receive that paper's pages, each under its number, and what code found when it checked your list: events whose words it could not find on the pages, or whose date is in neither their words nor their pages (to_check, each with why and, where code found them, the page's own words nearest to yours), and dates that stand on the pages but in none of your events (not_carried). A page says what its document says; square-bracket notes are the reader's, not the document's.
+
+Purpose: Look again so that every event the paper records is in the list, dated as the paper dates it, with words that stand on its pages.
+
+For each event in to_check: give it again, corrected - its words copied exactly from the page as they stand, a misread letter included, its date the date the paper gives for this act - or leave it out if the paper does not record it as you listed it. For each date in not_carried: give the event the paper records with it, if it marks one; give nothing for a date that marks no event (a stamp's date, a reference to a printed form).
+Work in a loop: read the pages again, decide each, check what you write against the page, and correct it.
+
+Outcome: events: only those you give again or add, each as before - date; kind; what; said_by; words."""
+#: A paper's dates code finds on its pages to ask about at most (v13): the rest are not asked about.
+NOT_CARRIED_MOST = 20
+
+
+def _numbers(words):
+    """The numbers some words hold, a month written as a name counted as its number, and a two-digit year as the years it may
+    stand for: what a date's numbers must be found among (v13)."""
+    found = {int(n) for n in re.findall(r"\d+", str(words))}
+    found |= {_MONTHS[name] for name in re.findall(rf"\b({_MONTH})\b", str(words).casefold())}
+    return found | {n % 100 for n in found if n >= 1000} | {2000 + n for n in found if n < 100} | {1900 + n for n in found if n < 100}
+
+
+def _traceable(event, finder):
+    """Whether an event's date stands in its own paper (v13, AN.28 D3): every number of the date, a month by name or number and a
+    year by four digits or its last two, among its words and its paper's pages - a paper may give a date on another page than the
+    passage it belongs to. A date no page of the paper gives was worked out or taken from elsewhere. An undated event is
+    traceable; an event whose words are not found is not checked here (it is not anchored)."""
+    if not read_date(event["date"], months=True) or not event["anchored"]:
+        return True
+    held = _numbers(event["words"])
+    for page in finder.pages:
+        held |= _numbers(_reading(page["text"]))
+    return {n for n in _numbers(event["date"]) if n} - {0} <= held
+
+
+#: Dates as a page writes them in full, day, month and year (v13): numbered, or with the month named.
+_PAGE_DATE = re.compile(rf"(?<!\d)\d{{1,2}}\s*[-./]\s*\d{{1,2}}\s*[-./]\s*\d{{4}}(?!\d)|(?<!\d)\d{{1,2}}\s*(?:st|nd|rd|th)?\s*"
+                        rf"(?:day\s+of\s+)?(?:{_MONTH})\b\.?,?\s*\d{{4}}(?!\d)|\b(?:{_MONTH})\b\.?\s+\d{{1,2}}\s*(?:st|nd|rd|th)?,?\s+\d{{4}}(?!\d)")
+
+
+def _not_carried(document, events, unread=()):
+    """The dates on a paper's pages, outside the reader's notes, that none of its events carries (v13): each once, as the page
+    writes it, with its page, in the papers' order; NOT_CARRIED_MOST at most. unread: the pages whose reading failed, which a
+    failure already names and which are not asked about again."""
+    carried = {event["sort"] for event in events if event["source"] == document["source"]}
+    found, seen = [], set()
+    for page in document["pages"]:
+        if page["page"] in unread:
+            continue
+        for match in _PAGE_DATE.finditer(_reading(page["text"]).casefold()):
+            day = read_date(match.group(0), months=True)
+            if day and len(day) == 10 and day not in carried and day not in seen:
+                seen.add(day)
+                found.append({"date": match.group(0), "page": page["page"]})
+    return found[:NOT_CARRIED_MOST]
+
+
+def _unread(failures, document):
+    """The pages of a paper a failure names (v13): "3" or "1-4"."""
+    pages = set()
+    for failure in failures:
+        if failure["document"] == document["name"]:
+            first, _, last = str(failure["pages"]).partition("-")
+            if first.isdigit() and (last or first).isdigit():
+                pages |= set(range(int(first), int(last or first) + 1))
+    return pages
+
+
+def _checked(model, context, events, documents, finders, failures=()):
+    """v13 (AN.28, D2 and D3): each paper's events checked by code - their words found, their dates traceable - and, for a paper
+    where some are not or a date on its pages is carried by none, one check call that looks again; its events replace those
+    that failed and add those it finds. An event still untraceable keeps its words and loses its date ("undated"); one whose
+    words are still not found stays, marked not anchored."""
+    out = []
+    for document in documents:
+        mine = [event for event in events if event["source"] == document["source"]]
+        finder = finders[document["source"]]
+        failing = [event for event in mine if not event["anchored"] or not _traceable(event, finder)]
+        missing = _not_carried(document, [{**event, "sort": read_date(event["date"], months=True)} for event in mine],
+                               _unread(failures, document))
+        if failing or missing:
+            to_check = [{"date": event["date"], "what": event["what"], "words": event["words"],
+                         "why": "its words are not found on the pages" if not event["anchored"]
+                         else "its date is in neither its words nor its pages",
+                         **({"nearest_words": near["words"]} if not event["anchored"] and (near := finder.nearest(event["words"]))
+                            else {})} for event in failing]
+            user = (_window_text(document, document["pages"]) + "\n\n"
+                    + json.dumps({"to_check": to_check, "not_carried": missing}, ensure_ascii=False))
+            try:
+                data = _call(model, "core_research_chronology", CHRONOLOGY_CHECK, user, CHRONOLOGY_SCHEMA, "chronology_check")
+                kept = [event for event in mine if event not in failing]
+                # A model that gives the paper's whole list again adds only what is new: an event already kept is not
+                # kept twice.
+                held = {(event["date"], event["kind"], event["words"]) for event in kept}
+                mine = kept + [event for event in _events_in(data, document, finder)
+                               if (event["date"], event["kind"], event["words"]) not in held]
+            except UsageLimitReached:
+                raise
+            except (ModelError, SchemaViolation):
+                pass
+        for event in mine:
+            if event["anchored"] and not _traceable(event, finder):
+                event["date"] = "undated"
+        out += mine
+    return out
+
+
 def chronology_of(model, context, *, wanted=None):
     """The chronology the documents of a turn record, as (events, failures) - plan AN.27, P8.
 
     The model says what a page records; code does the rest: finds the event's words in the document (the one finder), records the
     pages, reads the date, orders the events by it - the undated last, in the papers' order - and numbers them E1.... An event
     whose words are not found is kept, marked not anchored, never dropped and never to be cited as sourced."""
-    events, failures = _read_stretches(model, context, wanted, "core_research_chronology", CHRONOLOGY, CHRONOLOGY_SCHEMA,
-                                       "chronology", _events_in)
-    return _numbered_by_date(events, "E"), failures
+    if wanted is not None and not wanted():
+        return [], []
+    documents = _documents(context)
+    if not documents:
+        return [], []
+    events, failures = _read_stretches(model, context, None, "core_research_chronology", CHRONOLOGY_V13, CHRONOLOGY_SCHEMA,
+                                       "chronology", _events_in, whole=_whole_file(context, documents))
+    events = _checked(model, context, events, documents, {document["source"]: Pages(document["pages"])
+                                                          for document in documents}, failures)
+    return _numbered_by_date(events, "E", months=True), failures
 
 
 #: How much of the shorter of two quotations the longer must hold, but for scan noise, for them to be one passage quoted to different
@@ -995,10 +1170,10 @@ def transfers_of(model, context, *, wanted=None):
     ordered and numbered X1... exactly as the chronology's events are; the extents are read and added by extents.py, never here."""
     transfers, failures = _read_stretches(model, context, wanted, "core_research_transfers", TRANSFERS, TRANSFERS_SCHEMA,
                                           "transfers", _transfers_in)
-    return _numbered_by_date(transfers, "X"), failures
+    return _numbered_by_date(transfers, "X", months=True), failures
 
 
-def _stretch_issues(items, failures, context, *, prefix, label, noun, unavailable):
+def _stretch_issues(items, failures, context, *, prefix, label, noun, unavailable, months=False):
     """What a v12 plan records of one kind that the papers were read for, checked against the documents of the turn (plan AN.27,
     P8c and P13d), and the issues it raises. It must be what the reading makes of those papers: the items numbered prefix1... in
     the order of their dates, the undated last, each of a document the turn holds, its date read as read_date reads it, and its
@@ -1015,7 +1190,7 @@ def _stretch_issues(items, failures, context, *, prefix, label, noun, unavailabl
         document = documents.get(item["source"])
         if document is None or document["name"] != item["document"]:
             raise SchemaViolation(f"{label} {name} belongs to no document of this turn")
-        if item["sort"] != read_date(item["date"]):
+        if item["sort"] != read_date(item["date"], months=months):
             raise SchemaViolation(f"{label} {name} is dated otherwise than its date reads")
         key = (0, item["sort"]) if item["sort"] else (1, "")
         if last is not None and key < last:
@@ -1031,13 +1206,14 @@ def _stretch_issues(items, failures, context, *, prefix, label, noun, unavailabl
                                           f"{failure['reason']}", "proposal": deepcopy(failure)} for failure in failures]
 
 
-def _chronology_issues(events, failures, context):
+def _chronology_issues(events, failures, context, months=False):
     return _stretch_issues(events, failures, context, prefix="E", label="Chronology event", noun="chronology",
-                           unavailable="chronology")
+                           unavailable="chronology", months=months)
 
 
-def _transfer_issues(transfers, failures, context):
-    return _stretch_issues(transfers, failures, context, prefix="X", label="Transfer", noun="transfer", unavailable="transfers")
+def _transfer_issues(transfers, failures, context, months=False):
+    return _stretch_issues(transfers, failures, context, prefix="X", label="Transfer", noun="transfer", unavailable="transfers",
+                           months=months)
 
 
 def plan(model, context, interpretation=None, *, progress=None, wanted=None, restrictions=None):
@@ -1120,7 +1296,7 @@ def _proposal(model, context, still, progress, restrictions):
             "judgment_phrases": judgment, "failures": failures + missed}
 
 
-def _accept_v7(proposal, context, schema=SCHEMA):
+def _accept_v7(proposal, context, schema=SCHEMA, contract=None):
     data = canonical_schema_data(proposal, schema)
     require_schema(data, schema)
     catalogue = source_catalogue(context)
@@ -1133,10 +1309,11 @@ def _accept_v7(proposal, context, schema=SCHEMA):
     if rounds and (rounds[-1]["code_problems"] or rounds[-1]["verdict"] == "revise"):
         issues.append({"work_id": None, "mismatch": "The understanding kept open problems after review",
                        "proposal": deepcopy(rounds[-1])})
+    months = contract in WHOLE_FILE
     if "chronology" in data:
-        issues.extend(_chronology_issues(data["chronology"], data["chronology_failures"], context))
+        issues.extend(_chronology_issues(data["chronology"], data["chronology_failures"], context, months))
     if "transfers" in data:
-        issues.extend(_transfer_issues(data["transfers"], data.get("transfers_failures", []), context))
+        issues.extend(_transfer_issues(data["transfers"], data.get("transfers_failures", []), context, months))
     questions = {q["id"]: (dispute, q) for dispute in understanding["disputes"] for q in dispute["legal_questions"]}
     statute, judgment = {}, {}
     for entry in data["statute_phrases"]:
@@ -1182,7 +1359,7 @@ def accept(proposal, context, *, contract=CONTRACT):
     if contract in _QUESTION_PLANS:
         return _accept_v7(proposal, context, SCHEMA_V12 if contract in CHRONICLED
                           else SCHEMA if contract in (PURPOSED_CONTRACT, PER_DISPUTE_CONTRACT, JUDGMENTS_READ_CONTRACT)
-                          else SCHEMA_V8)
+                          else SCHEMA_V8, contract)
     schema = {LEGACY_CONTRACT: LEGACY_SCHEMA, PREVIOUS_CONTRACT: PREVIOUS_SCHEMA,
               WINDOWED_CONTRACT: ACCOUNT_SCHEMA, ACCOUNT_CONTRACT: ACCOUNT_SCHEMA,
               INSTRUMENTED_CONTRACT: INSTRUMENTED_SCHEMA}[contract]

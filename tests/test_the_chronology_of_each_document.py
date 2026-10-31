@@ -1,9 +1,11 @@
 """The chronology of each document (plan AN.27, P8; invariants I4 and I5).
 
 A bundle of papers was answered from an understanding that held 18 or 19 facts of 56 pages, so what the papers record - a sale chain, the
-orders a court recites, the proceedings it lists as pending - was lost between the papers and the answer. Each document is now read on
-its own, all at once, for what it records, event by event; code then finds each event's words on the pages the model was shown, reads
-the dates, orders the events and numbers them. The papers here are synthetic, of the same shape.
+orders a court recites, the proceedings it lists as pending - was lost between the papers and the answer. Each document is now read for
+on its own, all at once, for what it records, event by event; code then finds each event's words on the pages the model was shown, reads
+the dates, orders the events and numbers them. From research v13 (plan AN.28, D1-D3) each call answers for one paper's pages with the
+rest of the file in view, and an event whose words or date its paper does not hold - or a date on a paper's pages that no event carries -
+is looked at again in one check call for that paper. The papers here are synthetic, of the same shape.
 """
 import re
 import threading
@@ -32,7 +34,7 @@ class Reading:
         name = re.search(r'^Document: "(.*)"', prompt.user, re.M).group(1)
         with self.lock:
             self.calls.append((prompt.operation, name, prompt.user))
-        if self.meet is not None:
+        if self.meet is not None and '"to_check"' not in prompt.user:
             self.meet.wait(timeout=10)          # every document's call must be in flight together, or this raises
         if name in self.usage_limit:
             raise UsageLimitReached("the account has no credit")
@@ -81,15 +83,25 @@ def papers():
                    *[row("t1", 2, "order.pdf", n, text) for n, text in ORDER])
 
 
-def test_each_document_is_read_on_its_own_and_its_events_are_anchored_dated_ordered_and_numbered():
+def reads(model):
+    """The reading calls, not the check calls."""
+    return [call for call in model.calls if '"to_check"' not in call[2]]
+
+
+def test_each_document_is_read_for_on_its_own_with_the_rest_of_the_file_in_view():
     model = Reading(SCRIPT)
     events, failures = chronology_of(model, papers())
     assert failures == []
-    assert sorted(name for _, name, _ in model.calls) == ["deed.pdf", "order.pdf"]
-    for operation, name, seen in model.calls:
+    assert sorted(name for _, name, _ in reads(model)) == ["deed.pdf", "order.pdf"]
+    for operation, name, seen in reads(model):
         assert operation == "core_research_chronology"
         other = "order.pdf" if name == "deed.pdf" else "deed.pdf"
-        assert f'Document: "{name}"' in seen and f'"{other}"' not in seen, "a call sees one document's pages only"
+        mine, rest = seen.split("The pages you read for:")[1], seen.split("The pages you read for:")[0]
+        assert f'Document: "{name}"' in mine and f'Paper "{other}"' in rest, "the rest of the file is in view, before its pages"
+        assert "The advocate's messages, oldest first:\n- Read these." in rest
+    # The order's last event quotes words its pages do not hold: one check call for that paper looks again.
+    (_, name, checked), = [call for call in model.calls if '"to_check"' in call[2]]
+    assert name == "order.pdf" and "The petition was filed on a day the page lacks" in checked
     assert [(e["id"], e["sort"], e["document"], e["pages"], e["anchored"]) for e in events] == [
         ("E1", "1985-10-30", "deed.pdf", [1], True),
         ("E2", "2008-03-17", "deed.pdf", [2], True),
@@ -156,8 +168,8 @@ def test_an_event_is_anchored_by_its_words_in_its_own_document_and_never_in_anot
 
 def test_two_files_of_one_name_are_two_documents():
     model = Reading({"deed.pdf": [event("1985", "other", "Something.", "Sale Deed")]})
-    events, _ = chronology_of(model, context(row("t1", 1, "deed.pdf", 1, "Sale Deed one."),
-                                              row("t2", 1, "deed.pdf", 1, "Sale Deed two.")))
+    events, _ = chronology_of(model, context(row("t1", 1, "deed.pdf", 1, "Sale Deed one of 1985."),
+                                              row("t2", 1, "deed.pdf", 1, "Sale Deed two of 1985.")))
     assert len(model.calls) == 2 and sorted(e["source"] for e in events) == ["t1:d1", "t2:d1"]
 
 
@@ -169,7 +181,8 @@ def test_the_documents_are_read_at_the_same_time():
 
 def test_a_recording_is_read_by_its_parts():
     model = Reading({"call.mp3": [event("1 May 2020", "other", "The sum was agreed.", "we agreed the sum")]})
-    events, _ = chronology_of(model, context(row("t1", 1, "call.mp3", 1, "Yes, we agreed the sum.", recording=True)))
+    events, _ = chronology_of(model, context(row("t1", 1, "call.mp3", 1, "On 1 May 2020, yes, we agreed the sum.",
+                                                 recording=True)))
     (seen,) = [text for _, _, text in model.calls]
     assert 'Document: "call.mp3" (a recording, transcribed by AI)' in seen and "[Part 1]" in seen
     assert events[0]["anchored"] is True
@@ -261,3 +274,57 @@ def test_the_prompt_gives_a_register_of_many_entries_as_one_event():
                                             ("1-1-30", "2030-01-01"), ("1-1-31", "1931-01-01"), ("19/07/2021", "2021-07-19")])
 def test_a_two_digit_year_is_read_by_code(words, expected):
     assert read_date(words) == expected
+
+
+def test_above_the_limit_each_call_sees_only_the_pages_it_reads_for(monkeypatch):
+    # D1 (the owner: "a safe fixed limit like 100k tokens"): a file above it is not shown whole to each call.
+    monkeypatch.setattr(research, "WHOLE_FILE_TOKENS", 1)
+    model = Reading(SCRIPT)
+    chronology_of(model, papers())
+    for _, name, seen in reads(model):
+        other = "order.pdf" if name == "deed.pdf" else "deed.pdf"
+        assert f'Document: "{name}"' in seen and f'"{other}"' not in seen and "The rest of the file" not in seen
+
+
+def test_a_date_its_paper_never_gives_is_looked_at_again_and_kept_undated_if_still_not_given():
+    # Invented: the event's words are on the page, but its date is on no page of the paper.
+    model = Reading({"deed.pdf": [event("14-02-2015", "filing", "A counter was filed.", "The counter was filed by the respondents")]})
+    (found,), _ = chronology_of(model, context(row("t1", 1, "deed.pdf", 1, "The counter was filed by the respondents.")))
+    checked, = [call[2] for call in model.calls if '"to_check"' in call[2]]
+    assert "its date is in neither its words nor its pages" in checked
+    assert found["anchored"] is True and found["date"] == "undated" and found["sort"] == ""
+
+
+def test_a_date_on_a_paper_no_event_carries_is_asked_about_and_the_event_it_marks_is_added():
+    def answer(seen):
+        if '"to_check"' in seen:
+            return [event("4-4-2000", "order", "An order was passed.", "the order was passed on 4-4-2000")]
+        return [event("3-3-1999", "other", "A deed was signed.", "the deed was signed on 3-3-1999")]
+    model = Reading({"deed.pdf": answer})
+    events, _ = chronology_of(model, context(row("t1", 1, "deed.pdf", 1, "First the deed was signed on 3-3-1999. Then the "
+                                                                           "order was passed on 4-4-2000 by the court.")))
+    checked, = [call[2] for call in model.calls if '"to_check"' in call[2]]
+    assert '"not_carried": [{"date": "4-4-2000", "page": 1}]' in checked
+    assert [(e["sort"], e["anchored"]) for e in events] == [("1999-03-03", True), ("2000-04-04", True)]
+
+
+def test_a_paper_whose_events_all_check_out_needs_no_check_call():
+    model = Reading({"deed.pdf": [event("3-3-1999", "other", "A deed was signed.", "the deed was signed on 3-3-1999")]})
+    chronology_of(model, context(row("t1", 1, "deed.pdf", 1, "The deed was signed on 3-3-1999.")))
+    assert len(model.calls) == 1
+
+
+@pytest.mark.parametrize("words,expected", [("-09-2017", "2017-09"), ("09/2017", "2017-09"), ("dated -09-2017", "2017-09"),
+                                            ("28-09-2017", "2017-09-28"), ("1961-62", "1961")])
+def test_v13_reads_a_numbered_month_and_year_as_that_month(words, expected):
+    # Plan AN.28, B10 (invented dates): sorted by its month, not ahead of the year's earlier months.
+    assert read_date(words, months=True) == expected and read_date(words) == expected[:4] if len(expected) == 7 else True
+
+
+def test_the_v13_prompt_dates_an_event_by_when_it_happened_and_lists_a_recited_act_once():
+    prompt = research.CHRONOLOGY_V13
+    for part in ("Message:", "Purpose:", "Look for:", "Outcome:", "that date is that earlier act's, not this event's",
+                 "what the authority found and what it directed", "who brought it and who answers it",
+                 "records one event: list it once", "Work in a loop", "Do not work out, convert or guess a date"):
+        assert part in prompt, part
+    assert "Look again" in research.CHRONOLOGY_CHECK and "not_carried" in research.CHRONOLOGY_CHECK

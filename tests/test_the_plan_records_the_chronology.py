@@ -169,7 +169,9 @@ def test_a_usage_limit_in_the_reading_stops_the_plan():
 def test_the_contracts_before_v12_keep_their_shape_and_v12_needs_the_chronology():
     ctx = bundle()
     before = accept(proposal(chronology=False), ctx, contract=JUDGMENTS_READ_CONTRACT)
-    assert "chronology" not in before["proposal"] and CHRONICLED == (CONTRACT,) and CONTRACT == "core_research_v12"
+    # v13 (AN.28) keeps the chronology as v12 did, read with the whole file in view and its dates checked.
+    assert "chronology" not in before["proposal"] and CHRONICLED == ("core_research_v12", CONTRACT)
+    assert CONTRACT == "core_research_v13"
     with pytest.raises(SchemaViolation, match="undeclared"):
         accept(proposal(), ctx, contract=JUDGMENTS_READ_CONTRACT)
     with pytest.raises(SchemaViolation, match="missing"):
