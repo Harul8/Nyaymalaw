@@ -137,11 +137,12 @@ def test_four_actual_stage_calls_save_reopen_and_replay_without_reexecution(stor
     stored = store.load(chat_matter_id("owner", response["chat_id"]))
     rows = saved_rows(stored, "owner")
     # Answered dispute by dispute (owner decisions P25-P27, 19 Oct 2026): one dispute, one section.
-    assert rows[0]["activities"]["contract"] == "core_turn_v8"
+    assert rows[0]["activities"]["contract"] == "core_turn_v9"
     # No held Acts were given to this turn, so no time limit was worked out (item 9).
     assert rows[0]["activities"]["calculation"]["state"] == "not_needed"
     section, = rows[0]["activities"]["sections"]
-    assert section["reviewed"]["review"]["contract"] == "core_response_review_v11"
+    assert section["reviewed"]["review"]["contract"] == "core_response_review_v12"
+    assert section["looks"] == [] and section["reviewed"]["writer_notes"] == []
     assert section["reviewed"]["authority_evidence"]["contract"] == "core_response_authorities_v1"
     assert section["trims"] == [] and section["fallback"] is None and section["edit"] is None
     assert rows[0]["activities"]["cross_check"] is None and rows[0]["activities"]["overview"] is None
@@ -193,7 +194,7 @@ def test_mixed_legacy_and_current_history_reopens_without_fresh_authority_checks
         raise AssertionError("Saved readback cannot consult current authority indexes")
     monkeypatch.setattr(response_authorities, "check", no_new_check)
     rows = saved_rows(store.load(chat_matter_id("owner", first["chat_id"])), "owner")
-    assert [row["activities"]["contract"] for row in rows] == ["core_turn_v1", "core_turn_v8"]
+    assert [row["activities"]["contract"] for row in rows] == ["core_turn_v1", "core_turn_v9"]
     assert rows[0]["response"]["elements"] == elements
     assert run(store, model, chat_id=first["chat_id"], turn_id="new", message="Continue.")["replayed"]
     assert len(model.calls) == 4
@@ -224,7 +225,7 @@ def test_a_turn_saved_under_an_earlier_rendering_reopens_unchanged_beside_a_curr
     assert second["committed"] == "committed"
     rows = saved_rows(store.load(chat_matter_id("owner", first["chat_id"])), "owner")
     assert [row["activities"]["rendering_contract"] for row in rows] == [
-        saved, "core_response_rendering_v18"]
+        saved, "core_response_rendering_v19"]
     assert rows[0]["response"]["elements"] == elements
     if saved not in ("core_response_rendering_v4", "core_response_rendering_v5", "core_response_rendering_v6",
                      "core_response_rendering_v7"):
@@ -271,29 +272,30 @@ def answering(model):
     return [payload for name, payload in model.calls if name in ("core_response_writer", "core_response_review")]
 
 
-def test_reviewer_rejection_uses_one_rewrite_and_new_independent_review(store):
+def test_reviewer_rejection_uses_one_second_look_and_new_independent_review(store):
+    # Turn v9 (AN.28, D2): only the paragraph the review faults goes back, and the answer is reviewed again.
     model = ScriptedModel(reject=1)
+    model.second_looks = []
     response = run(store, model)
     assert response["metrics"]["llm_calls"] == 6
     assert response["metrics"]["draft_corrections"] == 1
-    assert "correction" in answering(model)[2]
-    assert "correction" not in answering(model)[3]
+    assert [call["operation"] for call in response["metrics"]["calls"]][-3:] == [
+        "core_response_review", "core_response_repair", "core_response_review"]
+    looked, = model.second_looks
+    assert [entry["paragraph"] for entry in looked] == ["U1"] and looked[0]["why"] == ["Synthetic attribution rejection"]
 
 
-def test_a_section_has_three_tries_and_each_rewrite_is_told_to_ground_it(store):
-    # Owner decision P25, 19 Oct 2026: "At most we can do a third try"; each rewrite the
-    # review asks for is told plainly to rest every statement on the facts, the documents
-    # and the held sources, and (P29) to add what the review suggests where they bear it out.
-    from nm.core_engine.calls import REVIEW_PURPOSE
+def test_a_section_has_two_second_looks_each_told_what_was_found(store):
+    # Owner decision P25, 19 Oct 2026: "At most we can do a third try"; from turn v9 (AN.28, D2) each try after
+    # the first is a second look at only the paragraphs at fault, told why and shown the piece as written.
     model = ScriptedModel(reject=2)
+    model.second_looks = []
     response = run(store, model)
     assert response["committed"] == "committed"
     assert response["metrics"]["llm_calls"] == 8 and response["metrics"]["draft_corrections"] == 2
-    assert ["correction" in payload for payload in answering(model)] == [False, False, True, False, True, False]
-    rewrites = [payload["correction"] for payload in answering(model) if "correction" in payload]
-    assert all(told["purpose"] == REVIEW_PURPOSE for told in rewrites)
-    # The rewrite is told what was found with the words it concerns, not code's IDs alone.
-    assert rewrites[0]["mismatch"][0]["concerns"] == ["Hello. How can I help?"]
+    assert [call["operation"] for call in response["metrics"]["calls"]].count("core_response_repair") == 2
+    assert [[entry["paragraph"] for entry in looked] for looked in model.second_looks] == [["U1"], ["U1"]]
+    assert all(looked[0]["why"] == ["Synthetic attribution rejection"] for looked in model.second_looks)
     # A reply covering no dispute is a simple, straight answer (P40, O13): its paragraph as advice.
     assert [element["kind"] for element in response["elements"]] == ["ADVICE"]
 
@@ -457,7 +459,7 @@ def test_a_turn_saved_before_sections_could_be_held_reopens_unchanged(store, sav
     second = run(store, ScriptedModel(), chat_id=first["chat_id"], turn_id="new", message="Continue.")
     assert second["committed"] == "committed"
     rows = saved_rows(store.load(chat_matter_id("owner", first["chat_id"])), "owner")
-    assert [row["activities"]["contract"] for row in rows] == ["core_turn_v3", "core_turn_v8"]
+    assert [row["activities"]["contract"] for row in rows] == ["core_turn_v3", "core_turn_v9"]
     assert rows[0]["response"]["elements"] == elements
     assert all("unit" not in element for element in elements)
     assert all("unit" in element for element in rows[1]["response"]["elements"])

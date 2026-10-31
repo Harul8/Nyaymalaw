@@ -57,7 +57,7 @@ class Dating(ScriptedModel):
 
     def __init__(self, times):
         super().__init__()
-        self.times, self.corrections = times, []
+        self.times, self.corrections, self.second_looks = times, [], []
 
     def structured(self, prompt, schema, tier, **kwargs):
         result = super().structured(prompt, schema, tier, **kwargs)
@@ -76,8 +76,9 @@ def test_the_writer_is_told_once_and_a_corrected_answer_is_kept(store):
     reply = run(store, model)
     assert reply["committed"] == "committed"
     assert "13 September" not in " ".join(e["text"] for e in reply["elements"])
-    finding, = model.corrections[0]
-    assert finding["category"] == "grounding" and "13 September 2026" in finding["mismatch"]
+    # Turn v9 (AN.28): the date goes back to the writer on a second look, named by its own words.
+    (entry,), = model.second_looks
+    assert entry["words_at_fault"] == ["13 September 2026"] and "13 September 2026" in entry["why"][0]
 
 
 def test_a_date_still_worked_out_after_the_rewrites_is_never_shown(store):

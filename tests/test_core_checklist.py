@@ -320,7 +320,7 @@ def test_a_saved_turn_keeps_its_checklist_as_records_and_the_board_shows_it(stor
     assert reply["committed"] == "committed"
     matter = store.load(chat_matter_id("owner", reply["chat_id"]))
     rows = turn.saved_rows(matter, "owner")
-    assert rows[0]["activities"]["contract"] == turn.CONTRACT == "core_turn_v8"
+    assert rows[0]["activities"]["contract"] == turn.CONTRACT == "core_turn_v9"
     saved = rows[0]["records"]["checklist"]
     items = saved["disputes"][0]["items"]
     assert [(item["id"], item["status"], item["evidence"]["words"]) for item in items] == [

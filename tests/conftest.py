@@ -139,6 +139,47 @@ def read_as_v11(data):
     return data
 
 
+class SecondLookAsRewrite:
+    """A scripted model that knows no second look (writer v14, plan AN.28) answers one as its writer's next round:
+    it is asked to write the piece again, and each paragraph at fault is rewritten as the paragraph in the same place
+    of what it writes - as a v13 rewrite would have replaced it. A paragraph it writes no counterpart for gets no
+    repair and stays at fault. Every other call goes to the model as it is; a model that knows the second look
+    (knows_second_look) answers it itself."""
+
+    def __init__(self, model):
+        self._model = model
+
+    def __getattr__(self, name):
+        return getattr(self._model, name)
+
+    def structured(self, prompt, schema, tier, **kwargs):
+        if prompt.operation != "core_response_repair" or getattr(self._model, "knows_second_look", False):
+            return self._model.structured(prompt, schema, tier, **kwargs)
+        import dataclasses
+        import json
+
+        from nm.core_engine import response_writer
+        from nm.shared.model_port import Prompt
+        payload = json.loads(prompt.user)
+        if isinstance(getattr(self._model, "second_looks", None), list):
+            self._model.second_looks.append(payload["to_check"])  # what a test may read of each second look
+        overview = payload["what_you_wrote"]["piece"].startswith("the overview")
+        operation = "core_response_overview" if overview else "core_response_writer"
+        asked = {key: value for key, value in payload.items() if key not in ("what_you_wrote", "your_paragraphs", "to_check")}
+        written = self._model.structured(Prompt(system="", user=json.dumps(asked), operation=operation),
+                                         response_writer.OVERVIEW_SCHEMA_V13 if overview else response_writer.PART_SCHEMA_V13,
+                                         tier, **kwargs)
+        data = placed_as_v13(operation, asked, written.data)
+        units = data.get("units", []) if isinstance(data, dict) else []
+        repairs = []
+        for entry in payload["to_check"]:
+            position = int(entry["paragraph"][1:])
+            if position <= len(units):
+                repairs.append({"paragraph": entry["paragraph"], "action": "rewrite", "rewritten": units[position - 1],
+                                "why": "Written again.", "page_words": None, "question": None})
+        return dataclasses.replace(written, data={"repairs": repairs})
+
+
 @pytest.fixture(autouse=True)
 def scripted_writers_write_as_v13(monkeypatch):
     """Every scripted writer reached through a turn's calls is read as writer v13 asks
@@ -149,12 +190,18 @@ def scripted_writers_write_as_v13(monkeypatch):
     from nm.core_engine import calls, response_writer
 
     original = calls.TurnCalls.structured
+    constructed = calls.TurnCalls.__init__
+
+    def init(self, model, **kwargs):
+        # Turn v9 (AN.28): a scripted model that knows no second look answers it as its next rewrite.
+        constructed(self, model if isinstance(model, SecondLookAsRewrite) else SecondLookAsRewrite(model), **kwargs)
+    monkeypatch.setattr(calls.TurnCalls, "__init__", init)
 
     from nm.core_engine import response_review
 
     def structured(self, prompt, schema, tier, *, max_tokens):
         receipt = original(self, prompt, schema, tier, max_tokens=max_tokens)
-        if schema == response_review.SCHEMA_V11 and receipt.usable:
+        if schema in (response_review.SCHEMA_V11, response_review.SCHEMA_V12) and receipt.usable:
             reviewed = read_as_v11(receipt.data)
             if reviewed is not receipt.data:
                 receipt = dataclasses.replace(receipt, data=reviewed)

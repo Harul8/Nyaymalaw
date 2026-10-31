@@ -54,7 +54,7 @@ def test_a_disputes_time_limits_close_its_part_and_the_questions_end_the_answer(
     # Each paragraph still names its own draft paragraph, in its own section from turn v6
     # (answered dispute by dispute, 19 Oct 2026); the heading names none.
     saved, = rows(store, reply)
-    assert saved["activities"]["rendering_contract"] == response_rendering.PRESENTED_CONTRACT
+    assert saved["activities"]["rendering_contract"] == response_rendering.REPAIRED_CONTRACT
     draft = answer_sections.piece_of(saved["activities"], elements[8]["section"])["draft"]
     assert draft["units"][response_rendering.unit_index(elements, 8)]["text"] == ASK
     with pytest.raises(IndexError):

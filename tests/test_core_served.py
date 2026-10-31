@@ -309,9 +309,12 @@ def test_review_correction_rechecks_complete_context_and_saves_once(served):
     served.model.reject = 1
     reply = successful(served)
     assert reply["metrics"]["llm_calls"] == 11 and reply["metrics"]["draft_corrections"] == 1
-    correction, review = served.model.calls[9:]
-    assert "correction" in correction[1] and "correction" not in review[1]
-    assert correction[1]["original_context"] == review[1]["original_context"]
+    # Turn v9 (AN.28): the paragraph at fault goes back for a second look, written with the complete context,
+    # and the answer is reviewed again with it.
+    assert [call["operation"] for call in reply["metrics"]["calls"]][-2:] == ["core_response_repair", "core_response_review"]
+    looked, review = served.model.calls[9:]
+    assert "correction" not in review[1]
+    assert looked[1]["original_context"] == review[1]["original_context"]
     assert len(served.store.load(chat_matter_id(OWNER, reply["chat_id"])).brain_chat) == 1
 
 

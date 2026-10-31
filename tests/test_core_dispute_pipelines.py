@@ -48,7 +48,8 @@ class Writing(Scripted):
 
 
 def _activity(record, sources, execution, worked, sections, crossed, overview):
-    return {"contract": turn.CONTRACT, "interpretation": {"units": []}, "research": record, "sources": sources,
+    # Written by writer v13 through the loop of turn v8, which saved turns replay.
+    return {"contract": turn.PRESENTED_CONTRACT, "interpretation": {"units": []}, "research": record, "sources": sources,
             "execution": execution, "calculation": worked, "rendering_contract": response_rendering.PRESENTED_CONTRACT,
             "sections": sections, "cross_check": crossed, "overview": overview}
 

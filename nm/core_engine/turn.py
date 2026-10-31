@@ -56,11 +56,21 @@ KEPT_CONTRACT = "core_turn_v7"
 #: v8 (owner decisions P39-P45, 24 Oct 2026; plan AN.6): v7 written for the advocate and laid
 #: out as they read it - each section by writer v13 and reviewed by review v11, the overview by
 #: writer v13 - and rendered as v18.
-CONTRACT = "core_turn_v8"
+PRESENTED_CONTRACT = "core_turn_v8"
+#: v9 (plan AN.28, D2, 31 Oct 2026): v8 whose sections and overview are written by writer v14 and
+#: reviewed by review v12 - only the paragraphs at fault go back to the writer for a second look, and
+#: what still fails is blocked sentence by sentence, never with its paragraph or section - each part
+#: keeping its second looks (answer_sections.LOOKS), and rendered as v19.
+CONTRACT = "core_turn_v9"
 #: The turns answered dispute by dispute.
-SECTIONED = (BY_DISPUTE_CONTRACT, KEPT_CONTRACT, CONTRACT)
+SECTIONED = (BY_DISPUTE_CONTRACT, KEPT_CONTRACT, PRESENTED_CONTRACT, CONTRACT)
 #: The turns that keep what code refused (P29): v7 on.
-_KEEPS = (KEPT_CONTRACT, CONTRACT)
+_KEEPS = (KEPT_CONTRACT, PRESENTED_CONTRACT, CONTRACT)
+#: The turns whose parts keep their second looks (AN.28): v9 on.
+_LOOKS = (CONTRACT,)
+#: The rendering each turn answered dispute by dispute was saved with.
+_RENDERINGS = {BY_DISPUTE_CONTRACT: "core_response_rendering_v17", KEPT_CONTRACT: "core_response_rendering_v17",
+               PRESENTED_CONTRACT: "core_response_rendering_v18", CONTRACT: "core_response_rendering_v19"}
 _RELEASED = (RELEASE_CONTRACT, RECORDS_CONTRACT)
 EXECUTION = research.EXECUTION
 _ACTIVITY_FIELDS = {"contract", "interpretation", "research", "sources", "draft",
@@ -187,7 +197,7 @@ def prepare(model, context, searcher, *, case_index=None, provision_reader=None,
     def base(record, sources, execution):
         return {"contract": CONTRACT, "interpretation": interpreted, "research": record, "sources": sources,
                 "execution": execution, "calculation": limits,
-                "rendering_contract": response_rendering.PRESENTED_CONTRACT}
+                "rendering_contract": response_rendering.REPAIRED_CONTRACT}
 
     def released(state):
         if shown is None:
@@ -198,18 +208,18 @@ def prepare(model, context, searcher, *, case_index=None, provision_reader=None,
         elements = response_rendering.render_sections(
             context, record, sources, sections=state["sections"], cross_check=state["cross_check"],
             overview=state["overview"], time_limits=limits, waiting=state["waiting"],
-            contract=response_rendering.PRESENTED_CONTRACT)
+            contract=response_rendering.REPAIRED_CONTRACT)
         shown(elements, {**base(record, sources, execution), **state}, calls.metrics())
-    # Turn v8 (P39-P45): each section written for the advocate and placed (writer v13), reviewed
-    # by review v11, and the answer laid out as rendering v18.
+    # Turn v9 (AN.28): each section written for the advocate and placed, its failing pieces given a second
+    # look and then blocked one by one (writer v14), reviewed by review v12, and laid out as rendering v19.
     sections, crossed, overview = answer_sections.answer(
         calls, context, None, None, interpretation=interpreted, execution=None, worked=limits,
         case_index=case_index, provision_reader=provision_reader, report=report, released=released,
-        researched=researched, contract=response_writer.PRESENTED_CONTRACT)
+        researched=researched, contract=response_writer.REPAIRED_CONTRACT)
     record, sources, execution = researched.whole()
     elements = response_rendering.render_sections(context, record, sources, sections=sections, cross_check=crossed,
                                                   overview=overview, time_limits=limits,
-                                                  contract=response_rendering.PRESENTED_CONTRACT)
+                                                  contract=response_rendering.REPAIRED_CONTRACT)
     activity = {**base(record, sources, execution), "sections": sections, "cross_check": crossed, "overview": overview}
     return elements, activity, calls.metrics()
 
@@ -220,7 +230,7 @@ def interrupted(held):
     activity = {key: deepcopy(value) for key, value in held.items() if key != "waiting"}
     activity["sections"], activity["cross_check"], activity["overview"] = answer_sections.interrupted(
         {"sections": held["sections"], "cross_check": held["cross_check"], "overview": held["overview"]},
-        held["research"], kept=held["contract"] in _KEEPS)
+        held["research"], kept=held["contract"] in _KEEPS, looked=held["contract"] in _LOOKS)
     return activity
 
 
@@ -275,7 +285,8 @@ def _validate_sections(activity, context, elements):
     sources = answer_sources.build(context, record)
     if sources != activity["sources"] or execution_record(record) != activity["execution"]:
         raise ValueError("Saved sources or operation evidence changed")
-    answer_sections.validate(activity, context, record, sources, limits, kept=activity["contract"] in _KEEPS)
+    answer_sections.validate(activity, context, record, sources, limits, kept=activity["contract"] in _KEEPS,
+                             looked=activity["contract"] in _LOOKS)
     rebuilt = response_rendering.render_sections(context, record, sources, sections=activity["sections"],
                                                  cross_check=activity["cross_check"], overview=activity["overview"],
                                                  time_limits=limits, contract=activity["rendering_contract"])
@@ -291,8 +302,7 @@ def known_activity(activity):
     version = activity.get("contract") if isinstance(activity, dict) else None
     rendering = activity.get("rendering_contract") if isinstance(activity, dict) else None
     if version in SECTIONED:
-        return set(activity) == _SECTIONED_FIELDS and rendering == (
-            response_rendering.PRESENTED_CONTRACT if version == CONTRACT else response_rendering.BY_DISPUTE_CONTRACT)
+        return set(activity) == _SECTIONED_FIELDS and rendering == _RENDERINGS[version]
     expected_fields =(_ACTIVITY_FIELDS if version == LEGACY_CONTRACT else
                        _ACTIVITY_FIELDS | {"authority_evidence"} if version == AUTHORITY_CONTRACT else
                        _ACTIVITY_FIELDS | {"authority_evidence", "calculation"} if version == CALCULATION_CONTRACT

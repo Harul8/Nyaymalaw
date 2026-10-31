@@ -137,7 +137,8 @@ def answered(model):
     elements = response_rendering.render_sections(ctx, record, sources, sections=sections, cross_check=crossed,
                                                   overview=overview, time_limits=worked,
                                                   contract=response_rendering.PRESENTED_CONTRACT)
-    activity = {"contract": turn.CONTRACT, "interpretation": {"units": []}, "research": record,
+    # These scripted answers are written by writer v13 through the loop of turn v8, which saved turns replay.
+    activity = {"contract": turn.PRESENTED_CONTRACT, "interpretation": {"units": []}, "research": record,
                 "sources": sources, "execution": execution, "calculation": worked,
                 "rendering_contract": response_rendering.PRESENTED_CONTRACT,
                 "sections": sections, "cross_check": crossed, "overview": overview}
