@@ -18,6 +18,16 @@ Oct 2026) each section and the overview are written for the advocate and placed 
 reviewed by review v11, which also says what could go and keeps shown a folded paragraph the
 advice depends on.
 
+From turn v9 (plan AN.28, D2, 31 Oct 2026) a section or overview written by writer v14 is not rewritten
+whole for what code's checks or the review find in it. Only the paragraphs at fault go back to the writer
+for a second look (response_writer.repair), with the words at fault and the papers' own words, while the
+piece's allowance lasts; the writer corrects, keeps or withdraws each. What still fails is then blocked:
+the sentences holding the words at fault are cut, a paragraph whose words at fault are not found in it is
+left out, and what remains is reviewed again - twice after cutting sentences, a third time after leaving
+out each paragraph still at fault. A checklist item at fault is left out as it is found. A piece is
+withheld only when the AI service fails, its review cannot be completed, nothing it wrote could be
+admitted, or nothing of it is left.
+
 An answer covering several disputes is then checked across its sections for conflicts. A
 section in conflict is corrected once; the correction is reviewed first and used only when
 it passes, with the original kept and the change said (G-EDITED). The overview that opens
@@ -72,6 +82,14 @@ _LEFT_OUT = {"grounding": ("G-GROUND", Recovery.NONE), "framing": ("G-GROUND", R
              "quotation": ("G-QUOTE", Recovery.NONE), "attribution": ("G-ATTRIB", Recovery.NONE),
              "effect": ("G-EFFECT", Recovery.SYSTEM)}
 _PIECE = {"draft", "authority_evidence", "review", "date_findings"}
+#: A v14 piece also keeps why the writer kept words found at fault, as its review was told (review v12).
+_PIECE_V14 = _PIECE | {"writer_notes"}
+#: The reviews of what remains after blocking a v14 piece (AN.28, D2): two after cutting the sentences
+#: still at fault, a third after leaving out each paragraph still at fault.
+TRIMS_V14 = 3
+#: From turn v9 each section and the overview also keeps its second looks (AN.28): what was at fault, what
+#: the writer returned and what code made of it - evidence, checked for shape, not re-derived.
+LOOKS = "looks"
 _SECTION = {"part", "dispute_id", "reviewed", "trims", "fallback", "edit"}
 #: From turn v7 (P29) each section, correction and overview also keeps what code refused or never
 #: had checked: what the writer or the review returned that code refused, and a draft code
@@ -136,7 +154,7 @@ def kept_shown(piece):
     """v11 (P41): the paragraphs placed under "More on this" that the review says the advice
     depends on, which are shown with the advice; none before v11."""
     review = piece["review"]
-    return list(review["proposal"].get("keep_shown", ())) if review["contract"] == response_review.PRESENTED_CONTRACT else []
+    return list(review["proposal"].get("keep_shown", ())) if review["contract"] in response_review.PRESENTED else []
 
 
 def remarks(piece):
@@ -256,6 +274,58 @@ def _told(piece):
                    for finding in piece["date_findings"]]
 
 
+def _judge(draft):
+    """The review a draft is judged by: v12 for a v14 draft, v11 for v13, and v10 before (P29)."""
+    return {response_writer.REPAIRED_CONTRACT: response_review.WORDED_CONTRACT,
+            response_writer.PRESENTED_CONTRACT: response_review.PRESENTED_CONTRACT}.get(draft["contract"], REVIEW)
+
+
+def _faults_of(piece, context, section):
+    """What a v14 piece's review and date check still fault (AN.28): each paragraph's fault - {"position", "kind"
+    (review or date), "words", "why", "near"}, near being words the review quoted from a source - and the IDs
+    of the checklist items at fault."""
+    prefix = response_writer._prefix(context, section)
+    faults, items = [], set()
+
+    def at(identity):
+        rest = identity[len(prefix):] if identity.startswith(prefix) else ""
+        return int(rest[1:]) if rest[:1] == "b" and rest[1:].isdigit() else None
+    for finding in review_faults(piece):
+        near = next((source["quote"] for source in finding["sources"] if source.get("quote")), None)
+        for identity in finding["unit_ids"]:
+            position = at(identity)
+            if position is None:
+                items.add(identity)
+                continue
+            faults.append({"position": position, "kind": "review", "why": finding["mismatch"], "near": near,
+                           "words": [words["text"] for words in finding.get("words", ()) if words["unit_id"] == identity]})
+    for finding in piece["date_findings"]:
+        for identity in finding["unit_ids"]:
+            position = at(identity)
+            if position is None:
+                items.add(identity)
+                continue
+            faults.append({"position": position, "kind": "date", "why": finding["mismatch"], "near": None,
+                           "words": list(finding.get("words", ()))})
+    return faults, sorted(items)
+
+
+def _blocked_draft(draft, faults, items, context, sources, section, dispute_id, *, final=False):
+    """A v14 draft with what its review and date check still fault blocked as well as what it already had blocked
+    (AN.28): the sentences holding each paragraph's words at fault cut - every paragraph at fault left out when
+    final - and the checklist items at fault left out. None where nothing of it would remain."""
+    left_out, cut, dropped_items = response_writer._blocked(draft, context)
+    cut, left_out = response_writer.block(draft["proposal"], [{**fault, "words": []} for fault in faults] if final
+                                          else faults, answer_sources.aliases(sources), cut, left_out)
+    if len(left_out) >= len(draft["proposal"]["units"]):
+        return None
+    blocked = response_writer.accept(draft["proposal"], context, sources, contract=response_writer.REPAIRED_CONTRACT,
+                                     parts=[{"dispute_id": dispute_id, "units": 1}], section=section, left_out=left_out,
+                                     cut=cut)
+    items = sorted(set(dropped_items) | set(items))
+    return response_writer.trim(blocked, items) if items else blocked
+
+
 def unanswered(sections, worked):
     """The disputes whose sections could not be written in full, in the answer's order, with why."""
     return [[sections[position]["dispute_id"], sections[position]["fallback"]["reason"]]
@@ -351,7 +421,7 @@ class _Answering:
         return ("capacity" if isinstance(exc, ContextOverflow) else "usage" if isinstance(exc, UsageLimitReached)
                 else "service")
 
-    def _review(self, scope, draft, kwargs, refused, researched):
+    def _review(self, scope, draft, kwargs, refused, researched, accepted=()):
         record, sources, execution = researched
         self.report("checking_authorities")
         authorities = response_authorities.check(self.context, record, sources, draft,
@@ -361,9 +431,7 @@ class _Answering:
         def judged():
             return response_review.review(self.calls, self.context, record, sources, draft, execution,
                                           authority_evidence=authorities, time_limits=self.time_limits,
-                                          contract=(response_review.PRESENTED_CONTRACT
-                                                    if draft["contract"] == response_writer.PRESENTED_CONTRACT
-                                                    else REVIEW), **kwargs)
+                                          contract=_judge(draft), **kwargs)
         with self._lock:
             self._reviews += 1
             number = self._reviews
@@ -383,8 +451,14 @@ class _Answering:
                     refused.append(_refusal("review", self.calls.last_output, refusal_reason(again)))
                     raise
         # Code's own check that the answer works out no date itself (owner, 15 Oct 2026).
-        return {"draft": draft, "authority_evidence": authorities, "review": review,
-                "date_findings": response_writer.dates_not_given(draft, self.context, sources, self.time_limits, record)}
+        repaired = draft["contract"] == response_writer.REPAIRED_CONTRACT
+        piece = {"draft": draft, "authority_evidence": authorities, "review": review,
+                 "date_findings": response_writer.dates_not_given(draft, self.context, sources, self.time_limits, record,
+                                                                  accepted=accepted, worded=repaired)}
+        if repaired:
+            # v14 (AN.28): why the writer kept words found at fault, as the review was told it.
+            piece["writer_notes"] = deepcopy(kwargs.get("writer_notes") or [])
+        return piece
 
     def _tries(self, scope, allowance, operation, write, kwargs, refused, researched, correction=None):
         """A piece's draft and its rewrites, each reviewed, within its scope's allowance,
@@ -466,6 +540,190 @@ class _Answering:
             trims.append(current)
         return trims, None
 
+    def _dispute(self, section):
+        return None if section == response_writer.OVERVIEW else self.layout[section]["dispute_id"]
+
+    def _repaired(self, scope, operation, write, kwargs, researched, *, section, sections=None):
+        """A v14 piece (plan AN.28, D2): its draft; while the scope's allowance lasts, a second look at only the
+        paragraphs code's checks or the review find at fault; then what still fails blocked and what remains
+        reviewed again (TRIMS_V14 at most). A checklist item at fault is left out as it is found. Returns the
+        piece's record with its second looks (LOOKS)."""
+        record, sources, execution = researched
+        offered = answer_sources.aliases(sources)
+        overview = section == response_writer.OVERVIEW
+        refused, looks, accepted, notes, trims = [], [], [], [], []
+        state = {"proposal": None, "cut": {}, "left_out": [], "items": [], "undo": None, "blocking": False}
+        reviewed, passed, correction, better = None, None, None, 0
+
+        def finish(why):
+            if why is not None:
+                _owned("G-FALLBACK", Response.DISCLOSE, Scope.NEED, Recovery.ADVOCATE)
+            elif beside(trims[-1] if trims else reviewed) or remarks(trims[-1] if trims else reviewed):
+                _owned("G-NOTED", Response.DISCLOSE, Scope.NEED, Recovery.ADVOCATE)
+            return {"reviewed": reviewed, "trims": trims, "fallback": None if why is None else {"reason": why},
+                    KEPT: refused, LOOKS: looks}
+
+        def block(faults, final=False):
+            state["cut"], state["left_out"] = response_writer.block(
+                state["proposal"], [{**fault, "words": []} for fault in faults] if final else faults, offered,
+                state["cut"], state["left_out"])
+
+        def look(faults):
+            """One second look at the paragraphs at fault, applied; False when the allowance is spent."""
+            try:
+                self.calls.spend("core_response_repair")
+            except CorrectionUnavailable:
+                return False
+            self.report("revising")
+            returned = response_writer.repair(self.calls, self.context, record, sources, state["proposal"], faults,
+                                              section=section, interpretation=self.interpretation,
+                                              execution=execution, time_limits=self.time_limits, sections=sections)
+            proposal, decisions, aside = response_writer.apply_repairs(state["proposal"], returned, faults,
+                                                                       overview=overview)
+            looks.append({"faults": deepcopy(faults), "returned": deepcopy(returned), "decisions": deepcopy(decisions),
+                          "set_aside": aside})
+            state["undo"] = {"proposal": state["proposal"], "cut": dict(state["cut"]),
+                             "left_out": list(state["left_out"]), "faults": faults}
+            state["proposal"] = proposal
+            for decision in decisions:
+                if decision["action"] == "rewrite":
+                    # A paragraph written again is new: nothing of it stays cut.
+                    state["cut"].pop(decision["position"], None)
+                elif decision["action"] == "same_thing" and decision["why"]:
+                    words = [words for fault in faults if fault["position"] == decision["position"]
+                             and fault["kind"] == "review" for words in fault["words"]]
+                    if words:
+                        notes.append({"words": "; ".join(dict.fromkeys(words)), "why": decision["why"]})
+            accepted.extend(response_writer.clerical_dates(self.context, faults, decisions))
+            withdrawn = {decision["position"] for decision in decisions if decision["action"] == "withdraw"}
+            if withdrawn:
+                block([fault for fault in faults if fault["position"] in withdrawn])
+            return True
+
+        while True:
+            # 1. An admitted draft: written, or rewritten whole for its form, or the proposal admitted again.
+            try:
+                if state["proposal"] is None:
+                    draft = write() if correction is None else self.calls.correct(operation, write, **correction)
+                    correction = None
+                elif len(state["left_out"]) >= len(state["proposal"]["units"]):
+                    return finish("found")
+                else:
+                    draft = response_writer.accept(
+                        state["proposal"], self.context, sources, contract=response_writer.REPAIRED_CONTRACT,
+                        parts=[{"dispute_id": self._dispute(section), "units": 1}], section=section, faults=[],
+                        left_out=state["left_out"], cut=state["cut"])
+                if state["items"]:
+                    draft = response_writer.trim(draft, state["items"])
+                state["proposal"], state["undo"] = draft["proposal"], None
+            except response_writer.UnitFaults as exc:
+                self.calls.refused(exc)
+                state["proposal"] = exc.proposal
+                faults = [{"position": fault["position"], "kind": "check", "words": fault["words"],
+                           "why": fault["reason"], "near": fault["near"]} for fault in exc.faults]
+                try:
+                    looked = not state["blocking"] and look(faults)
+                except (SchemaViolation, CorrectionUnavailable) as again:
+                    self.calls.refused(again)
+                    refused.append(_refusal("writing", self.calls.last_output, refusal_reason(again)))
+                    looked = False
+                except _STOP:
+                    raise
+                except ModelError as again:
+                    return finish(self._failed(scope, again))
+                if not looked:
+                    block(faults)
+                continue
+            except SchemaViolation as exc:
+                self.calls.refused(exc)
+                refused.append(_refusal("writing", self.calls.last_output, refusal_reason(exc)))
+                if state["undo"] is not None:
+                    # A second look broke the piece's form: back to before it, and what it was for blocked.
+                    undo, state["undo"] = state["undo"], None
+                    state["proposal"], state["cut"], state["left_out"] = undo["proposal"], undo["cut"], undo["left_out"]
+                    block(undo["faults"])
+                    continue
+                if passed is not None:
+                    reviewed = passed
+                    return finish(None)
+                if self.calls.used(scope) >= SECTION_ALLOWANCE:
+                    return finish("checks")
+                # Rewritten whole for its form: a new proposal, of which nothing is blocked yet.
+                state.update(proposal=None, cut={}, left_out=[], items=[])
+                correction = {"mismatch": shape_mismatch(exc), "rejected": self.calls.last_output}
+                continue
+            except CorrectionUnavailable:
+                if passed is not None:
+                    reviewed = passed
+                    return finish(None)
+                return finish("checks")
+            except _STOP:
+                raise
+            except ModelError as exc:
+                if passed is not None:
+                    reviewed = passed
+                    return finish(None)
+                return finish(self._failed(scope, exc))
+            # 2. Its review.
+            try:
+                piece = self._review(scope, draft, {**kwargs, **({"writer_notes": deepcopy(notes)} if notes else {})},
+                                     refused, researched, accepted=list(accepted))
+            except (SchemaViolation, CorrectionUnavailable) as exc:
+                self.calls.refused(exc)
+                refused.append(_refusal("unreviewed", draft["proposal"], _UNCHECKED["review"]))
+                return finish("review")
+            except _STOP:
+                raise
+            except ModelError as exc:
+                why = self._failed(scope, exc)
+                refused.append(_refusal("unreviewed", draft["proposal"], _UNCHECKED[why]))
+                return finish(why)
+            if state["blocking"]:
+                trims.append(piece)
+            else:
+                reviewed = piece
+            faults, items = _faults_of(piece, self.context, section)
+            # 3. Nothing at fault: shown, after one rewrite of the whole at most for what could be better (P33).
+            if not faults and not items:
+                if not state["blocking"]:
+                    passed = piece
+                    if (better < BETTER_REWRITES and _read_v10(piece) and beside(piece)
+                            and all(finding["category"] in response_review.SUGGESTIONS for finding in beside(piece))
+                            and self.calls.used(scope) < SECTION_ALLOWANCE):
+                        # A new proposal, of which nothing is blocked yet; should it bring a fault of its own, the
+                        # piece that passed stays.
+                        better += 1
+                        self.report("revising")
+                        state.update(proposal=None, cut={}, left_out=[], items=[])
+                        correction = {"mismatch": _told(piece), "rejected": piece["draft"]["proposal"],
+                                      "purpose": REVIEW_PURPOSE}
+                        continue
+                return finish(None)
+            if passed is not None and not state["blocking"]:
+                # The rewrite for what could be better brought a fault of its own: the piece that passed stays.
+                reviewed = passed
+                return finish(None)
+            state["items"] = sorted(set(state["items"]) | set(items))
+            # 4. A second look at the paragraphs at fault while the allowance lasts.
+            if not state["blocking"]:
+                if not faults:
+                    continue
+                try:
+                    if look(faults):
+                        continue
+                except (SchemaViolation, CorrectionUnavailable) as exc:
+                    self.calls.refused(exc)
+                    refused.append(_refusal("writing", self.calls.last_output, refusal_reason(exc)))
+                except _STOP:
+                    raise
+                except ModelError as exc:
+                    return finish(self._failed(scope, exc))
+            # 5. What still fails blocked; what remains reviewed again.
+            if len(trims) >= TRIMS_V14:
+                return finish("found")
+            block(faults, final=len(trims) == TRIMS_V14 - 1)
+            state["blocking"] = True
+
     def _piece(self, scope, operation, write, kwargs, researched):
         refused = []
         reviewed, why = self._tries(scope, SECTION_ALLOWANCE, operation, write, kwargs, refused, researched)
@@ -492,7 +750,10 @@ class _Answering:
         scope, researched = f"s{index}", self.researched.part(index)
         self.report("writing")
         with self.calls.scope(scope):
-            piece = self._piece(scope, "core_response_writer", self._write(index, researched), {}, researched)
+            piece = (self._repaired(scope, "core_response_writer", self._write(index, researched), {}, researched,
+                                    section=index)
+                     if self.writer == response_writer.REPAIRED_CONTRACT else
+                     self._piece(scope, "core_response_writer", self._write(index, researched), {}, researched))
         return {"part": index, "dispute_id": self.layout[index]["dispute_id"], **piece, "edit": None}
 
     def across(self, sections):
@@ -547,6 +808,10 @@ class _Answering:
                                                   execution=execution, time_limits=self.time_limits,
                                                   contract=self.writer)
         with self.calls.scope("o"):
+            if self.writer == response_writer.REPAIRED_CONTRACT:
+                return self._repaired("o", "core_response_overview", write,
+                                      {"sections": drafts, "unanswered": missing or None}, researched,
+                                      section=response_writer.OVERVIEW, sections=presented)
             return self._piece("o", "core_response_overview", write,
                                {"sections": drafts, "unanswered": missing or None}, researched)
 
@@ -625,7 +890,7 @@ def answer(calls, context, record, sources, *, interpretation, execution, worked
     return sections, crossed, overview
 
 
-def interrupted(shown_so_far, record, *, kept=True):
+def interrupted(shown_so_far, record, *, kept=True, looked=False):
     """A turn that stopped after showing some of its answer, as it is saved (owner decision
     P27, 19 Oct 2026: each section is saved when it is shown): the sections shown, and each
     part not finished marked so - a section never written, the check across the sections
@@ -633,7 +898,7 @@ def interrupted(shown_so_far, record, *, kept=True):
     parts keep what code refused (turn v7)."""
     layout = response_writer.parts(record)
     many = len(layout) > 1
-    unfinished = {KEPT: []} if kept else {}
+    unfinished = ({KEPT: []} if kept else {}) | ({LOOKS: []} if looked else {})
     done = {saved["part"]: deepcopy(saved) for saved in shown_so_far["sections"]}
     sections = [done.get(index) or {"part": index, "dispute_id": layout[index]["dispute_id"], "reviewed": None,
                                     "trims": [], "fallback": {"reason": "interrupted"}, "edit": None, **unfinished}
@@ -661,7 +926,9 @@ def _piece_valid(piece, context, record, sources, execution, time_limits, sectio
     """One saved piece: its draft, authority checks and review bound again exactly to their
     evidence; its date findings checked for shape (the date check reads today's date, so
     they are kept, not redone)."""
-    if not isinstance(piece, dict) or set(piece) != _PIECE:
+    repaired = isinstance(piece, dict) and isinstance(piece.get("draft"), dict) and (
+        piece["draft"].get("contract") == response_writer.REPAIRED_CONTRACT)
+    if not isinstance(piece, dict) or set(piece) != (_PIECE_V14 if repaired else _PIECE):
         raise ValueError("Unknown saved section")
     draft = piece["draft"]
     if (not isinstance(draft, dict) or draft.get("contract") not in response_writer.SECTIONS
@@ -672,15 +939,20 @@ def _piece_valid(piece, context, record, sources, execution, time_limits, sectio
     response_authorities.validate(piece["authority_evidence"], context, record, sources, draft)
     if (not isinstance(piece["review"], dict)
             or piece["review"].get("contract") not in (response_review.SECTION_CONTRACT, REVIEW,
-                                                       response_review.PRESENTED_CONTRACT)):
+                                                       response_review.PRESENTED_CONTRACT,
+                                                       response_review.WORDED_CONTRACT)):
         raise ValueError("A saved section is reviewed as a section")
+    notes = piece.get("writer_notes") if repaired else None
     response_review.validate(piece["review"], context, record, sources, draft, execution,
-                             authority_evidence=piece["authority_evidence"], time_limits=time_limits, **kwargs)
+                             authority_evidence=piece["authority_evidence"], time_limits=time_limits, **kwargs,
+                             **({"writer_notes": notes} if notes else {}))
     known = {unit["id"] for unit in draft["units"]} | {item["id"] for part in draft["checklists"]
                                                          for item in part["items"]}
     dates = piece["date_findings"]
     if not isinstance(dates, list) or any(
-            not isinstance(found, dict) or set(found) != {"category", "unit_ids", "sources", "mismatch"}
+            not isinstance(found, dict)
+            or set(found) != {"category", "unit_ids", "sources", "mismatch"} | ({"words"} if repaired else set())
+            or repaired and (not isinstance(found["words"], list) or not all(isinstance(w, str) for w in found["words"]))
             or found["category"] != "grounding" or not isinstance(found["unit_ids"], list)
             or len(found["unit_ids"]) != 1 or not set(found["unit_ids"]) <= known or found["sources"] != []
             or not isinstance(found["mismatch"], str) for found in dates):
@@ -698,6 +970,51 @@ def _kept_valid(saved, kept):
             or not isinstance(entry["why"], str) or not entry["why"].strip() or len(entry["why"]) > 200
             for entry in entries):
         raise ValueError("Unknown record of what code refused")
+
+
+def _looks_valid(saved):
+    """From turn v9 a part keeps its second looks (AN.28): evidence of what was at fault, what the writer returned
+    and what code made of it, checked for its shape and not re-derived."""
+    looks = saved[LOOKS]
+    if not isinstance(looks, list) or len(looks) > SECTION_ALLOWANCE or any(
+            not isinstance(look, dict) or set(look) != {"faults", "returned", "decisions", "set_aside"}
+            or not isinstance(look["faults"], list) or not look["faults"] or not isinstance(look["decisions"], list)
+            or not isinstance(look["set_aside"], list) for look in looks):
+        raise ValueError("Unknown record of a section's second looks")
+
+
+def _chain_valid_v14(saved, context, record, sources, execution, time_limits, section, dispute_id, kwargs):
+    """A v14 section's or overview's saved pieces (AN.28): each trim exactly what the piece before it still
+    faulted, blocked - the last leaving out each paragraph still at fault - and the note in its place only
+    for a reason that fits what was found."""
+    reviewed, trims, fallback = saved["reviewed"], saved["trims"], saved["fallback"]
+    if (not isinstance(trims, list) or len(trims) > TRIMS_V14 or fallback is not None and (
+            not isinstance(fallback, dict) or set(fallback) != {"reason"} or fallback["reason"] not in REASONS)):
+        raise ValueError("Unknown saved section")
+    if reviewed is None:
+        if trims or fallback is None:
+            raise ValueError("A section never reviewed stands as a note for why")
+        return
+    _piece_valid(reviewed, context, record, sources, execution, time_limits, section, dispute_id, kwargs)
+    current = reviewed
+    for number, trimmed in enumerate(trims):
+        faults, items = _faults_of(current, context, section)
+        if not faults and not items:
+            raise ValueError("A section is trimmed only of what its review still faulted")
+        _piece_valid(trimmed, context, record, sources, execution, time_limits, section, dispute_id, kwargs)
+        if trimmed["draft"] != _blocked_draft(current["draft"], faults, items, context, sources, section, dispute_id,
+                                              final=number == TRIMS_V14 - 1):
+            raise ValueError("A trimmed section differs from what its review still faulted")
+        current = trimmed
+    faults, items = _faults_of(current, context, section)
+    if not faults and not items:
+        if fallback is not None:
+            raise ValueError("A section that passed is shown")
+        return
+    # Still at fault: its trims ran out, nothing of it was left after its second looks or blocking, its
+    # review could not be completed, or the service failed.
+    if fallback is None or fallback["reason"] not in ("found", "review", *NOT_MADE):
+        raise ValueError("A section's note differs from what was found")
 
 
 def _chain_valid(saved, context, record, sources, execution, time_limits, section, dispute_id, kwargs):
@@ -734,12 +1051,13 @@ def _chain_valid(saved, context, record, sources, execution, time_limits, sectio
         raise ValueError("A section's note differs from what was found")
 
 
-def validate(activity, context, record, sources, worked, *, kept=True):
+def validate(activity, context, record, sources, worked, *, kept=True, looked=False):
     """Replay of a v6 or v7 turn's answer: every saved section, trim, correction, check across
     the sections and overview bound again to its exact evidence, and what code dropped, edited
     or put in a section's place re-derived from them. kept: the parts keep what code refused
     (turn v7, P29), checked for its shape."""
-    extra = {KEPT} if kept else set()
+    extra = ({KEPT} if kept else set()) | ({LOOKS} if looked else set())
+    chain = _chain_valid_v14 if looked else _chain_valid
     layout = response_writer.parts(record)
     many, time_limits, execution = len(layout) > 1, calculation.for_answer(worked), activity["execution"]
     indices = list(range(1, len(layout))) if many else [0]
@@ -751,8 +1069,10 @@ def validate(activity, context, record, sources, worked, *, kept=True):
                 or saved["dispute_id"] != layout[index]["dispute_id"]):
             raise ValueError("Saved sections differ from the answer's layout")
         _kept_valid(saved, kept)
-        _chain_valid(saved, context, *_research_for(context, record, sources, execution, layout, index), time_limits,
-                     index, saved["dispute_id"], {})
+        if looked:
+            _looks_valid(saved)
+        chain(saved, context, *_research_for(context, record, sources, execution, layout, index), time_limits,
+              index, saved["dispute_id"], {})
     if all(saved["fallback"] is not None and saved["fallback"]["reason"] in NOT_MADE
            for saved in sections):
         raise ValueError("A turn the service could not answer is not saved")
@@ -777,7 +1097,7 @@ def validate(activity, context, record, sources, worked, *, kept=True):
             if edit is not None:
                 raise ValueError("Only a section the check across the sections names is corrected")
             continue
-        if (not isinstance(edit, dict) or set(edit) != {"conflicts", "reviewed"} | extra
+        if (not isinstance(edit, dict) or set(edit) != {"conflicts", "reviewed"} | ({KEPT} if kept else set())
                 or edit["conflicts"] != owners[position]):
             raise ValueError("A correction differs from the conflicts that asked for it")
         _kept_valid(edit, kept)
@@ -793,11 +1113,13 @@ def validate(activity, context, record, sources, worked, *, kept=True):
     if not isinstance(overview, dict) or set(overview) != {"reviewed", "trims", "fallback"} | extra:
         raise ValueError("Unknown saved overview")
     _kept_valid(overview, kept)
+    if looked:
+        _looks_valid(overview)
     drafts = [shown(sections[position])["draft"] for position in order(sections, worked)
               if shown(sections[position]) is not None]
     missing = unanswered(sections, worked)
-    _chain_valid(overview, context, record, sources, execution, time_limits, response_writer.OVERVIEW, None,
-                 {"sections": drafts, "unanswered": missing or None})
+    chain(overview, context, record, sources, execution, time_limits, response_writer.OVERVIEW, None,
+          {"sections": drafts, "unanswered": missing or None})
 
 
 def piece_of(activity, section):
