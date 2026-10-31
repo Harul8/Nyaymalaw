@@ -58,7 +58,7 @@ def test_the_purpose_the_check_already_had_is_unchanged():
 
 
 def test_an_understanding_that_lists_legal_questions_with_nothing_ruled_out_is_researched():
-    # The second paid replay (1 Nov 2026): a last revision said no research was needed, though it listed legal questions and the
+    # The second paid replay (31 Oct 2026): a last revision said no research was needed, though it listed legal questions and the
     # advocate had ruled nothing out; the owner's standing purpose researches every matter unless the advocate rules it out.
     from tests.test_core_research import understanding as scripted
     quiet = {**scripted(), "needs_research": False, "no_research_reason": "Confined to the papers."}

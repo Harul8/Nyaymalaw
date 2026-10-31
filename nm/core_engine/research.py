@@ -1645,7 +1645,7 @@ def _proposal(model, context, still, progress, restrictions):
                 and any(dispute["legal_questions"] for dispute in understanding["disputes"])):
             # The owner's standing purpose (the check is told it): every matter is researched for where the law stands on each
             # dispute unless the advocate rules it out. An understanding that lists legal questions, with nothing ruled out, is
-            # researched even where its last revision said none was needed (the second paid replay of 1 Nov 2026).
+            # researched even where its last revision said none was needed (the second paid replay of 31 Oct 2026).
             understanding = {**understanding, "needs_research": True, "no_research_reason": ""}
             if phrasing is not None:
                 phrasing.result()
