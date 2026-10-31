@@ -1428,10 +1428,14 @@ def _misleads_beside(piece, where):
 
 def _left_out_beside(piece, where):
     """v19 (AN.28, stage 5): what the independent check found a piece passes over of the papers' record that bears on it, which the
-    rewrite NM made for it did not settle, said beside the piece in the check's own words."""
-    return [_notice("NOTE", f"The independent check found that {where} does not take up something your papers record that "
-                    f"bears on it, and the rewrite NM made for it did not settle that: {_plainly(finding['mismatch'])}")
-            for finding in answer_sections.beside(piece) if finding["category"] == response_review.LEFT_OUT]
+    rewrite NM made for it did not settle, said beside the piece in the check's own words - in one note for the piece."""
+    left = [_plainly(finding["mismatch"]) for finding in answer_sections.beside(piece) if finding["category"] == response_review.LEFT_OUT]
+    if not left:
+        return []
+    said = left[0] if len(left) == 1 else " ".join(f"({number}) {item}" for number, item in enumerate(left, 1))
+    things = "something your papers record that bears" if len(left) == 1 else f"{len(left)} things your papers record that bear"
+    return [_notice("NOTE", f"The independent check found that {where} does not take up {things} on it, and the rewrite NM made "
+                    f"for it did not settle that: {said}")]
 
 
 def _suggested(piece):

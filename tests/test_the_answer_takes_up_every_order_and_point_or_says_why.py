@@ -46,7 +46,10 @@ def test_the_writer_v14_is_given_every_order_pending_proceeding_and_point_to_tak
     prompt, payload = model.seen[0]
     coverage = payload["coverage"]
     assert coverage and {item["kind"] for item in coverage} <= {"order", "pending"}
-    assert all(item["cite"] for item in coverage), "each with the pages to cite"
+    # An event by its ID and kind: its date, what it is and the pages to cite are in papers_chronology beside it.
+    assert all(set(item) == {"id", "kind"} for item in coverage)
+    leading = [key for key in response_writer.SHARED_KEYS if key in payload]
+    assert list(payload)[:len(leading)] == leading and leading[-1] == "coverage", "what every part's call carries alike leads"
     assert [item["id"] for item in coverage] == [event["id"] for event in payload["papers_chronology"]
                                                  if event["kind"] in ("order", "pending") and event["located"]]
     earlier = Writer(quiet)
@@ -54,12 +57,16 @@ def test_the_writer_v14_is_given_every_order_pending_proceeding_and_point_to_tak
     assert "coverage" not in earlier.seen[0][1], "the v13 writer is shown what it was"
     writer = " ".join(response_writer.SYSTEM_V14.split())
     for part in ("Where coverage is given, it lists every order, direction and proceeding still pending",
-                 "every point the papers read side by side show", "Take up each that bears on your part, citing its pages",
-                 "say so in a limitation unit, with why", "Pass over none of them in silence", "Set out the papers' events once",
+                 "(each by its ID in papers_chronology, which holds its date, what it is and cite)",
+                 "every point the papers read side by side show",
+                 "Take up each whose absence would change or weaken what your part tells the advocate, citing its pages",
+                 "say in one limitation unit, with why, which such items you leave out", "Pass over none of those in silence",
+                 "one that would only add detail need not be named", "Set out the papers' events once",
                  "the chronology across the disputes is the opening overview's", "keep a part's dated events together, in date order"):
         assert part in writer, part
     overview = " ".join(response_writer.OVERVIEW_SYSTEM_V14.split())
-    assert "each that bears on the matter and that no section took up" in overview and "repeat nothing a section already says" in overview
+    assert "each whose absence would change or weaken what the answer tells the advocate and that no section took up" in overview
+    assert "repeat nothing a section already says" in overview
     assert "Where coverage is given" not in response_writer.SYSTEM_V13 + response_writer.OVERVIEW_SYSTEM_V13
 
 
@@ -86,12 +93,18 @@ def test_the_review_v12_holds_an_item_passed_over_in_silence_a_must_fix_said_by_
     reviewed = response_review.review(reviewer, ctx, record, sources, draft, research.execution(record),
                                       authority_evidence=response_authorities.check(ctx, record, sources, draft),
                                       contract=response_review.WORDED_CONTRACT)
-    item = reviewer.seen[0]["coverage"][0]
+    from nm.core_engine import answer_sources
+    offered = {tag: alias for alias, tag in answer_sources.aliases(sources).items()}
+    item = response_writer._coverage_shown(record, offered, ctx)[0]
+    assert reviewer.seen[0]["coverage"][0] == {"id": item["id"], "kind": item["kind"]}, "the review is shown it as the writer is"
     (left,) = reviewed["proposal"]["findings"]
     assert left["category"] == response_review.LEFT_OUT and left["unit_ids"] == [] and not reviewed["accepted"]
     assert left["mismatch"] == f"{item['date']} {item['kind']}: {item['what']} - It decides who holds the land."
     assert "names no item of the coverage list: 'E99'" in [entry["why"] for entry in reviewed["proposal"]["set_aside"]]
     assert "give it in missing" in response_review.SYSTEM_V12 and "missing" not in response_review.SYSTEM_V11
+    review = " ".join(response_review.SYSTEM_V12.split())
+    assert "An item whose absence would change or weaken what the piece tells the advocate" in review
+    assert "Do not give an item that would only add detail." in review
 
 
 class Covering:
@@ -152,3 +165,46 @@ def test_a_rewrite_that_takes_the_item_up_is_shown_with_nothing_beside_it():
     assert len(model.writes) == 2 and model.reviews == 2
     assert not [element for element in elements if element["kind"] == "NOTE"]
     assert sections[0]["reviewed"]["review"]["accepted"] is True
+
+
+def test_the_items_one_piece_leaves_out_are_said_in_one_note():
+    two = lambda payload: [{"id": payload["coverage"][0]["id"], "why": "It is the order in issue."},  # noqa: E731
+                           {"id": payload["coverage"][-1]["id"], "why": "The suits are still pending."}]
+    sections, elements = answered(Covering(lambda round_, payload: two(payload)))
+    note, = [element for element in elements if element["kind"] == "NOTE"]
+    assert "does not take up 2 things your papers record that bear on it" in note["text"]
+    assert "(1) " in note["text"] and "(2) " in note["text"] and "The suits are still pending." in note["text"]
+
+
+class Faulted(Covering):
+    """As Covering, but the first draft also holds a statement the review finds misleading."""
+
+    def structured(self, prompt, schema, tier, **kwargs):
+        payload = json.loads(prompt.user)
+        if prompt.operation == "core_response_writer" and not self.writes:
+            self.writes.append(payload)
+            units = [{"kind": "summary", "text": "In short, a FAULT claim here.", "uses": [], "place": "row_action"},
+                     {"kind": "next_step", "text": "Check the records.", "uses": [], "place": "next_steps"}]
+            return _result({"units": units, "checklist": [], "time_limit_ids": [], "by_when": None}, tier)
+        if prompt.operation == "core_response_review":
+            self.reviews += 1
+            misleading = [{"kind": "unsupported", "where": [unit["id"]], "evidence": [], "why": "Not borne out.",
+                           "words": ["In short, a FAULT claim here."]}
+                          for unit in payload["complete_draft_proposal"]["units"] if "FAULT" in unit["text"]]
+            return _result({"misleading": misleading, "could_be_better": [], "keep_shown": [],
+                            "missing": self.missing(self.reviews, payload)}, tier)
+        return super().structured(prompt, schema, tier, **kwargs)
+
+
+def test_the_rewrite_for_coverage_comes_before_any_second_look_and_has_its_own_allowance():
+    # The second paid replay: two second looks spent the section's allowance, and eleven items stayed out.
+    model = Faulted(lambda round_, payload: ([{"id": payload["coverage"][0]["id"], "why": "It is the order in issue."}]
+                                             if round_ == 1 else []))
+    sections, elements = answered(model)
+    assert len(model.writes) == 2 and model.writes[1]["correction"]["purpose"] == answer_sections.COVERAGE_PURPOSE
+    told = [entry["category"] for entry in model.writes[1]["correction"]["mismatch"]]
+    assert any(category.startswith("misleading") for category in told) and any(category.startswith("left out") for category in told), \
+        "the rewrite is told everything the review found"
+    (section,) = sections
+    assert section[answer_sections.LOOKS] == [] and section["fallback"] is None, "the rewrite settled both; no second look was needed"
+    assert not [element for element in elements if element["kind"] == "NOTE"]

@@ -426,10 +426,11 @@ SYSTEM_V12 = SYSTEM_V11.replace(
     "bear out (unsupported). Where figures_added is given, code added up the transactions NM found,\ngiver by giver: a sum or remainder of figures is borne out only if it is one figures_added gives,\nsaid as what that giver's transactions found add up to and not as what anyone holds, owes or has\npaid, and never as a sum across givers; one for a property or account whose complete is false,\nor one the piece worked out itself, is not.")
 SYSTEM_V12 = SYSTEM_V12.replace(
     "List only what you find. Empty lists mean the piece can be shown as it is, its folds as placed.",
-    "When coverage is given, it lists every order, direction and proceeding still pending that the\npapers record, and every point "
-    "the papers read side by side show, each with its ID (E1, C1...).\nAn item that bears on the piece, which the piece neither takes "
-    "up nor names as left out with a\nreason that holds, is a must-fix: give it in missing, with its ID and why it matters to the\n"
-    "advocate. An overview need not take up what the sections it opens take up.\n\n"
+    "When coverage is given, it lists every order, direction and proceeding still pending that the\npapers record (an event by its "
+    "ID in papers_chronology), and every point the papers read side by\nside show (C1...). An item whose absence would change or weaken "
+    "what the piece tells the\nadvocate, which the piece neither takes up nor names as left out with a reason that holds, is\na must-fix: "
+    "give it in missing, with its ID and why it matters to the advocate. Do not give an\nitem that would only add detail. An overview "
+    "need not take up what the sections it opens take\nup.\n\n"
     "List only what you find. Empty lists mean the piece can be shown as it is, its folds as placed.")
 assert SYSTEM_V12.count("words: the shortest stretch") == 1 and "writer_notes" in SYSTEM_V12 and "guntas" not in SYSTEM_V12
 assert "give it in missing" in SYSTEM_V12
@@ -1036,7 +1037,8 @@ def review(model, context, research_record, sources, draft, execution=None, *,
         # The events the papers record, as the writer of the piece was shown them (plan AN.27, P12).
         papers = response_writer._chronology_shown(research_record, shown, context) if contract in PRESENTED else None
         # v12 (AN.28, stage 5): what the piece must take up or say why not, as its writer was shown it.
-        coverage = response_writer._coverage_shown(research_record, shown, context) if contract == WORDED_CONTRACT else None
+        coverage = (response_writer._coverage_shown(research_record, shown, context, compact=True)
+                    if contract == WORDED_CONTRACT else None)
         if coverage:
             payload["coverage"] = coverage
         if papers:
@@ -1076,9 +1078,13 @@ def review(model, context, research_record, sources, draft, execution=None, *,
     system, schema = ((SYSTEM_V12, SCHEMA_V12) if contract == WORDED_CONTRACT
                       else (SYSTEM_V11, SCHEMA_V11) if contract == PRESENTED_CONTRACT
                       else (SYSTEM_V10, SCHEMA_V10) if contract == MISLEADS_CONTRACT else (SYSTEM, SCHEMA))
-    user = json.dumps(payload, ensure_ascii=False)
-    # v12 (AN.28, D4 and 6c): the review reasons at medium, and the conversation with its papers is marked for the cache.
     worded = contract == WORDED_CONTRACT
+    if worded:
+        # v12 (AN.28, 6c): what every review of the turn carries alike leads, in one order, so that the provider may reuse it.
+        payload = {**{key: payload[key] for key in response_writer.SHARED_KEYS if key in payload},
+                   **{key: value for key, value in payload.items() if key not in response_writer.SHARED_KEYS}}
+    user = json.dumps(payload, ensure_ascii=False)
+    # v12 (AN.28, D4 and 6c): the review reasons at medium, and the material it shares is marked for the cache.
     prompt = Prompt(system=system, user=user, operation="core_response_review", effort="medium" if worded else None,
                     cache_through=response_writer.shared_material(user, payload) if worded else 0)
     if (estimate_tokens(system + prompt.user + json.dumps(schema)) + MAX_OUTPUT

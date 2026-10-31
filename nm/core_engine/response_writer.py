@@ -539,7 +539,36 @@ Judgment roles and treatment remain proposals until independently reviewed.
 _LAND_V13 = "themselves. Counting is code's work for extents as it is for days: do not add, subtract or\nconvert acres, guntas or cents yourself. Where land_extents is given, code added the transfers of\nland NM found in the papers, parcel by parcel and seller by seller: use a seller's sold, and what\na stated whole extent leaves after it (leaves: if that seller held all of it) or how far it goes\nbeyond it (exceeds), exactly as given, and never add one seller's sales to another's. Say what\nits caveat says - that the sums add every transfer the papers record, whoever states it, rival\nand repeated accounts included, so a sum is a figure to check and never the extent anyone holds\nor has transferred - and which transfers were not added and why. Where exceeds is given, say that\nthe papers do not fit together on that seller's sales, as code found, and not which account is\nright. Name no remainder for a parcel whose complete is false, nor for a seller with no name.\nFor any other total or remainder, give each extent as the paper gives it, and say what would be\nadded or taken away and that it has not been worked out."
 assert SYSTEM_V13.count(_LAND_V13) == 1
 #: v14 (plan AN.28, D7): the figures code added up are those of the transactions of any matter, not only of land.
-SYSTEM_V14 = SYSTEM_V13.replace("neither in the chronology nor on a page.\n", "neither in the chronology nor on a page.\nWhere coverage is given, it lists every order, direction and proceeding still pending that the\npapers' chronology records, and every point the papers read side by side show (one of the\nclient's people in another proceeding, a finding against the client, an act after a death or a\ntime limit, a further property, account or case), each with what it is and cite. Take up each\nthat bears on your part, citing its pages; for one that bears on it but that you leave out, say\nso in a limitation unit, with why. Pass over none of them in silence. Set out the papers' events\nonce: where your part is one of several (other_parts), the chronology across the disputes is the\nopening overview's, so set out only the events your part turns on; where it is the whole answer,\nset out the chronology the advocate asked for. Either way keep a part's dated events together,\nin date order, and do not repeat them in another paragraph.\n").replace(_LAND_V13, "themselves. Counting is code's work for figures as it is for days: do not add, subtract or\nconvert areas, sums of money or any other figures yourself. Where figures_added is given, code\nadded up the transactions NM found in the papers, property by property or account by account\nand giver by giver - the seller, donor, settlor, lender or payer - areas with areas and sums of\nmoney with sums of money: use a giver's added, and what a stated whole leaves after it (leaves:\nif all of it was that giver's) or how far it goes beyond it (exceeds), exactly as given, and\nnever add one giver's figures to another's. Say what its caveat says - that the sums add every\ntransaction the papers record, whoever states it, rival and repeated accounts included, so a sum\nis a figure to check and never what anyone holds, owes or has paid - and which transactions were\nnot added and why. Where exceeds is given, say that the papers do not fit together on that\ngiver's transactions, as code found, and not which account is right. Name no remainder for a\nproperty or account whose complete is false, nor for a giver with no name. For any other total\nor remainder, give each figure as the paper gives it, and say what would be added or taken away\nand that it has not been worked out.")
+_GENERAL_V14 = """themselves. Counting is code's work for figures as it is for days: do not add, subtract or
+convert areas, sums of money or any other figures yourself. Where figures_added is given, code
+added up the transactions NM found in the papers, property by property or account by account
+and giver by giver - the seller, donor, settlor, lender or payer - areas with areas and sums of
+money with sums of money: use a giver's added, and what a stated whole leaves after it (leaves:
+if all of it was that giver's) or how far it goes beyond it (exceeds), exactly as given, and
+never add one giver's figures to another's. Say what its caveat says - that the sums add every
+transaction the papers record, whoever states it, rival and repeated accounts included, so a sum
+is a figure to check and never what anyone holds, owes or has paid - and which transactions were
+not added and why. Where exceeds is given, say that the papers do not fit together on that
+giver's transactions, as code found, and not which account is right. Name no remainder for a
+property or account whose complete is false, nor for a giver with no name. For any other total
+or remainder, give each figure as the paper gives it, and say what would be added or taken away
+and that it has not been worked out."""
+#: v14 (plan AN.28, stage 5): the coverage list, and the papers' events set out once.
+_COVERAGE_V14 = """neither in the chronology nor on a page.
+Where coverage is given, it lists every order, direction and proceeding still pending that the
+papers' chronology records (each by its ID in papers_chronology, which holds its date, what it is
+and cite), and every point the papers read side by side show (one of the client's people in
+another proceeding, a finding against the client, an act after a death or a time limit, a further
+property, account or case), each with what it is and cite. Take up each whose absence would change
+or weaken what your part tells the advocate, citing its pages; say in one limitation unit, with
+why, which such items you leave out. Pass over none of those in silence; one that would only add
+detail need not be named. Set out the papers' events once: where your part is one of several
+(other_parts), the chronology across the disputes is the opening overview's, so set out only the
+events your part turns on; where it is the whole answer, set out the chronology the advocate asked
+for. Either way keep a part's dated events together, in date order, and do not repeat them in
+another paragraph.
+"""
+SYSTEM_V14 = SYSTEM_V13.replace("neither in the chronology nor on a page.\n", _COVERAGE_V14).replace(_LAND_V13, _GENERAL_V14)
 
 
 def _object(fields):
@@ -1667,14 +1696,16 @@ def _extents_shown(record, context=None):
     return extents.shown(transfers, copy_figures.copies(_copy_pages(context)) if context else ())
 
 
-def _coverage_shown(record, offered, context=None):
+def _coverage_shown(record, offered, context=None, *, compact=False):
     """What the answer must take up or say why not (plan AN.28, stage 5), as the writer v14 and the review v12 are shown it: every
     order, direction and proceeding still pending that the papers' chronology records and found on its page, and every point the
     papers read side by side show whose words were found - each with its ID (E1..., C1...), what it is and the short IDs of the
-    pages to cite. None where the plan kept none (research before v13, or no papers)."""
+    pages to cite. None where the plan kept none (research before v13, or no papers). compact: an event by its ID and kind only, as
+    the writer and the review are shown it beside papers_chronology, which holds the rest."""
     if record.get("contract") not in research.WHOLE_FILE:
         return None
-    items = [{"id": event["id"], "kind": event["kind"], "date": event["date"], "what": event["what"], "cite": event["cite"]}
+    items = [{"id": event["id"], "kind": event["kind"]} if compact else
+             {"id": event["id"], "kind": event["kind"], "date": event["date"], "what": event["what"], "cite": event["cite"]}
              for event in _chronology_shown(record, offered, context) or () if event["kind"] in ("order", "pending")
              and event["located"]]
     items += [{"id": item["id"], "kind": item["kind"], "what": item["point"], "why_it_matters": item["why_it_matters"],
@@ -1703,14 +1734,15 @@ def _payload(context, record, sources, interpretation, execution, layout, index,
     copies = _copies_shown(context, offered) if worded else None
     land = _extents_shown(record, context) if worded else None
     # v14 (AN.28, stage 5): what the answer must take up or say why not.
-    coverage = _coverage_shown(record, offered, context) if general else None
+    coverage = _coverage_shown(record, offered, context, compact=True) if general else None
+    # What every part's call carries alike comes first (shared_material), the coverage list among it from v14.
     return {"original_context": answer_sources.shown_context(context, sources), "setting": clock_contracts.setting(),
-            **({"coverage": coverage} if coverage else {}),
             "interpretation_proposal": interpretation,
             **({"papers_chronology": papers} if papers else {}),
             **({"copies_read_differently": copies} if copies else {}),
             # v14 (AN.28, D7): the figures of the transactions of any matter.
             **({"figures_added" if general else "land_extents": land} if land else {}),
+            **({"coverage": coverage} if coverage else {}),
             "this_part": {"part": index + 1, "of": len(layout), "opens_the_answer": index == 0,
                           "dispute": disputes.get(part["dispute_id"]),
                           "other_parts": [disputes[p["dispute_id"]]["name"] for p in layout
@@ -1727,12 +1759,23 @@ def _payload(context, record, sources, interpretation, execution, layout, index,
 WRITING_EFFORT, SECOND_LOOK_EFFORT = "medium", "high"
 
 
+#: What every writing and review call of a turn carries alike, in the order its payload leads with them (plan AN.28, 6c).
+SHARED_KEYS = ("original_context", "setting", "interpretation_proposal", "papers_chronology", "copies_read_differently",
+               "figures_added", "coverage")
+
+
 def shared_material(user, payload):
-    """How many leading characters of a call's words are the conversation with its papers (original_context), which every call of
-    a kind carries alike and a provider may cache (plan AN.28, 6c); 0 where the payload does not begin with it."""
-    if not payload or next(iter(payload)) != "original_context":
+    """How many leading characters of a call's words are what every call of its kind carries alike - the conversation with its
+    papers, and after it the chronology, the figures and the coverage list where the payload leads with them - which a provider may
+    cache (plan AN.28, 6c); 0 where the payload does not begin with the conversation."""
+    leading = []
+    for key in payload or ():
+        if key not in SHARED_KEYS:
+            break
+        leading.append(key)
+    if not leading or leading[0] != "original_context":
         return 0
-    prefix = json.dumps({"original_context": payload["original_context"]}, ensure_ascii=False)[:-1]
+    prefix = json.dumps({key: payload[key] for key in leading}, ensure_ascii=False)[:-1]
     return len(prefix) if user.startswith(prefix) else 0
 
 
@@ -1924,9 +1967,19 @@ T1...) in your text, and give no URLs, verdicts or claims that NM saved, execute
 completed anything."""
 assert OVERVIEW_SYSTEM_V13.count("one event that other papers record too: set it out once. Where the advocate did not ask, leave\nit unused.\n") == 1
 #: v14 (AN.28, stage 5): the overview takes up what no section took up of the coverage list, or says why not.
+_OVERVIEW_COVERAGE_V14 = """one event that other papers record too: set it out once. Where the advocate did not ask, leave
+it unused.
+
+Where coverage is given, it lists every order, direction and proceeding still pending that the
+papers record (each by its ID in papers_chronology), and every point the papers read side by side
+show, each with what it is and cite. Take up, in a summary or limitation unit, each whose absence
+would change or weaken what the answer tells the advocate and that no section took up, citing its
+pages, or say in one limitation unit why such items are left out; repeat nothing a section already
+says.
+"""
 OVERVIEW_SYSTEM_V14 = OVERVIEW_SYSTEM_V13.replace(
     "one event that other papers record too: set it out once. Where the advocate did not ask, leave\nit unused.\n",
-    'one event that other papers record too: set it out once. Where the advocate did not ask, leave\nit unused.\n\nWhere coverage is given, it lists every order, direction and proceeding still pending that the\npapers record, and every point the papers read side by side show, each with what it is and cite.\nTake up, in a summary or limitation unit, each that bears on the matter and that no section took\nup, citing its pages, or say in a limitation unit why it is left out; repeat nothing a section\nalready says.\n')
+    _OVERVIEW_COVERAGE_V14)
 OVERVIEW_SCHEMA_V13 = _object({"units": {"type": "array", "minItems": 1, "items": _object({
     "kind": {"type": "string", "enum": list(OVERVIEW_KINDS_V13)}, "text": {**TEXT, "description": "Natural prose."},
     "uses": {"type": "array", "items": _use_v10(True)}})}})
@@ -1986,13 +2039,13 @@ def _overview_payload(context, research_record, sources, sections, interpretatio
     """What the overview's writer is given (v12 on), and its second look with it (v14) - with, from v14, the coverage list."""
     offered = {tag: alias for alias, tag in answer_sources.aliases(sources).items()}
     papers = _chronology_shown(research_record, offered, context) if presented else None
-    coverage = _coverage_shown(research_record, offered, context) if general else None
+    coverage = _coverage_shown(research_record, offered, context, compact=True) if general else None
     return {"original_context": answer_sources.shown_context(context, sources),
-            **({"coverage": coverage} if coverage else {}),
             "setting": clock_contracts.setting(), "interpretation_proposal": interpretation,
+            **({"papers_chronology": papers} if papers else {}),
+            **({"coverage": coverage} if coverage else {}),
             "understanding": research_record["plan"]["proposal"]["understanding"],
             "sections_shown": deepcopy(sections),
-            **({"papers_chronology": papers} if papers else {}),
             **({"time_limits": limit_ids(renamed(time_limits, offered))} if time_limits is not None else {}),
             "execution_evidence": execution,
             "source_kinds": {offered.get(identity, identity): row["kind"] for identity, row in sources.items()

@@ -94,3 +94,12 @@ def test_the_second_reading_of_a_page_and_the_look_again_at_copies_reason_at_med
     page_reading.relook(Pages(), {"name": "a.pdf", "number": 1, "image": b"\xff\xd8\xff", "text": "6.06"},
                         {"name": "b.pdf", "number": 1, "image": b"\xff\xd8\xff", "text": "6.16"}, [])
     assert [prompt.effort for prompt in seen] == [None, "medium", "medium"]
+
+
+def test_the_shared_material_reaches_as_far_as_the_payload_leads_with_what_every_call_carries_alike():
+    payload = {"original_context": {"pages": "p"}, "setting": {"today": "d"}, "papers_chronology": [1], "coverage": [2],
+               "this_part": {"part": 1}}
+    user = json.dumps(payload, ensure_ascii=False)
+    shared = response_writer.shared_material(user, payload)
+    assert user[:shared] == json.dumps({key: payload[key] for key in list(payload)[:4]}, ensure_ascii=False)[:-1]
+    assert response_writer.shared_material(json.dumps({"setting": 1}), {"setting": 1}) == 0, "it must lead with the conversation"

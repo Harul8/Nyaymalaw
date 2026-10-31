@@ -578,7 +578,10 @@ class _Answering:
                 state["cut"], state["left_out"])
 
         def look(faults):
-            """One second look at the paragraphs at fault, applied; False when the allowance is spent."""
+            """One second look at the paragraphs at fault, applied; False when the allowance is spent - the section's own,
+            never the one kept for the rewrite for its coverage."""
+            if len(looks) >= SECTION_ALLOWANCE:
+                return False
             try:
                 self.calls.spend("core_response_repair")
             except CorrectionUnavailable:
@@ -692,21 +695,23 @@ class _Answering:
             else:
                 reviewed = piece
             faults, items = _faults_of(piece, self.context, section)
-            # 3. Nothing at fault: shown, after one rewrite of the whole at most for what could be better (P33).
+            # 3. Stage 5: what the piece passed over of its coverage is no paragraph's fault: the piece is rewritten whole for it
+            # once, told everything the review found, before any second look at single paragraphs. Should a rewrite of a piece
+            # that passed bring a fault of its own, the piece that passed stays, with what it left out said beside it.
+            if (not state["blocking"] and covered < COVERAGE_REWRITES
+                    and any(finding["category"] == response_review.LEFT_OUT for finding in beside(piece))
+                    and self.calls.used(scope) < SECTION_ALLOWANCE + COVERAGE_REWRITES):
+                covered += 1
+                if not faults and not items:
+                    passed = piece
+                self.report("revising")
+                state.update(proposal=None, cut={}, left_out=[], items=[])
+                correction = {"mismatch": _told(piece), "rejected": piece["draft"]["proposal"], "purpose": COVERAGE_PURPOSE}
+                continue
+            # 4. Nothing at fault: shown, after one rewrite of the whole at most for what could be better (P33).
             if not faults and not items:
                 if not state["blocking"]:
                     passed = piece
-                    if (covered < COVERAGE_REWRITES and any(finding["category"] == response_review.LEFT_OUT
-                                                            for finding in beside(piece))
-                            and self.calls.used(scope) < SECTION_ALLOWANCE):
-                        # Stage 5: rewritten once for what of its coverage it passed over; should the rewrite bring a fault
-                        # of its own, the piece that passed stays, with what it left out said beside it.
-                        covered += 1
-                        self.report("revising")
-                        state.update(proposal=None, cut={}, left_out=[], items=[])
-                        correction = {"mismatch": _told(piece), "rejected": piece["draft"]["proposal"],
-                                      "purpose": COVERAGE_PURPOSE}
-                        continue
                     if (better < BETTER_REWRITES and _read_v10(piece) and beside(piece)
                             and all(finding["category"] in response_review.SUGGESTIONS for finding in beside(piece))
                             and self.calls.used(scope) < SECTION_ALLOWANCE):
@@ -724,7 +729,7 @@ class _Answering:
                 reviewed = passed
                 return finish(None)
             state["items"] = sorted(set(state["items"]) | set(items))
-            # 4. A second look at the paragraphs at fault while the allowance lasts.
+            # 5. A second look at the paragraphs at fault while the allowance lasts.
             if not state["blocking"]:
                 if not faults:
                     continue
@@ -738,7 +743,7 @@ class _Answering:
                     raise
                 except ModelError as exc:
                     return finish(self._failed(scope, exc))
-            # 5. What still fails blocked; what remains reviewed again.
+            # 6. What still fails blocked; what remains reviewed again.
             if len(trims) >= TRIMS_V14:
                 return finish("found")
             block(faults, final=len(trims) == TRIMS_V14 - 1)
@@ -769,7 +774,9 @@ class _Answering:
         from its own dispute's research as soon as that is ready (step 4)."""
         scope, researched = f"s{index}", self.researched.part(index)
         self.report("writing")
-        with self.calls.scope(scope):
+        # v14 (AN.28, stage 5): the rewrite for what the section passed over has an allowance of its own beside the section's.
+        repaired = self.writer == response_writer.REPAIRED_CONTRACT
+        with self.calls.scope(scope, SECTION_ALLOWANCE + (COVERAGE_REWRITES if repaired else 0)):
             piece = (self._repaired(scope, "core_response_writer", self._write(index, researched), {}, researched,
                                     section=index)
                      if self.writer == response_writer.REPAIRED_CONTRACT else
@@ -827,7 +834,8 @@ class _Answering:
                                                   sections=presented, interpretation=self.interpretation,
                                                   execution=execution, time_limits=self.time_limits,
                                                   contract=self.writer)
-        with self.calls.scope("o"):
+        with self.calls.scope("o", SECTION_ALLOWANCE + (COVERAGE_REWRITES if self.writer == response_writer.REPAIRED_CONTRACT
+                                                        else 0)):
             if self.writer == response_writer.REPAIRED_CONTRACT:
                 return self._repaired("o", "core_response_overview", write,
                                       {"sections": drafts, "unanswered": missing or None}, researched,
