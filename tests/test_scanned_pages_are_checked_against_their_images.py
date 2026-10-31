@@ -9,7 +9,7 @@ The pages and figures here are invented.
 """
 import pytest
 
-from nm.core_engine import documents, page_reading
+from nm.core_engine import copy_figures, documents, page_reading
 from nm.shared.model_port import ModelResult, ProviderUnavailable, Usage
 from tests.test_core_documents import ADVOCATE, desk, pdf  # noqa: F401 - pytest fixture
 
@@ -70,3 +70,48 @@ def test_a_second_look_that_fails_or_reads_the_same_leaves_the_first_reading_as_
     assert renewed["pages"][0]["text"] == first["text"] and "first_reading" not in renewed["pages"][0]
     renewed, _ = desk.read_waiting(ADVOCATE, documents.reference(scanned(desk)), Pages({1: first, 2: clear}, {1: first}))
     assert "first_reading" not in renewed["pages"][0]
+
+
+WORDS = ("This indenture of sale is made at the sub registrar office between the vendor and the purchaser for the land described "
+         "in the schedule below which the vendor holds as absolute owner free of all encumbrances and charges whatsoever and "
+         "the purchaser has paid the full price in the presence of the witnesses named at the foot of this deed")
+#: Other pages of the same papers, each in words of its own.
+OTHER_PAGES = {
+    1: ("Before the sub registrar appeared the vendor who is known to the witnesses and who admitted the execution of the deed "
+        "and the receipt of the consideration stated in it and the purchaser who accepted the same and asked that it be registered "
+        "in the book kept for the purpose under the law in force on that day"),
+    3: ("The schedule of property sets out the boundaries on the east by the road on the west by the canal on the north by the "
+        "lands of others and on the south by the village common and every tree well and right of way within those boundaries "
+        "passes with the land to the purchaser and the heirs and assigns of the purchaser")}
+
+
+def page_text(figure, more=""):
+    return f"{WORDS} survey number 12 extent {figure} acres document 77 of 2003 {more}".strip()
+
+
+def other_page(number, figure):
+    return f"{OTHER_PAGES[number]} figure {figure} page {number}"
+
+
+def paper(name, key, *texts):
+    return [{"document": name, "key": key, "page": number, "text": text} for number, text in enumerate(texts, 1)]
+
+
+def test_a_copy_whose_words_were_read_badly_is_paired_by_its_place_and_the_figures_it_shares():
+    # Plan AN.28, 4b (finding B6), invented: the middle page of the second copy was read with elisions.
+    elided = "Indenture ... vendor ... survey number 12 extent 6.16 acres document 77 of 2003 witness 4 of 9 page 2"
+    first = paper("deed.pdf", "d1", other_page(1, "1.10"), page_text("6.06", "witness 4 of 9 page 2"), other_page(3, "3.35"))
+    second = paper("copy.pdf", "d2", other_page(1, "1.10"), elided, other_page(3, "3.35"))
+    pairs = copy_figures.copies(first + second)
+    assert frozenset({("d1", 2), ("d2", 2)}) in pairs and len(pairs) == 3
+    found = copy_figures.differences(first + second)
+    assert [(item["first"]["page"], [(f["first"], f["second"]) for f in item["figures"]]) for item in found] == [(2, [("6.06", "6.16")])]
+
+
+def test_a_page_at_the_same_place_is_no_copy_without_figures_in_common_or_a_pair_beside_it():
+    other = "A different page altogether with its own figures 8 41 93 and 2024 and nothing more to it than that page 2"
+    first = paper("deed.pdf", "d1", other_page(1, "1.10"), page_text("6.06", "page 2"), other_page(3, "3.35"))
+    second = paper("copy.pdf", "d2", other_page(1, "1.10"), other, other_page(3, "3.35"))
+    assert frozenset({("d1", 2), ("d2", 2)}) not in copy_figures.copies(first + second)
+    lone = paper("copy.pdf", "d2", other_page(1, "1.10"), "Indenture ... survey number 12 extent 6.16 acres document 77 of 2003")
+    assert frozenset({("d1", 2), ("d2", 2)}) not in copy_figures.copies(first[:2] + lone), "one pair is no offset to go by"
