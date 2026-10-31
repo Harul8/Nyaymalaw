@@ -129,6 +129,9 @@ class Model:
             data = statute_phrases(next(d for d in self.subject["disputes"] if d["id"] == dispute_id))
         elif operation == "core_research_judgment_phrases":
             data = judgment_phrases(self.subject)
+        elif operation == "core_research_connections":
+            # Research v13 reads the papers side by side (plan AN.28, piece 3e); this double finds nothing there.
+            data = {"client_people": [], "connections": []}
         elif operation in ("core_research_pick", "core_research_judgment_pick"):
             shown = {}
             for label, number in re.findall(r"^\s+(Q\d+)\.(\d+) ", prompt.user, re.M):

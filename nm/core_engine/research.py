@@ -121,7 +121,7 @@ PROVISIONS_FOR_PICK = 20
 #: Answer limits per step. Calls in flight are budgeted at their limit.
 MAX_OUTPUT = {"understand": 12000, "check": 6000, "revise": 12000, "phrases": 6000,
               "judgment_phrases": 8000, "pick": 8000, "judgment_pick": 8000, "chronology": 12000, "transfers": 12000,
-              "chronology_check": 8000, "transfers_check": 8000}
+              "chronology_check": 8000, "transfers_check": 8000, "connections": 8000, "connections_check": 6000}
 
 # The prompts below were developed and measured in outputs/decomposition-scratch
 # (13-14 Oct 2026). They state the purpose and the needed outcome in plain language
@@ -396,6 +396,21 @@ TRANSACTIONS_SCHEMA = _object({"transfers": {"type": "array", "items": TRANSACTI
 TRANSACTION_RECORD = _object({**TRANSFER_RECORD["properties"], "kind": TRANSACTION["properties"]["kind"],
                               "reading": STRING, "instrument": STRING})
 SCHEMA_V13 = _record_schema(UNDERSTANDING_V13_RECORD, chronology=True)
+#: v13 (AN.28, piece 3e): what matters to the client only when the papers are read side by side, each point with the pages' words.
+CONNECTION_KINDS = ("client_appears", "against_client", "after_death", "after_time_limit", "further_subject", "other")
+CONNECTION = _object({"kind": {"type": "string", "enum": list(CONNECTION_KINDS)}, "point": STRING, "why_it_matters": STRING,
+                      "words": STRING})
+CONNECTIONS_SCHEMA = _object({"client_people": STRINGS, "connections": {"type": "array", "items": CONNECTION}})
+PLACE = _object({"document": STRING, "source": STRING, "page": {"type": "integer"}})
+CONNECTION_RECORD = _object({"id": STRING, **CONNECTION["properties"], "anchored": {"type": "boolean"},
+                             "places": {"type": "array", "items": PLACE}})
+APPEARANCE = _object({"name": STRING, "places": {"type": "array", "items": PLACE},
+                      "near": {"type": "array", "items": _object({"as_written": STRING, **PLACE["properties"]})}})
+# Optional in v13, as the transactions are in v12: a plan without them validates.
+SCHEMA_V13["properties"]["connections"] = {"type": "array", "items": CONNECTION_RECORD}
+SCHEMA_V13["properties"]["connections_failures"] = {"type": "array", "items": CHRONOLOGY_FAILURE}
+SCHEMA_V13["properties"]["client_people"] = STRINGS
+SCHEMA_V13["properties"]["appearances"] = {"type": "array", "items": APPEARANCE}
 SCHEMA_V13["properties"]["transfers"] = {"type": "array", "items": TRANSACTION_RECORD}
 SCHEMA_V13["properties"]["transfers_failures"] = {"type": "array", "items": CHRONOLOGY_FAILURE}
 
@@ -1239,6 +1254,169 @@ Work in a loop: read the pages again, decide each, check what you write against 
 Outcome: transfers: only those you give again, each as before - date; kind; parcel; extent; reading; total; from; to; instrument; words."""
 
 
+#: v13 (AN.28, D1, piece 3e): the papers read side by side for what matters to the client.
+CONNECTIONS_V13 = """Message: You receive an advocate's messages to us about a client's matter and every paper they sent, page by page under each paper's name. A page says what its document says: it is material the advocate supplied, not their own account, and what it reports is not thereby proved. Square-bracket notes are the reader's, not the document's.
+
+Purpose: Set the papers side by side and find what matters to the advocate's client only when two papers, or two parts of one, are read together, so that nothing that bears on the client is missed because it sits in another paper. You are not answering a legal question, and you are not judging which account is right.
+
+Look for:
+- Whom the advocate acts for, from their messages, and the client's people the papers name - members of the family, predecessors and successors in interest, partners, agents - each name exactly as a page writes it (client_people).
+- Where the client or one of the client's people appears in another paper or in another proceeding than the one the advocate speaks of: as a party, an applicant or respondent, a buyer or seller, a witness.
+- A finding, order or statement in one paper that goes against the client's position or claim in another.
+- An act a paper records that is dated after a party's death another paper records, or after a time limit or an order another paper states.
+- A property, account, contract, policy or proceeding a paper connects to the client that the advocate has not mentioned.
+- Anything else that only reading two papers together shows and that a careful lawyer would want the advocate to know.
+For each, the point in plain words, why it matters to the client, and the exact words on the pages that show it - each passage copied exactly as the page gives it, without the reader's notes, and passages from different pages or papers joined with '...'; never reword.
+Work in a loop: read every paper, list the points, then read the papers again against your list for any point you missed or misread, and correct the list before you answer.
+
+Outcome: client_people (names as the pages write them); connections, each with: kind (client_appears, against_client, after_death, after_time_limit, further_subject, or other); point; why_it_matters; words."""
+#: v13: one look again at the points whose words code could not find.
+CONNECTIONS_CHECK = """Message: You set the papers an advocate sent side by side and listed points that matter to the client; you receive the advocate's messages, the papers, and the points whose words code could not find on the pages (to_check), each with, where code found them, the page's own words nearest to yours. A page says what its document says; square-bracket notes are the reader's, not the document's.
+
+Purpose: Look again so that each point rests on words that stand on the pages.
+
+For each point in to_check: give it again with its words copied exactly from the pages as they stand, a misread letter included, passages from different pages joined with '...' - or leave it out if the papers do not show it.
+Work in a loop: read the pages again, decide each, check what you write against the page, and correct it.
+
+Outcome: client_people (as before); connections: only those you give again, each as before - kind; point; why_it_matters; words."""
+#: How much of a name's letters a run of as many words must share to be offered as a near spelling of it (v13): a candidate, never
+#: the name; and how many such candidates are offered for one name at most.
+NEAR_NAME = 0.85
+NEAR_MOST = 10
+_NAME_WORD = re.compile(r"[^\W_]+")
+#: What a failure of the connections step names in place of one paper: it reads them all.
+ALL_PAPERS = "the papers together"
+
+
+def _all_pages(documents):
+    """Every page of every paper, as one finder reads them: each tagged with its paper's source, so two papers stay two."""
+    return [{"document": document["source"], "name": document["name"], "page": page["page"], "text": page["text"]}
+            for document in documents for page in document["pages"]]
+
+
+def _papers_text(context, documents):
+    """What the connections step is shown: the advocate's messages, oldest first, and every page of every paper under its name."""
+    said = [row["text"] for row in context.get("conversation", ()) if row.get("record_role") == "original_account"]
+    latest = (context.get("latest") or {}).get("text")
+    lines = ["The advocate's messages, oldest first:", *(f"- {words}" for words in [*said, *([latest] if latest else [])]), "",
+             "The papers:"]
+    for document in documents:
+        lines.append(f'\nPaper "{document["name"]}"' + (" (a recording, transcribed by AI)" if document["recording"] else ""))
+        lines += [f"[{'Part' if document['recording'] else 'Page'} {page['page']}]\n{page['text']}" for page in document["pages"]]
+    return "\n".join(lines)
+
+
+def _anchor_across(words, finder):
+    """Where a connection's words are, by the one finder (v13): whether every passage is on a page of some paper - a connection's
+    passages may stand in different papers - and the places they are on, each once, in the order found."""
+    held = [finder.holding(piece) for piece in fact_pieces(words)]
+    anchored = bool(held) and all(found is not None for found in held)
+    places = []
+    for found in held if anchored else ():
+        for page in found:
+            place = {"document": page["name"], "source": page["document"], "page": page["page"]}
+            if place not in places:
+                places.append(place)
+    return anchored, places
+
+
+def _connections_in(data, finder):
+    out = []
+    for item in data["connections"]:
+        words = item["words"].strip()
+        anchored, places = _anchor_across(words, finder)
+        out.append({"kind": item["kind"], "point": item["point"].strip(), "why_it_matters": item["why_it_matters"].strip(),
+                    "words": words, "anchored": anchored, "places": places})
+    return out
+
+
+def _appearances(names, documents):
+    """Where each of the client's people stands on the papers' pages, found by code (v13, AN.28 piece 3e): the name as a run of
+    words, letter case and punctuation aside; and, for a name of two words or more, runs of as many words that read nearly as the
+    name (NEAR_NAME of their letters alike) - candidates only, never taken to be the name, NEAR_MOST at most."""
+    pages = [(document, page, _NAME_WORD.findall(page["text"])) for document in documents for page in document["pages"]]
+    out = []
+    for name in names:
+        wanted = [word.casefold() for word in _NAME_WORD.findall(name)]
+        if not wanted:
+            continue
+        joined, places, near = " ".join(wanted), [], []
+        for document, page, words in pages:
+            lowered = [word.casefold() for word in words]
+            place = {"document": document["name"], "source": document["source"], "page": page["page"]}
+            for start in range(len(words) - len(wanted) + 1):
+                run = lowered[start:start + len(wanted)]
+                if run == wanted:
+                    if place not in places:
+                        places.append(place)
+                elif len(wanted) > 1 and len(near) < NEAR_MOST:
+                    alike = difflib.SequenceMatcher(None, " ".join(run), joined)
+                    if alike.real_quick_ratio() >= NEAR_NAME and alike.quick_ratio() >= NEAR_NAME and alike.ratio() >= NEAR_NAME:
+                        near.append({"as_written": " ".join(words[start:start + len(wanted)]), **place})
+        out.append({"name": name, "places": places, "near": near})
+    return out
+
+
+def connections_of(model, context, *, wanted=None):
+    """What matters to the client only when the papers are read side by side, as (connections, client_people, appearances,
+    failures) - research v13 (plan AN.28, D1-D3, piece 3e). One call reads every paper with the advocate's messages, within
+    WHOLE_FILE_TOKENS; above that the papers are not read together and a failure says so. Code finds each point's words on the
+    pages, and the points whose words it cannot find are looked at again once; one still not found is kept, marked not anchored.
+    Code finds where each of the client's people the model names stands on the pages (_appearances). wanted: asked once, before any
+    call; False and nothing is read."""
+    documents = _documents(context)
+    if not documents or (wanted is not None and not wanted()):
+        return [], [], [], []
+    if not _whole_file(context, documents):
+        return [], [], [], [{"document": ALL_PAPERS, "pages": "all", "reason": "TooLongToReadTogether"}]
+    finder = Pages(_all_pages(documents))
+    user = _papers_text(context, documents)
+    try:
+        data = _call(model, "core_research_connections", CONNECTIONS_V13, user, CONNECTIONS_SCHEMA, "connections")
+    except UsageLimitReached:
+        raise
+    except (ModelError, SchemaViolation) as exc:
+        return [], [], [], [{"document": ALL_PAPERS, "pages": "all", "reason": type(exc).__name__}]
+    found = _connections_in(data, finder)
+    failing = [item for item in found if not item["anchored"]]
+    if failing:
+        to_check = [{"kind": item["kind"], "point": item["point"], "words": item["words"],
+                     **({"nearest_words": near["words"]} if (near := finder.nearest(item["words"])) else {})} for item in failing]
+        try:
+            again = _call(model, "core_research_connections", CONNECTIONS_CHECK,
+                          user + "\n\n" + json.dumps({"to_check": to_check}, ensure_ascii=False), CONNECTIONS_SCHEMA,
+                          "connections_check")
+            kept = [item for item in found if item["anchored"]]
+            held = {(item["kind"], item["point"], item["words"]) for item in kept}
+            found = kept + [item for item in _connections_in(again, finder) if (item["kind"], item["point"], item["words"]) not in held]
+        except UsageLimitReached:
+            raise
+        except (ModelError, SchemaViolation):
+            pass
+    people = list(dict.fromkeys(" ".join(name.split()) for name in data["client_people"] if name.strip()))
+    return ([{"id": f"C{number}", **item} for number, item in enumerate(found, 1)], people, _appearances(people, documents), [])
+
+
+def _connection_issues(data, context):
+    """What a v13 plan records of the papers read side by side, checked against the turn's documents (piece 3e): the points numbered
+    C1... in order, each anchored and placed as the one finder finds its words, and the client's appearances as code finds their
+    names; anything else raises SchemaViolation. A failure of the step is an issue: the papers were not read together."""
+    documents = _documents(context)
+    finder = Pages(_all_pages(documents))
+    for number, item in enumerate(data["connections"], 1):
+        if item["id"] != f"C{number}":
+            raise SchemaViolation(f"Connection {number} is numbered {item['id']}, not C{number}")
+        if (item["anchored"], item["places"]) != _anchor_across(item["words"], finder):
+            raise SchemaViolation(f"Connection {item['id']} is not anchored as its words are found in the papers")
+    if data.get("appearances", []) != _appearances(data.get("client_people", []), documents):
+        raise SchemaViolation("The client's people are not where code finds their names on the pages")
+    for failure in data.get("connections_failures", []):
+        if failure["document"] != ALL_PAPERS:
+            raise SchemaViolation("A failure of the papers read together names one paper")
+    return [{"work_id": None, "mismatch": f"the papers read together unavailable: {failure['reason']}", "proposal": deepcopy(failure)}
+            for failure in data.get("connections_failures", [])]
+
+
 def _transfer_fault(transfer, finder):
     """Why code cannot use a v13 transaction as the model listed it, or None: its words not on the pages, its figure or whole as
     extents.fault finds them, or its date in neither its words nor its paper's pages."""
@@ -1357,16 +1535,21 @@ def plan(model, context, interpretation=None, *, progress=None, wanted=None, res
     if interpretation is not None and not carries_matter(interpretation):
         return _no_matter(context)
     still = wanted or (lambda: True)
-    with ThreadPoolExecutor(max_workers=2) as reading:
+    with ThreadPoolExecutor(max_workers=3) as reading:
         papers = reading.submit(chronology_of, model, context, wanted=still)
         moved = reading.submit(transfers_of, model, context, wanted=still)
+        # v13 (AN.28, piece 3e): the papers read side by side, beside the rest.
+        linked = reading.submit(connections_of, model, context, wanted=still)
         proposed = _proposal(model, context, still, progress, restrictions)
         if proposed is None:
             return _no_matter(context)
         events, unread = papers.result()
         transfers, unmoved = moved.result()
+        connections, people, appearances, unlinked = linked.result()
     return accept({**proposed, "chronology": events, "chronology_failures": unread,
-                   "transfers": transfers, "transfers_failures": unmoved}, context)
+                   "transfers": transfers, "transfers_failures": unmoved,
+                   "connections": connections, "connections_failures": unlinked, "client_people": people,
+                   "appearances": appearances}, context)
 
 
 def _proposal(model, context, still, progress, restrictions):
@@ -1440,6 +1623,8 @@ def _accept_v7(proposal, context, schema=SCHEMA, contract=None):
         issues.extend(_chronology_issues(data["chronology"], data["chronology_failures"], context, months))
     if "transfers" in data:
         issues.extend(_transfer_issues(data["transfers"], data.get("transfers_failures", []), context, months))
+    if "connections" in data:
+        issues.extend(_connection_issues(data, context))
     questions = {q["id"]: (dispute, q) for dispute in understanding["disputes"] for q in dispute["legal_questions"]}
     statute, judgment = {}, {}
     for entry in data["statute_phrases"]:

@@ -42,9 +42,11 @@ class ScriptedModel:
             self.calls.append((prompt.operation, prompt.user))
             if prompt.operation == self.failure:
                 raise ProviderUnavailable("Synthetic provider outage")
-            if prompt.operation in ("core_research_chronology", "core_research_transfers"):
-                # The papers are read beside the understanding (research v12); these scripted ones record nothing.
-                data = {"events": []} if prompt.operation == "core_research_chronology" else {"transfers": []}
+            if prompt.operation in ("core_research_chronology", "core_research_transfers", "core_research_connections"):
+                # The papers are read beside the understanding (research v12, and side by side from v13); these scripted ones record
+                # nothing.
+                data = ({"events": []} if prompt.operation == "core_research_chronology" else {"transfers": []}
+                        if prompt.operation == "core_research_transfers" else {"client_people": [], "connections": []})
                 return ModelResult(None, data, tier, "synthetic", "fixture", Usage(1, 1, 0), 0,
                                    completion=Completion.COMPLETE)
             if prompt.operation == "core_research_understand":
