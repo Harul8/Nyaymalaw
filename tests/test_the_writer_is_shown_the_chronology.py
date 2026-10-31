@@ -51,10 +51,10 @@ def section(payload):
     event, page = cites(payload)
     return {"units": [
         unit("summary", "Appeal against the order", "row_action"),
-        unit("summary", "Have the sale deed ready", "row_ready"),
-        {"kind": "summary", "text": "The sale deed was made on 30-10-1985.", "place": "advice",
-         "uses": [{"source_kind": "document", "source_id": page, "link_words": "sale deed was made"}]}],
-        "checklist": [item(payload, "The sale deed", ["the sale deed"])], "time_limit_ids": [], "by_when": None}
+        unit("summary", "Have the agreement ready", "row_ready"),
+        {"kind": "summary", "text": "The agreement was made on 30-10-1985.", "place": "advice",
+         "uses": [{"source_kind": "document", "source_id": page, "link_words": "agreement was made"}]}],
+        "checklist": [item(payload, "The agreement", ["the agreement"])], "time_limit_ids": [], "by_when": None}
 
 
 def test_the_current_writer_is_shown_each_event_with_the_short_ids_of_its_pages():
@@ -89,7 +89,7 @@ def test_the_shown_events_carry_no_sort_date_no_exact_words_and_no_owned_id():
     shown = json.dumps(model.seen[0][1]["papers_chronology"])
     for key in ("sort", "words", "anchored", "source"):
         assert f'"{key}":' not in shown, key
-    assert "t1:d1" not in shown and "Sale Deed No. 100" not in shown, "the exact words and the owned IDs stay with the plan"
+    assert "t1:d1" not in shown and "Agreement No. 100" not in shown, "the exact words and the owned IDs stay with the plan"
 
 
 def test_the_earlier_writer_is_shown_what_it_always_was():

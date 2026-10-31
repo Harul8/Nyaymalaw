@@ -26,7 +26,7 @@ def test_two_copies_read_differently_are_named_with_both_readings_and_the_words_
     (found,) = copies(paper("deed.pdf", "Cover page.", passage("6.06")), paper("scan.pdf", passage("6.16")))
     assert found["first"] == {"document": "deed.pdf", "page": 2} and found["second"] == {"document": "scan.pdf", "page": 1}
     (figure,) = found["figures"]
-    assert (figure["first"], figure["second"]) == ("6.06", "6.16") and figure["after"].endswith("an extent of")
+    assert (figure["first"], figure["second"]) == ("6.06", "6.16") and figure["after"].endswith("a quantity of")
 
 
 def test_copies_that_agree_and_a_matter_with_one_paper_have_none():

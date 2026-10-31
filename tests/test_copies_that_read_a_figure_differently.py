@@ -14,9 +14,9 @@ pytestmark = pytest.mark.class_a
 FILLER = " ".join(f"term{n}" for n in range(60))
 
 
-def passage(extent="6.06", deed="596/80", date="5.1.1980", filler=FILLER):
-    return (f"Sale deed number {deed} dated {date} the vendor sold to the purchasers an extent of {extent} acres in the survey "
-            f"number of the village {filler} registered at the office of the sub registrar")
+def passage(quantity="6.06", deed="596/80", date="5.1.1980", filler=FILLER):
+    return (f"Agreement number {deed} dated {date} the supplier sold to the purchasers a quantity of {quantity} tonnes in the lot "
+            f"number of the warehouse {filler} registered at the office of the registrar")
 
 
 def page(document, number, text, key=None, **more):
@@ -29,7 +29,7 @@ def test_two_copies_that_read_a_figure_differently_are_flagged_with_both_reading
     assert (finding["first"]["document"], finding["first"]["page"]) == ("deed.pdf", 3)
     assert (finding["second"]["document"], finding["second"]["page"]) == ("scan.pdf", 1)
     (figure,) = finding["figures"]
-    assert (figure["first"], figure["second"]) == ("6.06", "6.16") and figure["after"].endswith("an extent of")
+    assert (figure["first"], figure["second"]) == ("6.06", "6.16") and figure["after"].endswith("a quantity of")
 
 
 def test_copies_that_agree_are_not_flagged():
@@ -37,7 +37,7 @@ def test_copies_that_agree_are_not_flagged():
 
 
 def test_a_word_read_differently_is_not_a_figure_and_a_figure_written_otherwise_is_not_a_difference():
-    other = passage().replace("vendor", "vender").replace("registrar", "registrer")
+    other = passage().replace("supplier", "suppler").replace("registrar", "registrer")
     assert differences([page("a.pdf", 1, passage()), page("b.pdf", 1, other)]) == []
     assert differences([page("a.pdf", 1, passage("6.06")), page("b.pdf", 1, passage("6-06"))]) == []
     assert differences([page("a.pdf", 1, passage("6.06")), page("b.pdf", 1, passage("6 06"))]) == []
@@ -49,8 +49,8 @@ def test_several_figures_that_differ_are_all_named():
 
 
 def test_two_pages_of_one_form_with_figures_of_their_own_are_not_copies():
-    rows_a = " ".join(f"survey {n} extent {n}.{n % 40:02d} khata {n * 3}" for n in range(1, 25))
-    rows_b = " ".join(f"survey {n + 100} extent {n + 7}.{(n + 5) % 40:02d} khata {n * 3 + 1}" for n in range(1, 25))
+    rows_a = " ".join(f"lot {n} quantity {n}.{n % 40:02d} ledger {n * 3}" for n in range(1, 25))
+    rows_b = " ".join(f"lot {n + 100} quantity {n + 7}.{(n + 5) % 40:02d} ledger {n * 3 + 1}" for n in range(1, 25))
     assert differences([page("a.pdf", 1, rows_a), page("b.pdf", 1, rows_b)]) == []
 
 
@@ -62,7 +62,7 @@ def test_pages_of_one_document_are_not_compared_with_each_other_and_two_files_of
 
 
 def test_a_page_too_short_to_be_a_copy_and_a_recording_are_left_alone():
-    assert differences([page("a.pdf", 1, "extent 6.06 acres"), page("b.pdf", 1, "extent 6.16 acres")]) == []
+    assert differences([page("a.pdf", 1, "quantity 6.06 tonnes"), page("b.pdf", 1, "quantity 6.16 tonnes")]) == []
     assert differences([page("a.mp3", 1, passage("6.06"), recording=True), page("b.mp3", 1, passage("6.16"), recording=True)]) == []
 
 
@@ -80,7 +80,7 @@ def test_a_pair_is_named_once_the_ids_are_kept_and_the_findings_are_bounded(monk
 
 
 def test_pages_that_say_different_things_are_not_copies():
-    other = " ".join(f"other{n}" for n in range(80)) + " extent of 6.16 acres"
+    other = " ".join(f"other{n}" for n in range(80)) + " quantity of 6.16 tonnes"
     assert differences([page("a.pdf", 1, passage("6.06")), page("b.pdf", 1, other)]) == []
 
 
@@ -91,16 +91,16 @@ def test_pages_that_share_only_part_of_their_wording_are_not_copies():
 
 def test_two_pages_of_one_form_that_say_the_same_but_differ_in_many_figures_are_not_copies():
     fixed = " ".join("clause" + chr(97 + n % 26) + chr(97 + n // 26) for n in range(80))
-    lines = [f"line{n} entry {n}.{n:02d} khata {n * 3}" for n in range(1, 11)]
-    changed = [line if n > 5 else f"line{n} entry {n}.{n + 1:02d} khata {n * 3 + 1}" for n, line in enumerate(lines, 1)]
+    lines = [f"line{n} entry {n}.{n:02d} ledger {n * 3}" for n in range(1, 11)]
+    changed = [line if n > 5 else f"line{n} entry {n}.{n + 1:02d} ledger {n * 3 + 1}" for n, line in enumerate(lines, 1)]
     assert differences([page("a.pdf", 1, fixed + " " + " ".join(lines)), page("b.pdf", 1, fixed + " " + " ".join(changed))]) == []
-    few = [line if n > 1 else f"line{n} entry {n}.{n + 1:02d} khata {n * 3 + 1}" for n, line in enumerate(lines, 1)]
+    few = [line if n > 1 else f"line{n} entry {n}.{n + 1:02d} ledger {n * 3 + 1}" for n, line in enumerate(lines, 1)]
     assert len(differences([page("a.pdf", 1, fixed + " " + " ".join(lines)), page("b.pdf", 1, fixed + " " + " ".join(few))])[0]["figures"]) == 2
 
 
 def test_a_copy_of_a_few_words_is_not_a_page_to_compare():
-    short = ("Sale deed number 596/80 dated 5.1.1980 the vendor sold to the purchasers an extent of {} acres in the survey number "
-             "of the village registered at the office of the sub registrar")
+    short = ("Agreement number 596/80 dated 5.1.1980 the supplier sold to the purchasers a quantity of {} tonnes in the lot number "
+             "of the warehouse registered at the office of the registrar")
     assert len(short.split()) < copy_figures.MIN_WORDS
     assert differences([page("a.pdf", 1, short.format("6.06")), page("b.pdf", 1, short.format("6.16"))]) == []
 
@@ -128,10 +128,10 @@ def test_copies_are_every_pair_of_pages_that_are_copies_of_one_page_whether_or_n
 
 def test_pages_of_one_document_a_form_with_figures_of_its_own_a_short_page_and_a_recording_are_not_copies():
     assert copy_figures.copies([page("deed.pdf", 1, passage()), page("deed.pdf", 2, passage())]) == set()
-    rows_a = " ".join(f"survey {n} extent {n}.{n % 40:02d} khata {n * 3}" for n in range(1, 25))
-    rows_b = " ".join(f"survey {n + 100} extent {n + 7}.{(n + 5) % 40:02d} khata {n * 3 + 1}" for n in range(1, 25))
+    rows_a = " ".join(f"lot {n} quantity {n}.{n % 40:02d} ledger {n * 3}" for n in range(1, 25))
+    rows_b = " ".join(f"lot {n + 100} quantity {n + 7}.{(n + 5) % 40:02d} ledger {n * 3 + 1}" for n in range(1, 25))
     assert copy_figures.copies([page("a.pdf", 1, rows_a), page("b.pdf", 1, rows_b)]) == set()
-    assert copy_figures.copies([page("a.pdf", 1, "extent 6.06 acres"), page("b.pdf", 1, "extent 6.06 acres")]) == set()
+    assert copy_figures.copies([page("a.pdf", 1, "quantity 6.06 tonnes"), page("b.pdf", 1, "quantity 6.06 tonnes")]) == set()
     assert copy_figures.copies([page("a.mp3", 1, passage(), recording=True), page("b.mp3", 1, passage(), recording=True)]) == set()
     assert copy_figures.copies([]) == set()
 

@@ -4,7 +4,7 @@ Code checks that an answer works out no date itself (owner, 15 Oct 2026): each d
 the sources, the time limits code worked out or today. A High Court paper that writes its date in words gave the plan "9 June 2022",
 the writer was shown that in the papers' chronology, and the check - made before the writer was shown anything else - found the date
 nowhere and left the paragraph out of the overview and of both sections of the reviewed bundle's first turn. The check now counts as
-given the dates of the events and of the transfers of land the writer was shown, those located on a page, taken from the same two
+given the dates of the events and of the transactions the writer was shown, those located on a page, taken from the same two
 functions its payload is built from. The papers here are synthetic.
 """
 import json
@@ -24,21 +24,21 @@ pytestmark = pytest.mark.class_a
 
 ORDER = [(1, "THURSDAY, THE NINTH DAY OF JUNE\nTWO THOUSAND AND TWENTY TWO\nORDER. The Court directs notice to the respondents."),
          (2, "The matter stands posted to 15.09.2022. A petition was filed on a day no page gives.")]
-DEED = [(1, "SALE. Made on the twelfth day of June nineteen ninety one, the vendor sold Ac.3.10 guntas of Sy.No.201 to the purchasers."),
-        (2, "The land had been partitioned among the co-owners on the third day of March nineteen seventy four.")]
+DEED = [(1, "SUPPLY. Made on the twelfth day of June nineteen ninety one, the supplier sold 310 kg of Lot 201 to the purchasers."),
+        (2, "The stock had been partitioned among the co-owners on the third day of March nineteen seventy four.")]
 SCRIPT = {
     "order.pdf": [event("9 June 2022", "order", "The Court directed notice to the respondents.",
                         "THE NINTH DAY OF JUNE\nTWO THOUSAND AND TWENTY TWO"),
                   event("1 January 2021", "filing", "A petition was filed.", "A petition was filed on a day the page lacks"),
                   event("undated", "order", "Notice is returnable in six weeks, that is by 21 July 2022.",
                         "The Court directs notice to the respondents")],
-    "deed.pdf": [event("undated", "transaction", "A sale.", "the vendor sold Ac.3.10 guntas of Sy.No.201")]}
+    "deed.pdf": [event("undated", "transaction", "A sale.", "the supplier sold 310 kg of Lot 201")]}
 SOLD = {"deed.pdf": [
-    transfer("3 March 1974", "Sy.No.201", "Ac.8.24", "partitioned among the co-owners on the third day of March nineteen seventy four",
+    transfer("3 March 1974", "Lot 201", "824 kg", "partitioned among the co-owners on the third day of March nineteen seventy four",
              to="the co-owners",
              kind="partition"),
-    transfer("12 June 1991", "Sy.No.201", "Ac.3.10 guntas", "the vendor sold Ac.3.10 guntas of Sy.No.201 to the purchasers"),
-    transfer("1 February 2019", "Sy.No.201", "Ac.0.10", "A sale made on a day the page lacks")]}
+    transfer("12 June 1991", "Lot 201", "310 kg", "the supplier sold 310 kg of Lot 201 to the purchasers"),
+    transfer("1 February 2019", "Lot 201", "10 kg", "A sale made on a day the page lacks")]}
 
 
 def matter():
@@ -67,10 +67,10 @@ def test_a_date_a_paper_writes_in_words_is_given_by_the_chronology_the_writer_wa
 
 def test_a_date_of_a_transfer_of_land_the_writer_was_shown_is_given_and_one_not_read_is_not():
     ctx, record, sources = matter()
-    sold = draft("The vendor sold Ac.3.10 guntas on 12 June 1991.")
+    sold = draft("The supplier sold 310 kg on 12 June 1991.")
     assert flagged(sold, ctx, sources) == ["t1:b1"] and flagged(sold, ctx, sources, record) == []
     # A transfer listed and not added (a partition) is shown to the writer with its date, so its date is given too.
-    partitioned = draft("The land was partitioned on 3 March 1974.")
+    partitioned = draft("The stock was partitioned on 3 March 1974.")
     assert flagged(partitioned, ctx, sources) == ["t1:b1"] and flagged(partitioned, ctx, sources, record) == []
     # A transfer whose words were not found on the page was not shown with a date.
     unread = next(t for t in record["plan"]["proposal"]["transfers"] if t["date"] == "1 February 2019")
@@ -81,14 +81,14 @@ def test_a_date_of_a_transfer_of_land_the_writer_was_shown_is_given_and_one_not_
 def test_a_date_no_page_of_its_paper_gives_is_not_kept_for_a_transaction_and_so_is_not_given():
     # Research v13 (plan AN.28, D3), invented: a transaction found on a page, dated by a date its paper nowhere gives.
     ctx = sent(*[row("t1", 1, "deed.pdf", n, text) for n, text in DEED])
-    made = plan(Beside({}, transfers={"deed.pdf": [transfer("5 May 1985", "Sy.No.201", "Ac.3.10 guntas",
-                                                            "the vendor sold Ac.3.10 guntas of Sy.No.201 to the purchasers")]},
+    made = plan(Beside({}, transfers={"deed.pdf": [transfer("5 May 1985", "Lot 201", "310 kg",
+                                                            "the supplier sold 310 kg of Lot 201 to the purchasers")]},
                        subject=understanding(1, 2)), ctx)
     (sold,) = made["proposal"]["transfers"]
     assert (sold["date"], sold["sort"], sold["anchored"]) == ("undated", "", True)
     record = retrieve(made, searcher(), ctx, model=Model())
     sources = answer_sources.build(ctx, record)
-    assert flagged(draft("The vendor sold it on 5 May 1985."), ctx, sources, record) == ["t1:b1"]
+    assert flagged(draft("The supplier sold it on 5 May 1985."), ctx, sources, record) == ["t1:b1"]
 
 
 def test_an_event_whose_words_were_not_found_gives_no_date_and_a_date_found_nowhere_stays_a_finding():

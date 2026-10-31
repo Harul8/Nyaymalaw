@@ -70,7 +70,7 @@ def today(now: datetime | None = None) -> date:
 
 def setting(now: datetime | None = None) -> dict:
     """Where and when the advocate works, as code tells the models (owner decision,
-    15 Oct 2026). Without it an answer asked which country the land was in and could
+    15 Oct 2026). Without it an answer asked which country the matter was in and could
     not tell whether "yesterday" fell under the old or the new criminal codes. Model
     input only: saved conversations never store it, so replay is unchanged."""
     day = today(now)

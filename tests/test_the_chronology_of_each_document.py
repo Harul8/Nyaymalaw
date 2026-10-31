@@ -58,20 +58,20 @@ def event(date, kind, what, words, said_by="the document"):
     return {"date": date, "kind": kind, "what": what, "said_by": said_by, "words": words}
 
 
-DEED = [(1, "Sale Deed No. 100 dated 30-10-1985. The vendor sold Ac.1.18 guntas to the purchasers."),
-        (2, "Registered at the Sub-Registrar's office. Mutation was ordered on 17-3-2008 in file B/54/2008.")]
-ORDER = [(1, "ORDER. The Joint Collector allowed the revision on 17 August 2019. In the meanwhile revenue officers shall "
+DEED = [(1, "Agreement No. 100 dated 30-10-1985. The supplier sold 118 kg to the purchasers."),
+        (2, "Registered at the Registrar's office. An audit was ordered on 17-3-2008 in file B/54/2008.")]
+ORDER = [(1, "ORDER. The Chief Arbitrator allowed the claim on 17 August 2019. In the meanwhile bank officers shall "
              "continue to maintain the name of the original\n\n[stamp: CERTIFIED TO BE TRUE COPY]\n[signature]"),
-         (2, "[Handwritten: 4831/-]\n\nowner in the records. Suits O.S. 891 of 2014 and 892 of 2014 are pending before the "
+         (2, "[Handwritten: 4831/-]\n\nholder in the records. Suits O.S. 891 of 2014 and 892 of 2014 are pending before the "
              "District Court.")]
 SCRIPT = {
-    "deed.pdf": [event("30-10-1985", "transaction", "A sale of Ac.1.18 guntas.", "Sale Deed No. 100 dated 30-10-1985"),
-                 event("17-3-2008", "order", "Mutation ordered in file B/54/2008.",
-                       "Mutation was ordered on 17-3-2008 in file B/54/2008")],
-    "order.pdf": [event("17 August 2019", "order", "The revision was allowed.",
-                        "The Joint Collector allowed the revision on 17 August 2019", "the Joint Collector"),
-                  event("undated", "order", "Revenue officers to keep the original owner's name in the records.",
-                        "revenue officers shall continue to maintain the name of the original owner in the records"),
+    "deed.pdf": [event("30-10-1985", "transaction", "A sale of 118 kg.", "Agreement No. 100 dated 30-10-1985"),
+                 event("17-3-2008", "order", "An audit ordered in file B/54/2008.",
+                       "An audit was ordered on 17-3-2008 in file B/54/2008")],
+    "order.pdf": [event("17 August 2019", "order", "The claim was allowed.",
+                        "The Chief Arbitrator allowed the claim on 17 August 2019", "the Chief Arbitrator"),
+                  event("undated", "order", "Bank officers to keep the original holder's name in the records.",
+                        "bank officers shall continue to maintain the name of the original holder in the records"),
                   event("undated", "pending", "Two suits are pending.",
                         "Suits O.S. 891 of 2014 and 892 of 2014 are pending before the District Court"),
                   event("1 January 2020", "filing", "A petition was filed.", "The petition was filed on a day the page lacks")],
@@ -109,8 +109,8 @@ def test_each_document_is_read_for_on_its_own_with_the_rest_of_the_file_in_view(
         ("E4", "2020-01-01", "order.pdf", [], False),
         ("E5", "", "order.pdf", [1, 2], True),
         ("E6", "", "order.pdf", [2], True)]
-    assert events[0]["what"] == "A sale of Ac.1.18 guntas." and events[0]["date"] == "30-10-1985" and events[0]["kind"] == "transaction"
-    assert events[2]["said_by"] == "the Joint Collector" and events[4]["date"] == "undated"
+    assert events[0]["what"] == "A sale of 118 kg." and events[0]["date"] == "30-10-1985" and events[0]["kind"] == "transaction"
+    assert events[2]["said_by"] == "the Chief Arbitrator" and events[4]["date"] == "undated"
     assert all(e["source"] in ("t1:d1", "t1:d2") for e in events)
 
 
@@ -167,9 +167,9 @@ def test_an_event_is_anchored_by_its_words_in_its_own_document_and_never_in_anot
 
 
 def test_two_files_of_one_name_are_two_documents():
-    model = Reading({"deed.pdf": [event("1985", "other", "Something.", "Sale Deed")]})
-    events, _ = chronology_of(model, context(row("t1", 1, "deed.pdf", 1, "Sale Deed one of 1985."),
-                                              row("t2", 1, "deed.pdf", 1, "Sale Deed two of 1985.")))
+    model = Reading({"deed.pdf": [event("1985", "other", "Something.", "Agreement")]})
+    events, _ = chronology_of(model, context(row("t1", 1, "deed.pdf", 1, "Agreement one of 1985."),
+                                              row("t2", 1, "deed.pdf", 1, "Agreement two of 1985.")))
     assert len(model.calls) == 2 and sorted(e["source"] for e in events) == ["t1:d1", "t2:d1"]
 
 

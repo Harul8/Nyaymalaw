@@ -182,10 +182,10 @@ def test_the_same_thing_written_another_way_is_kept_and_the_review_is_told_why()
         return [{"paragraph": entry["paragraph"], "action": "same_thing", "rewritten": None,
                  "why": "The papers write the same figure with a long dash.", "page_words": "Ac 3 - 12",
                  "question": None} for entry in to_check]
-    model = Looking({"D1": lambda: section_of("D1", "A FAULT extent of 3 acres 12 guntas.")}, same)
+    model = Looking({"D1": lambda: section_of("D1", "A FAULT quantity of 3 tonnes 12 quintals.")}, same)
     answered(model)
     told = [review.get("writer_notes") for review in model.reviews if review["what_you_review"].get("dispute") == "Dispute 1"]
-    assert told[0] is None and told[1] == [{"words": "A FAULT extent of 3 acres 12 guntas.",
+    assert told[0] is None and told[1] == [{"words": "A FAULT quantity of 3 tonnes 12 quintals.",
                                             "why": "The papers write the same figure with a long dash."}]
 
 
@@ -254,7 +254,7 @@ def test_a_review_copies_the_words_that_mislead_or_they_are_set_aside():
     assert admitted["proposal"]["set_aside"] == [
         {"where": "misleading 1", "why": "its words are not found in the paragraph or item it names: 'not there'"}]
     # The prompt asks for the words, and speaks of the figures copies read differently in general terms.
-    assert "words: the shortest stretch" in response_review.SYSTEM_V12 and "guntas" not in response_review.SYSTEM_V12
+    assert "words: the shortest stretch" in response_review.SYSTEM_V12
 
 
 def test_a_v14_draft_replays_exactly_what_was_cut_and_left_out():

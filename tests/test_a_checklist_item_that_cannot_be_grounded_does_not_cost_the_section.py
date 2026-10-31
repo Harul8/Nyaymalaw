@@ -16,7 +16,7 @@ from tests.test_the_writer_is_shown_the_chronology import Writer, cites, papers,
 
 pytestmark = pytest.mark.class_a
 
-SALE = "Sale Deed No. 100 dated 30-10-1985"
+SALE = "Agreement No. 100 dated 30-10-1985"
 
 
 def message(payload):
@@ -41,7 +41,7 @@ def written(*makers):
 
 
 def good(payload):
-    return item(payload, "The sale deed", ["the sale deed"])
+    return item(payload, "The agreement", ["the agreement"])
 
 
 def named(label, **changes):
@@ -54,7 +54,7 @@ def standing(need, status, evidence, **changes):
 
 def test_a_status_a_document_cannot_show_is_kept_as_not_yet_given_and_says_so():
     items, _ = written(good, standing("Current orders", "coming_or_unclear", lambda p: {"source_id": page(p), "quote": SALE}))
-    assert [i["need"] for i in items] == ["The sale deed", "Current orders"]
+    assert [i["need"] for i in items] == ["The agreement", "Current orders"]
     orders = items[1]
     assert (orders["status"], orders["evidence"], orders["note"]) == ("not_given", None, response_writer.UNCONFIRMED)
     assert orders["law"] is not None and orders["group"] == "needed", "what the law requires of it is kept"
@@ -94,14 +94,14 @@ def test_a_status_that_can_be_confirmed_is_kept_as_the_writer_gave_it():
 ])
 def test_an_item_whose_law_or_shape_cannot_be_checked_is_left_out_and_the_rest_is_kept(label, change):
     items, _ = written(named("Unsupported item", **change), good)
-    assert [i["need"] for i in items] == ["The sale deed"]
+    assert [i["need"] for i in items] == ["The agreement"]
     assert items[0]["id"].endswith("s0c1"), "the items that stand are numbered from one"
 
 
 def test_the_ask_of_an_item_stays_with_that_item_when_another_is_left_out():
     items, _ = written(named("Unsupported item", law=None, asked_words=["Appeal against the order"]), good)
     (kept,) = items
-    assert [a["text"] for a in kept["asked"]] == ["the sale deed"] and kept["asked"][0]["unit_id"].endswith("b2")
+    assert [a["text"] for a in kept["asked"]] == ["the agreement"] and kept["asked"][0]["unit_id"].endswith("b2")
 
 
 def test_a_section_whose_every_item_is_left_out_is_still_the_section():

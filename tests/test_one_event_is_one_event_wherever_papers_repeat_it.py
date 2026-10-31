@@ -19,8 +19,8 @@ from tests.test_the_board_names_figures_copies_read_differently import paper
 
 pytestmark = pytest.mark.class_a
 
-ORDER = "The Joint Collector allowed the revision petition by an order dated 17-8-2019 and set aside the order of the Revenue Divisional Officer"
-OTHER = "The Tahsildar passed an order in File B/53/2008 on 17-8-2019 granting mutation of the land to the purchasers named in the deed"
+ORDER = "The Chief Arbitrator allowed the claim petition by an order dated 17-8-2019 and set aside the order of the Zonal Deputy Officer"
+OTHER = "The Manager passed an order in File B/53/2008 on 17-8-2019 granting release of the stock to the purchasers named in the deed"
 COPIES = {frozenset({("a", 1), ("b", 1)})}
 
 
@@ -49,7 +49,7 @@ def test_the_order_is_the_order_of_the_first_event_of_each_and_the_plan_is_left_
 
 
 @pytest.mark.parametrize("other", [
-    ev(2, "b", sort="2019-08-18"), ev(2, "b", kind="filing"), ev(2, "b", words=OTHER), ev(2, "b", words="the order of the Joint Collector"),
+    ev(2, "b", sort="2019-08-18"), ev(2, "b", kind="filing"), ev(2, "b", words=OTHER), ev(2, "b", words="the order of the Chief Arbitrator"),
     ev(2, "b", anchored=False), ev(2, "b", pages=(2,)), ev(2, "a")])
 def test_events_that_are_not_the_same_event_stay_apart(other):
     assert ids(events_once([ev(1, "a"), other], COPIES)) == [("E1", []), ("E2", [])]
@@ -82,7 +82,7 @@ def test_a_paper_never_has_two_of_its_events_in_one_event():
 
 
 def test_an_event_joins_the_event_it_is_likeliest_to_be_and_not_the_first_that_will_do():
-    noisy = ORDER.replace("Joint Collector", "J0int Co11ector").replace("dated", "daled")
+    noisy = ORDER.replace("Chief Arbitrator", "Ch1ef Arb1trat0r").replace("dated", "daled")
     groups = events_once([ev(1, "a", words=noisy), ev(2, "a", words=ORDER), ev(3, "b", words=ORDER)], COPIES)
     assert ids(groups) == [("E1", []), ("E2", ["E3"])]
 
@@ -95,12 +95,12 @@ def test_a_third_paper_that_copies_a_page_of_the_second_joins_the_same_event():
 
 
 def test_a_scan_that_reads_a_word_or_two_differently_is_still_the_same_passage_and_a_different_sentence_is_not():
-    noisy = ORDER.replace("Joint Collector", "J0int Co11ector").replace("dated", "daled")
+    noisy = ORDER.replace("Chief Arbitrator", "Ch1ef Arb1trat0r").replace("dated", "daled")
     assert research._held_in(ORDER, noisy) >= research.SAME_PASSAGE
     assert research._held_in(ORDER, "12. It is submitted that " + noisy + " in the appeals") >= research.SAME_PASSAGE
     assert research._held_in(ORDER, OTHER) < 0.6, "two orders of one day share only the words of orders"
-    assert research._held_in("the Joint Collector", ORDER) == 0.0, "under four words say nothing of which event it is"
-    assert research._held_in("the Joint Collector allowed", ORDER) == 1.0, "four words are enough to be held in the longer"
+    assert research._held_in("the Chief Arbitrator", ORDER) == 0.0, "under four words say nothing of which event it is"
+    assert research._held_in("the Chief Arbitrator allowed", ORDER) == 1.0, "four words are enough to be held in the longer"
     assert research._held_in(ORDER, "") == 0.0 and research._held_in("", "") == 0.0
 
 
@@ -116,7 +116,7 @@ def test_undated_events_are_one_by_the_same_rule():
 
 
 # The board lists an event once, naming where else it is recorded; each paper's own count is what it gave.
-SALE = "Sale deed number 596/80 dated 5.1.1980 the vendor sold to the purchasers an extent of 6.06 acres in the survey number"
+SALE = "Agreement number 596/80 dated 5.1.1980 the supplier sold to the purchasers a quantity of 6.06 tonnes in the lot number"
 
 
 def at(number, name, source, words, pages=(1,)):

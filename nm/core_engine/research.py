@@ -19,7 +19,7 @@ from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 from datetime import date
 
-from nm.core_engine import extents
+from nm.core_engine import figures
 from nm.core_engine.replay_scope import known, once
 from nm.core_engine.retrieval import SearchUnavailable, _digest, _valid_location, in_force, validate_search
 from nm.core_engine.understanding import REFERENCE, TEXT, select, source_catalogue
@@ -136,7 +136,7 @@ What we need from you:
 
 - What the advocate wants from us now. Often they say so. When they only tell us what has happened, they want to know where the law stands on those events: the legal questions a lawyer would need answered to advise on them. Also note, in the advocate's own words, anything they have told us not to do (for example to pause research or not to contact anyone) in ruled_out, and where they have told us nothing of the kind leave ruled_out empty. What the papers leave open or unproved is not something the advocate ruled out: it belongs in the facts as uncertain and in the facts we would still need.
 - The people involved and their roles: whether each is the advocate's client or one of the client's people (client), and, for each proceeding the papers name - a suit, appeal, revision, petition, complaint or other case - each person's part in it (who brought it, who answers it, who else is joined), with the page's own words (parts). A person the papers name in a proceeding is listed even when the advocate did not mention them.
-- Every subject of the matter the papers identify - a property, an account, a contract, a policy, a case or a document - by its identifier exactly as the page writes it (a survey, account, policy, case or document number), what it is, and the page's own words (subjects). List a subject the papers name even where it seems not to bear on what the advocate asked, so that none is overlooked.
+- Every subject of the matter the papers identify - an asset, an account, a contract, a policy, a case or a document - by the number or name the page identifies it by, exactly as the page writes it, what it is, and the page's own words (subjects). List a subject the papers name even where it seems not to bear on what the advocate asked, so that none is overlooked.
 - The facts, each kept exactly as certain as the advocate put it: confirmed, reported by someone, uncertain, or disputed. Give the advocate's own words for each fact, or, for a fact that comes from a document they sent, the document's own words. What the advocate reports is their account, and what a document says is what its author wrote; neither is proven fact, and we never add facts they did not give.
 - The separate disputes. A dispute is one set of events between particular parties that needs its own legal answer. Events that call for different kinds of law, such as a civil wrong and a crime, or that concern different transactions, are separate disputes, even when they happen together or involve the same people.
 - For each dispute, think through every legal consequence the events may have, civil, criminal and under any special statute, and for each: the right or liability, the remedy, how and where it is pursued and within what time, and, where the case turns on particular evidence, how that evidence is proved. Ask as legal questions those that bear on what the advocate wants; put the rest in related points.
@@ -161,7 +161,7 @@ Check the understanding carefully against the conversation itself, the way you w
 - Are the related points genuinely useful to the advocate, and kept separate from what we research now?
 - Is research being started when the advocate has ruled it out, or skipped when it is needed? Our purpose with every matter is to find where the law stands for each dispute in it, so that the advocate can see what the case needs. They do not have to ask for that: when they only tell us what has happened, or ask us to understand, summarise or set out the events, they still want to know where the law stands on them. Skipping research is a problem unless the advocate has told us not to research or the message needs none (thanks, or a request to tidy or transcribe text); starting it is a problem only when they have ruled it out. Where we could find instructions from the advocate limiting our work in their latest message, they are listed after the conversation; the conversation itself may hold earlier ones. Do not report research as a problem because the advocate's words did not literally ask for advice.
 
-Counting is code's work for figures as it is for days: do not add, subtract or convert areas, sums of money or any other figures yourself, and do not report that figures disagree because they do not seem to add up. Where two papers give different figures for the same thing, say so with each figure as it is given; where figures might or might not add up, say that they have not been added up.
+Counting is code's work for figures as it is for days: do not add, subtract or convert any amount or quantity yourself, and do not report that figures disagree because they do not seem to add up. Where two papers give different figures for the same thing, say so with each figure as it is given; where figures might or might not add up, say that they have not been added up.
 
 Report only problems that matter: ones that would change what we research, or would leave us misunderstanding the matter or the advocate's instructions. Small differences of wording or emphasis do not matter. Give each real problem precisely, with what should change. If the understanding is sound, say so plainly. Do not invent problems to have something to say.
 """
@@ -173,7 +173,7 @@ PHRASES = """You are a senior Indian litigation lawyer about to search a library
 
 Statutes rarely use everyday words. They use terms of art and frame rules in their own way, so a search in plain English often misses the provision that answers the question. Use your knowledge of Indian law to write, for each legal question, the language the statutes themselves are likely to use:
 
-- Heading terms: the words a section heading for this rule would use, for example "compensation for loss of goods in transit" rather than "the courier lost my parcel".
+- Heading terms: the words a section heading for this rule would use, in the statute's own terms of art rather than the everyday words of the facts.
 - Alternative terms: other terms of art the law uses for the same idea, such as the term another Act uses, the term of an older or newer enactment on the subject, or the closely related concept a lawyer would also look under.
 - A rule statement: one sentence framing the governing rule the way a provision would, in your own words. Do not try to recite a section from memory; this is only a search probe, and the actual words will be read from the statutes we hold.
 
@@ -185,9 +185,9 @@ JUDGMENT_PHRASES = """You are a senior Indian litigation lawyer about to search 
 
 Judgments do not read like statutes. Courts frame the point in issue in their own way, name doctrines and tests, discuss the provision by its section number and Act, and state the principle they decide in a sentence of their own. A search phrased in the words of the statute mostly finds paragraphs that merely quote it. Use your knowledge of how Indian courts write to give, for each legal question, the language a judgment deciding it is likely to use:
 
-- The issue as a court frames it, for example "whether a writ petition lies against a private body discharging a public function".
+- The issue as a court frames it: the question of law it asks, in a court's own words.
 - The holding: one sentence stating the principle the way a court would hold it, in your own words. Do not try to recite a judgment from memory; this is only a search probe, and the actual words will be read from the judgments we hold.
-- The doctrine or test: the name courts give the principle, such as "promissory estoppel" or "constructive res judicata", tied to the provision where courts usually discuss it that way.
+- The doctrine or test: the name courts give the principle, tied to the provision where courts usually discuss it that way.
 
 For each question give two or three search phrases in all, choosing the kinds that will best find a judgment that decides the point.
 """
@@ -318,11 +318,11 @@ CHRONOLOGY = """Message: You receive one document an advocate sent about a clien
 Purpose: Set out the document's own chronology for the advocate and for our research assistant: every event, order, direction, filing, transaction and proceeding it records or reports, with its date, so that nothing in the paper is overlooked when the matter's history is told. You are not judging which account is right, and you are not answering any legal question.
 
 Look for:
-- Each event the document records, whatever its date: a sale, partition or other deed, a mutation or entry in a revenue or other record, an order or direction of a court or authority, an appeal, revision, petition, suit, complaint, FIR or charge sheet, a notice, a hearing or listing, a payment, a death; and each proceeding it says is pending, with what it says of its stage.
+- Each event the document records, whatever its date: a sale, partition or other deed, an entry in an official record, an order or direction of a court or authority, an appeal, revision, petition, suit, complaint, FIR or charge sheet, a notice, a hearing or listing, a payment, a death; and each proceeding it says is pending, with what it says of its stage.
 - Who says it. A document may record an event itself (an order's own date and directions) or report it (a recital of an earlier order, a party's account or pleading). Give the authority or party whose words they are, and keep a party's allegation as that party's.
 - The date as the page gives it, in the page's own form ("30-10-1985", "17 August 2019", "2008", "1961-62"); where the page gives none, say undated. Do not work out, convert or guess a date.
-- The figures and identifiers that belong to the event, such as extents, sums, and deed, case, file and survey numbers, exactly as the page gives them.
-- One event for each act and date. Do not merge events the page keeps apart, do not repeat an event the same page says twice, and do not add anything the page does not say. A register or list of many similar entries (a line for each survey number, say) is one event for the whole list, naming its range and the figures that matter, with the words of its first entries.
+- The figures and identifiers that belong to the event, such as amounts, quantities and the numbers that identify a document, case, file, account or item, exactly as the page gives them.
+- One event for each act and date. Do not merge events the page keeps apart, do not repeat an event the same page says twice, and do not add anything the page does not say. A register or list of many similar entries (a line for each item, say) is one event for the whole list, naming its range and the figures that matter, with the words of its first entries.
 Work in a loop: list the events page by page, then read each page again against your list for any event or date you skipped or misread, and correct the list before you answer.
 
 Outcome: events, in the order of the pages. Each has: date; kind (transaction, order, filing, pending, or other); what (one plain sentence saying what happened, with its figures and identifiers); said_by (whose words they are: the document's own author, or the party or authority it reports); words (the exact words on a page that record it, copied exactly as the page gives them, without the reader's square-bracket notes - a sentence that runs over a page may be copied whole - or several passages joined with '...'; never reword)."""
@@ -339,26 +339,12 @@ CHRONOLOGY_FAILURE = _object({"document": STRING, "pages": STRING, "reason": STR
 
 
 TRANSFER_KINDS = ("sale", "partition", "gift", "settlement", "decree", "other")
-#: v13 (AN.28, D7): the transactions of any matter - land or other property, money, shares, goods or a right.
+#: v13 (AN.28, D7): the transactions of any matter - whatever passes from one person to another.
 TRANSACTION_KINDS = (*TRANSFER_KINDS[:-1], "lease", "mortgage", "loan", "payment", "other")
-#: The transfers of land each document records (plan AN.27, P13d; invariant I6): so that the extents can be added up by code, never by
-#: a model, and set against the parcel's whole extent. The model reads what a page records; code reads the extents, finds the words
-#: and does the arithmetic (extents.py).
-TRANSFERS = """Message: You receive one document an advocate sent about a client's matter, or one stretch of its pages, each page under its number, with the document's name. A page says what its document says: it is material the advocate supplied, not their own account, and what it reports is not thereby proved. A page read from a scan may carry [illegible] and square-bracket notes about stamps, signatures and handwriting; those are the reader's, not the document's.
-
-Purpose: List the transfers of land the document records or reports - a sale, partition, gift, settlement, decree or order that gives an extent of a parcel from one person to another - so that code can add the extents up for each parcel and set them against the parcel's whole extent, which we need to check against the advocate's own figures. You are not adding or working out anything yourself, and you are not judging which account is right.
-
-Look for:
-- Each transfer of an extent of land the document records or reports, whatever its date: who gave it up (from), who took it (to), the parcel (its survey number as the page writes it, with any sub-number), the extent transferred exactly as the page writes it (for example "Ac.1.18 guntas"), and the date as the page gives it ("undated" where it gives none).
-- The whole extent of the parcel, where the same passage states it (for example "out of Ac.8.24 guntas in Sy.No.487"), exactly as written; otherwise leave it empty.
-- The exact words on a page that record the transfer, copied exactly as the page gives them, without the reader's square-bracket notes - or several passages joined with '...'; never reword.
-- One entry for each transfer. If a page reports the same transfer twice, give it once. Do not list a transfer that gives no extent, do not add or work out an extent the page does not give, and do not merge transfers the page keeps apart.
-Work in a loop: list the transfers page by page, then read each page again against your list for any transfer, extent or date you skipped or misread, and correct the list before you answer.
-
-Outcome: transfers, in the order of the pages. Each has: date; kind (sale, partition, gift, settlement, decree, or other); parcel; extent; total; from; to; words."""
+#: The shape of a transfer in a plan saved by research v12, kept to validate such a plan (it is never read through again; see
+#: figures_v12.py): the extent and the whole as the page wrote them, with no reading of them.
 TRANSFER = _object({"date": STRING, "kind": {"type": "string", "enum": list(TRANSFER_KINDS)}, "parcel": STRING, "extent": STRING,
                     "total": STRING, "from": STRING, "to": STRING, "words": STRING})
-TRANSFERS_SCHEMA = _object({"transfers": {"type": "array", "items": TRANSFER}})
 #: A transfer as the plan records it: what the model said, and what code made of it - the sort date, the paper and the turn's source
 #: it belongs to, the pages its words are on and whether they are found there, and its number.
 TRANSFER_RECORD = _object({"id": STRING, "date": STRING, "sort": STRING, "kind": TRANSFER["properties"]["kind"], "parcel": STRING,
@@ -386,17 +372,30 @@ def _record_schema(understanding, chronology=False):
 SCHEMA_V8 = _record_schema(UNDERSTANDING_V8)
 SCHEMA = _record_schema(UNDERSTANDING)
 SCHEMA_V12 = _record_schema(UNDERSTANDING, chronology=True)
-# The transfers of land (P13d) are optional in v12: a plan saved before them has none and validates as it did.
+# The transfers (P13d) are optional in v12: a plan saved before them has none and validates as it did.
 SCHEMA_V12["properties"]["transfers"] = {"type": "array", "items": TRANSFER_RECORD}
 SCHEMA_V12["properties"]["transfers_failures"] = {"type": "array", "items": CHRONOLOGY_FAILURE}
-#: v13 (AN.28, D3, D7, B16): a transaction of any kind, with the model's plain reading of its figure and the number of the document
-#: that records it, as the plan records it.
-TRANSACTION = _object({"date": STRING, "kind": {"type": "string", "enum": list(TRANSACTION_KINDS)}, "parcel": STRING,
-                       "extent": STRING, "reading": STRING, "total": STRING, "from": STRING, "to": STRING, "instrument": STRING,
-                       "words": STRING})
+#: v13 (AN.28, D3, D7, B16; AN.29, D9): a transaction of any kind - whatever passes from one person to another. The model reads the
+#: figure the page records into a quantity: its kind - an amount of money, an area, a length, a mass or a volume, or a share, a rate, a
+#: period or no figure - and, for an amount, its parts, each a number as the page writes it, the unit it stands against (named in plain
+#: words, which code resolves by its table of units: one it does not know is a figure it lists and never adds) and that unit as the
+#: page writes it. Code checks the numbers and the unit against the words and does the sums.
+QUANTITY = _object({"dimension": {"type": "string", "enum": list(figures.FIGURE_KINDS)},
+                    "parts": {"type": "array", "items": _object({"number": STRING, "unit": STRING, "written": STRING})}})
+QUANTITY_RECORD = _object({"dimension": STRING, "parts": {"type": "array", "items": _object({
+    "number": STRING, "unit": STRING, "written": STRING})}})
+TRANSACTION = _object({"date": STRING, "kind": {"type": "string", "enum": list(TRANSACTION_KINDS)}, "subject": STRING,
+                       "figure": STRING, "quantity": QUANTITY, "whole": STRING, "whole_quantity": QUANTITY, "from": STRING,
+                       "to": STRING, "instrument": STRING, "giver_died": STRING, "words": STRING})
 TRANSACTIONS_SCHEMA = _object({"transfers": {"type": "array", "items": TRANSACTION}})
-TRANSACTION_RECORD = _object({**TRANSFER_RECORD["properties"], "kind": TRANSACTION["properties"]["kind"],
-                              "reading": STRING, "instrument": STRING})
+#: A transaction as the plan records it: what the model said, and what code made of it - the sort dates, the paper and the turn's source
+#: it belongs to, the pages its words are on and whether they are found there, and its number.
+TRANSACTION_RECORD = _object({"id": STRING, "date": STRING, "sort": STRING, "kind": TRANSACTION["properties"]["kind"],
+                              "subject": STRING, "figure": STRING, "quantity": QUANTITY_RECORD, "whole": STRING,
+                              "whole_quantity": QUANTITY_RECORD, "from": STRING, "to": STRING, "instrument": STRING,
+                              "giver_died": STRING, "giver_died_sort": STRING, "document": STRING, "source": STRING,
+                              "pages": {"type": "array", "items": {"type": "integer"}}, "words": STRING,
+                              "anchored": {"type": "boolean"}})
 SCHEMA_V13 = _record_schema(UNDERSTANDING_V13_RECORD, chronology=True)
 #: v13 (AN.28, piece 3e): what matters to the client only when the papers are read side by side, each point with the pages' words.
 CONNECTION_KINDS = ("client_appears", "against_client", "after_death", "after_time_limit", "further_subject", "other")
@@ -633,20 +632,9 @@ class Pages:
 #: disputes and legal questions.
 _PLACES = {"asked": "what was asked", "ruled_out": "what was ruled out", "no_research_reason": "the reason given for no research"}
 _ITEMS = {"facts": "fact", "disputes": "dispute", "legal_questions": "legal question"}
-#: What the model is told when its understanding states an extent that none of the advocate's messages and none of the documents give.
-EXTENT_FIX = ("Do not work out an extent or a sum yourself: use one the advocate or a paper gives, copied as it stands, or say that it "
-              "has not been worked out. Code adds up the figures of the papers' transactions.")
-
-
-def _extents_written(text):
-    """Each extent some words write, as (the words as written, its guntas - None where the notation cannot be an extent, as Ac.0.55
-    cannot: 40 guntas make an acre - and the extent itself: its guntas, or for such a notation its acres and guntas as written, so that
-    a paper's own slip is the same slip). The finder and the reading are extents.py's own, so that the notations stay in one place."""
-    found = []
-    for _, _, how, match in extents._extents_in(" ".join(text.split())):
-        value = extents._guntas(how, match.groups())[0]
-        found.append((match.group(0), value, value if value is not None else tuple(int(part) for part in match.groups())))
-    return found
+#: What the model is told when its understanding states a figure that none of the advocate's messages and none of the documents give.
+FIGURE_FIX = ("Do not work out a figure yourself: use one the advocate or a paper gives, copied as it stands, or say that it has not "
+              "been worked out. Code adds up the figures of the papers' transactions.")
 
 
 def _words_of(value, place, key=""):
@@ -665,43 +653,35 @@ def _words_of(value, place, key=""):
                 yield from _words_of(item, place, name)
 
 
-def _extent_problems(understanding, context):
-    """The extents the understanding states that none of the advocate's messages and none of the documents they sent give (plan AN.27,
-    P23; invariant I6). Counting is code's work (extents.py adds the papers' transfers of land): a total, a difference or an estimate
-    that a model worked out is refused to it, in words, and left out when it revises. An extent is the same extent however it is written
-    (Ac.1.10, 1 acre 10 guntas and 50 guntas), and one that no paper can write - guntas of 40 or more - is refused unless a paper
-    itself writes those figures. One problem for each extent, naming every place it is stated. What an earlier note of ours or a
-    record of the matter holds is not a message or a paper."""
+def _figure_problems(understanding, context):
+    """The figures the understanding states that none of the advocate's messages and none of the documents they sent give (plan
+    AN.27, P23; AN.29, D9; invariant I6). Counting is code's work (figures.py adds the papers' transactions): a total, a difference or
+    an estimate that a model worked out is refused to it, in words, and left out when it revises. A figure is a number with a unit
+    beside it (figures.quantities_in); it is the papers' own if the same number stands against the same unit, or the same amount of
+    the same kind, in a message or a paper. One problem for each figure, naming every place it is stated. What an earlier note of
+    ours or a record of the matter holds is not a message or a paper."""
     sources = [row["text"] for row in context["conversation"] if row.get("record_role") == "original_account"]
     sources += [context["latest"]["text"]] + [row["text"] for row in context.get("documents", ())]
-    given = {extent for text in sources for _, _, extent in _extents_written(text)}
-    # And sums of money (AN.28, D7): a sum is the same sum in figures or in words, lakhs or rupees.
-    given_sums = {value for text in sources for _, value in extents.sums_written(" ".join(text.split()))}
+    pairs, amounts = set(), set()
+    for text in sources:
+        for _, number, unit in figures.quantities_in(" ".join(text.split())):
+            value = figures.number_of(number)
+            if value is not None:
+                pairs.add((unit, value))
+                amounts.add((figures.UNITS[unit].dimension, value * figures.UNITS[unit].size))
     stated = {}
     for name, item in understanding.items():
         for place, text in _words_of(item, _PLACES.get(name, f"the {name.replace('_', ' ')}"), name):
-            found = [(words, value, extent) for words, value, extent in _extents_written(text) if extent not in given]
-            found += [(words, value, ("sum", value)) for words, value in extents.sums_written(" ".join(text.split()))
-                      if value not in given_sums]
-            for words, value, extent in found:
-                kept = stated.setdefault(extent, {"words": words, "value": value, "places": []})
+            for words, number, unit in figures.quantities_in(" ".join(text.split())):
+                value = figures.number_of(number)
+                if value is None or (unit, value) in pairs or (figures.UNITS[unit].dimension, value * figures.UNITS[unit].size) in amounts:
+                    continue
+                kept = stated.setdefault((unit, value), {"words": words, "places": []})
                 if place not in kept["places"]:
                     kept["places"].append(place)
-    problems = []
-    for key, kept in stated.items():
-        where = ", ".join(kept["places"])
-        if isinstance(key, tuple) and key[:1] == ("sum",):
-            said = (f"The understanding states the sum {kept['words']!r} ({where}), which is in none of the advocate's messages or the "
-                    "documents they sent; it reads as a total, a difference or an estimate that was worked out.")
-        elif kept["value"] is None:
-            said = (f"The understanding writes the extent {kept['words']!r} ({where}), which cannot be an extent as a paper writes it - 40 "
-                    "guntas make an acre, so the guntas after the acres are under 40 - and is in none of the advocate's messages or the "
-                    "documents they sent.")
-        else:
-            said = (f"The understanding states the extent {kept['words']!r} ({where}), which is in none of the advocate's messages or the "
-                    "documents they sent; it reads as a total, a difference or an estimate that was worked out.")
-        problems.append({"problem": said, "fix": EXTENT_FIX})
-    return problems
+    return [{"problem": f"The understanding states the figure {kept['words']!r} ({', '.join(kept['places'])}), which is in none of the "
+                        "advocate's messages or the documents they sent; it reads as a total, a difference or an estimate that was "
+                        "worked out.", "fix": FIGURE_FIX} for kept in stated.values()]
 
 
 def code_checks(understanding, context):
@@ -755,7 +735,7 @@ def code_checks(understanding, context):
     if not understanding["needs_research"] and questions:
         problems.append({"problem": "Research is marked as not needed, yet legal questions are listed for research.",
                          "fix": "Either research is needed (say so) or the questions belong with the known disputes for later."})
-    return problems + _extent_problems(understanding, context)
+    return problems + _figure_problems(understanding, context)
 
 
 def _matter_text(understanding, disputes):
@@ -1041,11 +1021,13 @@ CHRONOLOGY_V13 = """Message: You receive an advocate's messages to us about a cl
 Purpose: Set out that paper's own chronology for the advocate and for our research assistant: every event, order, direction, filing, transaction and proceeding it records or reports, so that nothing in it is overlooked when the matter's history is told. You are not judging which account is right, and you are not answering any legal question.
 
 Look for:
-- Each event the paper records, whatever its date: a sale, partition or other deed, a mutation or entry in a revenue or other record, an order or direction of a court or authority, an appeal, revision, petition, suit, complaint, FIR or charge sheet, a notice, a hearing or listing, a payment, a death; and each proceeding it says is pending, with its stage.
+- Each event the paper records, whatever its date: a sale, partition or other deed, an entry in an official record, an order or direction of a court or authority, an appeal, revision, petition, suit, complaint, FIR or charge sheet, a notice, a hearing or listing, a payment, a death; and each proceeding it says is pending, with its stage.
 - When the event happened, as the page gives it ("30-10-1985", "17 August 2019", "2008", "1961-62"). A sentence often names the date of an earlier order, deed or filing it mentions: that date is that earlier act's, not this event's. Where the page gives no date for this event, say undated. Do not work out, convert or guess a date.
 - For an order or direction: what the authority found and what it directed, as the page records them. For a filing, appeal or proceeding: who brought it and who answers it, as the page names them.
 - Who says it: the paper's own author, or the party or authority it reports; a party's allegation stays that party's.
-- The figures and identifiers that belong to the event - extents, sums, and deed, case, file, account or survey numbers - exactly as the page gives them.
+- The figures and identifiers that belong to the event - amounts, quantities and the numbers that identify a document, case, file, account or item - exactly as the page gives them.
+- A case or document number carries the year it was filed or registered: where that year is all the page gives of when the case was filed or the document registered, give it as the date of that filing or registration, not "undated".
+- An order, decree or judgment that a later proceeding enforces, challenges, reviews or relies on is an event of its own at its own date, even where the page only recites it: list it once, and let the later proceeding refer to it.
 - One event for each act. A paper that recites the same act again - a party's account and its written arguments, an order's own recital - records one event: list it once. Do not merge events the paper keeps apart, and add nothing the page does not say. A register or list of many similar entries is one event for the whole list, naming its range and the figures that matter.
 Work in a loop: list the events page by page, then read each page again against your list for any event you skipped or misread, or any date you gave to the wrong act, and correct the list before you answer.
 
@@ -1065,9 +1047,9 @@ NOT_CARRIED_MOST = 20
 
 def _numbers(words):
     """The numbers some words hold, a month written as a name counted as its number, a number written in words as its number (the
-    twelfth day of June nineteen ninety one: extents.numbers_in_words), and a two-digit year as the years it may stand for: what a
+    twelfth day of the month, the year in words: figures.numbers_in_words), and a two-digit year as the years it may stand for: what a
     date's numbers must be found among (v13)."""
-    found = {int(n) for n in re.findall(r"\d+", str(words))} | extents.numbers_in_words(words)
+    found = {int(n) for n in re.findall(r"\d+", str(words))} | figures.numbers_in_words(words)
     found |= {_MONTHS[name] for name in re.findall(rf"\b({_MONTH})\b", str(words).casefold())}
     return found | {n % 100 for n in found if n >= 1000} | {2000 + n for n in found if n < 100} | {1900 + n for n in found if n < 100}
 
@@ -1234,44 +1216,53 @@ def events_once(events, copies):
     return shown
 
 
+def _quantity(given):
+    """A quantity as the plan keeps it: the model's reading of a figure, with every field present."""
+    given = given if isinstance(given, dict) else {}
+    parts = [{key: str(part.get(key, "")).strip() for key in ("number", "unit", "written")}
+             for part in given.get("parts") or () if isinstance(part, dict)]
+    return {"dimension": str(given.get("dimension") or "none").strip(), "parts": parts}
+
+
 def _transfers_in(data, document, finder):
     transfers = []
     for item in data["transfers"]:
         words = item["words"].strip()
         anchored, pages = _anchor(words, finder)
-        transfers.append({"date": item["date"].strip(), "kind": item["kind"], "parcel": item["parcel"].strip(),
-                          "extent": item["extent"].strip(), "total": item["total"].strip(), "from": item["from"].strip(),
-                          "to": item["to"].strip(), "document": document["name"], "source": document["source"], "pages": pages,
-                          "words": words, "anchored": anchored,
-                          # v13 (AN.28): the model's plain reading of the figure and the document that records it.
-                          "reading": item.get("reading", "").strip(), "instrument": item.get("instrument", "").strip()})
+        transfers.append({"date": item["date"].strip(), "kind": item["kind"], "subject": item["subject"].strip(),
+                          "figure": item["figure"].strip(), "quantity": _quantity(item.get("quantity")),
+                          "whole": item["whole"].strip(), "whole_quantity": _quantity(item.get("whole_quantity")),
+                          "from": item["from"].strip(), "to": item["to"].strip(), "instrument": item.get("instrument", "").strip(),
+                          "giver_died": item.get("giver_died", "").strip(), "giver_died_sort": "", "document": document["name"],
+                          "source": document["source"], "pages": pages, "words": words, "anchored": anchored})
     return transfers
 
 
 #: v13 (AN.28, D1, D3, D7, B16): the transactions of one paper, of any kind, read with the whole file in view.
 TRANSACTIONS_V13 = """Message: You receive an advocate's messages to us about a client's matter, the documents they sent, and the pages of one paper you read for now: the rest of the file comes first, page by page under each paper's name, and the pages you read for last, under "The pages you read for". A page says what its document says: it is material the advocate supplied, not their own account, and what it reports is not thereby proved. Square-bracket notes are the reader's, not the document's. The rest of the file is there so that you know what the matter is about and who is who: list only what the pages you read for record.
 
-Purpose: List the transactions those pages record or report - whatever moves property, money, shares, goods or a right from one person to another: a sale, partition, gift, settlement, decree, lease, mortgage, loan or payment - so that code can add the figures up for each property, account or subject and set them against any whole the papers state. You are not adding or working out anything yourself, and you are not judging which account is right.
+Purpose: List the transactions those pages record or report - whatever passes from one person to another: a sale, partition, gift, settlement, decree, lease, mortgage, loan or payment of anything - so that code can add the figures up for each subject and set them against any whole the papers state. You are not adding or working out anything yourself, and you are not judging which account is right.
 
 Look for:
-- Each transaction, whatever its date: who gave it up (from), who took it (to), what it concerns (parcel: the property, account or subject as the page names it - a survey, house or account number, with any sub-number), the figure transferred exactly as the page writes it (extent: an area, a sum, a share), the same figure in plain words with its unit, so that it reads only one way - acres and guntas, or acres and cents, as the paper means them (reading: for example "3 acres 12 guntas", "1 acre 18 cents", "Rs 200000", "a one-third share"), the number of the document that records it as the page writes it (instrument: a deed, agreement, cheque or order number, with its year; empty where none is given), and the date as the page gives it ("undated" where it gives none).
-- The whole of what the transaction concerns, where the same passage states it (for example "out of Ac.8.00 in the plot", invented), exactly as written; otherwise leave it empty.
-- The exact words on a page that record the transaction, copied exactly as the page gives them, without the reader's square-bracket notes - or several passages joined with '...'; never reword.
+- Each transaction, whatever its date: who gave it up (from), who took it (to), what it concerns (subject: the asset, account, contract or case, named as the papers most commonly name it - give the same subject the same name wherever it stands in the file), the figure transferred exactly as the page writes it (figure), the number that identifies the document recording it, as the page writes it (instrument; empty where none is given), the date as the page gives it ("undated" where it gives none), and, where the papers record that the giver had died by then, the date of that death as the papers give it (giver_died; empty where none is recorded).
+- What the figure is (quantity), read from the page's own words and never worked out: its dimension - money, area, length, mass or volume where it is an amount of that; share where it is a part of a whole; rate where it is a price or charge for a period or a measure; period where it is a length of time; none where the passage gives no figure - and, for an amount, its parts: each number exactly as the page writes it, in digits, with the unit it stands against, named in plain words (unit), and that unit exactly as the page writes it (written). A figure written in two units has two parts. You convert and add nothing.
+- The whole the transaction is out of, where the same passage states one (whole, exactly as written, with its quantity read the same way); otherwise leave both empty.
+- The exact words on a page that record the transaction, long enough to hold its figure and any whole it states, copied exactly as the page gives them, without the reader's square-bracket notes - or several passages joined with '...'; never reword.
 - One entry for each transaction. A paper that reports the same transaction again records one: give it once. Do not list a transaction that gives no figure, do not add or work out a figure the page does not give, and do not merge transactions the page keeps apart.
-Work in a loop: list the transactions page by page, then read each page again against your list for any transaction, figure, document number or date you skipped or misread, and correct the list before you answer.
+Work in a loop: list the transactions page by page, then read each page again against your list for any transaction, figure, number or date you skipped or misread, and correct the list before you answer.
 
-Outcome: transfers, in the order of the pages. Each has: date; kind (sale, partition, gift, settlement, decree, lease, mortgage, loan, payment, or other); parcel; extent; reading; total; from; to; instrument; words."""
+Outcome: transfers, in the order of the pages. Each has: date; kind (sale, partition, gift, settlement, decree, lease, mortgage, loan, payment, or other); subject; figure; quantity; whole; whole_quantity; from; to; instrument; giver_died; words."""
 
 
 #: v13 (AN.28, D2 and D3): one look again at a paper's transactions where code found what it could not use.
-TRANSACTIONS_CHECK = """Message: You listed the transactions one paper an advocate sent records; you receive that paper's pages, each under its number, and what code found when it checked your list (to_check): transactions whose words it could not find on the pages, whose figure or whole is not in those words, whose figure code reads otherwise than your reading of it, or whose date is in neither their words nor their pages - each with why and, where code found them, the page's own words nearest to yours. A page says what its document says; square-bracket notes are the reader's, not the document's.
+TRANSACTIONS_CHECK = """Message: You listed the transactions one paper an advocate sent records; you receive that paper's pages, each under its number, and what code found when it checked your list (to_check): transactions whose words it could not find on the pages, whose figure or whole it could not check against those words (a number or a unit not in them), whose reading of a figure has a unit code cannot convert or units of different kinds, whose recorded death of the giver is on no page of the file, or whose date is in neither their words nor their pages - each with why and, where code found them, the page's own words nearest to yours. A page says what its document says; square-bracket notes are the reader's, not the document's.
 
 Purpose: Look again so that every transaction is listed as the paper records it, with words that stand on its pages and a figure and a whole that stand in those words.
 
-For each transaction in to_check: give it again, corrected - its words copied exactly from the page as they stand, a misread letter included, and long enough to hold its figure and any whole it gives; its figure and whole exactly as those words write them, with your plain reading of the figure and its unit, so that it reads only one way; its date the date the paper gives for this transaction - or leave it out if the paper does not record it as you listed it.
+For each transaction in to_check: give it again, corrected - its words copied exactly from the page as they stand, a misread letter included, and long enough to hold its figure and any whole it gives; its figure and whole exactly as those words write them, each with its quantity read from them - every number as the page writes it, in digits, the unit it stands against and that unit as written - so that every number you give is in the words; its date the date the paper gives for this transaction; the death of the giver only if the papers record one - or leave it out if the paper does not record the transaction as you listed it.
 Work in a loop: read the pages again, decide each, check what you write against the page, and correct it.
 
-Outcome: transfers: only those you give again, each as before - date; kind; parcel; extent; reading; total; from; to; instrument; words."""
+Outcome: transfers: only those you give again, each as before - date; kind; subject; figure; quantity; whole; whole_quantity; from; to; instrument; giver_died; words."""
 
 
 #: v13 (AN.28, D1, piece 3e): the papers read side by side for what matters to the client.
@@ -1281,10 +1272,10 @@ Purpose: Set the papers side by side and find what matters to the advocate's cli
 
 Look for:
 - Whom the advocate acts for, from their messages, and the client's people the papers name - members of the family, predecessors and successors in interest, partners, agents - each name exactly as a page writes it (client_people).
-- Where the client or one of the client's people appears in another paper or in another proceeding than the one the advocate speaks of: as a party, an applicant or respondent, a buyer or seller, a witness.
+- Where the client or one of the client's people appears in another paper or in another proceeding than the one the advocate speaks of: as a party, an applicant or respondent, a witness, or a giver or receiver in a transaction.
 - A finding, order or statement in one paper that goes against the client's position or claim in another.
 - An act a paper records that is dated after a party's death another paper records, or after a time limit or an order another paper states.
-- A property, account, contract, policy or proceeding a paper connects to the client that the advocate has not mentioned.
+- An asset, account, contract, policy or proceeding a paper connects to the client that the advocate has not mentioned.
 - Anything else that only reading two papers together shows and that a careful lawyer would want the advocate to know.
 For each, the point in plain words, why it matters to the client, and the exact words on the pages that show it - each passage copied exactly as the page gives it, without the reader's notes, and passages from different pages or papers joined with '...'; never reword.
 Work in a loop: read every paper, list the points, then read the papers again against your list for any point you missed or misread, and correct the list before you answer.
@@ -1463,25 +1454,48 @@ def _connection_issues(data, context):
             for failure in data.get("connections_failures", [])]
 
 
-def _transfer_fault(transfer, finder):
+def _file_numbers(documents):
+    """Every number the pages of the whole file hold (as _numbers reads them): what a date given from another paper is traced to."""
+    held = set()
+    for document in documents:
+        for page in document["pages"]:
+            held |= _numbers(_reading(page["text"]))
+    return held
+
+
+def _died_ok(died, file_numbers):
+    """Whether the death a transaction records for its giver stands in the file: a date code reads, every number of which is on some
+    page of some paper (a death is often recorded in another paper than the transaction)."""
+    return bool(read_date(died, months=True)) and {n for n in _numbers(died) if n} <= file_numbers
+
+
+def _transfer_fault(transfer, finder, file_numbers):
     """Why code cannot use a v13 transaction as the model listed it, or None: its words not on the pages, its figure or whole as
-    extents.fault finds them, or its date in neither its words nor its paper's pages."""
+    figures.fault finds them, the death it records for the giver not on any page of the file, or its date in neither its words nor
+    its paper's pages."""
     if not transfer["anchored"]:
         return "its words are not found on the pages"
-    return extents.fault(transfer) or (None if _traceable(transfer, finder) else "its date is in neither its words nor its pages")
+    if why := figures.fault(transfer):
+        return why
+    if transfer["giver_died"] and not _died_ok(transfer["giver_died"], file_numbers):
+        return "the death it records for the giver is on no page of the file"
+    return None if _traceable(transfer, finder) else "its date is in neither its words nor its pages"
 
 
 def _checked_transfers(model, transfers, documents, finders):
     """v13 (AN.28, D2 and D3): each paper's transactions checked by code and, for a paper where some cannot be used as listed, one
     check call that looks again; what it gives replaces those at fault. One still at fault is kept as it is - the ledger lists it and
-    never adds it - and one whose date is still not in its paper keeps its words and loses its date ("undated")."""
+    never adds it - one whose date is still not in its paper keeps its words and loses its date ("undated"), and a death still on no
+    page of the file is dropped."""
+    file_numbers = _file_numbers(documents)
+
     def one(document):
         mine = [transfer for transfer in transfers if transfer["source"] == document["source"]]
         finder = finders[document["source"]]
-        failing = [(transfer, why) for transfer in mine if (why := _transfer_fault(transfer, finder))]
+        failing = [(transfer, why) for transfer in mine if (why := _transfer_fault(transfer, finder, file_numbers))]
         if failing:
-            to_check = [{**{key: transfer[key] for key in ("date", "kind", "parcel", "extent", "reading", "total", "from", "to",
-                                                          "instrument", "words")}, "why": why,
+            to_check = [{**{key: transfer[key] for key in ("date", "kind", "subject", "figure", "quantity", "whole", "whole_quantity",
+                                                          "from", "to", "instrument", "giver_died", "words")}, "why": why,
                          **({"nearest_words": near["words"]} if not transfer["anchored"]
                             and (near := finder.nearest(transfer["words"])) else {})} for transfer, why in failing]
             user = (_window_text(document, document["pages"]) + "\n\n"
@@ -1499,20 +1513,23 @@ def _checked_transfers(model, transfers, documents, finders):
         for transfer in mine:
             if transfer["anchored"] and not _traceable(transfer, finder):
                 transfer["date"] = "undated"
+            if transfer["giver_died"] and not _died_ok(transfer["giver_died"], file_numbers):
+                transfer["giver_died"] = ""
+            transfer["giver_died_sort"] = read_date(transfer["giver_died"], months=True) if transfer["giver_died"] else ""
         return mine
     with ThreadPoolExecutor(max_workers=max(1, min(8, len(documents)))) as pool:
         return [transfer for mine in pool.map(one, documents) for transfer in mine]
 
 
 def _same_transfer(transfer):
-    return tuple(transfer[key] for key in ("date", "kind", "parcel", "extent", "words"))
+    return tuple(transfer[key] for key in ("date", "kind", "subject", "figure", "words"))
 
 
 def transfers_of(model, context, *, wanted=None):
     """The transactions the documents of a turn record, as (transfers, failures) - plan AN.27, P13d; from research v13 of any kind
     (AN.28, D7). Read, anchored, dated, ordered and numbered X1... exactly as the chronology's events are, each paper read with the
-    whole file in view and looked at again once where code cannot use what it found (D2, D3); the figures are read and added by
-    extents.py, never here."""
+    whole file in view and looked at again once where code cannot use what it found (D2, D3); the figures are checked and added by
+    figures.py, never here."""
     documents = _documents(context)
     if not documents or (wanted is not None and not wanted()):
         return [], []
@@ -1562,6 +1579,10 @@ def _chronology_issues(events, failures, context, months=False):
 
 
 def _transfer_issues(transfers, failures, context, months=False):
+    for item in transfers:
+        if "giver_died_sort" in item and item["giver_died_sort"] != (read_date(item["giver_died"], months=months)
+                                                                    if item["giver_died"] else ""):
+            raise SchemaViolation(f"Transfer {item['id']} is dated otherwise than its giver's recorded death reads")
     return _stretch_issues(transfers, failures, context, prefix="X", label="Transfer", noun="transfer", unavailable="transfers",
                            months=months)
 
@@ -1575,7 +1596,7 @@ def plan(model, context, interpretation=None, *, progress=None, wanted=None, res
     and once it answers False the loop stops there with the plan for no matter. restrictions: asked once, after wanted has
     let the loop go on, what the advocate restricted in their latest message as the interpretation found it (a list of their
     exact words) or None where that is not known; the check and the correction are told (plan AN.27, P4).
-    The chronology of the documents, and the transfers of land they record (P13d), are read beside the loop (research v12, plan
+    The chronology of the documents, and the transactions they record (P13d), are read beside the loop (research v12, plan
     AN.27, P8c): each is started at once, asks wanted before any call, and its result is taken last; a stretch that could not be
     read is recorded, and a usage limit stops the turn."""
     if interpretation is not None and not carries_matter(interpretation):

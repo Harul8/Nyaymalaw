@@ -1,12 +1,12 @@
-"""The research check is told that counting extents is code's work (plan AN.27, P24; invariants I6 and S13).
+"""The research check is told that counting figures is code's work (plan AN.27, P24; AN.29, D9; invariants I6 and S13).
 
 In both replays of the reviewed bundle's first turn it was NM's own check that first said a purchase "does not reconcile" with two
-passbooks - its own sum was wrong, since 40 guntas make an acre - and the revising step adopted it; the second replay's answer carried
-it. The writer's prompt already says that counting is code's work for extents as it is for days; the check's did not. The check now has
-the same sentence, with its point for a check: it does not report figures as disagreeing because they do not seem to add up, it says so
-where two papers give different figures for the same land, and it says that figures have not been added up where they might or might
-not. A prompt is pinned here, not proved: what the model does with it is measured by a bounded replay. From research v13 and the writer
-v14 the rule is said of figures of any kind - areas, sums of money and any other (plan AN.28, D7).
+papers - its own sum was wrong - and the revising step adopted it; the second replay's answer carried it. The writer's prompt already
+says that counting is code's work for figures as it is for days; the check's did not. The check now has the same sentence, with its
+point for a check: it does not report figures as disagreeing because they do not seem to add up, it says so where two papers give
+different figures for the same thing, and it says that figures have not been added up where they might or might not. A prompt is pinned
+here, not proved: what the model does with it is measured by a bounded replay. From research v13 and the writer v14 the rule is said of
+figures of any kind - amounts and quantities of whatever unit (plan AN.28, D7).
 """
 import pytest
 
@@ -17,15 +17,14 @@ from tests.test_core_understanding import context
 
 pytestmark = pytest.mark.class_a
 
-COUNTING = ("Counting is code's work for figures as it is for days: do not add, subtract or convert areas, sums of money or any other "
-            "figures yourself")
+COUNTING = "Counting is code's work for figures as it is for days: do not add, subtract or convert any amount or quantity yourself"
 
 
 def words(prompt):
     return " ".join(prompt.split())
 
 
-def test_the_check_is_told_what_the_writer_is_told_about_counting_extents():
+def test_the_check_is_told_what_the_writer_is_told_about_counting_figures():
     assert COUNTING in words(research.CHECK)
     assert COUNTING in words(response_writer.SYSTEM_V14), "one rule, said the same way to the step that writes and the step that checks"
 

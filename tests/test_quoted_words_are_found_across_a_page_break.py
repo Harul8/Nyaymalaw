@@ -11,14 +11,14 @@ from nm.core_engine.research import Pages
 
 pytestmark = pytest.mark.class_a
 
-SENTENCE = ("revenue officers are directed to continue to maintain the name of the original owner in the records against land "
-            "to an extent of Ac.1.18 guntas and Ac.1.00 respectively in Survey No. 100 of the village. However none of the "
-            "parties should register conveyances of the above extent till the issue is adjudicated.")
-FOOT = ("The petition is disposed of and in the meanwhile revenue officers are directed to continue to maintain the name of the "
-        "original owner in the records against land to an extent of Ac.1.18 guntas and Ac.1.00\n\n"
+SENTENCE = ("bank officers are directed to continue to maintain the name of the original holder in the records against stock "
+            "to a quantity of 118 kg and 100 kg respectively in Lot No. 100 of the warehouse. However none of the "
+            "parties should register assignments of the above quantity till the issue is adjudicated.")
+FOOT = ("The petition is disposed of and in the meanwhile bank officers are directed to continue to maintain the name of the "
+        "original holder in the records against stock to a quantity of 118 kg and 100 kg\n\n"
         "[stamp: CERTIFIED TO BE TRUE COPY]\n[signature]\nAdministrative Officer\nCOLLECTORATE\nSome District\n[signature]")
-HEAD = ("[Handwritten: 4831/-]\n\nrespectively in Survey No. 100 of the village. However none of the parties should register "
-        "conveyances of the above extent till the issue is adjudicated.\"\n\nThe petition is disposed of.")
+HEAD = ("[Handwritten: 4831/-]\n\nrespectively in Lot No. 100 of the warehouse. However none of the parties should register "
+        "assignments of the above quantity till the issue is adjudicated.\"\n\nThe petition is disposed of.")
 
 
 def page(name, number, text):
@@ -46,12 +46,12 @@ def test_a_sentence_that_runs_over_a_page_break_is_found_past_the_stamp_the_sign
 
 
 def test_the_same_words_with_one_word_changed_are_not_found_and_the_problem_says_where_they_stop_matching():
-    changed = SENTENCE.replace("Ac.1.00", "Ac.2.00")
+    changed = SENTENCE.replace("100 kg", "200 kg")
     found = problems(changed, page("order.pdf", 8, FOOT), page("order.pdf", 9, HEAD))
     (problem,) = found
     assert "do not appear" in problem["problem"]
-    assert "match up to '... an extent of ac.1.18 guntas and'" in problem["problem"], problem["problem"]
-    assert "not found from 'ac.2.00 respectively in survey no. 100 of the village. however none of'" in problem["problem"]
+    assert "match up to '... a quantity of 118 kg and'" in problem["problem"], problem["problem"]
+    assert "not found from '200 kg respectively in lot no. 100 of the warehouse. however none'" in problem["problem"]
     assert problem["fix"].startswith("Quote the exact words")
 
 
@@ -79,7 +79,7 @@ def test_a_foot_or_head_longer_than_the_allowance_stops_a_sentence_running_over(
 
 def test_words_joined_with_an_ellipsis_from_separate_pages_are_still_found():
     one, three = page("order.pdf", 1, FOOT), page("order.pdf", 3, HEAD)
-    assert problems('"Ac.1.18 guntas and Ac.1.00" ... "till the issue is adjudicated"', one, three) == []
+    assert problems('"118 kg and 100 kg" ... "till the issue is adjudicated"', one, three) == []
 
 
 def test_a_sentence_goes_over_a_page_break_only_between_whole_words():
@@ -122,7 +122,7 @@ def test_the_board_traces_a_sentence_that_runs_over_a_page_break_to_both_pages()
     rows = [{"message": "Please read the papers.", "documents": [saved("order.pdf", [(8, FOOT), (9, HEAD)])]}]
     assert matter_board._where(SENTENCE, rows) == {"from": "document", "places": [
         {"document": "order.pdf", "page": 8, "read_by": "ai"}, {"document": "order.pdf", "page": 9, "read_by": "ai"}]}
-    assert matter_board._where(SENTENCE.replace("Ac.1.00", "Ac.2.00"), rows) == {"from": "not_found"}
+    assert matter_board._where(SENTENCE.replace("100 kg", "200 kg"), rows) == {"from": "not_found"}
 
 
 def test_the_board_keeps_a_recordings_mark_and_finds_words_on_the_page_that_holds_them():
@@ -151,7 +151,7 @@ def test_the_board_builds_the_pages_once_for_all_its_facts(monkeypatch):
 def test_the_fallback_note_shows_a_fact_whose_words_run_over_a_page_break_and_not_one_that_is_not_in_the_papers():
     held = context(page("order.pdf", 8, FOOT), page("order.pdf", 9, HEAD), said="Please read the papers.")
     assert response_rendering._given_words(SENTENCE, held)
-    assert not response_rendering._given_words(SENTENCE.replace("Ac.1.00", "Ac.2.00"), held)
+    assert not response_rendering._given_words(SENTENCE.replace("100 kg", "200 kg"), held)
     assert response_rendering._given_words("please read the papers", held), "the advocate's own words stand in a note too"
     assert not response_rendering._given_words("", held), "no words are no fact"
     assert not response_rendering._given_words(SENTENCE, context(page("one.pdf", 8, FOOT), page("two.pdf", 9, HEAD)))

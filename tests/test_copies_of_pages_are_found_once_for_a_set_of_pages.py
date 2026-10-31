@@ -103,8 +103,8 @@ def test_only_the_last_few_sets_are_kept_and_the_one_asked_for_most_recently_is_
 
 
 def test_what_is_told_is_what_a_search_of_those_pages_finds():
-    rows_a = " ".join(f"survey {n} extent {n}.{n % 40:02d} khata {n * 3}" for n in range(1, 25))
-    rows_b = " ".join(f"survey {n + 100} extent {n + 7}.{(n + 5) % 40:02d} khata {n * 3 + 1}" for n in range(1, 25))
+    rows_a = " ".join(f"lot {n} quantity {n}.{n % 40:02d} ledger {n * 3}" for n in range(1, 25))
+    rows_b = " ".join(f"lot {n + 100} quantity {n + 7}.{(n + 5) % 40:02d} ledger {n * 3 + 1}" for n in range(1, 25))
     sets = [two(), two("6.06", "6.06"), [page("a.pdf", 1, rows_a, key="a"), page("b.pdf", 1, rows_b, key="b")],
             [page("a.pdf", 1, passage(), key="a"), page("b.pdf", 1, passage("6.16"), key="b"), page("c.pdf", 2, passage("6.26"), key="c")], []]
     for pages in sets:

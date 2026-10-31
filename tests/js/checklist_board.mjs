@@ -64,10 +64,10 @@ const item = (id, need, group, status, extra = {}) => ({ id, need, group, status
 const board = {
   state: 'ready', related_points: [{ point: 'Any other route', why: 'It may be quicker.', dispute_id: null }],
   instructions: ['Do not contact the buyer.'],
-  facts: [{ id: 'f1', fact: 'The plot was sold twice', certainty: 'reported', from: 'advocate' }],
+  facts: [{ id: 'f1', fact: 'The consignment was sold twice', certainty: 'reported', from: 'advocate' }],
   disputes: [
-    { id: 'D1', name: 'Possession of the plot', between: ['Client', 'Later buyer'], questions: [],
-      checklist: { name: 'Possession of the plot', answered_at: at, in_hand: 1, time_limits: [
+    { id: 'D1', name: 'Possession of the consignment', between: ['Client', 'Later purchaser'], questions: [],
+      checklist: { name: 'Possession of the consignment', answered_at: at, in_hand: 1, time_limits: [
         { what: 'Last day to file the suit', last_day: '2027-01-10', rows: [['Last day', '10 January 2027 (Sunday)'],
           ['As of', '18 October 2026 (Sunday)'], ['Result', 'Open'], ['Days left', '84']] },
         { what: 'Last day to answer the notice', rows: [['Not assessed', 'the notice date is not given']] }],
@@ -100,9 +100,9 @@ const [first, second, third] = disputes.children;
 // 'File by' being said only of a filing), a quiet word where it could not, and how much is
 // in hand; then its items by group, each with its mark, its need and a note under it.
 assert.equal(first.className, 'dispute');
-assert.equal(first.attributes['aria-label'], 'Possession of the plot');
+assert.equal(first.attributes['aria-label'], 'Possession of the consignment');
 const [title] = find(first, (node) => node.className === 'dtitle');
-assert.equal(title.textContent, '1 · Possession of the plot');
+assert.equal(title.textContent, '1 · Possession of the consignment');
 const [meta] = find(first, (node) => node.className === 'dmeta');
 assert.deepEqual(meta.children.map((part) => [part.className, part.textContent]), [
   ['chip deadline open', 'By 10 Jan 2027 · 84 days left'], ['chip quiet', 'Last day not worked out'], ['count', '1 of 4 in hand']]);
@@ -135,12 +135,12 @@ assert.deepEqual(Array.from(opened.content, (node) => node.textContent), [
 const [tell, unavailable] = opened.content.at(-1).children;
 assert.deepEqual([tell.className, unavailable.className], ['act primary', 'act ghost']);
 tell.click();
-assert.equal(message.value, 'About "Proof the cancellation letter was received" (Possession of the plot): ');
+assert.equal(message.value, 'About "Proof the cancellation letter was received" (Possession of the consignment): ');
 assert.ok(message.focused && sized === 1 && message.dispatched === 'input');
 message.value = '';
 unavailable.click();
 assert.equal(message.value,
-  'About "Proof the cancellation letter was received" (Possession of the plot): this is not available.');
+  'About "Proof the cancellation letter was received" (Possession of the consignment): this is not available.');
 // The law link opens the saved passage where the answer that held it used it; otherwise
 // the words the checklist kept.
 const lawLink = opened.content[1].children.at(-1).children[0];
@@ -190,7 +190,7 @@ assert.match(fold.textContent, /Any other route — It may be quicker\./);
   const card = context.renderDisputeCard(passed, board, null);
   const passedChip = find(card, (node) => node.className === 'dmeta')[0].children[0];
   assert.deepEqual([passedChip.className, passedChip.textContent], ['chip deadline expired', 'By 1 Oct 2026 · Passed']);
-  assert.equal(find(card, (node) => node.className === 'dtitle')[0].textContent, 'Possession of the plot');
+  assert.equal(find(card, (node) => node.className === 'dtitle')[0].textContent, 'Possession of the consignment');
 }
 // How near an open last day is, in words and colour (the signed-off design, plan AN.14): a month
 // or less, a week or less, one day; the days are the count code saved.
@@ -206,7 +206,7 @@ assert.match(fold.textContent, /Any other route — It may be quicker\./);
 // AN ASK OPENS WHAT IT ASKS FOR (rendering v16; the readability design): the item as the board
 // of the same conversation now holds it, else as the answer admitted it.
 {
-  const ask = { start: 0, end: 15, text: 'Was it received', dispute: { id: 'D1', name: 'Possession of the plot' },
+  const ask = { start: 0, end: 15, text: 'Was it received', dispute: { id: 'D1', name: 'Possession of the consignment' },
     item: { need: 'Proof the cancellation letter was received', why: 'As the answer admitted it.', note: null,
             group: 'needed', status: 'not_given', law, evidence: null, asked_in: 't1', noted_in: 't1' } };
   context.state.chatBoard = { ...board, chat_id: 'c1' };
@@ -217,13 +217,13 @@ assert.match(fold.textContent, /Any other route — It may be quicker\./);
   assert.equal(view.content[0].textContent, 'Coming or unclear', 'as the board now holds it');
   context.openAskedItem({ chat_id: 'c2' }, ask, 'opener');
   view = shown.pop();
-  assert.equal(view.kind, 'Needed · Possession of the plot');
+  assert.equal(view.kind, 'Needed · Possession of the consignment');
   assert.deepEqual(Array.from(view.content.slice(0, 3), (node) => node.textContent), ['Not yet given',
     'Why it is neededAs the answer admitted it.Article 54, The Limitation Act, 1963',
     'Where it standsNot in your messages or documents yet.']);
   message.value = '';
   view.content.at(-1).children[0].click();
-  assert.equal(message.value, 'About "Proof the cancellation letter was received" (Possession of the plot): ');
+  assert.equal(message.value, 'About "Proof the cancellation letter was received" (Possession of the consignment): ');
   message.value = '';
   // A paragraph is drawn with its links when a source can be read or an ask opens an item.
   assert.deepEqual([context.linkedBody({ asks: [ask] }), context.linkedBody({ asks: [] }),

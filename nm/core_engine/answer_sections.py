@@ -68,13 +68,9 @@ REVIEW_RETRIES = 1
 #: 2026: in live run 4 the first such rewrite did most of the work, the second cost 75-100 s for
 #: smaller points). A misleading finding keeps the piece's tries (P25).
 BETTER_REWRITES = 1
-#: v14 (AN.28, stage 5): a piece the review finds passes over an item of its coverage list in silence is rewritten once for it.
-COVERAGE_REWRITES = 1
-COVERAGE_PURPOSE = ("The independent review found items of coverage - the orders, directions, pending proceedings and points the "
-                    "papers read side by side show - that bear on the piece but that it neither takes up nor names as left out "
-                    "with a reason; they are listed in mismatch with anything else it found. Rewrite the piece so that it takes "
-                    "up each, citing its pages, or says in a limitation unit why it is left out, and keep everything that was "
-                    "right.")
+#: v14 (AN.29, D10): items of its coverage list that the review finds a piece passes over - or mentions without what the advice
+#: needs - are taken up once, in one call shown only them, on an allowance of its own beside the piece's.
+TAKE_UPS = 1
 #: Why a section, the overview or the check across the sections is not shown as written:
 #: code's own checks refused every try; its review could not be completed; the review still
 #: found problems after the trims; the AI service failed or its account has no credit left (P51); it
@@ -281,6 +277,17 @@ def _told(piece):
     return told + [{"category": finding["category"], "mismatch": finding["mismatch"], "sources": finding["sources"],
                     "concerns": [words[identity] for identity in finding["unit_ids"] if identity in words]}
                    for finding in piece["date_findings"]]
+
+
+def _wanted(piece):
+    """The items of coverage the review found the piece passes over (writer v14; AN.29, D10), each once, in the order found:
+    [{"id", "said" (what the item is), "why" (the review's reason)}]."""
+    wanted = {}
+    for finding in _found(piece):
+        if finding["category"] == response_review.LEFT_OUT:
+            for identity in finding.get("items", ()):
+                wanted.setdefault(identity, {"id": identity, "said": finding["said"], "why": finding["reason"]})
+    return list(wanted.values())
 
 
 def _judge(draft):
@@ -553,16 +560,18 @@ class _Answering:
         return None if section == response_writer.OVERVIEW else self.layout[section]["dispute_id"]
 
     def _repaired(self, scope, operation, write, kwargs, researched, *, section, sections=None):
-        """A v14 piece (plan AN.28, D2): its draft; while the scope's allowance lasts, a second look at only the
-        paragraphs code's checks or the review find at fault; then what still fails blocked and what remains
-        reviewed again (TRIMS_V14 at most). A checklist item at fault is left out as it is found. Returns the
-        piece's record with its second looks (LOOKS)."""
+        """A v14 piece (plan AN.28, D2; AN.29, D10): its draft; once, the items of its coverage the review finds it passes
+        over taken up in one call; while the scope's allowance lasts, a second look at only the paragraphs code's checks or
+        the review find at fault; then what still fails blocked and what remains reviewed again (TRIMS_V14 at most). A
+        checklist item at fault is left out as it is found. Returns the piece's record with its second looks and take-up
+        (LOOKS)."""
         record, sources, execution = researched
         offered = answer_sources.aliases(sources)
         overview = section == response_writer.OVERVIEW
         refused, looks, accepted, notes, trims = [], [], [], [], []
-        state = {"proposal": None, "cut": {}, "left_out": [], "items": [], "undo": None, "blocking": False}
-        reviewed, passed, correction, better, covered = None, None, None, 0, 0
+        state = {"proposal": None, "cut": {}, "left_out": [], "items": [], "undo": None, "blocking": False,
+                 "second": 0, "taken": 0}
+        reviewed, passed, correction, better = None, None, None, 0
 
         def finish(why):
             if why is not None:
@@ -577,10 +586,14 @@ class _Answering:
                 state["proposal"], [{**fault, "words": []} for fault in faults] if final else faults, offered,
                 state["cut"], state["left_out"])
 
+        def spent():
+            """The corrections made within the section's own allowance: all the scope's but its take-up."""
+            return self.calls.used(scope) - state["taken"]
+
         def look(faults):
             """One second look at the paragraphs at fault, applied; False when the allowance is spent - the section's own,
-            never the one kept for the rewrite for its coverage."""
-            if len(looks) >= SECTION_ALLOWANCE:
+            never the one kept for the take-up."""
+            if state["second"] >= SECTION_ALLOWANCE:
                 return False
             try:
                 self.calls.spend("core_response_repair")
@@ -594,6 +607,7 @@ class _Answering:
                                                                        overview=overview)
             looks.append({"faults": deepcopy(faults), "returned": deepcopy(returned), "decisions": deepcopy(decisions),
                           "set_aside": aside})
+            state["second"] += 1
             state["undo"] = {"proposal": state["proposal"], "cut": dict(state["cut"]),
                              "left_out": list(state["left_out"]), "faults": faults}
             state["proposal"] = proposal
@@ -610,6 +624,38 @@ class _Answering:
             withdrawn = {decision["position"] for decision in decisions if decision["action"] == "withdraw"}
             if withdrawn:
                 block([fault for fault in faults if fault["position"] in withdrawn])
+            return True
+
+        def take(piece):
+            """The take-up: the items of coverage the review found the piece passes over, or mentions without what the advice
+            needs, taken up in one call shown only them. False when there is nothing to ask, the allowance for it is spent or
+            code could use nothing of the answer; otherwise the proposal has the paragraphs the writer added, and the reasons
+            it gave for the rest go to the next review."""
+            wanted = _wanted(piece)
+            if not wanted or state["taken"] >= TAKE_UPS:
+                return False
+            try:
+                self.calls.spend("core_response_take_up")
+            except CorrectionUnavailable:
+                return False
+            state["taken"] += 1
+            self.report("revising")
+            returned = response_writer.take_up(self.calls, self.context, record, sources, state["proposal"], wanted,
+                                               section=section, interpretation=self.interpretation, execution=execution,
+                                               time_limits=self.time_limits, sections=sections)
+            proposal, decisions, aside = response_writer.apply_take_up(
+                state["proposal"], returned, [entry["id"] for entry in wanted], overview=overview)
+            looks.append({"faults": deepcopy(wanted), "returned": deepcopy(returned), "decisions": deepcopy(decisions),
+                          "set_aside": aside})
+            if not decisions:
+                return False
+            said = {entry["id"]: entry["said"] for entry in wanted}
+            notes.extend({"words": said[decision["item"]], "why": decision["why"]}
+                         for decision in decisions if decision["action"] == "declined")
+            # Should what was added break the piece's form, back to before it; nothing is blocked for it.
+            state["undo"] = {"proposal": state["proposal"], "cut": dict(state["cut"]),
+                             "left_out": list(state["left_out"]), "faults": []}
+            state["proposal"] = proposal
             return True
 
         while True:
@@ -658,7 +704,7 @@ class _Answering:
                 if passed is not None:
                     reviewed = passed
                     return finish(None)
-                if self.calls.used(scope) >= SECTION_ALLOWANCE:
+                if spent() >= SECTION_ALLOWANCE:
                     return finish("checks")
                 # Rewritten whole for its form: a new proposal, of which nothing is blocked yet.
                 state.update(proposal=None, cut={}, left_out=[], items=[])
@@ -695,26 +741,28 @@ class _Answering:
             else:
                 reviewed = piece
             faults, items = _faults_of(piece, self.context, section)
-            # 3. Stage 5: what the piece passed over of its coverage is no paragraph's fault: the piece is rewritten whole for it
-            # once, told everything the review found, before any second look at single paragraphs. Should a rewrite of a piece
-            # that passed bring a fault of its own, the piece that passed stays, with what it left out said beside it.
-            if (not state["blocking"] and covered < COVERAGE_REWRITES
-                    and any(finding["category"] == response_review.LEFT_OUT for finding in beside(piece))
-                    and self.calls.used(scope) < SECTION_ALLOWANCE + COVERAGE_REWRITES):
-                covered += 1
-                if not faults and not items:
-                    passed = piece
-                self.report("revising")
-                state.update(proposal=None, cut={}, left_out=[], items=[])
-                correction = {"mismatch": _told(piece), "rejected": piece["draft"]["proposal"], "purpose": COVERAGE_PURPOSE}
-                continue
+            # 3. What the piece passed over of its coverage, or mentioned without what the advice needs, is no paragraph's fault:
+            # the items are taken up once, in one call shown only them, before any second look at single paragraphs. What the
+            # writer adds is admitted and reviewed like any paragraph; the reasons it gives for the rest go to the next review.
+            # Should the call fail, the piece stands as reviewed, with what it left out said beside it.
+            if not state["blocking"]:
+                try:
+                    if take(piece):
+                        continue
+                except (SchemaViolation, CorrectionUnavailable) as exc:
+                    self.calls.refused(exc)
+                    refused.append(_refusal("writing", self.calls.last_output, refusal_reason(exc)))
+                except _STOP:
+                    raise
+                except ModelError:
+                    pass
             # 4. Nothing at fault: shown, after one rewrite of the whole at most for what could be better (P33).
             if not faults and not items:
                 if not state["blocking"]:
                     passed = piece
                     if (better < BETTER_REWRITES and _read_v10(piece) and beside(piece)
                             and all(finding["category"] in response_review.SUGGESTIONS for finding in beside(piece))
-                            and self.calls.used(scope) < SECTION_ALLOWANCE):
+                            and spent() < SECTION_ALLOWANCE):
                         # A new proposal, of which nothing is blocked yet; should it bring a fault of its own, the
                         # piece that passed stays.
                         better += 1
@@ -774,9 +822,9 @@ class _Answering:
         from its own dispute's research as soon as that is ready (step 4)."""
         scope, researched = f"s{index}", self.researched.part(index)
         self.report("writing")
-        # v14 (AN.28, stage 5): the rewrite for what the section passed over has an allowance of its own beside the section's.
+        # v14 (AN.29, D10): the take-up of what the section passed over has an allowance of its own beside the section's.
         repaired = self.writer == response_writer.REPAIRED_CONTRACT
-        with self.calls.scope(scope, SECTION_ALLOWANCE + (COVERAGE_REWRITES if repaired else 0)):
+        with self.calls.scope(scope, SECTION_ALLOWANCE + (TAKE_UPS if repaired else 0)):
             piece = (self._repaired(scope, "core_response_writer", self._write(index, researched), {}, researched,
                                     section=index)
                      if self.writer == response_writer.REPAIRED_CONTRACT else
@@ -834,8 +882,7 @@ class _Answering:
                                                   sections=presented, interpretation=self.interpretation,
                                                   execution=execution, time_limits=self.time_limits,
                                                   contract=self.writer)
-        with self.calls.scope("o", SECTION_ALLOWANCE + (COVERAGE_REWRITES if self.writer == response_writer.REPAIRED_CONTRACT
-                                                        else 0)):
+        with self.calls.scope("o", SECTION_ALLOWANCE + (TAKE_UPS if self.writer == response_writer.REPAIRED_CONTRACT else 0)):
             if self.writer == response_writer.REPAIRED_CONTRACT:
                 return self._repaired("o", "core_response_overview", write,
                                       {"sections": drafts, "unanswered": missing or None}, researched,
@@ -1001,10 +1048,10 @@ def _kept_valid(saved, kept):
 
 
 def _looks_valid(saved):
-    """From turn v9 a part keeps its second looks (AN.28): evidence of what was at fault, what the writer returned
-    and what code made of it, checked for its shape and not re-derived."""
+    """From turn v9 a part keeps its second looks and its take-up (AN.28, AN.29): evidence of what was at fault or asked about,
+    what the writer returned and what code made of it, checked for its shape and not re-derived."""
     looks = saved[LOOKS]
-    if not isinstance(looks, list) or len(looks) > SECTION_ALLOWANCE or any(
+    if not isinstance(looks, list) or len(looks) > SECTION_ALLOWANCE + TAKE_UPS or any(
             not isinstance(look, dict) or set(look) != {"faults", "returned", "decisions", "set_aside"}
             or not isinstance(look["faults"], list) or not look["faults"] or not isinstance(look["decisions"], list)
             or not isinstance(look["set_aside"], list) for look in looks):

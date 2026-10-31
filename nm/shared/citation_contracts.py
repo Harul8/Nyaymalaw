@@ -130,7 +130,7 @@ def statute_title(stored: str, act_id: str = "") -> str:
     return " ".join(renamed.split())
 
 
-#: A key's closing year: "limitation act 1963", "land revenue act 1317 fasli".
+#: A key's closing year: "limitation act 1963", "<name> act 1317 fasli".
 _KEY_YEAR = re.compile(r"\s+(?:1\d{3}|20\d\d)(?:\s+fasli)?$")
 
 

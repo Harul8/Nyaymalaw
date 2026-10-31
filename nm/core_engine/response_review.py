@@ -384,13 +384,14 @@ event whose located is false could not be found on its page and supports nothing
 sets out the chronology the advocate asked for.
 
 When copies_read_differently is given, the piece must give both readings of such a figure and
-choose neither; one that gives only one reading, or that adds, subtracts or converts extents
-(acres, guntas, cents) where the papers do not state the result, states more than the papers
-bear out (unsupported). Where land_extents is given, code added the transfers of land NM found,
-seller by seller: a sum or remainder of extents is borne out only if it is one land_extents gives,
-said as what that seller's transfers found add up to and not as an extent anyone holds or has
-transferred, and never as a sum across sellers; one for a parcel whose complete is false, or one
-the piece worked out itself, is not.
+choose neither; one that gives only one reading, or that adds, subtracts or converts figures (an
+amount, a quantity, a period) where the papers do not state the result, states more than the
+papers bear out (unsupported). Where figures_added is given, code added up the transactions NM
+found, giver by giver: a sum or remainder of figures is borne out only if it is one figures_added
+gives, said as what that giver's transactions found add up to and not as what anyone holds, owes
+or has paid, and never as a sum across givers; one for a subject whose complete is false, or one
+the piece worked out itself, is not. A transaction that carries a remark is not an ordinary one:
+the piece must not present it as if it were.
 
 List only what you find. Empty lists mean the piece can be shown as it is, its folds as placed.""")
 assert SYSTEM_V11 != SYSTEM_V10 and "keep_shown" in SYSTEM_V11 and "shown as placed" not in SYSTEM_V10
@@ -415,26 +416,23 @@ SYSTEM_V12 = SYSTEM_V11.replace(
     "For each, say where it is; copy, exactly as they\nstand in the piece, the words that mislead (words: the "
     "shortest stretch that carries the\nproblem, so that only it need change); say why it misleads; and point "
     "to the words that\nshow it where you can:").replace(
-    "or that adds, subtracts or converts extents\n(acres, guntas, cents) where the papers do not state the result",
-    "or that adds, subtracts or converts the\nfigures (an extent, a sum, a period) where the papers do not state "
-    "the result").replace(
     "When removed_statements is present,",
     "When writer_notes is present, the writer looked again at words an earlier check or review\nfound at fault and "
-    "says why it kept them as they stand (the same figure, name or date written\nanother way, say): weigh that "
-    "against the sources, which alone are evidence. When\nremoved_statements is present,").replace(
-    "bear out (unsupported). Where land_extents is given, code added the transfers of land NM found,\nseller by seller: a sum or remainder of extents is borne out only if it is one land_extents gives,\nsaid as what that seller's transfers found add up to and not as an extent anyone holds or has\ntransferred, and never as a sum across sellers; one for a parcel whose complete is false, or one\nthe piece worked out itself, is not.",
-    "bear out (unsupported). Where figures_added is given, code added up the transactions NM found,\ngiver by giver: a sum or remainder of figures is borne out only if it is one figures_added gives,\nsaid as what that giver's transactions found add up to and not as what anyone holds, owes or has\npaid, and never as a sum across givers; one for a property or account whose complete is false,\nor one the piece worked out itself, is not.")
+    "says why it kept them as they stand (the same figure, name or date written\nanother way, say), or why it did not take up "
+    "an item of coverage found left out: weigh\nthat against the sources, which alone are evidence. When\nremoved_statements is present,")
 SYSTEM_V12 = SYSTEM_V12.replace(
     "List only what you find. Empty lists mean the piece can be shown as it is, its folds as placed.",
     "When coverage is given, it lists every order, direction and proceeding still pending that the\npapers record (an event by its "
-    "ID in papers_chronology), and every point the papers read side by\nside show (C1...). An item whose absence would change or weaken "
-    "what the piece tells the\nadvocate, which the piece neither takes up nor names as left out with a reason that holds, is\na must-fix: "
-    "give it in missing, with its ID and why it matters to the advocate. Do not give an\nitem that would only add detail. An overview "
-    "need not take up what the sections it opens take\nup.\n\n"
+    "ID in papers_chronology), every point the papers read side by\nside show (C1...) and every fact the understanding took from the "
+    "advocate's messages and the\npapers. An item whose absence would change or weaken what the piece tells the advocate, which "
+    "the\npiece neither takes up nor names as left out with a reason that holds, is a must-fix, and so is one\nthe piece mentions only in "
+    "passing, without what the advocate needs to act on it (of a proceeding,\nwho brought it and what it seeks): give it in missing, "
+    "with its ID and why it matters to the\nadvocate. Do not give an item that would only add detail. An overview need not take up "
+    "what\nthe sections it opens take up.\n\n"
     "List only what you find. Empty lists mean the piece can be shown as it is, its folds as placed.")
-assert SYSTEM_V12.count("words: the shortest stretch") == 1 and "writer_notes" in SYSTEM_V12 and "guntas" not in SYSTEM_V12
+assert SYSTEM_V12.count("words: the shortest stretch") == 1 and "writer_notes" in SYSTEM_V12
 assert "give it in missing" in SYSTEM_V12
-assert "figures_added" in SYSTEM_V12 and "land_extents" not in SYSTEM_V12
+assert "figures_added" in SYSTEM_V12
 SCHEMA_V12 = _object({
     "misleading": {"type": "array", "items": _object({
         **SCHEMA_V10["properties"]["misleading"]["items"]["properties"],
@@ -445,7 +443,7 @@ SCHEMA_V12 = _object({
     "keep_shown": SCHEMA_V11["properties"]["keep_shown"],
     # Stage 5: the coverage list's items the piece passes over in silence.
     "missing": {"type": "array", "items": _object({
-        "id": {**_WORDS, "description": "The ID (E1, C1...) of an item of coverage."},
+        "id": {**_WORDS, "description": "The ID of an item of coverage: an event's (E1...), a point's (C1...) or a fact's."},
         "why": {**_WORDS, "description": "Why it matters to the advocate here."}})}})
 #: Admission takes a misleading statement without its words as one whose words were not given: it is kept,
 #: and a paragraph it names with no words found in it is the last thing blocked whole (P29: a review's slip
@@ -814,9 +812,8 @@ def _accept_v10(returned, dependencies, contract=MISLEADS_CONTRACT):
         findings.append(admitted_finding)
     if contract == WORDED_CONTRACT:
         # Stage 5: an item of coverage passed over in silence, said by what it is (its ID is code's, not the advocate's).
-        listed = {item["id"]: item for item in response_writer._coverage_shown(
-            dependencies["research_record"], {tag: alias for alias, tag in offered.items()},
-            dependencies["original_context"]) or ()}
+        listed = {item["id"]: item for item in response_writer.coverage_items(
+            dependencies["research_record"], {tag: alias for alias, tag in offered.items()}, dependencies["original_context"])}
         for index, item in enumerate(data.get("missing", ())):
             where = f"missing {index + 1}"
             found = listed.get(item["id"].strip())
@@ -827,8 +824,10 @@ def _accept_v10(returned, dependencies, contract=MISLEADS_CONTRACT):
                 aside(where, "says nothing")
                 continue
             said = f"{found['date']} {found['kind']}: {found['what']}" if "date" in found else found["what"]
+            reason = item["why"].strip()
+            # The finding keeps the item and the review's reason, for the step that takes the item up (AN.29, D10).
             findings.append({"category": LEFT_OUT, "unit_ids": [], "limits": [], "sources": [],
-                             "mismatch": f"{said} - {item['why'].strip()}"})
+                             "mismatch": f"{said} - {reason}", "items": [found["id"]], "said": said, "reason": reason})
     for index, point in enumerate(data["could_be_better"]):
         where = f"could be better {index + 1}"
         unit_ids, named_limits = places(where, point["where"])
@@ -1047,11 +1046,11 @@ def review(model, context, research_record, sources, draft, execution=None, *,
                   if contract in PRESENTED and draft["section"] != response_writer.OVERVIEW else None)
         if copies:
             payload["copies_read_differently"] = copies
-        land = (response_writer._extents_shown(research_record, context)
-                if contract in PRESENTED and draft["section"] != response_writer.OVERVIEW else None)
-        if land:
-            # v12 (AN.28, D7): the figures of the transactions of any matter.
-            payload["figures_added" if contract == WORDED_CONTRACT else "land_extents"] = land
+        figured = (response_writer._figures_shown(research_record, context)
+                   if contract in PRESENTED and draft["section"] != response_writer.OVERVIEW else None)
+        if figured:
+            # The figures of the transactions the plan kept, added up by code (AN.28, D7; AN.29, D9).
+            payload["figures_added"] = figured
         if "dropped" in draft or "cut" in draft:
             payload["removed_statements"] = _removed(draft, context, sources)
         if conflicts:

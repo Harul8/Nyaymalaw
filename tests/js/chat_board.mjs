@@ -168,10 +168,10 @@ const board = {
 // could not locate says so; a long timeline shows its first events and folds the rest; a board without a timeline draws as before.
 {
   const events = [
-    { id: 'E1', date: '30-10-1985', dated: true, kind: 'transaction', what: 'A sale of Ac.1.18 guntas.', said_by: 'the deed',
-      document: 'deed.pdf', pages: [1], words: 'Sale Deed No. 100', located: true },
-    { id: 'E2', date: '17 August 2019', dated: true, kind: 'order', what: 'The revision was allowed.',
-      said_by: 'the Joint Collector', document: 'order.pdf', pages: [1, 2], words: 'allowed the revision', located: true },
+    { id: 'E1', date: '30-10-1985', dated: true, kind: 'transaction', what: 'A sale of 118 kg.', said_by: 'the deed',
+      document: 'deed.pdf', pages: [1], words: 'Agreement No. 100', located: true },
+    { id: 'E2', date: '17 August 2019', dated: true, kind: 'order', what: 'The claim was allowed.',
+      said_by: 'the Chief Arbitrator', document: 'order.pdf', pages: [1, 2], words: 'allowed the claim', located: true },
     { id: 'E3', date: '1 January 2020', dated: true, kind: 'filing', what: 'A petition was filed.', said_by: 'a party',
       document: 'order.pdf', pages: [], words: 'filed on a day the page lacks', located: false },
     { id: 'E4', date: 'undated', dated: false, kind: 'pending', what: 'Two suits are pending.', said_by: 'the order',
@@ -191,14 +191,14 @@ const board = {
   const said = text(fold);
   for (const part of ['deed.pdf: 2 pages read, 1 event', 'order.pdf: 1 page read, 3 events', 'NM could not read page 3 of this paper.',
     'scan.pdf: 0 pages read, 0 events', 'NM could not read pages 1, 2 of this paper.', 'call.mp3: 1 part read, 1 event',
-    '30-10-1985 A sale of Ac.1.18 guntas. · deed.pdf, page 1 · said by the deed',
-    '17 August 2019 The revision was allowed. · order.pdf, pages 1, 2 · said by the Joint Collector',
+    '30-10-1985 A sale of 118 kg. · deed.pdf, page 1 · said by the deed',
+    '17 August 2019 The claim was allowed. · order.pdf, pages 1, 2 · said by the Chief Arbitrator',
     'call.mp3, part 1 · said by a caller', 'Not dated in the paper', 'Two suits are pending.Pending · order.pdf, page 2']) {
     assert.ok(said.includes(part), part);
   }
   // The order is the server's: the dated events as kept, and the undated after them under their own heading.
   const where = (part) => said.indexOf(part);
-  assert.ok(where('A sale of') < where('The revision') && where('The revision') < where('A petition') && where('A petition') < where('The sum')
+  assert.ok(where('A sale of') < where('The claim') && where('The claim') < where('A petition') && where('A petition') < where('The sum')
     && where('In date order') < where('A sale of') && where('The sum') < where('Not dated in the paper')
     && where('Not dated in the paper') < where('Two suits'), 'as the server kept them');
   // An event the server could not locate says so, and gives no page.
@@ -208,7 +208,7 @@ const board = {
   const spans = [];
   const walk = (node) => { spans.push(node); (node.children || []).forEach(walk); };
   walk(fold);
-  assert.ok(spans.some((node) => node.title === 'Sale Deed No. 100'));
+  assert.ok(spans.some((node) => node.title === 'Agreement No. 100'));
 
   // A long timeline shows its first events and folds the rest.
   const many = Array.from({ length: 15 }, (_, n) => ({ ...events[0], id: `E${n + 1}`, what: `Event number ${n + 1}.` }));
@@ -247,7 +247,7 @@ const board = {
 {
   const repeated = [
     { id: 'E1', date: '5-1-1980', dated: true, kind: 'transaction', what: 'A sale.', said_by: 'the deed', document: 'scan.pdf', pages: [1],
-      words: 'Sale deed', located: true, also_in: [{ document: 'deed.pdf', pages: [3] }, { document: 'copy.pdf', pages: [1, 2] }] },
+      words: 'Agreement', located: true, also_in: [{ document: 'deed.pdf', pages: [3] }, { document: 'copy.pdf', pages: [1, 2] }] },
     { id: 'E2', date: '6-1-1980', dated: true, kind: 'order', what: 'An order.', said_by: 'the court', document: 'deed.pdf', pages: [4],
       words: 'Order', located: true }];
   const documents = [{ name: 'deed.pdf', pages_read: 4, events: 2, state: 'read', why: '' },
@@ -270,7 +270,7 @@ const board = {
 {
   const copies = [
     { first: { document: 'deed.pdf', page: 3 }, second: { document: 'scan.pdf', page: 1 },
-      figures: [{ first: '6.06', second: '6.16', after: 'an extent of' }] },
+      figures: [{ first: '6.06', second: '6.16', after: 'a quantity of' }] },
     { first: { document: 'a.pdf', page: 2 }, second: { document: 'b.pdf', page: 5 },
       figures: [{ first: '596/80', second: '596/89', after: 'deed number' }, { first: '1980', second: '1986', after: '' }] }];
   const nodes = context.renderChatBoard({ ...structuredClone(board), copies });
@@ -279,7 +279,7 @@ const board = {
   assert.equal(fold.children[0].textContent, 'Figures two copies read differently (2)');
   const said = text(fold);
   for (const part of ['NM has not chosen between them: check the originals.',
-    'deed.pdf, page 3 and scan.pdf, page 1: “6.06” and “6.16” (after “an extent of”)',
+    'deed.pdf, page 3 and scan.pdf, page 1: “6.06” and “6.16” (after “a quantity of”)',
     'a.pdf, page 2 and b.pdf, page 5: “596/80” and “596/89” (after “deed number”); “1980” and “1986”']) {
     assert.ok(said.includes(part), part);
   }
@@ -294,102 +294,100 @@ const board = {
   }
 }
 
-// Transactions by property or account (plan AN.27, P13d and P20; AN.28, D7): the transactions found, giver by giver, each giver's figures
-// added by the server's code and set against a stated whole - what it leaves if all of it was that giver's, or how far the figures go beyond
-// it; what could not be read or is not added listed and never added; nothing where the board has none.
+// Transactions by asset or account (plan AN.27, P13d and P20; AN.28, D7; AN.29, D9): the transactions found, giver by giver, each giver's
+// figures added by the server's code and set against a stated whole - what it leaves if all of it was that giver's, or how far the figures
+// go beyond it; what could not be read or is not added listed and never added; a transaction dated after its giver's recorded death carries
+// the server's remark; nothing where the board has none.
 {
-  const caveat = 'Extents are added as the papers state them, whoever states them, seller by seller.';
-  const extents = [
-    { parcel: 'Sy.No.487', sellers: [
-      { names: ['Hari Prasad', 'Hari Prasaad'], transfers: [
-        { ids: ['X1'], date: '30-10-1985', kind: 'sale', to: 'Kiran Rao', extent: 'Ac.1.18 guntas', as: '1 acre 18 guntas (Ac.1.18)',
-          read_as: 'acres.guntas', also_read_as: ['Kiran Raao'], papers: [{ document: 'deed.pdf', pages: [1] }, { document: 'order.pdf', pages: [4, 5] }] },
-        { ids: ['X2'], date: '2 January 1986', kind: 'sale', to: '', extent: 'Ac.1.00', as: '1 acre (Ac.1.00)',
-          read_as: 'acres.guntas', papers: [{ document: 'deed.pdf', pages: [] }] }],
-        not_added: [{ ids: ['X5'], date: '9-2-1974', kind: 'partition', to: 'Anil Kumar', extent: 'Ac.8.24', as: '8 acres 24 guntas (Ac.8.24)',
-          read_as: 'acres.guntas', why: 'a partition allots a share; it is not a sale', papers: [{ document: 'order.pdf', pages: [6] }] }],
-        added: '2 acres 18 guntas (Ac.2.18)' },
-      { names: ['Anil Kumar'], transfers: [], not_added: [
-        { ids: ['X7'], date: '9-2-1974', kind: 'partition', to: 'his sons', extent: 'equal shares', as: null,
-          read_as: 'no extent in these words', why: 'a partition allots a share; it is not a sale', papers: [{ document: 'order.pdf', pages: [6] }] }],
-        added: null },
-      { names: [], transfers: [
-        { ids: ['X6'], date: '3 March 1990', kind: 'sale', to: 'Mahesh Babu', extent: 'Ac.0.10', as: '10 guntas (Ac.0.10)',
-          read_as: 'acres.guntas', papers: [{ document: 'order.pdf', pages: [7] }] }],
-        not_added: [], added: null }],
-      not_read: [{ id: 'X3', extent: 'part of the land', why: 'no extent in these words', document: 'deed.pdf', pages: [3] }],
+  const caveat = 'Figures are added as the papers state them, whoever states them, giver by giver.';
+  const how = 'read from the words as 118 kilograms; every number is the page’s own';
+  const figures = [
+    { subject: 'Contract 487', givers: [
+      { names: ['Hari Prasad', 'Hari Prasaad'], counted: [
+        { ids: ['X1'], date: '30-10-1985', kind: 'sale', to: 'Kiran Rao', figure: '118 kg', as: '118 kilograms', read_as: how,
+          also_read_as: ['Kiran Raao'], papers: [{ document: 'deed.pdf', pages: [1] }, { document: 'order.pdf', pages: [4, 5] }] },
+        { ids: ['X2'], date: '2 January 1986', kind: 'sale', to: '', figure: '125 kg', as: '125 kilograms', read_as: how,
+          papers: [{ document: 'deed.pdf', pages: [] }], remark: 'dated after the death of the giver that the papers record (4-4-1985)' }],
+        listed: [{ ids: ['X5'], date: '9-2-1974', kind: 'partition', to: 'Anil Kumar', figure: '824 kg', as: '824 kilograms', read_as: how,
+          why: 'a partition allots a share; it is not a sale', papers: [{ document: 'order.pdf', pages: [6] }] }],
+        added: '243 kilograms' },
+      { names: ['Anil Kumar'], counted: [], listed: [
+        { ids: ['X7'], date: '9-2-1974', kind: 'partition', to: 'his sons', figure: 'equal shares', as: null,
+          read_as: 'a share of a whole: code adds sums of money and quantities only', why: 'a partition allots a share; it is not a sale',
+          papers: [{ document: 'order.pdf', pages: [6] }] }], added: null },
+      { names: [], counted: [
+        { ids: ['X6'], date: '3 March 1990', kind: 'sale', to: 'Mahesh Babu', figure: '10 kg', as: '10 kilograms', read_as: how,
+          papers: [{ document: 'order.pdf', pages: [7] }] }], listed: [], added: null }],
+      not_read: [{ id: 'X3', figure: 'part of the stock', why: 'no quantity was read from it', document: 'deed.pdf', pages: [3] }],
       complete: false,
-      totals: [{ text: 'Ac.8.24 guntas', measure: 'area', read_as: 'acres.guntas', as: '8 acres 24 guntas (Ac.8.24)', ids: ['X1'], by_seller: [] }],
+      totals: [{ text: '824 kg', dimension: 'mass', read_as: how, as: '824 kilograms', ids: ['X1'], by_giver: [] }],
       caveat },
-    { parcel: 'Sy.No.487/A', sellers: [
-      { names: ['Syed Alam'], transfers: [
-        { ids: ['X4'], date: 'undated', kind: 'gift', to: 'Other', extent: 'Ac.0.29', as: '29 guntas (Ac.0.29)',
-          read_as: 'acres.guntas', papers: [{ document: 'order.pdf', pages: [2] }] }],
-        not_added: [], added: '29 guntas (Ac.0.29)' }],
+    { subject: 'Contract 487/A', givers: [
+      { names: ['Syed Alam'], counted: [
+        { ids: ['X4'], date: 'undated', kind: 'gift', to: 'Other', figure: '29 kg', as: '29 kilograms', read_as: how,
+          papers: [{ document: 'order.pdf', pages: [2] }] }], listed: [], added: '29 kilograms' }],
       not_read: [], complete: true,
       totals: [
-        { text: 'Ac.2.00', measure: 'area', read_as: 'acres.guntas', as: '2 acres (Ac.2.00)', ids: ['X4'],
-          by_seller: [{ seller: 'Syed Alam', leaves: '1 acre 11 guntas (Ac.1.11)', exceeds: null }] },
-        { text: 'Ac.0.20', measure: 'area', read_as: 'acres.guntas', as: '20 guntas (Ac.0.20)', ids: ['X4'],
-          by_seller: [{ seller: 'Syed Alam', leaves: null, exceeds: '9 guntas (Ac.0.09)' }] },
-        { text: 'the whole survey number', measure: null, read_as: 'no extent in these words', as: null, ids: ['X4'], by_seller: [] }],
+        { text: '200 kg', dimension: 'mass', read_as: how, as: '200 kilograms', ids: ['X4'],
+          by_giver: [{ giver: 'Syed Alam', leaves: '171 kilograms', exceeds: null }] },
+        { text: '20 kg', dimension: 'mass', read_as: how, as: '20 kilograms', ids: ['X4'],
+          by_giver: [{ giver: 'Syed Alam', leaves: null, exceeds: '9 kilograms' }] },
+        { text: 'the whole stock', dimension: null, read_as: 'no quantity was read from it', as: null, ids: ['X4'], by_giver: [] }],
       caveat },
-    { parcel: 'Loan account 12', sellers: [
-      { names: ['Bank of Somewhere'], transfers: [
-        { ids: ['X8'], date: '1-1-2010', kind: 'loan', to: 'Ravi Teja', extent: 'Rs.2,00,000/-', as: 'Rs 2,00,000',
-          read_as: 'rupees in figures', papers: [{ document: 'loan.pdf', pages: [1] }] }],
-        not_added: [], added: 'Rs 2,00,000' },
-      { names: ['Ravi Teja'], transfers: [
-        { ids: ['X9'], date: '1-1-2011', kind: 'payment', to: 'Bank of Somewhere', extent: 'Rs.50,000', as: 'Rs 50,000',
-          read_as: 'rupees in figures', papers: [{ document: 'loan.pdf', pages: [2] }] }],
-        not_added: [], added: 'Rs 50,000' }],
+    { subject: 'Loan account 12', givers: [
+      { names: ['Bank of Somewhere'], counted: [
+        { ids: ['X8'], date: '1-1-2010', kind: 'loan', to: 'Ravi Teja', figure: 'Rs.2,00,000/-', as: 'Rs 2,00,000', read_as: how,
+          papers: [{ document: 'loan.pdf', pages: [1] }] }], listed: [], added: 'Rs 2,00,000' },
+      { names: ['Ravi Teja'], counted: [
+        { ids: ['X9'], date: '1-1-2011', kind: 'payment', to: 'Bank of Somewhere', figure: 'Rs.50,000', as: 'Rs 50,000', read_as: how,
+          papers: [{ document: 'loan.pdf', pages: [2] }] }], listed: [], added: 'Rs 50,000' }],
       not_read: [], complete: true,
-      totals: [{ text: 'Rs.2,00,000/-', measure: 'money', read_as: 'rupees in figures', as: 'Rs 2,00,000', ids: ['X8'],
-                 by_seller: [{ seller: 'Bank of Somewhere', leaves: 'Rs 0', exceeds: null },
-                             { seller: 'Ravi Teja', leaves: 'Rs 1,50,000', exceeds: null }] }],
+      totals: [{ text: 'Rs.2,00,000/-', dimension: 'money', read_as: how, as: 'Rs 2,00,000', ids: ['X8'],
+                 by_giver: [{ giver: 'Bank of Somewhere', leaves: 'Rs 0', exceeds: null },
+                            { giver: 'Ravi Teja', leaves: 'Rs 1,50,000', exceeds: null }] }],
       caveat }];
-  const nodes = context.renderChatBoard({ ...structuredClone(board), extents });
-  const fold = nodes.find((node) => node.tagName === 'DETAILS' && text(node).startsWith('Transactions by property'));
-  assert.ok(fold, 'a fold for the extents');
-  assert.equal(fold.children[0].textContent, 'Transactions by property or account (3)');
+  const nodes = context.renderChatBoard({ ...structuredClone(board), figures });
+  const fold = nodes.find((node) => node.tagName === 'DETAILS' && text(node).startsWith('Transactions by asset'));
+  assert.ok(fold, 'a fold for the figures');
+  assert.equal(fold.children[0].textContent, 'Transactions by asset or account (3)');
   const said = text(fold);
-  for (const part of ['Added up by NM’s code from the transactions it found in your papers - areas with areas, sums of money with sums of '
-    + 'money - as the papers state them and whoever states them. Rival or repeated accounts are added as if each were true, so a sum is a '
-    + 'figure to check against the papers, not what anyone holds, owes or has paid.', 'Sy.No.487',
+  for (const part of ['Added up by NM’s code from the transactions it found in your papers - each kind of quantity with its own, sums of '
+    + 'money with sums of money - as the papers state them and whoever states them. Rival or repeated accounts are added as if each were '
+    + 'true, so a sum is a figure to check against the papers, not what anyone holds, owes or has paid.', 'Contract 487',
     'From: Hari Prasad / Hari Prasaad',
-    '30-10-1985 sale: Ac.1.18 guntas (1 acre 18 guntas (Ac.1.18)) to Kiran Rao (also read as “Kiran Raao”) · deed.pdf, page 1; order.pdf, pages 4, 5',
-    '2 January 1986 sale: Ac.1.00 (1 acre (Ac.1.00)) · deed.pdf',
-    'Not added (a partition allots a share; it is not a sale): 9-2-1974 partition: Ac.8.24 (8 acres 24 guntas (Ac.8.24)) to Anil Kumar · order.pdf, page 6',
-    'Added as stated: 2 acres 18 guntas (Ac.2.18) (a transaction could not be added, so the whole is more)',
+    '30-10-1985 sale: 118 kg (118 kilograms) to Kiran Rao (also read as “Kiran Raao”) · deed.pdf, page 1; order.pdf, pages 4, 5',
+    '2 January 1986 sale: 125 kg (125 kilograms) · deed.pdf · dated after the death of the giver that the papers record (4-4-1985)',
+    'Not added (a partition allots a share; it is not a sale): 9-2-1974 partition: 824 kg (824 kilograms) to Anil Kumar · order.pdf, page 6',
+    'Added as stated: 243 kilograms (a transaction could not be added, so the whole is more)',
     'From: Anil Kumar',
     'Not added (a partition allots a share; it is not a sale): 9-2-1974 partition: equal shares to his sons · order.pdf, page 6',
-    'From: not named in the papers', '3 March 1990 sale: Ac.0.10 (10 guntas (Ac.0.10)) to Mahesh Babu · order.pdf, page 7',
-    'Not added: “part of the land” (no extent in these words) · deed.pdf',
-    'A paper states the whole as “Ac.8.24 guntas” (8 acres 24 guntas (Ac.8.24))',
+    'From: not named in the papers', '3 March 1990 sale: 10 kg (10 kilograms) to Mahesh Babu · order.pdf, page 7',
+    'Not added: “part of the stock” (no quantity was read from it) · deed.pdf',
+    'A paper states the whole as “824 kg” (824 kilograms)',
     'No remainder is named, because a transaction could not be added.',
-    'Sy.No.487/A', 'From: Syed Alam', 'undated gift: Ac.0.29 (29 guntas (Ac.0.29)) to Other · order.pdf, page 2',
-    'Added as stated: 29 guntas (Ac.0.29)',
-    'A paper states the whole as “Ac.2.00” (2 acres (Ac.2.00))',
-    'If Syed Alam held all of it, what they transferred, as found, leaves 1 acre 11 guntas (Ac.1.11).',
-    'What Syed Alam gave, as found, adds up to more than that whole, by 9 guntas (Ac.0.09): the papers cannot all be right.',
-    'A paper states the whole as “the whole survey number”; not used (no extent in these words)',
+    'Contract 487/A', 'From: Syed Alam', 'undated gift: 29 kg (29 kilograms) to Other · order.pdf, page 2',
+    'Added as stated: 29 kilograms',
+    'A paper states the whole as “200 kg” (200 kilograms)',
+    'If all of it was Syed Alam’s, what they gave, as found, leaves 171 kilograms.',
+    'What Syed Alam gave, as found, adds up to more than that whole, by 9 kilograms: the papers cannot all be right.',
+    'A paper states the whole as “the whole stock”; not used (no quantity was read from it)',
     'Loan account 12', 'From: Bank of Somewhere', '1-1-2010 loan: Rs.2,00,000/- (Rs 2,00,000) to Ravi Teja · loan.pdf, page 1',
     'From: Ravi Teja', '1-1-2011 payment: Rs.50,000 (Rs 50,000) to Bank of Somewhere · loan.pdf, page 2',
-    'Set against that sum, what Ravi Teja paid or lent, as found, leaves Rs 1,50,000.', caveat]) {
+    'If all of it was Ravi Teja’s, what they gave, as found, leaves Rs 1,50,000.', caveat]) {
     assert.ok(said.includes(part), part);
   }
-  assert.ok(!said.includes('Added as stated: 29 guntas (Ac.0.29) ('), 'a complete sum has no aside');
+  assert.ok(!said.includes('Added as stated: 29 kilograms ('), 'a complete sum has no aside');
   assert.ok(!said.includes('Added as stated: null') && (said.match(/Added as stated:/g) || []).length === 4, 'a giver with no name is added to no one');
-  assert.ok(!said.includes('null') && !said.includes('undefined'), 'an extent that could not be read is shown as the paper writes it, and no more');
-  assert.ok(!said.includes('leaves undefined') && !said.includes('If Ravi Teja held all of it'), 'nothing is said where there is nothing to say, '
-    + 'and a sum is not spoken of as land');
+  assert.ok(!said.includes('null') && !said.includes('undefined'), 'a quantity that could not be read is shown as the paper writes it, and no more');
+  assert.ok(!said.includes('leaves undefined') && !said.includes('leaves null'), 'nothing is said where there is nothing to say');
+  assert.equal((said.match(/dated after the death of the giver/g) || []).length, 1, 'a remark is said of the one transaction that carries it');
   assert.equal(nodes.indexOf(fold), nodes.findIndex((node) => node.className === 'board-disputes') + 1);
-  const with_copies = context.renderChatBoard({ ...structuredClone(board), extents, copies: [{ first: { document: 'a.pdf', page: 1 },
+  const with_copies = context.renderChatBoard({ ...structuredClone(board), figures, copies: [{ first: { document: 'a.pdf', page: 1 },
     second: { document: 'b.pdf', page: 1 }, figures: [{ first: '6.06', second: '6.16', after: '' }] }] });
   const at = (start) => with_copies.findIndex((node) => text(node).startsWith(start));
-  assert.ok(at('Figures two copies') >= 0 && at('Figures two copies') < at('Transactions by property or account'));
-  for (const quiet of [{ ...structuredClone(board), extents: [] }, structuredClone(board)]) {
-    assert.ok(!context.renderChatBoard(quiet).map(text).join('\n').includes('Transactions by property'));
+  assert.ok(at('Figures two copies') >= 0 && at('Figures two copies') < at('Transactions by asset or account'));
+  for (const quiet of [{ ...structuredClone(board), figures: [] }, structuredClone(board)]) {
+    assert.ok(!context.renderChatBoard(quiet).map(text).join('\n').includes('Transactions by asset'));
   }
 }
 
@@ -400,7 +398,7 @@ const board = {
   const together = { ...structuredClone(board),
     parties: [{ who: 'Leela Kulkarni', role: 'heir', client: true, parts: [{ proceeding: 'W.A. 6649 of 2016', part: 'respondent',
       from: 'document', places: [{ document: 'order.pdf', page: 1, read_by: 'local' }] }] }, { who: 'Navin Rastogi', role: 'buyer' }],
-    subjects: [{ identifier: 'Sy.No.9061', what: 'the land sold', from: 'document', places: [{ document: 'deed.pdf', page: 2,
+    subjects: [{ identifier: 'Lot 9061', what: 'the stock sold', from: 'document', places: [{ document: 'deed.pdf', page: 2,
       read_by: 'ai' }] }],
     connections: [
       { id: 'C1', kind: 'client_appears', point: 'Leela Kulkarni is a respondent in a pending appeal.', why: 'She is a client.',
@@ -425,7 +423,7 @@ const board = {
   const understood = text(nodes[nodes.length - 1]);
   for (const part of ['Parts in proceedings (1)', 'Subjects in the papers (1)', 'Who is who in each proceeding',
     'Leela Kulkarni (your client’s side): respondent in W.A. 6649 of 2016 · From order.pdf, page 1',
-    'Subjects the papers identify', 'Sy.No.9061 — the land sold · From deed.pdf, page 2 (read by AI)']) {
+    'Subjects the papers identify', 'Lot 9061 — the stock sold · From deed.pdf, page 2 (read by AI)']) {
     assert.ok(understood.includes(part), part);
   }
   const failed = context.renderChatBoard({ ...structuredClone(board), connections: [], appearances: [],

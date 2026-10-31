@@ -21,11 +21,11 @@ from tests.test_the_writer_is_shown_the_chronology import Writer
 
 pytestmark = pytest.mark.class_a
 
-SHORT = "Sale deed number 596/80 dated 5.1.1980 the vendor sold to the purchasers"
-LONG = SHORT + " an extent of 6.06 acres in the survey number of the village"
+SHORT = "Agreement number 596/80 dated 5.1.1980 the supplier sold to the purchasers"
+LONG = SHORT + " a quantity of 6.06 tonnes in the lot number of the warehouse"
 SCRIPT = {
-    "deed.pdf": [event("5.1.1980", "transaction", "The vendor sold the land.", SHORT, "the deed")],
-    "scan.pdf": [event("5.1.1980", "transaction", "A sale of 6.06 acres.", LONG, "the scan")]}
+    "deed.pdf": [event("5.1.1980", "transaction", "The supplier sold the stock.", SHORT, "the deed")],
+    "scan.pdf": [event("5.1.1980", "transaction", "A sale of 6.06 tonnes.", LONG, "the scan")]}
 SECTIONS = [{"dispute": "Dispute 1", "paragraphs": [{"kind": "summary", "text": "File by Wednesday."}]},
             {"dispute": "Dispute 2", "paragraphs": [{"kind": "summary", "text": "Serve the notice."}]}]
 
@@ -46,10 +46,10 @@ def cites_also(payload):
 def section(payload):
     return {"units": [
         unit("summary", "Appeal against the order", "row_action"),
-        unit("summary", "Have the sale deed ready", "row_ready"),
-        {"kind": "summary", "text": "The land was sold on 5.1.1980.", "place": "advice",
-         "uses": [{"source_kind": "document", "source_id": cites_also(payload), "link_words": "land was sold"}]}],
-        "checklist": [item(payload, "The sale deed", ["the sale deed"])], "time_limit_ids": [], "by_when": None}
+        unit("summary", "Have the agreement ready", "row_ready"),
+        {"kind": "summary", "text": "The stock was sold on 5.1.1980.", "place": "advice",
+         "uses": [{"source_kind": "document", "source_id": cites_also(payload), "link_words": "stock was sold"}]}],
+        "checklist": [item(payload, "The agreement", ["the agreement"])], "time_limit_ids": [], "by_when": None}
 
 
 def test_the_writer_is_shown_an_event_once_that_a_copy_of_its_page_records_again_and_may_cite_either_page():
@@ -59,7 +59,7 @@ def test_the_writer_is_shown_an_event_once_that_a_copy_of_its_page_records_again
     shown = model.seen[0][1]["papers_chronology"]
     assert len(record["plan"]["proposal"]["chronology"]) == 2 and len(shown) == 1
     (only,) = shown
-    assert (only["paper"], only["pages"], only["what"]) == ("scan.pdf", [1], "A sale of 6.06 acres."), "the fullest quotation stands"
+    assert (only["paper"], only["pages"], only["what"]) == ("scan.pdf", [1], "A sale of 6.06 tonnes."), "the fullest quotation stands"
     (also,) = only["also_in"]
     assert (also["paper"], also["pages"]) == ("deed.pdf", [1]) and len(also["cite"]) == 1 and also["cite"] != only["cite"]
     assert all(c.startswith("DOC") and model.seen[0][1]["source_kinds"][c] == "document" for c in also["cite"] + only["cite"])
@@ -111,12 +111,12 @@ def test_the_overview_and_the_review_are_shown_the_same_events_once():
 
 def test_the_date_check_is_given_the_date_of_an_event_as_often_as_the_writer_was_shown_it():
     ctx, record, sources = matter()
-    stated = {"contract": response_writer.PRESENTED_CONTRACT, "units": [{"id": "t1:b1", "text": "The vendor sold it."}]}
+    stated = {"contract": response_writer.PRESENTED_CONTRACT, "units": [{"id": "t1:b1", "text": "The supplier sold it."}]}
     assert response_writer._shown_dates(stated, record, ctx).count("5.1.1980") == 1
     assert response_writer._shown_dates(stated, record).count("5.1.1980") == 2
-    sold = {"contract": response_writer.PRESENTED_CONTRACT, "units": [{"id": "t1:b1", "text": "The land was sold on 5 January 1980."}]}
+    sold = {"contract": response_writer.PRESENTED_CONTRACT, "units": [{"id": "t1:b1", "text": "The stock was sold on 5 January 1980."}]}
     assert response_writer.dates_not_given(sold, ctx, sources, None, record) == []
-    other = {"contract": response_writer.PRESENTED_CONTRACT, "units": [{"id": "t1:b1", "text": "The land was sold on 6 January 1980."}]}
+    other = {"contract": response_writer.PRESENTED_CONTRACT, "units": [{"id": "t1:b1", "text": "The stock was sold on 6 January 1980."}]}
     assert [f["unit_ids"] for f in response_writer.dates_not_given(other, ctx, sources, None, record)] == [["t1:b1"]]
 
 

@@ -748,7 +748,7 @@ console.log('PASS NM response versus source role, related source words, known-co
   assert.equal(back.disabled, true);
 
   // A document page widens to the whole document, every page in order, the cited words marked.
-  const page2 = 'The purchaser paid the second instalment on time. The vendor shall register the deed on or '
+  const page2 = 'The purchaser paid the second instalment on time. The supplier shall register the deed on or '
     + 'before 31-12-2025, and not later. ' + 'Further terms follow here and continue. '.repeat(10);
   const page = {brain:true, id:'source-turn:d1p2', kind:'document', label:'Agreement of sale', locator:'page 2',
     text:page2, digest:'d-page', qualification:'Document the advocate sent.',

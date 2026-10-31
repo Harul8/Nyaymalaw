@@ -19,14 +19,14 @@ pytestmark = pytest.mark.class_a
 
 ORDER = "IN W.A. 6649 of 2016 the appellant is Navin Rastogi and the respondents include Leela Kulkarni. The appeal is pending."
 DEATH = "Death certificate. Sarala Kulkarni died on 15-6-2013."
-SALE = "Sale deed dated 20-1-2014 executed in the name of Sarala Kulkarni in favour of Navin Rastogi for Sy.No.9061. Witness: Leela Kulkarny."
+SALE = "Agreement dated 20-1-2014 executed in the name of Sarala Kulkarni in favour of Navin Rastogi for Lot 9061. Witness: Leela Kulkarny."
 POINTS = {"client_people": ["Sarala Kulkarni", "Leela Kulkarni", "Leela  Kulkarni"],
           "connections": [
               {"kind": "client_appears", "point": "Leela Kulkarni is a respondent in a pending writ appeal.",
                "why_it_matters": "She is one of the clients.", "words": "the respondents include Leela Kulkarni"},
               {"kind": "after_death", "point": "A sale in Sarala Kulkarni's name is dated after her recorded death.",
                "why_it_matters": "A dead person executes no deed.",
-               "words": "Sarala Kulkarni died on 15-6-2013 ... Sale deed dated 20-1-2014 executed in the name of Sarala Kulkarni"},
+               "words": "Sarala Kulkarni died on 15-6-2013 ... Agreement dated 20-1-2014 executed in the name of Sarala Kulkarni"},
               {"kind": "against_client", "point": "The appeal court found against the heirs.", "why_it_matters": "It binds them.",
                "words": "the court found against the heirs of Sarala Kulkarni"}]}
 
@@ -89,7 +89,7 @@ def test_where_the_clients_people_stand_is_found_by_code_and_a_near_spelling_is_
 def test_a_point_whose_words_are_not_found_is_looked_at_again_once_and_what_the_look_gives_replaces_it():
     fixed = {"client_people": [], "connections": [
         {"kind": "against_client", "point": "The appellant bought from a dead person's estate.", "why_it_matters": "Title is open.",
-         "words": "in favour of Navin Rastogi for Sy.No.9061"}]}
+         "words": "in favour of Navin Rastogi for Lot 9061"}]}
     model = SideBySide(again=fixed)
     connections, _, _, _ = connections_of(model, papers())
     looked = side(model)[1]
@@ -153,7 +153,7 @@ def test_the_board_shows_each_partys_part_the_subjects_the_points_read_side_by_s
         {"who": "Leela Kulkarni", "role": "heir", "client": True,
          "parts": [{"proceeding": "W.A. 6649 of 2016", "part": "respondent", "words": "the respondents include Leela Kulkarni"}]},
         {"who": "Navin Rastogi", "role": "buyer"}]
-    proposal["understanding"]["subjects"] = [{"identifier": "Sy.No.9061", "what": "the land sold", "words": "for Sy.No.9061"}]
+    proposal["understanding"]["subjects"] = [{"identifier": "Lot 9061", "what": "the stock sold", "words": "for Lot 9061"}]
     proposal["connections"], people, proposal["appearances"], proposal["connections_failures"] = connections_of(SideBySide(), papers())
     proposal["client_people"] = people
     shown = matter_board.board([row])
@@ -162,7 +162,7 @@ def test_the_board_shows_each_partys_part_the_subjects_the_points_read_side_by_s
         ("respondent", "W.A. 6649 of 2016", "document")]
     assert leela["parts"][0]["places"][0]["document"] == "order.pdf" and navin == {"who": "Navin Rastogi", "role": "buyer"}
     (subject,) = shown["subjects"]
-    assert (subject["identifier"], subject["from"], subject["places"][0]["page"]) == ("Sy.No.9061", "document", 2)
+    assert (subject["identifier"], subject["from"], subject["places"][0]["page"]) == ("Lot 9061", "document", 2)
     assert [(c["id"], c["kind"], c["anchored"]) for c in shown["connections"]] == [("C1", "client_appears", True), ("C2", "after_death", True)]
     assert shown["connections"][0]["why"] == "She is one of the clients." and shown["connections_failures"] == []
     assert [a["name"] for a in shown["appearances"]] == ["Sarala Kulkarni", "Leela Kulkarni"]

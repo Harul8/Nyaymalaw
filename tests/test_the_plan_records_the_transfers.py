@@ -1,17 +1,19 @@
-"""The plan records the transfers of land the papers record (plan AN.27, P13d, slice 2; invariant I6).
+"""The plan records the transactions the papers record (plan AN.27, P13d, slice 2; AN.28, D7; AN.29, D9; invariant I6).
 
-Each document is read, beside the chronology and the understanding, for the transfers of land it records - who gave an extent of
-which parcel to whom, the extent exactly as the page writes it, the parcel's whole extent where the passage states it. Code finds the
-words on the pages, reads the date, orders and numbers them X1..., and keeps them with the plan, which is refused if what it keeps is
-not what the papers show; the extents themselves are read and added by extents.py, never here. The fields are optional in research v12
-so every plan saved before validates as it did. The papers here are synthetic.
+Each document is read, beside the chronology and the understanding, for the transactions it records - who gave what to whom, what it
+concerns (the subject), the figure exactly as the page writes it and the model's reading of it into numbers and units, any whole the
+passage states, and the death of the giver where the papers record one. Code finds the words on the pages, reads the dates, orders and
+numbers them X1..., has a paper looked at again once where a number or a unit is not in its words, and keeps the plan with what is
+left; the plan is refused if what it keeps is not what the papers show. The figures themselves are added by figures.py, never here.
+The fields are optional in research v12 so every plan saved before validates as it did. The papers here are synthetic.
 """
+import re
 import threading
 from copy import deepcopy
 
 import pytest
 
-from nm.core_engine import extents, research
+from nm.core_engine import figures, research
 from nm.core_engine.research import accept, plan, retrieve, transfers_of
 from nm.shared.model_port import SchemaViolation, UsageLimitReached
 from tests.test_core_research import Model, operations, proposal, searcher
@@ -22,51 +24,67 @@ from tests.test_the_plan_records_the_chronology import Beside, bundle, sent
 pytestmark = pytest.mark.class_a
 
 
-def transfer(date, parcel, extent, words, *, total="", frm="the vendor", to="the purchasers", kind="sale"):
-    return {"date": date, "kind": kind, "parcel": parcel, "extent": extent, "total": total, "from": frm, "to": to, "words": words}
+def reading(figure):
+    """The model's reading of a figure that is one number against one unit (invented): the number and the unit as the page writes
+    them, the unit named from the table of units. A figure with no unit beside a number is read as no figure."""
+    found = figures.quantities_in(figure or "")
+    if not found:
+        return {"dimension": "none", "parts": []}
+    text, number, unit = found[0]
+    return {"dimension": figures.UNITS[unit].dimension,
+            "parts": [{"number": number.replace(",", ""), "unit": unit, "written": re.sub(r"[\d,.\s]+", "", text)}]}
+
+
+def transfer(date, subject, figure, words, *, whole="", frm="the supplier", to="the purchasers", kind="sale", quantity=None,
+             whole_quantity=None, instrument="", giver_died=""):
+    """A transaction as the model lists it (invented), its figure and whole read as `reading` reads them unless told otherwise."""
+    return {"date": date, "kind": kind, "subject": subject, "figure": figure, "quantity": quantity or reading(figure),
+            "whole": whole, "whole_quantity": whole_quantity or reading(whole), "from": frm, "to": to, "instrument": instrument,
+            "giver_died": giver_died, "words": words}
 
 
 SOLD = {
     "deed.pdf": [
-        transfer("30-10-1985", "Sy.No.487", "Ac.1.18 guntas", "The vendor sold Ac.1.18 guntas to the purchasers", total="Ac.8.24 guntas"),
-        transfer("1 January 2020", "Sy.No.487", "Ac.0.10", "A sale made on a day the page lacks")],
+        transfer("30-10-1985", "Lot 487", "118 kg", "The supplier sold 118 kg to the purchasers", whole="824 kg"),
+        transfer("1 January 2020", "Lot 487", "10 kg", "A sale made on a day the page lacks")],
     "order.pdf": [
-        transfer("undated", "Sy.No.487/A", "Ac.0.29", "Suits O.S. 891 of 2014 and 892 of 2014 are pending before the District Court")]}
+        transfer("undated", "Lot 487/A", "29 kg", "Suits O.S. 891 of 2014 and 892 of 2014 are pending before the District Court")]}
 
 
 def kept():
     return plan(Beside(SCRIPT, transfers=SOLD), bundle())
 
 
-def test_each_documents_transfers_are_anchored_dated_ordered_and_numbered():
+def test_each_documents_transactions_are_anchored_dated_ordered_and_numbered():
     model = Beside(SCRIPT, transfers=SOLD)
     found, failures = transfers_of(model, bundle())
     assert failures == []
     assert [(t["id"], t["sort"], t["document"], t["pages"], t["anchored"]) for t in found] == [
         ("X1", "1985-10-30", "deed.pdf", [1], True), ("X2", "2020-01-01", "deed.pdf", [], False), ("X3", "", "order.pdf", [2], True)]
     first = found[0]
-    assert (first["parcel"], first["extent"], first["total"], first["from"], first["to"], first["kind"]) == (
-        "Sy.No.487", "Ac.1.18 guntas", "Ac.8.24 guntas", "the vendor", "the purchasers", "sale")
+    assert (first["subject"], first["figure"], first["whole"], first["from"], first["to"], first["kind"]) == (
+        "Lot 487", "118 kg", "824 kg", "the supplier", "the purchasers", "sale")
+    assert first["quantity"] == {"dimension": "mass", "parts": [{"number": "118", "unit": "kilogram", "written": "kg"}]}
     reads = [prompt.user for prompt in model.calls if prompt.operation == "core_research_transfers" and '"to_check"' not in prompt.user]
     assert len(reads) == 2 and all(sum(f'Document: "{name}"' in text for name in ("deed.pdf", "order.pdf")) == 1 for text in reads)
-    # Research v13 (AN.28, D2): each paper with a transaction code cannot use as listed is looked at again once - here a whole and a
-    # figure on no page, and words not found.
+    # Research v13 (AN.28, D2): each paper with a transaction code cannot use as listed is looked at again once - here a whole on no
+    # page and words not found, and a figure whose number is not in its words.
     checks = [prompt.user for prompt in model.calls if '"to_check"' in prompt.user]
     assert sorted(text.split('"')[1] for text in checks) == ["deed.pdf", "order.pdf"]
     assert transfers_of(model, bundle(), wanted=lambda: False) == ([], []) and transfers_of(model, typed("Hello.")) == ([], [])
 
 
-def test_transfers_are_ordered_by_the_dates_code_reads_not_by_the_papers_order():
+def test_transactions_are_ordered_by_the_dates_code_reads_not_by_the_papers_order():
     backwards = {"deed.pdf": list(reversed(SOLD["deed.pdf"])), "order.pdf": SOLD["order.pdf"]}
     found, _ = transfers_of(Beside(SCRIPT, transfers=backwards), bundle())
     assert [t["sort"] for t in found] == ["1985-10-30", "2020-01-01", ""] and [t["id"] for t in found] == ["X1", "X2", "X3"]
 
 
-def test_the_plan_keeps_the_transfers_and_replays_from_its_own_proposal():
+def test_the_plan_keeps_the_transactions_and_replays_from_its_own_proposal():
     ctx, made = bundle(), kept()
     assert [t["id"] for t in made["proposal"]["transfers"]] == ["X1", "X2", "X3"] and made["proposal"]["transfers_failures"] == []
     assert made["proposal"]["transfers"] == transfers_of(Beside(SCRIPT, transfers=SOLD), ctx)[0]
-    assert accept(made["proposal"], ctx) == made and made["issues"] == [], "a transfer not located is marked, not an issue"
+    assert accept(made["proposal"], ctx) == made and made["issues"] == [], "a transaction not located is marked, not an issue"
     record = retrieve(made, searcher(), ctx, model=Model())
     assert research.validate(record, made, ctx) == record
 
@@ -94,9 +112,11 @@ def _renumber(items):
 
 CASES = [
     ("a number out of turn", lambda p: p["transfers"][0].update(id="X2"), "numbered"),
-    ("a transfer of no document of this turn", lambda p: p["transfers"][0].update(source="t9:d9"), "no document of this turn"),
-    ("a transfer under another document's name", lambda p: p["transfers"][0].update(document="order.pdf"), "no document of this turn"),
+    ("a transaction of no document of this turn", lambda p: p["transfers"][0].update(source="t9:d9"), "no document of this turn"),
+    ("a transaction under another document's name", lambda p: p["transfers"][0].update(document="order.pdf"), "no document of this turn"),
     ("a sort date its date does not give", lambda p: p["transfers"][0].update(sort="1999-01-01"), "dated otherwise"),
+    ("a sort date of the giver's death that it does not give",
+     lambda p: p["transfers"][0].update(giver_died="4-4-2003", giver_died_sort="1999-01-01"), "recorded death reads"),
     ("a later date before an earlier", lambda p: (p["transfers"].insert(0, p["transfers"].pop(1)), _renumber(p["transfers"])),
      "out of the order"),
     ("words said to be found that are not", lambda p: p["transfers"][1].update(anchored=True, pages=[1]), "not anchored as"),
@@ -105,12 +125,13 @@ CASES = [
     ("a stretch that failed in a document not sent",
      lambda p: p.update(transfers_failures=[{"document": "nope.pdf", "pages": "1", "reason": "x"}]), "names no document"),
     ("a kind outside the vocabulary", lambda p: p["transfers"][0].update(kind="gossip"), "vocabulary"),
-    ("a transfer with a field left out", lambda p: p["transfers"][0].pop("extent"), "missing"),
+    ("a transaction with a field left out", lambda p: p["transfers"][0].pop("subject"), "missing"),
+    ("a transaction whose reading of its figure is left out", lambda p: p["transfers"][0].pop("quantity"), "missing"),
 ]
 
 
 @pytest.mark.parametrize("label,change", [(case[0], case[1]) for case in CASES], ids=[case[0] for case in CASES])
-def test_a_plan_whose_transfers_are_not_what_the_papers_show_is_refused(label, change):
+def test_a_plan_whose_transactions_are_not_what_the_papers_show_is_refused(label, change):
     proposed = deepcopy(kept()["proposal"])
     change(proposed)
     message = next(case[2] for case in CASES if case[0] == label)
@@ -118,19 +139,19 @@ def test_a_plan_whose_transfers_are_not_what_the_papers_show_is_refused(label, c
         accept(proposed, bundle())
 
 
-def test_a_stretch_whose_transfers_could_not_be_read_is_an_issue_and_the_rest_is_kept():
+def test_a_stretch_whose_transactions_could_not_be_read_is_an_issue_and_the_rest_is_kept():
     made = plan(Beside(SCRIPT, transfers=SOLD, transfers_unreadable=["order.pdf"]), bundle())
     assert made["proposal"]["transfers_failures"] == [{"document": "order.pdf", "pages": "1-2", "reason": "SchemaViolation"}]
     assert [issue["mismatch"] for issue in made["issues"]] == ["transfers unavailable for order.pdf (pages 1-2): SchemaViolation"]
     assert {t["document"] for t in made["proposal"]["transfers"]} == {"deed.pdf"}
 
 
-def test_a_usage_limit_in_reading_the_transfers_stops_the_plan():
+def test_a_usage_limit_in_reading_the_transactions_stops_the_plan():
     with pytest.raises(UsageLimitReached):
         plan(Beside(SCRIPT, transfers=SOLD, transfers_usage_limit=["deed.pdf"]), bundle())
 
 
-def test_no_documents_make_no_transfers_without_a_call_and_a_plan_saved_before_them_validates():
+def test_no_documents_make_no_transactions_without_a_call_and_a_plan_saved_before_them_validates():
     model = Beside()
     none = plan(model, typed("Find the applicable law."))
     assert none["proposal"]["transfers"] == [] and "core_research_transfers" not in operations(model)
@@ -138,24 +159,65 @@ def test_no_documents_make_no_transfers_without_a_call_and_a_plan_saved_before_t
     assert "transfers" not in before["proposal"] and accept(before["proposal"], typed("Find the applicable law.")) == before
 
 
-def test_the_transfers_of_the_plan_are_added_up_by_extents_and_only_those_whose_words_were_found():
-    (parcel, other) = extents.ledger(kept()["proposal"]["transfers"])
-    assert parcel["parcel"] == "Sy.No.487" and parcel["sellers"][0]["added"] == {"area": 58} and not parcel["complete"]
-    assert [(u["id"], u["why"]) for u in parcel["unread"]] == [("X2", "its words were not found on the page")]
-    # Research v13 (AN.28, D3): the whole the model gave and the order's figure stand in none of the words that record their
-    # transactions - they are on no page - so the whole is listed and not used, and the figure is not added.
-    assert parcel["totals"][0]["text"] == "Ac.8.24 guntas" and parcel["totals"][0]["value"] is None
-    assert parcel["totals"][0]["how"] == "its figure is not in the words that record it" and parcel["totals"][0]["by_seller"] == []
-    assert other["parcel"] == "Sy.No.487/A" and other["sellers"] == [] and not other["complete"]
-    assert [(u["id"], u["why"]) for u in other["unread"]] == [("X3", "its figure is not in the words that record it")]
+PAPERS = [row("t1", 1, "agreement.pdf", 1, "Agreement No. 77 dated 5-6-2003. The supplier sold 500 kg of grain to the purchaser."),
+          row("t1", 2, "certificate.pdf", 1, "Certificate. The supplier died on 4-4-2003 at the town hospital.")]
 
 
-def test_the_prompt_states_the_message_the_purpose_what_to_look_for_and_the_outcome():
-    prompt = " ".join(research.TRANSFERS.split())
-    for part in ("Message:", "Purpose:", "Look for:", "Outcome:", "so that code can add the extents up for each parcel",
-                 "You are not adding or working out anything yourself", "exactly as the page writes it",
-                 "Do not list a transfer that gives no extent, do not add or work out an extent the page does not give",
-                 "Work in a loop"):
+def agreement(giver_died):
+    return {"agreement.pdf": [transfer("5-6-2003", "Contract 77", "500 kg", "The supplier sold 500 kg of grain to the purchaser",
+                                       giver_died=giver_died, instrument="Agreement No. 77", to="the purchaser")]}
+
+
+def test_the_death_of_a_giver_that_some_paper_of_the_file_records_is_kept_and_read_as_a_date():
+    # Invented: the death is recorded in another paper than the transaction.
+    model = Beside({}, transfers=agreement("4-4-2003"))
+    (found,), _ = transfers_of(model, sent(*PAPERS))
+    assert (found["giver_died"], found["giver_died_sort"]) == ("4-4-2003", "2003-04-04")
+    assert not [prompt for prompt in model.calls if '"to_check"' in prompt.user], "nothing to look at again"
+
+
+def test_a_death_that_no_page_of_the_file_records_is_looked_at_again_once_and_then_dropped():
+    model = Beside({}, transfers=agreement("9-9-1999"))
+    (found,), _ = transfers_of(model, sent(*PAPERS))
+    (checked,) = [prompt.user for prompt in model.calls if '"to_check"' in prompt.user]
+    assert "the death it records for the giver is on no page of the file" in checked
+    assert (found["giver_died"], found["giver_died_sort"]) == ("", ""), "a death on no page is not kept"
+    assert found["figure"] == "500 kg" and found["anchored"] is True and found["date"] == "5-6-2003"
+
+
+def test_a_transaction_whose_date_is_in_neither_its_words_nor_its_pages_loses_its_date_and_keeps_its_words():
+    wrong = {"agreement.pdf": [transfer("9-9-2009", "Contract 77", "500 kg", "The supplier sold 500 kg of grain to the purchaser")]}
+    (found,), _ = transfers_of(Beside({}, transfers=wrong), sent(*PAPERS))
+    assert (found["date"], found["sort"], found["anchored"]) == ("undated", "", True)
+
+
+def test_the_transactions_prompts_are_for_any_matter_and_each_paper_is_read_with_the_whole_file_in_view():
+    prompt = " ".join(research.TRANSACTIONS_V13.split())
+    for part in ("Message:", "Purpose:", "Look for:", "Outcome:", "whatever passes from one person to another",
+                 "so that code can add the figures up for each subject", "You are not adding or working out", "Work in a loop",
+                 "(subject: the asset, account, contract or case, named as the papers most commonly name it",
+                 "where the papers record that the giver had died by then, the date of that death as the papers give it (giver_died",
+                 "its dimension - money, area, length, mass or volume", "share where it is a part of a whole",
+                 "each number exactly as the page writes it, in digits", "You convert and add nothing",
+                 "do not add or work out a figure the page does not give"):
         assert part in prompt, part
-    assert research.MAX_OUTPUT["transfers"] == 16000 and research.TRANSFER_KINDS == (
-        "sale", "partition", "gift", "settlement", "decree", "other")
+    check = " ".join(research.TRANSACTIONS_CHECK.split())
+    for part in ("Message:", "Purpose:", "Outcome:", "a number or a unit not in them", "whose recorded death of the giver is on no page of the file",
+                 "copied exactly from the page as they stand", "so that every number you give is in the words", "Work in a loop"):
+        assert part in check, part
+    model = Beside(SCRIPT, transfers=SOLD)
+    transfers_of(model, bundle())
+    reads = [prompt for prompt in model.calls if prompt.operation == "core_research_transfers" and '"to_check"' not in prompt.user]
+    assert len(reads) == 2 and all(prompt.system == research.TRANSACTIONS_V13 for prompt in reads)
+    for prompt in reads:
+        mine, rest = prompt.user.split("The pages you read for:")[1], prompt.user.split("The pages you read for:")[0]
+        other = "order.pdf" if 'Document: "deed.pdf"' in mine else "deed.pdf"
+        assert f'Paper "{other}"' in rest and "The advocate's messages, oldest first:" in rest
+    assert research.TRANSACTION_KINDS == ("sale", "partition", "gift", "settlement", "decree", "lease", "mortgage", "loan", "payment",
+                                          "other")
+    wire = research.TRANSACTIONS_SCHEMA["properties"]["transfers"]["items"]["properties"]
+    assert set(wire) == {"date", "kind", "subject", "figure", "quantity", "whole", "whole_quantity", "from", "to", "instrument",
+                         "giver_died", "words"}
+    assert wire["quantity"]["properties"]["dimension"]["enum"] == list(figures.FIGURE_KINDS)
+    unit = wire["quantity"]["properties"]["parts"]["items"]["properties"]["unit"]
+    assert "enum" not in unit, "the model names a unit in plain words; code resolves it by its table"

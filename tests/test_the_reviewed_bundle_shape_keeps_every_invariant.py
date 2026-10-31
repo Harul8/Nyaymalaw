@@ -1,6 +1,6 @@
 """The reviewed bundle, as a regression example with its invariants (plan AN.27, P15).
 
-A 7-document, 56-page bundle of land papers was answered from an understanding of 18 or 19 facts that had lost the research, the
+A 7-document, 56-page bundle of papers was answered from an understanding of 18 or 19 facts that had lost the research, the
 chronology, the pending proceedings and the figures. This is a synthetic matter of the same SHAPE - no word of the real papers: a
 direction that runs over a page break past a stamp and a signature; orders and suits still pending; a scan that is a copy of another
 page with one figure read differently; an understanding NM's own check never settled and a dispute with no legal question - carried
@@ -29,25 +29,25 @@ from tests.test_the_writer_is_shown_the_chronology import Writer
 
 pytestmark = pytest.mark.class_a
 
-DIRECTION = "the name of the original owner shall continue to be maintained in the revenue records pending the decision of the civil court"
+DIRECTION = "the name of the original holder shall continue to be maintained in the bank records pending the decision of the civil court"
 REGISTER = [
-    (1, "Register of the village, certified. The High Court directed that the name of the original owner shall continue to be maintained in the"
+    (1, "Register of the warehouse, certified. The High Court directed that the name of the original holder shall continue to be maintained in the"
         "\n\nPage 1 of 3"),
-    (2, "Certified copy No. 55\n[stamp: CERTIFIED TRUE COPY]\n[signature]\nrevenue records pending the decision of the civil court. "
-        "Mutation was ordered on 17-3-2008 in file B/54/2008."),
+    (2, "Certified copy No. 55\n[stamp: CERTIFIED TRUE COPY]\n[signature]\nbank records pending the decision of the civil court. "
+        "An audit was ordered on 17-3-2008 in file B/54/2008."),
     (3, passage("6.06"))]
-ORDERS = [(1, "ORDER. The Joint Collector allowed the revision on 17 August 2019. "
+ORDERS = [(1, "ORDER. The Chief Arbitrator allowed the claim on 17 August 2019. "
               "Suits O.S. 891 of 2014 and 892 of 2014 are pending before the District Court.")]
 COPY = [(1, passage("6.16"))]
 
 SCRIPT = {
     "register.pdf": [
-        event("17-3-2008", "order", "Mutation was ordered in file B/54/2008.", "Mutation was ordered on 17-3-2008 in file B/54/2008"),
-        event("undated", "order", "The High Court directed that the original owner's name stay in the revenue records.", DIRECTION,
+        event("17-3-2008", "order", "An audit was ordered in file B/54/2008.", "An audit was ordered on 17-3-2008 in file B/54/2008"),
+        event("undated", "order", "The High Court directed that the original holder's name stay in the bank records.", DIRECTION,
               "the High Court")],
     "order.pdf": [
-        event("17 August 2019", "order", "The revision was allowed.", "The Joint Collector allowed the revision on 17 August 2019",
-              "the Joint Collector"),
+        event("17 August 2019", "order", "The claim was allowed.", "The Chief Arbitrator allowed the claim on 17 August 2019",
+              "the Chief Arbitrator"),
         event("undated", "pending", "Two suits are pending before the District Court.",
               "Suits O.S. 891 of 2014 and 892 of 2014 are pending before the District Court"),
         event("1 January 2021", "filing", "A petition was filed.", "The petition was filed on a day no page gives")],
@@ -64,8 +64,8 @@ def matter():
     papers = [("register.pdf", REGISTER), ("order.pdf", ORDERS), ("copy.pdf", COPY)]
     ctx = sent(*[row("t1", index, name, number, text) for index, (name, pages) in enumerate(papers, 1) for number, text in pages])
     subject = understanding(1, 1)
-    subject["facts"].append({"id": "F2", "fact": "The High Court directed that the original owner's name stay in the records.",
-                             "advocate_words": "the name of the original owner shall continue to be maintained in the revenue records",
+    subject["facts"].append({"id": "F2", "fact": "The High Court directed that the original holder's name stay in the records.",
+                             "advocate_words": "the name of the original holder shall continue to be maintained in the bank records",
                              "certainty": "reported"})
     subject["disputes"].append({"id": "D2", "name": "Dispute 2", "between": ["client", "other party"], "fact_ids": ["F2"],
                                 "legal_questions": [], "rights_at_stake": [], "relief_sought": [], "missing_facts": [],
@@ -95,7 +95,7 @@ def test_i1_a_direction_that_runs_over_a_page_break_past_a_stamp_is_found_and_a_
     m = matter()
     assert research.code_checks(m["subject"], m["ctx"]) == [], "the quotation is found across the break"
     damaged = {**m["subject"], "facts": [m["subject"]["facts"][0], {
-        **m["subject"]["facts"][1], "advocate_words": "the name of the original owner shall be struck from the revenue records"}]}
+        **m["subject"]["facts"][1], "advocate_words": "the name of the original holder shall be struck from the bank records"}]}
     (problem,) = research.code_checks(damaged, m["ctx"])
     assert "not found from" in problem["problem"] and "struck" in problem["problem"]
     assert m["board"]["facts"][1]["from"] == "document", "and the board knows where it comes from"
@@ -158,7 +158,7 @@ def test_i6_a_figure_two_copies_read_differently_is_flagged_by_code_to_the_board
                            authority_evidence=response_authorities.check(m["ctx"], m["record"], m["sources"], draft),
                            contract=response_review.PRESENTED_CONTRACT)
     assert review.seen[0][1]["copies_read_differently"] == payload["copies_read_differently"]
-    assert "Counting is code's work for extents" in response_writer.SYSTEM_V13
+    assert "Counting is code's work for figures" in response_writer.SYSTEM_V13
 
 
 def test_i7_whom_the_advocate_acts_for_is_asked_where_the_papers_show_opposite_sides():

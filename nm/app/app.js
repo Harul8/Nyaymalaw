@@ -3708,67 +3708,72 @@ function renderCopies(copies, make) {
   return [fold];
 }
 
-// TRANSACTIONS BY PROPERTY OR ACCOUNT (plan AN.27, P13d; AN.28, D7): the transactions NM found in the papers, their figures added up
-// by NM's code - never by a model - areas with areas and sums of money with sums, giver by giver, with what a paper's stated whole
-// leaves, and the server's caveat that a sum is only of what was found. What could not be read or added is listed and never added.
-function renderExtents(parcels, make) {
-  if (!Array.isArray(parcels) || !parcels.length) return [];
+// TRANSACTIONS BY SUBJECT (plan AN.27, P13d; AN.28, D7; AN.29, D9): the transactions NM found in the papers, their figures added up
+// by NM's code - never by a model - each kind of quantity with its own and sums of money with sums, giver by giver, with what a paper's
+// stated whole leaves, and the server's caveat that a sum is only of what was found. What could not be read or added is listed and
+// never added; a transaction dated after its giver's recorded death carries the server's remark.
+function renderFigures(subjects, make) {
+  if (!Array.isArray(subjects) || !subjects.length) return [];
   const fold = make('details', 'folded');
-  fold.appendChild(make('summary', '', `Transactions by property or account (${parcels.length})`));
-  fold.appendChild(make('p', 'board-lede', 'Added up by NM’s code from the transactions it found in your papers - areas with areas, '
-    + 'sums of money with sums of money - as the papers state them and whoever states them. Rival or repeated accounts are added as if '
-    + 'each were true, so a sum is a figure to check against the papers, not what anyone holds, owes or has paid.'));
-  // One line for a transfer, as the papers record it: where it is and - the same sale read on copies of one page, its buyer's name read
-  // two ways (P20 (b)) - both readings.
-  const said = (transfer) => {
-    const where = transfer.papers.map((paper) => paper.document + (paper.pages.length
+  fold.appendChild(make('summary', '', `Transactions by asset or account (${subjects.length})`));
+  fold.appendChild(make('p', 'board-lede', 'Added up by NM’s code from the transactions it found in your papers - each kind of quantity '
+    + 'with its own, sums of money with sums of money - as the papers state them and whoever states them. Rival or repeated accounts are '
+    + 'added as if each were true, so a sum is a figure to check against the papers, not what anyone holds, owes or has paid.'));
+  // One line for a transaction, as the papers record it: where it is and - the same sale read on copies of one page, its receiver's
+  // name read two ways (P20 (b)) - both readings.
+  const said = (entry) => {
+    const where = entry.papers.map((paper) => paper.document + (paper.pages.length
       ? `, page${paper.pages.length > 1 ? 's' : ''} ${paper.pages.join(', ')}` : '')).join('; ');
-    const alike = transfer.also_read_as && transfer.also_read_as.length
-      ? ` (also read as ${transfer.also_read_as.map((name) => `“${name}”`).join(' and ')})` : '';
-    return `${transfer.date} ${transfer.kind}: ${transfer.extent}${transfer.as ? ` (${transfer.as})` : ''}`
-      + `${transfer.to ? ` to ${transfer.to}` : ''}${alike} · ${where}`;
+    const alike = entry.also_read_as && entry.also_read_as.length
+      ? ` (also read as ${entry.also_read_as.map((name) => `“${name}”`).join(' and ')})` : '';
+    return `${entry.date} ${entry.kind}: ${entry.figure}${entry.as ? ` (${entry.as})` : ''}`
+      + `${entry.to ? ` to ${entry.to}` : ''}${alike} · ${where}`;
   };
-  for (const parcel of parcels) {
-    fold.appendChild(make('h3', 'board-h', parcel.parcel));
-    // Giver by giver (P20 (a)): a giver's figures are added to that giver's alone; there is no figure for the property as a whole.
-    for (const seller of parcel.sellers) {
-      fold.appendChild(make('p', 'board-fact', `From: ${seller.names.length ? seller.names.join(' / ') : 'not named in the papers'}`));
+  for (const subject of subjects) {
+    fold.appendChild(make('h3', 'board-h', subject.subject));
+    // Giver by giver (P20 (a)): a giver's figures are added to that giver's alone; there is no figure for the subject as a whole.
+    for (const giver of subject.givers) {
+      fold.appendChild(make('p', 'board-fact', `From: ${giver.names.length ? giver.names.join(' / ') : 'not named in the papers'}`));
       const list = make('ul', 'board-list');
-      for (const transfer of seller.transfers) list.appendChild(make('li', '', said(transfer)));
-      for (const other of seller.not_added) {
-        list.appendChild(make('li', 'board-status search_failed', `Not added (${other.why}): ${said(other)}`));
+      for (const entry of giver.counted) {
+        const item = make('li', '', said(entry));
+        if (entry.remark) item.appendChild(make('span', 'board-status search_failed', ` · ${entry.remark}`));
+        list.appendChild(item);
+      }
+      for (const other of giver.listed) {
+        const item = make('li', 'board-status search_failed', `Not added (${other.why}): ${said(other)}`);
+        if (other.remark) item.appendChild(make('span', '', ` · ${other.remark}`));
+        list.appendChild(item);
       }
       fold.appendChild(list);
-      if (seller.added) {
-        fold.appendChild(make('p', 'board-fact', `Added as stated: ${seller.added}`
-          + (parcel.complete ? '' : ' (a transaction could not be added, so the whole is more)')));
+      if (giver.added) {
+        fold.appendChild(make('p', 'board-fact', `Added as stated: ${giver.added}`
+          + (subject.complete ? '' : ' (a transaction could not be added, so the whole is more)')));
       }
     }
-    if (parcel.not_read.length) {
+    if (subject.not_read.length) {
       const list = make('ul', 'board-list');
-      for (const missed of parcel.not_read) {
-        list.appendChild(make('li', 'board-status search_failed', `Not added: “${missed.extent}” (${missed.why}) · ${missed.document}`));
+      for (const missed of subject.not_read) {
+        list.appendChild(make('li', 'board-status search_failed', `Not added: “${missed.figure}” (${missed.why}) · ${missed.document}`));
       }
       fold.appendChild(list);
     }
-    for (const total of parcel.totals) {
+    for (const total of subject.totals) {
       fold.appendChild(make('p', 'board-fact', `A paper states the whole as “${total.text}”`
         + `${total.as ? ` (${total.as})` : `; not used (${total.read_as})`}`));
-      for (const against of total.by_seller) {
+      for (const against of total.by_giver) {
         if (against.exceeds) {
-          fold.appendChild(make('p', 'board-status search_failed', `What ${against.seller} gave, as found, adds up to more than that `
+          fold.appendChild(make('p', 'board-status search_failed', `What ${against.giver} gave, as found, adds up to more than that `
             + `whole, by ${against.exceeds}: the papers cannot all be right.`));
         } else if (against.leaves) {
-          fold.appendChild(make('p', 'board-fact', total.measure === 'money'
-            ? `Set against that sum, what ${against.seller} paid or lent, as found, leaves ${against.leaves}.`
-            : `If ${against.seller} held all of it, what they transferred, as found, leaves ${against.leaves}.`));
+          fold.appendChild(make('p', 'board-fact', `If all of it was ${against.giver}’s, what they gave, as found, leaves ${against.leaves}.`));
         }
       }
-      if (total.as && !parcel.complete && !total.by_seller.some((against) => against.exceeds)) {
+      if (total.as && !subject.complete && !total.by_giver.some((against) => against.exceeds)) {
         fold.appendChild(make('p', 'board-fact', 'No remainder is named, because a transaction could not be added.'));
       }
     }
-    fold.appendChild(make('p', 'board-lede', parcel.caveat));
+    fold.appendChild(make('p', 'board-lede', subject.caveat));
   }
   return [fold];
 }
@@ -3777,7 +3782,7 @@ function renderExtents(parcels, make) {
 // with the pages the server found its words on, and where each of your client's people stands on the pages as the server's code found
 // the name - a near spelling offered only as a candidate, never taken for the person. A point whose words were not found says so.
 const SIDE_BY_SIDE = { client_appears: 'Your client’s people elsewhere', against_client: 'Against your client',
-  after_death: 'After a death', after_time_limit: 'After a time limit or order', further_subject: 'A further property, account or case',
+  after_death: 'After a death', after_time_limit: 'After a time limit or order', further_subject: 'A further asset, account or case',
   other: 'Read together' };
 function renderPapersTogether(board, make) {
   const connections = board.connections || [];
@@ -3855,7 +3860,7 @@ function renderChatBoard(board) {
   out.push(disputes);
   out.push(...renderTimeline(board.timeline, make));
   out.push(...renderCopies(board.copies, make));
-  out.push(...renderExtents(board.extents, make));
+  out.push(...renderFigures(board.figures, make));
   out.push(...renderPapersTogether(board, make));
   const points = (board.understanding && board.understanding.open_points) || [];
   const parts = (board.parties || []).flatMap((party) => (party.parts || []).map((part) => ({ party, part })));

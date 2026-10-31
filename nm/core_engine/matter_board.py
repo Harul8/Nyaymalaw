@@ -13,7 +13,7 @@ disputes are listed most urgent first, as the answer shows its sections (P26).
 """
 from __future__ import annotations
 
-from nm.core_engine import checklist, copy_figures, extents, research, response_rendering
+from nm.core_engine import checklist, copy_figures, figures, figures_v12, research, response_rendering
 
 _UNDERSTOOD = research.QUESTION_PLANS
 
@@ -136,13 +136,18 @@ def _copies(pages):
              "figures": found["figures"]} for found in copy_figures.differences(pages)]
 
 
-def _extents(record, pages):
-    """The figures the papers record, added up by code for each property or account (plan AN.27, P13d; AN.28, D7; invariant I6):
-    the transactions the plan kept, those whose words and figures were found added by extents.py - areas with areas, sums with
-    sums - and the rest listed and never added, giver by giver (P20 (a)) with each giver's sums, what a paper's stated whole leaves
-    after them or how far they go beyond it, and the caveat that a sum is only of what was found. One sale read on copies of a page is one (P20 (b)): pages are those sent up to the turn
-    shown. [] where the plan kept none."""
-    return extents.shown(record["plan"]["proposal"].get("transfers") or [], copy_figures.copies(pages))
+def _figures(record, pages):
+    """The figures the papers record, added up by code for each subject (plan AN.27, P13d; AN.28, D7; AN.29, D9; invariant I6): the
+    transactions the plan kept, those whose words and figures were found added by figures.py - sums of money with sums, each kind of
+    quantity with its own - and the rest listed and never added, giver by giver (P20 (a)) with each giver's sums, what a paper's
+    stated whole leaves after them or how far they go beyond it, and the caveat that a sum is only of what was found. One
+    transaction read on copies of a page is one (P20 (b)): pages are those sent up to the turn shown. A plan saved before research v13
+    holds its figures as the page wrote them and is read, as it always was, by the frozen reader (figures_v12). [] where the plan kept
+    none."""
+    transactions = record["plan"]["proposal"].get("transfers") or []
+    if transactions and "quantity" not in transactions[0]:
+        return figures_v12.shown_as_current(transactions, copy_figures.copies(pages))
+    return figures.shown(transactions, copy_figures.copies(pages))
 
 
 def _side_by_side(record):
@@ -264,7 +269,7 @@ def board(rows):
             "understanding": _confirmed(record),
             "timeline": _timeline(record, rows[:index + 1], copy_figures.copies(sent)),
             "copies": _copies(sent),
-            "extents": _extents(record, sent),
+            "figures": _figures(record, sent),
             **_side_by_side(record),
             "related_points": [{"point": r["point"], "why": r["why_it_matters"], "dispute_id": r["dispute_id"] or None,
                                 "dispute": names.get(r["dispute_id"])} for r in understanding["related_points"]],

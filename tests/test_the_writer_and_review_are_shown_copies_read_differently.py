@@ -2,7 +2,7 @@
 
 Two scans of one passage gave 6.06 and 6.16 and NM called it a disagreement in the papers; copies are now found by code (copy_figures)
 and the current writer and the review of its section are shown both readings with the short IDs of the two pages, told to give both and
-choose neither, and to leave the arithmetic of extents to code. The earlier writers and reviews see what they always did. The papers
+choose neither, and to leave the arithmetic of figures to code. The earlier writers and reviews see what they always did. The papers
 here are synthetic.
 """
 import json
@@ -23,7 +23,7 @@ pytestmark = pytest.mark.class_a
 
 
 def quiet(payload):
-    return {"units": [unit("summary", "Appeal against the order", "row_action"), unit("summary", "Have the sale deed ready", "row_ready")],
+    return {"units": [unit("summary", "Appeal against the order", "row_action"), unit("summary", "Have the agreement ready", "row_ready")],
             "checklist": [], "time_limit_ids": [], "by_when": None}
 
 
@@ -44,7 +44,7 @@ def test_the_current_writer_is_shown_both_readings_with_the_short_ids_of_the_pag
     assert found["first"]["cite"].startswith("DOC") and found["second"]["cite"].startswith("DOC") and found["first"]["cite"] != found["second"]["cite"]
     assert payload["source_kinds"][found["first"]["cite"]] == "document" == payload["source_kinds"][found["second"]["cite"]]
     (figure,) = found["figures"]
-    assert (figure["first"], figure["second"]) == ("6.06", "6.16") and figure["after"].endswith("an extent of")
+    assert (figure["first"], figure["second"]) == ("6.06", "6.16") and figure["after"].endswith("a quantity of")
     assert "papers_chronology" not in payload, "no events were read from these papers"
     assert "id" not in json.dumps(found["first"]) and "t1:d1" not in json.dumps(found)
 
@@ -85,12 +85,12 @@ def test_the_prompts_say_to_give_both_readings_and_to_leave_the_arithmetic_of_ex
     for part in ("Where copies_read_differently is given, it lists figures that two copies of one page read differently",
                  "give both readings and say that the copies differ, never choose between them, and do not call it a disagreement "
                  "in the papers themselves",
-                 "Counting is code's work for extents as it is for days: do not add, subtract or convert acres, guntas or cents yourself",
+                 "Counting is code's work for figures as it is for days: do not add, subtract or convert any amount or quantity yourself",
                  "say what would be added or taken away and that it has not been worked out"):
         assert part in writer, part
     review = " ".join(response_review.SYSTEM_V11.split())
     for part in ("When copies_read_differently is given, the piece must give both readings of such a figure and choose neither",
-                 "adds, subtracts or converts extents (acres, guntas, cents) where the papers do not state the result"):
+                 "adds, subtracts or converts figures (an amount, a quantity, a period) where the papers do not state the result"):
         assert part in review, part
     assert "copies_read_differently" not in response_writer.SYSTEM and "copies_read_differently" not in response_review.SYSTEM_V10
 
