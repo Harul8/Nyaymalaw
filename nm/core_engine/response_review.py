@@ -341,6 +341,9 @@ BETTER = "better"
 CUT = "could_go"
 #: The kinds of finding that ask for a better piece, never for leaving anything out.
 SUGGESTIONS = (BETTER, CUT)
+#: v12 (AN.28, stage 5): an item of the coverage list that bears on the piece, which it neither takes up nor names as left out with
+#: a reason. A must-fix that asks for a rewrite, never for leaving anything out; what still stays out is said beside the piece.
+LEFT_OUT = "left_out"
 _WORDS = {"type": "string"}
 _PLACES = {"type": "array", "items": _WORDS}
 _POINTER = _object({"source_id": _WORDS, "quote": {"anyOf": [_WORDS, {"type": "null"}]}})
@@ -421,7 +424,15 @@ SYSTEM_V12 = SYSTEM_V11.replace(
     "against the sources, which alone are evidence. When\nremoved_statements is present,").replace(
     "bear out (unsupported). Where land_extents is given, code added the transfers of land NM found,\nseller by seller: a sum or remainder of extents is borne out only if it is one land_extents gives,\nsaid as what that seller's transfers found add up to and not as an extent anyone holds or has\ntransferred, and never as a sum across sellers; one for a parcel whose complete is false, or one\nthe piece worked out itself, is not.",
     "bear out (unsupported). Where figures_added is given, code added up the transactions NM found,\ngiver by giver: a sum or remainder of figures is borne out only if it is one figures_added gives,\nsaid as what that giver's transactions found add up to and not as what anyone holds, owes or has\npaid, and never as a sum across givers; one for a property or account whose complete is false,\nor one the piece worked out itself, is not.")
+SYSTEM_V12 = SYSTEM_V12.replace(
+    "List only what you find. Empty lists mean the piece can be shown as it is, its folds as placed.",
+    "When coverage is given, it lists every order, direction and proceeding still pending that the\npapers record, and every point "
+    "the papers read side by side show, each with its ID (E1, C1...).\nAn item that bears on the piece, which the piece neither takes "
+    "up nor names as left out with a\nreason that holds, is a must-fix: give it in missing, with its ID and why it matters to the\n"
+    "advocate. An overview need not take up what the sections it opens take up.\n\n"
+    "List only what you find. Empty lists mean the piece can be shown as it is, its folds as placed.")
 assert SYSTEM_V12.count("words: the shortest stretch") == 1 and "writer_notes" in SYSTEM_V12 and "guntas" not in SYSTEM_V12
+assert "give it in missing" in SYSTEM_V12
 assert "figures_added" in SYSTEM_V12 and "land_extents" not in SYSTEM_V12
 SCHEMA_V12 = _object({
     "misleading": {"type": "array", "items": _object({
@@ -430,12 +441,17 @@ SCHEMA_V12 = _object({
                   "description": "The words of the piece that mislead, each copied exactly from the paragraph or "
                                  "checklist item named in where: the shortest stretch that carries the problem."}})},
     "could_be_better": SCHEMA_V11["properties"]["could_be_better"],
-    "keep_shown": SCHEMA_V11["properties"]["keep_shown"]})
+    "keep_shown": SCHEMA_V11["properties"]["keep_shown"],
+    # Stage 5: the coverage list's items the piece passes over in silence.
+    "missing": {"type": "array", "items": _object({
+        "id": {**_WORDS, "description": "The ID (E1, C1...) of an item of coverage."},
+        "why": {**_WORDS, "description": "Why it matters to the advocate here."}})}})
 #: Admission takes a misleading statement without its words as one whose words were not given: it is kept,
 #: and a paragraph it names with no words found in it is the last thing blocked whole (P29: a review's slip
 #: never refuses what the review found).
 _MISLEADING_V12 = SCHEMA_V12["properties"]["misleading"]["items"]
-SCHEMA_V12_ADMITTED = {**SCHEMA_V12, "properties": {**SCHEMA_V12["properties"], "misleading": {
+SCHEMA_V12_ADMITTED = {**SCHEMA_V12, "required": [name for name in SCHEMA_V12["required"] if name != "missing"],
+                       "properties": {**SCHEMA_V12["properties"], "misleading": {
     "type": "array", "items": {**_MISLEADING_V12, "required": [n for n in _MISLEADING_V12["required"] if n != "words"]}}}}
 _TIME_LIMIT = re.compile(r"T\d+")
 
@@ -795,6 +811,23 @@ def _accept_v10(returned, dependencies, contract=MISLEADS_CONTRACT):
                 elif {"unit_id": place[0], "text": place[1]} not in admitted_finding["words"]:
                     admitted_finding["words"].append({"unit_id": place[0], "text": place[1]})
         findings.append(admitted_finding)
+    if contract == WORDED_CONTRACT:
+        # Stage 5: an item of coverage passed over in silence, said by what it is (its ID is code's, not the advocate's).
+        listed = {item["id"]: item for item in response_writer._coverage_shown(
+            dependencies["research_record"], {tag: alias for alias, tag in offered.items()},
+            dependencies["original_context"]) or ()}
+        for index, item in enumerate(data.get("missing", ())):
+            where = f"missing {index + 1}"
+            found = listed.get(item["id"].strip())
+            if found is None:
+                aside(where, f"names no item of the coverage list: {item['id']!r}")
+                continue
+            if not item["why"].strip():
+                aside(where, "says nothing")
+                continue
+            said = f"{found['date']} {found['kind']}: {found['what']}" if "date" in found else found["what"]
+            findings.append({"category": LEFT_OUT, "unit_ids": [], "limits": [], "sources": [],
+                             "mismatch": f"{said} - {item['why'].strip()}"})
     for index, point in enumerate(data["could_be_better"]):
         where = f"could be better {index + 1}"
         unit_ids, named_limits = places(where, point["where"])
@@ -1002,6 +1035,10 @@ def review(model, context, research_record, sources, draft, execution=None, *,
             payload["what_you_review"] = {"piece": "the whole reply"}
         # The events the papers record, as the writer of the piece was shown them (plan AN.27, P12).
         papers = response_writer._chronology_shown(research_record, shown, context) if contract in PRESENTED else None
+        # v12 (AN.28, stage 5): what the piece must take up or say why not, as its writer was shown it.
+        coverage = response_writer._coverage_shown(research_record, shown, context) if contract == WORDED_CONTRACT else None
+        if coverage:
+            payload["coverage"] = coverage
         if papers:
             payload["papers_chronology"] = papers
         copies = (response_writer._copies_shown(context, shown)
