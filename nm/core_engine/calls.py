@@ -216,6 +216,23 @@ class TurnCalls:
         it, so the writer is told plainly to ground the section (P25). purpose: what a
         correction asked for by another check is for (CONFLICT_PURPOSE).
         """
+        self.spend(operation, mismatch=mismatch)
+        self.correction = {"operation": operation,
+            "purpose": (purpose if isinstance(purpose, str) and purpose else
+                        GROUNDING_PURPOSE if asked_by_review is True else
+                        "Correct the rejected draft using the complete original input and declared output contract."),
+            "mismatch": deepcopy(mismatch), "rejected_draft": deepcopy(rejected),
+            "provenance": "Untrusted rejected output and owner feedback; neither is original evidence."}
+        try:
+            return activity()
+        finally:
+            self.correction = None
+
+    def spend(self, operation, *, mismatch=True):
+        """Take one correction from the current scope's allowance (outside a scope, the turn's
+        shared one) and the turn's durable total. correct() spends one so; a second look at the
+        pieces code or the review found at fault (plan AN.28, D2) spends one so too, carrying its
+        own feedback rather than the correction correct() adds to its operation's next call."""
         if self.terminal:
             raise ReleaseWithheld("This turn's release scope is withheld")
         scope = getattr(self._local, "scope", None)
@@ -231,16 +248,6 @@ class TurnCalls:
                 self.reserve_correction()
             self.corrections_used += 1
             self._used[name] = self._used.get(name, 0) + 1
-        self.correction = {"operation": operation,
-            "purpose": (purpose if isinstance(purpose, str) and purpose else
-                        GROUNDING_PURPOSE if asked_by_review is True else
-                        "Correct the rejected draft using the complete original input and declared output contract."),
-            "mismatch": deepcopy(mismatch), "rejected_draft": deepcopy(rejected),
-            "provenance": "Untrusted rejected output and owner feedback; neither is original evidence."}
-        try:
-            return activity()
-        finally:
-            self.correction = None
 
     def checked(self, operation, activity):
         """A shape error may use the turn's first correction; outages/refusals never do."""
