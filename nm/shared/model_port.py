@@ -211,6 +211,10 @@ class Transcription:
     usage: Mapping[str, Any] = field(default_factory=dict)
 
 
+#: How hard a model may be asked to reason for one call (plan AN.28, D4).
+EFFORTS = ("low", "medium", "high")
+
+
 @dataclass(frozen=True)
 class Prompt:
     """A prompt in the product's vocabulary.
@@ -228,12 +232,23 @@ class Prompt:
     """Internal task identity; never inferred from prompt words or user text."""
     images: tuple[PageImage, ...] = field(default=(), repr=False)
     """Page images that follow `user`; sent only on a route bound for reading pages."""
+    effort: str | None = None
+    """How hard the model reasons for this call - one of EFFORTS - where the provider takes it; None for the adapter's own
+    setting (plan AN.28, D4). An adapter whose provider takes none ignores it: the product behaves the same, only its cost and
+    care differ."""
+    cache_through: int = 0
+    """How many leading characters of `user` are material every call of a kind carries alike - the conversation with its papers -
+    which an adapter that caches may mark for reuse; 0 for none (plan AN.28, 6c). Like the system prefix, it changes cost only."""
 
     def __post_init__(self) -> None:
         if not self.user or not self.user.strip():
             raise ValueError("Prompt.user must not be empty")
         if not isinstance(self.images, tuple) or any(not isinstance(i, PageImage) for i in self.images):
             raise ValueError("Prompt.images holds page images only")
+        if self.effort is not None and self.effort not in EFFORTS:
+            raise ValueError(f"Prompt.effort is one of {EFFORTS}")
+        if type(self.cache_through) is not int or not 0 <= self.cache_through <= len(self.user):
+            raise ValueError("Prompt.cache_through marks a prefix of user")
 
 
 @dataclass(frozen=True)

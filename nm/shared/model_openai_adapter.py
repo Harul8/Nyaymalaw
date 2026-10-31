@@ -107,7 +107,14 @@ def _invalid_json_constant(value):
 
 
 def _user_content(prompt: Prompt, *, responses: bool):
-    """The user's words, followed by any page images at full detail."""
+    """The user's words, followed by any page images at full detail. On the Responses transport the material every call of a kind
+    carries alike (prompt.cache_through) is its own part, marked for cache reuse (plan AN.28, 6c)."""
+    if responses and prompt.cache_through:
+        shared, rest = prompt.user[:prompt.cache_through], prompt.user[prompt.cache_through:]
+        parts = [{"type": "input_text", "text": shared, "prompt_cache_breakpoint": {"mode": "explicit"}},
+                 *([{"type": "input_text", "text": rest}] if rest else [])]
+        urls = [f"data:{image.media_type};base64,{base64.b64encode(image.data).decode('ascii')}" for image in prompt.images]
+        return [*parts, *({"type": "input_image", "image_url": url, "detail": "high"} for url in urls)]
     if not prompt.images:
         return prompt.user
     urls = [f"data:{image.media_type};base64,{base64.b64encode(image.data).decode('ascii')}"
@@ -582,7 +589,7 @@ class OpenAIModelAdapter:
             }
 
         if cfg.model in _RESPONSES_EFFORT:
-            resp, retries = self._responses_request(messages, cfg, schema, max_tokens)
+            resp, retries = self._responses_request(messages, cfg, schema, max_tokens, effort=prompt.effort)
         else:
             resp, retries = self._retrying_counted(
                 lambda: self._client.chat.completions.create(**kwargs), model=cfg.model,
@@ -733,7 +740,7 @@ class OpenAIModelAdapter:
             message=SimpleNamespace(content=text, refusal=refusal, tool_calls=None))]
         return receipt
 
-    def _responses_request(self, messages, cfg, schema, max_tokens):
+    def _responses_request(self, messages, cfg, schema, max_tokens, effort=None):
         # A changing user suffix must not replace the reusable instruction
         # boundary. Mark its exact words without elevating any matter content.
         inputs = [{**message, "content": [{"type": "input_text",
@@ -742,7 +749,8 @@ class OpenAIModelAdapter:
                   if message["role"] == "system" else dict(message)
                   for message in messages]
         kwargs = {"model": cfg.model, "input": inputs, "store": False,
-                  "reasoning": {"effort": _RESPONSES_EFFORT[cfg.model]},
+                  # A call's own effort where the product asks one (plan AN.28, D4), else the release's own.
+                  "reasoning": {"effort": effort or _RESPONSES_EFFORT[cfg.model]},
                   "truncation": "disabled"}
         if schema is not None:
             kwargs["text"] = {"format": {"type": "json_schema", "name": "nm_result",

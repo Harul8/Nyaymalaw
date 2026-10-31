@@ -150,8 +150,11 @@ class TurnCalls:
         if feedback is not None and feedback["operation"] == prompt.operation:
             payload = json.loads(prompt.user)
             payload["correction"] = deepcopy(feedback)
-            prompt = Prompt(system=prompt.system, user=json.dumps(payload, ensure_ascii=False),
-                            operation=prompt.operation)
+            user = json.dumps(payload, ensure_ascii=False)
+            # The correction joins the end: the call keeps its effort, and its shared material where that still leads.
+            shared = prompt.cache_through if user[:prompt.cache_through] == prompt.user[:prompt.cache_through] else 0
+            prompt = Prompt(system=prompt.system, user=user, operation=prompt.operation, effort=prompt.effort,
+                            cache_through=shared)
         if (estimate_tokens((prompt.system or "") + prompt.user + json.dumps(schema))
                 + max_tokens > self.context_budget(tier)):
             raise ContextOverflow("The complete stage input and correction exceed the context budget")
