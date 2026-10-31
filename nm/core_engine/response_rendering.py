@@ -91,6 +91,10 @@ BY_DISPUTE_CONTRACT = "core_response_rendering_v17"
 #: item as written, then the advocate's choices under "Your call"; and last, folded, "How NM
 #: checked this answer" with the independent check's remaining suggestions by part.
 PRESENTED_CONTRACT = "core_response_rendering_v18"
+#: v19 (plan AN.28, D2, 31 Oct 2026): v18 for sections whose failing pieces got a second look and were
+#: then blocked one by one (writer v14, review v12): each note says, in a plain sentence, how many
+#: statements were left out of a section and why, never repeating them.
+REPAIRED_CONTRACT = "core_response_rendering_v19"
 #: The versions whose asks open the checklist items they ask for.
 _ASKED = (CONTRACT,)
 #: The versions in which what concerns only a dispute's checklist holds no section back.
@@ -1150,6 +1154,60 @@ def _left_out(saved, where, name):
     return notes
 
 
+def _blocked_notes(saved, where, name):
+    """v19 (plan AN.28, D2): what was blocked of a v14 section or the overview, in code's words - the statements
+    taken out of its paragraphs, the paragraphs left out and the checklist items left out - each counted, with
+    which check found the problem and what it found, never repeating what was taken out. What the writer
+    withdrew on its second look is said so; a question it gave for a withdrawn point is among the asks."""
+    pieces = [saved["reviewed"], *saved["trims"]]
+    notes = []
+
+    def counted(draft):
+        """The sentences cut from a draft's paragraphs, and the IDs of its paragraphs and items left out."""
+        dropped = set(draft.get("dropped", ()))
+        paragraphs = {identity for identity in dropped if identity.rsplit(":", 1)[-1].lstrip("so0123456789")[:1] == "b"}
+        return sum(len(removed) for removed in draft.get("cut", {}).values()), paragraphs, dropped - paragraphs
+
+    def said(sentences, paragraphs):
+        return " and ".join(
+            ([f"{sentences} {'statements' if sentences > 1 else 'statement'} from its paragraphs"] if sentences else [])
+            + ([f"{len(paragraphs)} {'paragraphs' if len(paragraphs) > 1 else 'paragraph'}"] if paragraphs else []))
+    # What was blocked before the first review: what the writer withdrew on its second look, or what code's checks
+    # still refused when no second look was left.
+    sentences, paragraphs, items = counted(pieces[0]["draft"])
+    if sentences or paragraphs:
+        them = "them" if sentences + len(paragraphs) > 1 else "it"
+        notes.append(_notice("NOTE", f"Left out of {where}: {said(sentences, paragraphs)}, because NM's checks found "
+                             f"a problem in {them} that a second look could not settle. The rest was checked without "
+                             f"{them}."))
+    if items:
+        many = len(items) > 1
+        notes.append(_notice("NOTE", f"Left out of the checklist for {name}: {len(items)} "
+                             f"{'items' if many else 'item'}, because the independent check found a problem in "
+                             f"{'them' if many else 'it'}. The rest of this section was checked without "
+                             f"{'them' if many else 'it'}."))
+    # What each review after blocking still found, and what was blocked for it.
+    for before, after in zip(pieces, pieces[1:]):
+        had, now = counted(before["draft"]), counted(after["draft"])
+        sentences, paragraphs = max(now[0] - had[0], 0), now[1] - had[1]
+        items = [item for part in before["draft"]["checklists"] for item in part["items"] if item["id"] in now[2] - had[2]]
+        found, dated = answer_sections.review_faults(before), list(before["date_findings"])
+        if sentences or paragraphs:
+            them = "them" if sentences + len(paragraphs) > 1 else "it"
+            notes.append(_notice("NOTE", f"Left out of {where}: {said(sentences, paragraphs)}, because "
+                                 f"{_checker(found, dated)} still found a problem in {them} after NM looked at "
+                                 f"{them} again. What was found: {found_words(found, dated, where='the paragraph')} "
+                                 f"What remains was checked again without {them}."))
+        if items:
+            them = "them" if len(items) > 1 else "it"
+            named = "; ".join(f"“{item['need']}”" for item in items)
+            notes.append(_notice("NOTE", f"Left out of the checklist for {name}: {named}, because "
+                                 f"{_checker(found, dated)} found a problem in {them}. What was found: "
+                                 f"{found_words(found, dated, where='the item')} The rest of this section was "
+                                 f"checked again without {them}."))
+    return notes
+
+
 def _omitted(piece, where):
     """v17: what the independent check found a piece shown may leave out, in its own words;
     from review v10 (P29; G-NOTED), what it could add or put better, and what may mislead in it
@@ -1197,9 +1255,10 @@ def render_sections(context, research_record, sources, *, sections, cross_check,
     the turn works): the parts of the answer's layout still being written, each shown as a
     place it will fill; a saved answer has none. contract: v17, or v18 for sections written for
     the advocate and placed (writer v13, review v11)."""
-    if contract == PRESENTED_CONTRACT:
+    if contract in (PRESENTED_CONTRACT, REPAIRED_CONTRACT):
         return _render_presented(context, research_record, sources, sections=sections, cross_check=cross_check,
-                                 overview=overview, time_limits=time_limits, waiting=waiting)
+                                 overview=overview, time_limits=time_limits, waiting=waiting,
+                                 repaired=contract == REPAIRED_CONTRACT)
     if contract != BY_DISPUTE_CONTRACT:
         raise ValueError("An answer written dispute by dispute is rendered as v17 or v18")
     names = _dispute_names(research_record)
@@ -1374,18 +1433,20 @@ def _suggested(piece):
 
 
 def _render_presented(context, research_record, sources, *, sections, cross_check, overview, time_limits,
-                      waiting=()):
+                      waiting=(), repaired=False):
     """v18: an answer written dispute by dispute for the advocate (writer v13, review v11), laid
     out as PRESENTED_CONTRACT says. No new prose: every paragraph is a reviewed piece's own;
-    every label, row, notice and note is code's."""
+    every label, row, notice and note is code's. repaired: v19, for writer v14's pieces, whose
+    notes say what was blocked (_blocked_notes)."""
+    written = response_writer.REPAIRED_CONTRACT if repaired else response_writer.PRESENTED_CONTRACT
+    left_out = _blocked_notes if repaired else _left_out
     names = _dispute_names(research_record)
     many = len(response_writer.parts(research_record)) > 1
     positions = answer_sections.order(sections, time_limits)
     pieces = [answer_sections.shown(saved) for saved in sections]
     opening = answer_sections.shown(overview) if overview is not None else None
-    if any(piece is not None and piece["draft"]["contract"] != response_writer.PRESENTED_CONTRACT
-           for piece in (*pieces, opening)):
-        raise ValueError("Rendering v18 shows sections written for the advocate and placed (writer v13)")
+    if any(piece is not None and piece["draft"]["contract"] != written for piece in (*pieces, opening)):
+        raise ValueError("Rendering v18 shows sections written by writer v13, and v19 by writer v14")
     conflicts = (cross_check["proposal"]["conflicts"] if isinstance(cross_check, dict) and "proposal" in cross_check
                  else [])
 
@@ -1453,7 +1514,7 @@ def _render_presented(context, research_record, sources, *, sections, cross_chec
                     if unit["place"] == place:
                         (calls if place == "ask" else elements).append(
                             _shown_paragraph(unit, index, response_writer.OVERVIEW, sources, asks, kind=kind))
-            elements.extend(_left_out(overview, "the opening", OPENING))
+            elements.extend(left_out(overview, "the opening", OPENING))
             elements.extend(_misleads_beside(opening, "the opening"))
     # Each time limit closes the first section shown that names it, as v17 places them.
     remarked = _remarked([*pieces, opening])
@@ -1498,7 +1559,7 @@ def _render_presented(context, research_record, sources, *, sections, cross_chec
                 elements.extend(shown)
         elements.extend(claimed.get(position, []))
         if not edited:
-            elements.extend(_left_out(saved, where, name))
+            elements.extend(left_out(saved, where, name))
         elements.extend(_misleads_beside(piece, where))
         if edit is not None and not edited:
             said = " ".join(_plainly(conflicts[number]["mismatch"]) for number in edit["conflicts"])
