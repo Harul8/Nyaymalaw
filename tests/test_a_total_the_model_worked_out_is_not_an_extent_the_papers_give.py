@@ -61,7 +61,8 @@ def test_a_total_whose_guntas_are_forty_or_more_is_refused_to_the_model_that_wro
     (found,) = refused("The passbooks of 25 and 30 guntas total Ac.0.55, not Ac.1.10, so the figures do not agree.")
     assert "'Ac.0.55'" in found["problem"] and "(fact F1)" in found["problem"] and "40 guntas make an acre" in found["problem"]
     assert "Ac.1.10" not in found["problem"] and "25 guntas" not in found["problem"], "what the deed and the passbooks give is not refused"
-    assert found["fix"] == EXTENT_FIX and "Do not work out an extent yourself" in found["fix"] and "copied as it stands" in found["fix"]
+    assert found["fix"] == EXTENT_FIX and "Do not work out an extent or a sum yourself" in found["fix"]
+    assert "copied as it stands" in found["fix"]
 
 
 @pytest.mark.parametrize("words,shown", [("the passbooks come to 55 guntas", "55 guntas"), ("the passbooks come to Ac.1.15", "Ac.1.15"),
@@ -152,9 +153,18 @@ def test_each_extent_is_refused_once_with_every_place_it_is_stated_and_the_first
 
 
 def test_numbers_that_are_not_extents_are_not_read_as_extents():
-    text = ("The price was Rs.55,00,000 for survey number 12/3 under section 4.10 of the Act, registered on 12.10.2020 as document 55/2020, "
+    text = ("The sale of survey number 12/3 under section 4.10 of the Act, registered on 12.10.2020 as document 55/2020, "
             "and a fee of 2.5 per cent was paid on the 14th.")
     assert refused(text) == []
+
+
+def test_a_sum_the_model_worked_out_is_refused_as_an_extent_is_and_one_the_papers_give_is_not_in_any_notation():
+    # Plan AN.28, D7 (invented): counting is code's work for sums of money as for extents.
+    ctx = papers(page("deed.pdf", 3, "The price agreed is Rs.7,40,000/- (Rupees Seven Lakhs Forty Thousand only), of which Rs.2,10,000 "
+                                     "was paid."))
+    assert refused("The price was Rs. 7.4 lakhs, of which Rupees Two Lakhs Ten Thousand were paid.", ctx) == []
+    (found,) = refused("The price was Rs.7,40,000, so Rs.5,30,000 remains to be paid.", ctx)
+    assert "the sum 'Rs.5,30,000' (fact F1)" in found["problem"] and "worked out" in found["problem"] and found["fix"] == EXTENT_FIX
     assert research.code_checks(stating("A purchase."), papers()) == [], "an understanding with no extent is not touched"
 
 

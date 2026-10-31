@@ -245,6 +245,17 @@ def _sums(text):
     return found
 
 
+def sums_written(text):
+    """Each sum of money some words write, as (the words as written, its rupees), in the order they stand: for the check that an
+    understanding works out no sum (research, P23 made general by plan AN.28, D7)."""
+    found = [(match.start(), match.group(0).strip(), value) for match in _MONEY.finditer(text)
+             for value in [_amount(match.group(1) or match.group(3))
+                           * (_SCALE_WORDS[(match.group(2) or match.group(4)).casefold()] if (match.group(2) or match.group(4)) else 1)]]
+    found += [(start, text[start:end], Fraction(value)) for start, end, value, _ in _worded(text)
+              if re.search(rf"{_CURRENCY}\s*$", text[:start], re.I) or re.match(r"\s*rupees?\b", text[end:], re.I)]
+    return [(words, value) for _, words, value in sorted(found, key=lambda item: item[0])]
+
+
 def parse_money(words):
     """A sum of money as a paper writes it, in rupees: (rupees as a Fraction, how it was read), or (None, why not). In figures -
     Rs.2,50,000/-, Rs. 2.5 lakhs, 50,000 rupees - or in words after Rupees; a sum written in figures and in words is one sum where

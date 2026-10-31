@@ -133,7 +133,8 @@ Advocates bring matters to us so that we can find the law that governs them. You
 What we need from you:
 
 - What the advocate wants from us now. Often they say so. When they only tell us what has happened, they want to know where the law stands on those events: the legal questions a lawyer would need answered to advise on them. Also note, in the advocate's own words, anything they have told us not to do (for example to pause research or not to contact anyone) in ruled_out, and where they have told us nothing of the kind leave ruled_out empty. What the papers leave open or unproved is not something the advocate ruled out: it belongs in the facts as uncertain and in the facts we would still need.
-- The people involved and their roles.
+- The people involved and their roles: whether each is the advocate's client or one of the client's people (client), and, for each proceeding the papers name - a suit, appeal, revision, petition, complaint or other case - each person's part in it (who brought it, who answers it, who else is joined), with the page's own words (parts). A person the papers name in a proceeding is listed even when the advocate did not mention them.
+- Every subject of the matter the papers identify - a property, an account, a contract, a policy, a case or a document - by its identifier exactly as the page writes it (a survey, account, policy, case or document number), what it is, and the page's own words (subjects). List a subject the papers name even where it seems not to bear on what the advocate asked, so that none is overlooked.
 - The facts, each kept exactly as certain as the advocate put it: confirmed, reported by someone, uncertain, or disputed. Give the advocate's own words for each fact, or, for a fact that comes from a document they sent, the document's own words. What the advocate reports is their account, and what a document says is what its author wrote; neither is proven fact, and we never add facts they did not give.
 - The separate disputes. A dispute is one set of events between particular parties that needs its own legal answer. Events that call for different kinds of law, such as a civil wrong and a crime, or that concern different transactions, are separate disputes, even when they happen together or involve the same people.
 - For each dispute, think through every legal consequence the events may have, civil, criminal and under any special statute, and for each: the right or liability, the remedy, how and where it is pursued and within what time, and, where the case turns on particular evidence, how that evidence is proved. Ask as legal questions those that bear on what the advocate wants; put the rest in related points.
@@ -154,10 +155,11 @@ Check the understanding carefully against the conversation itself, the way you w
 - Does each legal question ask about one legal point, or would answering it need two different rules? Taken together, would the questions let us do what the advocate asked? Are any of them duplicates, or so general that no particular law answers them?
 - Have the events' other legal consequences (civil, criminal, under a special statute), and how each is pursued and proved, been considered, and asked where they bear on what the advocate wants?
 - Is any fact stated more strongly than the advocate or a document they sent put it, or added?
+- Is anyone's part in a proceeding the papers name, or a subject the papers identify, missed or misread?
 - Are the related points genuinely useful to the advocate, and kept separate from what we research now?
 - Is research being started when the advocate has ruled it out, or skipped when it is needed? Our purpose with every matter is to find where the law stands for each dispute in it, so that the advocate can see what the case needs. They do not have to ask for that: when they only tell us what has happened, or ask us to understand, summarise or set out the events, they still want to know where the law stands on them. Skipping research is a problem unless the advocate has told us not to research or the message needs none (thanks, or a request to tidy or transcribe text); starting it is a problem only when they have ruled it out. Where we could find instructions from the advocate limiting our work in their latest message, they are listed after the conversation; the conversation itself may hold earlier ones. Do not report research as a problem because the advocate's words did not literally ask for advice.
 
-Counting is code's work for extents as it is for days: do not add, subtract or convert acres, guntas or cents yourself, and do not report that figures disagree because they do not seem to add up. Where two papers give different figures for the same land, say so with each figure as it is given; where figures might or might not add up, say that they have not been added up.
+Counting is code's work for figures as it is for days: do not add, subtract or convert areas, sums of money or any other figures yourself, and do not report that figures disagree because they do not seem to add up. Where two papers give different figures for the same thing, say so with each figure as it is given; where figures might or might not add up, say that they have not been added up.
 
 Report only problems that matter: ones that would change what we research, or would leave us misunderstanding the matter or the advocate's instructions. Small differences of wording or emphasis do not matter. Give each real problem precisely, with what should change. If the understanding is sound, say so plainly. Do not invent problems to have something to say.
 """
@@ -275,6 +277,19 @@ PROBLEM = _object({"problem": STRING, "fix": STRING})
 CHECKED = _object({"verdict": {"type": "string", "enum": ["sound", "revise"]},
                    "problems": {"type": "array", "items": PROBLEM}})
 REVISED = _object({"notes": STRING, "understanding": UNDERSTANDING})
+#: v13 (AN.28, A1 and B12): whether each party is the client or one of the client's people, each party's part in each proceeding the
+#: papers name, and every subject the papers identify, each with the page's own words, which code finds.
+PART = _object({"proceeding": STRING, "part": STRING, "words": STRING})
+PARTY_V13 = _object({"who": STRING, "role": STRING, "client": {"type": "boolean"}, "parts": {"type": "array", "items": PART}})
+SUBJECT = _object({"identifier": STRING, "what": STRING, "words": STRING})
+UNDERSTANDING_V13 = {**UNDERSTANDING, "required": [*UNDERSTANDING["required"], "subjects"],
+                     "properties": {**UNDERSTANDING["properties"], "parties": {"type": "array", "items": PARTY_V13},
+                                    "subjects": {"type": "array", "items": SUBJECT}}}
+REVISED_V13 = _object({"notes": STRING, "understanding": UNDERSTANDING_V13})
+#: A v13 plan keeps an understanding without them as one that gives none (P29: a slip never refuses what was understood).
+UNDERSTANDING_V13_RECORD = {**UNDERSTANDING_V13, "required": UNDERSTANDING["required"],
+                            "properties": {**UNDERSTANDING_V13["properties"], "parties": {"type": "array", "items": {
+                                **PARTY_V13, "required": ["who", "role"]}}}}
 
 
 def _phrase(kinds):
@@ -380,7 +395,7 @@ TRANSACTION = _object({"date": STRING, "kind": {"type": "string", "enum": list(T
 TRANSACTIONS_SCHEMA = _object({"transfers": {"type": "array", "items": TRANSACTION}})
 TRANSACTION_RECORD = _object({**TRANSFER_RECORD["properties"], "kind": TRANSACTION["properties"]["kind"],
                               "reading": STRING, "instrument": STRING})
-SCHEMA_V13 = _record_schema(UNDERSTANDING, chronology=True)
+SCHEMA_V13 = _record_schema(UNDERSTANDING_V13_RECORD, chronology=True)
 SCHEMA_V13["properties"]["transfers"] = {"type": "array", "items": TRANSACTION_RECORD}
 SCHEMA_V13["properties"]["transfers_failures"] = {"type": "array", "items": CHRONOLOGY_FAILURE}
 
@@ -602,8 +617,8 @@ class Pages:
 _PLACES = {"asked": "what was asked", "ruled_out": "what was ruled out", "no_research_reason": "the reason given for no research"}
 _ITEMS = {"facts": "fact", "disputes": "dispute", "legal_questions": "legal question"}
 #: What the model is told when its understanding states an extent that none of the advocate's messages and none of the documents give.
-EXTENT_FIX = ("Do not work out an extent yourself: use one the advocate or a paper gives, copied as it stands, or say that the extent "
-              "has not been worked out. Code adds up the extents of the papers' transfers of land.")
+EXTENT_FIX = ("Do not work out an extent or a sum yourself: use one the advocate or a paper gives, copied as it stands, or say that it "
+              "has not been worked out. Code adds up the figures of the papers' transactions.")
 
 
 def _extents_written(text):
@@ -643,18 +658,25 @@ def _extent_problems(understanding, context):
     sources = [row["text"] for row in context["conversation"] if row.get("record_role") == "original_account"]
     sources += [context["latest"]["text"]] + [row["text"] for row in context.get("documents", ())]
     given = {extent for text in sources for _, _, extent in _extents_written(text)}
+    # And sums of money (AN.28, D7): a sum is the same sum in figures or in words, lakhs or rupees.
+    given_sums = {value for text in sources for _, value in extents.sums_written(" ".join(text.split()))}
     stated = {}
     for name, item in understanding.items():
         for place, text in _words_of(item, _PLACES.get(name, f"the {name.replace('_', ' ')}"), name):
-            for words, value, extent in _extents_written(text):
-                if extent not in given:
-                    kept = stated.setdefault(extent, {"words": words, "value": value, "places": []})
-                    if place not in kept["places"]:
-                        kept["places"].append(place)
+            found = [(words, value, extent) for words, value, extent in _extents_written(text) if extent not in given]
+            found += [(words, value, ("sum", value)) for words, value in extents.sums_written(" ".join(text.split()))
+                      if value not in given_sums]
+            for words, value, extent in found:
+                kept = stated.setdefault(extent, {"words": words, "value": value, "places": []})
+                if place not in kept["places"]:
+                    kept["places"].append(place)
     problems = []
-    for kept in stated.values():
+    for key, kept in stated.items():
         where = ", ".join(kept["places"])
-        if kept["value"] is None:
+        if isinstance(key, tuple) and key[:1] == ("sum",):
+            said = (f"The understanding states the sum {kept['words']!r} ({where}), which is in none of the advocate's messages or the "
+                    "documents they sent; it reads as a total, a difference or an estimate that was worked out.")
+        elif kept["value"] is None:
             said = (f"The understanding writes the extent {kept['words']!r} ({where}), which cannot be an extent as a paper writes it - 40 "
                     "guntas make an acre, so the guntas after the acres are under 40 - and is in none of the advocate's messages or the "
                     "documents they sent.")
@@ -686,6 +708,18 @@ def code_checks(understanding, context):
                              "fix": "Quote the exact words this fact rests on, as the page gives them - copy them as they stand, a "
                                     "misread letter or an odd spacing included, and keep what you add yourself outside the quotation "
                                     "marks (separate passages joined with '...') - or remove the fact if they were not given."})
+    # v13 (AN.28): each party's part in a proceeding and each subject rest on the page's own words, found by code as a fact's are.
+    said = [(f"{party['who']}'s part in {part['proceeding']}", part["words"]) for party in understanding.get("parties", ())
+            for part in party.get("parts", ())]
+    said += [(f"the subject {subject['identifier']}", subject["words"]) for subject in understanding.get("subjects", ())]
+    for place, quoted in said:
+        missing = [piece for piece in fact_pieces(quoted) if piece not in advocate and pages.holding(piece) is None]
+        if missing:
+            problems.append({"problem": f"For {place}, the quoted words do not appear in the advocate's messages or the documents "
+                                        f"they sent ({quoted!r}); {pages.stops(missing[0])}.",
+                             "fix": "Quote the exact words, as the page gives them - copy them as they stand, a misread letter or an "
+                                    "odd spacing included (separate passages joined with '...') - or leave it out if the papers do "
+                                    "not give it."})
     disputes = {d["id"] for d in understanding["disputes"]}
     if len(disputes) != len(understanding["disputes"]):
         problems.append({"problem": "Two disputes share an id.", "fix": "Give each dispute its own id."})
@@ -752,7 +786,7 @@ def carries_matter(interpretation):
 def _no_matter(context):
     return accept({"understanding": {"summary": "", "asked": [], "ruled_out": [], "needs_research": False,
                                      "no_research_reason": NO_NEW_MATTER, "parties": [], "facts": [],
-                                     "disputes": [], "related_points": []},
+                                     "disputes": [], "related_points": [], "subjects": []},
                    "review_rounds": [], "statute_phrases": [], "judgment_phrases": [], "failures": [],
                    "chronology": [], "chronology_failures": []}, context)
 
@@ -1096,10 +1130,8 @@ def chronology_of(model, context, *, wanted=None):
     The model says what a page records; code does the rest: finds the event's words in the document (the one finder), records the
     pages, reads the date, orders the events by it - the undated last, in the papers' order - and numbers them E1.... An event
     whose words are not found is kept, marked not anchored, never dropped and never to be cited as sourced."""
-    if wanted is not None and not wanted():
-        return [], []
     documents = _documents(context)
-    if not documents:
+    if not documents or (wanted is not None and not wanted()):
         return [], []
     events, failures = _read_stretches(model, context, None, "core_research_chronology", CHRONOLOGY_V13, CHRONOLOGY_SCHEMA,
                                        "chronology", _events_in, whole=_whole_file(context, documents))
@@ -1343,7 +1375,7 @@ def _proposal(model, context, still, progress, restrictions):
     report = progress or (lambda stage, **detail: None)
     text = conversation_text(context)
     report("understanding_matter")
-    understanding = _call(model, "core_research_understand", UNDERSTAND, text, UNDERSTANDING, "understand")
+    understanding = _call(model, "core_research_understand", UNDERSTAND, text, UNDERSTANDING_V13, "understand")
     rounds, failures, phrasing, note = [], [], None, None
     with ThreadPoolExecutor(max_workers=1) as beside:
         for number in range(MAX_REVISIONS + 1):
@@ -1375,7 +1407,7 @@ def _proposal(model, context, still, progress, restrictions):
                 revised = _call(model, "core_research_revise", REVISE, text + note + "\n\nYour understanding:\n"
                                 + json.dumps(understanding, ensure_ascii=False, indent=1)
                                 + "\n\nProblems found:\n" + json.dumps(problems, ensure_ascii=False, indent=1),
-                                REVISED, "revise")
+                                REVISED_V13, "revise")
             except (ModelError, SchemaViolation) as exc:
                 failures.append({"step": "revise", "scope": f"round {number + 1}", "reason": type(exc).__name__})
                 break

@@ -13,7 +13,7 @@ import pytest
 
 from nm.core_engine import answer_sources, research, response_authorities, response_review, response_writer
 from nm.core_engine.extents import ledger, parse, parse_money, read, render_value, shown
-from tests.test_core_research import _result
+from tests.test_core_research import _result, proposal, understanding
 from tests.test_the_chronology_of_each_document import SCRIPT, row
 from tests.test_the_plan_records_the_chronology import Beside, bundle, sent
 from tests.test_the_plan_records_the_transfers import SOLD, transfer
@@ -308,3 +308,31 @@ def test_the_look_again_prompt_says_what_code_found_and_asks_for_the_pages_own_w
                  "so that it reads only one way", "or leave it out if the paper does not record it as you listed it", "Work in a loop"):
         assert part in prompt, part
     assert research.MAX_OUTPUT["transfers_check"] == 8000
+
+
+
+def test_the_v13_understanding_names_the_client_the_parties_parts_and_the_subjects_each_with_words_code_finds():
+    # Plan AN.28, piece 3d (findings A1 and B12), invented: whom the advocate acts for, each party's part in each proceeding the papers
+    # name, and every subject they identify.
+    prompt = " ".join(research.UNDERSTAND.split())
+    for part in ("whether each is the advocate's client or one of the client's people (client)",
+                 "each person's part in it (who brought it, who answers it, who else is joined), with the page's own words (parts)",
+                 "Every subject of the matter the papers identify - a property, an account, a contract, a policy, a case or a document",
+                 "so that none is overlooked"):
+        assert part in prompt, part
+    assert "Is anyone's part in a proceeding the papers name, or a subject the papers identify, missed or misread?" in " ".join(
+        research.CHECK.split())
+    wire = research.UNDERSTANDING_V13["properties"]
+    assert set(wire["parties"]["items"]["required"]) == {"who", "role", "client", "parts"} and "subjects" in research.UNDERSTANDING_V13["required"]
+    subject = understanding()
+    subject["parties"] = [{"who": "the vendor", "role": "seller", "client": True,
+                           "parts": [{"proceeding": "O.S. 17 of 2019", "part": "defendant", "words": "the vendor as defendant"}]}]
+    subject["subjects"] = [{"identifier": "Sy.No.12", "what": "the land sold", "words": "the land in Sy.No.12"},
+                           {"identifier": "A/c 9466", "what": "a loan account", "words": "loan account No. 9466"}]
+    ctx = sent(row("t1", 1, "plaint.pdf", 1, "Suit O.S. 17 of 2019 is against the vendor as defendant over the land in Sy.No.12."))
+    problems = research.code_checks(subject, ctx)
+    assert [p["problem"].split(",")[0] for p in problems] == ["For the subject A/c 9466"], "only the words no page holds are refused"
+    assert research.accept({**proposal(), "understanding": subject}, ctx)["proposal"]["understanding"]["subjects"][0]["identifier"] == "Sy.No.12"
+    older = proposal()["understanding"]
+    assert "subjects" not in older and research.accept(proposal(), ctx)["proposal"]["understanding"] == older, \
+        "an understanding without them is kept as one that gives none"

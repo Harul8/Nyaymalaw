@@ -5,7 +5,8 @@ passbooks - its own sum was wrong, since 40 guntas make an acre - and the revisi
 it. The writer's prompt already says that counting is code's work for extents as it is for days; the check's did not. The check now has
 the same sentence, with its point for a check: it does not report figures as disagreeing because they do not seem to add up, it says so
 where two papers give different figures for the same land, and it says that figures have not been added up where they might or might
-not. A prompt is pinned here, not proved: what the model does with it is measured by a bounded replay.
+not. A prompt is pinned here, not proved: what the model does with it is measured by a bounded replay. From research v13 and the writer
+v14 the rule is said of figures of any kind - areas, sums of money and any other (plan AN.28, D7).
 """
 import pytest
 
@@ -16,7 +17,8 @@ from tests.test_core_understanding import context
 
 pytestmark = pytest.mark.class_a
 
-COUNTING = "Counting is code's work for extents as it is for days: do not add, subtract or convert acres, guntas or cents yourself"
+COUNTING = ("Counting is code's work for figures as it is for days: do not add, subtract or convert areas, sums of money or any other "
+            "figures yourself")
 
 
 def words(prompt):
@@ -25,13 +27,13 @@ def words(prompt):
 
 def test_the_check_is_told_what_the_writer_is_told_about_counting_extents():
     assert COUNTING in words(research.CHECK)
-    assert COUNTING in words(response_writer.SYSTEM_V13), "one rule, said the same way to the step that writes and the step that checks"
+    assert COUNTING in words(response_writer.SYSTEM_V14), "one rule, said the same way to the step that writes and the step that checks"
 
 
 def test_the_check_says_what_it_does_and_does_not_do_with_figures():
     check = words(research.CHECK)
     assert COUNTING + ", and do not report that figures disagree because they do not seem to add up." in check
-    assert "Where two papers give different figures for the same land, say so with each figure as it is given;" in check
+    assert "Where two papers give different figures for the same thing, say so with each figure as it is given;" in check
     assert "where figures might or might not add up, say that they have not been added up." in check
 
 
