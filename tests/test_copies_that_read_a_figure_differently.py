@@ -134,3 +134,12 @@ def test_pages_of_one_document_a_form_with_figures_of_its_own_a_short_page_and_a
     assert copy_figures.copies([page("a.pdf", 1, "extent 6.06 acres"), page("b.pdf", 1, "extent 6.06 acres")]) == set()
     assert copy_figures.copies([page("a.mp3", 1, passage(), recording=True), page("b.mp3", 1, passage(), recording=True)]) == set()
     assert copy_figures.copies([]) == set()
+
+
+def test_only_the_figures_of_a_stretch_read_differently_are_named_never_the_words_beside_them():
+    # Plan AN.28, B9 (invented page): a footer read into one copy is not shown as part of a figure.
+    words = " ".join(f"word{n}" for n in range(60))
+    first = {"document": "a.pdf", "key": "a", "page": 1, "text": f"{words} ordered on 25-11-2017 Office Clerk District {words}"}
+    second = {"document": "b.pdf", "key": "b", "page": 1, "text": f"{words} ordered on 25 {words}"}
+    found, = copy_figures.differences([first, second])
+    assert found["figures"] == [{"first": "25-11-2017", "second": "25", "after": "word58 word59 ordered on"}]

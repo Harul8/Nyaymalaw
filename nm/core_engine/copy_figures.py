@@ -3,7 +3,8 @@
 Two scans of one passage were read separately by the AI and gave 6.06 and 6.16; NM called it a disagreement in the papers, then said
 the advocate's figure could not be matched to either. A figure two readings give differently is for code to flag and for no model to
 settle: the copies are found here, by their words, and the figures in which they differ are named with the words before them. Nothing
-here says which reading is right.
+here says which reading is right. Only the figures of a stretch two readings give differently are named (plan AN.28, B9): words
+that stand beside them in that stretch - a printed footer, a scanner's mark - are not figures and are not shown as if they were.
 
 A page is a dict with "document" (its name), "key" (which document it belongs to - two files of one name are two documents), "page"
 and "text", and may carry an "id", which is kept. Two pages are copies of one page when they are in different documents, say enough
@@ -78,10 +79,11 @@ def _pairs(pages):
                 continue
             figures = []
             for tag, a, b, c, d in matcher.get_opcodes():
-                if tag != "replace" or not (any(map(_figure, left[a:b])) and any(map(_figure, right[c:d]))):
+                ones, others = [w for w in left[a:b] if _figure(w)], [w for w in right[c:d] if _figure(w)]
+                if tag != "replace" or not (ones and others):
                     continue
-                if _digits(left[a:b]) != _digits(right[c:d]):
-                    figures.append({"first": " ".join(left[a:b]), "second": " ".join(right[c:d]),
+                if _digits(ones) != _digits(others):
+                    figures.append({"first": " ".join(ones), "second": " ".join(others),
                                     "after": " ".join(left[max(0, a - 4):a])})
             if len(figures) <= max(FEW_FIGURES, MOST_FIGURES * sum(map(_figure, left))):
                 yield one, two, figures
