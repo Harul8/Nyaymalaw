@@ -3773,6 +3773,50 @@ function renderExtents(parcels, make) {
   return [fold];
 }
 
+// READ SIDE BY SIDE (plan AN.28, pieces 3e and 3f): what matters to your client only when the papers are set side by side, each point
+// with the pages the server found its words on, and where each of your client's people stands on the pages as the server's code found
+// the name - a near spelling offered only as a candidate, never taken for the person. A point whose words were not found says so.
+const SIDE_BY_SIDE = { client_appears: 'Your client’s people elsewhere', against_client: 'Against your client',
+  after_death: 'After a death', after_time_limit: 'After a time limit or order', further_subject: 'A further property, account or case',
+  other: 'Read together' };
+function renderPapersTogether(board, make) {
+  const connections = board.connections || [];
+  const appearances = (board.appearances || []).filter((one) => one.places.length || one.near.length);
+  const failed = (board.connections_failures || []).length > 0;
+  if (!connections.length && !appearances.length && !failed) return [];
+  const where = (places) => places.map((place) => `${place.document}, page ${place.page}`).join('; ');
+  const fold = make('details', 'folded');
+  fold.appendChild(make('summary', '', `Read side by side (${connections.length})`));
+  fold.appendChild(make('p', 'board-lede', 'What matters to your client only when your papers are set side by side, as NM read them, '
+    + 'each with the pages its words are on. Check each against the papers.'));
+  if (failed) {
+    fold.appendChild(make('p', 'board-status search_failed', 'Your papers could not be read together this time, so what shows only '
+      + 'when they are set side by side was not looked for.'));
+  }
+  if (connections.length) {
+    const points = make('ul', 'board-list');
+    for (const item of connections) {
+      const said = `${SIDE_BY_SIDE[item.kind] || SIDE_BY_SIDE.other}: ${item.point}${item.why ? ` — ${item.why}` : ''}`;
+      points.appendChild(make('li', item.anchored ? '' : 'board-status search_failed', item.anchored
+        ? `${said} · ${where(item.places)}` : `${said} · its words were not found on the pages, so it rests on nothing yet`));
+    }
+    fold.appendChild(points);
+  }
+  if (appearances.length) {
+    fold.appendChild(make('h3', 'board-h', 'Where your client’s people appear'));
+    const people = make('ul', 'board-list');
+    for (const one of appearances) {
+      people.appendChild(make('li', '', `${one.name}: ${one.places.length ? where(one.places) : 'not found as written'}`));
+      for (const near of one.near) {
+        people.appendChild(make('li', 'board-status', `Written “${near.as_written}” on ${near.document}, page ${near.page}: a near `
+          + 'spelling, not taken to be the same person'));
+      }
+    }
+    fold.appendChild(people);
+  }
+  return [fold];
+}
+
 // The board as NM understood the matter from the advocate's own words. Nothing on it is
 // presented as established: facts carry the certainty they were given with. The disputes
 // come first, under the marks' legend; how NM understood the matter, the facts, the
@@ -3812,8 +3856,12 @@ function renderChatBoard(board) {
   out.push(...renderTimeline(board.timeline, make));
   out.push(...renderCopies(board.copies, make));
   out.push(...renderExtents(board.extents, make));
+  out.push(...renderPapersTogether(board, make));
   const points = (board.understanding && board.understanding.open_points) || [];
-  const counted = [[board.facts.length, 'Facts as you gave them'], [board.instructions.length, 'Standing instructions'],
+  const parts = (board.parties || []).flatMap((party) => (party.parts || []).map((part) => ({ party, part })));
+  const subjects = board.subjects || [];
+  const counted = [[board.facts.length, 'Facts as you gave them'], [parts.length, 'Parts in proceedings'],
+    [subjects.length, 'Subjects in the papers'], [board.instructions.length, 'Standing instructions'],
     [board.related_points.length, 'Related points'], [points.length, 'Points NM’s own check raised']]
     .filter(([count]) => count)
     .map(([count, title]) => `${title} (${count})`);
@@ -3830,6 +3878,17 @@ function renderChatBoard(board) {
       if (fact.from === 'document') row.appendChild(make('span', 'board-status', ` · ${factPlace(fact)}`));
       fold.appendChild(row);
     }
+  }
+  // Each party's part in each proceeding the papers name, and each subject they identify (plan AN.28, piece 3f), with where the
+  // server found its words.
+  if (parts.length) {
+    fold.appendChild(make('h3', 'board-h', 'Who is who in each proceeding'));
+    fold.appendChild(list(parts.map(({ party, part }) => `${party.who}${party.client ? ' (your client’s side)' : ''}: ${part.part} in `
+      + `${part.proceeding} · ${factPlace(part)}`), 'board-list'));
+  }
+  if (subjects.length) {
+    fold.appendChild(make('h3', 'board-h', 'Subjects the papers identify'));
+    fold.appendChild(list(subjects.map((subject) => `${subject.identifier} — ${subject.what} · ${factPlace(subject)}`), 'board-list'));
   }
   if (board.instructions.length) {
     fold.appendChild(make('h3', 'board-h', 'Your standing instructions'));

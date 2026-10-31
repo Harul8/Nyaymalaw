@@ -393,4 +393,45 @@ const board = {
   }
 }
 
+// Read side by side, and who is who (plan AN.28, pieces 3e and 3f): each point with the pages the server found its words on, one whose
+// words were not found said so; where the client's people stand on the pages, a near spelling only a candidate; each party's part in
+// each proceeding and each subject, with where their words are. Invented names.
+{
+  const together = { ...structuredClone(board),
+    parties: [{ who: 'Leela Kulkarni', role: 'heir', client: true, parts: [{ proceeding: 'W.A. 6649 of 2016', part: 'respondent',
+      from: 'document', places: [{ document: 'order.pdf', page: 1, read_by: 'local' }] }] }, { who: 'Navin Rastogi', role: 'buyer' }],
+    subjects: [{ identifier: 'Sy.No.9061', what: 'the land sold', from: 'document', places: [{ document: 'deed.pdf', page: 2,
+      read_by: 'ai' }] }],
+    connections: [
+      { id: 'C1', kind: 'client_appears', point: 'Leela Kulkarni is a respondent in a pending appeal.', why: 'She is a client.',
+        anchored: true, places: [{ document: 'order.pdf', source: 't1:d1', page: 1 }] },
+      { id: 'C2', kind: 'against_client', point: 'A finding against the heirs.', why: '', anchored: false, places: [] }],
+    connections_failures: [],
+    appearances: [{ name: 'Leela Kulkarni', places: [{ document: 'order.pdf', source: 't1:d1', page: 1 }],
+      near: [{ as_written: 'Leela Kulkarny', document: 'deed.pdf', source: 't1:d2', page: 2 }] },
+    { name: 'Sarala Kulkarni', places: [], near: [] }] };
+  const nodes = context.renderChatBoard(together);
+  const fold = nodes.find((node) => node.tagName === 'DETAILS' && text(node).startsWith('Read side by side'));
+  assert.ok(fold, 'a fold for what the papers read together show');
+  assert.equal(fold.children[0].textContent, 'Read side by side (2)');
+  const said = text(fold);
+  for (const part of ['Your client’s people elsewhere: Leela Kulkarni is a respondent in a pending appeal. — She is a client. · order.pdf, page 1',
+    'Against your client: A finding against the heirs. · its words were not found on the pages, so it rests on nothing yet',
+    'Where your client’s people appear', 'Leela Kulkarni: order.pdf, page 1',
+    'Written “Leela Kulkarny” on deed.pdf, page 2: a near spelling, not taken to be the same person']) {
+    assert.ok(said.includes(part), part);
+  }
+  assert.ok(!said.includes('Sarala Kulkarni'), 'a name found nowhere and offered nowhere is not listed');
+  const understood = text(nodes[nodes.length - 1]);
+  for (const part of ['Parts in proceedings (1)', 'Subjects in the papers (1)', 'Who is who in each proceeding',
+    'Leela Kulkarni (your client’s side): respondent in W.A. 6649 of 2016 · From order.pdf, page 1',
+    'Subjects the papers identify', 'Sy.No.9061 — the land sold · From deed.pdf, page 2 (read by AI)']) {
+    assert.ok(understood.includes(part), part);
+  }
+  const failed = context.renderChatBoard({ ...structuredClone(board), connections: [], appearances: [],
+    connections_failures: [{ reason: 'TooLongToReadTogether' }] }).map(text).join('\n');
+  assert.ok(failed.includes('Your papers could not be read together this time'), 'a failure is said, never an empty success');
+  assert.ok(!context.renderChatBoard(structuredClone(board)).map(text).join('\n').includes('Read side by side'), 'nothing where none');
+}
+
 console.log('chat board: ok');

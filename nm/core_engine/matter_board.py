@@ -145,6 +145,19 @@ def _extents(record, pages):
     return extents.shown(record["plan"]["proposal"].get("transfers") or [], copy_figures.copies(pages))
 
 
+def _side_by_side(record):
+    """What research v13 found with the papers read side by side (plan AN.28, piece 3e), as the plan kept it: each point with the
+    pages code found its words on, or marked as not found; whether the papers could be read together; and where each of the client's
+    people stands on the pages, as code found the name, a near spelling a candidate only. Nothing where the plan kept none of it."""
+    proposal = record["plan"]["proposal"]
+    if "connections" not in proposal:
+        return {}
+    return {"connections": [{"id": item["id"], "kind": item["kind"], "point": item["point"], "why": item["why_it_matters"],
+                             "anchored": item["anchored"], "places": item["places"]} for item in proposal["connections"]],
+            "connections_failures": [{"reason": failure["reason"]} for failure in proposal.get("connections_failures", [])],
+            "appearances": proposal.get("appearances", [])}
+
+
 def _dispute(d, record, work, checklists):
     """One dispute as the board shows it: the facts it rests on, why each question was asked and what research did for it, why it
     matters (research v9, 16 Oct 2026), its checklist where the answer gave one, and whether the law has been assessed."""
@@ -233,7 +246,15 @@ def board(rows):
             "state": "ready", "turn_id": row["turn_id"],
             "summary": understanding["summary"], "asked": list(understanding["asked"]),
             "instructions": list(understanding["ruled_out"]),
-            "parties": [{"who": p["who"], "role": p["role"]} for p in understanding["parties"]],
+            # From research v13 (plan AN.28, piece 3f): whether a party is on the client's side and its part in each proceeding,
+            # each part and each subject the papers identify where code finds its words.
+            "parties": [{"who": p["who"], "role": p["role"], **({"client": p["client"]} if "client" in p else {}),
+                         **({"parts": [{"proceeding": part["proceeding"], "part": part["part"],
+                                        **_where(part["words"], rows[:index + 1], pages)} for part in p["parts"]]}
+                            if p.get("parts") else {})}
+                        for p in understanding["parties"]],
+            "subjects": [{"identifier": s["identifier"], "what": s["what"], **_where(s["words"], rows[:index + 1], pages)}
+                         for s in understanding.get("subjects", ())],
             "facts": [{"id": f["id"], "fact": f["fact"], "certainty": f["certainty"], "words": f["advocate_words"],
                        **_where(f["advocate_words"], rows[:index + 1], pages)}
                       for f in understanding["facts"]],
@@ -244,6 +265,7 @@ def board(rows):
             "timeline": _timeline(record, rows[:index + 1], copy_figures.copies(sent)),
             "copies": _copies(sent),
             "extents": _extents(record, sent),
+            **_side_by_side(record),
             "related_points": [{"point": r["point"], "why": r["why_it_matters"], "dispute_id": r["dispute_id"] or None,
                                 "dispute": names.get(r["dispute_id"])} for r in understanding["related_points"]],
         }

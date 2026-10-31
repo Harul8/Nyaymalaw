@@ -140,3 +140,30 @@ def test_the_prompts_say_what_to_look_for_and_that_no_legal_question_is_answered
                  "client_appears, against_client, after_death, after_time_limit, further_subject, or other"):
         assert part in prompt, part
     assert "Look again" in research.CONNECTIONS_CHECK and research.MAX_OUTPUT["connections"] == 8000
+
+
+def test_the_board_shows_each_partys_part_the_subjects_the_points_read_side_by_side_and_where_the_clients_people_appear():
+    # Plan AN.28, piece 3f: the board shows what the plan kept, with where code found each part's and subject's words.
+    from nm.core_engine import matter_board
+    from tests.test_the_board_has_a_timeline import turn
+    from tests.test_the_board_names_figures_copies_read_differently import paper
+    row = turn([paper("order.pdf", ORDER), paper("deed.pdf", DEATH, SALE)], [])
+    proposal = row["activities"]["research"]["plan"]["proposal"]
+    proposal["understanding"]["parties"] = [
+        {"who": "Leela Kulkarni", "role": "heir", "client": True,
+         "parts": [{"proceeding": "W.A. 6649 of 2016", "part": "respondent", "words": "the respondents include Leela Kulkarni"}]},
+        {"who": "Navin Rastogi", "role": "buyer"}]
+    proposal["understanding"]["subjects"] = [{"identifier": "Sy.No.9061", "what": "the land sold", "words": "for Sy.No.9061"}]
+    proposal["connections"], people, proposal["appearances"], proposal["connections_failures"] = connections_of(SideBySide(), papers())
+    proposal["client_people"] = people
+    shown = matter_board.board([row])
+    leela, navin = shown["parties"]
+    assert leela["client"] is True and [(p["part"], p["proceeding"], p["from"]) for p in leela["parts"]] == [
+        ("respondent", "W.A. 6649 of 2016", "document")]
+    assert leela["parts"][0]["places"][0]["document"] == "order.pdf" and navin == {"who": "Navin Rastogi", "role": "buyer"}
+    (subject,) = shown["subjects"]
+    assert (subject["identifier"], subject["from"], subject["places"][0]["page"]) == ("Sy.No.9061", "document", 2)
+    assert [(c["id"], c["kind"], c["anchored"]) for c in shown["connections"]] == [("C1", "client_appears", True), ("C2", "after_death", True)]
+    assert shown["connections"][0]["why"] == "She is one of the clients." and shown["connections_failures"] == []
+    assert [a["name"] for a in shown["appearances"]] == ["Sarala Kulkarni", "Leela Kulkarni"]
+    assert "connections" not in matter_board.board([turn([paper("deed.pdf", DEATH)], [])]), "a plan without them shows none"
