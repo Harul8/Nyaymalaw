@@ -535,6 +535,11 @@ citations and all execution, saving, correction, completion, effect-only acknowl
 and service status claims; do not author them inside an answer, limit or next step.
 Judgment roles and treatment remain proposals until independently reviewed.
 """
+#: The figures the v13 writer is told code added up: land extents alone.
+_LAND_V13 = "themselves. Counting is code's work for extents as it is for days: do not add, subtract or\nconvert acres, guntas or cents yourself. Where land_extents is given, code added the transfers of\nland NM found in the papers, parcel by parcel and seller by seller: use a seller's sold, and what\na stated whole extent leaves after it (leaves: if that seller held all of it) or how far it goes\nbeyond it (exceeds), exactly as given, and never add one seller's sales to another's. Say what\nits caveat says - that the sums add every transfer the papers record, whoever states it, rival\nand repeated accounts included, so a sum is a figure to check and never the extent anyone holds\nor has transferred - and which transfers were not added and why. Where exceeds is given, say that\nthe papers do not fit together on that seller's sales, as code found, and not which account is\nright. Name no remainder for a parcel whose complete is false, nor for a seller with no name.\nFor any other total or remainder, give each extent as the paper gives it, and say what would be\nadded or taken away and that it has not been worked out."
+assert SYSTEM_V13.count(_LAND_V13) == 1
+#: v14 (plan AN.28, D7): the figures code added up are those of the transactions of any matter, not only of land.
+SYSTEM_V14 = SYSTEM_V13.replace(_LAND_V13, "themselves. Counting is code's work for figures as it is for days: do not add, subtract or\nconvert areas, sums of money or any other figures yourself. Where figures_added is given, code\nadded up the transactions NM found in the papers, property by property or account by account\nand giver by giver - the seller, donor, settlor, lender or payer - areas with areas and sums of\nmoney with sums of money: use a giver's added, and what a stated whole leaves after it (leaves:\nif all of it was that giver's) or how far it goes beyond it (exceeds), exactly as given, and\nnever add one giver's figures to another's. Say what its caveat says - that the sums add every\ntransaction the papers record, whoever states it, rival and repeated accounts included, so a sum\nis a figure to check and never what anyone holds, owes or has paid - and which transactions were\nnot added and why. Where exceeds is given, say that the papers do not fit together on that\ngiver's transactions, as code found, and not which account is right. Name no remainder for a\nproperty or account whose complete is false, nor for a giver with no name. For any other total\nor remainder, give each figure as the paper gives it, and say what would be added or taken away\nand that it has not been worked out.")
 
 
 def _object(fields):
@@ -1650,7 +1655,8 @@ def _copies_shown(context, offered):
 
 
 def _extents_shown(record, context=None):
-    """The land extents added up by code, as the current writer and the review are shown them (plan AN.27, P13d; invariant I6): for
+    """The figures added up by code - land extents, and from research v13 the figures of the transactions of any matter (plan AN.28,
+    D7) - as the current writer and the review are shown them (plan AN.27, P13d; invariant I6): for
     each parcel its sellers (P20 (a)), with the transfers found (each once, and once too where copies of a page report it, P20 (b):
     context gives the pages), what could not be added and why, what each seller's sales add up to, what a paper's stated whole extent
     leaves after them or how far they go beyond it, and the caveat that a sum is only of the transfers found. None where the plan
@@ -1661,7 +1667,8 @@ def _extents_shown(record, context=None):
     return extents.shown(transfers, copy_figures.copies(_copy_pages(context)) if context else ())
 
 
-def _payload(context, record, sources, interpretation, execution, layout, index, time_limits=None, *, worded=False):
+def _payload(context, record, sources, interpretation, execution, layout, index, time_limits=None, *, worded=False,
+             general=False):
     part = layout[index]
     disputes = {}
     if record.get("contract") in research.QUESTION_PLANS:
@@ -1682,7 +1689,8 @@ def _payload(context, record, sources, interpretation, execution, layout, index,
             "interpretation_proposal": interpretation,
             **({"papers_chronology": papers} if papers else {}),
             **({"copies_read_differently": copies} if copies else {}),
-            **({"land_extents": land} if land else {}),
+            # v14 (AN.28, D7): the figures of the transactions of any matter.
+            **({"figures_added" if general else "land_extents": land} if land else {}),
             "this_part": {"part": index + 1, "of": len(layout), "opens_the_answer": index == 0,
                           "dispute": disputes.get(part["dispute_id"]),
                           "other_parts": [disputes[p["dispute_id"]]["name"] for p in layout
@@ -1765,8 +1773,10 @@ def write_section(model, context, research_record, sources, *, index, interpreta
         raise ValueError("A section answers one dispute of the answer's layout")
     presented = contract in PRESENTED
     part = _written(_write_part(model, _payload(context, research_record, sources, interpretation, execution,
-                                                layout, index, time_limits, worded=presented),
-                                **({"system": SYSTEM_V13, "schema": PART_SCHEMA_V13} if presented else {})))
+                                                layout, index, time_limits, worded=presented,
+                                                general=contract == REPAIRED_CONTRACT),
+                                **({"system": SYSTEM_V14 if contract == REPAIRED_CONTRACT else SYSTEM_V13,
+                                    "schema": PART_SCHEMA_V13} if presented else {})))
     _named_limits(part, _limit_names(time_limits))
     if hasattr(model, "last_output"):
         # A shape correction shows the writer the section it wrote.
@@ -2006,7 +2016,7 @@ def repair(model, context, research_record, sources, proposal, faults, *, sectio
     payload = (_overview_payload(context, research_record, sources, sections, interpretation, execution, time_limits,
                                  True) if overview else
                _payload(context, research_record, sources, interpretation, execution, parts(research_record), section,
-                        time_limits, worded=True))
+                        time_limits, worded=True, general=True))
     payload["what_you_wrote"] = {"piece": "the overview that opens the answer" if overview else "one dispute's section"}
     payload["your_paragraphs"] = [{"id": f"U{number}", "kind": unit.get("kind"),
                                    **({"place": unit["place"]} if "place" in unit else {}),
