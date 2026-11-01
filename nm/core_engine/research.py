@@ -1994,7 +1994,9 @@ def _connection_issues(data, context, version=EXACT_FINDER):
     for number, item in enumerate(data["connections"], 1):
         if item["id"] != f"C{number}":
             raise SchemaViolation(f"Connection {number} is numbered {item['id']}, not C{number}")
-        if (item["anchored"], item["places"]) != _anchor_across(item["words"], finder):
+        placed = (_placed_across(item["quoted"] or item["words"], finder) if version == TOLERANT_FINDER else None)
+        if (placed is not None and (item["anchored"], item["places"], item["words"]) != placed) or (
+                placed is None and (item["anchored"], item["places"]) != _anchor_across(item["words"], finder)):
             raise SchemaViolation(f"Connection {item['id']} is not anchored as its words are found in the papers")
     if data.get("appearances", []) != _appearances(data.get("client_people", []), documents):
         raise SchemaViolation("The client's people are not where code finds their names on the pages")
@@ -2123,7 +2125,12 @@ def _stretch_issues(items, failures, context, *, prefix, label, noun, unavailabl
         if last is not None and key < last:
             raise SchemaViolation(f"{label} {name} is out of the order of dates")
         last = key
-        if (item["anchored"], item["pages"]) != _anchor(item["words"], finders[item["source"]]):
+        if version == TOLERANT_FINDER:
+            # v14 (AN.33, D18): placed as it was made - from the words the model gave, by the tolerant finder - and so checked; the
+            # page's own words found again could split at the page's own dots (a form's leader, an ellipsis) and stand elsewhere too.
+            if (item["anchored"], item["pages"], item["words"]) != _placed(item["quoted"] or item["words"], finders[item["source"]]):
+                raise SchemaViolation(f"{label} {name} is not anchored as its words are found in its document")
+        elif (item["anchored"], item["pages"]) != _anchor(item["words"], finders[item["source"]]):
             raise SchemaViolation(f"{label} {name} is not anchored as its words are found in its document")
         if version == TOLERANT_FINDER and item["date_found"] != _date_found(item, numbers[item["source"]], file_numbers):
             raise SchemaViolation(f"{label} {name} says otherwise than code finds where its date stands")
