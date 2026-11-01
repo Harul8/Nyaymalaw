@@ -157,7 +157,7 @@ def test_the_review_v12_holds_an_item_passed_over_in_silence_a_must_fix_said_by_
     assert "An item whose absence would change or weaken what the piece tells the advocate" in review
     assert "every fact the understanding took from the advocate's messages and the papers" in review
     assert "mentions only in passing, without what the advocate needs to act on it (of a proceeding, who brought it and what it seeks)" in review
-    assert "Do not give an item that would only add detail." in review
+    assert "Do not give an item that would only add detail" in review
     assert "or why it did not take up an item of coverage found left out" in review
 
 

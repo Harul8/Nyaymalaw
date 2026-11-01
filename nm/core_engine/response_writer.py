@@ -550,7 +550,8 @@ from the advocate's messages and the papers, each with what it is. One whose wor
 check on a page (located false) is said as what the papers' reading gave, never cited or quoted as
 a page's words. Take up each whose absence would change or weaken what your part tells the
 advocate, citing its pages; say in one limitation unit, with why, which such items you leave out.
-Pass over none of those in silence; one that would only add detail need not be named.
+Pass over none of those in silence; one that would only add detail need not be named: every
+point of the papers' reading stands in the table of what the papers record, shown with the answer.
 Where you mention a proceeding that is pending, say who brought it and what it seeks, as
 papers_chronology records. Set out the papers' events once: where your part is one of several
 (other_parts), the chronology across the disputes is the opening overview's, so set out only the

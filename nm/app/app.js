@@ -3019,6 +3019,57 @@ function renderTurn(entry) {
       into.appendChild(fold);
       return;
     }
+    // WHAT YOUR PAPERS RECORD (plan AN.33, D20; piece 33m): every point NM read from the papers, built by code from the
+    // record and folded at the end, so that none is lost whatever the advice takes up; what NM could not check on a page, a
+    // date found nowhere, the differences between papers and what was set aside are each said as such.
+    if (el.kind === 'PAPERS' && el.papers) {
+      const make = (tag, className, text) => {
+        const node = document.createElement(tag);
+        if (className) node.className = className;
+        if (text !== undefined) node.textContent = text;
+        return node;
+      };
+      const events = el.papers.events || [];
+      const fold = make('details', 'answer-checked answer-papers');
+      fold.appendChild(make('summary', '', `${el.text} (${events.length} ${events.length === 1 ? 'point' : 'points'})`));
+      fold.appendChild(make('p', 'board-lede', 'Every point NM read from your papers, whether or not the advice above takes it '
+        + 'up. Each is as its paper says it, not proved; check anything that matters against the paper itself.'));
+      const dated = events.filter((event) => event.dated);
+      const undated = events.filter((event) => !event.dated);
+      if (dated.length) fold.append(make('h4', 'board-h', 'In date order'), ...eventRows(dated, make));
+      if (undated.length) fold.append(make('h4', 'board-h', 'Not dated in the paper'), ...eventRows(undated, make));
+      const where = (places) => places.map((place) => `${place.document}, page ${place.page}`).join('; ');
+      const together = el.papers.together || [];
+      if (together.length) {
+        fold.appendChild(make('h4', 'board-h', 'Read side by side'));
+        const list = make('ul', 'board-list');
+        for (const item of together) {
+          const said = `${SIDE_BY_SIDE[item.kind] || SIDE_BY_SIDE.other}: ${item.point}${item.why ? ` — ${item.why}` : ''}`;
+          list.appendChild(make('li', item.located ? '' : 'board-status search_failed', item.located
+            ? `${said} · ${where(item.places)}` : `${said} · its words were not found on the pages, so it rests on nothing yet`));
+        }
+        fold.appendChild(list);
+      }
+      const aside = el.papers.set_aside || [];
+      if (aside.length) {
+        fold.appendChild(make('h4', 'board-h', 'Set aside after checking'));
+        const list = make('ul', 'board-list');
+        for (const item of aside) list.appendChild(make('li', '', `${item.what} · ${item.document} · ${item.why}`));
+        fold.appendChild(list);
+      }
+      const unread = el.papers.unread || [];
+      if (unread.length) {
+        fold.appendChild(make('h4', 'board-h', 'Not read'));
+        const list = make('ul', 'board-list');
+        for (const item of unread) {
+          list.appendChild(make('li', 'board-status search_failed', `${item.document}, pages ${item.pages}: NM could not read these, `
+            + 'so nothing on them is listed'));
+        }
+        fold.appendChild(list);
+      }
+      into.appendChild(fold);
+      return;
+    }
     // HOW NM CHECKED THIS ANSWER (P39): what the independent check still suggests could be
     // added, put better or go, in its own words, by part, folded at the end.
     if (el.kind === 'CHECKED' && Array.isArray(el.checked)) {
@@ -3628,6 +3679,10 @@ function eventRows(events, make) {
       const item = make('li', 'board-event');
       if (event.dated) item.appendChild(make('span', 'board-when', `${event.date} `));
       item.appendChild(make('span', '', event.what));
+      // Research v14 (plan AN.33, D18): a date NM finds nowhere in the papers is kept beside the event, never stated as the papers'.
+      if (event.date_as_read) {
+        item.appendChild(make('span', 'board-status', ` · read as ${event.date_as_read}, a date NM finds nowhere in your papers`));
+      }
       if (event.kind === 'pending') item.appendChild(make('span', 'board-certainty', 'Pending'));
       const where = make('span', 'board-status', ` · ${eventPlace(event)}${event.said_by ? ` · said by ${event.said_by}` : ''}`);
       where.title = event.words;
@@ -3784,6 +3839,20 @@ function renderFigures(subjects, make) {
 const SIDE_BY_SIDE = { client_appears: 'Your client’s people elsewhere', against_client: 'Against your client',
   after_death: 'After a death', after_time_limit: 'After a time limit or order', further_subject: 'A further asset, account or case',
   papers_differ: 'Where your papers differ', other: 'Read together' };
+// SET ASIDE (plan AN.33, D18; piece 33m): what NM's reading gave that a second look found the papers do not record, with why. Listed so
+// that nothing NM read disappears without trace; never used as a point.
+function renderSetAside(items, make) {
+  if (!Array.isArray(items) || !items.length) return [];
+  const fold = make('details', 'folded');
+  fold.appendChild(make('summary', '', `Set aside after checking (${items.length})`));
+  fold.appendChild(make('p', 'board-lede', 'What NM first read from your papers but, looking again at the pages, found they do not '
+    + 'record. It is not used; check it against the papers if it matters.'));
+  const list = make('ul', 'board-list');
+  for (const item of items) list.appendChild(make('li', '', `${item.what} · ${item.document} · ${item.why}`));
+  fold.appendChild(list);
+  return [fold];
+}
+
 function renderPapersTogether(board, make) {
   const connections = board.connections || [];
   const appearances = (board.appearances || []).filter((one) => one.places.length || one.near.length);
@@ -3862,6 +3931,7 @@ function renderChatBoard(board) {
   out.push(...renderCopies(board.copies, make));
   out.push(...renderFigures(board.figures, make));
   out.push(...renderPapersTogether(board, make));
+  out.push(...renderSetAside(board.set_aside, make));
   const points = (board.understanding && board.understanding.open_points) || [];
   const parts = (board.parties || []).flatMap((party) => (party.parts || []).map((part) => ({ party, part })));
   const subjects = board.subjects || [];
@@ -4462,7 +4532,7 @@ function renderParts(into, elements, entry, render) {
     // outside the parts (17 and 18 Oct 2026).
     // From rendering v18 the checks folded last and the time limits no section names stand
     // outside the parts too (P39, P40).
-    if (el.kind === 'NOTICE' || el.kind === 'NEEDS' || el.kind === 'CHECKED' || el.outside
+    if (el.kind === 'NOTICE' || el.kind === 'NEEDS' || el.kind === 'CHECKED' || el.kind === 'PAPERS' || el.outside
         || (el.kind === 'TIME_LIMITS' && el.items.every((item) => item.outside))) { render(into, el); continue; }
     if (el.kind !== 'HEADING') { render(body, el); continue; }
     number += 1;
@@ -4527,7 +4597,7 @@ function renderShownSoFar(elements) {
       box.appendChild(list);
       continue;
     }
-    if (el.kind === 'CHECKED') continue;
+    if (el.kind === 'CHECKED' || el.kind === 'PAPERS') continue;
     const text = el.kind === 'FALLBACK' ? String(el.text || '').split('\n')[0] : el.text;
     box.appendChild(make('p', `el ${el.kind}${el.disclosure ? ' disclosure' : ''}`, text));
   }

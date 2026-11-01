@@ -431,7 +431,8 @@ SYSTEM_V12 = SYSTEM_V12.replace(
     "words, misleads. An item whose absence would change or weaken what the piece tells the advocate, which "
     "the\npiece neither takes up nor names as left out with a reason that holds, is a must-fix, and so is one\nthe piece mentions only in "
     "passing, without what the advocate needs to act on it (of a proceeding,\nwho brought it and what it seeks): give it in missing, "
-    "with its ID and why it matters to the\nadvocate. Do not give an item that would only add detail. An overview need not take up "
+    "with its ID and why it matters to the\nadvocate. Do not give an item that would only add detail: every point of the papers' reading stands in "
+    "the\ntable of what the papers record, shown with the answer. An overview need not take up "
     "what\nthe sections it opens take up.\n\n"
     "List only what you find. Empty lists mean the piece can be shown as it is, its folds as placed.")
 assert SYSTEM_V12.count("words: the shortest stretch") == 1 and "writer_notes" in SYSTEM_V12

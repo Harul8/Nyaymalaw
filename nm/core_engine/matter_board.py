@@ -81,6 +81,11 @@ def _event(group, sent):
     """One event of the timeline: the plan's event that stands for the group (research.events_once) and, where other papers record the
     same event on copies of its page (plan AN.27, P22), where else it is."""
     event = group["event"]
+    # Research v14 (plan AN.33, D18; piece 33m): a date whose numbers code finds nowhere in the papers is shown undated, with the
+    # reading's date beside it - never erased, never stated as the papers' date.
+    if event.get("date_found") == "nowhere":
+        return {**_event({**group, "event": {**event, "sort": "", "date_found": "none"}}, sent), "date": "undated",
+                "date_as_read": event["date"]}
     return {"id": event["id"], "date": event["date"], "dated": bool(event["sort"]), "kind": event["kind"],
             "what": event["what"], "said_by": event["said_by"], "document": event["document"],
             "pages": list(event["pages"]),
@@ -150,6 +155,16 @@ def _figures(record, pages):
     return figures.shown(transactions, copy_figures.copies(pages))
 
 
+def _set_aside(record):
+    """Research v14 (plan AN.33, D18; piece 33m): what settling a failed check found the papers do not record, with why - listed,
+    never kept as a point. Nothing where the plan kept no such list."""
+    proposal = record["plan"]["proposal"]
+    if "withdrawn" not in proposal:
+        return {}
+    return {"set_aside": [{"kind": item["kind"], "document": item["document"], "what": item["what"], "why": item["why"]}
+                          for item in proposal["withdrawn"]]}
+
+
 def _side_by_side(record):
     """What research v13 found with the papers read side by side (plan AN.28, piece 3e), as the plan kept it: each point with the
     pages code found its words on, or marked as not found; whether the papers could be read together; and where each of the client's
@@ -179,12 +194,13 @@ def _dispute(d, record, work, checklists):
             "law": _law(questions, listed is not None)}
 
 
-def _pages(rows):
-    """The pages of the documents a conversation's saved turns carry, in reading order, as the finder holds them."""
+def _pages(rows, version=research.EXACT_FINDER):
+    """The pages of the documents a conversation's saved turns carry, in reading order, as the finder holds them. version: the
+    finder the research record shown was made under (research v14: the tolerant one; plan AN.33, piece 33m)."""
     return research.Pages(
-        {"document": document["name"], "page": page["number"], "read_by": page["read_by"],
-         "recording": bool(document.get("recording")), "text": page["text"]}
-        for row in rows for document in row.get("documents", ()) for page in document["pages"])
+        ({"document": document["name"], "page": page["number"], "read_by": page["read_by"],
+          "recording": bool(document.get("recording")), "text": page["text"]}
+         for row in rows for document in row.get("documents", ()) for page in document["pages"]), version)
 
 
 def _where(words, rows, pages=None):
@@ -238,7 +254,8 @@ def board(rows):
             continue
         work = {item["question_id"]: item["id"] for item in record["plan"]["work"]}
         names = {dispute["id"]: dispute["name"] for dispute in understanding["disputes"]}
-        pages = _pages(rows[:index + 1])
+        pages = _pages(rows[:index + 1], research.TOLERANT_FINDER if record.get("contract") in research.SETTLED
+                       else research.EXACT_FINDER)
         sent = _sent(rows[:index + 1])
         # What each dispute needs, saved with this turn from its answer (turn v5, 18 Oct
         # 2026); a dispute's checklist is shown only under the same id and name.
@@ -271,6 +288,7 @@ def board(rows):
             "copies": _copies(sent),
             "figures": _figures(record, sent),
             **_side_by_side(record),
+            **_set_aside(record),
             "related_points": [{"point": r["point"], "why": r["why_it_matters"], "dispute_id": r["dispute_id"] or None,
                                 "dispute": names.get(r["dispute_id"])} for r in understanding["related_points"]],
         }

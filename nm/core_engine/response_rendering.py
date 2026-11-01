@@ -5,7 +5,7 @@ from copy import deepcopy
 from datetime import date
 import re
 
-from nm.core_engine import answer_sections, calculation, checklist, limitation, research, response_authorities
+from nm.core_engine import answer_sections, calculation, checklist, copy_figures, limitation, research, response_authorities
 from nm.core_engine import response_review, response_writer
 from nm.shared.citation_contracts import case_short_names, statute_title
 from nm.shared.model_port import USAGE_LIMIT_WORDS
@@ -350,7 +350,9 @@ def _cited_words(text, sources, authority, *, short=False):
 NOT_PARAGRAPHS = frozenset({"HEADING", "WORKING", "NOTICE", "HELD", "NEEDS", "NOTE", "FALLBACK", "EDITED",
                             "WAITING",
                             # v18: code's labels and rows, the items asked for and the checks folded.
-                            "IN_SHORT", "ROW", "SUBHEAD", "NEED_GROUP", "NEED_ITEM", "YOUR_CALL", "CHECKED"})
+                            "IN_SHORT", "ROW", "SUBHEAD", "NEED_GROUP", "NEED_ITEM", "YOUR_CALL", "CHECKED",
+                            # Research v14 (plan AN.33, piece 33m): what the papers record, folded at the end.
+                            "PAPERS"})
 #: v14: the heading under which every question to the advocate is gathered.
 NEEDS = "What I need from you"
 
@@ -1034,15 +1036,16 @@ def _shown_paragraph(unit, position, section, sources, asks, *, kind=None):
     return element
 
 
-def _given_words(words, context):
+def _given_words(words, context, version=research.EXACT_FINDER):
     """Whether a fact's quoted words are the advocate's own or a document's, as the board
     finds them (the one finder, research.Pages; plan AN.27, P3): only such words stand in a
-    note code builds."""
+    note code builds. version: the finder the research record was made under (research v14:
+    the tolerant one; plan AN.33, piece 33m)."""
     pieces = research.fact_pieces(words)
     advocate = research._bare(" ".join(
         [row["text"] for row in context["conversation"] if row.get("record_role") == "original_account"]
         + [context["latest"]["text"]]))
-    pages = research.Pages.of_context(context)
+    pages = research.Pages.of_context(context, version)
     return bool(pieces) and all(piece in advocate or pages.holding(piece) is not None for piece in pieces)
 
 
@@ -1074,8 +1077,9 @@ def _fallback(saved, name, context, research_record, sources):
                        "You can send it again, or narrow it.",
                        fallback={"section": None, "why": _UNSHOWN[reason], "facts": [], "provisions": [],
                                  "still_needed": [], "questions": []})
+    finder = research.TOLERANT_FINDER if research_record.get("contract") in research.SETTLED else research.EXACT_FINDER
     facts = [fact["advocate_words"] for fact in understanding["facts"]
-             if fact["id"] in dispute["fact_ids"] and _given_words(fact["advocate_words"], context)]
+             if fact["id"] in dispute["fact_ids"] and _given_words(fact["advocate_words"], context, finder)]
     # Research v10 keeps each dispute's picks apart; research.chosen reads every version's.
     picked, provisions, seen = research.chosen(research_record), [], set()
     for work in research_record["plan"]["work"]:
@@ -1445,6 +1449,47 @@ def _suggested(piece):
             for finding in answer_sections.beside(piece) if finding["category"] in response_review.SUGGESTIONS]
 
 
+#: Research v14 (plan AN.33, D20; piece 33m): what the papers record, every point of it, folded at the end of the answer.
+PAPERS = "What your papers record"
+
+
+def papers_record(research_record, context):
+    """Research v14 (plan AN.33, D20; piece 33m; owner, 1 Nov 2026: "writer shouldnt ignore any legally meaningful point s"):
+    every point the papers' reading set out, as the answer shows it folded at its end, so that none is lost whatever the advice
+    takes up - each event once (research.events_once; copies found by code), in the plan's order, with its paper and pages,
+    whether code found its words on the page, and a date whose numbers code finds nowhere in the papers shown undated with the
+    reading's date beside it; every point read side by side, a difference between papers among them; what settling set aside
+    as not in the papers, with why; and the stretches that could not be read. None before v14, or where the plan kept nothing
+    of the papers. Code builds it all from the record; no model writes it."""
+    if research_record.get("contract") not in research.SETTLED:
+        return None
+    proposal = research_record["plan"]["proposal"]
+    events, together = proposal.get("chronology") or [], proposal.get("connections") or []
+    aside, unread = proposal.get("withdrawn") or [], proposal.get("chronology_failures") or []
+    if not (events or together or aside or unread):
+        return None
+    copied = copy_figures.copies(response_writer._copy_pages(context))
+    recorded = {row["source_id"].rsplit("p", 1)[0] for row in context.get("documents", ()) if row["document"].get("recording")}
+
+    def shown(group):
+        event, nowhere = group["event"], group["event"]["date_found"] == "nowhere"
+        return {"id": event["id"], "date": "undated" if nowhere else event["date"], "dated": bool(event["sort"]) and not nowhere,
+                **({"date_as_read": event["date"]} if nowhere else {}), "kind": event["kind"], "what": event["what"],
+                "said_by": event["said_by"], "document": event["document"], "pages": list(event["pages"]),
+                "words": event["words"], "located": event["anchored"],
+                **({"recording": True} if event["source"] in recorded else {}),
+                **({"also_in": [{"document": other["document"], "pages": list(other["pages"])} for other in group["also"]]}
+                   if group["also"] else {})}
+    return {"events": [shown(group) for group in research.events_once(events, copied)],
+            "together": [{"id": item["id"], "kind": item["kind"], "point": item["point"], "why": item["why_it_matters"],
+                          "located": item["anchored"],
+                          "places": [{"document": place["document"], "page": place["page"]} for place in item["places"]]}
+                         for item in together],
+            "set_aside": [{"kind": item["kind"], "document": item["document"], "what": item["what"], "why": item["why"]}
+                          for item in aside],
+            "unread": [{"document": failure["document"], "pages": failure["pages"]} for failure in unread]}
+
+
 def _render_presented(context, research_record, sources, *, sections, cross_check, overview, time_limits,
                       waiting=(), repaired=False):
     """v18: an answer written dispute by dispute for the advocate (writer v13, review v11), laid
@@ -1609,6 +1654,10 @@ def _render_presented(context, research_record, sources, *, sections, cross_chec
         [("the opening", _suggested(opening))] if opening is not None else []) + [
         (called(sections[position]) if many else "this answer", _suggested(pieces[position]))
         for position in positions if pieces[position] is not None] if said]
+    # Research v14 (plan AN.33, piece 33m): what the papers record, every point of it, folded before how NM checked the answer.
+    papers = papers_record(research_record, context)
+    if papers is not None:
+        elements.append(_label("PAPERS", PAPERS, papers=papers))
     if checked:
         elements.append(_label("CHECKED", _CHECKED, checked=checked))
     return elements

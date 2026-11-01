@@ -137,7 +137,8 @@ def test_the_board_keeps_a_recordings_mark_and_finds_words_on_the_page_that_hold
 def test_the_board_builds_the_pages_once_for_all_its_facts(monkeypatch):
     built = []
     real = matter_board._pages
-    monkeypatch.setattr(matter_board, "_pages", lambda rows: built.append(1) or real(rows))
+    # Research v14 (plan AN.33, piece 33m): the board builds them with the finder its record was made under.
+    monkeypatch.setattr(matter_board, "_pages", lambda rows, version=research.EXACT_FINDER: built.append(version) or real(rows, version))
     rows = [{"turn_id": "t1", "message": "x", "documents": [saved("order.pdf", [(8, FOOT), (9, HEAD)])],
              "response": {"at": "2026-10-28T10:00:00+00:00"}, "records": {},
              "activities": {"research": {"contract": research.CONTRACT, "plan": {"proposal": {"understanding": {
@@ -145,7 +146,7 @@ def test_the_board_builds_the_pages_once_for_all_its_facts(monkeypatch):
                  "facts": [{"id": f"F{n}", "fact": "A fact.", "certainty": "reported",
                             "advocate_words": "the petition is disposed of"} for n in range(5)]}}, "work": []}}}}]
     shown = matter_board.board(rows)
-    assert [fact["from"] for fact in shown["facts"]] == ["document"] * 5 and len(built) == 1
+    assert [fact["from"] for fact in shown["facts"]] == ["document"] * 5 and built == [research.TOLERANT_FINDER]
 
 
 def test_the_fallback_note_shows_a_fact_whose_words_run_over_a_page_break_and_not_one_that_is_not_in_the_papers():
