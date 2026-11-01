@@ -91,7 +91,7 @@ def rounds(record, layout, context=None):
     answer's pieces: one for each part of layout - its sections and, where there are several, the overview), at most MAX_ROUNDS
     and at most as many as let every piece's allowances fit within calls.ALLOWANCE; one for a record before v14, as its answers were
     made. Code reads it again from the saved record and context, so a saved answer is checked against the allowance it was made
-    under."""
+    under. The fit counts each piece's mend (MENDS) beside its rounds."""
     if record.get("contract") not in research.SETTLED:
         return TAKE_UPS
     pieces = max(1, len(layout))
@@ -101,8 +101,14 @@ def rounds(record, layout, context=None):
         items = [item for item in items if "weight" in item or item["kind"] == "fact"]
     share = -(-len(items) // pieces)
     wanted = 1 + max(0, -(-(share - ROUND_ITEMS) // ROUND_ITEMS))
-    fits = (ALLOWANCE // pieces - SECTION_ALLOWANCE + 1) // 2
+    fits = (ALLOWANCE // pieces - SECTION_ALLOWANCE + 1 - MENDS) // 2
     return max(1, min(MAX_ROUNDS, wanted, fits))
+
+
+#: From research v14 (plan AN.33, piece 33l; owner, 1 Nov 2026: "let model decide ... to drop only that failed portion"): once in a
+#: piece, where blocking cut statements out of paragraphs, the writer may write each such paragraph again around what remains, on an
+#: allowance of its own (mend).
+MENDS = 1
 
 
 def allowances(rounds_):
@@ -366,20 +372,77 @@ def _faults_of(piece, context, section):
     return faults, sorted(items)
 
 
-def _blocked_draft(draft, faults, items, context, sources, section, dispute_id, *, final=False):
+def _mend_faults(cuts):
+    """What the mend of a piece is asked about (plan AN.33, piece 33l): each paragraph a blocking cut statements out of, with them."""
+    return [{"position": position, "kind": "cut", "words": list(removed), "why": response_writer.MEND_WHY, "near": None}
+            for position, removed in sorted(cuts.items())]
+
+
+def _mend_shown(proposal, cuts):
+    """The piece as its mend is shown it (piece 33l): each paragraph cut as it now stands."""
+    standing = deepcopy(proposal)
+    for position, removed in cuts.items():
+        unit = standing["units"][position - 1]
+        unit["text"] = "".join(piece for piece in response_writer.sentences(unit["text"]) if piece not in removed).strip()
+    return standing
+
+
+def _mended(proposal, cut, left_out, faults, returned, overview, offered):
+    """What a mend made of a piece (piece 33l), as the piece and its replay both apply it: each paragraph the writer rewrote takes
+    its place and is cut no more - unless it says again a statement that was taken out, which code sets aside, the paragraph
+    staying as cut; each it withdrew is left out; one it kept stays as cut. Returns (proposal, cut, left_out, decisions,
+    set_aside)."""
+    cuts = {fault["position"]: fault["words"] for fault in faults}
+    changed, decisions, aside = response_writer.apply_repairs(_mend_shown(proposal, cuts), returned, faults, overview=overview)
+    plain = lambda words: " ".join(str(words).split()).casefold()  # noqa: E731
+    again = {decision["position"] for decision in decisions if decision["action"] == "rewrite" and any(
+        plain(removed) and plain(removed) in plain(changed["units"][decision["position"] - 1].get("text", ""))
+        for removed in cuts[decision["position"]])}
+    if again:
+        named = [str(given.get("paragraph") or "").strip() if isinstance(given, dict) else "" for given in returned["repairs"]]
+        aside = [*aside, *({"repair": named.index(f"U{position}") + 1 if f"U{position}" in named else 0,
+                           "why": f"U{position}: written again, it says again what was taken out"} for position in sorted(again))]
+        decisions = [decision for decision in decisions if decision["position"] not in again]
+    out, cut = deepcopy(proposal), {position: list(removed) for position, removed in cut.items()}
+    for decision in decisions:
+        if decision["action"] == "rewrite":
+            out["units"][decision["position"] - 1] = changed["units"][decision["position"] - 1]
+            cut.pop(decision["position"], None)
+    withdrawn = [decision["position"] for decision in decisions if decision["action"] == "withdraw"]
+    if withdrawn:
+        cut, left_out = response_writer.block(out, [{"position": position, "words": []} for position in withdrawn], offered,
+                                              cut, left_out)
+    return out, cut, list(left_out), decisions, aside
+
+
+def _blocked_draft(draft, faults, items, context, sources, section, dispute_id, *, final=False, mend=None):
     """A v14 draft with what its review and date check still fault blocked as well as what it already had blocked
     (AN.28): the sentences holding each paragraph's words at fault cut - every paragraph at fault left out when
-    final - and the checklist items at fault left out. None where nothing of it would remain."""
+    final - and the checklist items at fault left out. None where nothing of it would remain. mend: the piece's mend, if it made
+    one and it is not yet applied (plan AN.33, piece 33l): where this blocking cut statements, the mend is of them - asked about
+    them exactly, its decisions as code makes them - and what it made is applied. Returns (draft, whether the mend was applied)."""
+    offered = answer_sources.aliases(sources)
     left_out, cut, dropped_items = response_writer._blocked(draft, context)
-    cut, left_out = response_writer.block(draft["proposal"], [{**fault, "words": []} for fault in faults] if final
-                                          else faults, answer_sources.aliases(sources), cut, left_out)
-    if len(left_out) >= len(draft["proposal"]["units"]):
-        return None
-    blocked = response_writer.accept(draft["proposal"], context, sources, contract=response_writer.REPAIRED_CONTRACT,
+    before = {position: list(removed) for position, removed in cut.items()}
+    proposal = draft["proposal"]
+    cut, left_out = response_writer.block(proposal, [{**fault, "words": []} for fault in faults] if final
+                                          else faults, offered, cut, left_out)
+    cuts = {position: removed for position, removed in cut.items() if removed != before.get(position)}
+    applied = mend is not None and bool(cuts)
+    if applied:
+        if mend["faults"] != _mend_faults(cuts):
+            raise ValueError("A mend differs from what its blocking cut")
+        proposal, cut, left_out, decisions, aside = _mended(proposal, cut, left_out, mend["faults"], mend["returned"],
+                                                            section == response_writer.OVERVIEW, offered)
+        if (decisions, aside) != (mend["decisions"], mend["set_aside"]):
+            raise ValueError("A mend differs from what code makes of what it returned")
+    if len(left_out) >= len(proposal["units"]):
+        return None, applied
+    blocked = response_writer.accept(proposal, context, sources, contract=response_writer.REPAIRED_CONTRACT,
                                      parts=[{"dispute_id": dispute_id, "units": 1}], section=section, left_out=left_out,
                                      cut=cut)
     items = sorted(set(dropped_items) | set(items))
-    return response_writer.trim(blocked, items) if items else blocked
+    return (response_writer.trim(blocked, items) if items else blocked), applied
 
 
 def unanswered(sections, worked):
@@ -472,6 +535,8 @@ class _Answering:
         #: piece is written (plan AN.33, D21).
         self.rounds = rounds({"contract": researched.contract, "plan": researched.plan}, self.layout, context)
         self.own, self.take_ups = allowances(self.rounds)
+        #: The mends each piece may make from research v14 (plan AN.33, piece 33l).
+        self.mends = MENDS if researched.contract in research.SETTLED else 0
         #: The service failure that left each scope unanswered, should the whole turn fail so.
         self.failures = {}
         self._reviews, self._lock = 0, threading.Lock()
@@ -615,7 +680,7 @@ class _Answering:
         overview = section == response_writer.OVERVIEW
         refused, looks, accepted, notes, trims = [], [], [], [], []
         state = {"proposal": None, "cut": {}, "left_out": [], "items": [], "undo": None, "blocking": False,
-                 "second": 0, "taken": 0, "asked": set()}
+                 "second": 0, "taken": 0, "asked": set(), "mended": False}
         reviewed, passed, correction, better = None, None, None, 0
         pending = None
 
@@ -633,8 +698,31 @@ class _Answering:
                 state["cut"], state["left_out"])
 
         def spent():
-            """The corrections made within the piece's own allowance: all the scope's but its take-ups."""
-            return self.calls.used(scope) - state["taken"]
+            """The corrections made within the piece's own allowance: all the scope's but its take-ups and its mend."""
+            return self.calls.used(scope) - state["taken"] - state["mended"]
+
+        def mend(cuts):
+            """Plan AN.33 (piece 33l): once in a piece, the paragraphs blocking cut statements out of (cuts: {position: the sentences
+            cut}), shown as they now stand to one second look, which writes each again around what remains where it no longer reads
+            whole, keeps it, or takes it out. False where nothing was cut, the piece was mended already or no correction is left."""
+            if state["mended"] or not cuts or not self.mends:
+                return False
+            try:
+                self.calls.spend("core_response_repair")
+            except CorrectionUnavailable:
+                return False
+            state["mended"] = True
+            self.report("revising")
+            faults = _mend_faults(cuts)
+            returned = response_writer.repair(self.calls, self.context, record, sources, _mend_shown(state["proposal"], cuts),
+                                              faults, section=section, interpretation=self.interpretation,
+                                              execution=execution, time_limits=self.time_limits, sections=sections)
+            # Written again around what remained, a paragraph is new: nothing of it stays cut (the replay makes the same).
+            state["proposal"], state["cut"], state["left_out"], decisions, aside = _mended(
+                state["proposal"], state["cut"], state["left_out"], faults, returned, overview, offered)
+            looks.append({"faults": deepcopy(faults), "returned": deepcopy(returned), "decisions": deepcopy(decisions),
+                          "set_aside": aside})
+            return True
 
         def look(faults):
             """One second look at the paragraphs at fault, applied; False when the allowance is spent - the piece's own,
@@ -859,8 +947,19 @@ class _Answering:
             # 6. What still fails blocked; what remains reviewed again.
             if len(trims) >= TRIMS_V14:
                 return finish("found")
+            before = {position: list(removed) for position, removed in state["cut"].items()}
             block(faults, final=len(trims) == TRIMS_V14 - 1)
             state["blocking"] = True
+            # Plan AN.33 (piece 33l): a paragraph a cut leaves short of its own sense may be written again, once in the piece.
+            try:
+                mend({position: removed for position, removed in state["cut"].items() if removed != before.get(position)})
+            except (SchemaViolation, CorrectionUnavailable) as exc:
+                self.calls.refused(exc)
+                refused.append(_refusal("writing", self.calls.last_output, refusal_reason(exc)))
+            except _STOP:
+                raise
+            except ModelError as exc:
+                return finish(self._failed(scope, exc))
 
     def _piece(self, scope, operation, write, kwargs, researched):
         refused = []
@@ -890,7 +989,7 @@ class _Answering:
         # v14 (AN.29, D10): the take-ups of what the section passed over have an allowance of their own beside the section's,
         # both set up front from the matter (AN.33, D21).
         repaired = self.writer == response_writer.REPAIRED_CONTRACT
-        with self.calls.scope(scope, self.own + self.take_ups if repaired else SECTION_ALLOWANCE):
+        with self.calls.scope(scope, self.own + self.take_ups + self.mends if repaired else SECTION_ALLOWANCE):
             piece = (self._repaired(scope, "core_response_writer", self._write(index, researched), {}, researched,
                                     section=index)
                      if self.writer == response_writer.REPAIRED_CONTRACT else
@@ -949,7 +1048,7 @@ class _Answering:
                                                   execution=execution, time_limits=self.time_limits,
                                                   contract=self.writer)
         repaired = self.writer == response_writer.REPAIRED_CONTRACT
-        with self.calls.scope("o", self.own + self.take_ups if repaired else SECTION_ALLOWANCE):
+        with self.calls.scope("o", self.own + self.take_ups + self.mends if repaired else SECTION_ALLOWANCE):
             if repaired:
                 return self._repaired("o", "core_response_overview", write,
                                       {"sections": drafts, "unanswered": missing or None}, researched,
@@ -1139,15 +1238,22 @@ def _chain_valid_v14(saved, context, record, sources, execution, time_limits, se
             raise ValueError("A section never reviewed stands as a note for why")
         return
     _piece_valid(reviewed, context, record, sources, execution, time_limits, section, dispute_id, kwargs)
+    # Plan AN.33 (piece 33l): the piece's mend, if it made one - a second look whose every fault is a cut.
+    mends = [look for look in saved.get(LOOKS) or () if look["faults"] and all(fault.get("kind") == "cut" for fault in look["faults"])]
+    if len(mends) > 1:
+        raise ValueError("A piece is mended once")
+    mend = mends[0] if mends else None
     current = reviewed
     for number, trimmed in enumerate(trims):
         faults, items = _faults_of(current, context, section)
         if not faults and not items:
             raise ValueError("A section is trimmed only of what its review still faulted")
         _piece_valid(trimmed, context, record, sources, execution, time_limits, section, dispute_id, kwargs)
-        if trimmed["draft"] != _blocked_draft(current["draft"], faults, items, context, sources, section, dispute_id,
-                                              final=number == TRIMS_V14 - 1):
+        expected, applied = _blocked_draft(current["draft"], faults, items, context, sources, section, dispute_id,
+                                           final=number == TRIMS_V14 - 1, mend=mend)
+        if trimmed["draft"] != expected:
             raise ValueError("A trimmed section differs from what its review still faulted")
+        mend = None if applied else mend
         current = trimmed
     faults, items = _faults_of(current, context, section)
     if not faults and not items:
@@ -1203,7 +1309,8 @@ def validate(activity, context, record, sources, worked, *, kept=True, looked=Fa
     chain = _chain_valid_v14 if looked else _chain_valid
     layout = response_writer.parts(record)
     many, time_limits, execution = len(layout) > 1, calculation.for_answer(worked), activity["execution"]
-    allowed = sum(allowances(rounds(record, layout, context))) if looked else SECTION_ALLOWANCE + TAKE_UPS
+    allowed = (sum(allowances(rounds(record, layout, context))) + (MENDS if record.get("contract") in research.SETTLED else 0)
+               if looked else SECTION_ALLOWANCE + TAKE_UPS)
     indices = list(range(1, len(layout))) if many else [0]
     sections = activity["sections"]
     if not isinstance(sections, list) or len(sections) != len(indices):

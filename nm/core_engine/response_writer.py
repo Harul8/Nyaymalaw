@@ -2165,6 +2165,13 @@ REPAIR_SCHEMA = _repair_schema(_units_v13(True)["items"])
 OVERVIEW_REPAIR_SCHEMA = _repair_schema(OVERVIEW_SCHEMA_V13["properties"]["units"]["items"])
 #: The second look's answer limit: only the paragraphs at fault, with reasoning.
 REPAIR_OUTPUT = 24000
+#: What a paragraph that blocking cut statements out of is shown with, in a second look made once in a piece for it (research v14;
+#: plan AN.33, piece 33l): your_paragraphs shows it as it now stands.
+MEND_WHY = ("Code took the statements in words_at_fault out of this paragraph: its checks or the review found them not borne out, "
+            "and your_paragraphs shows the paragraph as it now stands. If it no longer reads whole - it leans on what was taken out, "
+            "or the action it asked for went with it - rewrite it around what remains, adding nothing the statements taken out said. "
+            "If it reads whole as it stands, give same_thing, with the paragraph's own words as page_words. If nothing worth keeping "
+            "remains, withdraw it.")
 
 
 def repair(model, context, research_record, sources, proposal, faults, *, section, interpretation=None,

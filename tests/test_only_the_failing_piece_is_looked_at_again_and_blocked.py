@@ -135,8 +135,13 @@ def test_a_date_that_stays_unsupported_costs_only_its_sentence_never_the_paragra
     model = Looking({"D1": lambda: section_of("D1", middle)}, rewrite(middle))
     ctx, elements, activity = answered(model)
     first = activity["sections"][0]
-    assert len(first[answer_sections.LOOKS]) == 2 and first["fallback"] is None
-    assert [look["faults"][0]["words"] for look in first[answer_sections.LOOKS]] == [["1 March 2019"], ["1 March 2019"]]
+    assert len(first[answer_sections.LOOKS]) == 3 and first["fallback"] is None
+    assert [look["faults"][0]["words"] for look in first[answer_sections.LOOKS][:2]] == [["1 March 2019"], ["1 March 2019"]]
+    # Plan AN.33 (piece 33l): then the mend of the paragraph the cut left; this double writes the cut statement back, which
+    # code sets aside, so the paragraph stays as cut.
+    mend = first[answer_sections.LOOKS][2]
+    assert mend["faults"][0]["kind"] == "cut" and mend["decisions"] == []
+    assert mend["set_aside"] == [{"repair": 1, "why": "U2: written again, it says again what was taken out"}]
     trimmed, = first["trims"]
     shown = [unit["text"] for unit in trimmed["draft"]["units"]]
     assert shown[1] == "Its second section defines the offence. The papers do not say when the acts took place."

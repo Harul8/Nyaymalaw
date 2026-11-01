@@ -55,10 +55,11 @@ def test_one_round_is_the_allowance_before_and_the_pieces_allowances_fit_within_
     ctx, record, sources = matter()
     many = with_items(record, ctx, 400)
     found = {pieces: answer_sections.rounds(many, ONE * pieces, ctx) for pieces in (1, 3, 4, 5, 6, 7, 8, 16)}
-    assert found == {1: 4, 3: 4, 4: 3, 5: 2, 6: 2, 7: 1, 8: 1, 16: 1}
+    # Each piece's mend (plan AN.33, piece 33l) counts in the fit beside its rounds.
+    assert found == {1: 4, 3: 4, 4: 3, 5: 2, 6: 1, 7: 1, 8: 1, 16: 1}
     for pieces, allowed in found.items():
         if allowed > 1:
-            assert pieces * sum(answer_sections.allowances(allowed)) <= ALLOWANCE, pieces
+            assert pieces * (sum(answer_sections.allowances(allowed)) + answer_sections.MENDS) <= ALLOWANCE, pieces
 
 
 def answer(model):
@@ -150,13 +151,13 @@ def test_each_further_round_is_also_a_further_second_look_and_a_saved_answer_is_
     plain = Mending(lambda round_, payload: [])
     answer(plain)
     assert len(plain.looks) == SECTION_ALLOWANCE, "one round: the second looks there were before"
-    monkeypatch.setattr(answer_sections, "ROUND_ITEMS", 3)  # three rounds: four second looks of its own
+    monkeypatch.setattr(answer_sections, "ROUND_ITEMS", 2)  # four rounds: five second looks of its own
     model = Mending(lambda round_, payload: [])
     ctx, sections, elements, activity = answer(model)
     (section,) = sections
-    assert len(model.looks) == 4 and len(section[answer_sections.LOOKS]) == 4 and not model.take_ups
+    assert len(model.looks) == 5 and len(section[answer_sections.LOOKS]) == 5 and not model.take_ups
     assert all(look["faults"][0]["kind"] == "review" for look in section[answer_sections.LOOKS])
     assert [unit["text"] for unit in section["trims"][-1]["draft"]["units"]] == ["Check the records."], "then what still fails goes"
-    monkeypatch.setattr(answer_sections, "ROUND_ITEMS", 10)  # the same record now allows one round: three looks in all
+    monkeypatch.setattr(answer_sections, "ROUND_ITEMS", 10)  # the same record now allows one round: three looks and a mend
     with pytest.raises(ValueError, match="second looks"):
         turn.validate_activity(activity, ctx, elements)
