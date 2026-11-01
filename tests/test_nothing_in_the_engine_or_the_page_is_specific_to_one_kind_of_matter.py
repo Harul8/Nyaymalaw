@@ -62,7 +62,8 @@ def test_no_page_text_names_one_kind_of_matter(name):
 def test_what_the_models_are_given_names_no_unit_or_notation_of_any_kind_of_matter():
     from nm.core_engine import research, response_review, response_writer
 
-    for text in (research.TRANSACTIONS_V13, research.TRANSACTIONS_CHECK, research.UNDERSTAND, research.CHECK, research.CHRONOLOGY_V13,
+    for text in (research.TRANSACTIONS_V13, research.SETTLE_TRANSFERS, research.SETTLE_EVENTS, research.SETTLE_POINTS,
+                 research.SLIP_FIX, research.UNDERSTAND, research.CHECK, research.CHRONOLOGY_V13,
                  research.CONNECTIONS_V13, response_writer.SYSTEM_V13, response_writer.SYSTEM_V14, response_writer.TAKE_UP_SYSTEM,
                  response_writer.REPAIR_SYSTEM, response_review.SYSTEM_V11, response_review.SYSTEM_V12):
         assert not hits(text), hits(text)

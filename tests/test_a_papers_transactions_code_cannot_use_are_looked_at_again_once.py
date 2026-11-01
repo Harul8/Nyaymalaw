@@ -4,9 +4,12 @@ The model reads each paper's transactions with the whole file in view, and reads
 words are on the paper's pages, that every number and unit of the figure and of any whole stands in those words, that a death the
 transaction records for its giver stands on some page of the file, and that its date stands in its words or its paper; where it finds
 what it cannot use, the paper is looked at again in one call, shown what code found, and what that gives replaces what was at fault.
-What is still at fault is kept, listed and never added; a date the paper lacks is dropped; so is a death on no page. The papers are
+What is still at fault is kept, listed and never added. From research v14 (AN.33, D18) the look again settles each transaction by its
+index, a date found nowhere in the papers is kept and marked so, and a death on no page is kept and never used. The papers are
 invented.
 """
+import json
+import re
 import pytest
 
 from nm.core_engine import figures, research
@@ -29,7 +32,10 @@ class LooksAgain(Beside):
     def structured(self, prompt, schema, tier, **kwargs):
         if prompt.operation == "core_research_transfers" and '"to_check"' in prompt.user:
             self.calls.append(prompt)
-            return _result({"transfers": self.again.get(prompt.user.split('"')[1], [])}, tier)
+            # Research v14 (AN.33): the model settles each transaction code could not use, by its index, as `again` gives it.
+            name = re.search(r'The pages of the paper being checked:\nDocument: "(.*)"', prompt.user).group(1)
+            return _result({"settled": [{"index": index, "verdict": "clerical", "reason": "As the page has it.", "transfer": given}
+                                        for index, given in enumerate(self.again.get(name, []))]}, tier)
         return super().structured(prompt, schema, tier, **kwargs)
 
 
@@ -47,8 +53,8 @@ def test_a_transaction_code_cannot_use_is_looked_at_again_once_and_what_the_look
                        {"agreement.pdf": [sale("500 kg", "The supplier sold 500 kg of grain out of 1,350 kg", whole="1,350 kg")]})
     (kept,), failures = research.transfers_of(model, sent(*PAPER))
     (checked,) = [prompt for prompt in model.calls if '"to_check"' in prompt.user]
-    assert checked.system == research.TRANSACTIONS_CHECK and f'"why": "{figures.NOT_IN_WORDS}"' in checked.user and failures == []
-    assert "nearest_words" not in checked.user, "its words were found; it is its figure that is not in them"
+    assert checked.system == research.SETTLE_TRANSFERS and f'"why": "{figures.NOT_IN_WORDS}"' in checked.user and failures == []
+    assert '"nearest_words": "agreement no. 77' in checked.user, "the page's own words beside them, whatever failed"
     assert (kept["figure"], kept["whole"], kept["anchored"]) == ("500 kg", "1,350 kg", True)
     (subject,) = ledger([kept])
     assert subject["givers"][0]["added"] == {"mass": 500_000}
@@ -60,15 +66,17 @@ def test_words_not_found_are_looked_at_again_with_the_pages_own_words_nearest_to
                        {"agreement.pdf": [sale("500 kg", "The supplier sold 500 kg of grain")]})
     (kept,), _ = research.transfers_of(model, sent(*PAPER))
     (checked,) = [prompt for prompt in model.calls if '"to_check"' in prompt.user]
-    assert '"why": "its words are not found on the pages"' in checked.user and '"nearest_words"' in checked.user
+    assert '"why": "its words are not found, word for word, on the pages of its paper"' in checked.user
+    assert '"nearest_words"' in checked.user
     assert (kept["words"], kept["anchored"]) == ("The supplier sold 500 kg of grain", True)
 
 
-def test_a_transaction_still_at_fault_is_kept_listed_and_never_added_and_a_date_its_paper_lacks_is_dropped():
+def test_a_transaction_still_at_fault_is_kept_listed_and_never_added_and_a_date_the_papers_lack_is_kept_marked_so():
     first = [sale("Rs.3,00,000", "The supplier sold 500 kg of grain", date="9-9-2009")]
     model = LooksAgain({"agreement.pdf": first}, {"agreement.pdf": first})
     (kept,), _ = research.transfers_of(model, sent(*PAPER))
-    assert kept["date"] == "undated" and kept["sort"] == "", "a date on no page of its paper is not kept"
+    assert (kept["date"], kept["sort"], kept["date_found"]) == ("9-9-2009", "2009-09-09", "nowhere"), "kept, never erased"
+    assert kept["settled"] == "clerical", "what the model said of it stands beside it"
     (subject,) = ledger([kept])
     assert subject["givers"] == [] and subject["unread"][0]["why"] == figures.NOT_IN_WORDS
 
@@ -79,12 +87,17 @@ def test_a_paper_whose_transactions_all_check_out_needs_no_look_again():
     assert not [prompt for prompt in model.calls if '"to_check"' in prompt.user]
 
 
-def test_a_look_again_that_gives_the_whole_list_again_adds_only_what_is_new():
+def test_settling_answers_for_each_transaction_at_fault_by_its_index_and_the_one_that_was_right_is_kept_once():
     good = sale("500 kg", "The supplier sold 500 kg of grain out of 1,350 kg", whole="1,350 kg")
     bad = sale("900 kg", "The supplier sold 500 kg of grain", date="9-9-2009")
-    model = LooksAgain({"agreement.pdf": [good, bad]}, {"agreement.pdf": [good, bad]})
+    # The model settles the one at fault (index 0 of what it is shown) as it still reads it; the one that was right is not shown.
+    model = LooksAgain({"agreement.pdf": [good, bad]}, {"agreement.pdf": [bad]})
     found, _ = research.transfers_of(model, sent(*PAPER))
-    assert [(t["id"], t["figure"], t["date"]) for t in found] == [("X1", "500 kg", "5-6-2003"), ("X2", "900 kg", "undated")],         "the one that was right is not kept twice"
+    assert [(t["id"], t["figure"], t["date"], t["settled"]) for t in found] == [
+        ("X1", "500 kg", "5-6-2003", ""), ("X2", "900 kg", "9-9-2009", "clerical")]
+    (checked,) = [prompt for prompt in model.calls if '"to_check"' in prompt.user]
+    shown = json.loads(checked.user[checked.user.rindex('{"to_check"'):])
+    assert [(c["index"], c["words"]) for c in shown["to_check"]] == [(0, bad["words"])], "only what failed is shown, by its index"
 
 
 def test_a_reading_with_units_of_different_kinds_is_looked_at_again_and_a_share_is_no_fault():
@@ -102,14 +115,13 @@ def test_a_reading_with_units_of_different_kinds_is_looked_at_again_and_a_share_
     assert not [prompt for prompt in model.calls if '"to_check"' in prompt.user] and kept["quantity"]["dimension"] == "share"
 
 
-def test_the_look_again_prompt_says_what_code_found_and_asks_for_the_pages_own_words():
-    prompt = " ".join(research.TRANSACTIONS_CHECK.split())
-    for part in ("Message:", "Purpose:", "Outcome:", "transactions whose words it could not find on the pages",
-                 "whose figure or whole it could not check against those words (a number or a unit not in them)",
-                 "whose reading of a figure has a unit code cannot convert or units of different kinds",
-                 "whose recorded death of the giver is on no page of the file",
-                 "copied exactly from the page as they stand, a misread letter included",
-                 "so that every number you give is in the words", "the death of the giver only if the papers record one",
-                 "or leave it out if the paper does not record the transaction as you listed it", "Work in a loop"):
+def test_the_settling_prompt_says_what_code_checked_and_asks_for_the_pages_own_words():
+    prompt = " ".join(research.SETTLE_TRANSFERS.split())
+    for part in ("Message:", "Purpose:", "Outcome:", "that its words stand on the pages of its paper, word for word",
+                 "that its figure and any whole it states can be checked against those words",
+                 "that the death it records of the giver stands in the papers",
+                 "copied from the page exactly as they stand there, the slip included",
+                 "so that every number you give is in the words", "give the death of the giver only where the papers record one",
+                 "(verdict not_in_papers); it is withdrawn", "Work in a loop"):
         assert part in prompt, part
     assert research.MAX_OUTPUT["transfers_check"] == 12000

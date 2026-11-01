@@ -72,25 +72,36 @@ CHRONICLED_CONTRACT = "core_research_v12"
 #: each event: its words found on its pages, and its date's numbers found in its words or on those pages; where an event fails or
 #: a date on a paper's pages is carried by none of its events, one check call for that paper looks again. A numbered month and
 #: year with no day ("-09-2017", invented) is read as that month. v12 and earlier records replay unchanged.
-CONTRACT = "core_research_v13"
+WHOLE_FILE_CONTRACT = "core_research_v13"
+#: v14 (plan AN.33, D18 and D22; owner, 1 Nov 2026: "pass these to model and let model decide whether this is a clerical error or a
+#: genuine failed test in which can model can decide to drop only that failed portion"): the papers' events, transactions and points
+#: read side by side, and the understanding's quotations, are checked with the tolerant finder, and what is found is kept in the
+#: page's own words; what code still cannot check is settled by a model shown code's evidence, one call for each paper with failures,
+#: whose answer code checks again - a slip in copying is corrected from the page, only a part the papers do not hold goes, an item
+#: they do not record is withdrawn and listed, and what stays unchecked is kept and marked so. No date is erased: code records where
+#: it found a date's numbers - in the item's words, on its paper, elsewhere in the file - or that it found them nowhere. v13 and
+#: earlier records replay unchanged. In development until AN.33 is applied to the running server: no v14 record is saved before then.
+CONTRACT = "core_research_v14"
 #: The plans that set out the matter as disputes and legal questions (v7 on).
 QUESTION_PLANS = (PICKED_CONTRACT, JUDGMENT_PICKED_CONTRACT, PURPOSED_CONTRACT, PER_DISPUTE_CONTRACT, JUDGMENTS_READ_CONTRACT,
-                  CHRONICLED_CONTRACT, CONTRACT)
+                  CHRONICLED_CONTRACT, WHOLE_FILE_CONTRACT, CONTRACT)
 _QUESTION_PLANS = QUESTION_PLANS
 #: The records that pick judgment paragraphs and answer in parts per dispute (v8 on).
 JUDGMENT_PICKS = (JUDGMENT_PICKED_CONTRACT, PURPOSED_CONTRACT, PER_DISPUTE_CONTRACT, JUDGMENTS_READ_CONTRACT,
-                  CHRONICLED_CONTRACT, CONTRACT)
+                  CHRONICLED_CONTRACT, WHOLE_FILE_CONTRACT, CONTRACT)
 #: The records that keep each dispute's picks apart (v10 on).
-BY_DISPUTE = (PER_DISPUTE_CONTRACT, JUDGMENTS_READ_CONTRACT, CHRONICLED_CONTRACT, CONTRACT)
+BY_DISPUTE = (PER_DISPUTE_CONTRACT, JUDGMENTS_READ_CONTRACT, CHRONICLED_CONTRACT, WHOLE_FILE_CONTRACT, CONTRACT)
 #: The records that read the chosen judgments whole or as extracts (v11 on).
-JUDGMENTS_READ = (JUDGMENTS_READ_CONTRACT, CHRONICLED_CONTRACT, CONTRACT)
+JUDGMENTS_READ = (JUDGMENTS_READ_CONTRACT, CHRONICLED_CONTRACT, WHOLE_FILE_CONTRACT, CONTRACT)
 #: The records that also keep the chronology of the documents (v12 on).
-CHRONICLED = (CHRONICLED_CONTRACT, CONTRACT)
+CHRONICLED = (CHRONICLED_CONTRACT, WHOLE_FILE_CONTRACT, CONTRACT)
 #: The records whose papers are read with the whole file in view, their dates checked by code (v13 on).
-WHOLE_FILE = (CONTRACT,)
+WHOLE_FILE = (WHOLE_FILE_CONTRACT, CONTRACT)
+#: The records checked with the tolerant finder, whose failed checks a model settles (v14 on).
+SETTLED = (CONTRACT,)
 CONTRACTS = (LEGACY_CONTRACT, PREVIOUS_CONTRACT, WINDOWED_CONTRACT, ACCOUNT_CONTRACT, INSTRUMENTED_CONTRACT,
              PICKED_CONTRACT, JUDGMENT_PICKED_CONTRACT, PURPOSED_CONTRACT, PER_DISPUTE_CONTRACT, JUDGMENTS_READ_CONTRACT,
-             CHRONICLED_CONTRACT, CONTRACT)
+             CHRONICLED_CONTRACT, WHOLE_FILE_CONTRACT, CONTRACT)
 #: The papers a record step sees whole (D1, the owner: "a safe fixed limit like 100k tokens"): above it, each call sees the paper
 #: it answers for, with the advocate's messages.
 WHOLE_FILE_TOKENS = 100_000
@@ -416,6 +427,29 @@ SCHEMA_V13["properties"]["appearances"] = {"type": "array", "items": APPEARANCE}
 SCHEMA_V13["properties"]["transfers"] = {"type": "array", "items": TRANSACTION_RECORD}
 SCHEMA_V13["properties"]["transfers_failures"] = {"type": "array", "items": CHRONOLOGY_FAILURE}
 
+#: v14 (AN.33, D18 and D22): what settling a failed check decided for an item - "" where no check failed; the model's verdict
+#: (clerical, elsewhere, part, scan_misread, as_listed); unanswered where its answer named no verdict for the item; unavailable
+#: where the settling call failed. An item a model found the papers do not record is withdrawn and listed apart (WITHDRAWN).
+VERDICTS = ("clerical", "elsewhere", "part", "scan_misread", "as_listed", "not_in_papers")
+SETTLED_AS = ("", *VERDICTS[:-1], "unanswered", "unavailable")
+#: v14: where code found the numbers of an item's date - in its words, on its paper's pages, on another paper of the file, nowhere;
+#: none where the item is undated. A date is never erased.
+DATE_FOUND = ("words", "paper", "file", "nowhere", "none")
+_SETTLE_RECORD = {"quoted": STRING, "settled": {"type": "string", "enum": list(SETTLED_AS)}, "settled_why": STRING}
+EVENT_RECORD_V14 = _object({**EVENT_RECORD["properties"], **_SETTLE_RECORD,
+                            "date_found": {"type": "string", "enum": list(DATE_FOUND)}})
+TRANSACTION_RECORD_V14 = _object({**TRANSACTION_RECORD["properties"], **_SETTLE_RECORD,
+                                  "date_found": {"type": "string", "enum": list(DATE_FOUND)},
+                                  "giver_died_found": {"type": "boolean"}})
+CONNECTION_RECORD_V14 = _object({**CONNECTION_RECORD["properties"], **_SETTLE_RECORD})
+WITHDRAWN = _object({"kind": {"type": "string", "enum": ["event", "transaction", "point"]}, "document": STRING, "what": STRING,
+                     "words": STRING, "why": STRING})
+SCHEMA_V14 = deepcopy(SCHEMA_V13)
+SCHEMA_V14["properties"]["chronology"] = {"type": "array", "items": EVENT_RECORD_V14}
+SCHEMA_V14["properties"]["transfers"] = {"type": "array", "items": TRANSACTION_RECORD_V14}
+SCHEMA_V14["properties"]["connections"] = {"type": "array", "items": CONNECTION_RECORD_V14}
+SCHEMA_V14["properties"]["withdrawn"] = {"type": "array", "items": WITHDRAWN}
+
 
 def _source_windows(context):
     """Offer exact mechanical windows; only the model decides their relevance."""
@@ -634,11 +668,11 @@ class Pages:
         held = self._exactly(piece)
         return (held, None) if held is not None else None
 
-    def _tolerantly(self, piece):
+    def _tolerantly(self, piece, over=True):
         """Where the pages read as the words do, but for what _tolerant sets aside, beginning and ending where the page's own words
         do: [(page index, start, end)] for a stretch of one page, or two such for words that end one page and go on at the start of
         the next page of the same document, past no more than PAGE_FURNITURE characters of its foot and head; or None. Words with
-        fewer than TOLERANT_MINIMUM letters and digits are not placed so."""
+        fewer than TOLERANT_MINIMUM letters and digits are not placed so. over: False and only one page is looked at for them."""
         target = _tolerant(piece)[0]
         if sum(1 for char in target if _significant(char)) < TOLERANT_MINIMUM:
             return None
@@ -649,8 +683,8 @@ class Pages:
                 if _bounded(text, start, end):
                     return [(index, start, end)]
                 at = letters.find(target, at + 1)
-        words = piece.split(" ")
-        for index in range(len(self.pages) - 1):
+        words = piece.split(" ") if over else ()
+        for index in range(len(self.pages) - 1 if words else 0):
             first, second = self.pages[index], self.pages[index + 1]
             if (first["document"] == second["document"] and type(first["page"]) is int and type(second["page"]) is int
                     and second["page"] == first["page"] + 1 and (spans := self._tolerant_over(words, index))):
@@ -665,11 +699,14 @@ class Pages:
         for cut in range(1, len(words)):
             ending, going = _tolerant(" ".join(words[:cut]))[0], _tolerant(" ".join(words[cut:]))[0]
             at, begin = foot.rfind(ending) if ending else -1, head.find(going) if going else -1
-            if at < 0 or begin < 0 or len(foot) - at - len(ending) > PAGE_FURNITURE or begin > PAGE_FURNITURE:
+            if at < 0 or begin < 0:
                 continue
             first = (index, foot_at[at], foot_at[at + len(ending) - 1] + 1)
             second = (index + 1, head_at[begin], head_at[begin + len(going) - 1] + 1)
-            if _bounded(foot_text, *first[1:]) and _bounded(head_text, *second[1:]):
+            # The foot and the head beside the words are measured as the exact finder measures them: the page's words as they read,
+            # the reader's notes aside.
+            if (len(_reading(foot_text[first[2]:])) <= PAGE_FURNITURE and len(_reading(head_text[:second[1]])) <= PAGE_FURNITURE
+                    and _bounded(foot_text, *first[1:]) and _bounded(head_text, *second[1:])):
                 return [first, second]
         return None
 
@@ -720,22 +757,36 @@ class Pages:
         for length in range(len(words) - 1, 3, -1):
             for start in range(len(words) - length + 1):
                 run = " ".join(words[start:start + length])
-                held = self.holding(run)
-                if held is not None and len(held) == 1:
-                    index = next(i for i, page in enumerate(self.pages) if page is held[0])
+                index = self._one_page(run)
+                if index is not None:
                     plain, quoted = self._plain[index], run
                     if run not in plain:
                         plain, run = self._read[index], _reading(run)
                     if run not in plain:  # placed by the tolerant finder: the page's own words for the run, among the page's words
-                        _, begins, ends = self._tolerantly(quoted)[0]
+                        _, begins, ends = self._tolerantly(quoted, over=False)[0]
                         text = self.pages[index]["text"]
                         run = _bare(text[begins:ends])
                         plain = " ".join(part for part in (_bare(text[:begins]), run, _bare(text[ends:])) if part)
                     at = plain.find(run)
                     first, last = plain[:at].count(" "), plain[:at + len(run)].count(" ") + 1
                     around = " ".join(plain.split(" ")[max(0, first - NEAREST_AROUND):last + NEAREST_AROUND])
-                    return {"document": held[0]["document"], "page": held[0]["page"], "run": run, "words": around}
+                    return {"document": self.pages[index]["document"], "page": self.pages[index]["page"], "run": run,
+                            "words": around}
         return None
+
+    def _one_page(self, piece):
+        """The index of the first page that holds these words by itself - as the exact finder reads them, then, for the tolerant
+        finder, but for what _tolerant sets aside - or None. Words that hold only over a page break are not looked for: nearest
+        shows the longest run one page holds."""
+        for index, plain in enumerate(self._plain):
+            if piece in plain:
+                return index
+        words = _reading(piece)
+        for index, read in enumerate(self._read):
+            if words and words in read:
+                return index
+        found = self._tolerantly(piece, over=False) if self.version == TOLERANT_FINDER else None
+        return found[0][0] if found else None
 
     def stops(self, piece):
         """Where words that are not found stop matching, to say so: the words found as far as they go (their last few) and the
@@ -817,14 +868,25 @@ def _figure_problems(understanding, context):
                         "worked out.", "fix": FIGURE_FIX} for kept in stated.values()]
 
 
+#: What the model that revises an understanding is told when code cannot find the words something rests on (research v14, AN.33,
+#: D18): decide whether the failure is a slip in copying or a real one, and correct only what fails.
+SLIP_FIX = ("Decide whether the words were copied with a slip - a letter or digit a scan misread, a space inside a word or a number, "
+            "a name spelt otherwise, a word added or left out, passages joined without '...' - or whether the papers do not say this. "
+            "For a slip, copy the words from the page exactly as they stand there, the slip included, keeping what you add yourself "
+            "outside the quotation marks (separate passages joined with '...'); where only part of {what} is in the papers, keep {what} "
+            "to that part; leave {what} out only where the advocate's messages and the papers do not give it at all.")
+
+
 def code_checks(understanding, context):
     """Mechanical checks only; meaning is the model's work."""
     problems = []
     advocate = _bare(" ".join([row["text"] for row in context["conversation"]
                                if row.get("record_role") == "original_account"] + [context["latest"]["text"]]))
     # A fact may rest on a document the advocate sent; where its words appear is the
-    # code's to establish (owner decisions, 15 Oct 2026).
-    pages = Pages.of_context(context)
+    # code's to establish (owner decisions, 15 Oct 2026). From research v14 (AN.33, D18) the tolerant finder: a slip in copying
+    # that cannot change the meaning is no problem, and what is a problem is settled by the model that revises, from the page's
+    # own words code shows it - a fact is never lost for a slip in its quotation.
+    pages = Pages.of_context(context, TOLERANT_FINDER)
     facts = {f["id"] for f in understanding["facts"]}
     if len(facts) != len(understanding["facts"]):
         problems.append({"problem": "Two facts share an id.", "fix": "Give each fact its own id."})
@@ -835,9 +897,7 @@ def code_checks(understanding, context):
             problems.append({"problem": f"Fact {fact['id']}: the quoted words do not appear in the advocate's "
                                         f"messages or the documents they sent ({fact['advocate_words']!r}); "
                                         f"{pages.stops(missing[0])}.",
-                             "fix": "Quote the exact words this fact rests on, as the page gives them - copy them as they stand, a "
-                                    "misread letter or an odd spacing included, and keep what you add yourself outside the quotation "
-                                    "marks (separate passages joined with '...') - or remove the fact if they were not given."})
+                             "fix": SLIP_FIX.format(what="this fact")})
     # v13 (AN.28): each party's part in a proceeding and each subject rest on the page's own words, found by code as a fact's are.
     said = [(f"{party['who']}'s part in {part['proceeding']}", part["words"]) for party in understanding.get("parties", ())
             for part in party.get("parts", ())]
@@ -847,9 +907,7 @@ def code_checks(understanding, context):
         if missing:
             problems.append({"problem": f"For {place}, the quoted words do not appear in the advocate's messages or the documents "
                                         f"they sent ({quoted!r}); {pages.stops(missing[0])}.",
-                             "fix": "Quote the exact words, as the page gives them - copy them as they stand, a misread letter or an "
-                                    "odd spacing included (separate passages joined with '...') - or leave it out if the papers do "
-                                    "not give it."})
+                             "fix": SLIP_FIX.format(what="it")})
     disputes = {d["id"] for d in understanding["disputes"]}
     if len(disputes) != len(understanding["disputes"]):
         problems.append({"problem": "Two disputes share an id.", "fix": "Give each dispute its own id."})
@@ -1056,6 +1114,19 @@ def _anchor(words, pages):
     return anchored, (sorted({page["page"] for found in held if found for page in found}) if anchored else [])
 
 
+def _placed(words, finder):
+    """Where an item's words stand, by the tolerant finder (research v14, AN.33 D18): (anchored, the numbers of the pages they are on,
+    the words to keep). The words kept are the page's own where every passage stands on a page - each as the page has it, joined
+    with ' ... ' - so that what is kept as a quotation is the page's text; else the words as given."""
+    pieces = fact_pieces(words)
+    found = [finder.located(piece) for piece in pieces]
+    if not pieces or not all(found):
+        return False, [], words
+    own = [text for _, text in found]
+    return (True, sorted({page["page"] for held, _ in found for page in held}),
+            " ... ".join(own) if all(text is not None for text in own) else words)
+
+
 def _file_context(context, documents, document, window, whole):
     """What a v13 record step is shown before the pages it reads for (plan AN.28, D1): the advocate's messages, oldest first, and,
     where the file is within WHOLE_FILE_TOKENS, every other page of it under its paper's name - so that the step knows what the
@@ -1091,7 +1162,7 @@ def _read_stretches(model, context, wanted, operation, system, schema, step, sha
     if not documents or (wanted is not None and not wanted()):
         return [], []
     tasks = [(document, window) for document in documents for window in _windows(document["pages"])]
-    finders = {document["source"]: Pages(document["pages"]) for document in documents}
+    finders = {document["source"]: Pages(document["pages"], TOLERANT_FINDER) for document in documents}
 
     def read(task, depth=0):
         document, window = task
@@ -1128,13 +1199,16 @@ def _numbered_by_date(records, prefix, months=False):
 
 
 def _events_in(data, document, finder):
+    """The events one answer gives (v14): each placed by the tolerant finder and kept in the page's own words, with the words as
+    quoted beside them where they differ; where its date stands is code's, after (_date_found)."""
     events = []
     for item in data["events"]:
-        words = item["words"].strip()
-        anchored, pages = _anchor(words, finder)
+        given = item["words"].strip()
+        anchored, pages, words = _placed(given, finder)
         events.append({"date": item["date"].strip(), "kind": item["kind"], "what": item["what"].strip(),
                        "said_by": item["said_by"].strip(), "document": document["name"], "source": document["source"],
-                       "pages": pages, "words": words, "anchored": anchored})
+                       "pages": pages, "words": words, "anchored": anchored, "quoted": "" if words == given else given,
+                       "settled": "", "settled_why": "", "date_found": "none"})
     return events
 
 
@@ -1155,15 +1229,43 @@ Look for:
 Work in a loop: list the events page by page, then read each page again against your list for any event you skipped or misread, or any date you gave to the wrong act, and correct the list before you answer.
 
 Outcome: events, in the order of the pages. Each has: date; kind (transaction, order, filing, pending, or other); what (plain sentences saying what happened, with its figures and identifiers - what an order found and directed, who brought and who answers a proceeding); said_by (whose words they are: the document's own author, or the party or authority it reports); words (the exact words on a page that record it, copied exactly as the page gives them, without the reader's square-bracket notes - a sentence that runs over a page may be copied whole - or several passages joined with '...'; never reword)."""
-#: v13 (AN.28, D2): one look again at a paper's events where code found what it could not check.
-CHRONOLOGY_CHECK = """Message: You listed the events one paper an advocate sent records; you receive that paper's pages, each under its number, and what code found when it checked your list: events whose words it could not find on the pages, or whose date is in neither their words nor their pages (to_check, each with why and, where code found them, the page's own words nearest to yours), and dates that stand on the pages but in none of your events (not_carried). A page says what its document says; square-bracket notes are the reader's, not the document's.
+#: v14 (AN.33, D18 and D22; owner, 1 Nov 2026: "let model decide whether this is a clerical error or a genuine failed test"): one call
+#: settles what code could not check, for one paper (or, for the points read side by side, the papers together), shown code's
+#: evidence; code checks what it gives. One prompt for every kind of item, said for each.
+SETTLE = """Message: You {listed}. Code then checked each against the papers: that its words stand on {where}, word for word{checks}. You receive the advocate's messages and the papers, {focus}and what code could not check (to_check): each {noun} as you listed it, by its index, with why code could not check it and, where code found them, the page's own words nearest to yours. A page says what its document says; square-bracket notes are the page reader's, except the handwriting a note transcribes, which is the page's.
 
-Purpose: Look again so that every event the paper records is in the list, dated as the paper dates it, with words that stand on its pages.
+Purpose: For each {noun} in to_check, decide whether the check failed because of a slip in copying or because the {noun} is not as the papers record it, and give what code can check - so that nothing the papers record is lost for a slip, and nothing they do not record is kept.
 
-For each event in to_check: give it again, corrected - its words copied exactly from the page as they stand, a misread letter included, its date the date the paper gives for this act - or leave it out if the paper does not record it as you listed it. For each date in not_carried: give the event the paper records with it, if it marks one; give nothing for a date that marks no event (a stamp's date, a reference to a printed form).
-Work in a loop: read the pages again, decide each, check what you write against the page, and correct it.
+Look for:
+- A slip in copying: the page holds the same words with a difference - a letter or digit a scan misread, a space inside a word or a number, a name spelt otherwise, a word added or left out, passages joined without '...'. Give the {noun} again with its words copied from the page exactly as they stand there, the slip included (verdict clerical).
+- Words, or a date, that stand on another page or in another paper: give the {noun} with them as they stand there (verdict elsewhere).
+- Only part of the {noun} in the papers: give it again within what the papers hold, so that only the part they do not hold goes (verdict part).
+- A page whose text seems itself misread from its scan, so that its right words cannot be copied: keep the {noun} as you read it and say in reason what seems misread (verdict scan_misread).
+- A {noun} you still find recorded as you listed it, though code cannot find it: keep it and say in reason why (verdict as_listed).
+- A {noun} the papers do not record: say so in reason (verdict not_in_papers); it is withdrawn.{extra}
+Never work out a date or a figure the papers do not give. Work in a loop: decide each, check what you give against the page, and correct it before you answer.
 
-Outcome: events: only those you give again or add, each as before - date; kind; what; said_by; words."""
+Outcome: settled, one entry for each {noun} in to_check: index (its index in to_check); verdict (clerical, elsewhere, part, scan_misread, as_listed or not_in_papers); reason (one sentence); {key} (the {noun} as it should stand, every field as before{fields}).{outcome}"""
+#: v14: a paper's events settled.
+SETTLE_EVENTS = SETTLE.format(
+    listed="listed the events one paper an advocate sent records", noun="event", key="event", where="the pages of its paper",
+    checks=", and that the numbers of its date stand in its words or in the papers",
+    focus="the pages of the paper being checked last, under \"The pages of the paper being checked\", ",
+    extra="\n- Dates that stand on the paper's pages but in none of its events (not_carried): for each, give in added the event the "
+          "paper records with it, if it marks one; give nothing for a date that marks no event (a stamp's date, a printed form's).",
+    fields=": date; kind; what; said_by; words", outcome=" added: the events you give for not_carried, each as an event.")
+
+
+def _settle_schema(key, item):
+    """What a settling call answers (v14): for each item code could not check, its index, verdict, reason and the item as it should
+    stand; for a paper's events, also those it adds for the dates no event carried."""
+    entry = _object({"index": {"type": "integer"}, "verdict": {"type": "string", "enum": list(VERDICTS)}, "reason": STRING,
+                     key: item})
+    return _object({"settled": {"type": "array", "items": entry},
+                    **({"added": {"type": "array", "items": item}} if key == "event" else {})})
+
+
+SETTLE_EVENTS_SCHEMA = _settle_schema("event", EVENT)
 #: A paper's dates code finds on its pages to ask about at most (v13): the rest are not asked about.
 NOT_CARRIED_MOST = 20
 
@@ -1177,17 +1279,28 @@ def _numbers(words):
     return found | {n % 100 for n in found if n >= 1000} | {2000 + n for n in found if n < 100} | {1900 + n for n in found if n < 100}
 
 
-def _traceable(event, finder):
-    """Whether an event's date stands in its own paper (v13, AN.28 D3): every number of the date, a month by name or number and a
-    year by four digits or its last two, among its words and its paper's pages - a paper may give a date on another page than the
-    passage it belongs to. A date no page of the paper gives was worked out or taken from elsewhere. An undated event is
-    traceable; an event whose words are not found is not checked here (it is not anchored)."""
-    if not read_date(event["date"], months=True) or not event["anchored"]:
-        return True
-    held = _numbers(event["words"])
-    for page in finder.pages:
+def _paper_numbers(pages):
+    """Every number the pages of one paper hold (as _numbers reads them), the reader's notes aside."""
+    held = set()
+    for page in pages:
         held |= _numbers(_reading(page["text"]))
-    return {n for n in _numbers(event["date"]) if n} - {0} <= held
+    return held
+
+
+def _date_found(item, paper_numbers, file_numbers):
+    """Where code finds the numbers of an item's date (research v14, AN.33 D18): every number of the date - a month by name or number,
+    a year by four digits or its last two - among its words ("words"), else among its words and its paper's pages ("paper": a paper
+    may give a date on another page than the passage it belongs to), else among those of any page of the file ("file": an order a
+    note mentions may be dated by another paper), else "nowhere"; "none" where it gives no date code reads. A date is kept whatever
+    is found: code says where it stands, and a model settles one found nowhere."""
+    if not read_date(item["date"], months=True):
+        return "none"
+    wanted, said = {n for n in _numbers(item["date"]) if n} - {0}, _numbers(item["words"])
+    if wanted <= said:
+        return "words"
+    if wanted <= said | paper_numbers:
+        return "paper"
+    return "file" if wanted <= said | paper_numbers | file_numbers else "nowhere"
 
 
 #: Dates as a page writes them in full, day, month and year (v13): numbered, or with the month named.
@@ -1223,60 +1336,108 @@ def _unread(failures, document):
     return pages
 
 
-def _checked(model, context, events, documents, finders, failures=()):
-    """v13 (AN.28, D2 and D3): each paper's events checked by code - their words found, their dates traceable - and, for a paper
-    where some are not or a date on its pages is carried by none, one check call that looks again; its events replace those
-    that failed and add those it finds. An event still untraceable keeps its words and loses its date ("undated"); one whose
-    words are still not found stays, marked not anchored."""
+#: Why code could not check an item, as the model that settles it is told (v14).
+_NOT_FOUND = "its words are not found, word for word, on {where}"
+_NO_DATE = "the numbers of its date stand neither in its words nor anywhere in the papers"
+
+
+def _to_check(index, given, why, words, finder):
+    """One item a settling call is shown (v14): its index, the item as the model gave it, why code could not check it, and the page's
+    own words nearest to its words where code finds them."""
+    near = finder.nearest(fact_pieces(words)[0]) if fact_pieces(words) else None
+    return {"index": index, **given, "why": why, **({"nearest_words": near["words"]} if near else {})}
+
+
+def _settle_text(context, documents, document, whole, shown):
+    """What a settling call for one paper reads (v14): the advocate's messages and the rest of the file as the reading of that paper
+    was shown them, the paper's own pages last, then what code could not check."""
+    return (_file_context(context, documents, document, document["pages"], whole) + "\n\nThe pages of the paper being checked:\n"
+            + _window_text(document, document["pages"]) + "\n\n" + json.dumps(shown, ensure_ascii=False))
+
+
+def _settled(entries, failing, key, shape, document_name, what):
+    """What a settling call's answer does to the items that failed a check (v14): the first entry for each index counts. An item the
+    model finds the papers do not record is withdrawn - listed apart, with its words and why, never kept; any other is kept as the
+    model gives it, placed again by code (shape), with the verdict and why beside it, whether code can now check it or not; an item
+    the answer names no verdict for stays as it was, marked unanswered. Returns (kept, withdrawn)."""
+    by_index = {}
+    for entry in entries:
+        if type(entry["index"]) is int and 0 <= entry["index"] < len(failing):
+            by_index.setdefault(entry["index"], entry)
+    kept, withdrawn = [], []
+    for index, item in enumerate(failing):
+        entry = by_index.get(index)
+        if entry is None:
+            kept.append({**item, "settled": "unanswered", "settled_why": ""})
+        elif entry["verdict"] == "not_in_papers":
+            withdrawn.append({"kind": {"transfer": "transaction", "connection": "point"}.get(key, key), "document": document_name,
+                              "what": what(item), "words": item["words"], "why": entry["reason"].strip()})
+        else:
+            kept.append({**shape(entry[key]), "settled": entry["verdict"], "settled_why": entry["reason"].strip()})
+    return kept, withdrawn
+
+
+def _checked(model, context, events, documents, finders, failures=(), whole=True, withdrawn=None):
+    """v14 (AN.33, D18 and D22): each paper's events checked by code - their words placed by the tolerant finder and kept in the
+    page's own words, the numbers of their dates looked for in their words, their paper and the file - and, for a paper where an
+    event's words are not found or its date is found nowhere, or a date on its pages is carried by no event, one call that settles
+    them, shown code's evidence; code places what it gives again. No date is erased; an event still unchecked stays, marked so. An
+    event the model finds the papers do not record goes to withdrawn (a list), with why. The papers are settled all at once."""
+    file_numbers = _file_numbers(documents)
+
     def one(document):
         mine = [event for event in events if event["source"] == document["source"]]
-        finder = finders[document["source"]]
-        failing = [event for event in mine if not event["anchored"] or not _traceable(event, finder)]
+        finder, paper = finders[document["source"]], _paper_numbers(document["pages"])
+        for event in mine:
+            event["date_found"] = _date_found(event, paper, file_numbers)
+        failing = [event for event in mine if not event["anchored"] or event["date_found"] == "nowhere"]
         missing = _not_carried(document, [{**event, "sort": read_date(event["date"], months=True)} for event in mine],
                                _unread(failures, document))
-        if failing or missing:
-            to_check = [{"date": event["date"], "what": event["what"], "words": event["words"],
-                         "why": "its words are not found on the pages" if not event["anchored"]
-                         else "its date is in neither its words nor its pages",
-                         **({"nearest_words": near["words"]} if not event["anchored"] and (near := finder.nearest(event["words"]))
-                            else {})} for event in failing]
-            user = (_window_text(document, document["pages"]) + "\n\n"
-                    + json.dumps({"to_check": to_check, "not_carried": missing}, ensure_ascii=False))
-            try:
-                data = _call(model, "core_research_chronology", CHRONOLOGY_CHECK, user, CHRONOLOGY_SCHEMA, "chronology_check")
-                kept = [event for event in mine if event not in failing]
-                # A model that gives the paper's whole list again adds only what is new: an event already kept is not
-                # kept twice.
-                held = {(event["date"], event["kind"], event["words"]) for event in kept}
-                mine = kept + [event for event in _events_in(data, document, finder)
-                               if (event["date"], event["kind"], event["words"]) not in held]
-            except UsageLimitReached:
-                raise
-            except (ModelError, SchemaViolation):
-                pass
-        for event in mine:
-            if event["anchored"] and not _traceable(event, finder):
-                event["date"] = "undated"
-        return mine
-    # Each paper's look again is its own: all at once, in the papers' order (the first paid replay waited seven minutes for them
-    # one after another).
+        if not (failing or missing):
+            return mine, []
+        to_check = [_to_check(index, {key: event[key] for key in EVENT["properties"]},
+                              _NOT_FOUND.format(where="the pages of its paper") if not event["anchored"] else _NO_DATE,
+                              event["words"], finder) for index, event in enumerate(failing)]
+        user = _settle_text(context, documents, document, whole, {"to_check": to_check, "not_carried": missing})
+        kept = [event for event in mine if all(event is not wrong for wrong in failing)]
+        try:
+            data = _call(model, "core_research_chronology", SETTLE_EVENTS, user, SETTLE_EVENTS_SCHEMA, "chronology_check")
+            require_schema(data, SETTLE_EVENTS_SCHEMA)
+        except UsageLimitReached:
+            raise
+        except (ModelError, SchemaViolation):
+            return kept + [{**event, "settled": "unavailable"} for event in failing], []
+        settled, gone = _settled(data["settled"], failing, "event", lambda given: _events_in({"events": [given]}, document, finder)[0],
+                                 document["name"], lambda event: event["what"])
+        # An event added for a date no event carried counts once, beside those already kept.
+        held = {(event["date"], event["kind"], event["words"]) for event in kept + settled}
+        added = [event for event in _events_in({"events": data["added"]}, document, finder)
+                 if (event["date"], event["kind"], event["words"]) not in held]
+        for event in settled + added:
+            event["date_found"] = _date_found(event, paper, file_numbers)
+        return kept + settled + added, gone
     with ThreadPoolExecutor(max_workers=max(1, min(8, len(documents)))) as pool:
-        return [event for mine in pool.map(one, documents) for event in mine]
+        done = list(pool.map(one, documents))
+    if withdrawn is not None:
+        withdrawn.extend(item for _, gone in done for item in gone)
+    return [event for mine, _ in done for event in mine]
 
 
-def chronology_of(model, context, *, wanted=None):
+def chronology_of(model, context, *, wanted=None, withdrawn=None):
     """The chronology the documents of a turn record, as (events, failures) - plan AN.27, P8.
 
     The model says what a page records; code does the rest: finds the event's words in the document (the one finder), records the
     pages, reads the date, orders the events by it - the undated last, in the papers' order - and numbers them E1.... An event
-    whose words are not found is kept, marked not anchored, never dropped and never to be cited as sourced."""
+    whose words are not found is kept, marked not anchored, never dropped and never to be cited as sourced. withdrawn: a list that
+    receives the events a settling call found the papers do not record (v14)."""
     documents = _documents(context)
     if not documents or (wanted is not None and not wanted()):
         return [], []
+    whole = _whole_file(context, documents)
     events, failures = _read_stretches(model, context, None, "core_research_chronology", CHRONOLOGY_V13, CHRONOLOGY_SCHEMA,
-                                       "chronology", _events_in, whole=_whole_file(context, documents))
-    events = _checked(model, context, events, documents, {document["source"]: Pages(document["pages"])
-                                                          for document in documents}, failures)
+                                       "chronology", _events_in, whole=whole)
+    events = _checked(model, context, events, documents, {document["source"]: Pages(document["pages"], TOLERANT_FINDER)
+                                                          for document in documents}, failures, whole, withdrawn)
     return _numbered_by_date(events, "E", months=True), failures
 
 
@@ -1348,16 +1509,19 @@ def _quantity(given):
 
 
 def _transfers_in(data, document, finder):
+    """The transactions one answer gives (v14): placed and kept in the page's own words as events are (_events_in)."""
     transfers = []
     for item in data["transfers"]:
-        words = item["words"].strip()
-        anchored, pages = _anchor(words, finder)
+        given = item["words"].strip()
+        anchored, pages, words = _placed(given, finder)
         transfers.append({"date": item["date"].strip(), "kind": item["kind"], "subject": item["subject"].strip(),
                           "figure": item["figure"].strip(), "quantity": _quantity(item.get("quantity")),
                           "whole": item["whole"].strip(), "whole_quantity": _quantity(item.get("whole_quantity")),
                           "from": item["from"].strip(), "to": item["to"].strip(), "instrument": item.get("instrument", "").strip(),
                           "giver_died": item.get("giver_died", "").strip(), "giver_died_sort": "", "document": document["name"],
-                          "source": document["source"], "pages": pages, "words": words, "anchored": anchored})
+                          "source": document["source"], "pages": pages, "words": words, "anchored": anchored,
+                          "quoted": "" if words == given else given, "settled": "", "settled_why": "", "date_found": "none",
+                          "giver_died_found": False})
     return transfers
 
 
@@ -1377,15 +1541,18 @@ Work in a loop: list the transactions page by page, then read each page again ag
 Outcome: transfers, in the order of the pages. Each has: date; kind (sale, partition, gift, settlement, decree, lease, mortgage, loan, payment, or other); subject; figure; quantity; whole; whole_quantity; from; to; instrument; giver_died; words."""
 
 
-#: v13 (AN.28, D2 and D3): one look again at a paper's transactions where code found what it could not use.
-TRANSACTIONS_CHECK = """Message: You listed the transactions one paper an advocate sent records; you receive that paper's pages, each under its number, and what code found when it checked your list (to_check): transactions whose words it could not find on the pages, whose figure or whole it could not check against those words (a number or a unit not in them), whose reading of a figure has a unit code cannot convert or units of different kinds, whose recorded death of the giver is on no page of the file, or whose date is in neither their words nor their pages - each with why and, where code found them, the page's own words nearest to yours. A page says what its document says; square-bracket notes are the reader's, not the document's.
-
-Purpose: Look again so that every transaction is listed as the paper records it, with words that stand on its pages and a figure and a whole that stand in those words.
-
-For each transaction in to_check: give it again, corrected - its words copied exactly from the page as they stand, a misread letter included, and long enough to hold its figure and any whole it gives; its figure and whole exactly as those words write them, each with its quantity read from them - every number as the page writes it, in digits, the unit it stands against and that unit as written - so that every number you give is in the words; its date the date the paper gives for this transaction; the death of the giver only if the papers record one - or leave it out if the paper does not record the transaction as you listed it.
-Work in a loop: read the pages again, decide each, check what you write against the page, and correct it.
-
-Outcome: transfers: only those you give again, each as before - date; kind; subject; figure; quantity; whole; whole_quantity; from; to; instrument; giver_died; words."""
+#: v14: a paper's transactions settled (AN.33, D18 and D22), as its events are.
+SETTLE_TRANSFERS = SETTLE.format(
+    listed="listed the transactions one paper an advocate sent records", noun="transaction", key="transfer",
+    where="the pages of its paper",
+    checks=", that its figure and any whole it states can be checked against those words, that the death it records of the giver "
+           "stands in the papers, and that the numbers of its date stand in its words or in the papers",
+    focus="the pages of the paper being checked last, under \"The pages of the paper being checked\", ",
+    extra="\n- For a figure or a whole: give it exactly as its words write it, with its quantity read from them - every number as the "
+          "page writes it, in digits, the unit it stands against and that unit as written - so that every number you give is in the "
+          "words; give the death of the giver only where the papers record one.",
+    fields=": date; kind; subject; figure; quantity; whole; whole_quantity; from; to; instrument; giver_died; words", outcome="")
+SETTLE_TRANSFERS_SCHEMA = _settle_schema("transfer", TRANSACTION)
 
 
 #: v13 (AN.28, D1, piece 3e): the papers read side by side for what matters to the client.
@@ -1404,15 +1571,13 @@ For each, the point in plain words, why it matters to the client, and the exact 
 Work in a loop: read every paper, list the points, then read the papers again against your list for any point you missed or misread, and correct the list before you answer.
 
 Outcome: client_people (names as the pages write them); connections, each with: kind (client_appears, against_client, after_death, after_time_limit, further_subject, or other); point; why_it_matters; words."""
-#: v13: one look again at the points whose words code could not find.
-CONNECTIONS_CHECK = """Message: You set the papers an advocate sent side by side and listed points that matter to the client; you receive the advocate's messages, the papers, and the points whose words code could not find on the pages (to_check), each with, where code found them, the page's own words nearest to yours. A page says what its document says; square-bracket notes are the reader's, not the document's.
-
-Purpose: Look again so that each point rests on words that stand on the pages.
-
-For each point in to_check: give it again with its words copied exactly from the pages as they stand, a misread letter included, passages from different pages joined with '...' - or leave it out if the papers do not show it.
-Work in a loop: read the pages again, decide each, check what you write against the page, and correct it.
-
-Outcome: client_people (as before); connections: only those you give again, each as before - kind; point; why_it_matters; words."""
+#: v14: the points read side by side settled (AN.33, D18 and D22), the papers together.
+SETTLE_POINTS = SETTLE.format(
+    listed="set the papers an advocate sent side by side and listed the points that matter to the client", noun="point",
+    key="connection",
+    where="the pages of the papers (a point's passages may stand in different papers)", checks="", focus="", extra="",
+    fields=": kind; point; why_it_matters; words", outcome="")
+SETTLE_POINTS_SCHEMA = _settle_schema("connection", CONNECTION)
 #: How much of a name's letters a run of as many words must share to be offered as a near spelling of it (v13): a candidate, never
 #: the name; and how many such candidates are offered for one name at most.
 NEAR_NAME = 0.85
@@ -1454,26 +1619,33 @@ def _anchor_across(words, finder):
     return anchored, places
 
 
-def _verified(words, finder):
-    """A point's words with only the passages that stand on the pages, joined as the model joined them (plan AN.28, D2: only the
-    failing piece is blocked); the words as given where none stands. Each passage keeps its own letters."""
-    passages = (part.strip(" .,;:\"'") for part in re.split(r"\.\.\.|…", " ".join(str(words).split())))
-    found = [passage for passage in passages if _bare(passage) and finder.holding(_bare(passage)) is not None]
-    return " ... ".join(found) if found else words
+def _placed_across(words, finder):
+    """Where a point's words stand, by the tolerant finder over every paper (v14): (anchored, the places, each once in the order
+    found, the words to keep - the pages' own, as _placed keeps them)."""
+    pieces = fact_pieces(words)
+    found = [finder.located(piece) for piece in pieces]
+    if not pieces or not all(found):
+        return False, [], words
+    places = []
+    for held, _ in found:
+        for page in held:
+            place = {"document": page["name"], "source": page["document"], "page": page["page"]}
+            if place not in places:
+                places.append(place)
+    own = [text for _, text in found]
+    return True, places, " ... ".join(own) if all(text is not None for text in own) else words
 
 
-def _connections_in(data, finder, *, keep_found=False):
-    """The points one answer of the side-by-side reading gives. keep_found: a point whose words are not all found keeps the passages
-    that are (after the look again)."""
+def _connections_in(data, finder):
+    """The points one answer of the side-by-side reading gives (v14): placed over every paper by the tolerant finder and kept in the
+    pages' own words, with the words as quoted beside them where they differ."""
     out = []
     for item in data["connections"]:
-        words = item["words"].strip()
-        anchored, places = _anchor_across(words, finder)
-        if keep_found and not anchored:
-            words = _verified(words, finder)
-            anchored, places = _anchor_across(words, finder)
+        given = item["words"].strip()
+        anchored, places, words = _placed_across(given, finder)
         out.append({"kind": item["kind"], "point": item["point"].strip(), "why_it_matters": item["why_it_matters"].strip(),
-                    "words": words, "anchored": anchored, "places": places})
+                    "words": words, "anchored": anchored, "places": places, "quoted": "" if words == given else given,
+                    "settled": "", "settled_why": ""})
     return out
 
 
@@ -1509,19 +1681,20 @@ def _appearances(names, documents):
     return out
 
 
-def connections_of(model, context, *, wanted=None):
+def connections_of(model, context, *, wanted=None, withdrawn=None):
     """What matters to the client only when the papers are read side by side, as (connections, client_people, appearances,
     failures) - research v13 (plan AN.28, D1-D3, piece 3e). One call reads every paper with the advocate's messages, within
     WHOLE_FILE_TOKENS; above that the papers are not read together and a failure says so. Code finds each point's words on the
-    pages, and the points whose words it cannot find are looked at again once; one still not found is kept, marked not anchored.
-    Code finds where each of the client's people the model names stands on the pages (_appearances). wanted: asked once, before any
-    call; False and nothing is read."""
+    pages with the tolerant finder (v14), and one call settles the points whose words it cannot find, shown code's evidence; code
+    places what it gives again; a point still not found is kept, marked so; one the model finds the papers do not show goes to
+    withdrawn (a list), with why. Code finds where each of the client's people the model names stands on the pages (_appearances).
+    wanted: asked once, before any call; False and nothing is read."""
     documents = _documents(context)
     if not documents or (wanted is not None and not wanted()):
         return [], [], [], []
     if not _whole_file(context, documents):
         return [], [], [], [{"document": ALL_PAPERS, "pages": "all", "reason": "TooLongToReadTogether"}]
-    finder = Pages(_all_pages(documents))
+    finder = Pages(_all_pages(documents), TOLERANT_FINDER)
     user = _papers_text(context, documents)
     try:
         data = _call(model, "core_research_connections", CONNECTIONS_V13, user, CONNECTIONS_SCHEMA, "connections")
@@ -1532,22 +1705,26 @@ def connections_of(model, context, *, wanted=None):
     found = _connections_in(data, finder)
     failing = [item for item in found if not item["anchored"]]
     if failing:
-        to_check = [{"kind": item["kind"], "point": item["point"], "words": item["words"],
-                     **({"nearest_words": near["words"]} if (near := finder.nearest(item["words"])) else {})} for item in failing]
+        to_check = [_to_check(index, {key: item[key] for key in CONNECTION["properties"]},
+                              _NOT_FOUND.format(where="the pages of the papers"), item["words"], finder)
+                    for index, item in enumerate(failing)]
+        kept = [item for item in found if item["anchored"]]
         try:
-            again = _call(model, "core_research_connections", CONNECTIONS_CHECK,
-                          user + "\n\n" + json.dumps({"to_check": to_check}, ensure_ascii=False), CONNECTIONS_SCHEMA,
+            again = _call(model, "core_research_connections", SETTLE_POINTS,
+                          user + "\n\n" + json.dumps({"to_check": to_check}, ensure_ascii=False), SETTLE_POINTS_SCHEMA,
                           "connections_check")
-            kept = [item for item in found if item["anchored"]]
-            held = {(item["kind"], item["point"], item["words"]) for item in kept}
-            found = kept + [item for item in _connections_in(again, finder, keep_found=True)
-                            if (item["kind"], item["point"], item["words"]) not in held]
+            require_schema(again, SETTLE_POINTS_SCHEMA)
         except UsageLimitReached:
             raise
         except (ModelError, SchemaViolation):
-            found = [item for item in found if item["anchored"]] + [
-                {**item, **dict(zip(("anchored", "places"), _anchor_across(_verified(item["words"], finder), finder))),
-                 "words": _verified(item["words"], finder)} for item in found if not item["anchored"]]
+            found = kept + [{**item, "settled": "unavailable"} for item in failing]
+        else:
+            settled, gone = _settled(again["settled"], failing, "connection",
+                                     lambda given: _connections_in({"connections": [given]}, finder)[0], ALL_PAPERS,
+                                     lambda item: item["point"])
+            found = kept + settled
+            if withdrawn is not None:
+                withdrawn.extend(gone)
     # Each of the client's people once, letter case and spacing aside, as the papers first write the name.
     people = {}
     for name in data["client_people"]:
@@ -1557,12 +1734,13 @@ def connections_of(model, context, *, wanted=None):
     return ([{"id": f"C{number}", **item} for number, item in enumerate(found, 1)], people, _appearances(people, documents), [])
 
 
-def _connection_issues(data, context):
+def _connection_issues(data, context, version=EXACT_FINDER):
     """What a v13 plan records of the papers read side by side, checked against the turn's documents (piece 3e): the points numbered
-    C1... in order, each anchored and placed as the one finder finds its words, and the client's appearances as code finds their
-    names; anything else raises SchemaViolation. A failure of the step is an issue: the papers were not read together."""
+    C1... in order, each anchored and placed as the one finder finds its words - with the finder the record was made under
+    (version) - and the client's appearances as code finds their names; anything else raises SchemaViolation. A failure of the step
+    is an issue: the papers were not read together."""
     documents = _documents(context)
-    finder = Pages(_all_pages(documents))
+    finder = Pages(_all_pages(documents), version)
     for number, item in enumerate(data["connections"], 1):
         if item["id"] != f"C{number}":
             raise SchemaViolation(f"Connection {number} is numbered {item['id']}, not C{number}")
@@ -1592,86 +1770,95 @@ def _died_ok(died, file_numbers):
     return bool(read_date(died, months=True)) and {n for n in _numbers(died) if n} <= file_numbers
 
 
-def _transfer_fault(transfer, finder, file_numbers):
-    """Why code cannot use a v13 transaction as the model listed it, or None: its words not on the pages, its figure or whole as
-    figures.fault finds them, the death it records for the giver not on any page of the file, or its date in neither its words nor
-    its paper's pages."""
+def _transfer_fault(transfer, file_numbers):
+    """Why code cannot use a transaction as the model listed it, or None (v14): its words not on its paper's pages, its figure or
+    whole as figures.fault finds them, the death it records for the giver on no page of the file, or the numbers of its date found
+    nowhere in the papers (date_found, set first)."""
     if not transfer["anchored"]:
-        return "its words are not found on the pages"
+        return _NOT_FOUND.format(where="the pages of its paper")
     if why := figures.fault(transfer):
         return why
     if transfer["giver_died"] and not _died_ok(transfer["giver_died"], file_numbers):
-        return "the death it records for the giver is on no page of the file"
-    return None if _traceable(transfer, finder) else "its date is in neither its words nor its pages"
+        return "the death it records for the giver stands on no page of the papers"
+    return _NO_DATE if transfer["date_found"] == "nowhere" else None
 
 
-def _checked_transfers(model, transfers, documents, finders):
-    """v13 (AN.28, D2 and D3): each paper's transactions checked by code and, for a paper where some cannot be used as listed, one
-    check call that looks again; what it gives replaces those at fault. One still at fault is kept as it is - the ledger lists it and
-    never adds it - one whose date is still not in its paper keeps its words and loses its date ("undated"), and a death still on no
-    page of the file is dropped."""
+def _died(transfer, file_numbers):
+    """The death a transaction records for its giver, as code may use it (v14): kept as the papers' reading whatever is found, its
+    date read for use only where it stands in the file - a death found nowhere is listed, never used to judge what came after it."""
+    transfer["giver_died_found"] = bool(transfer["giver_died"]) and _died_ok(transfer["giver_died"], file_numbers)
+    transfer["giver_died_sort"] = read_date(transfer["giver_died"], months=True) if transfer["giver_died_found"] else ""
+    return transfer
+
+
+def _checked_transfers(model, context, transfers, documents, finders, whole=True, withdrawn=None):
+    """v14 (AN.33, D18 and D22): each paper's transactions checked by code as its events are (_checked), and for a paper where some
+    cannot be used as listed, one call that settles them, shown code's evidence; code places what it gives again. One still at fault
+    is kept as the model last gave it - the ledger lists it and never adds it; no date is erased; a giver's death not found in the
+    papers is kept, never used. One the model finds the papers do not record goes to withdrawn, with why."""
     file_numbers = _file_numbers(documents)
 
     def one(document):
         mine = [transfer for transfer in transfers if transfer["source"] == document["source"]]
-        finder = finders[document["source"]]
-        failing = [(transfer, why) for transfer in mine if (why := _transfer_fault(transfer, finder, file_numbers))]
-        if failing:
-            to_check = [{**{key: transfer[key] for key in ("date", "kind", "subject", "figure", "quantity", "whole", "whole_quantity",
-                                                          "from", "to", "instrument", "giver_died", "words")}, "why": why,
-                         **({"nearest_words": near["words"]} if not transfer["anchored"]
-                            and (near := finder.nearest(transfer["words"])) else {})} for transfer, why in failing]
-            user = (_window_text(document, document["pages"]) + "\n\n"
-                    + json.dumps({"to_check": to_check}, ensure_ascii=False))
-            try:
-                data = _call(model, "core_research_transfers", TRANSACTIONS_CHECK, user, TRANSACTIONS_SCHEMA, "transfers_check")
-                kept = [transfer for transfer in mine if all(transfer is not wrong for wrong, _ in failing)]
-                # A model that gives the paper's whole list again adds only what is new: one already kept is not kept twice.
-                held = {_same_transfer(transfer) for transfer in kept}
-                mine = kept + [transfer for transfer in _transfers_in(data, document, finder) if _same_transfer(transfer) not in held]
-            except UsageLimitReached:
-                raise
-            except (ModelError, SchemaViolation):
-                pass
+        finder, paper = finders[document["source"]], _paper_numbers(document["pages"])
         for transfer in mine:
-            if transfer["anchored"] and not _traceable(transfer, finder):
-                transfer["date"] = "undated"
-            if transfer["giver_died"] and not _died_ok(transfer["giver_died"], file_numbers):
-                transfer["giver_died"] = ""
-            transfer["giver_died_sort"] = read_date(transfer["giver_died"], months=True) if transfer["giver_died"] else ""
-        return mine
+            transfer["date_found"] = _date_found(transfer, paper, file_numbers)
+        failing = [(transfer, why) for transfer in mine if (why := _transfer_fault(transfer, file_numbers))]
+        if not failing:
+            return [_died(transfer, file_numbers) for transfer in mine], []
+        to_check = [_to_check(index, {key: transfer[key] for key in TRANSACTION["properties"]}, why, transfer["words"], finder)
+                    for index, (transfer, why) in enumerate(failing)]
+        user = _settle_text(context, documents, document, whole, {"to_check": to_check})
+        kept = [transfer for transfer in mine if all(transfer is not wrong for wrong, _ in failing)]
+        try:
+            data = _call(model, "core_research_transfers", SETTLE_TRANSFERS, user, SETTLE_TRANSFERS_SCHEMA, "transfers_check")
+            require_schema(data, SETTLE_TRANSFERS_SCHEMA)
+        except UsageLimitReached:
+            raise
+        except (ModelError, SchemaViolation):
+            return [_died(transfer, file_numbers) for transfer in kept + [{**wrong, "settled": "unavailable"} for wrong, _ in failing]], []
+        settled, gone = _settled(data["settled"], [wrong for wrong, _ in failing], "transfer",
+                                 lambda given: _transfers_in({"transfers": [given]}, document, finder)[0], document["name"],
+                                 lambda transfer: f"{transfer['kind']} of {transfer['figure'] or 'no stated figure'} ({transfer['subject']})")
+        for transfer in settled:
+            transfer["date_found"] = _date_found(transfer, paper, file_numbers)
+        return [_died(transfer, file_numbers) for transfer in kept + settled], gone
     with ThreadPoolExecutor(max_workers=max(1, min(8, len(documents)))) as pool:
-        return [transfer for mine in pool.map(one, documents) for transfer in mine]
+        done = list(pool.map(one, documents))
+    if withdrawn is not None:
+        withdrawn.extend(item for _, gone in done for item in gone)
+    return [transfer for mine, _ in done for transfer in mine]
 
 
-def _same_transfer(transfer):
-    return tuple(transfer[key] for key in ("date", "kind", "subject", "figure", "words"))
-
-
-def transfers_of(model, context, *, wanted=None):
+def transfers_of(model, context, *, wanted=None, withdrawn=None):
     """The transactions the documents of a turn record, as (transfers, failures) - plan AN.27, P13d; from research v13 of any kind
     (AN.28, D7). Read, anchored, dated, ordered and numbered X1... exactly as the chronology's events are, each paper read with the
-    whole file in view and looked at again once where code cannot use what it found (D2, D3); the figures are checked and added by
-    figures.py, never here."""
+    whole file in view and settled where code cannot use what it found (v14); the figures are checked and added by figures.py,
+    never here. withdrawn: a list that receives the transactions a settling call found the papers do not record."""
     documents = _documents(context)
     if not documents or (wanted is not None and not wanted()):
         return [], []
+    whole = _whole_file(context, documents)
     transfers, failures = _read_stretches(model, context, None, "core_research_transfers", TRANSACTIONS_V13, TRANSACTIONS_SCHEMA,
-                                          "transfers", _transfers_in, whole=_whole_file(context, documents))
-    transfers = _checked_transfers(model, transfers, documents, {document["source"]: Pages(document["pages"])
-                                                                 for document in documents})
+                                          "transfers", _transfers_in, whole=whole)
+    transfers = _checked_transfers(model, context, transfers, documents, {
+        document["source"]: Pages(document["pages"], TOLERANT_FINDER) for document in documents}, whole, withdrawn)
     return _numbered_by_date(transfers, "X", months=True), failures
 
 
-def _stretch_issues(items, failures, context, *, prefix, label, noun, unavailable, months=False):
+def _stretch_issues(items, failures, context, *, prefix, label, noun, unavailable, months=False, version=EXACT_FINDER):
     """What a v12 plan records of one kind that the papers were read for, checked against the documents of the turn (plan AN.27,
     P8c and P13d), and the issues it raises. It must be what the reading makes of those papers: the items numbered prefix1... in
     the order of their dates, the undated last, each of a document the turn holds, its date read as read_date reads it, and its
-    words found on the pages recorded - or on none, and marked not anchored - as the one finder finds them in that document;
+    words found on the pages recorded - or on none, and marked not anchored - as the one finder finds them in that document, with
+    the finder the record was made under (version); from v14 (the tolerant finder) also where code finds the numbers of its date;
     anything else raises SchemaViolation. A stretch that could not be read is an issue, since part of a paper was not read; an item
     whose words are not found is marked not anchored and is not an issue."""
     documents = {document["source"]: document for document in _documents(context)}
-    finders = {source: Pages(document["pages"]) for source, document in documents.items()}
+    finders = {source: Pages(document["pages"], version) for source, document in documents.items()}
+    numbers = ({source: _paper_numbers(document["pages"]) for source, document in documents.items()}
+               if version == TOLERANT_FINDER else {})
+    file_numbers = _file_numbers(documents.values()) if version == TOLERANT_FINDER else set()
     last = None
     for number, item in enumerate(items, 1):
         name = item["id"]
@@ -1688,6 +1875,8 @@ def _stretch_issues(items, failures, context, *, prefix, label, noun, unavailabl
         last = key
         if (item["anchored"], item["pages"]) != _anchor(item["words"], finders[item["source"]]):
             raise SchemaViolation(f"{label} {name} is not anchored as its words are found in its document")
+        if version == TOLERANT_FINDER and item["date_found"] != _date_found(item, numbers[item["source"]], file_numbers):
+            raise SchemaViolation(f"{label} {name} says otherwise than code finds where its date stands")
     names = {document["name"] for document in documents.values()}
     for failure in failures:
         if failure["document"] not in names:
@@ -1696,18 +1885,31 @@ def _stretch_issues(items, failures, context, *, prefix, label, noun, unavailabl
                                           f"{failure['reason']}", "proposal": deepcopy(failure)} for failure in failures]
 
 
-def _chronology_issues(events, failures, context, months=False):
+def _chronology_issues(events, failures, context, months=False, version=EXACT_FINDER):
     return _stretch_issues(events, failures, context, prefix="E", label="Chronology event", noun="chronology",
-                           unavailable="chronology", months=months)
+                           unavailable="chronology", months=months, version=version)
 
 
-def _transfer_issues(transfers, failures, context, months=False):
+def _transfer_issues(transfers, failures, context, months=False, version=EXACT_FINDER):
+    file_numbers = _file_numbers(_documents(context)) if version == TOLERANT_FINDER else set()
     for item in transfers:
+        found = item.get("giver_died_found", bool(item["giver_died"]))
+        if version == TOLERANT_FINDER and found != (bool(item["giver_died"]) and _died_ok(item["giver_died"], file_numbers)):
+            raise SchemaViolation(f"Transfer {item['id']} says otherwise than code finds of its giver's recorded death")
         if "giver_died_sort" in item and item["giver_died_sort"] != (read_date(item["giver_died"], months=months)
-                                                                    if item["giver_died"] else ""):
+                                                                    if item["giver_died"] and found else ""):
             raise SchemaViolation(f"Transfer {item['id']} is dated otherwise than its giver's recorded death reads")
     return _stretch_issues(transfers, failures, context, prefix="X", label="Transfer", noun="transfer", unavailable="transfers",
-                           months=months)
+                           months=months, version=version)
+
+
+def _withdrawn_issues(withdrawn, context):
+    """What a v14 plan lists as withdrawn, checked for what it may name: a paper of the turn, or the papers read together."""
+    names = {document["name"] for document in _documents(context)} | {ALL_PAPERS}
+    for item in withdrawn:
+        if item["document"] not in names:
+            raise SchemaViolation("A withdrawn item names no paper of this turn")
+    return []
 
 
 def plan(model, context, interpretation=None, *, progress=None, wanted=None, restrictions=None):
@@ -1725,11 +1927,13 @@ def plan(model, context, interpretation=None, *, progress=None, wanted=None, res
     if interpretation is not None and not carries_matter(interpretation):
         return _no_matter(context)
     still = wanted or (lambda: True)
+    # v14 (AN.33, D18): what settling a failed check finds the papers do not record, from each reading, listed with why.
+    withdrawn = {"events": [], "transfers": [], "points": []}
     with ThreadPoolExecutor(max_workers=3) as reading:
-        papers = reading.submit(chronology_of, model, context, wanted=still)
-        moved = reading.submit(transfers_of, model, context, wanted=still)
+        papers = reading.submit(chronology_of, model, context, wanted=still, withdrawn=withdrawn["events"])
+        moved = reading.submit(transfers_of, model, context, wanted=still, withdrawn=withdrawn["transfers"])
         # v13 (AN.28, piece 3e): the papers read side by side, beside the rest.
-        linked = reading.submit(connections_of, model, context, wanted=still)
+        linked = reading.submit(connections_of, model, context, wanted=still, withdrawn=withdrawn["points"])
         proposed = _proposal(model, context, still, progress, restrictions)
         if proposed is None:
             return _no_matter(context)
@@ -1739,7 +1943,8 @@ def plan(model, context, interpretation=None, *, progress=None, wanted=None, res
     return accept({**proposed, "chronology": events, "chronology_failures": unread,
                    "transfers": transfers, "transfers_failures": unmoved,
                    "connections": connections, "connections_failures": unlinked, "client_people": people,
-                   "appearances": appearances}, context)
+                   "appearances": appearances, "withdrawn": [*withdrawn["events"], *withdrawn["transfers"], *withdrawn["points"]]},
+                  context)
 
 
 def _proposal(model, context, still, progress, restrictions):
@@ -1819,12 +2024,16 @@ def _accept_v7(proposal, context, schema=SCHEMA, contract=None):
         issues.append({"work_id": None, "mismatch": "The understanding kept open problems after review",
                        "proposal": deepcopy(rounds[-1])})
     months = contract in WHOLE_FILE
+    # v14 (AN.33, D18): a record is checked with the finder it was made under.
+    version = TOLERANT_FINDER if contract in SETTLED else EXACT_FINDER
     if "chronology" in data:
-        issues.extend(_chronology_issues(data["chronology"], data["chronology_failures"], context, months))
+        issues.extend(_chronology_issues(data["chronology"], data["chronology_failures"], context, months, version))
     if "transfers" in data:
-        issues.extend(_transfer_issues(data["transfers"], data.get("transfers_failures", []), context, months))
+        issues.extend(_transfer_issues(data["transfers"], data.get("transfers_failures", []), context, months, version))
     if "connections" in data:
-        issues.extend(_connection_issues(data, context))
+        issues.extend(_connection_issues(data, context, version))
+    if "withdrawn" in data:
+        issues.extend(_withdrawn_issues(data["withdrawn"], context))
     questions = {q["id"]: (dispute, q) for dispute in understanding["disputes"] for q in dispute["legal_questions"]}
     statute, judgment = {}, {}
     for entry in data["statute_phrases"]:
@@ -1868,7 +2077,8 @@ def accept(proposal, context, *, contract=CONTRACT):
     if contract not in CONTRACTS:
         raise ValueError("Unknown research contract")
     if contract in _QUESTION_PLANS:
-        return _accept_v7(proposal, context, SCHEMA_V13 if contract in WHOLE_FILE else SCHEMA_V12 if contract in CHRONICLED
+        return _accept_v7(proposal, context, SCHEMA_V14 if contract in SETTLED else SCHEMA_V13 if contract in WHOLE_FILE
+                          else SCHEMA_V12 if contract in CHRONICLED
                           else SCHEMA if contract in (PURPOSED_CONTRACT, PER_DISPUTE_CONTRACT, JUDGMENTS_READ_CONTRACT)
                           else SCHEMA_V8, contract)
     schema = {LEGACY_CONTRACT: LEGACY_SCHEMA, PREVIOUS_CONTRACT: PREVIOUS_SCHEMA,

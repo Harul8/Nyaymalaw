@@ -41,6 +41,10 @@ class Reading:
         if name in self.fail:
             raise SchemaViolation(f"scripted failure for {name}")
         events = self.script.get(name, [])
+        if prompt.system == research.SETTLE_EVENTS:
+            # Research v14 (AN.33): a call that settles what code could not check answers in its own shape.
+            answer = events(prompt.user) if callable(events) else []
+            return _result(answer if isinstance(answer, dict) else {"settled": [], "added": answer}, tier)
         return _result({"events": events(prompt.user) if callable(events) else events}, tier)
 
 
@@ -286,13 +290,15 @@ def test_above_the_limit_each_call_sees_only_the_pages_it_reads_for(monkeypatch)
         assert f'Document: "{name}"' in seen and f'"{other}"' not in seen and "The rest of the file" not in seen
 
 
-def test_a_date_its_paper_never_gives_is_looked_at_again_and_kept_undated_if_still_not_given():
-    # Invented: the event's words are on the page, but its date is on no page of the paper.
+def test_a_date_the_papers_never_give_is_settled_and_kept_with_where_code_found_it():
+    # Invented: the event's words are on the page, but its date is on no page of the papers. Research v14 (AN.33, D18) never
+    # erases it: the model is asked, and the date it keeps is marked as found nowhere.
     model = Reading({"deed.pdf": [event("14-02-2015", "filing", "A counter was filed.", "The counter was filed by the respondents")]})
     (found,), _ = chronology_of(model, context(row("t1", 1, "deed.pdf", 1, "The counter was filed by the respondents.")))
     checked, = [call[2] for call in model.calls if '"to_check"' in call[2]]
-    assert "its date is in neither its words nor its pages" in checked
-    assert found["anchored"] is True and found["date"] == "undated" and found["sort"] == ""
+    assert research._NO_DATE in checked
+    assert found["anchored"] is True and found["date"] == "14-02-2015" and found["sort"] == "2015-02-14"
+    assert (found["date_found"], found["settled"]) == ("nowhere", "unanswered")
 
 
 def test_a_date_on_a_paper_no_event_carries_is_asked_about_and_the_event_it_marks_is_added():
@@ -327,7 +333,7 @@ def test_the_v13_prompt_dates_an_event_by_when_it_happened_and_lists_a_recited_a
                  "what the authority found and what it directed", "who brought it and who answers it",
                  "records one event: list it once", "Work in a loop", "Do not work out, convert or guess a date"):
         assert part in prompt, part
-    assert "Look again" in research.CHRONOLOGY_CHECK and "not_carried" in research.CHRONOLOGY_CHECK
+    assert "not_carried" in research.SETTLE_EVENTS and "verdict clerical" in research.SETTLE_EVENTS
 
 
 

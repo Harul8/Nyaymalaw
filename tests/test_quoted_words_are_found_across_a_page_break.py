@@ -52,7 +52,7 @@ def test_the_same_words_with_one_word_changed_are_not_found_and_the_problem_says
     assert "do not appear" in problem["problem"]
     assert "match up to '... a quantity of 118 kg and'" in problem["problem"], problem["problem"]
     assert "not found from '200 kg respectively in lot no. 100 of the warehouse. however none'" in problem["problem"]
-    assert problem["fix"].startswith("Quote the exact words")
+    assert problem["fix"].startswith("Decide whether the words were copied with a slip")
 
 
 def test_words_that_are_nowhere_in_the_papers_are_said_not_to_be_found_from_their_first_words():

@@ -78,14 +78,15 @@ def test_a_date_of_a_transfer_of_land_the_writer_was_shown_is_given_and_one_not_
     assert flagged(draft("A sale on 1 February 2019."), ctx, sources, record) == ["t1:b1"]
 
 
-def test_a_date_no_page_of_its_paper_gives_is_not_kept_for_a_transaction_and_so_is_not_given():
-    # Research v13 (plan AN.28, D3), invented: a transaction found on a page, dated by a date its paper nowhere gives.
+def test_a_date_no_page_of_the_papers_gives_is_kept_for_a_transaction_marked_so_and_so_is_not_given():
+    # Research v13 (plan AN.28, D3), invented: a transaction found on a page, dated by a date its paper nowhere gives. Research v14
+    # (AN.33, D18) keeps the date as read, marked as found nowhere, and shows it to the writer undated beside the reading.
     ctx = sent(*[row("t1", 1, "deed.pdf", n, text) for n, text in DEED])
     made = plan(Beside({}, transfers={"deed.pdf": [transfer("5 May 1985", "Lot 201", "310 kg",
                                                             "the supplier sold 310 kg of Lot 201 to the purchasers")]},
                        subject=understanding(1, 2)), ctx)
     (sold,) = made["proposal"]["transfers"]
-    assert (sold["date"], sold["sort"], sold["anchored"]) == ("undated", "", True)
+    assert (sold["date"], sold["sort"], sold["anchored"], sold["date_found"]) == ("5 May 1985", "1985-05-05", True, "nowhere")
     record = retrieve(made, searcher(), ctx, model=Model())
     sources = answer_sources.build(ctx, record)
     assert flagged(draft("The supplier sold it on 5 May 1985."), ctx, sources, record) == ["t1:b1"]

@@ -176,19 +176,20 @@ def test_the_death_of_a_giver_that_some_paper_of_the_file_records_is_kept_and_re
     assert not [prompt for prompt in model.calls if '"to_check"' in prompt.user], "nothing to look at again"
 
 
-def test_a_death_that_no_page_of_the_file_records_is_looked_at_again_once_and_then_dropped():
+def test_a_death_that_no_page_of_the_file_records_is_settled_once_and_then_kept_but_never_used():
+    # Research v14 (AN.33, D18): kept as the papers' reading, marked as not found, never read as a date to judge what came after.
     model = Beside({}, transfers=agreement("9-9-1999"))
     (found,), _ = transfers_of(model, sent(*PAPERS))
     (checked,) = [prompt.user for prompt in model.calls if '"to_check"' in prompt.user]
-    assert "the death it records for the giver is on no page of the file" in checked
-    assert (found["giver_died"], found["giver_died_sort"]) == ("", ""), "a death on no page is not kept"
+    assert "the death it records for the giver stands on no page of the papers" in checked
+    assert (found["giver_died"], found["giver_died_found"], found["giver_died_sort"]) == ("9-9-1999", False, "")
     assert found["figure"] == "500 kg" and found["anchored"] is True and found["date"] == "5-6-2003"
 
 
-def test_a_transaction_whose_date_is_in_neither_its_words_nor_its_pages_loses_its_date_and_keeps_its_words():
+def test_a_transaction_whose_date_stands_nowhere_in_the_papers_keeps_it_marked_so_and_keeps_its_words():
     wrong = {"agreement.pdf": [transfer("9-9-2009", "Contract 77", "500 kg", "The supplier sold 500 kg of grain to the purchaser")]}
     (found,), _ = transfers_of(Beside({}, transfers=wrong), sent(*PAPERS))
-    assert (found["date"], found["sort"], found["anchored"]) == ("undated", "", True)
+    assert (found["date"], found["sort"], found["anchored"], found["date_found"]) == ("9-9-2009", "2009-09-09", True, "nowhere")
 
 
 def test_the_transactions_prompts_are_for_any_matter_and_each_paper_is_read_with_the_whole_file_in_view():
@@ -201,9 +202,10 @@ def test_the_transactions_prompts_are_for_any_matter_and_each_paper_is_read_with
                  "each number exactly as the page writes it, in digits", "You convert and add nothing",
                  "do not add or work out a figure the page does not give"):
         assert part in prompt, part
-    check = " ".join(research.TRANSACTIONS_CHECK.split())
-    for part in ("Message:", "Purpose:", "Outcome:", "a number or a unit not in them", "whose recorded death of the giver is on no page of the file",
-                 "copied exactly from the page as they stand", "so that every number you give is in the words", "Work in a loop"):
+    check = " ".join(research.SETTLE_TRANSFERS.split())
+    for part in ("Message:", "Purpose:", "Outcome:", "that its figure and any whole it states can be checked against those words",
+                 "the death it records of the giver stands in the papers", "copied from the page exactly as they stand there",
+                 "so that every number you give is in the words", "Work in a loop"):
         assert part in check, part
     model = Beside(SCRIPT, transfers=SOLD)
     transfers_of(model, bundle())

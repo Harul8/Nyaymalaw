@@ -1641,13 +1641,26 @@ def _chronology_shown(record, offered, context=None):
     if not events:
         return None
     copied = copy_figures.copies(_copy_pages(context)) if context else ()
-    return [{"id": group["event"]["id"], "date": group["event"]["date"], "kind": group["event"]["kind"],
+    return [{"id": group["event"]["id"], **_date_shown(group["event"]), "kind": group["event"]["kind"],
              "what": group["event"]["what"], "said_by": group["event"]["said_by"], "paper": group["event"]["document"],
              "pages": list(group["event"]["pages"]), "cite": _cited(group["event"], offered),
              "located": group["event"]["anchored"],
              **({"also_in": [{"paper": other["document"], "pages": list(other["pages"]), "cite": _cited(other, offered)}
                              for other in group["also"]]} if group["also"] else {})}
             for group in research.events_once(events, copied)]
+
+
+#: What a writer is told of a date the papers' reading gave that code finds nowhere in the papers (research v14, AN.33 D18).
+DATE_NOT_FOUND = "code finds this date nowhere in the papers; it is the reading's, never to be stated as the papers' date"
+
+
+def _date_shown(item):
+    """An event's or a transaction's date as a writer is shown it (research v14, AN.33 D18): the date as the reading gave it; where
+    code finds its numbers nowhere in the papers, undated, with the reading's date beside it and what that means - so that a date
+    the papers do not give is neither lost from sight nor stated, nor counted among the dates the writer was given."""
+    if item.get("date_found") == "nowhere":
+        return {"date": "undated", "date_as_read": item["date"], "date_note": DATE_NOT_FOUND}
+    return {"date": item["date"]}
 
 
 def _copy_pages(context):
@@ -1679,6 +1692,10 @@ def _figures_shown(record, context=None):
     transactions = record["plan"]["proposal"].get("transfers") if record.get("contract") in research.WHOLE_FILE else None
     if not transactions:
         return None
+    # Research v14 (AN.33, D18): a transaction whose date code finds nowhere in the papers is shown undated (_date_shown); the plan
+    # keeps the date as read.
+    transactions = [{**moved, **_date_shown(moved), "sort": "" if moved.get("date_found") == "nowhere" else moved["sort"]}
+                    for moved in transactions]
     return figures.shown(transactions, copy_figures.copies(_copy_pages(context)) if context else ())
 
 

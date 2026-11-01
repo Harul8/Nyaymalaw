@@ -131,7 +131,7 @@ class Model:
             data = judgment_phrases(self.subject)
         elif operation == "core_research_connections":
             # Research v13 reads the papers side by side (plan AN.28, piece 3e); this double finds nothing there.
-            data = {"client_people": [], "connections": []}
+            data = {"settled": []} if '"to_check"' in prompt.user else {"client_people": [], "connections": []}
         elif operation in ("core_research_pick", "core_research_judgment_pick"):
             shown = {}
             for label, number in re.findall(r"^\s+(Q\d+)\.(\d+) ", prompt.user, re.M):
@@ -330,7 +330,7 @@ def test_search_returns_twenty_provisions_and_the_pick_admits_only_its_choice():
     model = Model(choose=lambda ids: ids[:2])
     record = retrieve(admitted, found, ctx, model=model)
     assert asked == [{"results": {"provision": PROVISIONS_FOR_PICK}}]
-    assert record["contract"] == CONTRACT == "core_research_v13" and record["state"] == "evaluated"
+    assert record["contract"] == CONTRACT == "core_research_v14" and record["state"] == "evaluated"
     provisions = [c for c in record["searches"]["t2:w1"]["candidates"] if c["kind"] == "provision"]
     assert len(provisions) == PROVISIONS_FOR_PICK
     assert record["picks"]["D1"]["chosen"] == {"t2:w1": [provisions[0]["id"], provisions[1]["id"]]}

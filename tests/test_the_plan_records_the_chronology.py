@@ -47,6 +47,8 @@ class Beside(Model):
                 raise UsageLimitReached("the account has no credit")
             if name in self.transfers_fail[0]:
                 raise SchemaViolation(f"scripted failure for {name}")
+            if prompt.system == research.SETTLE_TRANSFERS:
+                return _result({"settled": []}, tier)       # research v14: settles nothing unless told to
             return _result({"transfers": self.transfers.get(name, [])}, tier)
         if prompt.operation == "core_research_understand" and self.meet is not None:
             self.meet.wait(timeout=10)
@@ -169,9 +171,10 @@ def test_a_usage_limit_in_the_reading_stops_the_plan():
 def test_the_contracts_before_v12_keep_their_shape_and_v12_needs_the_chronology():
     ctx = bundle()
     before = accept(proposal(chronology=False), ctx, contract=JUDGMENTS_READ_CONTRACT)
-    # v13 (AN.28) keeps the chronology as v12 did, read with the whole file in view and its dates checked.
-    assert "chronology" not in before["proposal"] and CHRONICLED == ("core_research_v12", CONTRACT)
-    assert CONTRACT == "core_research_v13"
+    # v13 (AN.28) keeps the chronology as v12 did, read with the whole file in view and its dates checked; v14 (AN.33) too, its
+    # failed checks settled.
+    assert "chronology" not in before["proposal"] and CHRONICLED == ("core_research_v12", "core_research_v13", CONTRACT)
+    assert CONTRACT == "core_research_v14"
     with pytest.raises(SchemaViolation, match="undeclared"):
         accept(proposal(), ctx, contract=JUDGMENTS_READ_CONTRACT)
     with pytest.raises(SchemaViolation, match="missing"):

@@ -51,8 +51,11 @@ class SideBySide(Beside):
             if self.fail_side:
                 raise SchemaViolation("scripted failure")
             looked = '"to_check"' in prompt.user
-            return _result(self.again if looked and self.again is not None else self.points if not looked
-                           else {"client_people": [], "connections": []}, tier)
+            if looked:      # research v14 (AN.33): each point code could not find is settled, by its index, as `again` gives it
+                return _result({"settled": [{"index": index, "verdict": "clerical", "reason": "As the pages have it.",
+                                             "connection": given}
+                                            for index, given in enumerate((self.again or {}).get("connections", []))]}, tier)
+            return _result(self.points, tier)
         return super().structured(prompt, schema, tier, **kwargs)
 
 
@@ -66,13 +69,15 @@ def test_every_paper_is_read_together_once_and_each_point_is_found_on_its_pages_
     first = side(model)[0]
     assert first.system == research.CONNECTIONS_V13 and failures == []
     assert all(f'Paper "{name}"' in first.user for name in ("order.pdf", "deed.pdf")) and "We represent the heirs" in first.user
-    (appears, after) = connections
+    (appears, after, unfound) = connections
     assert (appears["id"], appears["anchored"], [(place["document"], place["page"]) for place in appears["places"]]) == (
         "C1", True, [("order.pdf", 1)])
     assert after["anchored"] and [place["page"] for place in after["places"]] == [1, 2], "one point, two pages of one paper"
     assert people == ["Sarala Kulkarni", "Leela Kulkarni"], "each name once, however it was spaced"
-    # The point whose words no page holds was looked at again and left out by the model; one it gives again with words still not
-    # found is kept, marked, and supports nothing.
+    # Research v14 (AN.33, D18): the point whose words no page holds was settled, and a settling that names no verdict for it keeps
+    # it as it was, marked, supporting nothing - it is never dropped unless the model finds the papers do not show it. One the
+    # model gives again with words still not found is kept the same way.
+    assert (unfound["id"], unfound["anchored"], unfound["settled"]) == ("C3", False, "unanswered")
     kept, _, _, _ = connections_of(SideBySide(again={"client_people": [], "connections": [POINTS["connections"][2]]}), papers())
     assert (kept[2]["id"], kept[2]["anchored"], kept[2]["places"]) == ("C3", False, [])
 
@@ -93,7 +98,7 @@ def test_a_point_whose_words_are_not_found_is_looked_at_again_once_and_what_the_
     model = SideBySide(again=fixed)
     connections, _, _, _ = connections_of(model, papers())
     looked = side(model)[1]
-    assert looked.system == research.CONNECTIONS_CHECK and '"to_check"' in looked.user and len(side(model)) == 2
+    assert looked.system == research.SETTLE_POINTS and '"to_check"' in looked.user and len(side(model)) == 2
     assert "the court found against the heirs of Sarala Kulkarni" in looked.user
     assert [(item["id"], item["kind"], item["anchored"]) for item in connections] == [
         ("C1", "client_appears", True), ("C2", "after_death", True), ("C3", "against_client", True)]
@@ -117,7 +122,8 @@ def test_the_plan_keeps_what_the_papers_read_together_show_and_refuses_a_record_
     ctx = papers()
     made = plan(SideBySide(), ctx)
     proposal = made["proposal"]
-    assert [item["id"] for item in proposal["connections"]] == ["C1", "C2"] and proposal["connections_failures"] == []
+    assert [item["id"] for item in proposal["connections"]] == ["C1", "C2", "C3"] and proposal["connections_failures"] == []
+    assert proposal["connections"][2]["settled"] == "unanswered" and proposal["withdrawn"] == []
     assert proposal["client_people"] == ["Sarala Kulkarni", "Leela Kulkarni"] and len(proposal["appearances"]) == 2
     assert accept(proposal, ctx) == made, "the plan replays from its own proposal"
     for tampered in ({**proposal, "appearances": []},
@@ -139,7 +145,7 @@ def test_the_prompts_say_what_to_look_for_and_that_no_legal_question_is_answered
                  "dated after a party's death", "that the advocate has not mentioned", "Work in a loop",
                  "client_appears, against_client, after_death, after_time_limit, further_subject, or other"):
         assert part in prompt, part
-    assert "Look again" in research.CONNECTIONS_CHECK and research.MAX_OUTPUT["connections"] == 16000
+    assert "verdict part" in research.SETTLE_POINTS and research.MAX_OUTPUT["connections"] == 16000
 
 
 def test_the_board_shows_each_partys_part_the_subjects_the_points_read_side_by_side_and_where_the_clients_people_appear():
@@ -163,7 +169,8 @@ def test_the_board_shows_each_partys_part_the_subjects_the_points_read_side_by_s
     assert leela["parts"][0]["places"][0]["document"] == "order.pdf" and navin == {"who": "Navin Rastogi", "role": "buyer"}
     (subject,) = shown["subjects"]
     assert (subject["identifier"], subject["from"], subject["places"][0]["page"]) == ("Lot 9061", "document", 2)
-    assert [(c["id"], c["kind"], c["anchored"]) for c in shown["connections"]] == [("C1", "client_appears", True), ("C2", "after_death", True)]
+    assert [(c["id"], c["kind"], c["anchored"]) for c in shown["connections"]] == [
+        ("C1", "client_appears", True), ("C2", "after_death", True), ("C3", "against_client", False)]
     assert shown["connections"][0]["why"] == "She is one of the clients." and shown["connections_failures"] == []
     assert [a["name"] for a in shown["appearances"]] == ["Sarala Kulkarni", "Leela Kulkarni"]
     assert "connections" not in matter_board.board([turn([paper("deed.pdf", DEATH)], [])]), "a plan without them shows none"
@@ -175,8 +182,10 @@ def test_a_point_keeps_the_passages_of_its_words_that_stand_on_the_pages_and_los
     slip = {"client_people": [], "connections": [
         {"kind": "client_appears", "point": "Leela Kulkarni is a respondent in a pending writ appeal.", "why_it_matters": "A client.",
          "words": "the respondents include Leela Kulkarni ... 7. Leela Kulkarni, respondent in another appeal"}]}
-    (kept,), _, _, _ = connections_of(SideBySide(points=slip, again=slip), papers())
-    assert kept["anchored"] and kept["words"] == "the respondents include Leela Kulkarni"
+    # Research v14 (AN.33): the model, shown the point code could not check, gives it within what the pages hold.
+    part = {"client_people": [], "connections": [{**slip["connections"][0], "words": "the respondents include Leela Kulkarni"}]}
+    (kept,), _, _, _ = connections_of(SideBySide(points=slip, again=part), papers())
+    assert kept["anchored"] and kept["words"] == "the respondents include Leela Kulkarni" and kept["settled"] == "clerical"
     assert [(place["document"], place["page"]) for place in kept["places"]] == [("order.pdf", 1)]
 
 

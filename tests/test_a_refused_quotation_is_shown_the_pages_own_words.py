@@ -46,7 +46,7 @@ def test_words_that_make_a_passive_active_inside_the_marks_are_refused_and_the_p
     said = found["problem"]
     assert "do not appear" in said and "the nearest words on a page (order.pdf, page 8) read '" in said
     assert "manager was directed to implement the name of these respondents for a quantity of 118 kg" in said.split("read '")[1]
-    assert found["fix"].startswith("Quote the exact words") and "as they stand" in found["fix"]
+    assert found["fix"].startswith("Decide whether the words were copied with a slip") and "as they stand" in found["fix"]
 
 
 def test_a_letter_the_scan_misread_is_shown_as_the_page_has_it_so_it_can_be_copied():

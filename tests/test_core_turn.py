@@ -47,6 +47,8 @@ class ScriptedModel:
                 # nothing.
                 data = ({"events": []} if prompt.operation == "core_research_chronology" else {"transfers": []}
                         if prompt.operation == "core_research_transfers" else {"client_people": [], "connections": []})
+                if '"to_check"' in prompt.user:     # research v14 (AN.33): a settling call settles nothing here
+                    data = {"settled": [], **({"added": []} if prompt.operation == "core_research_chronology" else {})}
                 return ModelResult(None, data, tier, "synthetic", "fixture", Usage(1, 1, 0), 0,
                                    completion=Completion.COMPLETE)
             if prompt.operation == "core_research_understand":

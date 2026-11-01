@@ -135,7 +135,7 @@ def test_a_quotation_is_left_to_its_own_check():
     subject["facts"][0]["advocate_words"] = "total 700 kg"
     (found,) = research.code_checks(subject, papers())
     assert "do not appear" in found["problem"] and "700 kg" in found["problem"], "refused once, as a quotation, and not again as a figure"
-    assert found["fix"].startswith("Quote the exact words")
+    assert found["fix"].startswith("Decide whether the words were copied with a slip")
 
 
 def test_each_figure_is_refused_once_with_every_place_it_is_stated_and_the_first_words_it_was_written_in():

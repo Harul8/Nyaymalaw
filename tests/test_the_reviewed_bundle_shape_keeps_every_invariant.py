@@ -120,7 +120,8 @@ def test_i4_the_papers_events_are_a_list_anchored_dated_and_ordered_by_code_with
     assert [(e["sort"], e["kind"], e["anchored"]) for e in events] == [
         ("2008-03-17", "order", True), ("2019-08-17", "order", True), ("2021-01-01", "filing", False),
         ("", "order", True), ("", "pending", True)]
-    run_over = next(e for e in events if e["words"] == DIRECTION)
+    # Research v14 keeps the pages' own words, two passages over a break; the words as quoted stand beside them.
+    run_over = next(e for e in events if DIRECTION in (e["words"], e["quoted"]))
     assert run_over["pages"] == [1, 2] and run_over["document"] == "register.pdf", "the direction over the break has both pages"
     assert next(e for e in events if e["kind"] == "pending")["pages"] == [1]
     assert [e["id"] for e in events] == ["E1", "E2", "E3", "E4", "E5"]
