@@ -67,7 +67,7 @@ def test_every_paper_is_read_together_once_and_each_point_is_found_on_its_pages_
     model = SideBySide()
     connections, people, appearances, failures = connections_of(model, papers())
     first = side(model)[0]
-    assert first.system == research.CONNECTIONS_V13 and failures == []
+    assert first.system == research.CONNECTIONS_V14 and failures == [], "research v14 (AN.33, piece 33f)"
     assert all(f'Paper "{name}"' in first.user for name in ("order.pdf", "deed.pdf")) and "We represent the heirs" in first.user
     (appears, after, unfound) = connections
     assert (appears["id"], appears["anchored"], [(place["document"], place["page"]) for place in appears["places"]]) == (
@@ -138,14 +138,17 @@ def test_the_plan_keeps_what_the_papers_read_together_show_and_refuses_a_record_
 
 
 def test_the_prompts_say_what_to_look_for_and_that_no_legal_question_is_answered():
-    prompt = " ".join(research.CONNECTIONS_V13.split())
-    for part in ("Message:", "Purpose:", "Look for:", "Outcome:", "only when two papers, or two parts of one, are read together",
-                 "You are not answering a legal question", "Whom the advocate acts for, from their messages",
-                 "in another proceeding than the one the advocate speaks of", "goes against the client's position",
-                 "dated after a party's death", "that the advocate has not mentioned", "Work in a loop",
-                 "client_appears, against_client, after_death, after_time_limit, further_subject, or other"):
-        assert part in prompt, part
-    assert "verdict part" in research.SETTLE_POINTS and research.MAX_OUTPUT["connections"] == 16000
+    # Research v14 (AN.33, piece 33f) reads with CONNECTIONS_V14; the prompt of the records made before is kept as it was.
+    for prompt, kinds in ((research.CONNECTIONS_V13, "further_subject, or other"),
+                          (research.CONNECTIONS_V14, "further_subject, papers_differ, or other")):
+        prompt = " ".join(prompt.split())
+        for part in ("Message:", "Purpose:", "Look for:", "Outcome:", "only when two papers, or two parts of one, are read together",
+                     "You are not answering a legal question", "Whom the advocate acts for, from their messages",
+                     "in another proceeding than the one the advocate speaks of", "goes against the client's position",
+                     "dated after a party's death", "that the advocate has not mentioned", "Work in a loop",
+                     "client_appears, against_client, after_death, after_time_limit, " + kinds):
+            assert part in prompt, part
+    assert "verdict part" in research.SETTLE_POINTS and research.MAX_OUTPUT["connections"] == 24000
 
 
 def test_the_board_shows_each_partys_part_the_subjects_the_points_read_side_by_side_and_where_the_clients_people_appear():

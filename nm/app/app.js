@@ -3783,7 +3783,7 @@ function renderFigures(subjects, make) {
 // the name - a near spelling offered only as a candidate, never taken for the person. A point whose words were not found says so.
 const SIDE_BY_SIDE = { client_appears: 'Your client’s people elsewhere', against_client: 'Against your client',
   after_death: 'After a death', after_time_limit: 'After a time limit or order', further_subject: 'A further asset, account or case',
-  other: 'Read together' };
+  papers_differ: 'Where your papers differ', other: 'Read together' };
 function renderPapersTogether(board, make) {
   const connections = board.connections || [];
   const appearances = (board.appearances || []).filter((one) => one.places.length || one.near.length);

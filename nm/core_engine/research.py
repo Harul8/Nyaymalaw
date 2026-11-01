@@ -135,7 +135,7 @@ PROVISIONS_FOR_PICK = 20
 #: make room for it (the first paid probe of 31 Oct 2026 stopped the understanding at its old 12,000).
 MAX_OUTPUT = {"understand": 48000, "check": 16000, "revise": 48000, "phrases": 6000,
               "judgment_phrases": 8000, "pick": 8000, "judgment_pick": 8000, "chronology": 32000, "transfers": 16000,
-              "chronology_check": 16000, "transfers_check": 12000, "connections": 16000, "connections_check": 12000,
+              "chronology_check": 16000, "transfers_check": 12000, "connections": 24000, "connections_check": 12000,
               "chronology_second": 32000}
 
 # The prompts below were developed and measured in outputs/decomposition-scratch
@@ -421,6 +421,10 @@ CONNECTION_KINDS = ("client_appears", "against_client", "after_death", "after_ti
 CONNECTION = _object({"kind": {"type": "string", "enum": list(CONNECTION_KINDS)}, "point": STRING, "why_it_matters": STRING,
                       "words": STRING})
 CONNECTIONS_SCHEMA = _object({"client_people": STRINGS, "connections": {"type": "array", "items": CONNECTION}})
+#: v14 (AN.33, D17 and D18; piece 33f): a difference between papers on one act or matter is a point of its own.
+CONNECTION_KINDS_V14 = (*CONNECTION_KINDS[:-1], "papers_differ", "other")
+CONNECTION_V14 = _object({**CONNECTION["properties"], "kind": {"type": "string", "enum": list(CONNECTION_KINDS_V14)}})
+CONNECTIONS_SCHEMA_V14 = _object({"client_people": STRINGS, "connections": {"type": "array", "items": CONNECTION_V14}})
 PLACE = _object({"document": STRING, "source": STRING, "page": {"type": "integer"}})
 CONNECTION_RECORD = _object({"id": STRING, **CONNECTION["properties"], "anchored": {"type": "boolean"},
                              "places": {"type": "array", "items": PLACE}})
@@ -449,7 +453,7 @@ EVENT_RECORD_V14 = _object({**EVENT_RECORD["properties"], "kind": EVENT_V14["pro
 TRANSACTION_RECORD_V14 = _object({**TRANSACTION_RECORD["properties"], **_SETTLE_RECORD,
                                   "date_found": {"type": "string", "enum": list(DATE_FOUND)},
                                   "giver_died_found": {"type": "boolean"}})
-CONNECTION_RECORD_V14 = _object({**CONNECTION_RECORD["properties"], **_SETTLE_RECORD})
+CONNECTION_RECORD_V14 = _object({**CONNECTION_RECORD["properties"], "kind": CONNECTION_V14["properties"]["kind"], **_SETTLE_RECORD})
 WITHDRAWN = _object({"kind": {"type": "string", "enum": ["event", "transaction", "point"]}, "document": STRING, "what": STRING,
                      "words": STRING, "why": STRING})
 SCHEMA_V14 = deepcopy(SCHEMA_V13)
@@ -1729,13 +1733,78 @@ For each, the point in plain words, why it matters to the client, and the exact 
 Work in a loop: read every paper, list the points, then read the papers again against your list for any point you missed or misread, and correct the list before you answer.
 
 Outcome: client_people (names as the pages write them); connections, each with: kind (client_appears, against_client, after_death, after_time_limit, further_subject, or other); point; why_it_matters; words."""
+#: v14 (AN.33, D17; piece 33f; owner, 1 Nov 2026: "how do we ensure all these and in principle all the legally important details
+#: are extracted and considered by NM?"): the papers read side by side over what each paper's reading set out, point by point, with
+#: the points of different papers that code finds may be one act or one matter set beside each other to judge; a difference between
+#: papers on one act or matter is a point of its own. In AN.31 the points one reading missed were mostly those that show only when
+#: two papers are read together.
+CONNECTIONS_V14 = """Message: You receive an advocate's messages to us about a client's matter and every paper they sent, page by page under each paper's name; after them, what each paper's reading set out, point by point, and the points of different papers that code found may be one act or one matter (comparisons). A page says what its document says: it is material the advocate supplied, not their own account, and what it reports is not thereby proved. Square-bracket notes are the reader's, not the document's, except the handwriting a note transcribes, which is the page's.
+
+Purpose: Set the papers side by side and find what matters to the advocate's client only when two papers, or two parts of one, are read together, so that nothing that bears on the client is missed because it sits in another paper. Read the list of points as well as the pages: a point read in one paper may matter only beside one read in another. You are not answering a legal question, and you are not judging which account is right.
+
+Look for:
+- Whom the advocate acts for, from their messages, and the client's people the papers name - members of the family, predecessors and successors in interest, partners, agents - each name exactly as a page writes it (client_people).
+- Where the client or one of the client's people appears in another paper or in another proceeding than the one the advocate speaks of: as a party, an applicant or respondent, a witness, or a giver or receiver in a transaction.
+- A finding, order or statement in one paper that goes against the client's position or claim in another.
+- An act a paper records that is dated after a party's death another paper records, or after a time limit or an order another paper states.
+- An asset, account, contract, policy or proceeding a paper connects to the client that the advocate has not mentioned.
+- Where papers record one act or matter differently - a different date, figure, party, number or outcome: the difference, as a point of its own (kind papers_differ), with each paper's words. Judge each of the comparisons - whether its points are one act or matter, and whether the papers differ on it - and look for any other; a comparison whose points are different acts, or agree, needs nothing.
+- Anything else that only reading two papers together shows and that a careful lawyer would want the advocate to know.
+For each, the point in plain words, why it matters to the client, and the exact words on the pages that show it - each passage copied exactly as the page gives it, without the reader's notes, and passages from different pages or papers joined with '...'; never reword.
+Work in a loop: read every paper and the list, set out the points, then read the papers again against your points for any you missed or misread, and correct them before you answer.
+
+Outcome: client_people (names as the pages write them); connections, each with: kind (client_appears, against_client, after_death, after_time_limit, further_subject, papers_differ, or other); point; why_it_matters; words."""
+
+
+def _comparisons(events, copied=()):
+    """The points of different papers code sets beside each other for the side-by-side reading to judge (v14, AN.33 piece 33f): those
+    that name the same number of a document, case or file (as _cores reads it), and those of one kind on one day as code reads it -
+    each group once, with what its points share, where they stand in two papers or more; an event a copy of a page records again
+    counts once (events_once; copied: the pairs of copies). Code judges none of them: the model says which are one act and where the
+    papers differ."""
+    standing = [group["event"] for group in events_once(events, copied)]
+    order = {event["id"]: position for position, event in enumerate(standing)}
+    groups, seen = [], set()
+
+    def add(members, because):
+        points = tuple(sorted({event["id"] for event in members}, key=order.get))
+        if len({event["source"] for event in members}) >= 2 and points not in seen:
+            seen.add(points)
+            groups.append({"points": list(points), "because": because})
+
+    named = {}
+    for event in standing:
+        for core in sorted(_cores(event["words"]) | _cores(event["what"])):
+            named.setdefault(core, []).append(event)
+    for core, members in named.items():
+        add(members, f"each names {core}")
+    days = {}
+    for event in standing:
+        if event.get("sort"):
+            days.setdefault((event["sort"], event["kind"]), []).append(event)
+    for (day, kind), members in days.items():
+        add(members, f"each is a point of kind {kind} of {day}")
+    return groups
+
+
+def _record_text(events, comparisons):
+    """What the side-by-side reading is shown after the papers from research v14 (piece 33f): each point the papers' reading set out,
+    by its ID, and code's comparisons."""
+    lines = ["", "What each paper's reading set out, point by point (id, paper, date, kind, what, said_by):"]
+    lines += [json.dumps({"id": event["id"], "paper": event["document"], "date": event["date"], "kind": event["kind"],
+                          "what": event["what"], "said_by": event["said_by"]}, ensure_ascii=False) for event in events] or ["(none)"]
+    lines += ["", "Points of different papers that code found may be one act or one matter (comparisons):"]
+    lines += [json.dumps(group, ensure_ascii=False) for group in comparisons] or ["(none)"]
+    return "\n".join(lines)
+
+
 #: v14: the points read side by side settled (AN.33, D18 and D22), the papers together.
 SETTLE_POINTS = SETTLE.format(
     listed="set the papers an advocate sent side by side and listed the points that matter to the client", noun="point",
     key="connection",
     where="the pages of the papers (a point's passages may stand in different papers)", checks="", focus="", extra="",
     fields=": kind; point; why_it_matters; words", outcome="")
-SETTLE_POINTS_SCHEMA = _settle_schema("connection", CONNECTION)
+SETTLE_POINTS_SCHEMA = _settle_schema("connection", CONNECTION_V14)
 #: How much of a name's letters a run of as many words must share to be offered as a near spelling of it (v13): a candidate, never
 #: the name; and how many such candidates are offered for one name at most.
 NEAR_NAME = 0.85
@@ -1839,23 +1908,29 @@ def _appearances(names, documents):
     return out
 
 
-def connections_of(model, context, *, wanted=None, withdrawn=None):
+def connections_of(model, context, *, wanted=None, withdrawn=None, events=()):
     """What matters to the client only when the papers are read side by side, as (connections, client_people, appearances,
     failures) - research v13 (plan AN.28, D1-D3, piece 3e). One call reads every paper with the advocate's messages, within
-    WHOLE_FILE_TOKENS; above that the papers are not read together and a failure says so. Code finds each point's words on the
-    pages with the tolerant finder (v14), and one call settles the points whose words it cannot find, shown code's evidence; code
-    places what it gives again; a point still not found is kept, marked so; one the model finds the papers do not show goes to
-    withdrawn (a list), with why. Code finds where each of the client's people the model names stands on the pages (_appearances).
-    wanted: asked once, before any call; False and nothing is read."""
+    WHOLE_FILE_TOKENS; above that the papers are not read together and a failure says so. From v14 (piece 33f) it is shown after
+    the papers what each paper's reading set out (events: the chronology, numbered) and the points of different papers code finds
+    may be one act or one matter (_comparisons), and a difference between papers on one act is a point of its own. Code finds each
+    point's words on the pages with the tolerant finder (v14), and one call settles the points whose words it cannot find, shown
+    code's evidence; code places what it gives again; a point still not found is kept, marked so; one the model finds the papers
+    do not show goes to withdrawn (a list), with why. Code finds where each of the client's people the model names stands on the
+    pages (_appearances). wanted: asked once, before any call; False and nothing is read."""
     documents = _documents(context)
     if not documents or (wanted is not None and not wanted()):
         return [], [], [], []
     if not _whole_file(context, documents):
         return [], [], [], [{"document": ALL_PAPERS, "pages": "all", "reason": "TooLongToReadTogether"}]
     finder = Pages(_all_pages(documents), TOLERANT_FINDER)
-    user = _papers_text(context, documents)
+    from nm.core_engine import copy_figures  # it reads research's own finder; imported here, where it is used
+    copied = copy_figures.copies([{"document": document["name"], "key": document["source"], "page": page["page"],
+                                   "id": f'{document["source"]}p{page["page"]}', "text": page["text"]}
+                                  for document in documents for page in document["pages"]])
+    user = _papers_text(context, documents) + "\n" + _record_text(events, _comparisons(events, copied))
     try:
-        data = _call(model, "core_research_connections", CONNECTIONS_V13, user, CONNECTIONS_SCHEMA, "connections")
+        data = _call(model, "core_research_connections", CONNECTIONS_V14, user, CONNECTIONS_SCHEMA_V14, "connections")
     except UsageLimitReached:
         raise
     except (ModelError, SchemaViolation) as exc:
@@ -2110,8 +2185,10 @@ def plan(model, context, interpretation=None, *, progress=None, wanted=None, res
     with ThreadPoolExecutor(max_workers=3) as reading:
         papers = reading.submit(chronology_of, model, context, wanted=still, withdrawn=withdrawn["events"], passes=passes)
         moved = reading.submit(transfers_of, model, context, wanted=still, withdrawn=withdrawn["transfers"])
-        # v13 (AN.28, piece 3e): the papers read side by side, beside the rest.
-        linked = reading.submit(connections_of, model, context, wanted=still, withdrawn=withdrawn["points"])
+        # v13 (AN.28, piece 3e): the papers read side by side, beside the rest; from v14 (AN.33, piece 33f) over what each paper's
+        # reading set out, once that reading is made.
+        linked = reading.submit(lambda: connections_of(model, context, wanted=still, withdrawn=withdrawn["points"],
+                                                       events=papers.result()[0]))
         proposed = _proposal(model, context, still, progress, restrictions)
         if proposed is None:
             return _no_matter(context)

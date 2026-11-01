@@ -544,7 +544,8 @@ chronology (each by its ID in papers_chronology, which holds its date, what it i
 order and what it found, a filing, a pending matter, a transaction, what a party says, a document's
 particulars, who is related to whom, where matters stand), every point the papers read side by side
 show (one of the client's people in another proceeding, a finding against the client, an act after
-a death or a time limit, a further asset, account or case), and every fact the understanding took
+a death or a time limit, a further asset, account or case, a difference between papers on one act),
+and every fact the understanding took
 from the advocate's messages and the papers, each with what it is. One whose words NM could not
 check on a page (located false) is said as what the papers' reading gave, never cited or quoted as
 a page's words. Take up each whose absence would change or weaken what your part tells the
