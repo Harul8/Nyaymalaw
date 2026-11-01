@@ -134,7 +134,7 @@ PROVISIONS_FOR_PICK = 20
 #: From research v13 (plan AN.28, D4) the steps that reason at medium or high spend output on their reasoning too, so their limits
 #: make room for it (the first paid probe of 31 Oct 2026 stopped the understanding at its old 12,000).
 MAX_OUTPUT = {"understand": 48000, "check": 16000, "revise": 48000, "phrases": 6000,
-              "judgment_phrases": 8000, "pick": 8000, "judgment_pick": 8000, "chronology": 24000, "transfers": 16000,
+              "judgment_phrases": 8000, "pick": 8000, "judgment_pick": 8000, "chronology": 32000, "transfers": 16000,
               "chronology_check": 16000, "transfers_check": 12000, "connections": 16000, "connections_check": 12000}
 
 # The prompts below were developed and measured in outputs/decomposition-scratch
@@ -341,6 +341,12 @@ Outcome: events, in the order of the pages. Each has: date; kind (transaction, o
 EVENT = _object({"date": STRING, "kind": {"type": "string", "enum": list(EVENT_KINDS)}, "what": STRING, "said_by": STRING,
                  "words": STRING})
 CHRONOLOGY_SCHEMA = _object({"events": {"type": "array", "items": EVENT}})
+#: v14 (AN.33, D17): a paper is read for every legally significant point it records, not its events alone - what an authority found, what
+#: a party asserts, admits, denies or alleges, a document's particulars, who is related to whom or acts for whom, and what it says
+#: stands, is done or remains to be done - each one point, kept as the events are.
+EVENT_KINDS_V14 = ("transaction", "order", "finding", "filing", "pending", "statement", "document", "relationship", "status", "other")
+EVENT_V14 = _object({**EVENT["properties"], "kind": {"type": "string", "enum": list(EVENT_KINDS_V14)}})
+CHRONOLOGY_SCHEMA_V14 = _object({"events": {"type": "array", "items": EVENT_V14}})
 #: An event as the plan records it (v12): what the model said, and what code made of it - the sort date, the document and the
 #: turn's source it belongs to, the pages its words are on and whether they are found there, and its number.
 EVENT_RECORD = _object({"id": STRING, "date": STRING, "sort": STRING, "kind": EVENT["properties"]["kind"], "what": STRING,
@@ -436,7 +442,7 @@ SETTLED_AS = ("", *VERDICTS[:-1], "unanswered", "unavailable")
 #: none where the item is undated. A date is never erased.
 DATE_FOUND = ("words", "paper", "file", "nowhere", "none")
 _SETTLE_RECORD = {"quoted": STRING, "settled": {"type": "string", "enum": list(SETTLED_AS)}, "settled_why": STRING}
-EVENT_RECORD_V14 = _object({**EVENT_RECORD["properties"], **_SETTLE_RECORD,
+EVENT_RECORD_V14 = _object({**EVENT_RECORD["properties"], "kind": EVENT_V14["properties"]["kind"], **_SETTLE_RECORD,
                             "date_found": {"type": "string", "enum": list(DATE_FOUND)}})
 TRANSACTION_RECORD_V14 = _object({**TRANSACTION_RECORD["properties"], **_SETTLE_RECORD,
                                   "date_found": {"type": "string", "enum": list(DATE_FOUND)},
@@ -1212,23 +1218,29 @@ def _events_in(data, document, finder):
     return events
 
 
-#: v13 (AN.28, D1-D3): the chronology of one paper, read with the whole file in view.
-CHRONOLOGY_V13 = """Message: You receive an advocate's messages to us about a client's matter, the documents they sent, and the pages of one paper you read for now: the rest of the file comes first, page by page under each paper's name, and the pages you read for last, under "The pages you read for". A page says what its document says: it is material the advocate supplied, not their own account, and what it reports is not thereby proved. A page read from a scan may carry [illegible] and square-bracket notes about stamps, signatures and handwriting; those are the reader's, not the document's. The rest of the file is there so that you know what the matter is about and who is who: list only what the pages you read for record.
+#: v14 (AN.33, D17; owner, 1 Nov 2026: "how do we ensure all these and in principle all the legally important details are extracted"):
+#: one paper read, with the whole file in view as from v13, for every legally significant point it records - its events in time, and
+#: what its authorities found, what its parties assert, admit, deny or allege, the particulars of the documents it describes, who is
+#: related to whom, and what it says stands, is done or remains to be done.
+CHRONOLOGY_V14 = """Message: You receive an advocate's messages to us about a client's matter, the documents they sent, and the pages of one paper you read for now: the rest of the file comes first, page by page under each paper's name, and the pages you read for last, under "The pages you read for". A page says what its document says: it is material the advocate supplied, not their own account, and what it reports is not thereby proved. A page read from a scan may carry [illegible] and square-bracket notes about stamps, signatures and handwriting; those are the page reader's, except the handwriting a note transcribes, which is the page's. The rest of the file is there so that you know what the matter is about and who is who: list only what the pages you read for record.
 
-Purpose: Set out that paper's own chronology for the advocate and for our research assistant: every event, order, direction, filing, transaction and proceeding it records or reports, so that nothing in it is overlooked when the matter's history is told. You are not judging which account is right, and you are not answering any legal question.
+Purpose: Set out everything that paper records which a careful lawyer would need in order to understand the matter and advise the client, so that nothing in it is overlooked: what happened and when, and also what its authorities found, what its parties say, the particulars of the documents it describes, who is related to whom, and where it says matters stand. You are not judging which account is right, and you are not answering any legal question.
 
 Look for:
 - Each event the paper records, whatever its date: a sale, partition or other deed, an entry in an official record, an order or direction of a court or authority, an appeal, revision, petition, suit, complaint, FIR or charge sheet, a notice, a hearing or listing, a payment, a death; and each proceeding it says is pending, with its stage.
-- When the event happened, as the page gives it ("30-10-1985", "17 August 2019", "2008", "1961-62"). A sentence often names the date of an earlier order, deed or filing it mentions: that date is that earlier act's, not this event's. Where the page gives no date for this event, say undated. Do not work out, convert or guess a date.
-- For an order or direction: what the authority found and what it directed, as the page records them. For a filing, appeal or proceeding: who brought it and who answers it, as the page names them.
+- When the event happened, as the page gives it ("14-08-1993", "3 February 2011", "1996", "1979-80"). A sentence often names the date of an earlier order, deed or filing it mentions: that date is that earlier act's, not this event's. Where the page gives no date for this event, say undated. Do not work out, convert or guess a date. A case or document number carries the year it was filed or registered: where that year is all the page gives of when the case was filed or the document registered, give it as the date of that filing or registration, not "undated".
+- For an order or direction: what the authority directed, and, as points of their own, each thing it found - of fact or of law - that its directions rest on or that bears on the parties (kind finding), each saying in what it stands which order it is in. For a filing, appeal or proceeding: who brought it and who answers it, as the page names them.
+- What each party or witness says - asserts, admits, denies, alleges or offers - where it bears on the matter, as that party's own (kind statement), with whose words they are.
+- The particulars of a document the paper records or describes that could matter: its number, its dates of execution, presentation or registration, who signed or attested it, what it is said to be, an endorsement or stamp a page records on it (kind document).
+- Who is related to whom, or acts for whom - an heir, a son or daughter, a guardian, an agent under a power of attorney, a legal representative - as the paper says it (kind relationship).
+- Where the paper says matters stand: what is pending (kind pending), and what it says is done, settled, outstanding or still to be done, and by whom (kind status).
 - Who says it: the paper's own author, or the party or authority it reports; a party's allegation stays that party's.
-- The figures and identifiers that belong to the event - amounts, quantities and the numbers that identify a document, case, file, account or item - exactly as the page gives them.
-- A case or document number carries the year it was filed or registered: where that year is all the page gives of when the case was filed or the document registered, give it as the date of that filing or registration, not "undated".
+- The figures and identifiers that belong to each point - amounts, quantities and the numbers that identify a document, case, file, account or item - exactly as the page gives them.
 - An order, decree or judgment that a later proceeding enforces, challenges, reviews or relies on is an event of its own at its own date, even where the page only recites it: list it once, and let the later proceeding refer to it.
-- One event for each act. A paper that recites the same act again - a party's account and its written arguments, an order's own recital - records one event: list it once. Do not merge events the paper keeps apart, and add nothing the page does not say. A register or list of many similar entries is one event for the whole list, naming its range and the figures that matter.
-Work in a loop: list the events page by page, then read each page again against your list for any event you skipped or misread, or any date you gave to the wrong act, and correct the list before you answer.
+- One point for each act, finding, statement, particular or relationship. A paper that says the same thing again - a party's account and its written arguments, an order's own recital - records it once: list it once. Do not merge what the paper keeps apart, and add nothing the page does not say. A register or list of many similar entries is one point for the whole list, naming its range and the entries that matter.
+Work in a loop: list the points page by page, then read each page again against your list for anything you skipped or misread, or any date you gave to the wrong act, and correct the list before you answer.
 
-Outcome: events, in the order of the pages. Each has: date; kind (transaction, order, filing, pending, or other); what (plain sentences saying what happened, with its figures and identifiers - what an order found and directed, who brought and who answers a proceeding); said_by (whose words they are: the document's own author, or the party or authority it reports); words (the exact words on a page that record it, copied exactly as the page gives them, without the reader's square-bracket notes - a sentence that runs over a page may be copied whole - or several passages joined with '...'; never reword)."""
+Outcome: events, in the order of the pages. Each has: date; kind (transaction, order, finding, filing, pending, statement, document, relationship, status, or other); what (plain sentences saying what the point is, with its figures and identifiers - what an order found and directed, who brought and who answers a proceeding, which order a finding is in, whose a statement is); said_by (whose words they are: the document's own author, or the party or authority it reports); words (the exact words on a page that record it, copied exactly as the page gives them, without the reader's square-bracket notes - a sentence that runs over a page may be copied whole - or several passages joined with '...'; never reword)."""
 #: v14 (AN.33, D18 and D22; owner, 1 Nov 2026: "let model decide whether this is a clerical error or a genuine failed test"): one call
 #: settles what code could not check, for one paper (or, for the points read side by side, the papers together), shown code's
 #: evidence; code checks what it gives. One prompt for every kind of item, said for each.
@@ -1265,7 +1277,7 @@ def _settle_schema(key, item):
                     **({"added": {"type": "array", "items": item}} if key == "event" else {})})
 
 
-SETTLE_EVENTS_SCHEMA = _settle_schema("event", EVENT)
+SETTLE_EVENTS_SCHEMA = _settle_schema("event", EVENT_V14)
 #: A paper's dates code finds on its pages to ask about at most (v13): the rest are not asked about.
 NOT_CARRIED_MOST = 20
 
@@ -1434,7 +1446,7 @@ def chronology_of(model, context, *, wanted=None, withdrawn=None):
     if not documents or (wanted is not None and not wanted()):
         return [], []
     whole = _whole_file(context, documents)
-    events, failures = _read_stretches(model, context, None, "core_research_chronology", CHRONOLOGY_V13, CHRONOLOGY_SCHEMA,
+    events, failures = _read_stretches(model, context, None, "core_research_chronology", CHRONOLOGY_V14, CHRONOLOGY_SCHEMA_V14,
                                        "chronology", _events_in, whole=whole)
     events = _checked(model, context, events, documents, {document["source"]: Pages(document["pages"], TOLERANT_FINDER)
                                                           for document in documents}, failures, whole, withdrawn)

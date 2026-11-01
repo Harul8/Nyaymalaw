@@ -24,18 +24,18 @@ def words(prompt):
 
 
 def test_a_case_or_document_number_carries_the_year_it_was_filed_or_registered():
-    prompt = words(research.CHRONOLOGY_V13)
+    prompt = words(research.CHRONOLOGY_V14)
     assert DATED in prompt
     assert prompt.index("Where the page gives no date for this event, say undated.") < prompt.index(DATED), \
         "said after the rule for an event the page does not date, as its exception"
 
 
 def test_an_order_decree_or_judgment_that_a_later_proceeding_relies_on_is_an_event_of_its_own_listed_once():
-    prompt = words(research.CHRONOLOGY_V13)
+    prompt = words(research.CHRONOLOGY_V14)
     assert RELIED_ON in prompt
-    assert prompt.index(RELIED_ON) < prompt.index("One event for each act."), "and the one-event rule that follows keeps it listed once"
+    assert prompt.index(RELIED_ON) < prompt.index("One point for each act, finding, statement, particular or relationship."),         "and the one-point rule that follows keeps it listed once"
 
 
 def test_the_earlier_timeline_prompt_is_what_it_was():
     assert DATED not in words(research.CHRONOLOGY) and RELIED_ON not in words(research.CHRONOLOGY)
-    assert research.CHRONOLOGY != research.CHRONOLOGY_V13
+    assert research.CHRONOLOGY != research.CHRONOLOGY_V14

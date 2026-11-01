@@ -233,3 +233,26 @@ def test_the_settling_prompt_says_what_code_checked_and_asks_for_a_verdict_never
         for verdict in research.VERDICTS:
             assert f"verdict {verdict}" in prompt or f"(verdict {verdict})" in prompt
     assert "not_carried" in SETTLE_EVENTS and "added" in SETTLE_EVENTS and "not_carried" not in SETTLE_TRANSFERS
+
+
+def test_a_paper_is_read_for_every_legally_significant_point_and_each_kind_is_kept_as_an_event_is():
+    # Research v14 (AN.33, D17): findings, statements, documents' particulars, relationships and status are points of their own.
+    page = [(1, "ORDER of 3-9-2014. The board found that the lessor had consented to the transfer. The board directed the entry "
+                "to be restored. The lessee says he paid the rent. Deed No. 41 was presented for registration on 5-1-2013. "
+                "Sri T. Ramesh, son of the late lessor, holds a power of attorney. The appeal is still pending.")]
+    points = [event("3-9-2014", "order", "The board directed the entry to be restored.", "The board directed the entry to be restored"),
+              event("3-9-2014", "finding", "In its order, the board found the lessor had consented.",
+                    "The board found that the lessor had consented to the transfer", "the board"),
+              event("undated", "statement", "The lessee says he paid the rent.", "The lessee says he paid the rent", "the lessee"),
+              event("5-1-2013", "document", "Deed No. 41 was presented on 5-1-2013.",
+                    "Deed No. 41 was presented for registration on 5-1-2013"),
+              event("undated", "relationship", "Sri T. Ramesh is the lessor's son and holds a power of attorney.",
+                    "Sri T. Ramesh, son of the late lessor, holds a power of attorney"),
+              event("undated", "pending", "The appeal is pending.", "The appeal is still pending")]
+    model = Settling({"order.pdf": points})
+    events, failures = chronology_of(model, sent(("order.pdf", page)))
+    assert failures == [] and model.settles() == []
+    assert sorted(e["kind"] for e in events) == ["document", "finding", "order", "pending", "relationship", "statement"]
+    assert all(e["anchored"] for e in events)
+    [reading] = [call for call in model.calls if call.system == research.CHRONOLOGY_V14]
+    assert reading.operation == "core_research_chronology" and "(kind finding)" in reading.system

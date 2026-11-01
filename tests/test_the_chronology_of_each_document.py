@@ -204,7 +204,7 @@ def test_the_prompt_states_the_message_the_purpose_what_to_look_for_and_the_outc
     for part in ("Message:", "Purpose:", "Look for:", "Outcome:", "Do not work out, convert or guess a date",
                  "Work in a loop", "You are not judging which account is right", "Who says it."):
         assert part in prompt, part
-    assert research.MAX_OUTPUT["chronology"] == 24000 and research.EVENT_KINDS == (
+    assert research.MAX_OUTPUT["chronology"] == 32000 and research.EVENT_KINDS == (
         "transaction", "order", "filing", "pending", "other")
 
 
@@ -327,12 +327,18 @@ def test_v13_reads_a_numbered_month_and_year_as_that_month(words, expected):
     assert read_date(words, months=True) == expected and read_date(words) == expected[:4] if len(expected) == 7 else True
 
 
-def test_the_v13_prompt_dates_an_event_by_when_it_happened_and_lists_a_recited_act_once():
-    prompt = research.CHRONOLOGY_V13
+def test_the_v14_prompt_reads_every_point_dates_an_event_by_when_it_happened_and_lists_a_recited_act_once():
+    # Research v14 (AN.33, D17): every legally significant point, not events alone.
+    prompt = " ".join(research.CHRONOLOGY_V14.split())
     for part in ("Message:", "Purpose:", "Look for:", "Outcome:", "that date is that earlier act's, not this event's",
-                 "what the authority found and what it directed", "who brought it and who answers it",
-                 "records one event: list it once", "Work in a loop", "Do not work out, convert or guess a date"):
+                 "what the authority directed, and, as points of their own, each thing it found", "(kind finding)",
+                 "who brought it and who answers it", "as that party's own (kind statement)", "(kind document)",
+                 "(kind relationship)", "(kind status)", "records it once: list it once", "Work in a loop",
+                 "Do not work out, convert or guess a date", "except the handwriting a note transcribes, which is the page's"):
         assert part in prompt, part
+    assert research.EVENT_KINDS_V14 == ("transaction", "order", "finding", "filing", "pending", "statement", "document",
+                                        "relationship", "status", "other")
+    assert research.CHRONOLOGY_SCHEMA_V14["properties"]["events"]["items"]["properties"]["kind"]["enum"] == list(research.EVENT_KINDS_V14)
     assert "not_carried" in research.SETTLE_EVENTS and "verdict clerical" in research.SETTLE_EVENTS
 
 
