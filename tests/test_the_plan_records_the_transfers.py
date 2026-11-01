@@ -97,8 +97,8 @@ def test_the_readings_of_the_papers_and_the_understanding_are_all_in_flight_toge
 
         def structured(self, prompt, schema, tier, **kwargs):
             if (prompt.operation in ("core_research_understand", "core_research_chronology", "core_research_transfers")
-                    and '"to_check"' not in prompt.user):
-                self.gate.wait(timeout=10)          # the look again comes after the readings, on its own
+                    and '"to_check"' not in prompt.user and research.SECOND_PASS.splitlines()[0] not in prompt.user):
+                self.gate.wait(timeout=10)          # the look again and the second pass come after the readings, on their own
             return super().structured(prompt, schema, tier, **kwargs)
     made = plan(Trio({"deed.pdf": SCRIPT["deed.pdf"]}, transfers={"deed.pdf": SOLD["deed.pdf"]}),
                 sent(*[row("t1", 1, "deed.pdf", n, text) for n, text in DEED]))

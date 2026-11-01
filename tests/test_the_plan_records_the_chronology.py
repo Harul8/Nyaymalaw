@@ -21,7 +21,7 @@ from tests.test_core_research import Model, _result, operations, proposal, searc
 from tests.test_core_turn import run, store  # noqa: F401 - pytest fixture
 from tests.test_core_turn_documents import DocumentModel, material
 from tests.test_core_understanding import context as typed
-from tests.test_the_chronology_of_each_document import DEED, ORDER, SCRIPT, Reading, event, row
+from tests.test_the_chronology_of_each_document import DEED, ORDER, SCRIPT, SECOND, Reading, event, row
 
 pytestmark = pytest.mark.class_a
 
@@ -81,7 +81,8 @@ def test_the_papers_are_read_beside_the_understanding_and_kept_with_the_plan():
     expected, _ = research.chronology_of(Reading(script), ctx)
     assert kept["proposal"]["chronology"] == expected and [e["id"] for e in expected] == ["E1", "E2"]
     assert kept["proposal"]["chronology_failures"] == [] and kept["issues"] == []
-    assert operations(model).count("core_research_chronology") == 1
+    reads = [p for p in model.calls if p.operation == "core_research_chronology" and SECOND not in p.user]
+    assert len(reads) == 1 and len(model.papers.second) == 1, "the paper is read, then read a second time for what it left out"
 
 
 def test_a_plan_keeps_every_event_of_every_document_and_marks_the_one_whose_words_are_not_found():

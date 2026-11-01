@@ -129,9 +129,9 @@ def test_i4_the_papers_events_are_a_list_anchored_dated_and_ordered_by_code_with
 
 def test_i5_each_paper_is_read_on_its_own_and_what_it_gave_reaches_the_board_the_writer_and_the_review():
     m = matter()
-    # The readings, not research v13's look again at a paper (plan AN.28, D2).
+    # The readings, not research v13's look again at a paper (plan AN.28, D2) nor research v14's second pass (AN.33, piece 33g).
     reads = [prompt.user for prompt in m["model"].calls if prompt.operation == "core_research_chronology"
-             and '"to_check"' not in prompt.user]
+             and '"to_check"' not in prompt.user and research.SECOND_PASS.splitlines()[0] not in prompt.user]
     assert len(reads) == 3 and all(sum(f'Document: "{name}"' in text for name in ("register.pdf", "order.pdf", "copy.pdf")) == 1
                                    for text in reads)
     payload, draft = written()

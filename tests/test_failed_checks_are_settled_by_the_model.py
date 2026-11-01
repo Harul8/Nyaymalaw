@@ -254,7 +254,8 @@ def test_a_paper_is_read_for_every_legally_significant_point_and_each_kind_is_ke
     assert failures == [] and model.settles() == []
     assert sorted(e["kind"] for e in events) == ["document", "finding", "order", "pending", "relationship", "statement"]
     assert all(e["anchored"] for e in events)
-    [reading] = [call for call in model.calls if call.system == research.CHRONOLOGY_V14]
+    [reading] = [call for call in model.calls if call.system == research.CHRONOLOGY_V14
+                 and research.SECOND_PASS.splitlines()[0] not in call.user]
     assert reading.operation == "core_research_chronology" and "(kind finding)" in reading.system
 
 

@@ -135,7 +135,8 @@ PROVISIONS_FOR_PICK = 20
 #: make room for it (the first paid probe of 31 Oct 2026 stopped the understanding at its old 12,000).
 MAX_OUTPUT = {"understand": 48000, "check": 16000, "revise": 48000, "phrases": 6000,
               "judgment_phrases": 8000, "pick": 8000, "judgment_pick": 8000, "chronology": 32000, "transfers": 16000,
-              "chronology_check": 16000, "transfers_check": 12000, "connections": 16000, "connections_check": 12000}
+              "chronology_check": 16000, "transfers_check": 12000, "connections": 16000, "connections_check": 12000,
+              "chronology_second": 32000}
 
 # The prompts below were developed and measured in outputs/decomposition-scratch
 # (13-14 Oct 2026). They state the purpose and the needed outcome in plain language
@@ -442,8 +443,9 @@ SETTLED_AS = ("", *VERDICTS[:-1], "unanswered", "unavailable")
 #: none where the item is undated. A date is never erased.
 DATE_FOUND = ("words", "paper", "file", "nowhere", "none")
 _SETTLE_RECORD = {"quoted": STRING, "settled": {"type": "string", "enum": list(SETTLED_AS)}, "settled_why": STRING}
+#: v14 (AN.33, piece 33g): second_pass - the event was given by the second pass over its paper, for what the reading left out.
 EVENT_RECORD_V14 = _object({**EVENT_RECORD["properties"], "kind": EVENT_V14["properties"]["kind"], **_SETTLE_RECORD,
-                            "date_found": {"type": "string", "enum": list(DATE_FOUND)}})
+                            "date_found": {"type": "string", "enum": list(DATE_FOUND)}, "second_pass": {"type": "boolean"}})
 TRANSACTION_RECORD_V14 = _object({**TRANSACTION_RECORD["properties"], **_SETTLE_RECORD,
                                   "date_found": {"type": "string", "enum": list(DATE_FOUND)},
                                   "giver_died_found": {"type": "boolean"}})
@@ -455,6 +457,9 @@ SCHEMA_V14["properties"]["chronology"] = {"type": "array", "items": EVENT_RECORD
 SCHEMA_V14["properties"]["transfers"] = {"type": "array", "items": TRANSACTION_RECORD_V14}
 SCHEMA_V14["properties"]["connections"] = {"type": "array", "items": CONNECTION_RECORD_V14}
 SCHEMA_V14["properties"]["withdrawn"] = {"type": "array", "items": WITHDRAWN}
+#: v14 (AN.33, piece 33g): each second pass over a stretch of a paper - how many events it added, or why it could not be made.
+SECOND_PASS_RECORD = _object({"document": STRING, "pages": STRING, "added": {"type": "integer"}, "reason": STRING})
+SCHEMA_V14["properties"]["chronology_second_pass"] = {"type": "array", "items": SECOND_PASS_RECORD}
 
 
 def _source_windows(context):
@@ -1214,8 +1219,69 @@ def _events_in(data, document, finder):
         events.append({"date": item["date"].strip(), "kind": item["kind"], "what": item["what"].strip(),
                        "said_by": item["said_by"].strip(), "document": document["name"], "source": document["source"],
                        "pages": pages, "words": words, "anchored": anchored, "quoted": "" if words == given else given,
-                       "settled": "", "settled_why": "", "date_found": "none"})
+                       "settled": "", "settled_why": "", "date_found": "none", "second_pass": False})
     return events
+
+
+#: v14 (AN.33, D17 and D25; piece 33g; owner, 1 Nov 2026: "how do we ensure all these and in principle all the legally important
+#: details are extracted"): after a paper's reading, a second pass over each stretch of it, shown what was read from the paper and
+#: asked only what that leaves out. It is the reading's own call - its prompt and the same file before the pages - with this after
+#: them, so that it reads as the reading did; what it gives is placed, checked and settled with the rest. In AN.31 two readings of
+#: the same papers made blind each found points the other missed.
+SECOND_PASS = """What the reading already set out from this paper, point by point (date, kind, what, said_by):
+{listed}
+
+Read the pages you read for again, now only for what that list leaves out: any point there that a careful lawyer would need - an event, an order or a thing it found, a filing or a matter pending, what a party says, a document's particulars, who is related to whom, where matters stand. Give each as an event, as the reading would have; give none where the list holds them all. Do not give again a point the list holds, in whatever words it is put."""
+
+
+def _same_point(one, other):
+    """Whether a point the second pass gives is one its paper's list holds already, word for word (v14): the same kind and the same
+    date and what, or the same words placed on the same pages. Any other likeness is the model's to judge, as it is told."""
+    if one["kind"] != other["kind"]:
+        return False
+    if (one["date"], " ".join(one["what"].split()).casefold()) == (other["date"], " ".join(other["what"].split()).casefold()):
+        return True
+    return bool(one["anchored"] and other["anchored"] and one["words"] and one["words"] == other["words"]
+                and one["pages"] == other["pages"])
+
+
+def _second_pass(model, context, documents, events, failures, whole):
+    """The second pass over each stretch of each paper (v14, AN.33 piece 33g), all at once: one call for each stretch whose reading
+    did not fail, shown the file as its reading was and the points read from its paper, asked only what they leave out. Returns (the
+    events it adds - placed as the reading's are, each marked second_pass, none the paper's list holds word for word - and a record of
+    each pass: how many it added, or why it could not be made). A pass that fails adds nothing and leaves the reading as it was; a
+    usage limit still stops the turn."""
+    finders = {document["source"]: Pages(document["pages"], TOLERANT_FINDER) for document in documents}
+    tasks = [(document, window) for document in documents for window in _windows(document["pages"])
+             if not {page["page"] for page in window} <= _unread(failures, document)]
+    if not tasks:
+        return [], []
+
+    def look(task):
+        document, window = task
+        first, last = window[0]["page"], window[-1]["page"]
+        label = f"{first}-{last}" if first != last else f"{first}"
+        held = [event for event in events if event["source"] == document["source"]]
+        listed = "\n".join(json.dumps({key: event[key] for key in ("date", "kind", "what", "said_by")}, ensure_ascii=False)
+                           for event in held) or "(none)"
+        user = (_window_text(document, window) if whole is None else
+                _file_context(context, documents, document, window, whole) + "\n\nThe pages you read for:\n"
+                + _window_text(document, window)) + "\n\n" + SECOND_PASS.format(listed=listed)
+        try:
+            data = _call(model, "core_research_chronology", CHRONOLOGY_V14, user, CHRONOLOGY_SCHEMA_V14, "chronology_second")
+        except UsageLimitReached:
+            raise
+        except (ModelError, SchemaViolation) as exc:
+            return [], {"document": document["name"], "pages": label, "added": 0, "reason": type(exc).__name__}
+        added = []
+        for event in _events_in(data, document, finders[document["source"]]):
+            if not any(_same_point(event, other) for other in (*held, *added)):
+                added.append({**event, "second_pass": True})
+        return added, {"document": document["name"], "pages": label, "added": len(added), "reason": ""}
+
+    with ThreadPoolExecutor(max_workers=min(8, len(tasks))) as pool:
+        done = list(pool.map(look, tasks))
+    return [event for added, _ in done for event in added], [record for _, record in done]
 
 
 #: v14 (AN.33, D17; owner, 1 Nov 2026: "how do we ensure all these and in principle all the legally important details are extracted"):
@@ -1447,7 +1513,9 @@ def _settled(entries, failing, key, shape, document_name, what):
             withdrawn.append({"kind": {"transfer": "transaction", "connection": "point"}.get(key, key), "document": document_name,
                               "what": what(item), "words": item["words"], "why": entry["reason"].strip()})
         else:
-            kept.append({**shape(entry[key]), "settled": entry["verdict"], "settled_why": entry["reason"].strip()})
+            # Where the item came from stays with it: an event the second pass gave is still the second pass's (piece 33g).
+            came = {"second_pass": item["second_pass"]} if "second_pass" in item else {}
+            kept.append({**shape(entry[key]), **came, "settled": entry["verdict"], "settled_why": entry["reason"].strip()})
     return kept, withdrawn
 
 
@@ -1507,19 +1575,25 @@ def _checked(model, context, events, documents, finders, failures=(), whole=True
     return [event for mine, _ in done for event in mine]
 
 
-def chronology_of(model, context, *, wanted=None, withdrawn=None):
+def chronology_of(model, context, *, wanted=None, withdrawn=None, passes=None):
     """The chronology the documents of a turn record, as (events, failures) - plan AN.27, P8.
 
     The model says what a page records; code does the rest: finds the event's words in the document (the one finder), records the
     pages, reads the date, orders the events by it - the undated last, in the papers' order - and numbers them E1.... An event
     whose words are not found is kept, marked not anchored, never dropped and never to be cited as sourced. withdrawn: a list that
-    receives the events a settling call found the papers do not record (v14)."""
+    receives the events a settling call found the papers do not record (v14). passes: a list that receives the record of each second
+    pass over a stretch of a paper, made after its reading for what it left out (v14, piece 33g)."""
     documents = _documents(context)
     if not documents or (wanted is not None and not wanted()):
         return [], []
     whole = _whole_file(context, documents)
     events, failures = _read_stretches(model, context, None, "core_research_chronology", CHRONOLOGY_V14, CHRONOLOGY_SCHEMA_V14,
                                        "chronology", _events_in, whole=whole)
+    if wanted is None or wanted():
+        added, made = _second_pass(model, context, documents, events, failures, whole)
+        events = events + added
+        if passes is not None:
+            passes.extend(made)
     events = _checked(model, context, events, documents, {document["source"]: Pages(document["pages"], TOLERANT_FINDER)
                                                           for document in documents}, failures, whole, withdrawn)
     return _numbered_by_date(events, "E", months=True), failures
@@ -1987,6 +2061,24 @@ def _transfer_issues(transfers, failures, context, months=False, version=EXACT_F
                            months=months, version=version)
 
 
+def _second_pass_issues(passes, events, context):
+    """What a v14 plan lists of its second passes (piece 33g), checked against the plan: each names a paper of the turn, says why it
+    failed only where it added nothing, and no paper has more events marked second_pass than its passes added (settling may withdraw
+    some, never add any as the second pass's)."""
+    names = {document["name"] for document in _documents(context)}
+    added = {}
+    for item in passes:
+        if item["document"] not in names or item["added"] < 0 or (item["reason"] and item["added"]):
+            raise SchemaViolation("A second pass names no paper of this turn, or says otherwise than it did")
+        added[item["document"]] = added.get(item["document"], 0) + item["added"]
+    for event in events:
+        if event.get("second_pass"):
+            added[event["document"]] = added.get(event["document"], 0) - 1
+            if added[event["document"]] < 0:
+                raise SchemaViolation(f"Chronology event {event['id']} is marked as the second pass's, which added no more")
+    return []
+
+
 def _withdrawn_issues(withdrawn, context):
     """What a v14 plan lists as withdrawn, checked for what it may name: a paper of the turn, or the papers read together."""
     names = {document["name"] for document in _documents(context)} | {ALL_PAPERS}
@@ -2013,8 +2105,10 @@ def plan(model, context, interpretation=None, *, progress=None, wanted=None, res
     still = wanted or (lambda: True)
     # v14 (AN.33, D18): what settling a failed check finds the papers do not record, from each reading, listed with why.
     withdrawn = {"events": [], "transfers": [], "points": []}
+    # v14 (AN.33, piece 33g): each second pass over a stretch of a paper, with what it added.
+    passes = []
     with ThreadPoolExecutor(max_workers=3) as reading:
-        papers = reading.submit(chronology_of, model, context, wanted=still, withdrawn=withdrawn["events"])
+        papers = reading.submit(chronology_of, model, context, wanted=still, withdrawn=withdrawn["events"], passes=passes)
         moved = reading.submit(transfers_of, model, context, wanted=still, withdrawn=withdrawn["transfers"])
         # v13 (AN.28, piece 3e): the papers read side by side, beside the rest.
         linked = reading.submit(connections_of, model, context, wanted=still, withdrawn=withdrawn["points"])
@@ -2027,7 +2121,8 @@ def plan(model, context, interpretation=None, *, progress=None, wanted=None, res
     return accept({**proposed, "chronology": events, "chronology_failures": unread,
                    "transfers": transfers, "transfers_failures": unmoved,
                    "connections": connections, "connections_failures": unlinked, "client_people": people,
-                   "appearances": appearances, "withdrawn": [*withdrawn["events"], *withdrawn["transfers"], *withdrawn["points"]]},
+                   "appearances": appearances, "withdrawn": [*withdrawn["events"], *withdrawn["transfers"], *withdrawn["points"]],
+                   "chronology_second_pass": passes},
                   context)
 
 
@@ -2118,6 +2213,8 @@ def _accept_v7(proposal, context, schema=SCHEMA, contract=None):
         issues.extend(_connection_issues(data, context, version))
     if "withdrawn" in data:
         issues.extend(_withdrawn_issues(data["withdrawn"], context))
+    if "chronology_second_pass" in data:
+        issues.extend(_second_pass_issues(data["chronology_second_pass"], data.get("chronology", []), context))
     questions = {q["id"]: (dispute, q) for dispute in understanding["disputes"] for q in dispute["legal_questions"]}
     statute, judgment = {}, {}
     for entry in data["statute_phrases"]:

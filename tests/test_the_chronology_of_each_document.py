@@ -20,18 +20,27 @@ from tests.test_core_research import _result
 pytestmark = pytest.mark.class_a
 
 
+#: The words that open what a second pass over a paper is asked after its pages (research v14, plan AN.33 piece 33g).
+SECOND = research.SECOND_PASS.splitlines()[0]
+
+
 class Reading:
-    """Answers the chronology call from a script keyed by the document's name; a name in `fail` fails as a shape error."""
+    """Answers the chronology call from a script keyed by the document's name; a name in `fail` fails as a shape error. The second
+    pass over a paper (research v14) is kept apart, in `second`, and finds nothing more."""
 
     def __init__(self, script, fail=(), usage_limit=(), meet=None):
         self.script, self.fail, self.usage_limit, self.meet = script, set(fail), set(usage_limit), meet
-        self.calls, self.lock = [], threading.Lock()
+        self.calls, self.second, self.lock = [], [], threading.Lock()
 
     def context_budget(self, tier):
         return 10 ** 9
 
     def structured(self, prompt, schema, tier, **kwargs):
         name = re.search(r'^Document: "(.*)"', prompt.user, re.M).group(1)
+        if SECOND in prompt.user:
+            with self.lock:
+                self.second.append((prompt.operation, name, prompt.user))
+            return _result({"events": []}, tier)
         with self.lock:
             self.calls.append((prompt.operation, name, prompt.user))
         if self.meet is not None and '"to_check"' not in prompt.user:
@@ -97,6 +106,7 @@ def test_each_document_is_read_for_on_its_own_with_the_rest_of_the_file_in_view(
     events, failures = chronology_of(model, papers())
     assert failures == []
     assert sorted(name for _, name, _ in reads(model)) == ["deed.pdf", "order.pdf"]
+    assert sorted(name for _, name, _ in model.second) == ["deed.pdf", "order.pdf"], "each paper is read a second time"
     for operation, name, seen in reads(model):
         assert operation == "core_research_chronology"
         other = "order.pdf" if name == "deed.pdf" else "deed.pdf"
