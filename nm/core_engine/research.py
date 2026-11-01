@@ -136,7 +136,7 @@ PROVISIONS_FOR_PICK = 20
 MAX_OUTPUT = {"understand": 48000, "check": 16000, "revise": 48000, "phrases": 6000,
               "judgment_phrases": 8000, "pick": 8000, "judgment_pick": 8000, "chronology": 32000, "transfers": 16000,
               "chronology_check": 16000, "transfers_check": 12000, "connections": 24000, "connections_check": 12000,
-              "chronology_second": 32000, "weigh": 24000, "weigh_check": 16000}
+              "chronology_second": 32000, "weigh": 24000, "weigh_check": 32000}
 
 # The prompts below were developed and measured in outputs/decomposition-scratch
 # (13-14 Oct 2026). They state the purpose and the needed outcome in plain language
