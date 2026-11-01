@@ -1264,8 +1264,13 @@ SETTLE_EVENTS = SETTLE.format(
     checks=", and that the numbers of its date stand in its words or in the papers",
     focus="the pages of the paper being checked last, under \"The pages of the paper being checked\", ",
     extra="\n- Dates that stand on the paper's pages but in none of its events (not_carried): for each, give in added the event the "
-          "paper records with it, if it marks one; give nothing for a date that marks no event (a stamp's date, a printed form's).",
-    fields=": date; kind; what; said_by; words", outcome=" added: the events you give for not_carried, each as an event.")
+          "paper records with it, if it marks one; give nothing for a date that marks no event (a stamp's date, a printed form's).\n"
+          "- Identifiers - numbers of documents, cases, files or items - that stand on the paper's pages but in none of its events "
+          "(identifiers_not_carried), and pages none of its events is on (pages_without_points): for each, give in added what the "
+          "paper records there that a careful lawyer would need, each as an event; give nothing where it records nothing of the kind "
+          "(a house number, a printed form's number, a page of signatures or stamps).",
+    fields=": date; kind; what; said_by; words",
+    outcome=" added: the events you give for not_carried, identifiers_not_carried and pages_without_points, each as an event.")
 
 
 def _settle_schema(key, item):
@@ -1337,6 +1342,63 @@ def _not_carried(document, events, unread=()):
     return found[:NOT_CARRIED_MOST]
 
 
+#: v14 (AN.33, D17; piece 33e): an identifier as a page writes one - a number of a document, case, file or item with a stroke in it
+#: ("715/92", "K/2257/2012", "C.R.P. 88/2020"), or "No. 58 of 2014" - read for the numbers it holds, which a point must carry.
+_IDENTIFIER = re.compile(r"(?<![\w/])(?:[^\W\d_]{1,6}\d?[./]?\s*)?\d{1,6}(?:\s*/\s*[^\W_]{1,6}){1,3}(?![\w/])"
+                         r"|\b(?:No\.?\s*)?(\d{2,6})\s+of\s+(\d{4})\b", re.I)
+#: A paper's identifiers and pages that no point carries, asked about at most (v14): the rest are not asked about.
+IDENTIFIERS_MOST, PAGES_MOST = 20, 10
+#: The letters and digits a page must hold for its holding no point to be asked about (v14): a cover or a stamp page holds fewer.
+PAGE_LETTERS = 200
+
+
+def _cores(text):
+    """The numbers the identifiers in some words hold, each as its digits joined by strokes ("88/2020"), "No. 88 of 2020" read
+    the same: what an identifier on a page is matched by in the points (v14)."""
+    found = set()
+    for match in _IDENTIFIER.finditer(" ".join(str(text).split())):
+        core = (f"{match.group(1)}/{match.group(2)}" if match.group(1) else
+                "/".join(part for part in re.split(r"\s*/\s*", re.sub(r"^[^\d]*", "", match.group(0))) if part))
+        if sum(char.isdigit() for char in core) >= 3 and not read_date(core.replace("/", "-")).count("-") == 2:
+            found.add(core.casefold())
+    return found
+
+
+def _uncovered(document, events, unread=()):
+    """What of a paper's pages no point of it carries (v14, AN.33 piece 33e), to be asked about once in its settling call: the
+    identifiers on its pages, outside the reader's notes, whose numbers no point's words or account hold - each once, as the page
+    writes it, with its page, IDENTIFIERS_MOST at most - and the pages no point is placed on that hold at least PAGE_LETTERS letters
+    and digits, PAGES_MOST at most. unread: the pages not to ask about - those whose reading failed, which a failure already names,
+    and those read already as copies (_read_as_copies)."""
+    mine = [event for event in events if event["source"] == document["source"]]
+    carried = set()
+    for event in mine:
+        carried |= _cores(event["words"]) | _cores(event["what"])
+    identifiers, seen = [], set()
+    for page in document["pages"]:
+        if page["page"] in unread:
+            continue
+        for match in _IDENTIFIER.finditer(" ".join(_MARKS.sub(" ", page["text"]).split())):
+            for core in _cores(match.group(0)):
+                if core not in carried and core not in seen:
+                    seen.add(core)
+                    identifiers.append({"identifier": match.group(0), "page": page["page"]})
+    named = {(event["source"], number) for event in events for number in event["pages"]}
+    pages = [page["page"] for page in document["pages"]
+             if page["page"] not in unread and (document["source"], page["page"]) not in named
+             and sum(1 for char in _reading(page["text"]) if char.isalnum()) >= PAGE_LETTERS]
+    return {"identifiers": identifiers[:IDENTIFIERS_MOST], "pages": pages[:PAGES_MOST]}
+
+
+def _read_as_copies(document, events, copied, earlier):
+    """The pages of a paper that are copies of a page of an earlier paper (earlier: their sources) some point is placed on (v14, AN.33
+    piece 33e; copied: the pairs copy_figures finds): read already, so neither their dates, nor their identifiers, nor they themselves
+    are asked about again - the first paper of a set of copies is the one asked about."""
+    named = {(event["source"], number) for event in events for number in event["pages"]}
+    return {page for pair in copied for (source, page), other in (tuple(pair), tuple(pair)[::-1])
+            if source == document["source"] and other[0] in earlier and other in named}
+
+
 def _unread(failures, document):
     """The pages of a paper a failure names (v13): "3" or "1-4"."""
     pages = set()
@@ -1396,6 +1458,11 @@ def _checked(model, context, events, documents, finders, failures=(), whole=True
     them, shown code's evidence; code places what it gives again. No date is erased; an event still unchecked stays, marked so. An
     event the model finds the papers do not record goes to withdrawn (a list), with why. The papers are settled all at once."""
     file_numbers = _file_numbers(documents)
+    from nm.core_engine import copy_figures  # it reads research's own finder; imported here, where it is used
+    copied = copy_figures.copies([{"document": document["name"], "key": document["source"], "page": page["page"],
+                                   "id": f'{document["source"]}p{page["page"]}', "text": page["text"]}
+                                  for document in documents for page in document["pages"]])
+    earlier = {document["source"]: {other["source"] for other in documents[:index]} for index, document in enumerate(documents)}
 
     def one(document):
         mine = [event for event in events if event["source"] == document["source"]]
@@ -1403,14 +1470,19 @@ def _checked(model, context, events, documents, finders, failures=(), whole=True
         for event in mine:
             event["date_found"] = _date_found(event, paper, file_numbers)
         failing = [event for event in mine if not event["anchored"] or event["date_found"] == "nowhere"]
-        missing = _not_carried(document, [{**event, "sort": read_date(event["date"], months=True)} for event in mine],
-                               _unread(failures, document))
-        if not (failing or missing):
+        # v14 (AN.33, piece 33e): a page that is a copy of one a point is placed on is read already; the identifiers and the pages of
+        # the paper no point carries are asked about in the same call as its dates no point carries.
+        skip = _unread(failures, document) | _read_as_copies(document, events, copied, earlier[document["source"]])
+        missing = _not_carried(document, [{**event, "sort": read_date(event["date"], months=True)} for event in mine], skip)
+        uncovered = _uncovered(document, events, skip)
+        if not (failing or missing or uncovered["identifiers"] or uncovered["pages"]):
             return mine, []
         to_check = [_to_check(index, {key: event[key] for key in EVENT["properties"]},
                               _NOT_FOUND.format(where="the pages of its paper") if not event["anchored"] else _NO_DATE,
                               event["words"], finder) for index, event in enumerate(failing)]
-        user = _settle_text(context, documents, document, whole, {"to_check": to_check, "not_carried": missing})
+        user = _settle_text(context, documents, document, whole, {"to_check": to_check, "not_carried": missing,
+                                                                  "identifiers_not_carried": uncovered["identifiers"],
+                                                                  "pages_without_points": uncovered["pages"]})
         kept = [event for event in mine if all(event is not wrong for wrong in failing)]
         try:
             data = _call(model, "core_research_chronology", SETTLE_EVENTS, user, SETTLE_EVENTS_SCHEMA, "chronology_check")

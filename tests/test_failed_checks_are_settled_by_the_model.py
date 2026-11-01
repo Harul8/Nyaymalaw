@@ -256,3 +256,36 @@ def test_a_paper_is_read_for_every_legally_significant_point_and_each_kind_is_ke
     assert all(e["anchored"] for e in events)
     [reading] = [call for call in model.calls if call.system == research.CHRONOLOGY_V14]
     assert reading.operation == "core_research_chronology" and "(kind finding)" in reading.system
+
+
+# Piece 33e (AN.33, D17): completeness by code - identifiers and pages of a paper no point carries are asked about once, in its
+# settling call, beside the dates no point carries.
+LEDGER = [(1, "Register of the depot. Agreement No. 7 dated 3-9-2014: the supplier sold 42 kg of grain to the buyer. Entry made "
+              "by the clerk in the presence of the keeper of the stores, who signed the register as its witness."),
+          (2, "The buyer's claim, Claim No. 58 of 2014, stands referred to the board, which has kept it pending for its next "
+              "sitting, the parties being told to bring their papers and their witnesses to it, and the keeper of the stores being "
+              "told to bring the register of the depot with them.")]
+
+
+def test_an_identifier_and_a_page_no_point_carries_are_asked_about_and_what_the_model_adds_is_kept():
+    claim = event("undated", "pending", "Claim No. 58 of 2014 is pending before the board.",
+                  "Claim No. 58 of 2014, stands referred to the board, which has kept it pending")
+    model = Settling({"ledger.pdf": [RIGHT]}, {"ledger.pdf": {"settled": [], "added": [claim]}})
+    events = chronology_of(model, sent(("ledger.pdf", LEDGER)))[0]
+    evidence = shown(model.settles()[0])
+    assert evidence["identifiers_not_carried"] == [{"identifier": "No. 58 of 2014", "page": 2}]
+    assert evidence["pages_without_points"] == [2] and evidence["to_check"] == []
+    assert [e["kind"] for e in events] == ["transaction", "pending"] and events[1]["anchored"]
+
+
+def test_what_a_point_carries_a_copy_of_a_covered_page_and_a_short_page_are_not_asked_about():
+    claim = event("undated", "pending", "Claim No. 58/2014 is pending.", "Claim No. 58 of 2014, stands referred to the board")
+    copy = [(1, LEDGER[0][1])]
+    model = Settling({"ledger.pdf": [RIGHT, claim], "copy.pdf": []})
+    chronology_of(model, sent(("ledger.pdf", LEDGER), ("copy.pdf", copy), ("cover.pdf", [(1, "Cover of the file.")])))
+    assert model.settles() == [], "the identifier is carried, the copy's page is read, and the cover holds too little"
+
+
+def test_a_date_is_no_identifier_and_the_numbers_of_an_identifier_are_what_count():
+    assert research._cores("dated 12/07/2021, in O.S. No. 4418 of 2016 and in file K / 58 / 2014") == {"4418/2016", "58/2014"}
+    assert research._cores("No. 7") == set(), "fewer than three digits says too little"
