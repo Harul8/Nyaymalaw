@@ -425,9 +425,10 @@ SYSTEM_V12 = SYSTEM_V11.replace(
     "an item of coverage found left out: weigh\nthat against the sources, which alone are evidence. When\nremoved_statements is present,")
 SYSTEM_V12 = SYSTEM_V12.replace(
     "List only what you find. Empty lists mean the piece can be shown as it is, its folds as placed.",
-    "When coverage is given, it lists every order, direction and proceeding still pending that the\npapers record (an event by its "
+    "When coverage is given, it lists what the answer must account for: points of the papers'\nchronology (an event by its "
     "ID in papers_chronology), every point the papers read side by\nside show (C1...) and every fact the understanding took from the "
-    "advocate's messages and the\npapers. An item whose absence would change or weaken what the piece tells the advocate, which "
+    "advocate's messages and the\npapers; one whose words NM could not check on a page (located false), cited or quoted as a\npage's "
+    "words, misleads. An item whose absence would change or weaken what the piece tells the advocate, which "
     "the\npiece neither takes up nor names as left out with a reason that holds, is a must-fix, and so is one\nthe piece mentions only in "
     "passing, without what the advocate needs to act on it (of a proceeding,\nwho brought it and what it seeks): give it in missing, "
     "with its ID and why it matters to the\nadvocate. Do not give an item that would only add detail. An overview need not take up "

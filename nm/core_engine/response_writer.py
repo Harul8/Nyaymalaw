@@ -539,14 +539,17 @@ Judgment roles and treatment remain proposals until independently reviewed.
 """
 #: v14 (plan AN.28, stage 5; AN.29): the coverage list, and the papers' events set out once.
 _COVERAGE_V14 = """neither in the chronology nor on a page.
-Where coverage is given, it lists every order, direction and proceeding still pending that the
-papers' chronology records (each by its ID in papers_chronology, which holds its date, what it is
-and cite), every point the papers read side by side show (one of the client's people in another
-proceeding, a finding against the client, an act after a death or a time limit, a further asset,
-account or case), and every fact the understanding took from the advocate's messages and the
-papers, each with what it is. Take up each whose absence would change or weaken what your part
-tells the advocate, citing its pages; say in one limitation unit, with why, which such items you
-leave out. Pass over none of those in silence; one that would only add detail need not be named.
+Where coverage is given, it lists what the answer must account for: points of the papers'
+chronology (each by its ID in papers_chronology, which holds its date, what it is and cite - an
+order and what it found, a filing, a pending matter, a transaction, what a party says, a document's
+particulars, who is related to whom, where matters stand), every point the papers read side by side
+show (one of the client's people in another proceeding, a finding against the client, an act after
+a death or a time limit, a further asset, account or case), and every fact the understanding took
+from the advocate's messages and the papers, each with what it is. One whose words NM could not
+check on a page (located false) is said as what the papers' reading gave, never cited or quoted as
+a page's words. Take up each whose absence would change or weaken what your part tells the
+advocate, citing its pages; say in one limitation unit, with why, which such items you leave out.
+Pass over none of those in silence; one that would only add detail need not be named.
 Where you mention a proceeding that is pending, say who brought it and what it seeks, as
 papers_chronology records. Set out the papers' events once: where your part is one of several
 (other_parts), the chronology across the disputes is the opening overview's, so set out only the
@@ -1704,19 +1707,23 @@ def coverage_items(record, offered, context=None):
     direction and proceeding still pending that the papers' chronology records and found on its page (E1...), each point the papers
     read side by side show whose words were found (C1...), and each fact the understanding took from the advocate's messages and the
     papers (as it numbered them) - with what it is, the papers' own words where the record has them, and the short IDs of the pages
-    to cite. [] where the plan kept none (research before v13, or no papers)."""
+    to cite. From research v14 (plan AN.33, D20; owner, 1 Nov 2026: "writer shouldnt ignore any legally meaningful point s"): every
+    point the papers' reading set out, of every kind, and every point read side by side, whether or not code could check its words on
+    a page - one it could not is marked located false, to be said as the reading's and never cited or quoted as a page's. [] where the
+    plan kept none (research before v13, or no papers)."""
     if record.get("contract") not in research.WHOLE_FILE:
         return []
+    every = record.get("contract") in research.SETTLED
     proposal = record["plan"]["proposal"]
     words = {event["id"]: event["words"] for event in proposal.get("chronology", ())}
     items = [{"id": event["id"], "kind": event["kind"], "date": event["date"], "what": event["what"], "said_by": event["said_by"],
-              "cite": event["cite"], "papers_words": words.get(event["id"], "")}
-             for event in _chronology_shown(record, offered, context) or () if event["kind"] in ("order", "pending")
-             and event["located"]]
+              "cite": event["cite"], "papers_words": words.get(event["id"], ""), **({} if event["located"] else {"located": False})}
+             for event in _chronology_shown(record, offered, context) or ()
+             if every or (event["kind"] in ("order", "pending") and event["located"])]
     items += [{"id": item["id"], "kind": item["kind"], "what": item["point"], "why_it_matters": item["why_it_matters"],
                "cite": [offered[page] for page in (f"{place['source']}p{place['page']}" for place in item["places"])
-                        if page in offered], "papers_words": item["words"]}
-              for item in proposal.get("connections", ()) if item["anchored"]]
+                        if page in offered], "papers_words": item["words"], **({} if item["anchored"] else {"located": False})}
+              for item in proposal.get("connections", ()) if every or item["anchored"]]
     taken = {item["id"] for item in items}
     # A fact is named as the understanding numbered it, unless that name is already an event's or a point's.
     items += [{"id": fact["id"] if fact["id"] not in taken else f"fact {fact['id']}", "kind": "fact", "what": fact["fact"],
@@ -1730,8 +1737,9 @@ def _coverage_shown(record, offered, context=None, *, compact=False):
     compact: an event by its ID and kind only, beside papers_chronology, which holds the rest; a point or a fact in brief."""
     items = coverage_items(record, offered, context)
     if compact:
-        items = [{"id": item["id"], "kind": item["kind"]} if item["kind"] in ("order", "pending") else
-                 {key: item[key] for key in ("id", "kind", "what", "why_it_matters", "certainty", "cite") if key in item}
+        # A point of the papers' chronology (it alone says whose words it is) by its ID and kind, beside papers_chronology.
+        items = [{"id": item["id"], "kind": item["kind"]} if "said_by" in item else
+                 {key: item[key] for key in ("id", "kind", "what", "why_it_matters", "certainty", "cite", "located") if key in item}
                  for item in items]
     return items or None
 
@@ -2003,9 +2011,10 @@ assert OVERVIEW_SYSTEM_V13.count("one event that other papers record too: set it
 _OVERVIEW_COVERAGE_V14 = """one event that other papers record too: set it out once. Where the advocate did not ask, leave
 it unused.
 
-Where coverage is given, it lists every order, direction and proceeding still pending that the
-papers record (each by its ID in papers_chronology), every point the papers read side by side show, and
-every fact the understanding took from the advocate's messages and the papers, each with what it is.
+Where coverage is given, it lists what the answer must account for: points of the papers' chronology
+(each by its ID in papers_chronology), every point the papers read side by side show, and every fact
+the understanding took from the advocate's messages and the papers, each with what it is; one whose
+words NM could not check on a page (located false) is said as the reading's, never cited as a page's.
 Take up, in a summary or limitation unit, each whose absence
 would change or weaken what the answer tells the advocate and that no section took up, citing its
 pages, or say in one limitation unit why such items are left out; repeat nothing a section already

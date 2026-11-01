@@ -57,9 +57,11 @@ def test_the_writer_v14_is_given_every_order_pending_proceeding_point_and_fact_t
     response_writer.write_section(model, ctx, record, sources, index=0, contract=V14)
     prompt, payload = model.seen[0]
     coverage = payload["coverage"]
-    events = [item for item in coverage if item["kind"] in ("order", "pending")]
+    # Research v14 (plan AN.33, D20): every point of the papers' chronology, of every kind and located or not, is to be accounted for.
+    chronology = {event["id"] for event in payload["papers_chronology"]}
+    events = [item for item in coverage if item["id"] in chronology]
     facts = [item for item in coverage if item["kind"] == "fact"]
-    assert events and facts and {item["kind"] for item in coverage} <= {"order", "pending", "fact", "other", "client_appears",
+    assert events and facts and {item["kind"] for item in coverage} <= {*research.EVENT_KINDS_V14, "fact", "client_appears",
                                                                          "against_client", "after_death", "after_time_limit",
                                                                          "further_subject"}
     # An event by its ID and kind: its date, what it is and the pages to cite are in papers_chronology beside it.
@@ -67,14 +69,16 @@ def test_the_writer_v14_is_given_every_order_pending_proceeding_point_and_fact_t
     assert all(set(item) == {"id", "kind", "what", "certainty"} for item in facts), "a fact in brief, as the understanding numbered it"
     leading = [key for key in response_writer.SHARED_KEYS if key in payload]
     assert list(payload)[:len(leading)] == leading and leading[-1] == "coverage", "what every part's call carries alike leads"
-    assert [item["id"] for item in events] == [event["id"] for event in payload["papers_chronology"]
-                                               if event["kind"] in ("order", "pending") and event["located"]]
+    assert [item["id"] for item in events] == [event["id"] for event in payload["papers_chronology"]]
+    assert {event["kind"] for event in payload["papers_chronology"]} - {"order", "pending"}, "not orders and pending matters alone"
     earlier = Writer(quiet)
     response_writer.write_section(earlier, ctx, record, sources, index=0, contract=response_writer.PRESENTED_CONTRACT)
     assert "coverage" not in earlier.seen[0][1], "the v13 writer is shown what it was"
     writer = " ".join(response_writer.SYSTEM_V14.split())
-    for part in ("Where coverage is given, it lists every order, direction and proceeding still pending",
-                 "(each by its ID in papers_chronology, which holds its date, what it is and cite)",
+    for part in ("Where coverage is given, it lists what the answer must account for: points of the papers' chronology",
+                 "One whose words NM could not check on a page (located false) is said as what the papers' reading gave, never "
+                 "cited or quoted as a page's words",
+                 "(each by its ID in papers_chronology, which holds its date, what it is and cite - an order and what it found",
                  "every point the papers read side by side show",
                  "and every fact the understanding took from the advocate's messages and the papers, each with what it is",
                  "Take up each whose absence would change or weaken what your part tells the advocate, citing its pages",
@@ -88,6 +92,29 @@ def test_the_writer_v14_is_given_every_order_pending_proceeding_point_and_fact_t
     assert "each whose absence would change or weaken what the answer tells the advocate and that no section took up" in overview
     assert "repeat nothing a section already says" in overview
     assert "Where coverage is given" not in response_writer.SYSTEM_V13 + response_writer.OVERVIEW_SYSTEM_V13
+
+
+def test_from_research_v14_a_point_code_could_not_check_on_a_page_is_still_to_be_accounted_for_and_is_marked_so():
+    ctx, record, sources = matter()
+    proposal = record["plan"]["proposal"]
+    unchecked = next(event for event in proposal["chronology"] if not event["anchored"])
+    first = proposal["chronology"][0]
+    proposal["connections"] = [{"id": "C1", "kind": "client_appears", "point": "The client's cousin is a respondent to the appeal.",
+                                "why_it_matters": "The appeal binds the family.", "words": "",
+                                "places": [{"source": first["source"], "page": first["pages"][0]}], "anchored": False}]
+    items = {item["id"]: item for item in items_of(record, ctx, sources)}
+    assert unchecked["kind"] not in ("order", "pending") and items[unchecked["id"]]["located"] is False
+    assert items["C1"]["located"] is False and items["C1"]["cite"], "a point read side by side whose words were not found"
+    assert [key for key, item in items.items() if "located" in item] == [unchecked["id"], "C1"], "only those are marked"
+    offered = {tag: alias for alias, tag in answer_sources.aliases(sources).items()}
+    shown = {item["id"]: item for item in response_writer._coverage_shown(record, offered, ctx, compact=True)}
+    assert shown[unchecked["id"]] == {"id": unchecked["id"], "kind": unchecked["kind"]}, "papers_chronology says it is not located"
+    assert shown["C1"]["located"] is False
+    # A record made before research v14 keeps the list its answers were made with (P46): orders and pending matters found on their
+    # page, and points read side by side whose words were found.
+    before = [item["id"] for item in items_of({**record, "contract": research.WHOLE_FILE_CONTRACT}, ctx, sources)
+              if item["kind"] != "fact"]
+    assert before == [event["id"] for event in proposal["chronology"] if event["kind"] in ("order", "pending") and event["anchored"]]
 
 
 class Reviewing:
