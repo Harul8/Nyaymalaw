@@ -15,6 +15,7 @@ import difflib
 import json
 import re
 import threading
+import unicodedata
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 from datetime import date
@@ -22,7 +23,7 @@ from datetime import date
 from nm.core_engine import figures, reasoning
 from nm.core_engine.replay_scope import known, once
 from nm.core_engine.retrieval import SearchUnavailable, _digest, _valid_location, in_force, validate_search
-from nm.core_engine.understanding import REFERENCE, TEXT, select, source_catalogue
+from nm.core_engine.understanding import REFERENCE, TEXT, TYPOGRAPHY, select, source_catalogue
 from nm.shared import clock_contracts
 from nm.shared.model_port import (
     ModelError, OutputTruncated, Prompt, SchemaViolation, Tier, UsageLimitReached, canonical_schema_data, estimate_tokens,
@@ -528,25 +529,152 @@ def _reading(text):
         marked = plain
 
 
+#: The versions of the one finder (plan AN.33, D18). The exact finder is the one every record saved before research v14 was checked
+#: and is shown with, and stays so (P46: a saved conversation reads back as it was made). The tolerant finder also finds words that
+#: differ from a page only in what cannot change their meaning.
+EXACT_FINDER, TOLERANT_FINDER = 1, 2
+#: The fewest letters and digits words must hold for the tolerant finder to place them: shorter words could stand almost anywhere.
+TOLERANT_MINIMUM = 12
+#: A reader's note that transcribes handwriting - "[Handwritten: 812]", "[handwritten note at the foot, partly illegible: ...]" -
+#: holds the page's own words after its first colon.
+_HANDWRITING = re.compile(r"\[\s*hand\s*-?\s*written[^:\[\]]*:", re.I)
+
+
+def _significant(char):
+    """A letter, a mark that belongs to a letter, or a digit, in any script: what words are made of."""
+    return unicodedata.category(char)[0] in "LMN"
+
+
+def _bounded(text, start, end):
+    """Whether a stretch of a text begins and ends where its words do: never inside a longer word or number."""
+    return (not start or not _significant(text[start - 1])) and (end == len(text) or not _significant(text[end]))
+
+
+def _tolerant(text):
+    """A text as the tolerant finder compares it (plan AN.33, D18), with the place in the text of each character kept. Set aside,
+    as what cannot change what the words say: the reader's own square-bracket notes (a stamp, a signature, [illegible]) - but not
+    the handwriting a note transcribes, which is the page's; spacing, a word a scan split included; case; quotation marks and the
+    other marks between words. A mark or a space between two digits is kept as it stands, so that 2.75 is never 27.5, "20 16" is
+    never 2016 and 14-08-1993 keeps its dashes: a number that differs is never taken for another."""
+    kept, work = [True] * len(text), text
+    while True:  # innermost notes first, as _reading takes them
+        spans = [match.span() for match in _MARKS.finditer(work)]
+        if not spans:
+            break
+        blank = list(work)
+        for start, end in spans:
+            handwriting = _HANDWRITING.match(work, start)
+            for index in range(start, end):
+                if handwriting is None or index < handwriting.end() or index == end - 1:
+                    kept[index] = False
+                blank[index] = " "
+        work = "".join(blank)
+    visible = [index for index, char in enumerate(text) if kept[index] and not char.isspace()]
+    letters, where = [], []
+    for position, index in enumerate(visible):
+        char = text[index]
+        before = text[visible[position - 1]] if position else ""
+        after = text[visible[position + 1]] if position + 1 < len(visible) else ""
+        if position and index - visible[position - 1] > 1 and before.isdigit() and char.isdigit():
+            letters.append(" ")
+            where.append(visible[position - 1] + 1)
+        if _significant(char):
+            for folded in char.casefold():
+                letters.append(folded)
+                where.append(index)
+        elif before.isdigit() and after.isdigit():
+            letters.append(char.translate(TYPOGRAPHY))
+            where.append(index)
+    return "".join(letters), where
+
+
 class Pages:
     """The pages of the documents the advocate sent, in reading order, and where quoted words are found in them. A page is
     {"document": name, "page": number, "text": text, ...}. Words are found on one page, or run over a page break onto the next
     page of the same document past what a page's foot and head hold; never across two documents, or across pages that are
-    not next to each other. One finder for every check of where a fact's words come from (plan AN.27, P1)."""
+    not next to each other. One finder for every check of where a fact's words come from (plan AN.27, P1).
 
-    def __init__(self, pages):
-        self.pages = list(pages)
+    version: EXACT_FINDER, or TOLERANT_FINDER (plan AN.33, D18), which finds whatever the exact finder finds and also words that
+    stand on one page, or run over a page break onto the next page of the same document, but for what _tolerant sets aside, at the
+    boundaries of the page's own words."""
+
+    def __init__(self, pages, version=EXACT_FINDER):
+        if version not in (EXACT_FINDER, TOLERANT_FINDER):
+            raise ValueError("Unknown finder version")
+        self.pages, self.version = list(pages), version
         self._plain = [_bare(page["text"]) for page in self.pages]
         self._read = [_reading(page["text"]) for page in self.pages]
+        self._tolerant = [_tolerant(page["text"]) for page in self.pages] if version == TOLERANT_FINDER else None
 
     @classmethod
-    def of_context(cls, context):
+    def of_context(cls, context, version=EXACT_FINDER):
         """The pages of a turn's context: each row is one page of one document the advocate sent."""
-        return cls({"document": row["document"]["name"], "page": row["document"].get("page"), "text": row["text"]}
-                   for row in context.get("documents", ()))
+        return cls(({"document": row["document"]["name"], "page": row["document"].get("page"), "text": row["text"]}
+                    for row in context.get("documents", ())), version)
 
     def holding(self, piece):
         """The page, or the two pages the words run over, that hold these words (a piece as fact_pieces gives it); or None."""
+        held = self._exactly(piece)
+        if held is not None or self.version == EXACT_FINDER:
+            return held
+        found = self._tolerantly(piece)
+        return [self.pages[index] for index, _, _ in found] if found else None
+
+    def located(self, piece):
+        """Where these words stand, with the page's own words for them (tolerant finder): (the page or the two pages, their words as
+        they stand there - two passages joined with ' ... ' where the words run over a page break); (the pages, None) where only the
+        exact finder finds them; None where they are not found. What a check keeps as a quotation is then the page's own words,
+        never the words as they were quoted."""
+        if self.version != TOLERANT_FINDER:
+            raise ValueError("Only the tolerant finder gives the page's own words")
+        found = self._tolerantly(piece)
+        if found:
+            return ([self.pages[index] for index, _, _ in found],
+                    " ... ".join(self.pages[index]["text"][start:end] for index, start, end in found))
+        held = self._exactly(piece)
+        return (held, None) if held is not None else None
+
+    def _tolerantly(self, piece):
+        """Where the pages read as the words do, but for what _tolerant sets aside, beginning and ending where the page's own words
+        do: [(page index, start, end)] for a stretch of one page, or two such for words that end one page and go on at the start of
+        the next page of the same document, past no more than PAGE_FURNITURE characters of its foot and head; or None. Words with
+        fewer than TOLERANT_MINIMUM letters and digits are not placed so."""
+        target = _tolerant(piece)[0]
+        if sum(1 for char in target if _significant(char)) < TOLERANT_MINIMUM:
+            return None
+        for index, (letters, where) in enumerate(self._tolerant):
+            text, at = self.pages[index]["text"], letters.find(target)
+            while at >= 0:
+                start, end = where[at], where[at + len(target) - 1] + 1
+                if _bounded(text, start, end):
+                    return [(index, start, end)]
+                at = letters.find(target, at + 1)
+        words = piece.split(" ")
+        for index in range(len(self.pages) - 1):
+            first, second = self.pages[index], self.pages[index + 1]
+            if (first["document"] == second["document"] and type(first["page"]) is int and type(second["page"]) is int
+                    and second["page"] == first["page"] + 1 and (spans := self._tolerant_over(words, index))):
+                return spans
+        return None
+
+    def _tolerant_over(self, words, index):
+        """The words cut at one of their spaces, the first part ending the foot of page `index` and the rest beginning the head of
+        the next page, each where the page's own words begin and end, as _tolerantly gives them; or None."""
+        (foot, foot_at), (head, head_at) = self._tolerant[index], self._tolerant[index + 1]
+        foot_text, head_text = self.pages[index]["text"], self.pages[index + 1]["text"]
+        for cut in range(1, len(words)):
+            ending, going = _tolerant(" ".join(words[:cut]))[0], _tolerant(" ".join(words[cut:]))[0]
+            at, begin = foot.rfind(ending) if ending else -1, head.find(going) if going else -1
+            if at < 0 or begin < 0 or len(foot) - at - len(ending) > PAGE_FURNITURE or begin > PAGE_FURNITURE:
+                continue
+            first = (index, foot_at[at], foot_at[at + len(ending) - 1] + 1)
+            second = (index + 1, head_at[begin], head_at[begin + len(going) - 1] + 1)
+            if _bounded(foot_text, *first[1:]) and _bounded(head_text, *second[1:]):
+                return [first, second]
+        return None
+
+    def _exactly(self, piece):
+        """The exact finder: the page, or the two pages the words run over, that hold these words; or None."""
         for index, plain in enumerate(self._plain):
             if piece in plain:
                 return [self.pages[index]]
@@ -595,9 +723,14 @@ class Pages:
                 held = self.holding(run)
                 if held is not None and len(held) == 1:
                     index = next(i for i, page in enumerate(self.pages) if page is held[0])
-                    plain = self._plain[index]
+                    plain, quoted = self._plain[index], run
                     if run not in plain:
                         plain, run = self._read[index], _reading(run)
+                    if run not in plain:  # placed by the tolerant finder: the page's own words for the run, among the page's words
+                        _, begins, ends = self._tolerantly(quoted)[0]
+                        text = self.pages[index]["text"]
+                        run = _bare(text[begins:ends])
+                        plain = " ".join(part for part in (_bare(text[:begins]), run, _bare(text[ends:])) if part)
                     at = plain.find(run)
                     first, last = plain[:at].count(" "), plain[:at + len(run)].count(" ") + 1
                     around = " ".join(plain.split(" ")[max(0, first - NEAREST_AROUND):last + NEAREST_AROUND])
