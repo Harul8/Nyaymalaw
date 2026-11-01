@@ -3693,6 +3693,12 @@ function eventRows(events, make) {
         item.appendChild(make('span', 'board-status', ` · read as ${event.date_as_read}, a date NM finds nowhere in your papers`));
       }
       if (event.kind === 'pending') item.appendChild(make('span', 'board-certainty', 'Pending'));
+      // Research v14 (plan AN.33, D19): how the weighing of the points found it, for which dispute.
+      if (event.weight) {
+        const effect = { helps: 'helps your client', hurts: 'hurts your client', both: 'cuts both ways' }[event.effect];
+        item.appendChild(make('span', 'board-certainty', `${event.weight === 'critical' ? 'Critical' : 'Material'}`
+          + `${event.dispute ? ` to ${event.dispute}` : ''}${effect ? `, ${effect}` : ''}`));
+      }
       const where = make('span', 'board-status', ` · ${eventPlace(event)}${event.said_by ? ` · said by ${event.said_by}` : ''}`);
       where.title = event.words;
       item.appendChild(where);

@@ -129,6 +129,9 @@ class Model:
             data = statute_phrases(next(d for d in self.subject["disputes"] if d["id"] == dispute_id))
         elif operation == "core_research_judgment_phrases":
             data = judgment_phrases(self.subject)
+        elif operation in ("core_research_weigh", "core_research_weigh_check"):
+            # Research v14 (AN.33, piece 33h) weighs the points read; this double weighs none.
+            data = {"weights": []} if operation == "core_research_weigh" else {"corrections": []}
         elif operation == "core_research_connections":
             # Research v13 reads the papers side by side (plan AN.28, piece 3e); this double finds nothing there.
             data = {"settled": []} if '"to_check"' in prompt.user else {"client_people": [], "connections": []}

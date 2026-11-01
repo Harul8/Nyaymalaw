@@ -95,7 +95,11 @@ def rounds(record, layout, context=None):
     if record.get("contract") not in research.SETTLED:
         return TAKE_UPS
     pieces = max(1, len(layout))
-    share = -(-len(response_writer.coverage_items(record, {}, context)) // pieces)
+    items = response_writer.coverage_items(record, {}, context)
+    # Plan AN.33 (D21, contract (3)): once the points are weighed, the critical and material ones count, with the facts; otherwise all.
+    if any("weight" in item for item in items):
+        items = [item for item in items if "weight" in item or item["kind"] == "fact"]
+    share = -(-len(items) // pieces)
     wanted = 1 + max(0, -(-(share - ROUND_ITEMS) // ROUND_ITEMS))
     fits = (ALLOWANCE // pieces - SECTION_ALLOWANCE + 1) // 2
     return max(1, min(MAX_ROUNDS, wanted, fits))

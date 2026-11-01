@@ -36,7 +36,7 @@ TABLE = {
     "understand": ("medium", True), "check": ("medium", True), "revise": ("high", True),
     "chronology": ("medium", True), "transfers": ("medium", True), "connections": ("medium", True),
     "chronology_check": ("high", True), "transfers_check": ("high", True), "connections_check": ("high", True),
-    "chronology_second": ("high", True),
+    "chronology_second": ("high", True), "weigh": ("medium", True), "weigh_check": ("high", True),
     "phrases": (None, False), "judgment_phrases": (None, False), "pick": (None, False), "judgment_pick": (None, False),
     "write": ("medium", False), "overview": ("medium", False), "review": ("medium", False), "cross_check": ("medium", False),
     "repair": ("high", False), "take_up": ("high", False),

@@ -1453,6 +1453,15 @@ def _suggested(piece):
 PAPERS = "What your papers record"
 
 
+def weight_marks(proposal):
+    """Research v14 (plan AN.33, D19; piece 33h): what the weighing found of each point it weighed, as the table of what the papers
+    record and the board say it beside the point - its weight and effect, the dispute it bears on by its name, and whether it is a fact
+    for the advocate. {} where nothing was weighed."""
+    disputes = {dispute["id"]: dispute["name"] for dispute in proposal["understanding"]["disputes"]}
+    return {entry["id"]: {**response_writer.weighing(entry), "dispute": disputes.get(entry["dispute"], entry["dispute"])}
+            for entry in proposal.get("weights", ())}
+
+
 def papers_record(research_record, context):
     """Research v14 (plan AN.33, D20; piece 33m; owner, 1 Nov 2026: "writer shouldnt ignore any legally meaningful point s"):
     every point the papers' reading set out, as the answer shows it folded at its end, so that none is lost whatever the advice
@@ -1470,6 +1479,10 @@ def papers_record(research_record, context):
         return None
     copied = copy_figures.copies(response_writer._copy_pages(context))
     recorded = {row["source_id"].rsplit("p", 1)[0] for row in context.get("documents", ()) if row["document"].get("recording")}
+    marks = weight_marks(proposal)
+
+    def marked(identity):
+        return marks.get(identity, {})
 
     def shown(group):
         event, nowhere = group["event"], group["event"]["date_found"] == "nowhere"
@@ -1479,11 +1492,12 @@ def papers_record(research_record, context):
                 "words": event["words"], "located": event["anchored"],
                 **({"recording": True} if event["source"] in recorded else {}),
                 **({"also_in": [{"document": other["document"], "pages": list(other["pages"])} for other in group["also"]]}
-                   if group["also"] else {})}
+                   if group["also"] else {}), **marked(event["id"])}
     return {"events": [shown(group) for group in research.events_once(events, copied)],
             "together": [{"id": item["id"], "kind": item["kind"], "point": item["point"], "why": item["why_it_matters"],
                           "located": item["anchored"],
-                          "places": [{"document": place["document"], "page": place["page"]} for place in item["places"]]}
+                          "places": [{"document": place["document"], "page": place["page"]} for place in item["places"]],
+                          **marked(item["id"])}
                          for item in together],
             "set_aside": [{"kind": item["kind"], "document": item["document"], "what": item["what"], "why": item["why"]}
                           for item in aside],

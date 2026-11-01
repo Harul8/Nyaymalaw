@@ -548,8 +548,11 @@ a death or a time limit, a further asset, account or case, a difference between 
 and every fact the understanding took
 from the advocate's messages and the papers, each with what it is. One whose words NM could not
 check on a page (located false) is said as what the papers' reading gave, never cited or quoted as
-a page's words. Take up each whose absence would change or weaken what your part tells the
-advocate, citing its pages; say in one limitation unit, with why, which such items you leave out.
+a page's words. An item with a weight is one the weighing of the points found critical or material
+to the dispute it names, helping or hurting the client (effect); take up each critical one that bears
+on your part, and one marked for_advocate as a fact for the advocate to act on. Take up each whose
+absence would change or weaken what your part tells the advocate, citing its pages; say in one
+limitation unit, with why, which such items you leave out.
 Pass over none of those in silence; one that would only add detail need not be named: every
 point of the papers' reading stands in the table of what the papers record, shown with the answer.
 Where you mention a proceeding that is pending, say who brought it and what it seeks, as
@@ -1718,13 +1721,17 @@ def coverage_items(record, offered, context=None):
     every = record.get("contract") in research.SETTLED
     proposal = record["plan"]["proposal"]
     words = {event["id"]: event["words"] for event in proposal.get("chronology", ())}
+    # Research v14 (plan AN.33, D19; piece 33h): what the weighing found of a point - its weight, effect and dispute.
+    weighed = {entry["id"]: weighing(entry) for entry in proposal.get("weights", ())}
     items = [{"id": event["id"], "kind": event["kind"], "date": event["date"], "what": event["what"], "said_by": event["said_by"],
-              "cite": event["cite"], "papers_words": words.get(event["id"], ""), **({} if event["located"] else {"located": False})}
+              "cite": event["cite"], "papers_words": words.get(event["id"], ""), **({} if event["located"] else {"located": False}),
+              **weighed.get(event["id"], {})}
              for event in _chronology_shown(record, offered, context) or ()
              if every or (event["kind"] in ("order", "pending") and event["located"])]
     items += [{"id": item["id"], "kind": item["kind"], "what": item["point"], "why_it_matters": item["why_it_matters"],
                "cite": [offered[page] for page in (f"{place['source']}p{place['page']}" for place in item["places"])
-                        if page in offered], "papers_words": item["words"], **({} if item["anchored"] else {"located": False})}
+                        if page in offered], "papers_words": item["words"], **({} if item["anchored"] else {"located": False}),
+               **weighed.get(item["id"], {})}
               for item in proposal.get("connections", ()) if every or item["anchored"]]
     taken = {item["id"] for item in items}
     # A fact is named as the understanding numbered it, unless that name is already an event's or a point's.
@@ -1734,14 +1741,27 @@ def coverage_items(record, offered, context=None):
     return items
 
 
+#: What a point of the coverage list carries of its weighing (research v14; plan AN.33, D19), as the writer and the review are shown it.
+WEIGHED = ("weight", "effect", "dispute", "for_advocate")
+
+
+def weighing(entry):
+    """What the weighing found of a point, as the coverage list carries it (research v14, piece 33h): its weight and effect, the
+    dispute it bears on, and, where it is so, that it is a fact for the advocate to act on."""
+    return {"weight": entry["weight"], "effect": entry["effect"], "dispute": entry["dispute"],
+            **({"for_advocate": True} if entry["for_advocate"] else {})}
+
+
 def _coverage_shown(record, offered, context=None, *, compact=False):
     """The coverage list as the writer v14 and the review v12 are shown it (plan AN.28, stage 5; AN.29): None where there is none.
     compact: an event by its ID and kind only, beside papers_chronology, which holds the rest; a point or a fact in brief."""
     items = coverage_items(record, offered, context)
     if compact:
         # A point of the papers' chronology (it alone says whose words it is) by its ID and kind, beside papers_chronology.
-        items = [{"id": item["id"], "kind": item["kind"]} if "said_by" in item else
-                 {key: item[key] for key in ("id", "kind", "what", "why_it_matters", "certainty", "cite", "located") if key in item}
+        items = [{"id": item["id"], "kind": item["kind"], **{key: item[key] for key in WEIGHED if key in item}}
+                 if "said_by" in item else
+                 {key: item[key] for key in ("id", "kind", "what", "why_it_matters", "certainty", "cite", "located", *WEIGHED)
+                  if key in item}
                  for item in items]
     return items or None
 

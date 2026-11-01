@@ -42,6 +42,10 @@ class ScriptedModel:
             self.calls.append((prompt.operation, prompt.user))
             if prompt.operation == self.failure:
                 raise ProviderUnavailable("Synthetic provider outage")
+            if prompt.operation in ("core_research_weigh", "core_research_weigh_check"):
+                # Research v14 (AN.33, piece 33h) weighs the points read; these scripted ones weigh none.
+                return ModelResult(None, {"weights": []} if prompt.operation == "core_research_weigh" else {"corrections": []}, tier,
+                                   "synthetic", "fixture", Usage(1, 1, 0), 0, completion=Completion.COMPLETE)
             if prompt.operation in ("core_research_chronology", "core_research_transfers", "core_research_connections"):
                 # The papers are read beside the understanding (research v12, and side by side from v13); these scripted ones record
                 # nothing.

@@ -136,7 +136,7 @@ PROVISIONS_FOR_PICK = 20
 MAX_OUTPUT = {"understand": 48000, "check": 16000, "revise": 48000, "phrases": 6000,
               "judgment_phrases": 8000, "pick": 8000, "judgment_pick": 8000, "chronology": 32000, "transfers": 16000,
               "chronology_check": 16000, "transfers_check": 12000, "connections": 24000, "connections_check": 12000,
-              "chronology_second": 32000}
+              "chronology_second": 32000, "weigh": 24000, "weigh_check": 16000}
 
 # The prompts below were developed and measured in outputs/decomposition-scratch
 # (13-14 Oct 2026). They state the purpose and the needed outcome in plain language
@@ -461,6 +461,23 @@ SCHEMA_V14["properties"]["chronology"] = {"type": "array", "items": EVENT_RECORD
 SCHEMA_V14["properties"]["transfers"] = {"type": "array", "items": TRANSACTION_RECORD_V14}
 SCHEMA_V14["properties"]["connections"] = {"type": "array", "items": CONNECTION_RECORD_V14}
 SCHEMA_V14["properties"]["withdrawn"] = {"type": "array", "items": WITHDRAWN}
+#: v14 (AN.33, D19; piece 33h): each point that matters to the advice, weighed - the dispute it bears on, whether it helps or hurts
+#: the client, how much (critical, material; a point not weighed is background), why, the legal question a critical point raises that
+#: no question of its dispute covers, or that it is a matter for the advocate - and what the check made of it (kept, changed, added).
+EFFECTS = ("helps", "hurts", "both", "unclear")
+WEIGHTS = ("critical", "material")
+WEIGHT = _object({"id": STRING, "dispute": STRING, "effect": {"type": "string", "enum": list(EFFECTS)},
+                  "weight": {"type": "string", "enum": list(WEIGHTS)}, "why": STRING, "question": STRING,
+                  "for_advocate": {"type": "boolean"}})
+WEIGH_SCHEMA = _object({"weights": {"type": "array", "items": WEIGHT}})
+WEIGH_CHECK_SCHEMA = _object({"corrections": {"type": "array", "items": _object({
+    **WEIGHT["properties"], "weight": {"type": "string", "enum": [*WEIGHTS, "background"]}})}})
+#: question_id: the legal question the point's own question became, researched with the rest; "" where it raised none.
+WEIGHT_RECORD = _object({**WEIGHT["properties"], "checked": {"type": "string", "enum": ["kept", "changed", "added", "unchecked"]},
+                         "question_id": STRING})
+WEIGHING_FAILURE = _object({"step": STRING, "reason": STRING})
+SCHEMA_V14["properties"]["weights"] = {"type": "array", "items": WEIGHT_RECORD}
+SCHEMA_V14["properties"]["weighing_failures"] = {"type": "array", "items": WEIGHING_FAILURE}
 #: v14 (AN.33, piece 33g): each second pass over a stretch of a paper - how many events it added, or why it could not be made.
 SECOND_PASS_RECORD = _object({"document": STRING, "pages": STRING, "added": {"type": "integer"}, "reason": STRING})
 SCHEMA_V14["properties"]["chronology_second_pass"] = {"type": "array", "items": SECOND_PASS_RECORD}
@@ -2163,6 +2180,155 @@ def _withdrawn_issues(withdrawn, context):
     return []
 
 
+#: v14 (AN.33, D19; piece 33h; owner, 1 Nov 2026: "how do we ensure all these and in principle all the legally important details are
+#: extracted and considered by NM?"): the points read, weighed for the advice as a step of their own, after the papers are read and
+#: the matter understood; and the weighing checked by a second call.
+WEIGH = """Message: You receive an advocate's messages to us about a client's matter, our understanding of it - its disputes, each with the legal questions we will research - and every point the papers the advocate sent were read for, each by its ID: what each paper records (E1, E2...) and what shows only when the papers are read side by side (C1, C2...). A point says what its paper says: it is material the advocate supplied, not proved.
+
+Purpose: Weigh the points for the advice, so that the answer is built on the ones that matter and none of those is missed. For each point that matters to a dispute, say which dispute it bears on, whether it helps the client, hurts the client or cuts both ways, why, and how much: critical - the advice would be wrong or incomplete without it - or material - it changes what the advocate should do or know. A point you do not name is background: it still stands in the table of what the papers record, shown with the answer. You are not answering the legal questions.
+
+Look for:
+- Each point that bears on a dispute's rights, relief, time limits, proof or procedure, and how.
+- Points that matter only together - an act after a death, a finding in one paper against a claim in another: weigh each point that carries the matter, and say in why which other points it rests on.
+- A critical point that none of its dispute's legal questions covers: give the legal question it raises (question), so that it is researched; or, where it is a matter of fact for the advocate to act on rather than of law, say so (for_advocate). Otherwise give no question.
+Work in a loop: weigh the points, then read them again against the disputes for any you missed or weighed wrongly, and correct the weighing before you answer.
+
+Outcome: weights, each with: id (the point's ID); dispute (its ID); effect (helps, hurts, both or unclear); weight (critical or material); why; question (or empty); for_advocate (true or false)."""
+WEIGH_CHECK = """Message: You receive an advocate's messages to us about a client's matter, our understanding of it, every point the papers were read for, each by its ID, and how a colleague weighed the points for the advice (weights): for each point that matters to a dispute, its dispute, whether it helps or hurts the client, how much (critical or material) and why; a point not weighed is background.
+
+Purpose: Check the weighing independently, so that no point that matters is left as background and none is weighed for more or less than it is worth. You are not answering the legal questions.
+
+Look for: a point weighed wrongly - the wrong dispute, effect or weight, or a why the points do not bear out; a point left as background that is critical or material; a point weighed that is background; a critical point whose legal question no question of its dispute covers and the weighing gave none. For each point you would weigh otherwise, give it as you would weigh it (weight background takes it out of the weighing); give nothing for a point weighed as you would weigh it.
+Work in a loop: read the weighing against the points and the disputes, decide, then read your corrections again before you answer.
+
+Outcome: corrections, each with: id; dispute; effect; weight (critical, material or background); why; question (or empty); for_advocate."""
+
+
+def _points_text(context, understanding, events, connections):
+    """What the weighing is shown (v14, piece 33h): the advocate's messages, the understanding's disputes with their legal questions,
+    and every point read by its ID - each event with its paper, date, kind, what, who says it and the page's words; each point read
+    side by side with its kind, point and why it matters."""
+    said = [row["text"] for row in context.get("conversation", ()) if row.get("record_role") == "original_account"]
+    latest = (context.get("latest") or {}).get("text")
+    lines = ["The advocate's messages, oldest first:", *(f"- {words}" for words in [*said, *([latest] if latest else [])]), "",
+             _matter_text(understanding, understanding["disputes"]), "", "The points the papers were read for:"]
+    lines += [json.dumps({"id": event["id"], "paper": event["document"], "date": event["date"], "kind": event["kind"],
+                          "what": event["what"], "said_by": event["said_by"], "words": event["words"]}, ensure_ascii=False)
+              for event in events]
+    lines += [json.dumps({"id": item["id"], "kind": item["kind"], "point": item["point"], "why_it_matters": item["why_it_matters"]},
+                         ensure_ascii=False) for item in connections]
+    return "\n".join(lines)
+
+
+def _weighed(given, points, disputes, aside, source):
+    """The entries of a weighing or its check that code can use (v14): each naming a point and a dispute of the plan, the first for a
+    point counting; the rest set aside, with why (source: which call gave it)."""
+    kept = {}
+    for number, entry in enumerate(given, 1):
+        if entry["id"] not in points or entry["dispute"] not in disputes:
+            aside.append({"step": source, "reason": f"entry {number} names no point or no dispute of the plan"})
+        elif entry["id"] not in kept:
+            kept[entry["id"]] = {key: entry[key].strip() if isinstance(entry[key], str) else entry[key] for key in WEIGHT["properties"]}
+    return kept
+
+
+def weigh(model, context, understanding, events, connections):
+    """The points read, weighed for the advice (v14, AN.33 D19, piece 33h): one call weighs every point that matters - its dispute,
+    whether it helps or hurts the client, how much, why, and the legal question a critical point raises that no question covers, or
+    that it is a matter for the advocate - and a second call checks the weighing and gives what it would weigh otherwise, which code
+    applies (a point it gives as background leaves the weighing). Code keeps only entries that name a point and a dispute of the plan.
+    Returns (weights, failures): each weight marked kept, changed or added by the check, or unchecked where the check failed; a failed
+    weighing leaves every point unweighed - background - and says so. A usage limit still stops the turn."""
+    points = {item["id"] for item in [*events, *connections]}
+    disputes = {dispute["id"] for dispute in understanding["disputes"]}
+    if not points or not disputes:
+        return [], []
+    user = _points_text(context, understanding, events, connections)
+    failures = []
+    try:
+        data = _call(model, "core_research_weigh", WEIGH, user, WEIGH_SCHEMA, "weigh")
+        require_schema(data, WEIGH_SCHEMA)
+    except UsageLimitReached:
+        raise
+    except (ModelError, SchemaViolation) as exc:
+        return [], [{"step": "weigh", "reason": type(exc).__name__}]
+    weights = _weighed(data["weights"], points, disputes, failures, "weigh")
+    shown = json.dumps({"weights": list(weights.values())}, ensure_ascii=False)
+    try:
+        again = _call(model, "core_research_weigh_check", WEIGH_CHECK, user + "\n\n" + shown, WEIGH_CHECK_SCHEMA, "weigh_check")
+        require_schema(again, WEIGH_CHECK_SCHEMA)
+    except UsageLimitReached:
+        raise
+    except (ModelError, SchemaViolation) as exc:
+        failures.append({"step": "weigh_check", "reason": type(exc).__name__})
+        return [{**entry, "checked": "unchecked", "question_id": ""} for entry in weights.values()], failures
+    corrected = _weighed(again["corrections"], points, disputes, failures, "weigh_check")
+    out = {}
+    for identity, entry in weights.items():
+        if identity not in corrected:
+            out[identity] = {**entry, "checked": "kept", "question_id": ""}
+    for identity, entry in corrected.items():
+        if entry["weight"] != "background":
+            out[identity] = {**entry, "checked": "changed" if identity in weights else "added", "question_id": ""}
+    order = {item["id"]: position for position, item in enumerate([*events, *connections])}
+    return sorted(out.values(), key=lambda entry: order[entry["id"]]), failures
+
+
+def _raise_questions(model, proposed, weights, report):
+    """The legal questions critical points raise that no question of their dispute covers (v14, AN.33 D19, piece 33h): each joins its
+    dispute, numbered after that dispute's own (D1Q4...), with the point's why as why it is needed, and is given search phrases as the
+    others are, so that it is researched in the held law. One that is a matter of fact for the advocate raises none. Returns the
+    proposal with them and the weights, each naming the question its point raised. A phrase step that fails is a failure the plan
+    records, and its question is then researched by none - an issue, as for any question."""
+    raised = {entry["id"] for entry in weights if entry["weight"] == "critical" and entry["question"] and not entry["for_advocate"]}
+    if not raised or not proposed["understanding"]["needs_research"]:
+        return proposed, weights
+    understanding = deepcopy(proposed["understanding"])
+    disputes = {dispute["id"]: dispute for dispute in understanding["disputes"]}
+    taken = {question["id"] for dispute in understanding["disputes"] for question in dispute["legal_questions"]}
+    added, out = set(), []
+    for entry in weights:
+        if entry["id"] not in raised:
+            out.append(entry)
+            continue
+        dispute = disputes[entry["dispute"]]
+        numbers = [int(match.group(1)) for question in dispute["legal_questions"]
+                   if (match := re.fullmatch(re.escape(dispute["id"]) + r"Q(\d+)", question["id"]))]
+        number = max(numbers, default=len(dispute["legal_questions"])) + 1
+        while f"{dispute['id']}Q{number}" in taken:
+            number += 1
+        identity = f"{dispute['id']}Q{number}"
+        taken.add(identity)
+        added.add(identity)
+        dispute["legal_questions"].append({"id": identity, "question": entry["question"], "why_needed": entry["why"],
+                                           "open_alternative": "", "law_to_check": []})
+        out.append({**entry, "question_id": identity})
+    fresh = {**understanding, "disputes": [{**dispute, "legal_questions": [question for question in dispute["legal_questions"]
+                                                                            if question["id"] in added]}
+                                           for dispute in understanding["disputes"]]}
+    statute, judgment, missed = _phrases(model, fresh, report)
+    return ({**proposed, "understanding": understanding, "statute_phrases": [*proposed["statute_phrases"], *statute],
+             "judgment_phrases": [*proposed["judgment_phrases"], *judgment], "failures": [*proposed["failures"], *missed]}, out)
+
+
+def _weight_issues(data):
+    """What a v14 plan keeps of its weighing, checked against the plan (piece 33h): each weight names a point and a dispute of the
+    plan, once; a failure of the weighing is an issue the plan says - its points were not weighed."""
+    points = {item["id"] for item in [*data.get("chronology", ()), *data.get("connections", ())]}
+    disputes = {dispute["id"] for dispute in data["understanding"]["disputes"]}
+    seen = set()
+    for entry in data.get("weights", ()):
+        if entry["id"] not in points or entry["dispute"] not in disputes or entry["id"] in seen:
+            raise SchemaViolation(f"Weight for {entry['id']} names no point or dispute of the plan, or weighs it twice")
+        if entry["question_id"] and entry["question_id"] not in {question["id"] for dispute in data["understanding"]["disputes"]
+                                                                 if dispute["id"] == entry["dispute"]
+                                                                 for question in dispute["legal_questions"]}:
+            raise SchemaViolation(f"Weight for {entry['id']} names a question its dispute does not hold")
+        seen.add(entry["id"])
+    return [{"work_id": None, "mismatch": f"the weighing of the points unavailable: {failure['step']} {failure['reason']}",
+             "proposal": deepcopy(failure)} for failure in data.get("weighing_failures", ()) if failure["step"] == "weigh"]
+
+
 def plan(model, context, interpretation=None, *, progress=None, wanted=None, restrictions=None):
     """The v7 reasoning loop. Expected model failures after the first understanding are
     recorded where they occur; independent work continues. The loop reads the
@@ -2195,11 +2361,15 @@ def plan(model, context, interpretation=None, *, progress=None, wanted=None, res
         events, unread = papers.result()
         transfers, unmoved = moved.result()
         connections, people, appearances, unlinked = linked.result()
+    # v14 (AN.33, D19; piece 33h): the points read, weighed for the advice, and the weighing checked.
+    weights, weighing = weigh(model, context, proposed["understanding"], events, connections) if still() else ([], [])
+    if weights and still():
+        proposed, weights = _raise_questions(model, proposed, weights, progress or (lambda stage, **detail: None))
     return accept({**proposed, "chronology": events, "chronology_failures": unread,
                    "transfers": transfers, "transfers_failures": unmoved,
                    "connections": connections, "connections_failures": unlinked, "client_people": people,
                    "appearances": appearances, "withdrawn": [*withdrawn["events"], *withdrawn["transfers"], *withdrawn["points"]],
-                   "chronology_second_pass": passes},
+                   "chronology_second_pass": passes, "weights": weights, "weighing_failures": weighing},
                   context)
 
 
@@ -2292,6 +2462,8 @@ def _accept_v7(proposal, context, schema=SCHEMA, contract=None):
         issues.extend(_withdrawn_issues(data["withdrawn"], context))
     if "chronology_second_pass" in data:
         issues.extend(_second_pass_issues(data["chronology_second_pass"], data.get("chronology", []), context))
+    if "weights" in data:
+        issues.extend(_weight_issues(data))
     questions = {q["id"]: (dispute, q) for dispute in understanding["disputes"] for q in dispute["legal_questions"]}
     statute, judgment = {}, {}
     for entry in data["statute_phrases"]:

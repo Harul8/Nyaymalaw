@@ -121,8 +121,11 @@ def _timeline(record, rows, copies=()):
             gaps = ["NM could not read this paper."]
         papers.append({"name": document["name"], "pages_read": len(document["pages"]), "events": count, "state": state,
                        "why": " ".join(gaps), **({"recording": True} if document.get("recording") else {})})
+    # Research v14 (plan AN.33, D19; piece 33h): what the weighing found of an event, said beside it.
+    marks = response_rendering.weight_marks(proposal)
     return {"state": "ready", "documents": papers,
-            "events": [_event(group, sent) for group in research.events_once(proposal["chronology"], copies)]}
+            "events": [{**_event(group, sent), **marks.get(group["event"]["id"], {})}
+                       for group in research.events_once(proposal["chronology"], copies)]}
 
 
 def _sent(rows):

@@ -42,6 +42,8 @@ STEPS = {
     "chronology_check": ("high", True), "transfers_check": ("high", True), "connections_check": ("high", True),
     # v14 (AN.33, piece 33g): the second pass over a paper for what its reading left out reads it again with care.
     "chronology_second": ("high", True),
+    # v14 (AN.33, piece 33h): the weighing of the points read is a judgement; its check looks again at it.
+    "weigh": ("medium", True), "weigh_check": ("high", True),
     # Research: the measured search steps stay at the release's own setting (owner decision, 14 Oct 2026).
     "phrases": (None, False), "judgment_phrases": (None, False), "pick": (None, False), "judgment_pick": (None, False),
     # The answer: a section and the overview, the review, the check across the sections, and the second looks.
