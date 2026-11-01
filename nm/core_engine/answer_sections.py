@@ -47,7 +47,7 @@ from nm.core_engine import (
     answer_sources, calculation, research, response_authorities, response_review, response_writer,
 )
 from nm.core_engine.calls import (
-    CONFLICT_PURPOSE, EDIT_ALLOWANCE, REVIEW_PURPOSE, SECTION_ALLOWANCE, SHARED_ALLOWANCE, CorrectionUnavailable,
+    ALLOWANCE, CONFLICT_PURPOSE, EDIT_ALLOWANCE, REVIEW_PURPOSE, SECTION_ALLOWANCE, SHARED_ALLOWANCE, CorrectionUnavailable,
     ReleaseWithheld, refusal_reason, shape_mismatch,
 )
 from nm.shared.egress_contracts import EgressRefused
@@ -74,6 +74,39 @@ BETTER_REWRITES = 0
 #: v14 (AN.29, D10): items of its coverage list that the review finds a piece passes over - or mentions without what the advice
 #: needs - are taken up once, in one call shown only them, on an allowance of its own beside the piece's.
 TAKE_UPS = 1
+#: From research v14 (plan AN.33, D21; owner, 1 Nov 2026: "put a meaningful limit on this up front ... based on the matter
+#: complexity", and "we should ensure there are no perpetual loops"): the rounds of repair a piece may make - each a take-up of
+#: what its review found it passes over and a second look at the paragraphs it found at fault, then one review - are set before any
+#: piece is written, from the matter: one, and one more for every ROUND_ITEMS items beyond the first ROUND_ITEMS of each piece's
+#: share of the coverage list, at most MAX_ROUNDS, and no more than let the pieces' allowances together fit within the turn's
+#: durable allowance of corrections (calls.ALLOWANCE), which bounds them all (rounds). A take-up asks only about what no earlier
+#: one of the piece asked, so the rounds stop when one changes nothing. One round is the allowance before: TAKE_UPS take-up and
+#: SECTION_ALLOWANCE corrections of the piece's own.
+ROUND_ITEMS, MAX_ROUNDS = 10, 4
+
+
+def rounds(record, layout, context=None):
+    """The rounds of repair each piece of an answer may make (plan AN.33, D21), set up front: from research v14, one, and one more
+    for every ROUND_ITEMS items beyond the first ROUND_ITEMS of each piece's share of the coverage list (its items divided among the
+    answer's pieces: one for each part of layout - its sections and, where there are several, the overview), at most MAX_ROUNDS
+    and at most as many as let every piece's allowances fit within calls.ALLOWANCE; one for a record before v14, as its answers were
+    made. Code reads it again from the saved record and context, so a saved answer is checked against the allowance it was made
+    under."""
+    if record.get("contract") not in research.SETTLED:
+        return TAKE_UPS
+    pieces = max(1, len(layout))
+    share = -(-len(response_writer.coverage_items(record, {}, context)) // pieces)
+    wanted = 1 + max(0, -(-(share - ROUND_ITEMS) // ROUND_ITEMS))
+    fits = (ALLOWANCE // pieces - SECTION_ALLOWANCE + 1) // 2
+    return max(1, min(MAX_ROUNDS, wanted, fits))
+
+
+def allowances(rounds_):
+    """What a piece with rounds_ rounds of repair may spend (plan AN.33, D21): its own corrections - its second looks, and a rewrite
+    for its form - and its take-ups. One round is the allowance before AN.33: SECTION_ALLOWANCE and TAKE_UPS."""
+    return SECTION_ALLOWANCE + rounds_ - 1, TAKE_UPS + rounds_ - 1
+
+
 #: Why a section, the overview or the check across the sections is not shown as written:
 #: code's own checks refused every try; its review could not be completed; the review still
 #: found problems after the trims; the AI service failed or its account has no credit left (P51); it
@@ -361,7 +394,7 @@ class Researched:
     def __init__(self, context, plan, parts=None, *, whole=None):
         self.context, self.plan, self._parts, self._whole = context, plan, parts, whole
         self.layout = response_writer.parts(whole[0] if whole else {"contract": research.CONTRACT, "plan": plan})
-        contract = whole[0].get("contract") if whole else research.CONTRACT
+        self.contract = contract = whole[0].get("contract") if whole else research.CONTRACT
         self._by_dispute = contract in research.BY_DISPUTE and len(self.layout) > 1
         self._lock, self._made = threading.Lock(), {}
 
@@ -431,6 +464,10 @@ class _Answering:
         self.case_index, self.provision_reader = case_index, provision_reader
         self.report = report or (lambda stage, **detail: None)
         self.layout = researched.layout
+        #: The rounds of repair each piece may make, and the corrections of its own and take-ups they allow it, set before any
+        #: piece is written (plan AN.33, D21).
+        self.rounds = rounds({"contract": researched.contract, "plan": researched.plan}, self.layout, context)
+        self.own, self.take_ups = allowances(self.rounds)
         #: The service failure that left each scope unanswered, should the whole turn fail so.
         self.failures = {}
         self._reviews, self._lock = 0, threading.Lock()
@@ -563,18 +600,18 @@ class _Answering:
         return None if section == response_writer.OVERVIEW else self.layout[section]["dispute_id"]
 
     def _repaired(self, scope, operation, write, kwargs, researched, *, section, sections=None):
-        """A v14 piece (plan AN.28, D2; AN.29, D10): its draft; once, the items of its coverage the review finds it passes
-        over taken up in one call; while the scope's allowance lasts, a second look at only the paragraphs code's checks or
-        the review find at fault - made at once, on the paragraphs of the same review, when the take-up was made for it, so
-        that one review follows both (plan AN.31); then what still fails blocked and what remains reviewed again
-        (TRIMS_V14 at most). A checklist item at fault is left out as it is found. Returns the piece's record with its
-        second looks and take-up (LOOKS)."""
+        """A v14 piece (plan AN.28, D2; AN.29, D10): its draft; in each round of repair its allowance leaves (plan AN.33, D21),
+        the items of its coverage the review finds it passes over, and no earlier take-up asked about, taken up in one call;
+        while its own allowance lasts, a second look at only the paragraphs code's checks or the review find at fault - made at
+        once, on the paragraphs of the same review, when the take-up was made for it, so that one review follows both (plan
+        AN.31); then what still fails blocked and what remains reviewed again (TRIMS_V14 at most). A checklist item at fault is
+        left out as it is found. Returns the piece's record with its second looks and take-ups (LOOKS)."""
         record, sources, execution = researched
         offered = answer_sources.aliases(sources)
         overview = section == response_writer.OVERVIEW
         refused, looks, accepted, notes, trims = [], [], [], [], []
         state = {"proposal": None, "cut": {}, "left_out": [], "items": [], "undo": None, "blocking": False,
-                 "second": 0, "taken": 0}
+                 "second": 0, "taken": 0, "asked": set()}
         reviewed, passed, correction, better = None, None, None, 0
         pending = None
 
@@ -592,13 +629,13 @@ class _Answering:
                 state["cut"], state["left_out"])
 
         def spent():
-            """The corrections made within the section's own allowance: all the scope's but its take-up."""
+            """The corrections made within the piece's own allowance: all the scope's but its take-ups."""
             return self.calls.used(scope) - state["taken"]
 
         def look(faults):
-            """One second look at the paragraphs at fault, applied; False when the allowance is spent - the section's own,
-            never the one kept for the take-up."""
-            if state["second"] >= SECTION_ALLOWANCE:
+            """One second look at the paragraphs at fault, applied; False when the allowance is spent - the piece's own,
+            never the one kept for the take-ups."""
+            if state["second"] >= self.own:
                 return False
             try:
                 self.calls.spend("core_response_repair")
@@ -632,18 +669,20 @@ class _Answering:
             return True
 
         def take(piece):
-            """The take-up: the items of coverage the review found the piece passes over, or mentions without what the advice
-            needs, taken up in one call shown only them. False when there is nothing to ask, the allowance for it is spent or
-            code could use nothing of the answer; otherwise the proposal has the paragraphs the writer added, and the reasons
-            it gave for the rest go to the next review."""
-            wanted = _wanted(piece)
-            if not wanted or state["taken"] >= TAKE_UPS:
+            """A take-up: the items of coverage the review found the piece passes over, or mentions without what the advice
+            needs, that no earlier take-up of the piece asked about, taken up in one call shown only them. False when there is
+            nothing new to ask, the allowance for it is spent or code could use nothing of the answer; otherwise the proposal
+            has the paragraphs the writer added, and the reasons it gave for the rest go to the next review."""
+            # Plan AN.33 (D21): only what no earlier take-up of this piece asked about, within the allowance set up front.
+            wanted = [entry for entry in _wanted(piece) if entry["id"] not in state["asked"]]
+            if not wanted or state["taken"] >= self.take_ups:
                 return False
             try:
                 self.calls.spend("core_response_take_up")
             except CorrectionUnavailable:
                 return False
             state["taken"] += 1
+            state["asked"] |= {entry["id"] for entry in wanted}
             self.report("revising")
             returned = response_writer.take_up(self.calls, self.context, record, sources, state["proposal"], wanted,
                                                section=section, interpretation=self.interpretation, execution=execution,
@@ -711,7 +750,7 @@ class _Answering:
                 if passed is not None:
                     reviewed = passed
                     return finish(None)
-                if spent() >= SECTION_ALLOWANCE:
+                if spent() >= self.own:
                     return finish("checks")
                 # Rewritten whole for its form: a new proposal, of which nothing is blocked yet.
                 state.update(proposal=None, cut={}, left_out=[], items=[])
@@ -784,7 +823,7 @@ class _Answering:
                     passed = piece
                     if (better < BETTER_REWRITES and _read_v10(piece) and beside(piece)
                             and all(finding["category"] in response_review.SUGGESTIONS for finding in beside(piece))
-                            and spent() < SECTION_ALLOWANCE):
+                            and spent() < self.own):
                         # A new proposal, of which nothing is blocked yet; should it bring a fault of its own, the
                         # piece that passed stays.
                         better += 1
@@ -844,9 +883,10 @@ class _Answering:
         from its own dispute's research as soon as that is ready (step 4)."""
         scope, researched = f"s{index}", self.researched.part(index)
         self.report("writing")
-        # v14 (AN.29, D10): the take-up of what the section passed over has an allowance of its own beside the section's.
+        # v14 (AN.29, D10): the take-ups of what the section passed over have an allowance of their own beside the section's,
+        # both set up front from the matter (AN.33, D21).
         repaired = self.writer == response_writer.REPAIRED_CONTRACT
-        with self.calls.scope(scope, SECTION_ALLOWANCE + (TAKE_UPS if repaired else 0)):
+        with self.calls.scope(scope, self.own + self.take_ups if repaired else SECTION_ALLOWANCE):
             piece = (self._repaired(scope, "core_response_writer", self._write(index, researched), {}, researched,
                                     section=index)
                      if self.writer == response_writer.REPAIRED_CONTRACT else
@@ -904,8 +944,9 @@ class _Answering:
                                                   sections=presented, interpretation=self.interpretation,
                                                   execution=execution, time_limits=self.time_limits,
                                                   contract=self.writer)
-        with self.calls.scope("o", SECTION_ALLOWANCE + (TAKE_UPS if self.writer == response_writer.REPAIRED_CONTRACT else 0)):
-            if self.writer == response_writer.REPAIRED_CONTRACT:
+        repaired = self.writer == response_writer.REPAIRED_CONTRACT
+        with self.calls.scope("o", self.own + self.take_ups if repaired else SECTION_ALLOWANCE):
+            if repaired:
                 return self._repaired("o", "core_response_overview", write,
                                       {"sections": drafts, "unanswered": missing or None}, researched,
                                       section=response_writer.OVERVIEW, sections=presented)
@@ -1069,11 +1110,12 @@ def _kept_valid(saved, kept):
         raise ValueError("Unknown record of what code refused")
 
 
-def _looks_valid(saved):
-    """From turn v9 a part keeps its second looks and its take-up (AN.28, AN.29): evidence of what was at fault or asked about,
-    what the writer returned and what code made of it, checked for its shape and not re-derived."""
+def _looks_valid(saved, allowed=SECTION_ALLOWANCE + TAKE_UPS):
+    """From turn v9 a part keeps its second looks and its take-ups (AN.28, AN.29): evidence of what was at fault or asked about,
+    what the writer returned and what code made of it, checked for its shape and not re-derived. allowed: how many the piece could
+    make (the allowances of its rounds, from the saved record; AN.33, D21)."""
     looks = saved[LOOKS]
-    if not isinstance(looks, list) or len(looks) > SECTION_ALLOWANCE + TAKE_UPS or any(
+    if not isinstance(looks, list) or len(looks) > allowed or any(
             not isinstance(look, dict) or set(look) != {"faults", "returned", "decisions", "set_aside"}
             or not isinstance(look["faults"], list) or not look["faults"] or not isinstance(look["decisions"], list)
             or not isinstance(look["set_aside"], list) for look in looks):
@@ -1157,6 +1199,7 @@ def validate(activity, context, record, sources, worked, *, kept=True, looked=Fa
     chain = _chain_valid_v14 if looked else _chain_valid
     layout = response_writer.parts(record)
     many, time_limits, execution = len(layout) > 1, calculation.for_answer(worked), activity["execution"]
+    allowed = sum(allowances(rounds(record, layout, context))) if looked else SECTION_ALLOWANCE + TAKE_UPS
     indices = list(range(1, len(layout))) if many else [0]
     sections = activity["sections"]
     if not isinstance(sections, list) or len(sections) != len(indices):
@@ -1167,7 +1210,7 @@ def validate(activity, context, record, sources, worked, *, kept=True, looked=Fa
             raise ValueError("Saved sections differ from the answer's layout")
         _kept_valid(saved, kept)
         if looked:
-            _looks_valid(saved)
+            _looks_valid(saved, allowed)
         chain(saved, context, *_research_for(context, record, sources, execution, layout, index), time_limits,
               index, saved["dispute_id"], {})
     if all(saved["fallback"] is not None and saved["fallback"]["reason"] in NOT_MADE
@@ -1211,7 +1254,7 @@ def validate(activity, context, record, sources, worked, *, kept=True, looked=Fa
         raise ValueError("Unknown saved overview")
     _kept_valid(overview, kept)
     if looked:
-        _looks_valid(overview)
+        _looks_valid(overview, allowed)
     drafts = [shown(sections[position])["draft"] for position in order(sections, worked)
               if shown(sections[position]) is not None]
     missing = unanswered(sections, worked)
