@@ -63,11 +63,14 @@ REVIEW = response_review.MISLEADS_CONTRACT
 #: A review with nothing code can use is tried once more, on its own allowance, never one of
 #: its section's rewrites (P29).
 REVIEW_RETRIES = 1
-#: A piece its review finds nothing misleading in, only what it could add or put better, is
-#: rewritten at most once for that; what is then still suggested is said beside it (P33, 21 Oct
-#: 2026: in live run 4 the first such rewrite did most of the work, the second cost 75-100 s for
-#: smaller points). A misleading finding keeps the piece's tries (P25).
-BETTER_REWRITES = 1
+#: A piece its review finds nothing misleading in, only what it could add or put better, was
+#: rewritten at most once for that (P33, 21 Oct 2026: in live run 4 the first such rewrite did most
+#: of the work, the second cost 75-100 s for smaller points). Since 1 Nov 2026 (plan AN.31, owner:
+#: "yes" to dropping it as a cost lever: a writing and a review, about $0.03 and a minute and a half
+#: a piece) it is rewritten for nothing: what the review suggests is kept under "How NM checked
+#: this" (P39). One rewrite is restored by setting this to 1. A misleading finding keeps the
+#: piece's tries (P25).
+BETTER_REWRITES = 0
 #: v14 (AN.29, D10): items of its coverage list that the review finds a piece passes over - or mentions without what the advice
 #: needs - are taken up once, in one call shown only them, on an allowance of its own beside the piece's.
 TAKE_UPS = 1
@@ -562,9 +565,10 @@ class _Answering:
     def _repaired(self, scope, operation, write, kwargs, researched, *, section, sections=None):
         """A v14 piece (plan AN.28, D2; AN.29, D10): its draft; once, the items of its coverage the review finds it passes
         over taken up in one call; while the scope's allowance lasts, a second look at only the paragraphs code's checks or
-        the review find at fault; then what still fails blocked and what remains reviewed again (TRIMS_V14 at most). A
-        checklist item at fault is left out as it is found. Returns the piece's record with its second looks and take-up
-        (LOOKS)."""
+        the review find at fault - made at once, on the paragraphs of the same review, when the take-up was made for it, so
+        that one review follows both (plan AN.31); then what still fails blocked and what remains reviewed again
+        (TRIMS_V14 at most). A checklist item at fault is left out as it is found. Returns the piece's record with its
+        second looks and take-up (LOOKS)."""
         record, sources, execution = researched
         offered = answer_sources.aliases(sources)
         overview = section == response_writer.OVERVIEW
@@ -572,6 +576,7 @@ class _Answering:
         state = {"proposal": None, "cut": {}, "left_out": [], "items": [], "undo": None, "blocking": False,
                  "second": 0, "taken": 0}
         reviewed, passed, correction, better = None, None, None, 0
+        pending = None
 
         def finish(why):
             if why is not None:
@@ -659,6 +664,8 @@ class _Answering:
             return True
 
         while True:
+            # The paragraphs a review found at fault, which a take-up was made first for, wait for one admission (plan AN.31, D15c).
+            carried, pending = pending, None
             # 1. An admitted draft: written, or rewritten whole for its form, or the proposal admitted again.
             try:
                 if state["proposal"] is None:
@@ -722,6 +729,20 @@ class _Answering:
                     reviewed = passed
                     return finish(None)
                 return finish(self._failed(scope, exc))
+            # 1b. The take-up's paragraphs are admitted: the second look at the paragraphs the same review found at fault is made now,
+            # so that one review follows both. Positions have not moved (a take-up only adds paragraphs). Should the look not be
+            # made, or fail, the review that follows finds them again.
+            if carried is not None:
+                try:
+                    if look(carried):
+                        continue
+                except (SchemaViolation, CorrectionUnavailable) as exc:
+                    self.calls.refused(exc)
+                    refused.append(_refusal("writing", self.calls.last_output, refusal_reason(exc)))
+                except _STOP:
+                    raise
+                except ModelError as exc:
+                    return finish(self._failed(scope, exc))
             # 2. Its review.
             try:
                 piece = self._review(scope, draft, {**kwargs, **({"writer_notes": deepcopy(notes)} if notes else {})},
@@ -748,6 +769,7 @@ class _Answering:
             if not state["blocking"]:
                 try:
                     if take(piece):
+                        pending = faults or None
                         continue
                 except (SchemaViolation, CorrectionUnavailable) as exc:
                     self.calls.refused(exc)

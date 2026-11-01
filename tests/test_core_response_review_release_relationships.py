@@ -5,6 +5,7 @@ import json
 
 import pytest
 
+from nm.core_engine import answer_sections
 from nm.core_engine.conversation import chat_matter_id
 from nm.core_engine.turn import saved_rows
 from nm.shared.store_file_store import FileMatterStore
@@ -92,7 +93,25 @@ class MissingWorkModel(ScriptedModel):
         return replace(result, data=out)
 
 
-def test_missing_work_rewrites_once_preserving_supported_peer_then_rechecks_and_saves(tmp_path):
+def test_missing_work_asks_for_no_rewrite_and_is_said_under_how_nm_checked_it(tmp_path):
+    # Plan AN.31 (1 Nov 2026; owner: "yes" to dropping P33 as a cost lever, BETTER_REWRITES = 0): what the check says could be better
+    # drives no rewrite; one writing and one review, and the point is kept under "How NM checked this answer" (P39).
+    assert answer_sections.BETTER_REWRITES == 0
+    store = FileMatterStore(tmp_path, key="synthetic-release-relationships")
+    model = MissingWorkModel()
+    response = run(store, model, message=model.message)
+    assert response["metrics"]["llm_calls"] == 4 and response["metrics"]["draft_corrections"] == 0
+    assert [name for name, _ in model.calls if name != "core_research_understand"] == [
+        "core_understanding", "core_response_writer", "core_response_review"]
+    checked = response["elements"][-1]
+    assert checked["kind"] == "CHECKED" and checked["checked"] == [{"part": "this answer", "suggestions": [
+        {"kind": "better", "text": "The independent request for questions has no delivered result or limit."}]}]
+    rows = saved_rows(store.load(chat_matter_id("owner", response["chat_id"])), "owner")
+    assert len(rows) == 1 and rows[0]["response"] == response
+
+
+def test_with_the_rewrite_switched_on_missing_work_rewrites_once_preserving_supported_peer_then_rechecks_and_saves(tmp_path, monkeypatch):
+    monkeypatch.setattr(answer_sections, "BETTER_REWRITES", 1)  # P33 as it was (21 Oct 2026)
     store = FileMatterStore(tmp_path, key="synthetic-release-relationships")
     model = MissingWorkModel()
     response = run(store, model, message=model.message)
@@ -125,10 +144,14 @@ def test_missing_work_rewrites_once_preserving_supported_peer_then_rechecks_and_
 # better asks for one (P33, 21 Oct 2026): a review that keeps finding the omission gets one
 # rewrite, besides any shape repair; what is still missing after it is kept under "How NM
 # checked this answer" (P39, 24 Oct 2026), never a reason to withhold it.
-@pytest.mark.parametrize("settings,expected_calls,corrections", [
-    ({"reject_repair": True}, 6, 1), ({"consume_shape_correction": True}, 7, 2)])
-def test_missing_work_still_missing_after_the_tries_is_said_beside_the_answer(tmp_path, settings, expected_calls,
-                                                                                corrections):
+# Since 1 Nov 2026 (AN.31) nothing is rewritten for it (BETTER_REWRITES = 0): the first two cases are the usual ones, the last two
+# the rewrite switched on (P33 as it was).
+@pytest.mark.parametrize("settings,expected_calls,corrections,rewrites", [
+    ({"reject_repair": True}, 4, 0, 0), ({"consume_shape_correction": True}, 5, 1, 0),
+    ({"reject_repair": True}, 6, 1, 1), ({"consume_shape_correction": True}, 7, 2, 1)])
+def test_missing_work_still_missing_after_the_tries_is_said_beside_the_answer(tmp_path, monkeypatch, settings, expected_calls,
+                                                                                corrections, rewrites):
+    monkeypatch.setattr(answer_sections, "BETTER_REWRITES", rewrites)
     store = FileMatterStore(tmp_path, key="synthetic-release-relationships")
     model = MissingWorkModel(**settings)
     response = run(store, model, message=model.message)

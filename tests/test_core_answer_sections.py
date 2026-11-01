@@ -311,10 +311,27 @@ def test_a_checklist_item_still_faulted_is_left_out_by_what_it_needed():
     assert turn.validate_activity(activity, ctx, elements) == activity
 
 
-def test_what_a_section_still_leaves_out_after_its_tries_is_kept_under_how_nm_checked_it_and_holds_nothing_back():
-    # What the review finds missing asks for one rewrite (P33, 21 Oct 2026; P25 gave it every
-    # try); after it, it is kept under "How NM checked this answer" (P39, 24 Oct 2026), and
-    # nothing is dropped for it.
+def test_what_a_section_still_leaves_out_is_kept_under_how_nm_checked_it_with_no_rewrite_and_holds_nothing_back():
+    # What the review finds missing asks for no rewrite since 1 Nov 2026 (plan AN.31, owner: "yes" to dropping P33 as a cost lever:
+    # BETTER_REWRITES = 0); it is kept under "How NM checked this answer" (P39, 24 Oct 2026), and nothing is dropped for it.
+    def leaving(round_, payload):
+        return [paragraph("summary", "In short for D1."), paragraph("next_step", "LEAVES out the court.")]
+    model = Scripted({"D1": leaving})
+    ctx, elements, activity, calls = answered(model)
+    assert answer_sections.BETTER_REWRITES == 0
+    assert calls.used("s1") == 0 and len(model.payloads("core_response_writer", "D1")) == 1
+    assert activity["sections"][0]["trims"] == [] and activity["sections"][0]["fallback"] is None
+    assert "NOTE" not in kinds(elements)
+    assert elements[-1]["kind"] == "CHECKED" and elements[-1]["checked"] == [{"part": "Dispute 1", "suggestions": [
+        {"kind": "better", "text": "a paragraph does not say which court hears it, which a message asks."}]}]
+    assert turn.validate_activity(activity, ctx, elements) == activity
+
+
+def test_with_the_rewrite_switched_on_what_a_section_still_leaves_out_asks_for_one_and_is_then_kept_under_how_nm_checked_it(
+        monkeypatch):
+    # The switch restores P33 (21 Oct 2026): one rewrite, after which what is still suggested is kept (P39), nothing dropped for it.
+    monkeypatch.setattr(answer_sections, "BETTER_REWRITES", 1)
+
     def leaving(round_, payload):
         return [paragraph("summary", "In short for D1."), paragraph("next_step", "LEAVES out the court.")]
     model = Scripted({"D1": leaving})
@@ -327,9 +344,11 @@ def test_what_a_section_still_leaves_out_after_its_tries_is_kept_under_how_nm_ch
     assert turn.validate_activity(activity, ctx, elements) == activity
 
 
-def test_a_rewrite_that_brings_a_fault_gives_way_to_the_earlier_draft_that_passed():
-    # Asked to add what the first draft left out, a rewrite may bring a fault of its own: the
-    # first draft, which passed but for what it leaves out, is kept and its omission said.
+def test_a_rewrite_that_brings_a_fault_gives_way_to_the_earlier_draft_that_passed(monkeypatch):
+    # With the rewrite for what could be better switched on (BETTER_REWRITES = 1; off since 1 Nov 2026, plan AN.31): asked to add what
+    # the first draft left out, a rewrite may bring a fault of its own: the first draft, which passed but for what it leaves out, is
+    # kept and its omission said.
+    monkeypatch.setattr(answer_sections, "BETTER_REWRITES", 1)
     def worse(round_, payload):
         if round_ == 1:
             return [paragraph("summary", "In short for D1."), paragraph("next_step", "LEAVES out the court.")]

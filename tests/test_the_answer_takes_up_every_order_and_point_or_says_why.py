@@ -332,6 +332,58 @@ def test_the_take_up_comes_before_any_second_look_and_has_an_allowance_of_its_ow
     assert not [element for element in elements if element["kind"] == "NOTE"]
 
 
+class Both(Faulted):
+    """As Faulted, and it knows the second look: it keeps what it is shown and writes the paragraph at fault again (or fails, as told)."""
+
+    knows_second_look = True
+
+    def __init__(self, missing, taking=None, failing=False):
+        super().__init__(missing, taking)
+        self.looks, self.failing = [], failing
+
+    def structured(self, prompt, schema, tier, **kwargs):
+        if prompt.operation != "core_response_repair":
+            return super().structured(prompt, schema, tier, **kwargs)
+        payload = json.loads(prompt.user)
+        self.looks.append(payload)
+        if self.failing:
+            raise SchemaViolation("scripted failure")
+        repairs = [{"paragraph": entry["paragraph"], "action": "rewrite", "why": "Written again.", "page_words": None, "question": None,
+                    "rewritten": {"kind": "summary", "text": "In short, the claim was allowed.", "uses": [], "place": "row_action"}}
+                   for entry in payload["to_check"]]
+        return _result({"repairs": repairs}, tier)
+
+
+def test_a_take_up_and_a_second_look_for_the_findings_of_one_review_are_made_before_the_one_review_that_follows():
+    # Plan AN.31, D15c. Before, the take-up was followed by a review that found the faulty paragraph again, then its second look and a third
+    # review; now the second look is made at once, on the paragraph the first review found, over the draft the take-up made.
+    model = Both(lambda round_, payload: ([{"id": payload["coverage"][0]["id"], "why": "It is the order in issue."}]
+                                          if round_ == 1 else []), taking_up)
+    sections, elements = answered(model)
+    assert len(model.take_ups) == 1 and len(model.looks) == 1 and model.reviews == 2, "a take-up and a second look, then one review"
+    (look,) = model.looks
+    assert [paragraph["id"] for paragraph in look["your_paragraphs"]] == ["U1", "U2", "U3"], "it is shown the paragraph the take-up added"
+    assert [entry["paragraph"] for entry in look["to_check"]] == ["U1"], "and only the paragraph the first review found at fault"
+    (section,) = sections
+    take, second = section[answer_sections.LOOKS]
+    assert [decision["action"] for decision in take["decisions"]] == ["added"] and second["faults"][0]["kind"] == "review"
+    assert section["fallback"] is None and section["trims"] == [] and section["reviewed"]["review"]["accepted"] is True
+    assert [unit["text"] for unit in section["reviewed"]["draft"]["units"]] == [
+        "In short, the claim was allowed.", "Check the records.", "The two suits are pending before the District Court."]
+    assert not [element for element in elements if element["kind"] == "NOTE"]
+
+
+def test_a_second_look_that_fails_beside_a_take_up_leaves_the_review_to_find_the_paragraph_again():
+    model = Both(lambda round_, payload: ([{"id": payload["coverage"][0]["id"], "why": "It is the order in issue."}]
+                                          if round_ == 1 else []), taking_up, failing=True)
+    sections, elements = answered(model)
+    assert len(model.take_ups) == 1 and len(model.looks) >= 2, "the second look beside the take-up failed, and again after the next review"
+    assert model.reviews >= 2, "the review that follows finds the paragraph again"
+    (section,) = sections
+    assert [entry["step"] for entry in section[answer_sections.KEPT]].count("writing") == len(model.looks), "each failure is kept as evidence"
+    assert section[answer_sections.LOOKS][0]["decisions"][0]["action"] == "added", "what the take-up added is not lost"
+
+
 def test_the_take_up_and_its_looks_are_bounded_by_the_pieces_allowance():
     assert answer_sections.TAKE_UPS == 1 and answer_sections.SECTION_ALLOWANCE == 2
     assert not hasattr(answer_sections, "COVERAGE_REWRITES") and not hasattr(answer_sections, "COVERAGE_PURPOSE")
@@ -417,3 +469,42 @@ def test_an_overview_paragraph_of_a_kind_the_overview_does_not_add_is_set_aside_
     assert look["decisions"] == [] and look["set_aside"] == [
         {"where": "addition 1", "why": "a paragraph of kind 'next_step' is not one the overview adds"}]
     assert len(overview["reviewed"]["draft"]["units"]) == 1 and overview["fallback"] is None
+
+
+class OpeningFaulted(Opening):
+    """As Opening, and the overview's first review also finds its one statement misleading; the second look writes it again."""
+
+    def __init__(self, taking):
+        super().__init__(taking)
+        self.looks = []
+
+    def structured(self, prompt, schema, tier, **kwargs):
+        payload = json.loads(prompt.user)
+        if prompt.operation == "core_response_repair":
+            self.looks.append(payload)
+            return _result({"repairs": [{"paragraph": entry["paragraph"], "action": "rewrite", "why": "Written again.", "page_words": None,
+                                         "question": None, "rewritten": {"kind": "next_step", "text": "Start with the second dispute.",
+                                                                         "uses": []}} for entry in payload["to_check"]]}, tier)
+        result = super().structured(prompt, schema, tier, **kwargs)
+        if prompt.operation == "core_response_review" and payload["what_you_review"]["piece"].startswith("the overview"):
+            result.data["misleading"] = [{"kind": "unsupported", "where": [unit["id"]], "evidence": [], "why": "Not borne out.",
+                                          "words": ["Start with the first dispute."]}
+                                         for unit in payload["complete_draft_proposal"]["units"] if "first dispute" in unit["text"]]
+        return result
+
+
+def test_the_overview_too_is_taken_up_and_looked_at_again_for_one_review_before_the_review_that_follows():
+    # Plan AN.31, D15c: the same step serves the overview; its second look is shown the paragraph the take-up added.
+    model = OpeningFaulted(lambda payload: {"additions": [{"items": [payload["to_take_up"][0]["id"]], "paragraph": {
+        "kind": "limitation", "text": "The client states a fact that no section takes up.", "uses": []}}], "declined": []})
+    ctx, elements, activity = answered_two(model)
+    overview_reviews = [payload for payload in model.reviews if payload["what_you_review"]["piece"].startswith("the overview")]
+    assert len(model.take_ups) == 1 and len(model.looks) == 1 and len(overview_reviews) == 2, "a take-up and a second look, then one review"
+    (look,) = model.looks
+    assert [paragraph["id"] for paragraph in look["your_paragraphs"]] == ["U1", "U2"] and [e["paragraph"] for e in look["to_check"]] == ["U1"]
+    overview = activity["overview"]
+    take, second = overview[answer_sections.LOOKS]
+    assert [d["action"] for d in take["decisions"]] == ["added"] and second["faults"][0]["kind"] == "review"
+    assert [unit["text"] for unit in overview["reviewed"]["draft"]["units"]] == [
+        "Start with the second dispute.", "The client states a fact that no section takes up."]
+    assert overview["fallback"] is None and overview["reviewed"]["review"]["accepted"] is True
