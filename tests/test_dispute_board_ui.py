@@ -13,8 +13,8 @@ PAGE_TESTS = [
     # Ten page tests sat in tests/js with nothing to run them until 26 Oct 2026 (plan AN.26).
     "add_while_working.mjs", "answer_parts.mjs", "attachments.mjs", "chat_board.mjs", "checklist_board.mjs",
     "research_note.mjs", "select_reply.mjs", "turn_progress.mjs", "voice_notes.mjs", "working_box.mjs",
-    # Plan AN.33, piece 33m: what the papers record, folded at the end of the answer.
-    "papers_table.mjs",
+    # Plan AN.33, piece 33m: what the papers record, folded at the end of the answer; piece 33n: the model and the effort.
+    "papers_table.mjs", "turn_choice.mjs",
 ]
 #: Run, with the cases it is given, by tests/test_the_screen_never_folds_a_disclosure.py.
 RUN_ELSEWHERE = {"render_turn_partition.mjs"}

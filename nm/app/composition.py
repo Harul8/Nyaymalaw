@@ -16,7 +16,7 @@ from nm.arrive.usage_port import AllowanceUsedUp, UsagePort, UsageRefused
 from nm.shared.deployment_contracts import shares_value_with
 from nm.shared.egress_contracts import DataClass, Gatekeeper, Sink
 from nm.shared.egress_policy import INDEX_PROCESSOR, OUTBOX_PROCESSOR, STORAGE_PROCESSOR, egress_policy
-from nm.shared.model_config import load, load_dotenv
+from nm.shared.model_config import TURN_MODELS, load, load_dotenv
 from nm.shared.model_metered import MeteredModel
 from nm.shared.model_openai_adapter import OpenAIModelAdapter
 from nm.shared.model_policed import PolicedModel
@@ -100,7 +100,9 @@ class Application:
             if not isinstance(self._model_adapter, OpenAIModelAdapter):
                 raise ValueError('A live evaluation budget requires the OpenAI adapter.')
             from nm.shared.model_call_budget import SessionCallBudget
-            models = tuple(dict.fromkeys(c.model for tier, c in self.config.tiers.items() if tier is not Tier.EMBED))
+            # Every model an advocate may choose for a turn may run in a bounded session too (plan AN.33, D23).
+            models = tuple(dict.fromkeys([*(c.model for tier, c in self.config.tiers.items() if tier is not Tier.EMBED),
+                                          *(model for model, _, _ in TURN_MODELS)]))
             self._model_adapter = self._model_adapter.with_call_budget(SessionCallBudget(
                 Path(budget_path), settings.get('NM_EVAL_MAX_USD', '25'), models=models))
         # Configuration is not corpus readiness; models and indices load on demand.
@@ -124,7 +126,7 @@ class Application:
         # Live words while dictating, only for an advocate who turns them on (owner, 15 Oct 2026).
         self.live_transcription_model = (settings.get('NM_LIVE_TRANSCRIBE_MODEL') or 'gpt-live-transcribe').strip()
 
-    def _model_for(self, advocate_id, *, session_current, page_images=False, audio_model=None):
+    def _model_for(self, advocate_id, *, session_current, page_images=False, audio_model=None, text_model=None):
         # Every call made for an advocate is metered against their account (plan AN.17), on either route.
         record = lambda call: self.usage.record(advocate_id, call)  # noqa: E731
         if isinstance(self._model_adapter, OpenAIModelAdapter):
@@ -132,7 +134,7 @@ class Application:
             model = bind_text_model(self._model_adapter, directory=self.directory,
                 account_id=advocate_id, config=self.config,
                 session_current=session_current, audit=self._egress_audit,
-                page_images=page_images, audio_model=audio_model, record=record)
+                page_images=page_images, audio_model=audio_model, record=record, text_model=text_model)
         else:
             # Fresh tracing per request prevents parallel conversations sharing traces.
             model = PolicedModel(inner=TracedModel(inner=MeteredModel(inner=self._model_adapter, record=record)),
@@ -172,7 +174,9 @@ class Application:
         return self._model_for(advocate_id, session_current=session_current,
                                audio_model=self.live_transcription_model)
 
-    def run_turn(self, *, advocate_id, session_current, document_refs=(), **request):
+    def run_turn(self, *, advocate_id, session_current, document_refs=(), model_choice=None, effort=None, **request):
+        """One turn for an advocate. model_choice and effort: what they chose for it (plan AN.33, D23) - the model every text call
+        of the turn runs on, and how hard each reasons; None: as configured, at the table's own levels."""
         from nm.core_engine.turn import process
 
         if document_refs:
@@ -186,7 +190,7 @@ class Application:
 
         # Saved replay performs no provider work. Permission/model construction
         # belongs to the first fresh model operation, not to receipt readback.
-        model = _DeferredAdapter(lambda: self._model_for(advocate_id, session_current=session_current))
+        model = _DeferredAdapter(lambda: self._model_for(advocate_id, session_current=session_current, text_model=model_choice))
         turn_id, reported = request.get('turn_id'), []
 
         def progress(stage, **detail):
@@ -204,7 +208,7 @@ class Application:
                              case_index=self.case_index,
                              provision_reader=getattr(self.legal_search, 'collections', {}).get('provision'),
                              progress=progress, running=lambda held: self.turn_running(advocate_id, held),
-                             **request)
+                             chosen_model=model_choice, effort=effort, **request)
             ended = 'finished'
             return result
         finally:

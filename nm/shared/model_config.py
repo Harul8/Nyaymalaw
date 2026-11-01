@@ -18,7 +18,7 @@ from __future__ import annotations
 import math
 import os
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from decimal import Decimal, ROUND_CEILING
 from pathlib import Path
 
@@ -110,6 +110,15 @@ RETURNED_MODEL_ALIASES: dict[str, tuple[str, ...]] = {
 
 # Exact published release IDs, not permission to accept arbitrary family aliases.
 PUBLISHED_RELEASES = frozenset({"gpt-6-luna", "gpt-6.1-sol", "gpt-6.1-terra"})
+
+#: The models an advocate may choose for a turn, the server's own list (plan AN.33, D23; owner, 1 Nov 2026: "let us list 6.1 Sol,
+#: 6.1 Terra and 6 Luna, with 6 Luna being the default model", and "Just say terra costs 8-10x more and similarly for sol"): each
+#: release ID, as the page names it, and what it costs beside Luna (PRICES: Terra ten times, Sol twenty times). The chosen model runs
+#: every call of the turn.
+TURN_MODELS = (("gpt-6-luna", "6 Luna", ""), ("gpt-6.1-terra", "6.1 Terra", "about 8-10x Luna's cost"),
+               ("gpt-6.1-sol", "6.1 Sol", "about 16-20x Luna's cost"))
+DEFAULT_TURN_MODEL = "gpt-6-luna"
+assert {model for model, _, _ in TURN_MODELS} <= PUBLISHED_RELEASES and DEFAULT_TURN_MODEL == TURN_MODELS[0][0]
 
 
 @dataclass(frozen=True)
@@ -264,6 +273,20 @@ def require_priced_snapshot(cfg: TierConfig, *, provider: str) -> TierConfig:
 @dataclass(frozen=True)
 class ModelConfig:
     tiers: dict[Tier, TierConfig]
+    #: Whether one model may review its own work on this installation (NM_ALLOW_SAME_MODEL_REVIEW): what lets a turn run every
+    #: call, the review among them, on the one model the advocate chose (plan AN.33, D23).
+    same_model_review: bool = False
+
+    def with_text_model(self, model: str) -> "ModelConfig":
+        """This configuration for one turn run on the model the advocate chose (plan AN.33, D23): every text tier on that model,
+        with the provider, key and address it is configured with; the embedding tier as it is. Refused for a model the server does
+        not offer (TURN_MODELS), and where one model may not review its own work and a review tier is configured."""
+        if model not in {offered for offered, _, _ in TURN_MODELS}:
+            raise ConfigurationError("Choose a model from the list NM offers.")
+        if not self.same_model_review and Tier.JUDGE in self.tiers:
+            raise ConfigurationError("One model for every call of a turn needs NM_ALLOW_SAME_MODEL_REVIEW: the review is one of them.")
+        return ModelConfig(tiers={tier: cfg if tier is Tier.EMBED else replace(cfg, model=model) for tier, cfg in self.tiers.items()},
+                           same_model_review=self.same_model_review)
 
     def for_tier(self, tier: Tier) -> TierConfig:
         try:
@@ -342,7 +365,7 @@ def load(env: dict[str, str] | None = None) -> ModelConfig:
         raise ConfigurationError("NM_ALLOW_SAME_MODEL_REVIEW must be true or false")
     if same_model_review != "true":
         _check_judge_distinct(tiers)
-    return ModelConfig(tiers=tiers)
+    return ModelConfig(tiers=tiers, same_model_review=same_model_review == "true")
 
 
 def _check_judge_distinct(tiers: dict[Tier, TierConfig]) -> None:

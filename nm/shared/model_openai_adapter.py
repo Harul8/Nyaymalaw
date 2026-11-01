@@ -284,9 +284,12 @@ class OpenAIModelAdapter:
         self._client = OpenAI(**kwargs)
 
     def for_matter_text(self, before_dispatch: Callable[[], None], *,
-                        page_images: bool = False, audio_model: str | None = None) -> OpenAIModelAdapter:
-        """Request-bound authority, shared transport; no shared consent state."""
-        bound = OpenAIModelAdapter(self._config, client=self._client, call_budget=self._call_budget)
+                        page_images: bool = False, audio_model: str | None = None,
+                        text_model: str | None = None) -> OpenAIModelAdapter:
+        """Request-bound authority, shared transport; no shared consent state. text_model: the model the advocate chose for the
+        turn, which every text call of the binding runs on (plan AN.33, D23; ModelConfig.with_text_model); None: as configured."""
+        config = self._config if text_model is None else self._config.with_text_model(text_model)
+        bound = OpenAIModelAdapter(config, client=self._client, call_budget=self._call_budget)
         bound._before_dispatch = before_dispatch
         bound._page_images = page_images is True
         bound._audio_model = audio_model if isinstance(audio_model, str) and audio_model.strip() else None

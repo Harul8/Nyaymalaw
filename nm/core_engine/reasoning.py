@@ -25,7 +25,9 @@ from __future__ import annotations
 
 from nm.shared.model_port import EFFORTS
 
-LEVELS = tuple(EFFORTS)
+#: The levels this table sets, low to high; max is only ever the advocate's choice for a turn (CHOICES).
+LEVELS = ("low", "medium", "high")
+assert set(LEVELS) <= set(EFFORTS)
 #: A step that reads more than this many tokens runs a level higher (plan AN.28, D4).
 LARGE_FILE_TOKENS = 60_000
 
@@ -55,6 +57,40 @@ STEPS = {
 def raised(level):
     """A level one above, never above high; the release's own setting (None) stays its own."""
     return None if level is None else LEVELS[min(LEVELS.index(level) + 1, len(LEVELS) - 1)]
+
+
+#: The effort an advocate may choose for a turn (plan AN.33, D23; owner, 1 Nov 2026: "You can have some 3-4 categories like low,
+#: medium, high, max. So this category should be used to tune the reasoning effort"): medium is this table as it stands; low and high
+#: move every call a level down or up, never below low or above high; max puts every call at max, the highest level that 6 Luna, 6.1
+#: Terra and 6.1 Sol each accept (their model pages, read 1 Nov 2026). A call at the release's own setting moves from low, the
+#: setting of those releases (the adapter's). The choice resets to medium for each new conversation (the page).
+CHOICES = ("low", "medium", "high", "max")
+DEFAULT_CHOICE = "medium"
+#: What a call may write - its reasoning included - grows with the choice (D23, contract (4)), never past MOST_OUTPUT, the most
+#: any model an advocate may choose writes in one answer.
+ALLOWANCE_TIMES = {"low": 1.0, "medium": 1.0, "high": 1.5, "max": 2.0}
+MOST_OUTPUT = 128_000
+
+
+def chosen(level, choice):
+    """A call's level under the effort the advocate chose for its turn (plan AN.33, D23): level, the step's own (None: the release's
+    own setting, which is low for the models an advocate may choose)."""
+    if choice not in CHOICES:
+        raise ValueError(f"An effort an advocate may choose is one of {CHOICES}")
+    if choice == DEFAULT_CHOICE:
+        return level
+    if choice == "max":
+        return "max"
+    at = LEVELS.index(level or "low")
+    return LEVELS[max(at - 1, 0)] if choice == "low" else LEVELS[min(at + 1, len(LEVELS) - 1)]
+
+
+def allowance(max_tokens, choice):
+    """What a call may write under the effort the advocate chose for its turn (plan AN.33, D23): its step's own allowance, grown with
+    the choice, never past MOST_OUTPUT."""
+    if choice not in CHOICES:
+        raise ValueError(f"An effort an advocate may choose is one of {CHOICES}")
+    return min(int(max_tokens * ALLOWANCE_TIMES[choice]), max(max_tokens, MOST_OUTPUT))
 
 
 def effort(step, *, tokens=0, again=False):

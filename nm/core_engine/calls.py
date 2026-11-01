@@ -7,7 +7,9 @@ import threading
 import time
 from contextlib import contextmanager
 from copy import deepcopy
+from dataclasses import replace
 
+from nm.core_engine import reasoning
 from nm.shared.model_port import ContextOverflow, ModelError, ModelResult, Prompt, SchemaViolation, estimate_tokens
 
 #: Corrections the turn's shared steps (understanding, research, time limits) may make
@@ -87,10 +89,15 @@ class TurnCalls:
     This owner bounds semantic/shape correction across activities and records
     their receipts. No nested stage receives a fresh allowance.
     """
-    def __init__(self, model, *, corrections_used=0, reserve_correction=None):
+    def __init__(self, model, *, corrections_used=0, reserve_correction=None, effort=reasoning.DEFAULT_CHOICE, chosen=None):
         if (type(corrections_used) is not int or not 0 <= corrections_used <= ALLOWANCE
                 or (reserve_correction is not None and not callable(reserve_correction))):
             raise ValueError("Correction ownership must come from a checked attempt")
+        if effort not in reasoning.CHOICES or (chosen is not None and not isinstance(chosen, dict)):
+            raise ValueError("A turn's effort is one an advocate may choose")
+        #: The effort the advocate chose for the turn, which moves every call of it (plan AN.33, D23), and what they chose - the
+        #: model and the effort - for the turn's record (metrics).
+        self.effort, self.chosen = effort, deepcopy(chosen)
         self.inner = model
         self.calls = []
         self.corrections_used = corrections_used
@@ -156,6 +163,10 @@ class TurnCalls:
             also = tuple(mark for mark in prompt.cache_also if shared and user[:mark] == prompt.user[:mark])
             prompt = Prompt(system=prompt.system, user=user, operation=prompt.operation, effort=prompt.effort,
                             cache_through=shared, cache_also=also)
+        if self.effort != reasoning.DEFAULT_CHOICE:
+            # Plan AN.33 (D23): the effort the advocate chose moves the call's own level, and what it may write grows with it.
+            prompt = replace(prompt, effort=reasoning.chosen(prompt.effort, self.effort))
+            max_tokens = reasoning.allowance(max_tokens, self.effort)
         if (estimate_tokens((prompt.system or "") + prompt.user + json.dumps(schema))
                 + max_tokens > self.context_budget(tier)):
             raise ContextOverflow("The complete stage input and correction exceed the context budget")
@@ -273,4 +284,6 @@ class TurnCalls:
                 "tokens_in": sum(c["tokens_in"] or 0 for c in self.calls),
                 "tokens_out": sum(c["tokens_out"] or 0 for c in self.calls),
                 "cached_tokens": sum(c["cached_tokens"] or 0 for c in self.calls),
-                "draft_corrections": self.corrections_used}
+                "draft_corrections": self.corrections_used,
+                # Plan AN.33 (D23): the model and the effort the advocate chose for the turn, where they chose them.
+                **({"chosen": deepcopy(self.chosen)} if self.chosen is not None else {})}

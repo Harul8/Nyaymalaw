@@ -2182,6 +2182,15 @@ function replyFooter(entry, copyText) {
   if (noteAvailable(answer)) foot.appendChild(noteControl(answer, status));
   const at = answeredAt(answer);
   if (at) foot.appendChild(at);
+  // Plan AN.33 (D23): the model and the effort the answer ran with, as the turn recorded them.
+  const chosen = answer.metrics && answer.metrics.chosen;
+  if (chosen && chosen.model) {
+    const names = { 'gpt-6-luna': '6 Luna', 'gpt-6.1-terra': '6.1 Terra', 'gpt-6.1-sol': '6.1 Sol' };
+    const line = document.createElement('span');
+    line.className = 'reply-chosen';
+    line.textContent = `${names[chosen.model] || chosen.model} · ${String(chosen.effort || 'medium').replace(/^./, (c) => c.toUpperCase())}`;
+    foot.appendChild(line);
+  }
   foot.appendChild(status);
   return foot;
 }
@@ -4712,6 +4721,8 @@ async function send(message, { workProduct, keepInMatter = false } = {}) {
     // ordinary offer, spelled as it always was.
     ...(keepInMatter ? { keep_in_matter: true } : {}),
     ...(documents.length ? { document_refs: documents.map((document) => document.document_ref) } : {}),
+    // Plan AN.33 (D23): the model and the effort chosen for this message travel where they are not the defaults.
+    ...(state.turnChoice || {}),
   });
   activeIntent.pending.push(entry);
   state.turns.push(entry);
@@ -6087,6 +6098,7 @@ $('intake').addEventListener('submit', async (ev) => {
 // the board appears after its details have been read back.
 function startMatter(chatId = null) {
   if (typeof chatId !== 'string') chatId = null;
+  resetTurnChoice();
   state.workTab = 'home';
   showTab('advise');
   setWorkView('opening');
@@ -6105,6 +6117,60 @@ function startMatter(chatId = null) {
   $('matter-heading').removeAttribute('title');
   window.dispatchEvent(new Event('nm:matter-changed'));
   $('message').focus();
+}
+
+// THE MODEL AND THE EFFORT FOR A MESSAGE (plan AN.33, D23; owner, 1 Nov 2026: "6 Luna being the default model. And whenever the
+// user selects another model, that selected model will be used throughout", "Reset for new conversations"): the server's own
+// lists, beside the send box; 6 Luna and Medium each time a conversation opens; Terra and Sol said as a cost beside Luna's. What
+// differs from the defaults the server gave is kept in state.turnChoice, which the message carries.
+let turnCosts = {};
+
+function rememberTurnChoice() {
+  const chosen = {};
+  for (const [name, id] of [['model', 'turn-model'], ['effort', 'turn-effort']]) {
+    const node = $(id);
+    if (node && node.value && node.value !== (node.dataset || {}).default) chosen[name] = node.value;
+  }
+  state.turnChoice = chosen;
+  const note = $('turn-cost');
+  if (!note) return;
+  const cost = turnCosts[($('turn-model') || {}).value] || '';
+  note.textContent = cost;
+  note.hidden = !cost;
+}
+
+function resetTurnChoice() {
+  for (const id of ['turn-model', 'turn-effort']) {
+    const node = $(id);
+    if (node && node.dataset && node.dataset.default) node.value = node.dataset.default;
+  }
+  rememberTurnChoice();
+}
+
+async function loadTurnChoices() {
+  let offered;
+  try {
+    offered = await api('/api/turn-choices');
+  } catch {
+    return; // the send box keeps 6 Luna and Medium, which the server takes without being told
+  }
+  const model = $('turn-model');
+  const effort = $('turn-effort');
+  if (!model || !effort) return;
+  const fill = (select, items, chosen) => {
+    select.replaceChildren(...items.map((item) => {
+      const option = document.createElement('option');
+      option.value = item.id;
+      option.textContent = item.cost ? `${item.label} · ${item.cost}` : item.label;
+      return option;
+    }));
+    if (chosen) select.dataset.default = chosen;
+    select.onchange = rememberTurnChoice;
+  };
+  fill(model, offered.models || [], offered.default && offered.default.model);
+  fill(effort, offered.efforts || [], offered.default && offered.default.effort);
+  turnCosts = Object.fromEntries((offered.models || []).map((item) => [item.id, item.cost || '']));
+  resetTurnChoice();
 }
 
 // F-A-18, F-B-01. The top bar's New matter starts one; Conversation history lists
@@ -8087,6 +8153,7 @@ function showApplication(advocate, workspace, professionalApproval) {
   document.cookie = 'nm_retirement=; Path=/; Max-Age=0; SameSite=Strict';
   state.advocate = advocate.id;
   state.sessionGeneration += 1;
+  loadTurnChoices();
   $('send').disabled = false;
   $('send').textContent = 'Send';
   state.workspace = workspace && workspace.id;

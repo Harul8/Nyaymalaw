@@ -18,7 +18,7 @@ from datetime import datetime, timezone
 from concurrent.futures import ThreadPoolExecutor
 
 from nm.core_engine import answer_sections, answer_sources, calculation, checklist, research
-from nm.core_engine import replay_scope, response_rendering, response_writer
+from nm.core_engine import reasoning, replay_scope, response_rendering, response_writer
 from nm.core_engine import understanding
 from nm.core_engine.calls import CorrectionUnavailable, ReleaseWithheld, TurnCalls
 from nm.core_engine.conversation import (
@@ -26,6 +26,7 @@ from nm.core_engine.conversation import (
     drop_shown, hold_shown, open_turn, shown_of, stored_chat,
 )
 from nm.shared.external_ai_contracts import ModelPermissionRefused
+from nm.shared.model_config import DEFAULT_TURN_MODEL
 from nm.shared.egress_contracts import EgressRefused
 from nm.shared.model_port import USAGE_LIMIT_MESSAGE, ContextOverflow, ModelError, SchemaViolation, UsageLimitReached
 from nm.shared.store_port import StaleWrite
@@ -367,9 +368,21 @@ def saved_rows(matter, advocate_id):
 def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=None,
             matter_id=None, expected_version=None, session_current=lambda: False,
             attempts: TurnAttemptPort | None = None, case_index=None, provision_reader=None,
-            progress=None, documents=(), held_acts=None, running=lambda turn_id: False):
+            progress=None, documents=(), held_acts=None, running=lambda turn_id: False,
+            chosen_model=None, effort=None):
+    """One turn. chosen_model and effort: what the advocate chose for it (plan AN.33, D23) - the model, which the caller's model
+    port already runs every call on, and the effort, which moves every call of the turn (calls.TurnCalls); both recorded with the
+    turn's metrics, and in its request where they are not the defaults. None: not chosen (the defaults, unrecorded)."""
     if not session_current():
         raise ConversationRefused("Sign in again before continuing.", status=401)
+    effort = reasoning.DEFAULT_CHOICE if effort is None else effort
+    if effort not in reasoning.CHOICES:
+        raise ConversationRefused("Choose how hard NM reasons from the list it offers.", status=422)
+    chosen = None if chosen_model is None and effort == reasoning.DEFAULT_CHOICE else {
+        "model": chosen_model, "effort": effort}
+    choice = tuple((name, value) for name, value, default in (
+        ("model", chosen_model, DEFAULT_TURN_MODEL), ("effort", effort, reasoning.DEFAULT_CHOICE))
+        if value is not None and value != default)
     if matter_id is None:
         # Another turn of this conversation that stopped after showing part of its answer
         # is saved first, with what it showed (P27); this same turn sent again starts afresh.
@@ -386,7 +399,7 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
                 recover(store, stored, advocate_id, running=running, session_current=session_current)
     context = open_turn(store, advocate_id=advocate_id, message=message, turn_id=turn_id,
                         chat_id=chat_id, matter_id=matter_id, expected_version=expected_version,
-                        documents=documents)
+                        documents=documents, choice=choice)
     if context.rows:
         saved_rows(context.matter, advocate_id)
     if context.replay is not None:
@@ -412,7 +425,8 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
             raise _attempt_refusal(exc) from exc
 
     calls = TurnCalls(model, corrections_used=claim["corrections_used"],
-                      reserve_correction=lambda: attempts.consume_correction(identity, token))
+                      reserve_correction=lambda: attempts.consume_correction(identity, token),
+                      effort=effort, chosen=chosen)
     # What the answer shows as each part passes is saved beside the conversation then (P27),
     # and the page told how much there is to show (P26).
     holder, report = {"context": context, "shown": 0}, _reporter(progress)

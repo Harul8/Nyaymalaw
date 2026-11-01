@@ -635,6 +635,17 @@
             </svg>
             <span class="sr-only">Dictate the brief</span>
           </button>
+          <!-- PLAN AN.33 (D23): the model and the effort for this message, from the server's own lists; 6 Luna and Medium
+               each time a conversation opens. -->
+          <label class="sr-only" for="turn-model">Model for this message</label>
+          <select id="turn-model" class="turn-choice" aria-describedby="turn-cost" data-default="gpt-6-luna">
+            <option value="gpt-6-luna" selected>6 Luna</option>
+          </select>
+          <label class="sr-only" for="turn-effort">How hard NM reasons for this message</label>
+          <select id="turn-effort" class="turn-choice" data-default="medium">
+            <option value="medium" selected>Medium</option>
+          </select>
+          <span class="hint turn-cost" id="turn-cost" hidden></span>
           <span class="hint" id="hint">Enter to send · Shift+Enter for a new line</span>
         </div>
         <button type="submit" class="primary" id="send">Send</button>

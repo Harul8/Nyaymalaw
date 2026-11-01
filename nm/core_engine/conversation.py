@@ -12,7 +12,9 @@ from copy import deepcopy
 from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 
+from nm.core_engine import reasoning
 from nm.core_engine.documents import checked_material
+from nm.shared.model_config import DEFAULT_TURN_MODEL, TURN_MODELS
 from nm.shared.store_port import StaleWrite
 from nm.work_the_file.matter_contracts import Matter
 
@@ -50,12 +52,29 @@ def _nonempty(value):
     return type(value) is str and bool(value.strip())
 
 
-def _request(advocate_id, chat_id, turn_id, message, documents):
-    """A turn's request; the documents sent with it are named by their exact references."""
+def _request(advocate_id, chat_id, turn_id, message, documents, choice=()):
+    """A turn's request; the documents sent with it are named by their exact references; and, from plan AN.33 (D23), the model and
+    the effort the advocate chose for it where they are not the defaults (choice: (name, value) pairs), so that a request with the
+    defaults is what it was before."""
     request = {"advocate_id": advocate_id, "chat_id": chat_id, "turn_id": turn_id, "message": message}
     if documents:
         request["document_refs"] = [document["document_ref"] for document in documents]
+    request.update(dict(choice))
     return request
+
+
+#: What a saved request may say the advocate chose for its turn (plan AN.33, D23): a model or an effort other than the default.
+_CHOSEN = {"model": frozenset(model for model, _, _ in TURN_MODELS) - {DEFAULT_TURN_MODEL},
+           "effort": frozenset(reasoning.CHOICES) - {reasoning.DEFAULT_CHOICE}}
+
+
+def _choice_of(request):
+    """What a saved request says the advocate chose for its turn, as (name, value) pairs - each one the server offers and not the
+    default - or ValueError."""
+    choice = tuple((name, request[name]) for name in _CHOSEN if name in request)
+    if any(value not in _CHOSEN[name] for name, value in choice):
+        raise ValueError("conversation request choice")
+    return choice
 
 
 def document_sources(turn_id, documents):
@@ -110,7 +129,7 @@ def checked_rows(matter, advocate_id, *, copied=True):
                     or row["matter_id"] != matter.id or row["advocate_id"] != advocate_id
                     or row["chat_id"] != header["chat_id"]
                     or request != _request(advocate_id, header["chat_id"], row["turn_id"],
-                                           row["message"], documents)
+                                           row["message"], documents, _choice_of(request))
                     or not _nonempty(row["message"]) or not _nonempty(row["turn_id"])
                     or type(row["state_version"]) is not int
                     or not last_version < row["state_version"] <= matter.version
@@ -149,10 +168,12 @@ class TurnContext:
     replay: dict | None = None
     #: The documents sent with this message, page by page (owner decisions, 15 Oct 2026).
     documents: tuple[dict, ...] = ()
+    #: What the advocate chose for this turn that is not the default - ("model", ...), ("effort", ...) - (plan AN.33, D23).
+    choice: tuple[tuple[str, str], ...] = ()
 
     @property
     def request(self):
-        return _request(self.matter.advocate_id, self.chat_id, self.turn_id, self.message, self.documents)
+        return _request(self.matter.advocate_id, self.chat_id, self.turn_id, self.message, self.documents, self.choice)
 
     def payload(self):
         conversation, pages, unread = [], [], []
@@ -253,7 +274,7 @@ def drop_shown(store, context):
 
 
 def open_turn(store, *, advocate_id, message, turn_id, chat_id=None, matter_id=None,
-              expected_version=None, documents=()):
+              expected_version=None, documents=(), choice=()):
     if not all(_nonempty(v) for v in (advocate_id, message, turn_id)):
         raise ConversationRefused("A message and request identity are required.", status=422)
     if matter_id is not None:
@@ -274,7 +295,8 @@ def open_turn(store, *, advocate_id, message, turn_id, chat_id=None, matter_id=N
     matter = matter or Matter(id=stored_id, advocate_id=advocate_id,
                               title="Conversation", brain_ready=False)
     context = TurnContext(matter, identity, turn_id, message, rows,
-                          documents=tuple(checked_material(list(documents))) if documents else ())
+                          documents=tuple(checked_material(list(documents))) if documents else (),
+                          choice=tuple(choice))
     for row in rows:
         if row["turn_id"] == turn_id:
             if row["request"] != context.request:

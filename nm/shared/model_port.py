@@ -211,8 +211,9 @@ class Transcription:
     usage: Mapping[str, Any] = field(default_factory=dict)
 
 
-#: How hard a model may be asked to reason for one call (plan AN.28, D4).
-EFFORTS = ("low", "medium", "high")
+#: How hard a model may be asked to reason for one call (plan AN.28, D4); max where the advocate chooses it for a turn (plan AN.33,
+#: D23: the highest level the models an advocate may choose accept, read on OpenAI's model pages on 1 Nov 2026).
+EFFORTS = ("low", "medium", "high", "max")
 
 
 @dataclass(frozen=True)

@@ -41,7 +41,9 @@ from nm.core_engine.turn import RECORDS_CONTRACT as RECORDS_CORE_TURN
 from nm.core_engine import answer_sections
 from nm.core_engine.turn import LEGACY_CONTRACT as LEGACY_CORE_TURN, recover, saved_rows
 from nm.core_engine import checklist
+from nm.core_engine.reasoning import CHOICES as EFFORT_CHOICES, DEFAULT_CHOICE as DEFAULT_EFFORT
 from nm.shared.external_ai_contracts import ModelPermissionRefused
+from nm.shared.model_config import DEFAULT_TURN_MODEL, TURN_MODELS
 from nm.shared.model_port import USAGE_LIMIT_MESSAGE, ModelError, UsageLimitReached
 from nm.shared.clock_contracts import FORUM
 from nm.shared.identity_contracts import source_fingerprint
@@ -351,6 +353,24 @@ class TurnRequest(BaseModel):
     chat_id: str | None = None
     thread_id: str | None = None
     turn_id: str | None = None
+    #: The model and the effort the advocate chose for this message (plan AN.33, D23), from the server's own lists
+    #: (/api/turn-choices); 6 Luna and medium unless chosen.
+    model: str = DEFAULT_TURN_MODEL
+    effort: str = DEFAULT_EFFORT
+
+    @field_validator("model")
+    @classmethod
+    def offered_model(cls, value: str) -> str:
+        if value not in {model for model, _, _ in TURN_MODELS}:
+            raise ValueError("Choose a model from the list NM offers.")
+        return value
+
+    @field_validator("effort")
+    @classmethod
+    def offered_effort(cls, value: str) -> str:
+        if value not in EFFORT_CHOICES:
+            raise ValueError("Choose how hard NM reasons from the list it offers.")
+        return value
     #: Documents sent with this message, by their exact references (owner decisions,
     #: 15 Oct 2026); each is read from the signed-in advocate's own space only.
     document_refs: list[Annotated[str, Field(max_length=120)]] = Field(default_factory=list, max_length=TURN_DOCUMENT_LIMIT)
@@ -546,6 +566,15 @@ def _usage_view(standing: dict) -> dict:
     return {"plan": "Trial", "left": standing["left"], "notice": None if step is None else {
         "step": step, "closes_after_seconds": SELF_CLOSING_SECONDS if step in SELF_CLOSING_STEPS else None},
         "limit": USAGE_LIMIT_MESSAGE if standing["left"] <= 0 else None}
+
+
+@app.get("/api/turn-choices")
+def turn_choices(advocate_id: Advocate) -> dict:
+    """The models and the efforts an advocate may choose for a message, the server's own lists (plan AN.33, D23): each model with
+    what it costs beside 6 Luna, and the defaults each conversation opens with."""
+    return {"models": [{"id": model, "label": label, "cost": cost} for model, label, cost in TURN_MODELS],
+            "efforts": [{"id": effort, "label": effort.capitalize()} for effort in EFFORT_CHOICES],
+            "default": {"model": DEFAULT_TURN_MODEL, "effort": DEFAULT_EFFORT}}
 
 
 @app.get("/api/usage")
@@ -1359,7 +1388,7 @@ def turn(req: TurnRequest, advocate_id: Advocate, request: Request, background: 
         output = application().run_turn(advocate_id=advocate_id,
             message=req.message, turn_id=req.turn_id, chat_id=req.chat_id,
             matter_id=req.matter_id, expected_version=req.expected_version,
-            document_refs=req.document_refs,
+            document_refs=req.document_refs, model_choice=req.model, effort=req.effort,
             session_current=lambda: _session_current(request, advocate_id))
     except ConversationRefused as exc:
         raise HTTPException(exc.status, _conversation_error(exc, req)) from exc

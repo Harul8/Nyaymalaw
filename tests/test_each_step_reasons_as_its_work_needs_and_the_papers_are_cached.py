@@ -19,7 +19,7 @@ pytestmark = pytest.mark.class_a
 
 
 def test_a_prompt_carries_an_effort_and_a_shared_prefix_or_neither():
-    assert EFFORTS == ("low", "medium", "high")
+    assert EFFORTS == ("low", "medium", "high", "max"), "max only as the advocate's choice for a turn (plan AN.33, D23)"
     prompt = Prompt(user="papers then task", effort="high", cache_through=6)
     assert (prompt.effort, prompt.cache_through) == ("high", 6)
     assert (Prompt(user="words").effort, Prompt(user="words").cache_through) == (None, 0)
