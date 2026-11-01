@@ -89,6 +89,9 @@ _NAMED = (CONTRACT, SECTION_CONTRACT)
 MAX_OUTPUT = 32000
 #: The check across the sections: its conflicts, with reasoning.
 CROSS_OUTPUT = 8000
+#: What the reviews of one piece carry alike beyond what every review carries: the research and the legal passages, which lead a worded
+#: review's payload (after the shared material) before the draft that changes from one review to the next (plan AN.31).
+STABLE_KEYS = ("research_proposal_and_results", "legal_sources")
 SYSTEM = """Message: You receive the complete original attributed conversation, the
 latest advocate message, current records and saved work; where and when the advocate
 works (their forum and today's date); the retrieved legal passages for what you review,
@@ -337,9 +340,9 @@ KINDS = {"unsupported": "grounding", "misquoted": "quotation", "misattributed": 
 #: What the piece could add or put better: said beside it, never a reason to leave it out.
 BETTER = "better"
 #: v11 (P43): what could go from the piece - a point said again, what an advocate already knows,
-#: detail that does not change the advice. Like BETTER, it asks for a rewrite, never a removal.
+#: detail that does not change the advice. Like BETTER, it is kept beside the piece - since 1 Nov 2026 (AN.31) with no rewrite - never a removal.
 CUT = "could_go"
-#: The kinds of finding that ask for a better piece, never for leaving anything out.
+#: The kinds of finding that suggest a better piece, never leaving anything out.
 SUGGESTIONS = (BETTER, CUT)
 #: v12 (AN.28, stage 5): an item of the coverage list that bears on the piece, which it neither takes up nor names as left out with
 #: a reason. A must-fix that asks for a rewrite, never for leaving anything out; what still stays out is said beside the piece.
@@ -1084,10 +1087,13 @@ def review(model, context, research_record, sources, draft, execution=None, *,
                    **{key: value for key, value in payload.items() if key not in response_writer.SHARED_KEYS}}
     user = json.dumps(payload, ensure_ascii=False)
     # v12 (AN.28, D4 and 6c): the review reasons at medium, and the material it shares is marked for the cache.
-    # How hard it reasons is reasoning.py's (plan AN.30).
+    # How hard it reasons is reasoning.py's (plan AN.30). The reviews of one piece also carry alike the research and the legal passages that
+    # lead its payload before the draft (STABLE_KEYS): marked too, so that the second and later reviews of the piece read them cached (AN.31).
+    shared = response_writer.shared_material(user, payload) if worded else 0
+    stable = response_writer.stable_material(user, payload, STABLE_KEYS) if shared else 0
     prompt = Prompt(system=system, user=user, operation="core_response_review",
                     effort=reasoning.effort("review") if worded else None,
-                    cache_through=response_writer.shared_material(user, payload) if worded else 0)
+                    cache_through=shared, cache_also=(stable,) if stable > shared else ())
     if (estimate_tokens(system + prompt.user + json.dumps(schema)) + MAX_OUTPUT
             > model.context_budget(Tier.JUDGE)):
         raise ContextOverflow("Complete independent response review exceeds the model budget")

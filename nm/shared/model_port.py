@@ -239,6 +239,10 @@ class Prompt:
     cache_through: int = 0
     """How many leading characters of `user` are material every call of a kind carries alike - the conversation with its papers -
     which an adapter that caches may mark for reuse; 0 for none (plan AN.28, 6c). Like the system prefix, it changes cost only."""
+    cache_also: tuple[int, ...] = ()
+    """Further offsets into `user`, each beyond cache_through and the one before, up to the end of `user`: material that the calls
+    of a kind made about one piece carry alike beyond what every call carries (plan AN.31) - which an adapter that caches may mark
+    too; () for none. It changes cost only."""
 
     def __post_init__(self) -> None:
         if not self.user or not self.user.strip():
@@ -249,6 +253,10 @@ class Prompt:
             raise ValueError(f"Prompt.effort is one of {EFFORTS}")
         if type(self.cache_through) is not int or not 0 <= self.cache_through <= len(self.user):
             raise ValueError("Prompt.cache_through marks a prefix of user")
+        if not isinstance(self.cache_also, tuple) or any(type(mark) is not int for mark in self.cache_also) or (
+                self.cache_also and (not self.cache_through or list(self.cache_also) != sorted(set(self.cache_also))
+                                     or not self.cache_through < self.cache_also[0] or self.cache_also[-1] > len(self.user))):
+            raise ValueError("Prompt.cache_also marks longer and longer prefixes of user beyond cache_through")
 
 
 @dataclass(frozen=True)

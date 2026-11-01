@@ -1778,6 +1778,21 @@ def shared_material(user, payload):
     return len(prefix) if user.startswith(prefix) else 0
 
 
+def stable_material(user, payload, keys):
+    """How many leading characters of a call's words are the shared material and then the payload keys `keys` that follow it, in that
+    order: what the calls of a kind made about one piece carry alike beyond what every call carries, which a provider may cache as
+    well (plan AN.31); 0 where the payload does not lead with them or the words do not begin with them."""
+    leading = []
+    for key in payload or ():
+        if key not in SHARED_KEYS:
+            break
+        leading.append(key)
+    if not leading or leading[0] != "original_context" or list(payload)[len(leading):len(leading) + len(keys)] != list(keys):
+        return 0
+    prefix = json.dumps({key: payload[key] for key in (*leading, *keys)}, ensure_ascii=False)[:-1]
+    return len(prefix) if user.startswith(prefix) else 0
+
+
 def _write_part(model, payload, *, system=SYSTEM, schema=PART_SCHEMA_V11, step=None):
     user = json.dumps(payload, ensure_ascii=False)
     # How hard it reasons is reasoning.py's (plan AN.30): from v14.

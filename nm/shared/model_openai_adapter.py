@@ -108,11 +108,15 @@ def _invalid_json_constant(value):
 
 def _user_content(prompt: Prompt, *, responses: bool):
     """The user's words, followed by any page images at full detail. On the Responses transport the material every call of a kind
-    carries alike (prompt.cache_through) is its own part, marked for cache reuse (plan AN.28, 6c)."""
+    carries alike (prompt.cache_through) is its own part, marked for cache reuse (plan AN.28, 6c), and so is each further stretch the
+    calls about one piece carry alike (prompt.cache_also; plan AN.31)."""
     if responses and prompt.cache_through:
-        shared, rest = prompt.user[:prompt.cache_through], prompt.user[prompt.cache_through:]
-        parts = [{"type": "input_text", "text": shared, "prompt_cache_breakpoint": {"mode": "explicit"}},
-                 *([{"type": "input_text", "text": rest}] if rest else [])]
+        marks = (prompt.cache_through, *prompt.cache_also)
+        cuts = (0, *marks)
+        rest = prompt.user[marks[-1]:]
+        parts = [{"type": "input_text", "text": prompt.user[start:end], "prompt_cache_breakpoint": {"mode": "explicit"}}
+                 for start, end in zip(cuts, cuts[1:])]
+        parts += [{"type": "input_text", "text": rest}] if rest else []
         urls = [f"data:{image.media_type};base64,{base64.b64encode(image.data).decode('ascii')}" for image in prompt.images]
         return [*parts, *({"type": "input_image", "image_url": url, "detail": "high"} for url in urls)]
     if not prompt.images:

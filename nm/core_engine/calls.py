@@ -153,8 +153,9 @@ class TurnCalls:
             user = json.dumps(payload, ensure_ascii=False)
             # The correction joins the end: the call keeps its effort, and its shared material where that still leads.
             shared = prompt.cache_through if user[:prompt.cache_through] == prompt.user[:prompt.cache_through] else 0
+            also = tuple(mark for mark in prompt.cache_also if shared and user[:mark] == prompt.user[:mark])
             prompt = Prompt(system=prompt.system, user=user, operation=prompt.operation, effort=prompt.effort,
-                            cache_through=shared)
+                            cache_through=shared, cache_also=also)
         if (estimate_tokens((prompt.system or "") + prompt.user + json.dumps(schema))
                 + max_tokens > self.context_budget(tier)):
             raise ContextOverflow("The complete stage input and correction exceed the context budget")
