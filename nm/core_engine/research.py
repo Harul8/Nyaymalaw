@@ -133,10 +133,11 @@ PROVISIONS_FOR_PICK = 20
 #: Answer limits per step. Calls in flight are budgeted at their limit.
 #: From research v13 (plan AN.28, D4) the steps that reason at medium or high spend output on their reasoning too, so their limits
 #: make room for it (the first paid probe of 31 Oct 2026 stopped the understanding at its old 12,000).
-MAX_OUTPUT = {"understand": 48000, "check": 16000, "revise": 48000, "phrases": 6000,
-              "judgment_phrases": 8000, "pick": 8000, "judgment_pick": 8000, "chronology": 32000, "transfers": 16000,
-              "chronology_check": 16000, "transfers_check": 12000, "connections": 24000, "connections_check": 12000,
-              "chronology_second": 32000, "weigh": 24000, "weigh_check": 32000}
+#: D27 (plan AN.33; owner, 2 Nov 2026: no hard limits): each step may write as much as its model can, within the room its input
+#: leaves (reasoning.room); no step has an allowance of its own.
+MAX_OUTPUT = dict.fromkeys(("understand", "check", "revise", "phrases", "judgment_phrases", "pick", "judgment_pick", "chronology",
+                            "transfers", "chronology_check", "transfers_check", "connections", "connections_check",
+                            "chronology_second", "weigh", "weigh_check"), reasoning.MOST_OUTPUT)
 
 # The prompts below were developed and measured in outputs/decomposition-scratch
 # (13-14 Oct 2026). They state the purpose and the needed outcome in plain language
@@ -979,7 +980,8 @@ def _effort(step, user, again=False):
 
 def _call(model, operation, system, user, schema, step, again=False):
     receipt = model.structured(Prompt(system=system, user=user, operation=operation, effort=_effort(step, user, again)),
-                               schema, Tier.ROUTINE, max_tokens=MAX_OUTPUT[step])
+                               schema, Tier.ROUTINE, max_tokens=min(MAX_OUTPUT[step], reasoning.room(
+                                   model, Tier.ROUTINE, system, user, json.dumps(schema))))
     if not receipt.usable or receipt.data is None:
         raise ModelError(f"Research step {step} did not complete", usage=receipt.usage,
                          latency_ms=receipt.latency_ms, retries=receipt.retries)
@@ -1433,8 +1435,7 @@ def _not_carried(document, events, unread=()):
 #: ("715/92", "K/2257/2012", "C.R.P. 88/2020"), or "No. 58 of 2014" - read for the numbers it holds, which a point must carry.
 _IDENTIFIER = re.compile(r"(?<![\w/])(?:[^\W\d_]{1,6}\d?[./]?\s*)?\d{1,6}(?:\s*/\s*[^\W_]{1,6}){1,3}(?![\w/])"
                          r"|\b(?:No\.?\s*)?(\d{2,6})\s+of\s+(\d{4})\b", re.I)
-#: A paper's identifiers and pages that no point carries, asked about at most (v14): the rest are not asked about.
-IDENTIFIERS_MOST, PAGES_MOST = 20, 10
+#: A paper's identifiers and pages that no point carries are all asked about (v14; D27, owner 2 Nov 2026: no list cut to a number).
 #: The letters and digits a page must hold for its holding no point to be asked about (v14): a cover or a stamp page holds fewer.
 PAGE_LETTERS = 200
 
@@ -1454,9 +1455,9 @@ def _cores(text):
 def _uncovered(document, events, unread=()):
     """What of a paper's pages no point of it carries (v14, AN.33 piece 33e), to be asked about once in its settling call: the
     identifiers on its pages, outside the reader's notes, whose numbers no point's words or account hold - each once, as the page
-    writes it, with its page, IDENTIFIERS_MOST at most - and the pages no point is placed on that hold at least PAGE_LETTERS letters
-    and digits, PAGES_MOST at most. unread: the pages not to ask about - those whose reading failed, which a failure already names,
-    and those read already as copies (_read_as_copies)."""
+    writes it, with its page - and the pages no point is placed on that hold at least PAGE_LETTERS letters and digits; from D27
+    (piece 33p) every one of them, none cut to a number. unread: the pages not to ask about - those whose reading failed, which a
+    failure already names, and those read already as copies (_read_as_copies)."""
     mine = [event for event in events if event["source"] == document["source"]]
     carried = set()
     for event in mine:
@@ -1474,7 +1475,7 @@ def _uncovered(document, events, unread=()):
     pages = [page["page"] for page in document["pages"]
              if page["page"] not in unread and (document["source"], page["page"]) not in named
              and sum(1 for char in _reading(page["text"]) if char.isalnum()) >= PAGE_LETTERS]
-    return {"identifiers": identifiers[:IDENTIFIERS_MOST], "pages": pages[:PAGES_MOST]}
+    return {"identifiers": identifiers, "pages": pages}
 
 
 def _read_as_copies(document, events, copied, earlier):

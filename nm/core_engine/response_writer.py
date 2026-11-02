@@ -23,7 +23,7 @@ from nm.core_engine.understanding import REFERENCE, TEXT, renamed, source_catalo
 from nm.shared import clock_contracts
 from nm.shared.model_port import (
     ContextOverflow, ModelError, Prompt, SchemaViolation, Tier, canonical_schema_data,
-    estimate_tokens, require_schema,
+    require_schema,
 )
 
 LEGACY_CONTRACT = "core_response_writer_v1"
@@ -134,9 +134,11 @@ OVERVIEW_KINDS = ("greeting", "summary", "next_step", "question", "limitation")
 #: (question). It greets no one: the answer goes straight to the point.
 OVERVIEW_KINDS_V13 = ("summary", "next_step", "question", "limitation")
 #: Each part's answer limit; reasoning counts towards it.
-MAX_OUTPUT = 40000
+#: D27 (plan AN.33; owner, 2 Nov 2026: no hard limits): what each writing call may write is its room (reasoning.room), the most its
+#: model writes at most.
+MAX_OUTPUT = reasoning.MOST_OUTPUT
 #: The overview's answer limit (v12): a short opening, with reasoning.
-OVERVIEW_OUTPUT = 24000
+OVERVIEW_OUTPUT = reasoning.MOST_OUTPUT
 SYSTEM = """Message: You receive the exact latest advocate message, complete attributed
 conversation, current authorised records and saved work, where and when the advocate
 works (their forum and today's date), our understanding of the matter (its disputes,
@@ -1846,11 +1848,12 @@ def _write_part(model, payload, *, system=SYSTEM, schema=PART_SCHEMA_V11, step=N
     effort = reasoning.effort(step) if step else None
     prompt = Prompt(system=system, user=user, operation="core_response_writer", effort=effort,
                     cache_through=shared_material(user, payload) if effort else 0)
-    if (estimate_tokens(system + prompt.user + json.dumps(schema)) + MAX_OUTPUT
-            > model.context_budget(Tier.HARD)):
-        raise ContextOverflow("Complete response context exceeds the model budget")
     try:
-        result = model.structured(prompt, schema, Tier.HARD, max_tokens=MAX_OUTPUT)
+        writes = min(MAX_OUTPUT, reasoning.room(model, Tier.HARD, system, prompt.user, json.dumps(schema)))
+    except ContextOverflow:
+        raise ContextOverflow("Complete response context exceeds the model budget") from None
+    try:
+        result = model.structured(prompt, schema, Tier.HARD, max_tokens=writes)
     except SchemaViolation as exc:
         if exc.rejected_result is None:
             raise
@@ -2073,11 +2076,12 @@ def write_overview(model, context, research_record, sources, *, sections, interp
     prompt = Prompt(system=system, user=user, operation="core_response_overview",
                     effort=reasoning.effort("overview") if v14 else None,
                     cache_through=shared_material(user, payload) if v14 else 0)
-    if (estimate_tokens(system + prompt.user + json.dumps(schema)) + OVERVIEW_OUTPUT
-            > model.context_budget(Tier.HARD)):
-        raise ContextOverflow("Complete overview context exceeds the model budget")
     try:
-        result = model.structured(prompt, schema, Tier.HARD, max_tokens=OVERVIEW_OUTPUT)
+        writes = min(OVERVIEW_OUTPUT, reasoning.room(model, Tier.HARD, system, prompt.user, json.dumps(schema)))
+    except ContextOverflow:
+        raise ContextOverflow("Complete overview context exceeds the model budget") from None
+    try:
+        result = model.structured(prompt, schema, Tier.HARD, max_tokens=writes)
     except SchemaViolation as exc:
         if exc.rejected_result is None:
             raise
@@ -2164,7 +2168,7 @@ def _repair_schema(paragraph):
 REPAIR_SCHEMA = _repair_schema(_units_v13(True)["items"])
 OVERVIEW_REPAIR_SCHEMA = _repair_schema(OVERVIEW_SCHEMA_V13["properties"]["units"]["items"])
 #: The second look's answer limit: only the paragraphs at fault, with reasoning.
-REPAIR_OUTPUT = 24000
+REPAIR_OUTPUT = reasoning.MOST_OUTPUT
 #: What a paragraph that blocking cut statements out of is shown with, in a second look made once in a piece for it (research v14;
 #: plan AN.33, piece 33l): your_paragraphs shows it as it now stands.
 MEND_WHY = ("Code took the statements in words_at_fault out of this paragraph: its checks or the review found them not borne out, "
@@ -2208,10 +2212,12 @@ def repair(model, context, research_record, sources, proposal, faults, *, sectio
     user = json.dumps(payload, ensure_ascii=False)
     prompt = Prompt(system=REPAIR_SYSTEM, user=user, operation="core_response_repair", effort=reasoning.effort("repair"),
                     cache_through=shared_material(user, payload))
-    if estimate_tokens(REPAIR_SYSTEM + prompt.user + json.dumps(schema)) + REPAIR_OUTPUT > model.context_budget(Tier.HARD):
-        raise ContextOverflow("Complete second look exceeds the model budget")
     try:
-        result = model.structured(prompt, schema, Tier.HARD, max_tokens=REPAIR_OUTPUT)
+        writes = min(REPAIR_OUTPUT, reasoning.room(model, Tier.HARD, REPAIR_SYSTEM, prompt.user, json.dumps(schema)))
+    except ContextOverflow:
+        raise ContextOverflow("Complete second look exceeds the model budget") from None
+    try:
+        result = model.structured(prompt, schema, Tier.HARD, max_tokens=writes)
     except SchemaViolation as exc:
         if exc.rejected_result is None:
             raise
@@ -2315,7 +2321,7 @@ against its source, and correct it.
 Outcome: additions, each with items (the IDs it takes up) and paragraph (whole); declined, each with items and why
 (one or two plain sentences). Every item in to_take_up is in one of them. Never write a short ID (M1, P1, T1...)
 in your text except as a link, and claim nothing NM saved, filed or did."""
-TAKE_UP_OUTPUT = 24000
+TAKE_UP_OUTPUT = reasoning.MOST_OUTPUT
 
 
 def _take_up_schema(paragraph):
@@ -2363,10 +2369,12 @@ def take_up(model, context, research_record, sources, proposal, wanted, *, secti
     user = json.dumps(payload, ensure_ascii=False)
     prompt = Prompt(system=TAKE_UP_SYSTEM, user=user, operation="core_response_take_up", effort=reasoning.effort("take_up"),
                     cache_through=shared_material(user, payload))
-    if estimate_tokens(TAKE_UP_SYSTEM + prompt.user + json.dumps(schema)) + TAKE_UP_OUTPUT > model.context_budget(Tier.HARD):
-        raise ContextOverflow("Complete take-up exceeds the model budget")
     try:
-        result = model.structured(prompt, schema, Tier.HARD, max_tokens=TAKE_UP_OUTPUT)
+        writes = min(TAKE_UP_OUTPUT, reasoning.room(model, Tier.HARD, TAKE_UP_SYSTEM, prompt.user, json.dumps(schema)))
+    except ContextOverflow:
+        raise ContextOverflow("Complete take-up exceeds the model budget") from None
+    try:
+        result = model.structured(prompt, schema, Tier.HARD, max_tokens=writes)
     except SchemaViolation as exc:
         if exc.rejected_result is None:
             raise

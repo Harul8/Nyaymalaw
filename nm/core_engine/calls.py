@@ -164,12 +164,14 @@ class TurnCalls:
             prompt = Prompt(system=prompt.system, user=user, operation=prompt.operation, effort=prompt.effort,
                             cache_through=shared, cache_also=also)
         if self.effort != reasoning.DEFAULT_CHOICE:
-            # Plan AN.33 (D23): the effort the advocate chose moves the call's own level, and what it may write grows with it.
+            # Plan AN.33 (D23): the effort the advocate chose moves the call's own level; what it may write is its room at every
+            # effort (D27).
             prompt = replace(prompt, effort=reasoning.chosen(prompt.effort, self.effort))
-            max_tokens = reasoning.allowance(max_tokens, self.effort)
-        if (estimate_tokens((prompt.system or "") + prompt.user + json.dumps(schema))
-                + max_tokens > self.context_budget(tier)):
+        # D27 (plan AN.33): what the call may write is the room its whole input - a correction joined to it included - leaves.
+        left = self.context_budget(tier) - estimate_tokens((prompt.system or "") + prompt.user + json.dumps(schema))
+        if left < min(max_tokens, reasoning.LEAST_ROOM):
             raise ContextOverflow("The complete stage input and correction exceed the context budget")
+        max_tokens = min(max_tokens, left)
         self.last_output = None
         started, receipt, error = time.monotonic(), None, None
         try:

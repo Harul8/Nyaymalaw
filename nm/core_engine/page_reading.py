@@ -23,7 +23,8 @@ from nm.shared.model_port import (USAGE_LIMIT_WORDS, ContentRefused, ModelError,
 
 CONTRACT = "core_page_reading_v1"
 OPERATION = "core_page_reading"
-MAX_OUTPUT = 12000
+#: D27 (plan AN.33; owner, 2 Nov 2026: no hard limits): a page's reading may write its room (reasoning.room).
+MAX_OUTPUT = reasoning.MOST_OUTPUT
 log = logging.getLogger(__name__)
 #: Pages read at once for one document, and at once across every document being read in this process (plan AN.25, P3, 30 Oct
 #: 2026): one upload of a long scan no longer waits in waves of four, and many uploads together never ask the AI service for
@@ -67,7 +68,7 @@ SCHEMA = {
 
 #: Plan AN.28, piece 4c (findings A8, A9): the figures two copies of one page read differently, looked at again on both images.
 RELOOK_OPERATION = "core_page_relook"
-RELOOK_OUTPUT = 8000
+RELOOK_OUTPUT = reasoning.MOST_OUTPUT
 RELOOK = """You receive the images of two pages that code found to be copies of one page, read separately, and the figures in which the two readings differ, each with the words just before it. Look at each image at that place and write the figure exactly as that image shows it - figures, letters and punctuation as written - or "unclear" where the image cannot settle it. Say what each image shows: do not choose between the copies, and do not correct one by the other.
 Work in a loop: find each place on both images, write what each shows, compare what you wrote with the images, and correct it before you answer."""
 RELOOK_SCHEMA = {"type": "object", "additionalProperties": False, "required": ["figures"], "properties": {"figures": {
@@ -107,7 +108,8 @@ def relook(model, first, second, figures):
                                                      ensure_ascii=False))
     prompt = Prompt(system=RELOOK, operation=RELOOK_OPERATION, user=user, effort=reasoning.effort("relook"),
                     images=(PageImage("image/jpeg", first["image"]), PageImage("image/jpeg", second["image"])))
-    result = model.structured(prompt, RELOOK_SCHEMA, Tier.ROUTINE, max_tokens=RELOOK_OUTPUT)
+    result = model.structured(prompt, RELOOK_SCHEMA, Tier.ROUTINE, max_tokens=min(RELOOK_OUTPUT, reasoning.room(
+        model, Tier.ROUTINE, RELOOK, user, json.dumps(RELOOK_SCHEMA))))
     shown = list(result.data["figures"])
     if len(shown) != len(figures):
         by_after = {item["after"].casefold(): item for item in shown}
@@ -174,7 +176,8 @@ def _read_once(model, name, number, image, *, first=None, found=()):
                     images=(PageImage("image/jpeg", image),),
                     effort=reasoning.effort("read_again" if first is not None else "read_page"))
     try:
-        result = model.structured(prompt, SCHEMA, Tier.ROUTINE, max_tokens=MAX_OUTPUT)
+        result = model.structured(prompt, SCHEMA, Tier.ROUTINE, max_tokens=min(MAX_OUTPUT, reasoning.room(
+            model, Tier.ROUTINE, prompt.system or "", user, json.dumps(SCHEMA))))
     except ModelPermissionRefused:
         raise
     except ContentRefused:

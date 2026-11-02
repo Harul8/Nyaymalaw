@@ -23,7 +23,7 @@ shows what each level cost, step by step, and this table can be tuned by measure
 """
 from __future__ import annotations
 
-from nm.shared.model_port import EFFORTS
+from nm.shared.model_port import EFFORTS, ContextOverflow, estimate_tokens
 
 #: The levels this table sets, low to high; max is only ever the advocate's choice for a turn (CHOICES).
 LEVELS = ("low", "medium", "high")
@@ -68,10 +68,26 @@ def raised(level):
 #: setting of those releases (the adapter's). The choice resets to medium for each new conversation (the page).
 CHOICES = ("low", "medium", "high", "max")
 DEFAULT_CHOICE = "medium"
-#: What a call may write - its reasoning included - grows with the choice (D23, contract (4)), never past MOST_OUTPUT, the most
-#: any model an advocate may choose writes in one answer.
-ALLOWANCE_TIMES = {"low": 1.0, "medium": 1.0, "high": 1.5, "max": 2.0}
+#: The most any model an advocate may choose writes in one answer, its reasoning included. From D27 every call may write it, within
+#: its room, at every effort; what a call may write no longer grows with the choice (D23, contract (4), subsumed).
 MOST_OUTPUT = 128_000
+#: D27 (owner, 2 Nov 2026: "we should not put any hard limits, unless it may create never ending loop, we never know how complex
+#: future cases can be"): no step's work is cut short by a fixed allowance - a call may write as much as its model can (MOST_OUTPUT,
+#: which the adapter lowers for a model that writes less), within the room its input leaves in the context the model is given. A
+#: call whose input leaves less than LEAST_ROOM is not made: its context is exceeded.
+LEAST_ROOM = 4_000
+
+
+def room(model, tier, *texts):
+    """What a call may write (D27): MOST_OUTPUT, or what its input - texts, all it sends - leaves of the context the model is given
+    where that is less; ContextOverflow where it leaves less than LEAST_ROOM. A model that says no context leaves MOST_OUTPUT."""
+    budget = model.context_budget(tier) if hasattr(model, "context_budget") else None
+    if budget is None:
+        return MOST_OUTPUT
+    left = budget - estimate_tokens("".join(texts))
+    if left < LEAST_ROOM:
+        raise ContextOverflow("The complete input of this step exceeds the context the model is given")
+    return min(MOST_OUTPUT, left)
 
 
 def chosen(level, choice):
@@ -85,14 +101,6 @@ def chosen(level, choice):
         return "max"
     at = LEVELS.index(level or "low")
     return LEVELS[max(at - 1, 0)] if choice == "low" else LEVELS[min(at + 1, len(LEVELS) - 1)]
-
-
-def allowance(max_tokens, choice):
-    """What a call may write under the effort the advocate chose for its turn (plan AN.33, D23): its step's own allowance, grown with
-    the choice, never past MOST_OUTPUT."""
-    if choice not in CHOICES:
-        raise ValueError(f"An effort an advocate may choose is one of {CHOICES}")
-    return min(int(max_tokens * ALLOWANCE_TIMES[choice]), max(max_tokens, MOST_OUTPUT))
 
 
 def effort(step, *, tokens=0, again=False):

@@ -12,7 +12,7 @@ import threading
 
 import pytest
 
-from nm.core_engine import research
+from nm.core_engine import reasoning, research
 from nm.core_engine.research import chronology_of, read_date
 from nm.shared.model_port import OutputTruncated, SchemaViolation, UsageLimitReached
 from tests.test_core_research import _result
@@ -214,7 +214,7 @@ def test_the_prompt_states_the_message_the_purpose_what_to_look_for_and_the_outc
     for part in ("Message:", "Purpose:", "Look for:", "Outcome:", "Do not work out, convert or guess a date",
                  "Work in a loop", "You are not judging which account is right", "Who says it."):
         assert part in prompt, part
-    assert research.MAX_OUTPUT["chronology"] == 32000 and research.EVENT_KINDS == (
+    assert research.MAX_OUTPUT["chronology"] == reasoning.MOST_OUTPUT and research.EVENT_KINDS == (
         "transaction", "order", "filing", "pending", "other")
 
 

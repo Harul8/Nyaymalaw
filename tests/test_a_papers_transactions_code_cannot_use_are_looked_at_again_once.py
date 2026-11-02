@@ -12,7 +12,7 @@ import json
 import re
 import pytest
 
-from nm.core_engine import figures, research
+from nm.core_engine import figures, reasoning, research
 from nm.core_engine.figures import ledger
 from tests.test_core_research import _result
 from tests.test_the_chronology_of_each_document import row
@@ -124,4 +124,4 @@ def test_the_settling_prompt_says_what_code_checked_and_asks_for_the_pages_own_w
                  "so that every number you give is in the words", "give the death of the giver only where the papers record one",
                  "(verdict not_in_papers); it is withdrawn", "Work in a loop"):
         assert part in prompt, part
-    assert research.MAX_OUTPUT["transfers_check"] == 12000
+    assert research.MAX_OUTPUT["transfers_check"] == reasoning.MOST_OUTPUT, "it may write its room (D27)"

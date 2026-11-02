@@ -60,7 +60,8 @@ V6_CONTRACT = "core_calculation_v6"
 CONTRACT = "core_calculation_v7"
 OPERATION = "core_calculation"
 CORRECTION_OPERATION = "core_calculation_correct"
-MAX_OUTPUT = 24000
+#: D27 (plan AN.33; owner, 2 Nov 2026: no hard limits): the working out of a time limit may write its room (reasoning.room).
+MAX_OUTPUT = reasoning.MOST_OUTPUT
 #: The Acts whose held text the step reads, all three listed as current.
 SUPPLIED = ("The Limitation Act, 1963", "The Negotiable Instruments Act, 1881", "The Code of Civil Procedure, 1908")
 #: An Act longer than this (the Code of Civil Procedure, about 1.1 million characters) is
@@ -483,7 +484,8 @@ def work_out(model, context, held_acts, *, now=None):
     user = research.conversation_text(context)
     try:
         result = model.structured(Prompt(system=system, user=user, operation=OPERATION, effort=reasoning.effort("calculate")),
-                                  SCHEMA, Tier.ROUTINE, max_tokens=MAX_OUTPUT)
+                                  SCHEMA, Tier.ROUTINE,
+                                  max_tokens=min(MAX_OUTPUT, reasoning.room(model, Tier.ROUTINE, system, user, json.dumps(SCHEMA))))
     except ModelError as exc:
         return unavailable(f"the time limits could not be worked out ({type(exc).__name__})")
     if not result.usable or result.data is None:
@@ -518,7 +520,8 @@ def _correct(model, system, user, proposal, refused):
     try:
         result = model.structured(Prompt(system=system, user=text, operation=CORRECTION_OPERATION,
                                          effort=reasoning.effort("calculate_correct")), CORRECTION, Tier.ROUTINE,
-                                  max_tokens=MAX_OUTPUT)
+                                  max_tokens=min(MAX_OUTPUT, reasoning.room(model, Tier.ROUTINE, system, text,
+                                                                            json.dumps(CORRECTION))))
     except (ModelError, SchemaViolation) as exc:
         return {**made, "why": type(exc).__name__}
     if not result.usable or result.data is None:

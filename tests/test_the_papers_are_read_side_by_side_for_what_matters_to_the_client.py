@@ -8,7 +8,7 @@ for the name. The papers, names and numbers here are invented.
 """
 import pytest
 
-from nm.core_engine import research
+from nm.core_engine import reasoning, research
 from nm.core_engine.research import accept, connections_of, plan
 from nm.shared.model_port import SchemaViolation, UsageLimitReached
 from tests.test_core_research import _result, understanding
@@ -148,7 +148,7 @@ def test_the_prompts_say_what_to_look_for_and_that_no_legal_question_is_answered
                      "dated after a party's death", "that the advocate has not mentioned", "Work in a loop",
                      "client_appears, against_client, after_death, after_time_limit, " + kinds):
             assert part in prompt, part
-    assert "verdict part" in research.SETTLE_POINTS and research.MAX_OUTPUT["connections"] == 24000
+    assert "verdict part" in research.SETTLE_POINTS and research.MAX_OUTPUT["connections"] == reasoning.MOST_OUTPUT
 
 
 def test_the_board_shows_each_partys_part_the_subjects_the_points_read_side_by_side_and_where_the_clients_people_appear():

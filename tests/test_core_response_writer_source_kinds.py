@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from nm.core_engine import answer_sources, response_writer as candidate
+from nm.core_engine import answer_sources, reasoning, response_writer as candidate
 from nm.core_engine import response_authorities, response_rendering, response_review, turn
 from nm.shared.model_port import SchemaViolation, on_the_wire
 from tests.test_core_answer_sources import fixture
@@ -232,7 +232,7 @@ def test_fresh_writer_remains_one_routine_call_and_transmits_complete_context():
                                     for identity, row in sources.items()}
     assert sent["held_passages"] == answer_sources.presentation(sources, aliased=True, compact=True)
     assert schema == candidate.PART_SCHEMA_V11
-    assert kwargs == {"max_tokens": candidate.MAX_OUTPUT}
+    assert kwargs == {"max_tokens": reasoning.room(model, tier, prompt.system, prompt.user, json.dumps(schema))}
     assert result["contract"] == candidate.CONTRACT
 
 

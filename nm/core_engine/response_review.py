@@ -22,7 +22,7 @@ from nm.core_engine.understanding import REFERENCE, TEXT
 from nm.shared import clock_contracts
 from nm.shared.model_port import (
     ContextOverflow, ModelError, Prompt, SchemaViolation, Tier,
-    canonical_schema_data, estimate_tokens, require_schema,
+    canonical_schema_data, require_schema,
 )
 
 LEGACY_CONTRACT = "core_response_review_v1"
@@ -86,9 +86,11 @@ _FINDINGS = (ROWS_CONTRACT, CONTRACT, SECTION_CONTRACT)
 #: The versions that name only what is wrong.
 _NAMED = (CONTRACT, SECTION_CONTRACT)
 #: A long reply's findings and coverage; reasoning counts towards it.
-MAX_OUTPUT = 32000
+#: D27 (plan AN.33; owner, 2 Nov 2026: no hard limits): a review, and the check across the sections, may write their room
+#: (reasoning.room), the most their model writes at most.
+MAX_OUTPUT = reasoning.MOST_OUTPUT
 #: The check across the sections: its conflicts, with reasoning.
-CROSS_OUTPUT = 8000
+CROSS_OUTPUT = reasoning.MOST_OUTPUT
 #: What the reviews of one piece carry alike beyond what every review carries: the research and the legal passages, which lead a worded
 #: review's payload (after the shared material) before the draft that changes from one review to the next (plan AN.31).
 STABLE_KEYS = ("research_proposal_and_results", "legal_sources")
@@ -1097,10 +1099,11 @@ def review(model, context, research_record, sources, draft, execution=None, *,
     prompt = Prompt(system=system, user=user, operation="core_response_review",
                     effort=reasoning.effort("review") if worded else None,
                     cache_through=shared, cache_also=(stable,) if stable > shared else ())
-    if (estimate_tokens(system + prompt.user + json.dumps(schema)) + MAX_OUTPUT
-            > model.context_budget(Tier.JUDGE)):
-        raise ContextOverflow("Complete independent response review exceeds the model budget")
-    result = model.structured(prompt, schema, Tier.JUDGE, max_tokens=MAX_OUTPUT)
+    try:
+        writes = min(MAX_OUTPUT, reasoning.room(model, Tier.JUDGE, system, prompt.user, json.dumps(schema)))
+    except ContextOverflow:
+        raise ContextOverflow("Complete independent response review exceeds the model budget") from None
+    result = model.structured(prompt, schema, Tier.JUDGE, max_tokens=writes)
     if not result.usable or result.data is None:
         raise ModelError("Independent response review did not complete", usage=result.usage,
                          latency_ms=result.latency_ms, retries=result.retries)
@@ -1229,10 +1232,11 @@ def cross_check(model, context, research_record, sources, sections, execution=No
         payload["owned_time_limits"] = response_writer.limit_ids(_aliased(deepcopy(dependencies["time_limits"]), shown))
     prompt = Prompt(system=CROSS_SYSTEM, user=json.dumps(payload, ensure_ascii=False),
                     operation="core_response_cross_check", effort=reasoning.effort("cross_check"))
-    if (estimate_tokens(CROSS_SYSTEM + prompt.user + json.dumps(CROSS_SCHEMA)) + CROSS_OUTPUT
-            > model.context_budget(Tier.JUDGE)):
-        raise ContextOverflow("The sections checked together exceed the model budget")
-    result = model.structured(prompt, CROSS_SCHEMA, Tier.JUDGE, max_tokens=CROSS_OUTPUT)
+    try:
+        writes = min(CROSS_OUTPUT, reasoning.room(model, Tier.JUDGE, CROSS_SYSTEM, prompt.user, json.dumps(CROSS_SCHEMA)))
+    except ContextOverflow:
+        raise ContextOverflow("The sections checked together exceed the model budget") from None
+    result = model.structured(prompt, CROSS_SCHEMA, Tier.JUDGE, max_tokens=writes)
     if not result.usable or result.data is None:
         raise ModelError("The check across the sections did not complete", usage=result.usage,
                          latency_ms=result.latency_ms, retries=result.retries)

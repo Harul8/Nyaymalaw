@@ -129,7 +129,7 @@ def test_the_plan_refuses_more_events_marked_as_the_second_passs_than_it_added()
 
 
 def test_the_second_pass_reads_with_care_and_asks_in_plain_words():
-    assert reasoning.STEPS["chronology_second"] == ("high", True) and research.MAX_OUTPUT["chronology_second"] == 32000
+    assert reasoning.STEPS["chronology_second"] == ("high", True) and research.MAX_OUTPUT["chronology_second"] == reasoning.MOST_OUTPUT
     words = " ".join(SECOND_PASS.split())
     for part in ("What the reading already set out from this paper, point by point (date, kind, what, said_by)",
                  "Read the pages you read for again, now only for what that list leaves out",

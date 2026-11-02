@@ -27,6 +27,7 @@ from nm.shared.model_budget import guard_budget, guard_tool_budget
 from nm.shared.model_call_budget import CallBudget, SessionCallBudget
 from nm.shared.model_config import (
     CONTEXT_BUDGET,
+    MAX_OUTPUT,
     ModelConfig,
     TierConfig,
     require_priced_snapshot,
@@ -235,6 +236,12 @@ class LiveTranscription:
                     usage={"type": "duration", "seconds": round(self.seconds, 3)}))
 
 
+def _within(model: str, max_tokens: int | None) -> int | None:
+    """What a call asks its model to write (D27, plan AN.33): never more than that model writes (MAX_OUTPUT), so that a bounded
+    session reserves, and the provider is asked for, what the model can give."""
+    return max_tokens if max_tokens is None else min(max_tokens, MAX_OUTPUT.get(model, max_tokens))
+
+
 class OpenAIModelAdapter:
     def __init__(self, config: ModelConfig, client: Any | None = None,
                  call_budget: CallBudget | SessionCallBudget | None = None) -> None:
@@ -418,6 +425,7 @@ class OpenAIModelAdapter:
             raise ModelPermissionRefused("Page images are not sent with tool calls.")
         guard_tool_budget(prompt, tools, tier, messages, max_tokens)
         cfg = self._cfg(tier)
+        max_tokens = _within(cfg.model, max_tokens)
         if cfg.model in ("gpt-6.1-sol", "gpt-6.1-terra"):
             raise ConfigurationError("This model does not support Chat Completions tool calling")
         request_budget, max_tokens = self._budget_for(cfg.model, max_tokens)
@@ -558,6 +566,7 @@ class OpenAIModelAdapter:
             raise ModelPermissionRefused(
                 "Page images are sent only when reading an advocate's scanned pages.")
         cfg = self._cfg(tier)
+        max_tokens = _within(cfg.model, max_tokens)
         # The port's budget, enforced BEFORE the call and identically to every
         # other adapter. Relying on the provider to report overflow would make
         # the budget a provider concept and let a prompt that does not port

@@ -13,10 +13,10 @@ import re
 
 import pytest
 
-from nm.core_engine import answer_sections, research, response_rendering, response_review, response_writer
+from nm.core_engine import answer_sections, reasoning, research, response_rendering, response_review, response_writer
 from nm.core_engine.research import WEIGH, WEIGH_CHECK, weigh
 from nm.shared.model_port import SchemaViolation
-from tests.test_core_research import _result, understanding
+from tests.test_core_research import _result
 from tests.test_the_answer_takes_up_every_order_and_point_or_says_why import items_of, matter
 
 pytestmark = pytest.mark.class_a
@@ -197,8 +197,7 @@ def test_a_critical_point_no_question_covers_raises_one_that_is_researched_and_o
         research.accept({**proposal, "weights": [{**proposal["weights"][0], "question_id": "D9Q1"}, proposal["weights"][1]]}, ctx)
 
 
-def test_the_check_of_the_weighing_may_write_as_much_as_a_papers_reading():
+def test_the_check_of_the_weighing_may_write_as_much_as_its_model_can():
     # The measuring run of 1 Nov 2026 weighed 105 points; its check, reasoning at high, ran out of its 16,000 tokens (OutputTruncated)
-    # and the weighing was kept unchecked, as designed. It may now write as much as a paper's reading.
-    assert research.MAX_OUTPUT["weigh_check"] == research.MAX_OUTPUT["chronology"] == 32000
-    assert research.MAX_OUTPUT["weigh"] == 24000
+    # and the weighing was kept unchecked, as designed. From D27 (piece 33p) it may write as much as its model can, as every step may.
+    assert research.MAX_OUTPUT["weigh_check"] == research.MAX_OUTPUT["weigh"] == reasoning.MOST_OUTPUT

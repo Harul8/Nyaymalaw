@@ -12,7 +12,7 @@ import json
 
 import pytest
 
-from nm.core_engine import research
+from nm.core_engine import reasoning, research
 from nm.core_engine.research import CONNECTIONS_V14, _comparisons, chronology_of, connections_of, plan
 from tests.test_core_research import _result, understanding
 from tests.test_the_chronology_of_each_document import event, row
@@ -138,5 +138,5 @@ def test_the_prompt_asks_for_the_differences_and_leaves_the_judgment_to_the_mode
         assert part in words, part
     assert research.CONNECTION_KINDS_V14 == ("client_appears", "against_client", "after_death", "after_time_limit",
                                              "further_subject", "papers_differ", "other")
-    assert research.MAX_OUTPUT["connections"] == 24000
+    assert research.MAX_OUTPUT["connections"] == reasoning.MOST_OUTPUT
     assert "papers_differ" not in research.CONNECTIONS_V13, "the prompt of the records made before is kept as it was"

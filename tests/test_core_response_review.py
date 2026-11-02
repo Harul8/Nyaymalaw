@@ -4,12 +4,12 @@ import json
 
 import pytest
 
-from nm.core_engine import response_authorities, response_review
+from nm.core_engine import reasoning, response_authorities, response_review
 from nm.core_engine.answer_sources import build, select
 from nm.core_engine.research import accept as accept_plan, retrieve
 from tests.test_core_research import Model as ResearchModel, proposal as research_proposal
 from nm.core_engine.response_review import (
-    CONTRACT, LEGACY_CONTRACT, MAX_OUTPUT, SCHEMA, _digest,
+    CONTRACT, LEGACY_CONTRACT, SCHEMA, _digest,
     review as review_checked, validate as validate_checked,
 )
 from nm.core_engine.response_writer import CONTRACT as WRITER_CONTRACT
@@ -178,7 +178,7 @@ def test_whole_originals_adjacent_legal_text_and_execution_are_separate_inputs()
     assert not any(tag in model.calls[0][0].user for tag in offered.values()), "legal passages travel by alias"
     assert any("Court rejected" in s["text"] for s in payload["legal_sources"]["passages"])
     assert all(s["kind"] in {"provision", "judgment"} for s in payload["legal_sources"]["passages"])
-    assert tier is Tier.JUDGE and schema == SCHEMA and kwargs == {"max_tokens": MAX_OUTPUT}
+    assert tier is Tier.JUDGE and schema == SCHEMA and kwargs == {"max_tokens": reasoning.room(model, tier, prompt.system, prompt.user, json.dumps(schema))}
     assert prompt.operation == "core_response_review"
     assert validate(reviewed, ctx, record, sources, draft, execution) == reviewed
 
