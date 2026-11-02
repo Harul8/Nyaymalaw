@@ -45,6 +45,8 @@ STEPS = {
     "chronology_second": ("high", True),
     # v14 (AN.33, piece 33h): the weighing of the points read is a judgement; its check looks again at it.
     "weigh": ("medium", True), "weigh_check": ("high", True),
+    # Plan AN.35 (piece 35c1): what makes a dispute's case stronger, and its check.
+    "case": ("medium", True), "case_check": ("high", True),
     # Research: the measured search steps stay at the release's own setting (owner decision, 14 Oct 2026).
     "phrases": (None, False), "judgment_phrases": (None, False), "pick": (None, False), "judgment_pick": (None, False),
     # The answer: a section and the overview, the review, the check across the sections, and the second looks.
