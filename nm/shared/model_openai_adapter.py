@@ -58,6 +58,7 @@ from nm.shared.model_port import (
     require_schema,
     require_tool_calls,
 )
+from nm.shared.text_contracts import snippet
 from nm.shared.model_transport import normalise_error, request_with_retries
 from nm.shared.text_contracts import blank
 
@@ -218,7 +219,7 @@ class LiveTranscription:
                 yield "words", self.words()
             elif kind == "error":
                 reason = (event.get("error") or {}).get("message") if isinstance(event.get("error"), dict) else None
-                yield "error", str(reason or "the provider refused the live dictation")[:200]
+                yield "error", snippet(str(reason or "the provider refused the live dictation"), 200)
                 return
             if (self._committed and self._committed_item in self._done
                     and all(item in self._done for item in self._order)):

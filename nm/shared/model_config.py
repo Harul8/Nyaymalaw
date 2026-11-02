@@ -118,7 +118,8 @@ PUBLISHED_RELEASES = frozenset({"gpt-6-luna", "gpt-6.1-sol", "gpt-6.1-terra"})
 TURN_MODELS = (("gpt-6-luna", "6 Luna", ""), ("gpt-6.1-terra", "6.1 Terra", "about 8-10x Luna's cost"),
                ("gpt-6.1-sol", "6.1 Sol", "about 16-20x Luna's cost"))
 DEFAULT_TURN_MODEL = "gpt-6-luna"
-assert {model for model, _, _ in TURN_MODELS} <= PUBLISHED_RELEASES and DEFAULT_TURN_MODEL == TURN_MODELS[0][0]
+if not ({model for model, _, _ in TURN_MODELS} <= PUBLISHED_RELEASES and DEFAULT_TURN_MODEL == TURN_MODELS[0][0]):
+    raise RuntimeError("Every model an advocate may choose is a published release, the default first")
 
 
 @dataclass(frozen=True)

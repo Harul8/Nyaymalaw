@@ -2035,7 +2035,8 @@ uses, copying source_kind and source_id from source_kinds, with a document page'
 link_words: the few words of your own sentence it supports. Never write a short ID (M1,
 T1...) in your text, and give no URLs, verdicts or claims that NM saved, executed or
 completed anything."""
-assert OVERVIEW_SYSTEM_V13.count("one event that other papers record too: set it out once. Where the advocate did not ask, leave\nit unused.\n") == 1
+if OVERVIEW_SYSTEM_V13.count("one event that other papers record too: set it out once. Where the advocate did not ask, leave\nit unused.\n") != 1:
+    raise RuntimeError("The overview's v13 instructions do not hold, once, the sentence v14 replaces")
 #: v14 (AN.28, stage 5): the overview takes up what no section took up of the coverage list, or says why not.
 _OVERVIEW_COVERAGE_V14 = """one event that other papers record too: set it out once. Where the advocate did not ask, leave
 it unused.

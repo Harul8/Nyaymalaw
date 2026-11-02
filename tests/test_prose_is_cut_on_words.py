@@ -276,7 +276,8 @@ def test_no_sentence_an_advocate_reads_is_cut_to_a_character_count():
           "fits and marks the elision, so the shortening is visible and the "
           "remainder is not silently reported as absent.")
 
-    assert len(EXEMPT) == 2, (
+    # P24 (19 Oct 2026) deleted the two modules whose cuts were exempt, and their entries with them: none is exempt now.
+    assert len(EXEMPT) == 0, (
         f"the exemption list is now {len(EXEMPT)} long. Each entry is a cut "
         f"nobody reads as English -- a model budget or a tuple of labels -- "
         f"and a third needs the same argument made in writing.")

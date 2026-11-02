@@ -27,7 +27,8 @@ from nm.shared.model_port import EFFORTS, ContextOverflow, estimate_tokens
 
 #: The levels this table sets, low to high; max is only ever the advocate's choice for a turn (CHOICES).
 LEVELS = ("low", "medium", "high")
-assert set(LEVELS) <= set(EFFORTS)
+if not set(LEVELS) <= set(EFFORTS):
+    raise RuntimeError("Each level the table sets is an effort the models accept")
 #: A step that reads more than this many tokens runs a level higher (plan AN.28, D4).
 LARGE_FILE_TOKENS = 60_000
 

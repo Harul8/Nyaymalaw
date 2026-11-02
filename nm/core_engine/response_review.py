@@ -399,7 +399,8 @@ the piece worked out itself, is not. A transaction that carries a remark is not 
 the piece must not present it as if it were.
 
 List only what you find. Empty lists mean the piece can be shown as it is, its folds as placed.""")
-assert SYSTEM_V11 != SYSTEM_V10 and "keep_shown" in SYSTEM_V11 and "shown as placed" not in SYSTEM_V10
+if not (SYSTEM_V11 != SYSTEM_V10 and "keep_shown" in SYSTEM_V11 and "shown as placed" not in SYSTEM_V10):
+    raise RuntimeError("Review v11's instructions are not built as their replacements say")
 SCHEMA_V10 = _object({
     "misleading": {"type": "array", "items": _object({
         "kind": {"type": "string", "enum": list(KINDS)}, "where": _PLACES,
@@ -438,9 +439,9 @@ SYSTEM_V12 = SYSTEM_V12.replace(
     "the\ntable of what the papers record, shown with the answer. An overview need not take up "
     "what\nthe sections it opens take up.\n\n"
     "List only what you find. Empty lists mean the piece can be shown as it is, its folds as placed.")
-assert SYSTEM_V12.count("words: the shortest stretch") == 1 and "writer_notes" in SYSTEM_V12
-assert "give it in missing" in SYSTEM_V12
-assert "figures_added" in SYSTEM_V12
+if not (SYSTEM_V12.count("words: the shortest stretch") == 1 and "writer_notes" in SYSTEM_V12
+        and "give it in missing" in SYSTEM_V12 and "figures_added" in SYSTEM_V12):
+    raise RuntimeError("Review v12's instructions are not built as their replacements say")
 SCHEMA_V12 = _object({
     "misleading": {"type": "array", "items": _object({
         **SCHEMA_V10["properties"]["misleading"]["items"]["properties"],
