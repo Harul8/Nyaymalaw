@@ -60,7 +60,7 @@ def test_a_range_names_every_provision_in_it(tmp_path):
 
 def test_a_provision_found_by_one_clause_is_returned_whole_with_what_its_act_links_to_it(tmp_path, monkeypatch):
     result = _search(_local(tmp_path, ROWS), monkeypatch, [CLAUSE_B])
-    assert result["contract"] == retrieval.CONTRACT == "hybrid_retrieval_v10"
+    assert result["contract"] == retrieval.ONE_READING_CONTRACT == "hybrid_retrieval_v10"
     returned = next(c for c in result["candidates"] if c["kind"] == "provision")
     assert returned["position"] == S138
     assert [s["position"] for s in returned["context"]["segments"]] == [S138, CLAUSE_B]

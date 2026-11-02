@@ -4,7 +4,7 @@ from copy import deepcopy
 import pytest
 
 from nm.core_engine.retrieval import (
-    CONTRACT, HybridSearcher, SearchUnavailable, _candidate, validate_search,
+    ONE_READING_CONTRACT, HybridSearcher, SearchUnavailable, _candidate, validate_search,
 )
 
 #: What v9 (P32) added to a search record; a record saved before it has none of these.
@@ -129,7 +129,7 @@ def test_v3_rejects_disconnected_context_but_replays_unchanged_v1_v2_snapshots()
     replacement = _candidate(source["kind"], source["position"], source["source"],
         source["corpus_revision"], source["score"], source["query_ids"], invalid_window)
     result["candidates"][result["candidates"].index(source)] = replacement
-    assert result["contract"] == CONTRACT == "hybrid_retrieval_v10"
+    assert result["contract"] == ONE_READING_CONTRACT == "hybrid_retrieval_v10"  # a search naming no sections (v11 names them)
     with pytest.raises(ValueError, match="unique|connected|root"):
         validate_search(result, QUERIES)
     saved_v4 = _saved_as(result, "hybrid_retrieval_v4")  # named instruments arrived with v6

@@ -41,7 +41,15 @@ RANK_DEPTH = {"provision": 40, "judgment": 100}
 RRF_K = 60
 #: v10 (owner decision P30, 20 Oct 2026): the reranker reads a question and each passage in
 #: one reading of up to RERANK_TOKENS tokens. v9 records, of the same shape, replay unchanged.
-CONTRACT = "hybrid_retrieval_v10"
+ONE_READING_CONTRACT = "hybrid_retrieval_v10"
+#: v11 (plan AN.35, D30; piece 35b; owner, 2 Nov 2026): the sections a question's plan names - those the papers, the advocate or
+#: the law to check cite for it - are read by their number from the held Act each names, whole, and offered to the pick with what
+#: search returned, and read with the provisions their Acts link to them, once. The Act is the instrument register's own key for
+#: its name (instrument_candidates), never a near title chosen for it; what is named and not held is said. v10 records, of the same
+#: shape without them, replay unchanged.
+CONTRACT = "hybrid_retrieval_v11"
+#: What became of a named section (v11).
+NAMED_STATES = ("read", "not_held", "ambiguous", "unavailable")
 #: v9 (owner decision P32, 20 Oct 2026): each returned provision is read whole, and with it
 #: the provisions its Act links to it in its own words and the provisions beside it, as
 #: connected candidates for the pick. v8 records replay unchanged.
@@ -504,6 +512,19 @@ class LocalCollection:
             return frozenset(entry["group"] for entry in self._register_documents().values()
                              if isinstance(entry, dict) and entry.get("role") == "kept"
                              and isinstance(entry.get("group"), str) and entry["group"])
+        except (OSError, ValueError, TypeError, AttributeError) as exc:
+            raise SearchUnavailable("The instrument register cannot be read") from exc
+
+    def kept_acts(self, keys) -> tuple:
+        """The held Acts the one-copy register keeps for the given instrument keys, by their own ids (v11; plan AN.35, piece 35b):
+        each group's kept copy, never another version of it."""
+        if self.copies is None or self.doc_type != "bare_act":
+            return ()
+        self._open()
+        keys = frozenset(keys)
+        try:
+            return tuple(sorted(act_id for act_id, entry in self._register_documents().items()
+                                if isinstance(entry, dict) and entry.get("group") in keys and entry.get("role") == "kept"))
         except (OSError, ValueError, TypeError, AttributeError) as exc:
             raise SearchUnavailable("The instrument register cannot be read") from exc
 
@@ -1386,15 +1407,68 @@ def _connect(collection, revision, returned, issues):
 
 def offered(record):
     """Every candidate a search record offers: what search returned and, from v9, the
-    provisions connected to them (P32)."""
-    return [*record["candidates"], *record.get("connected", ())]
+    provisions connected to them (P32); from v11 the sections its plan named, read by number."""
+    return [*record["candidates"], *record.get("connected", ()), *record.get("named_found", ())]
+
+
+def _read_named(collection, wanted, returned, issues):
+    """The sections a question's plan names, each read by its number from the held Act its name is (v11; plan AN.35, piece 35b):
+    the Act by the instrument register's key for its name - every kept Act the name may be, never a near title chosen for it - and
+    the section by its explicit number within it (read_provision). Each entry says what became of it: read (the candidates, one
+    already returned by search or read now, whole); not_held (no held Act is the name, or it holds no such provision); ambiguous
+    (the name may be more than one held Act, or one holds the number twice: each reading is offered, the pick judges which is
+    meant); unavailable (it could not be read). returned: the candidates search returned, by position. Returns (entries, the
+    candidates read now)."""
+    entries, found = [], {}
+    if not wanted:
+        return entries, []
+    reader, keys, acts = (getattr(collection, name, None) for name in ("read_provision", "instrument_keys", "kept_acts"))
+    if not all(callable(each) for each in (reader, keys, acts)):
+        return [{**item, "state": "unavailable", "found": [], "reason": "Held Acts cannot be read by name"} for item in wanted], []
+    try:
+        held = keys()
+    except SearchUnavailable as exc:
+        _log_stage_failure("provision", "named", exc)
+        return [{**item, "state": "unavailable", "found": [], "reason": str(exc)} for item in wanted], []
+    for item in wanted:
+        try:
+            candidates = acts(instrument_candidates(item["act"], held))
+        except SearchUnavailable as exc:
+            entries.append({**item, "state": "unavailable", "found": [], "reason": str(exc)})
+            continue
+        if not candidates:
+            entries.append({**item, "state": "not_held", "found": [], "reason": "No Act we hold is this name"})
+            continue
+        reads = [reader(act_id, item["section"]) for act_id in candidates]
+        ids = []
+        for read in reads:
+            if read["state"] != "found" or not read["sources"]:
+                continue
+            root = read["sources"][0]
+            candidate = returned.get(root["position"]) or found.setdefault(root["position"], root)
+            if candidate["id"] not in ids:
+                ids.append(candidate["id"])
+        if ids:
+            ambiguous = len(ids) > 1 or any(read["state"] == "ambiguous" for read in reads)
+            entries.append({**item, "state": "ambiguous" if ambiguous else "read", "found": ids,
+                            "reason": "The name may be more than one held Act, or the number more than one provision" if ambiguous
+                            else ""})
+        elif any(read["state"] == "ambiguous" for read in reads):
+            entries.append({**item, "state": "ambiguous", "found": [], "reason": next(
+                read["reason"] or "The number is held more than once" for read in reads if read["state"] == "ambiguous")})
+        elif all(read["state"] == "not_held" for read in reads):
+            entries.append({**item, "state": "not_held", "found": [], "reason": "The Act we hold under this name has no such provision"})
+        else:
+            entries.append({**item, "state": "unavailable", "found": [], "reason": next(
+                (read["reason"] for read in reads if read["state"] == "unavailable" and read["reason"]), "It could not be read")})
+    return entries, list(found.values())
 
 
 class SearchPort(Protocol):
     """The held-law search as a destination: the queries carry the advocate's words, so
     the composition root polices every search like any other destination."""
 
-    def search(self, queries, instruments=None, *, results=None) -> dict:
+    def search(self, queries, instruments=None, *, results=None, named=None) -> dict:
         ...
 
     def search_many(self, searches, *, results=None, done=None) -> list:
@@ -1434,17 +1508,19 @@ class HybridSearcher:
             except SearchUnavailable:
                 log.warning("A corpus could not be warmed", exc_info=True)
 
-    def search(self, queries, instruments=None, *, results=None):
+    def search(self, queries, instruments=None, *, results=None, named=None):
         """Search one dispute; query IDs are owned by its checked query plan. instruments
         are the Acts that plan names, matched to held instruments as search candidates.
         results sets how many candidates of each kind are returned (RESULTS_PER_KIND
-        unless a caller that chooses among more asks for more; owner decision, 14 Oct)."""
+        unless a caller that chooses among more asks for more; owner decision, 14 Oct).
+        named (v11; plan AN.35, piece 35b): the sections the plan names for the question, each
+        {"act", "section"}, read by their number (_read_named)."""
         with ExitStack() as scopes:
             for collection in self.collections.values():
                 scope = getattr(collection, "snapshot_scope", None)
                 if callable(scope):
                     scopes.enter_context(scope())
-            return self._search(queries, instruments, results)
+            return self._search(queries, instruments, results, named)
 
     def search_many(self, searches, *, results=None, done=None):
         """Search a matter's questions side by side (owner, 20 Oct 2026: step 1), each exactly
@@ -1458,8 +1534,9 @@ class HybridSearcher:
         if not searches:
             return []
         pool = ThreadPoolExecutor(max_workers=min(SIDE_BY_SIDE, len(searches)), thread_name_prefix="search")
-        futures = [pool.submit(self.search, queries, instruments, results=results)
-                   for queries, instruments in searches]
+        # v11: a search may carry the sections its plan names as a third part.
+        futures = [pool.submit(self.search, search[0], search[1], results=results,
+                               **({"named": search[2]} if len(search) > 2 else {})) for search in searches]
         for future in futures if done is not None else ():
             # Told apart from the result: a failure to report progress changes no search.
             future.add_done_callback(lambda _: done())
@@ -1483,7 +1560,7 @@ class HybridSearcher:
             raise SearchUnavailable("The judgment store changed while the judgment was read")
         return {"corpus_revision": revision, "paragraphs": paragraphs}
 
-    def _search(self, queries, instruments=None, results=None):
+    def _search(self, queries, instruments=None, results=None, wanted=None):
         if (not isinstance(queries, list) or not queries or any(
                 not isinstance(q, dict) or not isinstance(q.get("query_id"), str)
                 or not q["query_id"] or not isinstance(q.get("text"), str) or not q["text"].strip()
@@ -1498,6 +1575,13 @@ class HybridSearcher:
                 type(count) is not int or not 1 <= count <= 50 for count in returned.values()):
             raise ValueError("Each kind returns between 1 and 50 candidates")
         named = [{"name": name, "candidates": []} for name in names]
+        # A search naming no sections is a v10 search, of its shape; one that names them, even none, is v11 (piece 35b).
+        naming, wanted = wanted is not None, [] if wanted is None else wanted
+        if (not isinstance(wanted, list) or any(not isinstance(item, dict) or set(item) != {"act", "section"}
+                                                or any(not isinstance(item[k], str) or not item[k].strip() for k in item)
+                                                for item in wanted)):
+            raise ValueError("Each named section is an Act's name and its explicit number")
+        named_entries, named_found = [], []
         candidates, issues, stages, revisions = [], [], [], {}
         connected, connections, links = [], [], {}
         for kind in ("provision", "judgment"):
@@ -1710,38 +1794,77 @@ class HybridSearcher:
                     issues.append({"kind": kind, "query_id": None, "stage": "context", "reason": "Context has an explicit gap", "position": position})
                 candidates.append(_candidate(kind, position, rows[position], revision, score, associations[position], context))
             if kind == "provision":
-                connected, connections, links = _connect(
-                    collection, revision, [c for c in candidates if c["kind"] == kind], issues)
+                returned_here = [c for c in candidates if c["kind"] == kind]
+                named_entries, named_found = _read_named(collection, wanted, {c["position"]: c for c in returned_here}, issues)
+                connected, connections, links = _connect(collection, revision, returned_here + named_found, issues)
             if collection.revision() != revision:
                 candidates = [c for c in candidates if c["kind"] != kind]
                 if kind == "provision":
                     connected, connections, links = [], [], {}
+                    named_entries = [{**entry, "state": "unavailable", "found": [], "reason": "Corpus changed during search"}
+                                     for entry in named_entries]
+                    named_found = []
                 issues.append({"kind": kind, "query_id": None, "stage": "identity", "reason": "Corpus changed during search"})
+        if wanted and not named_entries:
+            named_entries = [{**item, "state": "unavailable", "found": [], "reason": "The held Acts could not be searched"}
+                             for item in wanted]
+        known = {c["id"] for c in [*candidates, *connected]}
+        named_found = [c for c in named_found if c["id"] not in known]
         state = "partial" if issues else "ready"
-        return {"contract": CONTRACT, "state": state, "queries": deepcopy(queries), "instruments": named,
-                "corpus_revisions": revisions, "stages": stages, "candidates": candidates, "issues": issues,
-                "connected": connected, "connections": connections, "links": links}
+        return {"contract": CONTRACT if naming else ONE_READING_CONTRACT, "state": state, "queries": deepcopy(queries),
+                "instruments": named, "corpus_revisions": revisions, "stages": stages, "candidates": candidates,
+                "issues": issues, "connected": connected, "connections": connections, "links": links,
+                **({"named": named_entries, "named_found": named_found} if naming else {})}
 
 
-def validate_search(record, queries, instruments=None):
+def _validate_named(record, named):
+    """v11: the sections a search's plan named, in its order, each with what became of it - read or ambiguous naming candidates the
+    record holds, not held or unavailable naming none, and why where it is not read; the candidates read for them are provisions
+    the record holds once."""
+    entries, found = record["named"], record["named_found"]
+    if (not isinstance(entries, list) or not isinstance(found, list)
+            or [{"act": e.get("act"), "section": e.get("section")} if isinstance(e, dict) else None for e in entries] != named):
+        raise ValueError("Named sections differ from those its plan named")
+    held = {c["id"] for c in [*record["candidates"], *record.get("connected", ()), *found]
+            if isinstance(c, dict) and isinstance(c.get("id"), str)}
+    if any(not isinstance(c, dict) or c.get("kind") != "provision" for c in found) or len({c["id"] for c in found}) != len(found):
+        raise ValueError("A named section read is a provision the record holds once")
+    for entry in entries:
+        if (set(entry) != {"act", "section", "state", "found", "reason"} or entry["state"] not in NAMED_STATES
+                or not isinstance(entry["found"], list) or not isinstance(entry["reason"], str)
+                or any(identity not in held for identity in entry["found"])
+                or (entry["state"] == "read") != (len(entry["found"]) == 1 and not entry["reason"])
+                or entry["state"] in ("not_held", "unavailable") and entry["found"]
+                or entry["state"] != "read" and not entry["reason"].strip()):
+            raise ValueError("A named section says otherwise than what became of it")
+
+
+def validate_search(record, queries, instruments=None, named=None):
     """Replay validates the saved exact snapshot, never reads a changed corpus.
     instruments are the Acts the plan named; a v6 or v7 record keeps them with the held
-    candidates each proposed when it was searched."""
+    candidates each proposed when it was searched. named (v11): the sections the plan named,
+    each kept with what became of it."""
     current = isinstance(record, dict) and record.get("contract") in (
-        NAMED_CONTRACT, JUDGMENT_ORDER_CONTRACT, RANK_DEPTH_CONTRACT, CONNECTED_CONTRACT, CONTRACT)
-    connecting = isinstance(record, dict) and record.get("contract") in (CONNECTED_CONTRACT, CONTRACT)
+        NAMED_CONTRACT, JUDGMENT_ORDER_CONTRACT, RANK_DEPTH_CONTRACT, CONNECTED_CONTRACT, ONE_READING_CONTRACT, CONTRACT)
+    connecting = isinstance(record, dict) and record.get("contract") in (CONNECTED_CONTRACT, ONE_READING_CONTRACT, CONTRACT)
+    reading_named = isinstance(record, dict) and record.get("contract") == CONTRACT
     fields = {"contract", "state", "queries", "corpus_revisions", "stages", "candidates", "issues"}
     if (not isinstance(record, dict) or set(record) != (
-            fields | {"instruments"} | ({"connected", "connections", "links"} if connecting else set()) if current else fields)
+            fields | {"instruments"} | ({"connected", "connections", "links"} if connecting else set())
+            | ({"named", "named_found"} if reading_named else set()) if current else fields)
             or record["contract"] not in (LEGACY_CONTRACT, PARENT_TREE_CONTRACT, PREVIOUS_CONTRACT, PARENT_STORE_CONTRACT,
                                           RERANK_ORDER_CONTRACT, NAMED_CONTRACT, JUDGMENT_ORDER_CONTRACT,
-                                          RANK_DEPTH_CONTRACT, CONNECTED_CONTRACT, CONTRACT)
+                                          RANK_DEPTH_CONTRACT, CONNECTED_CONTRACT, ONE_READING_CONTRACT, CONTRACT)
             or record["queries"] != queries
             or record["state"] != ("partial" if record["issues"] else "ready")
             or set(record["corpus_revisions"]) != {"provision", "judgment"}):
         raise ValueError("Search snapshot differs from its owned query contract")
     if any(not isinstance(record[key], list) for key in ("stages", "candidates", "issues")):
         raise ValueError("Search receipts and gaps must be explicit arrays")
+    if reading_named:
+        _validate_named(record, [] if named is None else named)
+    elif named:
+        raise ValueError("A search before v11 read no named sections")
     proposed = False
     if current:
         named = record["instruments"]
@@ -1775,7 +1898,7 @@ def validate_search(record, queries, instruments=None):
                 or issue["query_id"] is not None and issue["query_id"] not in query_ids
                 or issue["stage"] not in ("identity", *legs, "read", "rerank", "context", *(("instruments",) if current else ()),
                                           *(("standing",) if record["contract"] in (
-                                              JUDGMENT_ORDER_CONTRACT, RANK_DEPTH_CONTRACT, CONNECTED_CONTRACT, CONTRACT) else ()),
+                                              JUDGMENT_ORDER_CONTRACT, RANK_DEPTH_CONTRACT, CONNECTED_CONTRACT, ONE_READING_CONTRACT, CONTRACT) else ()),
                                           *(("links",) if connecting else ()))
                 or issue["stage"] == "links" and (issue["kind"] != "provision" or issue["query_id"] is not None)
                 or issue["stage"].startswith("named_") and (issue["kind"] != "provision" or not proposed)
@@ -1813,7 +1936,7 @@ def validate_search(record, queries, instruments=None):
         # v9 (P32): a connected provision was found through a returned one, not by a query.
         joined = number >= returned
         if record["contract"] not in (PARENT_STORE_CONTRACT, RERANK_ORDER_CONTRACT, NAMED_CONTRACT, JUDGMENT_ORDER_CONTRACT,
-                                      RANK_DEPTH_CONTRACT, CONNECTED_CONTRACT, CONTRACT) and any(type(p) is not int for p in (
+                                      RANK_DEPTH_CONTRACT, CONNECTED_CONTRACT, ONE_READING_CONTRACT, CONTRACT) and any(type(p) is not int for p in (
                 candidate["position"], *(s["position"] for s in candidate["context"]["segments"]))):
             raise ValueError("Historical search cannot contain contextual parent addresses")
         if (candidate["kind"] not in record["corpus_revisions"]
@@ -1849,7 +1972,7 @@ def validate_search(record, queries, instruments=None):
                 by_id.setdefault(segment["row"]["chunk_id"], []).append(segment["row"])
             root = candidate["source"]
             if (record["contract"] not in (PARENT_TREE_CONTRACT, PREVIOUS_CONTRACT, PARENT_STORE_CONTRACT, RERANK_ORDER_CONTRACT,
-                                           NAMED_CONTRACT, JUDGMENT_ORDER_CONTRACT, RANK_DEPTH_CONTRACT, CONNECTED_CONTRACT, CONTRACT)
+                                           NAMED_CONTRACT, JUDGMENT_ORDER_CONTRACT, RANK_DEPTH_CONTRACT, CONNECTED_CONTRACT, ONE_READING_CONTRACT, CONTRACT)
                     or candidate["kind"] != "provision" or len(segments) < 2
                     or root.get("parent_chunk_id") or len(by_id[root["chunk_id"]]) != 1
                     or len({s["position"] for s in segments}) != len(segments)):
@@ -1864,7 +1987,7 @@ def validate_search(record, queries, instruments=None):
                     seen.add(identity)
                     child = parents[0]
         if record["contract"] in (PREVIOUS_CONTRACT, PARENT_STORE_CONTRACT, RERANK_ORDER_CONTRACT, NAMED_CONTRACT,
-                                  JUDGMENT_ORDER_CONTRACT, RANK_DEPTH_CONTRACT, CONNECTED_CONTRACT, CONTRACT) and candidate["kind"] == "provision":
+                                  JUDGMENT_ORDER_CONTRACT, RANK_DEPTH_CONTRACT, CONNECTED_CONTRACT, ONE_READING_CONTRACT, CONTRACT) and candidate["kind"] == "provision":
             segments = context["segments"]
             if context["scope"] == "selected_indexed_segment":
                 if len(segments) != 1:

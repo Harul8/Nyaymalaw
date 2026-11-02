@@ -1604,7 +1604,11 @@ def _research_context(record, work_ids):
     Full durable candidate and query proofs remain in the research record."""
     mine = (lambda identity: True) if work_ids is None else (lambda identity: identity in work_ids)
     shown = {"state": record["state"], "planning_issues": record["plan"]["issues"],
-             "searches": [{"work_id": identity, "state": row["state"], "issues": row["issues"]}
+             # From search v11 (plan AN.35, piece 35b) what became of each section the plan named: one not held is research
+             # could not establish, said so.
+             "searches": [{"work_id": identity, "state": row["state"], "issues": row["issues"],
+                           **({"named": [{key: entry[key] for key in ("act", "section", "state", "reason")} for entry in row["named"]]}
+                              if row.get("named") else {})}
                           for identity, row in record["searches"].items() if mine(identity)],
              "failures": {identity: row for identity, row in record["failures"].items() if mine(identity)}}
     if record.get("contract") in research.QUESTION_PLANS:

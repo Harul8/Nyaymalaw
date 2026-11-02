@@ -103,7 +103,7 @@ def test_saved_v4_records_with_parent_sources_still_replay(tmp_path, monkeypatch
     collection = _local(tmp_path, [child])
     declare(collection, {"root": parent})
     result = _search(collection, monkeypatch, [0])
-    assert result["contract"] == retrieval.CONTRACT == "hybrid_retrieval_v10"
+    assert result["contract"] == retrieval.ONE_READING_CONTRACT == "hybrid_retrieval_v10"
     saved_v4 = deepcopy(result)
     saved_v4["contract"] = retrieval.PARENT_STORE_CONTRACT
     for field in ("instruments", "connected", "connections", "links"):

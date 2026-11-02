@@ -107,6 +107,8 @@ WHOLE_FILE = (WHOLE_FILE_CONTRACT, SETTLED_CONTRACT, CONTRACT)
 SETTLED = (SETTLED_CONTRACT, CONTRACT)
 #: v15: every judgment a dispute's pick chose is read (piece 35a).
 EVERY_CHOSEN = (CONTRACT,)
+#: v15 (plan AN.35, piece 35b): each question's plan names the sections to read first, each read by its number (search v11).
+NAMED_LAW = (CONTRACT,)
 CONTRACTS = (LEGACY_CONTRACT, PREVIOUS_CONTRACT, WINDOWED_CONTRACT, ACCOUNT_CONTRACT, INSTRUMENTED_CONTRACT,
              PICKED_CONTRACT, JUDGMENT_PICKED_CONTRACT, PURPOSED_CONTRACT, PER_DISPUTE_CONTRACT, JUDGMENTS_READ_CONTRACT,
              CHRONICLED_CONTRACT, WHOLE_FILE_CONTRACT, SETTLED_CONTRACT, CONTRACT)
@@ -166,7 +168,7 @@ What we need from you:
 - The separate disputes. A dispute is one set of events between particular parties that needs its own legal answer. Events that call for different kinds of law, such as a civil wrong and a crime, or that concern different transactions, are separate disputes, even when they happen together or involve the same people.
 - For each dispute, think through every legal consequence the events may have, civil, criminal and under any special statute, and for each: the right or liability, the remedy, how and where it is pursued and within what time, and, where the case turns on particular evidence, how that evidence is proved. Ask as legal questions those that bear on what the advocate wants; put the rest in related points.
 - For each dispute, the legal questions we must research to do what the advocate wants. A legal question is about one legal point: a right, an obligation, a remedy, a defence, a procedure, a time limit, a presumption or an offence. If answering it would need two different rules, such as what a right is and how it is enforced, it is two questions. Write each so that a lawyer could answer it from one or two provisions of law, and say briefly why we need it. Where the facts leave open something that changes the governing law (for example when the events happened, or which personal law applies), say what is open.
-- For each legal question, the law you would check first: the Indian Acts, and sections if you know them, that you believe govern it. This is your recollection to guide the search; it will be checked against the statutes we hold, so say only what you believe and do not guess.
+- For each legal question, the law you would check first: the Indian Acts, and sections if you know them, that you believe govern it, and every provision the advocate's messages or the papers cite that bears on it, as they cite it. This is your recollection to guide the search; it will be checked against the statutes we hold, so say only what you believe and do not guess.
 - For each dispute, the rights that may be at stake, the relief or outcome being sought, and the facts we would still need.
 - For each dispute, why it matters to the advocate's client: in a sentence or two, what is at stake for them and why it needs attention now.
 - Related points: things the advocate did not ask about but a careful lawyer would want them to know, such as a presumption that helps, a time limit that may be running, or an alternative remedy, with why each matters. We will tell the advocate about these and let them decide; we do not research them now.
@@ -205,6 +207,8 @@ Statutes rarely use everyday words. They use terms of art and frame rules in the
 For each question give the search phrases that will best find the governing provision, as many as the question needs - each a different way in, none a repeat of another - choosing the kinds that will find it. Keep heading and alternative terms to a few words each, and the rule statement to one sentence.
 
 Also name the Acts to search in: the Indian Acts you believe govern the question, by short title and year. When the date of the events decides which law applies, include both the Act in force then and the Act that replaced it or that it replaced.
+
+And name the sections to read first: each provision the law your colleague would check names for the question, and any other you know governs it, each by its Act's short title and year and its number as the Act numbers it (a section, an article, an order and rule). Each is read by its number from the Acts we hold, whole, beside what the search finds; one we do not hold is said, never replaced by another.
 """
 JUDGMENT_PHRASES = """You are a senior Indian litigation lawyer about to search a library of Indian judgments, the Supreme Court of India and the High Court of Andhra Pradesh, for the authorities that answer a set of legal questions. You receive the matter as a colleague has understood it: its disputes and, for each, the legal questions, with the law your colleague would check first.
 
@@ -326,6 +330,11 @@ def _phrase(kinds):
 STATUTE_PHRASES = _object({"questions": {"type": "array", "items": _object({
     "question_id": STRING, "phrases": {"type": "array", "items": _phrase(("heading", "alternative", "rule"))},
     "acts": STRINGS})}})
+#: v15 (plan AN.35, piece 35b): a section to read first, by its Act's name and its number as the Act numbers it.
+NAMED_SECTION = _object({"act": STRING, "section": STRING})
+STATUTE_PHRASES_V15 = _object({"questions": {"type": "array", "items": _object({
+    **STATUTE_PHRASES["properties"]["questions"]["items"]["properties"],
+    "sections": {"type": "array", "items": NAMED_SECTION}})}})
 JUDGMENT_PHRASE_SCHEMA = _object({"questions": {"type": "array", "items": _object({
     "question_id": STRING, "phrases": {"type": "array", "items": _phrase(("issue", "holding", "doctrine"))}})}})
 CHOICE = _object({"questions": {"type": "array", "items": _object({
@@ -493,6 +502,12 @@ SCHEMA_V14["properties"]["weighing_failures"] = {"type": "array", "items": WEIGH
 #: v14 (AN.33, piece 33g): each second pass over a stretch of a paper - how many events it added, or why it could not be made.
 SECOND_PASS_RECORD = _object({"document": STRING, "pages": STRING, "added": {"type": "integer"}, "reason": STRING})
 SCHEMA_V14["properties"]["chronology_second_pass"] = {"type": "array", "items": SECOND_PASS_RECORD}
+#: v15 (plan AN.35, piece 35b): the statute phrases keep the sections each question names; phrases kept without them name none.
+SCHEMA_V15 = deepcopy(SCHEMA_V14)
+_NAMING_QUESTION = STATUTE_PHRASES_V15["properties"]["questions"]["items"]
+SCHEMA_V15["properties"]["statute_phrases"] = {"type": "array", "items": _object({
+    "dispute_id": STRING, "questions": {"type": "array", "items": {
+        **_NAMING_QUESTION, "required": [key for key in _NAMING_QUESTION["required"] if key != "sections"]}}})}
 
 
 def _source_windows(context):
@@ -1050,7 +1065,7 @@ def _phrases(model, understanding, report):
         try:
             if kind == "statute":
                 return task, _call(model, "core_research_phrases", PHRASES,
-                                   _matter_text(understanding, [dispute]), STATUTE_PHRASES, "phrases"), None
+                                   _matter_text(understanding, [dispute]), STATUTE_PHRASES_V15, "phrases"), None
             return task, _call(model, "core_research_judgment_phrases", JUDGMENT_PHRASES,
                                _matter_text(understanding, disputes), JUDGMENT_PHRASE_SCHEMA, "judgment_phrases"), None
         except (ModelError, SchemaViolation) as exc:
@@ -2529,11 +2544,16 @@ def _accept_v7(proposal, context, schema=SCHEMA, contract=None):
             identity = context["latest"]["turn_id"] + f":w{len(work) + 1}"
             acts = list(dict.fromkeys(" ".join(name.split()) for name in statute.get(question_id, {}).get("acts", [])
                                       if name.strip()))
+            # v15 (plan AN.35, piece 35b): the sections to read first, each once, as the phrases step named them.
+            named = {(" ".join(item["act"].split()), " ".join(item["section"].split())): None
+                     for item in statute.get(question_id, {}).get("sections", []) if item["act"].strip() and item["section"].strip()}
             work.append({"id": identity, "sources": [deepcopy(latest)], "search_account": [],
                          "dispute": {"id": dispute["id"], "name": dispute["name"], "between": list(dispute["between"])},
                          "question_id": question_id, "question": question["question"],
                          "why_needed": question["why_needed"], "law_to_check": list(question["law_to_check"]),
                          "instruments": acts,
+                         **({"named": [{"act": act, "section": section} for act, section in named]}
+                            if contract in NAMED_LAW and named else {}),
                          "enquiries": [{"text": p["text"].strip(), "purpose": p["kind"], "basis": "conditional",
                                         "query_id": f"{identity}:q{i}"} for i, p in enumerate(texts, 1)]})
     return {"proposal": data, "work": work, "issues": issues, "semantic_review": "pending"}
@@ -2543,7 +2563,8 @@ def accept(proposal, context, *, contract=CONTRACT):
     if contract not in CONTRACTS:
         raise ValueError("Unknown research contract")
     if contract in _QUESTION_PLANS:
-        return _accept_v7(proposal, context, SCHEMA_V14 if contract in SETTLED else SCHEMA_V13 if contract in WHOLE_FILE
+        return _accept_v7(proposal, context, SCHEMA_V15 if contract in NAMED_LAW else SCHEMA_V14 if contract in SETTLED
+                          else SCHEMA_V13 if contract in WHOLE_FILE
                           else SCHEMA_V12 if contract in CHRONICLED
                           else SCHEMA if contract in (PURPOSED_CONTRACT, PER_DISPUTE_CONTRACT, JUDGMENTS_READ_CONTRACT)
                           else SCHEMA_V8, contract)
@@ -2627,6 +2648,12 @@ def search_queries(work, *, contract=CONTRACT):
             for enquiry in work["enquiries"]]
 
 
+def search_named(work, *, contract=CONTRACT):
+    """The sections a v15 work item names to read first, each {"act", "section"} (plan AN.35, piece 35b); None where it names
+    none, or before v15 - its search is then a search of v10's shape."""
+    return [dict(item) for item in work["named"]] if contract in NAMED_LAW and work.get("named") else None
+
+
 def search_instruments(work, *, contract=CONTRACT):
     """The Acts an investigation names, each once; plans before v6 named none."""
     if contract not in (INSTRUMENTED_CONTRACT, *_QUESTION_PLANS):
@@ -2646,9 +2673,11 @@ def _provisions(search):
 
 def _offered(search, kind):
     """What a pick chooses among: what search returned and, for provisions from search v9,
-    the provisions connected to them (owner decision P32, 20 Oct 2026). A fallback keeps
+    the provisions connected to them (owner decision P32, 20 Oct 2026), and from search v11 the
+    sections the plan named, read by their number (plan AN.35, piece 35b). A fallback keeps
     only what search returned."""
-    return [*_of_kind(search, kind), *(search.get("connected", ()) if kind == "provision" else ())]
+    return [*_of_kind(search, kind),
+            *((*search.get("connected", ()), *search.get("named_found", ())) if kind == "provision" else ())]
 
 
 def _connections_said(search, shown):
@@ -2676,17 +2705,20 @@ def _pick_text(plan, searches, labels):
         label, search = labels[work["id"]], searches[work["id"]]
         lines.append(f"\n{label}: {work['question']}")
         offered, returned = _offered(search, "provision"), len(_provisions(search))
+        linked = returned + len(search.get("connected", ()))
         shown = {candidate["id"]: f"{label}.{number}" for number, candidate in enumerate(offered, 1)}
         said = _connections_said(search, shown)
         for number, candidate in enumerate(offered, 1):
-            if number == returned + 1:
+            if number == returned + 1 and search.get("connected"):
                 lines.append("  Read with them, as their Acts connect them:")
+            if number == linked + 1:
+                lines.append("  Named for this question, read by their number:")
             source = candidate["source"]
             heading = re.sub(r"\s+", " ", source.get("section_title") or "")[:140]
             # P21 (19 Oct 2026): an Act India Code does not list as in force is said so.
             mark = f" [{in_force(source)}]" if in_force(source) else ""
             line = f"  {label}.{number} {candidate['title']}, section {candidate['locator']}{mark}: {heading}."
-            if number <= returned:
+            if number <= returned or number > linked:  # what search returned, and a section named for the question
                 body = (source.get("full_text") or "").splitlines()
                 line += " " + re.sub(r"\s+", " ", " ".join(body[1:] or body)).strip()[:220]
             if said.get(candidate["id"]):
@@ -2698,6 +2730,12 @@ def _pick_text(plan, searches, labels):
             if more:
                 line += f" (its Act connects {more} more provisions to it, not shown)"
             lines.append(line)
+        # v15 (plan AN.35, piece 35b): what became of each section the plan named.
+        for entry in search.get("named", ()):
+            places = ", ".join(shown[identity] for identity in entry["found"] if identity in shown)
+            said_of = {"read": f"read as {places}", "ambiguous": f"may be {places}" if places else "held more than once, not read",
+                       "not_held": "not held in our library", "unavailable": "could not be read"}[entry["state"]]
+            lines.append(f"  Named: {entry['act']}, {entry['section']} - {said_of}.")
     return "\n".join(lines)
 
 
@@ -2917,9 +2955,14 @@ def _picked(model, plan, searches, report):
 FOR_PICK = {"provision": PROVISIONS_FOR_PICK, "judgment": JUDGMENTS_FOR_PICK}
 
 
-def _search_key(work, queries, instruments):
+def _search_key(work, queries, instruments, named=None):
     """What makes two searches one (v14, piece 33q): the research work they are made for and exactly what each searches."""
-    return json.dumps([work["id"], queries, instruments], sort_keys=True, ensure_ascii=False)
+    return json.dumps([work["id"], queries, instruments, named], sort_keys=True, ensure_ascii=False)
+
+
+def _searched(asked):
+    """The searches search_many is asked for: (queries, instruments) and, from v15, the sections named."""
+    return [(queries, instruments) if named is None else (queries, instruments, named) for _, queries, instruments, named in asked]
 
 
 def start_search(searcher, work):
@@ -2934,13 +2977,12 @@ def start_search(searcher, work):
         if not queries:
             continue
         try:
-            asked.append((item, queries, search_instruments(item)))
+            asked.append((item, queries, search_instruments(item), search_named(item)))
         except (ValueError, KeyError, TypeError):
             continue
-    futures = searcher.search_many([(queries, instruments) for _, queries, instruments in asked],
-                                   results=FOR_PICK) if asked else []
-    return {_search_key(item, queries, instruments): future
-            for (item, queries, instruments), future in zip(asked, futures, strict=True)}
+    futures = searcher.search_many(_searched(asked), results=FOR_PICK) if asked else []
+    return {_search_key(item, queries, instruments, named): future
+            for (item, queries, instruments, named), future in zip(asked, futures, strict=True)}
 
 
 def retrieve_parts(plan, searcher, context, model=None, *, progress=None, started=None):
@@ -2963,12 +3005,12 @@ def retrieve_parts(plan, searcher, context, model=None, *, progress=None, starte
         try:
             if searcher is None:
                 raise SearchUnavailable("Held-law search is not configured")
-            instruments = search_instruments(work)
-            begun = started.pop(_search_key(work, queries, instruments), None)
+            instruments, named = search_instruments(work), search_named(work)
+            begun = started.pop(_search_key(work, queries, instruments, named), None)
             if begun is not None:
-                early.append((work, queries, instruments, begun))
+                early.append((work, queries, instruments, named, begun))
             else:
-                asked.append((work, queries, instruments))
+                asked.append((work, queries, instruments, named))
         except (SearchUnavailable, ValueError, OSError, RuntimeError, KeyError, TypeError) as exc:
             outcomes[work["id"]] = exc
     for future in started.values():
@@ -2981,12 +3023,11 @@ def retrieve_parts(plan, searcher, context, model=None, *, progress=None, starte
             finished[0] += 1
             if finished[0] < len(plan["work"]):  # the last is followed by the next stage at once
                 report("searching", done=finished[0], total=len(plan["work"]))
-    futures = searcher.search_many([(queries, instruments) for _, queries, instruments in asked],
-                                   results=FOR_PICK, done=searched) if asked else []
-    outcomes.update((work["id"], (future, queries, instruments))
-                    for (work, queries, instruments), future in zip(asked, futures, strict=True))
-    for work, queries, instruments, future in early:
-        outcomes[work["id"]] = (future, queries, instruments)
+    futures = searcher.search_many(_searched(asked), results=FOR_PICK, done=searched) if asked else []
+    outcomes.update((work["id"], (future, queries, instruments, named))
+                    for (work, queries, instruments, named), future in zip(asked, futures, strict=True))
+    for work, queries, instruments, named, future in early:
+        outcomes[work["id"]] = (future, queries, instruments, named)
         future.add_done_callback(searched)
 
     def researched(dispute_id, works):
@@ -2998,8 +3039,8 @@ def retrieve_parts(plan, searcher, context, model=None, *, progress=None, starte
                 outcome = outcomes[work["id"]]
                 if isinstance(outcome, Exception):
                     raise outcome
-                future, queries, instruments = outcome
-                searches[work["id"]] = validate_search(future.result(), queries, instruments)
+                future, queries, instruments, named = outcome
+                searches[work["id"]] = validate_search(future.result(), queries, instruments, named)
             except (SearchUnavailable, ValueError, OSError, RuntimeError, KeyError, TypeError) as exc:
                 # This independent read-only adapter/snapshot failed. It supplies no
                 # admitted evidence; peers remain available and the failure stays explicit.
@@ -3156,7 +3197,7 @@ def _validate(record, plan, context):
     for work in plan["work"]:
         if work["id"] in successes:
             validate_search(record["searches"][work["id"]], search_queries(work, contract=contract),
-                            search_instruments(work, contract=contract))
+                            search_instruments(work, contract=contract), search_named(work, contract=contract))
     picks = []
     if contract in BY_DISPUTE:
         # v10: each dispute's picks, labelled within that dispute's own searched questions.
