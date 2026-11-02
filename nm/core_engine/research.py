@@ -978,8 +978,12 @@ def _effort(step, user, again=False):
     return reasoning.effort(step, tokens=estimate_tokens(user), again=again)
 
 
-def _call(model, operation, system, user, schema, step, again=False):
-    receipt = model.structured(Prompt(system=system, user=user, operation=operation, effort=_effort(step, user, again)),
+def _call(model, operation, system, user, schema, step, again=False, marks=()):
+    """One research step's call. marks (v14, plan AN.34): the places in user where material other calls carry alike ends - the
+    opening every call shown the file shares - each kept by the cache for them to read. A call reads it only where its effort, its
+    answer's schema and its instructions are those of the call that wrote it (the probe of 2 Nov 2026): the calls of one step."""
+    receipt = model.structured(Prompt(system=system, user=user, operation=operation, effort=_effort(step, user, again),
+                                      cache_through=marks[0] if marks else 0, cache_also=tuple(marks[1:])),
                                schema, Tier.ROUTINE, max_tokens=min(MAX_OUTPUT[step], reasoning.room(
                                    model, Tier.ROUTINE, system, user, json.dumps(schema))))
     if not receipt.usable or receipt.data is None:
@@ -1161,21 +1165,26 @@ def _placed(words, finder):
             " ... ".join(own) if all(text is not None for text in own) else words)
 
 
-def _file_context(context, documents, document, window, whole):
+def _file_context(context, documents, whole):
     """What a v13 record step is shown before the pages it reads for (plan AN.28, D1): the advocate's messages, oldest first, and,
-    where the file is within WHOLE_FILE_TOKENS, every other page of it under its paper's name - so that the step knows what the
-    matter is about and who is who while it answers for its own pages."""
+    where the file is within WHOLE_FILE_TOKENS, every page of it under its paper's name - so that the step knows what the matter is
+    about and who is who while it answers for its own pages. From plan AN.34 (piece 34b) the whole file, its own pages among them,
+    so that every call shown it opens with the same text and the cache keeps it once for the rest."""
     said = [row["text"] for row in context.get("conversation", ()) if row.get("record_role") == "original_account"]
     latest = (context.get("latest") or {}).get("text")
     lines = ["The advocate's messages, oldest first:", *(f"- {words}" for words in [*said, *([latest] if latest else [])])]
-    focus = {page["page"] for page in window}
-    rest = [(other, page) for other in documents for page in other["pages"]
-            if not (other["source"] == document["source"] and page["page"] in focus)] if whole else []
-    if rest:
-        lines += ["", "The rest of the file, for context - the pages you do not read for:"]
+    if whole:
+        lines += ["", "The whole file, for context - the pages you read for among them:"]
         lines += [f'Paper "{other["name"]}", {"part" if other["recording"] else "page"} {page["page"]}: {page["text"]}'
-                  for other, page in rest]
+                  for other in documents for page in other["pages"]]
     return "\n".join(lines)
+
+
+def _reading_text(context, documents, document, window, whole):
+    """A stretch's reading as its call reads it, and the place the cache keeps (plan AN.34, piece 34b): (user, the end of the opening
+    every call shown the file shares - 0 where the file is not shown)."""
+    opening = "" if whole is None else _file_context(context, documents, whole) + "\n\nThe pages you read for:\n"
+    return opening + _window_text(document, window), len(opening) if whole else 0
 
 
 def _whole_file(context, documents):
@@ -1201,11 +1210,9 @@ def _read_stretches(model, context, wanted, operation, system, schema, step, sha
     def read(task, depth=0):
         document, window = task
         first, last = window[0]["page"], window[-1]["page"]
-        user = (_window_text(document, window) if whole is None else
-                _file_context(context, documents, document, window, whole) + "\n\nThe pages you read for:\n"
-                + _window_text(document, window))
+        user, opening = _reading_text(context, documents, document, window, whole)
         try:
-            data = _call(model, operation, system, user, schema, step)
+            data = _call(model, operation, system, user, schema, step, marks=(opening,) if opening else ())
         except UsageLimitReached:
             raise
         except (ModelError, SchemaViolation) as exc:
@@ -1287,11 +1294,11 @@ def _second_pass(model, context, documents, events, failures, whole):
         held = [event for event in events if event["source"] == document["source"]]
         listed = "\n".join(json.dumps({key: event[key] for key in ("date", "kind", "what", "said_by")}, ensure_ascii=False)
                            for event in held) or "(none)"
-        user = (_window_text(document, window) if whole is None else
-                _file_context(context, documents, document, window, whole) + "\n\nThe pages you read for:\n"
-                + _window_text(document, window)) + "\n\n" + SECOND_PASS.format(listed=listed)
+        read, opening = _reading_text(context, documents, document, window, whole)
+        user = read + "\n\n" + SECOND_PASS.format(listed=listed)
         try:
-            data = _call(model, "core_research_chronology", CHRONOLOGY_V14, user, CHRONOLOGY_SCHEMA_V14, "chronology_second")
+            data = _call(model, "core_research_chronology", CHRONOLOGY_V14, user, CHRONOLOGY_SCHEMA_V14, "chronology_second",
+                         marks=(opening,) if opening else ())
         except UsageLimitReached:
             raise
         except (ModelError, SchemaViolation) as exc:
@@ -1311,7 +1318,7 @@ def _second_pass(model, context, documents, events, failures, whole):
 #: one paper read, with the whole file in view as from v13, for every legally significant point it records - its events in time, and
 #: what its authorities found, what its parties assert, admit, deny or allege, the particulars of the documents it describes, who is
 #: related to whom, and what it says stands, is done or remains to be done.
-CHRONOLOGY_V14 = """Message: You receive an advocate's messages to us about a client's matter, the documents they sent, and the pages of one paper you read for now: the rest of the file comes first, page by page under each paper's name, and the pages you read for last, under "The pages you read for". A page says what its document says: it is material the advocate supplied, not their own account, and what it reports is not thereby proved. A page read from a scan may carry [illegible] and square-bracket notes about stamps, signatures and handwriting; those are the page reader's, except the handwriting a note transcribes, which is the page's. The rest of the file is there so that you know what the matter is about and who is who: list only what the pages you read for record.
+CHRONOLOGY_V14 = """Message: You receive an advocate's messages to us about a client's matter, the documents they sent, and the pages of one paper you read for now: the whole file comes first, page by page under each paper's name - the pages you read for among them - and the pages you read for again last, under "The pages you read for". A page says what its document says: it is material the advocate supplied, not their own account, and what it reports is not thereby proved. A page read from a scan may carry [illegible] and square-bracket notes about stamps, signatures and handwriting; those are the page reader's, except the handwriting a note transcribes, which is the page's. The file is there so that you know what the matter is about and who is who: list only what the pages you read for record.
 
 Purpose: Set out everything that paper records which a careful lawyer would need in order to understand the matter and advise the client, so that nothing in it is overlooked: what happened and when, and also what its authorities found, what its parties say, the particulars of the documents it describes, who is related to whom, and where it says matters stand. You are not judging which account is right, and you are not answering any legal question.
 
@@ -1511,10 +1518,11 @@ def _to_check(index, given, why, words, finder):
 
 
 def _settle_text(context, documents, document, whole, shown):
-    """What a settling call for one paper reads (v14): the advocate's messages and the rest of the file as the reading of that paper
-    was shown them, the paper's own pages last, then what code could not check."""
-    return (_file_context(context, documents, document, document["pages"], whole) + "\n\nThe pages of the paper being checked:\n"
-            + _window_text(document, document["pages"]) + "\n\n" + json.dumps(shown, ensure_ascii=False))
+    """What a settling call for one paper reads (v14), and the place the cache keeps (plan AN.34, piece 34b): (the advocate's messages
+    and the file as the reading of that paper was shown them, the paper's own pages last, then what code could not check; the end
+    of the opening every call shown the file shares)."""
+    opening = _file_context(context, documents, whole) + "\n\nThe pages of the paper being checked:\n"
+    return opening + _window_text(document, document["pages"]) + "\n\n" + json.dumps(shown, ensure_ascii=False), len(opening)
 
 
 def _settled(entries, failing, key, shape, document_name, what):
@@ -1570,12 +1578,13 @@ def _checked(model, context, events, documents, finders, failures=(), whole=True
         to_check = [_to_check(index, {key: event[key] for key in EVENT["properties"]},
                               _NOT_FOUND.format(where="the pages of its paper") if not event["anchored"] else _NO_DATE,
                               event["words"], finder) for index, event in enumerate(failing)]
-        user = _settle_text(context, documents, document, whole, {"to_check": to_check, "not_carried": missing,
+        user, opening = _settle_text(context, documents, document, whole, {"to_check": to_check, "not_carried": missing,
                                                                   "identifiers_not_carried": uncovered["identifiers"],
                                                                   "pages_without_points": uncovered["pages"]})
         kept = [event for event in mine if all(event is not wrong for wrong in failing)]
         try:
-            data = _call(model, "core_research_chronology", SETTLE_EVENTS, user, SETTLE_EVENTS_SCHEMA, "chronology_check")
+            data = _call(model, "core_research_chronology", SETTLE_EVENTS, user, SETTLE_EVENTS_SCHEMA, "chronology_check",
+                         marks=(opening,) if whole else ())
             require_schema(data, SETTLE_EVENTS_SCHEMA)
         except UsageLimitReached:
             raise
@@ -1706,7 +1715,7 @@ def _transfers_in(data, document, finder):
 
 
 #: v13 (AN.28, D1, D3, D7, B16): the transactions of one paper, of any kind, read with the whole file in view.
-TRANSACTIONS_V13 = """Message: You receive an advocate's messages to us about a client's matter, the documents they sent, and the pages of one paper you read for now: the rest of the file comes first, page by page under each paper's name, and the pages you read for last, under "The pages you read for". A page says what its document says: it is material the advocate supplied, not their own account, and what it reports is not thereby proved. Square-bracket notes are the reader's, not the document's. The rest of the file is there so that you know what the matter is about and who is who: list only what the pages you read for record.
+TRANSACTIONS_V13 = """Message: You receive an advocate's messages to us about a client's matter, the documents they sent, and the pages of one paper you read for now: the whole file comes first, page by page under each paper's name - the pages you read for among them - and the pages you read for again last, under "The pages you read for". A page says what its document says: it is material the advocate supplied, not their own account, and what it reports is not thereby proved. Square-bracket notes are the reader's, not the document's. The file is there so that you know what the matter is about and who is who: list only what the pages you read for record.
 
 Purpose: List the transactions those pages record or report - whatever passes from one person to another: a sale, partition, gift, settlement, decree, lease, mortgage, loan or payment of anything - so that code can add the figures up for each subject and set them against any whole the papers state. You are not adding or working out anything yourself, and you are not judging which account is right.
 
@@ -2061,10 +2070,11 @@ def _checked_transfers(model, context, transfers, documents, finders, whole=True
             return [_died(transfer, file_numbers) for transfer in mine], []
         to_check = [_to_check(index, {key: transfer[key] for key in TRANSACTION["properties"]}, why, transfer["words"], finder)
                     for index, (transfer, why) in enumerate(failing)]
-        user = _settle_text(context, documents, document, whole, {"to_check": to_check})
+        user, opening = _settle_text(context, documents, document, whole, {"to_check": to_check})
         kept = [transfer for transfer in mine if all(transfer is not wrong for wrong, _ in failing)]
         try:
-            data = _call(model, "core_research_transfers", SETTLE_TRANSFERS, user, SETTLE_TRANSFERS_SCHEMA, "transfers_check")
+            data = _call(model, "core_research_transfers", SETTLE_TRANSFERS, user, SETTLE_TRANSFERS_SCHEMA, "transfers_check",
+                         marks=(opening,) if whole else ())
             require_schema(data, SETTLE_TRANSFERS_SCHEMA)
         except UsageLimitReached:
             raise

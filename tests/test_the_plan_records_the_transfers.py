@@ -70,7 +70,8 @@ def test_each_documents_transactions_are_anchored_dated_ordered_and_numbered():
     # Research v13 (AN.28, D2): each paper with a transaction code cannot use as listed is looked at again once - here a whole on no
     # page and words not found, and a figure whose number is not in its words.
     checks = [prompt.user for prompt in model.calls if '"to_check"' in prompt.user]
-    assert sorted(text.split('"')[1] for text in checks) == ["deed.pdf", "order.pdf"]
+    # Each settling call names the paper it checks after the whole file (plan AN.34, piece 34b), as a reading does.
+    assert sorted(re.search(r'^Document: "(.*)"', text, re.M).group(1) for text in checks) == ["deed.pdf", "order.pdf"]
     assert transfers_of(model, bundle(), wanted=lambda: False) == ([], []) and transfers_of(model, typed("Hello.")) == ([], [])
 
 
