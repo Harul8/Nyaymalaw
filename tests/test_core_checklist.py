@@ -308,7 +308,7 @@ def test_a_saved_turn_keeps_its_disputes_case_as_records_and_the_board_and_the_a
             if prompt.operation not in ("core_case", "core_case_check"):
                 return super().structured(prompt, schema, tier, **kwargs)
             shown = json.loads(prompt.user.split("\n\nYour colleague's account:")[0])
-            passage = next(p for p in shown["held_law"] if "Counsel submitted" in p["text"])
+            passage = next(p for p in shown["held_law"]["passages"] if "Counsel submitted" in p["text"])
             return ModelResult(None, {"elements": [{
                 "element": "Service of the notice", "law": {"source_id": passage["id"], "quote": "Counsel submitted"},
                 "proves": "client", "status": "missing", "points": [], "why": "Nothing yet shows when it was served."}],

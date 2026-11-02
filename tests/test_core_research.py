@@ -104,7 +104,7 @@ class Model:
     """Answers each operation from a script; each pick chooses every shown candidate."""
 
     def __init__(self, subject=None, *, checks=None, revisions=None, fail=(), budget=100_000,
-                 completion=Completion.COMPLETE, choose=None, choose_judgments=None, further=None):
+                 completion=Completion.COMPLETE, choose=None, choose_judgments=None, further=None, full=None):
         self.subject = subject or understanding()
         self.checks = list(checks or [{"verdict": "sound", "problems": []}])
         self.revisions = list(revisions or [])
@@ -112,6 +112,9 @@ class Model:
         self.choose_judgments = choose_judgments
         # Research v16 (plan AN.35, piece 35d): what the further search names as missing, from what it is shown; nothing by default.
         self.further = further
+        # Research v17 (plan AN.36, piece 36a): which chosen paragraphs' judgments the judgment pick names to read in full; by default
+        # every one it chose (code reads at most five).
+        self.full = full
         self.calls = []
 
     def context_budget(self, tier): return self.budget
@@ -147,14 +150,28 @@ class Model:
             choose = self.choose if operation == "core_research_pick" else self.choose_judgments
             data = {"questions": [{"question_id": q, "chosen": (choose or (lambda ids: ids))(ids), "note": "Chosen."}
                                   for q, ids in shown.items()]}
+            if operation == "core_research_judgment_pick":
+                chosen = [identity for item in data["questions"] for identity in item["chosen"]]
+                data["read_in_full"] = (self.full or (lambda ids: ids))(chosen)
         else:
             raise AssertionError(operation)
         return _result(data, tier, self.completion)
 
 
+def without_full(record):
+    """A current record's judgment picks as a version before v17 kept them: naming no judgment to read in full (plan AN.36)."""
+    record = deepcopy(record)
+    picks = record.get("judgment_picks") or {}
+    for pick in ([picks] if "state" in picks else picks.values()):
+        if isinstance(pick.get("proposal"), dict):
+            pick["proposal"].pop("read_in_full", None)
+    return record
+
+
 def one_pick(record):
     """A v10 record of one dispute in the shape of v7-v9, which kept one pick of each kind
     for the whole matter (research v10, 21 Oct 2026, keeps each dispute's)."""
+    record = without_full(record)
     return {**{key: value for key, value in record.items() if key not in ("part", "judgments", "further")},
             "contract": "core_research_v9",
             "picks": record["picks"]["D1"], "judgment_picks": record["judgment_picks"]["D1"]}
@@ -338,7 +355,7 @@ def test_search_returns_twenty_provisions_and_the_pick_admits_only_its_choice():
     model = Model(choose=lambda ids: ids[:2])
     record = retrieve(admitted, found, ctx, model=model)
     assert asked == [{"results": {"provision": PROVISIONS_FOR_PICK, "judgment": JUDGMENTS_FOR_PICK}}]
-    assert record["contract"] == CONTRACT == "core_research_v16" and record["state"] == "evaluated"
+    assert record["contract"] == CONTRACT == "core_research_v17" and record["state"] == "evaluated"
     provisions = [c for c in record["searches"]["t2:w1"]["candidates"] if c["kind"] == "provision"]
     assert len(provisions) == PROVISIONS_FOR_PICK
     assert record["picks"]["D1"]["chosen"] == {"t2:w1": [provisions[0]["id"], provisions[1]["id"]]}

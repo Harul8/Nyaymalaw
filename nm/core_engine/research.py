@@ -96,34 +96,45 @@ NAMED_CONTRACT = "core_research_v15"
 #: to search; code searches once for those, the two picks choose among only what was not already offered for that question, and
 #: the judgments chosen are read with the rest, each judgment once. A question with nothing missing searches nothing; there is no
 #: second round, and a reading never starts a search (D30, the owner's relevance gates).
-CONTRACT = "core_research_v16"
+FURTHER_CONTRACT = "core_research_v16"
+#: v17 (plan AN.36, D34; piece 36a, 2 Nov 2026; owner: "let the model decide those top 2, 3, 4, or 5 judgments which are most
+#: relevant, and then the model can read the full judgment of only those"): v16 whose judgment picks also name, for the dispute, the
+#: judgments a lawyer would read in full; each dispute reads in full at most IN_FULL of them - the first pick's, then the further
+#: pick's, then the cited judgments the further call chose - and every other judgment chosen stands by its chosen paragraphs, each
+#: read with the stored paragraph either side (as research v8 read them). v16 and earlier records replay under their own rule.
+CONTRACT = "core_research_v17"
+#: v17: at most this many judgments a dispute are read in full (the owner, D34: "top 2, 3, 4, or 5").
+IN_FULL = 5
 #: The plans that set out the matter as disputes and legal questions (v7 on).
 QUESTION_PLANS = (PICKED_CONTRACT, JUDGMENT_PICKED_CONTRACT, PURPOSED_CONTRACT, PER_DISPUTE_CONTRACT, JUDGMENTS_READ_CONTRACT,
-                  CHRONICLED_CONTRACT, WHOLE_FILE_CONTRACT, SETTLED_CONTRACT, NAMED_CONTRACT, CONTRACT)
+                  CHRONICLED_CONTRACT, WHOLE_FILE_CONTRACT, SETTLED_CONTRACT, NAMED_CONTRACT, FURTHER_CONTRACT, CONTRACT)
 _QUESTION_PLANS = QUESTION_PLANS
 #: The records that pick judgment paragraphs and answer in parts per dispute (v8 on).
 JUDGMENT_PICKS = (JUDGMENT_PICKED_CONTRACT, PURPOSED_CONTRACT, PER_DISPUTE_CONTRACT, JUDGMENTS_READ_CONTRACT,
-                  CHRONICLED_CONTRACT, WHOLE_FILE_CONTRACT, SETTLED_CONTRACT, NAMED_CONTRACT, CONTRACT)
+                  CHRONICLED_CONTRACT, WHOLE_FILE_CONTRACT, SETTLED_CONTRACT, NAMED_CONTRACT, FURTHER_CONTRACT, CONTRACT)
 #: The records that keep each dispute's picks apart (v10 on).
 BY_DISPUTE = (PER_DISPUTE_CONTRACT, JUDGMENTS_READ_CONTRACT, CHRONICLED_CONTRACT, WHOLE_FILE_CONTRACT, SETTLED_CONTRACT,
-              NAMED_CONTRACT, CONTRACT)
+              NAMED_CONTRACT, FURTHER_CONTRACT, CONTRACT)
 #: The records that read the chosen judgments whole or as extracts (v11 on).
-JUDGMENTS_READ = (JUDGMENTS_READ_CONTRACT, CHRONICLED_CONTRACT, WHOLE_FILE_CONTRACT, SETTLED_CONTRACT, NAMED_CONTRACT, CONTRACT)
+JUDGMENTS_READ = (JUDGMENTS_READ_CONTRACT, CHRONICLED_CONTRACT, WHOLE_FILE_CONTRACT, SETTLED_CONTRACT, NAMED_CONTRACT,
+                  FURTHER_CONTRACT, CONTRACT)
 #: The records that also keep the chronology of the documents (v12 on).
-CHRONICLED = (CHRONICLED_CONTRACT, WHOLE_FILE_CONTRACT, SETTLED_CONTRACT, NAMED_CONTRACT, CONTRACT)
+CHRONICLED = (CHRONICLED_CONTRACT, WHOLE_FILE_CONTRACT, SETTLED_CONTRACT, NAMED_CONTRACT, FURTHER_CONTRACT, CONTRACT)
 #: The records whose papers are read with the whole file in view, their dates checked by code (v13 on).
-WHOLE_FILE = (WHOLE_FILE_CONTRACT, SETTLED_CONTRACT, NAMED_CONTRACT, CONTRACT)
+WHOLE_FILE = (WHOLE_FILE_CONTRACT, SETTLED_CONTRACT, NAMED_CONTRACT, FURTHER_CONTRACT, CONTRACT)
 #: The records checked with the tolerant finder, whose failed checks a model settles (v14 on).
-SETTLED = (SETTLED_CONTRACT, NAMED_CONTRACT, CONTRACT)
-#: v15: every judgment a dispute's pick chose is read (piece 35a).
-EVERY_CHOSEN = (NAMED_CONTRACT, CONTRACT)
+SETTLED = (SETTLED_CONTRACT, NAMED_CONTRACT, FURTHER_CONTRACT, CONTRACT)
+#: v15 and v16: every judgment a dispute's pick chose is read (piece 35a); v17 reads in full only the few chosen so (36a).
+EVERY_CHOSEN = (NAMED_CONTRACT, FURTHER_CONTRACT)
+#: v17 (piece 36a): the judgments read in full are the few the picks name, at most IN_FULL a dispute.
+FEW_IN_FULL = (CONTRACT,)
 #: v15 (plan AN.35, piece 35b): each question's plan names the sections to read first, each read by its number (search v11).
-NAMED_LAW = (NAMED_CONTRACT, CONTRACT)
+NAMED_LAW = (NAMED_CONTRACT, FURTHER_CONTRACT, CONTRACT)
 #: v16 (piece 35d): each dispute's law still missing is searched for once.
-FURTHER_LAW = (CONTRACT,)
+FURTHER_LAW = (FURTHER_CONTRACT, CONTRACT)
 CONTRACTS = (LEGACY_CONTRACT, PREVIOUS_CONTRACT, WINDOWED_CONTRACT, ACCOUNT_CONTRACT, INSTRUMENTED_CONTRACT,
              PICKED_CONTRACT, JUDGMENT_PICKED_CONTRACT, PURPOSED_CONTRACT, PER_DISPUTE_CONTRACT, JUDGMENTS_READ_CONTRACT,
-             CHRONICLED_CONTRACT, WHOLE_FILE_CONTRACT, SETTLED_CONTRACT, NAMED_CONTRACT, CONTRACT)
+             CHRONICLED_CONTRACT, WHOLE_FILE_CONTRACT, SETTLED_CONTRACT, NAMED_CONTRACT, FURTHER_CONTRACT, CONTRACT)
 #: The papers a record step sees whole (D1, the owner: "a safe fixed limit like 100k tokens"): above it, each call sees the paper
 #: it answers for, with the advocate's messages.
 WHOLE_FILE_TOKENS = 100_000
@@ -248,6 +259,17 @@ Judge each paragraph by what the court is doing in it. A paragraph that only quo
 """
 
 
+#: v17 (plan AN.36, D34; piece 36a): the judgment pick as v16's, with only the few judgments that matter most read in full.
+_READ_WHOLE_SAID = ("Each judgment whose paragraph you choose is then read whole, or, when it is long, as an extract around what was "
+                    "found, so choose the judgments a lawyer would rely on as much as the paragraphs.")
+if JUDGMENT_PICK.count(_READ_WHOLE_SAID) != 1:
+    raise RuntimeError("The v17 judgment pick cannot be made from v16's")
+JUDGMENT_PICK_V17 = JUDGMENT_PICK.replace(_READ_WHOLE_SAID, (
+    "Each paragraph you choose is read with the paragraph either side of it. Then, for the dispute as a whole, name in "
+    "read_in_full the judgments a lawyer would read in full before advising on it - the two to five that matter most to its "
+    "central questions - each by the ID of one of its paragraphs you chose; only those are read whole (a long one as an extract "
+    "around what you chose), and every other judgment stands by the paragraphs you chose."))
+
 def _object(fields):
     return {"type": "object", "additionalProperties": False,
             "required": list(fields), "properties": fields}
@@ -351,6 +373,8 @@ JUDGMENT_PHRASE_SCHEMA = _object({"questions": {"type": "array", "items": _objec
     "question_id": STRING, "phrases": {"type": "array", "items": _phrase(("issue", "holding", "doctrine"))}})}})
 CHOICE = _object({"questions": {"type": "array", "items": _object({
     "question_id": STRING, "chosen": STRINGS, "note": STRING})}})
+#: v17 (piece 36a): the judgment pick also names, for the dispute, the judgments to read in full, each by one of its paragraphs' IDs.
+CHOICE_V17 = _object({"questions": CHOICE["properties"]["questions"], "read_in_full": STRINGS})
 FAILURE = _object({"step": STRING, "scope": STRING, "reason": STRING})
 
 
@@ -2774,7 +2798,9 @@ def _judgment_pick_text(plan, searches, labels):
 
 #: Each pick's operation, prompt, output step and shown text.
 PICKS = {"provision": ("core_research_pick", PICK, "pick", _pick_text),
-         "judgment": ("core_research_judgment_pick", JUDGMENT_PICK, "judgment_pick", _judgment_pick_text)}
+         "judgment": ("core_research_judgment_pick", JUDGMENT_PICK_V17, "judgment_pick", _judgment_pick_text)}
+#: Each pick's answer shape as the current version asks for it (v17: the judgment pick names the judgments to read in full).
+PICK_SCHEMAS = {"provision": CHOICE, "judgment": CHOICE_V17}
 
 
 def _resolve_picks(choice, plan, searches, labels, kind="provision"):
@@ -2814,7 +2840,7 @@ def pick(model, plan, searches, kind="provision"):
                 "reason": None}
     operation, system, step, text = PICKS[kind]
     try:
-        choice = _call(model, operation, system, text(plan, searches, labels), CHOICE, step)
+        choice = _call(model, operation, system, text(plan, searches, labels), PICK_SCHEMAS[kind], step)
     except (ModelError, SchemaViolation) as exc:
         return {"state": "unavailable", "proposal": None, "chosen": _fallback_picks(searches, labels, kind),
                 "unknown": [], "reason": type(exc).__name__}
@@ -2863,7 +2889,29 @@ def _part(plan, dispute_id, searches, failures, chosen, judgments, contract=CONT
     return record
 
 
-def _chosen_cases(plan, searches, pick, contract=CONTRACT, skip=frozenset()):
+def _in_full(plan, searches, pick):
+    """The judgments a v17 pick named to read in full, in the order named (piece 36a): each named by one of its shown paragraphs' IDs,
+    only a judgment the pick chose a paragraph of, each once. A pick that could not be made names none."""
+    labels = _labels(plan, searches)
+    by_label = {label: work_id for work_id, label in labels.items()}
+    chosen = set()
+    for work_id, ids in pick["chosen"].items():
+        offered = {c["id"]: c for c in _of_kind(searches.get(work_id) or {"candidates": []}, "judgment")}
+        chosen |= {offered[identity]["source"].get("case_id") for identity in ids if identity in offered}
+    named = []
+    for shown in (pick.get("proposal") or {}).get("read_in_full") or ():
+        label, _, number = str(shown).rpartition(".")
+        work_id = by_label.get(label)
+        offered = _of_kind(searches[work_id], "judgment") if work_id is not None else []
+        if not number.isdigit() or not 1 <= int(number) <= len(offered):
+            continue
+        case_id = offered[int(number) - 1]["source"].get("case_id")
+        if case_id and case_id in chosen and case_id not in named:
+            named.append(case_id)
+    return named
+
+
+def _chosen_cases(plan, searches, pick, contract=CONTRACT, skip=frozenset(), limit=None):
     """The judgments a dispute's pick chose, in the order chosen - every one from v15 (piece 35a), at most JUDGMENTS_PER_DISPUTE
     before; with what search found of each and what the pick chose of each, by stored position. skip (v16): judgments the dispute
     already reads, read once."""
@@ -2881,7 +2929,11 @@ def _chosen_cases(plan, searches, pick, contract=CONTRACT, skip=frozenset()):
                 order.append(candidate["source"]["case_id"])
                 chosen.setdefault(candidate["source"]["case_id"], set()).add(candidate["position"])
     cases = list(dict.fromkeys(order))
-    if contract not in EVERY_CHOSEN:
+    if contract in FEW_IN_FULL:
+        # v17 (piece 36a): only those the pick named to read in full, at most IN_FULL a dispute (limit: what is left of them).
+        cases = [case_id for case_id in _in_full(plan, searches, pick) if case_id in cases][:IN_FULL if limit is None else
+                                                                                           max(0, limit)]
+    elif contract not in EVERY_CHOSEN:
         cases = cases[:JUDGMENTS_PER_DISPUTE]
     return [(case_id, found.get(case_id, set()), chosen.get(case_id, set())) for case_id in cases]
 
@@ -2931,12 +2983,12 @@ def _extract(paragraphs, found, chosen):
     return {position: why[position] for position in positions if position in kept}
 
 
-def _read_judgments(searcher, plan, searches, pick, skip=frozenset(), cases=None):
+def _read_judgments(searcher, plan, searches, pick, skip=frozenset(), cases=None, limit=None):
     """The judgments a dispute's answer reads (P31): each chosen judgment whole, or as an
     extract of a long one; one that cannot be read is said, with why. skip (v16): those already read. cases (v16, piece 35e):
     the judgments to read, as (case ID, found, chosen), where they are not the pick's."""
     read = []
-    for case_id, found, chosen in (_chosen_cases(plan, searches, pick, skip=skip) if cases is None else cases):
+    for case_id, found, chosen in (_chosen_cases(plan, searches, pick, skip=skip, limit=limit) if cases is None else cases):
         try:
             if searcher is None or not callable(getattr(searcher, "read_judgment", None)):
                 raise SearchUnavailable("Held judgments cannot be read whole")
@@ -3277,11 +3329,12 @@ def _further(model, searcher, plan, searches, picks, judgments, report, cited=()
     # The picks of what is new say no stage of their own: the turn is still choosing the dispute's law.
     chosen = (_picked(model, plan, fresh, lambda *_, **__: None) if fresh
               else {kind: pick(None, plan, {}, kind) for kind in _PICK_FIELDS})
-    read = _read_judgments(searcher, plan, fresh, chosen["judgment"], skip={entry["case_id"] for entry in judgments})
-    # Piece 35e: the held judgments the papers cite that the call chose to read, each once.
+    read = _read_judgments(searcher, plan, fresh, chosen["judgment"], skip={entry["case_id"] for entry in judgments},
+                           limit=IN_FULL - len(judgments))
+    # Piece 35e: the held judgments the papers cite that the call chose to read, each once; from v17 (36a) within the five.
     skip = {entry["case_id"] for entry in [*judgments, *read]}
-    cited_read = _read_judgments(searcher, plan, {}, None, cases=[(case_id, set(), set())
-                                                                  for case_id in _cited_cases(asked, labels, cited, skip)])
+    cited_read = _read_judgments(searcher, plan, {}, None, cases=[
+        (case_id, set(), set()) for case_id in _cited_cases(asked, labels, cited, skip)[:max(0, IN_FULL - len(judgments) - len(read))]])
     return {"state": "evaluated", "proposal": asked, "reason": None, "searches": found, "failures": failures, "picks": chosen,
             "judgments": read, "cited": deepcopy(list(cited)), "cited_read": cited_read}
 
@@ -3301,7 +3354,7 @@ def _validate_further(further, plan, searches, judgments, dispute_id, contract, 
                 or not isinstance(further["picks"], dict) or set(further["picks"]) != set(_PICK_FIELDS)):
             raise ValueError("A further search not made says why, and holds nothing")
         for kind in _PICK_FIELDS:
-            _validate_picks(further["picks"][kind], plan, {}, kind)
+            _validate_picks(further["picks"][kind], plan, {}, kind, contract)
         return
     asked = canonical_schema_data(further["proposal"], FURTHER_SCHEMA)
     require_schema(asked, FURTHER_SCHEMA)
@@ -3323,9 +3376,10 @@ def _validate_further(further, plan, searches, judgments, dispute_id, contract, 
     if not isinstance(further["picks"], dict) or set(further["picks"]) != set(_PICK_FIELDS):
         raise ValueError("A further search's picks are not one of each kind")
     for kind in _PICK_FIELDS:
-        _validate_picks(further["picks"][kind], plan, fresh, kind)
+        _validate_picks(further["picks"][kind], plan, fresh, kind, contract)
+    few = contract in FEW_IN_FULL
     _validate_judgments({dispute_id: further["judgments"]}, dispute_id, plan, fresh, further["picks"]["judgment"], contract,
-                        skip={entry["case_id"] for entry in judgments})
+                        skip={entry["case_id"] for entry in judgments}, limit=IN_FULL - len(judgments) if few else None)
     # Piece 35e: the cited judgments are the citations the papers and messages make, each as the index stood on it then.
     cited = further["cited"]
     made = _citations_in(context) if context is not None else None
@@ -3341,8 +3395,11 @@ def _validate_further(further, plan, searches, judgments, dispute_id, contract, 
                    or (entry["reason"] is not None) != (entry["state"] == "unavailable") for entry in cited)):
         raise ValueError("The judgments the papers cite are not as the further search kept them")
     skip = {entry["case_id"] for entry in [*judgments, *further["judgments"]]}
+    wanted = _cited_cases(asked, labels, cited, skip)
+    if few:
+        wanted = wanted[:max(0, IN_FULL - len(judgments) - len(further["judgments"]))]
     _validate_judgments({dispute_id: further["cited_read"]}, dispute_id, plan, {**searches, **further["searches"]}, None,
-                        contract, expected=[(case_id, set(), set()) for case_id in _cited_cases(asked, labels, cited, skip)])
+                        contract, expected=[(case_id, set(), set()) for case_id in wanted])
 
 
 def further_searches(record):
@@ -3527,7 +3584,7 @@ def _validate(record, plan, context):
             for dispute_id in disputes:
                 ids = {w["id"] for w in groups[dispute_id]}
                 own = {i: search for i, search in record["searches"].items() if i in ids}
-                _validate_picks(record[field][dispute_id], plan, own, kind)
+                _validate_picks(record[field][dispute_id], plan, own, kind, contract)
                 picks.append(record[field][dispute_id])
                 if kind == "judgment" and contract in JUDGMENTS_READ:
                     _validate_judgments(record["judgments"], dispute_id, plan, own, record[field][dispute_id], contract)
@@ -3556,13 +3613,14 @@ def _validate(record, plan, context):
     return deepcopy(record)
 
 
-def _validate_judgments(judgments, dispute_id, plan, searches, pick, contract=CONTRACT, skip=frozenset(), expected=None):
+def _validate_judgments(judgments, dispute_id, plan, searches, pick, contract=CONTRACT, skip=frozenset(), expected=None,
+                        limit=None):
     """v11 (P31): the judgments a dispute reads are those its pick chose, in order - every one from v15, at most
     JUDGMENTS_PER_DISPUTE before; each read whole when no longer than the bound, else as an extract
     keeping its opening, its order and what the pick chose; every paragraph kept exactly as
     stored, and what search found and the pick chose marked as found and chosen."""
     entries = judgments.get(dispute_id) if isinstance(judgments, dict) else None
-    expected = _chosen_cases(plan, searches, pick, contract, skip) if expected is None else expected
+    expected = _chosen_cases(plan, searches, pick, contract, skip, limit) if expected is None else expected
     if not isinstance(entries, list) or [entry.get("case_id") for entry in entries] != [c for c, _, _ in expected]:
         raise ValueError("The judgments read are not the ones the pick chose")
     revisions = {search["corpus_revisions"].get("judgment") for search in searches.values()}
@@ -3599,14 +3657,16 @@ def _validate_judgments(judgments, dispute_id, plan, searches, pick, contract=CO
                 raise ValueError("A judgment's paragraph is not held as stored")
 
 
-def _validate_picks(picks, plan, searches, kind="provision"):
+def _validate_picks(picks, plan, searches, kind="provision", contract=None):
     labels = _labels(plan, searches)
     if (not isinstance(picks, dict) or set(picks) != {"state", "proposal", "chosen", "unknown", "reason"}
             or picks["state"] not in ("evaluated", "unavailable", "not_needed")):
         raise ValueError(f"The {kind} pick has no checked disposition")
     if picks["state"] == "evaluated":
-        choice = canonical_schema_data(picks["proposal"], CHOICE)
-        require_schema(choice, CHOICE)
+        # v17 (piece 36a): a judgment pick also names the judgments to read in full.
+        schema = CHOICE_V17 if kind == "judgment" and contract in FEW_IN_FULL else CHOICE
+        choice = canonical_schema_data(picks["proposal"], schema)
+        require_schema(choice, schema)
         if (picks["proposal"] != choice or picks["reason"] is not None
                 or (picks["chosen"], picks["unknown"]) != _resolve_picks(choice, plan, searches, labels, kind)):
             raise ValueError(f"The saved {kind} pick differs from its proposal")

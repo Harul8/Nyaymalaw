@@ -1660,6 +1660,12 @@ def _research_context(record, work_ids):
             {"citation": entry["citation"], "held": research.CITED_SAID[entry["state"]],
              **({"judgment": f"{entry['judgment']['title']} ({entry['judgment']['court']}, {entry['judgment']['year']})"}
                 if entry["judgment"] else {})} for entry in cited.values()]
+    if record.get("contract") in research.FEW_IN_FULL:
+        # Research v17 (plan AN.36, piece 36a): which judgments were read in full; every other one only by the paragraphs chosen.
+        names = [next((p["row"].get("case_name") for p in entry["read"]), entry["case_id"])
+                 for entries in research.judgments_read(record).values() for entry in entries if "unread" not in entry]
+        shown["judgments_read_in_full"] = {"judgments": names, "every_other_judgment": (
+            "read only by the paragraphs research chose of it, each with the paragraph either side - never its whole view")}
     if record.get("contract") in research.QUESTION_PLANS:
         shown["understanding"] = record["plan"]["proposal"]["understanding"]
         shown["questions"] = [{"work_id": w["id"], "dispute_id": w["dispute"]["id"], "question": w["question"],
@@ -2236,6 +2242,37 @@ MEND_WHY = ("Code took the statements in words_at_fault out of this paragraph: i
             "remains, withdraw it.")
 
 
+#: Plan AN.36 (piece 36c): what a second look or a take-up of a section is shown of the held law, said beside it.
+RELIED_ON = ("the held law this section's paragraphs rely on, with the passages read with them, and the judgments read in full; "
+             "the dispute's other held law is not shown here")
+
+
+def _relied_on(held, proposal):
+    """The held law a second look or a take-up of a section is shown (piece 36c): the passages its paragraphs rely on, those read
+    with them (their context group and their read_with) and the judgments read in full - not the whole dispute's."""
+    used = {use.get("source_id") for unit in proposal.get("units", ()) if isinstance(unit, dict)
+            for use in (unit.get("uses") or ()) if isinstance(use, dict)}
+    by_id = {passage["id"]: passage for passage in held["passages"]}
+    groups = {by_id[identity]["context_group_id"] for identity in used if identity in by_id}
+    linked = {relation["source_id"] for identity in used if identity in by_id
+              for relation in by_id[identity].get("read_with", ())}
+    whole = {identity for identity, entry in held["coverage_by_id"].items()
+             if entry.get("scope") in ("whole_judgment", "judgment_extract")}
+    kept = [passage for passage in held["passages"] if passage["id"] in used or passage["context_group_id"] in groups
+            or passage["id"] in linked or set(passage.get("coverage_ids", ())) & whole]
+    coverage = {identity for passage in kept for identity in passage.get("coverage_ids", ())}
+    covered = {identity: entry for identity, entry in held["coverage_by_id"].items() if identity in coverage}
+    gaps = {gap for entry in covered.values() for gap in entry.get("gap_ids", ())}
+    kept_groups = {passage["context_group_id"] for passage in kept}
+    shown = {passage["id"] for passage in kept}
+    return {**held, "passages": kept, "coverage_by_id": covered,
+            "gaps_by_id": {identity: gap for identity, gap in held["gaps_by_id"].items() if identity in gaps},
+            "context_groups": {identity: [member for member in members if member in shown]
+                               for identity, members in held["context_groups"].items() if identity in kept_groups},
+            **({"group_titles": {identity: title for identity, title in held["group_titles"].items() if identity in kept_groups}}
+               if "group_titles" in held else {})}
+
+
 def repair(model, context, research_record, sources, proposal, faults, *, section, interpretation=None,
            execution=None, time_limits=None, sections=None):
     """The second look (writer v14; plan AN.28, D2): one writer-tier call shown only the paragraphs code's
@@ -2266,6 +2303,8 @@ def repair(model, context, research_record, sources, proposal, faults, *, sectio
             if value and value not in entry[key]:
                 entry[key].append(value)
     payload["to_check"] = [grouped[position] for position in sorted(grouped)]
+    if not overview and research_record.get("contract") in research.FEW_IN_FULL:
+        payload["held_passages"], payload["held_passages_shown"] = _relied_on(payload["held_passages"], proposal), RELIED_ON
     schema = OVERVIEW_REPAIR_SCHEMA if overview else REPAIR_SCHEMA
     user = json.dumps(payload, ensure_ascii=False)
     prompt = Prompt(system=REPAIR_SYSTEM, user=user, operation="core_response_repair", effort=reasoning.effort("repair"),
@@ -2423,6 +2462,8 @@ def take_up(model, context, research_record, sources, proposal, wanted, *, secti
     held = {item["id"]: item for item in coverage_items(research_record, offered, context)}
     payload["to_take_up"] = [{**held[entry["id"]], "why_the_review_says_it_matters": entry["why"],
                               "cited_by": cited_by(proposal, held[entry["id"]])} for entry in wanted if entry["id"] in held]
+    if not overview and research_record.get("contract") in research.FEW_IN_FULL:
+        payload["held_passages"], payload["held_passages_shown"] = _relied_on(payload["held_passages"], proposal), RELIED_ON
     schema = OVERVIEW_TAKE_UP_SCHEMA if overview else TAKE_UP_SCHEMA
     user = json.dumps(payload, ensure_ascii=False)
     prompt = Prompt(system=TAKE_UP_SYSTEM, user=user, operation="core_response_take_up", effort=reasoning.effort("take_up"),

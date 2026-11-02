@@ -106,23 +106,32 @@ def test_a_long_judgment_is_read_as_an_extract_that_keeps_what_matters(tmp_path,
         research.validate(stripped, plan, ctx)
 
 
-def test_every_judgment_chosen_is_read_in_the_order_chosen_and_a_record_saved_before_keeps_its_five(tmp_path):
+def test_at_most_five_judgments_are_read_in_full_and_a_record_saved_before_keeps_its_rule(tmp_path):
     rows = [row for case in ("one", "two", "three", "four", "five", "six")
             for row in short_judgment(case, paragraphs=4)]
     ctx, plan, record = researched(tmp_path, rows)
-    assert [entry["case_id"] for entry in record["judgments"]["D1"]] == ["one", "two", "three", "four", "five", "six"]
+    # Research v17 (plan AN.36, D34): the pick named all six; the first five are read in full, and the sixth stands by the
+    # paragraph chosen of it, with the paragraph either side.
+    assert [entry["case_id"] for entry in record["judgments"]["D1"]] == ["one", "two", "three", "four", "five"]
     assert research.validate(record, plan, ctx) == record
+    sixth = [row for row in answer_sources.build(ctx, record).values()
+             if row["kind"] == "judgment" and row["source_identity"]["case_id"] == "six"]
+    assert sixth and {row["coverage"][0]["scope"] for row in sixth} <= {"adjacent_indexed_segments", "selected_indexed_segment"}
     changed = deepcopy(record)
-    changed["judgments"]["D1"] = changed["judgments"]["D1"][:5]
+    changed["judgments"]["D1"] = changed["judgments"]["D1"][:4]
     with pytest.raises(ValueError, match="the pick chose"):
         research.validate(changed, plan, ctx)
+    from tests.test_core_research import without_full
+    record, changed = without_full(record), without_full(changed)
+    changed["judgments"]["D1"] = record["judgments"]["D1"][:5]
     # A record saved under research v14 read at most five, the first chosen, and replays so (P46).
     # (Research v16's further search is a field a v14 record never had.)
     saved = {**{key: value for key, value in changed.items() if key != "further"}, "contract": research.SETTLED_CONTRACT}
     assert research.validate(saved, plan, ctx) == saved
+    short = deepcopy(saved)
+    short["judgments"]["D1"] = short["judgments"]["D1"][:4]
     with pytest.raises(ValueError, match="the pick chose"):
-        research.validate({**{key: value for key, value in record.items() if key != "further"},
-                           "contract": research.SETTLED_CONTRACT}, plan, ctx)
+        research.validate(short, plan, ctx)
 
 
 def test_a_judgment_that_cannot_be_read_keeps_the_paragraphs_chosen_of_it(tmp_path):

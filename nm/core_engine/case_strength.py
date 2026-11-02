@@ -72,7 +72,8 @@ def material(context, part, sources, dispute):
     offered = {tag: alias for alias, tag in answer_sources.aliases(sources).items()}
     groups = research.dispute_work(part["plan"])
     work_ids = [work["id"] for work in groups.get(dispute["id"], [])]
-    shown = answer_sources.presentation(sources, aliased=True, compact=True, work_ids=work_ids)["passages"]
+    held = answer_sources.presentation(sources, aliased=True, compact=True, work_ids=work_ids)
+    shown = held["passages"]
     law = {passage["id"]: answer_sources.aliases(sources)[passage["id"]] for passage in shown
            if passage["id"] in answer_sources.aliases(sources)}
     points = response_writer.coverage_items(part, offered, context)
@@ -80,7 +81,9 @@ def material(context, part, sources, dispute):
     latest = (context.get("latest") or {}).get("text")
     payload = {"dispute": {key: deepcopy(dispute.get(key)) for key in ("id", "name", "between", "legal_questions", "rights_at_stake",
                                                                      "relief_sought", "missing_facts")},
-               "held_law": shown, "points": points, "advocate_messages": [*said, *([latest] if latest else [])]}
+               # Plan AN.36 (piece 36b): each document's title once, by its passages' group.
+               "held_law": {"passages": shown, "group_titles": held.get("group_titles", {})}, "points": points,
+               "advocate_messages": [*said, *([latest] if latest else [])]}
     return json.dumps(payload, ensure_ascii=False), law, {point["id"]: point.get("located", True) for point in points}
 
 

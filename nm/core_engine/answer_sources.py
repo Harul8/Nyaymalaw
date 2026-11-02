@@ -105,6 +105,10 @@ def _build(context, research_record):
     # v16 (plan AN.35, piece 35d): with the judgments each dispute's further search chose.
     reads = research.judgments_read(checked) if checked["contract"] in research.JUDGMENTS_READ else None
     unread = {entry["case_id"] for entries in (reads or {}).values() for entry in entries if "unread" in entry}
+    # v17 (plan AN.36, piece 36a): a chosen judgment not read in full stands by the paragraphs chosen of it, each with the
+    # paragraph either side, as v8 read them.
+    in_full = ({entry["case_id"] for entries in reads.values() for entry in entries if "unread" not in entry}
+               if checked["contract"] in research.FEW_IN_FULL else None)
     # v16 (plan AN.35, piece 35d): each further search as its picks were shown it, after the first.
     for work_id, search in [*checked["searches"].items(), *research.further_searches(checked)]:
         # From search v9 a pick may choose a provision connected to a returned one (P32).
@@ -112,7 +116,10 @@ def _build(context, research_record):
             if admitted is not None and selected["kind"] == "provision" and selected["id"] not in admitted:
                 continue
             if reads is not None and selected["kind"] == "judgment" and (
-                    selected["id"] not in picked or selected["source"].get("case_id") not in unread):
+                    selected["id"] not in picked or (selected["source"].get("case_id") in in_full
+                                                     # A paragraph with no judgment of its own stands for none (P31).
+                                                     or not selected["source"].get("case_id") if in_full is not None
+                                                     else selected["source"].get("case_id") not in unread)):
                 continue
             kind, revision = selected["kind"], selected["corpus_revision"]
             window = _window(selected, picked)
@@ -370,7 +377,8 @@ def presentation(sources, *, aliased=False, compact=False, work_ids=None):
         context_id = next((identity for identity, members in context_groups.items()
             if row["id"] in members and [m for m in members if m != row["id"]] == neighbours), None)
         if context_id is None:
-            context_id = f"context:{len(context_groups) + 1}"
+            # Plan AN.36 (piece 36b): short labels in the compact presentation the models read.
+            context_id = f"g{len(context_groups) + 1}" if compact else f"context:{len(context_groups) + 1}"
             context_groups[context_id] = [row["id"], *neighbours]
         passage["context_group_id"] = context_id
         coverage = passage.pop("coverage")
@@ -378,7 +386,7 @@ def presentation(sources, *, aliased=False, compact=False, work_ids=None):
         for entry in coverage:
             coverage_key = key(entry)
             if coverage_key not in coverage_keys:
-                identity = f"coverage:{len(coverage_by_id) + 1}"
+                identity = f"c{len(coverage_by_id) + 1}" if compact else f"coverage:{len(coverage_by_id) + 1}"
                 coverage_keys[coverage_key] = identity
                 shared = deepcopy(entry)
                 if shared.get("selected_source_id") in offered:
@@ -388,7 +396,7 @@ def presentation(sources, *, aliased=False, compact=False, work_ids=None):
                     for gap in shared.pop("gaps"):
                         gap_key = key(gap)
                         if gap_key not in gap_keys:
-                            gap_id = f"gap:{len(gaps_by_id) + 1}"
+                            gap_id = f"gap{len(gaps_by_id) + 1}" if compact else f"gap:{len(gaps_by_id) + 1}"
                             gap_keys[gap_key] = gap_id
                             gaps_by_id[gap_id] = gap
                         shared["gap_ids"].append(gap_keys[gap_key])
@@ -410,10 +418,21 @@ def presentation(sources, *, aliased=False, compact=False, work_ids=None):
         if compact:
             for field in ("source_identity", "record_role", "speaker"):
                 passage.pop(field)
+            # Piece 36b: the question a passage serves is its coverage's work_id; no list of long IDs on every passage.
+            passage.pop("work_ids", None)
         passages.append(passage)
     shown = {row["id"] for row in sources.values()
              if row["kind"] in _LEGAL and (work_ids is None or set(row["work_ids"]) & set(work_ids))}
     context_groups = {identity: [offered.get(member, member) for member in members if member in shown]
                       for identity, members in context_groups.items()}
-    return {"passages": passages, "coverage_by_id": coverage_by_id,
+    held = {"passages": passages, "coverage_by_id": coverage_by_id,
             "gaps_by_id": gaps_by_id, "context_groups": context_groups}
+    if compact:
+        # Piece 36b: a document's title said once, on its context group; a passage keeps one only where it differs.
+        titles = {}
+        for passage in passages:
+            group = passage["context_group_id"]
+            if titles.setdefault(group, passage.get("title")) == passage.get("title"):
+                passage.pop("title", None)
+        held["group_titles"] = titles
+    return held
