@@ -81,33 +81,41 @@ WHOLE_FILE_CONTRACT = "core_research_v13"
 #: they do not record is withdrawn and listed, and what stays unchecked is kept and marked so. No date is erased: code records where
 #: it found a date's numbers - in the item's words, on its paper, elsewhere in the file - or that it found them nowhere. v13 and
 #: earlier records replay unchanged. In development until AN.33 is applied to the running server: no v14 record is saved before then.
-CONTRACT = "core_research_v14"
+SETTLED_CONTRACT = "core_research_v14"
+#: v15 (plan AN.35, D30; piece 35a; owner, 2 Nov 2026): no fixed count on the relevant law kept and read -
+#: every judgment a dispute's pick chooses is read, none cut to JUDGMENTS_PER_DISPUTE, and each question is offered
+#: JUDGMENTS_FOR_PICK judgment paragraphs, as many as provisions, ranked by relevance; the picks choose by relevance
+#: alone ("we are only retrieving the relevant passages and reading only the relevant judgments"). v14 and earlier
+#: records replay under their own rule.
+CONTRACT = "core_research_v15"
 #: The plans that set out the matter as disputes and legal questions (v7 on).
 QUESTION_PLANS = (PICKED_CONTRACT, JUDGMENT_PICKED_CONTRACT, PURPOSED_CONTRACT, PER_DISPUTE_CONTRACT, JUDGMENTS_READ_CONTRACT,
-                  CHRONICLED_CONTRACT, WHOLE_FILE_CONTRACT, CONTRACT)
+                  CHRONICLED_CONTRACT, WHOLE_FILE_CONTRACT, SETTLED_CONTRACT, CONTRACT)
 _QUESTION_PLANS = QUESTION_PLANS
 #: The records that pick judgment paragraphs and answer in parts per dispute (v8 on).
 JUDGMENT_PICKS = (JUDGMENT_PICKED_CONTRACT, PURPOSED_CONTRACT, PER_DISPUTE_CONTRACT, JUDGMENTS_READ_CONTRACT,
-                  CHRONICLED_CONTRACT, WHOLE_FILE_CONTRACT, CONTRACT)
+                  CHRONICLED_CONTRACT, WHOLE_FILE_CONTRACT, SETTLED_CONTRACT, CONTRACT)
 #: The records that keep each dispute's picks apart (v10 on).
-BY_DISPUTE = (PER_DISPUTE_CONTRACT, JUDGMENTS_READ_CONTRACT, CHRONICLED_CONTRACT, WHOLE_FILE_CONTRACT, CONTRACT)
+BY_DISPUTE = (PER_DISPUTE_CONTRACT, JUDGMENTS_READ_CONTRACT, CHRONICLED_CONTRACT, WHOLE_FILE_CONTRACT, SETTLED_CONTRACT, CONTRACT)
 #: The records that read the chosen judgments whole or as extracts (v11 on).
-JUDGMENTS_READ = (JUDGMENTS_READ_CONTRACT, CHRONICLED_CONTRACT, WHOLE_FILE_CONTRACT, CONTRACT)
+JUDGMENTS_READ = (JUDGMENTS_READ_CONTRACT, CHRONICLED_CONTRACT, WHOLE_FILE_CONTRACT, SETTLED_CONTRACT, CONTRACT)
 #: The records that also keep the chronology of the documents (v12 on).
-CHRONICLED = (CHRONICLED_CONTRACT, WHOLE_FILE_CONTRACT, CONTRACT)
+CHRONICLED = (CHRONICLED_CONTRACT, WHOLE_FILE_CONTRACT, SETTLED_CONTRACT, CONTRACT)
 #: The records whose papers are read with the whole file in view, their dates checked by code (v13 on).
-WHOLE_FILE = (WHOLE_FILE_CONTRACT, CONTRACT)
+WHOLE_FILE = (WHOLE_FILE_CONTRACT, SETTLED_CONTRACT, CONTRACT)
 #: The records checked with the tolerant finder, whose failed checks a model settles (v14 on).
-SETTLED = (CONTRACT,)
+SETTLED = (SETTLED_CONTRACT, CONTRACT)
+#: v15: every judgment a dispute's pick chose is read (piece 35a).
+EVERY_CHOSEN = (CONTRACT,)
 CONTRACTS = (LEGACY_CONTRACT, PREVIOUS_CONTRACT, WINDOWED_CONTRACT, ACCOUNT_CONTRACT, INSTRUMENTED_CONTRACT,
              PICKED_CONTRACT, JUDGMENT_PICKED_CONTRACT, PURPOSED_CONTRACT, PER_DISPUTE_CONTRACT, JUDGMENTS_READ_CONTRACT,
-             CHRONICLED_CONTRACT, WHOLE_FILE_CONTRACT, CONTRACT)
+             CHRONICLED_CONTRACT, WHOLE_FILE_CONTRACT, SETTLED_CONTRACT, CONTRACT)
 #: The papers a record step sees whole (D1, the owner: "a safe fixed limit like 100k tokens"): above it, each call sees the paper
 #: it answers for, with the advocate's messages.
 WHOLE_FILE_TOKENS = 100_000
 #: P31 (owner, 21 Oct 2026): four to five judgments a dispute; a judgment is read whole up to about
 #: 8,000 tokens; an extract keeps one or two paragraphs either side of each one found.
-JUDGMENTS_PER_DISPUTE = 5
+JUDGMENTS_PER_DISPUTE = 5  # records before v15 only (piece 35a)
 WHOLE_JUDGMENT_CHARACTERS = 32000
 AROUND_CHOSEN, AROUND_FOUND = 2, 1
 #: Why a paragraph of a long judgment is in its extract, in the order the extract keeps them
@@ -130,6 +138,9 @@ EXECUTION = "core_read_only_execution_v1"
 MAX_REVISIONS = 1
 #: The pick chooses from each question's first PROVISIONS_FOR_PICK provisions.
 PROVISIONS_FOR_PICK = 20
+#: v15 (plan AN.35, piece 35a): the pick chooses from each question's first JUDGMENTS_FOR_PICK judgment paragraphs, ranked by
+#: relevance, as it does from twenty provisions - the breadth of what the model looks at, never a cut of what it keeps.
+JUDGMENTS_FOR_PICK = 20
 #: Answer limits per step. Calls in flight are budgeted at their limit.
 #: From research v13 (plan AN.28, D4) the steps that reason at medium or high spend output on their reasoning too, so their limits
 #: make room for it (the first paid probe of 31 Oct 2026 stopped the understanding at its old 12,000).
@@ -191,7 +202,7 @@ Statutes rarely use everyday words. They use terms of art and frame rules in the
 - Alternative terms: other terms of art the law uses for the same idea, such as the term another Act uses, the term of an older or newer enactment on the subject, or the closely related concept a lawyer would also look under.
 - A rule statement: one sentence framing the governing rule the way a provision would, in your own words. Do not try to recite a section from memory; this is only a search probe, and the actual words will be read from the statutes we hold.
 
-For each question give two or three search phrases in all, choosing the kinds that will best find the governing provision. Keep heading and alternative terms to a few words each, and the rule statement to one sentence.
+For each question give the search phrases that will best find the governing provision, as many as the question needs - each a different way in, none a repeat of another - choosing the kinds that will find it. Keep heading and alternative terms to a few words each, and the rule statement to one sentence.
 
 Also name the Acts to search in: the Indian Acts you believe govern the question, by short title and year. When the date of the events decides which law applies, include both the Act in force then and the Act that replaced it or that it replaced.
 """
@@ -203,7 +214,7 @@ Judgments do not read like statutes. Courts frame the point in issue in their ow
 - The holding: one sentence stating the principle the way a court would hold it, in your own words. Do not try to recite a judgment from memory; this is only a search probe, and the actual words will be read from the judgments we hold.
 - The doctrine or test: the name courts give the principle, tied to the provision where courts usually discuss it that way.
 
-For each question give two or three search phrases in all, choosing the kinds that will best find a judgment that decides the point.
+For each question give the search phrases that will best find a judgment that decides the point, as many as the question needs - each a different way in, none a repeat of another - choosing the kinds that will find it.
 """
 PICK = """You are a senior Indian litigation lawyer. A matter has been broken into legal questions, and for each question a search of the statutes we hold has returned up to twenty provisions, each shown with its Act, section, heading and opening words.
 
@@ -213,9 +224,9 @@ For each question, choose the provisions a lawyer must read to answer it: the on
 
 Judge each provision by what it actually says, not by whether it shares words with the question. A provision whose Act India Code, the government's record of the Acts in force, no longer lists is marked not in force; weigh that as a lawyer would. If no shown provision answers a question, choose none for it and say what is missing.
 """
-JUDGMENT_PICK = """You are a senior Indian litigation lawyer. A matter has been broken into legal questions, and for each question a search of the judgments we hold, the Supreme Court of India and the High Court of Andhra Pradesh, has returned up to six paragraphs, each shown with its judgment, court, year, how many later judgments cite it, and the paragraph's words.
+JUDGMENT_PICK = """You are a senior Indian litigation lawyer. A matter has been broken into legal questions, and for each question a search of the judgments we hold, the Supreme Court of India and the High Court of Andhra Pradesh, has returned up to twenty paragraphs, the most relevant first, each shown with its judgment, court, year, how many later judgments cite it, and the paragraph's words.
 
-For each question, choose the paragraphs a lawyer would rely on to answer it: those where a court decides or authoritatively explains the point the question asks about. Most questions need one to three; choose more only when each adds something, and put the most useful first. Each judgment whose paragraph you choose is then read whole, or, when it is long, as an extract around what was found, so choose the judgments a lawyer would rely on as much as the paragraphs.
+For each question, choose every paragraph a lawyer would rely on to answer it, and no other: those where a court decides or authoritatively explains the point the question asks about. A paragraph that does not decide or explain that point is not chosen, however near its words are to the question's. Put the most useful first. Each judgment whose paragraph you choose is then read whole, or, when it is long, as an extract around what was found, so choose the judgments a lawyer would rely on as much as the paragraphs.
 
 Judge each paragraph by what the court is doing in it. A paragraph that only quotes the statute, recites the facts of that case or reports a party's argument is rarely what a lawyer cites, unless the court adopts it as its own view. Weigh the court and the judgment's standing as a lawyer would, without passing over a recent judgment merely because few have cited it yet. If no shown paragraph answers a question, choose none for it and say what is missing.
 """
@@ -2799,9 +2810,9 @@ def _part(plan, dispute_id, searches, failures, chosen, judgments, contract=CONT
     return record
 
 
-def _chosen_cases(plan, searches, pick):
-    """The judgments a dispute's pick chose, in the order chosen, at most JUDGMENTS_PER_DISPUTE;
-    with what search found of each and what the pick chose of each, by stored position."""
+def _chosen_cases(plan, searches, pick, contract=CONTRACT):
+    """The judgments a dispute's pick chose, in the order chosen - every one from v15 (piece 35a), at most JUDGMENTS_PER_DISPUTE
+    before; with what search found of each and what the pick chose of each, by stored position."""
     returned = {c["id"]: c for search in searches.values() for c in _of_kind(search, "judgment")}
     found, chosen = {}, {}
     for candidate in returned.values():
@@ -2815,7 +2826,9 @@ def _chosen_cases(plan, searches, pick):
             if candidate is not None and candidate["source"].get("case_id"):
                 order.append(candidate["source"]["case_id"])
                 chosen.setdefault(candidate["source"]["case_id"], set()).add(candidate["position"])
-    cases = list(dict.fromkeys(order))[:JUDGMENTS_PER_DISPUTE]
+    cases = list(dict.fromkeys(order))
+    if contract not in EVERY_CHOSEN:
+        cases = cases[:JUDGMENTS_PER_DISPUTE]
     return [(case_id, found.get(case_id, set()), chosen.get(case_id, set())) for case_id in cases]
 
 
@@ -2900,6 +2913,10 @@ def _picked(model, plan, searches, report):
         return dict(zip(_PICK_FIELDS, pool.map(lambda kind: pick(model, plan, searches, kind), _PICK_FIELDS)))
 
 
+#: What each question's search returns of each kind for its picks (v15: as many judgment paragraphs as provisions).
+FOR_PICK = {"provision": PROVISIONS_FOR_PICK, "judgment": JUDGMENTS_FOR_PICK}
+
+
 def _search_key(work, queries, instruments):
     """What makes two searches one (v14, piece 33q): the research work they are made for and exactly what each searches."""
     return json.dumps([work["id"], queries, instruments], sort_keys=True, ensure_ascii=False)
@@ -2921,7 +2938,7 @@ def start_search(searcher, work):
         except (ValueError, KeyError, TypeError):
             continue
     futures = searcher.search_many([(queries, instruments) for _, queries, instruments in asked],
-                                   results={"provision": PROVISIONS_FOR_PICK}) if asked else []
+                                   results=FOR_PICK) if asked else []
     return {_search_key(item, queries, instruments): future
             for (item, queries, instruments), future in zip(asked, futures, strict=True)}
 
@@ -2965,7 +2982,7 @@ def retrieve_parts(plan, searcher, context, model=None, *, progress=None, starte
             if finished[0] < len(plan["work"]):  # the last is followed by the next stage at once
                 report("searching", done=finished[0], total=len(plan["work"]))
     futures = searcher.search_many([(queries, instruments) for _, queries, instruments in asked],
-                                   results={"provision": PROVISIONS_FOR_PICK}, done=searched) if asked else []
+                                   results=FOR_PICK, done=searched) if asked else []
     outcomes.update((work["id"], (future, queries, instruments))
                     for (work, queries, instruments), future in zip(asked, futures, strict=True))
     for work, queries, instruments, future in early:
@@ -3153,7 +3170,7 @@ def _validate(record, plan, context):
                 _validate_picks(record[field][dispute_id], plan, own, kind)
                 picks.append(record[field][dispute_id])
                 if kind == "judgment" and contract in JUDGMENTS_READ:
-                    _validate_judgments(record["judgments"], dispute_id, plan, own, record[field][dispute_id])
+                    _validate_judgments(record["judgments"], dispute_id, plan, own, record[field][dispute_id], contract)
         if contract in JUDGMENTS_READ and set(record["judgments"]) != set(disputes):
             raise ValueError("The judgments read are not one list for each dispute")
     else:
@@ -3170,13 +3187,13 @@ def _validate(record, plan, context):
     return deepcopy(record)
 
 
-def _validate_judgments(judgments, dispute_id, plan, searches, pick):
-    """v11 (P31): the judgments a dispute reads are those its pick chose, in order and at most
-    JUDGMENTS_PER_DISPUTE; each read whole when no longer than the bound, else as an extract
+def _validate_judgments(judgments, dispute_id, plan, searches, pick, contract=CONTRACT):
+    """v11 (P31): the judgments a dispute reads are those its pick chose, in order - every one from v15, at most
+    JUDGMENTS_PER_DISPUTE before; each read whole when no longer than the bound, else as an extract
     keeping its opening, its order and what the pick chose; every paragraph kept exactly as
     stored, and what search found and the pick chose marked as found and chosen."""
     entries = judgments.get(dispute_id) if isinstance(judgments, dict) else None
-    expected = _chosen_cases(plan, searches, pick)
+    expected = _chosen_cases(plan, searches, pick, contract)
     if not isinstance(entries, list) or [entry.get("case_id") for entry in entries] != [c for c, _, _ in expected]:
         raise ValueError("The judgments read are not the ones the pick chose")
     revisions = {search["corpus_revisions"].get("judgment") for search in searches.values()}

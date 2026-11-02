@@ -219,8 +219,8 @@ def test_a_v14_record_is_checked_with_the_finder_it_was_made_under():
     tampered = [{**events[0], "date_found": "file"}]
     with pytest.raises(SchemaViolation):
         research._chronology_issues(tampered, failures, context, True, research.TOLERANT_FINDER)
-    assert CONTRACT == "core_research_v14" and WHOLE_FILE_CONTRACT == "core_research_v13"
-    assert CONTRACT in research.SETTLED and WHOLE_FILE_CONTRACT not in research.SETTLED
+    assert research.SETTLED_CONTRACT == "core_research_v14" and WHOLE_FILE_CONTRACT == "core_research_v13"
+    assert {CONTRACT, research.SETTLED_CONTRACT} <= set(research.SETTLED) and WHOLE_FILE_CONTRACT not in research.SETTLED
     assert all(CONTRACT in group for group in (research.QUESTION_PLANS, research.JUDGMENT_PICKS, research.BY_DISPUTE,
                                                 research.JUDGMENTS_READ, research.CHRONICLED, research.WHOLE_FILE))
     assert accept  # the v14 plan's own round trip is exercised by the plan tests

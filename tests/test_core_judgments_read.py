@@ -1,7 +1,7 @@
 """The research chooses judgments, not paragraphs (owner decision P31, 20-21 Oct 2026).
 
-Each judgment a dispute's pick chose, at most five in the order chosen, is read whole when no
-longer than about 8,000 tokens; a longer one is read as an extract that says so - its opening,
+Each judgment a dispute's pick chose - every one from research v15 (plan AN.35, piece 35a), at most five in the order chosen
+before - is read whole when no longer than about 8,000 tokens; a longer one is read as an extract that says so - its opening,
 its conclusion and order, the paragraphs search found with one or two either side, and the
 paragraphs those name and where the court sets out the issues. The paragraphs search found are
 marked either way. Scripted picks and a small held store prove the reading, not the law.
@@ -106,16 +106,21 @@ def test_a_long_judgment_is_read_as_an_extract_that_keeps_what_matters(tmp_path,
         research.validate(stripped, plan, ctx)
 
 
-def test_at_most_five_judgments_a_dispute_in_the_order_chosen(tmp_path):
+def test_every_judgment_chosen_is_read_in_the_order_chosen_and_a_record_saved_before_keeps_its_five(tmp_path):
     rows = [row for case in ("one", "two", "three", "four", "five", "six")
             for row in short_judgment(case, paragraphs=4)]
     ctx, plan, record = researched(tmp_path, rows)
-    assert [entry["case_id"] for entry in record["judgments"]["D1"]] == ["one", "two", "three", "four", "five"]
+    assert [entry["case_id"] for entry in record["judgments"]["D1"]] == ["one", "two", "three", "four", "five", "six"]
     assert research.validate(record, plan, ctx) == record
     changed = deepcopy(record)
-    changed["judgments"]["D1"] = changed["judgments"]["D1"][:4]
+    changed["judgments"]["D1"] = changed["judgments"]["D1"][:5]
     with pytest.raises(ValueError, match="the pick chose"):
         research.validate(changed, plan, ctx)
+    # A record saved under research v14 read at most five, the first chosen, and replays so (P46).
+    saved = {**changed, "contract": research.SETTLED_CONTRACT}
+    assert research.validate(saved, plan, ctx) == saved
+    with pytest.raises(ValueError, match="the pick chose"):
+        research.validate({**record, "contract": research.SETTLED_CONTRACT}, plan, ctx)
 
 
 def test_a_judgment_that_cannot_be_read_keeps_the_paragraphs_chosen_of_it(tmp_path):

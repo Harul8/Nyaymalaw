@@ -173,9 +173,10 @@ def test_the_contracts_before_v12_keep_their_shape_and_v12_needs_the_chronology(
     ctx = bundle()
     before = accept(proposal(chronology=False), ctx, contract=JUDGMENTS_READ_CONTRACT)
     # v13 (AN.28) keeps the chronology as v12 did, read with the whole file in view and its dates checked; v14 (AN.33) too, its
-    # failed checks settled.
-    assert "chronology" not in before["proposal"] and CHRONICLED == ("core_research_v12", "core_research_v13", CONTRACT)
-    assert CONTRACT == "core_research_v14"
+    # failed checks settled; v15 (AN.35) too, every judgment chosen read.
+    assert "chronology" not in before["proposal"] and CHRONICLED == ("core_research_v12", "core_research_v13", "core_research_v14",
+                                                                      CONTRACT)
+    assert CONTRACT == "core_research_v15"
     with pytest.raises(SchemaViolation, match="undeclared"):
         accept(proposal(), ctx, contract=JUDGMENTS_READ_CONTRACT)
     with pytest.raises(SchemaViolation, match="missing"):
@@ -186,7 +187,9 @@ def test_a_record_saved_under_v11_still_validates_as_it_was_saved():
     ctx = bundle()
     before = accept(proposal(chronology=False), ctx, contract=JUDGMENTS_READ_CONTRACT)
     record = retrieve(accept(proposal(), ctx), searcher(), ctx, model=Model())
-    saved = {**record, "contract": JUDGMENTS_READ_CONTRACT, "plan": before}
+    # A v11 record read at most five of the judgments chosen (research v15 reads every one).
+    saved = {**record, "contract": JUDGMENTS_READ_CONTRACT, "plan": before,
+             "judgments": {dispute: entries[:5] for dispute, entries in record["judgments"].items()}}
     assert validate(saved, before, ctx) == saved
     with pytest.raises(ValueError):
         validate({**saved, "contract": CONTRACT}, before, ctx)

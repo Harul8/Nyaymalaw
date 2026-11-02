@@ -10,7 +10,8 @@ import pytest
 from nm.core_engine import answer_sources
 from nm.core_engine.calls import TurnCalls
 from nm.core_engine.research import (
-    CONTRACT, INSTRUMENTED_CONTRACT, JUDGMENT_PICKED_CONTRACT, MAX_REVISIONS, PICKED_CONTRACT, PROVISIONS_FOR_PICK, accept,
+    CONTRACT, FOR_PICK, INSTRUMENTED_CONTRACT, JUDGMENT_PICKED_CONTRACT, JUDGMENTS_FOR_PICK, MAX_REVISIONS, PICKED_CONTRACT,
+    PROVISIONS_FOR_PICK, accept,
     picked_judgments, plan, retrieve, search_instruments, search_queries, validate,
 )
 from nm.core_engine.retrieval import HybridSearcher, SearchUnavailable
@@ -332,8 +333,8 @@ def test_search_returns_twenty_provisions_and_the_pick_admits_only_its_choice():
     found.search = lambda queries, instruments=None, **kw: asked.append(kw) or search(queries, instruments, **kw)
     model = Model(choose=lambda ids: ids[:2])
     record = retrieve(admitted, found, ctx, model=model)
-    assert asked == [{"results": {"provision": PROVISIONS_FOR_PICK}}]
-    assert record["contract"] == CONTRACT == "core_research_v14" and record["state"] == "evaluated"
+    assert asked == [{"results": {"provision": PROVISIONS_FOR_PICK, "judgment": JUDGMENTS_FOR_PICK}}]
+    assert record["contract"] == CONTRACT == "core_research_v15" and record["state"] == "evaluated"
     provisions = [c for c in record["searches"]["t2:w1"]["candidates"] if c["kind"] == "provision"]
     assert len(provisions) == PROVISIONS_FOR_PICK
     assert record["picks"]["D1"]["chosen"] == {"t2:w1": [provisions[0]["id"], provisions[1]["id"]]}
@@ -344,15 +345,15 @@ def test_search_returns_twenty_provisions_and_the_pick_admits_only_its_choice():
     assert any(r["kind"] == "judgment" for r in sources.values())
 
 
-def test_the_judgment_pick_chooses_among_the_six_returned_and_records_its_choice():
+def test_the_judgment_pick_chooses_among_those_returned_and_records_its_choice():
     ctx = context("Find the applicable law.")
     admitted = accept(proposal(), ctx)
     model = Model(choose_judgments=lambda ids: [ids[2], ids[0]])
     record = retrieve(admitted, searcher(), ctx, model=model)
     paragraphs = [c for c in record["searches"]["t2:w1"]["candidates"] if c["kind"] == "judgment"]
-    assert len(paragraphs) == 6
+    assert len(paragraphs) == 8 <= JUDGMENTS_FOR_PICK, "research v15: as many as the search finds, up to twenty"
     shown = next(p.user for p in model.calls if p.operation == "core_research_judgment_pick")
-    assert re.findall(r"^\s+Q1\.(\d+) ", shown, re.M) == ["1", "2", "3", "4", "5", "6"]
+    assert re.findall(r"^\s+Q1\.(\d+) ", shown, re.M) == [str(n) for n in range(1, 9)]
     first = paragraphs[0]["source"]
     assert (f"Q1.1 {first['case_name']} (Supreme Court of India, 2001, cited by {first['cited_by_count']}), "
             f"paragraph {first['paragraph_num']}: Paragraph") in shown
@@ -507,7 +508,7 @@ def test_questions_are_searched_side_by_side_each_as_alone_and_reported_as_each_
     record = retrieve(admitted, found, ctx, model=Model(), progress=lambda stage, **detail: seen.append((stage, detail)))
     alone = searcher()
     assert record["searches"] == {work["id"]: alone.search(search_queries(work), search_instruments(work),
-                                                           results={"provision": PROVISIONS_FOR_PICK})
+                                                           results=FOR_PICK)
                                   for work in admitted["work"]}
     assert list(record["searches"]) == [work["id"] for work in admitted["work"]] and not record["failures"]
     assert [detail for stage, detail in seen if stage == "searching"] == [
