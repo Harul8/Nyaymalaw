@@ -44,21 +44,23 @@ def test_a_disputes_time_limits_close_its_part_and_the_questions_end_the_answer(
     reply = calculated(store, Laid())
     elements = reply["elements"]
     assert [element["kind"] for element in elements] == [
-        "IN_SHORT", "ROW", "ROW_ACTION", "ADVICE", "WORKING", "WORKING", "WORKING", "NEEDS", "ASK"]
+        "IN_SHORT", "ROW", "ROW_ACTION", "ADVICE", "WORKING", "CASE", "WORKING", "WORKING", "NEEDS", "ASK"]
     assert elements[2]["text"] == SUMMARY
-    # The limit the section names closes it; those it does not name stand outside the sections.
-    assert [(elements[i]["text"], elements[i].get("outside")) for i in (4, 5, 6)] == [
+    # The limit the section names closes it, then what makes its case stronger (rendering v20); those it does not name stand
+    # outside the sections.
+    assert [(elements[i]["text"], elements[i].get("outside")) for i in (4, 6, 7)] == [
         ("Last day for the drawer to pay", None), ("Last day to file the complaint", True),
         ("A period misquoted", True)]
-    assert (elements[7]["text"], elements[8]["text"]) == ("What I need from you", ASK)
+    assert (elements[8]["text"], elements[9]["text"]) == ("What I need from you", ASK)
     # Each paragraph still names its own draft paragraph, in its own section from turn v6
     # (answered dispute by dispute, 19 Oct 2026); the heading names none.
     saved, = rows(store, reply)
-    assert saved["activities"]["rendering_contract"] == response_rendering.REPAIRED_CONTRACT
-    draft = answer_sections.piece_of(saved["activities"], elements[8]["section"])["draft"]
-    assert draft["units"][response_rendering.unit_index(elements, 8)]["text"] == ASK
-    with pytest.raises(IndexError):
-        response_rendering.unit_index(elements, 7)
+    assert saved["activities"]["rendering_contract"] == response_rendering.CASED_CONTRACT
+    draft = answer_sections.piece_of(saved["activities"], elements[9]["section"])["draft"]
+    assert draft["units"][response_rendering.unit_index(elements, 9)]["text"] == ASK
+    for code_s in (5, 8):  # what makes the case stronger, and the heading of the questions, show no paragraph of a draft
+        with pytest.raises(IndexError):
+            response_rendering.unit_index(elements, code_s)
     # The research note heads the questions as the answer does.
     note = research_note.note(saved, prepared_for="Owner")
     assert [block for block in note["blocks"] if block["kind"] == "heading"] == [
@@ -69,6 +71,7 @@ def test_a_section_showing_only_its_row_keeps_its_question_and_unnamed_limits_fo
     reply = calculated(store, Laid(names=(), law=False))
     assert [(element["kind"], element["text"]) for element in reply["elements"]] == [
         ("IN_SHORT", "In short"), ("ROW", "Dispute 1"), ("ROW_ACTION", SUMMARY),
+        ("CASE", "What makes the case stronger"),
         ("WORKING", "Last day for the drawer to pay"), ("WORKING", "Last day to file the complaint"),
         ("WORKING", "A period misquoted"), ("NEEDS", "What I need from you"), ("ASK", ASK)]
 

@@ -15,6 +15,8 @@ PAGE_TESTS = [
     "research_note.mjs", "select_reply.mjs", "turn_progress.mjs", "voice_notes.mjs", "working_box.mjs",
     # Plan AN.33, piece 33m: what the papers record, folded at the end of the answer; piece 33n: the model and the effort.
     "papers_table.mjs", "turn_choice.mjs",
+    # Plan AN.35, piece 35c3d: what makes each dispute's case stronger, beside its section and on the board.
+    "case_strength.mjs",
 ]
 #: Run, with the cases it is given, by tests/test_the_screen_never_folds_a_disclosure.py.
 RUN_ELSEWHERE = {"render_turn_partition.mjs"}

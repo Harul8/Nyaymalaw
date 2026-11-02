@@ -228,7 +228,9 @@ def scripted_writers_write_as_v13(monkeypatch):
             if reviewed is not receipt.data:
                 receipt = dataclasses.replace(receipt, data=reviewed)
                 self.last_output = reviewed
-        if schema in (response_writer.PART_SCHEMA_V13, response_writer.OVERVIEW_SCHEMA_V13) and receipt.usable:
+        # Writer v15 (plan AN.35, piece 35c3a) asks for a section as v13 does, without its checklist.
+        if schema in (response_writer.PART_SCHEMA_V13, response_writer.PART_SCHEMA_V15,
+                      response_writer.OVERVIEW_SCHEMA_V13) and receipt.usable:
             placed = placed_as_v13(prompt.operation, json.loads(prompt.user), receipt.data)
             if placed is not receipt.data:
                 receipt = dataclasses.replace(receipt, data=placed)

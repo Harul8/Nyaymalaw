@@ -133,3 +133,29 @@ def test_each_disputes_section_keeps_its_case_set_out_beside_it_and_a_changed_on
     refused(activity, ctx, elements, lambda forged: forged["sections"][0]["case"].update(checked="unchecked"))
     refused(activity, ctx, elements, lambda forged: forged["sections"][0].pop("case"))
     refused(activity, ctx, elements, lambda forged: forged["sections"][0].update(case=deepcopy(forged["sections"][1]["case"])))
+
+
+def test_the_research_note_keeps_what_makes_the_case_stronger_as_the_page_shows_it():
+    """Piece 35c3b: the note the advocate keeps or sends sets out the case as the page shows it - each element with how it stands
+    and the law's words, or that NM could not find them in the law it read; what to get; what the other side will rely on."""
+    from nm.core_engine import research_note
+    view = {"state": "unchecked", "elements": [
+        {"element": "Possession for the period the law requires", "proves": "client", "status": "weak", "why": "Only one entry shows it.",
+         "law": {"found": True, "kind": "provision", "title": "Imagined Relief Act, 1907", "locator": "Section 4",
+                 "words": "possession for twelve years", "source_id": "P:abc"}, "points": []},
+        {"element": "Notice before the suit", "proves": "client", "status": "missing", "why": "Nothing shows it.",
+         "law": {"found": False, "words": "notice in writing"}, "points": []}],
+        "to_get": [{"what": "The postal receipt", "from_whom": "the client", "why": "It proves the date of posting.", "helps": "",
+                    "for": "Notice before the suit"}],
+        "other_side": [{"relies_on": "Their later entry", "answer": "It was made after the suit.", "law": None, "points": []}]}
+    blocks = research_note._case_blocks({"kind": "CASE", "text": "What makes the case stronger", "case": view})
+    assert [block["text"] for block in blocks] == [
+        "What makes the case stronger",
+        "NM's second look at this list could not be made, so it stands as first set out.",
+        "Shown only weakly, for the client to prove: Possession for the period the law requires. Only one entry shows it. "
+        'Imagined Relief Act, 1907, Section 4: "possession for twelve years".',
+        "Not yet shown, for the client to prove: Notice before the suit. Nothing shows it. NM could not find these words in the law "
+        'it read: "notice in writing".',
+        "• To get, from the client: The postal receipt. It proves the date of posting.",
+        "The other side will rely on: Their later entry. What answers it: It was made after the suit."]
+    assert blocks[0]["kind"] == "subheading" and all(block["kind"] == "paragraph" for block in blocks[1:])

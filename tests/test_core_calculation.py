@@ -114,8 +114,9 @@ def test_the_answer_carries_a_working_box_for_each_checked_limit_and_reports_the
     prompt = model.seen["calculation"]
     assert "held text" in prompt.system and TEXTS[NI] in prompt.system and MESSAGE in prompt.user
     kinds = [element["kind"] for element in reply["elements"]]
-    assert kinds[3:6] == ["WORKING", "WORKING", "WORKING"]  # after In short (rendering v18)
-    pay, complaint, bad = reply["elements"][3:6]
+    # After In short (rendering v18) and the section's case (rendering v20), the time limits no section names.
+    assert kinds[3:7] == ["CASE", "WORKING", "WORKING", "WORKING"]
+    pay, complaint, bad = reply["elements"][4:7]
     assert pay["working"]["last_day"] == "2026-09-13"
     assert complaint["working"]["last_day"] == "2026-10-14" and complaint["working"]["earliest_day"] == "2026-09-14"
     assert complaint["working"]["standing"] == {"state": "early", "days": 2}
@@ -172,9 +173,9 @@ def test_a_remark_on_a_worked_out_limit_is_shown_beside_it_and_asks_no_rewrite(s
             return super().structured(prompt, schema, tier, **kwargs)
     model = Remarking(chain())
     reply = turn(store, model)
-    assert [element["kind"] for element in reply["elements"]][3:7] == ["WORKING", "WORKING", "NOTE", "WORKING"]
-    assert reply["elements"][4]["text"] == "Last day to file the complaint"
-    assert reply["elements"][5]["text"] == ("The independent check remarked on this time limit: this time limit "
+    assert [element["kind"] for element in reply["elements"]][3:8] == ["CASE", "WORKING", "WORKING", "NOTE", "WORKING"]
+    assert reply["elements"][5]["text"] == "Last day to file the complaint"
+    assert reply["elements"][6]["text"] == ("The independent check remarked on this time limit: this time limit "
                                             "should run from the day the notice was delivered.")
     assert len(model.seen["core_response_writer"]) == 1 and reply["metrics"]["draft_corrections"] == 0
     row = saved_rows(store.load(chat_matter_id("owner", reply["chat_id"])), "owner")[0]

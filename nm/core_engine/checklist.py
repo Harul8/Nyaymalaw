@@ -23,7 +23,12 @@ V1_CONTRACT = "core_checklist_v1"
 #: passage itself does wherever it is shown. A turn's records keep the version they were
 #: saved under, and carry earlier disputes' items as they were.
 CONTRACT = "core_checklist_v2"
-CONTRACTS = (V1_CONTRACT, CONTRACT)
+#: v3 (plan AN.35, D31; piece 35c3c, 2 Nov 2026; owner: "I am okay to replace today's checklist with B"): a dispute whose section
+#: writer v15 wrote - it writes no checklist - keeps what makes its case stronger, as the answer shows it beside the section
+#: (case_strength.shown): what the law requires and how the papers stand on each element, what to get, what the other side will
+#: rely on; its time limits as before, and no items. A dispute the turn did not answer keeps what was saved for it, items and all.
+CASED_CONTRACT = "core_checklist_v3"
+CONTRACTS = (V1_CONTRACT, CONTRACT, CASED_CONTRACT)
 GROUPS = ("needed", "would_strengthen")
 STATES = ("in_hand", "coming_or_unclear", "not_given", "not_available")
 
@@ -107,23 +112,27 @@ def _limits(given, calculation):
             else {"what": entry["what"], "not_assessed": entry["why"]} for worked, entry in chosen]
 
 
-def _written(activity):
-    """Each dispute's checklist as this turn's answer showed it, by dispute id, and the items
-    the review still found wrong that it left out. From turn v6 (answered dispute by
+def _written(context, activity):
+    """Each dispute's checklist as this turn's answer showed it, by dispute id, the items
+    the review still found wrong that it left out, and (v3) each dispute's case as the answer
+    shows it beside a section writer v15 wrote. From turn v6 (answered dispute by
     dispute, 19 Oct 2026) each section shown gives its own, its dropped items already gone;
     a section a note stands in for gives none."""
     if "sections" in activity:
         # Imported here: the sections' owner reads the writer, which reads this module.
-        from nm.core_engine import answer_sections
-        written = {}
+        from nm.core_engine import answer_sections, response_writer
+        written, cases = {}, {}
         for section in activity["sections"]:
             piece = answer_sections.shown(section)
             if piece is not None and section["dispute_id"] is not None:
                 written.setdefault(section["dispute_id"], piece["draft"]["checklists"][0])
-        return written, set()
+                if piece["draft"]["contract"] == response_writer.CASED_CONTRACT and section["dispute_id"] not in cases:
+                    cases[section["dispute_id"]] = answer_sections.case_shown(section, context, activity["research"],
+                                                                              activity["sources"])
+        return written, set(), cases
     draft = activity.get("draft") or {}
     if "checklists" not in draft:
-        return {}, set()
+        return {}, set(), {}
     held = set((activity.get("release") or {}).get("parts") or [])
     # The items the review still found wrong after the rewrites are left out (rendering v15).
     left = {identity for entry in (activity.get("release") or {}).get("left_out") or [] for identity in entry["items"]}
@@ -131,17 +140,19 @@ def _written(activity):
     for index, (part, given) in enumerate(zip(draft["parts"], draft["checklists"])):
         if part["dispute_id"] is not None and index not in held:
             written.setdefault(part["dispute_id"], given)
-    return written, left
+    return written, left, {}
 
 
-def records(context, activity, contract=CONTRACT):
+def records(context, activity, contract=None):
     """The conversation's records after this turn. A dispute this answer covers takes the
-    checklist its section returned; a dispute it does not cover (or whose section is held
+    checklist its section returned - from v3, with its case where writer v15 wrote the section;
+    a dispute it does not cover (or whose section is held
     back, or stands as a note) keeps the checklist saved for it where the understanding
     still names it by the same id and name; the rest of the records is kept as it was. An
     answer covering no dispute changes nothing. contract: the version the records are made
-    under; a saved turn's are re-made under the version it saved them under."""
-    if contract not in CONTRACTS:
+    under - by default v3 for an answer whose sections writer v15 wrote, v2 otherwise; a saved
+    turn's are re-made under the version it saved them under."""
+    if contract is not None and contract not in CONTRACTS:
         raise ValueError("Unknown checklist contract")
     previous = deepcopy(context.get("current_records") or {})
     record = activity.get("research") or {}
@@ -150,7 +161,9 @@ def records(context, activity, contract=CONTRACT):
     turn_id = context["latest"]["turn_id"]
     earlier = saved(context)
     kept = {(dispute["id"], dispute["name"]): dispute for dispute in (_current(context) or {}).get("disputes", [])}
-    written, left = _written(activity)
+    written, left, cases = _written(context, activity)
+    if contract is None:
+        contract = CASED_CONTRACT if cases else CONTRACT
     if not written:
         # An answer that covers no dispute (a courtesy, or every section held back)
         # leaves the matter's checklist as it was.
@@ -161,8 +174,11 @@ def records(context, activity, contract=CONTRACT):
         if given is not None:
             entry = {"id": dispute["id"], "name": dispute["name"], "answered_in": turn_id,
                      "time_limits": _limits(given, activity.get("calculation")),
-                     "items": [_item(item, earlier, activity["sources"], turn_id, contract == CONTRACT)
-                               for item in given["items"] if item["id"] not in left]}
+                     "items": [_item(item, earlier, activity["sources"], turn_id, contract in (CONTRACT, CASED_CONTRACT))
+                               for item in given["items"] if item["id"] not in left],
+                     # v3 (piece 35c3c): what makes the dispute's case stronger, as the answer showed it.
+                     **({"case": deepcopy(cases[dispute["id"]])} if contract == CASED_CONTRACT and dispute["id"] in cases
+                        else {})}
         elif (dispute["id"], dispute["name"]) in kept:
             entry = deepcopy(kept[(dispute["id"], dispute["name"])])
         else:
@@ -193,5 +209,7 @@ def for_board(row_records, dates):
                           "evidence": evidence, "asked_at": dates.get(item["asked_in"]) if item["asked_in"] else None})
         shown[dispute["id"]] = {"name": dispute["name"], "answered_at": dates.get(dispute["answered_in"]),
                                 "time_limits": deepcopy(dispute["time_limits"]), "items": items,
-                                "in_hand": sum(item["status"] == "in_hand" for item in items)}
+                                "in_hand": sum(item["status"] == "in_hand" for item in items),
+                                # v3 (plan AN.35, piece 35c3c): what makes the dispute's case stronger, under the dispute.
+                                **({"case": deepcopy(dispute["case"])} if "case" in dispute else {})}
     return shown

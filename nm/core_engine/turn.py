@@ -63,8 +63,9 @@ PRESENTED_CONTRACT = "core_turn_v8"
 #: what still fails is blocked sentence by sentence, never with its paragraph or section - each part
 #: keeping its second looks (answer_sections.LOOKS), and rendered as v19.
 LOOKED_CONTRACT = "core_turn_v9"
-#: v10 (plan AN.35, D31; piece 35c2): v9 whose dispute sections each keep what makes their case stronger (answer_sections.CASE),
-#: set out beside the section's writing from research v15.
+#: v10 (plan AN.35, D31; pieces 35c2-35c3b): v9 whose dispute sections each keep what makes their case stronger
+#: (answer_sections.CASE), set out beside the section's writing from research v15; its sections are written by writer v15, which
+#: writes no checklist, and the answer is rendered as v20, the case beside each section.
 CONTRACT = "core_turn_v10"
 #: The turns answered dispute by dispute.
 SECTIONED = (BY_DISPUTE_CONTRACT, KEPT_CONTRACT, PRESENTED_CONTRACT, LOOKED_CONTRACT, CONTRACT)
@@ -75,7 +76,7 @@ _LOOKS = (LOOKED_CONTRACT, CONTRACT)
 #: The rendering each turn answered dispute by dispute was saved with.
 _RENDERINGS = {BY_DISPUTE_CONTRACT: "core_response_rendering_v17", KEPT_CONTRACT: "core_response_rendering_v17",
                PRESENTED_CONTRACT: "core_response_rendering_v18", LOOKED_CONTRACT: "core_response_rendering_v19",
-               CONTRACT: "core_response_rendering_v19"}
+               CONTRACT: "core_response_rendering_v20"}
 _RELEASED = (RELEASE_CONTRACT, RECORDS_CONTRACT)
 EXECUTION = research.EXECUTION
 _ACTIVITY_FIELDS = {"contract", "interpretation", "research", "sources", "draft",
@@ -206,7 +207,7 @@ def prepare(model, context, searcher, *, case_index=None, provision_reader=None,
     def base(record, sources, execution):
         return {"contract": CONTRACT, "interpretation": interpreted, "research": record, "sources": sources,
                 "execution": execution, "calculation": limits,
-                "rendering_contract": response_rendering.REPAIRED_CONTRACT}
+                "rendering_contract": response_rendering.CASED_CONTRACT}
 
     def released(state):
         if shown is None:
@@ -217,18 +218,18 @@ def prepare(model, context, searcher, *, case_index=None, provision_reader=None,
         elements = response_rendering.render_sections(
             context, record, sources, sections=state["sections"], cross_check=state["cross_check"],
             overview=state["overview"], time_limits=limits, waiting=state["waiting"],
-            contract=response_rendering.REPAIRED_CONTRACT)
+            contract=response_rendering.CASED_CONTRACT)
         shown(elements, {**base(record, sources, execution), **state}, calls.metrics())
     # Turn v9 (AN.28): each section written for the advocate and placed, its failing pieces given a second
     # look and then blocked one by one (writer v14), reviewed by review v12, and laid out as rendering v19.
     sections, crossed, overview = answer_sections.answer(
         calls, context, None, None, interpretation=interpreted, execution=None, worked=limits,
         case_index=case_index, provision_reader=provision_reader, report=report, released=released,
-        researched=researched, contract=response_writer.REPAIRED_CONTRACT)
+        researched=researched, contract=response_writer.CASED_CONTRACT)
     record, sources, execution = researched.whole()
     elements = response_rendering.render_sections(context, record, sources, sections=sections, cross_check=crossed,
                                                   overview=overview, time_limits=limits,
-                                                  contract=response_rendering.REPAIRED_CONTRACT)
+                                                  contract=response_rendering.CASED_CONTRACT)
     activity = {**base(record, sources, execution), "sections": sections, "cross_check": crossed, "overview": overview}
     return elements, activity, calls.metrics()
 

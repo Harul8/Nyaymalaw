@@ -94,15 +94,22 @@ PRESENTED_CONTRACT = "core_response_writer_v13"
 #: ("cut"), and a paragraph that cannot stand without them is left out ("dropped"), both recorded on
 #: the draft and replayed from its proposal. The prompt for writing is v13's.
 REPAIRED_CONTRACT = "core_response_writer_v14"
+#: v15 (plan AN.35, D31; piece 35c3a, 2 Nov 2026): v14 that writes no checklist. What the law requires of each dispute, how the
+#: papers stand on each element and what to gather from the client are set out beside its section (case_strength, turn v10), so
+#: the prompt asks for no checklist and an ask opens no checklist item; the answer shape has none, and code gives each section an
+#: empty checklist, so that the review, the cut and the page are otherwise as v14's.
+CASED_CONTRACT = "core_response_writer_v15"
+#: The versions whose failing pieces get a second look and are then blocked one by one (v14 on).
+REPAIRS = (REPAIRED_CONTRACT, CASED_CONTRACT)
 #: The versions that write a section for the advocate and place each unit in it (v13 on).
-PRESENTED = (PRESENTED_CONTRACT, REPAIRED_CONTRACT)
+PRESENTED = (PRESENTED_CONTRACT, *REPAIRS)
 CONTRACTS = (LEGACY_CONTRACT, OWNED_TAG_CONTRACT, ALIAS_CONTRACT, PARTS_CONTRACT, WORDS_CONTRACT,
              CHECKLIST_CONTRACT, LINKS_CONTRACT, ADDRESSLESS_CONTRACT, REASONED_CONTRACT, PLACED_CONTRACT,
-             CONTRACT, SECTION_CONTRACT, PRESENTED_CONTRACT, REPAIRED_CONTRACT)
+             CONTRACT, SECTION_CONTRACT, PRESENTED_CONTRACT, *REPAIRS)
 _IN_PARTS = (PARTS_CONTRACT, WORDS_CONTRACT, CHECKLIST_CONTRACT, LINKS_CONTRACT, ADDRESSLESS_CONTRACT,
-             REASONED_CONTRACT, PLACED_CONTRACT, CONTRACT, SECTION_CONTRACT, PRESENTED_CONTRACT, REPAIRED_CONTRACT)
+             REASONED_CONTRACT, PLACED_CONTRACT, CONTRACT, SECTION_CONTRACT, PRESENTED_CONTRACT, *REPAIRS)
 #: The versions in which each section of the answer is a draft of its own (v12 on).
-SECTIONS = (SECTION_CONTRACT, PRESENTED_CONTRACT, REPAIRED_CONTRACT)
+SECTIONS = (SECTION_CONTRACT, PRESENTED_CONTRACT, *REPAIRS)
 #: The versions in which every source names the words of its unit that it supports.
 WORDED = (WORDS_CONTRACT, CHECKLIST_CONTRACT)
 #: The versions whose units link their sources in their own text, [words](P1).
@@ -567,6 +574,31 @@ another paragraph.
 SYSTEM_V14 = SYSTEM_V13.replace("neither in the chronology nor on a page.\n", _COVERAGE_V14)
 
 
+def _without_checklist(system):
+    """v15 (plan AN.35, piece 35c3a): v14's prompt with no checklist asked for - what the case needs is set out beside the section."""
+    start = system.index("Your dispute's checklist: beside its units")
+    end = system.index(_LIMITS_SAID, start) + len(_LIMITS_SAID)
+    system = system[:start] + _CASE_BESIDE + system[end:]
+    for old, new in (('gathers them at the end under "What I need from you", where an ask for a checklist item\n  opens that item.',
+                      'gathers them at the end under "What I need from you".'),
+                     ("has no row, no checklist and no time limits", "has no row and no time limits"),
+                     ("dispute's part its checklist, time_limit_ids and by_when", "dispute's part its time_limit_ids and by_when"),
+                     (" and the asked_words of each item words of\nyour own ask for it,", ",")):
+        if system.count(old) != 1:
+            raise RuntimeError(f"Writer v15's prompt cannot be made from v14's: {old!r}")
+        system = system.replace(old, new)
+    return system
+
+
+_LIMITS_SAID = "of the time limits in time_limits that concern this dispute.\n"
+_CASE_BESIDE = """What the case needs: what the law requires of this dispute, how the papers stand on each
+element and what to gather from the client are set out beside your section by a colleague,
+from the same held law and points, so write no checklist. Under time_limit_ids give the IDs
+(T1, T2...) of the time limits in time_limits that concern this dispute.
+"""
+SYSTEM_V15 = _without_checklist(SYSTEM_V14)
+
+
 def _object(fields):
     return {"type": "object", "additionalProperties": False,
             "required": list(fields), "properties": fields}
@@ -736,6 +768,8 @@ def _units_v13(required):
 
 PART_SCHEMA_V13 = _object({"units": _units_v13(True), "checklist": {"type": "array", "items": ITEM_V13},
                            "time_limit_ids": LIMIT_IDS, "by_when": BY_WHEN})
+#: v15 (plan AN.35, piece 35c3a): a section returns no checklist.
+PART_SCHEMA_V15 = _object({"units": _units_v13(True), "time_limit_ids": LIMIT_IDS, "by_when": BY_WHEN})
 SCHEMA_V13 = _object({"units": _units_v13(False), "checklists": {"type": "array", "items": _object({
     "checklist": {"type": "array", "items": _ADMITTED_ITEM_V13}, "time_limit_ids": LIMIT_IDS, "by_when": BY_WHEN})}})
 
@@ -1221,7 +1255,7 @@ def accept(proposal, context, sources, *, contract=CONTRACT, parts=None, whole=T
     is raised with them once every paragraph is checked; left_out (positions, 1, 2...) and cut
     ({position: sentences}) are what was blocked, which the draft records under its paragraphs' IDs.
     """
-    if (faults is not None or left_out or cut) and contract != REPAIRED_CONTRACT:
+    if (faults is not None or left_out or cut) and contract not in REPAIRS:
         raise ValueError("Only a v14 draft has its paragraphs' faults collected or blocked")
     if contract not in CONTRACTS:
         raise ValueError("Unknown response writer contract")
@@ -1269,9 +1303,9 @@ def accept(proposal, context, sources, *, contract=CONTRACT, parts=None, whole=T
     blocked_places = {data["units"][position - 1].get("place") for position in left_out}
     draft = _admitted(data, units, addresses_latest, context, sources, contract=contract, parts=parts, whole=whole,
                       section=section, offered=offered, blocked_places=blocked_places)
-    if contract == REPAIRED_CONTRACT and cut:
+    if contract in REPAIRS and cut:
         draft["cut"] = {_prefix(context, section) + f"b{position}": list(removed) for position, removed in sorted(cut.items())}
-    if contract == REPAIRED_CONTRACT and left_out:
+    if contract in REPAIRS and left_out:
         draft["dropped"] = sorted(_prefix(context, section) + f"b{position}" for position in left_out)
     return draft
 
@@ -1358,10 +1392,13 @@ def _admitted(data, units, addresses_latest, context, sources, *, contract, part
     """A proposal's admitted paragraphs made a draft: the checks across its paragraphs, its layout and
     checklists (the end of accept). blocked_places: the places of paragraphs left out after their second
     looks (v14), whose absence from a row or the line on what to do first is no fault of the rest."""
-    if contract == REPAIRED_CONTRACT:
+    if contract in REPAIRS:
         if not units:
             raise SchemaViolation("Nothing of the section is left to admit")
         parts = [{**parts[0], "units": len(units)}]
+    if contract == CASED_CONTRACT and any(part.get("checklist") for part in data["checklists"]):
+        # v15 (plan AN.35, piece 35c3a): what the case needs is set out beside the section, never as its checklist.
+        raise SchemaViolation("A section of writer v15 returns no checklist")
     if contract in PRESENTED and section == OVERVIEW and [
             unit["place"] for unit in units].count("do_first") != (0 if "do_first" in blocked_places else 1):
         # v13: one line under "In short" on what to do first (owner decision P40).
@@ -1529,10 +1566,10 @@ def validate(draft, context, sources):
               | ({"checklists"} if contract in CHECKLISTED else set())
               | ({"section"} | ({"dropped"} if "dropped" in draft else set()) if contract in SECTIONS
                  else set())
-              | ({"cut"} if contract == REPAIRED_CONTRACT and "cut" in draft else set()))
+              | ({"cut"} if contract in REPAIRS and "cut" in draft else set()))
     if contract not in CONTRACTS or set(draft) != fields:
         raise ValueError("Response draft differs from its checked source selections")
-    if contract == REPAIRED_CONTRACT:
+    if contract in REPAIRS:
         # v14 (AN.28): admitted again from its proposal, blocked exactly as it records: its paragraphs
         # before admission, its checklist items after it.
         left_out, cut, items = _blocked(draft, context)
@@ -1922,10 +1959,14 @@ def write_section(model, context, research_record, sources, *, index, interpreta
     presented = contract in PRESENTED
     part = _written(_write_part(model, _payload(context, research_record, sources, interpretation, execution,
                                                 layout, index, time_limits, worded=presented,
-                                                general=contract == REPAIRED_CONTRACT),
-                                **({"system": SYSTEM_V14 if contract == REPAIRED_CONTRACT else SYSTEM_V13,
-                                    "schema": PART_SCHEMA_V13} if presented else {}),
-                                **({"step": "write"} if contract == REPAIRED_CONTRACT else {})))
+                                                general=contract in REPAIRS),
+                                **({"system": {REPAIRED_CONTRACT: SYSTEM_V14, CASED_CONTRACT: SYSTEM_V15}.get(contract, SYSTEM_V13),
+                                    "schema": PART_SCHEMA_V15 if contract == CASED_CONTRACT else PART_SCHEMA_V13}
+                                   if presented else {}),
+                                **({"step": "write"} if contract in REPAIRS else {})))
+    if contract == CASED_CONTRACT:
+        # v15: no checklist is asked for, so code gives the section an empty one; a stray one is never admitted.
+        part["checklist"] = []
     _named_limits(part, _limit_names(time_limits))
     if hasattr(model, "last_output"):
         # A shape correction shows the writer the section it wrote.
@@ -1938,7 +1979,7 @@ def write_section(model, context, research_record, sources, *, index, interpreta
                                                               else {})}]},
                   context, sources, contract=contract,
                   parts=[{"dispute_id": layout[index]["dispute_id"], "units": len(part["units"])}], section=index,
-                  **({"faults": []} if contract == REPAIRED_CONTRACT else {}))
+                  **({"faults": []} if contract in REPAIRS else {}))
 
 
 OVERVIEW_SYSTEM = """Message: You receive the exact latest advocate message, the complete
@@ -2068,16 +2109,16 @@ def write_overview(model, context, research_record, sources, *, sections, interp
     if contract not in SECTIONS:
         raise ValueError("An overview is written as v12 or v13")
     presented = contract in PRESENTED
-    system, schema = ((OVERVIEW_SYSTEM_V14 if contract == REPAIRED_CONTRACT else OVERVIEW_SYSTEM_V13, OVERVIEW_SCHEMA_V13)
+    system, schema = ((OVERVIEW_SYSTEM_V14 if contract in REPAIRS else OVERVIEW_SYSTEM_V13, OVERVIEW_SCHEMA_V13)
                       if presented else (OVERVIEW_SYSTEM, OVERVIEW_SCHEMA))
     if answer_sources.build(context, research_record) != sources:
         raise ValueError("Writer sources differ from their owned context and research snapshot")
     if len(parts(research_record)) < 2:
         raise ValueError("Only an answer covering several disputes opens with an overview")
     payload = _overview_payload(context, research_record, sources, sections, interpretation, execution, time_limits,
-                                presented, general=contract == REPAIRED_CONTRACT)
+                                presented, general=contract in REPAIRS)
     user = json.dumps(payload, ensure_ascii=False)
-    v14 = contract == REPAIRED_CONTRACT
+    v14 = contract in REPAIRS
     prompt = Prompt(system=system, user=user, operation="core_response_overview",
                     effort=reasoning.effort("overview") if v14 else None,
                     cache_through=shared_material(user, payload) if v14 else 0)
@@ -2106,7 +2147,7 @@ def write_overview(model, context, research_record, sources, *, sections, interp
     return accept({"units": part["units"], "checklists": [{"checklist": [], "time_limit_ids": [],
                                                            **({"by_when": None} if presented else {})}]},
                   context, sources, contract=contract, parts=[{"dispute_id": None, "units": len(part["units"])}],
-                  section=OVERVIEW, **({"faults": []} if contract == REPAIRED_CONTRACT else {}))
+                  section=OVERVIEW, **({"faults": []} if contract in REPAIRS else {}))
 
 
 def _overview_payload(context, research_record, sources, sections, interpretation, execution, time_limits, presented,
@@ -2477,7 +2518,7 @@ def removed(draft, context, sources):
     shown += [{"kind": units[position - 1]["kind"], "text": _linked(sentence, offered)[0].strip(),
                "cut_from": "a paragraph that is still shown"} for position, removed in cut.items() for sentence in removed]
     if items:
-        whole = accept(draft["proposal"], context, sources, contract=REPAIRED_CONTRACT,
+        whole = accept(draft["proposal"], context, sources, contract=draft["contract"],
                        parts=[{**draft["parts"][0], "units": 1}], section=draft["section"], left_out=left_out, cut=cut)
         shown += [{"kind": "checklist item", "text": item["need"]} for part in whole["checklists"]
                   for item in part["items"] if item["id"] in items]

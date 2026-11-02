@@ -15,7 +15,8 @@ from nm.core_engine import (
 from nm.core_engine.calls import TurnCalls
 from nm.core_engine.conversation import ConversationRefused, chat_matter_id
 from nm.shared.citation_contracts import statute_title
-from nm.shared.model_port import SchemaViolation
+from nm.shared.budget_contracts import Completion
+from nm.shared.model_port import ModelResult, SchemaViolation, Usage
 from tests.test_core_response_review import Model as ReviewModel, positive, request
 from tests.test_core_response_writer import PartModel, two_disputes
 from tests.test_core_turn import ScriptedModel, run, store  # noqa: F401 - pytest fixture
@@ -296,44 +297,53 @@ def test_the_matter_keeps_its_checklist_and_when_nm_first_asked():
     assert checklist.records(ctx, {**activity, "release": {"parts": [1, 2], "date_findings": []}}) == before
 
 
-def test_a_saved_turn_keeps_its_checklist_as_records_and_the_board_shows_it(store):
-    class Listing(ScriptedModel):
-        def structured(self, prompt, schema, tier, **kwargs):
-            result = super().structured(prompt, schema, tier, **kwargs)
-            if prompt.operation == "core_response_writer":
-                data = json.loads(prompt.user)
-                passage = next(p for p in data["held_passages"]["passages"] if "Counsel submitted" in p["text"])
-                message = data["original_context"]["latest"]["source_id"]
-                result.data["checklist"] = [
-                    {"need": "Proof the notice was served", "why": "Service must be shown.", "note": None,
-                     "group": "needed",
-                     "law": {"source_id": passage["id"], "quote": "Counsel submitted"}, "carries": None,
-                     "status": "in_hand", "evidence": {"source_id": message, "quote": "The notice was served"}},
-                    {"need": "The postal receipt", "why": "It proves the date of posting.", "note": "promised",
-                     "group": "would_strengthen",
-                     "law": {"source_id": passage["id"], "quote": "Counsel submitted"}, "carries": None,
-                     "status": "coming_or_unclear",
-                     "evidence": {"source_id": message, "quote": "I will send the postal receipt"}}]
-            return result
+def test_a_saved_turn_keeps_its_disputes_case_as_records_and_the_board_and_the_answer_show_it(store):
+    """From turn v10 (plan AN.35, D31; piece 35c3) the writer writes no checklist: what makes each dispute's case stronger, set out
+    beside its section, is what the records keep (checklist v3), the board shows under the dispute and the answer shows beside the
+    section, with what to get under "What I need from you"."""
+    class Casing(ScriptedModel):
+        knows_the_case = True
 
-    reply = run(store, Listing(legal=True), message="The notice was served on 2 March; I will send the postal receipt.")
+        def structured(self, prompt, schema, tier, **kwargs):
+            if prompt.operation not in ("core_case", "core_case_check"):
+                return super().structured(prompt, schema, tier, **kwargs)
+            shown = json.loads(prompt.user.split("\n\nYour colleague's account:")[0])
+            passage = next(p for p in shown["held_law"] if "Counsel submitted" in p["text"])
+            return ModelResult(None, {"elements": [{
+                "element": "Service of the notice", "law": {"source_id": passage["id"], "quote": "Counsel submitted"},
+                "proves": "client", "status": "missing", "points": [], "why": "Nothing yet shows when it was served."}],
+                "to_get": [{"what": "The postal receipt", "from_whom": "the client", "element": 1,
+                            "why": "It proves the date of posting.", "helps": "It shows the notice was served in time."}],
+                "other_side": []}, tier, "synthetic", "fixture", Usage(1, 1, 0), 0, completion=Completion.COMPLETE)
+
+    reply = run(store, Casing(legal=True), message="The notice was served on 2 March; I will send the postal receipt.")
     assert reply["committed"] == "committed"
     matter = store.load(chat_matter_id("owner", reply["chat_id"]))
     rows = turn.saved_rows(matter, "owner")
     assert rows[0]["activities"]["contract"] == turn.CONTRACT == "core_turn_v10"
     saved = rows[0]["records"]["checklist"]
-    items = saved["disputes"][0]["items"]
-    assert [(item["id"], item["status"], item["evidence"]["words"]) for item in items] == [
-        ("K1", "in_hand", "The notice was served"), ("K2", "coming_or_unclear", "I will send the postal receipt")]
+    assert saved["contract"] == checklist.CASED_CONTRACT == "core_checklist_v3"
+    dispute, = saved["disputes"]
+    assert dispute["items"] == [] and dispute["answered_in"] == rows[0]["turn_id"]
+    case = dispute["case"]
+    assert case["state"] == "checked"
+    element, = case["elements"]
+    assert (element["element"], element["status"], element["proves"]) == ("Service of the notice", "missing", "client")
+    assert element["law"]["found"] is True and element["law"]["words"] == "Counsel submitted" and element["law"]["kind"] == "judgment"
+    assert case["to_get"] == [{"what": "The postal receipt", "from_whom": "the client", "why": "It proves the date of posting.",
+                               "helps": "It shows the notice was served in time.", "for": "Service of the notice"}]
+    # The board shows it under the dispute, the law assessed by it.
     board = matter_board.board(rows)
-    shown = board["disputes"][0]["checklist"]
-    assert shown["in_hand"] == 1 and [item["status"] for item in shown["items"]] == ["in_hand", "coming_or_unclear"]
-    assert shown["items"][0]["evidence"]["given_at"] == reply["at"] and shown["answered_at"] == reply["at"]
-    # Writer v9: why each item is needed and where it stands, kept and shown (18 Oct 2026).
-    assert [(item["why"], item["note"]) for item in items] == [("Service must be shown.", None),
-                                                              ("It proves the date of posting.", "promised")]
-    assert [(item["why"], item["note"]) for item in shown["items"]] == [("Service must be shown.", None),
-                                                                       ("It proves the date of posting.", "promised")]
+    shown = board["disputes"][0]
+    assert shown["checklist"]["case"] == case and shown["checklist"]["answered_at"] == reply["at"]
+    assert shown["law"]["state"] == "assessed"
+    # The answer shows it beside the section, and what to get under "What I need from you".
+    beside = [element for element in reply["elements"] if element["kind"] == "CASE"]
+    assert [element["case"] for element in beside] == [case]
+    asked = [element for element in reply["elements"] if element["kind"] == "NEED_CASE"]
+    assert [(element["text"], element["need"]["from_whom"]) for element in asked] == [("The postal receipt", "the client")]
+    kinds = [element["kind"] for element in reply["elements"]]
+    assert kinds.index("CASE") < kinds.index("NEEDS") < kinds.index("NEED_CASE")
     # Records changed after saving are refused on reopening: the turn's own digest is made whole
     # here, but the chain's tail no longer matches (P46: the record is checked, never rebuilt).
     damaged = deepcopy(matter)

@@ -95,6 +95,11 @@ PRESENTED_CONTRACT = "core_response_rendering_v18"
 #: then blocked one by one (writer v14, review v12): each note says, in a plain sentence, how many
 #: statements were left out of a section and why, never repeating them.
 REPAIRED_CONTRACT = "core_response_rendering_v19"
+#: v20 (plan AN.35, D31-D32; piece 35c3b, 2 Nov 2026): v19 for sections written by writer v15, which writes no checklist. Beside each
+#: dispute's section, before "More on this", what makes its case stronger (case_strength): what the law requires, element by
+#: element, with how the papers stand on each, what to get and what the other side will rely on - or that it could not be set out;
+#: and under "What I need from you", for each dispute, what to get from the client, then its questions as written.
+CASED_CONTRACT = "core_response_rendering_v20"
 #: The versions whose asks open the checklist items they ask for.
 _ASKED = (CONTRACT,)
 #: The versions in which what concerns only a dispute's checklist holds no section back.
@@ -352,7 +357,9 @@ NOT_PARAGRAPHS = frozenset({"HEADING", "WORKING", "NOTICE", "HELD", "NEEDS", "NO
                             # v18: code's labels and rows, the items asked for and the checks folded.
                             "IN_SHORT", "ROW", "SUBHEAD", "NEED_GROUP", "NEED_ITEM", "YOUR_CALL", "CHECKED",
                             # Research v14 (plan AN.33, piece 33m): what the papers record, folded at the end.
-                            "PAPERS"})
+                            "PAPERS",
+                            # v20 (plan AN.35, piece 35c3b): what makes a dispute's case stronger, and what to get for it.
+                            "CASE", "NEED_CASE"})
 #: v14: the heading under which every question to the advocate is gathered.
 NEEDS = "What I need from you"
 
@@ -1259,10 +1266,10 @@ def render_sections(context, research_record, sources, *, sections, cross_check,
     the turn works): the parts of the answer's layout still being written, each shown as a
     place it will fill; a saved answer has none. contract: v17, or v18 for sections written for
     the advocate and placed (writer v13, review v11)."""
-    if contract in (PRESENTED_CONTRACT, REPAIRED_CONTRACT):
+    if contract in (PRESENTED_CONTRACT, REPAIRED_CONTRACT, CASED_CONTRACT):
         return _render_presented(context, research_record, sources, sections=sections, cross_check=cross_check,
                                  overview=overview, time_limits=time_limits, waiting=waiting,
-                                 repaired=contract == REPAIRED_CONTRACT)
+                                 repaired=contract in (REPAIRED_CONTRACT, CASED_CONTRACT), cased=contract == CASED_CONTRACT)
     if contract != BY_DISPUTE_CONTRACT:
         raise ValueError("An answer written dispute by dispute is rendered as v17 or v18")
     names = _dispute_names(research_record)
@@ -1451,6 +1458,8 @@ def _suggested(piece):
 
 #: Research v14 (plan AN.33, D20; piece 33m): what the papers record, every point of it, folded at the end of the answer.
 PAPERS = "What your papers record"
+#: v20 (plan AN.35, piece 35c3b): the title of what makes a dispute's case stronger, beside its section.
+CASE = "What makes the case stronger"
 
 
 def weight_marks(proposal):
@@ -1505,12 +1514,14 @@ def papers_record(research_record, context):
 
 
 def _render_presented(context, research_record, sources, *, sections, cross_check, overview, time_limits,
-                      waiting=(), repaired=False):
+                      waiting=(), repaired=False, cased=False):
     """v18: an answer written dispute by dispute for the advocate (writer v13, review v11), laid
     out as PRESENTED_CONTRACT says. No new prose: every paragraph is a reviewed piece's own;
     every label, row, notice and note is code's. repaired: v19, for writer v14's pieces, whose
     notes say what was blocked (_blocked_notes)."""
-    written = response_writer.REPAIRED_CONTRACT if repaired else response_writer.PRESENTED_CONTRACT
+    # v20 (cased): writer v15's pieces, each dispute's case beside its section.
+    written = (response_writer.CASED_CONTRACT if cased else response_writer.REPAIRED_CONTRACT if repaired
+               else response_writer.PRESENTED_CONTRACT)
     left_out = _blocked_notes if repaired else _left_out
     names = _dispute_names(research_record)
     many = len(response_writer.parts(research_record)) > 1
@@ -1518,7 +1529,7 @@ def _render_presented(context, research_record, sources, *, sections, cross_chec
     pieces = [answer_sections.shown(saved) for saved in sections]
     opening = answer_sections.shown(overview) if overview is not None else None
     if any(piece is not None and piece["draft"]["contract"] != written for piece in (*pieces, opening)):
-        raise ValueError("Rendering v18 shows sections written by writer v13, and v19 by writer v14")
+        raise ValueError("Rendering v18 shows sections written by writer v13, v19 by writer v14 and v20 by writer v15")
     conflicts = (cross_check["proposal"]["conflicts"] if isinstance(cross_check, dict) and "proposal" in cross_check
                  else [])
 
@@ -1638,12 +1649,20 @@ def _render_presented(context, research_record, sources, *, sections, cross_chec
             elements.append(_notice("NOTE", f"A check across the sections found that {where} may not agree with "
                                     f"another: {said} NM's correction did not pass the independent check, so {where} "
                                     "is shown as first checked."))
+        case = answer_sections.case_shown(saved, context, research_record, sources) if cased else None
+        if cased and saved["dispute_id"] is not None:
+            # v20 (plan AN.35, piece 35c3b): what makes this dispute's case stronger, before what folds under "More on this".
+            elements.append(_label("CASE", CASE, case=case, dispute={"id": saved["dispute_id"], "name": name})
+                            if case is not None else
+                            _notice("NOTE", f"NM did not set out what would make the case on {name} stronger this time."))
         elements.extend(shown_as("more", "MORE"))
         # What I need from you (P44): the items this section asks for, each once, then its
-        # questions that ask for no item, as written.
+        # questions that ask for no item, as written; from v20 what to get for its case, then its questions.
         group = [_label("NEED_ITEM", item["need"], item=deepcopy(checklist.kept(item, context, sources)),
                         dispute={"id": saved["dispute_id"], "name": name})
                  for item in piece["draft"]["checklists"][0]["items"] if item.get("asked")]
+        group += [_label("NEED_CASE", ask["what"], need=deepcopy(ask), dispute={"id": saved["dispute_id"], "name": name})
+                  for ask in (case or {}).get("to_get", ())]
         group += [_shown_paragraph(unit, index, saved["part"], sources, asks, kind="ASK") for index, unit in units
                   if unit["place"] == "ask" and not asks.get(unit["id"])]
         if group:

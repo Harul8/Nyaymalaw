@@ -1,0 +1,152 @@
+// What makes the case stronger (plan AN.35, D31-D32; piece 35c3d): beside each dispute's section of the answer (rendering v20),
+// each element with its mark, who must prove it, why, the law's own words and where they stand (or that NM could not find them in
+// the law it read) and the pages of its points; what to get, also under "What I need from you"; what the other side will rely on;
+// and on the board, under each dispute and in its detail (checklist v3). Runs the actual renderTurn, renderDisputeCard and
+// renderDisputeDetail from nm/app/app.js against a stub DOM, as papers_table.mjs does; not browser QA. The matter is invented.
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import vm from 'node:vm';
+
+const here = dirname(fileURLToPath(import.meta.url));
+const app = readFileSync(join(here, '..', '..', 'nm', 'app', 'app.js'), 'utf8');
+const between = (start, end) => {
+  const a = app.indexOf(start);
+  const b = app.indexOf(end, a + start.length);
+  if (a < 0 || b < 0 || b <= a) throw new Error(`renderer boundary moved: ${start}`);
+  return app.slice(a, b);
+};
+const rendererSource = between('function appendReplyBody(', 'const REPLY_ICONS')
+  + '\n' + between('function renderTurn(entry) {', 'function showConversationFromStart()')
+  + '\n' + between('function showConversationFromStart()', 'function repaint()');
+for (const name of ['function renderCaseBlock(', 'function renderDisputeCard(', 'function renderDisputeDetail(']) {
+  if (!rendererSource.includes(name)) throw new Error(`renderer boundary moved: ${name}`);
+}
+
+function el(tag) {
+  const node = {
+    tagName: tag.toUpperCase(), className: '', children: [], _text: '', open: false, dataset: {}, style: {},
+    hidden: false, attributes: {}, handlers: {}, colSpan: 1, scope: '', type: '', title: '',
+    set textContent(v) { this._text = String(v); this.children = []; },
+    get textContent() { return this._text + this.children.map((c) => c.textContent).join(''); },
+    set innerHTML(v) { this._text = String(v); },
+    get innerHTML() { return this._text; },
+    append(...kids) { for (const k of kids) this.children.push(k); },
+    appendChild(k) { this.children.push(k); return k; },
+    replaceChildren(...kids) { this.children = kids; },
+    addEventListener(name, handler) { this.handlers[name] = handler; },
+    querySelector() { return el('span'); },
+    querySelectorAll() { return []; },
+    setAttribute(name, value) { this.attributes[name] = String(value); },
+    removeAttribute() {},
+    closest() { return null; },
+    focus() {},
+  };
+  return node;
+}
+const byId = new Map();
+const document = {
+  createElement: el,
+  createTextNode: (t) => Object.assign(el('#text'), { _text: String(t) }),
+  getElementById: (id) => { if (!byId.has(id)) byId.set(id, el('div')); return byId.get(id); },
+  querySelector: () => null, querySelectorAll: () => [], addEventListener() {}, body: el('body'),
+};
+const context = {
+  document, console, setTimeout, clearTimeout,
+  window: { location: { hash: '', reload() {} }, addEventListener() {} },
+  localStorage: { getItem: () => null, setItem() {}, removeItem() {} },
+  fetch: async () => ({ ok: true, status: 200, json: async () => ({}) }),
+  navigator: { userAgent: 'node' },
+  ResizeObserver: class { observe() {} },
+  state: { matterId: null, ended: false, advocate: null, turns: [] },
+  renderOpeningNote: () => el('div'), renderBoardNote: () => null,
+  stateBlock: (_kind, message) => Object.assign(el('div'), { textContent: message }),
+  replyFooter: (_entry, copyText) => Object.assign(el('div'), { copyText }),
+  openSourceReader() {}, $: (id) => document.getElementById(id), withOpeningNotes: (turns) => turns,
+  reconcileIntent() {},
+};
+context.globalThis = context;
+vm.createContext(context);
+vm.runInContext(readFileSync(join(here, '..', '..', 'nm', 'app', 'brain-sources.js'), 'utf8'), context,
+  { filename: 'nm/app/brain-sources.js' });
+vm.runInContext(rendererSource, context, { filename: 'nm/app/app.js' });
+
+const label = (kind, text, extra = {}) => ({
+  kind, text, source: null, sources: [], refs: [], inline_citations: [], citation_markers: [], ...extra });
+const view = {
+  state: 'checked',
+  elements: [
+    { element: 'Possession for the period the law requires', proves: 'client', status: 'shown',
+      why: 'The revenue entries show it year after year.',
+      law: { found: true, kind: 'provision', title: 'Imagined Relief Act, 1907', locator: 'Section 4',
+        words: 'possession for twelve years', source_id: 'P:abc' },
+      points: [{ what: 'The entries name the client as in possession.', located: true,
+        pages: [{ document: 'entries.pdf', page: 'page 2', source_id: 't1:d1p2' }] }] },
+    { element: 'Notice before the suit', proves: 'client', status: 'missing', called: 'shown',
+      why: 'Nothing yet shows a notice was sent.', law: { found: false, words: 'notice in writing' }, points: [] },
+  ],
+  to_get: [{ what: 'The postal receipt', from_whom: 'the client', why: 'It proves the date of posting.',
+    helps: 'It shows the notice was sent in time.', for: 'Notice before the suit' }],
+  other_side: [{ relies_on: 'Their own later entry in the record', answer: 'It was made after the suit was filed.', law: null,
+    points: [] }],
+};
+const elements = [
+  label('HEADING', 'The boundary dispute'),
+  label('CASE', 'What makes the case stronger', { case: view, dispute: { id: 'D1', name: 'The boundary dispute' } }),
+  label('NEEDS', 'What I need from you'),
+  label('NEED_CASE', 'The postal receipt', { need: view.to_get[0], dispute: { id: 'D1', name: 'The boundary dispute' } }),
+];
+const turn = context.renderTurn({ brief: 'What do we need?', answer: {
+  turn_id: 't1', chat_id: 'c1', elements, metrics: { gates_fired: [], outcome: 'ok', latency_ms: 1, llm_calls: 1,
+    tokens: { in: 1, out: 1 }, cost_usd: 0, violations: [], tier_downgrades: [] } } });
+
+const walk = (root) => { const all = []; (function go(node) { all.push(node); for (const kid of node.children) go(kid); })(root); return all; };
+const has = (name) => (node) => String(node.className).split(/\s+/).includes(name);
+const [beside] = walk(turn).filter(has('answer-case'));
+assert.ok(beside, 'the case is drawn beside the section');
+assert.equal(beside.tagName, 'DETAILS');
+assert.equal(beside.open, true, 'open: what the case needs is read with the section');
+const text = beside.textContent;
+for (const part of ['What makes the case stronger', 'What the law requires',
+  'Possession for the period the law requires', 'Shown by the papers · For your client to prove',
+  'The revenue entries show it year after year.', 'possession for twelve years', 'Section 4, Imagined Relief Act, 1907',
+  'The entries name the client as in possession. · entries.pdf, page 2',
+  'Notice before the suit', 'Not yet shown · For your client to prove', 'Called shown, but none of its points was found on its page.',
+  'NM could not find these words in the law it read: “notice in writing”',
+  'What to get', 'The postal receipt — from the client', 'For: Notice before the suit', 'It proves the date of posting.',
+  'What the other side will rely on', 'Their own later entry in the record', 'What answers it: It was made after the suit was filed.']) {
+  assert.ok(text.includes(part), part);
+}
+const marks = walk(beside).filter(has('st')).map((node) => node.className);
+assert.deepEqual(marks, ['st st--in_hand', 'st st--not_given'], 'each element carries its mark');
+const [needs] = walk(turn).filter(has('need'));
+assert.ok(needs && needs.textContent.includes('The postal receipt — from the client. It proves the date of posting.'),
+  'what to get stands under What I need from you');
+
+// A case NM could not set out says so, and claims nothing.
+const failed = context.renderCaseBlock({ state: 'unavailable', elements: [], to_get: [], other_side: [] });
+assert.deepEqual(Array.from(failed, (node) => node.textContent), [
+  'NM could not set out what would make this case stronger this time. The rest stands as checked.']);
+const unchecked = context.renderCaseBlock({ ...view, state: 'unchecked' });
+assert.ok(unchecked[0].textContent.startsWith('NM’s second look at this list could not be made'));
+
+// The board: under the dispute, each element with its mark and how many the papers show; the detail holds the whole case.
+const dispute = { id: 'D1', name: 'The boundary dispute', between: ['the client', 'the neighbour'], fact_ids: [], questions: [],
+  rights_at_stake: [], relief_sought: [], still_needed: [], law: { state: 'assessed', why: '' },
+  checklist: { name: 'The boundary dispute', answered_at: '2026-11-02T10:00:00+00:00', time_limits: [], items: [], in_hand: 0,
+    case: view } };
+const board = { facts: [], related_points: [] };
+const card = context.renderDisputeCard(dispute, board, 1);
+const cardText = card.textContent;
+for (const part of ['1 · The boundary dispute', '1 of 2 shown by the papers', 'What the law requires',
+  'Possession for the period the law requires', 'Notice before the suit', '1 thing to get']) {
+  assert.ok(cardText.includes(part), part);
+}
+assert.ok(!cardText.includes('NM found nothing this dispute needs'), 'a case is never read as an empty checklist');
+const detail = context.renderDisputeDetail(dispute, board);
+const detailText = detail.map((node) => node.textContent).join('\n');
+assert.ok(detailText.includes('What makes the case stronger') && detailText.includes('The postal receipt — from the client'));
+const none = context.renderDisputeCard({ ...dispute, checklist: { ...dispute.checklist, case: null } }, board, 1);
+assert.ok(none.textContent.includes('NM could not set out what would make this case stronger when it last answered.'));
+console.log('case_strength.mjs: ok');

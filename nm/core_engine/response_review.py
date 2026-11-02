@@ -476,7 +476,8 @@ def _dependencies(context, research_record, sources, draft, execution, *,
     piece = draft.get("contract") in response_writer.SECTIONS
     overview = piece and draft.get("section") == response_writer.OVERVIEW
     judge = {response_writer.PRESENTED_CONTRACT: PRESENTED_CONTRACT,
-             response_writer.REPAIRED_CONTRACT: WORDED_CONTRACT}.get(draft.get("contract"))
+             response_writer.REPAIRED_CONTRACT: WORDED_CONTRACT,
+             response_writer.CASED_CONTRACT: WORDED_CONTRACT}.get(draft.get("contract"))
     if ((contract in _PIECES) != piece
             or piece and (contract if contract in PRESENTED else None) != judge
             or (sections is not None or unanswered) and not overview
@@ -968,7 +969,7 @@ def shown_sections(sections, research_record, unanswered=()):
 def _removed(draft, context, sources):
     """v9: what code left out of a section after its rewrites, as its review is shown it; v14 (AN.28)
     blocks sentences as well as paragraphs and items."""
-    if draft["contract"] == response_writer.REPAIRED_CONTRACT:
+    if draft["contract"] in response_writer.REPAIRS:
         return response_writer.removed(draft, context, sources)
     whole, dropped = response_writer.untrimmed(draft, context, sources), set(draft["dropped"])
     return ([{"kind": unit["kind"], "text": unit["text"]} for unit in whole["units"] if unit["id"] in dropped]

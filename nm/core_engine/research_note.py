@@ -44,7 +44,39 @@ def _when(response):
 
 #: v18: words of code's own that say what a line of the answer is, as the page shows them.
 _LEADS = {"ROW_ACTION": "What to do: ", "ROW_READY": "Have ready: ", "DO_FIRST": "Do first: ",
-          "RISK": "• ", "NEED_ITEM": "• ", "ASK": "• "}
+          "RISK": "• ", "NEED_ITEM": "• ", "ASK": "• ", "NEED_CASE": "• "}
+#: Rendering v20 (plan AN.35, piece 35c3b): how each element of a dispute's case stands, in code's words.
+_STANDS = {"shown": "Shown by the papers", "weak": "Shown only weakly", "missing": "Not yet shown"}
+_PROVES = {"client": "for the client to prove", "other_side": "for the other side to prove"}
+_CASE_STATES = {"unchecked": "NM's second look at this list could not be made, so it stands as first set out.",
+                "unavailable": "NM could not set out what would make this case stronger this time."}
+
+
+def _case_blocks(element):
+    """Rendering v20: what makes a dispute's case stronger, as the page shows it, in the note's own order: a sub-heading, then each
+    element with how it stands and the law's words (or that NM could not find them in the law it read), what to get, and what the
+    other side will rely on."""
+    case = element.get("case") or {}
+    blocks = [{"kind": "subheading", "text": element["text"], "refs": []}]
+    if case.get("state") in _CASE_STATES:
+        blocks.append({"kind": "paragraph", "text": _CASE_STATES[case["state"]], "refs": []})
+
+    def law(given):
+        if not given:
+            return ""
+        if not given.get("found"):
+            return f' NM could not find these words in the law it read: "{given["words"]}".'
+        return f' {given["title"]}, {given["locator"]}: "{given["words"]}".'
+    for item in case.get("elements") or ():
+        blocks.append({"kind": "paragraph", "refs": [], "text": (
+            f"{_STANDS.get(item['status'], item['status'])}, {_PROVES.get(item['proves'], '')}: {item['element']}. {item['why']}"
+            + law(item.get("law")))})
+    for ask in case.get("to_get") or ():
+        blocks.append({"kind": "paragraph", "refs": [], "text": f"• To get, from {ask['from_whom']}: {ask['what']}. {ask['why']}"})
+    for item in case.get("other_side") or ():
+        blocks.append({"kind": "paragraph", "refs": [], "text": f"The other side will rely on: {item['relies_on']}. What answers it: "
+                                                                f"{item['answer']}" + law(item.get("law"))})
+    return blocks
 _SUGGESTED = {"better": "Could add or put better", "could_go": "Could go"}
 
 
@@ -96,6 +128,9 @@ def note(row, *, prepared_for):
             folded = True
         if kind == "ROW":
             blocks.append({"kind": "paragraph", "text": _row(element), "refs": []})
+            continue
+        if kind == "CASE":
+            blocks.extend(_case_blocks(element))
             continue
         if kind == "CHECKED":
             blocks.append({"kind": "heading", "text": element["text"]})

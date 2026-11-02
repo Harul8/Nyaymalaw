@@ -36,8 +36,9 @@ _OPEN_POINTS, _POINT_CHARACTERS = 5, 600
 
 
 def _law(questions, assessed):
-    """Whether the law has been assessed for a dispute: by a researched answer's checklist; researched, without one (an earlier
-    conversation's); or not at all, with why in plain words."""
+    """Whether the law has been assessed for a dispute: by a researched answer's checklist, or from checklist v3 by its case set out
+    (plan AN.35, piece 35c3c); researched, without one (an earlier conversation's, or a case NM could not set out); or not at all,
+    with why in plain words."""
     if assessed:
         return {"state": "assessed", "why": ""}
     if any(question["status"] == "researched" for question in questions):
@@ -194,7 +195,8 @@ def _dispute(d, record, work, checklists):
             "still_needed": list(d["missing_facts"]), "rights_at_stake": list(d["rights_at_stake"]),
             "relief_sought": list(d["relief_sought"]),
             **({"checklist": listed} if listed is not None else {}),
-            "law": _law(questions, listed is not None)}
+            "law": _law(questions, listed is not None and (
+                "case" not in listed or listed["case"] is not None and listed["case"]["state"] != "unavailable"))}
 
 
 def _pages(rows, version=research.EXACT_FINDER):

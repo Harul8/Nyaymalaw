@@ -100,4 +100,5 @@ def test_the_check_made_when_a_turn_is_saved_derives_what_its_checks_share_once(
 
 def test_without_the_scope_each_check_at_saving_would_derive_its_own(store, monkeypatch):
     monkeypatch.setattr(replay_scope, "replaying", contextlib.nullcontext)
-    assert derived_while_saving(store, monkeypatch) == (18, 6)
+    # From rendering v20 (plan AN.35, piece 35c3b) each dispute's case is shown from its own research: one more each.
+    assert derived_while_saving(store, monkeypatch) == (20, 6)

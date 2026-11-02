@@ -435,6 +435,13 @@ button.board-card:focus-visible { outline: 2px solid var(--accent); outline-offs
 .item .sub { display: block; font-size: 0.76rem; color: var(--ink-3); }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .check-none { margin: 0; font-size: 0.82rem; color: var(--ink-3); }
+/* What makes the case stronger (plan AN.35, piece 35c3d): each element with its mark, its law and its pages. */
+.case-list { list-style: none; margin: 0.3rem 0 0.6rem; padding: 0; display: grid; gap: 0.7rem; }
+.case-element > p { margin: 0.15rem 0 0 26px; }
+.case-element > blockquote { margin-left: 26px; }
+.case-element > .case-head { margin: 0; display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 8px; align-items: start;
+  font-weight: 600; color: var(--ink); }
+.case-head .st { margin-top: 2px; }
 .folded { font-size: 0.82rem; color: var(--ink-3); border-top: 1px solid var(--rule); padding-top: 0.6rem; }
 .folded > summary { cursor: pointer; min-height: 2.75rem; display: flex; align-items: center; }
 .folded > :not(summary) { margin-top: 0.45rem; }

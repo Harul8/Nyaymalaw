@@ -343,6 +343,7 @@ def _wanted(piece):
 def _judge(draft):
     """The review a draft is judged by: v12 for a v14 draft, v11 for v13, and v10 before (P29)."""
     return {response_writer.REPAIRED_CONTRACT: response_review.WORDED_CONTRACT,
+            response_writer.CASED_CONTRACT: response_review.WORDED_CONTRACT,
             response_writer.PRESENTED_CONTRACT: response_review.PRESENTED_CONTRACT}.get(draft["contract"], REVIEW)
 
 
@@ -442,7 +443,7 @@ def _blocked_draft(draft, faults, items, context, sources, section, dispute_id, 
             raise ValueError("A mend differs from what code makes of what it returned")
     if len(left_out) >= len(proposal["units"]):
         return None, applied
-    blocked = response_writer.accept(proposal, context, sources, contract=response_writer.REPAIRED_CONTRACT,
+    blocked = response_writer.accept(proposal, context, sources, contract=draft["contract"],
                                      parts=[{"dispute_id": dispute_id, "units": 1}], section=section, left_out=left_out,
                                      cut=cut)
     items = sorted(set(dropped_items) | set(items))
@@ -522,6 +523,15 @@ def _research_for(context, record, sources, execution, layout, index):
     return record, sources, execution
 
 
+def case_shown(saved, context, record, sources):
+    """What makes a saved dispute section's case stronger, as the answer and the board show it (plan AN.35, piece 35c3), read from
+    the research the section was written from; None where the section keeps no case."""
+    if saved.get(CASE) is None:
+        return None
+    part, part_sources, _ = _research_for(context, record, sources, None, response_writer.parts(record), saved["part"])
+    return case_strength.shown(saved[CASE], context, part, part_sources)
+
+
 class _Answering:
     """One turn's answering: what every section's thread shares."""
 
@@ -580,7 +590,7 @@ class _Answering:
                     refused.append(_refusal("review", self.calls.last_output, refusal_reason(again)))
                     raise
         # Code's own check that the answer works out no date itself (owner, 15 Oct 2026).
-        repaired = draft["contract"] == response_writer.REPAIRED_CONTRACT
+        repaired = draft["contract"] in response_writer.REPAIRS
         piece = {"draft": draft, "authority_evidence": authorities, "review": review,
                  "date_findings": response_writer.dates_not_given(draft, self.context, sources, self.time_limits, record,
                                                                   accepted=accepted, worded=repaired)}
@@ -810,7 +820,7 @@ class _Answering:
                     return finish("found")
                 else:
                     draft = response_writer.accept(
-                        state["proposal"], self.context, sources, contract=response_writer.REPAIRED_CONTRACT,
+                        state["proposal"], self.context, sources, contract=self.writer,
                         parts=[{"dispute_id": self._dispute(section), "units": 1}], section=section, faults=[],
                         left_out=state["left_out"], cut=state["cut"])
                 if state["items"]:
@@ -1008,11 +1018,11 @@ class _Answering:
         self.report("writing")
         # v14 (AN.29, D10): the take-ups of what the section passed over have an allowance of their own beside the section's,
         # both set up front from the matter (AN.33, D21).
-        repaired = self.writer == response_writer.REPAIRED_CONTRACT
+        repaired = self.writer in response_writer.REPAIRS
         with self.calls.scope(scope, self.own + self.take_ups + self.mends if repaired else SECTION_ALLOWANCE):
             piece = (self._repaired(scope, "core_response_writer", self._write(index, researched), {}, researched,
                                     section=index)
-                     if self.writer == response_writer.REPAIRED_CONTRACT else
+                     if self.writer in response_writer.REPAIRS else
                      self._piece(scope, "core_response_writer", self._write(index, researched), {}, researched))
         return {"part": index, "dispute_id": self.layout[index]["dispute_id"], **piece, "edit": None}
 
@@ -1067,7 +1077,7 @@ class _Answering:
                                                   sections=presented, interpretation=self.interpretation,
                                                   execution=execution, time_limits=self.time_limits,
                                                   contract=self.writer)
-        repaired = self.writer == response_writer.REPAIRED_CONTRACT
+        repaired = self.writer in response_writer.REPAIRS
         with self.calls.scope("o", self.own + self.take_ups + self.mends if repaired else SECTION_ALLOWANCE):
             if repaired:
                 return self._repaired("o", "core_response_overview", write,
@@ -1190,7 +1200,7 @@ def _piece_valid(piece, context, record, sources, execution, time_limits, sectio
     evidence; its date findings checked for shape (the date check reads today's date, so
     they are kept, not redone)."""
     repaired = isinstance(piece, dict) and isinstance(piece.get("draft"), dict) and (
-        piece["draft"].get("contract") == response_writer.REPAIRED_CONTRACT)
+        piece["draft"].get("contract") in response_writer.REPAIRS)
     if not isinstance(piece, dict) or set(piece) != (_PIECE_V14 if repaired else _PIECE):
         raise ValueError("Unknown saved section")
     draft = piece["draft"]

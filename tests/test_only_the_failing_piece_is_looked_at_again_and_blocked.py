@@ -96,7 +96,8 @@ def answered(model):
     elements = response_rendering.render_sections(ctx, record, sources, sections=sections, cross_check=crossed,
                                                   overview=overview, time_limits=worked,
                                                   contract=response_rendering.REPAIRED_CONTRACT)
-    activity = {"contract": turn.CONTRACT, "interpretation": {"units": []}, "research": record, "sources": sources,
+    # Writer v14 rendered as v19 is how turn v9 saves an answer (turn v10 writes with writer v15 and renders as v20).
+    activity = {"contract": turn.LOOKED_CONTRACT, "interpretation": {"units": []}, "research": record, "sources": sources,
                 "execution": execution, "calculation": worked, "rendering_contract": response_rendering.REPAIRED_CONTRACT,
                 "sections": sections, "cross_check": crossed, "overview": overview}
     assert turn.validate_activity(activity, ctx, elements) == activity

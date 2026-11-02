@@ -20,6 +20,7 @@ import json
 from copy import deepcopy
 
 from nm.core_engine import answer_sources, reasoning, research, response_writer
+from nm.shared.citation_contracts import statute_title
 from nm.shared.model_port import (ModelError, Prompt, SchemaViolation, Tier, UsageLimitReached, canonical_schema_data,
                                   estimate_tokens, require_schema)
 
@@ -168,6 +169,54 @@ def assess(model, context, part, sources, dispute):
         record.update(proposal=first)
         record["failures"].append({"step": "case_check", "reason": type(exc).__name__})
     return {**record, **admit(record["proposal"], offered, points, sources)}
+
+
+#: How a case stands, as the answer and the board say it (piece 35c3): set out and checked by the second call; set out, its check not
+#: made; not set out, the first call having failed.
+SHOWN_STATES = ("checked", "unchecked", "unavailable")
+
+
+def shown(record, context, part, sources):
+    """A dispute's saved case as the answer and the board show it (plan AN.35, D32; piece 35c3): each element in plain words, who must
+    prove it, how the papers stand on it and why (and what it was called where code would not let it stand as shown), its law's own
+    words with the passage they stand in - or that code could not find them in one - and the pages of its points; what to get, from
+    whom, why and how it helps, under the element it is for; and what the other side will rely on and what answers it. Every word is
+    the model's or the passage's; every title, page and mark is code's. None where the dispute keeps no case."""
+    if record is None:
+        return None
+    aliased = answer_sources.aliases(sources)
+    offered = {tag: alias for alias, tag in aliased.items()}
+    points = {point["id"]: point for point in response_writer.coverage_items(part, offered, context)}
+
+    def law(given, found):
+        if not given["source_id"] and not given["quote"]:
+            return None
+        if not found:
+            return {"found": False, "words": given["quote"]}
+        tag = aliased[given["source_id"]]
+        source = sources[tag]
+        title = (statute_title(source["title"], source["source_identity"].get("act_id", ""))
+                 if source["kind"] == "provision" else source["title"])
+        return {"found": True, "kind": source["kind"], "title": title, "locator": source["locator"], "words": given["quote"],
+                "source_id": tag, **({"in_force": source["in_force"]} if "in_force" in source else {})}
+
+    def where(ids):
+        said = []
+        for identity in ids:
+            point = points[identity]
+            pages = [{"document": sources[aliased[cite]]["title"], "page": sources[aliased[cite]]["locator"],
+                      "source_id": aliased[cite]}
+                     for cite in point.get("cite") or () if cite in aliased and sources[aliased[cite]]["kind"] == "document"]
+            said.append({"what": point["what"], "located": point.get("located", True), "pages": pages})
+        return said
+    elements = [{"element": item["element"], "proves": item["proves"], "status": item["status"], "why": item["why"],
+                 **({"called": item["given_status"]} if item["given_status"] != item["status"] else {}),
+                 "law": law(item["law"], item["law_found"]), "points": where(item["points"])} for item in record["elements"]]
+    return {"state": "unavailable" if record["proposal"] is None else record["checked"], "elements": elements,
+            "to_get": [{"what": ask["what"], "from_whom": ask["from_whom"], "why": ask["why"], "helps": ask["helps"],
+                        "for": elements[ask["element"] - 1]["element"]} for ask in record["to_get"]],
+            "other_side": [{"relies_on": item["relies_on"], "answer": item["answer"], "law": law(item["law"], item["law_found"]),
+                            "points": where(item["points"])} for item in record["other_side"]]}
 
 
 def validate(record, context, part, sources, dispute):
