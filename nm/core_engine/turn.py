@@ -136,7 +136,7 @@ def understood(calls, context, searcher, report, held_acts=None):
     return interpreted, record, limits
 
 
-def _interpreted(calls, context, report):
+def _interpreted(calls, context, report, early=None):
     """The message's interpretation and the matter's understanding, side by side, and the
     research plan; returns the interpretation and the plan."""
     # The matter's first understanding reads the conversation itself, so it is written
@@ -155,7 +155,7 @@ def _interpreted(calls, context, report):
     with ThreadPoolExecutor(max_workers=1) as beside:
         planning = beside.submit(calls.checked, "core_research_plan",
                                  lambda: research.plan(calls, context, progress=report, wanted=wanted,
-                                                       restrictions=restricted))
+                                                       restrictions=restricted, early=early))
         try:
             interpreted = calls.checked("core_understanding", lambda: understanding.understand(calls, context))
             verdict["carries"] = research.carries_matter(interpreted)
@@ -184,14 +184,18 @@ def prepare(model, context, searcher, *, case_index=None, provision_reader=None,
     report = _reporter(progress)
     calls = model if isinstance(model, TurnCalls) else TurnCalls(model)
     report("understanding")
-    interpreted, plan = _interpreted(calls, context, report)
+    # Plan AN.33 (D28; piece 33q): the held law is searched as soon as the understanding and its search phrases are final, beside
+    # the papers' side-by-side reading and the weighing; each search begun so is used once, as it would have been made.
+    started = {}
+    interpreted, plan = _interpreted(calls, context, report,
+                                     early=lambda work: started.update(research.start_search(searcher, work)))
     # Step 4 (owner, 21 Oct 2026; P26 as first decided): each dispute is researched as its own
     # part, and its section is written as soon as that part is ready; the time limits are
     # worked out beside the search, only where research is needed.
     with ThreadPoolExecutor(max_workers=1) as pool:
         working = (pool.submit(calculation.work_out, calls, context, held_acts)
                    if held_acts is not None and _needs_research(plan) else None)
-        parts = research.retrieve_parts(plan, searcher, context, model=calls, progress=report)
+        parts = research.retrieve_parts(plan, searcher, context, model=calls, progress=report, started=started)
         limits = working.result() if working is not None else calculation.skipped()
     researched = answer_sections.Researched(context, plan, parts)
 

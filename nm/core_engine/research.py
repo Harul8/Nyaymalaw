@@ -2337,7 +2337,7 @@ def _weight_issues(data):
              "proposal": deepcopy(failure)} for failure in data.get("weighing_failures", ()) if failure["step"] == "weigh"]
 
 
-def plan(model, context, interpretation=None, *, progress=None, wanted=None, restrictions=None):
+def plan(model, context, interpretation=None, *, progress=None, wanted=None, restrictions=None, early=None):
     """The v7 reasoning loop. Expected model failures after the first understanding are
     recorded where they occur; independent work continues. The loop reads the
     conversation itself; the interpretation only spares it for a message that carries
@@ -2366,6 +2366,13 @@ def plan(model, context, interpretation=None, *, progress=None, wanted=None, res
         proposed = _proposal(model, context, still, progress, restrictions)
         if proposed is None:
             return _no_matter(context)
+        if early is not None and still():
+            # v14 (AN.33, D28; piece 33q): the research work the understanding and its search phrases give, for its search to start
+            # now, beside the side-by-side reading and the weighing. A proposal the plan's check refuses starts none.
+            try:
+                early(accept({**proposed, "chronology": [], "chronology_failures": []}, context)["work"])
+            except SchemaViolation:
+                pass
         events, unread = papers.result()
         transfers, unmoved = moved.result()
         connections, people, appearances, unlinked = linked.result()
@@ -2883,15 +2890,45 @@ def _picked(model, plan, searches, report):
         return dict(zip(_PICK_FIELDS, pool.map(lambda kind: pick(model, plan, searches, kind), _PICK_FIELDS)))
 
 
-def retrieve_parts(plan, searcher, context, model=None, *, progress=None):
+def _search_key(work, queries, instruments):
+    """What makes two searches one (v14, piece 33q): the research work they are made for and exactly what each searches."""
+    return json.dumps([work["id"], queries, instruments], sort_keys=True, ensure_ascii=False)
+
+
+def start_search(searcher, work):
+    """The searches of some research work started at once (v14, AN.33 D28, piece 33q), as retrieve_parts would start them, keyed by
+    what each searches (_search_key): {} where there is no searcher. A work item without queries starts none, and one whose Acts
+    code cannot list starts none either - retrieve_parts records why, as before."""
+    if searcher is None:
+        return {}
+    asked = []
+    for item in work:
+        queries = search_queries(item)
+        if not queries:
+            continue
+        try:
+            asked.append((item, queries, search_instruments(item)))
+        except (ValueError, KeyError, TypeError):
+            continue
+    futures = searcher.search_many([(queries, instruments) for _, queries, instruments in asked],
+                                   results={"provision": PROVISIONS_FOR_PICK}) if asked else []
+    return {_search_key(item, queries, instruments): future
+            for (item, queries, instruments), future in zip(asked, futures, strict=True)}
+
+
+def retrieve_parts(plan, searcher, context, model=None, *, progress=None, started=None):
     """v10: every question searched side by side in the answer's order (owner, 20 Oct 2026:
     step 1), and each dispute's provisions and judgment paragraphs picked as soon as its own
     questions are searched (21 Oct 2026: step 4). Returns each dispute's part as a future, in
-    the answer's order; a part keeps what each of its questions found, or why it failed."""
+    the answer's order; a part keeps what each of its questions found, or why it failed.
+    started (v14, AN.33 piece 33q): the searches start_search began while the plan was finished, by what each searches; one is
+    used for the work item it was made for where that item still searches exactly so, once, and every other item is searched now;
+    one begun for nothing the plan keeps is cancelled where it has not started, giving way to those needed."""
     if accept(plan["proposal"], context) != plan:
         raise ValueError("Research plan differs from its original sources")
     report = progress or (lambda stage, **detail: None)
-    asked, outcomes = [], {}
+    started = dict(started or {})
+    asked, outcomes, early = [], {}, []
     for work in plan["work"]:
         queries = search_queries(work)
         if not queries:
@@ -2899,13 +2936,20 @@ def retrieve_parts(plan, searcher, context, model=None, *, progress=None):
         try:
             if searcher is None:
                 raise SearchUnavailable("Held-law search is not configured")
-            asked.append((work, queries, search_instruments(work)))
+            instruments = search_instruments(work)
+            begun = started.pop(_search_key(work, queries, instruments), None)
+            if begun is not None:
+                early.append((work, queries, instruments, begun))
+            else:
+                asked.append((work, queries, instruments))
         except (SearchUnavailable, ValueError, OSError, RuntimeError, KeyError, TypeError) as exc:
             outcomes[work["id"]] = exc
-    finished, lock = [len(plan["work"]) - len(asked)], threading.Lock()
+    for future in started.values():
+        future.cancel()
+    finished, lock = [len(plan["work"]) - len(asked) - len(early)], threading.Lock()
     report("searching", done=finished[0], total=len(plan["work"]))
 
-    def searched():
+    def searched(*_):
         with lock:  # counts are reported in order
             finished[0] += 1
             if finished[0] < len(plan["work"]):  # the last is followed by the next stage at once
@@ -2914,6 +2958,9 @@ def retrieve_parts(plan, searcher, context, model=None, *, progress=None):
                                    results={"provision": PROVISIONS_FOR_PICK}, done=searched) if asked else []
     outcomes.update((work["id"], (future, queries, instruments))
                     for (work, queries, instruments), future in zip(asked, futures, strict=True))
+    for work, queries, instruments, future in early:
+        outcomes[work["id"]] = (future, queries, instruments)
+        future.add_done_callback(searched)
 
     def researched(dispute_id, works):
         searches, failures = {}, {}

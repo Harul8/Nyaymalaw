@@ -29,7 +29,7 @@ def interpreted(*units, issues=()):
 def run(monkeypatch, result):
     seen = {}
 
-    def plan(calls, context, interpretation=None, *, progress=None, wanted=None, restrictions=None):
+    def plan(calls, context, interpretation=None, *, progress=None, wanted=None, restrictions=None, early=None):
         seen["restrictions"] = restrictions()      # asked first: it must wait for the interpretation, not run ahead of it
         seen["wanted"] = wanted()
         return "PLAN"
