@@ -46,7 +46,7 @@ def library():
 def missing_time(user):
     label = re.search(r"^(Q\d+): ", user, re.M).group(1)
     return {"questions": [{"question_id": label, "missing": "When time runs for the suit.", "sections": [],
-                           "phrases": [FURTHER_WORDS]}]}
+                           "phrases": [FURTHER_WORDS], "cited": []}]}
 
 
 def researched(model):

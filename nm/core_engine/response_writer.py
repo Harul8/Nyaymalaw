@@ -595,6 +595,10 @@ _CASE_BESIDE = """What the case needs: what the law requires of this dispute, ho
 element and what to gather from the client are set out beside your section by a colleague,
 from the same held law and points, so write no checklist. Under time_limit_ids give the IDs
 (T1, T2...) of the time limits in time_limits that concern this dispute.
+Where research_context lists cited_in_the_papers, they are the judgments the papers and the
+advocate cite and how our library stands on each. One you rely on that is not held, or not
+checked, was not read: say so where it matters, never that the judgment does not exist or
+what it decided.
 """
 SYSTEM_V15 = _without_checklist(SYSTEM_V14)
 
@@ -1648,6 +1652,14 @@ def _research_context(record, work_ids):
                               if row.get("named") else {})}
                           for identity, row in record["searches"].items() if mine(identity)],
              "failures": {identity: row for identity, row in record["failures"].items() if mine(identity)}}
+    # Research v16 (plan AN.35, piece 35e): the judgments the papers cite and how our library stands on each - one not held is
+    # one research could not read, said so.
+    cited = {entry["id"]: entry for further in (record.get("further") or {}).values() for entry in further.get("cited", ())}
+    if cited:
+        shown["cited_in_the_papers"] = [
+            {"citation": entry["citation"], "held": research.CITED_SAID[entry["state"]],
+             **({"judgment": f"{entry['judgment']['title']} ({entry['judgment']['court']}, {entry['judgment']['year']})"}
+                if entry["judgment"] else {})} for entry in cited.values()]
     if record.get("contract") in research.QUESTION_PLANS:
         shown["understanding"] = record["plan"]["proposal"]["understanding"]
         shown["questions"] = [{"work_id": w["id"], "dispute_id": w["dispute"]["id"], "question": w["question"],

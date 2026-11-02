@@ -25,7 +25,8 @@ from nm.core_engine.replay_scope import known, once
 from nm.core_engine.retrieval import SearchUnavailable, _digest, _valid_location, in_force, validate_search
 from nm.core_engine.understanding import REFERENCE, TEXT, TYPOGRAPHY, select, source_catalogue
 from nm.shared import clock_contracts
-from nm.shared.citation_contracts import provision_references
+from nm.core_engine.citations import IndexUnavailable, held_judgments
+from nm.shared.citation_contracts import find_reporter_citations, provision_references
 from nm.shared.model_port import (
     ModelError, OutputTruncated, Prompt, SchemaViolation, Tier, UsageLimitReached, canonical_schema_data, estimate_tokens,
     require_schema,
@@ -2930,11 +2931,12 @@ def _extract(paragraphs, found, chosen):
     return {position: why[position] for position in positions if position in kept}
 
 
-def _read_judgments(searcher, plan, searches, pick, skip=frozenset()):
+def _read_judgments(searcher, plan, searches, pick, skip=frozenset(), cases=None):
     """The judgments a dispute's answer reads (P31): each chosen judgment whole, or as an
-    extract of a long one; one that cannot be read is said, with why. skip (v16): those already read."""
+    extract of a long one; one that cannot be read is said, with why. skip (v16): those already read. cases (v16, piece 35e):
+    the judgments to read, as (case ID, found, chosen), where they are not the pick's."""
     read = []
-    for case_id, found, chosen in _chosen_cases(plan, searches, pick, skip=skip):
+    for case_id, found, chosen in (_chosen_cases(plan, searches, pick, skip=skip) if cases is None else cases):
         try:
             if searcher is None or not callable(getattr(searcher, "read_judgment", None)):
                 raise SearchUnavailable("Held judgments cannot be read whole")
@@ -3000,7 +3002,7 @@ def start_search(searcher, work):
             for (item, queries, instruments, named), future in zip(asked, futures, strict=True)}
 
 
-def retrieve_parts(plan, searcher, context, model=None, *, progress=None, started=None):
+def retrieve_parts(plan, searcher, context, model=None, *, progress=None, started=None, case_index=None):
     """v10: every question searched side by side in the answer's order (owner, 20 Oct 2026:
     step 1), and each dispute's provisions and judgment paragraphs picked as soon as its own
     questions are searched (21 Oct 2026: step 4). Returns each dispute's part as a future, in
@@ -3062,9 +3064,12 @@ def retrieve_parts(plan, searcher, context, model=None, *, progress=None, starte
                 failures[work["id"]] = {"stage": "search", "reason": str(exc) or type(exc).__name__}
         picks = _picked(model, plan, searches, report)
         judgments = _read_judgments(searcher, plan, searches, picks["judgment"])
-        # v16 (plan AN.35, piece 35d): once, the law still missing for the dispute's questions.
+        # v16 (plan AN.35, piece 35d): once, the law still missing for the dispute's questions, and (piece 35e) the judgments the
+        # papers cite that its questions need.
         return _part(plan, dispute_id, searches, failures, picks, judgments,
-                     further=_further(model, searcher, plan, searches, picks, judgments, report))
+                     further=_further(model, searcher, plan, searches, picks, judgments, report, cited, context))
+    # Piece 35e: the judgments the papers and messages cite, looked up once for every dispute.
+    cited = cited_judgments(context, case_index)
     groups = dispute_work(plan)
     pool = ThreadPoolExecutor(max_workers=max(1, len(groups)), thread_name_prefix="dispute")
     parts = {dispute_id: pool.submit(researched, dispute_id, works) for dispute_id, works in groups.items()}
@@ -3081,11 +3086,88 @@ Purpose: before the dispute is answered, its law should be complete. For each qu
 
 Outcome: for each question whose governing law is still missing, say in missing what is missing, and name it: in sections, the sections to read by their number, each on its own, by its Act's short title and year and its number as the Act numbers it (a section, an article, an order and rule); in phrases, the words a statute or a court would use for what is missing, each a different way in. Leave out a question whose law is already there; ask only for law the question needs, not for what would merely add to it. This is the one further search for the dispute: what it finds is chosen from as before, and nothing is searched again.
 
-Work in a loop: read each question and what was chosen, decide what is missing, check that each section you name and each phrase you give would find law the question needs that is not already chosen, correct what does not, then give the whole."""
+The judgments the papers and the advocate's messages cite come after the questions, each under its number (CJ1, CJ2 ...) with where it is cited and how our library stands on it: held, held more than once, not held, or not checked. For each question, name in cited the held ones a lawyer must read to answer it; each is then read whole, or as an extract when it is long. Name none that does not bear on the question, and none we do not hold.
+
+Work in a loop: read each question and what was chosen, decide what is missing, check that each section you name and each phrase you give would find law the question needs that is not already chosen, and that each judgment you name in cited bears on it, correct what does not, then give the whole."""
 FURTHER_SCHEMA = _object({"questions": {"type": "array", "items": _object({
-    "question_id": STRING, "missing": STRING, "sections": {"type": "array", "items": NAMED_SECTION}, "phrases": STRINGS})}})
-#: The fields of a dispute's further search as its record keeps it.
-_FURTHER_FIELDS = {"state", "proposal", "reason", "searches", "failures", "picks", "judgments"}
+    "question_id": STRING, "missing": STRING, "sections": {"type": "array", "items": NAMED_SECTION}, "phrases": STRINGS,
+    "cited": STRINGS})}})
+#: The fields of a dispute's further search as its record keeps it; from piece 35e the judgments the papers cite, as the case
+#: index found them, and those of them read.
+_FURTHER_FIELDS = {"state", "proposal", "reason", "searches", "failures", "picks", "judgments", "cited", "cited_read"}
+#: How the held case index stands on a citation (piece 35e), as citations.check_citations says it.
+CITED_STATES = ("found", "ambiguous", "not_held", "unavailable")
+CITED_SAID = {"found": "held", "ambiguous": "held more than once, not read", "not_held": "not held in our library",
+               "unavailable": "not checked: the case index could not be read"}
+
+
+def _citations_in(context):
+    """Each case citation the advocate's messages and the papers make, once by its exact keys, with each place it is made (v16,
+    piece 35e). Code reads them (citation_contracts); nothing here decides which judgment a citation names."""
+    found = {}
+    for identity, row in source_catalogue(context).items():
+        if row.get("record_role") not in ("original_account", "supplied_document"):
+            continue
+        for citation in find_reporter_citations(row["text"]):
+            keys = tuple(citation.keys)
+            if not keys:
+                continue
+            entry = found.setdefault(keys, {"citation": " ".join(citation.text.split()), "keys": list(keys), "where": []})
+            if identity not in entry["where"]:
+                entry["where"].append(identity)
+    return [{"id": f"CJ{number}", **entry} for number, entry in enumerate(found.values(), 1)]
+
+
+def cited_judgments(context, case_index):
+    """The judgments the papers and the messages cite, each looked up in the held case index by its exact keys only (v16, piece
+    35e): found (one held judgment), ambiguous (more than one), not held, or unavailable (the index could not be read). Made once
+    per turn and kept with the research; never made again on reopening, where the index may have changed."""
+    cited = []
+    for entry in _citations_in(context):
+        try:
+            if case_index is None:
+                raise IndexUnavailable("the case index is not configured")
+            held = held_judgments(entry["keys"], case_index)
+        except (IndexUnavailable, OSError) as exc:
+            cited.append({**entry, "state": "unavailable", "judgment": None, "reason": str(exc) or type(exc).__name__})
+            continue
+        state = "found" if len(held) == 1 else "ambiguous" if held else "not_held"
+        judgment = ({key: held[0].get(key) for key in ("case_id", "title", "court", "year")} if state == "found" else None)
+        cited.append({**entry, "state": state, "judgment": judgment, "reason": None})
+    return cited
+
+
+def _cited_text(cited, context):
+    """The cited judgments as the further call reads them: each with how the library stands on it and where it is cited."""
+    catalogue = source_catalogue(context)
+
+    def place(identity):
+        row = catalogue.get(identity) or {}
+        about = row.get("document") if row.get("record_role") == "supplied_document" else None
+        return f"{about['name']}, page {about['page']}" if about else "the advocate's message"
+    lines = ["\nJudgments the papers and the advocate's messages cite:"]
+    for entry in cited:
+        held = entry["judgment"]
+        named = f" - {held['title']} ({', '.join(str(v) for v in (held.get('court'), held.get('year')) if v)})" if held else ""
+        lines.append(f"  {entry['id']} {entry['citation']}{named}: {CITED_SAID[entry['state']]}; cited in "
+                     + "; ".join(dict.fromkeys(place(identity) for identity in entry["where"])) + ".")
+    return "\n".join(lines)
+
+
+def _cited_cases(asked, labels, cited, skip):
+    """The held cited judgments the further call chose to read (v16, piece 35e), each once, in the order named: only one held as
+    one judgment, and none the dispute already reads."""
+    by_id = {entry["id"]: entry for entry in cited if entry["state"] == "found"}
+    order = []
+    for item in asked["questions"]:
+        if item["question_id"] not in labels.values():
+            continue
+        for identity in item.get("cited", ()):
+            entry = by_id.get(identity)
+            case_id = entry["judgment"]["case_id"] if entry else None
+            if case_id and case_id not in skip and case_id not in order:
+                order.append(case_id)
+    return order
 
 
 def _further_text(plan, searches, labels, picks):
@@ -3156,10 +3238,11 @@ def _fresh(search, before):
 
 def _no_further(state, reason=None):
     return {"state": state, "proposal": None, "reason": reason, "searches": {}, "failures": {},
-            "picks": {kind: pick(None, {"work": [], "proposal": {}}, {}, kind) for kind in _PICK_FIELDS}, "judgments": []}
+            "picks": {kind: pick(None, {"work": [], "proposal": {}}, {}, kind) for kind in _PICK_FIELDS}, "judgments": [],
+            "cited": [], "cited_read": []}
 
 
-def _further(model, searcher, plan, searches, picks, judgments, report):
+def _further(model, searcher, plan, searches, picks, judgments, report, cited=(), context=None):
     """A dispute's further search (v16, piece 35d): one call names the law still missing for each question; code searches once for
     what it names, the two picks choose among only what is new to each question, and the judgments chosen are read, each judgment
     once. A failed call leaves it unavailable, said; a failed search is kept as that question's failure; nothing is searched again."""
@@ -3169,8 +3252,8 @@ def _further(model, searcher, plan, searches, picks, judgments, report):
     if model is None:
         return _no_further("unavailable", "No model for the further search")
     try:
-        asked = _call(model, "core_research_further", FURTHER, _further_text(plan, searches, labels, picks), FURTHER_SCHEMA,
-                      "further")
+        asked = _call(model, "core_research_further", FURTHER, _further_text(plan, searches, labels, picks)
+                      + (_cited_text(cited, context) if cited else ""), FURTHER_SCHEMA, "further")
     except (ModelError, SchemaViolation) as exc:
         return _no_further("unavailable", type(exc).__name__)
     wanted = _further_wanted(asked, plan, labels)
@@ -3195,11 +3278,15 @@ def _further(model, searcher, plan, searches, picks, judgments, report):
     chosen = (_picked(model, plan, fresh, lambda *_, **__: None) if fresh
               else {kind: pick(None, plan, {}, kind) for kind in _PICK_FIELDS})
     read = _read_judgments(searcher, plan, fresh, chosen["judgment"], skip={entry["case_id"] for entry in judgments})
+    # Piece 35e: the held judgments the papers cite that the call chose to read, each once.
+    skip = {entry["case_id"] for entry in [*judgments, *read]}
+    cited_read = _read_judgments(searcher, plan, {}, None, cases=[(case_id, set(), set())
+                                                                  for case_id in _cited_cases(asked, labels, cited, skip)])
     return {"state": "evaluated", "proposal": asked, "reason": None, "searches": found, "failures": failures, "picks": chosen,
-            "judgments": read}
+            "judgments": read, "cited": deepcopy(list(cited)), "cited_read": cited_read}
 
 
-def _validate_further(further, plan, searches, judgments, dispute_id, contract):
+def _validate_further(further, plan, searches, judgments, dispute_id, contract, context=None):
     """A dispute's saved further search (v16) checked against its own answer and the dispute's first searches (P46)."""
     if not isinstance(further, dict) or set(further) != _FURTHER_FIELDS or further["state"] not in ("evaluated", "not_needed",
                                                                                                       "unavailable"):
@@ -3207,6 +3294,7 @@ def _validate_further(further, plan, searches, judgments, dispute_id, contract):
     labels = _labels(plan, searches)
     if further["state"] != "evaluated":
         if (further["proposal"] is not None or further["searches"] or further["failures"] or further["judgments"]
+                or further["cited"] != [] or further["cited_read"] != []
                 or further["state"] == "not_needed" and labels
                 or (further["reason"] is None) != (further["state"] == "not_needed")
                 or further["reason"] is not None and (not isinstance(further["reason"], str) or not further["reason"])
@@ -3238,6 +3326,23 @@ def _validate_further(further, plan, searches, judgments, dispute_id, contract):
         _validate_picks(further["picks"][kind], plan, fresh, kind)
     _validate_judgments({dispute_id: further["judgments"]}, dispute_id, plan, fresh, further["picks"]["judgment"], contract,
                         skip={entry["case_id"] for entry in judgments})
+    # Piece 35e: the cited judgments are the citations the papers and messages make, each as the index stood on it then.
+    cited = further["cited"]
+    made = _citations_in(context) if context is not None else None
+    if (not isinstance(cited, list) or made is None
+            or [{key: entry.get(key) for key in ("id", "citation", "keys", "where")} for entry in cited if isinstance(entry, dict)]
+            != made
+            or any(set(entry) != {"id", "citation", "keys", "where", "state", "judgment", "reason"}
+                   or entry["state"] not in CITED_STATES
+                   or (entry["judgment"] is not None) != (entry["state"] == "found")
+                   or entry["judgment"] is not None and (set(entry["judgment"]) != {"case_id", "title", "court", "year"}
+                                                         or not isinstance(entry["judgment"]["case_id"], str)
+                                                         or not entry["judgment"]["case_id"])
+                   or (entry["reason"] is not None) != (entry["state"] == "unavailable") for entry in cited)):
+        raise ValueError("The judgments the papers cite are not as the further search kept them")
+    skip = {entry["case_id"] for entry in [*judgments, *further["judgments"]]}
+    _validate_judgments({dispute_id: further["cited_read"]}, dispute_id, plan, {**searches, **further["searches"]}, None,
+                        contract, expected=[(case_id, set(), set()) for case_id in _cited_cases(asked, labels, cited, skip)])
 
 
 def further_searches(record):
@@ -3250,9 +3355,11 @@ def further_searches(record):
 
 
 def judgments_read(record):
-    """The judgments each dispute of a record reads: those its picks chose and, from v16, those its further picks chose."""
+    """The judgments each dispute of a record reads: those its picks chose and, from v16, those its further picks chose and the
+    judgments the papers cite that it chose to read (piece 35e)."""
     further = record.get("further") or {}
-    return {dispute_id: [*entries, *(further.get(dispute_id) or {}).get("judgments", ())]
+    return {dispute_id: [*entries, *(further.get(dispute_id) or {}).get("judgments", ()),
+                         *(further.get(dispute_id) or {}).get("cited_read", ())]
             for dispute_id, entries in (record.get("judgments") or {}).items()}
 
 
@@ -3319,9 +3426,9 @@ def chosen(record, kind="provision"):
     return out
 
 
-def retrieve(plan, searcher, context, model=None, *, progress=None):
+def retrieve(plan, searcher, context, model=None, *, progress=None, case_index=None):
     """The whole v10 research: every dispute's part, assembled (retrieve_parts)."""
-    parts = retrieve_parts(plan, searcher, context, model, progress=progress)
+    parts = retrieve_parts(plan, searcher, context, model, progress=progress, case_index=case_index)
     return assemble(plan, [future.result() for future in parts.values()])
 
 
@@ -3433,7 +3540,8 @@ def _validate(record, plan, context):
             for dispute_id in disputes:
                 ids = {w["id"] for w in groups[dispute_id]}
                 own = {i: search for i, search in record["searches"].items() if i in ids}
-                _validate_further(record["further"][dispute_id], plan, own, record["judgments"][dispute_id], dispute_id, contract)
+                _validate_further(record["further"][dispute_id], plan, own, record["judgments"][dispute_id], dispute_id, contract,
+                                  context)
     else:
         if contract in _QUESTION_PLANS:
             _validate_picks(record["picks"], plan, record["searches"])
@@ -3448,13 +3556,13 @@ def _validate(record, plan, context):
     return deepcopy(record)
 
 
-def _validate_judgments(judgments, dispute_id, plan, searches, pick, contract=CONTRACT, skip=frozenset()):
+def _validate_judgments(judgments, dispute_id, plan, searches, pick, contract=CONTRACT, skip=frozenset(), expected=None):
     """v11 (P31): the judgments a dispute reads are those its pick chose, in order - every one from v15, at most
     JUDGMENTS_PER_DISPUTE before; each read whole when no longer than the bound, else as an extract
     keeping its opening, its order and what the pick chose; every paragraph kept exactly as
     stored, and what search found and the pick chose marked as found and chosen."""
     entries = judgments.get(dispute_id) if isinstance(judgments, dict) else None
-    expected = _chosen_cases(plan, searches, pick, contract, skip)
+    expected = _chosen_cases(plan, searches, pick, contract, skip) if expected is None else expected
     if not isinstance(entries, list) or [entry.get("case_id") for entry in entries] != [c for c, _, _ in expected]:
         raise ValueError("The judgments read are not the ones the pick chose")
     revisions = {search["corpus_revisions"].get("judgment") for search in searches.values()}

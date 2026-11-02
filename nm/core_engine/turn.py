@@ -200,7 +200,8 @@ def prepare(model, context, searcher, *, case_index=None, provision_reader=None,
     with ThreadPoolExecutor(max_workers=1) as pool:
         working = (pool.submit(calculation.work_out, calls, context, held_acts)
                    if held_acts is not None and _needs_research(plan) else None)
-        parts = research.retrieve_parts(plan, searcher, context, model=calls, progress=report, started=started)
+        parts = research.retrieve_parts(plan, searcher, context, model=calls, progress=report, started=started,
+                                        case_index=case_index)
         limits = working.result() if working is not None else calculation.skipped()
     researched = answer_sections.Researched(context, plan, parts)
 

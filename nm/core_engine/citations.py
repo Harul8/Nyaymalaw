@@ -361,6 +361,12 @@ def _distinct(judgments: dict[str, dict]) -> list[dict]:
     return distinct
 
 
+def held_judgments(keys, index: CaseIdentityIndex) -> list[dict]:
+    """The different held judgments a citation's exact keys lead to, as check_citations finds them (plan AN.35, piece 35e: the
+    research reads a judgment the papers cite by its citation). Raises IndexUnavailable where the index cannot be read."""
+    return _distinct(index.judgments_for(tuple(keys)))
+
+
 def _scope_statement(scope: dict) -> str:
     courts = "; ".join(f"{c['court']}, {c['from']}-{c['to']} ({c['judgments']:,})" for c in scope["courts"])
     telangana = any("telangana" in c["court"].lower() and "pre-telangana" not in c["court"].lower()
