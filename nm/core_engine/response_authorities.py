@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 
-from nm.core_engine import answer_sources, response_writer
+from nm.core_engine import answer_sources, research, response_writer
 from nm.core_engine.calls import ReleaseWithheld
 from nm.core_engine.citations import CONTRACT as CITATION_CONTRACT
 from nm.core_engine.citations import IndexUnavailable, check_citations
@@ -42,7 +42,8 @@ def _raw_sources(research_record):
 
 def _offered_units(research_record):
     result = {}
-    for search in research_record["searches"].values():
+    # Research v16 (plan AN.35, piece 35d): what each further search offered too.
+    for search in [*research_record["searches"].values(), *(search for _, search in research.further_searches(research_record))]:
         for selected in offered(search):
             for position, row in [(selected["position"], selected["source"]),
                     *((s["position"], s["row"]) for s in selected["context"]["segments"])]:

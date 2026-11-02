@@ -102,9 +102,11 @@ def _build(context, research_record):
     picked = research.picked_judgments(checked)
     # v11 (P31): the judgments chosen are read whole or as extracts (_judgments_read); a chosen
     # judgment that could not be read keeps the paragraphs chosen of it, as v8 read them.
-    reads = checked["judgments"] if checked["contract"] in research.JUDGMENTS_READ else None
+    # v16 (plan AN.35, piece 35d): with the judgments each dispute's further search chose.
+    reads = research.judgments_read(checked) if checked["contract"] in research.JUDGMENTS_READ else None
     unread = {entry["case_id"] for entries in (reads or {}).values() for entry in entries if "unread" in entry}
-    for work_id, search in checked["searches"].items():
+    # v16 (plan AN.35, piece 35d): each further search as its picks were shown it, after the first.
+    for work_id, search in [*checked["searches"].items(), *research.further_searches(checked)]:
         # From search v9 a pick may choose a provision connected to a returned one (P32).
         for selected in offered(search):
             if admitted is not None and selected["kind"] == "provision" and selected["id"] not in admitted:
@@ -164,8 +166,10 @@ def _judgments_read(checked, reads, sources, positions):
             if "unread" in entry:
                 continue
             found_by = {}
+            further = dict(research.further_searches(checked))
             for work_id in work_ids:
-                for candidate in (checked["searches"].get(work_id) or {}).get("candidates", []):
+                for candidate in [*(checked["searches"].get(work_id) or {}).get("candidates", []),
+                                  *(further.get(work_id) or {}).get("candidates", [])]:
                     if candidate["kind"] == "judgment" and candidate["source"].get("case_id") == entry["case_id"]:
                         found_by.setdefault(candidate["position"], []).append(work_id)
             owning = list(dict.fromkeys(w for found in found_by.values() for w in found)) or work_ids[:1]
@@ -207,7 +211,7 @@ def _read_with(checked, sources):
     admitted provisions its Act connects to it, each saying how: it names the other, the
     other names it (with the words that do), or they stand beside each other. Catalogues of
     earlier searches carry no such field."""
-    for search in checked["searches"].values():
+    for search in [*checked["searches"].values(), *(search for _, search in research.further_searches(checked))]:
         for edge in search.get("connections", ()):
             if edge["from"] not in sources or edge["to"] not in sources:
                 continue

@@ -135,7 +135,7 @@ def store(tmp_path): return FileMatterStore(tmp_path, key="synthetic-turn-fixtur
 def test_four_actual_stage_calls_save_reopen_and_replay_without_reexecution(store):
     model = ScriptedModel(legal=True)
     response = run(store, model)
-    assert response["committed"] == "committed" and response["metrics"]["llm_calls"] == 11
+    assert response["committed"] == "committed" and response["metrics"]["llm_calls"] == 12
     names = [name for name, _ in model.calls]
     # The interpretation and the matter's first understanding are written together (18 Oct 2026).
     assert sorted(names[:2]) == ["core_research_understand", "core_understanding"]
@@ -487,4 +487,4 @@ def test_the_interpretation_and_the_matters_first_understanding_are_written_toge
                 assert started.wait(timeout=10), "the matter's understanding waited for the interpretation"
             return super().structured(prompt, schema, tier, **kwargs)
     response = run(store, Together(legal=True))
-    assert response["committed"] == "committed" and response["metrics"]["llm_calls"] == 11
+    assert response["committed"] == "committed" and response["metrics"]["llm_calls"] == 12

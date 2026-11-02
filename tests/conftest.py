@@ -182,8 +182,9 @@ class SecondLookAsRewrite:
 
 class CaseSetOutAsNothing:
     """A scripted model that knows no case step (turn v10, plan AN.35, piece 35c2) answers it as a model shown no law that
-    bears on its dispute would: no element, nothing to get, nothing the other side relies on. Every other call goes to the
-    model as it is; a model that knows the case step (knows_the_case) answers it itself."""
+    bears on its dispute would: no element, nothing to get, nothing the other side relies on; one that knows no further search
+    (research v16, piece 35d) finds no law still missing. Every other call goes to the model as it is; a model that knows the
+    case step (knows_the_case) or the further search (knows_further) answers it itself."""
 
     def __init__(self, model):
         self._model = model
@@ -192,10 +193,14 @@ class CaseSetOutAsNothing:
         return getattr(self._model, name)
 
     def structured(self, prompt, schema, tier, **kwargs):
-        if prompt.operation not in ("core_case", "core_case_check") or getattr(self._model, "knows_the_case", False):
-            return self._model.structured(prompt, schema, tier, **kwargs)
         from nm.shared.budget_contracts import Completion
         from nm.shared.model_port import ModelResult, Usage
+        if prompt.operation == "core_research_further" and not getattr(self._model, "knows_further", False):
+            # Research v16 (AN.35, piece 35d): a model that knows no further search finds no law still missing.
+            return ModelResult(None, {"questions": []}, tier, "synthetic", "fixture", Usage(1, 1, 0), 0,
+                               completion=Completion.COMPLETE)
+        if prompt.operation not in ("core_case", "core_case_check") or getattr(self._model, "knows_the_case", False):
+            return self._model.structured(prompt, schema, tier, **kwargs)
         return ModelResult(None, {"elements": [], "to_get": [], "other_side": []}, tier, "synthetic", "fixture", Usage(1, 1, 0), 0,
                            completion=Completion.COMPLETE)
 

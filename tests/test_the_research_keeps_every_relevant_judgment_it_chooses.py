@@ -44,6 +44,6 @@ def test_the_picks_and_the_phrases_are_asked_for_by_relevance_never_by_a_count()
 
 
 def test_records_before_v15_read_at_most_five_judgments_and_v15_every_one_chosen():
-    assert research.EVERY_CHOSEN == (research.CONTRACT,) and research.CONTRACT == "core_research_v15"
+    assert research.EVERY_CHOSEN == (research.NAMED_CONTRACT, research.CONTRACT) and research.NAMED_CONTRACT == "core_research_v15"
     assert research.SETTLED_CONTRACT in research.JUDGMENTS_READ and research.SETTLED_CONTRACT not in research.EVERY_CHOSEN
     assert research.JUDGMENTS_PER_DISPUTE == 5

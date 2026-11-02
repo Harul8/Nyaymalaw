@@ -180,8 +180,9 @@ def test_parent_source_is_saved_served_and_replayed_without_fresh_law_or_model_c
 
     monkeypatch.setattr(served.model, "structured", write_parent)
     reply = successful(served, message="Find the applicable law.")
-    # Turn v10 (plan AN.35, piece 35c2): the case step's two calls, answered by the shared fixture, are the turn's too.
-    assert reply["metrics"]["llm_calls"] == 11 and len(served.model.calls) == 9
+    # Turn v10 (plan AN.35, piece 35c2): the case step's two calls, and the further search of research v16 (piece 35d), answered by
+    # the shared fixture, are the turn's too.
+    assert reply["metrics"]["llm_calls"] == 12 and len(served.model.calls) == 9
     source = next(element["source"] for element in reply["elements"] if element.get("source"))
     assert source["text"] == parent["full_text"]
     for operation, payload in served.model.calls:

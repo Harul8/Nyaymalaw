@@ -450,7 +450,7 @@ def before_judgments_read(record):
     earlier = deepcopy(record["plan"])
     for key in ("chronology", "chronology_failures"):
         earlier["proposal"].pop(key)
-    return {**{key: value for key, value in record.items() if key != "judgments"}, "contract": "core_research_v10",
+    return {**{key: value for key, value in record.items() if key not in ("judgments", "further")}, "contract": "core_research_v10",
             "plan": earlier}
 
 

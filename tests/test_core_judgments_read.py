@@ -117,10 +117,12 @@ def test_every_judgment_chosen_is_read_in_the_order_chosen_and_a_record_saved_be
     with pytest.raises(ValueError, match="the pick chose"):
         research.validate(changed, plan, ctx)
     # A record saved under research v14 read at most five, the first chosen, and replays so (P46).
-    saved = {**changed, "contract": research.SETTLED_CONTRACT}
+    # (Research v16's further search is a field a v14 record never had.)
+    saved = {**{key: value for key, value in changed.items() if key != "further"}, "contract": research.SETTLED_CONTRACT}
     assert research.validate(saved, plan, ctx) == saved
     with pytest.raises(ValueError, match="the pick chose"):
-        research.validate({**record, "contract": research.SETTLED_CONTRACT}, plan, ctx)
+        research.validate({**{key: value for key, value in record.items() if key != "further"},
+                           "contract": research.SETTLED_CONTRACT}, plan, ctx)
 
 
 def test_a_judgment_that_cannot_be_read_keeps_the_paragraphs_chosen_of_it(tmp_path):
