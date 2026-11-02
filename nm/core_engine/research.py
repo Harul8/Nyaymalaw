@@ -25,6 +25,7 @@ from nm.core_engine.replay_scope import known, once
 from nm.core_engine.retrieval import SearchUnavailable, _digest, _valid_location, in_force, validate_search
 from nm.core_engine.understanding import REFERENCE, TEXT, TYPOGRAPHY, select, source_catalogue
 from nm.shared import clock_contracts
+from nm.shared.citation_contracts import provision_references
 from nm.shared.model_port import (
     ModelError, OutputTruncated, Prompt, SchemaViolation, Tier, UsageLimitReached, canonical_schema_data, estimate_tokens,
     require_schema,
@@ -208,7 +209,7 @@ For each question give the search phrases that will best find the governing prov
 
 Also name the Acts to search in: the Indian Acts you believe govern the question, by short title and year. When the date of the events decides which law applies, include both the Act in force then and the Act that replaced it or that it replaced.
 
-And name the sections to read first: each provision the law your colleague would check names for the question, and any other you know governs it, each by its Act's short title and year and its number as the Act numbers it (a section, an article, an order and rule). Each is read by its number from the Acts we hold, whole, beside what the search finds; one we do not hold is said, never replaced by another.
+And name the sections to read first: each provision the law your colleague would check names for the question, and any other you know governs it, each on its own, by its Act's short title and year and its number as the Act numbers it (a section, an article, an order and rule). Each is read by its number from the Acts we hold, whole, beside what the search finds; one we do not hold is said, never replaced by another.
 """
 JUDGMENT_PHRASES = """You are a senior Indian litigation lawyer about to search a library of Indian judgments, the Supreme Court of India and the High Court of Andhra Pradesh, for the authorities that answer a set of legal questions. You receive the matter as a colleague has understood it: its disputes and, for each, the legal questions, with the law your colleague would check first.
 
@@ -2544,9 +2545,11 @@ def _accept_v7(proposal, context, schema=SCHEMA, contract=None):
             identity = context["latest"]["turn_id"] + f":w{len(work) + 1}"
             acts = list(dict.fromkeys(" ".join(name.split()) for name in statute.get(question_id, {}).get("acts", [])
                                       if name.strip()))
-            # v15 (plan AN.35, piece 35b): the sections to read first, each once, as the phrases step named them.
-            named = {(" ".join(item["act"].split()), " ".join(item["section"].split())): None
-                     for item in statute.get(question_id, {}).get("sections", []) if item["act"].strip() and item["section"].strip()}
+            # v15 (plan AN.35, piece 35b): the sections to read first, each once, as the phrases step named them - a reference naming
+            # several provisions read as each it names (provision_references), one naming none kept as it was said.
+            named = {(" ".join(item["act"].split()), reference): None
+                     for item in statute.get(question_id, {}).get("sections", []) if item["act"].strip() and item["section"].strip()
+                     for reference in (provision_references(item["section"]) or (" ".join(item["section"].split()),))}
             work.append({"id": identity, "sources": [deepcopy(latest)], "search_account": [],
                          "dispute": {"id": dispute["id"], "name": dispute["name"], "between": list(dispute["between"])},
                          "question_id": question_id, "question": question["question"],

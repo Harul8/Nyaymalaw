@@ -119,3 +119,43 @@ def test_the_understanding_and_the_phrases_are_asked_for_the_law_the_papers_cite
     phrases = " ".join(research.PHRASES.split())
     assert "And name the sections to read first" in phrases and "one we do not hold is said, never replaced by another" in phrases
     assert "sections" in research.STATUTE_PHRASES_V15["properties"]["questions"]["items"]["required"]
+
+
+@pytest.mark.parametrize("said, read", [
+    ("Sections 3, 5 and 9", ("3", "5", "9")), ("Section 5(5)", ("5",)), ("Sections 6 and 6-A", ("6", "6A")),
+    ("Articles 226 and 227", ("Article 226", "Article 227")), ("Rules 5, 19 and 21", ("Rule 5", "Rule 19", "Rule 21")),
+    ("Order VII, rules 1 and 3", ("Order VII Rule 1", "Order VII Rule 3")), ("Order XXXIX", ("Order XXXIX",)),
+    ("sections 3 to 5", ("3", "4", "5")), ("Section 53A", ("53A",)), ("Rules governing the record", ())])
+def test_a_reference_naming_several_provisions_is_read_as_each_it_names(said, read):
+    # Found by the first small run (2 Nov 2026): 29 of 35 sections named were "not held", most of them lists like these.
+    from nm.shared.citation_contracts import provision_references
+    assert provision_references(said) == read
+
+
+def test_the_plan_reads_a_list_as_each_provision_and_a_reference_without_a_number_is_said_so():
+    ctx = context("Find the applicable law.")
+    proposed = proposal()
+    proposed["statute_phrases"][0]["questions"][0]["sections"] = [
+        {"act": ACT, "section": "Sections 6 and 99"}, {"act": ACT, "section": "the rules on notice"}]
+    (work,) = research.accept(proposed, ctx)["work"]
+    assert work["named"] == [{"act": ACT, "section": "6"}, {"act": ACT, "section": "99"},
+                             {"act": ACT, "section": "the rules on notice"}]
+    record = searched(work["named"])
+    assert [(e["section"], e["state"]) for e in record["named"]] == [("6", "read"), ("99", "not_held"),
+                                                                      ("the rules on notice", "not_held")]
+    assert record["named"][2]["reason"] == "It names no provision by its number"
+
+
+def test_a_link_the_act_gives_a_section_read_by_its_number_is_kept_with_it():
+    # Found by the first small run: 14 of 24 searches were refused, their named sections' links counted as joined to nothing.
+    record = searched(NAMED[:1])
+    (six,) = record["named_found"]
+    beside = {**row(text="7. The provision printed after it."), "chunk_id": "named-7", "act_id": "IRA_1907", "act_name": ACT,
+              "section_number": "7"}
+    context_7 = {"scope": "indexed_section_segments", "bounded": False, "unread_positions": [],
+                 "segments": [{"position": 8, "row": beside}]}
+    linked = retrieval._candidate("provision", 8, beside, "checked-corpus", None, [], context_7)
+    record["connected"].append(linked)
+    record["connections"].append({"from": six["id"], "to": linked["id"], "how": "beside", "words": None})
+    record["links"][six["id"]] = {"names": 0, "named_by": 0, "unbound": 0}
+    assert validate_search(record, QUERIES, [ACT], NAMED[:1]) == record

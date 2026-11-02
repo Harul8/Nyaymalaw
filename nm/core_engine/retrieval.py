@@ -1431,6 +1431,9 @@ def _read_named(collection, wanted, returned, issues):
         _log_stage_failure("provision", "named", exc)
         return [{**item, "state": "unavailable", "found": [], "reason": str(exc)} for item in wanted], []
     for item in wanted:
+        if not any(character.isdigit() for character in item["section"]):
+            entries.append({**item, "state": "not_held", "found": [], "reason": "It names no provision by its number"})
+            continue
         try:
             candidates = acts(instrument_candidates(item["act"], held))
         except SearchUnavailable as exc:
@@ -2019,7 +2022,8 @@ def _validate_connections(record):
     returned by search, as the words of one name the other or as neighbours in their Act;
     every connected provision is joined to a returned one; each returned provision's link
     counts cover what is shown of them."""
-    returned = {c["id"]: c for c in record["candidates"] if c["kind"] == "provision"}
+    # From v11 (plan AN.35, piece 35b) a section read by its number is read with its links as one search returned is.
+    returned = {c["id"]: c for c in [*record["candidates"], *record.get("named_found", ())] if c["kind"] == "provision"}
     offered_by_id = {**returned, **{c["id"]: c for c in record["connected"]}}
     seen, reached = set(), set()
     shown = {identity: {"names": 0, "named_by": 0} for identity in returned}

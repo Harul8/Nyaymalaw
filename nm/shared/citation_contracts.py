@@ -252,6 +252,42 @@ def last_wanted_section(text: str) -> str | None:
     return f"Article_{arts[-1]}" if arts else None
 
 
+#: One provision of a list a reference names (plan AN.35, piece 35b): a number with its own letters ("6A", "6-A"), never one in
+#: brackets (a sub-section, read as its section) and never a run of letters a word begins ("6 and").
+_LISTED_NUMBER = re.compile(r"(?<![A-Za-z0-9])(\d+)(?:-?([A-Z]{1,2}))?(?![A-Za-z0-9])")
+_LISTED_RANGE = re.compile(r"(?<![A-Za-z0-9])(\d+)\s*(?:to|-|\u2013)\s*(\d+)(?![A-Za-z0-9])", re.I)
+_LISTED_ORDER = re.compile(r"\b(?:order|o\.)\s*([IVXLCDM]+(?:-?[AB])?|\d+)\b", re.I)
+_LISTED_RULE = re.compile(r"\b(?:rules?|r\.)\s*(?=\d)", re.I)
+_LISTED_ARTICLE = re.compile(r"\b(?:articles?|arts?\.)\s*(?=\d)", re.I)
+#: A range is expanded to its provisions only when it is short; a longer one keeps its two ends.
+_LISTED_RANGE_MOST = 20
+
+
+def provision_references(text: str) -> tuple[str, ...]:
+    """Each provision a reference names, one by one, in the explicit form bind_provision_key reads (plan AN.35, piece 35b):
+    "Sections 3, 5 and 9" -> 3, 5, 9; "Section 5(5)" -> 5 (the section is read whole); "Sections 6 and 6-A" -> 6, 6A;
+    "Articles 226 and 227" -> Article 226, Article 227; "Order VII, rules 1 and 3" -> Order VII Rule 1, Order VII Rule 3;
+    "Order XXXIX" -> Order XXXIX; "sections 3 to 5" -> 3, 4, 5. A reference that names no number gives none. This splits what
+    the reference says; it never chooses an Act or decides that a provision is held."""
+    plain = re.sub(r"\([^)]*\)", " ", " ".join(str(text or "").split()))
+
+    def numbers(part):
+        out = []
+        for start, end in ((int(m[1]), int(m[2])) for m in _LISTED_RANGE.finditer(part)):
+            if start < end and end - start <= _LISTED_RANGE_MOST:
+                out.extend(str(number) for number in range(start, end + 1))
+        part = _LISTED_RANGE.sub(lambda m: f" {m[1]} , {m[2]} ", part)
+        out.extend(m[1] + (m[2] or "") for m in _LISTED_NUMBER.finditer(part))
+        return list(dict.fromkeys(out))
+    order = _LISTED_ORDER.search(plain)
+    if order:
+        designation, rest = order[1].replace("-", "").upper(), plain[order.end():]
+        rules = numbers(rest) if _LISTED_RULE.search(rest) else []
+        return tuple(f"Order {designation} Rule {rule}" for rule in rules) or (f"Order {designation}",)
+    kind = "Article " if _LISTED_ARTICLE.search(plain) else "Rule " if _LISTED_RULE.search(plain) else ""
+    return tuple(kind + number for number in numbers(plain))
+
+
 def provisions_cited(text: str) -> set[str]:
     """Every provision NUMBER named in a piece of text, upper-cased."""
     out: set[str] = set()
