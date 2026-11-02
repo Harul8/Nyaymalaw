@@ -62,16 +62,20 @@ PRESENTED_CONTRACT = "core_turn_v8"
 #: reviewed by review v12 - only the paragraphs at fault go back to the writer for a second look, and
 #: what still fails is blocked sentence by sentence, never with its paragraph or section - each part
 #: keeping its second looks (answer_sections.LOOKS), and rendered as v19.
-CONTRACT = "core_turn_v9"
+LOOKED_CONTRACT = "core_turn_v9"
+#: v10 (plan AN.35, D31; piece 35c2): v9 whose dispute sections each keep what makes their case stronger (answer_sections.CASE),
+#: set out beside the section's writing from research v15.
+CONTRACT = "core_turn_v10"
 #: The turns answered dispute by dispute.
-SECTIONED = (BY_DISPUTE_CONTRACT, KEPT_CONTRACT, PRESENTED_CONTRACT, CONTRACT)
+SECTIONED = (BY_DISPUTE_CONTRACT, KEPT_CONTRACT, PRESENTED_CONTRACT, LOOKED_CONTRACT, CONTRACT)
 #: The turns that keep what code refused (P29): v7 on.
-_KEEPS = (KEPT_CONTRACT, PRESENTED_CONTRACT, CONTRACT)
+_KEEPS = (KEPT_CONTRACT, PRESENTED_CONTRACT, LOOKED_CONTRACT, CONTRACT)
 #: The turns whose parts keep their second looks (AN.28): v9 on.
-_LOOKS = (CONTRACT,)
+_LOOKS = (LOOKED_CONTRACT, CONTRACT)
 #: The rendering each turn answered dispute by dispute was saved with.
 _RENDERINGS = {BY_DISPUTE_CONTRACT: "core_response_rendering_v17", KEPT_CONTRACT: "core_response_rendering_v17",
-               PRESENTED_CONTRACT: "core_response_rendering_v18", CONTRACT: "core_response_rendering_v19"}
+               PRESENTED_CONTRACT: "core_response_rendering_v18", LOOKED_CONTRACT: "core_response_rendering_v19",
+               CONTRACT: "core_response_rendering_v19"}
 _RELEASED = (RELEASE_CONTRACT, RECORDS_CONTRACT)
 EXECUTION = research.EXECUTION
 _ACTIVITY_FIELDS = {"contract", "interpretation", "research", "sources", "draft",

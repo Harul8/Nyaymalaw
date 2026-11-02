@@ -135,7 +135,7 @@ def store(tmp_path): return FileMatterStore(tmp_path, key="synthetic-turn-fixtur
 def test_four_actual_stage_calls_save_reopen_and_replay_without_reexecution(store):
     model = ScriptedModel(legal=True)
     response = run(store, model)
-    assert response["committed"] == "committed" and response["metrics"]["llm_calls"] == 9
+    assert response["committed"] == "committed" and response["metrics"]["llm_calls"] == 11
     names = [name for name, _ in model.calls]
     # The interpretation and the matter's first understanding are written together (18 Oct 2026).
     assert sorted(names[:2]) == ["core_research_understand", "core_understanding"]
@@ -145,7 +145,7 @@ def test_four_actual_stage_calls_save_reopen_and_replay_without_reexecution(stor
     stored = store.load(chat_matter_id("owner", response["chat_id"]))
     rows = saved_rows(stored, "owner")
     # Answered dispute by dispute (owner decisions P25-P27, 19 Oct 2026): one dispute, one section.
-    assert rows[0]["activities"]["contract"] == "core_turn_v9"
+    assert rows[0]["activities"]["contract"] == "core_turn_v10"
     # No held Acts were given to this turn, so no time limit was worked out (item 9).
     assert rows[0]["activities"]["calculation"]["state"] == "not_needed"
     section, = rows[0]["activities"]["sections"]
@@ -202,7 +202,7 @@ def test_mixed_legacy_and_current_history_reopens_without_fresh_authority_checks
         raise AssertionError("Saved readback cannot consult current authority indexes")
     monkeypatch.setattr(response_authorities, "check", no_new_check)
     rows = saved_rows(store.load(chat_matter_id("owner", first["chat_id"])), "owner")
-    assert [row["activities"]["contract"] for row in rows] == ["core_turn_v1", "core_turn_v9"]
+    assert [row["activities"]["contract"] for row in rows] == ["core_turn_v1", "core_turn_v10"]
     assert rows[0]["response"]["elements"] == elements
     assert run(store, model, chat_id=first["chat_id"], turn_id="new", message="Continue.")["replayed"]
     assert len(model.calls) == 4
@@ -467,7 +467,7 @@ def test_a_turn_saved_before_sections_could_be_held_reopens_unchanged(store, sav
     second = run(store, ScriptedModel(), chat_id=first["chat_id"], turn_id="new", message="Continue.")
     assert second["committed"] == "committed"
     rows = saved_rows(store.load(chat_matter_id("owner", first["chat_id"])), "owner")
-    assert [row["activities"]["contract"] for row in rows] == ["core_turn_v3", "core_turn_v9"]
+    assert [row["activities"]["contract"] for row in rows] == ["core_turn_v3", "core_turn_v10"]
     assert rows[0]["response"]["elements"] == elements
     assert all("unit" not in element for element in elements)
     assert all("unit" in element for element in rows[1]["response"]["elements"])
@@ -487,4 +487,4 @@ def test_the_interpretation_and_the_matters_first_understanding_are_written_toge
                 assert started.wait(timeout=10), "the matter's understanding waited for the interpretation"
             return super().structured(prompt, schema, tier, **kwargs)
     response = run(store, Together(legal=True))
-    assert response["committed"] == "committed" and response["metrics"]["llm_calls"] == 9
+    assert response["committed"] == "committed" and response["metrics"]["llm_calls"] == 11

@@ -90,7 +90,8 @@ def test_public_turn_saves_exact_input_reopens_and_reads_exact_sources_without_c
     message = "  Original account: नमस्ते.\nDo not contact anyone.  "
     reply = successful(served, message=message)
     assert reply["committed"] == "committed" and reply["matter_id"] is None
-    assert reply["metrics"]["llm_calls"] == 9
+    # Turn v10 (plan AN.35, piece 35c2): with the case step's two calls, answered by the shared fixture.
+    assert reply["metrics"]["llm_calls"] == 11
     matter = served.store.load(chat_matter_id(OWNER, reply["chat_id"]))
     assert matter.brain_chat[0]["message"] == message
     assert matter.brain_chat[0]["response"]["committed"] == "committed"
@@ -308,10 +309,11 @@ def test_unconfirmed_save_retry_only_reads_receipt_and_never_reexecutes_effects(
 def test_review_correction_rechecks_complete_context_and_saves_once(served):
     served.model.reject = 1
     reply = successful(served)
-    assert reply["metrics"]["llm_calls"] == 11 and reply["metrics"]["draft_corrections"] == 1
+    assert reply["metrics"]["llm_calls"] == 13 and reply["metrics"]["draft_corrections"] == 1
     # Turn v9 (AN.28): the paragraph at fault goes back for a second look, written with the complete context,
-    # and the answer is reviewed again with it.
-    assert [call["operation"] for call in reply["metrics"]["calls"]][-2:] == ["core_response_repair", "core_response_review"]
+    # and the answer is reviewed again with it (the case step's calls, beside the section, in their own order).
+    assert [call["operation"] for call in reply["metrics"]["calls"]
+            if not call["operation"].startswith("core_case")][-2:] == ["core_response_repair", "core_response_review"]
     looked, review = served.model.calls[9:]
     assert "correction" not in review[1]
     assert looked[1]["original_context"] == review[1]["original_context"]

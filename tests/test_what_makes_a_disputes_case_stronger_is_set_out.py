@@ -115,3 +115,21 @@ def test_the_step_is_asked_for_the_case_in_plain_words_and_in_a_loop():
                  "Ask only for what the papers do not already show"):
         assert part in words, part
     assert "nothing may be asked of the client that the papers already prove" in " ".join(case_strength.CASE_CHECK.split())
+
+
+def test_each_disputes_section_keeps_its_case_set_out_beside_it_and_a_changed_one_is_refused():
+    """Piece 35c2: from research v15 each dispute's case is set out beside the writing of its section, from the same research,
+    and kept with the section; the saved answer replays exactly, and a case changed, dropped or put under another dispute is
+    refused (P46)."""
+    from nm.core_engine import turn
+    from tests.test_core_answer_sections import Scripted, answered, refused
+    ctx, elements, activity, calls = answered(Scripted())
+    sections = activity["sections"]
+    assert [(section["case"]["contract"], section["case"]["dispute_id"], section["case"]["checked"]) for section in sections] == [
+        (case_strength.CONTRACT, section["dispute_id"], "checked") for section in sections]
+    made = sorted(call["operation"] for call in calls.calls if call["operation"].startswith("core_case"))
+    assert made == ["core_case", "core_case", "core_case_check", "core_case_check"], "two calls for each dispute"
+    assert turn.validate_activity(activity, ctx, elements) == activity
+    refused(activity, ctx, elements, lambda forged: forged["sections"][0]["case"].update(checked="unchecked"))
+    refused(activity, ctx, elements, lambda forged: forged["sections"][0].pop("case"))
+    refused(activity, ctx, elements, lambda forged: forged["sections"][0].update(case=deepcopy(forged["sections"][1]["case"])))

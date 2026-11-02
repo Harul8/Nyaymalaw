@@ -180,6 +180,26 @@ class SecondLookAsRewrite:
         return dataclasses.replace(written, data={"repairs": repairs})
 
 
+class CaseSetOutAsNothing:
+    """A scripted model that knows no case step (turn v10, plan AN.35, piece 35c2) answers it as a model shown no law that
+    bears on its dispute would: no element, nothing to get, nothing the other side relies on. Every other call goes to the
+    model as it is; a model that knows the case step (knows_the_case) answers it itself."""
+
+    def __init__(self, model):
+        self._model = model
+
+    def __getattr__(self, name):
+        return getattr(self._model, name)
+
+    def structured(self, prompt, schema, tier, **kwargs):
+        if prompt.operation not in ("core_case", "core_case_check") or getattr(self._model, "knows_the_case", False):
+            return self._model.structured(prompt, schema, tier, **kwargs)
+        from nm.shared.budget_contracts import Completion
+        from nm.shared.model_port import ModelResult, Usage
+        return ModelResult(None, {"elements": [], "to_get": [], "other_side": []}, tier, "synthetic", "fixture", Usage(1, 1, 0), 0,
+                           completion=Completion.COMPLETE)
+
+
 @pytest.fixture(autouse=True)
 def scripted_writers_write_as_v13(monkeypatch):
     """Every scripted writer reached through a turn's calls is read as writer v13 asks
@@ -194,7 +214,9 @@ def scripted_writers_write_as_v13(monkeypatch):
 
     def init(self, model, **kwargs):
         # Turn v9 (AN.28): a scripted model that knows no second look answers it as its next rewrite.
-        constructed(self, model if isinstance(model, SecondLookAsRewrite) else SecondLookAsRewrite(model), **kwargs)
+        # Turn v10 (AN.35): one that knows no case step sets out nothing for it.
+        constructed(self, model if isinstance(model, SecondLookAsRewrite) else SecondLookAsRewrite(CaseSetOutAsNothing(model)),
+                    **kwargs)
     monkeypatch.setattr(calls.TurnCalls, "__init__", init)
 
     from nm.core_engine import response_review

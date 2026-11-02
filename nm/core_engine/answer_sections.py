@@ -44,7 +44,7 @@ from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 
 from nm.core_engine import (
-    answer_sources, calculation, research, response_authorities, response_review, response_writer,
+    answer_sources, calculation, case_strength, research, response_authorities, response_review, response_writer,
 )
 from nm.core_engine.calls import (
     ALLOWANCE, CONFLICT_PURPOSE, EDIT_ALLOWANCE, REVIEW_PURPOSE, SECTION_ALLOWANCE, SHARED_ALLOWANCE, CorrectionUnavailable,
@@ -140,6 +140,10 @@ TRIMS_V14 = 3
 #: the writer returned and what code made of it - evidence, checked for shape, not re-derived.
 LOOKS = "looks"
 _SECTION = {"part", "dispute_id", "reviewed", "trims", "fallback", "edit"}
+#: From turn v10 (plan AN.35, D31; piece 35c2) each dispute's section also keeps what makes its case stronger (case_strength):
+#: what the law requires, how the papers stand on it, what to get and what the other side will rely on - or None where it was
+#: not made (a turn stopped before it).
+CASE = "case"
 #: From turn v7 (P29) each section, correction and overview also keeps what code refused or never
 #: had checked: what the writer or the review returned that code refused, and a draft code
 #: admitted that no review could be completed for, each with why, in code's own words.
@@ -983,8 +987,24 @@ class _Answering:
 
     def section(self, index):
         """One dispute's section, in its own scope of corrections (owner decision P26), written
-        from its own dispute's research as soon as that is ready (step 4)."""
+        from its own dispute's research as soon as that is ready (step 4); from research v15 (plan AN.35, piece 35c2) what makes
+        its case stronger is set out beside it, from the same research, and kept with it."""
         scope, researched = f"s{index}", self.researched.part(index)
+        cased = self.researched.contract in research.NAMED_LAW
+        dispute = self._understood(index) if cased else None
+        with ThreadPoolExecutor(max_workers=1) as beside:
+            making = (beside.submit(case_strength.assess, self.calls, self.context, researched[0], researched[1], dispute)
+                      if dispute is not None else None)
+            written = self._section(index, scope, researched)
+            return {**written, **({CASE: making.result() if making is not None else None} if cased else {})}
+
+    def _understood(self, index):
+        """The dispute a section answers, as its research understood it; None for a part that answers none."""
+        dispute_id = self.layout[index]["dispute_id"]
+        disputes = self.researched.plan["proposal"]["understanding"]["disputes"]
+        return next((dispute for dispute in disputes if dispute["id"] == dispute_id), None)
+
+    def _section(self, index, scope, researched):
         self.report("writing")
         # v14 (AN.29, D10): the take-ups of what the section passed over have an allowance of their own beside the section's,
         # both set up front from the matter (AN.33, D21).
@@ -1140,9 +1160,11 @@ def interrupted(shown_so_far, record, *, kept=True, looked=False):
     layout = response_writer.parts(record)
     many = len(layout) > 1
     unfinished = ({KEPT: []} if kept else {}) | ({LOOKS: []} if looked else {})
+    # From research v15 (plan AN.35, piece 35c2) a dispute's section keeps its case; one never written has none.
+    cased = {CASE: None} if record["contract"] in research.NAMED_LAW else {}
     done = {saved["part"]: deepcopy(saved) for saved in shown_so_far["sections"]}
     sections = [done.get(index) or {"part": index, "dispute_id": layout[index]["dispute_id"], "reviewed": None,
-                                    "trims": [], "fallback": {"reason": "interrupted"}, "edit": None, **unfinished}
+                                    "trims": [], "fallback": {"reason": "interrupted"}, "edit": None, **unfinished, **cased}
                 for index in (range(1, len(layout)) if many else [0])]
     before = sum(shown(saved, edited=False) is not None for saved in sections)
     crossed = deepcopy(shown_so_far["cross_check"])
@@ -1306,6 +1328,8 @@ def validate(activity, context, record, sources, worked, *, kept=True, looked=Fa
     or put in a section's place re-derived from them. kept: the parts keep what code refused
     (turn v7, P29), checked for its shape."""
     extra = ({KEPT} if kept else set()) | ({LOOKS} if looked else set())
+    # From research v15 (plan AN.35, piece 35c2) each dispute's section keeps its case, as it was written.
+    cased = record["contract"] in research.NAMED_LAW
     chain = _chain_valid_v14 if looked else _chain_valid
     layout = response_writer.parts(record)
     many, time_limits, execution = len(layout) > 1, calculation.for_answer(worked), activity["execution"]
@@ -1316,14 +1340,22 @@ def validate(activity, context, record, sources, worked, *, kept=True, looked=Fa
     if not isinstance(sections, list) or len(sections) != len(indices):
         raise ValueError("Saved sections differ from the answer's layout")
     for index, saved in zip(indices, sections):
-        if (not isinstance(saved, dict) or set(saved) != _SECTION | extra or saved["part"] != index
+        if (not isinstance(saved, dict) or set(saved) != _SECTION | extra | ({CASE} if cased else set()) or saved["part"] != index
                 or saved["dispute_id"] != layout[index]["dispute_id"]):
             raise ValueError("Saved sections differ from the answer's layout")
         _kept_valid(saved, kept)
         if looked:
             _looks_valid(saved, allowed)
-        chain(saved, context, *_research_for(context, record, sources, execution, layout, index), time_limits,
-              index, saved["dispute_id"], {})
+        own = _research_for(context, record, sources, execution, layout, index)
+        chain(saved, context, *own, time_limits, index, saved["dispute_id"], {})
+        if cased and saved[CASE] is not None:
+            # Turn v10 (plan AN.35, piece 35c2): the dispute's case, re-derived from its own answer and its dispute's research.
+            part, part_sources, _ = own
+            dispute = next((d for d in record["plan"]["proposal"]["understanding"]["disputes"] if d["id"] == saved["dispute_id"]),
+                           None)
+            if dispute is None:
+                raise ValueError("A saved case names no dispute of its research")
+            case_strength.validate(saved[CASE], context, part, part_sources, dispute)
     if all(saved["fallback"] is not None and saved["fallback"]["reason"] in NOT_MADE
            for saved in sections):
         raise ValueError("A turn the service could not answer is not saved")

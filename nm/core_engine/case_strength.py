@@ -182,6 +182,14 @@ def validate(record, context, part, sources, dispute):
         raise ValueError("A saved case's answer is not of its contract's shape") from exc
     expected = {"contract": CONTRACT, "dispute_id": dispute["id"], "proposal": record.get("proposal"),
                 "checked": record.get("checked"), "failures": record.get("failures"), **admit(proposal, offered, points, sources)}
-    if record != expected or record["checked"] not in ("checked", "unchecked"):
+    # Whether it was checked agrees with what failed: checked, nothing failed; unchecked, the check failed (its first account kept)
+    # or the first call did (no account).
+    failures = record.get("failures")
+    steps = [failure.get("step") if isinstance(failure, dict) and set(failure) == {"step", "reason"}
+             and isinstance(failure["reason"], str) else None for failure in failures] if isinstance(failures, list) else None
+    marked = (steps == [] and record.get("proposal") is not None if record.get("checked") == "checked" else
+              steps == (["case_check"] if record.get("proposal") is not None else ["case"])
+              if record.get("checked") == "unchecked" else False)
+    if record != expected or not marked:
         raise ValueError("A saved case differs from what code makes of its own answer")
     return deepcopy(record)
