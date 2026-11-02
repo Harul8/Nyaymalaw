@@ -13,9 +13,11 @@ lives in the same package.
 from __future__ import annotations
 
 import base64
+import hashlib
 import json
 import ssl
 import sys
+import threading
 import time
 from collections.abc import Callable, Mapping
 from typing import Any
@@ -234,6 +236,48 @@ class LiveTranscription:
             if self._token is not None:
                 self._budget.settle(self._token, SimpleNamespace(
                     usage={"type": "duration", "seconds": round(self.seconds, 3)}))
+
+
+#: Plan AN.34 (piece 34d; the probes of 2 Nov 2026): of four calls started together on one fresh cached opening, two wrote it and two
+#: read it; started 2 seconds after the first, every one read it. A request whose opening another request began writing less than
+#: LEAD_SECONDS before waits the rest of them, or until that request is answered, and reads it. A call reads an opening only where
+#: its effort and its answer's schema, as well as its instructions, are those of the call that wrote it, so all of them name it.
+LEAD_SECONDS = 2.0
+_LEADS: dict[str, tuple[float, threading.Event]] = {}
+_LEADS_LOCK = threading.Lock()
+
+
+def _opening(kwargs: dict[str, Any]) -> str | None:
+    """What names the opening a Responses request asks the cache to keep beyond its instructions (plan AN.34): its model, its effort,
+    its answer's format, its instructions and the first marked part of what it sends - all that a call reading it must share;
+    None where it marks no such part."""
+    system = next((message["content"][0]["text"] for message in kwargs["input"] if message["role"] == "system"), "")
+    for message in kwargs["input"]:
+        if message["role"] != "system" and isinstance(message["content"], list):
+            marked = next((part["text"] for part in message["content"] if "prompt_cache_breakpoint" in part), None)
+            if marked is not None:
+                shaped = [kwargs["model"], kwargs.get("reasoning"), kwargs.get("text"), system, marked]
+                return hashlib.sha256(json.dumps(shaped, sort_keys=True, default=str).encode("utf-8")).hexdigest()
+    return None
+
+
+def _lead(opening: str) -> threading.Event | None:
+    """The head start of the first request to send this opening (plan AN.34, piece 34d): for that request, what it sets once it is
+    answered; for any other, None, once it has waited the rest of LEAD_SECONDS since the first began or until the first was
+    answered, whichever comes sooner - and nothing where the first began longer ago."""
+    now = time.monotonic()
+    with _LEADS_LOCK:
+        for key in [key for key, (began, _) in _LEADS.items() if now - began > 150 * LEAD_SECONDS]:
+            del _LEADS[key]
+        held = _LEADS.get(opening)
+        if held is None:
+            answered = threading.Event()
+            _LEADS[opening] = (now, answered)
+            return answered
+    began, answered = held
+    if now - began < LEAD_SECONDS:
+        answered.wait(LEAD_SECONDS - (now - began))
+    return None
 
 
 def _within(model: str, max_tokens: int | None) -> int | None:
@@ -802,9 +846,15 @@ class OpenAIModelAdapter:
         kwargs["prompt_cache_options"] = {"mode": "explicit"}
         if max_tokens is not None:
             kwargs["max_output_tokens"] = max_tokens
-        response, retries = self._retrying_counted(
-            lambda: self._client.responses.create(**kwargs), model=cfg.model,
-            call_budget=request_budget, ledger_response=self._responses_receipt)
+        opening = _opening(kwargs)
+        first = _lead(opening) if opening is not None else None
+        try:
+            response, retries = self._retrying_counted(
+                lambda: self._client.responses.create(**kwargs), model=cfg.model,
+                call_budget=request_budget, ledger_response=self._responses_receipt)
+        finally:
+            if first is not None:
+                first.set()
         return self._responses_as_chat(response), retries
 
     def _retrying(self, fn):
