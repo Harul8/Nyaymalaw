@@ -1855,6 +1855,8 @@ function restoredTurn(turn) {
     elements: turn.elements || [], blocked: turn.blocked,
     blocked_reason: turn.blocked_reason, metrics: null, restored: true,
     service_status: typeof turn.service_status === 'string' ? turn.service_status : null,
+    // Plan AN.37: what NM asked while it worked, and how each answer came to stand.
+    questions_asked: turn.questions_asked && typeof turn.questions_asked === 'object' ? turn.questions_asked : null,
     at: turn.at || '',
     board_changes: Array.isArray(turn.board_changes) ? turn.board_changes : [],
     composed: Array.isArray(turn.composed) ? turn.composed : [],
@@ -2730,6 +2732,19 @@ function renderTurn(entry) {
       box.appendChild(list);
     }
     if (waiting) box.appendChild(waiting);
+    if (progress.asking) {
+      // Plan AN.37: NM has asked something only the advocate can settle; the window opens from here too.
+      const asked = document.createElement('div');
+      asked.className = 'progress-question';
+      asked.appendChild(document.createTextNode('NM has a question for you. '));
+      const open = document.createElement('button');
+      open.type = 'button';
+      open.className = 'ghost';
+      open.textContent = 'Answer';
+      open.addEventListener('click', () => openTurnQuestions(entry));
+      asked.appendChild(open);
+      box.appendChild(asked);
+    }
     wrap.appendChild(box);
     if (soFar) wrap.appendChild(soFar);
     return wrap;
@@ -2772,6 +2787,9 @@ function renderTurn(entry) {
     const status = stateBlock('quiet service-status', entry.answer.service_status);
     status.setAttribute('role', 'status');
     wrap.appendChild(status);
+  }
+  if (entry.answer.questions_asked && Array.isArray(entry.answer.questions_asked.questions)) {
+    wrap.appendChild(renderQuestionsAsked(entry.answer.questions_asked));
   }
 
   // WHAT FOLDS AND WHAT MAY NEVER FOLD.
@@ -3507,6 +3525,175 @@ function openNeedAnswers(entry, questions) {
   document.body.appendChild(dialog);
   dialog.showModal();
   if (boxes.length) boxes[0].focus();
+}
+
+// WHAT NM ASKS WHILE IT WORKS (plan AN.37, D37-D40, D44; owner, 3 Nov 2026: "ask a question to the user as a pop up with MCQs,
+// radial buttons, multicheck or optional free text -- same as Claude"). The progress says a window is open; the questions are
+// read from the advocate's own turn, each shown with what depends on it, its choices - one, or several ticked - and a box for
+// their own words. NM waits two minutes for the answers before going on with the defaults it names; the window stays open ten,
+// and a later answer is still taken. Once the message is answered, the answers go as the next message instead.
+function turnQuestionAnswers(questions, answered) {
+  // As the next message: each question under its heading, with the answer chosen or written.
+  return needAnswersMessage(questions.map((question) => ({ group: null, text: question.question })),
+    questions.map((question) => answered[question.id] ? [...answered[question.id].chosen,
+      ...(answered[question.id].other ? [answered[question.id].other] : [])].join('; ') : ''));
+}
+
+function askedLine(question, entry) {
+  const said = [...(entry.chosen || []), ...(entry.other ? [entry.other] : [])].join('; ');
+  return entry.how === 'assumed' ? `No answer came in time, so NM went on assuming: ${said}`
+    : entry.how === 'late' ? `You answered after NM had gone on: ${said}` : `You answered: ${said}`;
+}
+
+async function openTurnQuestions(entry) {
+  if (entry.questionsOpen || !entry.turnId) return;
+  entry.questionsOpen = true;
+  let view;
+  try {
+    view = await api(`/api/turn-question?turn_id=${encodeURIComponent(entry.turnId)}`);
+  } catch {
+    entry.questionsOpen = false;  // nothing is asked now, or it could not be read; the progress says again if it is
+    return;
+  }
+  const make = (tag, className, text) => {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  };
+  const taken = Object.fromEntries((view.answers || []).filter((item) => item.how !== 'assumed')
+    .map((item) => [item.id, item]));
+  const dialog = make('dialog', 'account-dialog turn-questions');
+  dialog.setAttribute('aria-labelledby', 'turn-questions-title');
+  const heading = make('div', 'dialog-heading');
+  const title = make('h2', '', view.questions.length === 1 ? 'NM has a question for you' : 'NM has questions for you');
+  title.id = 'turn-questions-title';
+  const later = make('button', 'ghost', 'Not now');
+  later.type = 'button';
+  later.addEventListener('click', () => dialog.close());
+  heading.append(title, later);
+  dialog.append(heading, make('p', '', view.defaults_applied
+    ? 'NM went on with the answers it names below. If yours differ, answer now and it will redo what depends on them.'
+    : 'NM is waiting for your answer before it writes the parts that depend on it; after two minutes it goes on with the '
+      + 'answer it names below.'));
+  const fields = view.questions.map((question, number) => {
+    const set = make('fieldset', 'turn-question');
+    set.style.margin = '1rem 0 0';
+    set.style.border = '0';
+    set.style.padding = '0';
+    set.appendChild(make('legend', '', `${question.header}: ${question.question}`));
+    set.appendChild(make('p', 'quiet', question.why));
+    const assumed = (view.answers || []).find((item) => item.id === question.id && item.how === 'assumed');
+    set.appendChild(make('p', 'quiet', assumed ? askedLine(question, assumed)
+      : `If you do not answer, NM goes on with: ${question.default.join('; ')}`));
+    if (taken[question.id]) {
+      set.appendChild(make('p', '', askedLine(question, taken[question.id])));
+      dialog.appendChild(set);
+      return { question, done: true };
+    }
+    const inputs = question.choices.map((choice, index) => {
+      const label = make('label', 'consent');
+      label.style.display = 'flex';
+      label.style.gap = '0.5rem';
+      const input = make('input');
+      input.type = question.multiple ? 'checkbox' : 'radio';
+      input.name = `turn-question-${number}`;
+      input.value = choice.label;
+      input.id = `turn-question-${number}-${index}`;
+      label.htmlFor = input.id;
+      const words = make('span', '', choice.label);
+      if (choice.description) words.appendChild(make('span', 'quiet', ` — ${choice.description}`));
+      label.append(input, words);
+      set.appendChild(label);
+      return input;
+    });
+    const own = make('textarea');
+    own.rows = 2;
+    own.placeholder = 'Or answer in your own words';
+    own.setAttribute('aria-label', `Your own answer: ${question.question}`);
+    own.style.width = '100%';
+    own.style.boxSizing = 'border-box';
+    own.style.font = 'inherit';
+    set.appendChild(own);
+    dialog.appendChild(set);
+    return { question, inputs, own };
+  });
+  const status = make('p', '');
+  status.setAttribute('role', 'status');
+  status.setAttribute('aria-live', 'polite');
+  const sendAnswers = make('button', 'primary', 'Send answers');
+  sendAnswers.type = 'button';
+  sendAnswers.addEventListener('click', async () => {
+    const answers = {};
+    for (const field of fields) {
+      if (field.done) continue;
+      const chosen = field.inputs.filter((input) => input.checked).map((input) => input.value);
+      const other = field.own.value.trim();
+      if (chosen.length || other) answers[field.question.id] = { chosen, other };
+    }
+    if (!Object.keys(answers).length) { status.textContent = 'Choose an answer or write your own.'; return; }
+    sendAnswers.disabled = true;
+    try {
+      await api('/api/turn-question', { method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ turn_id: entry.turnId, answers }) });
+      dialog.close();
+    } catch (error) {
+      sendAnswers.disabled = false;
+      if (error.status === 409 && error.detail?.code === 'window_closed') {
+        // NM has finished this message: the answers go as the next one (D44), as anything added meanwhile would.
+        const message = turnQuestionAnswers(view.questions, answers);
+        dialog.close();
+        if (activeDelivery && activeDelivery.entry.context === entry.context) {
+          if (!Array.isArray(entry.context.queued)) entry.context.queued = [];
+          entry.context.queued.push(message);
+          repaint();
+        } else if (!activeDelivery) {
+          send(message);
+        } else {
+          $('message').value = [message, $('message').value].filter((text) => text.trim()).join('\n\n');
+          sizeComposer();
+        }
+        return;
+      }
+      status.textContent = error.message;
+    }
+  });
+  const actions = make('div', 'dialog-actions');
+  actions.style.display = 'flex';
+  actions.style.gap = '0.75rem';
+  actions.style.marginTop = '1rem';
+  actions.append(sendAnswers);
+  dialog.append(status, actions);
+  dialog.addEventListener('close', () => {
+    entry.questionsOpen = false;
+    entry.questionsSeen = true;
+    dialog.remove();
+    repaint();
+  });
+  document.body.appendChild(dialog);
+  dialog.showModal();
+}
+
+// What a saved answer asked while it was worked on, above the answer it shaped (plan AN.37).
+function renderQuestionsAsked(asked) {
+  const box = document.createElement('section');
+  box.className = 'questions-asked quiet';
+  box.setAttribute('aria-label', 'What NM asked while working');
+  const title = document.createElement('p');
+  title.className = 'need-group';
+  title.textContent = 'What NM asked while working';
+  box.appendChild(title);
+  const list = document.createElement('ul');
+  list.className = 'need-list';
+  const answers = Object.fromEntries((asked.answers || []).map((item) => [item.id, item]));
+  for (const question of asked.questions || []) {
+    const item = document.createElement('li');
+    item.textContent = `${question.question} ${answers[question.id] ? askedLine(question, answers[question.id])
+      : 'Not answered.'}`;
+    list.appendChild(item);
+  }
+  box.appendChild(list);
+  return box;
 }
 
 // Opening a saved matter starts with its first turn. New live replies still
@@ -5212,6 +5399,8 @@ function watchProgress(entry, onFinished) {
       const seen = await api(`/api/turn-progress?turn_id=${encodeURIComponent(entry.turnId)}`);
       if (stopped) return;
       entry.progress = seen;
+      // Plan AN.37: a window of questions has opened; it is shown once by itself, and from the progress after.
+      if (seen.asking === true && !entry.questionsSeen && !entry.questionsOpen) openTurnQuestions(entry);
       if (Number.isInteger(seen.shown) && seen.shown > (entry.shownCount || 0) && seen.chat_id) {
         entry.shownCount = seen.shown;
         showSoFar(entry, seen.chat_id);
