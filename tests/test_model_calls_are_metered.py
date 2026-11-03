@@ -232,3 +232,70 @@ def test_a_receipt_the_meter_cannot_read_never_fails_the_call_or_its_error():
     with pytest.raises(OutputTruncated):
         model.structured(PROMPT, SCHEMA, Tier.ROUTINE)
     assert model.dropped == 1
+
+
+# --- what is left, asked before every call (plan AN.37, D42) ---------------------------------------------------------------
+
+class Counted(Speech):
+    """Answers text and speech, counting what it was asked to send."""
+
+    def __init__(self):
+        super().__init__(60)
+        self.sent = 0
+
+    def structured(self, prompt, schema, tier, *, max_tokens=None):
+        self.sent += 1
+        return receipt()
+
+    def transcribe(self, audio, **request):
+        self.sent += 1
+        return super().transcribe(audio, **request)
+
+    async def live_transcription(self, **request):
+        self.sent += 1
+        return await super().live_transcription(**request)
+
+
+def test_a_call_the_allowance_refuses_is_neither_sent_nor_recorded(kept):
+    from nm.arrive.usage_port import AllowanceUsedUp
+    from nm.shared.model_port import USAGE_LIMIT_MESSAGE
+
+    def used_up():
+        raise AllowanceUsedUp(USAGE_LIMIT_MESSAGE)
+    inner = Counted()
+    model = MeteredModel(inner=inner, record=kept, before=used_up)
+    with pytest.raises(UsageLimitReached):
+        model.structured(PROMPT, SCHEMA, Tier.ROUTINE, max_tokens=500)
+    with pytest.raises(UsageLimitReached):
+        model.transcribe(b"RIFF", file_name="note.wav", media_type="audio/wav")
+    with pytest.raises(UsageLimitReached):
+        asyncio.run(model.live_transcription(minutes=6))
+    assert inner.sent == 0 and kept.records == [] and model.dropped == 0
+
+
+def test_the_allowance_is_asked_before_each_call_and_a_call_it_allows_goes_as_before(kept):
+    asked, inner = [], Counted()
+    model = MeteredModel(inner=inner, record=kept, before=lambda: asked.append(inner.sent))
+    model.structured(PROMPT, SCHEMA, Tier.ROUTINE, max_tokens=500)
+    model.structured(PROMPT, SCHEMA, Tier.ROUTINE, max_tokens=500)
+    model.transcribe(b"RIFF", file_name="note.wav", media_type="audio/wav")
+    # Asked each time before the call went, never after it.
+    assert asked == [0, 1, 2] and inner.sent == 3 and len(kept.records) == 3
+
+
+def test_the_bound_model_asks_the_allowance_it_is_given_before_each_call(monkeypatch):
+    """The OpenAI route's binding passes what is asked before each call to the meter (D42)."""
+    from nm.app import model_permission
+
+    class Adapter:
+        def for_matter_text(self, authorize, *, page_images=False, audio_model=None):
+            return Provider(receipt())
+
+    monkeypatch.setattr(model_permission, "require_permission", lambda *args, **kwargs: None)
+    asked = []
+    model = model_permission.bind_text_model(Adapter(), directory=None, account_id="advocate@chambers.in", config=None,
+                                             session_current=lambda: True, record=lambda call: None,
+                                             before=lambda: asked.append("asked"))
+    assert model.inner.inner.before is not None
+    model.inner.inner.structured(PROMPT, SCHEMA, Tier.ROUTINE, max_tokens=500)
+    assert asked == ["asked"]

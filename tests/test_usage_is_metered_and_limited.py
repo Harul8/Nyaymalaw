@@ -79,3 +79,29 @@ def test_usage_that_cannot_be_read_is_never_free_usage(served):
     response = send(served)
     assert response.status_code == 503 and response.json()["detail"]["code"] == "response_unavailable"
     assert not served.model.calls
+
+
+def test_a_turn_stops_at_its_next_call_once_the_allowance_runs_out_in_the_middle(served):
+    """Plan AN.37 (D42, D46; owner, 3 Nov 2026: "we should stop the conversation in the middle if the usage is run out -- we
+    should check the usage left before every call"): the third call's charge takes the last of the allowance, and the turn
+    sends nothing more. Nothing had been shown, so nothing is saved and the message can be sent again once there is more."""
+    import threading
+
+    lock, sent, structured = threading.Lock(), [], served.model.structured
+
+    def spending(prompt, schema, tier, **kwargs):
+        result = structured(prompt, schema, tier, **kwargs)
+        with lock:
+            sent.append(prompt.operation)
+            if len(sent) == 3:
+                use_up(served)
+        return result
+    served.model.structured = spending
+    response = send(served)
+    assert response.status_code == 402
+    detail = response.json()["detail"]
+    assert detail["code"] == "usage_limit" and detail["why"].startswith(USAGE_LIMIT_MESSAGE)
+    assert len(sent) == 3  # nothing was sent after the allowance ran out
+    # The three calls sent and the charge that used the allowance up are kept; the calls refused were never sent.
+    assert served.app.usage.totals()["calls"] == 4
+    assert not served.store.list_for(OWNER).matters

@@ -129,15 +129,19 @@ class Application:
     def _model_for(self, advocate_id, *, session_current, page_images=False, audio_model=None, text_model=None):
         # Every call made for an advocate is metered against their account (plan AN.17), on either route.
         record = lambda call: self.usage.record(advocate_id, call)  # noqa: E731
+        # What is left is asked again before every call is sent (plan AN.37, D42), not only before the work starts.
+        before = lambda: self._require_allowance(advocate_id)  # noqa: E731
         if isinstance(self._model_adapter, OpenAIModelAdapter):
             from nm.app.model_permission import bind_text_model
             model = bind_text_model(self._model_adapter, directory=self.directory,
                 account_id=advocate_id, config=self.config,
                 session_current=session_current, audit=self._egress_audit,
-                page_images=page_images, audio_model=audio_model, record=record, text_model=text_model)
+                page_images=page_images, audio_model=audio_model, record=record, text_model=text_model,
+                before=before)
         else:
             # Fresh tracing per request prevents parallel conversations sharing traces.
-            model = PolicedModel(inner=TracedModel(inner=MeteredModel(inner=self._model_adapter, record=record)),
+            model = PolicedModel(inner=TracedModel(inner=MeteredModel(inner=self._model_adapter, record=record,
+                                                                      before=before)),
                 policy=self._gate.policy, audit=self._egress_audit,
                 authorize=lambda: _require_session(session_current))
         # After the permission, so an advocate who has not allowed AI sharing is told that first.
@@ -145,10 +149,11 @@ class Application:
         return model
 
     def _require_allowance(self, advocate_id):
-        """Once nothing is left, new paid work is refused before it starts (owner, O24: "Once nothing is
-        left"): a turn's first call, a reading of pages, a voice note, dictation, live dictation. Raised as
-        the usage limit, in the owner's words of P51, so each says it as it says the provider's. Work
-        already running finishes and is charged; a saved answer reopens without coming here."""
+        """Once nothing is left, new paid work is refused (owner, O24: "Once nothing is left"): before it
+        starts - a turn's first call, a reading of pages, a voice note, dictation, live dictation - and, from
+        plan AN.37 (D42, D46), before each further call it would send, so a turn stops in the middle once the
+        allowance runs out. Raised as the usage limit, in the owner's words of P51, so each says it as it says
+        the provider's. A call already sent finishes and is charged; a saved answer reopens without coming here."""
         try:
             left = self.usage.standing(advocate_id)['left']
         except UsageRefused as exc:

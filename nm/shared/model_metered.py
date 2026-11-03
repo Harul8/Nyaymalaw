@@ -17,8 +17,13 @@ answered carries its receipt, on its result or on its error (`ModelError.usage`:
 still cost money"), and is charged at the cost the adapter established from the provider's own usage
 report. A call that failed without one is kept with its failure and its attempts, its cost not
 established and charged nothing. NOT RECORDED: a refusal NM makes before anything is sent - the
-advocate's permission (`ModelPermissionRefused`, not a model error) or a tier that is not configured
-(`TierUnavailable`).
+advocate's permission (`ModelPermissionRefused`, not a model error), a tier that is not configured
+(`TierUnavailable`) or an allowance used up (below).
+
+WHAT IS LEFT, BEFORE EVERY CALL (owner, 3 Nov 2026, plan AN.37, D42 and D46: "we should stop the conversation in the
+middle if the usage is run out -- we should check the usage left before every call"): `before` is asked before each call is
+sent - text, embeddings, a recording, live dictation - and refuses it, unsent and unrecorded, once the account's allowance is
+used up. A call already sent finishes and is charged.
 
 Speech is priced by the minute (`AUDIO_PRICE_PER_MINUTE`): a recording at the duration the provider
 reports, a live dictation at the audio sent, when it closes.
@@ -74,6 +79,9 @@ class MeteredModel:
     inner: ModelPort
     #: Keeps one record (nm/arrive/usage_port.py, CALL_FIELDS) against the account this model serves.
     record: Callable[[dict], None]
+    #: Asked before each call is sent (plan AN.37, D42): raises to refuse it - the account's allowance used up - and the call
+    #: is then neither sent nor recorded. None: nothing is asked.
+    before: Callable[[], None] | None = None
     dropped: int = 0
     """Records this failed to KEEP. Not calls that failed."""
 
@@ -107,6 +115,7 @@ class MeteredModel:
         return self._metered("embed", None, Tier.EMBED, lambda: self.inner.embed(texts))
 
     def transcribe(self, audio: bytes, **request):
+        self._ask_before()
         try:
             heard = self.inner.transcribe(audio, **request)
         except TierUnavailable:
@@ -118,6 +127,7 @@ class MeteredModel:
         return heard
 
     async def live_transcription(self, **request):
+        self._ask_before()
         try:
             session = await self.inner.live_transcription(**request)
         except TierUnavailable:
@@ -129,8 +139,14 @@ class MeteredModel:
 
     # ------------------------------------------------------ the record -----
 
+    def _ask_before(self) -> None:
+        """Refuse a call before it is sent where `before` says so (D42); nothing is recorded, for nothing was sent."""
+        if self.before is not None:
+            self.before()
+
     def _metered(self, kind: str, prompt, tier: Tier, run):
         operation = getattr(prompt, "operation", None) or ("embed" if kind == "embed" else "")
+        self._ask_before()
         try:
             result = run()
         except TierUnavailable:
