@@ -9,6 +9,7 @@ import pytest
 
 from nm.core_engine import answer_sources
 from nm.core_engine.calls import TurnCalls
+import nm.core_engine.research as research_module
 from nm.core_engine.research import (
     CONTRACT, FOR_PICK, INSTRUMENTED_CONTRACT, JUDGMENT_PICKED_CONTRACT, JUDGMENTS_FOR_PICK, MAX_REVISIONS, PICKED_CONTRACT,
     PROVISIONS_FOR_PICK, accept,
@@ -159,12 +160,18 @@ class Model:
 
 
 def without_full(record):
-    """A current record's judgment picks as a version before v17 kept them: naming no judgment to read in full (plan AN.36)."""
+    """A current record's picks as a version before v17 kept them: its judgment picks naming no judgment to read in full, and
+    (before v18) its provision picks naming only what each question kept (plan AN.36)."""
     record = deepcopy(record)
     picks = record.get("judgment_picks") or {}
     for pick in ([picks] if "state" in picks else picks.values()):
         if isinstance(pick.get("proposal"), dict):
             pick["proposal"].pop("read_in_full", None)
+    provisions = record.get("picks") or {}
+    for pick in ([provisions] if "state" in provisions else provisions.values()):
+        if isinstance(pick.get("proposal"), dict):
+            for item in pick["proposal"]["questions"]:
+                item["chosen"] = item["chosen"][:research_module.SECTIONS_A_QUESTION]
     return record
 
 
@@ -355,7 +362,7 @@ def test_search_returns_twenty_provisions_and_the_pick_admits_only_its_choice():
     model = Model(choose=lambda ids: ids[:2])
     record = retrieve(admitted, found, ctx, model=model)
     assert asked == [{"results": {"provision": PROVISIONS_FOR_PICK, "judgment": JUDGMENTS_FOR_PICK}}]
-    assert record["contract"] == CONTRACT == "core_research_v17" and record["state"] == "evaluated"
+    assert record["contract"] == CONTRACT == "core_research_v18" and record["state"] == "evaluated"
     provisions = [c for c in record["searches"]["t2:w1"]["candidates"] if c["kind"] == "provision"]
     assert len(provisions) == PROVISIONS_FOR_PICK
     assert record["picks"]["D1"]["chosen"] == {"t2:w1": [provisions[0]["id"], provisions[1]["id"]]}
@@ -454,12 +461,13 @@ def test_shown_ids_alone_count_and_an_unknown_id_marks_the_research_partial():
     assert validate(record, admitted, ctx) == record
 
 
-def test_an_unavailable_pick_keeps_each_questions_first_six_provisions():
+def test_an_unavailable_pick_keeps_each_questions_first_five_provisions():
     ctx = context("Find the applicable law.")
     admitted = accept(proposal(), ctx)
     record = retrieve(admitted, searcher(), ctx, model=Model(fail={"core_research_pick"}))
     provisions = [c["id"] for c in record["searches"]["t2:w1"]["candidates"] if c["kind"] == "provision"]
-    assert record["picks"]["D1"]["state"] == "unavailable" and record["picks"]["D1"]["chosen"] == {"t2:w1": provisions[:6]}
+    # From research v18 (plan AN.36, D36) a question keeps at most five provisions; before, the first six.
+    assert record["picks"]["D1"]["state"] == "unavailable" and record["picks"]["D1"]["chosen"] == {"t2:w1": provisions[:5]}
     assert record["state"] == "partial" and validate(record, admitted, ctx) == record
 
 

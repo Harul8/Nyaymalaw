@@ -60,7 +60,7 @@ def test_the_judgment_pick_names_the_few_to_read_in_full_and_says_the_rest_stand
 def test_only_the_judgments_named_are_read_in_full_and_the_others_stand_by_their_passages():
     model = Model(full=lambda chosen: chosen[:2])
     ctx, plan, record = researched(model)
-    assert record["contract"] == "core_research_v17"
+    assert record["contract"] == "core_research_v18"
     assert [entry["case_id"] for entry in record["judgments"]["D1"]] == ["first case", "second case"]
     sources = answer_sources.build(ctx, record)
     by_case = {}
@@ -176,3 +176,62 @@ def test_the_judgments_the_papers_cite_have_first_claim_on_the_five():
         change(changed)
         with pytest.raises(ValueError):
             research.validate(changed, plan, ctx)
+
+
+def sections_library():
+    """Eight sections a first search finds and four more a search for when time runs finds, one judgment paragraph each time."""
+    provisions = Collection()
+    provisions.rows = {p: {"chunk_id": f"s{p}", "full_text": f"Section {p}\nProvision {p} text.", "act_id": "act",
+                           "act_name": "Act", "section_number": str(p)} for p in range(12)}
+    provisions.lexical = provisions.semantic = lambda query, depth: [8, 9, 10, 11] if "time runs" in query else list(range(8))
+    provisions.rerank = lambda pairs, *, anchors=None: [1.0] * len(pairs)
+    held = Collection("judgment")
+    held.rerank = lambda pairs, *, anchors=None: [1.0] * len(pairs)
+    return HybridSearcher({"provision": provisions, "judgment": held})
+
+
+def test_each_question_keeps_at_most_five_sections_the_pick_names_the_two_to_five_that_govern():
+    """D36 (owner, 3 Nov 2026: "there won't be more than lets say 2-5 relevants section"): the pick is asked for the two to five
+    provisions that govern each question; code keeps at most five, in the pick's order; named and linked ones count within them."""
+    words = " ".join(research.PICK_V18.split())
+    assert "choose the two to five provisions that govern it" in words and "no more than five are read for a question" in words
+    assert research.PICKS["provision"][1] is research.PICK_V18 and research.SECTIONS_A_QUESTION == 5
+    ctx = context("Find the applicable law.")
+    plan = research.accept(proposal(1, 1), ctx)
+    record = research.retrieve(plan, sections_library(), ctx, model=Model())
+    work_id = plan["work"][0]["id"]
+    chosen = record["picks"]["D1"]["chosen"][work_id]
+    returned = [c["id"] for c in record["searches"][work_id]["candidates"] if c["kind"] == "provision"]
+    assert len(returned) == 8 and chosen == returned[:5], "the pick named all eight; the first five it named are kept"
+    assert research.validate(record, plan, ctx) == record
+    changed = deepcopy(record)
+    changed["picks"]["D1"]["chosen"][work_id] = returned[:6]
+    with pytest.raises(ValueError, match="differs from its proposal"):
+        research.validate(changed, plan, ctx)
+    # A v17 pick kept every provision it named, and replays so.
+    labels = research._labels(plan, record["searches"])
+    proposal_ = record["picks"]["D1"]["proposal"]
+    assert research._resolve_picks(proposal_, plan, record["searches"], labels)[0][work_id] == returned
+
+
+def test_the_further_pick_keeps_only_what_is_left_of_each_questions_five():
+    import re
+
+    def time_missing(user):
+        label = re.search(r"^(Q\d+): ", user, re.M).group(1)
+        return {"questions": [{"question_id": label, "missing": "When time runs.", "sections": [], "phrases": ["when time runs"],
+                               "cited": []}]}
+    ctx = context("Find the applicable law.")
+    plan = research.accept(proposal(1, 1), ctx)
+    record = research.retrieve(plan, sections_library(), ctx, model=Model(choose=lambda ids: ids[:4], further=time_missing))
+    work_id = plan["work"][0]["id"]
+    assert len(record["picks"]["D1"]["chosen"][work_id]) == 4
+    further = record["further"]["D1"]
+    assert len(further["picks"]["provision"]["chosen"][work_id]) == 1, "four first, so one more"
+    assert research.validate(record, plan, ctx) == record
+    changed = deepcopy(record)
+    fresh = dict(research.further_searches(record))[work_id]
+    changed["further"]["D1"]["picks"]["provision"]["chosen"][work_id] = [c["id"] for c in fresh["candidates"]
+                                                                          if c["kind"] == "provision"][:2]
+    with pytest.raises(ValueError):
+        research.validate(changed, plan, ctx)

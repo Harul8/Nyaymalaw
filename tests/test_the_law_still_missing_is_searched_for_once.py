@@ -59,7 +59,7 @@ def researched(model):
 def test_the_law_still_missing_is_searched_for_once_and_only_what_is_new_is_chosen_from():
     model = Model(further=missing_time)
     ctx, plan, record, asked = researched(model)
-    assert record["contract"] == research.CONTRACT == "core_research_v17"
+    assert record["contract"] == research.CONTRACT == "core_research_v18"
     assert operations(model).count("core_research_further") == 1, "once for the dispute"
     assert len(asked) == 2, "the first searches, then the one further search"
     further, work_id = record["further"]["D1"], plan["work"][0]["id"]
@@ -113,7 +113,8 @@ def test_the_further_search_is_asked_for_in_plain_words_and_each_section_it_name
                  "nothing is searched again", "ask only for law the question needs"):
         assert part in words, part
     assert reasoning.STEPS["further"] == ("medium", False)
-    assert research.FURTHER_LAW == (research.FURTHER_CONTRACT, research.CONTRACT) and research.NAMED_CONTRACT in research.NAMED_LAW
+    assert research.FURTHER_LAW == (research.FURTHER_CONTRACT, research.FEW_CONTRACT, research.CONTRACT)
+    assert research.NAMED_CONTRACT in research.NAMED_LAW
     assert research.NAMED_CONTRACT not in research.FURTHER_LAW and research.NAMED_CONTRACT in research.EVERY_CHOSEN
     ctx = context("Find the applicable law.")
     plan = research.accept(proposal(1, 1), ctx)

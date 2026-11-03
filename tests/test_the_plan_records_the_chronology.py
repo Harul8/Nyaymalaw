@@ -175,8 +175,9 @@ def test_the_contracts_before_v12_keep_their_shape_and_v12_needs_the_chronology(
     # v13 (AN.28) keeps the chronology as v12 did, read with the whole file in view and its dates checked; v14 (AN.33) too, its
     # failed checks settled; v15 (AN.35) too, every judgment chosen read; v16 too, the law still missing searched for once.
     assert "chronology" not in before["proposal"] and CHRONICLED == ("core_research_v12", "core_research_v13", "core_research_v14",
-                                                                      "core_research_v15", "core_research_v16", CONTRACT)
-    assert CONTRACT == "core_research_v17"
+                                                                      "core_research_v15", "core_research_v16", "core_research_v17",
+                                                                      CONTRACT)
+    assert CONTRACT == "core_research_v18"
     with pytest.raises(SchemaViolation, match="undeclared"):
         accept(proposal(), ctx, contract=JUDGMENTS_READ_CONTRACT)
     with pytest.raises(SchemaViolation, match="missing"):
