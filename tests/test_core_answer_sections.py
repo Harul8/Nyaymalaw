@@ -780,6 +780,55 @@ def test_a_turn_withheld_whole_keeps_nothing_it_showed(store):
     assert held_now(store) is None
 
 
+def test_a_turn_whose_usage_runs_out_after_showing_part_of_its_answer_keeps_what_it_showed(store):
+    """Plan AN.37 (D46; owner, 3 Nov 2026): the usage runs out while one dispute's case is set out, after the other dispute's
+    section was shown. The turn is saved there, as a turn that stopped part-way, with P51's words above it - never withdrawn."""
+    from nm.core_engine.conversation import chat_matter_id
+    from nm.shared.model_port import USAGE_LIMIT_MESSAGE, UsageLimitReached
+    from tests.test_core_turn import run
+    model = through_turns(Scripted())
+    model.knows_the_case = True  # its case calls come here, not to the stand-in that sets out nothing
+    researching, lock, cases = model.structured, threading.Lock(), []
+
+    def structured(prompt, schema, tier, **kwargs):
+        if prompt.operation not in ("core_case", "core_case_check"):
+            return researching(prompt, schema, tier, **kwargs)
+        with lock:
+            cases.append(prompt.operation)
+            first = len(cases) == 1
+        if first:
+            raise UsageLimitReached(USAGE_LIMIT_MESSAGE)
+        return _result({"elements": [], "to_get": [], "other_side": []}, tier)
+    model.structured = structured
+    response = run(store, model)
+    assert response["committed"] == "committed" and response["service_status"] == turn.STOPPED_FOR_USAGE
+    assert response["service_status"].startswith(USAGE_LIMIT_MESSAGE)
+    assert held_now(store) is None  # saved, no longer only shown
+    rows = turn.saved_rows(store.load(chat_matter_id("owner", response["chat_id"])), "owner")
+    assert [row["turn_id"] for row in rows] == ["t1"] and rows[0]["response"] == {**response, "replayed": False}
+    sections = rows[0]["activities"]["sections"]
+    assert sorted((saved["fallback"] or {}).get("reason", "shown") for saved in sections) == ["interrupted", "shown"]
+    assert rows[0]["response"]["elements"][0]["text"].startswith("NM stopped before finishing this answer.")
+    # Sent again, the message is the answer saved, never a second one.
+    assert run(store, through_turns(Scripted()))["replayed"]
+
+
+def test_a_turn_run_on_a_chosen_effort_that_stopped_part_way_is_saved_with_what_it_showed(store):
+    """The model and effort chosen for a turn are part of its request (plan AN.33, D23): a turn run on a choice that stopped
+    after showing part of its answer is saved with what it showed, as any other is - before AN.37 it was withdrawn."""
+    from nm.core_engine.conversation import chat_matter_id
+    from nm.shared.external_ai_contracts import ModelPermissionRefused
+    from tests.test_core_turn import run
+    with pytest.raises(ModelPermissionRefused):
+        run(store, through_turns(Scripted(refuse={"core_response_overview"})), effort="high")
+    chat_id = held_now(store)["request"]["chat_id"]
+    later = run(store, through_turns(Scripted()), chat_id=chat_id, turn_id="t2", message="And the second?")
+    assert later["committed"] == "committed"
+    rows = turn.saved_rows(store.load(chat_matter_id("owner", chat_id)), "owner")
+    assert [row["turn_id"] for row in rows] == ["t1", "t2"] and rows[0]["request"]["effort"] == "high"
+    assert rows[0]["activities"]["overview"]["fallback"] == {"reason": "interrupted"}
+
+
 
 def test_the_page_reads_what_a_running_turn_has_shown_and_a_reopened_one_is_saved_with_it(served):
     """P26-P27 through the HTTP API: the progress says how much the answer has shown and in

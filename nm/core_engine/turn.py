@@ -87,6 +87,9 @@ _SECTIONED_FIELDS = {"contract", "interpretation", "research", "sources", "execu
 
 #: Receipts describe what this code did, never whether the request is fulfilled (research owns them).
 execution_record = research.execution
+#: Said above an answer the usage ran out part-way through (plan AN.37, D46): the owner's words of P51, then what was kept.
+STOPPED_FOR_USAGE = (USAGE_LIMIT_MESSAGE + " NM stopped part-way through this answer: the parts it had finished and checked "
+                     "are below, and the rest are marked as not finished.")
 
 
 def _diagnosis(code, exc, calls):
@@ -256,10 +259,23 @@ def recover(store, matter, advocate_id, *, running=lambda turn_id: False, sessio
         held = {"turn_id": None}
     if held is None or held["turn_id"] is not None and running(held["turn_id"]):
         return matter
+    save_shown(store, matter, advocate_id, held, session_current=session_current)
+    return store.load(matter.id)
+
+
+def save_shown(store, matter, advocate_id, held, *, session_current, service_status=None, metrics=None):
+    """Save what a turn showed of its answer before it stopped (held, as conversation.shown_of reads it), as a turn that stopped
+    part-way (P27): its activity with the parts not finished marked so, checked as it is saved (P46). Returns the saved
+    response, or None where what was shown could not be read reliably and was withdrawn. service_status: code's own words on
+    why the turn stopped, kept with it and shown above the answer (plan AN.37, D46); metrics: the turn's own, where the run
+    that made it saves it, otherwise those kept with what was shown."""
     rows = checked_rows(matter, advocate_id)
     try:
+        # The model and the effort chosen for the turn are part of its request (plan AN.33, D23): without them a turn run on
+        # a choice was never recognised as the request that showed its parts, and what it showed was withdrawn.
+        choice = tuple((name, held["request"][name]) for name in ("model", "effort") if name in held["request"])
         context = TurnContext(matter, held["request"]["chat_id"], held["turn_id"], held["message"], tuple(rows),
-                              documents=tuple(held["documents"]))
+                              documents=tuple(held["documents"]), choice=choice)
         if context.request != held["request"] or any(row["turn_id"] == held["turn_id"] for row in rows):
             raise ValueError("What was shown belongs to another request")
         activity = interrupted(held["activity"])
@@ -278,11 +294,11 @@ def recover(store, matter, advocate_id, *, running=lambda turn_id: False, sessio
         log.warning("The unfinished parts of an answer could not be read reliably and were withdrawn: %s",
                     type(exc).__name__)
         drop_shown(store, TurnContext(matter, rows[0]["chat_id"] if rows else "", "", "", tuple(rows)))
-        return store.load(matter.id)
-    commit_turn(store, context, elements=elements, activities=activity,
-                records=checklist.records(original, activity), metrics=held["metrics"],
-                session_current=session_current)
-    return store.load(matter.id)
+        return None
+    return commit_turn(store, context, elements=elements, activities=activity,
+                       records=checklist.records(original, activity),
+                       metrics=held["metrics"] if metrics is None else metrics, service_status=service_status,
+                       session_current=session_current)
 
 
 def _validate_sections(activity, context, elements):
@@ -484,6 +500,28 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
         finish("retryable", "model_permission_required")
         raise
     except ModelError as exc:
+        if isinstance(exc, UsageLimitReached) and holder["shown"]:
+            # Plan AN.37 (D46; owner, 3 Nov 2026): the usage ran out part-way through the answer. What it had shown is kept -
+            # saved now as a turn that stopped part-way (P27), with P51's words above it - rather than withdrawn.
+            _reporter(progress)("saving")
+            try:
+                held = shown_of(holder["context"].matter)
+            except ValueError:
+                held = None
+            try:
+                response = (save_shown(store, holder["context"].matter, advocate_id, held, session_current=session_current,
+                                       service_status=STOPPED_FOR_USAGE, metrics=calls.metrics())
+                            if held is not None and held["turn_id"] == turn_id else None)
+            except ConversationRefused as refused:
+                finish({"committed": "finished", "not_committed": "retryable"}.get(refused.committed, "unconfirmed"),
+                       refused.code)
+                raise
+            if response is not None:
+                try:
+                    finish("finished")
+                except (ConversationRefused, EgressRefused):
+                    pass  # the saved response is authoritative, as for any answer saved
+                return response
         withdraw()
         if isinstance(exc, ContextOverflow):
             why = "This conversation exceeds the current processing capacity. Your saved conversation is unchanged."
