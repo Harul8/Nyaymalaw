@@ -33,6 +33,8 @@ STAGES = {
     "checking_across": "Checking the sections against each other",
     "writing_overview": "Writing the overview",
     "saving": "Saving the answer",
+    # Plan AN.37 (D37): NM has asked the advocate something only they can settle.
+    "waiting_for_answer": "Waiting for your answer",
 }
 #: Counts a stage may report; anything else is dropped.
 DETAIL = ("done", "total", "round")

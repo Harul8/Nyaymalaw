@@ -125,6 +125,9 @@ class Application:
         self.transcription_model = (settings.get('NM_TRANSCRIBE_MODEL') or 'gpt-transcribe').strip()
         # Live words while dictating, only for an advocate who turns them on (owner, 15 Oct 2026).
         self.live_transcription_model = (settings.get('NM_LIVE_TRANSCRIBE_MODEL') or 'gpt-live-transcribe').strip()
+        # Plan AN.37 (D37-D40): the windows of questions turns have open, and what proposes the questions (none yet).
+        self.questions = QuestionDesk()
+        self.propose_questions = None
 
     def _model_for(self, advocate_id, *, session_current, page_images=False, audio_model=None, text_model=None):
         # Every call made for an advocate is metered against their account (plan AN.17), on either route.
@@ -213,10 +216,13 @@ class Application:
                              case_index=self.case_index,
                              provision_reader=getattr(self.legal_search, 'collections', {}).get('provision'),
                              progress=progress, running=lambda held: self.turn_running(advocate_id, held),
-                             chosen_model=model_choice, effort=effort, **request)
+                             chosen_model=model_choice, effort=effort,
+                             propose=self.propose_questions, desk=self.questions.bound(advocate_id), **request)
             ended = 'finished'
             return result
         finally:
+            # The window closes with the turn; an answer after it goes as the next message (plan AN.37, D44).
+            self.questions.close(advocate_id, turn_id)
             # Only the run that did the work closes its progress: a same-turn retry
             # refused while the first run works must not mark that run stopped.
             if reported:
@@ -290,6 +296,40 @@ class _DeferredAdapter:
 
     def __getattr__(self, name):
         return getattr(self._resolve(), name)
+
+class QuestionDesk:
+    """The windows of questions the turns this process is working on have open (plan AN.37, D37-D40): opened by a turn when it
+    asks, read and answered from its advocate's page, closed when the turn stops - an answer after that goes as the next message
+    (D44). Each advocate reaches only their own; nothing here outlives the process (a retry reuses what was sealed instead)."""
+
+    def __init__(self):
+        self._open, self._lock = {}, threading.Lock()
+
+    def bound(self, advocate_id):
+        """What a turn of this advocate opens its window on."""
+        desk = self
+
+        class _Bound:
+            def open(self, turn_id, asking):
+                with desk._lock:
+                    desk._open[(advocate_id, turn_id)] = asking
+        return _Bound()
+
+    def close(self, advocate_id, turn_id):
+        with self._lock:
+            self._open.pop((advocate_id, turn_id), None)
+
+    def window(self, advocate_id, turn_id):
+        """The advocate's window for that turn while it is open, or None."""
+        with self._lock:
+            asking = self._open.get((advocate_id, turn_id))
+        return asking if asking is not None and asking.open() else None
+
+    def answer(self, advocate_id, turn_id, given):
+        """The advocate's answers for that turn's window: "taken", or "closed" where there is no open window."""
+        asking = self.window(advocate_id, turn_id)
+        return "closed" if asking is None else asking.receive(given)
+
 
 def _require_session(check):
     from nm.app.model_permission import ModelPermissionRefused

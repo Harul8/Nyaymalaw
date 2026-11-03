@@ -195,6 +195,8 @@ class _Released(BaseModel):
     composed: list[dict] = []
     continuation: dict = {}
     service_status: str | None = None
+    # Plan AN.37: what NM asked while it worked on this message, and how each answer came to stand.
+    questions_asked: dict | None = None
 
 
 def _release(output) -> _Released:
@@ -1414,12 +1416,53 @@ def turn(req: TurnRequest, advocate_id: Advocate, request: Request, background: 
 @app.get('/api/turn-progress')
 def turn_progress(turn_id: str, advocate_id: Advocate, request: Request):
     """What the advocate's own turn in progress is doing: stage names, counts and
-    times only (owner decision, 14 Oct 2026). Unknown is never a failure claim."""
+    times only (owner decision, 14 Oct 2026). Unknown is never a failure claim. From plan
+    AN.37, that it has a window of questions open, where it has: never what it asks."""
     if not _session_current(request, advocate_id):
         raise HTTPException(401, 'not signed in')
     if not turn_id or len(turn_id) > 200:
         raise HTTPException(422, 'A turn identity is required.')
-    return application().turn_progress.read(advocate_id, turn_id)
+    seen = application().turn_progress.read(advocate_id, turn_id)
+    return {**seen, 'asking': True} if application().questions.window(advocate_id, turn_id) is not None else seen
+
+
+class QuestionAnswers(BaseModel):
+    turn_id: str = Field(min_length=1, max_length=200)
+    #: By question ID: {"chosen": [labels], "other": "own words"}.
+    answers: dict[str, dict]
+
+
+@app.get('/api/turn-question')
+def turn_question(turn_id: str, advocate_id: Advocate, request: Request, response: Response):
+    """What the advocate's own turn asks them now (plan AN.37, D37): its questions, the answers taken and whether the defaults
+    stand. Only while its window is open; the advocate reads only their own."""
+    if not _session_current(request, advocate_id):
+        raise HTTPException(401, 'not signed in')
+    if not turn_id or len(turn_id) > 200:
+        raise HTTPException(422, 'A turn identity is required.')
+    window = application().questions.window(advocate_id, turn_id)
+    if window is None:
+        raise HTTPException(404, {'code': 'no_question', 'why': 'NM is not asking anything about this message now.'})
+    response.headers['Cache-Control'] = 'no-store'
+    return window.view()
+
+
+@app.post('/api/turn-question', dependencies=[CsrfProtected])
+def turn_question_answers(req: QuestionAnswers, advocate_id: Advocate, request: Request):
+    """The advocate's answers to what their turn asks (plan AN.37, D37-D39, D44), checked against its choices. Once the turn
+    has finished, the window is closed and the page sends them as the next message."""
+    from nm.core_engine.questions import Refused
+
+    if not _session_current(request, advocate_id):
+        raise HTTPException(401, 'not signed in')
+    try:
+        state = application().questions.answer(advocate_id, req.turn_id, req.answers)
+    except Refused as exc:
+        raise HTTPException(422, {'code': 'answer_refused', 'why': str(exc)}) from exc
+    if state == 'closed':
+        raise HTTPException(409, {'code': 'window_closed',
+                                  'why': 'NM has finished working on this message. Your answers can go as your next message.'})
+    return {'state': state}
 
 
 def _conversation_error(exc, req=None):

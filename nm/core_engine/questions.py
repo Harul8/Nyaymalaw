@@ -194,6 +194,12 @@ class Asking:
         with self._lock:
             return deepcopy(self._answers)
 
+    def view(self):
+        """What the page shows of the window: the questions, the answers taken, and whether the defaults now stand."""
+        with self._lock:
+            return {"questions": deepcopy(self.questions), "answers": deepcopy(list(self._answers.values())),
+                    "defaults_applied": self._applied}
+
     def receive(self, given, *, hold=True):
         """The advocate's answers from the window, by question ID. Returns "taken", or "closed" where the window has closed;
         raises Refused for an answer code cannot take (nothing is kept from it)."""

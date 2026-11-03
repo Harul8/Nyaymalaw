@@ -396,6 +396,8 @@ def commit_turn(store, context, *, elements, activities, records=None, work=None
         row["documents"] = deepcopy(list(context.documents))
     if context.asked is not None:
         row["asked"] = questions.check_asked(deepcopy(context.asked))
+        # The page shows what was asked, and how each answer came to stand, above the answer it shaped.
+        response["questions_asked"] = deepcopy(row["asked"])
     row["digest"] = digest(row)
     # The turn's commit replaces what it showed and asked while it worked (P27; plan AN.37), in the same write.
     metadata = {**{key: value for key, value in context.matter.intake_answers.items() if key not in (SHOWN, ASKING)}, HEADER: {
