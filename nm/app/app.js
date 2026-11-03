@@ -3163,6 +3163,16 @@ function renderTurn(entry) {
         }
         asks.appendChild(ask);
       }
+      // Plan AN.37 (piece 37a): what NM asks here, answered in a window, each in a box of its own.
+      const questions = needQuestions(el.items);
+      if (questions.length) {
+        const answer = document.createElement('button');
+        answer.type = 'button';
+        answer.className = 'ghost need-answer';
+        answer.textContent = questions.length === 1 ? 'Answer this' : 'Answer these';
+        answer.addEventListener('click', () => openNeedAnswers(entry, questions));
+        parts.push(answer);
+      }
       box.append(title, ...parts);
       into.appendChild(box);
       return;
@@ -3381,6 +3391,122 @@ function renderTurn(entry) {
   // saved"; LB-139). The saved working stages stay sealed with the matter and
   // readable through the owned progress reads, for the owner's review.
   return wrap;
+}
+
+// WHAT I NEED FROM YOU, ANSWERED IN A WINDOW (plan AN.37, D37 and D43, piece 37a; owner, 3 Nov 2026: "ask a question to the
+// user as a pop up with ... optional free text"): each thing NM asked for under "What I need from you", with the dispute it is
+// for, gets a box of its own; the answers go to NM as the advocate's next message, each under the question it answers, in their
+// own words. Nothing is sent for a question left blank.
+function needQuestions(items) {
+  const questions = [];
+  let group = null;
+  for (const item of items || []) {
+    if (item.kind === 'NEED_GROUP') { group = String(item.text || '').trim() || null; continue; }
+    // What is the advocate's call is asked across the disputes, not for one of them.
+    if (item.kind === 'YOUR_CALL') { group = null; continue; }
+    const text = item.kind === 'NEED_CASE' && item.need
+      ? `${item.need.what} — from ${item.need.from_whom}` : String(item.text || '').trim();
+    if (text) questions.push({ group, text });
+  }
+  return questions;
+}
+
+function needAnswersMessage(questions, answers) {
+  const said = [];
+  questions.forEach((question, index) => {
+    const answer = String((answers || [])[index] || '').trim();
+    if (!answer) return;
+    said.push(`${question.group ? `On ${question.group}, you` : 'You'} asked: “${question.text}”\nMy answer: ${answer}`);
+  });
+  return said.length ? `My answers to your questions:\n\n${said.join('\n\n')}` : '';
+}
+
+function openNeedAnswers(entry, questions) {
+  const make = (tag, className, text) => {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  };
+  // What was written and not yet sent is kept with the answer it belongs to while the page is open.
+  const key = JSON.stringify(questions);
+  if (!entry.needDrafts) entry.needDrafts = {};
+  const drafts = entry.needDrafts[key] || (entry.needDrafts[key] = questions.map(() => ''));
+  const dialog = make('dialog', 'account-dialog need-answers');
+  dialog.setAttribute('aria-labelledby', 'need-answers-title');
+  const heading = make('div', 'dialog-heading');
+  const title = make('h2', '', 'Answer what NM asked');
+  title.id = 'need-answers-title';
+  const close = make('button', 'ghost', 'Close');
+  close.type = 'button';
+  close.addEventListener('click', () => dialog.close());
+  heading.append(title, close);
+  dialog.append(heading, make('p', '', 'Answer what you can and leave the rest blank. Your answers go to NM as your next '
+    + 'message, each under the question it answers.'));
+  const boxes = questions.map((question, index) => {
+    const box = make('textarea');
+    box.id = `need-answer-${index}`;
+    const label = make('label', 'need-answer-question');
+    label.htmlFor = box.id;
+    if (question.group) label.appendChild(make('strong', '', `${question.group}: `));
+    label.appendChild(document.createTextNode(question.text));
+    box.rows = 3;
+    box.value = drafts[index];
+    box.style.width = '100%';
+    box.style.boxSizing = 'border-box';
+    box.style.font = 'inherit';
+    box.addEventListener('input', () => { drafts[index] = box.value; });
+    label.style.display = 'block';
+    label.style.margin = '0.9rem 0 0.3rem';
+    dialog.append(label, box);
+    return box;
+  });
+  if (attachments.length) {
+    dialog.appendChild(make('p', 'quiet', 'The documents attached under the message box go with your answers.'));
+  }
+  const status = make('p', '');
+  status.setAttribute('role', 'status');
+  status.setAttribute('aria-live', 'polite');
+  const sendAnswers = make('button', 'primary', 'Send answers');
+  sendAnswers.type = 'button';
+  const cancel = make('button', 'ghost', 'Cancel');
+  cancel.type = 'button';
+  cancel.addEventListener('click', () => dialog.close());
+  sendAnswers.addEventListener('click', () => {
+    const message = needAnswersMessage(questions, boxes.map((box) => box.value));
+    if (!message) { status.textContent = 'Write an answer to at least one question.'; return; }
+    if (usageUsedUp()) { status.textContent = (usage && usage.limit) || 'Sending is paused until you upgrade.'; return; }
+    const blocked = attachmentsBlockSend();
+    if (blocked) { status.textContent = blocked; return; }
+    if (activeDelivery) {
+      // A message of this conversation is being answered: the answers are sent as soon as it is saved, as anything added
+      // meanwhile is (15 Oct 2026). Another conversation's message is never given them.
+      if (activeDelivery.entry.context !== entry.context) {
+        status.textContent = 'Another message is being answered. Send your answers once it is done.';
+        return;
+      }
+      const intent = entry.context;
+      if (!Array.isArray(intent.queued)) intent.queued = [];
+      intent.queued.push(message);
+    } else if (state.matterId && !state.matterReady) {
+      status.textContent = 'This conversation is still loading. Try again in a moment.';
+      return;
+    }
+    entry.needDrafts[key] = questions.map(() => '');
+    dialog.close();
+    if (activeDelivery) repaint();
+    else send(message);
+  });
+  const actions = make('div', 'dialog-actions');
+  actions.style.display = 'flex';
+  actions.style.gap = '0.75rem';
+  actions.style.marginTop = '1rem';
+  actions.append(sendAnswers, cancel);
+  dialog.append(status, actions);
+  dialog.addEventListener('close', () => dialog.remove());
+  document.body.appendChild(dialog);
+  dialog.showModal();
+  if (boxes.length) boxes[0].focus();
 }
 
 // Opening a saved matter starts with its first turn. New live replies still

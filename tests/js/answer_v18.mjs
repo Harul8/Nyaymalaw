@@ -174,7 +174,10 @@ assert.deepEqual(tables.map(inPart), [true, false]);
 
 // What I need from you: grouped by dispute, the item opening in the reading pane, Your call last.
 const need = find(has('need'))[0].node;
-assert.deepEqual(need.children.map((node) => node.className), ['need-title', 'need-group', 'need-list', 'need-group', 'need-list']);
+// Plan AN.37 (piece 37a): the block ends with the button that opens the window to answer what it asks.
+assert.deepEqual(need.children.map((node) => node.className),
+  ['need-title', 'need-group', 'need-list', 'need-group', 'need-list', 'ghost need-answer']);
+assert.equal(need.children.at(-1).textContent, 'Answer these');
 assert.deepEqual(find(has('need-group')).map(({ node }) => node.textContent), ['Cheque of Rs 4,80,000', 'Your call']);
 const open = find(has('need-item'))[0].node;
 assert.equal(open.textContent, 'The cheque and the return memo');
