@@ -382,7 +382,9 @@ def commit_turn(store, context, *, elements, activities, records=None, work=None
                 "composed": [], "continuation": {}, "metrics": deepcopy(metrics or {}),
                 "replayed": False, "committed": "committed", "input_admitted": True,
                 "matter_version": version, "at": datetime.now(timezone.utc).isoformat(),
-                "service_status": service_status}
+                "service_status": service_status,
+                # Plan AN.37: what NM asked while it worked on the message (below), or None - as the released answer says it.
+                "questions_asked": None}
     previous = context.rows[-1] if context.rows else {}
     row = {"contract": CONTRACT, "sequence": len(context.rows) + 1,
            "previous": previous.get("digest"), "state_version": version,

@@ -183,7 +183,7 @@ class SecondLookAsRewrite:
 class CaseSetOutAsNothing:
     """A scripted model that knows no case step (turn v10, plan AN.35, piece 35c2) answers it as a model shown no law that
     bears on its dispute would: no element, nothing to get, nothing the other side relies on; one that knows no further search
-    (research v16, piece 35d) finds no law still missing. Every other call goes to the model as it is; a model that knows the
+    (research v16, piece 35d) finds no law still missing; one that knows no question step (plan AN.37, piece 37d) asks nothing. Every other call goes to the model as it is; a model that knows the
     case step (knows_the_case) or the further search (knows_further) answers it itself."""
 
     def __init__(self, model):
@@ -195,6 +195,10 @@ class CaseSetOutAsNothing:
     def structured(self, prompt, schema, tier, **kwargs):
         from nm.shared.budget_contracts import Completion
         from nm.shared.model_port import ModelResult, Usage
+        if prompt.operation == "core_questions" and not getattr(self._model, "knows_questions", False):
+            # Plan AN.37 (piece 37d): a model that knows no question step asks nothing, as most messages need.
+            return ModelResult(None, {"questions": []}, tier, "synthetic", "fixture", Usage(1, 1, 0), 0,
+                               completion=Completion.COMPLETE)
         if prompt.operation == "core_research_further" and not getattr(self._model, "knows_further", False):
             # Research v16 (AN.35, piece 35d): a model that knows no further search finds no law still missing.
             return ModelResult(None, {"questions": []}, tier, "synthetic", "fixture", Usage(1, 1, 0), 0,

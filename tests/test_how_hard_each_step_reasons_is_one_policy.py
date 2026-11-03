@@ -39,6 +39,7 @@ TABLE = {
     "chronology_second": ("high", True), "weigh": ("medium", True), "weigh_check": ("high", True),
     "case": ("medium", True), "case_check": ("high", True),  # plan AN.35, piece 35c1
     "further": ("medium", False),  # plan AN.35, piece 35d
+    "questions": ("medium", False),  # plan AN.37, piece 37d
     "phrases": (None, False), "judgment_phrases": (None, False), "pick": (None, False), "judgment_pick": (None, False),
     "write": ("medium", False), "overview": ("medium", False), "review": ("medium", False), "cross_check": ("medium", False),
     "repair": ("high", False), "take_up": ("high", False),

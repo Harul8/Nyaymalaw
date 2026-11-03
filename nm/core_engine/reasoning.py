@@ -49,6 +49,8 @@ STEPS = {
     "case": ("medium", True), "case_check": ("high", True),
     # Plan AN.35 (piece 35d): the law still missing for a dispute, named once - a lawyer's judgement on what was chosen.
     "further": ("medium", False),
+    # Plan AN.37 (piece 37d): what only the advocate can settle, asked before the answer is written - a judgement, small to read.
+    "questions": ("medium", False),
     # Research: the measured search steps stay at the release's own setting (owner decision, 14 Oct 2026).
     "phrases": (None, False), "judgment_phrases": (None, False), "pick": (None, False), "judgment_pick": (None, False),
     # The answer: a section and the overview, the review, the check across the sections, and the second looks.

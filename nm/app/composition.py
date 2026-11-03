@@ -125,9 +125,10 @@ class Application:
         self.transcription_model = (settings.get('NM_TRANSCRIBE_MODEL') or 'gpt-transcribe').strip()
         # Live words while dictating, only for an advocate who turns them on (owner, 15 Oct 2026).
         self.live_transcription_model = (settings.get('NM_LIVE_TRANSCRIBE_MODEL') or 'gpt-live-transcribe').strip()
-        # Plan AN.37 (D37-D40): the windows of questions turns have open, and what proposes the questions (none yet).
+        # Plan AN.37 (D37-D40): the windows of questions turns have open, and what proposes the questions (piece 37d).
+        from nm.core_engine import questions
         self.questions = QuestionDesk()
-        self.propose_questions = None
+        self.propose_questions = questions.propose
 
     def _model_for(self, advocate_id, *, session_current, page_images=False, audio_model=None, text_model=None):
         # Every call made for an advocate is metered against their account (plan AN.17), on either route.
