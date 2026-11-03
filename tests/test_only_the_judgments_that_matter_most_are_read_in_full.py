@@ -134,3 +134,45 @@ def test_a_second_look_or_a_take_up_is_shown_only_the_law_the_section_relies_on(
     assert set(shown["context_groups"]) == {p["context_group_id"] for p in shown["passages"]}
     assert set(shown["coverage_by_id"]) == {c for p in shown["passages"] for c in p.get("coverage_ids", ())}
     assert response_writer.RELIED_ON.startswith("the held law this section's paragraphs rely on")
+
+
+def test_the_judgments_the_papers_cite_have_first_claim_on_the_five():
+    """D35 (owner, 3 Nov 2026: "cited judgments always get first claim"): a held judgment the papers cite that the further call
+    chooses is read in full first; the pick's named judgments fill what is left of the five; the rest stand by their passages."""
+    import re
+    from tests.test_the_judgments_the_papers_cite_are_read_by_their_citation import MESSAGE, Index
+    found = ("case a", "case b", "case c", "case d", "case e", "case f")
+    provisions = Collection()
+    provisions.rerank = lambda pairs, *, anchors=None: [1.0] * len(pairs)
+    held = Collection("judgment")
+    held.rows = {3 * n + k: {"chunk_id": f"j{n}{k}", "full_text": f"Paragraph {k} of {case}: the court holds rule {n}.",
+                             "case_id": case, "case_name": case.title(), "paragraph_num": str(k + 1),
+                             "court": "Supreme Court of India", "year": "1996", "cited_by_count": 10, "paragraph_type": "reasoning"}
+                 for n, case in enumerate([*found, "cited case"]) for k in range(3)}
+    held.lexical = held.semantic = lambda query, depth: [1, 4, 7, 10, 13, 16]
+    held.rerank = lambda pairs, *, anchors=None: [1.0] * len(pairs)
+    held.judgment_paragraphs = lambda case_id: [(p, deepcopy(row)) for p, row in held.rows.items() if row["case_id"] == case_id]
+    held.context = lambda position, source: {"scope": "selected_indexed_segment", "bounded": False, "unread_positions": [],
+                                             "segments": [{"position": p, "row": deepcopy(held.rows[p])}
+                                                          for p in (position - 1, position, position + 1) if p in held.rows]}
+
+    def name_the_cited(user):
+        label = re.search(r"^(Q\d+): ", user, re.M).group(1)
+        return {"questions": [{"question_id": label, "missing": "", "sections": [], "phrases": [], "cited": ["CJ1"]}]}
+    ctx = context(MESSAGE)
+    plan = research.accept(proposal(1, 1), ctx)
+    record = research.retrieve(plan, HybridSearcher({"provision": provisions, "judgment": held}), ctx,
+                               model=Model(further=name_the_cited), case_index=Index())
+    assert [entry["case_id"] for entry in record["further"]["D1"]["cited_read"]] == ["cited case"]
+    assert [entry["case_id"] for entry in record["judgments"]["D1"]] == ["case a", "case b", "case c", "case d"]
+    assert [entry["case_id"] for entry in record["further"]["D1"]["judgments"]] == []
+    by_passages = {row["source_identity"]["case_id"] for row in answer_sources.build(ctx, record).values()
+                   if row["kind"] == "judgment" and row["coverage"][0]["scope"] == "adjacent_indexed_segments"}
+    assert by_passages == {"case e", "case f"}
+    assert research.validate(record, plan, ctx) == record
+    for change in (lambda r: r["further"]["D1"]["cited_read"].clear(),
+                   lambda r: r["judgments"]["D1"].append(deepcopy(r["further"]["D1"]["cited_read"][0]))):
+        changed = deepcopy(record)
+        change(changed)
+        with pytest.raises(ValueError):
+            research.validate(changed, plan, ctx)

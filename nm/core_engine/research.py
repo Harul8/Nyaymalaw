@@ -3115,11 +3115,11 @@ def retrieve_parts(plan, searcher, context, model=None, *, progress=None, starte
                 # admitted evidence; peers remain available and the failure stays explicit.
                 failures[work["id"]] = {"stage": "search", "reason": str(exc) or type(exc).__name__}
         picks = _picked(model, plan, searches, report)
-        judgments = _read_judgments(searcher, plan, searches, picks["judgment"])
         # v16 (plan AN.35, piece 35d): once, the law still missing for the dispute's questions, and (piece 35e) the judgments the
-        # papers cite that its questions need.
-        return _part(plan, dispute_id, searches, failures, picks, judgments,
-                     further=_further(model, searcher, plan, searches, picks, judgments, report, cited, context))
+        # papers cite that its questions need; from v17 (plan AN.36, D35) made before any judgment is read in full, so that the
+        # cited ones have first claim on the five.
+        further, judgments = _further(model, searcher, plan, searches, picks, report, cited, context)
+        return _part(plan, dispute_id, searches, failures, picks, judgments, further=further)
     # Piece 35e: the judgments the papers and messages cite, looked up once for every dispute.
     cited = cited_judgments(context, case_index)
     groups = dispute_work(plan)
@@ -3294,20 +3294,25 @@ def _no_further(state, reason=None):
             "cited": [], "cited_read": []}
 
 
-def _further(model, searcher, plan, searches, picks, judgments, report, cited=(), context=None):
+def _further(model, searcher, plan, searches, picks, report, cited=(), context=None):
     """A dispute's further search (v16, piece 35d): one call names the law still missing for each question; code searches once for
     what it names, the two picks choose among only what is new to each question, and the judgments chosen are read, each judgment
-    once. A failed call leaves it unavailable, said; a failed search is kept as that question's failure; nothing is searched again."""
+    once. A failed call leaves it unavailable, said; a failed search is kept as that question's failure; nothing is searched again.
+    From v17 (plan AN.36, D35) the judgments are read here, after the call, within the dispute's five read in full: the cited ones it
+    chose first, then the first pick's, then the further pick's. Returns (the further search, the first pick's judgments read)."""
     labels = _labels(plan, searches)
+
+    def first(skip=frozenset(), limit=None):
+        return _read_judgments(searcher, plan, searches, picks["judgment"], skip=skip, limit=limit)
     if not labels:
-        return _no_further("not_needed")
+        return _no_further("not_needed"), first()
     if model is None:
-        return _no_further("unavailable", "No model for the further search")
+        return _no_further("unavailable", "No model for the further search"), first()
     try:
         asked = _call(model, "core_research_further", FURTHER, _further_text(plan, searches, labels, picks)
                       + (_cited_text(cited, context) if cited else ""), FURTHER_SCHEMA, "further")
     except (ModelError, SchemaViolation) as exc:
-        return _no_further("unavailable", type(exc).__name__)
+        return _no_further("unavailable", type(exc).__name__), first()
     wanted = _further_wanted(asked, plan, labels)
     found, failures = {}, {}
     planned = [(work, search_queries(work), search_instruments(work), search_named(work)) for work in wanted.values()]
@@ -3329,18 +3334,21 @@ def _further(model, searcher, plan, searches, picks, judgments, report, cited=()
     # The picks of what is new say no stage of their own: the turn is still choosing the dispute's law.
     chosen = (_picked(model, plan, fresh, lambda *_, **__: None) if fresh
               else {kind: pick(None, plan, {}, kind) for kind in _PICK_FIELDS})
-    read = _read_judgments(searcher, plan, fresh, chosen["judgment"], skip={entry["case_id"] for entry in judgments},
-                           limit=IN_FULL - len(judgments))
-    # Piece 35e: the held judgments the papers cite that the call chose to read, each once; from v17 (36a) within the five.
-    skip = {entry["case_id"] for entry in [*judgments, *read]}
-    cited_read = _read_judgments(searcher, plan, {}, None, cases=[
-        (case_id, set(), set()) for case_id in _cited_cases(asked, labels, cited, skip)[:max(0, IN_FULL - len(judgments) - len(read))]])
-    return {"state": "evaluated", "proposal": asked, "reason": None, "searches": found, "failures": failures, "picks": chosen,
-            "judgments": read, "cited": deepcopy(list(cited)), "cited_read": cited_read}
+    # Piece 35e, and D35: the held judgments the papers cite that the call chose come first, each once, within the five.
+    claimed = _cited_cases(asked, labels, cited, set())[:IN_FULL]
+    cited_read = _read_judgments(searcher, plan, {}, None, cases=[(case_id, set(), set()) for case_id in claimed])
+    judgments = first(skip=set(claimed), limit=IN_FULL - len(cited_read))
+    read = _read_judgments(searcher, plan, fresh, chosen["judgment"],
+                           skip=set(claimed) | {entry["case_id"] for entry in judgments},
+                           limit=IN_FULL - len(cited_read) - len(judgments))
+    return ({"state": "evaluated", "proposal": asked, "reason": None, "searches": found, "failures": failures, "picks": chosen,
+             "judgments": read, "cited": deepcopy(list(cited)), "cited_read": cited_read}, judgments)
 
 
-def _validate_further(further, plan, searches, judgments, dispute_id, contract, context=None):
-    """A dispute's saved further search (v16) checked against its own answer and the dispute's first searches (P46)."""
+def _validate_further(further, plan, searches, judgments, dispute_id, contract, context=None, first_pick=None):
+    """A dispute's saved further search (v16) checked against its own answer and the dispute's first searches (P46). From v17 (D35)
+    the first pick's judgments read are checked here too, after the cited ones that had first claim (first_pick: that pick)."""
+    few = contract in FEW_IN_FULL
     if not isinstance(further, dict) or set(further) != _FURTHER_FIELDS or further["state"] not in ("evaluated", "not_needed",
                                                                                                       "unavailable"):
         raise ValueError("A dispute's further search has no checked disposition")
@@ -3355,6 +3363,8 @@ def _validate_further(further, plan, searches, judgments, dispute_id, contract, 
             raise ValueError("A further search not made says why, and holds nothing")
         for kind in _PICK_FIELDS:
             _validate_picks(further["picks"][kind], plan, {}, kind, contract)
+        if few:
+            _validate_judgments({dispute_id: judgments}, dispute_id, plan, searches, first_pick, contract)
         return
     asked = canonical_schema_data(further["proposal"], FURTHER_SCHEMA)
     require_schema(asked, FURTHER_SCHEMA)
@@ -3377,9 +3387,9 @@ def _validate_further(further, plan, searches, judgments, dispute_id, contract, 
         raise ValueError("A further search's picks are not one of each kind")
     for kind in _PICK_FIELDS:
         _validate_picks(further["picks"][kind], plan, fresh, kind, contract)
-    few = contract in FEW_IN_FULL
-    _validate_judgments({dispute_id: further["judgments"]}, dispute_id, plan, fresh, further["picks"]["judgment"], contract,
-                        skip={entry["case_id"] for entry in judgments}, limit=IN_FULL - len(judgments) if few else None)
+    if not few:
+        _validate_judgments({dispute_id: further["judgments"]}, dispute_id, plan, fresh, further["picks"]["judgment"], contract,
+                            skip={entry["case_id"] for entry in judgments})
     # Piece 35e: the cited judgments are the citations the papers and messages make, each as the index stood on it then.
     cited = further["cited"]
     made = _citations_in(context) if context is not None else None
@@ -3394,12 +3404,20 @@ def _validate_further(further, plan, searches, judgments, dispute_id, contract, 
                                                          or not entry["judgment"]["case_id"])
                    or (entry["reason"] is not None) != (entry["state"] == "unavailable") for entry in cited)):
         raise ValueError("The judgments the papers cite are not as the further search kept them")
-    skip = {entry["case_id"] for entry in [*judgments, *further["judgments"]]}
-    wanted = _cited_cases(asked, labels, cited, skip)
-    if few:
-        wanted = wanted[:max(0, IN_FULL - len(judgments) - len(further["judgments"]))]
+    if not few:
+        wanted = _cited_cases(asked, labels, cited, {entry["case_id"] for entry in [*judgments, *further["judgments"]]})
+        _validate_judgments({dispute_id: further["cited_read"]}, dispute_id, plan, {**searches, **further["searches"]}, None,
+                            contract, expected=[(case_id, set(), set()) for case_id in wanted])
+        return
+    # v17 (D35): the cited judgments chosen first, then the first pick's, then the further pick's, within the five.
+    claimed = _cited_cases(asked, labels, cited, set())[:IN_FULL]
     _validate_judgments({dispute_id: further["cited_read"]}, dispute_id, plan, {**searches, **further["searches"]}, None,
-                        contract, expected=[(case_id, set(), set()) for case_id in wanted])
+                        contract, expected=[(case_id, set(), set()) for case_id in claimed])
+    _validate_judgments({dispute_id: judgments}, dispute_id, plan, searches, first_pick, contract, skip=set(claimed),
+                        limit=IN_FULL - len(further["cited_read"]))
+    _validate_judgments({dispute_id: further["judgments"]}, dispute_id, plan, fresh, further["picks"]["judgment"], contract,
+                        skip=set(claimed) | {entry["case_id"] for entry in judgments},
+                        limit=IN_FULL - len(further["cited_read"]) - len(judgments))
 
 
 def further_searches(record):
@@ -3586,7 +3604,8 @@ def _validate(record, plan, context):
                 own = {i: search for i, search in record["searches"].items() if i in ids}
                 _validate_picks(record[field][dispute_id], plan, own, kind, contract)
                 picks.append(record[field][dispute_id])
-                if kind == "judgment" and contract in JUDGMENTS_READ:
+                if kind == "judgment" and contract in JUDGMENTS_READ and contract not in FEW_IN_FULL:
+                    # From v17 (D35) a dispute's first judgments read are checked with its further search, after the cited ones.
                     _validate_judgments(record["judgments"], dispute_id, plan, own, record[field][dispute_id], contract)
         if contract in JUDGMENTS_READ and set(record["judgments"]) != set(disputes):
             raise ValueError("The judgments read are not one list for each dispute")
@@ -3598,7 +3617,7 @@ def _validate(record, plan, context):
                 ids = {w["id"] for w in groups[dispute_id]}
                 own = {i: search for i, search in record["searches"].items() if i in ids}
                 _validate_further(record["further"][dispute_id], plan, own, record["judgments"][dispute_id], dispute_id, contract,
-                                  context)
+                                  context, record["judgment_picks"][dispute_id])
     else:
         if contract in _QUESTION_PLANS:
             _validate_picks(record["picks"], plan, record["searches"])
