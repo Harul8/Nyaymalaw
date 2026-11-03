@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 
 from concurrent.futures import ThreadPoolExecutor
 
-from nm.core_engine import answer_sections, answer_sources, calculation, checklist, research
+from nm.core_engine import answer_sections, answer_sources, calculation, checklist, estimates, research
 from nm.core_engine import reasoning, replay_scope, response_rendering, response_writer
 from nm.core_engine import understanding
 from nm.core_engine.calls import CorrectionUnavailable, ReleaseWithheld, TurnCalls
@@ -28,7 +28,7 @@ from nm.core_engine.conversation import (
 from nm.shared.external_ai_contracts import ModelPermissionRefused
 from nm.shared.model_config import DEFAULT_TURN_MODEL
 from nm.shared.egress_contracts import EgressRefused
-from nm.shared.model_port import USAGE_LIMIT_MESSAGE, ContextOverflow, ModelError, SchemaViolation, UsageLimitReached
+from nm.shared.model_port import USAGE_LIMIT_MESSAGE, ContextOverflow, ModelError, SchemaViolation, Tier, UsageLimitReached
 from nm.shared.store_port import StaleWrite
 from nm.shared.turn_attempt_port import AttemptRefused, TurnAttemptPort
 
@@ -183,6 +183,12 @@ def _interpreted(calls, context, report, early=None):
     return interpreted, plan
 
 
+def _papers(context):
+    """How many papers the conversation has sent, by their names in each turn."""
+    pages = context.get("documents") if isinstance(context, dict) else None
+    return len({(page.get("turn_id"), (page.get("document") or {}).get("name")) for page in pages or ()})
+
+
 def prepare(model, context, searcher, *, case_index=None, provision_reader=None, progress=None,
             held_acts=None, shown=None):
     """Prepare and admit one response, dispute by dispute (turn v7, owner decisions P25-P27, P29).
@@ -192,11 +198,20 @@ def prepare(model, context, searcher, *, case_index=None, provision_reader=None,
     report = _reporter(progress)
     calls = model if isinstance(model, TurnCalls) else TurnCalls(model)
     report("understanding")
+    # Plan AN.37 (D41, D45): what the turn is expected to cost - roughly now, from the papers sent, and again once its plan is
+    # known - kept beside what it spends, for diagnostics only.
+    priced = calls.model_for(Tier.HARD)
+    if priced is not None:
+        calls.expect("start", estimates.turn_start_usd(priced, _papers(context), calls.effort))
     # Plan AN.33 (D28; piece 33q): the held law is searched as soon as the understanding and its search phrases are final, beside
     # the papers' side-by-side reading and the weighing; each search begun so is used once, as it would have been made.
     started = {}
     interpreted, plan = _interpreted(calls, context, report,
                                      early=lambda work: started.update(research.start_search(searcher, work)))
+    if priced is not None:
+        disputes = len(response_writer.parts({"contract": research.CONTRACT, "plan": plan}))
+        calls.expect("planned", estimates.turn_planned_usd(priced, calls.estimate()["spent_usd"], max(1, disputes - 1),
+                                                           calls.effort))
     # Step 4 (owner, 21 Oct 2026; P26 as first decided): each dispute is researched as its own
     # part, and its section is written as soon as that part is ready; the time limits are
     # worked out beside the search, only where research is needed.
@@ -235,6 +250,11 @@ def prepare(model, context, searcher, *, case_index=None, provision_reader=None,
                                                   overview=overview, time_limits=limits,
                                                   contract=response_rendering.CASED_CONTRACT)
     activity = {**base(record, sources, execution), "sections": sections, "cross_check": crossed, "overview": overview}
+    kept = calls.estimate()
+    if kept["passed"]:
+        # D45: recorded for diagnostics; the answer is saved as it would be.
+        log.warning("A turn spent %.4f, more than %s times its estimate (%s)", kept["spent_usd"], estimates.OVER_TURN,
+                    ", ".join(kept["passed"]))
     return elements, activity, calls.metrics()
 
 

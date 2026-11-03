@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 import threading
 import time
@@ -9,8 +10,11 @@ from contextlib import contextmanager
 from copy import deepcopy
 from dataclasses import replace
 
-from nm.core_engine import reasoning
-from nm.shared.model_port import ContextOverflow, ModelError, ModelResult, Prompt, SchemaViolation, estimate_tokens
+from nm.core_engine import estimates, reasoning
+from nm.shared.model_port import (ConfigurationError, ContextOverflow, ModelError, ModelResult, Prompt, SchemaViolation, TierUnavailable,
+                                  estimate_tokens)
+
+log = logging.getLogger(__name__)
 
 #: Corrections the turn's shared steps (understanding, research, time limits) may make
 #: between them: one, as before (owner decision, 17 Oct 2026).
@@ -109,6 +113,8 @@ class TurnCalls:
         self._used = {}
         self.last_output = None
         self.terminal = False
+        #: The turn's own estimates (plan AN.37, D41): "start", before its plan is known, and "planned", once it is (expect()).
+        self.expected = {}
 
     @property
     def last_output(self):
@@ -150,6 +156,23 @@ class TurnCalls:
     def context_budget(self, tier):
         return self.inner.context_budget(tier)
 
+    def model_for(self, tier):
+        """The model a call on tier is asked to run on, or None where that is not established: a tier not configured, or a port
+        that cannot say (a stand-in with no resolved_model, reached through the wrappers that pass the question on)."""
+        resolve = getattr(self.inner, "resolved_model", None)
+        if not callable(resolve):
+            return None
+        try:
+            return resolve(tier)
+        except (TierUnavailable, ConfigurationError, AttributeError):
+            return None
+
+    def expect(self, stage, usd):
+        """Keep the turn's estimate at a stage of it (plan AN.37, D41): "start" or "planned". Diagnostics only (D45)."""
+        if stage in ("start", "planned") and isinstance(usd, float):
+            with self._lock:
+                self.expected[stage] = usd
+
     def structured(self, prompt, schema, tier, *, max_tokens):
         if self.terminal:
             raise ReleaseWithheld("This turn's release scope is withheld")
@@ -163,15 +186,20 @@ class TurnCalls:
             also = tuple(mark for mark in prompt.cache_also if shared and user[:mark] == prompt.user[:mark])
             prompt = Prompt(system=prompt.system, user=user, operation=prompt.operation, effort=prompt.effort,
                             cache_through=shared, cache_also=also)
+        own = prompt.effort
         if self.effort != reasoning.DEFAULT_CHOICE:
             # Plan AN.33 (D23): the effort the advocate chose moves the call's own level; what it may write is its room at every
             # effort (D27).
             prompt = replace(prompt, effort=reasoning.chosen(prompt.effort, self.effort))
         # D27 (plan AN.33): what the call may write is the room its whole input - a correction joined to it included - leaves.
-        left = self.context_budget(tier) - estimate_tokens((prompt.system or "") + prompt.user + json.dumps(schema))
+        sent = estimate_tokens((prompt.system or "") + prompt.user + json.dumps(schema))
+        left = self.context_budget(tier) - sent
         if left < min(max_tokens, reasoning.LEAST_ROOM):
             raise ContextOverflow("The complete stage input and correction exceed the context budget")
         max_tokens = min(max_tokens, left)
+        # Plan AN.37 (D41, D45): what this call is expected to cost, worked out before it is sent and kept beside what it cost.
+        model = self.model_for(tier)
+        expected = None if model is None else estimates.call_usd(model, sent, prompt.operation, own=own, sent=prompt.effort)
         self.last_output = None
         started, receipt, error = time.monotonic(), None, None
         try:
@@ -212,7 +240,13 @@ class TurnCalls:
                 "correction": feedback is not None and feedback["operation"] == prompt.operation,
                 "usage_confirmed": usage is not None,
                 # Why code refused what this call returned, if it did (refused()).
-                "refused": None})
+                "refused": None,
+                # Plan AN.37 (D41): the level the call was sent at, and what it was expected to cost.
+                "effort": prompt.effort, "estimated_usd": expected})
+            if estimates.passed(record["cost_usd"], expected, estimates.OVER_CALL):
+                # D45: recorded for diagnostics; the call and the turn go on as they would.
+                log.warning("A call cost more than %s times its estimate: %s, %.4f against %.4f", estimates.OVER_CALL,
+                            prompt.operation, record["cost_usd"], expected)
 
     def refused(self, exc):
         """Note on this thread's latest call why code refused what it returned: the reason's
@@ -278,6 +312,20 @@ class TurnCalls:
         self.terminal = True
         raise ReleaseWithheld(reason)
 
+    def estimate(self):
+        """What the turn was expected to cost against what it has spent (plan AN.37, D41 and D45): the sum of its calls'
+        estimates, its own estimates at its start and once planned, what it has spent, and which estimates spending passed by
+        OVER_TURN times. Diagnostics only."""
+        with self._lock:
+            calls, expected = list(self.calls), dict(self.expected)
+        spent = sum(call["cost_usd"] or 0 for call in calls)
+        made = [call["estimated_usd"] for call in calls if call.get("estimated_usd") is not None]
+        kept = {"calls_usd": round(sum(made), 6) if made else None, "calls_estimated": len(made),
+                **{f"{stage}_usd": usd for stage, usd in expected.items()}, "spent_usd": round(spent, 6)}
+        kept["passed"] = [name for name in ("calls", *expected) if estimates.passed(spent, kept[f"{name}_usd"],
+                                                                                     estimates.OVER_TURN)]
+        return kept
+
     def metrics(self):
         return {"llm_calls": len(self.calls), "calls": deepcopy(self.calls),
                 "reported_transport_retries": sum(c["retries"] for c in self.calls),
@@ -287,5 +335,7 @@ class TurnCalls:
                 "tokens_out": sum(c["tokens_out"] or 0 for c in self.calls),
                 "cached_tokens": sum(c["cached_tokens"] or 0 for c in self.calls),
                 "draft_corrections": self.corrections_used,
+                # Plan AN.37 (D41, D45): the turn's estimates against what it has spent.
+                "estimate": self.estimate(),
                 # Plan AN.33 (D23): the model and the effort the advocate chose for the turn, where they chose them.
                 **({"chosen": deepcopy(self.chosen)} if self.chosen is not None else {})}
