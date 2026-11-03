@@ -11,8 +11,8 @@ WHO DECIDES. The model proposes questions (37d); code decides whether one is sho
 not asked before in the conversation, no link, never asking for a password, a code or a card. Code also checks every answer
 against its choices (answer).
 
-WAITING (D39). Work that does not depend on the answer goes on. Work that does waits WAIT seconds; then the default is applied and
-the work moves on. The window stays open OPEN seconds from when it was asked, and an answer given in that time is taken: while the
+WAITING (D39, D50). Work that does not depend on the answer goes on - the research, and the writing of every dispute no question
+names. Work that does waits WAIT seconds from when the window opened; then the default is applied and the work moves on. The window stays open OPEN seconds from when it was asked, and an answer given in that time is taken: while the
 turn runs, what depended on a default the answer differs from is redone once (D44); once the turn has finished, the page sends the
 answer as the next message.
 
@@ -170,25 +170,43 @@ class Asking:
         with self._lock:
             return self._started is not None and self._clock() - self._started <= self._open_for
 
-    def ask(self, given=None):
-        """Show the window, and wait up to WAIT seconds for its answers. Returns the answers as they then stand: those given,
-        and for each question not answered its default, as assumed. The window stays open after. given: answers the advocate
-        gave this same message's window before (a retry, D40), taken first."""
+    def start(self, given=None):
+        """Show the window, without waiting (D50: what does not depend on it goes on). given: answers the advocate gave this
+        same message's window before (a retry, D40), taken first."""
         with self._lock:
             self._started = self._clock()
         if given:
             self.receive(given, hold=False)
         self._hold(self.state())
         self._report("waiting_for_answer")
-        self._answered.wait(self._wait)
+
+    def wait(self):
+        """Wait until every question is answered or WAIT seconds have passed since the window opened, then let the default stand
+        for each question not answered, as assumed. Returns the answers as they then stand. The window stays open after."""
         with self._lock:
-            self._applied = True
-            for question in self.questions:
-                self._answers.setdefault(question["id"], {"id": question["id"], "chosen": list(question["default"]),
-                                                          "other": "", "how": "assumed", "at": _now()})
-            self.version += 1
-        self._hold(self.state())
+            left = self._wait - (self._clock() - self._started)
+        if left > 0:
+            self._answered.wait(left)
+        return self.settle()
+
+    def settle(self):
+        """Let the default stand, at once, for each question not answered - where the work no longer waits - and return the
+        answers as they stand."""
+        with self._lock:
+            applied, self._applied = self._applied, True
+            if not applied:
+                for question in self.questions:
+                    self._answers.setdefault(question["id"], {"id": question["id"], "chosen": list(question["default"]),
+                                                              "other": "", "how": "assumed", "at": _now()})
+                self.version += 1
+        if not applied:
+            self._hold(self.state())
         return self.answers()
+
+    def ask(self, given=None):
+        """Show the window and wait for its answers (start, then wait)."""
+        self.start(given)
+        return self.wait()
 
     def answers(self):
         with self._lock:

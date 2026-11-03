@@ -204,6 +204,14 @@ class _Later:
     def version(self):
         return self.asking.version
 
+    def touches(self, dispute_id):
+        """Whether a question names the dispute, or names none and so touches the whole answer (D50)."""
+        return any(not question["depends"] or dispute_id in question["depends"] for question in self.asking.questions)
+
+    def wait(self):
+        """Until the answers, or after WAIT the defaults, stand (D39)."""
+        self.asking.wait()
+
     def since(self, version):
         changed = self.asking.changed_since(version)
         if not changed:
@@ -248,8 +256,9 @@ def prepare(model, context, searcher, *, case_index=None, provision_reader=None,
                    if held_acts is not None and _needs_research(plan) else None)
         parts = research.retrieve_parts(plan, searcher, context, model=calls, progress=report, started=started,
                                         case_index=case_index)
-        # Plan AN.37 (D39): what only the advocate can settle is asked once the plan is known. The research and the time
-        # limits go on meanwhile; the writing, which depends on the answers, waits for them or, after WAIT, the defaults.
+        # Plan AN.37 (D39, D50): what only the advocate can settle is asked once the plan is known. The research and the time
+        # limits go on meanwhile, and the writing of each dispute no question names; the writing of those it names waits for the
+        # answers or, after WAIT, the defaults (answer_sections.answer).
         asking = ask(interpreted, plan, context) if ask is not None else None
         limits = working.result() if working is not None else calculation.skipped()
     later = _Later(asking, context) if asking is not None else None
@@ -593,7 +602,7 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
         holder["asking"] = asking
         if desk is not None:
             desk.open(turn_id, asking)
-        asking.ask(given=given)
+        asking.start(given=given)
         return asking
 
     def withdraw():
@@ -610,7 +619,9 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
             case_index=case_index, provision_reader=provision_reader, progress=progress,
             held_acts=held_acts, shown=shown, ask=ask)
         if holder["asking"] is not None:
-            # Plan AN.37: what was asked, and the answers as they stand now, are saved with the turn.
+            # Plan AN.37: what was asked, and the answers as they stand now, are saved with the turn - a question no writing
+            # waited on with its default, as assumed.
+            holder["asking"].settle()
             context = replace(context, asked=holder["asking"].state())
             holder["context"] = replace(holder["context"], asked=context.asked)
         # The one check of the answer, as it is saved (P46): what its checks share is derived

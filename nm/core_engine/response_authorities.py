@@ -31,7 +31,11 @@ def _dependencies(context, research_record, sources, draft):
     if answer_sources.build(context, research_record) != sources:
         raise ValueError("Authority catalogue differs from its owned research snapshot")
     response_writer.validate(draft, context, sources)
-    return _digest({"context": context, "research": research_record,
+    # Plan AN.37 (D44, D50): the answers the advocate gives while the turn works are read by the writing but are no source of
+    # anything it cites; a section written before they came and one written after bind the same evidence, as the turn is saved
+    # with the answers as they stand by then.
+    bound = {key: value for key, value in context.items() if key != "answers"}
+    return _digest({"context": bound, "research": research_record,
                     "sources": sources, "draft": draft})
 
 

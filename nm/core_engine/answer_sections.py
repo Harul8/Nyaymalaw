@@ -1108,9 +1108,10 @@ def answer(calls, context, record, sources, *, interpretation, execution, worked
     contract: the writer version (v12, or v13 from turn v8: P39-P45); its pieces are reviewed by
     review v10 or v11 to match.
 
-    later (plan AN.37, D44): a window of questions still open while the answer is written (turn._Later). Where an answer taken
-    after the sections began differs from the default they were written on, the sections it touches are written again, once,
-    with it; the check across the sections and the overview then read them so."""
+    later (plan AN.37, D44, D50): a window of questions still open while the answer is written (turn._Later). A section whose
+    dispute a question names waits for the answers (or the defaults) and is written with them; every other section is written
+    at once. Where an answer taken after that differs from the default the waiting sections were written on, the sections it
+    touches are written again, once, with it; the check across the sections and the overview read the answers as they stand."""
     researched = researched or Researched.ready(context, record, sources, execution)
 
     def answering_on(context):
@@ -1118,7 +1119,19 @@ def answer(calls, context, record, sources, *, interpretation, execution, worked
                           case_index=case_index, provision_reader=provision_reader, report=report,
                           contract=contract)
     answering = answering_on(context)
-    began = later.version() if later is not None else None
+    # D50: the answering made once the answers stand, shared by the sections a question names; and every answering's failures.
+    waited, waiting, failures = {}, threading.Lock(), [answering.failures]
+
+    def written_by(index):
+        if later is None or not later.touches(answering.layout[index]["dispute_id"]):
+            return answering
+        with waiting:
+            if "answering" not in waited:
+                later.wait()
+                waited["version"] = later.version()
+                waited["answering"] = answering_on(later.context())
+                failures.append(waited["answering"].failures)
+            return waited["answering"]
     layout = answering.layout
     indices = list(range(1, len(layout))) if len(layout) > 1 else [0]
     state, lock = {"sections": {}, "cross_check": None, "overview": None}, threading.Lock()
@@ -1133,7 +1146,7 @@ def answer(calls, context, record, sources, *, interpretation, execution, worked
                       "cross_check": deepcopy(state["cross_check"]), "overview": deepcopy(state["overview"])})
 
     def section(index):
-        saved = answering.section(index)
+        saved = written_by(index).section(index)
         with lock:
             state["sections"][index] = saved
             publish()
@@ -1141,8 +1154,8 @@ def answer(calls, context, record, sources, *, interpretation, execution, worked
     # Each section starts writing as soon as its own research is ready (step 4).
     with ThreadPoolExecutor(max_workers=max(1, min(8, len(indices)))) as pool:
         sections = list(pool.map(section, indices))
-    if later is not None:
-        context_now, touched = later.since(began)
+    if later is not None and "version" in waited:
+        context_now, touched = later.since(waited["version"])
         if context_now is not None:
             # D44: once, the sections an answer that came after the defaults touches, written again with it.
             again = answering_on(context_now)
@@ -1157,11 +1170,15 @@ def answer(calls, context, record, sources, *, interpretation, execution, worked
                     with lock:
                         state["sections"][indices[position]] = saved
                         publish()
-            answering.failures.update(again.failures)
-            answering = again
+            failures.append(again.failures)
+    if later is not None:
+        # The check across the sections and the overview read the answers as they stand.
+        answering = answering_on(later.context())
+        failures.append(answering.failures)
     if all(saved["fallback"] is not None and saved["fallback"]["reason"] in NOT_MADE
            for saved in sections):
-        raise next(answering.failures[f"s{index}"] for index in indices)
+        failed = {scope: exc for found in failures for scope, exc in found.items()}
+        raise next(failed[f"s{index}"] for index in indices)
     many, crossed, overview = len(layout) > 1, None, None
     if many and sum(shown(saved) is not None for saved in sections) >= 2:
         answering.report("checking_across")

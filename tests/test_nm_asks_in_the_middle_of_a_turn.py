@@ -218,6 +218,15 @@ def test_a_late_answer_that_differs_is_written_again_once_in_the_sections_it_tou
         def version(self):
             return 1
 
+        def touches(self, dispute_id):
+            return True
+
+        def wait(self):
+            pass
+
+        def context(self):
+            return ctx
+
         def since(self, version):
             self.asked += 1
             return {**ctx, "answers": [{"question": "Whom do you act for?", "answer": "The seller",
@@ -237,3 +246,49 @@ def test_a_late_answer_that_differs_is_written_again_once_in_the_sections_it_tou
 def store(tmp_path):
     from nm.shared.store_file_store import FileMatterStore
     return FileMatterStore(tmp_path, key="synthetic-asking-fixture")
+
+
+def test_a_dispute_no_question_touches_is_written_at_once_and_one_it_touches_waits_for_the_answer(store, monkeypatch):
+    """D50 (owner, 3 Nov 2026: "if question doesnt touch, then need not wait"), through the real turn of two disputes: the
+    question names the second dispute only; the first dispute's section is written at once, the second's only once the wait
+    is over, with the default the advocate did not answer."""
+    import time
+
+    from tests.test_core_answer_sections import Scripted, through_turns
+    from tests.test_core_turn import run
+    monkeypatch.setattr(questions, "WAIT", 1.0)
+    model = through_turns(Scripted())
+    writing, written = model.structured, {}
+
+    def structured(prompt, schema, tier, **kwargs):
+        if prompt.operation == "core_response_writer":
+            dispute = (json.loads(prompt.user)["this_part"]["dispute"] or {}).get("id")
+            written.setdefault(dispute, time.monotonic())
+        return writing(prompt, schema, tier, **kwargs)
+    model.structured = structured
+    opened = {}
+
+    def propose(calls, context, interpreted, plan, asked_before):
+        second = plan["proposal"]["understanding"]["disputes"][1]["id"]
+        opened["at"], opened["second"] = time.monotonic(), second
+        return [proposal(depends=[second])]
+    response = run(store, model, propose=propose, desk=Desk())
+    first = next(dispute for dispute in written if dispute != opened["second"])
+    assert written[first] - opened["at"] < 0.9, "the dispute no question names did not wait"
+    assert written[opened["second"]] - opened["at"] >= 1.0, "the dispute the question names waited for the answer"
+    row = turn.saved_rows(store.load(chat_matter_id("owner", response["chat_id"])), "owner")[0]
+    assert [(a["chosen"], a["how"]) for a in row["asked"]["answers"]] == [(["The buyer"], "assumed")]
+
+
+def test_a_question_no_writing_waited_on_is_saved_with_its_default(store):
+    """A question naming a dispute the answer has no section for: nothing waited on it, and it is saved with its default."""
+    from tests.test_core_turn import ScriptedModel, run
+    model = ScriptedModel(legal=True)
+
+    def propose(calls, context, interpreted, plan, asked_before):
+        disputes = plan["proposal"]["understanding"]["disputes"]
+        return [proposal(depends=[disputes[0]["id"]])] if disputes else []
+    response = run(store, model, propose=propose, desk=Desk())
+    row = turn.saved_rows(store.load(chat_matter_id("owner", response["chat_id"])), "owner")[0]
+    assert all(answer["how"] in ("assumed", "answered") for answer in row["asked"]["answers"])
+    assert len(row["asked"]["answers"]) == len(row["asked"]["questions"])

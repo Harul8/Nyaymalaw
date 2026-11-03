@@ -484,7 +484,11 @@ def _dependencies(context, research_record, sources, draft, execution, *,
             or conflicts and (not piece or overview) or (held_back or shortened) and piece
             or writer_notes and contract != WORDED_CONTRACT):
         raise ValueError("Review version differs from the piece it judges")
-    dependencies = {"original_context": deepcopy(context), "research_record": deepcopy(research_record),
+    # Plan AN.37 (D44, D50): the answers the advocate gives while the turn works are shown to the review with the conversation
+    # but bound no more than the writing's are (response_authorities): a section reviewed before they came and one after bind
+    # the same evidence, and the turn keeps the answers as asked.
+    bound = {key: value for key, value in context.items() if key != "answers"}
+    dependencies = {"original_context": deepcopy(bound), "research_record": deepcopy(research_record),
         "sources": deepcopy(sources), "draft": deepcopy(draft), "execution": deepcopy(execution)}
     if contract == LEGACY_CONTRACT:
         if authority_evidence is not None:
