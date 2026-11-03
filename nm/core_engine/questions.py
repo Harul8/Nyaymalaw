@@ -308,9 +308,9 @@ QUESTION = _object({"header": _STRING, "question": _STRING, "why": _STRING, "cho
                     "depends": {"type": "array", "items": _STRING}})
 SCHEMA = _object({"questions": {"type": "array", "items": QUESTION}})
 
-PROPOSE = """Message: You receive an advocate's own messages to us about a client's matter, and our understanding of it as our research has set it out: each dispute with its ID, who is on each side, its legal questions, the rights at stake, the relief sought and the facts we found missing; and the questions already put to the advocate in this conversation. We are about to research the law and write our answer. Before we write it, we can put a few questions to the advocate in a short window; they answer by picking a choice or in their own words, and if they do not answer within two minutes we go on with the answer we name.
+PROPOSE = """Message: You receive an advocate's own messages to us about a client's matter, and our understanding of it as our research has set it out: each dispute with its ID, who is on each side, its legal questions, the rights at stake, the relief sought and the facts we found missing; what our reading of their papers found - whom it took to be the client's people (none means neither their messages nor the papers showed it), where papers record one act or matter differently, and the pages we could not read; and the questions already put to the advocate in this conversation. We are about to research the law and write our answer. Before we write it, we can put a few questions to the advocate in a short window; they answer by picking a choice or in their own words, and if they do not answer within two minutes we go on with the answer we name.
 
-Purpose: Ask only what the advocate alone can settle and what would change the answer we write - for example whom they act for, where their messages do not say and the matter has parties on opposite sides; what they want from us, where their message could mean quite different work; which of several disputes to take up now, where their words suggest they want only some; a fact only they can know that changes the law that applies or a time limit, such as the date their client received a notice. Do not ask what their messages already settle, what our research can find, or a question of law that is ours to answer, and never ask again what was asked before. Most messages need no question: asking nothing is the usual outcome.
+Purpose: Ask only what the advocate alone can settle and what would change the answer we write - for example whom they act for, where their messages do not say and the matter has parties on opposite sides; what they want from us, where their message could mean quite different work; which of several disputes to take up now, where their words suggest they want only some; a fact only they can know that changes the law that applies or a time limit, such as the date their client received a notice; which account to go by where papers differ on something the answer turns on; whether to go on without pages we could not read where those pages matter. Do not ask what their messages already settle, what our research can find, or a question of law that is ours to answer, and never ask again what was asked before. Most messages need no question: asking nothing is the usual outcome.
 
 For each question: header, a few words naming it; question, in plain words; why, one line on what in our answer depends on it; choices, two to four likely answers, each with a label and, where it helps, a short description; multiple, whether more than one may be chosen; default, the choice we will go on with if they do not answer - the likeliest on what they have said; and depends, the IDs of the disputes whose part of the answer turns on it (none where the whole answer does).
 
@@ -336,8 +336,16 @@ def propose(calls, context, interpreted, plan, asked_before):
         return []
     said = [row["text"] for row in context.get("conversation", ()) if row.get("record_role") == "original_account"]
     latest = (context.get("latest") or {}).get("text")
+    # Plan AN.37 (piece 37e): what code and the reading found that only the advocate may settle - the model decides whether
+    # any of it is worth asking.
+    proposal = plan.get("proposal") or {}
+    found = {"client_people": list(proposal.get("client_people") or []),
+             "papers_differ": [{"point": item.get("point"), "why_it_matters": item.get("why_it_matters")}
+                               for item in proposal.get("connections") or [] if item.get("kind") == "papers_differ"],
+             "pages_not_read": [{"paper": item.get("name"), "page": item.get("page"), "why": item.get("reason")}
+                                for item in context.get("unread_document_pages") or ()]}
     user = json.dumps({"advocate_messages": [*said, *([latest] if latest else [])], "disputes": disputes,
-                       "asked_before": list(asked_before)}, ensure_ascii=False)
+                       "found_in_the_papers": found, "asked_before": list(asked_before)}, ensure_ascii=False)
     try:
         receipt = calls.structured(Prompt(system=PROPOSE, user=user, operation=OPERATION, effort=reasoning.effort("questions")),
                                    SCHEMA, Tier.ROUTINE, max_tokens=reasoning.room(calls, Tier.ROUTINE, PROPOSE, user,

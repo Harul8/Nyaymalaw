@@ -70,3 +70,21 @@ def test_the_served_turn_proposes_with_this_step_and_a_message_that_needs_no_que
     operations = [call["operation"] for call in reply.json()["metrics"]["calls"]]
     assert operations.count("core_questions") == 1
     assert served.app.questions.window(OWNER, "turn-1") is None
+
+
+def test_the_model_is_also_shown_what_code_and_the_reading_found_that_only_the_advocate_may_settle():
+    """Piece 37e: whom the reading took as the client's people, where papers differ, and the pages not read go to the step,
+    which decides whether any is worth asking."""
+    plan = {"proposal": {**PLAN["proposal"], "client_people": [],
+                         "connections": [{"kind": "papers_differ", "point": "The notice is dated 3 May in one paper and 5 May in "
+                                          "the other", "why_it_matters": "The time limit runs from it"},
+                                         {"kind": "client_appears", "point": "Elsewhere", "why_it_matters": ""}]}}
+    context = {**CONTEXT, "unread_document_pages": [{"turn_id": "t1", "name": "Agreement", "page": 2,
+                                                     "reason": "the page is blank"}]}
+    calls = Calls({"questions": []})
+    assert questions.propose(calls, context, {}, plan, []) == []
+    shown = json.loads(calls.asked[0][0].user)["found_in_the_papers"]
+    assert shown == {"client_people": [],
+                     "papers_differ": [{"point": "The notice is dated 3 May in one paper and 5 May in the other",
+                                        "why_it_matters": "The time limit runs from it"}],
+                     "pages_not_read": [{"paper": "Agreement", "page": 2, "why": "the page is blank"}]}
