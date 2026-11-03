@@ -1089,7 +1089,7 @@ class _Answering:
 
 def answer(calls, context, record, sources, *, interpretation, execution, worked, case_index=None,
            provision_reader=None, report=None, released=None, researched=None,
-           contract=response_writer.PRESENTED_CONTRACT):
+           contract=response_writer.PRESENTED_CONTRACT, later=None):
     """Every section of the answer, side by side, then (for several disputes) the check
     across them with any correction, and the overview. Returns the sections in the
     answer's layout, the check across them (None, its record, or why it could not be
@@ -1106,11 +1106,19 @@ def answer(calls, context, record, sources, *, interpretation, execution, worked
     is ready (Researched); record, sources and execution are then None.
 
     contract: the writer version (v12, or v13 from turn v8: P39-P45); its pieces are reviewed by
-    review v10 or v11 to match."""
+    review v10 or v11 to match.
+
+    later (plan AN.37, D44): a window of questions still open while the answer is written (turn._Later). Where an answer taken
+    after the sections began differs from the default they were written on, the sections it touches are written again, once,
+    with it; the check across the sections and the overview then read them so."""
     researched = researched or Researched.ready(context, record, sources, execution)
-    answering = _Answering(calls, context, researched, interpretation=interpretation, worked=worked,
-                           case_index=case_index, provision_reader=provision_reader, report=report,
-                           contract=contract)
+
+    def answering_on(context):
+        return _Answering(calls, context, researched, interpretation=interpretation, worked=worked,
+                          case_index=case_index, provision_reader=provision_reader, report=report,
+                          contract=contract)
+    answering = answering_on(context)
+    began = later.version() if later is not None else None
     layout = answering.layout
     indices = list(range(1, len(layout))) if len(layout) > 1 else [0]
     state, lock = {"sections": {}, "cross_check": None, "overview": None}, threading.Lock()
@@ -1133,6 +1141,24 @@ def answer(calls, context, record, sources, *, interpretation, execution, worked
     # Each section starts writing as soon as its own research is ready (step 4).
     with ThreadPoolExecutor(max_workers=max(1, min(8, len(indices)))) as pool:
         sections = list(pool.map(section, indices))
+    if later is not None:
+        context_now, touched = later.since(began)
+        if context_now is not None:
+            # D44: once, the sections an answer that came after the defaults touches, written again with it.
+            again = answering_on(context_now)
+            redo = [position for position, index in enumerate(indices)
+                    if touched is None or layout[index]["dispute_id"] in touched]
+            if redo:
+                answering.report("revising")
+                with ThreadPoolExecutor(max_workers=max(1, min(8, len(redo)))) as pool:
+                    rewritten = list(pool.map(lambda position: again.section(indices[position]), redo))
+                for position, saved in zip(redo, rewritten):
+                    sections[position] = saved
+                    with lock:
+                        state["sections"][indices[position]] = saved
+                        publish()
+            answering.failures.update(again.failures)
+            answering = again
     if all(saved["fallback"] is not None and saved["fallback"]["reason"] in NOT_MADE
            for saved in sections):
         raise next(answering.failures[f"s{index}"] for index in indices)

@@ -47,6 +47,7 @@
     "nm.core_engine.limitation": "core",
     "nm.core_engine.matter_board": "core",
     "nm.core_engine.page_reading": "core",
+    "nm.core_engine.questions": "core",
     "nm.core_engine.reasoning": "core",
     "nm.core_engine.replay_scope": "core",
     "nm.core_engine.research": "core",
@@ -121,7 +122,7 @@
   "expected_roles": {
     "adapters": 29,
     "bootstrap": 5,
-    "core": 32,
+    "core": 33,
     "domain": 37,
     "edge": 2,
     "infrastructure": 1,

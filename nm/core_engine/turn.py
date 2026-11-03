@@ -13,17 +13,18 @@ import re
 import threading
 
 from copy import deepcopy
+from dataclasses import replace
 from datetime import datetime, timezone
 
 from concurrent.futures import ThreadPoolExecutor
 
-from nm.core_engine import answer_sections, answer_sources, calculation, checklist, estimates, research
+from nm.core_engine import answer_sections, answer_sources, calculation, checklist, estimates, questions, research
 from nm.core_engine import reasoning, replay_scope, response_rendering, response_writer
 from nm.core_engine import understanding
 from nm.core_engine.calls import CorrectionUnavailable, ReleaseWithheld, TurnCalls
 from nm.core_engine.conversation import (
-    ConversationRefused, TurnContext, chat_matter_id, checked_rows, commit_turn, committed_version, digest,
-    drop_shown, hold_shown, open_turn, shown_of, stored_chat,
+    ConversationRefused, TurnContext, asking_of, chat_matter_id, checked_rows, commit_turn, committed_version, digest,
+    drop_asking, drop_shown, hold_asking, hold_shown, open_turn, shown_of, stored_chat,
 )
 from nm.shared.external_ai_contracts import ModelPermissionRefused
 from nm.shared.model_config import DEFAULT_TURN_MODEL
@@ -189,12 +190,36 @@ def _papers(context):
     return len({(page.get("turn_id"), (page.get("document") or {}).get("name")) for page in pages or ()})
 
 
+class _Later:
+    """What the writing reads of a window still open while it writes (plan AN.37, D44): the context with the answers as they
+    stand, and, after its sections, what changed since they began and which disputes that touches (None: the whole answer)."""
+
+    def __init__(self, asking, base):
+        self.asking, self.base = asking, base
+
+    def context(self):
+        return {**self.base, "answers": questions.context_answers(self.asking.questions,
+                                                                  list(self.asking.answers().values()))}
+
+    def version(self):
+        return self.asking.version
+
+    def since(self, version):
+        changed = self.asking.changed_since(version)
+        if not changed:
+            return None, None
+        depends = [question["depends"] for question in self.asking.questions if question["id"] in changed]
+        return self.context(), None if any(not names for names in depends) else {name for names in depends for name in names}
+
+
 def prepare(model, context, searcher, *, case_index=None, provision_reader=None, progress=None,
-            held_acts=None, shown=None):
+            held_acts=None, shown=None, ask=None):
     """Prepare and admit one response, dispute by dispute (turn v7, owner decisions P25-P27, P29).
     No persistence or external action occurs here. shown (P26): told, each time the answer
     shows more, its elements so far and the activity they come from (its sections done, the
-    parts still being written under "waiting")."""
+    parts still being written under "waiting"). ask (plan AN.37): given the interpretation, the plan
+    and the context, asks the advocate what only they can settle and returns its questions.Asking once
+    the answers or the defaults stand, or None where nothing is asked."""
     report = _reporter(progress)
     calls = model if isinstance(model, TurnCalls) else TurnCalls(model)
     report("understanding")
@@ -220,7 +245,13 @@ def prepare(model, context, searcher, *, case_index=None, provision_reader=None,
                    if held_acts is not None and _needs_research(plan) else None)
         parts = research.retrieve_parts(plan, searcher, context, model=calls, progress=report, started=started,
                                         case_index=case_index)
+        # Plan AN.37 (D39): what only the advocate can settle is asked once the plan is known. The research and the time
+        # limits go on meanwhile; the writing, which depends on the answers, waits for them or, after WAIT, the defaults.
+        asking = ask(interpreted, plan, context) if ask is not None else None
         limits = working.result() if working is not None else calculation.skipped()
+    later = _Later(asking, context) if asking is not None else None
+    if later is not None:
+        context = later.context()
     researched = answer_sections.Researched(context, plan, parts)
 
     def base(record, sources, execution):
@@ -244,7 +275,9 @@ def prepare(model, context, searcher, *, case_index=None, provision_reader=None,
     sections, crossed, overview = answer_sections.answer(
         calls, context, None, None, interpretation=interpreted, execution=None, worked=limits,
         case_index=case_index, provision_reader=provision_reader, report=report, released=released,
-        researched=researched, contract=response_writer.CASED_CONTRACT)
+        researched=researched, contract=response_writer.CASED_CONTRACT, later=later)
+    if later is not None:
+        context = later.context()
     record, sources, execution = researched.whole()
     elements = response_rendering.render_sections(context, record, sources, sections=sections, cross_check=crossed,
                                                   overview=overview, time_limits=limits,
@@ -294,8 +327,11 @@ def save_shown(store, matter, advocate_id, held, *, session_current, service_sta
         # The model and the effort chosen for the turn are part of its request (plan AN.33, D23): without them a turn run on
         # a choice was never recognised as the request that showed its parts, and what it showed was withdrawn.
         choice = tuple((name, held["request"][name]) for name in ("model", "effort") if name in held["request"])
+        # Plan AN.37: what the turn asked, and the answers as they stood, are saved with what it showed.
+        asking = asking_of(matter, held["turn_id"])
         context = TurnContext(matter, held["request"]["chat_id"], held["turn_id"], held["message"], tuple(rows),
-                              documents=tuple(held["documents"]), choice=choice)
+                              documents=tuple(held["documents"]), choice=choice,
+                              asked=asking["state"] if asking is not None else None)
         if context.request != held["request"] or any(row["turn_id"] == held["turn_id"] for row in rows):
             raise ValueError("What was shown belongs to another request")
         activity = interrupted(held["activity"])
@@ -415,10 +451,13 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
             matter_id=None, expected_version=None, session_current=lambda: False,
             attempts: TurnAttemptPort | None = None, case_index=None, provision_reader=None,
             progress=None, documents=(), held_acts=None, running=lambda turn_id: False,
-            chosen_model=None, effort=None):
+            chosen_model=None, effort=None, propose=None, desk=None):
     """One turn. chosen_model and effort: what the advocate chose for it (plan AN.33, D23) - the model, which the caller's model
     port already runs every call on, and the effort, which moves every call of the turn (calls.TurnCalls); both recorded with the
-    turn's metrics, and in its request where they are not the defaults. None: not chosen (the defaults, unrecorded)."""
+    turn's metrics, and in its request where they are not the defaults. None: not chosen (the defaults, unrecorded).
+    propose and desk (plan AN.37, D37-D40): propose(calls, context, interpretation, plan, asked_before) gives the questions the
+    model would ask the advocate once the plan is known, which code admits (questions.admit); desk.open(turn_id, asking) lets the
+    page's answers reach the window while the turn runs (its owner closes it when the turn stops). None: nothing asked."""
     if not session_current():
         raise ConversationRefused("Sign in again before continuing.", status=401)
     effort = reasoning.DEFAULT_CHOICE if effort is None else effort
@@ -443,6 +482,18 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
                 held = {"turn_id": None}
             if held is not None and held["turn_id"] != turn_id:
                 recover(store, stored, advocate_id, running=running, session_current=session_current)
+            # What another message asked and was never saved with (its turn stopped before showing anything) is withdrawn;
+            # this same message sent again reuses it (plan AN.37, D40).
+            try:
+                current = store.load(stored.id)
+                waiting = asking_of(current)
+            except (OSError, ValueError):
+                current, waiting = None, None
+            if waiting is not None and waiting["turn_id"] != turn_id and not running(waiting["turn_id"]):
+                try:
+                    drop_asking(store, current)
+                except (OSError, StaleWrite, ValueError):
+                    log.warning("What an earlier message asked could not be withdrawn", exc_info=True)
     context = open_turn(store, advocate_id=advocate_id, message=message, turn_id=turn_id,
                         chat_id=chat_id, matter_id=matter_id, expected_version=expected_version,
                         documents=documents, choice=choice)
@@ -475,7 +526,10 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
                       effort=effort, chosen=chosen)
     # What the answer shows as each part passes is saved beside the conversation then (P27),
     # and the page told how much there is to show (P26).
-    holder, report = {"context": context, "shown": 0}, _reporter(progress)
+    holder, report = {"context": context, "shown": 0, "asking": None}, _reporter(progress)
+    # The writes beside the conversation - what is shown, what is asked and answered - come from several threads (P26; plan
+    # AN.37): one at a time, each on the version the last left.
+    beside = threading.Lock()
     try:
         before = shown_of(context.matter)
     except ValueError:
@@ -487,13 +541,55 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
                 "documents": deepcopy(list(context.documents)), "activity": activity, "elements": elements,
                 "metrics": metrics, "at": datetime.now(timezone.utc).isoformat(), "base_version": base}
         try:
-            holder["context"] = hold_shown(store, holder["context"], held)
+            with beside:
+                holder["context"] = hold_shown(store, holder["context"], held)
         except (OSError, StaleWrite, ConversationRefused, ValueError):
             # The answer goes on; its commit decides what is saved.
             log.warning("What the answer showed could not be saved beside the conversation", exc_info=True)
             return
         holder["shown"] += 1
         report("shown", shown=holder["shown"], chat_id=context.chat_id)
+
+    def sealed(state):
+        """What the turn asked and the answers as they stand, sealed beside the conversation (plan AN.37, D40)."""
+        try:
+            with beside:
+                holder["context"] = hold_asking(store, holder["context"], state)
+        except (OSError, StaleWrite, ConversationRefused, ValueError):
+            # The window goes on; the turn's commit saves what was asked and answered.
+            log.warning("What the turn asked could not be saved beside the conversation", exc_info=True)
+
+    asked_before = [question["question"] for row in context.rows if "asked" in row for question in row["asked"]["questions"]]
+    try:
+        again = asking_of(context.matter, turn_id)
+    except ValueError:
+        again = None
+
+    def ask(interpreted, plan, payload):
+        """Plan AN.37: the questions - the model's as code admits them, or those this same message asked before - shown to the
+        advocate; returns the window once the answers or the defaults stand, or None where nothing is asked."""
+        if again is not None:
+            state = again["state"]
+        elif propose is None:
+            return None
+        else:
+            understanding = (plan.get("proposal") or {}).get("understanding") or {}
+            disputes = [dispute["id"] for dispute in understanding.get("disputes") or []]
+            admitted, refused = questions.admit(propose(calls, payload, interpreted, plan, asked_before),
+                                                asked_before=asked_before, disputes=disputes)
+            if refused:
+                log.info("Questions code did not show: %s", "; ".join(item["why"] for item in refused))
+            if not admitted:
+                return None
+            state = {"questions": admitted, "answers": []}
+        asking = questions.Asking(state["questions"], hold=sealed, report=report)
+        given = {entry["id"]: {"chosen": entry["chosen"], "other": entry["other"]} for entry in state["answers"]
+                 if entry["how"] != "assumed"}
+        holder["asking"] = asking
+        if desk is not None:
+            desk.open(turn_id, asking)
+        asking.ask(given=given)
+        return asking
 
     def withdraw():
         """A turn withheld whole, or not answered at all, keeps nothing it showed. What an
@@ -507,7 +603,11 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
     try:
         elements, activity, metrics = prepare(calls, context.payload(), searcher,
             case_index=case_index, provision_reader=provision_reader, progress=progress,
-            held_acts=held_acts, shown=shown)
+            held_acts=held_acts, shown=shown, ask=ask)
+        if holder["asking"] is not None:
+            # Plan AN.37: what was asked, and the answers as they stand now, are saved with the turn.
+            context = replace(context, asked=holder["asking"].state())
+            holder["context"] = replace(holder["context"], asked=context.asked)
         # The one check of the answer, as it is saved (P46): what its checks share is derived
         # once (P35).
         with replay_scope.replaying():

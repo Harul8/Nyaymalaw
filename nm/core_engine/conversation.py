@@ -12,7 +12,7 @@ from copy import deepcopy
 from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 
-from nm.core_engine import reasoning
+from nm.core_engine import questions, reasoning
 from nm.core_engine.documents import checked_material
 from nm.shared.model_config import DEFAULT_TURN_MODEL, TURN_MODELS
 from nm.shared.store_port import StaleWrite
@@ -29,6 +29,10 @@ HEADER = "core_conversation"
 SHOWN = "core_shown"
 _SHOWN_FIELDS = {"turn_id", "request", "message", "documents", "activity", "elements", "metrics", "at",
                  "base_version"}
+#: What a turn has asked the advocate while it works (plan AN.37, D37-D40), sealed with the conversation as it is asked and as
+#: each answer is taken: the turn, and its questions and answers (questions.Asking.state). Read by the page; a retry of the same
+#: message reuses it; the turn's commit replaces it, the turn keeping it as "asked". Never a turn of the conversation itself.
+ASKING = "core_asking"
 
 
 class ConversationRefused(Exception):
@@ -123,6 +127,8 @@ def checked_rows(matter, advocate_id, *, copied=True):
             request = row["request"]
             response = row["response"]
             documents = checked_material(row["documents"]) if "documents" in row else ()
+            if "asked" in row:
+                questions.check_asked(row["asked"])
             if (row["contract"] != CONTRACT or type(row["sequence"]) is not int
                     or row["sequence"] != sequence
                     or row["previous"] != previous or row["digest"] != digest(body)
@@ -170,6 +176,8 @@ class TurnContext:
     documents: tuple[dict, ...] = ()
     #: What the advocate chose for this turn that is not the default - ("model", ...), ("effort", ...) - (plan AN.33, D23).
     choice: tuple[tuple[str, str], ...] = ()
+    #: What the turn asked the advocate and the answers as they stand (plan AN.37): questions.Asking.state(), or None.
+    asked: dict | None = None
 
     @property
     def request(self):
@@ -193,6 +201,9 @@ class TurnContext:
                                      "turn_id": row["turn_id"], "speaker": "service",
                                      "record_role": "service_status",
                                      "text": response["service_status"]})
+            # Plan AN.37: what an earlier turn asked, and the answers - the advocate's own words, or the default NM went on with.
+            if "asked" in row:
+                conversation.extend(questions.conversation_rows(row["turn_id"], row["asked"]))
         latest = {"source_id": self.turn_id + ":advocate", "turn_id": self.turn_id,
                   "speaker": "advocate", "record_role": "original_account", "text": self.message}
         pages += document_sources(self.turn_id, self.documents)
@@ -206,6 +217,10 @@ class TurnContext:
         if pages or unread:
             context["documents"] = pages
             context["unread_document_pages"] = unread
+        # Only a turn that asked carries what it asked (plan AN.37), so every other context stays exactly as it was. The research
+        # and the understanding were made before the asking and read none of it; the writing, the review and the case read it.
+        if self.asked is not None:
+            context["answers"] = questions.context_answers(self.asked["questions"], self.asked["answers"])
         return context
 
 
@@ -262,13 +277,49 @@ def _written(store, candidate, expected_version):
         return current
 
 
+def asking_of(matter, turn_id=None):
+    """What a turn not yet committed has asked, as it was sealed - {"turn_id", "state"} - or None; only that turn's where
+    turn_id is given. ValueError where it cannot be read reliably."""
+    held = (matter.intake_answers or {}).get(ASKING) if matter is not None else None
+    if held is None:
+        return None
+    if not isinstance(held, dict) or set(held) != {"turn_id", "state"} or not _nonempty(held["turn_id"]):
+        raise ValueError("What a turn has asked could not be read reliably")
+    questions.check_asked(held["state"])
+    if turn_id is not None and held["turn_id"] != turn_id:
+        return None
+    return deepcopy(held)
+
+
+def hold_asking(store, context, state):
+    """Seal what this turn has asked, and the answers as they stand, beside its conversation (plan AN.37, D40). The
+    conversation's turns are unchanged. Returns the turn's context at the version written."""
+    questions.check_asked(state)
+    metadata = {**context.matter.intake_answers, ASKING: {"turn_id": context.turn_id, "state": deepcopy(state)}}
+    metadata.setdefault(HEADER, {"contract": CONTRACT, "chat_id": context.chat_id, "turn_count": 0,
+                                 "tail_digest": None})
+    candidate = replace(context.matter, intake_answers=metadata, version=context.matter.version + 1)
+    checked_rows(candidate, context.matter.advocate_id, copied=False)
+    return replace(context, matter=_written(store, candidate, context.matter.version))
+
+
+def drop_asking(store, matter):
+    """Withdraw what a turn asked that was never saved with it - its turn stopped before showing anything, and another message
+    came (plan AN.37, D40). Returns the conversation as written, or as it was where nothing was asked."""
+    if ASKING not in (matter.intake_answers or {}):
+        return matter
+    metadata = {key: value for key, value in matter.intake_answers.items() if key != ASKING}
+    candidate = replace(matter, intake_answers=metadata, version=matter.version + 1)
+    return _written(store, candidate, matter.version)
+
+
 def drop_shown(store, context):
-    """Withdraw what this turn has shown, where the turn is withheld whole (G-CORE) or was
+    """Withdraw what this turn has shown, and what it asked, where the turn is withheld whole (G-CORE) or was
     not answered at all. Returns the turn's context at the version written, or as it was
     where nothing was held."""
-    if SHOWN not in context.matter.intake_answers:
+    if SHOWN not in context.matter.intake_answers and ASKING not in context.matter.intake_answers:
         return context
-    metadata = {key: value for key, value in context.matter.intake_answers.items() if key != SHOWN}
+    metadata = {key: value for key, value in context.matter.intake_answers.items() if key not in (SHOWN, ASKING)}
     candidate = replace(context.matter, intake_answers=metadata, version=context.matter.version + 1)
     return replace(context, matter=_written(store, candidate, context.matter.version))
 
@@ -343,9 +394,11 @@ def commit_turn(store, context, *, elements, activities, records=None, work=None
            "work": deepcopy(work if work is not None else previous.get("work", []))}
     if context.documents:
         row["documents"] = deepcopy(list(context.documents))
+    if context.asked is not None:
+        row["asked"] = questions.check_asked(deepcopy(context.asked))
     row["digest"] = digest(row)
-    # The turn's commit replaces what it showed while it worked (P27), in the same write.
-    metadata = {**{key: value for key, value in context.matter.intake_answers.items() if key != SHOWN}, HEADER: {
+    # The turn's commit replaces what it showed and asked while it worked (P27; plan AN.37), in the same write.
+    metadata = {**{key: value for key, value in context.matter.intake_answers.items() if key not in (SHOWN, ASKING)}, HEADER: {
         "contract": CONTRACT, "chat_id": context.chat_id,
         "turn_count": len(context.rows) + 1, "tail_digest": row["digest"]}}
     candidate = replace(context.matter, brain_chat=(*context.rows, row),

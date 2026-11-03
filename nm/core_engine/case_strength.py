@@ -84,6 +84,9 @@ def material(context, part, sources, dispute):
                # Plan AN.36 (piece 36b): each document's title once, by its passages' group.
                "held_law": {"passages": shown, "group_titles": held.get("group_titles", {})}, "points": points,
                "advocate_messages": [*said, *([latest] if latest else [])]}
+    # Plan AN.37: what NM asked the advocate during this turn, and the answers as they stand - theirs, or NM's assumption.
+    if context.get("answers"):
+        payload["answers_during_this_turn"] = deepcopy(context["answers"])
     return json.dumps(payload, ensure_ascii=False), law, {point["id"]: point.get("located", True) for point in points}
 
 
