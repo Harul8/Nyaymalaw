@@ -16,7 +16,7 @@ from nm.arrive.usage_port import AllowanceUsedUp, UsagePort, UsageRefused
 from nm.shared.deployment_contracts import shares_value_with
 from nm.shared.egress_contracts import DataClass, Gatekeeper, Sink
 from nm.shared.egress_policy import INDEX_PROCESSOR, OUTBOX_PROCESSOR, STORAGE_PROCESSOR, egress_policy
-from nm.shared.model_config import TURN_MODELS, load, load_dotenv
+from nm.shared.model_config import AUTO_TURN, DEFAULT_TURN_MODEL, TURN_MODELS, load, load_dotenv
 from nm.shared.model_metered import MeteredModel
 from nm.shared.model_openai_adapter import OpenAIModelAdapter
 from nm.shared.model_policed import PolicedModel
@@ -186,6 +186,7 @@ class Application:
     def run_turn(self, *, advocate_id, session_current, document_refs=(), model_choice=None, effort=None, **request):
         """One turn for an advocate. model_choice and effort: what they chose for it (plan AN.33, D23) - the model every text call
         of the turn runs on, and how hard each reasons; None: as configured, at the table's own levels."""
+        from nm.core_engine import routing
         from nm.core_engine.turn import process
 
         if document_refs:
@@ -199,7 +200,13 @@ class Application:
 
         # Saved replay performs no provider work. Permission/model construction
         # belongs to the first fresh model operation, not to receipt readback.
-        model = _DeferredAdapter(lambda: self._model_for(advocate_id, session_current=session_current, text_model=model_choice))
+        # Plan AN.38 (D47-D49): Auto runs every call on 6 Luna and moves one to the stronger model where the turn's own evidence
+        # says so; that model is bound, under the same permission and allowance, only if a call moves to it.
+        auto = model_choice == AUTO_TURN
+        model = _DeferredAdapter(lambda: self._model_for(advocate_id, session_current=session_current,
+                                                         text_model=DEFAULT_TURN_MODEL if auto else model_choice))
+        stronger = (_DeferredAdapter(lambda: self._model_for(advocate_id, session_current=session_current,
+                                                             text_model=routing.STRONGER)) if auto else None)
         turn_id, reported = request.get('turn_id'), []
 
         def progress(stage, **detail):
@@ -217,7 +224,7 @@ class Application:
                              case_index=self.case_index,
                              provision_reader=getattr(self.legal_search, 'collections', {}).get('provision'),
                              progress=progress, running=lambda held: self.turn_running(advocate_id, held),
-                             chosen_model=model_choice, effort=effort,
+                             chosen_model=model_choice, effort=effort, stronger=stronger,
                              propose=self.propose_questions, desk=self.questions.bound(advocate_id), **request)
             ended = 'finished'
             return result

@@ -120,6 +120,10 @@ TURN_MODELS = (("gpt-6-luna", "6 Luna", ""), ("gpt-6.1-terra", "6.1 Terra", "abo
 DEFAULT_TURN_MODEL = "gpt-6-luna"
 if not ({model for model, _, _ in TURN_MODELS} <= PUBLISHED_RELEASES and DEFAULT_TURN_MODEL == TURN_MODELS[0][0]):
     raise RuntimeError("Every model an advocate may choose is a published release, the default first")
+#: What an advocate may choose for a turn (plan AN.38, D47-D49): each model above, and Auto, which runs every step on 6 Luna and
+#: moves a call to 6.1 Terra where the turn's own evidence says so (nm/core_engine/routing.py); 6 Luna stays the default.
+AUTO_TURN = "auto"
+TURN_CHOICES = (TURN_MODELS[0], (AUTO_TURN, "Auto", "6 Luna, and 6.1 Terra where the work shows it needs it"), *TURN_MODELS[1:])
 
 
 @dataclass(frozen=True)

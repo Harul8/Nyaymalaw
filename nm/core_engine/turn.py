@@ -233,6 +233,9 @@ def prepare(model, context, searcher, *, case_index=None, provision_reader=None,
     started = {}
     interpreted, plan = _interpreted(calls, context, report,
                                      early=lambda work: started.update(research.start_search(searcher, work)))
+    # Plan AN.38 (D48): papers that record one act or matter differently move the working out of the time limits under Auto.
+    if any(item.get("kind") == "papers_differ" for item in (plan.get("proposal") or {}).get("connections") or ()):
+        calls.found("papers_differ")
     if priced is not None:
         disputes = len(response_writer.parts({"contract": research.CONTRACT, "plan": plan}))
         calls.expect("planned", estimates.turn_planned_usd(priced, calls.estimate()["spent_usd"], max(1, disputes - 1),
@@ -451,13 +454,15 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
             matter_id=None, expected_version=None, session_current=lambda: False,
             attempts: TurnAttemptPort | None = None, case_index=None, provision_reader=None,
             progress=None, documents=(), held_acts=None, running=lambda turn_id: False,
-            chosen_model=None, effort=None, propose=None, desk=None):
+            chosen_model=None, effort=None, propose=None, desk=None, stronger=None):
     """One turn. chosen_model and effort: what the advocate chose for it (plan AN.33, D23) - the model, which the caller's model
     port already runs every call on, and the effort, which moves every call of the turn (calls.TurnCalls); both recorded with the
     turn's metrics, and in its request where they are not the defaults. None: not chosen (the defaults, unrecorded).
     propose and desk (plan AN.37, D37-D40): propose(calls, context, interpretation, plan, asked_before) gives the questions the
     model would ask the advocate once the plan is known, which code admits (questions.admit); desk.open(turn_id, asking) lets the
-    page's answers reach the window while the turn runs (its owner closes it when the turn stops). None: nothing asked."""
+    page's answers reach the window while the turn runs (its owner closes it when the turn stops). None: nothing asked.
+    stronger (plan AN.38, D47-D49): under Auto, the model port a call moves to on the turn's own evidence (routing); None: every
+    call runs on model."""
     if not session_current():
         raise ConversationRefused("Sign in again before continuing.", status=401)
     effort = reasoning.DEFAULT_CHOICE if effort is None else effort
@@ -523,7 +528,7 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
 
     calls = TurnCalls(model, corrections_used=claim["corrections_used"],
                       reserve_correction=lambda: attempts.consume_correction(identity, token),
-                      effort=effort, chosen=chosen)
+                      effort=effort, chosen=chosen, stronger=stronger)
     # What the answer shows as each part passes is saved beside the conversation then (P27),
     # and the page told how much there is to show (P26).
     holder, report = {"context": context, "shown": 0, "asking": None}, _reporter(progress)

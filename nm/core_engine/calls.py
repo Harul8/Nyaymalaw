@@ -10,7 +10,7 @@ from contextlib import contextmanager
 from copy import deepcopy
 from dataclasses import replace
 
-from nm.core_engine import estimates, reasoning
+from nm.core_engine import estimates, reasoning, routing
 from nm.shared.model_port import (ConfigurationError, ContextOverflow, ModelError, ModelResult, Prompt, SchemaViolation, TierUnavailable,
                                   estimate_tokens)
 
@@ -93,7 +93,8 @@ class TurnCalls:
     This owner bounds semantic/shape correction across activities and records
     their receipts. No nested stage receives a fresh allowance.
     """
-    def __init__(self, model, *, corrections_used=0, reserve_correction=None, effort=reasoning.DEFAULT_CHOICE, chosen=None):
+    def __init__(self, model, *, corrections_used=0, reserve_correction=None, effort=reasoning.DEFAULT_CHOICE, chosen=None,
+                 stronger=None):
         if (type(corrections_used) is not int or not 0 <= corrections_used <= ALLOWANCE
                 or (reserve_correction is not None and not callable(reserve_correction))):
             raise ValueError("Correction ownership must come from a checked attempt")
@@ -115,6 +116,9 @@ class TurnCalls:
         self.terminal = False
         #: The turn's own estimates (plan AN.37, D41): "start", before its plan is known, and "planned", once it is (expect()).
         self.expected = {}
+        #: Under Auto (plan AN.38, D47-D48): the stronger model a call moves to on evidence (routing.escalated), and what the turn
+        #: has found that moves a step (found()). None: every call runs on the turn's own model, as before.
+        self.stronger, self.evidence = stronger, set()
 
     @property
     def last_output(self):
@@ -156,16 +160,33 @@ class TurnCalls:
     def context_budget(self, tier):
         return self.inner.context_budget(tier)
 
-    def model_for(self, tier):
-        """The model a call on tier is asked to run on, or None where that is not established: a tier not configured, or a port
-        that cannot say (a stand-in with no resolved_model, reached through the wrappers that pass the question on)."""
-        resolve = getattr(self.inner, "resolved_model", None)
+    def model_for(self, tier, port=None):
+        """The model a call on tier is asked to run on (on port, by default the turn's own), or None where that is not
+        established: a tier not configured, or a port that cannot say (a stand-in with no resolved_model, reached through the
+        wrappers that pass the question on)."""
+        resolve = getattr(self.inner if port is None else port, "resolved_model", None)
         if not callable(resolve):
             return None
         try:
             return resolve(tier)
         except (TierUnavailable, ConfigurationError, AttributeError):
             return None
+
+    def found(self, name):
+        """What the turn has found that moves a step under Auto (routing.ON_EVIDENCE)."""
+        with self._lock:
+            self.evidence.add(name)
+
+    def _routed(self, operation):
+        """Whether this thread's call of operation moves to the stronger model (plan AN.38, D48)."""
+        if self.stronger is None:
+            return False
+        scope = getattr(self._local, "scope", None)
+        with self._lock:
+            corrections = 0 if scope is None else max(self._used.get(scope[0], 0), self._used.get(scope[0].split(".")[0], 0))
+            earlier = sum(1 for call in self.calls if call.get("operation") == operation)
+            evidence = frozenset(self.evidence)
+        return routing.escalated(operation, corrections=corrections, earlier=earlier, evidence=evidence)
 
     def expect(self, stage, usd):
         """Keep the turn's estimate at a stage of it (plan AN.37, D41): "start" or "planned". Diagnostics only (D45)."""
@@ -197,13 +218,16 @@ class TurnCalls:
         if left < min(max_tokens, reasoning.LEAST_ROOM):
             raise ContextOverflow("The complete stage input and correction exceed the context budget")
         max_tokens = min(max_tokens, left)
+        # Plan AN.38 (D48): under Auto, the call moves to the stronger model where the turn's own evidence says so.
+        routed = self._routed(prompt.operation)
+        target = self.stronger if routed else self.inner
         # Plan AN.37 (D41, D45): what this call is expected to cost, worked out before it is sent and kept beside what it cost.
-        model = self.model_for(tier)
+        model = self.model_for(tier, port=target)
         expected = None if model is None else estimates.call_usd(model, sent, prompt.operation, own=own, sent=prompt.effort)
         self.last_output = None
         started, receipt, error = time.monotonic(), None, None
         try:
-            receipt = self.inner.structured(prompt, schema, tier, max_tokens=max_tokens)
+            receipt = target.structured(prompt, schema, tier, max_tokens=max_tokens)
             if receipt.usable:
                 self.last_output = deepcopy(receipt.data)
             return receipt
@@ -242,7 +266,9 @@ class TurnCalls:
                 # Why code refused what this call returned, if it did (refused()).
                 "refused": None,
                 # Plan AN.37 (D41): the level the call was sent at, and what it was expected to cost.
-                "effort": prompt.effort, "estimated_usd": expected})
+                "effort": prompt.effort, "estimated_usd": expected,
+                # Plan AN.38 (D48): whether Auto moved it to the stronger model.
+                **({"routed": True} if routed else {})})
             if estimates.passed(record["cost_usd"], expected, estimates.OVER_CALL):
                 # D45: recorded for diagnostics; the call and the turn go on as they would.
                 log.warning("A call cost more than %s times its estimate: %s, %.4f against %.4f", estimates.OVER_CALL,

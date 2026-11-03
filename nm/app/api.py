@@ -43,7 +43,7 @@ from nm.core_engine.turn import LEGACY_CONTRACT as LEGACY_CORE_TURN, recover, sa
 from nm.core_engine import checklist
 from nm.core_engine.reasoning import CHOICES as EFFORT_CHOICES, DEFAULT_CHOICE as DEFAULT_EFFORT
 from nm.shared.external_ai_contracts import ModelPermissionRefused
-from nm.shared.model_config import DEFAULT_TURN_MODEL, TURN_MODELS
+from nm.shared.model_config import DEFAULT_TURN_MODEL, TURN_CHOICES
 from nm.shared.model_port import USAGE_LIMIT_MESSAGE, ModelError, UsageLimitReached
 from nm.shared.clock_contracts import FORUM
 from nm.shared.identity_contracts import source_fingerprint
@@ -363,7 +363,7 @@ class TurnRequest(BaseModel):
     @field_validator("model")
     @classmethod
     def offered_model(cls, value: str) -> str:
-        if value not in {model for model, _, _ in TURN_MODELS}:
+        if value not in {model for model, _, _ in TURN_CHOICES}:
             raise ValueError("Choose a model from the list NM offers.")
         return value
 
@@ -574,7 +574,7 @@ def _usage_view(standing: dict) -> dict:
 def turn_choices(advocate_id: Advocate) -> dict:
     """The models and the efforts an advocate may choose for a message, the server's own lists (plan AN.33, D23): each model with
     what it costs beside 6 Luna, and the defaults each conversation opens with."""
-    return {"models": [{"id": model, "label": label, "cost": cost} for model, label, cost in TURN_MODELS],
+    return {"models": [{"id": model, "label": label, "cost": cost} for model, label, cost in TURN_CHOICES],
             "efforts": [{"id": effort, "label": effort.capitalize()} for effort in EFFORT_CHOICES],
             "default": {"model": DEFAULT_TURN_MODEL, "effort": DEFAULT_EFFORT}}
 

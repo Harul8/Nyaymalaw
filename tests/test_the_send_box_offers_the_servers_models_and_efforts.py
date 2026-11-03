@@ -21,6 +21,8 @@ def test_the_server_says_which_models_and_efforts_may_be_chosen_and_the_defaults
     assert offered.status_code == 200
     assert offered.json() == {
         "models": [{"id": "gpt-6-luna", "label": "6 Luna", "cost": ""},
+                   # Plan AN.38 (D47): Auto, beside the models, 6 Luna still the default.
+                   {"id": "auto", "label": "Auto", "cost": "6 Luna, and 6.1 Terra where the work shows it needs it"},
                    {"id": "gpt-6.1-terra", "label": "6.1 Terra", "cost": "about 8-10x Luna's cost"},
                    {"id": "gpt-6.1-sol", "label": "6.1 Sol", "cost": "about 16-20x Luna's cost"}],
         "efforts": [{"id": "low", "label": "Low"}, {"id": "medium", "label": "Medium"}, {"id": "high", "label": "High"},
