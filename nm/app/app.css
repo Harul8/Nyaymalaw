@@ -1451,7 +1451,6 @@ main.single {
 .plan-ticks { list-style: none; display: grid; gap: 0.65rem; margin: 0; padding: 0; color: var(--ink-2); font-size: 0.95rem; line-height: 1.45; }
 .plan-ticks li { display: flex; gap: 0.6rem; align-items: flex-start; }
 .plan-ticks li svg { flex: none; margin-top: 2px; color: var(--accent); }
-.plan-blank { padding: 0 3px; border-radius: 3px; background: var(--amber-w); color: #5c440d; font-weight: 500; }
 @media (max-width: 900px) {
   .usage-plan-panels, .plan-options { grid-template-columns: 1fr; }
 }

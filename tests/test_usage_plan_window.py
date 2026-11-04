@@ -73,9 +73,14 @@ def test_the_plans_in_the_app_are_the_plans_on_the_public_page():
     assert public_plans(), "the public page lost its plans, so this compares nothing"
 
 
-def test_the_credits_stay_as_the_owner_left_them():
+def test_no_plan_promises_a_number_of_usage_credits():
+    """Owner, 4 Nov 2026: "From usage and plan tabs - remove this point [XX] usage credits each month" - gone from Pro and Elite, in
+    the app and on the public pages alike; Enterprise keeps its credits and terms agreed with the chambers."""
     ticks = [tick for plan in app_plans().values() for tick in plan["ticks"]]
-    assert ticks.count("[XX] usage credits each month") == 2
+    assert not any("usage credits each month" in tick for tick in ticks)
+    assert ticks.count("Usage credits and terms agreed with you") == 1
+    for page in ("plans.html", "home.html"):
+        assert "usage credits each month" not in browser_assets()[page].read_text(encoding="utf-8"), page
 
 
 def test_no_plan_is_offered_that_cannot_be_had():
