@@ -86,7 +86,7 @@ const board = {
     { id: 'D3', name: 'An earlier dispute', between: [], questions: [{ status: 'researched' }] }],
 };
 
-// Disputes first: the marks' legend once, the disputes, then one fold below.
+// Disputes first: the marks' legend once, the disputes, then one line below (plan AN.39, D57).
 const [legend, disputes, fold] = context.renderChatBoard(board);
 assert.equal(legend.className, 'legend');
 assert.equal(legend.attributes['aria-hidden'], 'true', "each item's own words are read out with it");
@@ -174,12 +174,18 @@ assert.match(second.textContent, /NM found nothing this dispute needs in the law
 assert.match(third.textContent, /1 legal question · 1 researched/);
 assert.equal(find(third, (node) => node.className === 'dtitle')[0].textContent, '3 · An earlier dispute');
 
-// The facts, standing instructions and related points fold below, with what the board is.
-assert.equal(fold.tag, 'details');
-assert.equal(fold.children[0].textContent, 'Facts as you gave them (1) · Standing instructions (1) · Related points (1)');
-assert.match(fold.textContent, /As NM understood this matter/);
-assert.match(fold.textContent, /Do not contact the buyer\./);
-assert.match(fold.textContent, /Any other route — It may be quicker\./);
+// The facts, standing instructions and related points are one line below, opening in the reading pane with what the board is.
+assert.equal(fold.tag, 'button');
+assert.equal(fold.className, 'board-line');
+assert.equal(fold.textContent, 'How NM understood this matter');
+fold.click();
+const understood = shown.at(-1);
+assert.equal(understood.kind, 'Matter board');
+const read = understood.content.map((node) => node.textContent).join('\n');
+assert.match(read, /Facts as you gave them \(1\) · Standing instructions \(1\) · Related points \(1\)/);
+assert.match(read, /As NM understood this matter/);
+assert.match(read, /Do not contact the buyer\./);
+assert.match(read, /Any other route — It may be quicker\./);
 
 // A passed last day says so beside its date; a single dispute is not numbered.
 {

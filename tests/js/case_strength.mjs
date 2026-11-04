@@ -140,7 +140,8 @@ const board = { facts: [], related_points: [] };
 const card = context.renderDisputeCard(dispute, board, 1);
 const cardText = card.textContent;
 for (const part of ['1 · The boundary dispute', '1 of 2 shown by the papers', 'What the law requires',
-  'Possession for the period the law requires', 'Notice before the suit', '1 thing to get']) {
+  'Possession for the period the law requires', 'Notice before the suit', '1 to get', 'The other side will rely on',
+  'Their own later entry in the record']) {
   assert.ok(cardText.includes(part), part);
 }
 assert.ok(!cardText.includes('NM found nothing this dispute needs'), 'a case is never read as an empty checklist');
@@ -149,4 +150,102 @@ const detailText = detail.map((node) => node.textContent).join('\n');
 assert.ok(detailText.includes('What makes the case stronger') && detailText.includes('The postal receipt — from the client'));
 const none = context.renderDisputeCard({ ...dispute, checklist: { ...dispute.checklist, case: null } }, board, 1);
 assert.ok(none.textContent.includes('NM could not set out what would make this case stronger when it last answered.'));
+
+// THE BOARD IN SHORT PHRASES, EACH POINT ALONE IN THE READING PANE (plan AN.39, D52, D55-D57; owner, 4 Nov 2026): on the board each
+// element and each thing the other side relies on is one line - its short name, or a saved case's own words - and opens alone in the
+// pane: how it stands and who proves it, why it is needed with its law, where it stands with its pages, what to get for it, and the
+// buttons where the papers do not show it. Its law and its pages open from the saved record of the answer that holds the case.
+{
+  const opened = [];
+  const passages = [];
+  context.window.NmBrainSources = { ...context.window.NmBrainSources,
+    showContent: (title, content, opener, back, kind) => opened.push({ title, content: Array.from(content), opener, kind }),
+    openPassage: (where, tag, opener, given) => passages.push({ where, tag, given }) };
+  const message = Object.assign(el('textarea'), { value: '', dispatchEvent() {} });
+  byId.set('message', message);
+  context.sizeComposer = () => {};
+  context.Event = class { constructor(type) { this.type = type; } };
+  const named = structuredClone(view);
+  named.elements[0].label = 'Possession for twelve years';
+  named.other_side[0].label = 'Their later entry';
+  const labelled = { ...dispute, checklist: { ...dispute.checklist, case: named } };
+  const caseElement = label('CASE', 'What makes the case stronger', { case: named, dispute: { id: 'D1', name: 'The boundary dispute' } });
+  context.state.turns = [{ answer: { chat_id: 'c1', turn_id: 't1', elements: [caseElement] } }];
+  const card = context.renderDisputeCard(labelled, board, 1);
+  const rows = walk(card).filter((node) => node.tagName === 'BUTTON' && has('item')(node));
+  assert.deepEqual(Array.from(rows, (row) => row.children[1].children[0].textContent),
+    ['Possession for twelve years', 'Notice before the suit', 'Their later entry'], 'short names; a saved case\'s own words where none');
+  assert.ok(!card.textContent.includes('The revenue entries show it'), 'the detail is in the pane, not on the board');
+  const said = (pane) => pane.content.map((node) => node.textContent).join('\n');
+  const within = (pane, test) => pane.content.flatMap(walk).filter(test);
+
+  // A point the papers show: only that point, and no buttons.
+  rows[0].handlers.click();
+  let pane = opened.at(-1);
+  assert.equal(pane.title, 'Possession for twelve years');
+  assert.equal(pane.kind, 'What the law requires · Dispute 1');
+  for (const part of ['Shown by the papers · For your client to prove', 'Possession for the period the law requires', 'Why it is needed',
+    'The revenue entries show it year after year.', 'Section 4, Imagined Relief Act, 1907', 'Where it stands',
+    'The entries name the client as in possession. · entries.pdf, page 2']) {
+    assert.ok(said(pane).includes(part), part);
+  }
+  assert.ok(!said(pane).includes('Notice before the suit') && !said(pane).includes('Tell NM'), 'only this point; no buttons');
+  const cites = within(pane, (node) => node.tagName === 'BUTTON' && has('cite')(node));
+  cites[0].handlers.click();
+  assert.deepEqual(JSON.parse(JSON.stringify(passages.at(-1))), { where: { chat_id: 'c1', turn_id: 't1' }, tag: 'P:abc',
+    given: { words: 'possession for twelve years', phrase: 'Possession for twelve years', title: 'Imagined Relief Act, 1907' } });
+  cites[1].handlers.click();
+  assert.equal(passages.at(-1).tag, 't1:d1p2', 'the page opens from the answer\'s record');
+
+  // A point not yet shown: where it stands, what to get for it, and the two buttons, each putting a start in the message box.
+  rows[1].handlers.click();
+  pane = opened.at(-1);
+  for (const part of ['Not yet shown · For your client to prove', 'NM could not find these words in the law it read: “notice in writing”',
+    'Called shown, but none of its points was found on its page.', 'Not in your messages or documents yet.', 'What to get',
+    'The postal receipt — from the client', 'It proves the date of posting.', 'It shows the notice was sent in time.']) {
+    assert.ok(said(pane).includes(part), part);
+  }
+  const acts = within(pane, (node) => has('act')(node));
+  assert.deepEqual(Array.from(acts, (node) => node.textContent), ['Tell NM about this', 'Not available']);
+  acts[0].handlers.click();
+  assert.equal(message.value, 'About "Notice before the suit" (The boundary dispute): ');
+  acts[1].handlers.click();
+  assert.equal(message.value, 'About "Notice before the suit" (The boundary dispute):\n'
+    + 'About "Notice before the suit" (The boundary dispute): this is not available.');
+
+  // What the other side will rely on, alone, with what answers it.
+  rows[2].handlers.click();
+  pane = opened.at(-1);
+  assert.equal(pane.kind, 'The other side will rely on · Dispute 1');
+  assert.ok(said(pane).includes('Their own later entry in the record') && said(pane).includes('What answers it')
+    && said(pane).includes('It was made after the suit was filed.'));
+  assert.deepEqual(Array.from(within(pane, (node) => has('act')(node)), (node) => node.textContent), ['Tell NM what answers it']);
+
+  // Without an answer on the page that holds the case, the law shows its words alone, as before.
+  context.state.turns = [];
+  context.renderDisputeCard(labelled, board, 1);
+  const bare = walk(context.renderDisputeCard(labelled, board, 1)).filter((node) => node.tagName === 'BUTTON' && has('item')(node));
+  bare[0].handlers.click();
+  const before = passages.length;
+  within(opened.at(-1), (node) => node.tagName === 'BUTTON' && has('cite')(node))[0].handlers.click();
+  assert.equal(passages.length, before, 'no saved passage is asked for without the answer that holds it');
+
+  // What I need from you: what to get opens the point it is for (D55).
+  const asked = context.renderTurn({ brief: 'What do we need?', answer: { turn_id: 't1', chat_id: 'c1', elements: [
+    label('HEADING', 'The boundary dispute'), caseElement, label('NEEDS', 'What I need from you'),
+    label('NEED_CASE', 'The postal receipt', { need: named.to_get[0], dispute: { id: 'D1', name: 'The boundary dispute' } })],
+    metrics: { gates_fired: [], outcome: 'ok', latency_ms: 1, llm_calls: 1, tokens: { in: 1, out: 1 }, cost_usd: 0, violations: [],
+      tier_downgrades: [] } } });
+  const need = walk(asked).find((node) => has('need-item')(node));
+  assert.equal(need.textContent, 'The postal receipt');
+  need.handlers.click();
+  assert.equal(opened.at(-1).title, 'Notice before the suit');
+  assert.equal(opened.at(-1).kind, 'What the law requires · The boundary dispute');
+
+  // The legend says what a case's marks mean, above the disputes.
+  const [legend] = context.renderChatBoard({ state: 'ready', disputes: [labelled], facts: [], instructions: [], related_points: [],
+    parties: [], subjects: [] });
+  assert.equal(legend.className, 'legend');
+  assert.deepEqual(Array.from(legend.children, (entry) => entry.textContent), ['Shown by the papers', 'Shown only weakly', 'Not yet shown']);
+}
 console.log('case_strength.mjs: ok');

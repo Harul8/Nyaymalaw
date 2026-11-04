@@ -435,6 +435,19 @@ button.board-card:focus-visible { outline: 2px solid var(--accent); outline-offs
 .item .sub { display: block; font-size: 0.76rem; color: var(--ink-3); }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .check-none { margin: 0; font-size: 0.82rem; color: var(--ink-3); }
+/* THE BOARD IN SHORT PHRASES (plan AN.39, D57): a point saved before it had a short name shows its own words on two lines, the
+   whole in the reading pane; what the other side will rely on is marked by a quiet square; the board's other parts are one line
+   each, opening in the pane. */
+.item .t.short { display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.st--other { border: 1.8px solid var(--ink-3); border-radius: 3px; transform: scale(0.75); }
+.board-line { all: unset; box-sizing: border-box; width: 100%; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;
+  min-height: 2.75rem; border-top: 1px solid var(--rule); font-size: 0.82rem; color: var(--ink-2); }
+.board-line::after { content: "\203A"; margin-left: auto; color: var(--ink-3); font-size: 1rem; }
+.board-line:hover { color: var(--accent); }
+.board-line:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* The whole Act or judgment in the reading pane (D53): each part under its section or paragraph, the passage the answer read marked. */
+.whole-law .document-text { font-family: var(--f-serif); font-size: 0.94rem; line-height: 1.6; }
+.whole-law .document-text.here { border-left: 3px solid var(--mark); padding-left: 8px; }
 /* What makes the case stronger (plan AN.35, piece 35c3d): each element with its mark, its law and its pages. */
 .case-list { list-style: none; margin: 0.3rem 0 0.6rem; padding: 0; display: grid; gap: 0.7rem; }
 .case-element > p { margin: 0.15rem 0 0 26px; }

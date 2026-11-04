@@ -27,13 +27,25 @@ const context = vm.createContext({
     opened.push({ title, content: Array.from(content), trigger, kind }) } },
 });
 vm.runInContext(app.slice(start, end), context);
+// THE BOARD'S OTHER PARTS AS LINES (plan AN.39, D57): each opens its detail in the reading pane. drawn() reads each line through the
+// pane - what it opens - so that what each part says is checked as before, where the advocate now reads it.
+const unfold = (nodes) => nodes.map((node) => {
+  if (node.className !== 'board-line') return node;
+  node.handlers.click();
+  const { title, content, kind } = opened.pop();
+  assert.equal(title, node.textContent);
+  assert.equal(kind, 'Matter board');
+  return { tagName: 'DETAILS', className: 'folded', textContent: '', line: node,
+    children: [{ textContent: node.textContent, children: [] }, ...content] };
+});
+const drawn = (board_) => unfold(context.renderChatBoard(board_));
 const slice = (from, to) => app.slice(app.indexOf(from), app.indexOf(to, app.indexOf(from)));
 vm.runInContext(slice('function timeLimitStanding(rows) {', '// What is left of a time limit'), context);
 vm.runInContext(slice('function fileDate(iso) {', 'function fileAttention('), context);
 
 // Nothing researched yet: said plainly, never an error.
 {
-  const [only] = context.renderChatBoard({ state: 'empty' });
+  const [only] = drawn({ state: 'empty' });
   assert.equal(only.stateKind, 'empty');
 }
 
@@ -61,7 +73,7 @@ const board = {
 // A ready board: short dispute cards, related points, facts with their certainty and the
 // advocate's standing instructions; the understanding's own summary is not shown.
 {
-  const nodes = context.renderChatBoard(board);
+  const nodes = drawn(board);
   const all = nodes.map(text).join('\n');
   assert.ok(all.includes('As NM understood this matter'));
   assert.ok(!all.includes('Written before research'));
@@ -101,7 +113,7 @@ const board = {
 {
   const earlier = structuredClone(board);
   delete earlier.disputes[0].why_it_matters;
-  const nodes = context.renderChatBoard(earlier);
+  const nodes = drawn(earlier);
   assert.ok(!nodes.map(text).join('\n').includes('without the path'));
   nodes[0].children.find((node) => node.className === 'dispute')
     .children.find((node) => node.tagName === 'BUTTON').handlers.click();
@@ -117,7 +129,7 @@ const board = {
       { what: 'Last day to file the suit', rows: [['Last day', '10 January 2027 (Sunday)'],
         ['As of', '18 October 2026 (Sunday)'], ['Result', 'Open'], ['Days left', '84']] },
       { what: 'Last day to answer the notice', rows: [['Not assessed', 'the notice date is not given']] }] };
-  const nodes = context.renderChatBoard(listed);
+  const nodes = drawn(listed);
   nodes[0].children.find((node) => node.className === 'dispute')
     .children.find((node) => node.tagName === 'BUTTON').handlers.click();
   const detail = opened.at(-1).content.map(text).join('\n');
@@ -134,7 +146,7 @@ const board = {
 {
   const why = 'NM has not researched the law for this dispute, so what the law requires of it has not been assessed.';
   const unassessed = { ...structuredClone(board.disputes[0]), questions: [], law: { state: 'not_assessed', why } };
-  const shown = context.renderChatBoard({ ...structuredClone(board), disputes: [unassessed], understanding: {
+  const shown = drawn({ ...structuredClone(board), disputes: [unassessed], understanding: {
     confirmed: false, open_points: ['The understanding does not set out the chronology.'] } });
   const all = shown.map(text).join('\n');
   assert.ok(all.includes(`What the law requires: not yet assessed. ${why}`));
@@ -150,7 +162,7 @@ const board = {
   // Questions set but not finished: the note and the count both stand.
   const unfinished = { ...structuredClone(board.disputes[0]), law: { state: 'not_assessed',
     why: 'NM’s research of the law for this dispute did not finish, so what the law requires of it has not been assessed.' } };
-  const again = context.renderChatBoard({ ...structuredClone(board), disputes: [unfinished] }).map(text).join('\n');
+  const again = drawn({ ...structuredClone(board), disputes: [unfinished] }).map(text).join('\n');
   assert.ok(again.includes('What the law requires: not yet assessed. NM’s research of the law for this dispute did not finish'));
   assert.ok(again.includes('2 legal questions · 1 researched · 1 search failed'));
 
@@ -158,7 +170,7 @@ const board = {
   for (const quiet of [{ ...structuredClone(board), understanding: { confirmed: true, open_points: [] } },
     { ...structuredClone(board), disputes: [{ ...structuredClone(board.disputes[0]), law: { state: 'researched', why: '' } }] },
     structuredClone(board)]) {
-    const said = context.renderChatBoard(quiet).map(text).join('\n');
+    const said = drawn(quiet).map(text).join('\n');
     assert.ok(!said.includes('not yet assessed') && !said.includes('was not satisfied') && !said.includes('own check raised'));
   }
 }
@@ -183,7 +195,7 @@ const board = {
     { name: 'order.pdf', pages_read: 1, events: 3, state: 'partly_read', why: 'NM could not read page 3 of this paper.' },
     { name: 'scan.pdf', pages_read: 0, events: 0, state: 'not_read', why: 'NM could not read pages 1, 2 of this paper.' },
     { name: 'call.mp3', pages_read: 1, events: 1, state: 'read', why: '', recording: true }];
-  const nodes = context.renderChatBoard({ ...structuredClone(board), timeline: { state: 'ready', events, documents } });
+  const nodes = drawn({ ...structuredClone(board), timeline: { state: 'ready', events, documents } });
   const fold = nodes.find((node) => node.tagName === 'DETAILS' && text(node).startsWith('Timeline of your papers'));
   assert.ok(fold, 'a fold for the timeline');
   assert.equal(nodes.indexOf(fold), nodes.findIndex((node) => node.className === 'board-disputes') + 1, 'it follows the disputes');
@@ -212,32 +224,32 @@ const board = {
 
   // A long timeline shows its first events and folds the rest.
   const many = Array.from({ length: 15 }, (_, n) => ({ ...events[0], id: `E${n + 1}`, what: `Event number ${n + 1}.` }));
-  const long = context.renderChatBoard({ ...structuredClone(board), timeline: { state: 'ready', events: many, documents } })
+  const long = drawn({ ...structuredClone(board), timeline: { state: 'ready', events: many, documents } })
     .find((node) => node.tagName === 'DETAILS' && text(node).startsWith('Timeline of your papers'));
   const more = long.children.find((node) => node.className === 'board-more');
   assert.equal(more.children[0].textContent, 'Show the other 3 events');
   assert.ok(text(more).includes('Event number 13.') && text(more).includes('Event number 15.') && !text(more).includes('Event number 12.'));
   const shown = long.children.find((node) => node.className === 'board-list board-events');
   assert.ok(text(shown).includes('Event number 12.') && !text(shown).includes('Event number 13.'));
-  const one = context.renderChatBoard({ ...structuredClone(board), timeline: { state: 'ready', events: many.slice(0, 13), documents } })
+  const one = drawn({ ...structuredClone(board), timeline: { state: 'ready', events: many.slice(0, 13), documents } })
     .find((node) => node.tagName === 'DETAILS' && text(node).startsWith('Timeline of your papers'));
   assert.equal(one.children.find((node) => node.className === 'board-more').children[0].textContent, 'Show the other 1 event');
 
   // Papers with no event, and one paper not fully read, say so.
-  const none = context.renderChatBoard({ ...structuredClone(board), timeline: { state: 'ready', events: [], documents: [documents[0]] } })
+  const none = drawn({ ...structuredClone(board), timeline: { state: 'ready', events: [], documents: [documents[0]] } })
     .map(text).join('\n');
   assert.ok(none.includes('Timeline of your papers (0 events)') && none.includes('NM listed no events from these papers.'));
   assert.ok(!none.includes('not fully read') && !none.includes('In date order'));
-  const partly = context.renderChatBoard({ ...structuredClone(board), timeline: { state: 'ready', events: [events[0]], documents: [documents[1]] } })
+  const partly = drawn({ ...structuredClone(board), timeline: { state: 'ready', events: [events[0]], documents: [documents[1]] } })
     .map(text).join('\n');
   assert.ok(partly.includes('Timeline of your papers (1 event) · 1 paper not fully read'));
 
   // An earlier conversation's board says none was made; a board with no papers, or no word on it, says nothing.
   const why = 'NM did not make a timeline of the papers when it answered this conversation, so there is none to show.';
-  const earlier = context.renderChatBoard({ ...structuredClone(board), timeline: { state: 'not_made', why } });
+  const earlier = drawn({ ...structuredClone(board), timeline: { state: 'not_made', why } });
   assert.ok(earlier.map(text).join('\n').includes(why) && !earlier.some((node) => text(node).startsWith('Timeline of your papers')));
   for (const quiet of [{ ...structuredClone(board), timeline: { state: 'none' } }, structuredClone(board)]) {
-    const read = context.renderChatBoard(quiet).map(text).join('\n');
+    const read = drawn(quiet).map(text).join('\n');
     assert.ok(!read.includes('Timeline of your papers') && !read.includes('timeline'));
   }
 }
@@ -252,7 +264,7 @@ const board = {
       words: 'Order', located: true }];
   const documents = [{ name: 'deed.pdf', pages_read: 4, events: 2, state: 'read', why: '' },
     { name: 'scan.pdf', pages_read: 1, events: 1, state: 'read', why: '' }];
-  const foldOf = (events) => context.renderChatBoard({ ...structuredClone(board), timeline: { state: 'ready', events, documents } })
+  const foldOf = (events) => drawn({ ...structuredClone(board), timeline: { state: 'ready', events, documents } })
     .find((node) => node.tagName === 'DETAILS' && text(node).startsWith('Timeline of your papers'));
   const said = text(foldOf(repeated));
   assert.ok(said.includes('A sale. · scan.pdf, page 1 · said by the deed · also in deed.pdf, page 3; copy.pdf, pages 1, 2'));
@@ -273,7 +285,7 @@ const board = {
       figures: [{ first: '6.06', second: '6.16', after: 'a quantity of' }] },
     { first: { document: 'a.pdf', page: 2 }, second: { document: 'b.pdf', page: 5 },
       figures: [{ first: '596/80', second: '596/89', after: 'deed number' }, { first: '1980', second: '1986', after: '' }] }];
-  const nodes = context.renderChatBoard({ ...structuredClone(board), copies });
+  const nodes = drawn({ ...structuredClone(board), copies });
   const fold = nodes.find((node) => node.tagName === 'DETAILS' && text(node).startsWith('Figures two copies read differently'));
   assert.ok(fold, 'a fold for the copies');
   assert.equal(fold.children[0].textContent, 'Figures two copies read differently (2)');
@@ -286,11 +298,11 @@ const board = {
   assert.ok(!said.includes('1986 (after'), 'no words before: none given');
   // It follows the disputes and, where there is one, the timeline.
   assert.equal(nodes.indexOf(fold), nodes.findIndex((node) => node.className === 'board-disputes') + 1);
-  const both = context.renderChatBoard({ ...structuredClone(board), copies, timeline: { state: 'ready', events: [], documents: [] } });
+  const both = drawn({ ...structuredClone(board), copies, timeline: { state: 'ready', events: [], documents: [] } });
   const at = (start) => both.findIndex((node) => text(node).startsWith(start));
   assert.ok(at('Timeline of your papers') >= 0 && at('Timeline of your papers') < at('Figures two copies'));
   for (const quiet of [{ ...structuredClone(board), copies: [] }, structuredClone(board)]) {
-    assert.ok(!context.renderChatBoard(quiet).map(text).join('\n').includes('Figures two copies'));
+    assert.ok(!drawn(quiet).map(text).join('\n').includes('Figures two copies'));
   }
 }
 
@@ -346,7 +358,7 @@ const board = {
                  by_giver: [{ giver: 'Bank of Somewhere', leaves: 'Rs 0', exceeds: null },
                             { giver: 'Ravi Teja', leaves: 'Rs 1,50,000', exceeds: null }] }],
       caveat }];
-  const nodes = context.renderChatBoard({ ...structuredClone(board), figures });
+  const nodes = drawn({ ...structuredClone(board), figures });
   const fold = nodes.find((node) => node.tagName === 'DETAILS' && text(node).startsWith('Transactions by asset'));
   assert.ok(fold, 'a fold for the figures');
   assert.equal(fold.children[0].textContent, 'Transactions by asset or account (3)');
@@ -382,12 +394,12 @@ const board = {
   assert.ok(!said.includes('leaves undefined') && !said.includes('leaves null'), 'nothing is said where there is nothing to say');
   assert.equal((said.match(/dated after the death of the giver/g) || []).length, 1, 'a remark is said of the one transaction that carries it');
   assert.equal(nodes.indexOf(fold), nodes.findIndex((node) => node.className === 'board-disputes') + 1);
-  const with_copies = context.renderChatBoard({ ...structuredClone(board), figures, copies: [{ first: { document: 'a.pdf', page: 1 },
+  const with_copies = drawn({ ...structuredClone(board), figures, copies: [{ first: { document: 'a.pdf', page: 1 },
     second: { document: 'b.pdf', page: 1 }, figures: [{ first: '6.06', second: '6.16', after: '' }] }] });
   const at = (start) => with_copies.findIndex((node) => text(node).startsWith(start));
   assert.ok(at('Figures two copies') >= 0 && at('Figures two copies') < at('Transactions by asset or account'));
   for (const quiet of [{ ...structuredClone(board), figures: [] }, structuredClone(board)]) {
-    assert.ok(!context.renderChatBoard(quiet).map(text).join('\n').includes('Transactions by asset'));
+    assert.ok(!drawn(quiet).map(text).join('\n').includes('Transactions by asset'));
   }
 }
 
@@ -408,7 +420,7 @@ const board = {
     appearances: [{ name: 'Leela Kulkarni', places: [{ document: 'order.pdf', source: 't1:d1', page: 1 }],
       near: [{ as_written: 'Leela Kulkarny', document: 'deed.pdf', source: 't1:d2', page: 2 }] },
     { name: 'Sarala Kulkarni', places: [], near: [] }] };
-  const nodes = context.renderChatBoard(together);
+  const nodes = drawn(together);
   const fold = nodes.find((node) => node.tagName === 'DETAILS' && text(node).startsWith('Read side by side'));
   assert.ok(fold, 'a fold for what the papers read together show');
   assert.equal(fold.children[0].textContent, 'Read side by side (2)');
@@ -426,10 +438,17 @@ const board = {
     'Subjects the papers identify', 'Lot 9061 — the stock sold · From deed.pdf, page 2 (read by AI)']) {
     assert.ok(understood.includes(part), part);
   }
-  const failed = context.renderChatBoard({ ...structuredClone(board), connections: [], appearances: [],
+  const failed = drawn({ ...structuredClone(board), connections: [], appearances: [],
     connections_failures: [{ reason: 'TooLongToReadTogether' }] }).map(text).join('\n');
   assert.ok(failed.includes('Your papers could not be read together this time'), 'a failure is said, never an empty success');
-  assert.ok(!context.renderChatBoard(structuredClone(board)).map(text).join('\n').includes('Read side by side'), 'nothing where none');
+  assert.ok(!drawn(structuredClone(board)).map(text).join('\n').includes('Read side by side'), 'nothing where none');
 }
 
+// On the board itself each part is one short line, nothing of its detail.
+{
+  const lines = context.renderChatBoard(board).filter((node) => node.className === 'board-line');
+  assert.deepEqual(JSON.parse(JSON.stringify(lines.map((node) => [node.tagName, node.textContent]))),
+    [['BUTTON', 'How NM understood this matter']]);
+  assert.equal(lines[0].children.length, 0, 'its detail opens in the pane');
+}
 console.log('chat board: ok');

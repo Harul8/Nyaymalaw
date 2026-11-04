@@ -3057,7 +3057,7 @@ function renderTurn(entry) {
       const opener = document.createElement('summary');
       opener.textContent = el.text;
       fold.appendChild(opener);
-      fold.append(...renderCaseBlock(el.case));
+      fold.append(...renderCaseBlock(el.case, caseHolderOf(entry.answer)));
       into.appendChild(fold);
       return;
     }
@@ -3166,8 +3166,22 @@ function renderTurn(entry) {
         }
         const ask = document.createElement('li');
         if (item.kind === 'NEED_CASE' && item.need) {
-          // Rendering v20: what to get for a dispute's case, from whom and why.
-          ask.appendChild(document.createTextNode(`${item.need.what} — from ${item.need.from_whom}. ${item.need.why}`));
+          // Rendering v20: what to get for a dispute's case, from whom and why. Plan AN.39 (D55): its words open the point of the
+          // case it is for, in the reading pane, as the board's point does.
+          const point = caseElementFor(entry.answer, item.dispute, item.need.for);
+          if (point) {
+            const open = document.createElement('button');
+            open.type = 'button';
+            open.className = 'cite need-item';
+            open.textContent = item.need.what;
+            open.setAttribute('aria-label', `Open what it is for: ${point.item.label || point.item.element}`);
+            open.addEventListener('click', () => window.NmBrainSources.showContent(point.item.label || point.item.element,
+              renderCaseItem(point.item, point.view, item.dispute || {}, caseHolderOf(entry.answer)), open, false,
+              `What the law requires · ${(item.dispute && item.dispute.name) || 'this dispute'}`));
+            ask.append(open, document.createTextNode(` — from ${item.need.from_whom}. ${item.need.why}`));
+          } else {
+            ask.appendChild(document.createTextNode(`${item.need.what} — from ${item.need.from_whom}. ${item.need.why}`));
+          }
         } else if (item.kind === 'NEED_ITEM' && item.item) {
           const open = document.createElement('button');
           open.type = 'button';
@@ -4052,6 +4066,19 @@ function eventRows(events, make) {
   return out;
 }
 
+// A PART OF THE BOARD BELOW THE DISPUTES (plan AN.39, D57; owner, 4 Nov 2026: the board "not lengthy and completely sentences but
+// short phrases and details to follow in reading pane when clicked"): one line, its detail opening in the reading pane. Built as a
+// fold was: what is appended to it is what the pane shows.
+function boardPart(summary) {
+  const content = [];
+  const line = document.createElement('button');
+  line.type = 'button';
+  line.className = 'board-line';
+  line.textContent = summary;
+  line.addEventListener('click', () => window.NmBrainSources.showContent(summary, content, line, false, 'Matter board'));
+  return { node: line, content, appendChild: (item) => { content.push(item); return item; }, append: (...items) => { content.push(...items); } };
+}
+
 function renderTimeline(timeline, make) {
   if (!timeline || timeline.state === 'none') return [];
   if (timeline.state !== 'ready') {
@@ -4060,9 +4087,8 @@ function renderTimeline(timeline, make) {
   const events = timeline.events || [];
   const papers = timeline.documents || [];
   const unfinished = papers.filter((paper) => paper.state !== 'read').length;
-  const fold = make('details', 'folded');
-  fold.appendChild(make('summary', '', `Timeline of your papers (${events.length} ${events.length === 1 ? 'event' : 'events'})`
-    + (unfinished ? ` · ${unfinished} ${unfinished === 1 ? 'paper' : 'papers'} not fully read` : '')));
+  const fold = boardPart(`Timeline of your papers (${events.length} ${events.length === 1 ? 'event' : 'events'})`
+    + (unfinished ? ` · ${unfinished} ${unfinished === 1 ? 'paper' : 'papers'} not fully read` : ''));
   const repeated = events.some((event) => Array.isArray(event.also_in) && event.also_in.length);
   fold.appendChild(make('p', 'board-lede', 'What your papers record, event by event, as NM read them. Each is as its paper says it, '
     + 'not proved; check anything that matters against the paper itself.'
@@ -4082,15 +4108,14 @@ function renderTimeline(timeline, make) {
   if (dated.length) fold.append(make('h3', 'board-h', 'In date order'), ...eventRows(dated, make));
   if (undated.length) fold.append(make('h3', 'board-h', 'Not dated in the paper'), ...eventRows(undated, make));
   if (!events.length) fold.appendChild(make('p', 'board-lede', 'NM listed no events from these papers.'));
-  return [fold];
+  return [fold.node];
 }
 
 // FIGURES TWO COPIES READ DIFFERENTLY (plan AN.27, P13): pages that are almost word for word the same but give a figure differently,
 // found by code from the saved pages. The page chooses between nothing: it gives both readings and the words before them.
 function renderCopies(copies, make) {
   if (!Array.isArray(copies) || !copies.length) return [];
-  const fold = make('details', 'folded');
-  fold.appendChild(make('summary', '', `Figures two copies read differently (${copies.length})`));
+  const fold = boardPart(`Figures two copies read differently (${copies.length})`);
   fold.appendChild(make('p', 'board-lede', 'These pages are almost word for word the same, but a figure on one is not the figure on the '
     + 'other. NM has not chosen between them: check the originals.'));
   const list = make('ul', 'board-list');
@@ -4103,7 +4128,7 @@ function renderCopies(copies, make) {
     list.appendChild(item);
   }
   fold.appendChild(list);
-  return [fold];
+  return [fold.node];
 }
 
 // TRANSACTIONS BY SUBJECT (plan AN.27, P13d; AN.28, D7; AN.29, D9): the transactions NM found in the papers, their figures added up
@@ -4112,8 +4137,7 @@ function renderCopies(copies, make) {
 // never added; a transaction dated after its giver's recorded death carries the server's remark.
 function renderFigures(subjects, make) {
   if (!Array.isArray(subjects) || !subjects.length) return [];
-  const fold = make('details', 'folded');
-  fold.appendChild(make('summary', '', `Transactions by asset or account (${subjects.length})`));
+  const fold = boardPart(`Transactions by asset or account (${subjects.length})`);
   fold.appendChild(make('p', 'board-lede', 'Added up by NM’s code from the transactions it found in your papers - each kind of quantity '
     + 'with its own, sums of money with sums of money - as the papers state them and whoever states them. Rival or repeated accounts are '
     + 'added as if each were true, so a sum is a figure to check against the papers, not what anyone holds, owes or has paid.'));
@@ -4173,7 +4197,7 @@ function renderFigures(subjects, make) {
     }
     fold.appendChild(make('p', 'board-lede', subject.caveat));
   }
-  return [fold];
+  return [fold.node];
 }
 
 // READ SIDE BY SIDE (plan AN.28, pieces 3e and 3f): what matters to your client only when the papers are set side by side, each point
@@ -4186,14 +4210,13 @@ const SIDE_BY_SIDE = { client_appears: 'Your client’s people elsewhere', again
 // that nothing NM read disappears without trace; never used as a point.
 function renderSetAside(items, make) {
   if (!Array.isArray(items) || !items.length) return [];
-  const fold = make('details', 'folded');
-  fold.appendChild(make('summary', '', `Set aside after checking (${items.length})`));
+  const fold = boardPart(`Set aside after checking (${items.length})`);
   fold.appendChild(make('p', 'board-lede', 'What NM first read from your papers but, looking again at the pages, found they do not '
     + 'record. It is not used; check it against the papers if it matters.'));
   const list = make('ul', 'board-list');
   for (const item of items) list.appendChild(make('li', '', `${item.what} · ${item.document} · ${item.why}`));
   fold.appendChild(list);
-  return [fold];
+  return [fold.node];
 }
 
 function renderPapersTogether(board, make) {
@@ -4202,8 +4225,7 @@ function renderPapersTogether(board, make) {
   const failed = (board.connections_failures || []).length > 0;
   if (!connections.length && !appearances.length && !failed) return [];
   const where = (places) => places.map((place) => `${place.document}, page ${place.page}`).join('; ');
-  const fold = make('details', 'folded');
-  fold.appendChild(make('summary', '', `Read side by side (${connections.length})`));
+  const fold = boardPart(`Read side by side (${connections.length})`);
   fold.appendChild(make('p', 'board-lede', 'What matters to your client only when your papers are set side by side, as NM read them, '
     + 'each with the pages its words are on. Check each against the papers.'));
   if (failed) {
@@ -4231,7 +4253,7 @@ function renderPapersTogether(board, make) {
     }
     fold.appendChild(people);
   }
-  return [fold];
+  return [fold.node];
 }
 
 // The board as NM understood the matter from the advocate's own words. Nothing on it is
@@ -4265,6 +4287,10 @@ function renderChatBoard(board) {
   if (board.disputes.some((dispute) => dispute.checklist && dispute.checklist.items.length)) {
     out.push(renderCheckLegend());
   }
+  // What a case's marks mean (plan AN.39), as the checklist's were said above the disputes on 31 October.
+  if (board.disputes.some((dispute) => dispute.checklist && dispute.checklist.case && (dispute.checklist.case.elements || []).length)) {
+    out.push(renderCheckLegend(CASE_MARKS));
+  }
   const disputes = make('section', 'board-disputes');
   disputes.setAttribute('aria-label', board.disputes.length === 1 ? 'Dispute' : `Disputes (${board.disputes.length})`);
   board.disputes.forEach((dispute, index) => disputes.appendChild(
@@ -4283,8 +4309,8 @@ function renderChatBoard(board) {
     [board.related_points.length, 'Related points'], [points.length, 'Points NM’s own check raised']]
     .filter(([count]) => count)
     .map(([count, title]) => `${title} (${count})`);
-  const fold = make('details', 'folded');
-  fold.appendChild(make('summary', '', counted.join(' · ') || 'How NM understood this matter'));
+  const fold = boardPart('How NM understood this matter');
+  if (counted.length) fold.appendChild(make('p', 'source-where', counted.join(' · ')));
   fold.appendChild(make('p', 'board-lede', 'As NM understood this matter from your messages and the documents '
     + 'you sent. Facts are as you or a document gave them, not proved.'));
   if (board.facts.length) {
@@ -4320,7 +4346,7 @@ function renderChatBoard(board) {
     fold.appendChild(make('h3', 'board-h', 'Points NM’s own check raised'));
     fold.appendChild(list(points, 'board-list'));
   }
-  out.push(fold);
+  out.push(fold.node);
   return out;
 }
 
@@ -4340,7 +4366,9 @@ const CASE_STATES = {
   unavailable: 'NM could not set out what would make this case stronger this time. The rest stands as checked.',
 };
 
-function renderCaseBlock(view) {
+// holder: the answer that holds the case ({chat_id, turn_id}), from whose saved record its law and its pages open (plan AN.39); none
+// where the page does not hold it, and then the law is shown as its words alone.
+function renderCaseBlock(view, holder = null) {
   const make = (tag, className, text) => {
     const node = document.createElement(tag);
     if (className) node.className = className;
@@ -4349,23 +4377,9 @@ function renderCaseBlock(view) {
   };
   const out = [];
   if (CASE_STATES[view.state]) out.push(make('p', 'check-none', CASE_STATES[view.state]));
-  const law = (given) => {
-    if (!given) return [];
-    if (!given.found) {
-      return [make('p', 'board-meta', `NM could not find these words in the law it read: “${given.words}”`)];
-    }
-    const open = make('button', 'cite', [given.locator, given.title].filter(Boolean).join(', ') || 'The law');
-    open.type = 'button';
-    open.addEventListener('click', () => openLaw(given, open));
-    const where = make('p', 'req-law');
-    where.appendChild(open);
-    const force = typeof given.in_force === 'string' && given.in_force.trim() ? given.in_force.trim() : '';
-    return [make('blockquote', 'detail-words', given.words), where,
-      ...(force ? [make('p', 'source-role warn', force.charAt(0).toUpperCase() + force.slice(1))] : [])];
-  };
-  const points = (said) => said.map((point) => make('p', 'board-meta', point.located && point.pages.length
-    ? `${point.what} · ${point.pages.map((page) => `${page.document}, ${page.page}`).join('; ')}`
-    : point.located ? point.what : `${point.what} · its words were not found on a page, so it rests on nothing yet`));
+  const law = (given, usedFor) => (given && given.found
+    ? [make('blockquote', 'detail-words', given.words), ...caseLaw(given, holder, usedFor)] : caseLaw(given, holder, usedFor));
+  const points = (said) => casePoints(said, holder);
   const elements = view.elements || [];
   if (elements.length) {
     out.push(make('h4', 'board-h', 'What the law requires'));
@@ -4383,7 +4397,7 @@ function renderCaseBlock(view) {
       if (item.called && item.called !== item.status) {
         li.appendChild(make('p', 'board-meta', 'Called shown, but none of its points was found on its page.'));
       }
-      li.append(...law(item.law), ...points(item.points || []));
+      li.append(...law(item.law, item.element), ...points(item.points || []));
       ul.appendChild(li);
     }
     out.push(ul);
@@ -4413,11 +4427,189 @@ function renderCaseBlock(view) {
       const li = make('li');
       li.appendChild(make('p', 'detail-question', item.relies_on));
       if (item.answer) li.appendChild(make('p', '', `What answers it: ${item.answer}`));
-      li.append(...law(item.law), ...points(item.points || []));
+      li.append(...law(item.law, item.relies_on), ...points(item.points || []));
       ul.appendChild(li);
     }
     out.push(ul);
   }
+  return out;
+}
+
+// A CASE'S LAW (plan AN.39, D53): the section and the Act, or the paragraph and the judgment, as a link that opens the passage in the
+// reading pane - from the saved record of the answer that holds the case, its words marked - or, where the page holds no such answer,
+// its words as the case kept them. Words NM could not find in the law it read say so.
+function caseLaw(given, holder, usedFor) {
+  const make = (tag, className, text) => {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  };
+  if (!given) return [];
+  if (!given.found) return [make('p', 'board-meta', `NM could not find these words in the law it read: “${given.words}”`)];
+  const open = make('button', 'cite', [given.locator, given.title].filter(Boolean).join(', ') || 'The law');
+  open.type = 'button';
+  open.addEventListener('click', () => (holder && given.source_id
+    ? window.NmBrainSources.openPassage(holder, given.source_id, open, { words: given.words, phrase: usedFor, title: given.title })
+    : openLaw(given, open)));
+  const where = make('p', 'req-law');
+  where.appendChild(open);
+  const force = typeof given.in_force === 'string' && given.in_force.trim() ? given.in_force.trim() : '';
+  return [where, ...(force ? [make('p', 'source-role warn', force.charAt(0).toUpperCase() + force.slice(1))] : [])];
+}
+
+// THE POINTS OF THE PAPERS A CASE'S ITEM RESTS ON (plan AN.39, D55): each with its pages, each page opening in the reading pane from
+// the answer's saved record, the whole document a click away; a point whose words were not found on a page says so.
+function casePoints(said, holder) {
+  return said.map((point) => {
+    const line = document.createElement('p');
+    line.className = 'board-meta';
+    line.appendChild(document.createTextNode(point.what));
+    if (point.located && point.pages.length) {
+      line.appendChild(document.createTextNode(' · '));
+      point.pages.forEach((page, index) => {
+        if (index) line.appendChild(document.createTextNode('; '));
+        const label = `${page.document}, ${page.page}`;
+        if (holder && page.source_id) {
+          const open = document.createElement('button');
+          open.type = 'button';
+          open.className = 'cite';
+          open.textContent = label;
+          open.addEventListener('click', () => window.NmBrainSources.openPassage(holder, page.source_id, open,
+            { phrase: point.what, title: page.document }));
+          line.appendChild(open);
+        } else {
+          line.appendChild(document.createTextNode(label));
+        }
+      });
+    } else if (!point.located) {
+      line.appendChild(document.createTextNode(' · its words were not found on a page, so it rests on nothing yet'));
+    }
+    return line;
+  });
+}
+
+// THE ANSWER THAT HOLDS A CASE (plan AN.39): an answer's own, or - for a dispute on the board - the newest answer on the page that set
+// out that dispute's case, which is the case the board keeps for it.
+function caseHolderOf(answer) {
+  return answer && answer.chat_id && answer.turn_id ? { chat_id: answer.chat_id, turn_id: answer.turn_id } : null;
+}
+
+function caseHolder(dispute) {
+  for (const entry of [...(state.turns || [])].reverse()) {
+    if ((entry.answer && entry.answer.elements || []).some((el) => el.kind === 'CASE' && el.case && el.dispute
+        && el.dispute.id === dispute.id)) {
+      return caseHolderOf(entry.answer);
+    }
+  }
+  return null;
+}
+
+// The point of a dispute's case an answer's "what to get" is for, with the case it belongs to; none where the answer holds none.
+function caseElementFor(answer, dispute, name) {
+  const held = ((answer && answer.elements) || []).find((el) => el.kind === 'CASE' && el.case && el.dispute && dispute
+    && el.dispute.id === dispute.id);
+  const item = held && (held.case.elements || []).find((element) => element.element === name);
+  return item ? { item, view: held.case } : null;
+}
+
+// A start put in the message box for the advocate to finish and send (the board's and the pane's "Tell NM" buttons).
+function startMessage(words) {
+  const box = $('message');
+  box.value = box.value.trim() ? `${box.value.trim()}\n${words}` : words;
+  box.dispatchEvent(new Event('input', { bubbles: true }));
+  sizeComposer();
+  box.focus();
+}
+
+// ONE POINT OF A DISPUTE'S CASE IN THE READING PANE (plan AN.39, D52; owner, 4 Nov 2026: "it should again only open data related to that
+// particular point, with an option to share details about it"), as an item opened on 31 October: how it stands and who must prove it;
+// why it is needed, with the law that requires it opening as its passage; where it stands in the papers, each page opening in the
+// pane; what to get for it; and - not yet shown, or shown only weakly - "Tell NM about this" and "Not available", each putting a start
+// in the message box. A point the papers show has no buttons (owner: OK).
+function renderCaseItem(item, view, dispute, holder) {
+  const make = (tag, className, text) => {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  };
+  const block = (title, ...content) => {
+    const section = make('section', 'req-block');
+    section.appendChild(make('h4', '', title));
+    section.append(...content);
+    return section;
+  };
+  const mark = CASE_MARKS[item.status] || CASE_MARKS.missing;
+  const status = make('p', `req-status item--${mark.mark}`);
+  const sign = make('span', 'st st--' + mark.mark);
+  sign.setAttribute('aria-hidden', 'true');
+  status.append(sign, make('span', '', [mark.label, CASE_PROVES[item.proves]].filter(Boolean).join(' · ')));
+  const name = item.label || item.element;
+  const out = [status];
+  if (item.label && item.label !== item.element) out.push(make('p', 'dispute-why', item.element));
+  out.push(block('Why it is needed', ...(item.why ? [make('p', '', item.why)] : []), ...caseLaw(item.law, holder, name)));
+  const stands = [];
+  if (item.called && item.called !== item.status) {
+    stands.push(make('p', '', 'Called shown, but none of its points was found on its page.'));
+  }
+  stands.push(...casePoints(item.points || [], holder));
+  if (!(item.points || []).length) stands.push(make('p', '', 'Not in your messages or documents yet.'));
+  out.push(block('Where it stands', ...stands));
+  const asks = ((view && view.to_get) || []).filter((ask) => ask.for === item.element);
+  if (asks.length) {
+    const ul = make('ul', 'board-list');
+    for (const ask of asks) {
+      const li = make('li');
+      li.appendChild(make('p', 'detail-question', `${ask.what} — from ${ask.from_whom}`));
+      if (ask.why) li.appendChild(make('p', '', ask.why));
+      if (ask.helps) li.appendChild(make('p', 'board-meta', ask.helps));
+      ul.appendChild(li);
+    }
+    out.push(block('What to get', ul));
+  }
+  if (item.status !== 'shown') {
+    const actions = make('div', 'actions');
+    const tell = make('button', 'act primary', 'Tell NM about this');
+    tell.type = 'button';
+    tell.addEventListener('click', () => startMessage(`About "${name}" (${dispute.name}): `));
+    const unavailable = make('button', 'act ghost', 'Not available');
+    unavailable.type = 'button';
+    unavailable.addEventListener('click', () => startMessage(`About "${name}" (${dispute.name}): this is not available.`));
+    actions.append(tell, unavailable);
+    out.push(actions);
+  }
+  return out;
+}
+
+// WHAT THE OTHER SIDE WILL RELY ON, ONE THING IN THE READING PANE (plan AN.39, D56): what they will rely on, the law they would cite
+// opening as its passage, what answers it, the points of the papers with their pages, and "Tell NM what answers it".
+function renderOtherSideItem(item, dispute, holder) {
+  const make = (tag, className, text) => {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  };
+  const block = (title, ...content) => {
+    const section = make('section', 'req-block');
+    section.appendChild(make('h4', '', title));
+    section.append(...content);
+    return section;
+  };
+  const name = item.label || item.relies_on;
+  const out = [];
+  if (item.label && item.label !== item.relies_on) out.push(make('p', 'dispute-why', item.relies_on));
+  const law = caseLaw(item.law, holder, name);
+  if (law.length) out.push(block('The law they would rely on', ...law));
+  if (item.answer) out.push(block('What answers it', make('p', '', item.answer)));
+  if ((item.points || []).length) out.push(block('Where it stands', ...casePoints(item.points, holder)));
+  const actions = make('div', 'actions');
+  const tell = make('button', 'act primary', 'Tell NM what answers it');
+  tell.type = 'button';
+  tell.addEventListener('click', () => startMessage(`About what the other side will rely on, "${name}" (${dispute.name}): `));
+  actions.appendChild(tell);
+  out.push(actions);
   return out;
 }
 
@@ -4441,8 +4633,8 @@ function checkMark(status) {
   return mark;
 }
 
-// What the marks mean, said once above the disputes.
-function renderCheckLegend() {
+// What the marks mean, said once above the disputes: the checklist's (marks), or a case's (CASE_MARKS, each naming the mark it draws).
+function renderCheckLegend(marks = CHECK_MARKS) {
   const make = (tag, className, text) => {
     const node = document.createElement(tag);
     if (className) node.className = className;
@@ -4451,9 +4643,9 @@ function renderCheckLegend() {
   };
   const legend = make('p', 'legend');
   legend.setAttribute('aria-hidden', 'true');
-  for (const [status, { label }] of Object.entries(CHECK_MARKS)) {
+  for (const [status, { label, mark }] of Object.entries(marks)) {
     const entry = make('span', 'legend-entry');
-    entry.append(checkMark(status), make('span', '', label));
+    entry.append(checkMark(mark || status), make('span', '', label));
     legend.appendChild(entry);
   }
   return legend;
@@ -4528,7 +4720,9 @@ function renderDisputeCard(dispute, board, number = null) {
     return section;
   }
   if ('case' in listed) {
-    // Checklist v3 (plan AN.35, piece 35c3): what makes the case stronger, each element with its mark; the detail opens on the name.
+    // Checklist v3 (plan AN.35, piece 35c3): what makes the case stronger. IN SHORT PHRASES (plan AN.39, D52, D56-D57; owner, 4 Nov
+    // 2026): each element, and each thing the other side will rely on, one line - its short name, or (saved before it had one) its
+    // own words on two lines - opening alone in the reading pane, where the detail is; the dispute's name opens the whole dispute.
     const meta = make('p', 'dmeta');
     meta.append(...deadlineChips(listed.time_limits));
     const view = listed.case;
@@ -4537,6 +4731,7 @@ function renderDisputeCard(dispute, board, number = null) {
       const shown = elements.filter((item) => item.status === 'shown').length;
       meta.appendChild(make('span', 'count', `${shown} of ${elements.length} shown by the papers`));
     }
+    if (view && (view.to_get || []).length) meta.appendChild(make('span', 'count', `${view.to_get.length} to get`));
     if (meta.children.length) section.appendChild(meta);
     if (!view || view.state === 'unavailable' || !elements.length) {
       section.appendChild(make('p', 'check-none', !view || view.state === 'unavailable'
@@ -4545,28 +4740,40 @@ function renderDisputeCard(dispute, board, number = null) {
           + 'finding that the law requires nothing.'));
       return section;
     }
+    const place = number ? `Dispute ${number}` : dispute.name;
+    const line = (className, mark, words, srLabel, open) => {
+      const li = make('li');
+      const row = make('button', className);
+      row.type = 'button';
+      const said = make('span', 'item-words');
+      said.appendChild(make('span', 't short', words));
+      if (srLabel) said.appendChild(make('span', 'sr', ` · ${srLabel}`));
+      const sign = make('span', 'st st--' + mark);
+      sign.setAttribute('aria-hidden', 'true');
+      row.append(sign, said);
+      row.addEventListener('click', () => open(row));
+      li.appendChild(row);
+      return li;
+    };
     section.appendChild(make('p', 'group', 'What the law requires'));
     const ul = make('ul', 'checklist');
     for (const item of elements) {
       const mark = CASE_MARKS[item.status] || CASE_MARKS.missing;
-      const li = make('li');
-      const row = make('button', `item item--${mark.mark}`);
-      row.type = 'button';
-      const words = make('span', 'item-words');
-      words.appendChild(make('span', 't', item.element));
-      words.appendChild(make('span', 'sr', ` · ${mark.label}`));
-      const state = make('span', 'st st--' + mark.mark);
-      state.setAttribute('aria-hidden', 'true');
-      row.append(state, words);
-      row.addEventListener('click', () => window.NmBrainSources.showContent(dispute.name,
-        renderDisputeDetail(dispute, board), row, false, number ? `Dispute ${number}` : 'Dispute'));
-      li.appendChild(row);
-      ul.appendChild(li);
+      ul.appendChild(line(`item item--${mark.mark}`, mark.mark, item.label || item.element, mark.label,
+        (row) => window.NmBrainSources.showContent(item.label || item.element, renderCaseItem(item, view, dispute, caseHolder(dispute)),
+          row, false, `What the law requires · ${place}`)));
     }
     section.appendChild(ul);
-    if ((view.to_get || []).length) {
-      section.appendChild(make('p', 'board-meta', `${view.to_get.length} ${view.to_get.length === 1 ? 'thing' : 'things'} to get`
-        + '. Open the dispute to see what, from whom and why.'));
+    const other = view.other_side || [];
+    if (other.length) {
+      section.appendChild(make('p', 'group', 'The other side will rely on'));
+      const theirs = make('ul', 'checklist');
+      for (const item of other) {
+        theirs.appendChild(line('item item--other', 'other', item.label || item.relies_on, '',
+          (row) => window.NmBrainSources.showContent(item.label || item.relies_on, renderOtherSideItem(item, dispute, caseHolder(dispute)),
+            row, false, `The other side will rely on · ${place}`)));
+      }
+      section.appendChild(theirs);
     }
     return section;
   }
@@ -4661,13 +4868,7 @@ function renderChecklistItem(item, dispute) {
   out.push(block(item.status === 'in_hand' ? 'What shows it' : item.status === 'not_available' ? 'What you said'
     : 'Where it stands', ...stands));
   if (item.status !== 'in_hand') {
-    const fill = (words) => {
-      const box = $('message');
-      box.value = box.value.trim() ? `${box.value.trim()}\n${words}` : words;
-      box.dispatchEvent(new Event('input', { bubbles: true }));
-      sizeComposer();
-      box.focus();
-    };
+    const fill = startMessage;
     const actions = make('div', 'actions');
     const tell = make('button', 'act primary', 'Tell NM about this');
     tell.type = 'button';
@@ -4782,7 +4983,7 @@ function renderDisputeDetail(dispute, board) {
     out.push(part('Time limits', ul));
   }
   if (dispute.checklist && 'case' in dispute.checklist) {
-    out.push(part('What makes the case stronger', ...(dispute.checklist.case ? renderCaseBlock(dispute.checklist.case)
+    out.push(part('What makes the case stronger', ...(dispute.checklist.case ? renderCaseBlock(dispute.checklist.case, caseHolder(dispute))
       : [make('p', 'check-none', 'NM could not set out what would make this case stronger when it last answered.')])));
   }
   const facts = (dispute.fact_ids || []).map((id) => board.facts.find((fact) => fact.id === id)).filter(Boolean);
