@@ -1,0 +1,490 @@
+{
+ "board": [
+  "p.board-lede",
+  [
+   "p.legend",
+   [
+    [
+     "span.legend-entry",
+     [
+      "span.st.st--in_hand",
+      "span"
+     ]
+    ],
+    [
+     "span.legend-entry",
+     [
+      "span.st.st--coming_or_unclear",
+      "span"
+     ]
+    ],
+    [
+     "span.legend-entry",
+     [
+      "span.st.st--not_given",
+      "span"
+     ]
+    ]
+   ]
+  ],
+  [
+   "section.board-disputes",
+   [
+    [
+     "section.dispute",
+     [
+      "button.dtitle \"The boundary dispute\"",
+      [
+       "p.dmeta",
+       [
+        "span.chip.deadline.open",
+        "span.count",
+        "span.count"
+       ]
+      ],
+      "p.group",
+      [
+       "ul.checklist",
+       [
+        [
+         "li",
+         [
+          [
+           "button.item.item--in_hand \"Possession for twelve years · Shown by the papers\"",
+           [
+            "span.st.st--in_hand",
+            [
+             "span.item-words",
+             [
+              "span.t.short",
+              "span.sr"
+             ]
+            ]
+           ]
+          ]
+         ]
+        ],
+        [
+         "li",
+         [
+          [
+           "button.item.item--coming_or_unclear \"Notice before the suit · Shown only weakly\"",
+           [
+            "span.st.st--coming_or_unclear",
+            [
+             "span.item-words",
+             [
+              "span.t.short",
+              "span.sr"
+             ]
+            ]
+           ]
+          ]
+         ]
+        ]
+       ]
+      ],
+      "p.group",
+      [
+       "ul.checklist",
+       [
+        [
+         "li",
+         [
+          [
+           "button.item.item--other \"Their later entry\"",
+           [
+            "span.st.st--other",
+            [
+             "span.item-words",
+             [
+              "span.t.short"
+             ]
+            ]
+           ]
+          ]
+         ]
+        ]
+       ]
+      ]
+     ]
+    ]
+   ]
+  ],
+  "button.board-line \"Timeline of your papers (1 event)\"",
+  "button.board-line \"Figures two copies read differently (1)\"",
+  "button.board-line \"Set aside after checking (1)\"",
+  "button.board-line \"How NM understood this matter\""
+ ],
+ "pane": [
+  {
+   "title": "The boundary dispute",
+   "kind": "Dispute",
+   "content": [
+    "p.source-where",
+    [
+     "p.dmeta",
+     [
+      "span.chip.deadline.open"
+     ]
+    ],
+    [
+     "section.detail-section",
+     [
+      "h3.detail-h \"Time limits\"",
+      [
+       "ul.detail-list",
+       [
+        [
+         "li",
+         [
+          "p.detail-question",
+          "p.board-meta"
+         ]
+        ]
+       ]
+      ]
+     ]
+    ],
+    [
+     "section.detail-section",
+     [
+      "h3.detail-h \"What makes the case stronger\"",
+      "h4.board-h \"What the law requires\"",
+      [
+       "ul.case-list",
+       [
+        [
+         "li.case-element",
+         [
+          [
+           "p.case-head",
+           [
+            "span.st.st--in_hand",
+            "span.t"
+           ]
+          ],
+          "p.board-meta",
+          "p",
+          "blockquote.detail-words",
+          [
+           "p.req-law",
+           [
+            "button.cite \"s.4, Imagined Relief Act, 1907\""
+           ]
+          ],
+          [
+           "p.board-meta",
+           [
+            "button.cite \"entries.pdf, page 2\""
+           ]
+          ]
+         ]
+        ],
+        [
+         "li.case-element",
+         [
+          [
+           "p.case-head",
+           [
+            "span.st.st--coming_or_unclear",
+            "span.t"
+           ]
+          ],
+          "p.board-meta",
+          "p",
+          "p.board-meta",
+          "p.board-meta"
+         ]
+        ]
+       ]
+      ],
+      "h4.board-h \"What to get\"",
+      [
+       "ul.board-list",
+       [
+        [
+         "li",
+         [
+          "p.detail-question",
+          "p.board-meta",
+          "p",
+          "p.board-meta"
+         ]
+        ]
+       ]
+      ],
+      "h4.board-h \"What the other side will rely on\"",
+      [
+       "ul.board-list",
+       [
+        [
+         "li",
+         [
+          "p.detail-question",
+          "p"
+         ]
+        ]
+       ]
+      ]
+     ]
+    ],
+    "p.board-lede"
+   ]
+  },
+  {
+   "title": "Possession for twelve years",
+   "kind": "What the law requires · The boundary dispute",
+   "content": [
+    [
+     "p.req-status.item--in_hand",
+     [
+      "span.st.st--in_hand",
+      "span"
+     ]
+    ],
+    "p.dispute-why",
+    [
+     "section.req-block",
+     [
+      "h4 \"Why it is needed\"",
+      "p",
+      [
+       "p.req-law",
+       [
+        "button.cite \"s.4, Imagined Relief Act, 1907\""
+       ]
+      ]
+     ]
+    ],
+    [
+     "section.req-block",
+     [
+      "h4 \"Where it stands\"",
+      [
+       "p.board-meta",
+       [
+        "button.cite \"entries.pdf, page 2\""
+       ]
+      ]
+     ]
+    ]
+   ]
+  },
+  {
+   "title": "Notice before the suit",
+   "kind": "What the law requires · The boundary dispute",
+   "content": [
+    [
+     "p.req-status.item--coming_or_unclear",
+     [
+      "span.st.st--coming_or_unclear",
+      "span"
+     ]
+    ],
+    [
+     "section.req-block",
+     [
+      "h4 \"Why it is needed\"",
+      "p",
+      "p.board-meta"
+     ]
+    ],
+    [
+     "section.req-block",
+     [
+      "h4 \"Where it stands\"",
+      "p.board-meta"
+     ]
+    ],
+    [
+     "section.req-block",
+     [
+      "h4 \"What to get\"",
+      [
+       "ul.board-list",
+       [
+        [
+         "li",
+         [
+          "p.detail-question",
+          "p",
+          "p.board-meta"
+         ]
+        ]
+       ]
+      ]
+     ]
+    ],
+    [
+     "div.actions",
+     [
+      "button.act.primary \"Tell NM about this\"",
+      "button.act.ghost \"Not available\""
+     ]
+    ]
+   ]
+  },
+  {
+   "title": "Their later entry",
+   "kind": "The other side will rely on · The boundary dispute",
+   "content": [
+    "p.dispute-why",
+    [
+     "section.req-block",
+     [
+      "h4 \"What answers it\"",
+      "p"
+     ]
+    ],
+    [
+     "div.actions",
+     [
+      "button.act.primary \"Tell NM what answers it\""
+     ]
+    ]
+   ]
+  },
+  {
+   "title": "Timeline of your papers (1 event)",
+   "kind": "Matter board",
+   "content": [
+    "p.board-lede",
+    "h3.board-h \"Papers read\"",
+    [
+     "ul.board-list",
+     [
+      "li"
+     ]
+    ],
+    "h3.board-h \"In date order\"",
+    [
+     "ul.board-list.board-events",
+     [
+      [
+       "li.board-event",
+       [
+        "span.board-when",
+        "span",
+        "span.board-status"
+       ]
+      ]
+     ]
+    ]
+   ]
+  },
+  {
+   "title": "Figures two copies read differently (1)",
+   "kind": "Matter board",
+   "content": [
+    "p.board-lede",
+    [
+     "ul.board-list",
+     [
+      [
+       "li",
+       [
+        "span.board-status"
+       ]
+      ]
+     ]
+    ]
+   ]
+  },
+  {
+   "title": "Set aside after checking (1)",
+   "kind": "Matter board",
+   "content": [
+    "p.board-lede",
+    [
+     "ul.board-list",
+     [
+      "li"
+     ]
+    ]
+   ]
+  },
+  {
+   "title": "How NM understood this matter",
+   "kind": "Matter board",
+   "content": [
+    "p.source-where",
+    "p.board-lede",
+    "h3.board-h \"Facts, as you gave them\"",
+    [
+     "p.board-fact",
+     [
+      "span.board-certainty.reported",
+      "span"
+     ]
+    ],
+    "h3.board-h \"Your standing instructions\"",
+    [
+     "ul.board-list",
+     [
+      "li"
+     ]
+    ],
+    "h3.board-h \"Points NM’s own check raised\"",
+    [
+     "ul.board-list",
+     [
+      "li"
+     ]
+    ]
+   ]
+  }
+ ],
+ "passage": {
+  "kind": "Held law",
+  "title": "Imagined Relief Act, 1907",
+  "body": [
+   "p.source-where",
+   "p.source-role",
+   [
+    "div.brain-source-text.passage",
+    [
+     "mark"
+    ]
+   ],
+   "button.source-expand \"Read the whole Act\"",
+   [
+    "details.how-checked",
+    [
+     "summary \"How NM checked this\"",
+     [
+      "dl.checked-plainly",
+      [
+       "dt",
+       "dd",
+       "dt",
+       "dd",
+       "dt",
+       "dd"
+      ]
+     ]
+    ]
+   ]
+  ]
+ },
+ "whole": {
+  "kind": "Whole Act",
+  "title": "Imagined Relief Act, 1907",
+  "body": [
+   [
+    "div.document-flow.whole-law",
+    [
+     "div.page-mark",
+     "div.document-text",
+     "div.page-mark",
+     [
+      "div.document-text.here",
+      [
+       "mark"
+      ]
+     ]
+    ]
+   ]
+  ]
+ }
+}

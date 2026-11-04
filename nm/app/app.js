@@ -4256,6 +4256,9 @@ function renderPapersTogether(board, make) {
   return [fold.node];
 }
 
+// FROZEN (owner, 4 Nov 2026; plan AN.39, D60): the UI and structure of the matter board and of the reading pane change only with
+// the owner's explicit approval, even as a by-product of other work. tests/js/board_and_pane_frozen.mjs pins them; a failure
+// there means ask the owner first.
 // The board as NM understood the matter from the advocate's own words. Nothing on it is
 // presented as established: facts carry the certainty they were given with. The disputes
 // come first, under the marks' legend; how NM understood the matter, the facts, the

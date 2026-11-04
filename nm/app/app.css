@@ -435,6 +435,8 @@ button.board-card:focus-visible { outline: 2px solid var(--accent); outline-offs
 .item .sub { display: block; font-size: 0.76rem; color: var(--ink-3); }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .check-none { margin: 0; font-size: 0.82rem; color: var(--ink-3); }
+/* FROZEN (owner, 4 Nov 2026; plan AN.39, D60): the matter board's and the reading pane's look changes only with the owner's
+   explicit approval; tests/js/board_and_pane_frozen.mjs pins their structure. */
 /* THE BOARD IN SHORT PHRASES (plan AN.39, D57): a point saved before it had a short name shows its own words on two lines, the
    whole in the reading pane; what the other side will rely on is marked by a quiet square; the board's other parts are one line
    each, opening in the pane. */
