@@ -40,11 +40,11 @@ drafts and reviews (validate).
 from __future__ import annotations
 
 import threading
-from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 
 from nm.core_engine import (
-    answer_sources, calculation, case_strength, research, response_authorities, response_review, response_writer,
+    answer_sources, calculation, case_strength, replay_scope, research, response_authorities, response_review,
+    response_writer,
 )
 from nm.core_engine.calls import (
     ALLOWANCE, CONFLICT_PURPOSE, EDIT_ALLOWANCE, REVIEW_PURPOSE, SECTION_ALLOWANCE, SHARED_ALLOWANCE, CorrectionUnavailable,
@@ -1002,7 +1002,7 @@ class _Answering:
         scope, researched = f"s{index}", self.researched.part(index)
         cased = self.researched.contract in research.NAMED_LAW
         dispute = self._understood(index) if cased else None
-        with ThreadPoolExecutor(max_workers=1) as beside:
+        with replay_scope.Pool(max_workers=1) as beside:
             making = (beside.submit(case_strength.assess, self.calls, self.context, researched[0], researched[1], dispute)
                       if dispute is not None else None)
             written = self._section(index, scope, researched)
@@ -1152,7 +1152,7 @@ def answer(calls, context, record, sources, *, interpretation, execution, worked
             publish()
         return saved
     # Each section starts writing as soon as its own research is ready (step 4).
-    with ThreadPoolExecutor(max_workers=max(1, min(8, len(indices)))) as pool:
+    with replay_scope.Pool(max_workers=max(1, min(8, len(indices)))) as pool:
         sections = list(pool.map(section, indices))
     if later is not None and "version" in waited:
         context_now, touched = later.since(waited["version"])
@@ -1163,7 +1163,7 @@ def answer(calls, context, record, sources, *, interpretation, execution, worked
                     if touched is None or layout[index]["dispute_id"] in touched]
             if redo:
                 answering.report("revising")
-                with ThreadPoolExecutor(max_workers=max(1, min(8, len(redo)))) as pool:
+                with replay_scope.Pool(max_workers=max(1, min(8, len(redo)))) as pool:
                     rewritten = list(pool.map(lambda position: again.section(indices[position]), redo))
                 for position, saved in zip(redo, rewritten):
                     sections[position] = saved
@@ -1187,7 +1187,7 @@ def answer(calls, context, record, sources, *, interpretation, execution, worked
         owners = _owners(sections, conflicts)
         if owners:
             answering.report("revising")
-            with ThreadPoolExecutor(max_workers=max(1, min(8, len(owners)))) as pool:
+            with replay_scope.Pool(max_workers=max(1, min(8, len(owners)))) as pool:
                 edits = list(pool.map(lambda position: answering.edit(sections[position], conflicts, owners[position]),
                                       owners))
             for position, edit in zip(owners, edits):

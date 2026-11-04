@@ -120,3 +120,55 @@ def test_a_turns_preparation_is_one_turns_scope_closed_before_the_check_made_at_
     response = run(FileMatterStore(tmp_path, key="synthetic-turn-fixture"), through_turns(Scripted()))
     assert response["committed"] == "committed"
     assert seen == ["opened", "closed", "checked"]
+
+def faulty_first(round_, payload):
+    """A section the review sends back once, so that it is written, checked and shown more than once."""
+    from tests.test_core_answer_sections import paragraph
+    return [paragraph("summary", "UNSUPPORTED claim." if round_ == 1 else "In short for D2."),
+            paragraph("next_step", f"Take the next step for D2 (round {round_}).")]
+
+
+def validated_while_answering(tmp_path, monkeypatch):
+    """Each research validation one turn of two disputes makes before the check made at saving, by the identities it was made
+    from; and how many times the turn showed more of its answer."""
+    from nm.core_engine import research, turn
+    from nm.shared.store_file_store import FileMatterStore
+    from tests.test_core_answer_sections import Scripted, through_turns
+    from tests.test_core_turn import run
+    checking, made = {"now": False}, []
+    original_check, original_validate = turn.validate_activity, research._validate
+
+    def check(*args):
+        checking["now"] = True
+        try:
+            return original_check(*args)
+        finally:
+            checking["now"] = False
+
+    def validate(record, plan, context):
+        if not checking["now"]:
+            made.append((id(record), id(plan), id(context)))
+        return original_validate(record, plan, context)
+    monkeypatch.setattr(turn, "validate_activity", check)
+    monkeypatch.setattr(research, "_validate", validate)
+    shown = []
+    response = run(FileMatterStore(tmp_path, key="synthetic-turn-fixture"), through_turns(Scripted({"D2": faulty_first})),
+                   progress=lambda stage, **detail: shown.append(stage))
+    monkeypatch.setattr(turn, "validate_activity", original_check)
+    monkeypatch.setattr(research, "_validate", original_validate)
+    assert response["committed"] == "committed"
+    return made, shown.count("shown")
+
+
+def test_a_turn_validates_each_research_record_once_however_often_it_writes_checks_and_shows(tmp_path, monkeypatch):
+    made, shown = validated_while_answering(tmp_path, monkeypatch)
+    assert shown >= 2, "the answer was shown more than once"
+    assert len(made) == len(set(made)), "a research record validated twice in one turn"
+
+
+def test_without_the_turns_scope_the_same_research_would_be_validated_again_and_again(tmp_path, monkeypatch):
+    import contextlib
+    with_scope = len(validated_while_answering(tmp_path / "with", monkeypatch)[0])
+    monkeypatch.setattr(replay_scope, "turn", contextlib.nullcontext)
+    without = len(validated_while_answering(tmp_path / "without", monkeypatch)[0])
+    assert without > 3 * with_scope
