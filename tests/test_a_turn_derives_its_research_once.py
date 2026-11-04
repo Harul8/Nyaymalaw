@@ -92,3 +92,31 @@ def test_a_pool_carries_the_turns_scope_into_its_threads_and_threads_derive_a_th
     assert log == ["made", "made"]
     assert all(result is results[0] for result in results)
 
+
+# --- the turn (piece 41b) and its answering (piece 41c) -------------------------------------------------------------------------
+
+def test_a_turns_preparation_is_one_turns_scope_closed_before_the_check_made_at_saving(tmp_path, monkeypatch):
+    import contextlib
+
+    from nm.core_engine import turn
+    from nm.shared.store_file_store import FileMatterStore
+    from tests.test_core_answer_sections import Scripted, through_turns
+    from tests.test_core_turn import run
+    seen, opened = [], replay_scope.turn
+
+    @contextlib.contextmanager
+    def watched():
+        seen.append("opened")
+        with opened():
+            yield
+        seen.append("closed")
+    original_check = turn.validate_activity
+
+    def check(*args):
+        seen.append("checked")
+        return original_check(*args)
+    monkeypatch.setattr(replay_scope, "turn", watched)
+    monkeypatch.setattr(turn, "validate_activity", check)
+    response = run(FileMatterStore(tmp_path, key="synthetic-turn-fixture"), through_turns(Scripted()))
+    assert response["committed"] == "committed"
+    assert seen == ["opened", "closed", "checked"]

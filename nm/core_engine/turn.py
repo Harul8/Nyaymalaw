@@ -16,8 +16,6 @@ from copy import deepcopy
 from dataclasses import replace
 from datetime import datetime, timezone
 
-from concurrent.futures import ThreadPoolExecutor
-
 from nm.core_engine import answer_sections, answer_sources, calculation, checklist, estimates, questions, research
 from nm.core_engine import reasoning, replay_scope, response_rendering, response_writer
 from nm.core_engine import understanding
@@ -137,7 +135,7 @@ def understood(calls, context, searcher, report, held_acts=None):
     the calculation record."""
     interpreted, plan = _interpreted(calls, context, report)
     # Time limits are worked out beside the search, only where research is needed.
-    with ThreadPoolExecutor(max_workers=1) as pool:
+    with replay_scope.Pool(max_workers=1) as pool:
         working = (pool.submit(calculation.work_out, calls, context, held_acts)
                    if held_acts is not None and _needs_research(plan) else None)
         record = research.retrieve(plan, searcher, context, model=calls, progress=report)
@@ -161,7 +159,7 @@ def _interpreted(calls, context, report, early=None):
         decided.wait()
         return verdict.get("restrictions")
 
-    with ThreadPoolExecutor(max_workers=1) as beside:
+    with replay_scope.Pool(max_workers=1) as beside:
         planning = beside.submit(calls.checked, "core_research_plan",
                                  lambda: research.plan(calls, context, progress=report, wanted=wanted,
                                                        restrictions=restricted, early=early))
@@ -227,7 +225,16 @@ def prepare(model, context, searcher, *, case_index=None, provision_reader=None,
     shows more, its elements so far and the activity they come from (its sections done, the
     parts still being written under "waiting"). ask (plan AN.37): given the interpretation, the plan
     and the context, asks the advocate what only they can settle and returns its questions.Asking once
-    the answers or the defaults stand, or None where nothing is asked."""
+    the answers or the defaults stand, or None where nothing is asked.
+
+    The whole preparation is one turn's scope (plan AN.41, step 1): what is derived from its
+    research is derived once, by every section, check and drawing of what is shown."""
+    with replay_scope.turn():
+        return _prepare(model, context, searcher, case_index=case_index, provision_reader=provision_reader,
+                        progress=progress, held_acts=held_acts, shown=shown, ask=ask)
+
+
+def _prepare(model, context, searcher, *, case_index, provision_reader, progress, held_acts, shown, ask):
     report = _reporter(progress)
     calls = model if isinstance(model, TurnCalls) else TurnCalls(model)
     report("understanding")
@@ -251,7 +258,7 @@ def prepare(model, context, searcher, *, case_index=None, provision_reader=None,
     # Step 4 (owner, 21 Oct 2026; P26 as first decided): each dispute is researched as its own
     # part, and its section is written as soon as that part is ready; the time limits are
     # worked out beside the search, only where research is needed.
-    with ThreadPoolExecutor(max_workers=1) as pool:
+    with replay_scope.Pool(max_workers=1) as pool:
         working = (pool.submit(calculation.work_out, calls, context, held_acts)
                    if held_acts is not None and _needs_research(plan) else None)
         parts = research.retrieve_parts(plan, searcher, context, model=calls, progress=report, started=started,
