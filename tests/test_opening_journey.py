@@ -39,7 +39,7 @@ def test_first_blocked_chat_stays_with_its_saved_matter(page, journey):
     assert response.status == 200
     answer = response.json()
     assert answer['blocked'] is True, 'the witness must exercise a real opening screen'
-    page.wait_for_function("() => document.getElementById('send').textContent === 'Send'")
+    page.wait_for_function("() => document.getElementById('send').dataset.state === 'send'")
     assert page.is_hidden('#intake'), 'a reply sent an existing matter back to its opening form'
     assert page.is_visible('#composer') and page.is_visible('#thread')
     assert page.get_attribute('#pane-advise', 'data-matter-id') == mid
@@ -64,7 +64,7 @@ def test_a_second_blank_opening_is_a_new_matter_not_the_last_one(page, journey):
     said = 'Synthetic brief on the first blank matter only.'
     page.fill('#message', said)
     page.click('#send')
-    page.wait_for_function("() => document.getElementById('send').textContent === 'Send'")
+    page.wait_for_function("() => document.getElementById('send').dataset.state === 'send'")
 
     _start_matter(page)
     page.click('#in-go')

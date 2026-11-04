@@ -14,7 +14,10 @@ function between(from, to) {
 }
 
 class Element {
-  constructor(tag) { this.tag = tag; this.children = []; this.attributes = {}; this.listeners = {}; this._text = ''; this.hidden = false; }
+  constructor(tag) {
+    this.tag = tag; this.children = []; this.attributes = {}; this.listeners = {}; this._text = ''; this.hidden = false;
+    this.value = ''; this.dataset = {};
+  }
   set textContent(value) { this._text = String(value); this.children = []; }
   get textContent() { return this._text + this.children.map((child) => child.textContent).join(''); }
   append(...nodes) { this.children.push(...nodes); }
@@ -33,8 +36,9 @@ function harness(replies) {
   const context = vm.createContext({
     $: get, document: { createElement: (tag) => new Element(tag) }, encodeURIComponent,
     setPlusMenu() {}, loadUsage() {},
-    // Plan AN.40: no message waits for its files here (tests/js/send_when_read.mjs covers that).
-    heldSend: null,
+    // Plan AN.40: no message waits for its files here (tests/js/send_when_read.mjs covers that); plan AN.42: no answer is being
+    // worked on and nothing waits above the box (tests/js/send_ring_and_queue.mjs covers those).
+    heldSend: null, activeDelivery: null, state: { matterId: null }, usageUsedUp: () => false, renderQueued() {},
     setTimeout: (callback, ms) => { delays.push(ms); callback(); return 0; },
     api: async (url, options) => {
       requests.push({ url, options, shown: get('attachments').children[0] ? get('attachments').children[0].textContent : '' });

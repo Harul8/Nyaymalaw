@@ -146,7 +146,7 @@ def test_send_consumes_only_the_submitted_draft_before_the_response(page, journe
     else:
         page.get_by_role("button", name="Cancel", exact=True).click()
         held[0].abort()
-    page.wait_for_function("document.getElementById('send').textContent === 'Send'")
+    page.wait_for_function("document.getElementById('send').dataset.state === 'send'")
     assert page.locator("#message").input_value() == message
     assert page.locator("#thread .brief").last.inner_text() == message
     if outcome != "reply":
@@ -190,7 +190,7 @@ def test_cleared_composer_recovers_receipt_and_retries_exactly_once_after_reload
         assert page.get_by_role("button", name="Send this brief again", exact=True).count() == 0
     else:
         page.get_by_role("button", name="Send this brief again", exact=True).click()
-        page.wait_for_function("document.getElementById('send').textContent === 'Send'")
+        page.wait_for_function("document.getElementById('send').dataset.state === 'send'")
         assert len(calls) == 2 and calls[0] == calls[1]
     assert page.locator("#message").input_value() == BRIEF
     assert not page.errors

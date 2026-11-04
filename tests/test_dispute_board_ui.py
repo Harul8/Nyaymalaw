@@ -21,6 +21,8 @@ PAGE_TESTS = [
     "board_and_pane_frozen.mjs",
     # Plan AN.40: a message sent while its files are read waits for them and goes by itself.
     "send_when_read.mjs",
+    # Plan AN.42 (D74-D77): Send as a round arrow and a turning ring; what is written meanwhile waits above the box.
+    "send_ring_and_queue.mjs",
 ]
 #: Run, with the cases it is given, by tests/test_the_screen_never_folds_a_disclosure.py.
 RUN_ELSEWHERE = {"render_turn_partition.mjs"}

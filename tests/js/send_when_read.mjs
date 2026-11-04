@@ -17,7 +17,7 @@ function between(from, to) {
 class Element {
   constructor(tag) {
     this.tag = tag; this.children = []; this.attributes = {}; this.listeners = {}; this._text = ''; this.hidden = false;
-    this.parentElement = null; this.value = ''; this.disabled = false;
+    this.parentElement = null; this.value = ''; this.disabled = false; this.dataset = {};
   }
   set textContent(value) { this._text = String(value); this.children = []; }
   get textContent() { return this._text + this.children.map((child) => child.textContent).join(''); }
@@ -30,7 +30,7 @@ class Element {
   replaceChildren(...nodes) { this._text = ''; this.children = []; this.append(...nodes); }
   setAttribute(name, value) { this.attributes[name] = value; }
   addEventListener(event, handler) { this.listeners[event] = handler; }
-  click() { if (this.listeners.click) this.listeners.click(); }
+  click() { if (this.listeners.click) this.listeners.click({ preventDefault() {} }); }
 }
 
 const summary = (name, changes = {}) => ({ document_ref: `doc_${name}`, name, format: 'pdf', state: 'read',
@@ -52,7 +52,7 @@ function harness() {
     setTimeout: (callback) => { callback(); return 0; },
     api: async () => { const reply = replies.shift(); if (reply instanceof Error) throw reply; return typeof reply === 'function' ? reply() : reply; },
     state: { matterId: null, matterReady: true, turns: [], intake: null, disputeFocus: null, matterVersion: 0, turnChoice: null },
-    activeDelivery: null, activeIntent: intent, heldSend: null, holdCancel: null, usage: null,
+    activeDelivery: null, activeIntent: intent, heldSend: null, usage: null, renderQueued() {},
     usageUsedUp: () => false, selectIntent() {}, snapshotIntent() {}, matchesIntake: () => true, newTurnId: () => 'turn_1',
     consumeComposer: (entry) => { if (get('message').value === entry.brief) get('message').value = ''; },
     deliver: async (entry) => { delivered.push(entry); },
@@ -72,7 +72,8 @@ function harness() {
   const attached = () => vm.runInContext('attachments', context);
   return { context, get, delivered, intent, scanning, attach, replies, attached };
 }
-const cancelOf = (get) => get('send').parentElement.children.find((node) => node.textContent === 'Cancel');
+// Plan AN.42 (D75): the ring is the way to let a waiting message go.
+const ringed = (get) => get('send').dataset.state === 'waiting';
 
 // Send pressed while a page is read: Send greyed with Cancel, the line says so, and nothing goes yet. The words the box holds when the
 // reading ends are what goes (D62), with the file, through the same send.
@@ -85,9 +86,9 @@ const cancelOf = (get) => get('send').parentElement.children.find((node) => node
   get('message').value = 'Please review the deed.';
   await context.send(get('message').value, { fromBox: true });
   assert.equal(delivered.length, 0, 'nothing goes while the file is read');
-  assert.equal(get('send').disabled, true);
-  assert.equal(get('send').textContent, 'Sends when read…');
-  assert.ok(cancelOf(get), 'Cancel beside the greyed Send');
+  assert.ok(ringed(get), 'Send is the turning ring');
+  assert.equal(get('send').disabled, false, 'the ring can be pressed');
+  assert.equal(get('send').attributes['aria-label'], 'Do not send: keep the words and files');
   assert.equal(get('attachments-status').textContent, 'Your message will go as soon as the files are read.');
   // Pressed again: still one message waiting.
   await context.send(get('message').value, { fromBox: true });
@@ -102,8 +103,7 @@ const cancelOf = (get) => get('send').parentElement.children.find((node) => node
   assert.equal(get('message').value, '', 'the box is taken, as a pressed Send takes it');
   assert.equal(attached().length, 0);
   assert.equal(get('send').disabled, false);
-  assert.equal(get('send').textContent, 'Send');
-  assert.equal(cancelOf(get), undefined, 'Cancel goes with the wait');
+  assert.equal(get('send').dataset.state, 'send', 'the arrow is back once the wait ends');
 }
 
 // A file that comes back not fully read (AI data sharing off): nothing goes, Send works again, and the line says which file and why.
@@ -122,7 +122,7 @@ const cancelOf = (get) => get('send').parentElement.children.find((node) => node
     'Not sent: scan.pdf could not be fully read. Remove it or read it again, then press Send.');
   assert.equal(get('message').value, 'Read this.', 'the words stay');
   assert.equal(get('send').disabled, false);
-  assert.equal(get('send').textContent, 'Send');
+  assert.equal(get('send').dataset.state, 'send');
 }
 
 // A file already read when Send was pressed is as the advocate saw it; only what was read meanwhile can stop the message.
@@ -143,7 +143,7 @@ const cancelOf = (get) => get('send').parentElement.children.find((node) => node
   assert.equal(delivered[0].documents.length, 2);
 }
 
-// Cancel: nothing goes when the reading ends, and the words and files stay.
+// The ring pressed: nothing goes when the reading ends, and the words and files stay.
 {
   const { context, get, delivered, scanning, attach, attached } = harness();
   const finish = scanning('deed.pdf');
@@ -151,9 +151,9 @@ const cancelOf = (get) => get('send').parentElement.children.find((node) => node
   await tick();
   get('message').value = 'Please review.';
   await context.send(get('message').value, { fromBox: true });
-  cancelOf(get).click();
+  get('send').click();
   assert.equal(get('attachments-status').textContent, 'Not sent. Your words and files are as they were.');
-  assert.equal(get('send').disabled, false);
+  assert.equal(get('send').dataset.state, 'send');
   finish();
   await uploading;
   await tick();
@@ -185,7 +185,7 @@ const cancelOf = (get) => get('send').parentElement.children.find((node) => node
   await tick();
   get('message').value = 'Typed meanwhile.';
   await context.send('My answers.');
-  cancelOf(get).click();
+  get('send').click();
   assert.equal(get('message').value, 'My answers.\n\nTyped meanwhile.');
   assert.equal(delivered.length, 0);
 }
@@ -205,7 +205,7 @@ const cancelOf = (get) => get('send').parentElement.children.find((node) => node
   assert.equal(delivered.length, 0);
   assert.equal(intent.text, 'My answers.');
   assert.equal(get('message').value, 'another draft');
-  assert.equal(get('send').textContent, 'Send');
+  assert.equal(get('send').dataset.state, 'send');
 }
 
 // A box emptied while waiting sends nothing; anything else that stops a pressed Send stops it, with today's words.

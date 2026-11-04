@@ -74,9 +74,8 @@ let outcomeReturn = 'register';
 let resetToken = null;
 let activeDelivery = null;
 let retiringSession = null;
-// A message waiting for its files to be read, and the Cancel beside its greyed Send (plan AN.40).
+// A message waiting for its files to be read (plan AN.40); Send is then a turning ring that lets it go (AN.42, D75).
 let heldSend = null;
-let holdCancel = null;
 
 // In-memory work belongs to an advocate, workspace and file (or one unsaved
 // opening), not to the composer DOM. The immutable pending request belongs to
@@ -2666,30 +2665,6 @@ function renderTurn(entry) {
   // page shows the stage it has reached, the time so far and the stages done.
   if (!entry.answer) {
     const progress = entry.progress;
-    // WHAT WAS ADDED WHILE THIS QUESTION IS WORKED ON (owner decision, 15 Oct 2026),
-    // sent as the next message as soon as this answer is saved; each can be removed.
-    const queued = Array.isArray(entry.context && entry.context.queued) ? entry.context.queued : [];
-    const waiting = queued.length ? document.createElement('div') : null;
-    if (waiting) {
-      waiting.className = 'progress-queued';
-      const label = document.createElement('div');
-      label.className = 'progress-queued-label';
-      label.textContent = 'Added while working · sent as soon as this answer is ready';
-      waiting.appendChild(label);
-      queued.forEach((text, index) => {
-        const row = document.createElement('div');
-        row.className = 'queued-item';
-        const words = document.createElement('span');
-        words.textContent = text;
-        const remove = document.createElement('button');
-        remove.type = 'button';
-        remove.className = 'ghost';
-        remove.textContent = 'Remove';
-        remove.addEventListener('click', () => { queued.splice(index, 1); repaint(); });
-        row.append(words, remove);
-        waiting.appendChild(row);
-      });
-    }
     // WHAT THE ANSWER HAS SHOWN SO FAR (owner decisions P26-P27, 19 Oct 2026): each part as
     // it passes its checks, saved with the conversation as it is shown.
     const soFar = Array.isArray(entry.shownElements) && entry.shownElements.length
@@ -2700,7 +2675,6 @@ function renderTurn(entry) {
       pending.textContent = 'Preparing a response…';
       wrap.appendChild(pending);
       if (soFar) wrap.appendChild(soFar);
-      if (waiting) wrap.appendChild(waiting);
       return wrap;
     }
     const took = (seconds) => {
@@ -2736,7 +2710,6 @@ function renderTurn(entry) {
       }
       box.appendChild(list);
     }
-    if (waiting) box.appendChild(waiting);
     if (progress.asking) {
       // Plan AN.37: NM has asked something only the advocate can settle; the window opens from here too.
       const asked = document.createElement('div');
@@ -5430,21 +5403,11 @@ async function deliver(entry) {
   entry.attempt = attempt;
   const current = () => entry.attempt === attempt && ownsIntent(intent)
     && attempt.session === state.sessionGeneration;
-  const btn = $('send');
-  // Writing remains available while delivery is in flight; only Send is held.
-  btn.disabled = true;
-  btn.textContent = 'Working…';
-  const cancel = document.createElement('button');
-  cancel.className = 'ghost cancel';
-  cancel.textContent = 'Cancel';
+  // Writing remains available while delivery is in flight; Send is the turning ring until words are typed (plan AN.42, D74, D76).
   const stop = new AbortController();
   const delivery = { controller: stop, entry };
   activeDelivery = delivery;
-  cancel.addEventListener('click', () => {
-    entry.cancelled = true;
-    stop.abort();
-  });
-  btn.parentElement.insertBefore(cancel, btn);
+  paintSend();
   $('message').placeholder = COMPOSER_WAITING;
   entry.state = 'sending';
   entry.error = null;
@@ -5545,11 +5508,8 @@ async function deliver(entry) {
   } finally {
     if (watcher) watcher.stop();
     entry.progress = null;
-    cancel.remove();
     if (activeDelivery === delivery) {
       activeDelivery = null;
-      btn.disabled = false;
-      btn.textContent = 'Send';
       $('message').placeholder = COMPOSER_PROMPT;
       updateWorkspace();
       // An answer, made or not, may have used some of the allowance (P53).
@@ -5561,35 +5521,119 @@ async function deliver(entry) {
 
 // ADD TO A QUESTION WHILE IT IS WORKED ON (owner decision, 15 Oct 2026), as in
 // Cursor: what the advocate sends meanwhile is queued on the conversation the
-// question belongs to, shown under the progress, and sent as the next message once
-// the answer is saved. If the answer fails, it returns to the message box instead.
+// question belongs to and sent as the next message once the answer is saved. If the
+// answer fails, it returns to the message box instead.
+// PLAN AN.42 (D77, owner, 4 Nov 2026): each waits as a line just above the message box, with the files attached to it - their
+// upload and reading go on - and Edit (back into the box, above what is typed there, with its files) and Discard. What waits goes
+// once, together, when the answer is done (D80).
 const COMPOSER_PROMPT = 'Tell NM what you need, ask a question, or add material.';
 const COMPOSER_WAITING = 'Add to this question; it is sent as soon as the answer is ready (Enter).';
 function queueAddition(text) {
   const intent = activeDelivery && activeDelivery.entry.context;
   if (!intent || !text.trim()) return;
+  const blocked = attachmentsBlockSend({ reading: false });
+  if (blocked) { $('attachments-status').textContent = blocked; return; }
   if (!Array.isArray(intent.queued)) intent.queued = [];
-  intent.queued.push(text);
+  const files = attachments.splice(0);
+  files.forEach((item) => queuedFiles.add(item));
+  intent.queued.push({ text, files });
   $('message').value = '';
   intent.text = '';
   sizeComposer();
-  repaint();
+  renderAttachments();
+}
+
+// The messages that waited, as one: their words, and their files back with the message box's.
+function unqueue(items) {
+  items.forEach((item) => item.files.forEach((file) => queuedFiles.delete(file)));
+  return { words: items.map((item) => item.text).join('\n\n'), files: items.flatMap((item) => item.files) };
 }
 
 function releaseQueued(entry) {
   const intent = entry.context;
-  const queued = intent && Array.isArray(intent.queued) ? intent.queued.splice(0) : [];
-  if (!queued.length) return;
+  if (!intent || !Array.isArray(intent.queued) || !intent.queued.length) return;
+  // Another conversation is open: what waits stays on its own, with Edit and Discard, until the advocate comes back to it.
+  if (!ownsIntent(intent)) return;
+  const { words, files } = unqueue(intent.queued.splice(0));
+  const alone = !attachments.length;
+  attachments.push(...files);
   // Plan AN.40 (D64): files still being read hold the words, which go by themselves once they are read.
-  if (['committed', 'replayed'].includes(entry.state) && ownsIntent(intent) && !activeDelivery && !heldSend
+  if (['committed', 'replayed'].includes(entry.state) && alone && !activeDelivery && !heldSend
       && !attachmentsBlockSend({ reading: false })) {
-    send(queued.join('\n\n'));
+    renderAttachments();
+    send(words);
     return;
   }
   const box = $('message');
-  box.value = [...queued, box.value].filter((text) => text.trim()).join('\n\n');
+  box.value = [words, box.value].filter((text) => text.trim()).join('\n\n');
   intent.text = box.value;
   sizeComposer();
+  renderAttachments();
+}
+
+function editQueued(intent, item) {
+  intent.queued = intent.queued.filter((other) => other !== item);
+  const { words, files } = unqueue([item]);
+  const box = $('message');
+  box.value = [words, box.value].filter((text) => text.trim()).join('\n\n');
+  intent.text = box.value;
+  attachments.push(...files);
+  sizeComposer();
+  renderAttachments();
+  box.focus();
+}
+
+function discardQueued(intent, item) {
+  intent.queued = intent.queued.filter((other) => other !== item);
+  unqueue([item]);
+  paintSend();
+}
+
+function queuedFilesSaid(files) {
+  if (!files.length) return '';
+  const reading = files.filter((item) => READING_STATES.includes(item.status)).length;
+  const unusable = files.filter((item) => ['held', 'failed'].includes(item.status)).length;
+  const count = (n, what) => `${n} ${what}${n === 1 ? '' : 's'}`;
+  if (unusable) return `${count(unusable, 'file')} could not be used`;
+  if (reading) return `reading ${count(reading, 'file')}…`;
+  return count(files.length, 'file');
+}
+
+// What waits, a line each above the message box (D77): the conversation shown's own.
+function renderQueued() {
+  const host = $('queued');
+  const intent = activeIntent;
+  const items = intent && Array.isArray(intent.queued) ? intent.queued : [];
+  host.hidden = !items.length;
+  host.replaceChildren(...items.map((item) => {
+    const line = document.createElement('li');
+    const words = document.createElement('span');
+    words.className = 'queued-words';
+    words.textContent = item.text;
+    words.title = item.text;
+    line.appendChild(words);
+    const said = queuedFilesSaid(item.files);
+    if (said) {
+      const files = document.createElement('span');
+      files.className = 'queued-files';
+      files.textContent = said;
+      line.appendChild(files);
+    }
+    const edit = document.createElement('button');
+    edit.type = 'button';
+    edit.className = 'ghost';
+    edit.textContent = 'Edit';
+    edit.setAttribute('aria-label', 'Put this message back in the box to edit it');
+    edit.addEventListener('click', () => editQueued(intent, item));
+    const discard = document.createElement('button');
+    discard.type = 'button';
+    discard.className = 'ghost';
+    discard.textContent = 'Discard';
+    discard.setAttribute('aria-label', 'Discard this message');
+    discard.addEventListener('click', () => discardQueued(intent, item));
+    line.append(edit, discard);
+    return line;
+  }));
 }
 
 // WHAT A TURN IN PROGRESS IS DOING (owner decision, 14 Oct 2026). Only stage
@@ -5747,6 +5791,11 @@ const DOCUMENT_MAX_BYTES = 16 * 1024 * 1024;
 // (TURN_DOCUMENT_LIMIT in nm/app/api.py; a test holds the two equal), so the page keeps the first ones and says so.
 const DOCUMENTS_PER_MESSAGE = 10;
 let attachments = [];
+// Files that went into the queue with a message (plan AN.42, D77) are still wanted: their upload and reading go on.
+const queuedFiles = new Set();
+function wanted(item) {
+  return attachments.includes(item) || queuedFiles.has(item);
+}
 
 // The documents a message would carry: all but those held or failed, which cannot be sent.
 function documentsCarried() {
@@ -5906,6 +5955,7 @@ function renderAttachments() {
     return chip;
   }));
   if (!attachments.length) $('attachments-status').textContent = '';
+  paintSend();
 }
 
 async function attachFile(file) {
@@ -5951,7 +6001,7 @@ async function uploadAttachment(file) {
   const settle = (status, note = item.note) => {
     item.status = status;
     item.note = note;
-    if (attachments.includes(item)) renderAttachments();
+    if (wanted(item)) renderAttachments();
     releaseHeld();
   };
   const limit = isRecording(file) ? AUDIO_MAX_BYTES : DOCUMENT_MAX_BYTES;
@@ -5967,7 +6017,7 @@ async function uploadAttachment(file) {
   } catch (error) {
     return settle('failed', error.message);
   }
-  if (item.summary.state !== 'held' && item.summary.waiting_for_ai > 0 && attachments.includes(item)) {
+  if (item.summary.state !== 'held' && item.summary.waiting_for_ai > 0 && wanted(item)) {
     await readWaiting(item);
     return;
   }
@@ -5996,7 +6046,7 @@ async function relookAttachments() {
 async function readWaiting(item) {
   const settle = (status) => {
     item.status = status;
-    if (attachments.includes(item)) renderAttachments();
+    if (wanted(item)) renderAttachments();
   };
   item.note = '';
   item.progress = null;
@@ -6009,9 +6059,9 @@ async function readWaiting(item) {
     let job = await api(address, { method: 'POST' });
     while (job.state === 'reading') {
       item.progress = { done: job.done, total: job.total };
-      if (attachments.includes(item)) renderAttachments();
+      if (wanted(item)) renderAttachments();
       await new Promise((resolve) => setTimeout(resolve, READING_POLL_MS));
-      if (!attachments.includes(item)) return;
+      if (!wanted(item)) return;
       job = await api(address);
     }
     if (job.state === 'failed') throw Object.assign(new Error(job.error.why), { status: job.error.status });
@@ -6123,28 +6173,42 @@ function holdSend(message, options) {
   paintSend();
 }
 
-// Send as the page shows it: held while an answer is worked on, while a message waits for its files, while the file loads, and once
-// nothing is left of the allowance (AN.17: the words stay in the box).
+// Send as the page shows it (plan AN.42, D74-D76): a round up-arrow; a turning ring with a stop while an answer is worked on - until
+// words are typed or a file attached, which bring the arrow back to queue them - and while a message waits for its files (D75);
+// greyed while the file loads and once nothing is left of the allowance (AN.17: the words stay in the box). And what waits to be
+// sent, above the box (D77).
+const SEND_LOOKS = {
+  send: 'Send',
+  queue: 'Send: it waits until this answer is ready',
+  working: 'Stop waiting for this answer',
+  waiting: 'Do not send: keep the words and files',
+  loading: 'Loading file…',
+};
 function paintSend() {
   const button = $('send');
-  button.disabled = Boolean(activeDelivery || heldSend || (state.matterId && !state.matterReady) || usageUsedUp());
-  if (!activeDelivery) {
-    button.textContent = heldSend ? 'Sends when read…' : state.matterId && !state.matterReady ? 'Loading file…' : 'Send';
-  }
-  if (heldSend && !activeDelivery) {
-    if (!holdCancel) {
-      holdCancel = document.createElement('button');
-      holdCancel.type = 'button';
-      holdCancel.className = 'ghost cancel';
-      holdCancel.textContent = 'Cancel';
-      holdCancel.setAttribute('aria-label', 'Do not send this message when the files are read');
-      holdCancel.addEventListener('click', () => cancelHold('Not sent. Your words and files are as they were.'));
-    }
-    if (holdCancel.parentElement !== button.parentElement) button.parentElement.insertBefore(holdCancel, button);
-  } else if (holdCancel && holdCancel.parentElement) {
-    holdCancel.remove();
-  }
+  const writing = Boolean($('message').value.trim()) || attachments.length > 0;
+  const look = heldSend ? 'waiting' : activeDelivery ? (writing ? 'queue' : 'working')
+    : state.matterId && !state.matterReady ? 'loading' : 'send';
+  button.dataset.state = look === 'queue' || look === 'loading' ? 'send' : look;
+  button.setAttribute('aria-label', SEND_LOOKS[look]);
+  button.title = SEND_LOOKS[look];
+  button.disabled = look === 'loading' || (look === 'send' && usageUsedUp());
+  renderQueued();
 }
+
+// The ring pressed (D74, D75): a message waiting for its files is let go; while an answer is worked on, the page stops waiting for
+// it (as Cancel did; plan AN.42 D78 makes it stop NM's work too, after AN.41).
+$('send').addEventListener('click', (event) => {
+  const look = $('send').dataset.state;
+  if (look === 'waiting' && heldSend) {
+    event.preventDefault();
+    cancelHold('Not sent. Your words and files are as they were.');
+  } else if (look === 'working' && activeDelivery) {
+    event.preventDefault();
+    activeDelivery.entry.cancelled = true;
+    activeDelivery.controller.abort();
+  }
+});
 
 // The waiting message let go: words sent another way go back to its own conversation's message box; the box's own words never left it.
 function cancelHold(said = '') {
@@ -8939,8 +9003,7 @@ function showApplication(advocate, workspace, professionalApproval) {
   state.advocate = advocate.id;
   state.sessionGeneration += 1;
   loadTurnChoices();
-  $('send').disabled = false;
-  $('send').textContent = 'Send';
+  paintSend();
   state.workspace = workspace && workspace.id;
   // A different person or workspace must not inherit even an invisible draft.
   for (const [key, intent] of intentContexts) {
@@ -9406,6 +9469,8 @@ $('signout').addEventListener('click', signOut);
 });
 
 $('message').addEventListener('input', sizeComposer);
+// Words typed while NM works bring the arrow back (plan AN.42, D76).
+$('message').addEventListener('input', paintSend);
 $('draft-close').addEventListener('click', closeDraftRecovery);
 $('draft-dialog').addEventListener('cancel', (event) => {
   event.preventDefault(); closeDraftRecovery();

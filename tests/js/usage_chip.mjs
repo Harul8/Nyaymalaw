@@ -139,7 +139,7 @@ const LIMIT = 'You have run out of your usage limits. Please upgrade to continue
 }
 
 // The send button pauses with it.
-assert.ok(app.includes("button.disabled = Boolean(activeDelivery || heldSend || (state.matterId && !state.matterReady) || usageUsedUp());"));
+assert.ok(app.includes("button.disabled = look === 'loading' || (look === 'send' && usageUsedUp());"));
 // No price is shown in Dictation (O21, O22).
 assert.ok(!app.includes('a minute.`'), 'Dictation no longer shows a price');
 console.log('usage chip: ok');

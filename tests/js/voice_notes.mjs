@@ -11,7 +11,10 @@ const to = app.indexOf('// F-C-02. THE MIC', from);
 assert.ok(from >= 0 && to > from);
 
 class Element {
-  constructor() { this.children = []; this.listeners = {}; this._text = ''; this.hidden = false; this.attributes = {}; }
+  constructor() {
+    this.children = []; this.listeners = {}; this._text = ''; this.hidden = false; this.attributes = {}; this.value = '';
+    this.dataset = {};
+  }
   set textContent(value) { this._text = String(value); this.children = []; }
   get textContent() { return this._text + this.children.map((child) => child.textContent).join(''); }
   append(...nodes) { this.children.push(...nodes); }
@@ -37,6 +40,8 @@ function harness(replies, { seconds = 2 } = {}) {
   const context = vm.createContext({
     $: (id) => (elements[id] ||= new Element()), document: { createElement: () => new Element() },
     encodeURIComponent, Blob, File, setPlusMenu() {}, loadUsage() {}, heldSend: null,
+    // Plan AN.42: no answer is being worked on and nothing waits above the box.
+    activeDelivery: null, state: { matterId: null }, usageUsedUp: () => false, renderQueued() {},
     window: { AudioContext: Playing }, OfflineAudioContext: Mixing,
     setTimeout: (callback) => { callback(); return 0; },
     api: async (url, options) => {

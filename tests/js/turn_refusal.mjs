@@ -20,6 +20,7 @@ async function refused(code, expectedState, expectedReloads) {
   if (code !== undefined) detail.code = code;
   const friendly = 'The saved conversation could not be verified. No new message was saved.';
   let reloads = 0;
+  let painted = 0;
   const context = vm.createContext({
     // A browser always has timers; the progress watcher calls them directly.
     setTimeout: () => 0, clearTimeout: () => {},
@@ -27,7 +28,7 @@ async function refused(code, expectedState, expectedReloads) {
     state: {sessionGeneration: 1, matterId: 'synthetic-matter'},
     ownsIntent: () => true, $: node,
     document: {createElement: () => node('cancel')},
-    repaint() {}, updateWorkspace() {}, loadUsage() {},
+    repaint() {}, updateWorkspace() { painted += 1; }, paintSend() {}, loadUsage() {},
     saveProtectedDraft: async () => true,
     api: async () => { throw Object.assign(new Error(friendly), {status: 409, detail}); },
     showThreadBoard: async () => { reloads += 1; },
@@ -40,7 +41,8 @@ async function refused(code, expectedState, expectedReloads) {
   assert.equal(entry.error, friendly);
   assert.equal(entry.refusal, detail);
   assert.equal(context.activeDelivery, null);
-  assert.equal(node('send').disabled, false);
+  // Send is drawn again once the delivery has ended (plan AN.42: paintSend, through updateWorkspace).
+  assert.equal(painted, 1);
 }
 
 await refused('brain_refused', 'not_committed', 0);
