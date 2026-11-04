@@ -1,5 +1,5 @@
 """Auto (plan AN.38, D47-D49): every step runs on 6 Luna, and a call moves to 6.1 Terra only on evidence code sees in the turn -
-a piece faulted twice, an understanding still faulted after its revision, papers that differ before the time limits are worked
+a piece whose statements were found wrong twice (D51), an understanding still faulted after its revision, papers that differ before the time limits are worked
 out. Offline; scripted ports stand for the two models."""
 from __future__ import annotations
 
@@ -17,6 +17,9 @@ SCHEMA = {"type": "object", "properties": {"a": {"type": "string"}}, "required":
 
 
 class Port:
+    #: It answers a second look itself (the suite's stand-in rewrites one otherwise).
+    knows_second_look = True
+
     def __init__(self, model):
         self.model, self.sent = model, []
 
@@ -54,18 +57,42 @@ def test_under_auto_a_piece_faulted_twice_has_its_later_tries_and_their_reviews_
     calls = TurnCalls(base, stronger=stronger)
     with calls.scope("s1", 5):
         call(calls, "core_response_writer")
-        calls.spend("core_response_writer")
-        call(calls, "core_response_writer")
-        calls.spend("core_response_writer")
-        call(calls, "core_response_writer")  # the third try
+        calls.spend("core_response_repair")
+        call(calls, "core_response_repair")
+        calls.spend("core_response_repair")
+        call(calls, "core_response_repair")  # the second look after the second fault
         with calls.scope("s1.review3", 1):
             call(calls, "core_response_review")  # the review of it
-    assert base.sent == ["core_response_writer", "core_response_writer"]
-    assert stronger.sent == ["core_response_writer", "core_response_review"]
+    assert base.sent == ["core_response_writer", "core_response_repair"]
+    assert stronger.sent == ["core_response_repair", "core_response_review"]
     assert [c.get("routed", False) for c in calls.calls] == [False, False, True, True]
     assert calls.calls[2]["model"] == "gpt-6.1-terra"
     # The estimate is made on the model the call is sent to.
     assert calls.calls[2]["estimated_usd"] > calls.calls[1]["estimated_usd"]
+
+
+def test_under_auto_a_take_up_of_what_was_missing_and_a_rewrite_for_form_do_not_count_as_faults():
+    # D51 (owner, 4 Nov 2026): only the rounds that found the piece's statements wrong or misleading count.
+    base, stronger = Port("gpt-6-luna"), Port("gpt-6.1-terra")
+    calls = TurnCalls(base, stronger=stronger)
+    with calls.scope("s1", 6):
+        call(calls, "core_response_writer")
+        calls.spend("core_response_writer")  # a rewrite for form
+        call(calls, "core_response_writer")
+        calls.spend("core_response_take_up")
+        call(calls, "core_response_take_up")
+        calls.spend("core_response_repair")
+        call(calls, "core_response_repair")  # one fault so far: still Luna
+        with calls.scope("s1.review2", 2):
+            calls.spend("core_response_review")  # the review's own form
+            call(calls, "core_response_review")
+        calls.spend("core_response_repair")
+        call(calls, "core_response_repair")  # the second: Terra
+    assert base.sent == ["core_response_writer", "core_response_writer", "core_response_take_up", "core_response_repair",
+                         "core_response_review"]
+    assert stronger.sent == ["core_response_repair"]
+    # Every correction still counts against the piece's own allowance.
+    assert calls.used("s1") == 4
 
 
 def test_under_auto_the_second_revision_of_the_understanding_and_the_time_limits_after_differing_papers_move():

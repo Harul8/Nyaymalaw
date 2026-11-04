@@ -112,6 +112,8 @@ class TurnCalls:
         # the allowances are taken under a lock.
         self._local, self._lock = threading.local(), threading.Lock()
         self._used = {}
+        #: Each scope's corrections by the operation that made them: Auto counts only those routing.FAULTED names (D51).
+        self._made = {}
         self.last_output = None
         self.terminal = False
         #: The turn's own estimates (plan AN.37, D41): "start", before its plan is known, and "planned", once it is (expect()).
@@ -183,10 +185,14 @@ class TurnCalls:
             return False
         scope = getattr(self._local, "scope", None)
         with self._lock:
-            corrections = 0 if scope is None else max(self._used.get(scope[0], 0), self._used.get(scope[0].split(".")[0], 0))
+            corrections = 0 if scope is None else max(self._faulted(scope[0]), self._faulted(scope[0].split(".")[0]))
             earlier = sum(1 for call in self.calls if call.get("operation") == operation)
             evidence = frozenset(self.evidence)
         return routing.escalated(operation, corrections=corrections, earlier=earlier, evidence=evidence)
+
+    def _faulted(self, name):
+        """The corrections the named scope has made that count towards moving it under Auto (routing.FAULTED). Under the lock."""
+        return sum(count for operation, count in self._made.get(name, {}).items() if operation in routing.FAULTED)
 
     def expect(self, stage, usd):
         """Keep the turn's estimate at a stage of it (plan AN.37, D41): "start" or "planned". Diagnostics only (D45)."""
@@ -325,6 +331,8 @@ class TurnCalls:
                 self.reserve_correction()
             self.corrections_used += 1
             self._used[name] = self._used.get(name, 0) + 1
+            made = self._made.setdefault(name, {})
+            made[operation] = made.get(operation, 0) + 1
 
     def checked(self, operation, activity):
         """A shape error may use the turn's first correction; outages/refusals never do."""
