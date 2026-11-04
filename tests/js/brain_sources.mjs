@@ -645,8 +645,9 @@ console.log('PASS NM response versus source role, related source words, known-co
 
 
 // THE PASSAGE FIRST (owner decisions, 17 Oct 2026): where it is from and what it is, the
-// supporting words marked in a little of what surrounds them, the whole passage or the
-// whole document a click away, every saved check folded, and Back.
+// passage, every saved check folded, and Back. THE RELEVANT PASSAGE ONLY (plan AN.39, D53-D54,
+// 4 Nov 2026): the passage whole with the words used marked in it, the whole Act, judgment or
+// document a click away.
 {
   reader.close(false);  // a fresh pane: Back starts with nothing behind it
   const body = () => nodes.get('brain-source-body');
@@ -674,20 +675,13 @@ console.log('PASS NM response versus source role, related source words, known-co
   assert.match(byClass('source-attention').textContent, /did not come out clean/);
   assert.doesNotMatch(body().textContent, /saved check evidence is unavailable/);
   assert.match(body().textContent, /Provision readback: Readback differs from the selected saved passage/);
-  const window_ = byClass('brain-source-window passage');
-  assert.deepEqual(window_.children.map((child) => child.className || child.tagName),
-    ['ctx', 'MARK', 'ctx'], 'the context greyed, the words marked');
-  const mark = window_.children.find((child) => child.tagName === 'MARK');
-  assert.equal(mark.textContent, 'within three years of the date fixed for performance');
-  assert.ok(window_.textContent.startsWith('…') && window_.textContent.endsWith('…'));
-  assert.ok(window_.textContent.length < long.length);
-  assert.equal(passageText(), long);
-  assert.equal(passageOf(body()).hidden, true);
-  const expand = byClass('source-expand');
-  assert.equal(expand.textContent, 'Show the whole section');
-  expand.handlers.get('click')();
-  assert.equal(passageOf(body()).hidden, false);
-  assert.equal(expand.textContent, 'Hide the whole section');
+  assert.equal(byClass('brain-source-window passage'), undefined, 'no window of a little context');
+  const passage = passageOf(body());
+  assert.ok(!passage.hidden);
+  assert.equal(passageText(), long, 'the passage shown whole');
+  assert.deepEqual(passage.children.map((child) => child.tagName), ['#TEXT', 'MARK', '#TEXT'], 'the words used marked in it');
+  assert.equal(passage.children[1].textContent, 'within three years of the date fixed for performance');
+  assert.equal(byClass('source-expand').textContent, 'Read the whole Act', 'the whole Act is the option');
   const checks = byClass('how-checked');
   assert.equal(checks.tagName, 'DETAILS');
   assert.equal(checks.children[0].textContent, 'How NM checked this');
@@ -761,6 +755,9 @@ console.log('PASS NM response versus source role, related source words, known-co
   assert.equal(nodes.get('brain-source-kind').textContent, 'Document you sent');
   assert.equal(byClass('source-where').textContent, 'page 2');
   assert.equal(byClass('source-role'), undefined, 'a document has no court role');
+  // The page itself first, its words marked; the whole document a click away, in place.
+  assert.equal(passageText(), page2);
+  assert.equal(passageOf(body()).children.find((child) => child.tagName === 'MARK').textContent, 'on or before 31-12-2025');
   const whole = byClass('source-expand');
   assert.equal(whole.textContent, 'Show the whole document');
   const fetching = whole.handlers.get('click')();
@@ -769,13 +766,14 @@ console.log('PASS NM response versus source role, related source words, known-co
     pages:[{number:1, text:'Page one words.', read_by:'local'}, {number:2, text:page2, read_by:'local'}],
     unread:[{number:3, reason:'the scan was cut off'}]}]}]});
   await fetching;
-  const flow = passageOf(body());
+  const flow = byClass('document-flow whole');
   assert.equal(flow.hidden, false);
   assert.deepEqual(flow.children.map((child) => child.textContent),
     ['Page 1', 'Page one words.', 'Page 2', page2, 'Page 3', 'Not read: the scan was cut off']);
   assert.equal(flow.children[3].children.find((child) => child.tagName === 'MARK').textContent,
     'on or before 31-12-2025');
   assert.equal(whole.hidden, true);
+  assert.equal(passageOf(body()).hidden, true, 'the page is not shown twice');
   // A page read by AI from a scan, and only partly legible, says so (the design).
   const scanned = reader.open(pageAnswer, pageElement, 0, 0, opener);
   reads.at(-1).resolve({...page, reading:{by:'ai', legible:'part'}}); await scanned;
@@ -809,18 +807,15 @@ console.log('PASS NM response versus source role, related source words, known-co
     assert.equal(byClass('source-attention'), undefined, activity_contract);
   }
 
-  // When the checks arrive, the whole section the advocate opened, How NM checked this and
-  // where they scrolled stay as they were.
+  // When the checks arrive, How NM checked this and where the advocate scrolled stay as they were.
   const slow = reader.open(lawAnswer, lawElement, 0, 0, opener);
   assert.equal(passageText(), long);
   assert.match(byClass('how-checked').textContent, /Source checks: Being read/);
   assert.equal(byClass('source-attention'), undefined, 'no check is said before it is read');
-  byClass('source-expand').handlers.get('click')();
   byClass('how-checked').open = true; byClass('how-checked').handlers.get('toggle')();
   body().scrollTop = 240;
   reads.at(-1).resolve({...statute, authority_inspection:{...v4, activity_contract:'core_turn_v7'}}); await slow;
-  assert.equal(passageOf(body()).hidden, false);
-  assert.equal(byClass('source-expand').textContent, 'Hide the whole section');
+  assert.ok(!passageOf(body()).hidden);
   assert.equal(byClass('how-checked').open, true);
   assert.equal(body().scrollTop, 240);
   assert.match(byClass('source-attention').textContent, /did not come out clean/);
@@ -828,3 +823,96 @@ console.log('PASS NM response versus source role, related source words, known-co
   reader.close();
 }
 console.log('PASS the passage first, at once; the whole document a click away, the checks folded, and Back');
+
+// THE WHOLE ACT OR JUDGMENT (plan AN.39, D53): a view of its own, read by the passage's own identity, every part under its section or
+// paragraph, the passage the answer read marked; a change in the held law said; Back to the passage; held law that cannot be read is
+// said, never replaced.
+{
+  reader.close(false);
+  const body = () => nodes.get('brain-source-body');
+  const byClass = (name) => body().children.find((child) => child.className === name);
+  const statute = {brain:true, id:'statute-7', kind:'provision', label:'The Imagined Act, 1901', locator:'s.7',
+    text:'7. The rule of seven.', digest:'d-7', qualification:'Legislative text.',
+    verification:{source_role:'legislative_text', assertion_role:'legislative_text', support_excerpt:'7. The rule of seven.'}};
+  const lawElement = {kind:'LAW', text:'The rule applies.', source:statute, sources:[statute], refs:['s.7']};
+  const lawAnswer = {chat_id:'chat-9', matter_id:null, turn_id:'turn-9', elements:[lawElement]};
+  const opening = reader.open(lawAnswer, lawElement, 0, 0, opener);
+  reads.at(-1).resolve({...statute}); await opening;
+  const read = byClass('source-expand');
+  assert.equal(read.textContent, 'Read the whole Act');
+  const reading = read.handlers.get('click')();
+  assert.equal(reads.at(-1).url, '/api/chats/chat-9/turns/turn-9/passages/statute-7/whole');
+  assert.equal(nodes.get('brain-source-kind').textContent, 'Whole Act');
+  assert.match(nodes.get('brain-source-status').textContent, /Reading the whole Act/);
+  reads.at(-1).resolve({kind:'provision', title:'The Imagined Act, 1901', changed:true, found:true, parts:[
+    {locator:'s.6', heading:'Six', text:'6. The rule of six.', here:false},
+    {locator:'s.7', heading:'Seven', text:'7. The rule of seven.', here:true}]});
+  await reading;
+  assert.equal(nodes.get('brain-source-title').textContent, 'The Imagined Act, 1901');
+  assert.match(byClass('source-role warn').textContent, /changed since this answer/);
+  const flow = byClass('document-flow whole-law');
+  assert.deepEqual(flow.children.map((child) => child.textContent), ['s.6 · Six', '6. The rule of six.', 's.7 · Seven',
+    '7. The rule of seven.']);
+  assert.equal(flow.children[3].className, 'document-text here');
+  assert.equal(flow.children[3].children[0].tagName, 'MARK', 'the passage the answer read is marked');
+  // Back returns to the passage.
+  nodes.get('brain-source-back').handlers.get('click')();
+  reads.at(-1).resolve({...statute}); await new Promise((done) => setTimeout(done, 0));
+  assert.equal(passageText(), '7. The rule of seven.');
+  // A judgment says so; held law that cannot be read now is said, never replaced.
+  const judgment = {...statute, id:'j-3', kind:'judgment', label:'Example v State', locator:'3'};
+  const judgmentElement = {...lawElement, source:judgment, sources:[judgment], refs:['3']};
+  const judged = reader.open({...lawAnswer, elements:[judgmentElement]}, judgmentElement, 0, 0, opener);
+  reads.at(-1).resolve({...judgment}); await judged;
+  assert.equal(byClass('source-expand').textContent, 'Read the whole judgment');
+  const failing = byClass('source-expand').handlers.get('click')();
+  reads.at(-1).reject(new Error('The whole judgment could not be read now. The passage itself is as the answer saved it.'));
+  await failing;
+  assert.equal(body().children.length, 0);
+  assert.match(nodes.get('brain-source-status').textContent, /could not be read now/);
+  // An answer kept under a matter (before conversations) has no whole-law route: no option is offered.
+  const kept = reader.open({...lawAnswer, chat_id:null, matter_id:'m-1'}, lawElement, 0, 0, opener);
+  reads.at(-1).resolve({...statute}); await kept;
+  assert.equal(byClass('source-expand'), undefined);
+  reader.close();
+}
+console.log('PASS the whole Act or judgment a click away, read by identity, the passage marked, Back to it');
+
+// ANY PASSAGE A SAVED ANSWER READ (plan AN.39, D52-D55), opened by its tag: the law a point rests on, its words marked, What NM checked
+// said as code's exact-word check only - no paragraph used it; a page a point stands on; a passage that cannot be read is said.
+{
+  reader.close(false);
+  const body = () => nodes.get('brain-source-body');
+  const byClass = (name) => body().children.find((child) => child.className === name);
+  const where = {chat_id:'chat-9', turn_id:'turn-9'};
+  const opening = reader.openPassage(where, 'provision:abc', opener, {words:'the rule of seven', phrase:'Possession for the period'});
+  assert.equal(reads.at(-1).url, '/api/chats/chat-9/turns/turn-9/passages/provision%3Aabc');
+  reads.at(-1).resolve({brain:true, id:'provision:abc', kind:'provision', label:'The Imagined Act, 1901', title:'The Imagined Act, 1901',
+    locator:'s.7', text:'7. Possession is proved by the rule of seven, and no other.', digest:'d', whole:true});
+  await opening;
+  assert.equal(nodes.get('brain-source-title').textContent, 'The Imagined Act, 1901');
+  assert.equal(nodes.get('brain-source-kind').textContent, 'Held law');
+  assert.equal(byClass('source-where').textContent, 's.7');
+  assert.equal(byClass('source-role').textContent, 'Legislative text');
+  assert.equal(passageOf(body()).children.find((child) => child.tagName === 'MARK').textContent, 'the rule of seven');
+  assert.equal(byClass('source-expand').textContent, 'Read the whole Act');
+  const checks = byClass('how-checked');
+  assert.deepEqual(checks.children[1].children.map((child) => child.textContent),
+    ['Used for', '“Possession for the period”', 'Words', 'Found in the held text exactly as quoted', 'Checked by', 'Code (exact words)']);
+  assert.doesNotMatch(body().textContent, /Saved source checks|saved check evidence/, 'no paragraph checks are claimed');
+  // A page a point stands on opens the same way, the whole document a click away.
+  const page = reader.openPassage(where, 'turn-9:d1p2', opener);
+  reads.at(-1).resolve({brain:true, id:'turn-9:d1p2', kind:'document', label:'Sale deed', title:'Sale deed', locator:'page 2',
+    text:'The words of page two.', digest:'d2', whole:false, qualification:'', reading:{by:'file', legible:'whole'}});
+  await page;
+  assert.equal(nodes.get('brain-source-kind').textContent, 'Document you sent');
+  assert.equal(byClass('source-expand').textContent, 'Show the whole document');
+  assert.equal(byClass('how-checked'), undefined, 'nothing was checked of it here, so nothing is said');
+  const failed = reader.openPassage(where, 'provision:gone', opener);
+  reads.at(-1).reject(new Error('Saved passage not available.'));
+  await failed;
+  assert.match(nodes.get('brain-source-status').textContent, /could not be read. Saved passage not available/);
+  assert.equal(await reader.openPassage({chat_id:'chat-9'}, 'x', opener), false, 'no answer to read it from, nothing opens');
+  reader.close();
+}
+console.log('PASS any passage a saved answer read opens by its tag, its words marked, with the whole a click away');

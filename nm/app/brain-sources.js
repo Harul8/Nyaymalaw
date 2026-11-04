@@ -222,24 +222,6 @@ window.NmBrainSources = (() => {
     return paragraph ? `paragraph ${paragraph[1]}` : locator;
   }
 
-  // The supporting words with a little of what surrounds them, cut at a sentence or a
-  // line where one is near. None when the words cannot be placed, or are the whole text.
-  function excerptWindow(text, excerpt, reach = 240) {
-    const at = words(excerpt) && words(text) ? text.indexOf(excerpt) : -1;
-    if (at < 0 || (at === 0 && excerpt.length === text.length)) return null;
-    let start = Math.max(0, at - reach);
-    let end = Math.min(text.length, at + excerpt.length + reach);
-    const lead = text.slice(start, at);
-    const cut = Math.max(lead.lastIndexOf('. '), lead.lastIndexOf('\n'));
-    if (start > 0 && cut >= 0) start += cut + 1;
-    const tail = text.slice(at + excerpt.length, end);
-    const stop = tail.search(/[.!?]\s|\n/);
-    if (end < text.length && stop >= 0) end = at + excerpt.length + stop + 1;
-    if (start === 0 && end === text.length) return null;
-    return {lead:`${start > 0 ? '…' : ''}${text.slice(start, at).trimStart()}`, excerpt,
-      tail:`${text.slice(at + excerpt.length, end).trimEnd()}${end < text.length ? '…' : ''}`};
-  }
-
   // Text into host with the supporting words marked where they stand.
   function marked(host, text, excerpt) {
     const at = words(excerpt) ? text.indexOf(excerpt) : -1;
@@ -299,13 +281,17 @@ window.NmBrainSources = (() => {
   }
 
   // THE PASSAGE FIRST (owner decisions, 17 Oct 2026; the design of that day): what it is
-  // and where it is from, the supporting words marked in a little of their context, the
-  // whole document, section or paragraph a click away, and how NM checked it folded below:
-  // in a few words first, then every saved check. phrase: the words of the answer the
-  // source was opened from. kept: what the advocate had opened in the pane, and where they had
-  // scrolled, before its saved checks arrived (P37).
+  // and where it is from, the passage, and how NM checked it folded below: in a few words
+  // first, then every saved check. THE RELEVANT PASSAGE ONLY (plan AN.39, D53-D54; owner, 4 Nov
+  // 2026: "just the excact paragraph, with section/act name or judgement name, an option to read
+  // the full document"): the paragraph or the part of the section, whole, with the words used
+  // marked where they are saved; the whole a click away - a paper the advocate sent from its own
+  // pages, an Act or a judgment from the held law. phrase: the words of the answer (or the point)
+  // the source was opened from. kept: what the advocate had opened in the pane, and where they had
+  // scrolled, before its saved checks arrived (P37). unpaired: opened by its tag rather than from a
+  // paragraph of the answer, so no paragraph's checks are recorded for it (D52).
   function populate(source, choices = null, inspection = null, responseText = null, answer = null, phrase = null,
-                    kept = null) {
+                    kept = null, {unpaired = false} = {}) {
     const coreResponse = coreInspection(source, inspection) && words(responseText);
     opened = {whole:false, checks:false};
     const view_ = opened;
@@ -347,42 +333,30 @@ window.NmBrainSources = (() => {
     const given = source.verification?.support_excerpt;
     const excerpt = words(given) && words(source.text) && given.trim() === source.text.trim() ? '' : given;
     const full = marked(make('div', 'brain-source-text passage'), source.text, excerpt);
-    const view = excerptWindow(source.text, excerpt);
-    const whole = source.kind === 'document' ? 'document' : source.kind === 'judgment' ? 'paragraph' : 'section';
-    if (view) {
-      const window_ = make('div', 'brain-source-window passage');
-      const mark = make('mark', '', view.excerpt);
-      window_.append(make('span', 'ctx', view.lead), mark, make('span', 'ctx', view.tail));
-      const expand = make('button', 'source-expand', `Show the whole ${whole}`);
-      expand.type = 'button';
-      full.hidden = true;
-      full.className = 'brain-source-text whole';
-      const read = active;
-      const toggle = () => {
-        if (source.kind === 'document' && answer) {
-          view_.whole = true;
-          return wholeDocument(answer, source, read, full, expand);
-        }
-        full.hidden = !full.hidden;
-        view_.whole = !full.hidden;
-        expand.textContent = `${full.hidden ? 'Show' : 'Hide'} the whole ${whole}`;
-      };
-      expand.addEventListener('click', toggle);
-      shown.push(window_, expand);
-      if (kept?.whole) toggle();
-    } else if (source.kind === 'document' && answer && /:d\d+p\d+$/.test(source.id || '')) {
+    shown.push(full);
+    if (source.kind === 'document' && answer?.chat_id && /:d\d+p\d+$/.test(source.id || '')) {
+      // The page widens to the whole document in place, the page's words marked where they stand.
       const expand = make('button', 'source-expand', 'Show the whole document');
       expand.type = 'button';
       const read = active;
-      const page = full;
       const flow = make('div', 'document-flow whole');
       flow.hidden = true;
-      const toggle = () => { view_.whole = true; return wholeDocument(answer, source, read, flow, expand); };
+      const toggle = async () => {
+        view_.whole = true;
+        await wholeDocument(answer, source, read, flow, expand);
+        if (!flow.hidden && expand.hidden) full.hidden = true;
+      };
       expand.addEventListener('click', toggle);
-      shown.push(page, expand, flow);
+      shown.push(expand, flow);
       if (kept?.whole) toggle();
+    } else if (legal(source) && answer?.chat_id && answer?.turn_id && words(source.id)) {
+      // The whole Act or judgment opens as a view of its own, with Back to the passage (D53).
+      const expand = make('button', 'source-expand', `Read the whole ${source.kind === 'judgment' ? 'judgment' : 'Act'}`);
+      expand.type = 'button';
+      const opener = active?.opener;
+      expand.addEventListener('click', () => openWhole(answer, source, opener));
+      shown.push(expand);
     }
-    if (!shown.includes(full)) shown.push(full);
     if (choices) shown.push(choices);
     const checks = make('details', 'how-checked');
     checks.appendChild(make('summary', '', 'How NM checked this'));
@@ -398,8 +372,13 @@ window.NmBrainSources = (() => {
       ? (source.kind === 'document' ? 'Found on the page exactly as quoted' : 'Found in the held text exactly as quoted')
       : '');
     say('Checked by', source.brain === true && inspection?.contract === 'core_source_authority_view_v1'
-      ? 'Code (exact words) and the independent review' : '');
+      ? 'Code (exact words) and the independent review' : unpaired && words(excerpt) ? 'Code (exact words)' : '');
     if (plainly.children.length) checks.appendChild(plainly);
+    if (unpaired) {
+      // No paragraph of the answer used it, so there are no paragraph checks to fold here (D52).
+      if (plainly.children.length) shown.push(checks);
+      return finish(shown, kept);
+    }
     if (coreResponse) {
       checks.append(make('p', 'brain-source-excerpt', `NM response: ${responseText}`),
         make('p', 'hint', 'Selected source passage'));
@@ -441,9 +420,99 @@ window.NmBrainSources = (() => {
       }
     }
     shown.push(checks);
-    node('brain-source-body').replaceChildren(...shown);
-    node('brain-source-body').scrollTop = kept?.scroll || 0;
+    finish(shown, kept);
+  }
+
+  // The pane's body as populated; where the advocate had scrolled is kept, and otherwise the words
+  // marked are brought into view.
+  function finish(shown, kept) {
+    const body = node('brain-source-body');
+    body.replaceChildren(...shown);
+    body.scrollTop = kept?.scroll || 0;
     node('brain-source-status').textContent = '';
+    if (!kept?.scroll) {
+      const passage = shown.find((item) => String(item.className).split(' ').includes('passage'));
+      passage?.children?.find((child) => child.tagName === 'MARK')?.scrollIntoView?.({block:'center'});
+    }
+  }
+
+  const address = (where) => `/api/chats/${encodeURIComponent(where.chat_id)}/turns/${encodeURIComponent(where.turn_id)}`;
+
+  // ANY PASSAGE A SAVED ANSWER READ (plan AN.39, D52-D55), opened by its tag: the law a point of the
+  // board rests on, or a page a point stands on - though no paragraph of the answer cites it. where:
+  // the answer that read it ({chat_id, turn_id}); given.words: the words used, marked where they
+  // stand; given.phrase: what it is opened for.
+  async function openPassage(where, tag, opener, given = {}, viaBack = false) {
+    if (!where?.chat_id || !where?.turn_id || !words(tag)) return false;
+    remember({show: (back) => openPassage(where, tag, opener, given, back)}, viaBack);
+    const read = begin(given.title || '', opener, 'Opening the saved passage…', '');
+    const owns = () => active === read && generation === read.generation && JSON.stringify(scope()) === read.scope;
+    try {
+      const saved = await request(`${address(where)}/passages/${encodeURIComponent(tag)}`);
+      if (!owns()) return true;
+      if (saved?.id !== tag || !words(saved.text)) throw new Error('The saved passage could not be matched.');
+      node('brain-source-title').textContent = saved.label;
+      const used = words(given.words) && saved.text.includes(given.words) ? given.words : '';
+      populate({...saved, verification:{...(saved.kind === 'provision' ? {source_role:'legislative_text'} : {}),
+        ...(used ? {support_excerpt:used} : {})}}, null, null, null, where, given.phrase, null, {unpaired:true});
+    } catch (error) {
+      if (owns()) {
+        node('brain-source-body').replaceChildren();
+        node('brain-source-status').textContent = `The saved passage could not be read. ${error.message}`;
+      }
+    }
+    return true;
+  }
+
+  // THE WHOLE ACT OR JUDGMENT (plan AN.39, D53), as a view of its own with Back to the passage: every
+  // part in order, each under its section or paragraph, the passage the answer read marked and
+  // brought into view; that the held law has changed since the answer, or no longer holds the
+  // passage, is said; and that it could not be read now, never something else in its place.
+  async function openWhole(where, source, opener, viaBack = false) {
+    const what = source.kind === 'judgment' ? 'judgment' : 'Act';
+    remember({show: (back) => openWhole(where, source, opener, back)}, viaBack);
+    const read = begin(source.label || source.title || '', opener, `Reading the whole ${what}…`,
+      source.kind === 'judgment' ? 'Whole judgment' : 'Whole Act');
+    const owns = () => active === read && generation === read.generation && JSON.stringify(scope()) === read.scope;
+    const make = (tag, className, text) => {
+      const item = document.createElement(tag);
+      if (className) item.className = className;
+      if (text !== undefined) item.textContent = text;
+      return item;
+    };
+    try {
+      const whole = await request(`${address(where)}/passages/${encodeURIComponent(source.id)}/whole`);
+      if (!owns()) return;
+      const shown = [];
+      if (whole.changed) {
+        shown.push(make('p', 'source-role warn', `The held law has changed since this answer: this is the ${what} as `
+          + 'Nyaymalaw holds it today.'));
+      }
+      if (!whole.found) shown.push(make('p', 'hint', `The passage this answer read is not in the ${what} as held today.`));
+      const flow = make('div', 'document-flow whole-law');
+      let here = null;
+      for (const part of whole.parts || []) {
+        const place = [part.locator, part.heading].filter(words).join(' · ');
+        if (place) flow.appendChild(make('div', 'page-mark', place));
+        const text = make('div', part.here ? 'document-text here' : 'document-text');
+        if (part.here) {
+          text.appendChild(make('mark', '', part.text));
+          here = here || text;
+        } else {
+          text.textContent = part.text;
+        }
+        flow.appendChild(text);
+      }
+      shown.push(flow);
+      node('brain-source-body').replaceChildren(...shown);
+      node('brain-source-status').textContent = '';
+      if (here) here.scrollIntoView?.({block:'start'});
+    } catch (error) {
+      if (owns()) {
+        node('brain-source-body').replaceChildren();
+        node('brain-source-status').textContent = error?.message || `The whole ${what} could not be read now.`;
+      }
+    }
   }
 
   // phrase: the words of the answer the source is opened from, where it is linked on them.
@@ -749,6 +818,6 @@ window.NmBrainSources = (() => {
     close();
   });
   window.addEventListener('nm:matter-changed', () => close(false));
-  return Object.freeze({configure, open, close, showContent, appendBody,
+  return Object.freeze({configure, open, openPassage, close, showContent, appendBody,
     openRecordSource, isReadableRecordSource, labelFor});
 })();
