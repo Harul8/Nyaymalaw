@@ -48,8 +48,9 @@ def setting():
 
 
 def element(alias, words, status="missing", points=(), proves="client"):
-    return {"element": "Possession for the period the law requires", "law": {"source_id": alias, "quote": words},
-            "proves": proves, "status": status, "points": list(points), "why": "The papers say little of it."}
+    return {"element": "Possession for the period the law requires", "label": "Possession for the period",
+            "law": {"source_id": alias, "quote": words}, "proves": proves, "status": status, "points": list(points),
+            "why": "The papers say little of it."}
 
 
 def ask(number, what="A certified copy of the revenue record"):
@@ -60,8 +61,8 @@ def account(alias, words, located):
     return {"elements": [element(alias, words, "shown", [located]), element(alias, "words no passage holds", "shown", ["E99"]),
                          element(alias, words)],
             "to_get": [ask(1), ask(3), ask(9)],
-            "other_side": [{"relies_on": "Their own entry in the record", "law": {"source_id": "", "quote": ""}, "answer": "It was made later.",
-                            "points": [located]}]}
+            "other_side": [{"relies_on": "Their own entry in the record", "label": "Their own entry",
+                            "law": {"source_id": "", "quote": ""}, "answer": "It was made later.", "points": [located]}]}
 
 
 def test_the_step_reads_the_dispute_its_law_and_every_point_and_its_check_is_told_what_code_could_not_check():

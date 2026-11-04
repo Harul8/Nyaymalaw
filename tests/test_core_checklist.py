@@ -310,7 +310,8 @@ def test_a_saved_turn_keeps_its_disputes_case_as_records_and_the_board_and_the_a
             shown = json.loads(prompt.user.split("\n\nYour colleague's account:")[0])
             passage = next(p for p in shown["held_law"]["passages"] if "Counsel submitted" in p["text"])
             return ModelResult(None, {"elements": [{
-                "element": "Service of the notice", "law": {"source_id": passage["id"], "quote": "Counsel submitted"},
+                "element": "Service of the notice", "label": "Service of the notice",
+                "law": {"source_id": passage["id"], "quote": "Counsel submitted"},
                 "proves": "client", "status": "missing", "points": [], "why": "Nothing yet shows when it was served."}],
                 "to_get": [{"what": "The postal receipt", "from_whom": "the client", "element": 1,
                             "why": "It proves the date of posting.", "helps": "It shows the notice was served in time."}],
