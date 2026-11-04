@@ -41,6 +41,8 @@ from nm.core_engine.turn import RECORDS_CONTRACT as RECORDS_CORE_TURN
 from nm.core_engine import answer_sections
 from nm.core_engine.turn import LEGACY_CONTRACT as LEGACY_CORE_TURN, recover, saved_rows
 from nm.core_engine import checklist
+from nm.core_engine.retrieval import SearchUnavailable
+from nm.shared.citation_contracts import provision_label, statute_title
 from nm.core_engine.reasoning import CHOICES as EFFORT_CHOICES, DEFAULT_CHOICE as DEFAULT_EFFORT
 from nm.shared.external_ai_contracts import ModelPermissionRefused
 from nm.shared.model_config import DEFAULT_TURN_MODEL, TURN_CHOICES
@@ -2219,6 +2221,84 @@ def chat_source(chat_id: str, turn_id: str, element: int, source: int,
         # The same, for the reading pane's kind line and its badge (the design, 18 Oct 2026).
         shown['reading'] = _page_reading(rows, selected['id'])
     return shown
+
+
+_passage_log = logging.getLogger('nm.passages')
+#: What a passage opened by its tag may be (plan AN.39): held law, or a page of a paper the advocate sent.
+_PASSAGE_KINDS = ('provision', 'judgment', 'document')
+
+
+def _saved_passage(chat_id, turn_id, tag, advocate_id, request):
+    """One passage a saved answer read, from that answer's own record (P46), and every saved turn of the conversation."""
+    _, rows = _read_chat(chat_id, advocate_id, request)
+    row = next((item for item in rows if item['turn_id'] == turn_id), None)
+    catalogue = (row or {}).get('activities', {}).get('sources') if isinstance((row or {}).get('activities'), dict) else None
+    passage = catalogue.get(tag) if isinstance(catalogue, dict) else None
+    if not isinstance(passage, dict) or passage.get('id') != tag or passage.get('kind') not in _PASSAGE_KINDS:
+        raise HTTPException(404, 'Saved passage not available.')
+    if not _session_current(request, advocate_id):
+        raise HTTPException(401, 'not signed in')
+    return passage, rows
+
+
+def _passage_title(passage):
+    if passage['kind'] == 'provision':
+        return statute_title(passage['title'], passage['source_identity'].get('act_id', ''))
+    return passage['title']
+
+
+@app.get('/api/chats/{chat_id}/turns/{turn_id}/passages/{tag}')
+def chat_passage(chat_id: str, turn_id: str, tag: str, advocate_id: Advocate, request: Request, response: Response):
+    """ANY PASSAGE A SAVED ANSWER READ (plan AN.39, D52-D55): a law that a point of the board rests on, or a page a point stands on,
+    opened in the reading pane as a passage the answer cites is - though no paragraph of the answer cites it - from the answer's own
+    saved record. It carries no check of a paragraph's use: no paragraph used it."""
+    passage, rows = _saved_passage(chat_id, turn_id, tag, advocate_id, request)
+    response.headers['Cache-Control'] = 'no-store'
+    title = _passage_title(passage)
+    shown = {'brain': True, 'id': tag, 'digest': passage['digest'], 'kind': passage['kind'], 'label': title, 'title': title,
+             'locator': passage['locator'] or 'Saved passage', 'text': passage['text'],
+             # Whether the whole Act or judgment it is part of can be asked for (D53).
+             'whole': passage['kind'] != 'document'}
+    if 'in_force' in passage:
+        shown['in_force'] = passage['in_force']
+    if passage['kind'] == 'document':
+        shown['qualification'] = _how_read(rows, tag)
+        shown['reading'] = _page_reading(rows, tag)
+    return shown
+
+
+@app.get('/api/chats/{chat_id}/turns/{turn_id}/passages/{tag}/whole')
+def chat_passage_whole(chat_id: str, turn_id: str, tag: str, advocate_id: Advocate, request: Request, response: Response):
+    """THE WHOLE ACT OR JUDGMENT A PASSAGE IS PART OF (plan AN.39, D53; owner, 4 Nov 2026: "only the paragraph with reading the whole
+    doc act or judgement as optional"), read from the held law by the saved passage's own identity - never by a name or a search -
+    each part in stored order with the passage's own marked. Whether the held law has changed since the answer read it is said;
+    held law that cannot be read now is said to be unavailable, never replaced by something else."""
+    passage, _ = _saved_passage(chat_id, turn_id, tag, advocate_id, request)
+    if passage['kind'] == 'document':
+        raise HTTPException(404, 'A paper you sent opens whole from its own page.')
+    response.headers['Cache-Control'] = 'no-store'
+    identity, judgment = passage['source_identity'], passage['kind'] == 'judgment'
+    search = application().legal_search
+    what = 'judgment' if judgment else 'Act'
+    try:
+        if search is None:
+            raise SearchUnavailable('The held law is not available here')
+        read = search.read_judgment(identity['case_id']) if judgment else search.read_act(identity['act_id'])
+    except (SearchUnavailable, ValueError) as exc:
+        _passage_log.warning('The whole %s of a saved passage could not be read: %s', what, type(exc).__name__)
+        raise HTTPException(503, f'The whole {what} could not be read now. The passage itself is as the answer saved it.') from exc
+    parts = []
+    for _, held in read['paragraphs' if judgment else 'parts']:
+        if judgment:
+            number = str(held.get('paragraph_num') or held.get('para_no') or '')
+            where = f'paragraph {number}' if number else ''
+        else:
+            where = provision_label('', str(held.get('section_number') or ''))
+        parts.append({'locator': where, 'heading': '' if judgment else (held.get('section_title') or ''),
+                      'text': held['full_text'], 'here': held.get('chunk_id') == identity.get('chunk_id')})
+    return {'kind': passage['kind'], 'title': _passage_title(passage), 'parts': parts,
+            'changed': read['corpus_revision'] != identity.get('corpus_revision'),
+            'found': any(part['here'] for part in parts)}
 
 
 def _page_reading(rows, source_id):
