@@ -47,7 +47,7 @@ function fixture() {
   const requests = [], starts = [], boardToggles = [], sent = [], boards = [];
   const state = { railGeneration: 0, matterListGeneration: 0, sessionGeneration: 1,
     matterId: null, matterVersion: null, turns: [] };
-  const context = { state, activeIntent: null, activeDelivery: null, $: get,
+  const context = { state, activeIntent: null, activeDelivery: null, heldSend: null, $: get,
     document: { createElement: () => new Element() },
     window: { dispatchEvent() {}, NmBrainSources: { close() {} } }, Event: class {},
     api: url => new Promise((resolve, reject) => requests.push({ url, resolve, reject })),
@@ -60,6 +60,7 @@ function fixture() {
     showTab() {}, showIntake() {}, snapshotIntent() {}, consumeComposer() {},
     matchesIntake: () => false, newTurnId: () => 'new-turn',
     attachments: [], attachmentsBlockSend: () => null, renderAttachments() {},
+    attachmentsReading: () => false,
     deliver: async entry => { sent.push(JSON.parse(entry.envelope)); },
     toggleMatters() {}, toggleMatterBoard: open => boardToggles.push(open),
     setWorkView: view => { get('pane-advise').dataset.view = view; },

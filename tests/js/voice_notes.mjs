@@ -36,7 +36,7 @@ function harness(replies, { seconds = 2 } = {}) {
   }
   const context = vm.createContext({
     $: (id) => (elements[id] ||= new Element()), document: { createElement: () => new Element() },
-    encodeURIComponent, Blob, File, setPlusMenu() {}, loadUsage() {},
+    encodeURIComponent, Blob, File, setPlusMenu() {}, loadUsage() {}, heldSend: null,
     window: { AudioContext: Playing }, OfflineAudioContext: Mixing,
     setTimeout: (callback) => { callback(); return 0; },
     api: async (url, options) => {

@@ -33,6 +33,8 @@ function harness(replies) {
   const context = vm.createContext({
     $: get, document: { createElement: (tag) => new Element(tag) }, encodeURIComponent,
     setPlusMenu() {}, loadUsage() {},
+    // Plan AN.40: no message waits for its files here (tests/js/send_when_read.mjs covers that).
+    heldSend: null,
     setTimeout: (callback, ms) => { delays.push(ms); callback(); return 0; },
     api: async (url, options) => {
       requests.push({ url, options, shown: get('attachments').children[0] ? get('attachments').children[0].textContent : '' });

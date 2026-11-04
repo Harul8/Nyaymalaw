@@ -70,6 +70,8 @@ async function composed(text) {
     matchesIntake: () => true,
     deliver: async (entry) => { outgoing.push(entry); },
     attachments: [], attachmentsBlockSend: () => null, renderAttachments() {},
+    // Plan AN.40: no file is being read here (tests/js/send_when_read.mjs covers a message that waits for one).
+    heldSend: null, attachmentsReading: () => false,
     usageUsedUp: () => false, loadUsage() {},
   });
   vm.runInContext(app.slice(sendStart, start) + app.slice(wireStart, wireEnd), context);

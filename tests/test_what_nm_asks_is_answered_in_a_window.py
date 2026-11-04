@@ -77,4 +77,5 @@ def test_the_answers_window_is_offered_beside_what_nm_asks_and_sends_through_the
     window = script[script.index("\nfunction openNeedAnswers("):]
     window = window[:window.index("\n}\n") + 3]
     assert "activeDelivery.entry.context !== entry.context" in window and "send(message)" in window
-    assert "usageUsedUp()" in window and "attachmentsBlockSend()" in window
+    # Plan AN.40: files still being read do not stop the answers, which wait for them in send(); a message already waiting does.
+    assert "usageUsedUp()" in window and "attachmentsBlockSend({ reading: false })" in window and "if (heldSend)" in window

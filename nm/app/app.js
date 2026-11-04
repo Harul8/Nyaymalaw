@@ -74,6 +74,9 @@ let outcomeReturn = 'register';
 let resetToken = null;
 let activeDelivery = null;
 let retiringSession = null;
+// A message waiting for its files to be read, and the Cancel beside its greyed Send (plan AN.40).
+let heldSend = null;
+let holdCancel = null;
 
 // In-memory work belongs to an advocate, workspace and file (or one unsaved
 // opening), not to the composer DOM. The immutable pending request belongs to
@@ -366,6 +369,8 @@ function selectIntent(matterId, { opening = false, chatId = null } = {}) {
     });
     activeIntent = intentContexts.get(key);
   }
+  // Plan AN.40 (D64): a message waiting for its files never goes in another conversation than the one it was sent in.
+  if (heldSend && heldSend.intent !== activeIntent) cancelHold();
   restoreIntent();
 }
 
@@ -3508,8 +3513,9 @@ function openNeedAnswers(entry, questions) {
     const message = needAnswersMessage(questions, boxes.map((box) => box.value));
     if (!message) { status.textContent = 'Write an answer to at least one question.'; return; }
     if (usageUsedUp()) { status.textContent = (usage && usage.limit) || 'Sending is paused until you upgrade.'; return; }
-    const blocked = attachmentsBlockSend();
+    const blocked = attachmentsBlockSend({ reading: false });
     if (blocked) { status.textContent = blocked; return; }
+    if (heldSend) { status.textContent = 'Another message is waiting for its files to be read. Send your answers once it has gone.'; return; }
     if (activeDelivery) {
       // A message of this conversation is being answered: the answers are sent as soon as it is saved, as anything added
       // meanwhile is (15 Oct 2026). Another conversation's message is never given them.
@@ -5330,10 +5336,7 @@ function updateWorkspace() {
   const filesShown = Boolean(state.matterId) || intakeOpen;
   $('matter-files').hidden = !filesShown;
   if (!filesShown) closeFilesMenu();
-  // Sending pauses once nothing is left (AN.17): the words stay in the box.
-  $('send').disabled = Boolean(activeDelivery || (state.matterId && !state.matterReady) || usageUsedUp());
-  if (!activeDelivery) $('send').textContent = state.matterId && !state.matterReady
-    ? 'Loading file…' : 'Send';
+  paintSend();
 }
 
 /* ------------------------------------------------------------------ send --- */
@@ -5365,8 +5368,11 @@ function consumeComposer(entry) {
   sizeComposer();
 }
 
-async function send(message, { workProduct, keepInMatter = false } = {}) {
+// fromBox (plan AN.40, D62): the message is the message box's, so that if it waits for its files what goes is what the box holds then.
+async function send(message, { workProduct, keepInMatter = false, fromBox = false } = {}) {
   if (activeDelivery || (state.matterId && !state.matterReady)) return;
+  // One message waits for the files at a time; it goes as soon as they are read.
+  if (heldSend) { $('attachments-status').textContent = HOLD_SAID; return; }
   if (!activeIntent) selectIntent(state.matterId, { opening: !state.matterId });
   snapshotIntent();
   // Re-entering Send with an unresolved identical intent is also a retry.
@@ -5377,8 +5383,10 @@ async function send(message, { workProduct, keepInMatter = false } = {}) {
     && entry.refusal?.retryable !== false);
   if (pending) { consumeComposer(pending); await deliver(pending); return; }
   // The documents attached under the brief travel with this message only.
-  const blocked = attachmentsBlockSend();
+  const blocked = attachmentsBlockSend({ reading: false });
   if (blocked) { $('attachments-status').textContent = blocked; return; }
+  // Plan AN.40 (D61): a file still being uploaded or read holds the message, which goes by itself once it is read.
+  if (attachmentsReading()) { holdSend(message, { workProduct, keepInMatter, fromBox }); return; }
   if (attachments.length > 1) await relookAttachments();
   const documents = attachments.map((item) => ({ document_ref: item.summary.document_ref,
     name: item.summary.name, recording: Boolean(item.summary.recording), pages_read: item.summary.pages_read,
@@ -5572,8 +5580,9 @@ function releaseQueued(entry) {
   const intent = entry.context;
   const queued = intent && Array.isArray(intent.queued) ? intent.queued.splice(0) : [];
   if (!queued.length) return;
-  if (['committed', 'replayed'].includes(entry.state) && ownsIntent(intent) && !activeDelivery
-      && !attachmentsBlockSend()) {
+  // Plan AN.40 (D64): files still being read hold the words, which go by themselves once they are read.
+  if (['committed', 'replayed'].includes(entry.state) && ownsIntent(intent) && !activeDelivery && !heldSend
+      && !attachmentsBlockSend({ reading: false })) {
     send(queued.join('\n\n'));
     return;
   }
@@ -5650,7 +5659,7 @@ $('composer').addEventListener('submit', (ev) => {
   if (usageUsedUp()) { loadUsage(); return; }
   // deliver clears the typing field after minting the retry receipt, and
   // refuses network dispatch unless that receipt has been protected locally.
-  send(text);
+  send(text, { fromBox: true });
 });
 
 $('message').addEventListener('keydown', (ev) => {
@@ -5891,6 +5900,7 @@ function renderAttachments() {
       if (item.status === 'recording') stopVoiceNote({ discard: true });
       attachments = attachments.filter((other) => other !== item);
       renderAttachments();
+      releaseHeld();
     });
     chip.appendChild(remove);
     return chip;
@@ -5903,6 +5913,7 @@ async function attachFile(file) {
     attachments.push({ name: file.name, status: 'failed', summary: null,
       note: 'video is not read; send the recording as audio (MP3, M4A, WAV, OGG or OPUS)' });
     renderAttachments();
+    releaseHeld();
     return;
   }
   if (!isRecording(file) || (NATIVE_AUDIO.includes(extensionOf(file.name)) && file.size <= AUDIO_MAX_BYTES)) {
@@ -5920,6 +5931,7 @@ async function attachFile(file) {
     item.status = 'failed';
     item.note = 'this browser could not play this recording; save it as MP3 or M4A and attach it again';
     renderAttachments();
+    releaseHeld();
     return;
   }
   if (!attachments.includes(item)) return;
@@ -5928,6 +5940,7 @@ async function attachFile(file) {
   await Promise.all(parts.map((part, index) => uploadAttachment(new File([part],
     parts.length === 1 ? `${file.name}.wav` : `${file.name} (part ${index + 1} of ${parts.length}).wav`,
     { type: 'audio/wav' }))));
+  releaseHeld();
 }
 
 async function uploadAttachment(file) {
@@ -5939,6 +5952,7 @@ async function uploadAttachment(file) {
     item.status = status;
     item.note = note;
     if (attachments.includes(item)) renderAttachments();
+    releaseHeld();
   };
   const limit = isRecording(file) ? AUDIO_MAX_BYTES : DOCUMENT_MAX_BYTES;
   if (file.size > limit) {
@@ -6011,6 +6025,7 @@ async function readWaiting(item) {
   item.progress = null;
   settle(item.summary.state === 'held' ? 'held' : 'ready');
   loadUsage();
+  releaseHeld();
 }
 
 // RECORD A VOICE NOTE: the microphone starts and stops only when the advocate presses.
@@ -6067,12 +6082,13 @@ function stopVoiceNote({ discard = false } = {}) {
   if (recorder.state !== 'inactive') recorder.stop();
 }
 
-// Why the message cannot carry its documents yet, or null when it can.
-function attachmentsBlockSend() {
+// Why the message cannot carry its documents yet, or null when it can. reading: false leaves out the files still being read, for a
+// message that waits for them (plan AN.40).
+function attachmentsBlockSend({ reading = true } = {}) {
   if (attachments.some((item) => item.status === 'recording')) {
     return 'Stop the voice note recording before sending.';
   }
-  if (attachments.some((item) => ['converting', 'uploading', 'reading_scans'].includes(item.status))) {
+  if (reading && attachmentsReading()) {
     return 'Wait until the attached documents have been read.';
   }
   if (attachments.some((item) => ['held', 'failed'].includes(item.status))) {
@@ -6083,6 +6099,91 @@ function attachmentsBlockSend() {
     return `A message can carry at most ${DOCUMENTS_PER_MESSAGE} documents; remove ${carried - DOCUMENTS_PER_MESSAGE} before sending.`;
   }
   return null;
+}
+
+// SEND ONCE THE FILES ARE READ (plan AN.40, D61-D64; owner, 4 Nov 2026: "if SEND button is clicked, then greyout SEND button and once
+// file scanning / reading is done send them automatically, instead of saying files are being read so wait kind of message"). A message
+// sent while a file is still being uploaded, converted or read waits for it: Send is greyed and says so, Cancel beside it, and the
+// message goes by itself through send() once nothing is being read. What goes is what the message box holds then (D62) - or, for words
+// sent another way (added while NM was answering, or answers to NM's questions), those words. It does not go, and Send works again with
+// the reason under the files, if a file read meanwhile could not be used or came back with pages not read (D63), or if anything else
+// would stop a pressed Send; nor in another conversation than the one it was sent in, nor once the advocate has signed out (D64).
+const READING_STATES = ['converting', 'uploading', 'reading_scans'];
+const HOLD_SAID = 'Your message will go as soon as the files are read.';
+
+function attachmentsReading() {
+  return attachments.some((item) => READING_STATES.includes(item.status));
+}
+
+function holdSend(message, options) {
+  heldSend = { intent: activeIntent, message: options.fromBox ? null : message, options,
+    // The files already read when Send was pressed, as the advocate saw them then.
+    seen: new Set(attachments.filter((item) => !READING_STATES.includes(item.status))) };
+  $('attachments-status').textContent = HOLD_SAID;
+  paintSend();
+}
+
+// Send as the page shows it: held while an answer is worked on, while a message waits for its files, while the file loads, and once
+// nothing is left of the allowance (AN.17: the words stay in the box).
+function paintSend() {
+  const button = $('send');
+  button.disabled = Boolean(activeDelivery || heldSend || (state.matterId && !state.matterReady) || usageUsedUp());
+  if (!activeDelivery) {
+    button.textContent = heldSend ? 'Sends when read…' : state.matterId && !state.matterReady ? 'Loading file…' : 'Send';
+  }
+  if (heldSend && !activeDelivery) {
+    if (!holdCancel) {
+      holdCancel = document.createElement('button');
+      holdCancel.type = 'button';
+      holdCancel.className = 'ghost cancel';
+      holdCancel.textContent = 'Cancel';
+      holdCancel.setAttribute('aria-label', 'Do not send this message when the files are read');
+      holdCancel.addEventListener('click', () => cancelHold('Not sent. Your words and files are as they were.'));
+    }
+    if (holdCancel.parentElement !== button.parentElement) button.parentElement.insertBefore(holdCancel, button);
+  } else if (holdCancel && holdCancel.parentElement) {
+    holdCancel.remove();
+  }
+}
+
+// The waiting message let go: words sent another way go back to its own conversation's message box; the box's own words never left it.
+function cancelHold(said = '') {
+  const hold = heldSend;
+  if (!hold) return;
+  heldSend = null;
+  if (hold.message !== null && hold.message.trim()) {
+    if (ownsIntent(hold.intent)) {
+      const box = $('message');
+      box.value = [hold.message, box.value].filter((text) => text.trim()).join('\n\n');
+      hold.intent.text = box.value;
+      sizeComposer();
+    } else {
+      hold.intent.text = [hold.message, hold.intent.text || ''].filter((text) => text.trim()).join('\n\n');
+    }
+  }
+  $('attachments-status').textContent = said;
+  paintSend();
+}
+
+// Asked whenever a file's upload or reading ends, or a file is added failed or removed: once nothing is being read, the waiting message
+// goes - or, where it cannot, is let go with the reason.
+function releaseHeld() {
+  const hold = heldSend;
+  if (!hold || attachmentsReading()) return;
+  if (!ownsIntent(hold.intent)) { cancelHold(); return; }
+  const unread = attachments.filter((item) => !hold.seen.has(item) && (['failed', 'held'].includes(item.status)
+    || Boolean(item.note) || Boolean(item.summary && item.summary.waiting_for_ai > 0)));
+  const message = hold.message === null ? $('message').value : hold.message;
+  const them = unread.length === 1 ? 'it' : 'them';
+  const refused = unread.length
+    ? `Not sent: ${unread.map((item) => item.name).join(', ')} could not be fully read. Remove ${them} or read ${them} again, then `
+      + 'press Send.'
+    : attachmentsBlockSend() || (!message.trim() ? 'Not sent: the message box is empty.' : '')
+      || (usageUsedUp() ? `Not sent: ${(usage && usage.limit) || 'Sending is paused until you upgrade.'}` : '');
+  if (refused) { cancelHold(refused); return; }
+  heldSend = null;
+  paintSend();
+  send(message, hold.options);
 }
 
 $('plus-attach').addEventListener('click', () => {
