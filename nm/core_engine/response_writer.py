@@ -1827,6 +1827,26 @@ def _coverage_shown(record, offered, context=None, *, compact=False):
     return items or None
 
 
+def interpretation_shown(interpretation, context, sources):
+    """The message's interpretation as the writer reads it (plan AN.35's cost finding; owner, 5 Nov 2026: "do 1"): each unit as it
+    was interpreted, its sources by the short IDs the original context shows them under, and a passage of its context that is a
+    whole message or a whole page of the papers named by its ID alone - those words are in original_context, once. On the 4 Nov
+    answer each unit carried every page of the papers again, about 41 thousand tokens a unit, in every writing call. A quotation of
+    part of a message or a page keeps its words. Nothing of the interpretation itself changes."""
+    if not isinstance(interpretation, dict) or not isinstance(interpretation.get("units"), list):
+        return interpretation
+    whole = {identity: row["text"] for identity, row in source_catalogue(context).items()}
+
+    def shown(entry):
+        if (isinstance(entry, dict) and entry.get("start") == 0 and isinstance(entry.get("text"), str)
+                and whole.get(entry.get("source_id")) == entry["text"] and entry.get("end") == len(entry["text"])):
+            return {"source_id": entry["source_id"], "whole": True}
+        return entry
+    units = [{**unit, "context": [shown(entry) for entry in unit["context"]]} if isinstance(unit.get("context"), list) else unit
+             for unit in interpretation["units"]]
+    return renamed({**interpretation, "units": units}, {identity: alias for alias, identity in answer_sources.aliases(sources).items()})
+
+
 def _payload(context, record, sources, interpretation, execution, layout, index, time_limits=None, *, worded=False,
              general=False):
     part = layout[index]
@@ -1849,7 +1869,7 @@ def _payload(context, record, sources, interpretation, execution, layout, index,
     coverage = _coverage_shown(record, offered, context, compact=True) if general else None
     # What every part's call carries alike comes first (shared_material), the coverage list among it from v14.
     return {"original_context": answer_sources.shown_context(context, sources), "setting": clock_contracts.setting(),
-            "interpretation_proposal": interpretation,
+            "interpretation_proposal": interpretation_shown(interpretation, context, sources),
             **({"papers_chronology": papers} if papers else {}),
             **({"copies_read_differently": copies} if copies else {}),
             # The figures of the transactions, added up by code (AN.28, D7).
@@ -2175,7 +2195,7 @@ def _overview_payload(context, research_record, sources, sections, interpretatio
     papers = _chronology_shown(research_record, offered, context) if presented else None
     coverage = _coverage_shown(research_record, offered, context, compact=True) if general else None
     return {"original_context": answer_sources.shown_context(context, sources),
-            "setting": clock_contracts.setting(), "interpretation_proposal": interpretation,
+            "setting": clock_contracts.setting(), "interpretation_proposal": interpretation_shown(interpretation, context, sources),
             **({"papers_chronology": papers} if papers else {}),
             **({"coverage": coverage} if coverage else {}),
             "understanding": research_record["plan"]["proposal"]["understanding"],
