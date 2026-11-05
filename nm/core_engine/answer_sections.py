@@ -48,7 +48,7 @@ from nm.core_engine import (
 )
 from nm.core_engine.calls import (
     ALLOWANCE, CONFLICT_PURPOSE, EDIT_ALLOWANCE, REVIEW_PURPOSE, SECTION_ALLOWANCE, SHARED_ALLOWANCE, CorrectionUnavailable,
-    ReleaseWithheld, refusal_reason, shape_mismatch,
+    ReleaseWithheld, StopRequested, refusal_reason, shape_mismatch,
 )
 from nm.shared.egress_contracts import EgressRefused
 from nm.shared.external_ai_contracts import ModelPermissionRefused
@@ -124,7 +124,7 @@ def allowances(rounds_):
 REASONS = tuple(response_review.UNWRITTEN)
 #: Wherever they happen, these stop the turn: a permission or egress refusal, and a terminal
 #: release boundary (an authority readback differing from its held source, G-CORE).
-_STOP = (ModelPermissionRefused, EgressRefused, ReleaseWithheld)
+_STOP = (ModelPermissionRefused, EgressRefused, ReleaseWithheld, StopRequested)
 #: The gate that owns leaving a statement out for each kind of finding (owner decision P25):
 #: a date found nowhere is an unsupported statement too.
 _LEFT_OUT = {"grounding": ("G-GROUND", Recovery.NONE), "framing": ("G-GROUND", Recovery.NONE),
@@ -562,10 +562,10 @@ class _Answering:
 
     def _review(self, scope, draft, kwargs, refused, researched, accepted=()):
         record, sources, execution = researched
-        self.report("checking_authorities")
+        self.report("checking_authorities", part=scope)
         authorities = response_authorities.check(self.context, record, sources, draft,
                                                  case_index=self.case_index, provision_reader=self.provision_reader)
-        self.report("reviewing")
+        self.report("reviewing", part=scope)
 
         def judged():
             return response_review.review(self.calls, self.context, record, sources, draft, execution,
@@ -650,7 +650,7 @@ class _Answering:
                 if better >= BETTER_REWRITES:
                     return kept(), None
                 better += 1
-            self.report("revising")
+            self.report("revising", part=scope, corrections=len(faults(piece)))
             correction = {"mismatch": _told(piece), "rejected": piece["draft"]["proposal"],
                           **({"purpose": REVIEW_PURPOSE} if _read_v10(piece) else {"asked_by_review": True})}
 
@@ -682,7 +682,7 @@ class _Answering:
     def _dispute(self, section):
         return None if section == response_writer.OVERVIEW else self.layout[section]["dispute_id"]
 
-    def _repaired(self, scope, operation, write, kwargs, researched, *, section, sections=None):
+    def _repaired(self, scope, operation, write, kwargs, researched, *, section, sections=None, start=None):
         """A v14 piece (plan AN.28, D2; AN.29, D10): its draft; in each round of repair its allowance leaves (plan AN.33, D21),
         the items of its coverage the review finds it passes over, and no earlier take-up asked about, taken up in one call;
         while its own allowance lasts, a second look at only the paragraphs code's checks or the review find at fault - made at
@@ -693,7 +693,8 @@ class _Answering:
         offered = answer_sources.aliases(sources)
         overview = section == response_writer.OVERVIEW
         refused, looks, accepted, notes, trims = [], [], [], [], []
-        state = {"proposal": None, "cut": {}, "left_out": [], "items": [], "undo": None, "blocking": False,
+        # start (plan AN.42, D79): the words a piece already shown stood in, admitted and reviewed again instead of written afresh.
+        state = {"proposal": deepcopy(start), "cut": {}, "left_out": [], "items": [], "undo": None, "blocking": False,
                  "second": 0, "taken": 0, "asked": set(), "mended": False}
         reviewed, passed, correction, better = None, None, None, 0
         pending = None
@@ -726,7 +727,7 @@ class _Answering:
             except CorrectionUnavailable:
                 return False
             state["mended"] = True
-            self.report("revising")
+            self.report("revising", part=scope, corrections=len(cuts))
             faults = _mend_faults(cuts)
             returned = response_writer.repair(self.calls, self.context, record, sources, _mend_shown(state["proposal"], cuts),
                                               faults, section=section, interpretation=self.interpretation,
@@ -747,7 +748,7 @@ class _Answering:
                 self.calls.spend("core_response_repair")
             except CorrectionUnavailable:
                 return False
-            self.report("revising")
+            self.report("revising", part=scope, corrections=len(faults))
             returned = response_writer.repair(self.calls, self.context, record, sources, state["proposal"], faults,
                                               section=section, interpretation=self.interpretation,
                                               execution=execution, time_limits=self.time_limits, sections=sections)
@@ -789,7 +790,7 @@ class _Answering:
                 return False
             state["taken"] += 1
             state["asked"] |= {entry["id"] for entry in wanted}
-            self.report("revising")
+            self.report("revising", part=scope, corrections=len(wanted))
             returned = response_writer.take_up(self.calls, self.context, record, sources, state["proposal"], wanted,
                                                section=section, interpretation=self.interpretation, execution=execution,
                                                time_limits=self.time_limits, sections=sections)
@@ -933,7 +934,7 @@ class _Answering:
                         # A new proposal, of which nothing is blocked yet; should it bring a fault of its own, the
                         # piece that passed stays.
                         better += 1
-                        self.report("revising")
+                        self.report("revising", part=scope, corrections=len(beside(piece)))
                         state.update(proposal=None, cut={}, left_out=[], items=[])
                         correction = {"mismatch": _told(piece), "rejected": piece["draft"]["proposal"],
                                       "purpose": REVIEW_PURPOSE}
@@ -995,18 +996,28 @@ class _Answering:
             self.calls, self.context, record, sources, index=index, interpretation=self.interpretation,
             execution=execution, time_limits=self.time_limits, contract=self.writer)
 
-    def section(self, index):
+    def section(self, index, *, case=None, case_done=None, start=None):
         """One dispute's section, in its own scope of corrections (owner decision P26), written
         from its own dispute's research as soon as that is ready (step 4); from research v15 (plan AN.35, piece 35c2) what makes
-        its case stronger is set out beside it, from the same research, and kept with it."""
+        its case stronger is set out beside it, from the same research, and kept with it.
+        Plan AN.41 (D67, D70): case, the dispute's case set out already by an answer continuing where it stopped, used as it is;
+        case_done(index, case) is told the case as soon as it is set out. Plan AN.42 (D79): start, the words a section already
+        shown stood in, reviewed again from them instead of written afresh."""
         scope, researched = f"s{index}", self.researched.part(index)
         cased = self.researched.contract in research.NAMED_LAW
         dispute = self._understood(index) if cased else None
         with replay_scope.Pool(max_workers=1) as beside:
-            making = (beside.submit(case_strength.assess, self.calls, self.context, researched[0], researched[1], dispute)
-                      if dispute is not None else None)
-            written = self._section(index, scope, researched)
-            return {**written, **({CASE: making.result() if making is not None else None} if cased else {})}
+            making = (beside.submit(self._case, index, researched, dispute, case_done)
+                      if dispute is not None and case is None else None)
+            written = self._section(index, scope, researched, start=start)
+            made = case if case is not None and dispute is not None else making.result() if making is not None else None
+            return {**written, **({CASE: made} if cased else {})}
+
+    def _case(self, index, researched, dispute, case_done):
+        made = case_strength.assess(self.calls, self.context, researched[0], researched[1], dispute)
+        if case_done is not None:
+            case_done(index, made)
+        return made
 
     def _understood(self, index):
         """The dispute a section answers, as its research understood it; None for a part that answers none."""
@@ -1014,14 +1025,14 @@ class _Answering:
         disputes = self.researched.plan["proposal"]["understanding"]["disputes"]
         return next((dispute for dispute in disputes if dispute["id"] == dispute_id), None)
 
-    def _section(self, index, scope, researched):
-        self.report("writing")
+    def _section(self, index, scope, researched, start=None):
+        self.report("writing", part=scope)
         # v14 (AN.29, D10): the take-ups of what the section passed over have an allowance of their own beside the section's,
         # both set up front from the matter (AN.33, D21).
         repaired = self.writer in response_writer.REPAIRS
         with self.calls.scope(scope, self.own + self.take_ups + self.mends if repaired else SECTION_ALLOWANCE):
             piece = (self._repaired(scope, "core_response_writer", self._write(index, researched), {}, researched,
-                                    section=index)
+                                    section=index, start=start)
                      if self.writer in response_writer.REPAIRS else
                      self._piece(scope, "core_response_writer", self._write(index, researched), {}, researched))
         return {"part": index, "dispute_id": self.layout[index]["dispute_id"], **piece, "edit": None}
@@ -1089,7 +1100,7 @@ class _Answering:
 
 def answer(calls, context, record, sources, *, interpretation, execution, worked, case_index=None,
            provision_reader=None, report=None, released=None, researched=None,
-           contract=response_writer.PRESENTED_CONTRACT, later=None):
+           contract=response_writer.PRESENTED_CONTRACT, later=None, done=None, cases=None, case_done=None, steered=False):
     """Every section of the answer, side by side, then (for several disputes) the check
     across them with any correction, and the overview. Returns the sections in the
     answer's layout, the check across them (None, its record, or why it could not be
@@ -1111,7 +1122,15 @@ def answer(calls, context, record, sources, *, interpretation, execution, worked
     later (plan AN.37, D44, D50): a window of questions still open while the answer is written (turn._Later). A section whose
     dispute a question names waits for the answers (or the defaults) and is written with them; every other section is written
     at once. Where an answer taken after that differs from the default the waiting sections were written on, the sections it
-    touches are written again, once, with it; the check across the sections and the overview read the answers as they stand."""
+    touches are written again, once, with it; the check across the sections and the overview read the answers as they stand.
+
+    done (plan AN.41, D70): what an answer continuing where it stopped had shown - {"sections", "cross_check", "overview"} -
+    checked by the caller as a saved answer is checked. Each section is kept as it is and not written again, but one the service
+    could not make (NOT_MADE), which is written now; the check across the sections and the overview are kept where every section
+    was. cases: each dispute's case set out already, by its section's index (str); case_done(index, case) is told each case as it
+    is set out (D67). steered (plan AN.42, D79): the answer continues with what the advocate steered it with - each section kept is
+    admitted and reviewed again from its own words against the steered conversation, and written again only where its review finds
+    it wanting; the check across the sections and the overview are made again."""
     researched = researched or Researched.ready(context, record, sources, execution)
 
     def answering_on(context):
@@ -1134,7 +1153,12 @@ def answer(calls, context, record, sources, *, interpretation, execution, worked
             return waited["answering"]
     layout = answering.layout
     indices = list(range(1, len(layout))) if len(layout) > 1 else [0]
-    state, lock = {"sections": {}, "cross_check": None, "overview": None}, threading.Lock()
+    kept = {saved["part"]: saved for saved in (done or {}).get("sections") or ()
+            if saved["part"] in indices and saved["dispute_id"] == layout[saved["part"]]["dispute_id"]
+            and (saved["fallback"] is None or saved["fallback"]["reason"] not in NOT_MADE)}
+    # Every section kept as it was shown: the check across them and the overview made then stand too.
+    whole = not steered and bool(done) and set(indices) <= set(kept)
+    state, lock = {"sections": {} if steered else dict(kept), "cross_check": None, "overview": None}, threading.Lock()
 
     def publish():
         # An answer with one section is whole when it passes; an answer's first showing is a
@@ -1146,7 +1170,11 @@ def answer(calls, context, record, sources, *, interpretation, execution, worked
                       "cross_check": deepcopy(state["cross_check"]), "overview": deepcopy(state["overview"])})
 
     def section(index):
-        saved = written_by(index).section(index)
+        if index in kept and not steered:
+            return kept[index]
+        before = shown(kept[index]) if steered and index in kept else None
+        saved = written_by(index).section(index, case=None if steered else (cases or {}).get(str(index)), case_done=case_done,
+                                          start=before["draft"]["proposal"] if before is not None else None)
         with lock:
             state["sections"][index] = saved
             publish()
@@ -1180,7 +1208,11 @@ def answer(calls, context, record, sources, *, interpretation, execution, worked
         failed = {scope: exc for found in failures for scope, exc in found.items()}
         raise next(failed[f"s{index}"] for index in indices)
     many, crossed, overview = len(layout) > 1, None, None
-    if many and sum(shown(saved) is not None for saved in sections) >= 2:
+    if whole and done["cross_check"] is not None:
+        crossed = done["cross_check"]
+        with lock:
+            state["cross_check"] = crossed
+    elif many and sum(shown(saved) is not None for saved in sections) >= 2:
         answering.report("checking_across")
         crossed = answering.across(sections)
         conflicts = crossed["proposal"]["conflicts"] if "proposal" in crossed else []
@@ -1195,7 +1227,9 @@ def answer(calls, context, record, sources, *, interpretation, execution, worked
         with lock:
             state["cross_check"] = crossed
             publish()
-    if many and any(shown(saved) is not None for saved in sections):
+    if whole and done["overview"] is not None:
+        overview = done["overview"]
+    elif many and any(shown(saved) is not None for saved in sections):
         answering.report("writing_overview")
         overview = answering.overview(sections)
         with lock:
