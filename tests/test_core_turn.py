@@ -31,6 +31,11 @@ class ScriptedModel:
     def context_budget(self, tier): return 100_000
 
     def structured(self, prompt, schema, tier, **kwargs):
+        if prompt.operation == "core_title":
+            # Plan AN.43: the conversation's title, on the turn's model port beside the turn - kept apart from the turn's calls.
+            self.titled = getattr(self, "titled", 0) + 1
+            return ModelResult(None, {"title": getattr(self, "title", "Synthetic reported account matter")}, tier, "synthetic",
+                               "fixture", Usage(1, 1, 0), 0, completion=Completion.COMPLETE)
         if prompt.operation == "core_calculation":
             # Item 9: the scripted turns need no time limit unless a test says otherwise.
             self.calls.append((prompt.operation, prompt.user))

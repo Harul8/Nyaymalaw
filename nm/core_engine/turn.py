@@ -18,11 +18,11 @@ from datetime import datetime, timezone
 
 from nm.core_engine import answer_sections, answer_sources, calculation, case_strength, checklist, estimates, questions
 from nm.core_engine import reasoning, replay_scope, research, response_rendering, response_writer
-from nm.core_engine import understanding
+from nm.core_engine import titles, understanding
 from nm.core_engine.calls import CorrectionUnavailable, ReleaseWithheld, StopRequested, TurnCalls
 from nm.core_engine.conversation import (
     ConversationRefused, TurnContext, asking_of, chat_matter_id, checked_rows, commit_turn, committed_version, digest,
-    drop_asking, drop_shown, hold_asking, hold_shown, open_turn, sent, shown_of, stored_chat,
+    drop_asking, drop_shown, hold_asking, hold_shown, hold_title, open_turn, sent, shown_of, stored_chat, title_of,
 )
 from nm.shared.external_ai_contracts import ModelPermissionRefused
 from nm.shared.model_config import DEFAULT_TURN_MODEL
@@ -110,6 +110,8 @@ STOP_NEEDS = {
 #: Plan AN.41 (D66, D71): a turn saved as it stopped before NM had finished any part of it - the advocate's message and files,
 #: and code's words on why it stopped, with nothing of an answer.
 UNANSWERED_CONTRACT = "core_turn_unanswered_v1"
+#: How long a finished answer waits, at most, for the conversation's title still being written beside it (plan AN.43), in seconds.
+TITLE_WAIT = 60
 #: What a stopped answer says of the time limits when it stopped before they were worked out.
 LIMITS_UNFINISHED = "The answer stopped before the time limits were worked out"
 
@@ -494,7 +496,7 @@ class _Keeper:
 
 
 def prepare(model, context, searcher, *, case_index=None, provision_reader=None, progress=None,
-            held_acts=None, shown=None, ask=None, keep=None, resume=None, steered=False):
+            held_acts=None, shown=None, ask=None, keep=None, resume=None, steered=False, on_understood=None):
     """Prepare and admit one response, dispute by dispute (turn v7, owner decisions P25-P27, P29).
     No persistence or external action occurs here. shown (P26): told, each time the answer
     shows more, its elements so far and the answering's state they come from (its sections done,
@@ -510,15 +512,16 @@ def prepare(model, context, searcher, *, case_index=None, provision_reader=None,
     saved (conversation.STEPS); each is checked as a saved answer is checked and kept where it passes, and only what is missing
     is done. steered (plan AN.42, D79): the conversation carries what the advocate steered the answer with since those steps were
     saved - the understanding is made again from it, each dispute's research kept where the new plan asks exactly what it
-    answered, and each section shown reviewed again against it from its own words."""
+    answered, and each section shown reviewed again against it from its own words. on_understood (plan AN.43): told the context and the
+    plan as soon as the matter is understood (or was, before it stopped), for what is made from them beside the answer."""
     with replay_scope.turn():
         return _prepare(model, context, searcher, case_index=case_index, provision_reader=provision_reader,
                         progress=progress, held_acts=held_acts, shown=shown, ask=ask, keep=keep, resume=resume,
-                        steered=steered)
+                        steered=steered, on_understood=on_understood)
 
 
 def _prepare(model, context, searcher, *, case_index, provision_reader, progress, held_acts, shown, ask, keep, resume,
-             steered):
+             steered, on_understood):
     report = _reporter(progress)
     calls = model if isinstance(model, TurnCalls) else TurnCalls(model)
     kept = _kept(resume, context, report) if resume and not steered else _NOTHING_KEPT
@@ -543,6 +546,8 @@ def _prepare(model, context, searcher, *, case_index, provision_reader, progress
             kept = _kept(resume, context, report, plan=plan, steered=True)
             if keep is not None:
                 keep.parts_kept(kept["parts"])
+    if on_understood is not None:
+        on_understood(context, plan)
     # Plan AN.38 (D48): papers that record one act or matter differently move the working out of the time limits under Auto.
     if any(item.get("kind") == "papers_differ" for item in (plan.get("proposal") or {}).get("connections") or ()):
         calls.found("papers_differ")
@@ -821,7 +826,7 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
             attempts: TurnAttemptPort | None = None, case_index=None, provision_reader=None,
             progress=None, documents=(), held_acts=None, running=lambda turn_id: False,
             chosen_model=None, effort=None, propose=None, desk=None, stronger=None, stopping=None, steers=None,
-            attach=None):
+            attach=None, entitle=None):
     """One turn. chosen_model and effort: what the advocate chose for it (plan AN.33, D23) - the model, which the caller's model
     port already runs every call on, and the effort, which moves every call of the turn (calls.TurnCalls); both recorded with the
     turn's metrics, and in its request where they are not the defaults. None: not chosen (the defaults, unrecorded).
@@ -837,7 +842,10 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
     every call. steers (D79): takes what the advocate has steered the answer with since it was last asked - each {"text",
     "documents", "at"} - and clears the stop it came with; the answer then continues with it. attach(advocate_id, chat_id, write)
     (D77): told, once the message is saved, how a write from outside the turn beside its conversation is made on the turn's own
-    versions - write(change) runs change(context) under the turn's lock of writes and keeps the context it returns."""
+    versions - write(change) runs change(context) under the turn's lock of writes and keeps the context it returns.
+    entitle (plan AN.43, D82): given what is known of the matter (titles.material), the title the model writes for the conversation,
+    as code admits it, or None; asked once the matter is understood, beside the answer, where the conversation has no title yet (or
+    one written before any matter was understood)."""
     if not session_current():
         raise ConversationRefused("Sign in again before continuing.", status=401)
     effort = reasoning.DEFAULT_CHOICE if effort is None else effort
@@ -945,6 +953,33 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
             holder["context"] = change(holder["context"])
     if attach is not None:
         attach(advocate_id, context.chat_id, write_beside)
+    try:
+        titled = title_of(context.matter)
+    except ValueError:
+        titled = None
+    titling = {}
+
+    def entitled(payload, plan):
+        """Plan AN.43 (D82): the conversation's title, written once the matter is understood - beside the research, never holding
+        the answer up - where it has none yet, or one written before any matter was understood."""
+        if entitle is None or titling or titled is not None and (titled["from_matter"] or not titles.understood(plan)):
+            return
+
+        def write():
+            try:
+                text = entitle(titles.material(payload, plan))
+            except (ModelError, ModelPermissionRefused, EgressRefused) as exc:
+                log.warning("No title was written for the conversation: %s", type(exc).__name__)
+                return
+            if text is None:
+                return
+            try:
+                write_beside(lambda current: hold_title(store, current, {"text": text,
+                                                                          "from_matter": titles.understood(plan)}))
+            except (OSError, StaleWrite, ConversationRefused, ValueError):
+                log.warning("The conversation's title could not be saved", exc_info=True)
+        titling["thread"] = threading.Thread(target=write, name="turn-title", daemon=True)
+        titling["thread"].start()
 
     def shown(elements, state, metrics):
         def change(held):
@@ -1017,7 +1052,8 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
             try:
                 elements, activity, metrics = prepare(calls, context.payload(), searcher,
                     case_index=case_index, provision_reader=provision_reader, progress=progress,
-                    held_acts=held_acts, shown=shown, ask=ask, keep=keeper, resume=resume, steered=steered)
+                    held_acts=held_acts, shown=shown, ask=ask, keep=keeper, resume=resume, steered=steered,
+                    on_understood=entitled)
                 break
             except StopRequested:
                 taken = steers() if steers is not None else []
@@ -1038,7 +1074,10 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
                 # Whatever of the earlier work is still under way stops at its next call; the steered answer goes on.
                 calls = calls.successor()
                 report("steering")
-        # Nothing more is saved as the turn works: what it made is saved with it, below.
+        # Nothing more is saved as the turn works: what it made is saved with it, below - the title first, where it is still
+        # being written (a short call; the answer is not held up for longer than TITLE_WAIT).
+        if titling:
+            titling["thread"].join(TITLE_WAIT)
         keeper.close()
         if holder["asking"] is not None:
             # Plan AN.37: what was asked, and the answers as they stand now, are saved with the turn - a question no writing

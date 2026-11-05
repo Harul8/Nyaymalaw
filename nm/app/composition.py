@@ -193,7 +193,7 @@ class Application:
     def run_turn(self, *, advocate_id, session_current, document_refs=(), model_choice=None, effort=None, **request):
         """One turn for an advocate. model_choice and effort: what they chose for it (plan AN.33, D23) - the model every text call
         of the turn runs on, and how hard each reasons; None: as configured, at the table's own levels."""
-        from nm.core_engine import routing
+        from nm.core_engine import routing, titles
         from nm.core_engine.turn import process
 
         if document_refs:
@@ -245,7 +245,9 @@ class Application:
                              progress=progress, running=lambda held: self.turn_running(advocate_id, held),
                              chosen_model=model_choice, effort=effort, stronger=stronger,
                              propose=self.propose_questions, desk=self.questions.bound(advocate_id),
-                             stopping=running.stop.is_set, steers=running.take, attach=running.attach, **request)
+                             stopping=running.stop.is_set, steers=running.take, attach=running.attach,
+                             # Plan AN.43 (D82): the conversation's title, on the turn's own model port - metered as any call.
+                             entitle=lambda given: titles.entitle(model, given), **request)
             ended = 'finished'
             return result
         finally:
