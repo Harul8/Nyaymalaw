@@ -148,15 +148,20 @@ def _now():
 class Asking:
     """One turn's window: its questions, the answers taken and how each stands. hold(state) seals the state beside the
     conversation each time it changes; report(stage) tells the progress. Thread-safe: the turn waits on it while the page's
-    answer arrives on another thread."""
+    answer arrives on another thread. From plan AN.37's D87 (5 Nov 2026) code may add a question to the window while the turn
+    works - which Act or judgment a name means, found by the research - each question waiting its own WAIT from when it was
+    asked; the window stays open OPEN from the last question asked."""
 
     def __init__(self, questions, *, hold=lambda state: None, report=lambda stage, **detail: None, clock=time.monotonic,
                  wait=None, open_for=None):
         self.questions = deepcopy(questions)
         self._hold, self._report, self._clock = hold, report, clock
         self._wait, self._open_for = WAIT if wait is None else wait, OPEN if open_for is None else open_for
-        self._lock, self._answered = threading.Lock(), threading.Event()
-        self._answers, self.version, self._started, self._applied = {}, 0, None, False
+        self._lock = threading.Lock()
+        self._turned = threading.Condition(self._lock)
+        self._answers, self.version, self._started = {}, 0, None
+        #: When each question was asked, and those whose default stood because no answer came in time.
+        self._asked, self._assumed = {}, set()
         #: The version at which each answer that came after the defaults changed one (D44).
         self._changed = {}
 
@@ -166,42 +171,97 @@ class Asking:
             return {"questions": deepcopy(self.questions), "answers": deepcopy(list(self._answers.values()))}
 
     def open(self):
-        """Whether an answer can still be taken."""
+        """Whether an answer can still be taken: OPEN seconds from the last question asked."""
         with self._lock:
-            return self._started is not None and self._clock() - self._started <= self._open_for
+            return self._open_now()
+
+    def _open_now(self):
+        return self._started is not None and self._clock() - max(self._asked.values(), default=self._started) <= self._open_for
 
     def start(self, given=None):
         """Show the window, without waiting (D50: what does not depend on it goes on). given: answers the advocate gave this
         same message's window before (a retry, D40), taken first."""
         with self._lock:
             self._started = self._clock()
+            for question in self.questions:
+                self._asked.setdefault(question["id"], self._started)
         if given:
             self.receive(given, hold=False)
         self._hold(self.state())
         self._report("waiting_for_answer")
 
-    def wait(self):
-        """Wait until every question is answered or WAIT seconds have passed since the window opened, then let the default stand
-        for each question not answered, as assumed. Returns the answers as they then stand. The window stays open after."""
+    def add(self, admitted):
+        """Questions code asks while the turn works (D87), each already admitted (admit), put in the window - opening it where
+        nothing was asked yet - and asked from now. A question the window already asks in the same words is not asked again: its
+        ID is given (a retry reuses its answer). One past MOST_QUESTIONS is not asked: None in its place, and its default stands
+        for the work. Returns the IDs, in order."""
+        ids, added = [], False
         with self._lock:
-            left = self._wait - (self._clock() - self._started)
-        if left > 0:
-            self._answered.wait(left)
-        return self.settle()
+            now = self._clock()
+            if self._started is None:
+                self._started = now
+            known = {_key(question["question"]): question["id"] for question in self.questions}
+            for item in admitted:
+                if _key(item["question"]) in known:
+                    ids.append(known[_key(item["question"])])
+                    continue
+                if len(self.questions) >= MOST_QUESTIONS:
+                    ids.append(None)
+                    continue
+                identity = f"q{len(self.questions) + 1}"
+                self.questions.append({**deepcopy(item), "id": identity})
+                known[_key(item["question"])] = identity
+                self._asked[identity] = now
+                ids.append(identity)
+                added = True
+        if added:
+            self._hold(self.state())
+            self._report("waiting_for_answer")
+        return ids
+
+    def wait(self):
+        """Wait until every question asked when the window opened is answered or WAIT seconds have passed since then, then let
+        the default stand for each of them not answered, as assumed. Returns the answers as they then stand. The window stays
+        open after."""
+        with self._lock:
+            first = [question["id"] for question in self.questions if self._asked.get(question["id"]) == self._started]
+        return self.wait_for(first)
+
+    def wait_for(self, ids):
+        """Wait until each question named is answered or WAIT seconds have passed since it was asked, then let the default
+        stand for each of them not answered. Returns the answers as they then stand."""
+        ids = [identity for identity in ids if identity is not None]
+        with self._lock:
+            while True:
+                waiting = [identity for identity in ids if identity not in self._answers]
+                if not waiting:
+                    break
+                left = max(self._asked[identity] for identity in waiting) + self._wait - self._clock()
+                if left <= 0 or not self._turned.wait(left):
+                    break  # the time is up: an answer, had it come, would have woken the wait
+        self._default(ids)
+        return self.answers()
 
     def settle(self):
         """Let the default stand, at once, for each question not answered - where the work no longer waits - and return the
         answers as they stand."""
         with self._lock:
-            applied, self._applied = self._applied, True
-            if not applied:
-                for question in self.questions:
-                    self._answers.setdefault(question["id"], {"id": question["id"], "chosen": list(question["default"]),
-                                                              "other": "", "how": "assumed", "at": _now()})
-                self.version += 1
-        if not applied:
-            self._hold(self.state())
+            ids = [question["id"] for question in self.questions]
+        self._default(ids)
         return self.answers()
+
+    def _default(self, ids):
+        with self._lock:
+            known = {question["id"]: question for question in self.questions}
+            fresh = [identity for identity in ids if identity in known and identity not in self._answers]
+            for identity in fresh:
+                self._answers[identity] = {"id": identity, "chosen": list(known[identity]["default"]), "other": "",
+                                           "how": "assumed", "at": _now()}
+                self._assumed.add(identity)
+            if fresh:
+                self.version += 1
+        if fresh:
+            self._hold(self.state())
 
     def ask(self, given=None):
         """Show the window and wait for its answers (start, then wait)."""
@@ -213,40 +273,42 @@ class Asking:
             return deepcopy(self._answers)
 
     def view(self):
-        """What the page shows of the window: the questions, the answers taken, and whether the defaults now stand."""
+        """What the page shows of the window: the questions, the answers taken, and whether the defaults now stand - for every
+        question not answered."""
         with self._lock:
+            unanswered = [q["id"] for q in self.questions if self._answers.get(q["id"], {}).get("how") in (None, "assumed")]
             return {"questions": deepcopy(self.questions), "answers": deepcopy(list(self._answers.values())),
-                    "defaults_applied": self._applied}
+                    "defaults_applied": bool(unanswered) and all(identity in self._assumed for identity in unanswered)}
 
     def receive(self, given, *, hold=True):
         """The advocate's answers from the window, by question ID. Returns "taken", or "closed" where the window has closed;
         raises Refused for an answer code cannot take (nothing is kept from it)."""
         if not isinstance(given, dict) or not given:
             raise Refused("Answer at least one question.")
-        known = {question["id"]: question for question in self.questions}
+        with self._lock:
+            known = {question["id"]: question for question in self.questions}
         if any(identity not in known for identity in given):
             raise Refused("An answer names a question this window does not ask.")
         settled = {identity: answer(known[identity], value) for identity, value in given.items()}
         with self._lock:
-            if self._started is None or self._clock() - self._started > self._open_for:
+            if not self._open_now():
                 return "closed"
-            how = "late" if self._applied else "answered"
-            changed = False
+            changed = set()
             for identity, value in settled.items():
                 before = self._answers.get(identity)
                 if before is not None and before["how"] in ("answered", "late"):
                     continue  # the first answer counts
-                changed = changed or before is None or (before["chosen"], before["other"]) != (value["chosen"], value["other"])
-                self._answers[identity] = {"id": identity, **value, "how": how, "at": _now()}
-            if changed and self._applied:
+                late = identity in self._assumed
+                if late and (before["chosen"], before["other"]) != (value["chosen"], value["other"]):
+                    changed.add(identity)
+                self._answers[identity] = {"id": identity, **value, "how": "late" if late else "answered", "at": _now()}
+            if changed:
                 self.version += 1
-                for identity in settled:
+                for identity in changed:
                     self._changed[identity] = self.version
-            done = all(question["id"] in self._answers for question in self.questions)
+            self._turned.notify_all()
         if hold:
             self._hold(self.state())
-        if done:
-            self._answered.set()
         return "taken"
 
     def changed_since(self, version):
