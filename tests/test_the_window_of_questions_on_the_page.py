@@ -65,7 +65,9 @@ def test_how_each_answer_stands_is_said_and_a_closed_window_sends_the_answers_as
 def test_the_progress_opens_the_window_once_and_offers_it_while_it_is_open():
     script = (ROOT / "nm/app/app.js").read_text(encoding="utf-8")
     poll = script[script.index("async function poll() {"):script.index("function watchProgress(") + 4000]
-    assert "seen.asking === true && !entry.questionsSeen && !entry.questionsOpen" in poll
+    assert "seen.asking === true && !entry.questionsOpen" in poll
+    # Plan AN.37 (D87): opened by itself once, and again when code adds a question to it while the turn works.
+    assert "(!entry.questionsSeen || (seen.asked || 0) > (entry.questionsSeenCount || 0))" in poll
     working = script[script.index("function renderTurn(entry) {"):script.index("function showConversationFromStart()")]
     assert "if (progress.asking)" in working and "openTurnQuestions(entry)" in working
     window = script[script.index("async function openTurnQuestions("):script.index("function renderQuestionsAsked(")]
@@ -73,3 +75,4 @@ def test_the_progress_opens_the_window_once_and_offers_it_while_it_is_open():
     assert "'/api/turn-question'" in window and "window_closed" in window
     assert "activeDelivery.entry.context === entry.context" in window
     assert "input.type = question.multiple ? 'checkbox' : 'radio'" in window
+    assert "entry.questionsSeenCount = view.questions.length;" in window

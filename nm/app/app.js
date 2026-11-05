@@ -3765,6 +3765,7 @@ async function openTurnQuestions(entry) {
   dialog.addEventListener('close', () => {
     entry.questionsOpen = false;
     entry.questionsSeen = true;
+    entry.questionsSeenCount = view.questions.length;
     dialog.remove();
     repaint();
   });
@@ -6152,8 +6153,10 @@ function watchProgress(entry, onFinished, onStopped = null) {
         showSoFar(entry, seen.chat_id);
         if (entry.context && Array.isArray(entry.context.queued) && entry.context.queued.length) saveQueued(entry.context);
       }
-      // Plan AN.37: a window of questions has opened; it is shown once by itself, and from the progress after.
-      if (seen.asking === true && !entry.questionsSeen && !entry.questionsOpen) openTurnQuestions(entry);
+      // Plan AN.37: a window of questions has opened; it is shown once by itself, and from the progress after - and by itself
+      // again when a question is added to it while the turn works (D87).
+      if (seen.asking === true && !entry.questionsOpen
+          && (!entry.questionsSeen || (seen.asked || 0) > (entry.questionsSeenCount || 0))) openTurnQuestions(entry);
       if (Number.isInteger(seen.shown) && seen.shown > (entry.shownCount || 0) && seen.chat_id) {
         entry.shownCount = seen.shown;
         showSoFar(entry, seen.chat_id);
