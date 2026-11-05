@@ -182,3 +182,61 @@ def test_a_stop_is_not_a_model_failure(store):
     from nm.core_engine import answer_sections
     from nm.shared.model_port import ModelError
     assert not issubclass(StopRequested, ModelError) and StopRequested in answer_sections._STOP
+
+
+def test_an_answer_stopped_in_the_earlier_form_continues_with_what_it_had_shown(store):
+    """An answer that stopped before plan AN.41 was kept as what it had shown and the activity it came from (P27). Continue keeps
+    that work too - checked as any saved step is - instead of starting again and losing what was shown."""
+    from dataclasses import replace
+    from nm.core_engine.conversation import TurnContext
+    scripted = Scripted(refuse={"core_response_overview"})
+    model = through_turns(scripted)
+    with pytest.raises(ModelPermissionRefused):
+        run(store, model)
+    matter = store.load(chat_matter_id("owner", stored_chat("owner", None, "t1")))
+    now = shown_of(matter)
+    context = TurnContext(matter, now["request"]["chat_id"], "t1", now["message"], ()).payload()
+    earlier = {key: now[key] for key in ("turn_id", "request", "message", "documents", "elements", "metrics", "at", "base_version")}
+    earlier["activity"] = {**turn.activity_of(now, context), "waiting": []}
+    store.commit(replace(matter, intake_answers={**matter.intake_answers, "core_shown": earlier}, version=matter.version + 1),
+                 expected_version=matter.version)
+    assert "steps" not in held(store) and held(store)["elements"]
+    scripted.refuse.clear()
+    before = {dispute: written(scripted, dispute) for dispute in ("D1", "D2")}
+    response = run(store, model)
+    assert response["committed"] == "committed"
+    assert {dispute: written(scripted, dispute) for dispute in ("D1", "D2")} == before, "its sections are not written again"
+    assert len(scripted.payloads("core_response_overview")) == 2  # the one refused before, and the one written now
+
+
+def test_after_a_steer_the_sections_shown_stay_until_each_is_replaced_and_only_those_replaced_are_finished(store):
+    """D79: "a section already shown is replaced once its rewrite passes" - the page goes on showing it meanwhile; what is kept as
+    finished is only what was reviewed against the steer, so a Continue after a stop never passes the steer over."""
+    steer = {"text": "Weigh the later notice too.", "documents": [], "at": "2026-11-05T10:00:00+00:00"}
+    pressed, waiting, seen = threading.Event(), [steer], []
+    scripted = Scripted()
+    model = through_turns(scripted)
+    first = model.structured
+
+    def structured(prompt, schema, tier, **kwargs):
+        if prompt.operation == "core_response_review" and steer["text"] in prompt.user:
+            now = held(store)
+            seen.append((len((now["steps"]["answered"] or {}).get("sections", ())),
+                         [e["text"] for e in now["elements"] if e["kind"] == "HEADING"]))
+        out = first(prompt, schema, tier, **kwargs)
+        if prompt.operation == "core_response_cross_check" and waiting:
+            pressed.set()
+        return out
+    model.structured = structured
+
+    def steers():
+        taken = list(waiting)
+        waiting.clear()
+        pressed.clear()
+        return taken
+    assert run(store, model, stopping=pressed.is_set, steers=steers)["committed"] == "committed"
+    # At the first review against the steer: nothing finished since it, both sections still shown.
+    assert seen[0] == (0, ["Dispute 1: In short for D1.", "Dispute 2: In short for D2."])
+    # Both sections are reviewed side by side; by the overview's review both are replaced and count as finished.
+    assert seen[-1] == (2, ["Dispute 1: In short for D1.", "Dispute 2: In short for D2."])
+    assert all(len(headings) == 2 for _, headings in seen), "neither section left the page while it was reviewed again"

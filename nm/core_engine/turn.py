@@ -333,6 +333,25 @@ def _kept(steps, context, report, *, plan=None, steered=False):
     return kept
 
 
+def steps_from(held):
+    """The steps of a turn saved in the earlier form - what it had shown and the activity it came from (P27) - so that Continue
+    keeps them too (plan AN.41, D70): its understanding and plan, each dispute's research it had finished, its time limits and what
+    its answer had shown. Each is checked at Continue as any saved step is. None where that activity cannot be read so."""
+    try:
+        activity = held["activity"]
+        record, plan = activity["research"], activity["research"]["plan"]
+        parts = {}
+        for dispute_id in research.dispute_work(plan):
+            if (record.get("picks") or {}).get(dispute_id, {}).get("reason") == research.UNFINISHED:
+                continue  # recorded as not yet researched when it stopped
+            parts[dispute_id] = research.part_of(record, dispute_id)
+        return {"understood": {"interpretation": activity["interpretation"], "plan": plan}, "limits": activity["calculation"],
+                "parts": parts, "cases": {}, "answered": {key: activity[key] for key in ("sections", "cross_check", "overview")}}
+    except _UNREADABLE as exc:
+        log.warning("What an earlier stopped answer had shown could not be read for Continue: %s", type(exc).__name__)
+        return None
+
+
 def activity_of(held, context):
     """The activity of a turn being worked on, derived from its saved steps (plan AN.41, D67) exactly as the turn shows it: its
     understanding, each dispute's research done so far (the rest recorded as not finished), the time limits (or that they were
@@ -573,7 +592,10 @@ def _prepare(model, context, searcher, *, case_index, provision_reader, progress
             context, record, sources, sections=state["sections"], cross_check=state["cross_check"],
             overview=state["overview"], time_limits=limits, waiting=state["waiting"],
             contract=response_rendering.CASED_CONTRACT)
-        shown(elements, {key: state[key] for key in ("sections", "cross_check", "overview")}, calls.metrics())
+        # D79: a section shown only until its review against a steer replaces it is shown, never kept as finished.
+        before = set(state.get("before") or ())
+        shown(elements, {"sections": [saved for saved in state["sections"] if saved["part"] not in before],
+                         "cross_check": state["cross_check"], "overview": state["overview"]}, calls.metrics())
     # Turn v9 (AN.28): each section written for the advocate and placed, its failing pieces given a second
     # look and then blocked one by one (writer v14), reviewed by review v12, and laid out as rendering v19.
     sections, crossed, overview = answer_sections.answer(
@@ -901,9 +923,9 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
     base = same["base_version"] if same else context.matter.version
     # Plan AN.41 (D66): the message and its files are saved with the conversation before any AI work begins. The same message
     # sent again - Continue - starts from what it saved (D70), with what steered it (D79).
-    resume = same["steps"] if same is not None and "steps" in same else None
+    resume = (None if same is None else same["steps"] if "steps" in same else steps_from(same))
     held = sent(turn_id, context.request, context.message, context.documents, base,
-                at=datetime.now(timezone.utc).isoformat(), steps=resume, steers=same["steers"] if resume else ())
+                at=datetime.now(timezone.utc).isoformat(), steps=resume, steers=same.get("steers", ()) if resume else ())
     if resume is not None:
         held["elements"], held["metrics"] = same["elements"], same["metrics"]
     if held["steers"]:
