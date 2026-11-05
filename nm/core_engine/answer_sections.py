@@ -1160,14 +1160,19 @@ def answer(calls, context, record, sources, *, interpretation, execution, worked
     whole = not steered and bool(done) and set(indices) <= set(kept)
     state, lock = {"sections": {} if steered else dict(kept), "cross_check": None, "overview": None}, threading.Lock()
 
+    # D79: after a steer, each section already shown stays shown until its review against the steer replaces it; "before" names
+    # those shown only so, which are not finished work.
+    shown_before = dict(kept) if steered else {}
+
     def publish():
         # An answer with one section is whole when it passes; an answer's first showing is a
         # section that passed, not a note alone.
-        if released is not None and len(indices) > 1 and any(shown(saved) is not None
-                                                             for saved in state["sections"].values()):
-            released({"sections": [deepcopy(state["sections"][index]) for index in indices if index in state["sections"]],
-                      "waiting": [index for index in indices if index not in state["sections"]],
-                      "cross_check": deepcopy(state["cross_check"]), "overview": deepcopy(state["overview"])})
+        current = {**shown_before, **state["sections"]}
+        if released is not None and len(indices) > 1 and any(shown(saved) is not None for saved in state["sections"].values()):
+            released({"sections": [deepcopy(current[index]) for index in indices if index in current],
+                      "waiting": [index for index in indices if index not in current],
+                      "cross_check": deepcopy(state["cross_check"]), "overview": deepcopy(state["overview"]),
+                      "before": [index for index in indices if index in shown_before and index not in state["sections"]]})
 
     def section(index):
         if index in kept and not steered:
