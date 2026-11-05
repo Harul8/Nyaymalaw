@@ -411,3 +411,37 @@ def test_a_dry_run_changes_nothing(tmp_path):
     summary = job.append(job.passages_for(_act(tmp_path)), store, encode=_encode,
                          build_bm25=_BM25(), dry_run=True)
     assert summary["dry_run"] and _state(store) == before
+
+
+RUN_ON = """The Synthetic Councils Act, 1957
+1.
+Short title. This Act may be called the Synthetic Councils Act, 1957.
+2.
+Definitions. In this Act, unless the context otherwise requires, words have their usual meaning.
+3.
+Increase in the strength of the First Council.(1) The total number of seats in the First Council shall be increased to 40 and of those seats--(a) twelve are to be filled by election; and
+(b)
+four by nomination.
+1. Subs. by Act 58 of 1960, s. 3 and Sch. II, for "26th April, 1958" (retrospectively).(1) The words were substituted.
+4. Increase in the strength of the Second Council.(1) The total number of seats in the Second Council shall be increased from 72 to 108 and of those seats a third are to be filled by election;
+(2)
+The Council shall be deemed to have been constituted on the date of this Act.
+5. Increase in the strength of the Third Council.(1) The total number of seats in the Third Council shall be increased from 30 to 45 and of those seats a half are to be filled by election, the rest by nomination as the Governor may direct.
+6.
+Repeal.
+- The Ordinance is repealed.
+"""
+
+
+def test_a_section_printed_with_its_first_sub_section_on_the_headings_line_is_a_section(tmp_path):
+    """Plan AN.32 (5 Nov 2026): the Legislative Councils Act, 1957 prints its sections 9 and 10 as "9. Increase in the strength
+    of the Punjab Legislative Council.(1) The total ..." on one long line; read before as words of section 8, the Act lost them.
+    A footnote printed so ("1. Subs. by Act ...(1)") is never a section."""
+    act = _act(tmp_path, RUN_ON, name="1957_6_The Synthetic Councils Act, 1957.txt")
+    assert [s.number for s in act.sections] == ["1", "2", "3", "4", "5", "6"]
+    four = next(s for s in act.sections if s.number == "4")
+    assert four.title == "Increase in the strength of the Second Council." and four.opening[0].startswith("4. Increase")
+    assert "(2)" in four.lines, "its later sub-sections stay its own"
+    three = next(s for s in act.sections if s.number == "3")
+    assert not any(line.startswith("4. ") for line in three.lines), "the section stays out of the one before it"
+    assert any(line.startswith("1. Subs. by Act") for line in three.lines), "a footnote stays words where it is printed"

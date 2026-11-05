@@ -85,6 +85,23 @@ _SECTION_INLINE = re.compile(rf"^{_NUMBER}\.\s+(.{{2,200}}?)(?:(\.)\s*|:\s*|\s)[
 #: ...or the heading alone on the line, its text on the next ("2. Definitions." then
 #: "In this Act..." -- the Indian Stamp Act, 1899 throughout).
 _SECTION_HEADED = re.compile(rf"^{_NUMBER}\.\s+(\S.{{1,200}})$")
+#: ...or the heading ended "." and the text run on from it at its first sub-section, on one
+#: line: "9. Increase in the strength of the Punjab Legislative Council.(1) The total ..."
+#: (the Legislative Councils Act, 1957, sections 9 and 10; plan AN.32, 5 Nov 2026). Read
+#: before, the line stayed words of the section above it and the Act lost those sections.
+_SECTION_RUN_ON = re.compile(rf"^{_NUMBER}\.\s+([A-Z\[].{{1,200}}?\.)\s*\(1\)\s*\S")
+#: ...never a footnote printed among the sections ("4. Subs. by Act 44 of 1980, s. 50 ...
+#: .(1)" in India Code's text of the Customs Act, 1962), which would take the number of the
+#: section printed after it.
+_FOOTNOTE_OPENS = re.compile(r"^\[?\s*(?:Subs\.|Ins\.|Omitted|Rep\.|The words|Added|Renumbered|Cl\.|Sub-s|"
+                             r"Now see|The original|Certain|Vide|Ss?\.\s*\d)", re.I)
+
+
+def _run_on(line: str) -> re.Match | None:
+    """A section printed with its heading and its first sub-section on one line, never a
+    footnote."""
+    found = _SECTION_RUN_ON.match(line)
+    return None if found is None or _FOOTNOTE_OPENS.match(found.group(2)) else found
 #: A table, "{|" or "[TABLE]" to "|}": its numbered rows are rows, never sections (the
 #: table in section 320 of the Code of Criminal Procedure numbers its rows by the Penal
 #: Code's sections).
@@ -207,7 +224,7 @@ def read_act(raw: str, *, act_id: str, act_name: str, title: str, year: str, nam
             # "(1)" or "-" after it; or, for "22." with its heading below, a heading ended
             # "." or ":" (a numbered sentence on one line ends so too).
             looks.append(bool(
-                _SECTION_INLINE.match(line) or _TEXT_OPENS.match(after)
+                _SECTION_INLINE.match(line) or _run_on(line) or _TEXT_OPENS.match(after)
                 or len(opened.opening) == 2
                 and _HEADING_ENDS.search(opened.title.rstrip(" ]"))))
             candidates.append((i, opened))
@@ -361,8 +378,8 @@ _LISTED = re.compile(rf"^{_NUMBER}\.(?:\s|$)")
 def _opens_section(line: str, following: str) -> Section | None:
     """The section `line` opens, printed in any of the library's three ways, if it
     opens one; whether its number may open one is `parse_act`'s question."""
-    marker, inline, headed = (_SECTION.match(line), _SECTION_INLINE.match(line),
-                              _SECTION_HEADED.match(line))
+    marker, inline, headed, run_on = (_SECTION.match(line), _SECTION_INLINE.match(line),
+                                      _SECTION_HEADED.match(line), _run_on(line))
     # A heading alone on its line needs its text after it: a line of the arrangement of
     # sections that big Codes print first is followed by the next line of it.
     if headed and (not following or _LISTED.match(following) or not (
@@ -378,6 +395,8 @@ def _opens_section(line: str, following: str) -> Section | None:
         heading = inline.group(2).strip() + (inline.group(3) or "")
     elif headed:
         number, heading, opening = headed.group(1), headed.group(2), [line]
+    elif run_on:
+        number, heading, opening = run_on.group(1), run_on.group(2), [line]
     else:
         return None
     return Section(number.replace("-", ""), heading, opening=opening)
