@@ -21,7 +21,10 @@ For the Acts given, each by its id in the store:
      those held (every later passage moved by the difference), a new vector index (every other passage's vector as it was)
      and a new word index over every passage, all beside the current ones;
   5. only then it swaps the three in, keeping the earlier ones beside them as '.before-<time>', and rewrites the lineage record
-     with what was corrected.
+     with what was corrected, keeping the earlier record beside it as '.before-<time>' too.
+
+To undo: stop the server, and put each '.before-<time>' member back under its own name - the passage store, the vector index,
+the word index and the lineage record.
 
 Saved conversations are not changed: an answer keeps the words of the passages it read, and opening the whole Act from one says
 that the held law has changed since. Start the server again after.
@@ -226,6 +229,7 @@ def correct(replacements: dict[str, list[dict]], store: Store, *, encode: Callab
     if problems:
         raise RuntimeError("corrected, but the set does not agree - the search will refuse it until the '.before-"
                            f"{stamp}' members are put back: " + "; ".join(problems))
+    shutil.copyfile(store.lineage, store.lineage.with_name(f"{store.lineage.name}.before-{stamp}"))
     store.lineage.write_text(json.dumps(record, indent=2), encoding="utf8")
     return {"acts": summary, "passages": total, "before": f".before-{stamp}"}
 

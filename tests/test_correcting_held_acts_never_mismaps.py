@@ -115,6 +115,8 @@ def test_after_a_correction_vector_n_is_still_passage_n_and_every_other_passage_
     assert hybrid.check_lineage(record, store.vector_store) == [], "the corrected set does not agree"
     names = [path.name for path in store.vector_store.iterdir()]
     assert all(any(name.startswith(f"{member}.before-") for name in names) for member in ("chunks.db", "bare.index", "bm25"))
+    kept = [path for path in store.lineage.parent.iterdir() if path.name.startswith("lineage.json.before-")]
+    assert len(kept) == 1 and json.loads(kept[0].read_text())["passages"] == 7, "the earlier lineage record is kept beside"
 
 
 def test_two_acts_corrected_at_once_one_shorter_one_longer(tmp_path):
