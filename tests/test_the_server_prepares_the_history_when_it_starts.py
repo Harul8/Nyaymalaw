@@ -19,12 +19,17 @@ def start(monkeypatch, prepare):
     """Run the one-process server's start-up; returns what the stand-in web server saw when it was started."""
     import uvicorn
 
-    monkeypatch.setattr(main, "Application", lambda: SimpleNamespace(health=lambda: {"runtime": "ready"}, legal_search=None))
+    # Plan AN.41 (D73): at its start the server also releases the answers an earlier run of it was working on.
+    released = []
+    monkeypatch.setattr(main, "Application", lambda: SimpleNamespace(
+        health=lambda: {"runtime": "ready"}, legal_search=None,
+        turns_of_an_earlier_run_released=lambda: released.append(1) or 0))
     monkeypatch.setattr(main.api, "set_application", lambda application: None)
     monkeypatch.setattr(main.api, "prepare_history", prepare)
     seen = []
     monkeypatch.setattr(uvicorn, "run", lambda app, **kwargs: seen.append(kwargs))
     assert main.main(["--no-follow-code", "--port", "8099"]) == 0
+    assert released == [1], "the answers of an earlier run released once, as the server starts"
     return seen
 
 
