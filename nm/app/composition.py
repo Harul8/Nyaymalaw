@@ -129,6 +129,13 @@ class Application:
         from nm.core_engine import questions
         self.questions = QuestionDesk()
         self.propose_questions = questions.propose
+        # Plan AN.41-AN.42: the turns this process is working on, each with the advocate's Stop and the steers waiting for it.
+        self._running, self._running_lock = {}, threading.Lock()
+
+    def turns_of_an_earlier_run_released(self):
+        """At the server's start (plan AN.41, D73): every turn the earlier run of it was working on has stopped with it, and is
+        made able to continue - by itself as soon as its advocate's page is back, or by Continue. Returns how many."""
+        return self.turn_attempts.release_ended("interrupted")
 
     def _model_for(self, advocate_id, *, session_current, page_images=False, audio_model=None, text_model=None):
         # Every call made for an advocate is metered against their account (plan AN.17), on either route.
@@ -214,8 +221,20 @@ class Application:
             if stage == 'shown':  # the answer showed more (owner decisions P26-P27)
                 self.turn_progress.shown(advocate_id, turn_id, detail.get('shown'), detail.get('chat_id'))
                 return
+            if stage in ('sent', 'saved'):  # the message, then the work finished, saved with the conversation (plan AN.41)
+                self.turn_progress.saved(advocate_id, turn_id, detail.get('saved', 0), detail.get('chat_id'))
+                return
             self.turn_progress.report(advocate_id, turn_id, stage, detail)
 
+        # Plan AN.42 (D78-D79): this run's Stop and the steers waiting for it, reached while it works; a same-turn retry refused
+        # while the first run works leaves the first run's alone.
+        key, running = (advocate_id, turn_id), _Running()
+        with self._running_lock:
+            mine = key not in self._running
+            if mine:
+                self._running[key] = running
+            else:
+                running = self._running[key]
         ended = 'stopped'
         try:
             result = process(model, self.store, self.legal_search, advocate_id=advocate_id,
@@ -225,16 +244,105 @@ class Application:
                              provision_reader=getattr(self.legal_search, 'collections', {}).get('provision'),
                              progress=progress, running=lambda held: self.turn_running(advocate_id, held),
                              chosen_model=model_choice, effort=effort, stronger=stronger,
-                             propose=self.propose_questions, desk=self.questions.bound(advocate_id), **request)
+                             propose=self.propose_questions, desk=self.questions.bound(advocate_id),
+                             stopping=running.stop.is_set, steers=running.take, attach=running.attach, **request)
             ended = 'finished'
             return result
         finally:
+            if mine:
+                with self._running_lock:
+                    self._running.pop(key, None)
             # The window closes with the turn; an answer after it goes as the next message (plan AN.37, D44).
             self.questions.close(advocate_id, turn_id)
             # Only the run that did the work closes its progress: a same-turn retry
             # refused while the first run works must not mark that run stopped.
             if reported:
                 self.turn_progress.end(advocate_id, turn_id, ended)
+
+    def _held(self, advocate_id, chat_id):
+        """The conversation and the turn being worked on in it, as saved: (matter, held), held None where there is none."""
+        from nm.core_engine.conversation import chat_matter_id, shown_of
+        matter = self.store.load(chat_matter_id(advocate_id, chat_id))
+        if matter is None or matter.advocate_id != advocate_id:
+            return None, None
+        try:
+            return matter, shown_of(matter)
+        except ValueError:
+            return matter, None
+
+    def continue_turn(self, *, advocate_id, chat_id, turn_id, session_current):
+        """Continue (plan AN.41, D70; D73 by itself after a restart): the answer that stopped picks up where it stopped - the
+        same message, files and choice of model and effort, sent again, which keeps each step it finished that still passes its
+        check. ConversationRefused where that turn is not stopped in this conversation."""
+        from nm.core_engine.conversation import ConversationRefused
+        matter, held = self._held(advocate_id, chat_id)
+        if held is None or held['turn_id'] != turn_id:
+            raise ConversationRefused('There is no answer that stopped part-way to continue here.', status=404,
+                                      code='nothing_to_continue')
+        if self.turn_running(advocate_id, turn_id):
+            raise ConversationRefused('NM is already working on this answer.', code='turn_in_progress')
+        asked = held['request']
+        return self.run_turn(advocate_id=advocate_id, session_current=session_current,
+                             document_refs=tuple(asked.get('document_refs', ())), model_choice=asked.get('model'),
+                             effort=asked.get('effort'), message=held['message'], turn_id=turn_id,
+                             chat_id=asked['chat_id'])
+
+    def discard_turn(self, *, advocate_id, chat_id, turn_id, session_current):
+        """Discard (plan AN.41, D71): the red message and its buttons go; the answer that stopped is saved as it stopped. Returns
+        the saved response, or None where that turn is not stopped in this conversation."""
+        from nm.core_engine import turn
+        matter, held = self._held(advocate_id, chat_id)
+        if held is None:
+            return None
+        return turn.discard(self.store, matter, advocate_id, turn_id,
+                            running=lambda held_turn: self.turn_running(advocate_id, held_turn),
+                            session_current=session_current)
+
+    def stop_turn(self, advocate_id, turn_id):
+        """Stop (plan AN.42, D78): the answer stops after the step in progress. False where this process is not working on it."""
+        with self._running_lock:
+            running = self._running.get((advocate_id, turn_id))
+        if running is None or not self.turn_running(advocate_id, turn_id):
+            return False
+        running.stop.set()
+        return True
+
+    def steer_turn(self, *, advocate_id, turn_id, text, document_refs=()):
+        """Steer (plan AN.42, D79): the message goes into the answer being worked on, with the documents sent with it as they were
+        read; the answer stops after the step in progress and goes on with it. False where this process is not working on it -
+        the answer has finished, and the page sends the message as the next one."""
+        from datetime import datetime, timezone
+        with self._running_lock:
+            running = self._running.get((advocate_id, turn_id))
+        if running is None or not self.turn_running(advocate_id, turn_id):
+            return False
+        documents = []
+        if document_refs:
+            from nm.core_engine import documents as turn_documents
+            if self.documents is None:
+                raise turn_documents.DocumentRefused("Documents cannot be read on this installation.")
+            documents = turn_documents.turn_material([self.documents.load(advocate_id, ref) for ref in document_refs])
+        running.add({'text': text, 'documents': list(documents), 'at': datetime.now(timezone.utc).isoformat()})
+        return True
+
+    def save_queued(self, *, advocate_id, chat_id, queued):
+        """What waits to be sent as the next message of a conversation (plan AN.42, D77), saved with it: on the versions of the
+        turn this process is working on in it, where there is one, so that neither write undoes the other."""
+        from nm.core_engine.conversation import chat_matter_id, hold_queued, save_queued
+        from nm.shared.store_port import StaleWrite
+        with self._running_lock:
+            writers = [running.writer for running in self._running.values()
+                       if running.advocate_id == advocate_id and running.chat_id == chat_id and running.writer is not None]
+        for writer in writers:
+            try:
+                writer(lambda context: hold_queued(self.store, context, queued))
+                return
+            except (OSError, StaleWrite, ValueError):
+                pass  # that turn has just been saved: what waits is saved on the conversation as it now is
+        matter = self.store.load(chat_matter_id(advocate_id, chat_id))
+        if matter is None or matter.advocate_id != advocate_id:
+            raise LookupError('Conversation not available.')
+        save_queued(self.store, matter, queued)
 
     def turn_running(self, advocate_id, turn_id):
         """Whether one of this advocate's turns is being worked on in this process now."""
@@ -304,6 +412,31 @@ class _DeferredAdapter:
 
     def __getattr__(self, name):
         return getattr(self._resolve(), name)
+
+class _Running:
+    """A turn this process is working on (plan AN.42, D78-D79): the advocate's Stop, the steers waiting to go into it, and the
+    way to write beside its conversation on its own versions (D77)."""
+
+    def __init__(self):
+        self.stop, self._steers, self._lock = threading.Event(), [], threading.Lock()
+        self.writer, self.advocate_id, self.chat_id = None, None, None
+
+    def add(self, steer):
+        with self._lock:
+            self._steers.append(steer)
+            self.stop.set()
+
+    def take(self):
+        """The steers waiting, taken; the stop they came with cleared. [] where none waited (a Stop of the advocate's own)."""
+        with self._lock:
+            taken, self._steers = self._steers, []
+            if taken:
+                self.stop.clear()
+        return taken
+
+    def attach(self, advocate_id, chat_id, writer):
+        self.advocate_id, self.chat_id, self.writer = advocate_id, chat_id, writer
+
 
 class QuestionDesk:
     """The windows of questions the turns this process is working on have open (plan AN.37, D37-D40): opened by a turn when it

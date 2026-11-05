@@ -205,6 +205,17 @@ def main(argv: list[str] | None = None) -> int:
     create_app(application)
     import uvicorn
 
+    # Plan AN.41 (D73): what the earlier run of this server was working on stopped with it; each such answer is made able to
+    # continue where it stopped, by itself once its advocate's page is back. Its start is the one owner that knows this.
+    from nm.shared.turn_attempt_port import AttemptRefused
+    try:
+        released = application.turns_of_an_earlier_run_released()
+    except AttemptRefused as exc:  # the server still starts; such an answer then waits on Continue
+        print(f"The answers an earlier run was working on could not be released: {exc.code}", file=sys.stderr)
+    else:
+        if released:
+            print(f"{released} answer(s) an earlier run was working on can continue where they stopped.", file=sys.stderr)
+
     warm_search = getattr(getattr(application, "legal_search", None), "warm", None)
     if callable(warm_search):
         threading.Thread(target=warm_search, name="search-warm", daemon=True).start()
