@@ -124,7 +124,7 @@
   "expected_roles": {
     "adapters": 29,
     "bootstrap": 5,
-    "core": 34,
+    "core": 35,
     "domain": 37,
     "edge": 2,
     "infrastructure": 1,
