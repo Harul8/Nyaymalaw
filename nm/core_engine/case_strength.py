@@ -64,7 +64,7 @@ SCHEMAS = {V1_CONTRACT: SCHEMA_V1, CONTRACT: SCHEMA}
 #: The quotation marks a quotation may come wrapped in (v2).
 WRAPPING = "\"'\u201c\u201d\u2018\u2019\u00ab\u00bb"
 
-CASE = """Message: You receive one dispute of an advocate's matter as our research has set it out: the dispute, with its legal questions, the rights at stake, the relief sought and what is still missing; the held law our research read for it - provisions of the Acts and paragraphs of judgments, each under its short ID (P1, J1 ...); every point our reading of the papers set out, each with its ID, what it is, the papers' own words, the pages it stands on (or that its words were not found on a page) and how the weighing of the points weighed it; and the advocate's own messages.
+CASE = """Message: You receive one dispute of an advocate's matter as our research has set it out: every point our reading of the papers set out, each with its ID, what it is, the papers' own words, the pages it stands on (or that its words were not found on a page) and how the weighing of the points weighed it; the advocate's own messages; the dispute, with its legal questions, the rights at stake, the relief sought and what is still missing; and the held law our research read for it - provisions of the Acts and paragraphs of judgments, each under its short ID (P1, J1 ...).
 
 Purpose: Our client's case on this dispute is to be made as strong as the law and the facts allow. A lawyer preparing it asks what the law requires to be proven, which of it the papers already prove, which they prove only weakly, and which they do not prove at all - and so what must still be gathered from the client or elsewhere before the matter is argued, and what the other side will rely on.
 
@@ -100,20 +100,41 @@ def material(context, part, sources, dispute):
     points = response_writer.coverage_items(part, offered, context)
     said = [row["text"] for row in context.get("conversation", ()) if row.get("record_role") == "original_account"]
     latest = (context.get("latest") or {}).get("text")
-    payload = {"dispute": {key: deepcopy(dispute.get(key)) for key in ("id", "name", "between", "legal_questions", "rights_at_stake",
+    # Plan AN.35's cost finding (owner, 5 Nov 2026: "do 1"): the points and the advocate's messages, the same for every dispute
+    # of a turn (about 57 thousand tokens on the 4 Nov answer), lead, so that the calls about its other disputes read them from the
+    # provider's cache (SHARED); the dispute and its held law follow.
+    payload = {"points": points, "advocate_messages": [*said, *([latest] if latest else [])],
+               "dispute": {key: deepcopy(dispute.get(key)) for key in ("id", "name", "between", "legal_questions", "rights_at_stake",
                                                                      "relief_sought", "missing_facts")},
                # Plan AN.36 (piece 36b): each document's title once, by its passages' group.
-               "held_law": {"passages": shown, "group_titles": held.get("group_titles", {})}, "points": points,
-               "advocate_messages": [*said, *([latest] if latest else [])]}
+               "held_law": {"passages": shown, "group_titles": held.get("group_titles", {})}}
     # Plan AN.37: what NM asked the advocate during this turn, and the answers as they stand - theirs, or NM's assumption.
     if context.get("answers"):
         payload["answers_during_this_turn"] = deepcopy(context["answers"])
     return json.dumps(payload, ensure_ascii=False), law, {point["id"]: point.get("located", True) for point in points}
 
 
+#: What leads the step's material for every dispute of a turn alike, in this order (plan AN.35's cost finding).
+SHARED = ("points", "advocate_messages")
+
+
+def shared_through(user):
+    """How many leading characters of the step's words are what its calls about every dispute of the turn carry alike - the points
+    and the advocate's messages - which a provider may cache; 0 where the words do not lead with them."""
+    try:
+        payload = json.loads(user[:user.index("\n\n")] if "\n\n" in user else user)
+    except ValueError:
+        return 0
+    if not isinstance(payload, dict) or list(payload)[:len(SHARED)] != list(SHARED):
+        return 0
+    prefix = json.dumps({key: payload[key] for key in SHARED}, ensure_ascii=False)[:-1]
+    return len(prefix) if user.startswith(prefix) else 0
+
+
 def _call(model, operation, system, user, step):
     receipt = model.structured(Prompt(system=system, user=user, operation=operation,
-                                      effort=reasoning.effort(step, tokens=estimate_tokens(user))), SCHEMA,
+                                      effort=reasoning.effort(step, tokens=estimate_tokens(user)),
+                                      cache_through=shared_through(user)), SCHEMA,
                                Tier.ROUTINE, max_tokens=reasoning.room(model, Tier.ROUTINE, system, user, json.dumps(SCHEMA)))
     if not receipt.usable or receipt.data is None:
         raise ModelError(f"The case step {step} did not complete", usage=receipt.usage, latency_ms=receipt.latency_ms,
