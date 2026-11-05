@@ -86,6 +86,11 @@ class ReleaseWithheld(ModelError):
     """A terminal release boundary fired; draft correction cannot clear it."""
 
 
+class StopRequested(Exception):
+    """The advocate stopped the answer (plan AN.42, D78): no further call is sent, and a call already sent finishes and is paid
+    for. Not a model failure: no section is answered with a note for it, and the turn stops, keeping every step finished."""
+
+
 class TurnCalls:
     """Construct once per turn; pass this same object to every model stage.
 
@@ -94,7 +99,7 @@ class TurnCalls:
     their receipts. No nested stage receives a fresh allowance.
     """
     def __init__(self, model, *, corrections_used=0, reserve_correction=None, effort=reasoning.DEFAULT_CHOICE, chosen=None,
-                 stronger=None):
+                 stronger=None, stopping=None):
         if (type(corrections_used) is not int or not 0 <= corrections_used <= ALLOWANCE
                 or (reserve_correction is not None and not callable(reserve_correction))):
             raise ValueError("Correction ownership must come from a checked attempt")
@@ -121,6 +126,19 @@ class TurnCalls:
         #: Under Auto (plan AN.38, D47-D48): the stronger model a call moves to on evidence (routing.escalated), and what the turn
         #: has found that moves a step (found()). None: every call runs on the turn's own model, as before.
         self.stronger, self.evidence = stronger, set()
+        #: Whether the advocate has stopped the answer (plan AN.42, D78): asked before every call is sent. None: never stopped.
+        self.stopping = stopping
+
+    def successor(self):
+        """The calls of the same turn as it goes on after a steer (plan AN.42, D79): the record of its calls, the corrections made
+        and its estimates carry on, shared; each scope's own corrections start afresh, since a steered piece is reviewed and
+        repaired anew. This one sends no further call: whatever of the earlier work is still under way stops at its next call."""
+        with self._lock:
+            after = TurnCalls(self.inner, corrections_used=self.corrections_used, reserve_correction=self.reserve_correction,
+                              effort=self.effort, chosen=self.chosen, stronger=self.stronger, stopping=self.stopping)
+            after.calls, after.expected, after.evidence = self.calls, dict(self.expected), set(self.evidence)
+            self.stopping = lambda: True
+        return after
 
     @property
     def last_output(self):
@@ -203,6 +221,8 @@ class TurnCalls:
     def structured(self, prompt, schema, tier, *, max_tokens):
         if self.terminal:
             raise ReleaseWithheld("This turn's release scope is withheld")
+        if self.stopping is not None and self.stopping():
+            raise StopRequested("The advocate stopped this answer")
         feedback = self.correction
         if feedback is not None and feedback["operation"] == prompt.operation:
             payload = json.loads(prompt.user)
