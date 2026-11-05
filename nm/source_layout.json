@@ -58,6 +58,7 @@
     "nm.core_engine.response_writer": "core",
     "nm.core_engine.retrieval": "core",
     "nm.core_engine.routing": "core",
+    "nm.core_engine.titles": "core",
     "nm.core_engine.turn": "core",
     "nm.core_engine.understanding": "core",
     "nm.core_engine.voice": "core",

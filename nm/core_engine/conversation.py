@@ -384,6 +384,34 @@ QUEUED = "core_queued"
 _QUEUED_MOST = 20
 
 
+#: The conversation's title in the history (plan AN.43, D81-D82): the model's words as code admitted them (titles.admitted), and
+#: whether they were written from an understanding of the matter - a title written before any matter was understood (a greeting)
+#: is written again, once, when one is. Kept with the conversation, which a turn's commit leaves as it is.
+TITLE = "core_title"
+
+
+def title_of(matter):
+    """The conversation's title, as saved - {"text", "from_matter"} - or None where it has none. ValueError where it cannot be read
+    reliably."""
+    from nm.core_engine import titles
+    held = (matter.intake_answers or {}).get(TITLE) if matter is not None else None
+    if held is None:
+        return None
+    if (not isinstance(held, dict) or set(held) != {"text", "from_matter"} or type(held["from_matter"]) is not bool
+            or titles.admitted(held["text"])[0] != held["text"]):
+        raise ValueError("The conversation's title could not be read reliably")
+    return dict(held)
+
+
+def hold_title(store, context, title):
+    """Save the conversation's title beside it, on the versions of its turn being worked on (D82). Returns the turn's context at the
+    version written."""
+    metadata = {**context.matter.intake_answers, TITLE: dict(title)}
+    candidate = replace(context.matter, intake_answers=metadata, version=context.matter.version + 1)
+    title_of(candidate)
+    return replace(context, matter=_written(store, candidate, context.matter.version))
+
+
 def queued_of(matter):
     """What waits to go as the next message of the conversation, as it was saved: a list, empty where nothing waits. ValueError
     where it cannot be read reliably."""

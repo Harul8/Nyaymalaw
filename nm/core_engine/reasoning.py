@@ -51,6 +51,8 @@ STEPS = {
     "further": ("medium", False),
     # Plan AN.37 (piece 37d): what only the advocate can settle, asked before the answer is written - a judgement, small to read.
     "questions": ("medium", False),
+    # Plan AN.43 (D82): a conversation's title in the history - a short judgement on what tells the matter apart, small to read.
+    "title": ("medium", False),
     # Research: the measured search steps stay at the release's own setting (owner decision, 14 Oct 2026).
     "phrases": (None, False), "judgment_phrases": (None, False), "pick": (None, False), "judgment_pick": (None, False),
     # The answer: a section and the overview, the review, the check across the sections, and the second looks.
