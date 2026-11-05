@@ -22,3 +22,8 @@ class TurnAttemptPort(Protocol):
     def finish(self, identity: str, token: str, state: str, code: str | None = None) -> None:
         """Monotonic terminal/finished/unconfirmed, or retryable with allowance retained."""
         ...
+
+    def release_ended(self, code: str = "interrupted") -> int:
+        """At the server's start (plan AN.41, D73): each claim still running, left by an earlier run of the server, made
+        retryable with its allowance retained. Returns how many."""
+        ...

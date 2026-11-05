@@ -5,6 +5,8 @@ pattern. This store carries only opaque request digests, fencing tokens and stat
 it is neither an admitted conversation nor an execution receipt. A running claim
 left by a crash remains busy. Recovery of that unknown attempt needs an explicit
 owner; elapsed time never grants a fresh correction or repeats a possible effect.
+From plan AN.41 (D73) that owner is the server's start (release_ended), when no
+claim of an earlier run of it can still be at work.
 """
 from __future__ import annotations
 
@@ -192,6 +194,15 @@ class FileTurnAttempts:
                 (identity, token, prior[3]))
             if changed.rowcount != 1:
                 raise AttemptRefused("conflict")
+
+    def release_ended(self, code: str = "interrupted") -> int:
+        """Plan AN.41 (D73): the server is starting, so no turn of an earlier run of it is being worked on any longer. Each
+        claim still running is made retryable, its corrections kept, so that the same message continues where it stopped. The
+        explicit owner of that recovery is the server's start, never elapsed time. Returns how many claims it released."""
+        if not _code(code) or code is None:
+            raise AttemptRefused("conflict")
+        with self._transaction() as db:
+            return db.execute("UPDATE turn_attempts SET state='retryable',code=? WHERE state='running'", (code,)).rowcount
 
     def finish(self, identity: str, token: str, state: str, code: str | None = None) -> None:
         if (not _opaque(identity) or not _opaque(token) or not isinstance(state, str)
