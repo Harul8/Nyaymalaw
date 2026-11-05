@@ -264,3 +264,35 @@ def test_an_order_whose_rules_cannot_be_read_is_said():
     notes = []
     assert cpc_orders(["ORDER IV", "Institution of suits", "Words without any rule.", "APPENDIX A"], notes) == []
     assert notes == ["Order IV could not be read: Order IV: no section 1 was found"]
+
+
+def _sections(*pairs):
+    return [Section(number, title) for number, title in pairs]
+
+
+def test_the_acts_printed_numbers_stand_where_india_code_numbers_its_sections_otherwise():
+    """Plan AN.32 (owner, 5 Nov 2026: "do 2"): India Code's records number a five-section Act 1, 3, 4, 5, 6 where the Act - its
+    PDF's text and ours alike - prints 1 to 5, and an answer cited its sections one too high. The printed numbers are taken only
+    where both other texts are read, agree, and stand heading for heading beside India Code's; otherwise India Code's stand."""
+    from pipeline.build_acts_v4 import printed_numbers
+
+    india = _sections(("1", "Short title and commencement."), ("3", "Repeal of Act."), ("4", "Savings."),
+                      ("5", "Abatement of legal proceedings."), ("6", "Repeal and saving."))
+    pdf = _sections(("1", "Short title, application and commencement."), ("2", "Repeal of Act 33 of 1976."), ("3", "Savings."),
+                    ("4", "Abatement of legal proceedings."), ("5", "Repeal and saving."))
+    ours = _sections(("1", "Short title and application commencement."), ("2", "Repeal of Act"), ("3", "Saving."),
+                     ("4", "Abatement of legal proceedings."), ("5", "Repeal and saving."))
+    assert printed_numbers(india, pdf, ours) == ["1", "2", "3", "4", "5"]
+    assert printed_numbers(india, pdf, None) is None and printed_numbers(india, None, ours) is None, "two texts, or none"
+    assert printed_numbers(india, pdf, ours[:4]) is None, "the other texts disagree"
+    swapped = _sections(*[(n, t) for n, t in (("1", "Short title and commencement."), ("2", "Definitions."),
+                                               ("3", "Power to remove difficulties."), ("4", "Construction of references."))])
+    other = _sections(("1", "Short title and commencement."), ("2", "Definitions."), ("3", "Construction of references."),
+                      ("4", "Power to remove difficulties."))
+    assert printed_numbers(swapped, other, other) is None, "the same numbers ordered otherwise are not decided here"
+    hyphened = _sections(("1", "Short title."), ("45-O", "Powers."))
+    assert printed_numbers(hyphened, _sections(("1", "Short title."), ("45O", "Powers.")),
+                           _sections(("1", "Short title."), ("45O", "Powers."))) is None, "45-O and 45O are one number"
+    unlike = _sections(("1", "Short title."), ("3", "Penalty for default."))
+    assert printed_numbers(unlike, _sections(("1", "Short title."), ("2", "Definitions.")),
+                           _sections(("1", "Short title."), ("2", "Definitions."))) is None, "headings that do not stand alike"

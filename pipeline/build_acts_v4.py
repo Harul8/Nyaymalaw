@@ -566,6 +566,35 @@ def statute_words(section: Section) -> str:
     return "\n".join(line for line in section.lines if not _FOOTNOTE_LINE.match(line))
 
 
+def _bare(number: str) -> str:
+    """A section number as written either way: "45-O" and "45O" are one number."""
+    return number.replace("-", "").replace(" ", "").upper()
+
+
+def _heading_key(title: str) -> str:
+    return " ".join(re.sub(r"[^a-z0-9 ]+", " ", (title or "").lower()).split())
+
+
+def printed_numbers(india: list[Section], pdf: list[Section] | None, ours: list[Section] | None) -> list[str] | None:
+    """The Act's own printed numbers for India Code's sections, where India Code numbers them otherwise (plan AN.32; owner, 5
+    Nov 2026: "do 2"): India Code's section records number the Urban Land (Ceiling and Regulation) Repeal Act, 1999 1, 3, 4, 5,
+    6, while the Act - India Code's own text of its PDF and our text alike - prints 1 to 5, and the answer cited its sections one
+    too high. Taken only where both other texts are read and print the same numbers, one for each of India Code's sections, and
+    the headings stand alike in order; a number written "45-O" or "45O" is one number. None where India Code's numbers stand: any
+    other difference is not decided here (the Telangana Board of Revenue (Replacement by Commissioners) Act, 1977, whose two
+    texts order two sections differently, is one)."""
+    if not pdf or not ours:
+        return None
+    theirs = [_bare(section.number) for section in pdf]
+    if ([_bare(section.number) for section in ours] != theirs or len(theirs) != len(india)
+            or [_bare(section.number) for section in india] == theirs):
+        return None
+    if any(SequenceMatcher(None, _heading_key(mine.title), _heading_key(other.title), autojunk=False).ratio() < 0.5
+           for mine, other in zip(india, pdf)):
+        return None
+    return [section.number for section in pdf]
+
+
 def read_entry(entry: dict, words: Counter) -> tuple[Act, list[Article], dict]:
     """One instrument read from its source, with its schedules and the record of how."""
     record: dict = {"source": entry["source"], "standing": entry.get("standing"), "notes": {}, "changed": [],
@@ -605,6 +634,7 @@ def read_entry(entry: dict, words: Counter) -> tuple[Act, list[Article], dict]:
         record["schedule_source"] = "India Code's PDF text" if extra or articles else None
         return act, articles, record
     pdf_sections: dict[str, str] = {}
+    pdf_read: list[Section] | None = None
     texts = sorted((ACT_TEXTS / state / entry["india_act_id"]).glob("*.txt"))
     for path in texts:
         if path.name[:1] == "H" or path.name[:2] == "Hh":
@@ -614,11 +644,12 @@ def read_entry(entry: dict, words: Counter) -> tuple[Act, list[Article], dict]:
                             title=title, year=year, name=path.name)
         except ValueError:
             continue
+        pdf_read = read.sections if pdf_read is None else pdf_read
         for section in read.sections:
             pdf_sections.setdefault(section.number, statute_words(section))
     our_back = back_matter(ours, title) if ours is not None else []
     our_sections = {section.number: statute_words(section) for section in (ours.sections if ours else [])}
-    sections = []
+    held: list[tuple[Section, dict]] = []
     taken: dict[str, Section] = {}
     for entry_section in fetched["sections"]:
         section, notes = india_code_section(entry_section)
@@ -631,6 +662,15 @@ def read_entry(entry: dict, words: Counter) -> tuple[Act, list[Article], dict]:
                 taken[section.number].lines.extend(section.lines)
             continue
         taken[section.number] = section
+        held.append((section, notes))
+    printed = printed_numbers([section for section, _ in held], pdf_read, ours.sections if ours else None)
+    if printed is not None:
+        record["renumbered"] = [{"india_code": section.number, "printed": number}
+                                for (section, _), number in zip(held, printed) if section.number != number]
+        for (section, _), number in zip(held, printed):
+            section.number, section.opening = number, [f"{number}. {section.title}"]
+    sections = []
+    for section, notes in held:
         text, changed, review = reconcile("\n".join(section.lines), pdf_sections.get(section.number),
                                           our_sections.get(section.number), words)
         section.lines = text.split("\n")
@@ -739,7 +779,8 @@ def read_stage(only: set[str] | None) -> None:
                      "kind": entry["kind"], "added": entry.get("added"), "sections": len(act.sections),
                      "articles": len(articles), "passages": len(made), "schedule_source": record["schedule_source"],
                      "schedule_notes": record["schedule_notes"],
-                     "notes": record["notes"], "changed": record["changed"], "read_as": record.get("read_as", "sections")})
+                     "notes": record["notes"], "changed": record["changed"], "read_as": record.get("read_as", "sections"),
+                     **({"renumbered": record["renumbered"]} if record.get("renumbered") else {})})
         reviews.extend({"act": act.title, **item} for item in record["review"])
         if number % 100 == 0:
             print(f"   {number}/{len(kept)} read, {len(rows)} passages", flush=True)
