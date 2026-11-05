@@ -34,15 +34,16 @@ function harness() {
   const elements = {};
   const get = (id) => (elements[id] ||= new Element('div'));
   let queuedDrawn = 0;
+  const asked = [];
   const context = vm.createContext({
     $: get, document: { createElement: (tag) => new Element(tag) }, encodeURIComponent,
-    setPlusMenu() {}, loadUsage() {}, api: async () => ({}),
+    setPlusMenu() {}, loadUsage() {}, api: async (path, options) => { asked.push([path, options && options.body]); return {}; },
     state: { matterId: null, matterReady: true }, activeDelivery: null, heldSend: null, activeIntent: null, usage: null,
     usageUsedUp: () => false, renderQueued() { queuedDrawn += 1; }, ownsIntent: () => true, send() {},
   });
   vm.runInContext(between('// DOCUMENTS WITH A MESSAGE', '// F-C-02. THE MIC'), context);
   const looks = () => ({ state: get('send').dataset.state, label: get('send').attributes['aria-label'], disabled: get('send').disabled });
-  return { context, get, looks, queuedDrawn: () => queuedDrawn };
+  return { context, get, looks, queuedDrawn: () => queuedDrawn, asked };
 }
 const pressed = () => {
   const event = { prevented: false, preventDefault() { this.prevented = true; } };
@@ -57,19 +58,24 @@ const pressed = () => {
   assert.equal(queuedDrawn(), 1, 'what waits above the box is drawn with it');
 }
 
-// An answer being worked on: the turning ring with its stop. Pressed, the page stops waiting for the answer.
+// An answer being worked on: the turning ring with its stop. Pressed, it stops NM after the step in progress (D78): the page goes on
+// waiting for the answer, which comes back stopped, with what was finished kept.
 {
-  const { context, get, looks } = harness();
+  const { context, get, looks, asked } = harness();
   let aborted = 0;
-  const entry = { cancelled: false };
+  const entry = { cancelled: false, turnId: 'turn-synthetic' };
   context.activeDelivery = { entry, controller: { abort() { aborted += 1; } } };
   context.paintSend();
-  assert.deepEqual(looks(), { state: 'working', label: 'Stop waiting for this answer', disabled: false });
+  assert.deepEqual(looks(), { state: 'working', label: 'Stop this answer', disabled: false });
   const event = pressed();
   get('send').listeners.click(event);
+  await Promise.resolve();
   assert.ok(event.prevented, 'the press is not a send');
-  assert.equal(aborted, 1);
-  assert.equal(entry.cancelled, true);
+  assert.equal(aborted, 0, 'the page does not stop waiting');
+  assert.deepEqual(asked, [['/api/turn/stop', '{"turn_id":"turn-synthetic"}']]);
+  assert.equal(get('attachments-status').textContent, 'Stopping after the step in progress…');
+  get('send').listeners.click(pressed());
+  assert.equal(asked.length, 1, 'pressed again, it is asked once');
   // Words typed meanwhile bring the arrow back, to queue them; cleared, the ring returns (D76).
   get('message').value = 'Also the second deed.';
   context.paintSend();
@@ -77,7 +83,7 @@ const pressed = () => {
   const queue = pressed();
   get('send').listeners.click(queue);
   assert.equal(queue.prevented, false, 'pressed, the arrow sends: the message goes to the queue');
-  assert.equal(aborted, 1);
+  assert.equal(asked.length, 1);
   get('message').value = '   ';
   context.paintSend();
   assert.equal(looks().state, 'working', 'no stop while the box holds words; cleared, it is back');

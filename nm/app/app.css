@@ -699,6 +699,10 @@ button.board-card:focus-visible { outline: 2px solid var(--accent); outline-offs
 /* The AI account's usage used up (owner decisions O18, P51; plan AN.14): brass, as the design
    draws a limit to act on, not red, which is for a fault. */
 .failure.limit { border-color: #dccb98; background: var(--brass-w); color: #4f3a10; }
+/* An answer that stopped part-way (plan AN.41, D69): said in red, with Continue and Discard in the message itself. */
+.failure.stopped { color: #a3271b; border-color: #e3a79d; }
+.failure.stopped .refusal-head { color: #a3271b; font-weight: 600; margin: 0 0 0.4rem; }
+.failure.stopped .stopped-actions { display: flex; gap: 0.5rem; margin-top: 0.6rem; }
 .failure.limit .refusal-head { color: #4f3a10; margin: 0 0 0.4rem; }
 
 /* THE ANSWER'S OWN HEADER (plan AN.20; the signed-off design): the NM mark, Nyaymalaw and the time the
@@ -2202,3 +2206,9 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visib
 .turn-progress .progress-now { font-family: var(--f-serif); font-size: 1.1rem; font-weight: 600; }
 .turn-progress .progress-time { opacity: 0.75; font-size: 0.92em; margin-top: 0.15rem; }
 .turn-progress .progress-steps { margin: 0.4rem 0 0; padding-left: 1.2rem; opacity: 0.75; font-size: 0.92em; }
+/* The work as it finishes (plan AN.41, D68): the disputes and questions found, each dispute's law, each section's state. */
+.turn-progress .progress-work { margin-top: 0.5rem; font-size: 0.92em; }
+.turn-progress .progress-disputes { margin: 0; padding-left: 1.2rem; }
+.turn-progress .progress-dispute-name { font-weight: 600; }
+.turn-progress .progress-questions, .turn-progress .progress-law, .turn-progress .progress-section { color: var(--ink-3); }
+.turn-progress .progress-note, .turn-progress .progress-steer { margin-top: 0.3rem; font-size: 0.92em; color: var(--ink-3); }

@@ -149,7 +149,7 @@ async function saveProtectedDraft({previousKey = null} = {}) {
       editedAt:held.editedAt || Date.now(),
       pending:held.pending.map(entry=>({turnId:entry.turnId, brief:entry.brief,
         documents:entry.documents || [],
-        request:entry.request, envelope:entry.envelope, state:'unknown',
+        request:entry.request, envelope:entry.envelope, endpoint:entry.endpoint || null, state:'unknown',
         error:'A prior request needs reconciliation before retry.'})),
     };
     const savedAt = await draftVault.save(snapshot);
@@ -539,6 +539,20 @@ function idleWatching() {
   return idle.limitMs > 0 && Boolean(state.advocate) && !state.ended;
 }
 
+// PLAN AN.41 (D65; owner, 4 Nov 2026: idle is "where user didn't do anything and NM is also not doing thing"): from Send until the
+// answer is saved or stops, the advocate counts as active - here, and on the server, which keeps the session active while NM works -
+// and the thirty minutes start once NM has finished. The twelve-hour limit of a sign-in is unchanged: the server still ends it.
+function nmWorking() {
+  return Boolean(activeDelivery) || (Array.isArray(state.turns) && state.turns.some((entry) => entry && entry.following));
+}
+
+function nmFinished() {
+  if (!idleWatching()) return;
+  idle.lastActivity = Date.now();
+  $('idle-warning').hidden = true;
+  checkIdle();
+}
+
 function startIdleWatch(minutes, accessWindow) {
   stopIdleWatch();
   if (!state.advocate || !(minutes > 0)) return;
@@ -581,7 +595,7 @@ function noteActivity(at, { share = true, report = true } = {}) {
     sessionEnded('Your last confirmed access window ended. Sign in again to recover your protected draft.');
     return;
   }
-  if (idle.lastActivity && at - idle.lastActivity >= idle.limitMs) {
+  if (idle.lastActivity && at - idle.lastActivity >= idle.limitMs && !nmWorking()) {
     idleSignOut();
     return;
   }
@@ -631,6 +645,14 @@ function checkIdle() {
   const endAt = Math.min(idle.lastActivity + idle.limitMs, idle.serverUntil);
   if (accessWindowEnded()) {
     sessionEnded('Your last confirmed access window ended. Sign in again to recover your protected draft.');
+    return;
+  }
+  if (nmWorking()) {
+    // D65: NM working is activity; the server's own window is asked for again as it moves on.
+    idle.lastActivity = now;
+    $('idle-warning').hidden = true;
+    if (now - idle.lastReport >= IDLE_REPORT_MS) sendActivityReport();
+    idle.timer = setTimeout(checkIdle, IDLE_REPORT_MS / 2);
     return;
   }
   if (now >= endAt) {
@@ -878,7 +900,53 @@ async function restorePendingChat(chatId) {
   state.matterVersion = restored.matter_version;
   state.turns = restored.turns.map(restoredTurn);
   reconcileIntent(restored.turns);
+  // Plan AN.41 (D66): the turn being worked on is in the conversation from Send - followed while NM works, or said to have
+  // stopped, in red, with Continue and Discard (D69); after a restart NM continues it by itself (D73).
+  if (restored.pending) followPending(activeIntent, restored.pending, chatId);
+  // Plan AN.42 (D77): what waits to be sent is kept with the conversation.
+  if (Array.isArray(restored.queued) && restored.queued.length) await restoreQueued(activeIntent, restored.queued, restored.pending);
   repaint();
+}
+
+// The answer being worked on, followed by a page that did not send it (a reload, another tab, a restart): it is the answer this page
+// waits for, so that the ring stops it (D78) and what is written meanwhile waits for it (D76-D77), as for one this page sent.
+function followAs(entry) {
+  if (activeDelivery) return;
+  activeDelivery = { controller: { abort() {} }, entry, following: true };
+  $('message').placeholder = COMPOSER_WAITING;
+  paintSend();
+}
+
+function unfollow(entry) {
+  if (!activeDelivery || activeDelivery.entry !== entry || !activeDelivery.following) return;
+  activeDelivery = null;
+  $('message').placeholder = COMPOSER_PROMPT;
+  updateWorkspace();
+}
+
+function followPending(intent, pending, chatId) {
+  let entry = state.turns.find((item) => item.turnId === pending.turn_id && !item.answer);
+  if (!entry) {
+    entry = { brief: pending.message, documents: pending.documents || [], turnId: pending.turn_id, context: intent,
+      state: 'sending', chatId,
+      request: { matter_id: null, chat_id: chatId, parties: {}, release: {}, capacity: null } };
+    intent.pending.push(entry);
+    state.turns.push(entry);
+  }
+  entry.chatId = chatId;
+  takePending(entry, pending);
+  if (pending.state === 'working') {
+    if (activeDelivery && activeDelivery.entry === entry) return;
+    entry.state = 'sending';
+    entry.following = true;
+    followAs(entry);
+    checkIdle();
+    watchProgress(entry, () => { entry.following = false; unfollow(entry); nmFinished(); restorePendingChat(chatId); },
+      () => { entry.following = false; unfollow(entry); nmFinished(); refreshStopped(entry, chatId); });
+    return;
+  }
+  entry.state = 'stopped';
+  if (pending.stopped && pending.stopped.by_itself) continueTurn(entry, { byItself: true });
 }
 
 // CONVERSATION HISTORY (owner, 16 Oct 2026): its own view, read fresh each time.
@@ -2566,6 +2634,22 @@ function renderTurn(entry) {
     wrap.appendChild(row);
   }
 
+  // PLAN AN.41 (D69-D71): AN ANSWER THAT STOPPED PART-WAY says so in the conversation, in red, in code's own words - why, what is
+  // finished and what is not - with Continue and Discard in that message and nowhere else. What it finished is shown under it.
+  if (entry.state === 'stopped' && !entry.answer) {
+    wrap.appendChild(renderStopped(entry));
+    if (Array.isArray(entry.shownElements) && entry.shownElements.length) wrap.appendChild(renderShownSoFar(entry.shownElements));
+    return wrap;
+  }
+  if (entry.state === 'reconnecting' && !entry.answer) {
+    const waiting = document.createElement('div');
+    waiting.className = 'el ground turn-progress';
+    waiting.textContent = 'NM is being restarted. Your message is saved; this answer goes on as soon as NM is back.';
+    wrap.appendChild(waiting);
+    if (Array.isArray(entry.shownElements) && entry.shownElements.length) wrap.appendChild(renderShownSoFar(entry.shownElements));
+    return wrap;
+  }
+
   if (entry.error) {
     // A WITHHELD TURN IS STRUCTURED, and dumping its JSON at the advocate
     // wastes the one thing that makes a refusal useful — what could not be
@@ -2699,6 +2783,14 @@ function renderTurn(entry) {
     time.className = 'progress-time';
     time.textContent = `${took(progress.elapsed_seconds)} so far. Most answers take a few minutes.`;
     box.append(now, time);
+    if (entry.restartNote) box.appendChild(Object.assign(document.createElement('div'), {
+      className: 'progress-note', textContent: entry.restartNote }));
+    // D79: what the advocate added is in the answer being worked on.
+    for (const steer of entry.steers || []) box.appendChild(Object.assign(document.createElement('div'), {
+      className: 'progress-steer', textContent: `Added while NM worked: ${steer}` }));
+    // D68: the work finished so far, read from the saved conversation; each part's state from the progress.
+    const work = renderWork(entry.work, progress.parts || {});
+    if (work) box.appendChild(work);
     const done = (progress.steps || []).slice(0, -1);
     if (done.length) {
       const list = document.createElement('ol');
@@ -5227,6 +5319,106 @@ function renderParts(into, elements, entry, render) {
 // WHAT AN ANSWER HAS SHOWN SO FAR, while it is still being written (owner decisions P26-P27,
 // 19 Oct 2026): each dispute's section as it passes its checks, drawn plainly - its sources
 // open from the answer once it is saved, which replaces this.
+// PLAN AN.41 (D68; owner, 4 Nov 2026: "show the work in pieces as they are done instead of waiting for everything to be done"):
+// the work as it finishes, from the saved conversation - about a minute in, the disputes and the legal questions NM found, a short
+// line each, so that a misunderstanding can be put right early; each dispute's law as its research finishes; each section written,
+// being checked, rewritten after its check asked for corrections, then shown below. Never the AI's words before their check (D72).
+const PART_SAID = { writing: 'being written', checking: 'written - being checked' };
+function renderWork(work, parts) {
+  if (!work || !work.understood) return null;
+  const make = (tag, className, text) => {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  };
+  const box = make('div', 'progress-work');
+  const list = make('ul', 'progress-disputes');
+  for (const dispute of work.disputes || []) {
+    const item = make('li', 'progress-dispute');
+    item.appendChild(make('span', 'progress-dispute-name', dispute.name));
+    const questions = (dispute.questions || []).filter(Boolean);
+    if (questions.length) item.appendChild(make('span', 'progress-questions', ` · ${questions.join(' · ')}`));
+    if (dispute.researched) {
+      const law = (dispute.law || []).map((found) => (found.kind === 'provision'
+        ? [found.section ? `s. ${found.section}` : '', found.act].filter(Boolean).join(', ') : found.title)).filter(Boolean);
+      item.appendChild(make('div', 'progress-law', law.length ? `Law chosen: ${law.join('; ')}` : 'Researched: no held law chosen'));
+    }
+    const section = (work.sections || []).find((part) => part.dispute_id === dispute.id);
+    if (section) {
+      const now = parts[section.part];
+      const said = section.done ? 'Section shown below'
+        : now && now.state === 'rewriting'
+          ? `The check asked for ${now.corrections || 'some'} correction${now.corrections === 1 ? '' : 's'} - rewriting`
+          : now ? `Section ${PART_SAID[now.state] || 'being written'}` : '';
+      if (said) item.appendChild(make('div', 'progress-section', said));
+    }
+    list.appendChild(item);
+  }
+  box.appendChild(list);
+  if (work.checked_across) box.appendChild(make('div', 'progress-section', 'The sections are checked against each other'));
+  return box;
+}
+
+// The red message (D69): why, what is finished and what is not, what must be put right first; Continue and Discard (D70, D71).
+function renderStopped(entry) {
+  const stopped = entry.stopped || {};
+  const box = document.createElement('div');
+  box.className = 'failure stopped';
+  box.setAttribute('role', 'status');
+  const head = document.createElement('p');
+  head.className = 'refusal-head';
+  head.textContent = `NM stopped before finishing this answer. ${stopped.why || (entry.refusal && entry.refusal.why) || ''}`.trim();
+  box.appendChild(head);
+  const said = (label, items) => {
+    if (!Array.isArray(items) || !items.length) return;
+    const line = document.createElement('p');
+    line.className = 'refusal-gap';
+    line.textContent = `${label}: ${items.join('; ')}.`;
+    box.appendChild(line);
+  };
+  said('Finished', stopped.finished);
+  said('Not finished', stopped.unfinished);
+  if (stopped.needs) {
+    const needs = document.createElement('p');
+    needs.className = 'refusal-gap';
+    needs.textContent = stopped.needs;
+    box.appendChild(needs);
+  }
+  if (entry.discardError) {
+    const failed = document.createElement('p');
+    failed.className = 'refusal-gap';
+    failed.textContent = `Not discarded: ${entry.discardError}`;
+    box.appendChild(failed);
+  }
+  const buttons = document.createElement('div');
+  buttons.className = 'stopped-actions';
+  const go = document.createElement('button');
+  go.type = 'button';
+  go.textContent = 'Continue';
+  go.disabled = Boolean(activeDelivery) || Boolean(entry.discarding);
+  go.addEventListener('click', () => continueTurn(entry));
+  const drop = document.createElement('button');
+  drop.type = 'button';
+  drop.className = 'ghost';
+  drop.textContent = 'Discard';
+  drop.title = 'Keep the answer as it stopped, without finishing it';
+  drop.disabled = Boolean(activeDelivery) || Boolean(entry.discarding);
+  drop.addEventListener('click', () => discardTurn(entry));
+  buttons.append(go, drop);
+  if (stopped.code === 'model_permission_required') {
+    // What must be put right first, where it is put right.
+    const settings = document.createElement('button');
+    settings.type = 'button';
+    settings.className = 'ghost';
+    settings.textContent = 'Review AI data sharing';
+    settings.addEventListener('click', openAiSharing);
+    buttons.appendChild(settings);
+  }
+  box.appendChild(buttons);
+  return box;
+}
+
 function renderShownSoFar(elements) {
   const make = (tag, className, text) => {
     const node = document.createElement(tag);
@@ -5407,6 +5599,7 @@ async function deliver(entry) {
   const stop = new AbortController();
   const delivery = { controller: stop, entry };
   activeDelivery = delivery;
+  checkIdle();  // D65: NM working counts as activity from now
   paintSend();
   $('message').placeholder = COMPOSER_WAITING;
   entry.state = 'sending';
@@ -5422,7 +5615,8 @@ async function deliver(entry) {
       throw new Error('The retry details could not be saved on this device. No request was sent.');
     }
     watcher = watchProgress(entry);
-    const answer = await api('/api/turn', {
+    // Plan AN.41 (D70): Continue sends the same turn by its own route, which reads its message and files as saved.
+    const answer = await api(entry.endpoint || '/api/turn', {
       method: 'POST', headers: { 'content-type': 'application/json' },
       signal: stop.signal, body: entry.envelope,
     });
@@ -5430,6 +5624,8 @@ async function deliver(entry) {
     if (current()) snapshotIntent();
     entry.answer = answer;
     entry.state = answer.replayed ? 'replayed' : 'committed';
+    entry.stopped = null;
+    entry.endpoint = null;
     intent.pending = intent.pending.filter((item) => item !== entry);
     if (matchesIntake(entry, intent.intake)) intent.intake = null;
     // A reply belongs to the conversation that sent it. An unestablished
@@ -5481,6 +5677,18 @@ async function deliver(entry) {
       entry.error = 'You cancelled this turn’s request; whether it was saved is not confirmed.';
     }
     if (e.status === 409 && entry.refusal?.code === 'stale_version') entry.state = 'stale';
+    // Plan AN.41 (D69): the answer stopped part-way and what NM finished is kept: the red message, read from the conversation.
+    if (entry.refusal?.kept) {
+      entry.state = 'stopped';
+      entry.error = null;
+      refreshStopped(entry, entry.chatId || intent.chatId || entry.request?.chat_id);
+    }
+    // D73: no reply at all - the server is being restarted. The page waits for it and follows the answer, which NM continues.
+    if (!e.status && !entry.cancelled && !(e.name === 'AbortError')) {
+      entry.state = 'reconnecting';
+      entry.error = null;
+      reconnect(entry);
+    }
     if (!current()) return;
     if (entry.state === 'input_only' && entry.refusal?.matter_id) {
       const openedId = entry.refusal.matter_id;
@@ -5514,8 +5722,133 @@ async function deliver(entry) {
       updateWorkspace();
       // An answer, made or not, may have used some of the allowance (P53).
       loadUsage();
+      nmFinished();
     }
+    if (!['reconnecting', 'stopped'].includes(entry.state)) releaseQueued(entry);
+  }
+}
+
+// PLAN AN.41 (D69, D70): WHY AN ANSWER STOPPED, AND WHAT IT FINISHED, as the conversation keeps it - never guessed by the page.
+async function refreshStopped(entry, chatId) {
+  if (!chatId) return;
+  try {
+    const chat = await api(`/api/chats/${encodeURIComponent(chatId)}`);
+    const pending = chat.pending;
+    if (!pending || pending.turn_id !== entry.turnId || entry.answer) return;
+    entry.chatId = chatId;
+    takePending(entry, pending);
+    repaint();
+  } catch (error) { /* the red message says what the refusal said */ }
+}
+
+// What the conversation holds of a turn being worked on, taken into its entry (D66-D69, D79).
+function takePending(entry, pending) {
+  entry.shownElements = Array.isArray(pending.elements) ? pending.elements : [];
+  if (pending.work) entry.work = pending.work;
+  entry.steers = Array.isArray(pending.steers) ? pending.steers : [];
+  if (pending.state === 'stopped' && pending.stopped) {
+    entry.stopped = pending.stopped;
+    if (!activeDelivery || activeDelivery.entry !== entry) entry.state = 'stopped';
+  }
+}
+
+// D73: AFTER A RESTART NM CONTINUES BY ITSELF. The page asks every few seconds until the server is back, then follows the answer:
+// still worked on, saved, or stopped - and where it stopped only because the server was restarted, presses Continue itself, once,
+// with a line saying so. Where it cannot continue by itself the red message says why.
+const RECONNECT_EVERY_MS = 3000;
+async function reconnect(entry) {
+  if (entry.reconnecting) return;
+  entry.reconnecting = true;
+  entry.following = true;
+  followAs(entry);
+  try {
+    for (let tries = 0; tries < 400 && !entry.answer; tries += 1) {
+      await new Promise((resolve) => setTimeout(resolve, RECONNECT_EVERY_MS));
+      if (state.ended || !ownsIntent(entry.context)) return;
+      const chatId = entry.chatId || entry.context.chatId || entry.request?.chat_id;
+      let seen;
+      try {
+        seen = await api(`/api/turn-progress?turn_id=${encodeURIComponent(entry.turnId)}`
+          + (chatId ? `&chat_id=${encodeURIComponent(chatId)}` : ''));
+      } catch (error) {
+        if (error?.status === 401) return;
+        continue;  // not back yet
+      }
+      if (seen.chat_id) entry.chatId = seen.chat_id;
+      if (seen.state === 'working') {
+        entry.state = 'sending';
+        entry.progress = seen;
+        repaint();
+        continue;
+      }
+      if (seen.state === 'finished' && entry.chatId) {
+        entry.following = false;
+        unfollow(entry);
+        await restorePendingChat(entry.chatId);
+        return;
+      }
+      if (seen.state === 'stopped' && seen.stopped) {
+        entry.following = false;
+        unfollow(entry);
+        entry.stopped = seen.stopped;
+        entry.state = 'stopped';
+        repaint();
+        if (seen.stopped.by_itself) continueTurn(entry, { byItself: true });
+        else refreshStopped(entry, entry.chatId);
+        return;
+      }
+      // Not known to the server at all: whether it was saved cannot be told; sending again is safe (BK-36).
+      entry.following = false;
+      entry.state = 'unknown';
+      entry.error = 'NM was restarted before your message reached it.';
+      repaint();
+      return;
+    }
+  } finally {
+    entry.reconnecting = false;
+    entry.following = false;
+    unfollow(entry);
+    nmFinished();
+  }
+}
+
+// CONTINUE (D70; D73 by itself after a restart): the same turn picks up where it stopped.
+function continueTurn(entry, { byItself = false } = {}) {
+  if (activeDelivery || !ownsIntent(entry.context)) return;
+  const chatId = entry.chatId || entry.context.chatId || entry.request?.chat_id;
+  if (!chatId) return;
+  if (byItself) {
+    if (entry.continuedByItself) return;  // once: should it stop again, the red message waits for the advocate
+    entry.continuedByItself = true;
+    entry.restartNote = 'NM was restarted while it worked on this message and continued by itself.';
+  }
+  entry.endpoint = '/api/turn/continue';
+  entry.envelope = JSON.stringify({ chat_id: chatId, turn_id: entry.turnId });
+  entry.stopped = null;
+  deliver(entry);
+}
+
+// DISCARD (D71): the red message and its buttons go; the answer that stopped is saved as it stopped.
+async function discardTurn(entry) {
+  const chatId = entry.chatId || entry.context.chatId || entry.request?.chat_id;
+  if (!chatId || entry.discarding) return;
+  entry.discarding = true;
+  repaint();
+  try {
+    const answer = await api('/api/turn/discard', { method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, turn_id: entry.turnId }) });
+    entry.answer = answer;
+    entry.state = 'committed';
+    entry.stopped = null;
+    const intent = entry.context;
+    if (intent) intent.pending = (intent.pending || []).filter((item) => item !== entry);
+    if (Number.isInteger(answer.matter_version)) state.matterVersion = answer.matter_version;
     releaseQueued(entry);
+  } catch (error) {
+    entry.discardError = error.message;
+  } finally {
+    entry.discarding = false;
+    repaint();
   }
 }
 
@@ -5541,6 +5874,74 @@ function queueAddition(text) {
   intent.text = '';
   sizeComposer();
   renderAttachments();
+  saveQueued(intent);
+}
+
+// PLAN AN.42 (D77): what waits is kept with the conversation, so that a reload keeps it - its words and the files read so far.
+async function saveQueued(intent) {
+  const chatId = intent && (intent.chatId || (activeDelivery && activeDelivery.entry.context === intent
+    && activeDelivery.entry.chatId));
+  if (!chatId) return;
+  const queued = (intent.queued || []).map((item) => ({ text: item.text,
+    documents: item.files.filter((file) => file.summary && file.summary.document_ref)
+      .map((file) => ({ document_ref: file.summary.document_ref, name: file.summary.name || file.name || '' })) }));
+  try {
+    await api(`/api/chats/${encodeURIComponent(chatId)}/queued`, { method: 'PUT',
+      headers: { 'content-type': 'application/json' }, body: JSON.stringify({ queued }) });
+  } catch (error) { /* kept on this page; the next change saves it again */ }
+}
+
+// What waited when the conversation was opened (D77): its lines back above the box, each file as it was read. Where the answer
+// it waited for is done, what waits goes now, once, together (D80); where it stopped, it waits for Continue or Discard.
+async function restoreQueued(intent, queued, pending) {
+  const items = [];
+  for (const item of queued) {
+    const files = [];
+    for (const document_ of item.documents || []) {
+      try {
+        const summary = await api(`/api/documents/${encodeURIComponent(document_.document_ref)}`);
+        files.push({ name: document_.name || summary.name, status: 'ready', summary, note: '' });
+      } catch (error) {
+        files.push({ name: document_.name, status: 'failed', summary: null, note: 'could not be opened again' });
+      }
+    }
+    files.forEach((file) => queuedFiles.add(file));
+    items.push({ text: item.text, files });
+  }
+  // The conversation's record is what waits: lines this page already held are taken back first.
+  unqueue(intent.queued || []);
+  intent.queued = items;
+  renderQueued();
+  if (!pending) releaseQueued({ state: 'committed', context: intent });
+}
+
+// STEER (D79): the line goes into the answer being worked on, with its files once they are read; NM decides what it changes. Where
+// the answer has already finished, it stays to go as the next message, and the line under the files says so.
+async function steerQueued(intent, item) {
+  const delivery = activeDelivery;
+  if (!delivery || delivery.entry.context !== intent || item.steering) return;
+  if (item.files.some((file) => READING_STATES.includes(file.status))) return;
+  item.steering = true;
+  renderQueued();
+  try {
+    await api('/api/turn/steer', { method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ turn_id: delivery.entry.turnId, message: item.text,
+        document_refs: item.files.filter((file) => file.summary && file.summary.document_ref)
+          .map((file) => file.summary.document_ref) }) });
+    intent.queued = intent.queued.filter((other) => other !== item);
+    unqueue([item]);
+    delivery.entry.steers = [...(delivery.entry.steers || []), item.text];
+    $('attachments-status').textContent = 'Added to the answer NM is working on.';
+    saveQueued(intent);
+  } catch (error) {
+    $('attachments-status').textContent = error?.status === 409
+      ? 'NM had already finished this answer, so this message goes as the next one.'
+      : `Not added: ${error.message}`;
+  } finally {
+    item.steering = false;
+    repaint();
+    paintSend();
+  }
 }
 
 // The messages that waited, as one: their words, and their files back with the message box's.
@@ -5555,6 +5956,7 @@ function releaseQueued(entry) {
   // Another conversation is open: what waits stays on its own, with Edit and Discard, until the advocate comes back to it.
   if (!ownsIntent(intent)) return;
   const { words, files } = unqueue(intent.queued.splice(0));
+  saveQueued(intent);
   const alone = !attachments.length;
   attachments.push(...files);
   // Plan AN.40 (D64): files still being read hold the words, which go by themselves once they are read.
@@ -5581,12 +5983,14 @@ function editQueued(intent, item) {
   sizeComposer();
   renderAttachments();
   box.focus();
+  saveQueued(intent);
 }
 
 function discardQueued(intent, item) {
   intent.queued = intent.queued.filter((other) => other !== item);
   unqueue([item]);
   paintSend();
+  saveQueued(intent);
 }
 
 function queuedFilesSaid(files) {
@@ -5619,6 +6023,17 @@ function renderQueued() {
       files.textContent = said;
       line.appendChild(files);
     }
+    // D79: Steer, while the answer it waits for is worked on and its files are read.
+    if (activeDelivery && activeDelivery.entry.context === intent) {
+      const steer = document.createElement('button');
+      steer.type = 'button';
+      steer.className = 'ghost';
+      steer.textContent = item.steering ? 'Steering…' : 'Steer';
+      steer.disabled = Boolean(item.steering) || item.files.some((file) => READING_STATES.includes(file.status));
+      steer.setAttribute('aria-label', 'Send this into the answer NM is working on now');
+      steer.addEventListener('click', () => steerQueued(intent, item));
+      line.appendChild(steer);
+    }
     const edit = document.createElement('button');
     edit.type = 'button';
     edit.className = 'ghost';
@@ -5641,7 +6056,7 @@ function renderQueued() {
 // answer or a refusal arrives; after a reload (with onFinished) it stops when
 // the server no longer knows the turn and fetches the saved answer when done.
 const PROGRESS_EVERY_MS = 2000;
-function watchProgress(entry, onFinished) {
+function watchProgress(entry, onFinished, onStopped = null) {
   let stopped = false;
   let timer = null;
   // The browser's timers are called directly: invoked as an object's method they
@@ -5653,9 +6068,18 @@ function watchProgress(entry, onFinished) {
   async function poll() {
     if (stopped) return;
     try {
-      const seen = await api(`/api/turn-progress?turn_id=${encodeURIComponent(entry.turnId)}`);
+      const chatId = entry.chatId || (entry.context && entry.context.chatId) || null;
+      const seen = await api(`/api/turn-progress?turn_id=${encodeURIComponent(entry.turnId)}`
+        + (chatId ? `&chat_id=${encodeURIComponent(chatId)}` : ''));
       if (stopped) return;
       entry.progress = seen;
+      if (seen.chat_id) entry.chatId = seen.chat_id;
+      // Plan AN.41 (D68): the work finished has been saved again: read it from the conversation (D77: and what waits goes with it).
+      if (Number.isInteger(seen.saved) && seen.saved > (entry.savedCount ?? -1) && seen.chat_id) {
+        entry.savedCount = seen.saved;
+        showSoFar(entry, seen.chat_id);
+        if (entry.context && Array.isArray(entry.context.queued) && entry.context.queued.length) saveQueued(entry.context);
+      }
       // Plan AN.37: a window of questions has opened; it is shown once by itself, and from the progress after.
       if (seen.asking === true && !entry.questionsSeen && !entry.questionsOpen) openTurnQuestions(entry);
       if (Number.isInteger(seen.shown) && seen.shown > (entry.shownCount || 0) && seen.chat_id) {
@@ -5664,7 +6088,7 @@ function watchProgress(entry, onFinished) {
       }
       repaint();
       if (onFinished && seen.state === 'finished') { stop(); onFinished(); return; }
-      if (onFinished && seen.state !== 'working') { stop(); return; }
+      if (onFinished && seen.state !== 'working') { stop(); if (onStopped) onStopped(); return; }
     } catch (error) {
       // Progress is auxiliary: the send or the saved conversation still decides.
       if (onFinished || error?.status === 401) { stop(); return; }
@@ -5683,6 +6107,8 @@ async function showSoFar(entry, chatId) {
     const chat = await api(`/api/chats/${encodeURIComponent(chatId)}`);
     if (entry.answer || !chat.pending || chat.pending.turn_id !== entry.turnId) return;
     entry.shownElements = chat.pending.elements;
+    if (chat.pending.work) entry.work = chat.pending.work;
+    entry.steers = Array.isArray(chat.pending.steers) ? chat.pending.steers : [];
     repaint();
     if (activeIntent && entry.context === activeIntent) loadChatBoard(activeIntent.chatId || chatId);
   } catch (error) {
@@ -6180,7 +6606,7 @@ function holdSend(message, options) {
 const SEND_LOOKS = {
   send: 'Send',
   queue: 'Send: it waits until this answer is ready',
-  working: 'Stop waiting for this answer',
+  working: 'Stop this answer',
   waiting: 'Do not send: keep the words and files',
   loading: 'Loading file…',
 };
@@ -6196,8 +6622,9 @@ function paintSend() {
   renderQueued();
 }
 
-// The ring pressed (D74, D75): a message waiting for its files is let go; while an answer is worked on, the page stops waiting for
-// it (as Cancel did; plan AN.42 D78 makes it stop NM's work too, after AN.41).
+// The ring pressed (D74, D75): a message waiting for its files is let go; while an answer is worked on, it stops NM (D78) after the
+// step in progress - every piece finished is kept and the red message follows, with Continue and Discard. If the stop cannot reach
+// the server the ring keeps turning and the line under the files says so.
 $('send').addEventListener('click', (event) => {
   const look = $('send').dataset.state;
   if (look === 'waiting' && heldSend) {
@@ -6205,10 +6632,23 @@ $('send').addEventListener('click', (event) => {
     cancelHold('Not sent. Your words and files are as they were.');
   } else if (look === 'working' && activeDelivery) {
     event.preventDefault();
-    activeDelivery.entry.cancelled = true;
-    activeDelivery.controller.abort();
+    stopTurn(activeDelivery.entry);
   }
 });
+
+async function stopTurn(entry) {
+  if (entry.stopping) return;
+  entry.stopping = true;
+  $('attachments-status').textContent = 'Stopping after the step in progress…';
+  try {
+    await api('/api/turn/stop', { method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ turn_id: entry.turnId }) });
+  } catch (error) {
+    entry.stopping = false;
+    $('attachments-status').textContent = error?.status === 409
+      ? 'NM had already finished this answer.' : 'The answer could not be stopped. NM is still working on it.';
+  }
+}
 
 // The waiting message let go: words sent another way go back to its own conversation's message box; the box's own words never left it.
 function cancelHold(said = '') {

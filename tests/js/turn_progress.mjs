@@ -27,7 +27,9 @@ function el(tag) {
 const texts = (node) => [node._text, ...node.children.flatMap(texts)].filter(Boolean);
 
 // --- the waiting turn ------------------------------------------------------------
-const render = vm.createContext({ document: { createElement: el }, Number, Math });
+// Plan AN.41: the work as it finishes and an answer that stopped are drawn by tests/js/an_answer_that_stopped.mjs.
+const render = vm.createContext({ document: { createElement: el }, Number, Math, renderWork: () => null,
+  renderStopped: () => null });
 vm.runInContext(between('function renderTurn(entry) {', 'function showConversationFromStart()'), render);
 
 const plain = render.renderTurn({ brief: 'What remedy is there?', turnId: 't1' });

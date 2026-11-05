@@ -29,6 +29,8 @@ async function refused(code, expectedState, expectedReloads) {
     ownsIntent: () => true, $: node,
     document: {createElement: () => node('cancel')},
     repaint() {}, updateWorkspace() { painted += 1; }, paintSend() {}, loadUsage() {},
+    // Plan AN.41 (D65): NM working counts as activity - the idle clock is other tests' (tests/js/an_answer_that_stopped.mjs).
+    checkIdle() {}, nmFinished() {},
     saveProtectedDraft: async () => true,
     api: async () => { throw Object.assign(new Error(friendly), {status: 409, detail}); },
     showThreadBoard: async () => { reloads += 1; },
