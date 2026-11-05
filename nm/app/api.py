@@ -11,6 +11,7 @@ import os
 import re
 import threading
 from collections import OrderedDict
+from contextlib import contextmanager
 from copy import deepcopy
 from datetime import date
 from math import ceil
@@ -24,12 +25,13 @@ from fastapi.responses import JSONResponse
 from starlette.concurrency import run_in_threadpool
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, StrictBool, field_validator
 from nm.app.static_assets import browser_assets_router
+from nm.app.turn_progress import STAGES as TURN_STAGES
 from nm.arrive import attempts_contracts as attempts
 from nm.arrive.advocate_contracts import PASSWORD_RESET_MINUTES, SESSION_IDLE_MINUTES, csrf_token, utcnow
 from nm.arrive.directory_port import AccountBusy, AuthenticationUnavailable
 from nm.arrive.professional_access import read_professional_status
 from nm.core_engine.conversation import (CONTRACT as CONVERSATION_CONTRACT, HEADER, SHOWN, ConversationRefused,
-                                         TurnContext, chat_matter_id, checked_rows, shown_of)
+                                         TurnContext, chat_matter_id, checked_rows, queued_of, shown_of, stored_chat)
 from nm.core_engine import documents as document_rules
 from nm.core_engine import research_note, voice
 from nm.core_engine.response_rendering import unit_index
@@ -39,7 +41,9 @@ from nm.core_engine.turn import CALCULATION_CONTRACT as CALCULATION_CORE_TURN
 from nm.core_engine.turn import RELEASE_CONTRACT as RELEASE_CORE_TURN
 from nm.core_engine.turn import RECORDS_CONTRACT as RECORDS_CORE_TURN
 from nm.core_engine import answer_sections
-from nm.core_engine.turn import LEGACY_CONTRACT as LEGACY_CORE_TURN, recover, saved_rows
+from nm.core_engine.turn import LEGACY_CONTRACT as LEGACY_CORE_TURN, STOP_NEEDS, STOPS, activity_of, saved_rows
+from nm.core_engine import research, response_writer
+from nm.core_engine.retrieval import offered
 from nm.core_engine import checklist
 from nm.core_engine.retrieval import SearchUnavailable
 from nm.shared.citation_contracts import provision_label, statute_title
@@ -1377,6 +1381,64 @@ def _session_current(request, advocate_id):
     return bool(session and session.advocate_id == advocate_id
                 and directory.identity(advocate_id) is not None)
 
+#: How often the server counts the advocate active while NM works on their message (plan AN.41, D65), in seconds: well inside
+#: the thirty idle minutes.
+_ACTIVE_EVERY = 60
+
+
+@contextmanager
+def _active_while_working(request):
+    """Plan AN.41 (D65; owner, 4 Nov 2026: idle is "where user didn't do anything and NM is also not doing thing"): from Send
+    until the answer is saved or stops, the advocate counts as active on the server as on the page, so the idle sign-out's thirty
+    minutes start once NM has finished. The twelve-hour limit of a sign-in is unchanged: a session past it is not touched."""
+    token = request.cookies.get('nm_session', '')
+    device = _device(request.cookies.get('nm_device'), request.headers.get('user-agent'))
+    done = threading.Event()
+
+    def keep():
+        while not done.wait(_ACTIVE_EVERY):
+            try:
+                application().directory.touch_session(token, device, utcnow())
+            except (AccountBusy, AuthenticationUnavailable, OSError, ValueError) as exc:
+                logging.getLogger('nm.session').warning('A session could not be kept active while NM worked (%s).',
+                                                        type(exc).__name__)
+    keeper = threading.Thread(target=keep, name='turn-active', daemon=True)
+    keeper.start()
+    try:
+        yield
+    finally:
+        done.set()
+
+
+def _answered(run, req, request, advocate_id, background):
+    """One run of a turn - sent, or continued (plan AN.41) - and its answer released, or refused in code's own words; while it
+    runs the advocate counts as active (D65). What NM finished and kept, where it stopped part-way, is said (kept)."""
+    try:
+        with _active_while_working(request):
+            output = run()
+    except ConversationRefused as exc:
+        raise HTTPException(exc.status, _conversation_error(exc, req)) from exc
+    except document_rules.DocumentRefused as exc:
+        raise HTTPException(422, {'why': str(exc), 'code': 'document_refused', 'committed': 'not_committed',
+                                  'turn_id': req.turn_id, 'chat_id': req.chat_id, 'retryable': False}) from exc
+    except ModelPermissionRefused as exc:
+        if not _session_current(request, advocate_id):
+            raise HTTPException(401, {'why': 'Sign in again before continuing.', 'code': 'signed_out',
+                                      'committed': 'not_committed', 'turn_id': req.turn_id, 'chat_id': req.chat_id,
+                                      'retryable': True, **({'kept': True} if getattr(exc, 'kept', False) else {})}) from exc
+        # No receipt lookup is implied by permission refusal: an earlier attempt
+        # with this request identity may already be saved.
+        raise HTTPException(403, {'why': str(exc), 'code': 'model_permission_required',
+            'committed': 'unconfirmed', 'turn_id': req.turn_id, 'chat_id': req.chat_id,
+            'retryable': False, **({'kept': True} if getattr(exc, 'kept', False) else {})}) from exc
+    if not _session_current(request, advocate_id):
+        raise HTTPException(401, 'not signed in')
+    released = _release(output)
+    if released.chat_id:  # once the answer has gone, the history's line of this conversation is made ready (O29)
+        background.add_task(_prepare_chat_line, advocate_id, released.chat_id)
+    return released
+
+
 @app.post('/api/turn', dependencies=[CsrfProtected])
 def turn(req: TurnRequest, advocate_id: Advocate, request: Request, background: BackgroundTasks) -> _Released:
     if not _session_current(request, advocate_id):
@@ -1388,44 +1450,163 @@ def turn(req: TurnRequest, advocate_id: Advocate, request: Request, background: 
             'Describe the requested work in your message instead.', 'code': 'unsupported_action_settings',
             'committed': 'unconfirmed', 'turn_id': req.turn_id, 'chat_id': req.chat_id,
             'retryable': False})
-    try:
-        output = application().run_turn(advocate_id=advocate_id,
+    return _answered(lambda: application().run_turn(advocate_id=advocate_id,
             message=req.message, turn_id=req.turn_id, chat_id=req.chat_id,
             matter_id=req.matter_id, expected_version=req.expected_version,
             document_refs=req.document_refs, model_choice=req.model, effort=req.effort,
-            session_current=lambda: _session_current(request, advocate_id))
+            session_current=lambda: _session_current(request, advocate_id)), req, request, advocate_id, background)
+
+
+class TurnOf(BaseModel):
+    """A turn of one of the advocate's own conversations (plan AN.41-AN.42)."""
+    chat_id: str = Field(min_length=1, max_length=200)
+    turn_id: str = Field(min_length=1, max_length=200)
+
+
+@app.post('/api/turn/continue', dependencies=[CsrfProtected])
+def continue_turn(req: TurnOf, advocate_id: Advocate, request: Request, background: BackgroundTasks) -> _Released:
+    """Continue (plan AN.41, D70; and D73, pressed by the page itself after a restart): the answer that stopped picks up where it
+    stopped - each step it finished kept where it still passes its check - and is saved once it is finished."""
+    if not _session_current(request, advocate_id):
+        raise HTTPException(401, 'not signed in')
+    return _answered(lambda: application().continue_turn(
+        advocate_id=advocate_id, chat_id=req.chat_id, turn_id=req.turn_id,
+        session_current=lambda: _session_current(request, advocate_id)), req, request, advocate_id, background)
+
+
+@app.post('/api/turn/discard', dependencies=[CsrfProtected])
+def discard_turn(req: TurnOf, advocate_id: Advocate, request: Request, background: BackgroundTasks) -> _Released:
+    """Discard (plan AN.41, D71): the red message and its Continue and Discard go; the answer that stopped is saved as it stopped,
+    the parts it finished below code's words on why."""
+    if not _session_current(request, advocate_id):
+        raise HTTPException(401, 'not signed in')
+    try:
+        output = application().discard_turn(advocate_id=advocate_id, chat_id=req.chat_id, turn_id=req.turn_id,
+                                            session_current=lambda: _session_current(request, advocate_id))
     except ConversationRefused as exc:
         raise HTTPException(exc.status, _conversation_error(exc, req)) from exc
-    except document_rules.DocumentRefused as exc:
-        raise HTTPException(422, {'why': str(exc), 'code': 'document_refused', 'committed': 'not_committed',
-                                  'turn_id': req.turn_id, 'chat_id': req.chat_id, 'retryable': False}) from exc
-    except ModelPermissionRefused as exc:
-        if not _session_current(request, advocate_id):
-            raise HTTPException(401, 'not signed in') from exc
-        # No receipt lookup is implied by permission refusal: an earlier attempt
-        # with this request identity may already be saved.
-        raise HTTPException(403, {'why': str(exc), 'code': 'model_permission_required',
-            'committed': 'unconfirmed', 'turn_id': req.turn_id, 'chat_id': req.chat_id,
-            'retryable': False}) from exc
+    except (OSError, ValueError) as exc:
+        raise HTTPException(503, 'This conversation could not be read reliably.') from exc
+    if output is None:
+        raise HTTPException(409, {'code': 'nothing_to_discard', 'why': 'There is no answer that stopped part-way here.',
+                                  'turn_id': req.turn_id, 'chat_id': req.chat_id})
     if not _session_current(request, advocate_id):
         raise HTTPException(401, 'not signed in')
     released = _release(output)
-    if released.chat_id:  # once the answer has gone, the history's line of this conversation is made ready (O29)
-        background.add_task(_prepare_chat_line, advocate_id, released.chat_id)
+    background.add_task(_prepare_chat_line, advocate_id, req.chat_id)
     return released
 
 
-@app.get('/api/turn-progress')
-def turn_progress(turn_id: str, advocate_id: Advocate, request: Request):
-    """What the advocate's own turn in progress is doing: stage names, counts and
-    times only (owner decision, 14 Oct 2026). Unknown is never a failure claim. From plan
-    AN.37, that it has a window of questions open, where it has: never what it asks."""
+class TurnStop(BaseModel):
+    turn_id: str = Field(min_length=1, max_length=200)
+
+
+@app.post('/api/turn/stop', dependencies=[CsrfProtected])
+def stop_turn(req: TurnStop, advocate_id: Advocate, request: Request):
+    """Stop (plan AN.42, D78): the answer stops after the step in progress; every piece finished is kept, and the red message
+    with Continue and Discard follows when the turn has stopped."""
     if not _session_current(request, advocate_id):
         raise HTTPException(401, 'not signed in')
-    if not turn_id or len(turn_id) > 200:
+    if not application().stop_turn(advocate_id, req.turn_id):
+        raise HTTPException(409, {'code': 'not_working', 'why': 'NM is not working on this message now.'})
+    return {'state': 'stopping'}
+
+
+class TurnSteer(BaseModel):
+    turn_id: str = Field(min_length=1, max_length=200)
+    message: str = Field(min_length=1, max_length=20000)
+    document_refs: list[str] = Field(default_factory=list, max_length=20)
+
+    @field_validator("message")
+    @classmethod
+    def preserve_original_message(cls, value: str) -> str:
+        _not_blank(value)
+        return value
+
+
+@app.post('/api/turn/steer', dependencies=[CsrfProtected])
+def steer_turn(req: TurnSteer, advocate_id: Advocate, request: Request):
+    """Steer (plan AN.42, D79): the message goes into the answer being worked on, which stops after the step in progress and goes
+    on with it - NM decides what it changes. Once the answer has finished it goes as the next message: the page sends it so."""
+    if not _session_current(request, advocate_id):
+        raise HTTPException(401, 'not signed in')
+    try:
+        taken = application().steer_turn(advocate_id=advocate_id, turn_id=req.turn_id, text=req.message,
+                                         document_refs=tuple(req.document_refs))
+    except document_rules.DocumentRefused as exc:
+        raise HTTPException(422, {'why': str(exc), 'code': 'document_refused'}) from exc
+    if not taken:
+        raise HTTPException(409, {'code': 'finished', 'why': 'NM had already finished this answer, so your message goes as the '
+                                  'next one.'})
+    return {'state': 'taken'}
+
+
+class QueuedDocument(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    document_ref: str = Field(min_length=1, max_length=200)
+    name: str = Field(max_length=300)
+
+
+class QueuedMessage(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    text: str = Field(min_length=1, max_length=20000)
+    documents: list[QueuedDocument] = Field(default_factory=list, max_length=20)
+
+
+class Queued(BaseModel):
+    queued: list[QueuedMessage] = Field(default_factory=list, max_length=20)
+
+
+@app.put('/api/chats/{chat_id}/queued', dependencies=[CsrfProtected])
+def save_queued(chat_id: str, req: Queued, advocate_id: Advocate, request: Request):
+    """What waits to be sent as the conversation's next message (plan AN.42, D77), kept with it so that a reload keeps it."""
+    if not _session_current(request, advocate_id):
+        raise HTTPException(401, 'not signed in')
+    try:
+        application().save_queued(advocate_id=advocate_id, chat_id=chat_id,
+                                  queued=[item.model_dump() for item in req.queued if item.text.strip()])
+    except LookupError as exc:
+        raise HTTPException(404, 'Conversation not available.') from exc
+    except (OSError, ValueError) as exc:
+        raise HTTPException(503, {'code': 'queue_not_saved', 'why': 'What waits could not be saved with the conversation.'}) from exc
+    return {'state': 'saved'}
+
+
+@app.get('/api/turn-progress')
+def turn_progress(turn_id: str, advocate_id: Advocate, request: Request, chat_id: str | None = None):
+    """What the advocate's own turn in progress is doing: stage names, counts and
+    times only (owner decision, 14 Oct 2026). Unknown is never a failure claim. From plan
+    AN.37, that it has a window of questions open, where it has: never what it asks.
+    From plan AN.41 (D73): where this process does not know the turn - the server was restarted - the saved conversation says
+    whether it was saved (finished) or stopped part-way (stopped, with whether NM continues it by itself). chat_id: the
+    conversation, where the page knows it; a first message's is found from the turn."""
+    if not _session_current(request, advocate_id):
+        raise HTTPException(401, 'not signed in')
+    if not turn_id or len(turn_id) > 200 or chat_id is not None and not 0 < len(chat_id) <= 200:
         raise HTTPException(422, 'A turn identity is required.')
     seen = application().turn_progress.read(advocate_id, turn_id)
-    return {**seen, 'asking': True} if application().questions.window(advocate_id, turn_id) is not None else seen
+    if seen.get('state') == 'unknown':
+        seen = {**seen, **_saved_state(advocate_id, chat_id or stored_chat(advocate_id, None, turn_id), turn_id)}
+    if application().questions.window(advocate_id, turn_id) is None:
+        return seen
+    # While NM waits for the advocate's answer, that is what it is doing, whatever its research reports beside it meanwhile.
+    return {**seen, 'asking': True, 'stage': 'waiting_for_answer', 'label': TURN_STAGES['waiting_for_answer']}
+
+
+def _saved_state(advocate_id, chat_id, turn_id):
+    """Where a turn this process does not know stands in its saved conversation (D73): {} where it is not there."""
+    try:
+        matter = application().store.load(chat_matter_id(advocate_id, chat_id))
+    except (OSError, ValueError):
+        return {}
+    if matter is None or matter.advocate_id != advocate_id:
+        return {}
+    if any(row.get('turn_id') == turn_id for row in matter.brain_chat):
+        return {'state': 'finished', 'chat_id': chat_id}
+    held = _held(matter)
+    if held is None or held['turn_id'] != turn_id:
+        return {}
+    return {'state': 'stopped', 'chat_id': chat_id, 'stopped': _stopped_of(held)}
 
 
 class QuestionAnswers(BaseModel):
@@ -1473,6 +1654,9 @@ def _conversation_error(exc, req=None):
     or, for something missing, the check's own explanation; never the words withheld."""
     detail = {'why': exc.why, 'code': exc.code, 'committed': exc.committed,
               'retryable': exc.retryable}
+    if getattr(exc, 'kept', False):
+        # Plan AN.41 (D69): the answer stopped part-way and what NM finished is kept with the conversation.
+        detail['kept'] = True
     if req is not None:
         detail.update(turn_id=req.turn_id, chat_id=req.chat_id)
     return detail
@@ -1522,10 +1706,8 @@ def _read_chat(chat_id, advocate_id, request):
     if matter is None or matter.advocate_id != advocate_id:
         raise HTTPException(404, 'Conversation not available.')
     try:
-        if HEADER in matter.intake_answers:
-            matter = recover(store, matter, advocate_id,
-                             running=lambda held: application().turn_running(advocate_id, held),
-                             session_current=lambda: _session_current(request, advocate_id))
+        # Plan AN.41 (D69-D71): an answer that stopped part-way is no longer saved by reading the conversation; it waits, with
+        # what it finished, for Continue, Discard or the next message.
         rows = saved_rows(matter, advocate_id)
     except ConversationRefused as exc:
         raise HTTPException(exc.status, _conversation_error(exc)) from exc
@@ -1561,11 +1743,21 @@ def _derived_line(store, matter_id):
             line['unavailable'] = True
         else:
             line['chat'] = {'chat_id': rows[0]['chat_id'], 'preview': rows[0]['message'],
-                            'turn_count': len(rows)} if rows else None
+                            'turn_count': len(rows)} if rows else _first_message(matter)
     else:
         # Old records remain history; reading never upgrades their contracts.
         line['matter'] = {'matter_id': matter.id, 'matter': matter.title, 'state': 'historical'}
     return line
+
+
+def _first_message(matter):
+    """A conversation whose first message is being worked on, or stopped before it was answered (plan AN.41, D66): it is in the
+    history from Send, under that message. None where there is none."""
+    held = _held(matter)
+    if held is None:
+        return None
+    # Its one message counts, though no answer to it is saved yet.
+    return {'chat_id': matter.intake_answers[HEADER]['chat_id'], 'preview': held['message'], 'turn_count': 1}
 
 
 def _keepable(line):
@@ -1693,12 +1885,130 @@ def chat(chat_id: str, advocate_id: Advocate, request: Request, response: Respon
         raise HTTPException(401, 'not signed in')
     response.headers['Cache-Control'] = 'no-store'
     # What the turn being worked on has shown so far (owner decisions P26-P27), saved with
-    # the conversation as each part passed; the committed answer replaces it.
+    # the conversation as each part passed; the committed answer replaces it. From plan AN.41: from Send, with the work it has
+    # finished and, where it stopped, why.
     held = _held(matter)
+    try:
+        queued = queued_of(matter)
+    except ValueError:
+        queued = []
     return {'state': 'ok', 'chat_id': chat_id, 'matter_id': None,
             'matter_version': matter.version, 'turns': turns,
-            **({'pending': {'turn_id': held['turn_id'], 'message': held['message'], 'elements': held['elements'],
-                            'at': held['at']}} if held else {})}
+            **({'pending': _pending(advocate_id, held)} if held else {}),
+            **({'queued': queued} if queued else {})}
+
+
+def _pending(advocate_id, held):
+    """A turn being worked on, as the page reads it (plan AN.41, D66-D69): its message and files, what its answer has shown, the
+    work it has finished (D68), whether NM is working on it now and, where it is not, why it stopped (D69) and whether NM goes on
+    by itself (D73); what steered it (AN.42, D79)."""
+    working = application().turn_running(advocate_id, held['turn_id'])
+    pending = {'turn_id': held['turn_id'], 'message': held['message'], 'elements': held['elements'], 'at': held['at'],
+               'documents': [_sent_document(document) for document in held['documents']],
+               'state': 'working' if working else 'stopped'}
+    if 'steps' in held:
+        pending['work'] = _work_of(held)
+        pending['steers'] = [steer['text'] for steer in held['steers']]
+    if not working:
+        pending['stopped'] = _stopped_of(held)
+    return pending
+
+
+def _stopped_of(held):
+    """Why a turn stopped part-way, in code's words (D69): what was finished and what was not, what must be put right before
+    Continue works, and whether NM continues it by itself (D73) - only after a restart, the message having been sent already."""
+    stopped = held.get('stopped') or {}
+    code = stopped.get('code') or 'interrupted'
+    work = _work_of(held) if 'steps' in held else None
+    return {'code': code, 'why': STOPS.get(code, STOPS['failed']), 'needs': STOP_NEEDS.get(code),
+            'by_itself': 'steps' in held and not stopped, 'at': stopped.get('at'),
+            'finished': _finished_said(work) if work is not None else [],
+            'unfinished': _unfinished_said(work) if work is not None else []}
+
+
+def _work_of(held):
+    """The work a turn being worked on has finished (plan AN.41, D68), from its saved steps: the disputes and legal questions it
+    found, each dispute's law as its research chose it, the case set out, and each section of the answer - done or not yet."""
+    steps = held['steps']
+    understood = steps['understood']
+    if understood is None:
+        return {'understood': False, 'disputes': [], 'sections': [], 'checked_across': False, 'overview': False,
+                'limits': False}
+    plan = understood['plan']
+    disputes = ((plan.get('proposal') or {}).get('understanding') or {}).get('disputes') or []
+    layout = response_writer.parts({'contract': research.CONTRACT, 'plan': plan})
+    indices = list(range(1, len(layout))) if len(layout) > 1 else [0]
+    answered = steps['answered'] or {'sections': [], 'cross_check': None, 'overview': None}
+    done = {saved['part'] for saved in answered['sections']}
+    names = {dispute['id']: dispute['name'] for dispute in disputes}
+    researched = steps['parts']
+    return {'understood': True,
+            'disputes': [{'id': dispute['id'], 'name': dispute['name'],
+                          'questions': [question['question'] for question in dispute.get('legal_questions', ())],
+                          'researched': dispute['id'] in researched,
+                          'law': _law_found(researched[dispute['id']]) if dispute['id'] in researched else []}
+                         for dispute in disputes],
+            'sections': [{'part': f's{index}', 'dispute_id': layout[index]['dispute_id'],
+                          'name': names.get(layout[index]['dispute_id']), 'done': index in done,
+                          'case': str(index) in steps['cases']} for index in indices],
+            'checked_across': answered['cross_check'] is not None, 'overview': answered['overview'] is not None,
+            'limits': steps['limits'] is not None}
+
+
+def _law_found(part):
+    """The sections of the Acts and the judgments one dispute's research chose (D68), by name, from its saved research: what the
+    page lists as that dispute's research finishes. Never their text."""
+    chosen = {identity for kind in ('provision', 'judgment') for ids in research.chosen(part, kind).values() for identity in ids}
+    found, seen = [], set()
+    for search in [*part['searches'].values(), *(search for _, search in research.further_searches(part))]:
+        for candidate in offered(search):
+            if candidate['id'] not in chosen:
+                continue
+            row = candidate.get('source') or {}
+            if candidate['kind'] == 'provision':
+                item = {'kind': 'provision', 'act': row.get('act_name') or row.get('act_id') or '',
+                        'section': str(row.get('section_number') or '')}
+            else:
+                item = {'kind': 'judgment', 'title': row.get('case_name') or row.get('case_id') or ''}
+            key = tuple(sorted(item.items()))
+            if key not in seen:
+                seen.add(key)
+                found.append(item)
+    return found
+
+
+def _finished_said(work):
+    """What a stopped answer had finished, in code's words (D69)."""
+    if not work['understood']:
+        return []
+    said = ['the disputes and legal questions']
+    researched = sum(dispute['researched'] for dispute in work['disputes'])
+    if researched:
+        said.append(f"the research for {researched} of {len(work['disputes'])} dispute{'s' if len(work['disputes']) != 1 else ''}")
+    if work['limits']:
+        said.append('the time limits')
+    written = sum(section['done'] for section in work['sections'])
+    if written:
+        said.append(f"{written} of {len(work['sections'])} section{'s' if len(work['sections']) != 1 else ''} of the answer")
+    if work['checked_across']:
+        said.append('the check across the sections')
+    return said
+
+
+def _unfinished_said(work):
+    """What a stopped answer had not finished, in code's words (D69)."""
+    if not work['understood']:
+        return ['the whole answer']
+    said = []
+    left = [dispute['name'] for dispute in work['disputes'] if not dispute['researched']]
+    if left:
+        said.append('the research for ' + '; '.join(left))
+    unwritten = [section['name'] or 'the answer' for section in work['sections'] if not section['done']]
+    if unwritten:
+        said.append('the section' + ('s' if len(unwritten) != 1 else '') + ' on ' + '; '.join(unwritten))
+    if len(work['sections']) > 1 and not work['overview']:
+        said.append('the overview')
+    return said
 
 
 def _held(matter):
@@ -1813,7 +2123,7 @@ def chat_board(chat_id: str, advocate_id: Advocate, request: Request, response: 
     turn is worked on, each dispute's section shown so far updates it (owner decision P26)."""
     matter, rows = _read_chat(chat_id, advocate_id, request)
     held = _held(matter)
-    if held is not None:
+    if held is not None and ('steps' not in held or held['steps']['understood'] is not None):
         rows = [*rows, _held_row(matter, rows, held)]
     board = matter_board(rows)
     if not _session_current(request, advocate_id):
@@ -1826,8 +2136,9 @@ def _held_row(matter, rows, held):
     """A turn still being worked on, as the board reads a saved turn: its understanding and
     research, and the checklist of each dispute's section shown so far."""
     context = TurnContext(matter, held['request']['chat_id'], held['turn_id'], held['message'], tuple(rows),
-                          documents=tuple(held['documents'])).payload()
-    activity = {key: value for key, value in held['activity'].items() if key != 'waiting'}
+                          documents=tuple(held['documents']), steers=tuple(held.get('steers', ()))).payload()
+    # Plan AN.41 (D67): derived from the steps it saved; nothing to show before the matter is understood.
+    activity = {key: value for key, value in (activity_of(held, context) or {}).items() if key != 'waiting'}
     return {'turn_id': held['turn_id'], 'message': held['message'], 'documents': held['documents'],
             'activities': activity, 'records': checklist.records(context, activity),
             'response': {'at': held['at']}}

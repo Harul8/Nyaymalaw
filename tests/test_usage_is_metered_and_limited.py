@@ -10,7 +10,7 @@ import pytest
 from nm.arrive.usage_port import TRIAL_MICRO_USD
 from nm.core_engine.conversation import chat_matter_id
 from nm.shared.model_port import USAGE_LIMIT_MESSAGE
-from tests.test_core_served import OTHER, OWNER, send, served, successful  # noqa: F401 -- the fixture
+from tests.test_core_served import OTHER, OWNER, no_answer_saved, send, served, successful  # noqa: F401 -- the fixture
 
 pytestmark = pytest.mark.class_a
 
@@ -47,7 +47,8 @@ def test_once_nothing_is_left_a_new_message_is_refused_before_any_call(served):
     detail = response.json()["detail"]
     assert detail["code"] == "usage_limit" and detail["why"].startswith(USAGE_LIMIT_MESSAGE)
     assert detail["retryable"] and detail["committed"] == "not_committed"
-    assert not served.model.calls and not served.store.list_for(OWNER).matters
+    assert not served.model.calls
+    no_answer_saved(served, "usage_limit")  # plan AN.41 (D66): the message is kept, for Continue once usage is available
     # Another account's allowance is its own.
     other = served.login(OTHER)
     assert other.post("/api/turn", json={"message": "Inspect this reported account.", "turn_id": "turn-o"}
@@ -104,4 +105,4 @@ def test_a_turn_stops_at_its_next_call_once_the_allowance_runs_out_in_the_middle
     assert len(sent) == 3  # nothing was sent after the allowance ran out
     # The three calls sent and the charge that used the allowance up are kept; the calls refused were never sent.
     assert served.app.usage.totals()["calls"] == 4
-    assert not served.store.list_for(OWNER).matters
+    no_answer_saved(served, "usage_limit")  # plan AN.41 (D66, D69): what was finished is kept, for Continue

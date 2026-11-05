@@ -723,8 +723,11 @@ def test_each_part_is_saved_with_the_conversation_as_it_is_shown_and_the_commit_
                    progress=lambda stage, **detail: reported.append((stage, detail)))
     held = seen["held"]
     assert held["turn_id"] == "t1" and held["message"] == "Hello."
-    assert [saved["part"] for saved in held["activity"]["sections"]] == [1, 2]
-    assert held["activity"]["waiting"] == [] and held["activity"]["overview"] is None
+    assert [saved["part"] for saved in held["steps"]["answered"]["sections"]] == [1, 2]
+    assert held["steps"]["answered"]["overview"] is None
+    # Plan AN.41 (D67): each step saved as it finished - the understanding, each dispute's research, the time limits.
+    assert held["steps"]["understood"] is not None and set(held["steps"]["parts"]) == {"D1", "D2"}
+    assert held["steps"]["limits"] is not None and held["stopped"] is None
     assert [e["kind"] for e in held["elements"]].count("HEADING") == 2
     shown = [detail for stage, detail in reported if stage == "shown"]
     assert [detail["shown"] for detail in shown] == [1, 2, 3, 4] and {d["chat_id"] for d in shown} == {response["chat_id"]}
@@ -741,7 +744,8 @@ def test_a_turn_that_stopped_after_showing_part_of_its_answer_is_saved_with_what
     with pytest.raises(ModelPermissionRefused):
         run(store, through_turns(Scripted(refuse={"core_response_overview"})))
     held = held_now(store)
-    assert [saved["part"] for saved in held["activity"]["sections"]] == [1, 2]
+    assert [saved["part"] for saved in held["steps"]["answered"]["sections"]] == [1, 2]
+    assert held["stopped"]["code"] == "model_permission_required"
     # The next message of the conversation saves it first, with what it showed.
     chat_id = held["request"]["chat_id"]
     later = run(store, through_turns(Scripted()), chat_id=chat_id, turn_id="t2", message="And the second?")
@@ -782,8 +786,9 @@ def test_a_turn_withheld_whole_keeps_nothing_it_showed(store):
 
 def test_a_turn_whose_usage_runs_out_after_showing_part_of_its_answer_keeps_what_it_showed(store):
     """Plan AN.37 (D46; owner, 3 Nov 2026): the usage runs out while one dispute's case is set out, after the other dispute's
-    section was shown. The turn is saved there, as a turn that stopped part-way, with P51's words above it - never withdrawn."""
-    from nm.core_engine.conversation import chat_matter_id
+    section was shown. Plan AN.41 (D69, D71): what it finished is kept, never withdrawn, with why it stopped - for Continue once
+    usage is available, or Discard, which saves it as it stopped with P51's words above it."""
+    from nm.core_engine.conversation import ConversationRefused, chat_matter_id
     from nm.shared.model_port import USAGE_LIMIT_MESSAGE, UsageLimitReached
     from tests.test_core_turn import run
     model = through_turns(Scripted())
@@ -800,7 +805,13 @@ def test_a_turn_whose_usage_runs_out_after_showing_part_of_its_answer_keeps_what
             raise UsageLimitReached(USAGE_LIMIT_MESSAGE)
         return _result({"elements": [], "to_get": [], "other_side": []}, tier)
     model.structured = structured
-    response = run(store, model)
+    with pytest.raises(ConversationRefused) as stopped:
+        run(store, model)
+    assert stopped.value.code == "usage_limit" and stopped.value.status == 402 and stopped.value.kept
+    held = held_now(store)
+    assert held["stopped"]["code"] == "usage_limit"
+    chat_id = held["request"]["chat_id"]
+    response = turn.discard(store, store.load(chat_matter_id("owner", chat_id)), "owner", "t1", session_current=lambda: True)
     assert response["committed"] == "committed" and response["service_status"] == turn.STOPPED_FOR_USAGE
     assert response["service_status"].startswith(USAGE_LIMIT_MESSAGE)
     assert held_now(store) is None  # saved, no longer only shown
@@ -830,10 +841,11 @@ def test_a_turn_run_on_a_chosen_effort_that_stopped_part_way_is_saved_with_what_
 
 
 
-def test_the_page_reads_what_a_running_turn_has_shown_and_a_reopened_one_is_saved_with_it(served):
+def test_the_page_reads_what_a_running_turn_has_shown_and_a_stopped_one_waits_with_it(served):
     """P26-P27 through the HTTP API: the progress says how much the answer has shown and in
-    which conversation; the conversation holds what was shown while its turn is worked on;
-    reopened once the turn stopped, it is saved with what it showed."""
+    which conversation; the conversation holds what was shown while its turn is worked on.
+    Plan AN.41 (D69-D71): reopened once the turn stopped, it waits with what it finished and why it stopped, for Continue or
+    Discard; Discard saves it as it stopped."""
     from nm.core_engine.conversation import stored_chat
     scripted_answers(served, Scripted(refuse={"core_response_overview"}))
     resp = served.client.post("/api/turn", json={"message": "Inspect this reported account.", "turn_id": "turn-1"})
@@ -850,11 +862,24 @@ def test_the_page_reads_what_a_running_turn_has_shown_and_a_reopened_one_is_save
     board = served.client.get(f"/api/chats/{chat_id}/board").json()
     assert [dispute["id"] for dispute in board["disputes"]] == ["D1", "D2"]
     assert all("checklist" in dispute for dispute in board["disputes"])
-    # Once it has stopped, reopening saves it with what it showed.
+    assert reading["pending"]["state"] == "working" and "stopped" not in reading["pending"]
+    # Once it has stopped, reopening shows it waiting with what it finished and why it stopped; nothing is saved by reading it.
     served.app.turn_progress.end(OWNER, "turn-1", "stopped")
+    reopened = served.client.get(f"/api/chats/{chat_id}").json()
+    assert reopened["turns"] == [] and reopened["pending"]["state"] == "stopped"
+    stopped = reopened["pending"]["stopped"]
+    assert stopped["code"] == "model_permission_required" and stopped["by_itself"] is False and stopped["needs"]
+    assert "2 of 2 sections of the answer" in stopped["finished"] and stopped["unfinished"] == ["the overview"]
+    work = reopened["pending"]["work"]
+    assert [dispute["id"] for dispute in work["disputes"]] == ["D1", "D2"] and all(d["researched"] for d in work["disputes"])
+    assert [section["done"] for section in work["sections"]] == [True, True]
+    # Discard: saved as it stopped, code's words above it.
+    discarded = served.client.post("/api/turn/discard", json={"chat_id": chat_id, "turn_id": "turn-1"})
+    assert discarded.status_code == 200, discarded.text
     reopened = served.client.get(f"/api/chats/{chat_id}").json()
     assert "pending" not in reopened and len(reopened["turns"]) == 1
     assert reopened["turns"][0]["elements"][0]["text"].startswith("NM stopped before finishing this answer.")
+    assert reopened["turns"][0]["service_status"].startswith("AI data sharing is turned off")
     assert reopened["matter_version"] == reopened["turns"][0]["matter_version"]
 
 

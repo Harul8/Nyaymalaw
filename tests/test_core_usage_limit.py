@@ -37,7 +37,10 @@ def test_a_turn_the_account_cannot_answer_is_refused_in_the_owners_words(store, 
     assert error.why == SAID
     # Kept for whoever runs the service: the failure's own name and the stage, no words of the matter.
     assert error.diagnosis.startswith("usage_limit-UsageLimitReached-")
-    assert not store.list_for("owner").matters
+    # Plan AN.41 (D66, D69): no answer is saved; the message is, from Send, with what NM finished, for Continue.
+    from nm.core_engine.conversation import shown_of
+    matter, = store.list_for("owner").matters
+    assert matter.brain_chat == () and shown_of(matter)["stopped"]["code"] == "usage_limit" and error.kept
     logged, = [r.getMessage() for r in caplog.records if r.getMessage().startswith("Message not answered")]
     assert "UsageLimitReached" in logged and "Hello." not in logged
 
@@ -51,6 +54,7 @@ def test_the_same_message_is_answered_once_the_account_is_topped_up(store):
 
 
 def test_the_served_turn_says_it_in_the_owners_words_and_saves_nothing(served):  # noqa: F811
+    from tests.test_core_served import no_answer_saved
     original = served.model.structured
 
     def exhausted(prompt, schema, tier, **kwargs):
@@ -64,7 +68,7 @@ def test_the_served_turn_says_it_in_the_owners_words_and_saves_nothing(served): 
     detail = response.json()["detail"]
     assert (detail["code"], detail["why"], detail["committed"], detail["retryable"]) == (
         "usage_limit", SAID, "not_committed", True)
-    assert not served.store.list_for(OWNER).matters
+    no_answer_saved(served, "usage_limit")
 
 
 # --- the answer that lost a step to it (piece 3) ----------------------------------------------

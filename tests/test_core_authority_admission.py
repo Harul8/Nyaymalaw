@@ -75,7 +75,9 @@ def test_exact_source_mismatch_is_withheld_before_positive_reviewer_or_save(serv
     assert names[-1] == "core_response_writer"
     assert sorted(names[2:-1]) == ["core_research_check", "core_research_judgment_phrases",
                                    "core_research_judgment_pick", "core_research_phrases", "core_research_pick"]
-    assert not served.store.list_for(OWNER).matters
+    # No answer is saved, and nothing of the withheld turn is kept (G-CORE); plan AN.41 saved its message at Send.
+    from nm.core_engine.conversation import shown_of
+    assert all(matter.brain_chat == () and shown_of(matter) is None for matter in served.store.list_for(OWNER).matters)
     # A fresh source mismatch cannot be cleared by retrying the same turn or by
     # allowing the configured always-positive synthetic reviewer to run.
     retry = send(served)

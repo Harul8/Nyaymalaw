@@ -66,6 +66,16 @@ def served(tmp_path, monkeypatch):
         client.close()
 
 
+def no_answer_saved(served, code=None):
+    """Plan AN.41 (D66): no answer is saved; the message is, from Send, kept beside the conversation with why it stopped."""
+    from nm.core_engine.conversation import shown_of
+    matters = served.store.list_for(OWNER).matters
+    assert all(matter.brain_chat == () for matter in matters)
+    if code is not None:
+        assert len(matters) == 1 and shown_of(matters[0])["stopped"]["code"] == code
+    return matters
+
+
 def send(served, **changes):
     return served.client.post("/api/turn", json={"message": "Inspect this reported account.",
                                                "turn_id": "turn-1", **changes})
@@ -200,7 +210,7 @@ def test_session_revoked_during_review_prevents_save_and_disclosure(served, monk
     monkeypatch.setattr(served.model, "structured", revoke)
     response = send(served)
     assert response.status_code == 401 and "Counsel" not in response.text
-    assert not served.store.list_for(OWNER).matters
+    no_answer_saved(served, "signed_out")
 
 
 def test_revocation_after_atomic_save_withholds_reply_but_relogin_replays_once(served, monkeypatch):
@@ -208,7 +218,8 @@ def test_revocation_after_atomic_save_withholds_reply_but_relogin_replays_once(s
     token = served.client.cookies.get("nm_session")
     def revoke(matter, **kwargs):
         result = original(matter, **kwargs)
-        served.directory.close_session(token, "Synthetic post-save revocation")
+        if matter.brain_chat:  # the answer's own save, not the message's at Send (plan AN.41, D66)
+            served.directory.close_session(token, "Synthetic post-save revocation")
         return result
     monkeypatch.setattr(served.store, "commit", revoke)
     response = send(served)
@@ -285,6 +296,8 @@ def test_unconfirmed_save_retry_only_reads_receipt_and_never_reexecutes_effects(
     original = served.store.commit
     pending = []
     def fail(matter, **kwargs):
+        if not matter.brain_chat:  # the message saved at Send and the work beside it (plan AN.41) are written
+            return original(matter, **kwargs)
         pending.append((matter, kwargs))
         raise OSError("Synthetic unavailable store")
     monkeypatch.setattr(served.store, "commit", fail)
@@ -293,12 +306,14 @@ def test_unconfirmed_save_retry_only_reads_receipt_and_never_reexecutes_effects(
     detail = response.json()["detail"]
     assert detail["code"] == "save_unconfirmed" and detail["committed"] == "unconfirmed"
     assert detail["retryable"] and detail["turn_id"] == "turn-1"
-    assert "Counsel" not in response.text and not served.store.list_for(OWNER).matters
+    assert "Counsel" not in response.text
+    no_answer_saved(served)
     monkeypatch.setattr(served.store, "commit", original)
     unconfirmed = send(served)
     assert unconfirmed.status_code == 503
     assert unconfirmed.json()["detail"]["code"] == "attempt_unconfirmed"
-    assert len(served.model.calls) == 9 and not served.store.list_for(OWNER).matters
+    assert len(served.model.calls) == 9
+    no_answer_saved(served)
     # A delayed confirmation supplies the exact original candidate. A retry
     # reads that durable receipt; it does not generate or apply another effect.
     original(pending[0][0], **pending[0][1])
@@ -351,7 +366,8 @@ def test_provider_outage_does_not_save_an_empty_success(served):
     assert response.status_code == 503
     detail = response.json()["detail"]
     assert detail["code"] == "response_unavailable" and detail["retryable"]
-    assert detail["committed"] == "not_committed" and not served.store.list_for(OWNER).matters
+    assert detail["committed"] == "not_committed" and detail["kept"]
+    no_answer_saved(served, "response_unavailable")
 
 
 def test_saved_replay_requires_no_new_model_permission_but_new_work_does(served, monkeypatch):
@@ -370,7 +386,8 @@ def test_permission_denied_before_first_call_can_resume_same_request_after_grant
     monkeypatch.setattr(served.app, "_model_for", refuse)
     response = send(served)
     assert response.status_code == 403 and response.json()["detail"]["code"] == "model_permission_required"
-    assert not served.model.calls and not served.store.list_for(OWNER).matters
+    assert not served.model.calls
+    no_answer_saved(served, "model_permission_required")
     monkeypatch.setattr(served.app, "_model_for", original)
     reply = successful(served)
     assert len(served.model.calls) == 9
