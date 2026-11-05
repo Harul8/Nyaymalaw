@@ -50,6 +50,8 @@ def test_the_advocate_reads_the_question_answers_it_and_the_saved_answer_carries
     progress = until(lambda: (lambda seen: seen if seen.get("asking") else None)(
         page.get("/api/turn-progress?turn_id=turn-1").json()))
     assert progress["stage"] == "waiting_for_answer" and "Whom" not in str(progress)  # the progress never says what it asks
+    # Plan AN.37 (D87): how many questions the window asks, so that the page opens it again when code adds one.
+    assert progress["asked"] == 1
     window = page.get("/api/turn-question?turn_id=turn-1").json()
     assert [q["question"] for q in window["questions"]] == ["Whom do you act for?"] and not window["defaults_applied"]
     refused = page.post("/api/turn-question", json={"turn_id": "turn-1", "answers": {"q1": {"chosen": ["Someone"]}}})

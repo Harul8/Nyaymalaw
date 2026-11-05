@@ -1587,10 +1587,13 @@ def turn_progress(turn_id: str, advocate_id: Advocate, request: Request, chat_id
     seen = application().turn_progress.read(advocate_id, turn_id)
     if seen.get('state') == 'unknown':
         seen = {**seen, **_saved_state(advocate_id, chat_id or stored_chat(advocate_id, None, turn_id), turn_id)}
-    if application().questions.window(advocate_id, turn_id) is None:
+    window = application().questions.window(advocate_id, turn_id)
+    if window is None:
         return seen
-    # While NM waits for the advocate's answer, that is what it is doing, whatever its research reports beside it meanwhile.
-    return {**seen, 'asking': True, 'stage': 'waiting_for_answer', 'label': TURN_STAGES['waiting_for_answer']}
+    # While NM waits for the advocate's answer, that is what it is doing, whatever its research reports beside it meanwhile. D87:
+    # how many questions the window asks, so that the page opens it again when code adds one while the turn works.
+    return {**seen, 'asking': True, 'asked': len(window.view()['questions']), 'stage': 'waiting_for_answer',
+            'label': TURN_STAGES['waiting_for_answer']}
 
 
 def _saved_state(advocate_id, chat_id, turn_id):
