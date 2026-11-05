@@ -16,7 +16,7 @@ import json
 import re
 import threading
 import unicodedata
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import Future, ThreadPoolExecutor
 from copy import deepcopy
 from datetime import date
 
@@ -3089,22 +3089,27 @@ def start_search(searcher, work):
             for (item, queries, instruments, named), future in zip(asked, futures, strict=True)}
 
 
-def retrieve_parts(plan, searcher, context, model=None, *, progress=None, started=None, case_index=None):
+def retrieve_parts(plan, searcher, context, model=None, *, progress=None, started=None, case_index=None, done=None):
     """v10: every question searched side by side in the answer's order (owner, 20 Oct 2026:
     step 1), and each dispute's provisions and judgment paragraphs picked as soon as its own
     questions are searched (21 Oct 2026: step 4). Returns each dispute's part as a future, in
     the answer's order; a part keeps what each of its questions found, or why it failed.
     started (v14, AN.33 piece 33q): the searches start_search began while the plan was finished, by what each searches; one is
     used for the work item it was made for where that item still searches exactly so, once, and every other item is searched now;
-    one begun for nothing the plan keeps is cancelled where it has not started, giving way to those needed."""
+    one begun for nothing the plan keeps is cancelled where it has not started, giving way to those needed.
+    done (plan AN.41, D70): the parts of disputes already researched by an answer continuing where it stopped, each checked by the
+    caller as saved research is checked (validate); each is used as it is and its questions are not searched again."""
     if accept(plan["proposal"], context) != plan:
         raise ValueError("Research plan differs from its original sources")
     report = progress or (lambda stage, **detail: None)
     started = dict(started or {})
+    groups = dispute_work(plan)
+    done = {dispute_id: part for dispute_id, part in (done or {}).items() if dispute_id in groups}
+    kept = {work["id"] for dispute_id in done for work in groups[dispute_id]}
     asked, outcomes, early = [], {}, []
     for work in plan["work"]:
         queries = search_queries(work)
-        if not queries:
+        if not queries or work["id"] in kept:
             continue
         try:
             if searcher is None:
@@ -3156,10 +3161,15 @@ def retrieve_parts(plan, searcher, context, model=None, *, progress=None, starte
         further, judgments = _further(model, searcher, plan, searches, picks, report, cited, context)
         return _part(plan, dispute_id, searches, failures, picks, judgments, further=further)
     # Piece 35e: the judgments the papers and messages cite, looked up once for every dispute.
-    cited = cited_judgments(context, case_index)
-    groups = dispute_work(plan)
-    pool = ThreadPoolExecutor(max_workers=max(1, len(groups)), thread_name_prefix="dispute")
-    parts = {dispute_id: pool.submit(researched, dispute_id, works) for dispute_id, works in groups.items()}
+    cited = cited_judgments(context, case_index) if len(done) < len(groups) else []
+    pool = ThreadPoolExecutor(max_workers=max(1, len(groups) - len(done)), thread_name_prefix="dispute")
+    parts = {}
+    for dispute_id, works in groups.items():
+        if dispute_id in done:
+            parts[dispute_id] = Future()
+            parts[dispute_id].set_result(done[dispute_id])
+        else:
+            parts[dispute_id] = pool.submit(researched, dispute_id, works)
     pool.shutdown(wait=False)
     return parts
 
