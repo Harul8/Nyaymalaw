@@ -2621,6 +2621,14 @@ def _accept_v7(proposal, context, schema=SCHEMA, contract=None):
 
 
 def accept(proposal, context, *, contract=CONTRACT):
+    """A research plan's proposal admitted against the conversation it was made from. Once within a turn or a replay (plan AN.41,
+    step 1; P35): each dispute's research, and the research continuing where it stopped, is checked against the same plan, and
+    admitting it again for each found nothing new - about 5 s a dispute on the 4 Nov 2026 matter."""
+    return once(("plan", id(proposal), id(context), contract), (proposal, context),
+                lambda: _accept(proposal, context, contract=contract))
+
+
+def _accept(proposal, context, *, contract=CONTRACT):
     if contract not in CONTRACTS:
         raise ValueError("Unknown research contract")
     if contract in _QUESTION_PLANS:

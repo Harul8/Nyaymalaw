@@ -172,3 +172,20 @@ def test_without_the_turns_scope_the_same_research_would_be_validated_again_and_
     monkeypatch.setattr(replay_scope, "turn", contextlib.nullcontext)
     without = len(validated_while_answering(tmp_path / "without", monkeypatch)[0])
     assert without > 3 * with_scope
+
+
+def test_within_a_turn_the_research_plan_is_admitted_once_for_every_dispute_checked_against_it(monkeypatch):
+    """Step 1 (5 Nov 2026): each dispute's research, and research continuing where it stopped, was checked against the same plan,
+    admitting the plan again each time - about 5.5 s a dispute on the 4 Nov matter (28 s for its five; 7 s now). Within
+    a turn it is admitted once; outside any scope, each time, as before."""
+    from nm.core_engine import research
+    log = []
+    monkeypatch.setattr(research, "_accept", lambda proposal, context, contract=research.CONTRACT: log.append(contract) or
+                        {"admitted": proposal["n"]})
+    proposal, context = {"n": 1}, {"latest": {}}
+    with replay_scope.turn():
+        first = research.accept(proposal, context)
+        assert all(research.accept(proposal, context) is first for _ in range(4))
+        research.accept({"n": 1}, context)  # another proposal, though alike, is admitted for itself
+    research.accept(proposal, context)
+    assert log == [research.CONTRACT] * 3

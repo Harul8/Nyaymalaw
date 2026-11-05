@@ -30,8 +30,9 @@ from contextvars import ContextVar
 _DERIVED = ContextVar("replay_scope_derived", default=None)
 #: What a turn's own scope remembers: what is derived from the research alone, by the first
 #: part of its key (research.validate, research.part_of, answer_sources.build, the passages
-#: response_authorities reads as offered).
-RESEARCH = frozenset({"research", "part", "sources", "raw"})
+#: response_authorities reads as offered) - and, from plan AN.41 step 1, the research plan admitted against the conversation
+#: (research.accept), which each dispute's research is checked against.
+RESEARCH = frozenset({"research", "part", "sources", "raw", "plan"})
 
 
 class _Scope:
