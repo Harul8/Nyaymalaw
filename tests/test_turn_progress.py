@@ -28,7 +28,8 @@ def test_the_record_keeps_stage_names_counts_and_times_only():
     clock.now += 3
     seen = progress.read("a", "t1")
     assert seen == {"state": "working", "stage": "searching", "label": STAGES["searching"],
-                    "detail": {"done": 2, "total": 9}, "shown": 0, "chat_id": None, "elapsed_seconds": 7,
+                    "detail": {"done": 2, "total": 9}, "shown": 0, "chat_id": None, "saved": 0, "parts": {},
+                    "elapsed_seconds": 7,
                     "steps": [{"label": STAGES["understanding"], "seconds": 4},
                               {"label": STAGES["searching"], "seconds": 3}]}
     progress.report("a", "t1", "searching", {"done": 3, "total": 9})  # the same stage moves on, not repeats
@@ -51,12 +52,17 @@ def test_each_advocate_reads_only_their_own_turn_and_entries_lapse_after_the_tur
 
 def test_a_turn_reports_its_stages_in_order(store):
     seen = []
-    run(store, ScriptedModel(legal=True), progress=lambda stage, **detail: seen.append((stage, detail)))
-    assert seen == [("understanding", {}), ("understanding_matter", {}), ("checking_understanding", {"round": 1}),
-                    ("writing_search_terms", {"total": 1}), ("searching", {"done": 0, "total": 1}),
-                    ("choosing_provisions", {}), ("writing", {}), ("checking_authorities", {}),
-                    ("reviewing", {}), ("saving", {})]
-    assert set(stage for stage, _ in seen) <= set(STAGES)
+    response = run(store, ScriptedModel(legal=True), progress=lambda stage, **detail: seen.append((stage, detail)))
+    # Plan AN.41: first that the message is saved, and where; each later save of the work is reported as it lands (saved), in
+    # no fixed place among the stages; each part of the answer says which part it is (D68).
+    assert seen[0] == ("sent", {"chat_id": response["chat_id"]})
+    assert all(detail["chat_id"] == response["chat_id"] for stage, detail in seen if stage == "saved")
+    assert [entry for entry in seen[1:] if entry[0] != "saved"] == [
+        ("understanding", {}), ("understanding_matter", {}), ("checking_understanding", {"round": 1}),
+        ("writing_search_terms", {"total": 1}), ("searching", {"done": 0, "total": 1}),
+        ("choosing_provisions", {}), ("writing", {"part": "s0"}), ("checking_authorities", {"part": "s0"}),
+        ("reviewing", {"part": "s0"}), ("saving", {})]
+    assert set(stage for stage, _ in seen if stage not in ("sent", "saved")) <= set(STAGES)
 
 
 def test_a_failing_progress_report_never_fails_the_turn(store):
