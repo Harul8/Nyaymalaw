@@ -1644,22 +1644,33 @@ def _research_context(record, work_ids):
     """What research did for this part: its questions and their search outcomes and gaps.
     Full durable candidate and query proofs remain in the research record."""
     mine = (lambda identity: True) if work_ids is None else (lambda identity: identity in work_ids)
+    # Plan AN.37 (D87): which Act the advocate said a name read as more than one held Act means.
+    means = {(item["act"], work_id): research.act_label(item["meant"], item["titles"][item["acts"].index(item["meant"])])
+             for items in (record.get("meant") or {}).values() for item in items if item["meant"] for work_id in item["work_ids"]}
+
+    def named(identity, entry):
+        said = {key: entry[key] for key in ("act", "section", "state", "reason")}
+        meant = means.get((entry["act"], identity)) if entry["state"] == "ambiguous" else None
+        return {**said, "the_advocate_means": meant} if meant else said
     shown = {"state": record["state"], "planning_issues": record["plan"]["issues"],
              # From search v11 (plan AN.35, piece 35b) what became of each section the plan named: one not held is research
              # could not establish, said so.
              "searches": [{"work_id": identity, "state": row["state"], "issues": row["issues"],
-                           **({"named": [{key: entry[key] for key in ("act", "section", "state", "reason")} for entry in row["named"]]}
-                              if row.get("named") else {})}
+                           **({"named": [named(identity, entry) for entry in row["named"]]} if row.get("named") else {})}
                           for identity, row in record["searches"].items() if mine(identity)],
              "failures": {identity: row for identity, row in record["failures"].items() if mine(identity)}}
     # Research v16 (plan AN.35, piece 35e): the judgments the papers cite and how our library stands on each - one not held is
-    # one research could not read, said so.
+    # one research could not read, said so; from D87, of one held more than once, the judgment the advocate means.
     cited = {entry["id"]: entry for further in (record.get("further") or {}).values() for entry in further.get("cited", ())}
+
+    def judgment(entry):
+        held = entry["judgment"] or next((one for one in entry.get("held") or () if one["case_id"] == entry.get("meant")), None)
+        return {"judgment": f"{held['title']} ({held['court']}, {held['year']})"} if held else {}
     if cited:
         shown["cited_in_the_papers"] = [
-            {"citation": entry["citation"], "held": research.CITED_SAID[entry["state"]],
-             **({"judgment": f"{entry['judgment']['title']} ({entry['judgment']['court']}, {entry['judgment']['year']})"}
-                if entry["judgment"] else {})} for entry in cited.values()]
+            {"citation": entry["citation"],
+             "held": "held more than once; the advocate means this one" if entry.get("meant") else research.CITED_SAID[entry["state"]],
+             **judgment(entry)} for entry in cited.values()]
     if record.get("contract") in research.FEW_IN_FULL:
         # Research v17 (plan AN.36, piece 36a): which judgments were read in full; every other one only by the paragraphs chosen.
         names = [next((p["row"].get("case_name") for p in entry["read"]), entry["case_id"])
