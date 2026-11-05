@@ -2655,8 +2655,11 @@ def chat_passage_whole(chat_id: str, turn_id: str, tag: str, advocate_id: Advoca
             where = f'paragraph {number}' if number else ''
         else:
             where = provision_label('', str(held.get('section_number') or ''))
+        # Plan AN.32 (5 Nov 2026): the passage is marked only where its own words are still held under its identity - an Act
+        # corrected since may hold other words under it (a section renumbered), which are never marked as the passage read.
         parts.append({'locator': where, 'heading': '' if judgment else (held.get('section_title') or ''),
-                      'text': held['full_text'], 'here': held.get('chunk_id') == identity.get('chunk_id')})
+                      'text': held['full_text'],
+                      'here': held.get('chunk_id') == identity.get('chunk_id') and held['full_text'] == passage.get('text')})
     return {'kind': passage['kind'], 'title': _passage_title(passage), 'parts': parts,
             'changed': read['corpus_revision'] != identity.get('corpus_revision'),
             'found': any(part['here'] for part in parts)}

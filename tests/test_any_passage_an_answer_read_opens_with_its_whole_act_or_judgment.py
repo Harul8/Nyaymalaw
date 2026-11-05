@@ -69,6 +69,19 @@ def test_the_whole_act_or_judgment_is_read_by_the_passages_own_identity_with_its
         True, False, "s.1", "Short title"), "a changed held law, and a passage no longer in it, are said"
 
 
+def test_other_words_held_since_under_the_passages_identity_are_never_marked_as_the_passage(served):
+    """Plan AN.32 (5 Nov 2026): an Act corrected since the answer may hold other words under the passage's identity - its section
+    3 renumbered 2, and what was its section 4 now its section 3. The words there are shown as the Act's, never marked as the
+    passage the answer read; that passage is said not to be in the Act as held today."""
+    reply = successful(served, message="Inspect this reported account.")
+    tag, saved = next((tag, row) for tag, row in catalogue(served, reply).items() if row["kind"] == "provision")
+    identity = saved["source_identity"]
+    served.app.legal_search = SimpleNamespace(read_act=lambda act_id: {"corpus_revision": "corrected since", "parts": [
+        (0, {"chunk_id": identity["chunk_id"], "section_number": "3", "section_title": "Savings", "full_text": "3. Savings."})]})
+    whole = served.client.get(address(reply, tag, whole=True)).json()
+    assert (whole["changed"], whole["found"], whole["parts"][0]["here"]) == (True, False, False)
+
+
 def test_held_law_that_cannot_be_read_now_is_said_to_be_unavailable(served):
     reply = successful(served, message="Inspect this reported account.")
     tag = next(tag for tag, row in catalogue(served, reply).items() if row["kind"] == "provision")
