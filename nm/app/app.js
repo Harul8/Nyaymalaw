@@ -2789,7 +2789,8 @@ function renderTurn(entry) {
     for (const steer of entry.steers || []) box.appendChild(Object.assign(document.createElement('div'), {
       className: 'progress-steer', textContent: `Added while NM worked: ${steer}` }));
     // D68: the work finished so far, read from the saved conversation; each part's state from the progress.
-    const work = renderWork(entry.work, progress.parts || {});
+    const work = renderWork(entry.work, progress.parts || {},
+      { chat_id: entry.chatId || (entry.context && entry.context.chatId) || null, turn_id: entry.turnId });
     if (work) box.appendChild(work);
     const done = (progress.steps || []).slice(0, -1);
     if (done.length) {
@@ -5324,7 +5325,9 @@ function renderParts(into, elements, entry, render) {
 // line each, so that a misunderstanding can be put right early; each dispute's law as its research finishes; each section written,
 // being checked, rewritten after its check asked for corrections, then shown below. Never the AI's words before their check (D72).
 const PART_SAID = { writing: 'being written', checking: 'written - being checked' };
-function renderWork(work, parts) {
+const LAW_SHOWN = 4;
+// where: the answer being worked on ({chat_id, turn_id}); each law its research chose opens in the reading pane, as the board's does.
+function renderWork(work, parts, where = null) {
   if (!work || !work.understood) return null;
   const make = (tag, className, text) => {
     const node = document.createElement(tag);
@@ -5340,9 +5343,33 @@ function renderWork(work, parts) {
     const questions = (dispute.questions || []).filter(Boolean);
     if (questions.length) item.appendChild(make('span', 'progress-questions', ` · ${questions.join(' · ')}`));
     if (dispute.researched) {
-      const law = (dispute.law || []).map((found) => (found.kind === 'provision'
-        ? [found.section ? `s. ${found.section}` : '', found.act].filter(Boolean).join(', ') : found.title)).filter(Boolean);
-      item.appendChild(make('div', 'progress-law', law.length ? `Law chosen: ${law.join('; ')}` : 'Researched: no held law chosen'));
+      const law = (dispute.law || []).map((found) => ({ found, said: found.kind === 'provision'
+        ? [found.section ? `s. ${found.section}` : '', found.act].filter(Boolean).join(', ') : found.title }))
+        .filter((entry) => entry.said)
+        .sort((a, b) => (a.found.kind === 'provision' ? 0 : 1) - (b.found.kind === 'provision' ? 0 : 1));
+      const line = make('div', 'progress-law', law.length ? 'Law chosen: ' : 'Researched: no held law chosen');
+      // A short line (D68): the first few, the rest behind 'and N more'.
+      const draw = (count) => {
+        line.replaceChildren();
+        line.appendChild(make('span', '', law.length ? 'Law chosen: ' : 'Researched: no held law chosen'));
+        law.slice(0, count).forEach(({ found, said }, index) => {
+          if (index) line.appendChild(make('span', '', '; '));
+          if (!where || !where.chat_id || !found.tag || !window.NmBrainSources) { line.appendChild(make('span', '', said)); return; }
+          const open = make('button', 'cite', said);
+          open.type = 'button';
+          open.addEventListener('click', () => window.NmBrainSources.openPassage(where, found.tag, open,
+            { phrase: `Chosen by the research for ${dispute.name}`, title: said }));
+          line.appendChild(open);
+        });
+        if (law.length > count) {
+          const more = make('button', 'ghost', `and ${law.length - count} more`);
+          more.type = 'button';
+          more.addEventListener('click', () => draw(law.length));
+          line.append(make('span', '', ' '), more);
+        }
+      };
+      draw(LAW_SHOWN);
+      item.appendChild(line);
     }
     const section = (work.sections || []).find((part) => part.dispute_id === dispute.id);
     if (section) {

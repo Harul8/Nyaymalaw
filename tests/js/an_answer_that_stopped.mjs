@@ -28,6 +28,7 @@ class Element {
   get textContent() { return this._text + this.children.map((child) => child.textContent).join(''); }
   append(...nodes) { this.children.push(...nodes); }
   appendChild(node) { this.children.push(node); return node; }
+  replaceChildren(...nodes) { this._text = ''; this.children = nodes; }
   setAttribute(name, value) { this.attributes[name] = value; }
   addEventListener(event, handler) { this.listeners[event] = handler; }
   click() { this.listeners.click && this.listeners.click(); }
@@ -70,20 +71,38 @@ const button = (node, text) => (node._text === text ? node : (node.children || [
 
 // --- the work as it finishes (D68) -----------------------------------------------------------------------------------------
 {
-  const context = vm.createContext({ document: { createElement: (tag) => new Element(tag) } });
-  vm.runInContext(constant('PART_SAID') + fn('renderWork'), context);
+  const opened = [];
+  const context = vm.createContext({ document: { createElement: (tag) => new Element(tag) },
+    window: { NmBrainSources: { openPassage: (where, tag, opener, given) => opened.push([where.turn_id, tag, given.phrase]) } } });
+  vm.runInContext(constant('PART_SAID') + constant('LAW_SHOWN') + fn('renderWork'), context);
   assert.equal(context.renderWork(null, {}), null);
   assert.equal(context.renderWork({ understood: false }, {}), null, 'nothing before the disputes are found');
   const work = { understood: true, checked_across: false, disputes: [
     { id: 'D1', name: 'Possession of the shop', questions: ['Is the tenant protected?'], researched: true,
-      law: [{ kind: 'provision', act: 'Rent Control Act', section: '10' }, { kind: 'judgment', title: 'A v B' }] },
+      law: [{ kind: 'provision', act: 'Rent Control Act', section: '10', tag: 'provision:p10' },
+        { kind: 'judgment', title: 'A v B', tag: 'judgment:j1' }] },
     { id: 'D2', name: 'Arrears of rent', questions: ['Are the arrears due?'], researched: false, law: [] }],
     sections: [{ part: 's1', dispute_id: 'D1', done: false }, { part: 's2', dispute_id: 'D2', done: false }] };
   const drawn = context.renderWork(work, { s1: { state: 'rewriting', corrections: 3 }, s2: { state: 'checking' } });
   assert.deepEqual(texts(drawn), [
-    'Possession of the shop', ' · Is the tenant protected?', 'Law chosen: s. 10, Rent Control Act; A v B',
+    'Possession of the shop', ' · Is the tenant protected?', 'Law chosen: ', 's. 10, Rent Control Act', '; ', 'A v B',
     'The check asked for 3 corrections - rewriting',
     'Arrears of rent', ' · Are the arrears due?', 'Section written - being checked']);
+  // With the answer it belongs to, each law opens in the reading pane, as the board's does (D68).
+  const linked = context.renderWork(work, {}, { chat_id: 'c1', turn_id: 't1' });
+  button(linked, 's. 10, Rent Control Act').click();
+  button(linked, 'A v B').click();
+  same(opened, [['t1', 'provision:p10', 'Chosen by the research for Possession of the shop'],
+    ['t1', 'judgment:j1', 'Chosen by the research for Possession of the shop']]);
+  // A long list stays a short line: the sections first, then the judgments, the first few and the rest behind 'and N more'.
+  const many = { understood: true, checked_across: false, sections: [], disputes: [{ id: 'D3', name: 'Title', questions: [],
+    researched: true, law: [{ kind: 'judgment', title: 'C v D' }, ...[1, 2, 3, 4, 5].map((n) => ({ kind: 'provision',
+      act: 'Transfer of Property Act', section: String(n) }))] }] };
+  const folded = context.renderWork(many, {});
+  assert.deepEqual(texts(folded).slice(1), ['Law chosen: ', 's. 1, Transfer of Property Act', '; ', 's. 2, Transfer of Property Act',
+    '; ', 's. 3, Transfer of Property Act', '; ', 's. 4, Transfer of Property Act', ' ', 'and 2 more']);
+  button(folded, 'and 2 more').click();
+  assert.ok(texts(folded).includes('C v D') && !texts(folded).includes('and 2 more'));
   work.sections[0].done = true;
   work.checked_across = true;
   assert.ok(texts(context.renderWork(work, {})).includes('Section shown below'));

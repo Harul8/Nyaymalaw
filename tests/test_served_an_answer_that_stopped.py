@@ -145,3 +145,17 @@ def test_the_progress_says_each_part_s_state_and_how_often_the_work_was_saved():
     seen = progress.read("a", "t")
     assert seen["chat_id"] == "new_chat" and seen["saved"] == 2
     assert seen["parts"] == {"s1": {"state": "rewriting", "corrections": 3}, "o": {"state": "writing"}}
+
+
+def test_the_law_each_dispute_s_research_chose_opens_in_the_reading_pane_before_the_answer_is_saved(served):
+    """D68: each dispute's law, as its research finishes, opens in the reading pane as the board's law does - from what the turn
+    has saved, before any answer is."""
+    chat_id = stopped_at_the_overview(served)
+    work = served.client.get(f"/api/chats/{chat_id}").json()["pending"]["work"]
+    found = [law for dispute in work["disputes"] for law in dispute["law"]]
+    assert found and all(law["tag"] for law in found)
+    for law in found:
+        passage = served.client.get(f"/api/chats/{chat_id}/turns/turn-1/passages/{law['tag']}")
+        assert passage.status_code == 200, (law, passage.text)
+        assert passage.json()["id"] == law["tag"] and passage.json()["text"]
+    assert served.client.get(f"/api/chats/{chat_id}/turns/turn-2/passages/{found[0]['tag']}").status_code == 404

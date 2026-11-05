@@ -1973,7 +1973,8 @@ def _law_found(part):
             key = tuple(sorted(item.items()))
             if key not in seen:
                 seen.add(key)
-                found.append(item)
+                # The passage it opens in the reading pane, as the board's law opens (the candidate is the passage's own id).
+                found.append({**item, 'tag': candidate['id']})
     return found
 
 
@@ -2540,16 +2541,34 @@ _PASSAGE_KINDS = ('provision', 'judgment', 'document')
 
 
 def _saved_passage(chat_id, turn_id, tag, advocate_id, request):
-    """One passage a saved answer read, from that answer's own record (P46), and every saved turn of the conversation."""
-    _, rows = _read_chat(chat_id, advocate_id, request)
+    """One passage a saved answer read, from that answer's own record (P46), and every saved turn of the conversation. From plan
+    AN.41 (D68), also one the answer being worked on has read so far, from what it has saved."""
+    matter, rows = _read_chat(chat_id, advocate_id, request)
     row = next((item for item in rows if item['turn_id'] == turn_id), None)
     catalogue = (row or {}).get('activities', {}).get('sources') if isinstance((row or {}).get('activities'), dict) else None
+    if row is None:
+        catalogue = _held_sources(matter, rows, turn_id)
     passage = catalogue.get(tag) if isinstance(catalogue, dict) else None
     if not isinstance(passage, dict) or passage.get('id') != tag or passage.get('kind') not in _PASSAGE_KINDS:
         raise HTTPException(404, 'Saved passage not available.')
     if not _session_current(request, advocate_id):
         raise HTTPException(401, 'not signed in')
     return passage, rows
+
+
+def _held_sources(matter, rows, turn_id):
+    """The sources the turn being worked on has read so far, derived from the steps it saved (D68); None where that turn is not
+    being worked on here, or has read nothing yet."""
+    held = _held(matter)
+    if held is None or held['turn_id'] != turn_id:
+        return None
+    try:
+        context = TurnContext(matter, held['request']['chat_id'], turn_id, held['message'], tuple(rows),
+                              documents=tuple(held['documents']), steers=tuple(held.get('steers', ()))).payload()
+        activity = activity_of(held, context)
+    except (KeyError, TypeError, ValueError):
+        return None
+    return activity.get('sources') if isinstance(activity, dict) else None
 
 
 def _passage_title(passage):
