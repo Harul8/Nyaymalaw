@@ -31,7 +31,7 @@ from nm.arrive.advocate_contracts import PASSWORD_RESET_MINUTES, SESSION_IDLE_MI
 from nm.arrive.directory_port import AccountBusy, AuthenticationUnavailable
 from nm.arrive.professional_access import read_professional_status
 from nm.core_engine.conversation import (CONTRACT as CONVERSATION_CONTRACT, HEADER, SHOWN, ConversationRefused,
-                                         TurnContext, chat_matter_id, checked_rows, queued_of, shown_of, stored_chat)
+                                         TurnContext, chat_matter_id, checked_rows, queued_of, shown_of, stored_chat, title_of)
 from nm.core_engine import documents as document_rules
 from nm.core_engine import research_note, voice
 from nm.core_engine.response_rendering import unit_index
@@ -1673,7 +1673,8 @@ _LISTED: dict = {}
 _KEPT_LOCK = threading.Lock()
 #: What a line kept on disk was derived under (O29): its shape, and the conversation contract whose receipt
 #: checks it rests on. A line kept under anything else is derived again from its file.
-_LINE_VERSION = f'history-line-1/{CONVERSATION_CONTRACT}'
+#: history-line-2 (plan AN.43, D81): a line carries the conversation's title.
+_LINE_VERSION = f'history-line-2/{CONVERSATION_CONTRACT}'
 #: The most a page of the history may ask for; the page asks for ten (O29, 26 Oct 2026).
 _HISTORY_PAGE_MAX = 100
 _history_log = logging.getLogger('nm.history')
@@ -1744,10 +1745,22 @@ def _derived_line(store, matter_id):
         else:
             line['chat'] = {'chat_id': rows[0]['chat_id'], 'preview': rows[0]['message'],
                             'turn_count': len(rows)} if rows else _first_message(matter)
+            if line['chat'] is not None:
+                # Plan AN.43 (D81): the line is shown under its title; until there is one, the page shows the message's first words.
+                line['chat']['title'] = _title_text(matter)
     else:
         # Old records remain history; reading never upgrades their contracts.
         line['matter'] = {'matter_id': matter.id, 'matter': matter.title, 'state': 'historical'}
     return line
+
+
+def _title_text(matter):
+    """The conversation's title as the history shows it (D81), or None where it has none yet or it cannot be read reliably."""
+    try:
+        title = title_of(matter)
+    except ValueError:
+        return None
+    return title['text'] if title else None
 
 
 def _first_message(matter):

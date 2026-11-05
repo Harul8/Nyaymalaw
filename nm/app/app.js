@@ -992,16 +992,27 @@ function historyWhen(at) {
 
 // One saved conversation's row. The generation and the session are those of the list the row belongs to: a
 // row left over from an earlier listing, or from a session that has ended, may not paint over what replaced it.
+// PLAN AN.43 (D81-D82; owner, 5 Nov 2026: "put a small name to the matters in the list instead of large text"): each line under
+// its title, which the model writes from the matter's details; until there is one, the message's first ten words. The first message
+// itself on hover.
+function historyTitle(chat) {
+  if (typeof chat.title === 'string' && chat.title.trim()) return chat.title.trim();
+  const words = String(chat.preview || '').split(/\s+/).filter(Boolean);
+  return words.length ? words.slice(0, 10).join(' ') + (words.length > 10 ? '…' : '') : 'Conversation';
+}
+
 function historyChatRow(chat, generation, session) {
   const row = document.createElement('div');
   row.className = 'row';
   row.dataset.chatId = chat.chat_id;
   row.setAttribute('role', 'button');
   row.tabIndex = 0;
-  row.setAttribute('aria-label', `Open conversation: ${chat.preview}`);
+  const named = historyTitle(chat);
+  row.setAttribute('aria-label', `Open conversation: ${named}`);
   const title = document.createElement('div');
   title.className = 'r-title';
-  title.textContent = chat.preview || 'Conversation';
+  title.textContent = named;
+  if (chat.preview) title.title = chat.preview;
   const details = document.createElement('div');
   details.className = 'hint';
   details.textContent = `${chat.turn_count} message${chat.turn_count === 1 ? '' : 's'}`
