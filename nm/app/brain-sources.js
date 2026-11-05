@@ -436,7 +436,9 @@ window.NmBrainSources = (() => {
     node('brain-source-status').textContent = '';
     if (!kept?.scroll) {
       const passage = shown.find((item) => String(item.className).split(' ').includes('passage'));
-      passage?.children?.find((child) => child.tagName === 'MARK')?.scrollIntoView?.({block:'center'});
+      // The marked words, by the passage's own query: its children are a live collection in a browser, not a list, and have no
+      // find (on 4-5 Nov 2026 asking that failed every passage opened, after it was drawn).
+      passage?.querySelector?.('mark')?.scrollIntoView?.({block:'center'});
     }
   }
 
