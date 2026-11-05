@@ -87,14 +87,15 @@ def test_a_conversation_is_titled_once_its_matter_is_understood_and_not_again(st
     assert title_of(store.load(matter.id))["text"] == "Reported account matter"
 
 
-def test_a_title_written_before_any_matter_is_written_again_once_when_one_is(store):
+def test_once_nm_names_a_conversation_it_stays_as_named(store):
+    """D84 (owner, 5 Nov 2026: "once NM names it, let it stay that way"): never written again, whatever the later messages bring."""
     titles_given = iter(["Greeting", "Reported account matter"])
     first = run(store, ScriptedModel(legal=False), entitle=lambda given: next(titles_given))
     matter_id = chat_matter_id("owner", first["chat_id"])
     assert title_of(store.load(matter_id)) == {"text": "Greeting", "from_matter": False}
     run(store, ScriptedModel(legal=True), entitle=lambda given: next(titles_given), chat_id=first["chat_id"], turn_id="t2",
         message="The account was reported.")
-    assert title_of(store.load(matter_id)) == {"text": "Reported account matter", "from_matter": True}
+    assert title_of(store.load(matter_id)) == {"text": "Greeting", "from_matter": False}
 
 
 def test_no_title_leaves_the_answer_as_it_was(store):
@@ -112,3 +113,40 @@ def test_the_history_lists_each_conversation_under_its_title(served):
     chat, = served.client.get("/api/work").json()["chats"]
     assert chat["title"] == "Reported account of the client" and chat["preview"] == "Inspect this reported account."
     assert served.model.titled == 1
+
+
+def test_the_conversation_says_its_title_and_a_small_route_gives_it_alone(served):
+    """D84: the page shows the title at the conversation's beginning - read with the conversation, or alone after an answer."""
+    served.model.title = "Reported account of the client"
+    reply = served.client.post("/api/turn", json={"message": "Inspect this reported account.", "turn_id": "turn-1"}).json()
+    assert served.client.get(f"/api/chats/{reply['chat_id']}").json()["title"] == "Reported account of the client"
+    assert served.client.get(f"/api/chats/{reply['chat_id']}/title").json() == {
+        "chat_id": reply["chat_id"], "title": "Reported account of the client"}
+    assert served.client.get("/api/chats/new_nothing/title").status_code == 404
+    other = served.login("core-other@example.test")
+    assert other.get(f"/api/chats/{reply['chat_id']}/title").status_code == 404
+
+
+def test_the_operator_titles_the_conversations_saved_before_and_leaves_a_titled_one_alone(store):
+    """D83: the conversations saved before titles were written, titled once, by the operator's run; one with a title keeps it."""
+    import importlib.util
+    from pathlib import Path
+    spec = importlib.util.spec_from_file_location("title_conversations",
+                                                  Path(__file__).resolve().parents[1] / "operations" / "title_conversations.py")
+    command = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(command)
+    untitled = run(store, ScriptedModel(legal=True))
+    titled = run(store, ScriptedModel(legal=True), turn_id="t9", entitle=lambda given: "Already named")
+    asked = []
+
+    def entitle(given):
+        asked.append(given)
+        return "Reported account matter"
+    assert command.title_all(store, "owner", entitle, dry=True)["untitled"] == 1 and not asked
+    counts = command.title_all(store, "owner", entitle)
+    assert counts == {"untitled": 1, "unreadable": 0, "titled": 1, "no_title_given": 0, "not_saved": 0, "words": [3]}
+    assert asked[0]["advocate_messages"] == ["Hello."] and "parties" in asked[0]["matter"]
+    assert title_of(store.load(chat_matter_id("owner", untitled["chat_id"])))["text"] == "Reported account matter"
+    assert title_of(store.load(chat_matter_id("owner", titled["chat_id"])))["text"] == "Already named"
+    assert command.title_all(store, "owner", entitle)["untitled"] == 0, "once named, it stays as named"
+    assert command.title_all(store, "someone-else", entitle)["untitled"] == 0
