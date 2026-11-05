@@ -2766,8 +2766,10 @@ def _connections_said(search, shown):
     return said
 
 
-def _pick_text(plan, searches, labels):
+def _pick_text(plan, searches, labels, meant=()):
     lines = [f"Matter: {plan['proposal']['understanding']['summary']}"]
+    # Plan AN.37 (D87): which Act the advocate said a name means, by the name as written.
+    means = {(item["act"], work_id): item for item in meant or () if item["meant"] for work_id in item["work_ids"]}
     for work in plan["work"]:
         if work["id"] not in searches:
             continue
@@ -2804,6 +2806,11 @@ def _pick_text(plan, searches, labels):
             places = ", ".join(shown[identity] for identity in entry["found"] if identity in shown)
             said_of = {"read": f"read as {places}", "ambiguous": f"may be {places}" if places else "held more than once, not read",
                        "not_held": "not held in our library", "unavailable": "could not be read"}[entry["state"]]
+            item = means.get((entry["act"], work["id"])) if entry["state"] == "ambiguous" else None
+            if item is not None:
+                kept = ", ".join(shown[identity] for identity in entry["found"] if identity in shown
+                                 and _act_of(search, identity) == item["meant"])
+                said_of = f"the advocate means {act_label(item['meant'], item['titles'][item['acts'].index(item['meant'])])}: read as {kept}"
             lines.append(f"  Named: {entry['act']}, {entry['section']} - {said_of}.")
     return "\n".join(lines)
 
@@ -2870,7 +2877,9 @@ def _labels(plan, searches):
             enumerate((w for w in plan["work"] if w["id"] in searches), 1)}
 
 
-def pick(model, plan, searches, kind="provision", room=None):
+def pick(model, plan, searches, kind="provision", room=None, meant=()):
+    """meant (plan AN.37, D87): which Act the advocate said a name means - the pick is told, and keeps no reading of another Act
+    for that name."""
     labels = _labels(plan, searches)
     if kind == "provision" and room is None:
         # v18 (piece 36e): each question keeps at most SECTIONS_A_QUESTION provisions.
@@ -2879,13 +2888,107 @@ def pick(model, plan, searches, kind="provision", room=None):
         return {"state": "not_needed", "proposal": None, "chosen": {w: [] for w in labels}, "unknown": [],
                 "reason": None}
     operation, system, step, text = PICKS[kind]
+    shown = text(plan, searches, labels, meant) if kind == "provision" and meant else text(plan, searches, labels)
     try:
-        choice = _call(model, operation, system, text(plan, searches, labels), PICK_SCHEMAS[kind], step)
+        choice = _call(model, operation, system, shown, PICK_SCHEMAS[kind], step)
     except (ModelError, SchemaViolation) as exc:
-        return {"state": "unavailable", "proposal": None, "chosen": _fallback_picks(searches, labels, kind, room),
+        return {"state": "unavailable", "proposal": None,
+                "chosen": _keep_meant(_fallback_picks(searches, labels, kind, room), searches, meant if kind == "provision" else ()),
                 "unknown": [], "reason": type(exc).__name__}
     chosen, unknown = _resolve_picks(choice, plan, searches, labels, kind, room)
-    return {"state": "evaluated", "proposal": choice, "chosen": chosen, "unknown": unknown, "reason": None}
+    return {"state": "evaluated", "proposal": choice, "chosen": _keep_meant(chosen, searches, meant if kind == "provision" else ()),
+            "unknown": unknown, "reason": None}
+
+
+# --- plan AN.37, D87: which Act or judgment a name means, asked of the advocate by code ---------------------------------------
+
+#: The choice that leaves a name to NM's own judgement (the default), and the one that goes on without a judgment cited ambiguously.
+NM_JUDGES = "Let NM judge from the papers"
+WITHOUT_IT = "Go on without it"
+#: How many held Acts or judgments a question offers by name; the rest are left to NM's judgement.
+NAMED_CHOICES = 3
+_JURISDICTION_PREFIX = re.compile(r"^(?:[A-Za-z]+(?: [A-Za-z]+)*?) \d{4} \d+ ")
+
+
+def act_label(act_id, title):
+    """A held Act as the advocate reads it: its title without the store's prefix, and where it is not a central Act, whose."""
+    shown = _JURISDICTION_PREFIX.sub("", title or act_id or "").strip()
+    whose = (act_id or "").split("_", 1)[0].title()
+    return (shown if whose in ("", "Union Of India") else f"{shown} ({whose})")[:120]
+
+
+def _act_of(search, identity):
+    candidate = next((c for c in _offered(search, "provision") if c["id"] == identity), None)
+    return (candidate or {}).get("source", {}).get("act_id")
+
+
+def named_ambiguities(plan, searches):
+    """The names a dispute's searched questions read as more than one held Act, once each (D87): {"act": the name as written,
+    "work_ids", "acts": their ids in the order read, "titles"}. A number held twice in one Act is not one: the pick judges it."""
+    found = {}
+    for work in plan["work"]:
+        search = searches.get(work["id"])
+        for entry in (search or {}).get("named", ()):
+            if entry["state"] != "ambiguous":
+                continue
+            acts = {}
+            for identity in entry["found"]:
+                candidate = next((c for c in _offered(search, "provision") if c["id"] == identity), None)
+                if candidate is not None and candidate["source"].get("act_id"):
+                    acts.setdefault(candidate["source"]["act_id"], candidate.get("title") or candidate["source"]["act_id"])
+            if len(acts) < 2:
+                continue
+            item = found.setdefault((entry["act"], tuple(acts)), {"act": entry["act"], "work_ids": [], "acts": list(acts),
+                                                                  "titles": list(acts.values())})
+            if work["id"] not in item["work_ids"]:
+                item["work_ids"].append(work["id"])
+    return list(found.values())
+
+
+def named_question(item, dispute):
+    """What code asks of one name read as more than one held Act (D87): each Act a choice, NM's judgement the default."""
+    choices = [{"label": act_label(act_id, title), "description": ""}
+               for act_id, title in list(zip(item["acts"], item["titles"]))[:NAMED_CHOICES]]
+    return {"header": "Which Act is meant", "question": f"Which Act do you mean by \"{item['act']}\"? We hold more than one by that name.",
+            "why": f"The law read for {dispute.get('name') or 'this dispute'} turns on which Act it is.",
+            "choices": [*choices, {"label": NM_JUDGES, "description": "NM reads each and goes by what your papers show."}],
+            "multiple": False, "default": [NM_JUDGES], "depends": [dispute["id"]], "asked_by": "code"}
+
+
+def cited_question(entry, disputes):
+    """What code asks of a citation under which more than one judgment is held (D87): each judgment a choice; going on without
+    it, as before, the default."""
+    choices = [{"label": f"{held['title']} ({', '.join(str(v) for v in (held.get('court'), held.get('year')) if v)})"[:120],
+                "description": ""} for held in entry["held"][:NAMED_CHOICES]]
+    return {"header": "Which judgment is meant", "question": f"Your papers cite {entry['citation']}. We hold more than one judgment "
+            "under that citation: which do you mean?", "why": "Only the judgment you mean is read for the answer.",
+            "choices": [*choices, {"label": WITHOUT_IT, "description": "NM goes on without reading a judgment under this citation."}],
+            "multiple": False, "default": [WITHOUT_IT], "depends": list(disputes), "asked_by": "code"}
+
+
+def _chosen_index(question, answer):
+    """Which offered choice an answer took, by its place among the choices; None for the default or the advocate's own words."""
+    labels = [choice["label"] for choice in question["choices"][:-1]]
+    chosen = (answer or {}).get("chosen") or []
+    return labels.index(chosen[0]) if len(chosen) == 1 and chosen[0] in labels else None
+
+
+def _keep_meant(chosen, searches, meant):
+    """A pick's choice without the readings of a name's other Acts, where the advocate said which Act it means (D87)."""
+    if not meant:
+        return chosen
+    kept = {work_id: list(ids) for work_id, ids in chosen.items()}
+    for item in meant:
+        if not item["meant"]:
+            continue
+        for work_id in item["work_ids"]:
+            search = searches.get(work_id)
+            if search is None or work_id not in kept:
+                continue
+            other = {identity for entry in search.get("named", ()) if entry["state"] == "ambiguous" and entry["act"] == item["act"]
+                     for identity in entry["found"] if _act_of(search, identity) != item["meant"]}
+            kept[work_id] = [identity for identity in kept[work_id] if identity not in other]
+    return kept
 
 
 def _picks_open(picks):
@@ -2914,9 +3017,10 @@ def _state(plan, searches, failures, picks):
         search["state"] == "partial" for search in searches.values())) else "evaluated"
 
 
-def _part(plan, dispute_id, searches, failures, chosen, judgments, contract=CONTRACT, further=None):
+def _part(plan, dispute_id, searches, failures, chosen, judgments, contract=CONTRACT, further=None, meant=None):
     """One dispute's part of a v10 or v11 record: its questions' searches and gaps, its own
-    picks, (v11) the judgments it reads and (v16) its further search."""
+    picks, (v11) the judgments it reads, (v16) its further search and (plan AN.37, D87) the names read as more than one held Act,
+    each with the Act the advocate said it means (None: NM's judgement) - only where there were any."""
     ids = [w["id"] for w in dispute_work(plan)[dispute_id]]
     searches = {i: searches[i] for i in ids if i in searches}
     failures = {i: failures[i] for i in ids if i in failures}
@@ -2924,7 +3028,8 @@ def _part(plan, dispute_id, searches, failures, chosen, judgments, contract=CONT
               "failures": deepcopy(failures), "part": dispute_id,
               **{field: {dispute_id: deepcopy(chosen[kind])} for kind, field in _PICK_FIELDS.items()},
               **({"judgments": {dispute_id: deepcopy(judgments)}} if contract in JUDGMENTS_READ else {}),
-              **({"further": {dispute_id: deepcopy(further)}} if contract in FURTHER_LAW else {})}
+              **({"further": {dispute_id: deepcopy(further)}} if contract in FURTHER_LAW else {}),
+              **({"meant": {dispute_id: deepcopy(meant)}} if meant else {})}
     record["state"] = _state(plan, searches, failures, [chosen[kind] for kind in _PICK_FIELDS])
     return record
 
@@ -3048,19 +3153,20 @@ def _read_judgments(searcher, plan, searches, pick, skip=frozenset(), cases=None
     return read
 
 
-def _picked(model, plan, searches, report, room=None):
+def _picked(model, plan, searches, report, room=None, meant=()):
     """A dispute's two picks, beside each other; without a model each keeps the first six. room (v18): how many provisions each
     question may still keep (the further pick's); every question SECTIONS_A_QUESTION where it is not given."""
     labels = _labels(plan, searches)
     room = {work_id: SECTIONS_A_QUESTION for work_id in labels} if room is None else room
     if model is None:
         return {kind: {"state": "unavailable", "proposal": None, "unknown": [], "reason": "No model for the pick",
-                       "chosen": _fallback_picks(searches, labels, kind, room)} for kind in _PICK_FIELDS}
+                       "chosen": _keep_meant(_fallback_picks(searches, labels, kind, room), searches,
+                                             meant if kind == "provision" else ())} for kind in _PICK_FIELDS}
     if searches:
         report("choosing_provisions")
     with ThreadPoolExecutor(max_workers=len(_PICK_FIELDS)) as pool:
-        return dict(zip(_PICK_FIELDS, pool.map(lambda kind: pick(model, plan, searches, kind, room if kind == "provision" else None),
-                                               _PICK_FIELDS)))
+        return dict(zip(_PICK_FIELDS, pool.map(lambda kind: pick(model, plan, searches, kind, room if kind == "provision" else None,
+                                                                 meant if kind == "provision" else ()), _PICK_FIELDS)))
 
 
 #: What each question's search returns of each kind for its picks (v15: as many judgment paragraphs as provisions).
@@ -3097,7 +3203,8 @@ def start_search(searcher, work):
             for (item, queries, instruments, named), future in zip(asked, futures, strict=True)}
 
 
-def retrieve_parts(plan, searcher, context, model=None, *, progress=None, started=None, case_index=None, done=None):
+def retrieve_parts(plan, searcher, context, model=None, *, progress=None, started=None, case_index=None, done=None,
+                   settle=None):
     """v10: every question searched side by side in the answer's order (owner, 20 Oct 2026:
     step 1), and each dispute's provisions and judgment paragraphs picked as soon as its own
     questions are searched (21 Oct 2026: step 4). Returns each dispute's part as a future, in
@@ -3106,7 +3213,10 @@ def retrieve_parts(plan, searcher, context, model=None, *, progress=None, starte
     used for the work item it was made for where that item still searches exactly so, once, and every other item is searched now;
     one begun for nothing the plan keeps is cancelled where it has not started, giving way to those needed.
     done (plan AN.41, D70): the parts of disputes already researched by an answer continuing where it stopped, each checked by the
-    caller as saved research is checked (validate); each is used as it is and its questions are not searched again."""
+    caller as saved research is checked (validate); each is used as it is and its questions are not searched again.
+    settle (plan AN.37, D87): asks the advocate code's questions and waits for the answers - settle(questions) gives each
+    question's answer, by its place - which Act a name read as more than one held Act means, before the dispute's pick, and which
+    judgment a citation held more than once means, once for the turn, before the judgments cited are read. None asks nothing."""
     if accept(plan["proposal"], context) != plan:
         raise ValueError("Research plan differs from its original sources")
     report = progress or (lambda stage, **detail: None)
@@ -3162,14 +3272,31 @@ def retrieve_parts(plan, searcher, context, model=None, *, progress=None, starte
                 # This independent read-only adapter/snapshot failed. It supplies no
                 # admitted evidence; peers remain available and the failure stays explicit.
                 failures[work["id"]] = {"stage": "search", "reason": str(exc) or type(exc).__name__}
-        picks = _picked(model, plan, searches, report)
+        # Plan AN.37 (D87): which Act a name read as more than one held Act means, asked before the pick.
+        meant = named_ambiguities(plan, searches) if settle is not None else []
+        if meant:
+            answers = settle([named_question(item, disputes[dispute_id]) for item in meant])
+            for item, (question, answer) in zip(meant, answers):
+                at = _chosen_index(question, answer)
+                item["meant"] = item["acts"][at] if at is not None else None
+        picks = _picked(model, plan, searches, report, meant=meant)
         # v16 (plan AN.35, piece 35d): once, the law still missing for the dispute's questions, and (piece 35e) the judgments the
         # papers cite that its questions need; from v17 (plan AN.36, D35) made before any judgment is read in full, so that the
         # cited ones have first claim on the five.
-        further, judgments = _further(model, searcher, plan, searches, picks, report, cited, context)
-        return _part(plan, dispute_id, searches, failures, picks, judgments, further=further)
+        further, judgments = _further(model, searcher, plan, searches, picks, report, cited_now(), context)
+        return _part(plan, dispute_id, searches, failures, picks, judgments, further=further, meant=meant)
     # Piece 35e: the judgments the papers and messages cite, looked up once for every dispute.
     cited = cited_judgments(context, case_index) if len(done) < len(groups) else []
+    disputes = {d["id"]: d for d in (plan["proposal"].get("understanding") or {}).get("disputes", [])}
+    asked_cited, cited_lock = {}, threading.Lock()
+
+    def cited_now():
+        """D87: the judgments cited, with which one the advocate means of a citation held more than once - asked once for the
+        turn, by the first dispute to need them; the others wait for that answer."""
+        with cited_lock:
+            if "cited" not in asked_cited:
+                asked_cited["cited"] = _cited_meant(cited, settle, list(groups))
+            return asked_cited["cited"]
     pool = ThreadPoolExecutor(max_workers=max(1, len(groups) - len(done)), thread_name_prefix="dispute")
     parts = {}
     for dispute_id, works in groups.items():
@@ -3223,6 +3350,19 @@ def _citations_in(context):
     return [{"id": f"CJ{number}", **entry} for number, entry in enumerate(found.values(), 1)]
 
 
+def _cited_meant(cited, settle, disputes):
+    """The judgments cited, each held more than once with the one the advocate means (D87); as they were where nothing is asked."""
+    unsure = [entry for entry in cited if entry["state"] == "ambiguous" and len(entry.get("held") or ()) >= 2]
+    if settle is None or not unsure:
+        return cited
+    answers = settle([cited_question(entry, disputes) for entry in unsure])
+    meant = {}
+    for entry, (question, answer) in zip(unsure, answers):
+        at = _chosen_index(question, answer)
+        meant[entry["id"]] = entry["held"][at]["case_id"] if at is not None else None
+    return [{**entry, "meant": meant[entry["id"]]} if entry["id"] in meant else entry for entry in cited]
+
+
 def cited_judgments(context, case_index):
     """The judgments the papers and the messages cite, each looked up in the held case index by its exact keys only (v16, piece
     35e): found (one held judgment), ambiguous (more than one), not held, or unavailable (the index could not be read). Made once
@@ -3238,7 +3378,10 @@ def cited_judgments(context, case_index):
             continue
         state = "found" if len(held) == 1 else "ambiguous" if held else "not_held"
         judgment = ({key: held[0].get(key) for key in ("case_id", "title", "court", "year")} if state == "found" else None)
-        cited.append({**entry, "state": state, "judgment": judgment, "reason": None})
+        # Plan AN.37 (D87): a citation held more than once keeps the judgments it may be, for the advocate to say which is meant.
+        unsure = ({"held": [{key: one.get(key) for key in ("case_id", "title", "court", "year")} for one in held], "meant": None}
+                  if state == "ambiguous" else {})
+        cited.append({**entry, "state": state, "judgment": judgment, "reason": None, **unsure})
     return cited
 
 
@@ -3252,9 +3395,10 @@ def _cited_text(cited, context):
         return f"{about['name']}, page {about['page']}" if about else "the advocate's message"
     lines = ["\nJudgments the papers and the advocate's messages cite:"]
     for entry in cited:
-        held = entry["judgment"]
+        held = entry["judgment"] or next((one for one in entry.get("held") or () if one["case_id"] == entry.get("meant")), None)
         named = f" - {held['title']} ({', '.join(str(v) for v in (held.get('court'), held.get('year')) if v)})" if held else ""
-        lines.append(f"  {entry['id']} {entry['citation']}{named}: {CITED_SAID[entry['state']]}; cited in "
+        said = "held more than once; the advocate means this one" if entry.get("meant") else CITED_SAID[entry["state"]]
+        lines.append(f"  {entry['id']} {entry['citation']}{named}: {said}; cited in "
                      + "; ".join(dict.fromkeys(place(identity) for identity in entry["where"])) + ".")
     return "\n".join(lines)
 
@@ -3262,14 +3406,15 @@ def _cited_text(cited, context):
 def _cited_cases(asked, labels, cited, skip):
     """The held cited judgments the further call chose to read (v16, piece 35e), each once, in the order named: only one held as
     one judgment, and none the dispute already reads."""
-    by_id = {entry["id"]: entry for entry in cited if entry["state"] == "found"}
+    by_id = {entry["id"]: entry for entry in cited if entry["state"] == "found" or entry.get("meant")}
     order = []
     for item in asked["questions"]:
         if item["question_id"] not in labels.values():
             continue
         for identity in item.get("cited", ()):
             entry = by_id.get(identity)
-            case_id = entry["judgment"]["case_id"] if entry else None
+            # D87: of a citation held more than once, the judgment the advocate means.
+            case_id = (entry["judgment"]["case_id"] if entry["state"] == "found" else entry["meant"]) if entry else None
             if case_id and case_id not in skip and case_id not in order:
                 order.append(case_id)
     return order
@@ -3455,7 +3600,8 @@ def _validate_further(further, plan, searches, judgments, dispute_id, contract, 
     if (not isinstance(cited, list) or made is None
             or [{key: entry.get(key) for key in ("id", "citation", "keys", "where")} for entry in cited if isinstance(entry, dict)]
             != made
-            or any(set(entry) != {"id", "citation", "keys", "where", "state", "judgment", "reason"}
+            or any(set(entry) - {"held", "meant"} != {"id", "citation", "keys", "where", "state", "judgment", "reason"}
+                   or not _cited_unsure_kept(entry)
                    or entry["state"] not in CITED_STATES
                    or (entry["judgment"] is not None) != (entry["state"] == "found")
                    or entry["judgment"] is not None and (set(entry["judgment"]) != {"case_id", "title", "court", "year"}
@@ -3477,6 +3623,29 @@ def _validate_further(further, plan, searches, judgments, dispute_id, contract, 
     _validate_judgments({dispute_id: further["judgments"]}, dispute_id, plan, fresh, further["picks"]["judgment"], contract,
                         skip=set(claimed) | {entry["case_id"] for entry in judgments},
                         limit=IN_FULL - len(further["cited_read"]) - len(judgments))
+
+
+def _cited_unsure_kept(entry):
+    """D87: a citation held more than once keeps the judgments it may be and which the advocate means (None: not said), or neither
+    (a record made before); no other citation keeps either."""
+    if "held" not in entry and "meant" not in entry:
+        return True
+    held = entry.get("held")
+    return (entry.get("state") == "ambiguous" and isinstance(held, list) and len(held) >= 2
+            and all(isinstance(one, dict) and set(one) == {"case_id", "title", "court", "year"}
+                    and isinstance(one["case_id"], str) and one["case_id"] for one in held)
+            and "meant" in entry and (entry["meant"] is None or entry["meant"] in [one["case_id"] for one in held]))
+
+
+def _validate_meant(meant, plan, searches, dispute_id):
+    """D87: a dispute's names read as more than one held Act, as its searches read them, each with an Act it may be or None."""
+    expected = named_ambiguities(plan, searches)
+    if (not isinstance(meant, list) or not meant or len(meant) != len(expected)
+            or any(not isinstance(item, dict) or "meant" not in item
+                   or {key: value for key, value in item.items() if key != "meant"} != want
+                   or item["meant"] is not None and item["meant"] not in want["acts"] for item, want in zip(meant, expected))):
+        raise ValueError("The names a dispute read as more than one Act are not as its searches read them")
+    return meant
 
 
 def further_searches(record):
@@ -3503,7 +3672,7 @@ def assemble(plan, parts, *, unfinished=None):
     then record that as their gap and its picks keep nothing."""
     done = {part["part"]: part for part in parts}
     searches, failures, chosen = {}, {}, {field: {} for field in _PICK_FIELDS.values()}
-    judgments, further = {}, {}
+    judgments, further, meant = {}, {}, {}
     for dispute_id, works in dispute_work(plan).items():
         part = done.get(dispute_id)
         if part is None:
@@ -3522,11 +3691,13 @@ def assemble(plan, parts, *, unfinished=None):
             chosen[field][dispute_id] = deepcopy(part[field][dispute_id])
         judgments[dispute_id] = deepcopy(part["judgments"][dispute_id])
         further[dispute_id] = deepcopy(part["further"][dispute_id])
+        if (part.get("meant") or {}).get(dispute_id):
+            meant[dispute_id] = deepcopy(part["meant"][dispute_id])
     order = [w["id"] for w in plan["work"]]
     record = {"contract": CONTRACT, "plan": deepcopy(plan),
               "searches": {i: searches[i] for i in order if i in searches},
               "failures": {i: failures[i] for i in order if i in failures}, **chosen, "judgments": judgments,
-              "further": further}
+              "further": further, **({"meant": meant} if meant else {})}
     record["state"] = _state(plan, record["searches"], record["failures"], picks_of(record))
     return record
 
@@ -3538,7 +3709,7 @@ def part_of(record, dispute_id):
         record["plan"], dispute_id, record["searches"], record["failures"],
         {kind: record[field][dispute_id] for kind, field in _PICK_FIELDS.items()},
         (record.get("judgments") or {}).get(dispute_id, []), record["contract"],
-        (record.get("further") or {}).get(dispute_id)))
+        (record.get("further") or {}).get(dispute_id), (record.get("meant") or {}).get(dispute_id)))
 
 
 def picks_of(record, kind=None):
@@ -3628,7 +3799,8 @@ def _validate(record, plan, context):
               | ({"judgment_picks"} if contract in JUDGMENT_PICKS else set())
               | ({"judgments"} if contract in JUDGMENTS_READ else set())
               | ({"further"} if contract in FURTHER_LAW else set())
-              | ({"part"} if contract in BY_DISPUTE and "part" in record else set()))
+              | ({"part"} if contract in BY_DISPUTE and "part" in record else set())
+              | ({"meant"} if contract in BY_DISPUTE and "meant" in record else set()))
     if (not isinstance(record, dict)
             or set(record) != fields
             or record.get("plan") != plan or not isinstance(record.get("searches"), dict)
@@ -3655,13 +3827,19 @@ def _validate(record, plan, context):
     if contract in BY_DISPUTE:
         # v10: each dispute's picks, labelled within that dispute's own searched questions.
         disputes = [record["part"]] if "part" in fields else list(groups)
+        meant = record.get("meant", {})
+        if not isinstance(meant, dict) or set(meant) - set(disputes):
+            raise ValueError("The names read as more than one Act name no dispute of the record")
+        for dispute_id, items in meant.items():
+            ids = {w["id"] for w in groups[dispute_id]}
+            _validate_meant(items, plan, {i: s for i, s in record["searches"].items() if i in ids}, dispute_id)
         for kind, field in _PICK_FIELDS.items():
             if not isinstance(record[field], dict) or set(record[field]) != set(disputes):
                 raise ValueError(f"The {kind} picks are not one for each dispute")
             for dispute_id in disputes:
                 ids = {w["id"] for w in groups[dispute_id]}
                 own = {i: search for i, search in record["searches"].items() if i in ids}
-                _validate_picks(record[field][dispute_id], plan, own, kind, contract)
+                _validate_picks(record[field][dispute_id], plan, own, kind, contract, meant=meant.get(dispute_id, ()))
                 picks.append(record[field][dispute_id])
                 if kind == "judgment" and contract in JUDGMENTS_READ and contract not in FEW_IN_FULL:
                     # From v17 (D35) a dispute's first judgments read are checked with its further search, after the cited ones.
@@ -3735,8 +3913,9 @@ def _validate_judgments(judgments, dispute_id, plan, searches, pick, contract=CO
                 raise ValueError("A judgment's paragraph is not held as stored")
 
 
-def _validate_picks(picks, plan, searches, kind="provision", contract=None, room=None):
+def _validate_picks(picks, plan, searches, kind="provision", contract=None, room=None, meant=()):
     labels = _labels(plan, searches)
+    meant = meant if kind == "provision" else ()
     if kind == "provision" and contract in FEW_SECTIONS and room is None:
         room = {work_id: SECTIONS_A_QUESTION for work_id in labels}
     elif kind != "provision" or contract not in FEW_SECTIONS:
@@ -3749,12 +3928,14 @@ def _validate_picks(picks, plan, searches, kind="provision", contract=None, room
         schema = CHOICE_V17 if kind == "judgment" and contract in FEW_IN_FULL else CHOICE
         choice = canonical_schema_data(picks["proposal"], schema)
         require_schema(choice, schema)
+        resolved, unknown = _resolve_picks(choice, plan, searches, labels, kind, room)
         if (picks["proposal"] != choice or picks["reason"] is not None
-                or (picks["chosen"], picks["unknown"]) != _resolve_picks(choice, plan, searches, labels, kind, room)):
+                or (picks["chosen"], picks["unknown"]) != (_keep_meant(resolved, searches, meant), unknown)):
             raise ValueError(f"The saved {kind} pick differs from its proposal")
     elif picks["state"] == "unavailable":
         if (picks["proposal"] is not None or picks["unknown"] or not isinstance(picks["reason"], str)
-                or not picks["reason"] or picks["chosen"] != _fallback_picks(searches, labels, kind, room)):
+                or not picks["reason"]
+                or picks["chosen"] != _keep_meant(_fallback_picks(searches, labels, kind, room), searches, meant)):
             raise ValueError(f"An unavailable {kind} pick keeps each question's first six")
     elif (picks["proposal"] is not None or picks["unknown"] or picks["reason"] is not None
           or picks["chosen"] != {w: [] for w in labels} or any(_of_kind(searches[w], kind) for w in labels)):
