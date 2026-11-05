@@ -224,10 +224,14 @@ def _papers(context):
 
 class _Later:
     """What the writing reads of a window still open while it writes (plan AN.37, D44): the context with the answers as they
-    stand, and, after its sections, what changed since they began and which disputes that touches (None: the whole answer)."""
+    stand, and, after its sections, what changed since they began and which disputes that touches (None: the whole answer).
+    The writing waits only on the questions the model asked: those code asks (D87) are waited on by the research that asks them."""
 
     def __init__(self, asking, base):
         self.asking, self.base = asking, base
+
+    def _waited_on(self):
+        return [question for question in self.asking.questions if question.get("asked_by", "model") != "code"]
 
     def context(self):
         return {**self.base, "answers": questions.context_answers(self.asking.questions,
@@ -238,11 +242,11 @@ class _Later:
 
     def touches(self, dispute_id):
         """Whether a question names the dispute, or names none and so touches the whole answer (D50)."""
-        return any(not question["depends"] or dispute_id in question["depends"] for question in self.asking.questions)
+        return any(not question["depends"] or dispute_id in question["depends"] for question in self._waited_on())
 
     def wait(self):
         """Until the answers, or after WAIT the defaults, stand (D39)."""
-        self.asking.wait()
+        self.asking.wait_for([question["id"] for question in self._waited_on()])
 
     def since(self, version):
         changed = self.asking.changed_since(version)
@@ -496,13 +500,14 @@ class _Keeper:
 
 
 def prepare(model, context, searcher, *, case_index=None, provision_reader=None, progress=None,
-            held_acts=None, shown=None, ask=None, keep=None, resume=None, steered=False, on_understood=None):
+            held_acts=None, shown=None, ask=None, keep=None, resume=None, steered=False, on_understood=None, settle=None):
     """Prepare and admit one response, dispute by dispute (turn v7, owner decisions P25-P27, P29).
     No persistence or external action occurs here. shown (P26): told, each time the answer
     shows more, its elements so far and the answering's state they come from (its sections done,
     the check across them and the overview). ask (plan AN.37): given the interpretation, the plan
     and the context, asks the advocate what only they can settle and returns its questions.Asking once
-    the answers or the defaults stand, or None where nothing is asked.
+    the answers or the defaults stand, or None where nothing is asked. settle (plan AN.37, D87): asks the advocate the
+    questions code puts while the research runs - which Act or judgment a name means - and gives their answers.
 
     The whole preparation is one turn's scope (plan AN.41, step 1): what is derived from its
     research is derived once, by every section, check and drawing of what is shown.
@@ -517,11 +522,11 @@ def prepare(model, context, searcher, *, case_index=None, provision_reader=None,
     with replay_scope.turn():
         return _prepare(model, context, searcher, case_index=case_index, provision_reader=provision_reader,
                         progress=progress, held_acts=held_acts, shown=shown, ask=ask, keep=keep, resume=resume,
-                        steered=steered, on_understood=on_understood)
+                        steered=steered, on_understood=on_understood, settle=settle)
 
 
 def _prepare(model, context, searcher, *, case_index, provision_reader, progress, held_acts, shown, ask, keep, resume,
-             steered, on_understood):
+             steered, on_understood, settle=None):
     report = _reporter(progress)
     calls = model if isinstance(model, TurnCalls) else TurnCalls(model)
     kept = _kept(resume, context, report) if resume and not steered else _NOTHING_KEPT
@@ -562,7 +567,7 @@ def _prepare(model, context, searcher, *, case_index, provision_reader, progress
         working = (pool.submit(calculation.work_out, calls, context, held_acts)
                    if held_acts is not None and _needs_research(plan) and kept["limits"] is None else None)
         parts = research.retrieve_parts(plan, searcher, context, model=calls, progress=report, started=started,
-                                        case_index=case_index, done=kept["parts"])
+                                        case_index=case_index, done=kept["parts"], settle=settle)
         if keep is not None:
             # D67: each dispute's research saved as it finishes.
             for dispute_id, future in parts.items():
@@ -919,7 +924,7 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
                       effort=effort, chosen=chosen, stronger=stronger, stopping=stopping)
     # What the answer shows as each part passes is saved beside the conversation then (P27),
     # and the page told how much there is to show (P26).
-    holder, report = {"context": context, "shown": 0, "asking": None}, _reporter(progress)
+    holder, report = {"context": context, "shown": 0, "asking": None, "model": None}, _reporter(progress)
     # The writes beside the conversation - what is shown, what is asked and answered - come from several threads (P26; plan
     # AN.37): one at a time, each on the version the last left.
     beside = threading.Lock()
@@ -1010,33 +1015,66 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
     except ValueError:
         again = None
 
+    window_lock = threading.Lock()
+
+    def opened(admitted):
+        """Plan AN.37 (D87): the turn's one window - opened by the first questions put to the advocate, the model's or code's,
+        with what this same message asked before (a retry, D40) - with the questions given added to it. Returns their IDs (None
+        for one the window has no room for), and the window."""
+        with window_lock:
+            asking, fresh = holder["asking"], holder["asking"] is None
+            if fresh:
+                state = again["state"] if again is not None else {"questions": [], "answers": []}
+                asking = questions.Asking(state["questions"], hold=sealed, report=report)
+                if asking.questions:
+                    asking.start(given={entry["id"]: {"chosen": entry["chosen"], "other": entry["other"]}
+                                        for entry in state["answers"] if entry["how"] != "assumed"})
+            ids = asking.add(admitted) if admitted else []
+            if fresh and asking.questions:
+                holder["asking"] = asking
+                if desk is not None:
+                    desk.open(turn_id, asking)
+            return ids, holder["asking"]
+
     def ask(interpreted, plan, payload):
         """Plan AN.37: the questions - the model's as code admits them, or those this same message asked before - shown to the
-        advocate; returns the window once the answers or the defaults stand, or None where nothing is asked."""
-        if holder["asking"] is not None:
-            state = holder["asking"].state()  # asked already in this run, before a steer (D79)
-        elif again is not None:
-            state = again["state"]
-        elif propose is None:
+        advocate; returns the window, or None where nothing is asked. The model is asked once in a run (a steer keeps them)."""
+        if holder["model"] is None:
+            if again is not None:
+                holder["model"] = [question for question in again["state"]["questions"]
+                                   if question.get("asked_by", "model") != "code"]
+            elif propose is None:
+                holder["model"] = []
+            else:
+                understanding = (plan.get("proposal") or {}).get("understanding") or {}
+                disputes = [dispute["id"] for dispute in understanding.get("disputes") or []]
+                admitted, refused = questions.admit(propose(calls, payload, interpreted, plan, asked_before),
+                                                    asked_before=asked_before, disputes=disputes)
+                if refused:
+                    log.info("Questions code did not show: %s", "; ".join(item["why"] for item in refused))
+                holder["model"] = admitted
+        if not holder["model"]:
             return None
-        else:
-            understanding = (plan.get("proposal") or {}).get("understanding") or {}
-            disputes = [dispute["id"] for dispute in understanding.get("disputes") or []]
-            admitted, refused = questions.admit(propose(calls, payload, interpreted, plan, asked_before),
-                                                asked_before=asked_before, disputes=disputes)
-            if refused:
-                log.info("Questions code did not show: %s", "; ".join(item["why"] for item in refused))
-            if not admitted:
-                return None
-            state = {"questions": admitted, "answers": []}
-        asking = questions.Asking(state["questions"], hold=sealed, report=report)
-        given = {entry["id"]: {"chosen": entry["chosen"], "other": entry["other"]} for entry in state["answers"]
-                 if entry["how"] != "assumed"}
-        holder["asking"] = asking
-        if desk is not None:
-            desk.open(turn_id, asking)
-        asking.start(given=given)
-        return asking
+        return opened(holder["model"])[1]
+
+    def settle(asked):
+        """Plan AN.37 (D87): code's questions - which Act or judgment a name means - put in the window and waited for, each its
+        own WAIT; one asked before in this conversation, or past the window's room, goes on with its default. Returns each
+        question as asked with its answer (None: the default)."""
+        admitted, refused = questions.admit(asked, asked_before=asked_before,
+                                            disputes={name for question in asked for name in question["depends"]})
+        if refused:
+            log.info("Questions code did not show: %s", "; ".join(item["why"] for item in refused))
+        shown = {position - 1 for position in range(1, len(asked) + 1)} - {item["position"] - 1 for item in refused}
+        ids, asking = opened(admitted) if admitted else ([], holder["asking"])
+        answers = asking.wait_for(ids) if asking is not None and ids else {}
+        by_place = dict(zip(sorted(shown), ids))
+        out = []
+        for place, question in enumerate(asked):
+            identity = by_place.get(place)
+            given = answers.get(identity) if identity is not None else None
+            out.append((question, given if given is not None and given["how"] != "assumed" else None))
+        return out
 
     def withdraw():
         """A turn withheld whole keeps nothing it showed (G-CORE), nor anything it saved as it worked."""
@@ -1057,7 +1095,7 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
                 elements, activity, metrics = prepare(calls, context.payload(), searcher,
                     case_index=case_index, provision_reader=provision_reader, progress=progress,
                     held_acts=held_acts, shown=shown, ask=ask, keep=keeper, resume=resume, steered=steered,
-                    on_understood=entitled)
+                    on_understood=entitled, settle=settle)
                 break
             except StopRequested:
                 taken = steers() if steers is not None else []
