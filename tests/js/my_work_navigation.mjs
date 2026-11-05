@@ -58,6 +58,8 @@ function fixture() {
       context.activeIntent = { matterId, chatId, pending: [] };
     },
     showTab() {}, showIntake() {}, snapshotIntent() {}, consumeComposer() {},
+    // Plan AN.43 (D84): the title a reopened conversation shows at its beginning is tests/js/history_titles.mjs's.
+    takeTitle() {},
     matchesIntake: () => false, newTurnId: () => 'new-turn',
     attachments: [], attachmentsBlockSend: () => null, renderAttachments() {},
     attachmentsReading: () => false,

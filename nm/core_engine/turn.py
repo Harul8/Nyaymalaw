@@ -843,9 +843,9 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
     "documents", "at"} - and clears the stop it came with; the answer then continues with it. attach(advocate_id, chat_id, write)
     (D77): told, once the message is saved, how a write from outside the turn beside its conversation is made on the turn's own
     versions - write(change) runs change(context) under the turn's lock of writes and keeps the context it returns.
-    entitle (plan AN.43, D82): given what is known of the matter (titles.material), the title the model writes for the conversation,
-    as code admits it, or None; asked once the matter is understood, beside the answer, where the conversation has no title yet (or
-    one written before any matter was understood)."""
+    entitle (plan AN.43, D82, D84): given what is known of the matter (titles.material), the title the model writes for the
+    conversation, as code admits it, or None; asked once the matter is understood, beside the answer, where the conversation has no
+    title yet - once named, it stays as named."""
     if not session_current():
         raise ConversationRefused("Sign in again before continuing.", status=401)
     effort = reasoning.DEFAULT_CHOICE if effort is None else effort
@@ -960,9 +960,9 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
     titling = {}
 
     def entitled(payload, plan):
-        """Plan AN.43 (D82): the conversation's title, written once the matter is understood - beside the research, never holding
-        the answer up - where it has none yet, or one written before any matter was understood."""
-        if entitle is None or titling or titled is not None and (titled["from_matter"] or not titles.understood(plan)):
+        """Plan AN.43 (D82, D84): the conversation's title, written once the matter is understood - beside the research, never
+        holding the answer up - where it has none yet. Once NM has named it, it stays as named."""
+        if entitle is None or titling or titled is not None:
             return
 
         def write():
@@ -978,6 +978,10 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
                                                                           "from_matter": titles.understood(plan)}))
             except (OSError, StaleWrite, ConversationRefused, ValueError):
                 log.warning("The conversation's title could not be saved", exc_info=True)
+                return
+            # D84: the page reads the conversation again when its saved work moves on, and finds the title there.
+            keeper.saved += 1
+            report("saved", saved=keeper.saved, chat_id=context.chat_id)
         titling["thread"] = threading.Thread(target=write, name="turn-title", daemon=True)
         titling["thread"].start()
 

@@ -35,4 +35,24 @@ assert.equal(untitled.children[0].textContent, 'Please analyse the attached sale
 assert.equal(context.historyTitle({ preview: 'Analyse this' }), 'Analyse this');
 assert.equal(context.historyTitle({ preview: '' }), 'Conversation');
 
+// D84 (owner, 5 Nov 2026: "put the heading just once in the begining, after the first message is saved, till the NM names it ...
+// <empty title> and once NM names it, let it stay that way"): the conversation's title once, at its beginning.
+const thread = vm.createContext({ document: { createElement: (tag) => new Element(tag) }, activeIntent: { chatId: null },
+  state: { turns: [] } });
+vm.runInContext(fn('threadTitle') + fn('takeTitle'), thread);
+assert.equal(thread.threadTitle().length, 0, 'nothing before the first message is sent');
+thread.state.turns = [{ turnId: 't1', chatId: 'new_c1' }];
+let [heading] = thread.threadTitle();
+assert.equal(heading.tag, 'h2');
+assert.equal(heading.textContent, '', 'empty until NM names it');
+assert.equal(heading.className, 'thread-title unnamed');
+thread.takeTitle('new_c1', 'Asha Rao v. Greenfield Builders');
+[heading] = thread.threadTitle();
+assert.equal(heading.textContent, 'Asha Rao v. Greenfield Builders', 'a first conversation is named before its answer reaches the page');
+thread.takeTitle('new_c1', 'Something else');
+assert.equal(thread.threadTitle()[0].textContent, 'Asha Rao v. Greenfield Builders', 'once named, it stays as named');
+thread.activeIntent = { chatId: 'c2' };
+thread.state.turns = [{ answer: {} }];
+assert.equal(thread.threadTitle()[0].textContent, '', 'another conversation never shows this one\'s title');
+
 console.log('history_titles.mjs: ok');

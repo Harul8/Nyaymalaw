@@ -898,6 +898,7 @@ async function restorePendingChat(chatId) {
   startMatter(chatId);
   if (session !== state.sessionGeneration || !activeIntent || activeIntent.chatId !== chatId) return;
   state.matterVersion = restored.matter_version;
+  takeTitle(chatId, restored.title);
   state.turns = restored.turns.map(restoredTurn);
   reconcileIntent(restored.turns);
   // Plan AN.41 (D66): the turn being worked on is in the conversation from Send - followed while NM works, or said to have
@@ -5504,11 +5505,42 @@ function renderShownSoFar(elements) {
   return box;
 }
 
+// PLAN AN.43 (D84; owner, 5 Nov 2026: "put the heading just once in the begining, after the first message is saved, till the NM
+// names it, we can put <empty title> and once NM names it, let it stay that way"): the conversation's title once, at its beginning,
+// from when its first message is sent (saved at Send, AN.41 D66) - empty until NM names it, then as NM named it.
+function threadTitle() {
+  if (!state.turns.some((entry) => entry.turnId || entry.answer)) return [];
+  // A first message's conversation is known by the turn's progress before its answer names it on the page.
+  const chatId = (activeIntent && activeIntent.chatId) || (state.turns.find((entry) => entry.chatId) || {}).chatId || null;
+  const known = state.chatTitle && state.chatTitle.chatId === chatId ? state.chatTitle.text : null;
+  const heading = document.createElement('h2');
+  heading.className = known ? 'thread-title' : 'thread-title unnamed';
+  heading.textContent = typeof known === 'string' ? known : '';
+  return [heading];
+}
+
+// The title as the conversation now says it (D84): kept once named; asked for again only while it is not.
+function takeTitle(chatId, title) {
+  if (!chatId) return;
+  if (state.chatTitle && state.chatTitle.chatId === chatId && state.chatTitle.text) return;
+  state.chatTitle = { chatId, text: typeof title === 'string' && title.trim() ? title.trim() : null };
+}
+
+async function refreshTitle(chatId) {
+  if (!chatId || (state.chatTitle && state.chatTitle.chatId === chatId && state.chatTitle.text)) return;
+  try {
+    const said = await api(`/api/chats/${encodeURIComponent(chatId)}/title`);
+    if (!activeIntent || activeIntent.chatId !== chatId) return;
+    takeTitle(chatId, said.title);
+    repaint();
+  } catch (error) { /* the conversation goes on untitled here; it is named on the next reading */ }
+}
+
 function repaint() {
   const t = $('thread');
   const follow = t.scrollHeight - t.scrollTop - t.clientHeight < 48;
   const top = t.scrollTop;
-  t.replaceChildren(...state.turns.map(renderTurn));
+  t.replaceChildren(...threadTitle(), ...state.turns.map(renderTurn));
   t.scrollTop = follow ? t.scrollHeight : top;
   $('jump-latest').hidden = follow;
   updateWorkspace();
@@ -5698,6 +5730,8 @@ async function deliver(entry) {
     });
     // The board is read again after every answer (owner, 16 Oct 2026).
     else if (intent.chatId) loadChatBoard();
+    // Plan AN.43 (D84): the title, where NM had not named the conversation when this answer began.
+    if (intent.chatId) refreshTitle(intent.chatId);
   } catch (e) {
     // clearPrivileged already freezes an abandoned attempt as unknown. Neither
     // that old response nor a later retry can rewrite one another's outcome.
@@ -6143,6 +6177,7 @@ function watchProgress(entry, onFinished, onStopped = null) {
 async function showSoFar(entry, chatId) {
   try {
     const chat = await api(`/api/chats/${encodeURIComponent(chatId)}`);
+    takeTitle(chatId, chat.title);
     if (entry.answer || !chat.pending || chat.pending.turn_id !== entry.turnId) return;
     entry.shownElements = chat.pending.elements;
     if (chat.pending.work) entry.work = chat.pending.work;

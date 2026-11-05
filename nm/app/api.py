@@ -1907,8 +1907,26 @@ def chat(chat_id: str, advocate_id: Advocate, request: Request, response: Respon
         queued = []
     return {'state': 'ok', 'chat_id': chat_id, 'matter_id': None,
             'matter_version': matter.version, 'turns': turns,
+            # Plan AN.43 (D84): the title the conversation shows at its beginning; None until NM names it.
+            'title': _title_text(matter),
             **({'pending': _pending(advocate_id, held)} if held else {}),
             **({'queued': queued} if queued else {})}
+
+
+@app.get('/api/chats/{chat_id}/title')
+def chat_title(chat_id: str, advocate_id: Advocate, request: Request, response: Response):
+    """The conversation's title (plan AN.43, D84), for the page to show at its beginning once NM has named it: read from the saved
+    file alone, which reading the whole conversation for it would not need. None until NM names it."""
+    try:
+        matter = application().store.load(chat_matter_id(advocate_id, chat_id))
+    except (OSError, ValueError) as exc:
+        raise HTTPException(503, 'This conversation could not be read reliably.') from exc
+    if not _session_current(request, advocate_id):
+        raise HTTPException(401, 'not signed in')
+    if matter is None or matter.advocate_id != advocate_id:
+        raise HTTPException(404, 'Conversation not available.')
+    response.headers['Cache-Control'] = 'no-store'
+    return {'chat_id': chat_id, 'title': _title_text(matter)}
 
 
 def _pending(advocate_id, held):

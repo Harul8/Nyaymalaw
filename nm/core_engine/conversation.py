@@ -412,6 +412,15 @@ def hold_title(store, context, title):
     return replace(context, matter=_written(store, candidate, context.matter.version))
 
 
+def save_title(store, matter, title):
+    """Save the title of a conversation no turn is being worked on now (D83: the conversations saved before, titled once by the
+    operator's run). Returns the conversation as written."""
+    metadata = {**(matter.intake_answers or {}), TITLE: dict(title)}
+    candidate = replace(matter, intake_answers=metadata, version=matter.version + 1)
+    title_of(candidate)
+    return _written(store, candidate, matter.version)
+
+
 def queued_of(matter):
     """What waits to go as the next message of the conversation, as it was saved: a list, empty where nothing waits. ValueError
     where it cannot be read reliably."""
