@@ -16,13 +16,13 @@ from copy import deepcopy
 from dataclasses import replace
 from datetime import datetime, timezone
 
-from nm.core_engine import answer_sections, answer_sources, calculation, checklist, estimates, questions, research
-from nm.core_engine import reasoning, replay_scope, response_rendering, response_writer
+from nm.core_engine import answer_sections, answer_sources, calculation, case_strength, checklist, estimates, questions
+from nm.core_engine import reasoning, replay_scope, research, response_rendering, response_writer
 from nm.core_engine import understanding
-from nm.core_engine.calls import CorrectionUnavailable, ReleaseWithheld, TurnCalls
+from nm.core_engine.calls import CorrectionUnavailable, ReleaseWithheld, StopRequested, TurnCalls
 from nm.core_engine.conversation import (
     ConversationRefused, TurnContext, asking_of, chat_matter_id, checked_rows, commit_turn, committed_version, digest,
-    drop_asking, drop_shown, hold_asking, hold_shown, open_turn, shown_of, stored_chat,
+    drop_asking, drop_shown, hold_asking, hold_shown, open_turn, sent, shown_of, stored_chat,
 )
 from nm.shared.external_ai_contracts import ModelPermissionRefused
 from nm.shared.model_config import DEFAULT_TURN_MODEL
@@ -89,6 +89,38 @@ execution_record = research.execution
 #: Said above an answer the usage ran out part-way through (plan AN.37, D46): the owner's words of P51, then what was kept.
 STOPPED_FOR_USAGE = (USAGE_LIMIT_MESSAGE + " NM stopped part-way through this answer: the parts it had finished and checked "
                      "are below, and the rest are marked as not finished.")
+#: Why an answer stopped part-way, in code's own words, by the code the turn keeps with what it finished (plan AN.41, D69). Said in
+#: red in the conversation with Continue and Discard; said above the answer once it is saved as it stopped (D71).
+STOPS = {
+    "interrupted": "NM was restarted while it worked on this message.",
+    "signed_out": "Your sign-in ended while NM was working on this message.",
+    "model_permission_required": "AI data sharing is turned off for your account, so NM could not go on with this message.",
+    "usage_limit": USAGE_LIMIT_MESSAGE,
+    "response_unavailable": "The AI service could not be reached reliably part-way through this message.",
+    "stopped": "You stopped NM part-way through this answer.",
+    "not_saved": "NM finished this answer but could not save it.",
+    "failed": "Something went wrong on NM's side part-way through this message.",
+}
+#: What each cause needs before Continue can work (D70): put right first, said with the red message.
+STOP_NEEDS = {
+    "signed_out": "Sign in again, then press Continue.",
+    "model_permission_required": "Turn AI data sharing back on, then press Continue.",
+    "usage_limit": "Continue works once more usage is available.",
+}
+#: Plan AN.41 (D66, D71): a turn saved as it stopped before NM had finished any part of it - the advocate's message and files,
+#: and code's words on why it stopped, with nothing of an answer.
+UNANSWERED_CONTRACT = "core_turn_unanswered_v1"
+#: What a stopped answer says of the time limits when it stopped before they were worked out.
+LIMITS_UNFINISHED = "The answer stopped before the time limits were worked out"
+
+
+def stopped_said(held):
+    """Code's words above an answer saved as it stopped (D71): why it stopped, and that what it finished is below."""
+    why = STOPS.get((held.get("stopped") or {}).get("code") or "interrupted", STOPS["failed"])
+    if "steps" in held and held["steps"]["understood"] is None:
+        return why + " NM stopped before it had finished any part of an answer: your message and files are saved."
+    return (why + " NM stopped part-way through this answer: the parts it had finished and checked are below, and the rest "
+            "are marked as not finished.")
 
 
 def _diagnosis(code, exc, calls):
@@ -218,25 +250,259 @@ class _Later:
         return self.context(), None if any(not names for names in depends) else {name for names in depends for name in names}
 
 
+#: What an answer starting afresh keeps of earlier work: nothing.
+_NOTHING_KEPT = {"understood": None, "limits": None, "parts": {}, "cases": {}, "answered": None}
+_UNREADABLE = (ValueError, KeyError, TypeError, IndexError, SchemaViolation)
+
+
+def _kept(steps, context, report, *, plan=None, steered=False):
+    """What an answer continuing where it stopped keeps of the steps it saved (plan AN.41, D70): each checked as a saved answer is
+    checked - the plan against the conversation, each dispute's research against the plan, the time limits, each case against its
+    dispute's research, and what the answer had shown as it would be saved - and kept where it passes. What does not pass, or rests
+    on what did not, is done again. plan (plan AN.42, D79): the plan made again after a steer, which the research must still
+    answer; the time limits and the cases are then made again, and what the answer had shown is only the words each section is
+    reviewed again from."""
+    kept = deepcopy(_NOTHING_KEPT)
+    understood = (steps or {}).get("understood")
+    if understood is None:
+        return kept
+    report("continuing")
+    if plan is None:
+        plan = understood["plan"]
+        try:
+            if research.accept(plan["proposal"], context) != plan:
+                raise ValueError("The saved research plan differs from its original sources")
+        except _UNREADABLE as exc:
+            log.warning("A saved understanding was not kept and is made again: %s", type(exc).__name__)
+            return kept
+        kept["understood"] = (understood["interpretation"], plan)
+    for dispute_id, part in steps["parts"].items():
+        try:
+            research.validate(part, plan, context)
+        except _UNREADABLE as exc:
+            log.warning("A dispute's saved research was not kept and is made again: %s", type(exc).__name__)
+            continue
+        kept["parts"][dispute_id] = part
+    if steered:
+        kept["answered"] = steps["answered"]
+        return kept
+    if steps["limits"] is not None:
+        try:
+            calculation.validate(steps["limits"], context)
+            kept["limits"] = steps["limits"]
+        except _UNREADABLE as exc:
+            log.warning("The saved time limits were not kept and are worked out again: %s", type(exc).__name__)
+    layout = response_writer.parts({"contract": research.CONTRACT, "plan": plan})
+    disputes = {dispute["id"]: dispute for dispute in ((plan.get("proposal") or {}).get("understanding") or {}).get("disputes", ())}
+    for key, case in steps["cases"].items():
+        index = int(key)
+        dispute_id = layout[index]["dispute_id"] if index < len(layout) else None
+        part = kept["parts"].get(dispute_id)
+        if part is None or dispute_id not in disputes:
+            continue
+        try:
+            case_strength.validate(case, context, part, answer_sources.build(context, part), disputes[dispute_id])
+            kept["cases"][key] = case
+        except _UNREADABLE as exc:
+            log.warning("A dispute's saved case was not kept and is set out again: %s", type(exc).__name__)
+    answered = steps["answered"]
+    # A section answering one of several disputes is written from that dispute's research; any other, from all of it.
+    complete = set(research.dispute_work(plan)) <= set(kept["parts"])
+
+    def researched(saved):
+        return saved["dispute_id"] in kept["parts"] if len(layout) > 1 else complete
+    if answered is not None and not all(researched(saved) for saved in answered["sections"]):
+        # A section written from research no longer kept is written again, and so are the check across the sections and the
+        # overview, which read every section, and the corrections that check asked for.
+        answered = {"sections": [{**saved, "edit": None} for saved in answered["sections"] if researched(saved)],
+                    "cross_check": None, "overview": None}
+    if answered is not None and kept["limits"] is not None:
+        held = {"steps": {**steps, "parts": kept["parts"], "limits": kept["limits"], "answered": answered}}
+        try:
+            activity = interrupted(activity_of(held, context))
+            with replay_scope.replaying():
+                record = research.validate(activity["research"], activity["research"]["plan"], context)
+                elements = response_rendering.render_sections(
+                    context, record, answer_sources.build(context, record), sections=activity["sections"],
+                    cross_check=activity["cross_check"], overview=activity["overview"],
+                    time_limits=calculation.validate(activity["calculation"], context), contract=activity["rendering_contract"])
+                validate_activity(activity, context, elements)
+            kept["answered"] = answered
+        except _UNREADABLE as exc:
+            log.warning("What a stopped answer had shown was not kept and is written again: %s", type(exc).__name__)
+    return kept
+
+
+def activity_of(held, context):
+    """The activity of a turn being worked on, derived from its saved steps (plan AN.41, D67) exactly as the turn shows it: its
+    understanding, each dispute's research done so far (the rest recorded as not finished), the time limits (or that they were
+    not worked out) and what the answer had shown. None where the matter was not yet understood. A record of the earlier form
+    keeps the activity it was saved with."""
+    if "steps" not in held:
+        return held["activity"]
+    steps = held["steps"]
+    if steps["understood"] is None:
+        return None
+    plan = steps["understood"]["plan"]
+    record = research.assemble(plan, list(steps["parts"].values()), unfinished=research.UNFINISHED)
+    sources = answer_sources.build(context, record)
+    answered = steps["answered"] or {"sections": [], "cross_check": None, "overview": None}
+    return {"contract": CONTRACT, "interpretation": steps["understood"]["interpretation"], "research": record,
+            "sources": sources, "execution": execution_record(record),
+            "calculation": steps["limits"] if steps["limits"] is not None else calculation.unavailable(LIMITS_UNFINISHED),
+            "rendering_contract": response_rendering.CASED_CONTRACT, **deepcopy(answered)}
+
+
+class _Keeper:
+    """The record of the turn being worked on, kept beside its conversation (plan AN.41, D66-D67): written at once when Send is
+    pressed and whenever the answer shows more (P26-P27), and as each other step finishes by one writer of its own, which takes
+    every change made while it waited, so that a run of quick steps costs one write and the turn's own work never waits for it.
+    Every write is of the record as it then stands, on the version the last write left (one at a time); a write never puts back
+    an older record than one already written."""
+
+    #: The least time between two writes the writer makes by itself, in seconds: a long conversation takes seconds to write.
+    GAP = 5.0
+
+    def __init__(self, store, holder, beside, held, report):
+        self.store, self.holder, self.beside, self.held, self.report = store, holder, beside, held, report
+        self._cond, self._dirty, self._closed, self._thread = threading.Condition(), 0, False, None
+        self._made, self._written, self.saved = 0, 0, 0
+
+    def _snapshot(self):
+        """The record as it stands, under the condition: a copy of its own structure, sharing the step results, which nothing
+        changes once made."""
+        held = dict(self.held)
+        held["steps"] = {**held["steps"], "parts": dict(held["steps"]["parts"]), "cases": dict(held["steps"]["cases"])}
+        held["steers"], held["elements"] = list(held["steers"]), list(held["elements"])
+        self._made += 1
+        return self._made, held
+
+    def _write(self, number, held):
+        """Write one record; False where it could not be written (the turn goes on; a later write or its commit decides)."""
+        with self.beside:
+            if number <= self._written:
+                return True
+            try:
+                self.holder["context"] = hold_shown(self.store, self.holder["context"], held, private=True)
+            except (OSError, StaleWrite, ConversationRefused, ValueError):
+                log.warning("The turn's work so far could not be saved beside the conversation", exc_info=True)
+                return False
+            self._written = number
+        return True
+
+    def write(self):
+        """Write the record as it stands now, in the caller's thread. Raises where it cannot be written."""
+        with self._cond:
+            number, held = self._snapshot()
+            self._dirty = 0
+        with self.beside:
+            self.holder["context"] = hold_shown(self.store, self.holder["context"], held, private=True)
+            self._written = max(self._written, number)
+
+    def now(self, change):
+        """Change the record and write it at once (what the answer shows, P26). True where it was written."""
+        with self._cond:
+            change(self.held)
+            number, held = self._snapshot()
+            self._dirty = 0
+        return self._write(number, held)
+
+    def later(self, change):
+        """Change the record; the writer writes it soon, with whatever else changes meanwhile."""
+        with self._cond:
+            if self._closed:
+                return
+            change(self.held)
+            self._dirty += 1
+            if self._thread is None:
+                self._thread = threading.Thread(target=self._run, name="turn-keeper", daemon=True)
+                self._thread.start()
+            self._cond.notify_all()
+
+    def _run(self):
+        while True:
+            with self._cond:
+                while not self._dirty and not self._closed:
+                    self._cond.wait()
+                if self._closed:
+                    return
+                number, held = self._snapshot()
+                self._dirty = 0
+            if self._write(number, held):
+                self.saved += 1
+                self.report("saved", saved=self.saved, chat_id=self.holder["context"].chat_id)
+            with self._cond:
+                if not self._closed:
+                    self._cond.wait(self.GAP)
+
+    def close(self):
+        """No further write by the writer; one under way is finished first."""
+        with self._cond:
+            self._closed = True
+            self._cond.notify_all()
+            thread = self._thread
+        if thread is not None and thread is not threading.current_thread():
+            thread.join()
+
+    def stop(self, code, *, answered=None):
+        """The turn stopped part-way (D69): why, saved with everything it finished, at once. answered: the whole answer, where it
+        was finished but not saved. Raises nothing; False where it could not be written."""
+        self.close()
+
+        def stopped(held):
+            held["stopped"] = {"code": code, "at": datetime.now(timezone.utc).isoformat()}
+            if answered is not None:
+                held["elements"], held["steps"] = answered[0], {**held["steps"], "answered": answered[1]}
+        return self.now(stopped)
+
+    # The steps, as each finishes (D67).
+    def understood(self, interpretation, plan):
+        self.later(lambda held: held.update(steps={**held["steps"], "understood": {"interpretation": interpretation,
+                                                                                    "plan": plan}}))
+
+    def limits(self, record):
+        self.later(lambda held: held.update(steps={**held["steps"], "limits": record}))
+
+    def part(self, dispute_id, part):
+        self.later(lambda held: held.update(steps={**held["steps"], "parts": {**held["steps"]["parts"], dispute_id: part}}))
+
+    def parts_kept(self, parts):
+        """After a steer (D79): only the research still answering the new plan is kept."""
+        self.later(lambda held: held.update(steps={**held["steps"], "parts": dict(parts)}))
+
+    def case(self, index, case):
+        self.later(lambda held: held.update(steps={**held["steps"], "cases": {**held["steps"]["cases"], str(index): case}}))
+
+
 def prepare(model, context, searcher, *, case_index=None, provision_reader=None, progress=None,
-            held_acts=None, shown=None, ask=None):
+            held_acts=None, shown=None, ask=None, keep=None, resume=None, steered=False):
     """Prepare and admit one response, dispute by dispute (turn v7, owner decisions P25-P27, P29).
     No persistence or external action occurs here. shown (P26): told, each time the answer
-    shows more, its elements so far and the activity they come from (its sections done, the
-    parts still being written under "waiting"). ask (plan AN.37): given the interpretation, the plan
+    shows more, its elements so far and the answering's state they come from (its sections done,
+    the check across them and the overview). ask (plan AN.37): given the interpretation, the plan
     and the context, asks the advocate what only they can settle and returns its questions.Asking once
     the answers or the defaults stand, or None where nothing is asked.
 
     The whole preparation is one turn's scope (plan AN.41, step 1): what is derived from its
-    research is derived once, by every section, check and drawing of what is shown."""
+    research is derived once, by every section, check and drawing of what is shown.
+
+    keep (plan AN.41, D67): told each step's result as the step finishes - understood(interpretation, plan), limits(record),
+    part(dispute_id, part), case(index, case) - so that it is saved then. resume (D70): the steps an answer that stopped had
+    saved (conversation.STEPS); each is checked as a saved answer is checked and kept where it passes, and only what is missing
+    is done. steered (plan AN.42, D79): the conversation carries what the advocate steered the answer with since those steps were
+    saved - the understanding is made again from it, each dispute's research kept where the new plan asks exactly what it
+    answered, and each section shown reviewed again against it from its own words."""
     with replay_scope.turn():
         return _prepare(model, context, searcher, case_index=case_index, provision_reader=provision_reader,
-                        progress=progress, held_acts=held_acts, shown=shown, ask=ask)
+                        progress=progress, held_acts=held_acts, shown=shown, ask=ask, keep=keep, resume=resume,
+                        steered=steered)
 
 
-def _prepare(model, context, searcher, *, case_index, provision_reader, progress, held_acts, shown, ask):
+def _prepare(model, context, searcher, *, case_index, provision_reader, progress, held_acts, shown, ask, keep, resume,
+             steered):
     report = _reporter(progress)
     calls = model if isinstance(model, TurnCalls) else TurnCalls(model)
+    kept = _kept(resume, context, report) if resume and not steered else _NOTHING_KEPT
     report("understanding")
     # Plan AN.37 (D41, D45): what the turn is expected to cost - roughly now, from the papers sent, and again once its plan is
     # known - kept beside what it spends, for diagnostics only.
@@ -246,8 +512,18 @@ def _prepare(model, context, searcher, *, case_index, provision_reader, progress
     # Plan AN.33 (D28; piece 33q): the held law is searched as soon as the understanding and its search phrases are final, beside
     # the papers' side-by-side reading and the weighing; each search begun so is used once, as it would have been made.
     started = {}
-    interpreted, plan = _interpreted(calls, context, report,
-                                     early=lambda work: started.update(research.start_search(searcher, work)))
+    if kept["understood"] is not None:
+        interpreted, plan = kept["understood"]
+    else:
+        interpreted, plan = _interpreted(calls, context, report,
+                                         early=lambda work: started.update(research.start_search(searcher, work)))
+        if keep is not None:
+            keep.understood(interpreted, plan)
+        if steered and resume:
+            # D79: what was finished before the steer is kept only where it still answers what the new plan asks.
+            kept = _kept(resume, context, report, plan=plan, steered=True)
+            if keep is not None:
+                keep.parts_kept(kept["parts"])
     # Plan AN.38 (D48): papers that record one act or matter differently move the working out of the time limits under Auto.
     if any(item.get("kind") == "papers_differ" for item in (plan.get("proposal") or {}).get("connections") or ()):
         calls.found("papers_differ")
@@ -260,14 +536,23 @@ def _prepare(model, context, searcher, *, case_index, provision_reader, progress
     # worked out beside the search, only where research is needed.
     with replay_scope.Pool(max_workers=1) as pool:
         working = (pool.submit(calculation.work_out, calls, context, held_acts)
-                   if held_acts is not None and _needs_research(plan) else None)
+                   if held_acts is not None and _needs_research(plan) and kept["limits"] is None else None)
         parts = research.retrieve_parts(plan, searcher, context, model=calls, progress=report, started=started,
-                                        case_index=case_index)
+                                        case_index=case_index, done=kept["parts"])
+        if keep is not None:
+            # D67: each dispute's research saved as it finishes.
+            for dispute_id, future in parts.items():
+                if dispute_id not in kept["parts"]:
+                    future.add_done_callback(lambda done, dispute_id=dispute_id: (
+                        keep.part(dispute_id, done.result()) if not done.cancelled() and done.exception() is None else None))
         # Plan AN.37 (D39, D50): what only the advocate can settle is asked once the plan is known. The research and the time
         # limits go on meanwhile, and the writing of each dispute no question names; the writing of those it names waits for the
         # answers or, after WAIT, the defaults (answer_sections.answer).
         asking = ask(interpreted, plan, context) if ask is not None else None
-        limits = working.result() if working is not None else calculation.skipped()
+        limits = (kept["limits"] if kept["limits"] is not None else
+                  working.result() if working is not None else calculation.skipped())
+    if keep is not None and kept["limits"] is None:
+        keep.limits(limits)
     later = _Later(asking, context) if asking is not None else None
     if later is not None:
         context = later.context()
@@ -288,13 +573,14 @@ def _prepare(model, context, searcher, *, case_index, provision_reader, progress
             context, record, sources, sections=state["sections"], cross_check=state["cross_check"],
             overview=state["overview"], time_limits=limits, waiting=state["waiting"],
             contract=response_rendering.CASED_CONTRACT)
-        shown(elements, {**base(record, sources, execution), **state}, calls.metrics())
+        shown(elements, {key: state[key] for key in ("sections", "cross_check", "overview")}, calls.metrics())
     # Turn v9 (AN.28): each section written for the advocate and placed, its failing pieces given a second
     # look and then blocked one by one (writer v14), reviewed by review v12, and laid out as rendering v19.
     sections, crossed, overview = answer_sections.answer(
         calls, context, None, None, interpretation=interpreted, execution=None, worked=limits,
         case_index=case_index, provision_reader=provision_reader, report=report, released=released,
-        researched=researched, contract=response_writer.CASED_CONTRACT, later=later)
+        researched=researched, contract=response_writer.CASED_CONTRACT, later=later, done=kept["answered"],
+        cases=kept["cases"], case_done=keep.case if keep is not None else None, steered=steered and bool(kept["answered"]))
     if later is not None:
         context = later.context()
     record, sources, execution = researched.whole()
@@ -350,11 +636,23 @@ def save_shown(store, matter, advocate_id, held, *, session_current, service_sta
         asking = asking_of(matter, held["turn_id"])
         context = TurnContext(matter, held["request"]["chat_id"], held["turn_id"], held["message"], tuple(rows),
                               documents=tuple(held["documents"]), choice=choice,
-                              asked=asking["state"] if asking is not None else None)
+                              asked=asking["state"] if asking is not None else None,
+                              steers=tuple(held.get("steers", ())))
         if context.request != held["request"] or any(row["turn_id"] == held["turn_id"] for row in rows):
             raise ValueError("What was shown belongs to another request")
-        activity = interrupted(held["activity"])
-        original = context.payload()
+    except (ValueError, KeyError, TypeError, SchemaViolation) as exc:
+        log.warning("The unfinished parts of an answer could not be read reliably and were withdrawn: %s",
+                    type(exc).__name__)
+        drop_shown(store, TurnContext(matter, rows[0]["chat_id"] if rows else "", "", "", tuple(rows)))
+        return None
+    original = context.payload()
+    if service_status is None and "steps" in held:
+        service_status = stopped_said(held)
+    try:
+        derived = activity_of(held, original)
+        if derived is None:
+            raise LookupError("nothing finished")
+        activity = interrupted(derived)
         # Saving what an unfinished turn showed is when it is checked (P46): what its checks
         # share is derived once (P35).
         with replay_scope.replaying():
@@ -365,15 +663,38 @@ def save_shown(store, matter, advocate_id, held, *, session_current, service_sta
                 overview=activity["overview"], time_limits=calculation.validate(activity["calculation"], original),
                 contract=activity["rendering_contract"])
             validate_activity(activity, original, elements)
-    except (ValueError, KeyError, TypeError, SchemaViolation) as exc:
-        log.warning("The unfinished parts of an answer could not be read reliably and were withdrawn: %s",
-                    type(exc).__name__)
-        drop_shown(store, TurnContext(matter, rows[0]["chat_id"] if rows else "", "", "", tuple(rows)))
-        return None
-    return commit_turn(store, context, elements=elements, activities=activity,
-                       records=checklist.records(original, activity),
+        records = checklist.records(original, activity)
+    except (ValueError, TypeError, SchemaViolation, LookupError) as exc:
+        if "steps" not in held:
+            log.warning("The unfinished parts of an answer could not be read reliably and were withdrawn: %s",
+                        type(exc).__name__)
+            drop_shown(store, TurnContext(matter, rows[0]["chat_id"] if rows else "", "", "", tuple(rows)))
+            return None
+        # Plan AN.41 (D66): the advocate's message and files are never lost. What could not be read reliably is not shown; the
+        # message is saved with code's words on why it stopped, and nothing of an answer.
+        if not isinstance(exc, LookupError):
+            log.warning("What a stopped answer finished could not be read reliably; its message is saved alone: %s",
+                        type(exc).__name__)
+            service_status = (STOPS.get((held.get("stopped") or {}).get("code") or "interrupted", STOPS["failed"])
+                              + " What NM had finished could not be read reliably, so none of it is shown; your message and "
+                              "files are saved.")
+        activity, elements, records = {"contract": UNANSWERED_CONTRACT}, [], None
+    return commit_turn(store, context, elements=elements, activities=activity, records=records,
                        metrics=held["metrics"] if metrics is None else metrics, service_status=service_status,
                        session_current=session_current)
+
+
+def discard(store, matter, advocate_id, turn_id, *, running=lambda turn_id: False, session_current):
+    """Discard (plan AN.41, D71): the red message and its buttons go, and the answer that stopped is saved as it stopped - the
+    parts it finished below code's words on why it stopped - never reworked after (P46). Returns the saved response, or None where
+    that turn is not stopped here (it finished, is still being worked on, or is another turn)."""
+    try:
+        held = shown_of(matter)
+    except ValueError:
+        return None
+    if held is None or held["turn_id"] != turn_id or running(turn_id):
+        return None
+    return save_shown(store, matter, advocate_id, held, session_current=session_current)
 
 
 def _validate_sections(activity, context, elements):
@@ -403,6 +724,8 @@ def known_activity(activity):
     rebuilds nothing. A record a later version wrote is never shown or upgraded by this code."""
     version = activity.get("contract") if isinstance(activity, dict) else None
     rendering = activity.get("rendering_contract") if isinstance(activity, dict) else None
+    if version == UNANSWERED_CONTRACT:
+        return set(activity) == {"contract"}
     if version in SECTIONED:
         return set(activity) == _SECTIONED_FIELDS and rendering == _RENDERINGS[version]
     expected_fields =(_ACTIVITY_FIELDS if version == LEGACY_CONTRACT else
@@ -431,6 +754,11 @@ def validate_activity(activity, context, elements):
     """The check of a turn as it is saved: rebuilt from its saved contract and snapshots,
     never fetching newer law, it must give exactly the answer to be saved."""
     version = activity.get("contract") if isinstance(activity, dict) else None
+    if version == UNANSWERED_CONTRACT:
+        # Plan AN.41 (D66): the message saved with nothing of an answer.
+        if not known_activity(activity) or elements != []:
+            raise ValueError("A turn saved unanswered shows nothing of an answer")
+        return deepcopy(activity)
     if version in SECTIONED:
         return _validate_sections(activity, context, elements)
     if not known_activity(activity):
@@ -470,7 +798,8 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
             matter_id=None, expected_version=None, session_current=lambda: False,
             attempts: TurnAttemptPort | None = None, case_index=None, provision_reader=None,
             progress=None, documents=(), held_acts=None, running=lambda turn_id: False,
-            chosen_model=None, effort=None, propose=None, desk=None, stronger=None):
+            chosen_model=None, effort=None, propose=None, desk=None, stronger=None, stopping=None, steers=None,
+            attach=None):
     """One turn. chosen_model and effort: what the advocate chose for it (plan AN.33, D23) - the model, which the caller's model
     port already runs every call on, and the effort, which moves every call of the turn (calls.TurnCalls); both recorded with the
     turn's metrics, and in its request where they are not the defaults. None: not chosen (the defaults, unrecorded).
@@ -478,7 +807,15 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
     model would ask the advocate once the plan is known, which code admits (questions.admit); desk.open(turn_id, asking) lets the
     page's answers reach the window while the turn runs (its owner closes it when the turn stops). None: nothing asked.
     stronger (plan AN.38, D47-D49): under Auto, the model port a call moves to on the turn's own evidence (routing); None: every
-    call runs on model."""
+    call runs on model.
+
+    Plan AN.41 (D66-D73): the message and its files are saved with the conversation before any AI work, and each step's result as
+    it finishes; an answer that stops part-way keeps all it finished, with why it stopped, for Continue or Discard; the same message
+    sent again continues where it stopped. stopping (plan AN.42, D78): whether the advocate has stopped the answer, asked before
+    every call. steers (D79): takes what the advocate has steered the answer with since it was last asked - each {"text",
+    "documents", "at"} - and clears the stop it came with; the answer then continues with it. attach(advocate_id, chat_id, write)
+    (D77): told, once the message is saved, how a write from outside the turn beside its conversation is made on the turn's own
+    versions - write(change) runs change(context) under the turn's lock of writes and keeps the context it returns."""
     if not session_current():
         raise ConversationRefused("Sign in again before continuing.", status=401)
     effort = reasoning.DEFAULT_CHOICE if effort is None else effort
@@ -501,7 +838,12 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
                 held = shown_of(stored)
             except ValueError:
                 held = {"turn_id": None}
+            if held is not None and held["turn_id"] is not None and held["turn_id"] != turn_id and running(held["turn_id"]):
+                # Plan AN.42 (D77): one answer at a time in a conversation; what is written meanwhile waits in the queue.
+                raise ConversationRefused("NM is still working on your earlier message in this conversation. Your new message "
+                                          "can wait above the message box until that answer is ready.", code="turn_in_progress")
             if held is not None and held["turn_id"] != turn_id:
+                # Plan AN.41 (D71): a new message sent instead of Continue or Discard saves the answer that stopped as it is.
                 recover(store, stored, advocate_id, running=running, session_current=session_current)
             # What another message asked and was never saved with (its turn stopped before showing anything) is withdrawn;
             # this same message sent again reuses it (plan AN.37, D40).
@@ -544,7 +886,7 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
 
     calls = TurnCalls(model, corrections_used=claim["corrections_used"],
                       reserve_correction=lambda: attempts.consume_correction(identity, token),
-                      effort=effort, chosen=chosen, stronger=stronger)
+                      effort=effort, chosen=chosen, stronger=stronger, stopping=stopping)
     # What the answer shows as each part passes is saved beside the conversation then (P27),
     # and the page told how much there is to show (P26).
     holder, report = {"context": context, "shown": 0, "asking": None}, _reporter(progress)
@@ -555,18 +897,39 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
         before = shown_of(context.matter)
     except ValueError:
         before = None
-    base = before["base_version"] if before and before["turn_id"] == turn_id else context.matter.version
+    same = before if before and before["turn_id"] == turn_id else None
+    base = same["base_version"] if same else context.matter.version
+    # Plan AN.41 (D66): the message and its files are saved with the conversation before any AI work begins. The same message
+    # sent again - Continue - starts from what it saved (D70), with what steered it (D79).
+    resume = same["steps"] if same is not None and "steps" in same else None
+    held = sent(turn_id, context.request, context.message, context.documents, base,
+                at=datetime.now(timezone.utc).isoformat(), steps=resume, steers=same["steers"] if resume else ())
+    if resume is not None:
+        held["elements"], held["metrics"] = same["elements"], same["metrics"]
+    if held["steers"]:
+        context = replace(context, steers=tuple(held["steers"]))
+        holder["context"] = context
+    keeper = _Keeper(store, holder, beside, held, report)
+    try:
+        keeper.write()
+    except (OSError, StaleWrite, ConversationRefused, ValueError) as exc:
+        finish("retryable", "not_saved")
+        raise ConversationRefused("Your message could not be saved, so NM has not started on it. Sending it again is safe.",
+                                  status=503, code="message_not_saved", retryable=True) from exc
+    report("sent", chat_id=context.chat_id)
 
-    def shown(elements, activity, metrics):
-        held = {"turn_id": turn_id, "request": context.request, "message": context.message,
-                "documents": deepcopy(list(context.documents)), "activity": activity, "elements": elements,
-                "metrics": metrics, "at": datetime.now(timezone.utc).isoformat(), "base_version": base}
-        try:
-            with beside:
-                holder["context"] = hold_shown(store, holder["context"], held)
-        except (OSError, StaleWrite, ConversationRefused, ValueError):
+    def write_beside(change):
+        with beside:
+            holder["context"] = change(holder["context"])
+    if attach is not None:
+        attach(advocate_id, context.chat_id, write_beside)
+
+    def shown(elements, state, metrics):
+        def change(held):
+            held["elements"], held["metrics"] = elements, metrics
+            held["steps"] = {**held["steps"], "answered": state}
+        if not keeper.now(change):
             # The answer goes on; its commit decides what is saved.
-            log.warning("What the answer showed could not be saved beside the conversation", exc_info=True)
             return
         holder["shown"] += 1
         report("shown", shown=holder["shown"], chat_id=context.chat_id)
@@ -589,7 +952,9 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
     def ask(interpreted, plan, payload):
         """Plan AN.37: the questions - the model's as code admits them, or those this same message asked before - shown to the
         advocate; returns the window once the answers or the defaults stand, or None where nothing is asked."""
-        if again is not None:
+        if holder["asking"] is not None:
+            state = holder["asking"].state()  # asked already in this run, before a steer (D79)
+        elif again is not None:
             state = again["state"]
         elif propose is None:
             return None
@@ -613,71 +978,88 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
         return asking
 
     def withdraw():
-        """A turn withheld whole, or not answered at all, keeps nothing it showed. What an
-        earlier run of this same message showed is left as it was saved."""
-        if not holder["shown"]:
-            return
+        """A turn withheld whole keeps nothing it showed (G-CORE), nor anything it saved as it worked."""
+        keeper.close()
         try:
             holder["context"] = drop_shown(store, holder["context"])
         except (OSError, StaleWrite):
             log.warning("What an unanswered turn showed could not be withdrawn", exc_info=True)
+
+    def stopped(code, exc, *, answered=None):
+        """Plan AN.41 (D69): the turn stopped part-way; all it finished is kept with why, for Continue or Discard."""
+        keeper.stop(code, answered=answered)
+        exc.kept = True
+    steered = False
     try:
-        elements, activity, metrics = prepare(calls, context.payload(), searcher,
-            case_index=case_index, provision_reader=provision_reader, progress=progress,
-            held_acts=held_acts, shown=shown, ask=ask)
+        while True:
+            try:
+                elements, activity, metrics = prepare(calls, context.payload(), searcher,
+                    case_index=case_index, provision_reader=provision_reader, progress=progress,
+                    held_acts=held_acts, shown=shown, ask=ask, keep=keeper, resume=resume, steered=steered)
+                break
+            except StopRequested:
+                taken = steers() if steers is not None else []
+                if not taken:
+                    raise
+                # Plan AN.42 (D79): the answer continues with the steer - from the steps finished so far, each kept where it still
+                # answers what the steered conversation asks. What was shown before it is only the words each section is reviewed
+                # again from: it is no longer kept as finished, so that no Continue after this could pass the steer over.
+                resume, steered = deepcopy(keeper.held["steps"]), True
+
+                def steering(held):
+                    held["steers"] = [*held["steers"], *taken]
+                    held["steps"] = {**held["steps"], "answered": None, "cases": {}}
+                keeper.now(steering)
+                context = replace(context, steers=(*context.steers, *taken))
+                with beside:  # a write beside the conversation may be under way: the turn's context changes between writes
+                    holder["context"] = replace(holder["context"], steers=context.steers)
+                # Whatever of the earlier work is still under way stops at its next call; the steered answer goes on.
+                calls = calls.successor()
+                report("steering")
+        # Nothing more is saved as the turn works: what it made is saved with it, below.
+        keeper.close()
         if holder["asking"] is not None:
             # Plan AN.37: what was asked, and the answers as they stand now, are saved with the turn - a question no writing
             # waited on with its default, as assumed.
             holder["asking"].settle()
             context = replace(context, asked=holder["asking"].state())
-            holder["context"] = replace(holder["context"], asked=context.asked)
+            with beside:
+                holder["context"] = replace(holder["context"], asked=context.asked)
         # The one check of the answer, as it is saved (P46): what its checks share is derived
         # once (P35).
         with replay_scope.replaying():
             validate_activity(activity, context.payload(), elements)
     except AttemptRefused as exc:
+        keeper.close()
         raise _attempt_refusal(exc) from exc
-    except ModelPermissionRefused:
-        # Never turned into an answer here; what was shown stays saved beside the
-        # conversation, and is saved with it unless this same message is sent again.
+    except StopRequested as exc:
+        # Plan AN.42 (D78): stopped by the advocate after the step in progress; every piece finished is kept.
+        refusal = ConversationRefused(STOPS["stopped"] + " What NM had finished is kept.", status=409, code="stopped",
+                                      retryable=True)
+        stopped("stopped", refusal)
+        finish("retryable", "stopped")
+        refusal.metrics = calls.metrics()
+        raise refusal from exc
+    except ModelPermissionRefused as exc:
+        # Never turned into an answer here; what was finished stays saved beside the conversation for Continue (D69).
+        stopped("model_permission_required" if session_current() else "signed_out", exc)
         finish("retryable", "model_permission_required")
         raise
     except ModelError as exc:
-        if isinstance(exc, UsageLimitReached) and holder["shown"]:
-            # Plan AN.37 (D46; owner, 3 Nov 2026): the usage ran out part-way through the answer. What it had shown is kept -
-            # saved now as a turn that stopped part-way (P27), with P51's words above it - rather than withdrawn.
-            _reporter(progress)("saving")
-            try:
-                held = shown_of(holder["context"].matter)
-            except ValueError:
-                held = None
-            try:
-                response = (save_shown(store, holder["context"].matter, advocate_id, held, session_current=session_current,
-                                       service_status=STOPPED_FOR_USAGE, metrics=calls.metrics())
-                            if held is not None and held["turn_id"] == turn_id else None)
-            except ConversationRefused as refused:
-                finish({"committed": "finished", "not_committed": "retryable"}.get(refused.committed, "unconfirmed"),
-                       refused.code)
-                raise
-            if response is not None:
-                try:
-                    finish("finished")
-                except (ConversationRefused, EgressRefused):
-                    pass  # the saved response is authoritative, as for any answer saved
-                return response
-        withdraw()
         if isinstance(exc, ContextOverflow):
+            withdraw()
             why = "This conversation exceeds the current processing capacity. Your saved conversation is unchanged."
             code = "context_capacity"
         elif isinstance(exc, UsageLimitReached):
-            # The provider's account has no credit left (owner decision P51, 25 Oct 2026): said in
-            # the owner's words, status 402 for it, and the message can be sent again once that is
-            # put right; nothing waits on a retry that cannot succeed.
+            # The provider's account has no credit left (owner decision P51, 25 Oct 2026): said in the owner's words, status
+            # 402 for it. Plan AN.41 (D69): what NM finished is kept beside the conversation (kept), and Continue works once that
+            # is put right; the saved conversation itself is unchanged.
             why = USAGE_LIMIT_MESSAGE + " Your saved conversation is unchanged."
             code = "usage_limit"
         elif isinstance(exc, (ReleaseWithheld, CorrectionUnavailable, SchemaViolation)):
             # What the check still found, and what the advocate can do (owner decision,
-            # 17 Oct 2026), where the release boundary itself withheld the answer.
+            # 17 Oct 2026), where the release boundary itself withheld the answer (G-CORE: nothing of it is kept).
+            withdraw()
             found = getattr(exc, "found", None)
             why = ("I could not provide a sufficiently reliable answer to this message. "
                    + (f"After the rewrites NM may make, the independent check still found: {found} You can "
@@ -689,6 +1071,8 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
             code = "response_unavailable"
         refusal = ConversationRefused(why, status=402 if code == "usage_limit" else 503, code=code,
                                      retryable=code in ("response_unavailable", "usage_limit"))
+        if code in ("usage_limit", "response_unavailable"):
+            stopped(code, refusal)
         refusal.diagnosis = _diagnosis(code, exc, calls)
         # A gate's fixed names, or a provider failure's own kind and message (17 Oct 2026:
         # a failed call's reason was lost); never the message, a draft or the review's words.
@@ -698,6 +1082,12 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
         finish("retryable" if refusal.retryable else "terminal", refusal.diagnosis)
         refusal.metrics = calls.metrics()
         raise refusal from exc
+    except Exception:
+        # Not a model failure and not disguised as one: what was finished is kept, the failure goes on to its owner.
+        keeper.stop("failed")
+        finish("retryable", "failed")
+        raise
+    keeper.close()
     _reporter(progress)("saving")
     try:
         response = commit_turn(store, holder["context"], elements=elements, activities=activity,
@@ -707,6 +1097,10 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
         # A subsequent request checks the durable response before the attempt.
         # Unconfirmed ownership never permits repeating the effect.
         state = {"committed": "finished", "not_committed": "retryable"}.get(exc.committed, "unconfirmed")
+        if state == "retryable":
+            # Plan AN.41: the finished answer is kept for Continue, which saves it.
+            stopped("signed_out" if exc.status == 401 else "not_saved", exc,
+                    answered=(elements, {key: activity[key] for key in ("sections", "cross_check", "overview")}))
         finish(state, exc.code)
         raise
     try:

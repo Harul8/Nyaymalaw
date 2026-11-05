@@ -5,7 +5,7 @@ import json
 
 import pytest
 
-from nm.core_engine.conversation import ConversationRefused, chat_matter_id, digest
+from nm.core_engine.conversation import ConversationRefused, chat_matter_id, digest, shown_of
 from nm.core_engine.retrieval import HybridSearcher
 from nm.core_engine.turn import process, saved_rows
 from nm.shared.budget_contracts import Completion
@@ -343,7 +343,12 @@ def test_provider_outage_never_saves_an_empty_success(store, caplog):
     with pytest.raises(ConversationRefused) as error:
         run(store, ScriptedModel(failure="core_response_review"))
     assert error.value.code == "response_unavailable" and error.value.committed == "not_committed"
-    assert not store.list_for("owner").matters
+    # Plan AN.41 (D66, D69): no answer is saved; the message is, from Send, with what NM finished and why it stopped.
+    matter, = store.list_for("owner").matters
+    assert matter.brain_chat == () and error.value.kept
+    held = shown_of(matter)
+    assert held["message"] == "Hello." and held["stopped"]["code"] == "response_unavailable"
+    assert held["steps"]["understood"] is not None and held["elements"] == []
     # The provider failure's own kind and message are logged for diagnosis (17 Oct 2026).
     logged, = [r.getMessage() for r in caplog.records if r.getMessage().startswith("Message not answered")]
     assert logged.endswith("(ProviderUnavailable: Synthetic provider outage)")
@@ -372,9 +377,10 @@ def test_spent_correction_survives_retry_after_provider_outage(store):
     model.failure, model.reject = None, 2
     retry = run(store, model)
     # The resumed request keeps its spent correction in the turn's durable count; its
-    # section has its own tries again (owner decision P25).
+    # section has its own tries again (owner decision P25). Plan AN.41 (D70): it continues where it stopped - the
+    # understanding and the plan it had finished are kept, not made again.
     assert retry["committed"] == "committed" and retry["metrics"]["draft_corrections"] == 3
-    assert len(model.calls) == 13
+    assert len(model.calls) == 11
 
 
 def test_permission_loss_after_correction_does_not_reset_allowance(store):
@@ -389,9 +395,9 @@ def test_permission_loss_after_correction_does_not_reset_allowance(store):
     model.structured, model.reject = original, 2
     resumed = run(store, model)
     # Four calls before the denied review, then the section's three tries; the spent shape
-    # correction stays in the turn's durable count.
+    # correction stays in the turn's durable count. Plan AN.41 (D70): the understanding and the plan are kept.
     assert resumed["committed"] == "committed" and resumed["metrics"]["draft_corrections"] == 3
-    assert len(model.calls) == 12
+    assert len(model.calls) == 10
 
 
 def test_known_pre_save_session_loss_allows_same_request_recovery(store):
@@ -400,8 +406,12 @@ def test_known_pre_save_session_loss_allows_same_request_recovery(store):
     with pytest.raises(ConversationRefused) as refused:
         run(store, model, session_current=lambda: next(checks))
     assert refused.value.committed == "not_committed"
-    assert not store.list_for("owner").matters
+    # Plan AN.41: nothing is saved as an answer; the finished answer is kept with the message, for Continue to save.
+    matter, = store.list_for("owner").matters
+    assert matter.brain_chat == () and shown_of(matter)["stopped"]["code"] == "signed_out"
+    made = len(model.calls)
     assert run(store, model)["committed"] == "committed"
+    assert len(model.calls) == made, "Continue saves the finished answer without making it again"
 
 
 def test_post_commit_auxiliary_policy_failure_cannot_hide_saved_response(store):
