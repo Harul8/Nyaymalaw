@@ -96,11 +96,8 @@ files. Use the dated [baseline](docs/BASELINE.md) and current source manifests
 for measured counts and coverage; an older count or corpus label does not prove
 legal applicability or currency. The product scope is Telangana and central law.
 
-Attach it as a directory junction rather than copying it:
-
-```powershell
-New-Item -ItemType Junction -Path legal_database -Target "<path to the corpus>"
-```
+It is a folder inside the checkout (moved here from the earlier Agentified NM
+folder on 6 Nov 2026), not a junction. Never move, delete or `git add -f` it.
 
 The old B-164 report inferred incomplete Acts from one lookup path. Later
 analysis found that coverage must reconcile every store and identifier; one

@@ -45,7 +45,8 @@ production pipeline does not use; they remain in Git history. nm/Archives/legal_
 keeps only the nine retrieval helpers and the citation contracts that the Act-store
 corpus jobs in pipeline/ import. Check actual imports before moving them.
 
-Before borrowing archived or Agentified NM code, tell the owner exactly what
+Before borrowing archived or Agentified NM code (that folder was deleted on 6 Nov 2026;
+its history is the NM-1.0 repository and a local bundle in .nm/archive), tell the owner exactly what
 will be reused, inspect its complete contract and validate current integration.
 Do not reinstate a whole engine or infer that its tests protect new code.
 Preserve unrelated edits, source documents and saved matters.
@@ -120,11 +121,13 @@ explicitly authorised spend/run limits. A comparison does not promote its model.
 
 ## Corpus discipline
 
-- legal_database/ is a gitignored directory junction. Preserve its target, never
-  force-add corpus bytes, and use dated manifests to establish coverage.
+- legal_database/ is a gitignored folder inside the checkout (moved here from the
+  Agentified NM folder on 6 Nov 2026, owner's decision; no longer a junction). Never
+  move or delete it without the owner's word, never force-add corpus bytes, and use
+  dated manifests to establish coverage.
 - Originals, chunks, parents and indexes have different metadata. Identify the
   store, version and filters inspected. One failed lookup cannot prove absence
-  from the corpus. Search tools may need explicit junction traversal.
+  from the corpus. Search tools that honour .gitignore skip it; search it explicitly.
 - Held corpus law is the product boundary. Availability, provenance, speaker,
   court treatment, applicability, currency and binding force remain distinct.
   Summarising an uploaded judgment does not admit it as governing authority.

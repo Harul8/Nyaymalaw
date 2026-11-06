@@ -61,7 +61,7 @@ automatically.
 | `assurance/` | The Git hooks that keep the code graph current (`hooks/`), the console helper the operator commands and corpus jobs use, and three test helpers: exact source segments, layout geometry, and the browser-journey harness |
 | `development_environment/developer_tooling/` | The code-graph launcher (`crg_serve.ps1`, named in `.mcp.json`) and the vector refresh the hooks call |
 | `docs/` | The plan workbook, the [build guide](BUILD_GUIDE.md) and its playbooks, this map, [BASELINE](BASELINE.md), [DEFECT_SHAPES](DEFECT_SHAPES.md), [GOLDEN_SET](GOLDEN_SET.md), [REVIEW_LINKS](REVIEW_LINKS.md), [LIMITATION_SCENARIOS](LIMITATION_SCENARIOS.md) and the two blueprint files the app reads |
-| `legal_database/` | The corpus, a gitignored directory junction; never committed |
+| `legal_database/` | The corpus, a gitignored folder in the checkout (a junction until 6 Nov 2026); never committed |
 | `.nm/` | Private runtime data: matter store, keys, indexes, local evaluation records; never committed |
 
 ## Reading order

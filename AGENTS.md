@@ -237,7 +237,8 @@ make that visible and ask only for the distinction needed to proceed.
 
 Keep one owner for each decision and one durable record for each fact. Reuse
 the application's authenticated boundaries and storage contracts where they
-fit; do not copy archived legal-brain or Agentified NM snippets without first
+fit; do not copy archived legal-brain or Agentified NM snippets (now only in Git
+history: the NM-1.0 repository) without first
 telling the user exactly what is proposed for reuse. Tests should exercise
 unanticipated turns, corrections, diversions, return to prior work, missing
 context, and mixed requests through the actual public boundary as it ships.

@@ -1,9 +1,6 @@
-# The corpus. 22GB, and twelve files exceed GitHub's 100MB hard limit —
-# caselaws_v2.index alone is 3.9GB. It is present in a working tree as a
-# DIRECTORY JUNCTION, not a copy, so nothing is duplicated on disk:
-#
-#   New-Item -ItemType Junction -Path legal_database -Target <path to corpus>
-#
+# The corpus. About 15GB, and several files exceed GitHub's 100MB hard limit -
+# caselaws_v2.index alone is 3.9GB. Since 6 Nov 2026 it is a folder inside the
+# checkout (moved from the earlier Agentified NM folder), not a junction.
 # See README.md. Never `git add -f` any of it.
 legal_database/
 .nm-artefacts/
