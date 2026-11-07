@@ -29,6 +29,7 @@
     "nm.arrive.mail_port": "ports",
     "nm.arrive.professional_access": "core",
     "nm.arrive.professional_access_contracts": "domain",
+    "nm.arrive.store_admin": "adapters",
     "nm.arrive.store_directory": "adapters",
     "nm.arrive.store_pending_accounts": "adapters",
     "nm.arrive.store_usage": "adapters",
@@ -124,7 +125,7 @@
     "nm.work_the_file.matter_contracts": "domain"
   },
   "expected_roles": {
-    "adapters": 29,
+    "adapters": 30,
     "bootstrap": 5,
     "core": 36,
     "domain": 37,
