@@ -45,6 +45,25 @@ files: `docs/blueprint/evaluations.json` (the media contract),
 files under `nm/` (outside `Archives/`) differ from `nm/source_layout.json`, so a
 new module is declared there in the same commit.
 
+The Admin area (plan AN.46; owner decisions of 7 Nov 2026) is one page, `nm/app/admin.html`
+with `admin.css` and `admin.js`, opened from the person menu in a tab of its own. It shows
+usage, balance and consumption beside the account facts they belong to, diagnostics, the held
+law's description, and who has done what - never a conversation, matter, file or record. Admins
+are named only in the server's settings (`NM_ADMINS="email:admin,email:view-only"`, read at
+start); the page and its three files are served only to them (the one static router's gate), and
+every `/api/admin/` address answers anyone else with the 404 of an address that is not there.
+`nm/app/admin_api.py` is the router (handed the edge's own sign-in and cross-site pieces, so it
+imports nothing from `api.py`), `admin_views.py` builds each page from named allowed fields and
+refuses a payload with a forbidden key, and `admin_changes.py` is the one path every change takes
+(level, password given in this session, a one-line reason, a first and a second audit entry).
+The Admin area has ports of its own, so the directory port the sign-in edge holds still cannot
+list accounts: `nm/arrive/admin_port.py` names them, and `admin_directory.py` (accounts, sessions,
+the suspension mark), `admin_usage.py`, `admin_turns.py`, `admin_checks.py`, `admin_library.py`
+and `store_admin.py` carry them. Its own stores are `admin.sqlite` (the audit chain and the
+password check) and `turn-events.sqlite` (one content-free line per finished turn, written by
+`composition.run_turn`; `store_turn_events.py`). `admin_access.py` reads the roster. Adding
+documents to the held law is still the owner's offline jobs below, with the server stopped.
+
 The corpus jobs in `pipeline/` build the stores the engine reads:
 `fetch_india_code.py` fetches the Acts, `build_acts_v4.py` (with
 `append_bare_acts.py`) builds the Act store and its indexes,
