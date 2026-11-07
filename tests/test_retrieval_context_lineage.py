@@ -62,6 +62,20 @@ def test_unknown_or_foreign_context_declaration_is_rejected(tmp_path, monkeypatc
         job.context_store(collection)
 
 
+@pytest.mark.parametrize("name", ["bare_acts", "judgments"])
+@pytest.mark.parametrize("check", [False, True])
+def test_a_record_that_names_a_store_built_since_is_never_replaced_by_the_earlier_stores(tmp_path, monkeypatch, capsys, check, name):
+    """Plan AN.45: after the library moves to a newer store (acts_v5, judgments_v3), this job would put the earlier one back."""
+    setup(tmp_path, monkeypatch)
+    collection = job.COLLECTIONS[name]
+    newer = json.dumps({"schema": 1, "doc_type": collection.doc_type, "vector_index": {"path": "judgments_v3/judgments_v3.index"}})
+    collection.out.write_text(newer, encoding="utf-8")
+    monkeypatch.setattr(job, "faiss_header", lambda _: pytest.fail("the earlier index is not even looked at"))
+    assert job.record_one(collection, samples=1, check=check) == 1
+    assert "names another store (judgments_v3/judgments_v3.index)" in capsys.readouterr().out
+    assert collection.out.read_text(encoding="utf-8") == newer
+
+
 @pytest.mark.parametrize("check,mutate", [(False, False), (True, False), (False, True)])
 def test_record_writer_carries_context_identity_and_refuses_mid_run_changes(tmp_path, monkeypatch, check, mutate):
     collection = setup(tmp_path, monkeypatch)

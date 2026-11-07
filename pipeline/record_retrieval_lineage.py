@@ -33,6 +33,12 @@ neighbours (defect shape S11). So before a search may use a collection, this job
 The search refuses to run on a set that no longer agrees with its record. After a
 bare-act append (`pipeline/append_bare_acts.py`) the append job rewrites that record.
 
+It records the EARLIER stores only (bareacts_v3, caselaws_v2). A store built since - the Acts
+of build_acts_v4 (acts_v5), the judgments of build_judgments_v3, the Acts' vectors of
+embed_acts_wording - writes its own record when it is built, and this job refuses to replace a
+record that names another store (plan AN.45): run on a library that has moved to a newer store,
+it would put the earlier one back.
+
 It takes a few minutes (the judgment index is 4.2 GB to hash), and it is a job the owner
 starts; nothing runs it.
 """
@@ -211,6 +217,11 @@ def verify_words(collection: Collection, passages: int, samples: int) -> dict:
 
 def record_one(collection: Collection, *, samples: int, check: bool) -> int:
     print(f"\n== {collection.name}")
+    named = ((json.loads(collection.out.read_text(encoding="utf-8")) if collection.out.exists() else {}).get("vector_index") or {}).get("path")
+    if named is not None and named != collection.index:
+        print(f"REFUSED: the live record names another store ({named}); this job records only {collection.index}, and a store built "
+              "since records itself. Nothing written.")
+        return 1
     try:
         context = context_store(collection)
     except (OSError, ValueError) as exc:
