@@ -46,7 +46,7 @@ from nm.core_engine import research, response_writer
 from nm.core_engine.retrieval import offered
 from nm.core_engine import checklist
 from nm.core_engine.retrieval import SearchUnavailable
-from nm.shared.citation_contracts import provision_label, statute_title
+from nm.shared.citation_contracts import judgment_place, provision_label, statute_title
 from nm.core_engine.reasoning import CHOICES as EFFORT_CHOICES, DEFAULT_CHOICE as DEFAULT_EFFORT
 from nm.shared.external_ai_contracts import ModelPermissionRefused
 from nm.shared.model_config import DEFAULT_TURN_MODEL, TURN_CHOICES
@@ -2631,6 +2631,26 @@ def chat_passage(chat_id: str, turn_id: str, tag: str, advocate_id: Advocate, re
     return shown
 
 
+#: The run of words that makes a place and not a phrase.
+_SAME_PLACE = 12
+
+
+def _words_stand_together(held, saved):
+    """Whether a passage held now is where the passage an answer read stands (plan AN.45, D100): the same words, the shorter inside
+    the longer, or - the passage cut since from other bounds - a run of twelve words they share. Words only, so a judgment cut
+    again is marked where the answer read it whatever the passages' identities are now."""
+    a, b = str(held or '').split(), str(saved or '').split()
+    if a == b:
+        return bool(a)
+    short, long = (a, b) if len(a) <= len(b) else (b, a)
+    if len(short) < 3:
+        return False
+    if len(short) < _SAME_PLACE:
+        return any(long[at:at + len(short)] == short for at in range(len(long) - len(short) + 1))
+    runs = {tuple(b[at:at + _SAME_PLACE]) for at in range(len(b) - _SAME_PLACE + 1)}
+    return any(tuple(a[at:at + _SAME_PLACE]) in runs for at in range(len(a) - _SAME_PLACE + 1))
+
+
 @app.get('/api/chats/{chat_id}/turns/{turn_id}/passages/{tag}/whole')
 def chat_passage_whole(chat_id: str, turn_id: str, tag: str, advocate_id: Advocate, request: Request, response: Response):
     """THE WHOLE ACT OR JUDGMENT A PASSAGE IS PART OF (plan AN.39, D53; owner, 4 Nov 2026: "only the paragraph with reading the whole
@@ -2654,15 +2674,16 @@ def chat_passage_whole(chat_id: str, turn_id: str, tag: str, advocate_id: Advoca
     parts = []
     for _, held in read['paragraphs' if judgment else 'parts']:
         if judgment:
-            number = str(held.get('paragraph_num') or held.get('para_no') or '')
-            where = f'paragraph {number}' if number else ''
+            where = judgment_place(held.get('locator') or held.get('paragraph_num') or held.get('para_no'), held.get('part') or 1)
         else:
             where = provision_label('', str(held.get('section_number') or ''))
         # Plan AN.32 (5 Nov 2026): the passage is marked only where its own words are still held under its identity - an Act
         # corrected since may hold other words under it (a section renumbered), which are never marked as the passage read.
+        # Plan AN.45: a judgment cut again since holds the words an answer read in a passage of its own cut, whatever its identity.
+        same = (_words_stand_together(held['full_text'], passage.get('text')) if judgment
+                else held.get('chunk_id') == identity.get('chunk_id') and held['full_text'] == passage.get('text'))
         parts.append({'locator': where, 'heading': '' if judgment else (held.get('section_title') or ''),
-                      'text': held['full_text'],
-                      'here': held.get('chunk_id') == identity.get('chunk_id') and held['full_text'] == passage.get('text')})
+                      'text': held['full_text'], 'here': same})
     return {'kind': passage['kind'], 'title': _passage_title(passage), 'parts': parts,
             'changed': read['corpus_revision'] != identity.get('corpus_revision'),
             'found': any(part['here'] for part in parts)}

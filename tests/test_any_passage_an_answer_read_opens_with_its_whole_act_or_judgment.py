@@ -8,6 +8,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from nm.app.api import _words_stand_together
 from nm.core_engine.conversation import chat_matter_id
 from nm.core_engine.retrieval import SearchUnavailable
 from nm.core_engine.turn import saved_rows
@@ -67,6 +68,44 @@ def test_the_whole_act_or_judgment_is_read_by_the_passages_own_identity_with_its
     whole = served.client.get(address(reply, tag, whole=True)).json()
     assert (whole["changed"], whole["found"], whole["parts"][0]["locator"], whole["parts"][0]["heading"]) == (
         True, False, "s.1", "Short title"), "a changed held law, and a passage no longer in it, are said"
+
+
+def test_a_judgment_cut_again_since_is_marked_where_the_words_the_answer_read_now_stand(served):
+    """Plan AN.45 (D100): the judgment is held cut on the court's own paragraphs - new identities, a paragraph in parts, an opening, a
+    passage the court never numbered - and the passage an answer read before is marked in the passages its words stand in, each
+    named as a lawyer cites it. The words of the passage the answer saved are not changed (P46)."""
+    reply = successful(served, message="Inspect this reported account.")
+    tag, saved = next((tag, row) for tag, row in catalogue(served, reply).items() if row["kind"] == "judgment")
+    identity = saved["source_identity"]
+    served.app.legal_search = SimpleNamespace(read_judgment=lambda case_id: {"corpus_revision": "cut again", "paragraphs": [
+        (0, {"chunk_id": "n0", "locator": "opening of the judgment", "paragraph_num": "", "part": 1,
+             "full_text": "IN THE SUPREME COURT OF INDIA. JUDGMENT."}),
+        (1, {"chunk_id": "n1", "locator": "2", "paragraph_num": "2", "part": 1, "parts": 2,
+             "full_text": "2. " + saved["text"] + " It follows that the appeal fails."}),
+        (2, {"chunk_id": "n2", "locator": "2", "paragraph_num": "2", "part": 2, "parts": 2,
+             "full_text": "The respondent's contention, taken up in the paragraph that follows, is unfounded in law."}),
+        (3, {"chunk_id": "n3", "locator": "passage 3", "paragraph_num": "", "part": 1,
+             "full_text": "The appeal is dismissed with costs throughout."})]})
+    whole = served.client.get(address(reply, tag, whole=True)).json()
+    assert [(part["locator"], part["here"]) for part in whole["parts"]] == [
+        ("opening of the judgment", False), ("paragraph 2", True), ("paragraph 2 (continued)", False), ("passage 3", False)]
+    assert (whole["changed"], whole["found"]) == (True, True), "held law has changed since the answer, and the passage is in it"
+    assert saved["source_identity"] == identity and saved["text"], "the saved passage is as it was"
+
+
+@pytest.mark.parametrize("held, saved, together", [
+    ("The appeal is dismissed with costs.", "The appeal is dismissed with costs.", True),
+    ("The appeal  is dismissed\nwith costs.", "The appeal is dismissed with costs.", True),
+    ("7. The appeal is dismissed with costs. It follows.", "The appeal is dismissed with costs.", True),
+    ("one two three four five six seven eight nine ten eleven twelve thirteen",
+     "zero one two three four five six seven eight nine ten eleven twelve", True),
+    ("JUDGMENT", "JUDGMENT of the court was delivered by", False),
+    ("Dismissed. Costs.", "Appeal dismissed. Costs follow the event.", False),
+    ("one two three four five six seven eight nine ten eleven twelve", "twelve eleven ten nine eight seven six five four three two one", False),
+    ("", "", False), ("The appeal is dismissed.", "", False)])
+def test_the_passage_an_answer_read_is_found_in_the_judgment_by_its_words_alone(held, saved, together):
+    assert _words_stand_together(held, saved) is together
+    assert _words_stand_together(saved, held) is together, "whichever of the two is the longer"
 
 
 def test_other_words_held_since_under_the_passages_identity_are_never_marked_as_the_passage(served):
