@@ -10,8 +10,9 @@ from types import MappingProxyType
 from nm.arrive.admin_access import roster_from
 from nm.arrive.admin_directory import AdminFileDirectory
 from nm.arrive.admin_checks import AdminChecks
-from nm.arrive.admin_port import (AdminAccountsPort, AdminChecksPort, AdminDirectoryPort, AdminRecordPort, AdminTurnsPort,
-                                  AdminUsagePort)
+from nm.arrive.admin_library import AdminLibrary
+from nm.arrive.admin_port import (AdminAccountsPort, AdminChecksPort, AdminDirectoryPort, AdminLibraryPort, AdminRecordPort,
+                                  AdminTurnsPort, AdminUsagePort)
 from nm.arrive.admin_turns import AdminTurns
 from nm.arrive.admin_usage import AdminUsage
 from nm.arrive.advocate_contracts import utcnow
@@ -125,8 +126,13 @@ class Application:
         self.admin_turns = PolicedPort(inner=AdminTurns(storage / TURN_EVENTS_FILE),
             gate=self._gate, port=AdminTurnsPort, sink=Sink.STORAGE, processor_id=STORAGE_PROCESSOR,
             data_classes=(DataClass.OPERATIONAL,))
-        self.admin_checks = PolicedPort(inner=AdminChecks(storage=storage, root=self.root, settings=settings),
+        checks = AdminChecks(storage=storage, root=self.root, settings=settings)
+        self.admin_checks = PolicedPort(inner=checks,
             gate=self._gate, port=AdminChecksPort, sink=Sink.STORAGE, processor_id=STORAGE_PROCESSOR,
+            data_classes=(DataClass.OPERATIONAL,))
+        # What the held law holds, described (plan AN.46, piece 46l): read from the store's own records and catalogue, never opened.
+        self.admin_library = PolicedPort(inner=AdminLibrary(checks=checks, root=self.root, corpus_dir=checks.corpus),
+            gate=self._gate, port=AdminLibraryPort, sink=Sink.STORAGE, processor_id=STORAGE_PROCESSOR,
             data_classes=(DataClass.OPERATIONAL,))
         self.admin_record = PolicedPort(inner=_DeferredAdapter(lambda: FileAdminRecord(storage / ADMIN_FILE)),
             gate=self._gate, port=AdminRecordPort, sink=Sink.STORAGE, processor_id=STORAGE_PROCESSOR,

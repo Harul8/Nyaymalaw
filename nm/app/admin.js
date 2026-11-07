@@ -433,6 +433,46 @@
     return root;
   }
 
+  const COLLECTION = { acts: 'Acts', judgments: 'Judgments' };
+
+  async function libraryPage() {
+    const l = await ask('/api/admin/library');
+    const root = el('div');
+    root.append(el('p', { class: 'adm-sub', text: 'What the held law holds, as its own records describe it. This page shows it and does not change it: documents are added from a terminal ' +
+      'with the server stopped (see below), so that the index being replaced is not in use.' }));
+    root.append(section('What is held', l.stores.map((s) => {
+      const name = COLLECTION[s.collection] || s.collection;
+      if (!s.readable) return el('article', { class: 'adm-check' }, el('header', {}, el('h3', { text: name }), el('span', { class: 'adm-chip adm-bad', text: '? Could not be read' })),
+        note('This store’s record could not be read just now. The other store stands.'));
+      const catalogue = s.catalogue;
+      return el('article', { class: 'adm-check' }, el('header', {}, el('h3', { text: name }),
+        el('span', { class: `adm-chip ${s.files_present && s.sizes_as_recorded && s.bm25_present ? 'adm-ok' : 'adm-warn'}`,
+          text: s.files_present && s.sizes_as_recorded && s.bm25_present ? '✓ In place' : '! A file is missing or a size differs' })),
+        facts([['Passages', num(s.passages)], ['Vectors', num(s.vectors)], ['Built with', s.model], ['Recorded', when(s.recorded_at)],
+          ['Checked at recording', `${num(s.same_vector)} of ${num(s.sampled)} sampled vectors matched their passages`],
+          ['Vector index', bytes(s.index_bytes)], ['Passage store', bytes(s.passage_store_bytes)],
+          ...(catalogue ? [['Acts', num(catalogue.acts)]] : [])]),
+        catalogue ? el('div', { class: 'adm-two', style: 'margin-top:.8rem' },
+          table({ head: ['Jurisdiction', 'Acts'], numeric: [1], rows: catalogue.by_jurisdiction.map((r) => [r.name, num(r.acts)]) }),
+          table({ head: ['Standing, as India Code gives it', 'Acts'], numeric: [1], rows: catalogue.by_standing.map((r) => [r.name, num(r.acts)]) })) : null);
+    })));
+    root.append(section('Built beside, not yet searched', table({ head: ['Store', 'Built', 'Judgments', 'Passages', 'Index'], numeric: [2, 3],
+      empty: 'No other store is waiting.', rows: l.candidates.map((c) => [c.name, c.readable ? when(c.built_at) : 'Could not be read', num(c.judgments), num(c.passages),
+        c.has_index ? 'Built' : 'Not built yet']) })));
+    root.append(section('Set aside when a store was last replaced', table({ head: ['Name', 'Size'], numeric: [1], empty: 'Nothing is kept from an earlier replacement.',
+      rows: l.earlier_copies.map((c) => [c.name + (c.folder ? ' (folder)' : ''), bytes(c.bytes)]) })));
+    if (l.disk) {
+      root.append(section('Room to add', facts(Object.entries(l.disk).map(([k, v]) => [k === 'law' ? 'The disk the law is on' : 'The disk the records are on',
+        `${bytes(v.free)} free of ${bytes(v.total)}`]))));
+    }
+    root.append(section('How a document is added', el('ol', { class: 'adm-steps' },
+      el('li', { text: 'Acts: put the Act’s text file in the library’s own form, then run the append job for Acts with --dry-run first and read what it prints. It encodes only the new Acts, adds their vectors after the existing ones, rebuilds the word index, and keeps the earlier files beside the new ones.' }),
+      el('li', { text: 'Judgments: the read stage cuts them into passages (the store above, “built beside”); the index stage encodes them and a swap makes the new store the one searched. Each stage is run by the owner.' }),
+      el('li', { text: 'Both change the library, so the owner runs them with the server stopped. Start the server again and this page shows the new counts; the earlier files stay beside the new ones for a roll-back.' }))));
+    root.append(note(`Read ${when(l.as_of)}.`));
+    return root;
+  }
+
   async function accessPage() {
     const a = await ask('/api/admin/access');
     const root = el('div');
@@ -562,7 +602,7 @@
 
   const PAGES = {
     overview: ['Overview', overviewPage], users: ['Users', usersPage], usage: ['Usage and analytics', usagePage],
-    diagnostics: ['Diagnostics', diagnosticsPage], access: ['Access and audit', accessPage] };
+    diagnostics: ['Diagnostics', diagnosticsPage], library: ['Library', libraryPage], access: ['Access and audit', accessPage] };
 
   function failure(error, retry) {
     if (error.status === 401) {

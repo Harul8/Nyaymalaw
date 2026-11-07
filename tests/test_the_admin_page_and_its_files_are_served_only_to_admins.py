@@ -123,7 +123,7 @@ def test_the_script_never_builds_markup_from_what_the_server_sends():
 def test_the_script_asks_only_the_admin_api_and_the_page_loads_only_the_servers_own_files():
     assert set(re.findall(r"""ask\(\s*[`'"]([^`'"?$]*)""", SCRIPT)) <= {"/api/admin/overview", "/api/admin/users", "/api/admin/users/",
                                                                      "/api/admin/usage", "/api/admin/diagnostics", "/api/admin/access",
-                                                                     "/api/admin/me"}
+                                                                     "/api/admin/library", "/api/admin/me"}
     assert set(re.findall(r"""send\(\s*[`'"]([^`'"$]*)""", SCRIPT)) <= {"/api/admin/password", "/api/admin/users/"}
     assert "/api/admin/me" in SCRIPT
     for text in (SCRIPT, PAGE, STYLE):

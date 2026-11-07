@@ -202,6 +202,15 @@ class AdminChecksPort(Protocol):
         ...
 
 
+# ------------------------------------------------------------------------ the library ---
+
+class AdminLibraryPort(Protocol):
+    def library(self) -> Mapping[str, object]:
+        """What the held law holds, described and not opened: each store's lineage facts, the Acts catalogue's counts, the earlier
+        copies kept beside a store, candidate stores built beside the live ones, and free disk (D122)."""
+        ...
+
+
 # ------------------------------------------------------------------ the audit record ---
 
 @dataclass(frozen=True)

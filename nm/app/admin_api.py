@@ -183,6 +183,10 @@ def admin_router(*, application: Callable, signed_in: Callable, csrf: object, ad
             return {"suspended": False, "changed": application().admin_accounts.set_suspended(account.id, False, now)}
         return make(request, level, account_id, Action.SUSPEND, "reinstate", body.reason, allow)
 
+    @router.get("/library")
+    def library(level: Level = Depends(admin_level)) -> dict:
+        return read(lambda roster, directory, usage_port, now: admin_views.library_view(application().admin_library, now))
+
     @router.get("/diagnostics")
     def diagnostics(level: Level = Depends(admin_level)) -> dict:
         return read(lambda roster, directory, usage_port, now: admin_views.diagnostics_view(

@@ -18,8 +18,8 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Mapping
 
 from nm.arrive.admin_access import Roster
-from nm.arrive.admin_port import (AdminAccount, AdminChecksPort, AdminDirectoryPort, AdminRecordPort, AdminTurnsPort,
-                                  AdminUnavailable, AdminUsagePort, Balance, Consumption)
+from nm.arrive.admin_port import (AdminAccount, AdminChecksPort, AdminDirectoryPort, AdminLibraryPort, AdminRecordPort,
+                                  AdminTurnsPort, AdminUnavailable, AdminUsagePort, Balance, Consumption)
 from nm.arrive.advocate_contracts import canonical_id
 
 #: The days an admin may ask the usage pages about.
@@ -365,3 +365,11 @@ def diagnostics_view(roster: Roster, usage: AdminUsagePort, turns: AdminTurnsPor
                         {"admins": len(roster.levels), "entries_ignored": roster.rejected}))
     counts = {name: sum(1 for c in found if c["state"] == name) for name in ("ok", "attention", "note", "unavailable")}
     return content_free({"as_of": now.isoformat(), "summary": counts, "checks": found})
+
+
+# ---------------------------------------------------------------------------- the library ---
+
+def library_view(library: AdminLibraryPort, now: datetime) -> dict:
+    """What the held law holds (D122): counts and descriptions of the stores and what has been set aside or built beside them. The
+    law is public, but the view still carries only descriptions - no passage, no judgment's words, no index."""
+    return content_free({"as_of": now.isoformat(), **library.library()})
