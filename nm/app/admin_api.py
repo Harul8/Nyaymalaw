@@ -51,12 +51,16 @@ class AllowanceChange(Reason):
     usd: Decimal = Field(gt=0, le=1000, decimal_places=6)
 
 
+class UserTypeChange(Reason):
+    user_type: str = Field(pattern="^(advocate|admin)$")
+
+
 def admin_router(*, application: Callable, signed_in: Callable, csrf: object, admit_attempt: Callable,
                  serving: Callable[[], dict] = lambda: {}) -> APIRouter:
     router = APIRouter(prefix="/api/admin")
 
     def admin_level(advocate_id: str = Depends(signed_in)) -> Level:
-        level = application().admin_roster.level_of(advocate_id)
+        level = application().admin_level_of(advocate_id)
         if level is None:
             raise HTTPException(status_code=404, detail=_NOT_HERE)
         return level
@@ -75,7 +79,7 @@ def admin_router(*, application: Callable, signed_in: Callable, csrf: object, ad
             confirmed = application().admin_record.password_confirmed(session.token_fingerprint, utcnow())
         except AdminUnavailable:
             confirmed = False
-        return {"level": level.value, "label": LEVEL_LABELS[level.value], "can_change": level is Level.ADMIN,
+        return {"id": session.advocate_id, "level": level.value, "label": LEVEL_LABELS[level.value], "can_change": level is Level.ADMIN,
                 "password_confirmed": confirmed}
 
     @router.post("/password", dependencies=[csrf])
@@ -163,9 +167,9 @@ def admin_router(*, application: Callable, signed_in: Callable, csrf: object, ad
         return make(request, level, account_id, Action.SESSIONS, "sessions end", body.reason, end)
 
     def refuse_an_admin(account_id: str) -> None:
-        if application().admin_roster.level_of(account_id) is not None:
-            raise HTTPException(status_code=409, detail="This account is an admin, named in the server's settings. It is not "
-                                                        "suspended from here; take it out of the settings to stop its access.")
+        if application().admin_level_of(account_id) is not None:
+            raise HTTPException(status_code=409, detail="This account is an admin. Admins are not suspended from here: make it an "
+                                                        "advocate first, or take it out of the server's settings if it is named there.")
 
     @router.post("/users/{account_id}/suspend", dependencies=[csrf])
     def suspend(account_id: str, body: Reason, request: Request, level: Level = Depends(admin_level)) -> dict:
@@ -176,6 +180,20 @@ def admin_router(*, application: Callable, signed_in: Callable, csrf: object, ad
             ended = application().admin_accounts.end_sessions(account.id, "account suspended by an admin")
             return {"suspended": True, "changed": changed, "sessions_ended": ended}
         return make(request, level, account_id, Action.SUSPEND, "suspend", body.reason, stop)
+
+    @router.post("/users/{account_id}/user-type", dependencies=[csrf])
+    def set_user_type(account_id: str, body: UserTypeChange, request: Request, level: Level = Depends(admin_level)) -> dict:
+        wanted = canonical_id(account_id)
+        if application().admin_roster.level_of(wanted) is not None:
+            raise HTTPException(status_code=409, detail="This account is named in the server's settings. Its type is changed there, "
+                                                        "not here.")
+        if wanted == canonical_id(request.state.account_session.advocate_id):
+            raise HTTPException(status_code=409, detail="You cannot change your own user type. Another admin can.")
+
+        def change(account, session, now):
+            changed = application().admin_accounts.set_user_type(account.id, body.user_type)
+            return {"user_type": body.user_type, "changed": changed}
+        return make(request, level, account_id, Action.USER_TYPE, f"user type {body.user_type}", body.reason, change)
 
     @router.post("/users/{account_id}/reinstate", dependencies=[csrf])
     def reinstate(account_id: str, body: Reason, request: Request, level: Level = Depends(admin_level)) -> dict:

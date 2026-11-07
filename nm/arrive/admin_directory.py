@@ -123,7 +123,7 @@ class AdminFileDirectory(FileDirectory):
             ai_sharing=sharing, ai_notice_version=notice,
             last_sign_in=max((s.issued_at for s in mine), default=None),
             last_active=max(activity, default=None), sessions=lines,
-            suspended=bool(doc.get("suspended")))
+            suspended=bool(doc.get("suspended")), user_type="admin" if doc.get("user_type") == "admin" else "advocate")
 
     def _waiting(self, now: datetime) -> tuple[tuple[WaitingRegistration, ...], bool]:
         path = self._root / _PENDING
@@ -176,6 +176,35 @@ class AdminFileDirectory(FileDirectory):
                 doc["suspended"] = {"at": now.isoformat(timespec="seconds")}
             else:
                 del doc["suspended"]
+            try:
+                self._replace_advocate(self._advocate_path(wanted), doc)
+            except OSError as exc:
+                raise AdminUnavailable("the account could not be written") from exc
+            return True
+        finally:
+            claim.release()
+
+    def set_user_type(self, account_id: str, user_type: str) -> bool:
+        """Set or clear the account's `user_type` mark under the directory's own claim on the account. Advocate is the absence of the
+        mark, so an account that was never set has nothing written."""
+        if user_type not in ("advocate", "admin"):
+            raise ValueError("a user type is advocate or admin")
+        wanted = canonical_id(account_id)
+        claim = self._claim_account(wanted)
+        if claim is None:
+            raise AdminChangeRefused(409, "This account is being changed just now. Try again in a moment.")
+        try:
+            doc = self._read(wanted)
+            if not isinstance(doc, dict):
+                if self._auth_state.last_failure == self.UNKNOWN:
+                    raise AdminChangeRefused(404, "There is no such account.")
+                raise AdminChangeRefused(409, "This account's record could not be read, so it was not changed.")
+            if (doc.get("user_type") == "admin") == (user_type == "admin"):
+                return False
+            if user_type == "admin":
+                doc["user_type"] = "admin"
+            else:
+                del doc["user_type"]
             try:
                 self._replace_advocate(self._advocate_path(wanted), doc)
             except OSError as exc:

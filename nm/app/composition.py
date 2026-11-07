@@ -7,7 +7,7 @@ import threading
 from collections.abc import Mapping
 from pathlib import Path
 from types import MappingProxyType
-from nm.arrive.admin_access import roster_from
+from nm.arrive.admin_access import Level, roster_from
 from nm.arrive.admin_directory import AdminFileDirectory
 from nm.arrive.admin_checks import AdminChecks
 from nm.arrive.admin_library import AdminLibrary
@@ -179,6 +179,15 @@ class Application:
         self.propose_questions = questions.propose
         # Plan AN.41-AN.42: the turns this process is working on, each with the advocate's Stop and the steers waiting for it.
         self._running, self._running_lock = {}, threading.Lock()
+
+    def admin_level_of(self, advocate_id):
+        """The Admin level of a signed-in account, or None for an advocate (AN.46; owner, 7 Nov 2026). The server's settings name the
+        first admins, at either level, and cannot be changed from the page; any other account is an admin when an admin has set that
+        as its user type. One answer for the page's gate, every Admin route and the user lists."""
+        named = self.admin_roster.level_of(advocate_id)
+        if named is not None:
+            return named
+        return Level.ADMIN if self.directory.user_type(advocate_id) == 'admin' else None
 
     def turns_of_an_earlier_run_released(self):
         """At the server's start (plan AN.41, D73): every turn the earlier run of it was working on has stopped with it, and is

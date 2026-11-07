@@ -236,6 +236,11 @@ class DirectoryPort(Protocol):
         """For rendering who is signed in. Requires a live session upstream."""
         ...
 
+    def user_type(self, advocate_id: str) -> str:
+        """"admin" when an admin has set that on this account, otherwise "advocate" - every account is an advocate until then, and one
+        that cannot be read is an advocate too (AN.46; owner, 7 Nov 2026). Asks about the one account named, never lists any."""
+        ...
+
     def professional_approval(self, advocate_id: str) -> dict | None:
         """Current operator-reviewed record; absence/unreadable never grants approval."""
         ...

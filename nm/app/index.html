@@ -343,6 +343,10 @@
       </a>
       <button type="button" id="top-new" class="ghost top-action">+ New matter</button>
       <button type="button" id="top-history" class="ghost top-action" aria-controls="rail">Conversation history</button>
+      <!-- THE ADMIN AREA (plan AN.46, piece 46p; owner, 7 Nov 2026: the same sign-in for everyone, and an admin sees the admin tabs
+           without asking): shown, automatically, when the server answers /api/admin/me, which it does only for an account the server's
+           settings name as an admin. -->
+      <button type="button" id="admin-entry" class="ghost top-action" hidden>Admin</button>
     </nav>
 
     <div class="ribbon-account">
@@ -399,9 +403,6 @@
           <button id="ai-sharing" type="button" class="ghost">AI data sharing</button>
           <button id="dictation-setting" type="button" class="ghost">Dictation</button>
           <button id="advocate-preferences" type="button" class="ghost" hidden>Advice preferences</button>
-          <!-- THE ADMIN AREA (plan AN.46, piece 46p; D124): shown only when the server answers /api/admin/me, which it does only for
-               an account the server's settings name as an admin. Opens in a tab of its own, so the work here is left as it is. -->
-          <button id="admin-entry" type="button" class="ghost" hidden>Admin</button>
           <button id="signout" type="button" class="ghost">Sign out</button>
         </div>
       </div>

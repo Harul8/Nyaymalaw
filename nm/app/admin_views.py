@@ -63,9 +63,12 @@ def _iso(value: datetime | None) -> str | None:
     return value.isoformat() if value is not None else None
 
 
-def _level(roster: Roster, account_id: str) -> str:
-    level = roster.level_of(account_id)
-    return level.value if level is not None else "advocate"
+def _level(roster: Roster, account: AdminAccount) -> str:
+    """The settings' level when they name the account, else admin when the account's own type says so, else advocate."""
+    level = roster.level_of(account.id)
+    if level is not None:
+        return level.value
+    return "admin" if account.user_type == "admin" else "advocate"
 
 
 def _allowance(balance: Balance | None) -> dict:
@@ -78,7 +81,9 @@ def _row(account: AdminAccount, roster: Roster, balances: Mapping[str, Balance],
     status = "unreadable" if not account.readable else "suspended" if account.suspended else "active"
     return {
         "id": account.id, "name": account.name, "enrolment": account.enrolment, "firm_id": account.firm_id,
-        "level": _level(roster, account.id), "level_label": LEVEL_LABELS[_level(roster, account.id)], "status": status,
+        "level": _level(roster, account), "level_label": LEVEL_LABELS[_level(roster, account)], "status": status,
+        "user_type": "admin" if _level(roster, account) != "advocate" else "advocate",
+        "type_locked": roster.level_of(account.id) is not None,
         "created_at": _iso(account.created_at), "last_sign_in": _iso(account.last_sign_in),
         "last_active": _iso(account.last_active), "live_sessions": sum(1 for s in account.sessions if s.live),
         "professional": {"state": account.professional_state, "valid_until": _iso(account.professional_valid_until)},
@@ -240,10 +245,15 @@ def access_view(roster: Roster, directory: AdminDirectoryPort, record: AdminReco
     the audit log newest first, and whether its chain still holds. A log that cannot be read is said to be unreadable; the roster
     still shows."""
     known = {a.id: a for a in directory.listing(now).accounts}
-    admins = [{"id": who, "level": level.value, "label": LEVEL_LABELS[level.value],
-               "name": known[who].name if who in known else "", "has_account": who in known,
-               "status": ("unreadable" if not known[who].readable else "suspended" if known[who].suspended else "active")
-               if who in known else "no account"} for who, level in roster.named()]
+    def line(who: str, level: str, source: str) -> dict:
+        return {"id": who, "level": level, "label": LEVEL_LABELS[level], "source": source,
+                "name": known[who].name if who in known else "", "has_account": who in known,
+                "status": ("unreadable" if not known[who].readable else "suspended" if known[who].suspended else "active")
+                if who in known else "no account"}
+
+    admins = [line(who, level.value, "server settings") for who, level in roster.named()]
+    admins += [line(a.id, "admin", "set by an admin") for a in sorted(known.values(), key=lambda a: a.id)
+               if a.readable and a.user_type == "admin" and roster.level_of(a.id) is None]
     try:
         check, entries = record.verify(), record.entries(limit=limit)
         audit = {"available": True,

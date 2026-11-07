@@ -53,6 +53,9 @@ class AdminAccount:
     sessions: tuple[SessionLine, ...] = ()
     #: Set by an Admin (D121); an account the directory does not yet record this for is not suspended.
     suspended: bool = False
+    #: "advocate" (the default) or "admin", as an admin last set it on the account (owner, 7 Nov 2026). The server's settings may name
+    #: an admin as well; the view joins the two.
+    user_type: str = "advocate"
 
 
 @dataclass(frozen=True)
@@ -97,6 +100,11 @@ class AdminAccountsPort(Protocol):
     def set_suspended(self, account_id: str, suspended: bool, now: datetime) -> bool:
         """Suspend or reinstate. True when the account's state changed, False when it was already so. Raises AdminChangeRefused for an
         account that does not exist, one whose record cannot be read, or one being changed just now; AdminUnavailable on storage."""
+        ...
+
+    def set_user_type(self, account_id: str, user_type: str) -> bool:
+        """Set the account's user type to "advocate" or "admin". True when it changed, False when it was already so. Raises
+        AdminChangeRefused for an account that does not exist, cannot be read or is being changed just now."""
         ...
 
     def end_sessions(self, account_id: str, why: str, keep_fingerprint: str = "") -> int:

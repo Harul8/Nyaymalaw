@@ -302,10 +302,36 @@
     return root;
   }
 
+  // THE USER TYPE (owner, 7 Nov 2026): every account is an Advocate until an Admin makes it an Admin, from this list. Those the server's
+  // settings name are shown as they are set there and cannot be changed here; your own type is yours to keep (another admin changes it);
+  // Admin (view only) sees the type and cannot change it.
+  function typeCell(r) {
+    if (r.type_locked) return el('div', {}, levelChip(r), el('span', { class: 'adm-who-mail', text: 'set in the server’s settings' }));
+    if (!me.can_change || r.status === 'unreadable' || r.id === me.id) return levelChip(r);
+    const label = r.name || r.id;
+    const select = el('select', { class: 'adm-field adm-select', 'aria-label': `User type of ${label}` },
+      el('option', { value: 'advocate', text: 'Advocate' }), el('option', { value: 'admin', text: 'Admin' }));
+    select.value = r.user_type;
+    select.addEventListener('change', async () => {
+      const wanted = select.value;
+      await confirmChange({
+        title: wanted === 'admin' ? `Make ${label} an Admin` : `Make ${label} an Advocate`, submit: wanted === 'admin' ? 'Make an Admin' : 'Make an Advocate', fields: [],
+        summary: wanted === 'admin'
+          ? `${label} will see the Admin area as soon as they next open the workspace: every account’s usage, balance and account facts - never anyone’s conversations, files or records - and they can make changes.`
+          : `${label} will no longer see or reach the Admin area. Nothing of theirs is deleted.`,
+        run: async (v) => {
+          await send(`/api/admin/users/${encodeURIComponent(r.id)}/user-type`, { user_type: wanted, reason: v.reason });
+          return `${label} is now ${wanted === 'admin' ? 'an Admin' : 'an Advocate'}.`;
+        } });
+      if (select.isConnected) select.value = r.user_type;
+    });
+    return select;
+  }
+
   let userSort = { key: 'name', dir: 1 };
   let userFilter = '';
   const USER_COLUMNS = [
-    ['name', 'Name', (r) => (r.name || r.id).toLowerCase()], ['level', 'Level', (r) => r.level_label], ['status', 'Status', (r) => r.status],
+    ['name', 'Name', (r) => (r.name || r.id).toLowerCase()], ['level', 'User type', (r) => r.level_label], ['status', 'Status', (r) => r.status],
     ['approval', 'Professional approval', (r) => r.professional.state || ''], ['allowance', 'Allowance', (r) => (r.allowance.started ? r.allowance.left_percent : 1e9)],
     ['sharing', 'AI sharing', (r) => (r.ai_sharing === null ? -1 : Number(r.ai_sharing))], ['signin', 'Last sign-in', (r) => r.last_sign_in || ''],
     ['sessions', 'Sessions', (r) => r.live_sessions]];
@@ -324,7 +350,7 @@
       holder.replaceChildren(rows.length ? el('div', { class: 'adm-scroll' }, el('table', { class: 'adm-table' },
         el('thead', {}, el('tr', {}, heads)),
         el('tbody', {}, rows.map((r) => el('tr', {},
-          el('td', {}, who(r, true)), el('td', {}, levelChip(r)), el('td', {}, statusChip(r.status)),
+          el('td', {}, who(r, true)), el('td', {}, typeCell(r)), el('td', {}, statusChip(r.status)),
           el('td', { text: approvalText(r.professional) }), el('td', {}, meter(r.allowance)),
           el('td', { text: r.ai_sharing === null ? 'Could not be read' : r.ai_sharing ? 'On' : 'Off' }),
           el('td', { class: 'adm-nowrap', text: when(r.last_sign_in) }), el('td', { class: 'adm-num', text: num(r.live_sessions) })))))) : note('No account matches.'));
@@ -352,7 +378,7 @@
     root.append(el('div', { class: 'adm-person' }, el('strong', { text: u.name || u.id }), levelChip(u), statusChip(u.status),
       u.name ? el('span', { class: 'adm-person-mail', text: u.id }) : null));
     root.append(facts([
-      ['Enrolment', u.enrolment || '—'], ['Firm', u.firm_id || '—'], ['Account made', dateOnly(u.created_at)],
+      ['User type', u.level_label], ['Enrolment', u.enrolment || '—'], ['Firm', u.firm_id || '—'], ['Account made', dateOnly(u.created_at)],
       ['Last sign-in', when(u.last_sign_in)], ['Last active', when(u.last_active)], ['Professional approval', approvalText(u.professional)],
       ['AI data sharing', u.ai_sharing === null ? 'Could not be read' : u.ai_sharing ? `On${u.ai_notice_version ? ` (notice ${u.ai_notice_version})` : ''}` : 'Off'],
       ['Allowance', meter(u.allowance)],
@@ -476,10 +502,10 @@
   async function accessPage() {
     const a = await ask('/api/admin/access');
     const root = el('div');
-    root.append(el('p', { class: 'adm-sub', text: 'Admins are named in the server’s own settings, never on an account and never from this page. Changing the list means editing the settings and restarting the server.' }));
-    root.append(section('Who is an admin', table({ head: ['Admin', 'Level', 'Account'], empty: 'The settings name no admin.',
+    root.append(el('p', { class: 'adm-sub', text: 'The first admins are named in the server’s own settings and can only be changed there. Any other account is an Admin when an Admin sets its user type on the Users page.' }));
+    root.append(section('Who is an admin', table({ head: ['Admin', 'Level', 'Set by', 'Account'], empty: 'No account is an admin yet.',
       rows: a.admins.map((m) => [el('div', {}, el('span', { class: 'adm-who', text: m.name || m.id }), m.name ? el('span', { class: 'adm-who-mail', text: m.id }) : null),
-        el('span', { class: 'adm-chip adm-admin', text: m.label }), m.has_account ? statusChip(m.status) : el('span', { class: 'adm-chip adm-warn', text: 'No account yet' })]) }),
+        el('span', { class: 'adm-chip adm-admin', text: m.label }), m.source, m.has_account ? statusChip(m.status) : el('span', { class: 'adm-chip adm-warn', text: 'No account yet' })]) }),
       a.rejected_entries ? callout('adm-warn', `${plural(a.rejected_entries, 'entry', 'entries')} in the setting could not be used and ${a.rejected_entries === 1 ? 'was' : 'were'} ignored. An ignored entry never raises anyone; it can only leave someone out.`) : null));
     const log = a.audit;
     if (!log.available) {
@@ -552,8 +578,10 @@
       }
     });
     dialog.replaceChildren(form);
+    const closed = new Promise((resolve) => dialog.addEventListener('close', resolve, { once: true }));
     dialog.showModal();
     (inputs[fields[0] ? fields[0].name : 'reason']).focus();
+    return closed;
   }
 
   function changesPanel(u) {
@@ -583,12 +611,12 @@
       buttons.push(el('span', { class: 'adm-note', text: 'This account is an admin, named in the server’s settings. It is not suspended from here.' }));
     } else if (u.status === 'suspended') {
       buttons.push(el('button', { type: 'button', class: 'adm-button', text: 'Reinstate the account…', onclick: () => confirmChange({
-        title: `Reinstate ${who}`, submit: 'Reinstate', fields: [], summary: `${who} will be able to sign in again.`,
-        run: async (v) => { await send(`/api/admin/users/${encodeURIComponent(u.id)}/reinstate`, { reason: v.reason }); return `${who} can sign in again.`; } }) }));
+        title: `Reinstate ${who}`, submit: 'Reinstate', fields: [], summary: `${who} will be shown as active again.`,
+        run: async (v) => { await send(`/api/admin/users/${encodeURIComponent(u.id)}/reinstate`, { reason: v.reason }); return `${who} is active again.`; } }) }));
     } else {
       buttons.push(el('button', { type: 'button', class: 'adm-button adm-plain', text: 'Suspend the account…', onclick: () => confirmChange({
         title: `Suspend ${who}`, submit: 'Suspend', fields: [],
-        summary: `${who} is signed out everywhere and cannot sign in until you reinstate them. Nothing is deleted: their matters and conversations stay as they are.`,
+        summary: `${who} is signed out everywhere and shown as suspended. The next time they sign in with their password the suspension ends by itself and they are in, with no message; you can also reinstate them sooner. Nothing is deleted: their matters and conversations stay as they are.`,
         run: async (v) => {
           const done = await send(`/api/admin/users/${encodeURIComponent(u.id)}/suspend`, { reason: v.reason });
           return `${who} is suspended; ${plural(done.sessions_ended, 'session was', 'sessions were')} ended.`;

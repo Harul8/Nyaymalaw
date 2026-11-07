@@ -90,8 +90,8 @@ def test_a_signed_in_advocate_who_is_not_named_gets_what_an_address_the_server_d
 
 def test_an_admin_and_a_view_only_admin_are_both_shown_the_pages_and_told_their_level(world):
     boss, viewer = world.client(BOSS), world.client(VIEWER)
-    assert boss.get("/api/admin/me").json() == {"level": "admin", "label": "Admin", "can_change": True, "password_confirmed": False}
-    assert viewer.get("/api/admin/me").json() == {"level": "view-only", "label": "Admin (view only)", "can_change": False,
+    assert boss.get("/api/admin/me").json() == {"id": BOSS, "level": "admin", "label": "Admin", "can_change": True, "password_confirmed": False}
+    assert viewer.get("/api/admin/me").json() == {"id": VIEWER, "level": "view-only", "label": "Admin (view only)", "can_change": False,
                                                   "password_confirmed": False}
     for client in (boss, viewer):
         for address in ADDRESSES[1:]:

@@ -39,6 +39,7 @@ class Action(str, Enum):
     RESET_EMAIL = "reset-email"
     INVITE = "invite"
     SUSPEND = "suspend"
+    USER_TYPE = "user-type"
     LIBRARY_ADD = "library-add"
     LIBRARY_SWITCH = "library-switch"
 

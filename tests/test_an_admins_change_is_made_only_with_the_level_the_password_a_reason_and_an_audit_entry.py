@@ -234,18 +234,25 @@ def test_an_admin_ending_their_own_sessions_keeps_the_one_they_are_using(served)
 
 # ------------------------------------------------------------------------------ suspension ---
 
-def test_a_suspended_account_has_no_session_and_cannot_sign_in_and_is_told_what_any_refused_sign_in_is_told(served):
+def test_a_suspended_account_is_signed_out_and_shown_suspended_until_the_person_signs_in_again(served):
     advocate = served.login(ADVOCATE)
     admin = served.login(ADMIN, confirmed=True)
     reply = admin.post(f"/api/admin/users/{ADVOCATE}/suspend", json={"reason": "Chambers asked us to"})
     assert reply.status_code == 200 and reply.json() == {"suspended": True, "changed": True, "sessions_ended": 1, "audited": True}
     assert advocate.get("/api/session").status_code == 401
-    fresh = TestClient(served.asgi)
-    refused = fresh.post("/api/login", headers={"origin": "http://testserver"}, json={"advocate_id": ADVOCATE, "password": PASSWORD})
-    wrong = fresh.post("/api/login", headers={"origin": "http://testserver"}, json={"advocate_id": ADVOCATE, "password": "not the password"})
-    assert (refused.status_code, refused.json()) == (wrong.status_code, wrong.json()) and refused.status_code == 401
     assert admin.get(f"/api/admin/users/{ADVOCATE}").json()["status"] == "suspended"
-    assert "sign-in refused: account suspended" in (served.tmp_path / "auth.log").read_text(encoding="utf8")
+
+
+def test_signing_in_again_ends_the_suspension_by_itself_with_no_message_and_a_wrong_password_does_not(served):
+    admin = served.login(ADMIN, confirmed=True)
+    admin.post(f"/api/admin/users/{ADVOCATE}/suspend", json={"reason": "pending a check"})
+    wrong = TestClient(served.asgi).post("/api/login", headers={"origin": "http://testserver"},
+                                         json={"advocate_id": ADVOCATE, "password": "not the password"})
+    assert wrong.status_code == 401 and admin.get(f"/api/admin/users/{ADVOCATE}").json()["status"] == "suspended"
+    again = served.login(ADVOCATE)  # the right password: in, and nothing is said about a suspension
+    assert again.get("/api/session").status_code == 200
+    assert admin.get(f"/api/admin/users/{ADVOCATE}").json()["status"] == "active"
+    assert "suspension lifted by sign-in" in (served.tmp_path / "auth.log").read_text(encoding="utf8")
 
 
 def test_suspending_again_changes_nothing_and_says_so(served):
@@ -255,7 +262,7 @@ def test_suspending_again_changes_nothing_and_says_so(served):
     assert again.status_code == 200 and again.json()["changed"] is False
 
 
-def test_reinstating_lets_the_account_sign_in_again_and_matters_were_never_touched(served):
+def test_reinstating_sooner_shows_the_account_active_and_matters_were_never_touched(served):
     admin = served.login(ADMIN, confirmed=True)
     admin.post(f"/api/admin/users/{ADVOCATE}/suspend", json={"reason": "pending a check"})
     reply = admin.post(f"/api/admin/users/{ADVOCATE}/reinstate", json={"reason": "Check done"})
@@ -270,7 +277,7 @@ def test_an_admin_account_cannot_be_suspended_from_here_because_the_settings_nam
     admin = served.login(ADMIN, confirmed=True)
     for target in (ADMIN, VIEWER):
         reply = admin.post(f"/api/admin/users/{target}/suspend", json={"reason": "no"})
-        assert reply.status_code == 409 and "named in the server's settings" in reply.json()["detail"]
+        assert reply.status_code == 409 and "Admins are not suspended from here" in reply.json()["detail"]
     assert audit(served) == [] and admin.get("/api/session").status_code == 200
 
 

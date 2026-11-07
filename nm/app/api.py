@@ -2727,15 +2727,16 @@ def historical_matter(matter_id: str, advocate_id: Advocate, request: Request):
         raise HTTPException(404, 'Matter not available.')
     raise HTTPException(409, 'This matter belongs to the earlier brain. Its saved data is retained; opening it in the rebuilt brain is not available yet.')
 
-def _may_see_the_admin_area(request: Request) -> bool:
-    """Whether this request comes from an account the server's settings name as an admin (plan AN.46, D117). Anyone else - signed out,
-    or an advocate - is given the 404 of a name that is not there, so the Admin page and its files tell no one else they exist."""
+def _may_see_the_admin_area(request: Request) -> bool | str:
+    """True for an account the server's settings name as an admin (plan AN.46, D117). Nobody signed in is sent to the one sign-in
+    ("sign-in"), which brings an admin back here. A signed-in advocate is given the 404 of a name that is not there, so the Admin
+    page and its files tell no advocate they exist."""
     try:
         advocate_id = signed_in(request, request.cookies.get("nm_session"), request.cookies.get("nm_device"),
                                 request.headers.get("user-agent"))
     except HTTPException:
-        return False
-    return application().admin_roster.level_of(advocate_id) is not None
+        return "sign-in"
+    return application().admin_level_of(advocate_id) is not None
 
 
 app.include_router(browser_assets_router(

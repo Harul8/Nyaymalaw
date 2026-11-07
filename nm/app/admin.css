@@ -73,6 +73,7 @@ a { color: var(--accent); }
 .adm-sort:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .adm-sort[aria-sort="ascending"]::after { content: " ▲"; font-size: 0.65em; }
 .adm-sort[aria-sort="descending"]::after { content: " ▼"; font-size: 0.65em; }
+.adm-table .adm-select { min-width: 8.5rem; padding: 0.25rem 0.4rem; }
 .adm-nowrap { white-space: nowrap; }
 .adm-who { display: block; font-weight: 600; }
 .adm-who-mail { display: block; font-size: 0.8rem; color: var(--ink-3); overflow-wrap: anywhere; }

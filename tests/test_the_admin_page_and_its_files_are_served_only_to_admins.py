@@ -62,15 +62,24 @@ def served(tmp_path, monkeypatch):
         client.close()
 
 
-def test_a_signed_out_visitor_and_an_advocate_get_the_404_of_a_name_that_is_not_there(served):
-    for visitor in (served(), served(ADVOCATE)):
-        unknown = visitor.get("/static/nothing-here.js")
-        assert unknown.status_code == 404
-        for address in FILES:
-            for method in (visitor.get, visitor.head):
-                reply = method(address)
-                assert reply.status_code == 404, (address, method.__name__)
-            assert visitor.get(address).json() == unknown.json(), address
+def test_an_advocate_gets_the_404_of_a_name_that_is_not_there_for_the_page_and_each_file(served):
+    visitor = served(ADVOCATE)
+    unknown = visitor.get("/static/nothing-here.js")
+    assert unknown.status_code == 404
+    for address in FILES:
+        for method in (visitor.get, visitor.head):
+            assert method(address, follow_redirects=False).status_code == 404, (address, method.__name__)
+        assert visitor.get(address).json() == unknown.json(), address
+
+
+def test_a_signed_out_visitor_is_sent_to_the_one_sign_in_for_the_page_and_given_the_404_for_the_files(served):
+    visitor = served()
+    for address in ("/admin", "/static/admin.html"):
+        reply = visitor.get(address, follow_redirects=False)
+        assert reply.status_code == 302 and reply.headers["location"] == "/app#admin", address
+        assert reply.headers["cache-control"] == "no-store"
+    for address in ("/static/admin.css", "/static/admin.js"):
+        assert visitor.get(address, follow_redirects=False).status_code == 404, address
 
 
 def test_an_admin_of_either_level_is_served_the_page_and_its_files_with_their_exact_bytes(served):
@@ -102,7 +111,7 @@ def test_the_other_pages_and_files_are_still_served_to_a_signed_out_visitor(serv
 
 def test_the_person_menu_offers_admin_only_after_the_server_has_answered_for_this_account():
     page, script = (APP / "index.html").read_text(encoding="utf8"), (APP / "app.js").read_text(encoding="utf8")
-    entry = re.search(r'<button id="admin-entry"[^>]*>', page)
+    entry = re.search(r'<button type="button" id="admin-entry"[^>]*>', page)
     assert entry and " hidden" in entry.group(0)
     assert "fetch('/api/admin/me'" in script and "entry.hidden = !res.ok" in script
     assert re.search(r"function clearPrivileged\(\) \{\s*const adminEntry = \$\('admin-entry'\);\s*if \(adminEntry\) adminEntry.hidden = true;", script)

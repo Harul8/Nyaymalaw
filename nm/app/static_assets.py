@@ -12,7 +12,7 @@ from pathlib import Path
 from types import MappingProxyType
 
 from fastapi import APIRouter, HTTPException, Request
-from starlette.responses import FileResponse, Response
+from starlette.responses import FileResponse, RedirectResponse, Response
 from starlette.staticfiles import NotModifiedResponse, StaticFiles
 
 from nm.shared.source_layout import MEDIA_TYPES
@@ -36,6 +36,8 @@ PAGES = MappingProxyType({
     "/about": "about.html",
     "/legal": "legal.html",
 })
+#: Where a signed-out visitor to a gated page is sent: the one sign-in, which opens the page they came for once they are in.
+SIGN_IN_ADDRESS = "/app#admin"
 # Reuse the framework's conditional-header semantics, not its path lookup or
 # serving entry point. This validator has no directory or package population.
 _REVALIDATION = StaticFiles()
@@ -47,7 +49,7 @@ class BrowserAssetsRefused(ValueError):
 
 def browser_assets_router(*, asset_paths: Callable[[], Mapping[str, Path]],
                           root: Path,
-                          gated: Mapping[str, Callable[[Request], bool]] | None = None) -> APIRouter:
+                          gated: Mapping[str, Callable[[Request], bool | str]] | None = None) -> APIRouter:
     """Snapshot the trusted manifest's exact URLs, retaining current file bytes.
 
     The root is supplied by application composition, never an HTTP argument.
@@ -58,6 +60,10 @@ def browser_assets_router(*, asset_paths: Callable[[], Mapping[str, Path]],
     server must not tell anyone they are for: to every other request the name is the same 404 as an unknown one. The gate is supplied
     by composition (the edge's sign-in and the settings' admin list), never read from the request; the file is still one the closed
     manifest declares, so there is one way to serve a file and not two.
+
+    A gate answers True (serve it), False (the 404), or "sign-in": nobody is signed in, so a PAGE is answered with a redirect to the
+    workspace's own sign-in (there is one login, the same for every account - an admin is whoever the settings name once signed in),
+    and any other file with the 404. The redirect tells nobody anything: the sign-in page is public.
     """
     gates = MappingProxyType(dict(gated or {}))
     owned_root = root.resolve(strict=True)
@@ -97,8 +103,12 @@ def browser_assets_router(*, asset_paths: Callable[[], Mapping[str, Path]],
         if path is None:
             raise HTTPException(status_code=404)
         gate = gates.get(name)
-        if gate is not None and not gate(request):
-            raise HTTPException(status_code=404)
+        if gate is not None:
+            verdict = gate(request)
+            if verdict == "sign-in" and path.suffix == ".html":
+                return RedirectResponse(SIGN_IN_ADDRESS, status_code=302, headers={"cache-control": "no-store"})
+            if verdict is not True:
+                raise HTTPException(status_code=404)
         try:
             resolved = path.resolve(strict=True)
             if resolved != canonical[name] or owned_root not in resolved.parents:

@@ -9518,16 +9518,17 @@ async function showAdminEntry() {
   entry.hidden = true;
   try {
     const res = await fetch('/api/admin/me', { credentials: 'same-origin' });
-    if (generation === state.sessionGeneration && state.advocate) entry.hidden = !res.ok;
+    if (generation === state.sessionGeneration && state.advocate) {
+      entry.hidden = !res.ok;
+      // A sign-in that began at /admin (the server sent the visitor here) goes on to it once the account is known to be an admin.
+      if (res.ok && window.location.hash === '#admin') window.location.replace('/admin');
+    }
   } catch {
     entry.hidden = true;
   }
 }
 
-$('admin-entry').addEventListener('click', () => {
-  setAccountMenu(false);
-  window.open('/admin', '_blank', 'noopener');
-});
+$('admin-entry').addEventListener('click', () => { window.location.assign('/admin'); });
 
 function showApplication(advocate, workspace, professionalApproval) {
   if (!workspace || !workspace.id || !workspace.label) {

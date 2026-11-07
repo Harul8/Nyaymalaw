@@ -603,6 +603,17 @@ class FileDirectory:
             doc = self._read(identity.id)
             if doc is None:
                 return None
+            if doc.get("suspended"):
+                # AN.46, D121 (owner, 7 Nov 2026): a suspension lasts until the person signs in again. The right password ends it, in the
+                # same step as the session it opens, under the claim this holds, and the person is told nothing about it. If the mark
+                # cannot be taken off, no session is opened (a suspended account has no identity to the edge), so the sign-in fails.
+                try:
+                    del doc["suspended"]
+                    self._replace_advocate(self._advocate_path(identity.id), doc)
+                except OSError:
+                    self._note(identity.id, "suspension could not be lifted at sign-in")
+                    return None
+                self._note(identity.id, "suspension lifted by sign-in")
             if any(name in doc for name in RETIRED_RECOVERY_FIELDS):
                 # RECOVERY CODES NO LONGER EXIST, so their digests do not stay
                 # on disk waiting for a route that is gone. `_write_account`
@@ -755,7 +766,6 @@ class FileDirectory:
     UNKNOWN = "unknown"
     WRONG_PASSWORD = "wrong_password"
     UNREADABLE = "unreadable"
-    SUSPENDED = "suspended"
 
     def _read(self, advocate_id: str) -> dict | None:
         self._auth_state.last_failure = self.UNKNOWN
@@ -817,6 +827,10 @@ class FileDirectory:
             self._auth_state.last_failure = self.UNREADABLE
             self._note(advocate_id, f"record unreadable: {type(exc).__name__}")
             return None
+
+    def user_type(self, advocate_id: str) -> str:
+        doc = self._read(advocate_id)
+        return "admin" if isinstance(doc, dict) and doc.get("user_type") == "admin" else "advocate"
 
     def identity(self, advocate_id: str) -> AdvocateIdentity | None:
         doc = self._read(advocate_id)
@@ -1222,12 +1236,6 @@ class FileDirectory:
         if not verified:
             self._auth_state.last_failure = self.WRONG_PASSWORD
             self._note(advocate_id, "wrong password")
-            return None
-        if doc.get("suspended"):
-            # AN.46, D121: an admin has suspended the account. The password was right, so this says so in the log; the caller is told
-            # what it is told of any refused sign-in (A1: nothing about what exists), and no session is opened.
-            self._auth_state.last_failure = self.SUSPENDED
-            self._note(advocate_id, "sign-in refused: account suspended")
             return None
         self._auth_state.last_failure = None
         self._note(advocate_id, "authenticated")
