@@ -40,7 +40,8 @@ class PasswordCheck(BaseModel):
     password: str = Field(min_length=1, max_length=1024)
 
 
-def admin_router(*, application: Callable, signed_in: Callable, csrf: object, admit_attempt: Callable) -> APIRouter:
+def admin_router(*, application: Callable, signed_in: Callable, csrf: object, admit_attempt: Callable,
+                 serving: Callable[[], dict] = lambda: {}) -> APIRouter:
     router = APIRouter(prefix="/api/admin")
 
     def admin_level(advocate_id: str = Depends(signed_in)) -> Level:
@@ -109,6 +110,11 @@ def admin_router(*, application: Callable, signed_in: Callable, csrf: object, ad
             raise HTTPException(status_code=422, detail=f"Usage is shown for {', '.join(map(str, admin_views.PERIODS))} days.")
         return read(lambda roster, directory, usage_port, now, period: admin_views.usage_view(
             roster, directory, usage_port, now, period, application().admin_turns), days)
+
+    @router.get("/diagnostics")
+    def diagnostics(level: Level = Depends(admin_level)) -> dict:
+        return read(lambda roster, directory, usage_port, now: admin_views.diagnostics_view(
+            roster, usage_port, application().admin_turns, application().admin_checks, now, serving(), application().health()))
 
     @router.get("/access")
     def access(level: Level = Depends(admin_level)) -> dict:

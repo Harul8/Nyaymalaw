@@ -154,6 +154,31 @@ class AdminTurnsPort(Protocol):
         ...
 
 
+# ------------------------------------------------------------------------ diagnostics ---
+
+class AdminChecksPort(Protocol):
+    """The sources the diagnostics are made of: counts, sizes and short names, nothing an advocate wrote (D119). A method whose source
+    cannot be read returns None (or raises AdminUnavailable), and only that check says so (D128)."""
+
+    def turn_attempts(self) -> Mapping[str, int] | None:
+        ...
+
+    def sign_ins(self, since: datetime) -> Mapping[str, int] | None:
+        ...
+
+    def disk(self) -> Mapping[str, Mapping[str, int]] | None:
+        ...
+
+    def law(self) -> Sequence[Mapping]:
+        ...
+
+    def scanner(self) -> Mapping[str, object]:
+        ...
+
+    def outbox(self) -> Mapping[str, object]:
+        ...
+
+
 # ------------------------------------------------------------------ the audit record ---
 
 @dataclass(frozen=True)

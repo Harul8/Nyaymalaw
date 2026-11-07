@@ -18,8 +18,8 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Mapping
 
 from nm.arrive.admin_access import Roster
-from nm.arrive.admin_port import (AdminAccount, AdminDirectoryPort, AdminRecordPort, AdminTurnsPort, AdminUnavailable,
-                                  AdminUsagePort, Balance, Consumption)
+from nm.arrive.admin_port import (AdminAccount, AdminChecksPort, AdminDirectoryPort, AdminRecordPort, AdminTurnsPort,
+                                  AdminUnavailable, AdminUsagePort, Balance, Consumption)
 from nm.arrive.advocate_contracts import canonical_id
 
 #: The days an admin may ask the usage pages about.
@@ -253,3 +253,115 @@ def access_view(roster: Roster, directory: AdminDirectoryPort, record: AdminReco
     except AdminUnavailable:
         audit = {"available": False}
     return content_free({"as_of": now.isoformat(), "admins": admins, "rejected_entries": roster.rejected, "audit": audit})
+
+
+# ------------------------------------------------------------------------ diagnostics ---
+
+#: A disk with less free than this is called low.
+LOW_DISK_BYTES = 20 * 1024 ** 3
+LOW_DISK_SHARE = 0.10
+#: The malware scanner's definitions older than this many days are called old.
+OLD_DEFINITIONS_DAYS = 3
+#: A day with this many wrong sign-ins is called busy.
+BUSY_WRONG_SIGN_INS = 20
+#: A local outbox with this many unread messages is called filling up.
+FULL_OUTBOX = 20
+#: The share of model calls that did not end well before the model service is called unwell, once there are enough calls to say.
+UNWELL_SHARE = 0.10
+ENOUGH_CALLS = 5
+
+
+def _check(name: str, label: str, state: str, facts: dict) -> dict:
+    return {"id": name, "label": label, "state": state, "facts": facts}
+
+
+def _could_not(name: str, label: str) -> dict:
+    return _check(name, label, "unavailable", {})
+
+
+def diagnostics_view(roster: Roster, usage: AdminUsagePort, turns: AdminTurnsPort, checks: AdminChecksPort, now: datetime,
+                     serving: Mapping[str, Any], provider: Mapping[str, Any]) -> dict:
+    """Is the service well? Each check reads one source and says ok, attention, note or unavailable; a source that cannot be read makes
+    only its own check unavailable (D128). Facts are counts, sizes and short names - never an address, a message or a word of anyone's
+    work; recent problems are a kind and a count."""
+    day_ago = now - timedelta(hours=24)
+    found: list[dict] = []
+
+    state = serving.get("code_state")
+    found.append(_check("server", "The server and its code", {"current": "ok", "stale": "attention"}.get(state, "unavailable"),
+                        {"code_state": state or "not_assessed", "running_code": str(serving.get("serving", ""))[:12],
+                         "code_on_disk": str(serving.get("tree", ""))[:12]}))
+
+    try:
+        outcomes = {r.group[0]: r.calls for r in usage.consumption(day_ago, now, "outcome")}
+        total, bad = sum(outcomes.values()), sum(n for k, n in outcomes.items() if k != "ok")
+        found.append(_check("model_service", "The model service (calls in the last 24 hours)",
+                            "attention" if total >= ENOUGH_CALLS and bad / total > UNWELL_SHARE else "ok",
+                            {"provider": provider.get("provider"), "model": provider.get("model"), "calls": total,
+                             "not_ok": bad, "by_outcome": outcomes}))
+    except AdminUnavailable:
+        found.append(_could_not("model_service", "The model service (calls in the last 24 hours)"))
+
+    attempts = checks.turn_attempts()
+    if attempts is None:
+        found.append(_could_not("turns_in_progress", "Turns in progress"))
+    else:
+        found.append(_check("turns_in_progress", "Turns in progress", "attention" if attempts["unconfirmed"] else "ok",
+                            {"running": attempts["running"], "stopped_and_waiting": attempts["retryable"],
+                             "unconfirmed": attempts["unconfirmed"]}))
+    try:
+        recent = turns.summary(day_ago, now)
+        ended = {name: sum(getattr(d, name) for d in recent.by_day) for name in ("answered", "stopped", "refused", "failed")}
+        made = sum(ended.values())
+        found.append(_check("recent_turns", "Turns in the last 24 hours",
+                            "attention" if made >= ENOUGH_CALLS and ended["failed"] / made > UNWELL_SHARE else "ok",
+                            {**ended, "seconds_middle": recent.answered_seconds_middle,
+                             "seconds_slow": recent.answered_seconds_slow, "record_began": _iso(recent.first_at)}))
+    except AdminUnavailable:
+        found.append(_could_not("recent_turns", "Turns in the last 24 hours"))
+
+    for store in checks.law():
+        label = f"The held {store['collection']}"
+        if not store.get("readable"):
+            found.append(_could_not(f"law_{store['collection']}", label))
+            continue
+        well = (store["files_present"] and store["sizes_as_recorded"] and store["bm25_present"]
+                and store["sampled"] == store["same_vector"] and store["passages"] <= store["vectors"])
+        found.append(_check(f"law_{store['collection']}", label, "ok" if well else "attention", {
+            "passages": store["passages"], "vectors": store["vectors"], "model": store["model"],
+            "recorded_at": store["recorded_at"], "sampled": store["sampled"], "same_vector": store["same_vector"],
+            "files_present": store["files_present"], "sizes_as_recorded": store["sizes_as_recorded"],
+            "word_index_present": store["bm25_present"], "checked_by": "size, not by hash"}))
+
+    scanner = checks.scanner()
+    age = scanner["definitions_age_days"]
+    found.append(_check("scanner", "The document scanner",
+                        "ok" if scanner["configured"] and scanner["present"] and age is not None and age <= OLD_DEFINITIONS_DAYS
+                        else "attention", dict(scanner)))
+
+    sign_ins = checks.sign_ins(datetime.now() - timedelta(hours=24))
+    if sign_ins is None:
+        found.append(_could_not("sign_in_security", "Sign-in security (last 24 hours)"))
+    else:
+        found.append(_check("sign_in_security", "Sign-in security (last 24 hours)",
+                            "attention" if sign_ins["wrong_password"] + sign_ins["unknown_account"] >= BUSY_WRONG_SIGN_INS else "ok",
+                            dict(sign_ins)))
+
+    disk = checks.disk()
+    if disk is None:
+        found.append(_could_not("disk", "Free disk"))
+    else:
+        low = any(d["free"] < LOW_DISK_BYTES or d["free"] / d["total"] < LOW_DISK_SHARE for d in disk.values() if d["total"])
+        found.append(_check("disk", "Free disk", "attention" if low else "ok", {k: dict(v) for k, v in disk.items()}))
+
+    try:
+        outbox = checks.outbox()
+        found.append(_check("mail", "Account mail", "attention" if outbox["queued"] >= FULL_OUTBOX
+                            else "ok" if outbox["reaches_a_mailbox"] else "note", dict(outbox)))
+    except AdminUnavailable:
+        found.append(_could_not("mail", "Account mail"))
+
+    found.append(_check("admin_setting", "The admin list in the server's settings", "attention" if roster.rejected else "ok",
+                        {"admins": len(roster.levels), "entries_ignored": roster.rejected}))
+    counts = {name: sum(1 for c in found if c["state"] == name) for name in ("ok", "attention", "note", "unavailable")}
+    return content_free({"as_of": now.isoformat(), "summary": counts, "checks": found})

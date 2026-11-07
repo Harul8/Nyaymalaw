@@ -2733,4 +2733,4 @@ app.include_router(browser_assets_router(
 # The Admin area (plan AN.46, piece 46g): its routes are given the edge's own sign-in, CSRF and failed-attempt pieces, so there is
 # no door in them the rest of the edge does not use. A signed-in advocate who is not named in the settings gets a 404.
 app.include_router(admin_router(application=application, signed_in=signed_in, csrf=CsrfProtected,
-                                admit_attempt=_admit_auth_attempt))
+                                admit_attempt=_admit_auth_attempt, serving=serving_state))

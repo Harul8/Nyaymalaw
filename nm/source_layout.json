@@ -19,6 +19,7 @@
     "nm.arrive": "domain",
     "nm.arrive.account_confirmation_contracts": "domain",
     "nm.arrive.admin_access": "core",
+    "nm.arrive.admin_checks": "adapters",
     "nm.arrive.admin_directory": "adapters",
     "nm.arrive.admin_port": "ports",
     "nm.arrive.admin_turns": "adapters",
@@ -132,7 +133,7 @@
     "nm.work_the_file.matter_contracts": "domain"
   },
   "expected_roles": {
-    "adapters": 34,
+    "adapters": 35,
     "bootstrap": 5,
     "core": 37,
     "domain": 37,
