@@ -33,7 +33,7 @@ import re
 import sqlite3
 from pathlib import Path
 
-from nm.shared.citation_contracts import CASE, READ_FORMATS, find_reporter_citations
+from nm.shared.citation_contracts import CASE, READ_FORMATS, court_title, find_reporter_citations
 from nm.shared.text_contracts import fold_spacing, words
 
 CONTRACT = "citation_check_v3"
@@ -91,10 +91,15 @@ class CaseIdentityIndex:
                                                key=lambda row: row[5]) if row[5]]
             coverage = ("all_indexed_owners" if metadata.get("citation_ownership") == "all_pairs_v2"
                         and primary == ["citation_key", "case_id"] else "unassessed")
+            # Plan AN.45 (D102): every Andhra Pradesh court is the Telangana forum's, the one rule the statutes' titles use.
+            merged: dict[str, list] = {}
+            for court, count, first, last in con.execute(
+                    "select court, count(*), min(year), max(year) from cases group by court order by count(*) desc"):
+                held = merged.setdefault(court_title(court), [0, first, last])
+                held[0] += count
+                held[1], held[2] = min(held[1], first), max(held[2], last)
             courts = [{"court": court, "judgments": count, "from": first, "to": last}
-                      for court, count, first, last in con.execute(
-                          "select court, count(*), min(year), max(year) from cases "
-                          "group by court order by count(*) desc")]
+                      for court, (count, first, last) in sorted(merged.items(), key=lambda item: -item[1][0])]
         except sqlite3.Error as exc:
             raise IndexUnavailable("the case index scope could not be read") from exc
         finally:
@@ -113,6 +118,7 @@ class CaseIdentityIndex:
                     "c.petitioner, c.respondent from citations x left join cases c using (case_id) "
                     "where x.citation_key = ? order by c.case_id", (key,)).fetchall()
                 for row in rows:
+                    row = (*row[:2], court_title(row[2]), *row[3:])
                     if row[0] is None:
                         raise IndexUnavailable("a citation points to an unavailable case record")
                     identity = row[0]
@@ -141,7 +147,7 @@ class CaseIdentityIndex:
         finally:
             con.close()
         return [dict(zip(("case_id", "court", "year", "title", "decided_on", "bench", "petitioner",
-                          "respondent"), row), held_keys=[]) for row in rows]
+                          "respondent"), (row[0], court_title(row[1]), *row[2:])), held_keys=[]) for row in rows]
 
     def text(self, judgment: dict) -> str:
         path = self.judgments.joinpath(*str(judgment["source_file"]).replace("\\", "/").split("/"))

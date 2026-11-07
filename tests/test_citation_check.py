@@ -40,12 +40,13 @@ JUDGMENTS = {
 }
 
 
-def _build(root: Path, *, partial: str = "no", cases: str | None = None) -> CaseIdentityIndex:
+def _build(root: Path, *, partial: str = "no", cases: str | None = None, held: dict | None = None) -> CaseIdentityIndex:
+    held = JUDGMENTS if held is None else held
     database, judgments = root / "identity.db", root / "CaseLaws"
     judgments.mkdir(parents=True, exist_ok=True)
     con = sqlite3.connect(database)
     con.executescript(IDENTITY_SCHEMA)
-    for case_id, (court, year, title, decided, pet, res, keys, text) in JUDGMENTS.items():
+    for case_id, (court, year, title, decided, pet, res, keys, text) in held.items():
         source = f"Synthetic\\{case_id}.txt"
         con.execute("insert into cases (case_id, source_file, court, year, title, decided_on, petitioner, "
                     "respondent) values (?,?,?,?,?,?,?,?)", (case_id, source, court, year, title, decided, pet, res))
@@ -55,7 +56,7 @@ def _build(root: Path, *, partial: str = "no", cases: str | None = None) -> Case
             (judgments / "Synthetic" / f"{case_id}.txt").write_text(text, encoding="utf-8")
     con.executemany("insert into identity values (?,?)", [
         ("built_at", "2026-08-30T09:18:08"), ("partial", partial),
-        ("cases", cases or str(len(JUDGMENTS)))])
+        ("cases", cases or str(len(held)))])
     con.commit()
     con.close()
     return CaseIdentityIndex(database, judgments)
@@ -186,11 +187,26 @@ def test_no_citation_says_so_and_lists_the_formats_it_reads(index):
     assert "(2018) 5 SCC 379" in result["formats"]
 
 
-def test_the_scope_is_measured_from_the_index_and_names_what_is_not_held(index):
+def test_the_scope_is_measured_from_the_index_and_names_what_is_not_held(index, tmp_path):
     result = check_citations("(1973) 4 SCC 225", index)
     assert result["contract"] == CONTRACT
     assert f"{len(JUDGMENTS)} judgments" in result["index"]["statement"]
-    assert "No Telangana High Court judgments are held" in result["index"]["statement"]
+    # Plan AN.45 (D102): the Andhra Pradesh High Court's judgments are the Telangana forum's - said so, not "none held".
+    courts = {c["court"]: c for c in result["index"]["scope"]["courts"]}
+    assert set(courts) == {"Supreme Court of India", "High Court of Telangana"}
+    assert (courts["High Court of Telangana"]["judgments"], courts["High Court of Telangana"]["from"]) == (1, 1999)
+    assert "No Telangana High Court judgments are held" not in result["index"]["statement"]
+    # A library with no such court still says what it does not hold.
+    only_supreme = {k: v for k, v in JUDGMENTS.items() if v[0] == "Supreme Court of India"}
+    (tmp_path / "only_supreme").mkdir()
+    bare = _build(tmp_path / "only_supreme", held=only_supreme)
+    assert "No Telangana High Court judgments are held" in check_citations("(1973) 4 SCC 225", bare)["index"]["statement"]
+
+
+def test_a_held_judgment_of_the_andhra_pradesh_court_is_shown_as_the_telangana_forums(index):
+    row = _only(check_citations("Ursula Pennyworth v. Registrar, 1999 (3) ALT 10", index))
+    assert row["judgments"][0]["court"] == "High Court of Telangana"
+    assert "High Court of Telangana, 5 May, 1999" in " ".join(row["reasons"]), row["reasons"]
 
 
 def test_the_engine_has_no_door_to_a_model_or_a_store():
