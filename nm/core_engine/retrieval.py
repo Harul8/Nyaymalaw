@@ -1288,7 +1288,10 @@ def _candidate(kind, position, row, revision, score, query_ids, context):
             or score is not None and (type(score) not in (int, float) or not math.isfinite(score))):
         raise SearchUnavailable("Candidate source position, kind or score is inconsistent")
     title = row.get("act_name") or row.get("act_id") if kind == "provision" else row.get("case_name") or row.get("case_id")
-    locator = str(row.get("section_number") or "") if kind == "provision" else str(row.get("paragraph_num") or row.get("para_no") or "")
+    # Plan AN.45 (D99): a judgment passage cut on the court's own paragraphs says what it is called (its paragraph number, "opening of
+    # the judgment" or "passage 7"); a row without that - every row already saved - is read as before.
+    locator = (str(row.get("section_number") or "") if kind == "provision"
+               else str(row.get("locator") or row.get("paragraph_num") or row.get("para_no") or ""))
     if not isinstance(title, str) or not title.strip():
         raise SearchUnavailable("Candidate has no attributable document identity")
     identity = {"kind": kind, "position": position, "revision": revision, "row": row}
