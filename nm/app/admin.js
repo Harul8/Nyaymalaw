@@ -594,6 +594,10 @@
           return `Added $${Number(v.usd).toLocaleString('en-US')} to ${who}’s allowance. They now have ${money(done.allowance.granted)} granted.` +
             (done.audited ? '' : ' The audit log could not take its second entry; the first stands.');
         } }) }),
+      el('button', { type: 'button', class: 'adm-button adm-plain', text: 'Send a password-reset email…', onclick: () => confirmChange({
+        title: `Send ${who} a password-reset email`, submit: 'Send the email', fields: [],
+        summary: `A one-time link to choose a new password goes to ${u.id}. Using it ends every session of the account. Nothing else changes.`,
+        run: async (v) => (await send(`/api/admin/users/${encodeURIComponent(u.id)}/reset-email`, { reason: v.reason })).message }) }),
       el('button', { type: 'button', class: 'adm-button adm-plain', text: 'End all sessions…', onclick: () => confirmChange({
         title: `End ${who}’s sessions`, submit: 'End the sessions', fields: [],
         summary: `This signs ${who} out of every device. Their conversations and matters are not touched, and they can sign in again.`,

@@ -56,7 +56,8 @@ class UserTypeChange(Reason):
 
 
 def admin_router(*, application: Callable, signed_in: Callable, csrf: object, admit_attempt: Callable,
-                 serving: Callable[[], dict] = lambda: {}) -> APIRouter:
+                 serving: Callable[[], dict] = lambda: {},
+                 send_reset: Callable[[str, Request, object], str] = lambda email, request, now: "not-configured") -> APIRouter:
     router = APIRouter(prefix="/api/admin")
 
     def admin_level(advocate_id: str = Depends(signed_in)) -> Level:
@@ -165,6 +166,25 @@ def admin_router(*, application: Callable, signed_in: Callable, csrf: object, ad
             keep = session.token_fingerprint if account.id == canonical_id(session.advocate_id) else ""
             return {"sessions_ended": application().admin_accounts.end_sessions(account.id, "ended by an admin", keep)}
         return make(request, level, account_id, Action.SESSIONS, "sessions end", body.reason, end)
+
+    _RESET_WORDS = {
+        "mailed": "A password-reset link was emailed to the account.",
+        "local-outbox": "A password-reset link was written to this installation's local outbox. No email leaves this computer until "
+                        "mail delivery is set up, so the person has not been sent it.",
+    }
+
+    @router.post("/users/{account_id}/reset-email", dependencies=[csrf])
+    def reset_email(account_id: str, body: Reason, request: Request, level: Level = Depends(admin_level)) -> dict:
+        def send(account, session, now):
+            sent = send_reset(account.id, request, now)
+            if sent == "no-address":
+                raise AdminChangeRefused(409, "This account has no email address to send a link to.")
+            if sent == "not-configured":
+                raise AdminChangeRefused(503, "The public address of this installation is not set, so a link cannot be built.")
+            if sent == "not-delivered":
+                raise AdminChangeRefused(503, "The link could not be delivered just now. Nothing was sent.")
+            return {"sent": sent, "message": _RESET_WORDS[sent]}
+        return make(request, level, account_id, Action.RESET_EMAIL, "reset email", body.reason, send)
 
     def refuse_an_admin(account_id: str) -> None:
         if application().admin_level_of(account_id) is not None:

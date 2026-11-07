@@ -1021,6 +1021,30 @@ def _send_reset_link(email: str, configured: str, fallback: str, now) -> None:
         _mail_log.exception("password reset link failed with a programming error")
 
 
+def _send_reset_link_for_an_admin(email: str, request: Request, now) -> str:
+    """Issue and send one reset link for an admin who asked for it (plan AN.46), and say truthfully what became of it: "mailed" (to a
+    mailbox), "local-outbox" (written to this installation's own outbox, from which no mail leaves), "no-address" (the account has no
+    address to send to), "not-configured" (a mailbox-delivering channel with no NM_PUBLIC_URL, so no link is built) or "not-delivered"."""
+    from nm.arrive.mail_contracts import password_reset_mail
+    from nm.shared.egress_contracts import EgressRefused
+
+    mail = application().mail
+    delivers = bool(getattr(mail, "delivers_to_mailbox", True))
+    configured, fallback = _public_base(request)
+    base = configured or ("" if delivers else fallback)
+    token = application().directory.issue_password_reset(email, now)
+    if token is None:
+        return "no-address"
+    if not base:
+        return "not-configured"
+    try:
+        mail.send(password_reset_mail(email, f"{base}/app#reset={token}"))
+    except (OSError, EgressRefused) as exc:
+        _mail_log.error("password reset link not delivered: %s", type(exc).__name__)
+        return "not-delivered"
+    return "mailed" if delivers else "local-outbox"
+
+
 @app.post("/api/password/forgot", dependencies=[Depends(public_origin)],
           status_code=202)
 @implements("A1")
@@ -2746,4 +2770,5 @@ app.include_router(browser_assets_router(
 # The Admin area (plan AN.46, piece 46g): its routes are given the edge's own sign-in, CSRF and failed-attempt pieces, so there is
 # no door in them the rest of the edge does not use. A signed-in advocate who is not named in the settings gets a 404.
 app.include_router(admin_router(application=application, signed_in=signed_in, csrf=CsrfProtected,
-                                admit_attempt=_admit_auth_attempt, serving=serving_state))
+                                admit_attempt=_admit_auth_attempt, serving=serving_state,
+                                send_reset=_send_reset_link_for_an_admin))

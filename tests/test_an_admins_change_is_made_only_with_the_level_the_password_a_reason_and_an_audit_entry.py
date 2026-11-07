@@ -31,7 +31,7 @@ TRIAL = 300_000
 def served(tmp_path, monkeypatch):
     directory = FileDirectory(tmp_path, key=KEY)
     for who in (ADMIN, VIEWER, ADVOCATE, OTHER):
-        directory.enrol(Enrolment(AdvocateIdentity(who, who.split("@")[0].title()), enrol(PASSWORD)))
+        directory.enrol(Enrolment(AdvocateIdentity(who, who.split("@")[0].title(), email=who), enrol(PASSWORD)))
     model = ScriptedModel(legal=True)
     model.provider = "scripted"
     app = Application(root=Path(__file__).resolve().parents[1], model=model, store=FileMatterStore(tmp_path, key=KEY),
@@ -290,3 +290,28 @@ def test_suspending_an_account_whose_record_will_not_open_is_refused_and_leaves_
     reply = admin.post(f"/api/admin/users/{OTHER}/suspend", json={"reason": "x"})
     assert reply.status_code in (404, 409)
     assert target.read_bytes() == b"\x00 not a record"
+
+
+# ------------------------------------------------------------------- the reset email ---
+
+def test_a_reset_link_is_sent_to_the_account_and_with_only_a_local_outbox_the_admin_is_told_it_has_not_left_the_computer(served):
+    admin = served.login(ADMIN, confirmed=True)
+    reply = admin.post(f"/api/admin/users/{ADVOCATE}/reset-email", json={"reason": "Locked out, asked on the phone"})
+    assert reply.status_code == 200, reply.text
+    assert reply.json()["sent"] == "local-outbox" and "No email leaves this computer" in reply.json()["message"]
+    assert any((served.tmp_path / "outbox").iterdir())
+    assert [row[1:] for row in audit(served)][-1] == ("reset email", ADVOCATE, "Locked out, asked on the phone", "done")
+
+
+def test_an_account_with_no_address_is_refused_in_words_and_the_log_says_it_was_not_made(served):
+    served.app.directory.enrol(Enrolment(AdvocateIdentity("no-address", "No Address"), enrol(PASSWORD)))
+    admin = served.login(ADMIN, confirmed=True)
+    reply = admin.post("/api/admin/users/no-address/reset-email", json={"reason": "x"})
+    assert reply.status_code == 409 and "no email address" in reply.json()["detail"]
+    assert [row[4] for row in audit(served)] == ["started", "not made"]
+
+
+def test_a_view_only_admin_an_unconfirmed_admin_and_an_advocate_cannot_send_a_reset_link(served):
+    for client, status in ((served.login(VIEWER, confirmed=True), 403), (served.login(ADMIN), 403), (served.login(ADVOCATE), 404)):
+        assert client.post(f"/api/admin/users/{OTHER}/reset-email", json={"reason": "x"}).status_code == status
+    assert audit(served) == []
