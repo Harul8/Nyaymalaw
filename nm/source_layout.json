@@ -7,6 +7,7 @@
     "nm.advise.brief_contracts": "domain",
     "nm.advise.turn_receipt_contracts": "domain",
     "nm.app": "domain",
+    "nm.app.admin_views": "core",
     "nm.app.api": "edge",
     "nm.app.composition": "bootstrap",
     "nm.app.documents": "bootstrap",
@@ -129,7 +130,7 @@
   "expected_roles": {
     "adapters": 32,
     "bootstrap": 5,
-    "core": 36,
+    "core": 37,
     "domain": 37,
     "edge": 2,
     "infrastructure": 1,
