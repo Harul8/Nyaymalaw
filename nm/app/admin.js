@@ -92,6 +92,36 @@
     return body;
   }
 
+  function cookie(name) {
+    const hit = document.cookie.split('; ').find((part) => part.startsWith(`${name}=`));
+    return hit ? decodeURIComponent(hit.slice(name.length + 1)) : '';
+  }
+
+  // A change is sent as a POST with the cross-site header every write in this product carries. The server's refusals come back in
+  // words (and, for the password step, with a code the page answers by asking for the password).
+  async function send(path, body) {
+    let res;
+    try {
+      res = await fetch(path, { method: 'POST', credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-NM-CSRF': cookie('nm_csrf') },
+        body: JSON.stringify(body) });
+    } catch {
+      throw new Refused('The server could not be reached. Nothing has been changed.', 0);
+    }
+    let data = null;
+    try { data = await res.json(); } catch { /* not JSON */ }
+    if (res.status === 401) throw new Refused('Your session has ended. Sign in again from the workspace.', 401);
+    if (!res.ok) {
+      const detail = data && data.detail;
+      const message = typeof detail === 'string' ? detail : detail && typeof detail.message === 'string' ? detail.message
+        : Array.isArray(detail) ? 'Check the amount and the reason, and try again.' : `The server answered ${res.status}.`;
+      const refused = new Refused(message, res.status);
+      refused.code = detail && detail.code;
+      throw refused;
+    }
+    return data;
+  }
+
   // ----------------------------------------------------------------- the pieces ---
 
   const tip = $('adm-tip');
@@ -331,6 +361,7 @@
     root.append(section('Signed-in devices', table({ head: ['Device', 'Signed in', 'Last active', 'Ends', 'Now'], empty: 'No sessions are recorded.',
       rows: u.sessions.map((s) => [s.client_label || '—', when(s.issued_at), when(s.last_active_at), when(s.expires_at),
         el('span', { class: `adm-chip ${s.live ? 'adm-ok' : ''}`, text: s.live ? 'Live' : 'Ended' })]) })));
+    root.append(changesPanel(u));
     const t = u.usage.totals;
     root.append(section(`Use in the last ${u.usage.period.days} days`, el('div', { class: 'adm-tiles' },
       tile('Calls', num(t.calls)), tile('Cost', money(t.micro_usd), t.cost_not_established ? `${num(t.cost_not_established)} calls had no cost established` : null),
@@ -426,6 +457,107 @@
     return root;
   }
 
+  // ---------------------------------------------------------------- changes (D116) ---
+
+  let flash = null;
+
+  // One dialog for every change: what will happen, the fields it needs, the reason, and - only when the server has not had it from this
+  // session in the last ten minutes - the admin's password. Nothing is sent until the admin presses the button, and the password is
+  // sent to the server's own password check and nowhere else; it is cleared from the field as soon as it is sent.
+  async function confirmChange({ title, summary, fields, submit, run }) {
+    let status;
+    try { status = await ask('/api/admin/me'); } catch (error) { flash = { kind: 'adm-bad', text: error.message }; return render(); }
+    const dialog = $('adm-dialog');
+    let needPassword = !status.password_confirmed;
+    const inputs = {};
+    const message = el('p', { class: 'adm-dialog-message', role: 'alert' });
+    const rows = fields.map((f) => {
+      inputs[f.name] = el('input', { class: 'adm-field', id: `adm-f-${f.name}`, type: f.type || 'text', required: true, maxlength: f.maxlength,
+        min: f.min, max: f.max, step: f.step, autocomplete: 'off', inputmode: f.inputmode });
+      return el('div', { class: 'adm-dialog-row' }, el('label', { for: `adm-f-${f.name}`, text: f.label }), inputs[f.name],
+        f.help ? el('span', { class: 'adm-note', text: f.help }) : null);
+    });
+    inputs.reason = el('input', { class: 'adm-field', id: 'adm-f-reason', type: 'text', required: true, maxlength: 200, autocomplete: 'off' });
+    const password = el('input', { class: 'adm-field', id: 'adm-f-password', type: 'password', autocomplete: 'current-password', maxlength: 1024 });
+    const passwordRow = el('div', { class: 'adm-dialog-row' }, el('label', { for: 'adm-f-password', text: 'Your password' }), password,
+      el('span', { class: 'adm-note', text: 'Asked once in ten minutes, in each browser you sign in with.' }));
+    passwordRow.hidden = !needPassword;
+    const go = el('button', { type: 'submit', class: 'adm-button', text: submit });
+    const cancel = el('button', { type: 'button', class: 'adm-button adm-plain', text: 'Cancel', onclick: () => dialog.close() });
+    const form = el('form', { method: 'dialog', class: 'adm-dialog-form' }, el('h2', { id: 'adm-dialog-title', text: title }), el('p', { text: summary }),
+      rows, el('div', { class: 'adm-dialog-row' }, el('label', { for: 'adm-f-reason', text: 'Why (one line, kept in the audit log)' }), inputs.reason,
+        el('span', { class: 'adm-note', text: 'At most 200 characters. Do not put an advocate’s case in it.' })),
+      passwordRow, message, el('div', { class: 'adm-dialog-buttons' }, cancel, go));
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      go.disabled = true;
+      message.textContent = '';
+      try {
+        if (needPassword) {
+          if (!password.value) { message.textContent = 'Type your password to continue.'; return; }
+          try { await send('/api/admin/password', { password: password.value }); } finally { password.value = ''; }
+          needPassword = false;
+        }
+        const values = Object.fromEntries(Object.entries(inputs).map(([name, input]) => [name, input.value]));
+        const result = await run(values);
+        dialog.close();
+        flash = { kind: 'adm-fine', text: result };
+        render();
+      } catch (error) {
+        if (error.code === 'password_needed') { needPassword = true; passwordRow.hidden = false; password.focus(); }
+        message.textContent = error.message;
+        if (error.status === 401) { dialog.close(); render(); }
+      } finally {
+        go.disabled = false;
+      }
+    });
+    dialog.replaceChildren(form);
+    dialog.showModal();
+    (inputs[fields[0] ? fields[0].name : 'reason']).focus();
+  }
+
+  function changesPanel(u) {
+    if (!me.can_change) {
+      return section('Changes', note('Admin (view only) can look but cannot change anything. Changes are made by an Admin.'));
+    }
+    const who = u.name || u.id;
+    const buttons = [
+      el('button', { type: 'button', class: 'adm-button adm-plain', text: 'Add to the allowance…', onclick: () => confirmChange({
+        title: `Add to ${who}’s allowance`, submit: 'Add to the allowance',
+        summary: `${who} has had ${u.allowance.started ? money(u.allowance.granted) : 'nothing yet'} granted and has used ${u.allowance.started ? money(u.allowance.spent) : money(0)}. ` +
+          'What you add is in US dollars, at most $1,000 at a time.',
+        fields: [{ name: 'usd', label: 'Amount to add (US dollars)', type: 'number', min: '0.01', max: '1000', step: '0.01', inputmode: 'decimal' }],
+        run: async (v) => {
+          const done = await send(`/api/admin/users/${encodeURIComponent(u.id)}/allowance`, { usd: v.usd, reason: v.reason });
+          return `Added $${Number(v.usd).toLocaleString('en-US')} to ${who}’s allowance. They now have ${money(done.allowance.granted)} granted.` +
+            (done.audited ? '' : ' The audit log could not take its second entry; the first stands.');
+        } }) }),
+      el('button', { type: 'button', class: 'adm-button adm-plain', text: 'End all sessions…', onclick: () => confirmChange({
+        title: `End ${who}’s sessions`, submit: 'End the sessions', fields: [],
+        summary: `This signs ${who} out of every device. Their conversations and matters are not touched, and they can sign in again.`,
+        run: async (v) => {
+          const done = await send(`/api/admin/users/${encodeURIComponent(u.id)}/end-sessions`, { reason: v.reason });
+          return `Ended ${plural(done.sessions_ended, 'session', 'sessions')} of ${who}.`;
+        } }) })];
+    if (u.level !== 'advocate') {
+      buttons.push(el('span', { class: 'adm-note', text: 'This account is an admin, named in the server’s settings. It is not suspended from here.' }));
+    } else if (u.status === 'suspended') {
+      buttons.push(el('button', { type: 'button', class: 'adm-button', text: 'Reinstate the account…', onclick: () => confirmChange({
+        title: `Reinstate ${who}`, submit: 'Reinstate', fields: [], summary: `${who} will be able to sign in again.`,
+        run: async (v) => { await send(`/api/admin/users/${encodeURIComponent(u.id)}/reinstate`, { reason: v.reason }); return `${who} can sign in again.`; } }) }));
+    } else {
+      buttons.push(el('button', { type: 'button', class: 'adm-button adm-plain', text: 'Suspend the account…', onclick: () => confirmChange({
+        title: `Suspend ${who}`, submit: 'Suspend', fields: [],
+        summary: `${who} is signed out everywhere and cannot sign in until you reinstate them. Nothing is deleted: their matters and conversations stay as they are.`,
+        run: async (v) => {
+          const done = await send(`/api/admin/users/${encodeURIComponent(u.id)}/suspend`, { reason: v.reason });
+          return `${who} is suspended; ${plural(done.sessions_ended, 'session was', 'sessions were')} ended.`;
+        } }) }));
+    }
+    return section('Changes', note('Each change asks for a reason and, once in ten minutes, your password, and is written to the audit log (Access and audit).'),
+      el('div', { class: 'adm-actions' }, buttons));
+  }
+
   // ---------------------------------------------------------------------- routing ---
 
   const PAGES = {
@@ -455,7 +587,10 @@
     body.replaceChildren(note('Reading…'));
     try {
       const node = key === 'users' && parts[1] ? await userPage(decodeURIComponent(parts.slice(1).join('/'))) : await page();
-      if (mine === generation) body.replaceChildren(node);
+      if (mine === generation) {
+        body.replaceChildren(...(flash ? [callout(flash.kind, flash.text)] : []), node);
+        flash = null;
+      }
     } catch (error) {
       if (mine === generation) body.replaceChildren(failure(error, render));
     }

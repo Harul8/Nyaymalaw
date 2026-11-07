@@ -10,7 +10,8 @@ from types import MappingProxyType
 from nm.arrive.admin_access import roster_from
 from nm.arrive.admin_directory import AdminFileDirectory
 from nm.arrive.admin_checks import AdminChecks
-from nm.arrive.admin_port import AdminChecksPort, AdminDirectoryPort, AdminRecordPort, AdminTurnsPort, AdminUsagePort
+from nm.arrive.admin_port import (AdminAccountsPort, AdminChecksPort, AdminDirectoryPort, AdminRecordPort, AdminTurnsPort,
+                                  AdminUsagePort)
 from nm.arrive.admin_turns import AdminTurns
 from nm.arrive.admin_usage import AdminUsage
 from nm.arrive.advocate_contracts import utcnow
@@ -112,6 +113,11 @@ class Application:
         self.admin_roster = roster_from(settings)
         self.admin_directory = PolicedPort(inner=_DeferredAdapter(lambda: AdminFileDirectory(storage, key=key)),
             gate=self._gate, port=AdminDirectoryPort, sink=Sink.STORAGE, processor_id=STORAGE_PROCESSOR,
+            data_classes=(DataClass.OPERATIONAL, DataClass.RESTRICTED))
+        # What an admin may change about an account itself (D116, D121): the same directory files, through a port that can only suspend
+        # an account and end its sessions.
+        self.admin_accounts = PolicedPort(inner=_DeferredAdapter(lambda: AdminFileDirectory(storage, key=key)),
+            gate=self._gate, port=AdminAccountsPort, sink=Sink.STORAGE, processor_id=STORAGE_PROCESSOR,
             data_classes=(DataClass.OPERATIONAL, DataClass.RESTRICTED))
         self.admin_usage = PolicedPort(inner=AdminUsage(storage / USAGE_FILE),
             gate=self._gate, port=AdminUsagePort, sink=Sink.STORAGE, processor_id=STORAGE_PROCESSOR,

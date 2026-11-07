@@ -755,6 +755,7 @@ class FileDirectory:
     UNKNOWN = "unknown"
     WRONG_PASSWORD = "wrong_password"
     UNREADABLE = "unreadable"
+    SUSPENDED = "suspended"
 
     def _read(self, advocate_id: str) -> dict | None:
         self._auth_state.last_failure = self.UNKNOWN
@@ -819,7 +820,8 @@ class FileDirectory:
 
     def identity(self, advocate_id: str) -> AdvocateIdentity | None:
         doc = self._read(advocate_id)
-        return AdvocateIdentity(**doc["identity"]) if doc else None
+        # A suspended account (AN.46, D121) has no identity to the edge: every request that asks who is signed in is answered 401.
+        return AdvocateIdentity(**doc["identity"]) if doc and not doc.get("suspended") else None
 
     def _seal_model_permissions(self, rows: list[dict]) -> str:
         return self._cipher.encrypt(
@@ -1220,6 +1222,12 @@ class FileDirectory:
         if not verified:
             self._auth_state.last_failure = self.WRONG_PASSWORD
             self._note(advocate_id, "wrong password")
+            return None
+        if doc.get("suspended"):
+            # AN.46, D121: an admin has suspended the account. The password was right, so this says so in the log; the caller is told
+            # what it is told of any refused sign-in (A1: nothing about what exists), and no session is opened.
+            self._auth_state.last_failure = self.SUSPENDED
+            self._note(advocate_id, "sign-in refused: account suspended")
             return None
         self._auth_state.last_failure = None
         self._note(advocate_id, "authenticated")

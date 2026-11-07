@@ -20,8 +20,10 @@ from contextlib import closing
 from datetime import datetime
 from pathlib import Path
 
-from nm.arrive.admin_port import (AdminAccount, AdminUnavailable, DirectoryListing, SessionLine, WaitingRegistration)
+from nm.arrive.admin_port import (AdminAccount, AdminChangeRefused, AdminUnavailable, DirectoryListing, SessionLine,
+                                  WaitingRegistration)
 from nm.arrive.advocate_contracts import AdvocateIdentity, canonical_id
+from nm.arrive.directory_port import SessionsUnavailable
 from nm.arrive.professional_access_contracts import ProfessionalApproval
 from nm.arrive.store_directory import FileDirectory
 
@@ -152,3 +154,46 @@ class AdminFileDirectory(FileDirectory):
                                 key=lambda a: (not a.readable, a.id)))
         waiting, waiting_readable = self._waiting(now)
         return DirectoryListing(accounts, waiting, unreadable_sessions, waiting_readable)
+
+    # ------------------------------------------------------------ changes (D116, D121) ---
+
+    def set_suspended(self, account_id: str, suspended: bool, now: datetime) -> bool:
+        """Set or clear the account's `suspended` mark, under the directory's own claim on the account (the one sign-in, a password
+        reset and an approval write hold), so a change cannot cross a sign-in. The mark holds only when; who did it and why is the audit's."""
+        wanted = canonical_id(account_id)
+        claim = self._claim_account(wanted)
+        if claim is None:
+            raise AdminChangeRefused(409, "This account is being changed just now. Try again in a moment.")
+        try:
+            doc = self._read(wanted)
+            if not isinstance(doc, dict):
+                if self._auth_state.last_failure == self.UNKNOWN:
+                    raise AdminChangeRefused(404, "There is no such account.")
+                raise AdminChangeRefused(409, "This account's record could not be read, so it was not changed.")
+            if bool(doc.get("suspended")) == suspended:
+                return False
+            if suspended:
+                doc["suspended"] = {"at": now.isoformat(timespec="seconds")}
+            else:
+                del doc["suspended"]
+            try:
+                self._replace_advocate(self._advocate_path(wanted), doc)
+            except OSError as exc:
+                raise AdminUnavailable("the account could not be written") from exc
+            return True
+        finally:
+            claim.release()
+
+    def end_sessions(self, account_id: str, why: str, keep_fingerprint: str = "") -> int:
+        from dataclasses import replace
+
+        ended = 0
+        try:
+            for session in self.sessions_for(canonical_id(account_id)):
+                if session.token_fingerprint == keep_fingerprint or session.ended_because:
+                    continue
+                self._write_session(replace(session, ended_because=why))
+                ended += 1
+        except (OSError, SessionsUnavailable) as exc:
+            raise AdminUnavailable("the sessions could not be ended") from exc
+        return ended

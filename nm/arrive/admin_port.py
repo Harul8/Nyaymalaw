@@ -81,6 +81,29 @@ class AdminDirectoryPort(Protocol):
         ...
 
 
+class AdminChangeRefused(Exception):
+    """A change the Admin area was asked to make was refused for a reason an admin should be told in plain words (nothing was changed).
+    `status` is the HTTP status the edge answers with."""
+
+    def __init__(self, status: int, detail: str):
+        super().__init__(detail)
+        self.status, self.detail = status, detail
+
+
+class AdminAccountsPort(Protocol):
+    """What an admin may change about an account itself (D116, D121). The allowance is changed through the usage port's own grant, and
+    nothing else about an account - its password, its approval, its matters - is reachable from here."""
+
+    def set_suspended(self, account_id: str, suspended: bool, now: datetime) -> bool:
+        """Suspend or reinstate. True when the account's state changed, False when it was already so. Raises AdminChangeRefused for an
+        account that does not exist, one whose record cannot be read, or one being changed just now; AdminUnavailable on storage."""
+        ...
+
+    def end_sessions(self, account_id: str, why: str, keep_fingerprint: str = "") -> int:
+        """End every live session of the account except the one whose fingerprint is given. Returns how many were ended."""
+        ...
+
+
 # ------------------------------------------------------------------------- usage ---
 
 @dataclass(frozen=True)

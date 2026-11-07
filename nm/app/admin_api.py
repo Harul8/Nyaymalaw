@@ -19,15 +19,16 @@ A SOURCE THAT CANNOT BE READ FAILS ITS OWN ROUTE (503, in plain words) and nothi
 """
 from __future__ import annotations
 
+from decimal import Decimal
 from typing import Callable
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
 
-from nm.app import admin_views
-from nm.arrive.admin_access import Level
-from nm.arrive.admin_port import AdminUnavailable
-from nm.arrive.advocate_contracts import utcnow
+from nm.app import admin_changes, admin_views
+from nm.arrive.admin_access import Action, Level
+from nm.arrive.admin_port import AdminChangeRefused, AdminUnavailable
+from nm.arrive.advocate_contracts import canonical_id, utcnow
 from nm.arrive.directory_port import AuthenticationUnavailable
 
 LEVEL_LABELS = admin_views.LEVEL_LABELS
@@ -38,6 +39,16 @@ _UNAVAILABLE = "This part of the Admin area could not be read. Nothing has been 
 class PasswordCheck(BaseModel):
     model_config = ConfigDict(extra="forbid")
     password: str = Field(min_length=1, max_length=1024)
+
+
+class Reason(BaseModel):
+    """What every change is sent with. The length is judged by the change itself, in words an admin can act on."""
+    model_config = ConfigDict(extra="forbid")
+    reason: str = Field(max_length=2000)
+
+
+class AllowanceChange(Reason):
+    usd: Decimal = Field(gt=0, le=1000, decimal_places=6)
 
 
 def admin_router(*, application: Callable, signed_in: Callable, csrf: object, admit_attempt: Callable,
@@ -110,6 +121,67 @@ def admin_router(*, application: Callable, signed_in: Callable, csrf: object, ad
             raise HTTPException(status_code=422, detail=f"Usage is shown for {', '.join(map(str, admin_views.PERIODS))} days.")
         return read(lambda roster, directory, usage_port, now, period: admin_views.usage_view(
             roster, directory, usage_port, now, period, application().admin_turns), days)
+
+    # ------------------------------------------------------------------ changes (D116, D121) ---
+
+    def make(request: Request, level: Level, account_id: str, action: Action, label: str, reason: str, do: Callable) -> dict:
+        """The account must be there and readable; then the one path every change takes (nm/app/admin_changes.py)."""
+        session, now = request.state.account_session, utcnow()
+        wanted = canonical_id(account_id)
+        account = next((a for a in application().admin_directory.listing(now).accounts if a.id == wanted), None) if wanted else None
+        if account is None:
+            raise HTTPException(status_code=404, detail=_NOT_HERE)
+        if not account.readable:
+            raise HTTPException(status_code=409, detail="This account's record could not be read, so it was not changed.")
+        try:
+            return admin_changes.make_change(
+                record=application().admin_record, level=level, actor=session.advocate_id,
+                session_fingerprint=session.token_fingerprint, now=now, action=action, label=label, target=account.id,
+                reason=reason, do=lambda: do(account, session, now))
+        except AdminChangeRefused as exc:
+            code = getattr(exc, "code", None)
+            raise HTTPException(status_code=exc.status, detail={"code": code, "message": exc.detail} if code else exc.detail) from exc
+        except AdminUnavailable as exc:
+            raise HTTPException(status_code=503, detail=_UNAVAILABLE) from exc
+
+    @router.post("/users/{account_id}/allowance", dependencies=[csrf])
+    def add_allowance(account_id: str, body: AllowanceChange, request: Request, level: Level = Depends(admin_level)) -> dict:
+        micro = int(body.usd * 1_000_000)
+        if Decimal(micro) != body.usd * 1_000_000:
+            raise HTTPException(status_code=422, detail="The amount is in US dollars, to at most six decimal places.")
+
+        def grant(account, session, now):
+            standing = application().usage.grant(account.id, micro, note=f"{session.advocate_id}: {body.reason.strip()}"[:200])
+            return {"allowance": {"granted": standing["granted"], "spent": standing["spent"], "left_percent": standing["left"]}}
+        return make(request, level, account_id, Action.ALLOWANCE, f"allowance add usd {format(body.usd.normalize(), 'f')}", body.reason, grant)
+
+    @router.post("/users/{account_id}/end-sessions", dependencies=[csrf])
+    def end_sessions(account_id: str, body: Reason, request: Request, level: Level = Depends(admin_level)) -> dict:
+        def end(account, session, now):
+            keep = session.token_fingerprint if account.id == canonical_id(session.advocate_id) else ""
+            return {"sessions_ended": application().admin_accounts.end_sessions(account.id, "ended by an admin", keep)}
+        return make(request, level, account_id, Action.SESSIONS, "sessions end", body.reason, end)
+
+    def refuse_an_admin(account_id: str) -> None:
+        if application().admin_roster.level_of(account_id) is not None:
+            raise HTTPException(status_code=409, detail="This account is an admin, named in the server's settings. It is not "
+                                                        "suspended from here; take it out of the settings to stop its access.")
+
+    @router.post("/users/{account_id}/suspend", dependencies=[csrf])
+    def suspend(account_id: str, body: Reason, request: Request, level: Level = Depends(admin_level)) -> dict:
+        refuse_an_admin(account_id)
+
+        def stop(account, session, now):
+            changed = application().admin_accounts.set_suspended(account.id, True, now)
+            ended = application().admin_accounts.end_sessions(account.id, "account suspended by an admin")
+            return {"suspended": True, "changed": changed, "sessions_ended": ended}
+        return make(request, level, account_id, Action.SUSPEND, "suspend", body.reason, stop)
+
+    @router.post("/users/{account_id}/reinstate", dependencies=[csrf])
+    def reinstate(account_id: str, body: Reason, request: Request, level: Level = Depends(admin_level)) -> dict:
+        def allow(account, session, now):
+            return {"suspended": False, "changed": application().admin_accounts.set_suspended(account.id, False, now)}
+        return make(request, level, account_id, Action.SUSPEND, "reinstate", body.reason, allow)
 
     @router.get("/diagnostics")
     def diagnostics(level: Level = Depends(admin_level)) -> dict:

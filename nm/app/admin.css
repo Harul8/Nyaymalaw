@@ -114,6 +114,16 @@ a { color: var(--accent); }
 .adm-periods button + button { border-left: 1px solid var(--rule-2); }
 .adm-periods button[aria-pressed="true"] { background: var(--accent); color: #fff; }
 .adm-periods button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.adm-actions { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; margin: 0.6rem 0 0; }
+.adm-dialog { border: 1px solid var(--rule-2); border-radius: 12px; padding: 1.25rem 1.4rem; width: min(30rem, calc(100vw - 2rem)); color: var(--ink); background: var(--surface); box-shadow: 0 8px 32px rgba(27, 32, 41, .25); }
+.adm-dialog::backdrop { background: rgba(27, 32, 41, .45); }
+.adm-dialog h2 { margin: 0 0 0.5rem; font: 600 1.25rem/1.25 var(--f-serif); }
+.adm-dialog p { margin: 0 0 0.7rem; }
+.adm-dialog-row { display: flex; flex-direction: column; gap: 0.2rem; margin: 0 0 0.75rem; }
+.adm-dialog-row label { font-size: 0.85rem; font-weight: 600; }
+.adm-dialog-row .adm-field { min-width: 0; width: 100%; }
+.adm-dialog-message { color: var(--signal); font-weight: 600; min-height: 1.4em; }
+.adm-dialog-buttons { display: flex; justify-content: flex-end; gap: 0.6rem; }
 .adm-mono { font-family: var(--f-mono); font-size: 0.8rem; overflow-wrap: anywhere; }
 
 /* --------------------------------------------------------------------- charts --- */
