@@ -36,7 +36,9 @@
     "nm.arrive.store_admin": "adapters",
     "nm.arrive.store_directory": "adapters",
     "nm.arrive.store_pending_accounts": "adapters",
+    "nm.arrive.store_turn_events": "adapters",
     "nm.arrive.store_usage": "adapters",
+    "nm.arrive.turn_event_port": "ports",
     "nm.arrive.usage_port": "ports",
     "nm.core_engine.answer_sections": "core",
     "nm.core_engine.answer_sources": "core",
@@ -129,13 +131,13 @@
     "nm.work_the_file.matter_contracts": "domain"
   },
   "expected_roles": {
-    "adapters": 32,
+    "adapters": 33,
     "bootstrap": 5,
     "core": 37,
     "domain": 37,
     "edge": 3,
     "infrastructure": 1,
-    "ports": 11
+    "ports": 12
   },
   "browser_assets": {
     "app.css": "nm/app/app.css",
