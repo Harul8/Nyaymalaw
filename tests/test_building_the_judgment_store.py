@@ -266,6 +266,43 @@ def test_a_run_stopped_part_way_through_the_vectors_goes_on_from_the_last_block_
         assert float(vectors[pos] @ _vector(row["blob"]["full_text"])) > 0.999
 
 
+def _rewrite(folder, change):
+    lines = (folder / "passages.jsonl").read_text(encoding="utf-8").splitlines()
+    rows = [json.loads(line) for line in lines]
+    change(rows)
+    (folder / "passages.jsonl").write_text("\n".join(json.dumps(row) for row in rows) + "\n", encoding="utf-8")
+
+
+def test_vectors_are_reused_when_only_what_each_passage_cites_changed_and_made_again_when_a_word_changes(tmp_path):
+    places = library(tmp_path)
+    job.read_stage(places, "trial", only=None, seed=1, aliases="checked", workers=1, counter=words)
+    folder, total = places.folder("trial"), len(rows_of(places))
+    first = job.encode_all(folder, _encode, total, block=5)
+    before = np.array(np.memmap(first, dtype="float32", mode="r", shape=(total, job.DIMENSIONS)))
+    # the read stage is run again after an alias is checked: the passages file differs, the words are the same
+    _rewrite(folder, lambda rows: [row["blob"].update(provisions_resolved_by="an alias the owner checked later") for row in rows])
+    seen = []
+    again = job.encode_all(folder, lambda texts: (seen.append(len(texts)) or _encode(texts)), total, block=5)
+    assert seen == [], "nothing was encoded again"
+    assert np.array_equal(np.array(np.memmap(again, dtype="float32", mode="r", shape=(total, job.DIMENSIONS))), before)
+    # one word changes anywhere: every vector is made again
+    _rewrite(folder, lambda rows: rows[0]["blob"].update(full_text=rows[0]["blob"]["full_text"] + " altered"))
+    seen.clear()
+    job.encode_all(folder, lambda texts: (seen.append(len(texts)) or _encode(texts)), total, block=5)
+    assert sum(seen) == total
+
+
+def test_the_fingerprint_of_the_words_ignores_everything_but_the_words_and_their_order(tmp_path):
+    places = library(tmp_path)
+    job.read_stage(places, "trial", only=None, seed=1, aliases="checked", workers=1, counter=words)
+    folder = places.folder("trial")
+    one = job.texts_fingerprint(folder)
+    _rewrite(folder, lambda rows: [row["blob"].update(note="x") for row in rows])
+    assert job.texts_fingerprint(folder) == one
+    _rewrite(folder, lambda rows: rows.reverse())
+    assert job.texts_fingerprint(folder) != one
+
+
 def test_the_swap_makes_the_new_record_the_live_one_keeps_the_earlier_and_is_refused_while_the_server_is_up(tmp_path):
     places, _ = built(tmp_path)
     places.retrieval.mkdir(parents=True, exist_ok=True)

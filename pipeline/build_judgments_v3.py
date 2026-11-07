@@ -465,9 +465,27 @@ def encode_texts(texts, encode: Callable[[list[str]], "object"], total: int, pat
     return path
 
 
+def texts_fingerprint(folder: Path) -> str:
+    """A hash of every passage's words, in order, and of nothing else. The vectors are made from the words alone, so they are the same for
+    any reading of the judgments that cuts them the same way, whatever the reading attached to each passage (the Acts an alias names,
+    a kind, a court's name) - which is what changes when the owner checks an Act alias and the read stage is run again."""
+    digest = hashlib.sha256()
+    for row in _passages(folder):
+        words = row["blob"]["full_text"].encode("utf-8")
+        digest.update(len(words).to_bytes(8, "big"))
+        digest.update(words)
+    return digest.hexdigest()
+
+
 def encode_all(folder: Path, encode: Callable[[list[str]], "object"], total: int, block: int = 20_000) -> Path:
-    """Every passage's vector, a block at a time, into one file; a run stopped part-way goes on from the last block written."""
-    stamp = {"passages": total, "jsonl_bytes": (folder / "passages.jsonl").stat().st_size, "dimensions": DIMENSIONS}
+    """Every passage's vector, a block at a time, into one file; a run stopped part-way goes on from the last block written.
+
+    THE RESUME IS KEYED ON THE WORDS, NOT ON THE FILE (owner, 7 Nov 2026: the Act aliases are still to be checked, and checking them means the
+    read stage is run again and writes a passages file that differs in what each passage cites while its words are the same). Kept with
+    --keep-vectors, an earlier run's vectors serve any later folder whose passages have the same words in the same order: copy
+    vectors.f32 and vectors.progress.json into the new folder before the index stage and it encodes nothing. One changed word anywhere
+    and it starts again."""
+    stamp = {"passages": total, "texts_sha256": texts_fingerprint(folder), "dimensions": DIMENSIONS}
     return encode_texts((row["blob"]["full_text"] for row in _passages(folder)), encode, total, folder / "vectors.f32",
                         folder / "vectors.progress.json", stamp, block)
 
