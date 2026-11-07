@@ -839,12 +839,29 @@ def provisions_named(text: str, within: str | None = None, instrument: str = "")
 # legal identity).
 
 
+#: The court line the case index reads from the source's own headings: "Andhra HC (Pre-Telangana)".
+_ANDHRA_HC = re.compile(r"\bAndhra\s+(?:HC|H\.\s?C\.)(?:\s*\(\s*Pre-Telangana\s*\))?", re.I)
+
+
 def court_title(court: str) -> str:
     """A court as the library shows it: every Andhra Pradesh court is the Telangana forum's (owner decision, 5 Nov 2026: "all
     Andhra Pradesh Judgements should be marked as telangana judgements only"), by the one rule the statutes' titles use (STATE_NAME,
-    FORUM). The court's own name is kept by whoever calls this (court_as_filed); a name already Telangana's is unchanged."""
+    FORUM), and the source's own label of that court ("Andhra HC (Pre-Telangana)") is that court. The court's own name is kept by
+    whoever calls this (court_as_filed); a name already Telangana's is unchanged."""
     court = " ".join(str(court or "").split())
+    if _ANDHRA_HC.search(court):
+        return _ANDHRA_HC.sub(f"High Court of {FORUM}", court)
     return court if TELANGANA.search(court) or not STATE_NAME.search(court) else STATE_NAME.sub(FORUM, court)
+
+
+def judgment_place(locator, part: int = 1) -> str:
+    """How a sentence names a judgment passage from its locator (plan AN.45, D99): "paragraph 12" for the court's own number - every
+    part of a paragraph cut in several is that paragraph, the later parts "(continued)" where the parts are listed - and as written
+    for NM's own names, "opening of the judgment" and "passage 7"; nothing where the passage has no locator."""
+    locator = " ".join(str(locator or "").split())
+    place = f"paragraph {locator}" if locator[:1].isdigit() else locator
+    later = isinstance(part, int) and not isinstance(part, bool) and part > 1
+    return f"{place} (continued)" if place and later else place
 
 
 #: Names that name no Act: what a judgment calls an Act it has named before, or any Act at all.

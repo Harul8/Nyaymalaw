@@ -1,11 +1,12 @@
 """What a judgment cites (plan AN.45, D102-D104). A judgment's words cite provisions with the Act they name, in the forms judges
 write them; code reads the provision and the Act's words as written, and says which held Act those words are - exactly, or by an
 alias the owner has CHECKED, or not at all (CLAUDE.md: approximate matching ranks, it never resolves legal identity). And every
-Andhra Pradesh court is the Telangana forum's, by the one rule the statutes' titles use. The Acts here are invented."""
+Andhra Pradesh court is the Telangana forum's, by the one rule the statutes' titles use; and a judgment passage is named as a
+lawyer cites it. The Acts here are invented."""
 import pytest
 
 from nm.shared.citation_contracts import (
-    ActResolver, act_alias_index, cited_provisions, court_title, instrument_key, provisions_named,
+    ActResolver, act_alias_index, cited_provisions, court_title, instrument_key, judgment_place, provisions_named,
 )
 
 pytestmark = pytest.mark.class_a
@@ -35,9 +36,22 @@ ALIASES = {"schema": 1, "aliases": [
 def test_every_andhra_pradesh_court_is_the_telangana_forums_and_no_other_is_touched():
     assert court_title("High Court of Andhra Pradesh") == "High Court of Telangana"
     assert court_title("  High Court of A.P. ") == "High Court of Telangana"
+    assert court_title("Andhra HC (Pre-Telangana)") == "High Court of Telangana", "the case index's label for that court"
+    assert court_title("Andhra HC") == "High Court of Telangana"
     assert court_title("Supreme Court of India") == "Supreme Court of India"
     assert court_title("High Court of Telangana") == "High Court of Telangana"
     assert court_title("") == ""
+
+
+@pytest.mark.parametrize("locator, part, said", [
+    ("12", 1, "paragraph 12"), ("12", 2, "paragraph 12 (continued)"), (" 12 ", 3, "paragraph 12 (continued)"),
+    ("opening of the judgment", 1, "opening of the judgment"), ("opening of the judgment", 2, "opening of the judgment (continued)"),
+    ("passage 7", 1, "passage 7"), ("", 2, ""), (None, 1, ""), ("5", "x", "paragraph 5"), ("5", None, "paragraph 5"),
+])
+def test_a_judgment_passage_is_named_as_a_lawyer_cites_it(locator, part, said):
+    """Paragraph before the court's own number only; every part of a paragraph is that paragraph, the later ones continued."""
+    assert judgment_place(locator, part) == said
+    assert judgment_place(locator) == judgment_place(locator, 1)
 
 
 def test_a_provision_is_read_with_the_act_the_judgment_names_in_the_forms_judges_write_it():
