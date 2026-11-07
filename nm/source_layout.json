@@ -16,6 +16,7 @@
     "nm.app.turn_progress": "domain",
     "nm.arrive": "domain",
     "nm.arrive.account_confirmation_contracts": "domain",
+    "nm.arrive.admin_access": "core",
     "nm.arrive.advocate_contracts": "domain",
     "nm.arrive.advocate_memory_codec": "core",
     "nm.arrive.advocate_memory_contracts": "domain",
@@ -124,7 +125,7 @@
   "expected_roles": {
     "adapters": 29,
     "bootstrap": 5,
-    "core": 35,
+    "core": 36,
     "domain": 37,
     "edge": 2,
     "infrastructure": 1,
