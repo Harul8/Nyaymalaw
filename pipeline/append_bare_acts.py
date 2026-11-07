@@ -94,7 +94,7 @@ _SECTION_RUN_ON = re.compile(rf"^{_NUMBER}\.\s+([A-Z\[].{{1,200}}?\.)\s*\(1\)\s*
 #: .(1)" in India Code's text of the Customs Act, 1962), which would take the number of the
 #: section printed after it.
 _FOOTNOTE_OPENS = re.compile(r"^\[?\s*(?:Subs\.|Ins\.|Omitted|Rep\.|The words|Added|Renumbered|Cl\.|Sub-s|"
-                             r"Now see|The original|Certain|Vide|Ss?\.\s*\d)", re.I)
+                             r"Now see|The original|Certain|Vide)", re.I)
 
 
 def _run_on(line: str) -> re.Match | None:
