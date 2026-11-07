@@ -28,6 +28,7 @@ _HEADERS = {
 PAGES = MappingProxyType({
     "/": "home.html",
     "/app": "index.html",
+    "/admin": "admin.html",  # gated: served only to an account the settings name as an admin (D117)
     "/how-it-works": "how-it-works.html",
     "/what-it-holds": "what-it-holds.html",
     "/trust": "trust.html",
@@ -45,13 +46,20 @@ class BrowserAssetsRefused(ValueError):
 
 
 def browser_assets_router(*, asset_paths: Callable[[], Mapping[str, Path]],
-                          root: Path) -> APIRouter:
+                          root: Path,
+                          gated: Mapping[str, Callable[[Request], bool]] | None = None) -> APIRouter:
     """Snapshot the trusted manifest's exact URLs, retaining current file bytes.
 
     The root is supplied by application composition, never an HTTP argument.
     Missing/escaped declarations refuse startup; a subsequently withdrawn or
     redirected asset returns the same 404 as an unknown public name.
+
+    A GATED NAME (plan AN.46, piece 46p; D117) is served only to a request its gate admits - the Admin area's page and files, which the
+    server must not tell anyone they are for: to every other request the name is the same 404 as an unknown one. The gate is supplied
+    by composition (the edge's sign-in and the settings' admin list), never read from the request; the file is still one the closed
+    manifest declares, so there is one way to serve a file and not two.
     """
+    gates = MappingProxyType(dict(gated or {}))
     owned_root = root.resolve(strict=True)
     admitted_owner = None
     assets = MappingProxyType({})
@@ -87,6 +95,9 @@ def browser_assets_router(*, asset_paths: Callable[[], Mapping[str, Path]],
             raise HTTPException(status_code=404)
         path = admitted_assets().get(name)
         if path is None:
+            raise HTTPException(status_code=404)
+        gate = gates.get(name)
+        if gate is not None and not gate(request):
             raise HTTPException(status_code=404)
         try:
             resolved = path.resolve(strict=True)

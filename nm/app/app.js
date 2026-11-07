@@ -424,6 +424,8 @@ function keepDraft() {
 // surface added later cannot be the one that keeps painting a matter after
 // the session behind it is gone.
 function clearPrivileged() {
+  const adminEntry = $('admin-entry');
+  if (adminEntry) adminEntry.hidden = true;
   closeDisputeReader(false);
   window.NmBrainSources?.close(false);
   if (draftVault) draftVault.lock();
@@ -9507,6 +9509,26 @@ function showGate(message) {
   $('login-id').focus();
 }
 
+// THE ADMIN ENTRY (plan AN.46, piece 46p; D117 and D124). The person menu offers Admin only to an account the server's settings name: the
+// server answers /api/admin/me for them and with the 404 of an address it does not have for everyone else, so this learns nothing from a
+// refusal and shows nothing. It asks again at each sign-in, and `clearPrivileged` hides it when the session ends.
+async function showAdminEntry() {
+  const entry = $('admin-entry');
+  const generation = state.sessionGeneration;
+  entry.hidden = true;
+  try {
+    const res = await fetch('/api/admin/me', { credentials: 'same-origin' });
+    if (generation === state.sessionGeneration && state.advocate) entry.hidden = !res.ok;
+  } catch {
+    entry.hidden = true;
+  }
+}
+
+$('admin-entry').addEventListener('click', () => {
+  setAccountMenu(false);
+  window.open('/admin', '_blank', 'noopener');
+});
+
 function showApplication(advocate, workspace, professionalApproval) {
   if (!workspace || !workspace.id || !workspace.label) {
     clearPrivileged();
@@ -9556,6 +9578,7 @@ function showApplication(advocate, workspace, professionalApproval) {
   if (!draftWaiting) startMatter();
   loadHealth();
   loadUsage();
+  showAdminEntry();
   // The landing page is Home. Loading every matter's checked register here
   // started a second, overlapping list request when the advocate chose My
   // work, and did work even when they resumed an already-open file. The list

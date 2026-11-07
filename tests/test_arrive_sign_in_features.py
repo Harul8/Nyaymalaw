@@ -1086,7 +1086,9 @@ def person_menu_actions(app_page):
     # Any further attributes are allowed (Usage and plan says it opens a dialog), so no button is
     # passed over for having one more than the others.
     buttons = re.findall(r'<button id="([a-z-]+)" type="button" class="ghost"[^>]*>([^<]+)</button>', panel)
-    shown = [(id_, label) for id_, label in buttons if id_ != "advocate-preferences"]
+    # Two entries are conditional and hidden until the server says they are for this account: Advice preferences, and Admin (plan
+    # AN.46, piece 46p), which the server answers for only an account its settings name as an admin.
+    shown = [(id_, label) for id_, label in buttons if id_ not in ("advocate-preferences", "admin-entry")]
     assert shown == [("usage-plan", "Usage and plan"), ("devices", "Signed-in devices"),
                      ("ai-sharing", "AI data sharing"), ("dictation-setting", "Dictation"),
                      ("signout", "Sign out")], buttons

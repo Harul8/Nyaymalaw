@@ -1,0 +1,44 @@
+<!doctype html>
+<!-- The Admin area (plan AN.46, piece 46p; owner decisions D116-D119 and D124, 7 Nov 2026). One page of its own, opened from the person menu
+     for admins only: usage, balance and consumption beside the account facts they belong to, diagnostics, and who has done what.
+     It shows no conversation, matter, file or record of an advocate's. The server answers every Admin address with the 404 of an address
+     it does not have unless the settings name the signed-in account (nm/app/admin_api.py); this page learns whether to show itself from
+     /api/admin/me answering at all. The workspace's board and reading pane are not touched (D60). -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Nyaymalaw Admin</title>
+<link rel="stylesheet" href="/static/fonts.css">
+<link rel="stylesheet" href="/static/admin.css">
+</head>
+<body>
+<a class="adm-skip" href="#adm-main">Skip to the page</a>
+<header class="adm-bar">
+  <a class="adm-brand" href="/app" aria-label="Back to the workspace">
+    <span class="adm-mark">NM</span><span class="adm-brand-name">NYAYMALAW</span><span class="adm-brand-area">Admin</span>
+  </a>
+  <span id="adm-level" class="adm-level" hidden></span>
+  <a class="adm-back" href="/app">Back to the workspace</a>
+</header>
+
+<div id="adm-gate" class="adm-gate" role="status">Checking your access…</div>
+
+<div id="adm-shell" class="adm-shell" hidden>
+  <nav class="adm-nav" aria-label="Admin sections" id="adm-nav">
+    <a href="#overview" data-page="overview">Overview</a>
+    <a href="#users" data-page="users">Users</a>
+    <a href="#usage" data-page="usage">Usage</a>
+    <a href="#diagnostics" data-page="diagnostics">Diagnostics</a>
+    <a href="#access" data-page="access">Access and audit</a>
+  </nav>
+  <main id="adm-main" class="adm-main" tabindex="-1">
+    <h1 id="adm-title" class="adm-title"></h1>
+    <div id="adm-body" aria-live="polite"></div>
+  </main>
+</div>
+<div id="adm-tip" class="adm-tip" role="presentation" hidden></div>
+<script src="/static/admin.js"></script>
+</body>
+</html>

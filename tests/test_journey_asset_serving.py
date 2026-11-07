@@ -270,6 +270,11 @@ ASSETS = {
     "app.css": ("nm/app/app.css", "text/css"),
     "app.js": ("nm/app/app.js", "text/javascript"),
     "index.html": ("nm/app/index.html", "text/html"),
+    # The Admin area (plan AN.46, piece 46p; D117 and D124): declared like every other file, and served only to an admin - see
+    # tests/test_the_admin_page_and_its_files_are_served_only_to_admins.py.
+    "admin.html": ("nm/app/admin.html", "text/html"),
+    "admin.css": ("nm/app/admin.css", "text/css"),
+    "admin.js": ("nm/app/admin.js", "text/javascript"),
     "person.js": ("nm/app/person.js", "text/javascript"),
     "brain-sources.js": ("nm/app/brain-sources.js", "text/javascript"),
     "draft-vault.js": ("nm/arrive/draft-vault.js", "text/javascript"),
@@ -298,13 +303,17 @@ def test_every_declared_browser_asset_is_the_exact_shipped_population():
     assert browser_assets(root=ROOT) == {
         name: ROOT / path for name, (path, _media_type) in ASSETS.items()
     }
-    assert len(ASSETS) == 27
+    assert len(ASSETS) == 30
     # The old tree is migration evidence, not a runtime import or public root.
     assert not any(isinstance(route, Mount) and route.path == "/static"
                    for route in api.app.routes)
 
 
-@pytest.mark.parametrize("name", tuple(ASSETS))
+#: Every file a visitor with no session is served; the Admin area's three are served to admins only.
+PUBLIC_ASSETS = {name: row for name, row in ASSETS.items() if not name.startswith("admin.")}
+
+
+@pytest.mark.parametrize("name", tuple(PUBLIC_ASSETS))
 def test_every_real_asset_get_retains_exact_bytes_media_and_cache_headers(http_boundary, name):
     path, media_type = ASSETS[name]
     response = http_boundary.get(f"/static/{name}")

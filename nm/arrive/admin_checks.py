@@ -94,7 +94,8 @@ class AdminChecks:
         found = {}
         try:
             for name, where in (("records", self.storage), ("law", self.corpus)):
-                usage = shutil.disk_usage(where)
+                # Free space belongs to the disk, so a folder not made yet is read through the nearest one that is.
+                usage = shutil.disk_usage(next(p for p in (where, *where.parents) if p.exists()))
                 found[name] = {"free": usage.free, "total": usage.total}
         except OSError:
             return None
