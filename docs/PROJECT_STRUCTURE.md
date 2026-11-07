@@ -30,9 +30,10 @@ Nyaymalaw/
     Archives/legal_brain/  only the nine retrieval helpers and the citation
                     contracts that the Act-store corpus jobs import
     source_layout.json  every active module's role and the served browser assets
-  operations/       the six operator commands (enrol, invite, outbox, professional
-                    approval, store migration, re-keying)
-  pipeline/         the Act-store corpus jobs and their inputs
+  operations/       the operator commands (enrol, invite, outbox, professional
+                    approval, store migration, re-keying, titling old conversations,
+                    usage) and the measurement of old against new search vectors
+  pipeline/         the corpus jobs (Acts and judgments) and their inputs
 ```
 
 `nm/app/main.py` is the entry point (`start.ps1` runs it). It reaches every module
@@ -47,11 +48,21 @@ new module is declared there in the same commit.
 The corpus jobs in `pipeline/` build the stores the engine reads:
 `fetch_india_code.py` fetches the Acts, `build_acts_v4.py` (with
 `append_bare_acts.py`) builds the Act store and its indexes,
-`record_retrieval_lineage.py` records what built the indexes,
-`build_identity_index.py` builds the case identity index, and
-`instrument_copies.py` chooses the stored copy of each instrument. `manifest.yaml`
-is the curated Act manifest. Each is an offline job run deliberately, never
-automatically.
+`embed_acts_wording.py` makes the Acts' vectors again from each passage's own
+wording (the line that names it left out), `cut_judgments.py` cuts a judgment on the
+court's own printed paragraphs and `build_judgments_v3.py` builds the judgment store
+anew with it (each passage carrying its court, the judgment's own citations, the cases
+and the provisions it cites, and its kind), `classify_judgment_paragraphs.py` names the
+kinds still unknown with a model (a paid run the owner limits and applies),
+`record_retrieval_lineage.py` records what built the earlier indexes (each store built
+since writes its own record), `build_identity_index.py` builds the case identity index,
+and `instrument_copies.py` chooses the stored copy of each instrument. `manifest.yaml`
+is the curated Act manifest and `act_aliases.json` the owner's list of the short forms
+judgments use for an Act (only the aliases marked checked resolve a name).
+`operations/compare_retrieval.py` puts composed legal questions to the Acts' earlier and
+new vectors and reports the ranks, before the owner swaps. Each is an offline job run
+deliberately, never automatically; a store changes what the search reads only at its
+swap, with the server stopped.
 
 ## Around production
 
@@ -61,7 +72,7 @@ automatically.
 | `assurance/` | The Git hooks that keep the code graph current (`hooks/`), the console helper the operator commands and corpus jobs use, and three test helpers: exact source segments, layout geometry, and the browser-journey harness |
 | `development_environment/developer_tooling/` | The code-graph launcher (`crg_serve.ps1`, named in `.mcp.json`) and the vector refresh the hooks call |
 | `docs/` | The plan workbook, the [build guide](BUILD_GUIDE.md) and its playbooks, this map, [BASELINE](BASELINE.md), [DEFECT_SHAPES](DEFECT_SHAPES.md), [GOLDEN_SET](GOLDEN_SET.md), [REVIEW_LINKS](REVIEW_LINKS.md), [LIMITATION_SCENARIOS](LIMITATION_SCENARIOS.md) and the two blueprint files the app reads |
-| `legal_database/` | The corpus, a gitignored folder in the checkout (a junction until 6 Nov 2026); never committed |
+| `legal_database/` | The corpus, a gitignored directory junction; never committed |
 | `.nm/` | Private runtime data: matter store, keys, indexes, local evaluation records; never committed |
 
 ## Reading order
