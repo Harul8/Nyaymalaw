@@ -1,5 +1,6 @@
 """Compose the served application with the existing authenticated, sealed adapters."""
 from __future__ import annotations
+import logging
 import os
 import re
 import threading
@@ -16,10 +17,12 @@ from nm.arrive.mail_outbox import FileOutbox
 from nm.arrive.mail_port import MailPort
 from nm.arrive.store_admin import FileAdminRecord
 from nm.arrive.store_directory import FileDirectory
+from nm.arrive.store_turn_events import FileTurnEvents
 from nm.arrive.store_usage import FileUsage
+from nm.arrive.turn_event_port import TurnEventPort, TurnEventRefused
 from nm.arrive.usage_port import AllowanceUsedUp, UsagePort, UsageRefused
 from nm.shared.deployment_contracts import shares_value_with
-from nm.shared.egress_contracts import DataClass, Gatekeeper, Sink
+from nm.shared.egress_contracts import DataClass, EgressRefused, Gatekeeper, Sink
 from nm.shared.egress_policy import INDEX_PROCESSOR, OUTBOX_PROCESSOR, STORAGE_PROCESSOR, egress_policy
 from nm.shared.model_config import AUTO_TURN, DEFAULT_TURN_MODEL, TURN_MODELS, load, load_dotenv
 from nm.shared.model_metered import MeteredModel
@@ -45,6 +48,8 @@ _DEFAULT_SEARCH = object()
 USAGE_FILE = 'usage.sqlite'
 #: What the Admin area did and who just confirmed their password (plan AN.46, piece 46g).
 ADMIN_FILE = 'admin.sqlite'
+#: One content-free line per finished turn (plan AN.46, piece 46h; owner decision D120).
+TURN_EVENTS_FILE = 'turn-events.sqlite'
 
 
 def storage_root(settings: Mapping[str, str], root: Path) -> Path:
@@ -92,6 +97,10 @@ class Application:
         self.usage = PolicedPort(inner=_DeferredAdapter(
             lambda: FileUsage(storage / USAGE_FILE)),
             gate=self._gate, port=UsagePort, sink=Sink.STORAGE, processor_id=STORAGE_PROCESSOR,
+            data_classes=(DataClass.OPERATIONAL,))
+        # One content-free line when each turn ends (plan AN.46, piece 46h; owner decision D120), in a sidecar of its own.
+        self.turn_events = PolicedPort(inner=_DeferredAdapter(lambda: FileTurnEvents(storage / TURN_EVENTS_FILE)),
+            gate=self._gate, port=TurnEventPort, sink=Sink.STORAGE, processor_id=STORAGE_PROCESSOR,
             data_classes=(DataClass.OPERATIONAL,))
         self.directory = PolicedPort(inner=directory or FileDirectory(storage, key=key),
             gate=self._gate, port=DirectoryPort, sink=Sink.STORAGE, processor_id=STORAGE_PROCESSOR,
@@ -254,7 +263,7 @@ class Application:
                 self._running[key] = running
             else:
                 running = self._running[key]
-        ended = 'stopped'
+        ended, began, outcome, metrics, replayed = 'stopped', utcnow(), 'failed', None, False
         try:
             result = process(model, self.store, self.legal_search, advocate_id=advocate_id,
                              session_current=session_current, attempts=self.turn_attempts,
@@ -268,17 +277,41 @@ class Application:
                              # Plan AN.43 (D82): the conversation's title, on the turn's own model port - metered as any call.
                              entitle=lambda given: titles.entitle(model, given), **request)
             ended = 'finished'
+            outcome = 'answered'
+            if isinstance(result, Mapping):
+                metrics, replayed = result.get('metrics'), bool(result.get('replayed'))
             return result
+        except Exception as exc:
+            outcome, metrics = _how_a_turn_ended(exc), getattr(exc, 'metrics', None)
+            raise
         finally:
             if mine:
                 with self._running_lock:
                     self._running.pop(key, None)
+                if not replayed:  # reopening a saved answer is not a turn (plan AN.46, D120)
+                    self._note_turn(advocate_id, began, outcome, metrics, model_choice, effort, len(document_refs or ()))
             # The window closes with the turn; an answer after it goes as the next message (plan AN.37, D44).
             self.questions.close(advocate_id, turn_id)
             # Only the run that did the work closes its progress: a same-turn retry
             # refused while the first run works must not mark that run stopped.
             if reported:
                 self.turn_progress.end(advocate_id, turn_id, ended)
+
+    def _note_turn(self, advocate_id, began, outcome, metrics, model_choice, effort, documents):
+        """One content-free line when a turn ends (plan AN.46, piece 46h; owner decision D120): when, how long, how it ended, the model
+        and effort chosen, the calls it made, what they cost, the documents sent. Its failure loses the line and nothing else: it never
+        fails, delays or changes an answer, and only the kind of fault is logged."""
+        try:
+            calls = metrics.get('llm_calls') if isinstance(metrics, Mapping) else None
+            cost = metrics.get('cost_usd') if isinstance(metrics, Mapping) else None
+            self.turn_events.record(advocate_id, {
+                'started_at': began, 'ended_at': max(utcnow(), began), 'outcome': outcome,
+                'model': model_choice or 'default', 'effort': effort or 'default',
+                'calls': calls if type(calls) is int and calls >= 0 else None,
+                'micro_usd': round(cost * 1_000_000) if isinstance(cost, (int, float)) and cost >= 0 else None,
+                'documents': documents})
+        except (TurnEventRefused, EgressRefused, ValueError, TypeError) as exc:
+            logging.getLogger('nm.turns').warning('A turn line could not be kept (%s).', type(exc).__name__)
 
     def _held(self, advocate_id, chat_id):
         """The conversation and the turn being worked on in it, as saved: (matter, held), held None where there is none."""
@@ -457,6 +490,27 @@ class _Running:
 
     def attach(self, advocate_id, chat_id, writer):
         self.advocate_id, self.chat_id, self.writer = advocate_id, chat_id, writer
+
+
+def _how_a_turn_ended(exc) -> str:
+    """How a turn that raised ended, for its line (plan AN.46, D120): stopped by the advocate; refused before it could be answered
+    (a sign-in that ended, AI sharing off, an allowance used up, an earlier answer still being worked on, a document it could not
+    use); or failed - on NM's side or the AI service's, or a refusal that says the conversation could not be read or the answer
+    could not be given reliably."""
+    from nm.core_engine.conversation import ConversationRefused
+    from nm.core_engine.documents import DocumentRefused
+    from nm.shared.external_ai_contracts import ModelPermissionRefused
+    if isinstance(exc, ConversationRefused):
+        if exc.code == 'stopped':
+            return 'stopped'
+        if exc.status in (401, 402, 403, 422, 429):  # signed out, allowance, not permitted, not accepted, too many
+            return 'refused'
+        failed = exc.status >= 500 or exc.committed == 'unconfirmed' or exc.code in (
+            'history_unavailable', 'answer_withheld', 'attempt_unconfirmed')
+        return 'failed' if failed else 'refused'
+    if isinstance(exc, (DocumentRefused, ModelPermissionRefused, AllowanceUsedUp)):
+        return 'refused'
+    return 'failed'
 
 
 class QuestionDesk:
