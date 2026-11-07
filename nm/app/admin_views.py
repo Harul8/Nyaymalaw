@@ -29,8 +29,6 @@ INDIA = timezone(timedelta(hours=5, minutes=30))
 LEVEL_LABELS = {"admin": "Admin", "view-only": "Admin (view only)", "advocate": "Advocate"}
 #: An allowance this low is called low, as the advocate's own notices start to (P53).
 LOW_PERCENT = 10
-#: An approval ending within this many days is called ending.
-APPROVAL_ENDING_DAYS = 30
 TOP_ACCOUNTS = 10
 #: A key under which an advocate's work or a secret would sit. A payload with one of these anywhere is refused.
 FORBIDDEN_KEYS = frozenset({
@@ -86,7 +84,6 @@ def _row(account: AdminAccount, roster: Roster, balances: Mapping[str, Balance],
         "type_locked": roster.level_of(account.id) is not None,
         "created_at": _iso(account.created_at), "last_sign_in": _iso(account.last_sign_in),
         "last_active": _iso(account.last_active), "live_sessions": sum(1 for s in account.sessions if s.live),
-        "professional": {"state": account.professional_state, "valid_until": _iso(account.professional_valid_until)},
         "ai_sharing": account.ai_sharing,
         "allowance": _allowance(balances.get(digest(account.id))) if account.readable else _allowance(None)}
 
@@ -156,8 +153,7 @@ def users_view(roster: Roster, directory: AdminDirectoryPort, usage: AdminUsageP
                    "advocates": sum(1 for r in rows if r["level"] == "advocate"),
                    "suspended": sum(1 for r in rows if r["status"] == "suspended"),
                    "unreadable": len(rows) - len(readable), "waiting": len(listing.waiting),
-                   "ai_sharing_on": sum(1 for r in readable if r["ai_sharing"]),
-                   "approved": sum(1 for r in readable if r["professional"]["state"] == "approved")},
+                   "ai_sharing_on": sum(1 for r in readable if r["ai_sharing"])},
         "accounts": rows,
         "waiting": [{"email": w.email, "name": w.name, "requested_at": _iso(w.requested_at),
                      "expires_at": _iso(w.expires_at)} for w in listing.waiting],
@@ -221,12 +217,9 @@ def overview_view(roster: Roster, directory: AdminDirectoryPort, usage: AdminUsa
     page = users_view(roster, directory, usage, now)
     week = usage_view(roster, directory, usage, now, 7, turns)
     rows = page["accounts"]
-    ending = now + timedelta(days=APPROVAL_ENDING_DAYS)
     attention = [
         {"kind": "allowance_low", "count": sum(1 for r in rows if r["allowance"]["started"]
                                                and r["allowance"]["left_percent"] <= LOW_PERCENT)},
-        {"kind": "approval_ending", "count": sum(1 for r in rows if r["professional"]["state"] == "approved"
-                                                 and datetime.fromisoformat(r["professional"]["valid_until"]) <= ending)},
         {"kind": "records_unreadable", "count": page["totals"]["unreadable"]},
         {"kind": "sessions_unreadable", "count": page["unreadable_sessions"]},
         {"kind": "registrations_unreadable", "count": 0 if page["waiting_readable"] else 1}]

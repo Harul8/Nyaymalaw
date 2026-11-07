@@ -150,11 +150,6 @@
     const label = { active: 'Active', suspended: 'Suspended', unreadable: 'Record unreadable' }[status] || status;
     return el('span', { class: `adm-chip ${status === 'active' ? 'adm-ok' : 'adm-bad'}`, text: label });
   }
-  function approvalText(p) {
-    if (!p || p.state === null) return 'Could not be read';
-    if (p.state === 'approved') return `Approved until ${dateOnly(p.valid_until)}`;
-    return { revoked: 'Revoked', expired: `Ended ${dateOnly(p.valid_until)}`, none: 'Not approved' }[p.state] || p.state;
-  }
   function meter(allowance) {
     if (!allowance.started) return el('span', { class: 'adm-note', text: 'Not started' });
     const low = allowance.left_percent <= 10;
@@ -259,7 +254,6 @@
 
   const ATTENTION = {
     allowance_low: (n) => `${plural(n, 'account has', 'accounts have')} 10% or less of the allowance left.`,
-    approval_ending: (n) => `${plural(n, 'professional approval ends', 'professional approvals end')} within 30 days.`,
     records_unreadable: (n) => `${plural(n, 'account record', 'account records')} could not be read.`,
     sessions_unreadable: (n) => `${plural(n, 'session file', 'session files')} could not be read, so the sessions shown may be incomplete.`,
     registrations_unreadable: () => 'The registrations waiting to be confirmed could not be read.' };
@@ -295,7 +289,7 @@
       tile('AI sharing on', num(a.ai_sharing_on), `of ${num(a.accounts)} accounts`)));
     root.append(section('Needs attention', o.needs_attention.length
       ? el('div', {}, o.needs_attention.map((item) => callout('adm-warn', (ATTENTION[item.kind] || (() => item.kind))(item.count), ' ',
-        item.kind === 'allowance_low' || item.kind === 'approval_ending' ? el('a', { href: '#users', text: 'See the users.' }) : null)))
+        item.kind === 'allowance_low' ? el('a', { href: '#users', text: 'See the users.' }) : null)))
       : callout('adm-fine', 'Nothing needs attention in the accounts.')));
     root.append(section('This week', el('div', { class: 'adm-two' }, costByDay(o.week.by_day, 'Cost by day, last 7 days'),
       el('div', {}, answersBlock(o.answers, 'Answers by day, last 7 days')))));
@@ -332,7 +326,7 @@
   let userFilter = '';
   const USER_COLUMNS = [
     ['name', 'Name', (r) => (r.name || r.id).toLowerCase()], ['level', 'User type', (r) => r.level_label], ['status', 'Status', (r) => r.status],
-    ['approval', 'Professional approval', (r) => r.professional.state || ''], ['allowance', 'Allowance', (r) => (r.allowance.started ? r.allowance.left_percent : 1e9)],
+    ['allowance', 'Allowance', (r) => (r.allowance.started ? r.allowance.left_percent : 1e9)],
     ['sharing', 'AI sharing', (r) => (r.ai_sharing === null ? -1 : Number(r.ai_sharing))], ['signin', 'Last sign-in', (r) => r.last_sign_in || ''],
     ['sessions', 'Sessions', (r) => r.live_sessions]];
 
@@ -351,7 +345,7 @@
         el('thead', {}, el('tr', {}, heads)),
         el('tbody', {}, rows.map((r) => el('tr', {},
           el('td', {}, who(r, true)), el('td', {}, typeCell(r)), el('td', {}, statusChip(r.status)),
-          el('td', { text: approvalText(r.professional) }), el('td', {}, meter(r.allowance)),
+          el('td', {}, meter(r.allowance)),
           el('td', { text: r.ai_sharing === null ? 'Could not be read' : r.ai_sharing ? 'On' : 'Off' }),
           el('td', { class: 'adm-nowrap', text: when(r.last_sign_in) }), el('td', { class: 'adm-num', text: num(r.live_sessions) })))))) : note('No account matches.'));
     };
@@ -379,7 +373,7 @@
       u.name ? el('span', { class: 'adm-person-mail', text: u.id }) : null));
     root.append(facts([
       ['User type', u.level_label], ['Enrolment', u.enrolment || '—'], ['Firm', u.firm_id || '—'], ['Account made', dateOnly(u.created_at)],
-      ['Last sign-in', when(u.last_sign_in)], ['Last active', when(u.last_active)], ['Professional approval', approvalText(u.professional)],
+      ['Last sign-in', when(u.last_sign_in)], ['Last active', when(u.last_active)],
       ['AI data sharing', u.ai_sharing === null ? 'Could not be read' : u.ai_sharing ? `On${u.ai_notice_version ? ` (notice ${u.ai_notice_version})` : ''}` : 'Off'],
       ['Allowance', meter(u.allowance)],
       ['Granted and used', u.allowance.started ? `${money(u.allowance.granted)} granted · ${money(u.allowance.spent)} used` : 'Not started']]));

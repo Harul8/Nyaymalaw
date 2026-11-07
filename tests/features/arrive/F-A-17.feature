@@ -15,7 +15,7 @@ Feature: F-A-17 The top bar and the person menu, the same on every page
   Scenario: The person menu holds the profile and the account's settings
     Given the page
     And the page script
-    Then the person menu shows the name, email, active workspace, enrolment and practice, and professional approval
+    Then the person menu shows the name, email, active workspace, and enrolment and practice
     And the person menu has Usage and plan, Signed-in devices, AI data sharing, Dictation and Sign out
     And the menu opens from its button and closes on Escape, on a click elsewhere, and when the session ends
 

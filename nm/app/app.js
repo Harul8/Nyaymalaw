@@ -473,7 +473,7 @@ function clearPrivileged() {
   state.turns = [];
   ['thread', 'rail-body', 'rail-meta', 'matter-board-body', 'matter-board-meta',
    'search-results', 'history-body', 'who-name', 'account-initials', 'profile-name', 'profile-email', 'profile-workspace',
-   'who-detail', 'professional-approval', 'files-menu', 'search-index', 'search-state', 'history-state']
+   'who-detail', 'files-menu', 'search-index', 'search-state', 'history-state']
     .forEach((id) => { const el = $(id); if (el) el.textContent = ''; });
   fitBoard();
   $('matter-heading').textContent = 'My work';
@@ -9560,8 +9560,6 @@ function showApplication(advocate, workspace, professionalApproval) {
   $('profile-email').textContent = advocate.email || 'Not recorded';
   $('who-detail').textContent = [advocate.enrolment, advocate.practice]
     .filter(Boolean).join(' · ') || 'Not recorded yet';
-  $('professional-approval').textContent = professionalApproval?.state === 'approved'
-    ? 'Professional profile approved' : 'Professional profile not approved';
   $('profile-workspace').textContent = workspace.label;
   $('gate').hidden = true;
   $('masthead').hidden = false;

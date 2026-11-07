@@ -42,9 +42,6 @@ class AdminAccount:
     enrolment: str = ""
     firm_id: str = ""
     created_at: datetime | None = None
-    #: "approved", "revoked", "expired" or "none"; None when the account's approval record would not open.
-    professional_state: str | None = None
-    professional_valid_until: datetime | None = None
     #: AI data sharing as the advocate last set it; None when the permission record would not open.
     ai_sharing: bool | None = None
     ai_notice_version: str | None = None

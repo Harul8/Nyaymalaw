@@ -1066,15 +1066,13 @@ def no_top_tabs(app_page, page_script):
     assert "showTab('advise');" in show and "showTab('home')" not in show
 
 
-@then("the person menu shows the name, email, active workspace, enrolment and practice, and "
-      "professional approval")
+@then("the person menu shows the name, email, active workspace, and enrolment and practice")
 def person_menu_profile(app_page, page_script):
     panel = app_page[app_page.index('<div id="account-panel"'):]
     details = re.findall(r'<dt>([^<]+)</dt><dd id="([^"]+)"', panel[:panel.index("</dl>")])
     assert details == [("Name", "profile-name"), ("Email", "profile-email"),
                        ("Active workspace", "profile-workspace"),
-                       ("Enrolment and practice", "who-detail"),
-                       ("Professional approval", "professional-approval")], details
+                       ("Enrolment and practice", "who-detail")], details
     show = _function(page_script, "showApplication")
     for _, field in details:
         assert f"$('{field}').textContent" in show, f"{field} is never filled"
@@ -1118,7 +1116,7 @@ def name_from_the_account(page_script):
 def session_end_clears_the_profile(page_script):
     clear = _function(page_script, "clearPrivileged")
     for detail in ("'who-name'", "'profile-name'", "'profile-email'", "'profile-workspace'",
-                   "'who-detail'", "'professional-approval'"):
+                   "'who-detail'"):
         assert detail in clear, detail
 
 

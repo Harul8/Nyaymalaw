@@ -12,7 +12,6 @@ import pytest
 from nm.arrive.admin_directory import SESSIONS_SHOWN, AdminFileDirectory
 from nm.arrive.advocate_contracts import (PRIVACY_NOTICE_VERSION, AdvocateIdentity, Enrolment, enrol,
                                           registration_consent)
-from nm.arrive.professional_access_contracts import ProfessionalApproval
 from nm.arrive.store_directory import FileDirectory
 from nm.shared.external_ai_contracts import NOTICE_VERSION, ModelPermission
 
@@ -40,14 +39,6 @@ def account(directory, who, *, name=None, enrolment="", firm=""):
     return who
 
 
-def approve(directory, who, *, days=100, revoke=False):
-    approval = ProfessionalApproval(who, REVIEWER, "enrolment certificate", "ref-1", "a" * 64,
-                                    NOW - timedelta(days=10), NOW + timedelta(days=days))
-    directory.record_professional_approval(approval, expected_version=0, now=NOW)
-    if revoke:
-        directory.record_professional_approval(approval.revoke(REVIEWER, "withdrawn", NOW), expected_version=1, now=NOW)
-
-
 def share(directory, who, accepted=True):
     directory.record_model_permission(ModelPermission(who, NOTICE_VERSION, accepted, NOW - timedelta(days=5), 1),
                                       expected_version=0)
@@ -61,7 +52,6 @@ def snapshot(root):
 def test_each_account_is_listed_once_with_the_fields_an_admin_may_see(directory, admin):
     account(directory, "meera@example.test", name="Meera Iyer", enrolment="D/1234/2015", firm="chambers-1")
     account(directory, "anita@example.test", name="Anita Rao")
-    approve(directory, "meera@example.test")
     share(directory, "meera@example.test")
     token = directory.open_session("meera@example.test", "device-1", NOW - timedelta(minutes=40), client_label="Chrome on Windows")
     directory.touch_session(token, "device-1", NOW - timedelta(minutes=15))
@@ -70,23 +60,11 @@ def test_each_account_is_listed_once_with_the_fields_an_admin_may_see(directory,
     anita, meera = listing.accounts
     assert meera.readable and (meera.name, meera.enrolment, meera.firm_id) == ("Meera Iyer", "D/1234/2015", "chambers-1")
     assert meera.created_at == NOW - timedelta(days=30)
-    assert (meera.professional_state, meera.professional_valid_until) == ("approved", NOW + timedelta(days=100))
     assert (meera.ai_sharing, meera.ai_notice_version) == (True, NOTICE_VERSION)
     assert meera.last_sign_in == NOW - timedelta(minutes=40) and meera.last_active == NOW - timedelta(minutes=15)
     assert [(s.client_label, s.live) for s in meera.sessions] == [("Chrome on Windows", True)]
-    assert (anita.professional_state, anita.ai_sharing, anita.ai_notice_version) == ("none", False, None)
+    assert (anita.ai_sharing, anita.ai_notice_version) == (False, None)
     assert anita.sessions == () and anita.last_sign_in is None and not anita.suspended
-
-
-def test_an_approval_that_was_revoked_or_has_ended_is_said_so(directory, admin):
-    for who in ("revoked@example.test", "ended@example.test"):
-        account(directory, who)
-    approve(directory, "revoked@example.test", revoke=True)
-    approval = ProfessionalApproval("ended@example.test", REVIEWER, "certificate", "ref-2", "b" * 64,
-                                    NOW - timedelta(days=400), NOW - timedelta(days=35))
-    directory.record_professional_approval(approval, expected_version=0, now=NOW - timedelta(days=300))
-    states = {a.id: a.professional_state for a in admin.listing(NOW).accounts}
-    assert states == {"ended@example.test": "expired", "revoked@example.test": "revoked"}
 
 
 def test_a_session_that_has_ended_is_listed_as_not_live_and_only_the_newest_are_shown(directory, admin):
@@ -121,7 +99,7 @@ def test_an_account_that_will_not_open_is_listed_as_unreadable_and_the_others_ar
     assert set(accounts) == {"fine@example.test", "broken@example.test"}
     assert accounts["fine@example.test"].readable and not accounts["broken@example.test"].readable
     broken = accounts["broken@example.test"]
-    assert (broken.name, broken.professional_state, broken.ai_sharing, broken.sessions) == ("", None, None, ())
+    assert (broken.name, broken.ai_sharing, broken.sessions) == ("", None, ())
 
 
 def test_an_account_filed_under_another_name_is_not_adopted(tmp_path, directory, admin):
@@ -136,11 +114,10 @@ def test_a_part_that_will_not_open_is_unknown_and_not_none(tmp_path, directory, 
     who = account(directory, "odd@example.test")
     path = directory._advocate_path(who)
     doc = json.loads(path.read_text())
-    doc["professional_approval"] = "not sealed text"
     doc["model_permission"] = "not sealed text"
     path.write_text(json.dumps(doc))
     odd = admin.listing(NOW).accounts[0]
-    assert odd.readable and odd.professional_state is None and odd.ai_sharing is None
+    assert odd.readable and odd.ai_sharing is None
 
 
 def test_a_session_file_that_will_not_open_is_counted_so_the_page_can_say_the_sessions_may_be_incomplete(tmp_path, directory, admin):

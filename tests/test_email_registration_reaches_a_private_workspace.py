@@ -72,7 +72,6 @@ def test_email_registration_opens_own_workspace_and_matter(page, journey, width)
     page.wait_for_selector("#masthead:not([hidden])")
     assert email in page.inner_text("#workspace-name")
     assert page.inner_text("#who-detail") != " · "
-    assert page.inner_text("#professional-approval") == "Professional profile not approved"
     support._reach_rail(page, width)
     assert page.locator("#rail-body .row[data-matter-id]").count() == 0
     support._start_matter(page)

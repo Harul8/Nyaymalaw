@@ -24,7 +24,6 @@ from nm.arrive.admin_port import (AdminAccount, AdminChangeRefused, AdminUnavail
                                   WaitingRegistration)
 from nm.arrive.advocate_contracts import AdvocateIdentity, canonical_id
 from nm.arrive.directory_port import SessionsUnavailable
-from nm.arrive.professional_access_contracts import ProfessionalApproval
 from nm.arrive.store_directory import FileDirectory
 
 #: The most sessions listed for one account (the newest); older ones are history the page does not need.
@@ -77,22 +76,6 @@ class AdminFileDirectory(FileDirectory):
                 found.setdefault(canonical_id(session.advocate_id), []).append(session)
         return found, unreadable
 
-    def _professional(self, doc: dict, account_id: str, now: datetime) -> tuple[str | None, datetime | None]:
-        try:
-            rows = self._professional_records(doc, account_id)
-            if not rows:
-                return "none", None
-            approval = ProfessionalApproval.from_record(rows[-1])
-            if approval is None:
-                return None, None
-            if approval.revoked_at is not None:
-                return "revoked", approval.valid_until
-            if approval.permits(account_id, now):
-                return "approved", approval.valid_until
-            return ("expired" if now >= approval.valid_until else "none"), approval.valid_until
-        except Exception:  # noqa: BLE001 -- a record that will not open is unknown, not "none"
-            return None, None
-
     def _sharing(self, doc: dict, account_id: str, now: datetime) -> tuple[bool | None, str | None]:
         try:
             rows = self._model_permissions(doc, account_id)
@@ -110,7 +93,6 @@ class AdminFileDirectory(FileDirectory):
             return AdminAccount(id=path.stem, readable=False)
         if canonical_id(identity.id) != identity.id or (path.parent == self._advocates and identity.id != path.stem):
             return AdminAccount(id=path.stem, readable=False)
-        state, until = self._professional(doc, identity.id, now)
         sharing, notice = self._sharing(doc, identity.id, now)
         mine = sorted(sessions_of.get(identity.id, ()), key=lambda s: s.issued_at, reverse=True)
         lines = tuple(SessionLine(s.client_label, s.issued_at, s.expires_at, s.last_active_at, s.live_at(now))
@@ -119,7 +101,6 @@ class AdminFileDirectory(FileDirectory):
         return AdminAccount(
             id=identity.id, readable=True, name=identity.name, enrolment=identity.enrolment,
             firm_id=identity.firm_id, created_at=_when(doc.get("created_at")),
-            professional_state=state, professional_valid_until=until,
             ai_sharing=sharing, ai_notice_version=notice,
             last_sign_in=max((s.issued_at for s in mine), default=None),
             last_active=max(activity, default=None), sessions=lines,

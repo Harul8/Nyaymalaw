@@ -16,7 +16,6 @@ from nm.arrive.admin_directory import AdminFileDirectory
 from nm.arrive.admin_usage import AdminUsage
 from nm.arrive.advocate_contracts import (PRIVACY_NOTICE_VERSION, AdvocateIdentity, Enrolment, enrol,
                                           registration_consent)
-from nm.arrive.professional_access_contracts import ProfessionalApproval
 from nm.arrive.store_directory import FileDirectory
 from nm.arrive.store_usage import FileUsage
 from nm.arrive.usage_port import TRIAL_MICRO_USD
@@ -48,17 +47,12 @@ class World:
         self.admin_directory = AdminFileDirectory(tmp_path, key=KEY)
         self.admin_usage = AdminUsage(tmp_path / "usage.sqlite")
 
-    def account(self, who, name=None, *, sharing=False, approval_days=None, start=True):
+    def account(self, who, name=None, *, sharing=False, start=True):
         self.directory.enrol(Enrolment(AdvocateIdentity(who, name or who.split("@")[0]), enrol(PASSWORD),
                                        NOW - timedelta(days=60)))
         if sharing:
             self.directory.record_model_permission(
                 ModelPermission(who, NOTICE_VERSION, True, NOW - timedelta(days=3), 1), expected_version=0)
-        if approval_days is not None:
-            self.directory.record_professional_approval(
-                ProfessionalApproval(who, "reviewer@example.test", "certificate", "ref", "a" * 64,
-                                     NOW - timedelta(days=20), NOW + timedelta(days=approval_days)),
-                expected_version=0, now=NOW)
         if start:
             self.usage.standing(who)
         return who
@@ -81,7 +75,7 @@ def world(tmp_path, monkeypatch):
 def populate(world):
     world.account("boss@example.test", "Boss", sharing=True)
     world.account("viewer@example.test", "Viewer")
-    world.account("anita@example.test", "Anita Rao", sharing=True, approval_days=10)
+    world.account("anita@example.test", "Anita Rao", sharing=True)
     world.account("never@example.test", "Never Used", start=False)
     world.spend("anita@example.test", NOW - timedelta(days=2), micro_usd=TRIAL_MICRO_USD - 20_000)
     world.spend("anita@example.test", NOW - timedelta(days=1), model="gpt-6-1-sol", operation="response_writer", micro_usd=5000)
@@ -90,7 +84,7 @@ def populate(world):
     world.directory.open_session("anita@example.test", "d1", NOW - timedelta(minutes=20), client_label="Chrome on Windows")
 
 
-def test_the_users_page_gives_each_account_its_level_status_approval_sharing_and_allowance(world):
+def test_the_users_page_gives_each_account_its_level_status_sharing_and_allowance(world):
     populate(world)
     page = users_view(ROSTER, world.admin_directory, world.admin_usage, NOW)
     rows = {r["id"]: r for r in page["accounts"]}
@@ -99,12 +93,11 @@ def test_the_users_page_gives_each_account_its_level_status_approval_sharing_and
     assert rows["viewer@example.test"]["level_label"] == "Admin (view only)"
     anita = rows["anita@example.test"]
     assert (anita["level"], anita["level_label"], anita["status"]) == ("advocate", "Advocate", "active")
-    assert anita["professional"] == {"state": "approved", "valid_until": (NOW + timedelta(days=10)).isoformat()}
     assert anita["ai_sharing"] is True and anita["live_sessions"] == 1 and anita["name"] == "Anita Rao"
     assert anita["allowance"] == {"started": True, "granted": TRIAL_MICRO_USD, "spent": TRIAL_MICRO_USD - 15_000, "left_percent": 5}
     assert rows["never@example.test"]["allowance"] == {"started": False, "granted": None, "spent": None, "left_percent": None}
     assert page["totals"] == {"accounts": 4, "admins": 2, "advocates": 2, "suspended": 0, "unreadable": 0, "waiting": 0,
-                              "ai_sharing_on": 2, "approved": 1}
+                              "ai_sharing_on": 2}
 
 
 def test_a_suspended_account_an_unreadable_one_and_an_email_waiting_are_facts_beside_the_level(world, tmp_path):
@@ -168,7 +161,7 @@ def test_spend_by_an_account_the_directory_no_longer_holds_is_still_counted_with
 def test_the_overview_says_what_needs_attention_and_nothing_that_does_not(world):
     populate(world)
     page = overview_view(ROSTER, world.admin_directory, world.admin_usage, NOW)
-    assert {item["kind"]: item["count"] for item in page["needs_attention"]} == {"allowance_low": 1, "approval_ending": 1}
+    assert {item["kind"]: item["count"] for item in page["needs_attention"]} == {"allowance_low": 1}
     assert page["accounts"]["accounts"] == 4 and page["live_sessions"] == 1 and page["signed_in_last_7_days"] == 1
     assert page["week"]["tiles"]["calls"] == 4 and len(page["week"]["by_day"]) == 7
 
