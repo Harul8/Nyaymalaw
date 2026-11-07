@@ -62,11 +62,11 @@ class Passage:
 
     @property
     def locator(self) -> str:
-        """What an answer and the reading pane call this passage."""
+        """What an answer and the reading pane call this passage: the court's number for every part of a paragraph (a lawyer cites
+        "paragraph 12", never its part), the opening, or NM's own "passage 7"."""
         if self.section == "text":
             return f"passage {self.order}"
-        name = self.paragraph if self.section == "paragraph" else "opening"
-        return f"{name} (part {self.part} of {self.parts})" if self.parts > 1 else name
+        return self.paragraph if self.section == "paragraph" else "opening of the judgment"
 
 
 @dataclass

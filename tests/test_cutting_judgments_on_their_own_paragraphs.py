@@ -47,7 +47,7 @@ def test_a_judgment_with_printed_numbers_is_cut_on_them_and_the_heading_is_its_o
     result = cj.cut(raw, words)
     assert result.numbering == "printed" and result.paragraphs == 7 and (result.first, result.last) == (1, 7)
     keeps_every_word(raw, result)
-    assert [p.locator for p in result.passages] == ["opening", *map(str, range(1, 8))]
+    assert [p.locator for p in result.passages] == ["opening of the judgment", *map(str, range(1, 8))]
     assert result.passages[0].text.startswith("SUPREME COURT OF INDIA") and result.passages[0].paragraph == ""
     assert all(p.text.startswith(f"{p.paragraph}. ") for p in result.passages[1:]), "a paragraph begins at its printed number"
 
@@ -69,7 +69,7 @@ def test_a_first_number_lost_from_the_text_leaves_that_paragraph_in_the_opening_
     result = cj.cut(raw, words)
     keeps_every_word(raw, result)
     assert (result.numbering, result.first, result.last) == ("printed", 2, 8)
-    assert [p.locator for p in result.passages] == ["opening", "2", "3", "5", "6", "7", "8"]
+    assert [p.locator for p in result.passages] == ["opening of the judgment", "2", "3", "5", "6", "7", "8"]
     assert "first1 proved" in result.passages[0].text, "paragraph 1, its number lost, is in the opening and not called 2"
 
 
@@ -99,7 +99,7 @@ def test_a_paragraph_longer_than_the_model_reads_is_split_at_sentence_ends_into_
     keeps_every_word(raw, result)
     seventh = [p for p in result.passages if p.paragraph == "7"]
     assert [(p.part, p.parts) for p in seventh] == [(1, 2), (2, 2)]
-    assert [p.locator for p in seventh] == ["7 (part 1 of 2)", "7 (part 2 of 2)"]
+    assert [p.locator for p in seventh] == ["7", "7"], "a lawyer cites paragraph 7, never its part"
     assert all(len(p.text.split()) <= cj.LIMIT for p in seventh)
     sizes = [len(p.text.split()) for p in seventh]
     assert max(sizes) - min(sizes) <= 12, "the parts are about equal"

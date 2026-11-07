@@ -110,7 +110,8 @@ def test_each_judgment_is_cut_on_its_paragraphs_and_each_passage_carries_what_is
     assert summary["not in the earlier store"] == 2 and summary["passages"] == len(rows_of(places))
     rows = rows_of(places)
     first = [r["blob"] for r in rows if r["case_id"] == "SC_1990_A_V_B"]
-    assert [b["locator"] for b in first][:3] == ["opening", "1", "2"] and "5 (part 1 of 2)" in [b["locator"] for b in first]
+    assert [b["locator"] for b in first][:3] == ["opening of the judgment", "1", "2"]
+    assert [(b["locator"], b["part"], b["parts"]) for b in first if b["paragraph_num"] == "5"] == [("5", 1, 2), ("5", 2, 2)]
     assert all(b["numbering"] == "printed" and b["doc_type"] == "case_law" and b["court"] == "Supreme Court of India" for b in first)
     assert all(b["case_name"] == "Alpha vs Beta" and (b["cites_count"], b["cited_by_count"]) == (3, 12) for b in first)
     assert {b["source_file"] for b in first} == {"CaseLaws\\Supreme Court\\SC_1990_A_V_B.txt"}, "as the earlier store names it"
@@ -133,8 +134,8 @@ def test_the_kinds_are_those_of_the_old_passages_the_new_ones_overlap_and_unknow
     places = library(tmp_path)
     job.read_stage(places, "trial", only=None, seed=1, aliases="checked", workers=1, counter=words)
     rows = rows_of(places)
-    first = {r["blob"]["locator"]: r["atom_type"] for r in rows if r["case_id"] == "SC_1990_A_V_B"}
-    assert first["1"] == first["2"] == "facts" and first["6"] == first["7"] == "ratio" and first["5 (part 1 of 2)"] == "ratio"
+    first = {(r["blob"]["locator"], r["blob"]["part"]): r["atom_type"] for r in rows if r["case_id"] == "SC_1990_A_V_B"}
+    assert first["1", 1] == first["2", 1] == "facts" and first["6", 1] == first["7", 1] == "ratio" and first["5", 1] == "ratio"
     assert {r["atom_type"] for r in rows if r["case_id"] == "HC_1995_D_V_E"} == {"reasoning"}
     assert {r["atom_type"] for r in rows if r["case_id"] == "SC_1960_Z_V_H"} == {"unknown"}
 
