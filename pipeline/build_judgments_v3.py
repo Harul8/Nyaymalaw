@@ -433,12 +433,12 @@ def write_passage_store(folder: Path, name: str) -> int:
     return pos
 
 
-def encode_all(folder: Path, encode: Callable[[list[str]], "object"], total: int, block: int = 20_000) -> Path:
-    """Every passage's vector, a block at a time, into one file; a run stopped part-way goes on from the last block written."""
+def encode_texts(texts, encode: Callable[[list[str]], "object"], total: int, path: Path, progress: Path, stamp: dict,
+                 block: int = 20_000) -> Path:
+    """Every text's vector (text n is vector n), a block at a time, into one file; a run stopped part-way goes on from the last block
+    written, when the progress file records the same stamp - what the texts are made from - and starts again when it does not."""
     import numpy as np
 
-    path, progress = folder / "vectors.f32", folder / "vectors.progress.json"
-    stamp = {"passages": total, "jsonl_bytes": (folder / "passages.jsonl").stat().st_size, "dimensions": DIMENSIONS}
     done = 0
     if path.exists() and progress.exists():
         saved = json.loads(progress.read_text(encoding="utf-8"))
@@ -446,23 +446,30 @@ def encode_all(folder: Path, encode: Callable[[list[str]], "object"], total: int
             done = saved["done"]
     mode = "r+" if path.exists() and done else "w+"
     vectors = np.memmap(path, dtype="float32", mode=mode, shape=(total, DIMENSIONS))
-    texts, start = [], 0
-    for row in _passages(folder):
-        texts.append(row["blob"]["full_text"])
-        if len(texts) == block:
+    batch, start = [], 0
+    for text in texts:
+        batch.append(text)
+        if len(batch) == block:
             if start >= done:
-                vectors[start:start + len(texts)] = np.asarray(encode(texts), dtype="float32")
+                vectors[start:start + len(batch)] = np.asarray(encode(batch), dtype="float32")
                 vectors.flush()
-                progress.write_text(json.dumps({**stamp, "done": start + len(texts)}), encoding="utf-8")
-                print(f"   {start + len(texts):,}/{total:,} vectors", flush=True)
-            start += len(texts)
-            texts = []
-    if texts and start >= done:
-        vectors[start:start + len(texts)] = np.asarray(encode(texts), dtype="float32")
+                progress.write_text(json.dumps({**stamp, "done": start + len(batch)}), encoding="utf-8")
+                print(f"   {start + len(batch):,}/{total:,} vectors", flush=True)
+            start += len(batch)
+            batch = []
+    if batch and start >= done:
+        vectors[start:start + len(batch)] = np.asarray(encode(batch), dtype="float32")
         vectors.flush()
         progress.write_text(json.dumps({**stamp, "done": total}), encoding="utf-8")
     del vectors
     return path
+
+
+def encode_all(folder: Path, encode: Callable[[list[str]], "object"], total: int, block: int = 20_000) -> Path:
+    """Every passage's vector, a block at a time, into one file; a run stopped part-way goes on from the last block written."""
+    stamp = {"passages": total, "jsonl_bytes": (folder / "passages.jsonl").stat().st_size, "dimensions": DIMENSIONS}
+    return encode_texts((row["blob"]["full_text"] for row in _passages(folder)), encode, total, folder / "vectors.f32",
+                        folder / "vectors.progress.json", stamp, block)
 
 
 def build_word_index(folder: Path, name: str, build: Callable | None = None) -> int:
@@ -545,21 +552,25 @@ def server_is_up(port: int = 8071) -> bool:
 
 
 def swap_stage(places: Places, out: str, *, running: Callable[[], bool] = server_is_up) -> dict:
+    """The search reads the new judgment store from now on: see swap_record."""
+    return swap_record(places.candidate(out), places.live, places.vector_store, DOC_TYPE, running=running)
+
+
+def swap_record(candidate: Path, live: Path, vector_store: Path, doc_type: str, *,
+                running: Callable[[], bool] = server_is_up) -> dict:
     """The search reads the new store from now on: the candidate lineage record becomes the live one, the earlier kept beside it as
     .before-<time>. Refuses while the server is up or the candidate does not agree with the files it names."""
     from nm.Archives.legal_brain.retrieve.hybrid_sections import check_lineage
 
-    candidate = places.candidate(out)
     if not candidate.is_file():
         raise SystemExit(f"{candidate} is not there: run the index stage first")
     record = json.loads(candidate.read_text(encoding="utf-8"))
-    problems = check_lineage(record, places.vector_store, doc_type=DOC_TYPE)
+    problems = check_lineage(record, vector_store, doc_type=doc_type)
     if problems:
         raise SystemExit("the new store does not agree with its record; nothing swapped: " + "; ".join(problems))
     if running():
         raise SystemExit("the server is up; stop it first, then swap - nothing swapped")
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
-    live = places.live
     aside = live.with_name(f"{live.name}.before-{stamp}")
     os.replace(live, aside)
     staged = live.with_name(live.name + ".new")
