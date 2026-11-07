@@ -88,7 +88,8 @@ def admin_router(*, application: Callable, signed_in: Callable, csrf: object, ad
 
     @router.get("/overview")
     def overview(level: Level = Depends(admin_level)) -> dict:
-        return read(admin_views.overview_view)
+        return read(lambda roster, directory, usage_port, now: admin_views.overview_view(
+            roster, directory, usage_port, now, application().admin_turns))
 
     @router.get("/users")
     def users(level: Level = Depends(admin_level)) -> dict:
@@ -107,6 +108,11 @@ def admin_router(*, application: Callable, signed_in: Callable, csrf: object, ad
         if days not in admin_views.PERIODS:
             raise HTTPException(status_code=422, detail=f"Usage is shown for {', '.join(map(str, admin_views.PERIODS))} days.")
         return read(lambda roster, directory, usage_port, now, period: admin_views.usage_view(
-            roster, directory, usage_port, now, period), days)
+            roster, directory, usage_port, now, period, application().admin_turns), days)
+
+    @router.get("/access")
+    def access(level: Level = Depends(admin_level)) -> dict:
+        return read(lambda roster, directory, usage_port, now: admin_views.access_view(
+            roster, directory, application().admin_record, now))
 
     return router

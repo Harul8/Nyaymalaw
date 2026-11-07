@@ -9,7 +9,8 @@ from pathlib import Path
 from types import MappingProxyType
 from nm.arrive.admin_access import roster_from
 from nm.arrive.admin_directory import AdminFileDirectory
-from nm.arrive.admin_port import AdminDirectoryPort, AdminRecordPort, AdminUsagePort
+from nm.arrive.admin_port import AdminDirectoryPort, AdminRecordPort, AdminTurnsPort, AdminUsagePort
+from nm.arrive.admin_turns import AdminTurns
 from nm.arrive.admin_usage import AdminUsage
 from nm.arrive.advocate_contracts import utcnow
 from nm.arrive.directory_port import DirectoryPort
@@ -113,6 +114,9 @@ class Application:
             data_classes=(DataClass.OPERATIONAL, DataClass.RESTRICTED))
         self.admin_usage = PolicedPort(inner=AdminUsage(storage / USAGE_FILE),
             gate=self._gate, port=AdminUsagePort, sink=Sink.STORAGE, processor_id=STORAGE_PROCESSOR,
+            data_classes=(DataClass.OPERATIONAL,))
+        self.admin_turns = PolicedPort(inner=AdminTurns(storage / TURN_EVENTS_FILE),
+            gate=self._gate, port=AdminTurnsPort, sink=Sink.STORAGE, processor_id=STORAGE_PROCESSOR,
             data_classes=(DataClass.OPERATIONAL,))
         self.admin_record = PolicedPort(inner=_DeferredAdapter(lambda: FileAdminRecord(storage / ADMIN_FILE)),
             gate=self._gate, port=AdminRecordPort, sink=Sink.STORAGE, processor_id=STORAGE_PROCESSOR,

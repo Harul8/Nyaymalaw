@@ -284,7 +284,7 @@ def test_the_composition_root_polices_every_live_destination():
     # operational and restricted account facts on local storage, admitted like the directory and usage beside them.
     expected = {"StorePort", "TurnAttemptPort", "DirectoryPort", "MailPort", "SearchPort",
                 "UploadPort", "DocumentDerivativePort", "UsagePort",
-                "AdminDirectoryPort", "AdminUsagePort", "AdminRecordPort",
+                "AdminDirectoryPort", "AdminUsagePort", "AdminRecordPort", "AdminTurnsPort",
                 # One content-free line per finished turn (plan AN.46, piece 46h; D120): operational, on local storage.
                 "TurnEventPort"}
     assert ports and len(ports) == len(calls) == len(set(ports)), (

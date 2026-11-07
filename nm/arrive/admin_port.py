@@ -125,6 +125,35 @@ class AdminUsagePort(Protocol):
         ...
 
 
+# --------------------------------------------------------------------- the turn record ---
+
+@dataclass(frozen=True)
+class TurnDay:
+    """How many turns ended on one Indian day, by how they ended (D120). No account, model or word of a turn."""
+    day: str
+    answered: int = 0
+    stopped: int = 0
+    refused: int = 0
+    failed: int = 0
+
+
+@dataclass(frozen=True)
+class TurnsSummary:
+    """The turn record over a period. Days with no turn are absent (the view fills them); the middle and slow ends are the time, in
+    seconds, that half and nine in ten of the answers took. `first_at` is when the record began: nothing before it was recorded."""
+    by_day: tuple[TurnDay, ...]
+    answered_seconds_middle: int | None
+    answered_seconds_slow: int | None
+    first_at: datetime | None
+
+
+class AdminTurnsPort(Protocol):
+    def summary(self, since: datetime, until: datetime) -> TurnsSummary:
+        """Turns that ended from `since` up to `until`. A record that has not begun is empty (first_at None). Raises
+        AdminUnavailable when the record is there and cannot be read."""
+        ...
+
+
 # ------------------------------------------------------------------ the audit record ---
 
 @dataclass(frozen=True)

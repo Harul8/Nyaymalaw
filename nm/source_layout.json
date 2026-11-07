@@ -21,6 +21,7 @@
     "nm.arrive.admin_access": "core",
     "nm.arrive.admin_directory": "adapters",
     "nm.arrive.admin_port": "ports",
+    "nm.arrive.admin_turns": "adapters",
     "nm.arrive.admin_usage": "adapters",
     "nm.arrive.advocate_contracts": "domain",
     "nm.arrive.advocate_memory_codec": "core",
@@ -131,7 +132,7 @@
     "nm.work_the_file.matter_contracts": "domain"
   },
   "expected_roles": {
-    "adapters": 33,
+    "adapters": 34,
     "bootstrap": 5,
     "core": 37,
     "domain": 37,

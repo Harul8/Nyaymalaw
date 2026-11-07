@@ -18,7 +18,8 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Mapping
 
 from nm.arrive.admin_access import Roster
-from nm.arrive.admin_port import (AdminAccount, AdminDirectoryPort, AdminUsagePort, Balance, Consumption)
+from nm.arrive.admin_port import (AdminAccount, AdminDirectoryPort, AdminRecordPort, AdminTurnsPort, AdminUnavailable,
+                                  AdminUsagePort, Balance, Consumption)
 from nm.arrive.advocate_contracts import canonical_id
 
 #: The days an admin may ask the usage pages about.
@@ -120,6 +121,24 @@ def _by_day(rows: list[Consumption], days: list[str]) -> list[dict]:
     return list(found.values())
 
 
+def _answers(turns: AdminTurnsPort | None, since: datetime, until: datetime, days: list[str]) -> dict:
+    """The turn record's part of the Usage page (D120): answers a day, how turns ended, how long an answer took. A part that cannot be
+    read says so and leaves the rest of the page standing (D128); no turn port at all is the old "needs the turn record"."""
+    if turns is None:
+        return {"available": False, "needs": "the turn record"}
+    try:
+        summary = turns.summary(since, until)
+    except AdminUnavailable:
+        return {"available": False, "unreadable": True}
+    found = {t.day: t for t in summary.by_day}
+    rows = [{"day": day, **({"answered": found[day].answered, "stopped": found[day].stopped, "refused": found[day].refused,
+                            "failed": found[day].failed} if day in found else
+                           {"answered": 0, "stopped": 0, "refused": 0, "failed": 0})} for day in days]
+    return {"available": True, "began": _iso(summary.first_at), "by_day": rows,
+            "totals": {name: sum(r[name] for r in rows) for name in ("answered", "stopped", "refused", "failed")},
+            "seconds_middle": summary.answered_seconds_middle, "seconds_slow": summary.answered_seconds_slow}
+
+
 # --------------------------------------------------------------------------- the pages ---
 
 def users_view(roster: Roster, directory: AdminDirectoryPort, usage: AdminUsagePort, now: datetime) -> dict:
@@ -165,7 +184,8 @@ def user_view(account_id: str, roster: Roster, directory: AdminDirectoryPort, us
                              for day in _days(since, until)]}})
 
 
-def usage_view(roster: Roster, directory: AdminDirectoryPort, usage: AdminUsagePort, now: datetime, days: int = 30) -> dict:
+def usage_view(roster: Roster, directory: AdminDirectoryPort, usage: AdminUsagePort, now: datetime, days: int = 30,
+               turns: AdminTurnsPort | None = None) -> dict:
     since, until = _period(now, days)
     by_day_model = list(usage.consumption(since, until, "day,model"))
     by_account = list(usage.consumption(since, until, "account"))
@@ -188,12 +208,13 @@ def usage_view(roster: Roster, directory: AdminDirectoryPort, usage: AdminUsageP
         "funnel": {"waiting": len(listing.waiting), "accounts": len(listing.accounts),
                    "ai_sharing_on": sum(1 for a in listing.accounts if a.ai_sharing),
                    "started_allowance": started, "used_in_period": len(by_account)},
-        "answers": {"available": False, "needs": "the turn record"}})
+        "answers": _answers(turns, since, until, _days(since, until))})
 
 
-def overview_view(roster: Roster, directory: AdminDirectoryPort, usage: AdminUsagePort, now: datetime) -> dict:
+def overview_view(roster: Roster, directory: AdminDirectoryPort, usage: AdminUsagePort, now: datetime,
+                  turns: AdminTurnsPort | None = None) -> dict:
     page = users_view(roster, directory, usage, now)
-    week = usage_view(roster, directory, usage, now, 7)
+    week = usage_view(roster, directory, usage, now, 7, turns)
     rows = page["accounts"]
     ending = now + timedelta(days=APPROVAL_ENDING_DAYS)
     attention = [
@@ -212,3 +233,23 @@ def overview_view(roster: Roster, directory: AdminDirectoryPort, usage: AdminUsa
         "week": {"tiles": week["tiles"], "by_day": week["by_day"], "models": week["models"]},
         "needs_attention": [item for item in attention if item["count"]],
         "answers": week["answers"]})
+
+
+def access_view(roster: Roster, directory: AdminDirectoryPort, record: AdminRecordPort, now: datetime, *, limit: int = 100) -> dict:
+    """Who is an admin and what they have done (D117, D126): the settings' roster beside what the directory knows of those accounts,
+    the audit log newest first, and whether its chain still holds. A log that cannot be read is said to be unreadable; the roster
+    still shows."""
+    known = {a.id: a for a in directory.listing(now).accounts}
+    admins = [{"id": who, "level": level.value, "label": LEVEL_LABELS[level.value],
+               "name": known[who].name if who in known else "", "has_account": who in known,
+               "status": ("unreadable" if not known[who].readable else "suspended" if known[who].suspended else "active")
+               if who in known else "no account"} for who, level in roster.named()]
+    try:
+        check, entries = record.verify(), record.entries(limit=limit)
+        audit = {"available": True,
+                 "chain": {"ok": check.ok, "entries": check.entries, "first_bad_id": check.first_bad_id, "newest": check.newest},
+                 "entries": [{"id": e.id, "at": _iso(e.at), "actor": e.actor, "action": e.action, "target": e.target,
+                              "reason": e.reason, "outcome": e.outcome, "fingerprint": e.fingerprint} for e in entries]}
+    except AdminUnavailable:
+        audit = {"available": False}
+    return content_free({"as_of": now.isoformat(), "admins": admins, "rejected_entries": roster.rejected, "audit": audit})
