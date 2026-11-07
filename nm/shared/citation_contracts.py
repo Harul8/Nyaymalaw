@@ -851,17 +851,25 @@ def court_title(court: str) -> str:
 _GENERIC_ACTS = frozenset({
     "act", "code", "rules", "rule", "regulation", "regulations", "ordinance", "said act", "this act", "principal act", "central act",
     "state act", "amendment act", "impugned act", "parent act", "local act", "special act", "present act", "above act"})
-#: "/34" after "section 302": another section of the same Act, which follows; then the words that join a provision to its Act.
-_ACT_LEAD = re.compile(r"(?:\s*/\s*\d+[A-Za-z]?(?:\s*\([^)]{1,6}\))*)*\s*,?\s*(?:(?:of|in|under|to|by)\s+)?(?:the\s+)?")
+#: "/34" after "section 302": another section of the same Act, which follows; "and" where the second number of the list was lost
+#: from the text ("articles 21 and [22] of the Constitution"); then the words that join a provision to its Act.
+_ACT_LEAD = re.compile(r"(?:\s*/\s*\d+[A-Za-z]?(?:\s*\([^)]{1,6}\))*)*\s*,?\s*(?:(?:and|or)\s+)?(?:(?:of|in|under|to|by)\s+)?(?:the\s+)?")
 #: The Act's name as a judgment writes it: capitalised words and joining words, to the word that ends an instrument's name.
 _ACT_HEAD = re.compile(
-    r"(?:[A-Z][\w'&.\-]*,?\s+|(?:of|and|for|the|in|on|to)\s+|\(\s*|\)\s*){0,14}?(?P<last>" + _INSTRUMENT_WORD + ")")
+    r"(?:[A-Z][\w'&.\-]*\)?,?\s+|(?:of|and|for|the|in|on|to)\s+|\(\s*){0,14}?(?P<last>" + _INSTRUMENT_WORD + ")")
+#: A name's instrument words can run on: "Foreign Exchange Regulation Act", "Mines and Minerals (Regulation and Development) Act".
+_ACT_MORE = re.compile(r"\s+" + _INSTRUMENT_WORD)
 #: "Code of Civil Procedure", "Constitution of India": the name goes on after these two words.
 _ACT_TAIL_OF = re.compile(r"\s+(?:of|on)\s+((?:[A-Z][\w'&\-]*|and|of)(?:\s+(?:[A-Z][\w'&\-]*|and|of)){0,4})(?![\w'&\-])")
 _ACT_YEAR = re.compile(r"\s*,?\s*(?:of\s+)?(?:1[6-9]\d\d|20\d\d)\b")
 _WORD = re.compile(r"[A-Za-z0-9]+")
 _NONSPACE = re.compile(r"\S+")
 _ACT_ABBREVIATION_WORDS = 6
+
+
+def _bare_name(key: str) -> str:
+    """An instrument key without its year ("act of 1996" -> "act"): what is left to name the Act by."""
+    return re.sub(r"\s+of$", "", _KEY_YEAR.sub("", key))
 
 
 def _act_after(text: str, at: int, aliases) -> str | None:
@@ -874,6 +882,16 @@ def _act_after(text: str, at: int, aliases) -> str | None:
     head = _ACT_HEAD.match(tail, start)
     if head:
         end = head.end()
+        while True:
+            if tail.count("(", start, end) > tail.count(")", start, end):  # "Mines and Minerals (Regulation and Development) Act"
+                closing = tail.find(")", end, end + 80)
+                if closing < 0:
+                    break
+                end = closing + 1
+            more = _ACT_MORE.match(tail, end)
+            if not more:
+                break
+            end = more.end()
         if head.group("last").startswith(("Code", "Constitution")):
             extended = _ACT_TAIL_OF.match(tail, end)
             if extended:
@@ -906,7 +924,7 @@ def cited_provisions(text: str, aliases=None) -> tuple[dict, ...]:
     found, seen = [], set()
     for named in provisions_named(text):
         act = _act_after(text, named.end, aliases)
-        if not act or instrument_key(act) in _GENERIC_ACTS:
+        if not act or _bare_name(instrument_key(act)) in _GENERIC_ACTS:
             continue
         item = (named.reference, named.through, act)
         if item not in seen:
@@ -938,7 +956,7 @@ def act_alias_index(document, *, checked_only: bool = True) -> dict[str, dict]:
             continue
         for way in entry["as_written"]:
             key = instrument_key(way)
-            if key in index:
+            if index.get(key, entry) is not entry:
                 raise ValueError(f"Two Act aliases claim {way!r}")
             index[key] = entry
     return index
@@ -967,36 +985,44 @@ class ActResolver:
         return int(found.group().split()[0]) if found else None
 
     def resolve(self, words: str, year: int | None = None) -> dict:
+        """The held Act(s) these words name. year: the year the judgment was decided. A checked alias is the owner's word for what a
+        short form means and comes before the title; a year written in the name must be that of an Act the alias names."""
         key = instrument_key(words)
-        if not key or key in _GENERIC_ACTS:
+        if not key or _bare_name(key) in _GENERIC_ACTS:
             return self._answer("unresolved", why="it names no Act")
         if key in self.held:
             return self._answer("held", [key], by="name")
-        if not _KEY_YEAR.search(key) and key in self.by_title:
-            known = self.by_title[key]
+        written = self._enacted(key)
+        entry = self.aliases.get(key) or self.aliases.get(_KEY_YEAR.sub("", key))
+        if entry:
+            return self._by_alias(entry, year, written, " ".join(words.split()))
+        if written is not None:
+            return self._answer("not_held", named=[" ".join(words.split())], by="name",
+                                why="no held Act has this name and year")
+        known = self.by_title.get(key, [])
+        if known:
             usable = [one for one in known if year is None or (self._enacted(one) or 0) <= year]
             if len(usable) == 1:
                 return self._answer("held", usable, by="title" if len(known) == 1 else "title and year")
             if usable:
                 return self._answer("ambiguous", usable, by="title")
             return self._answer("unresolved", why="every held Act of that title was enacted after the judgment")
-        entry = self.aliases.get(key) or self.aliases.get(_KEY_YEAR.sub("", key))
-        if entry:
-            return self._by_alias(entry, year)
-        if _KEY_YEAR.search(key):
-            return self._answer("not_held", named=[" ".join(words.split())], by="name",
-                                why="no held Act has this name and year")
         return self._answer("unresolved", why="no held Act has this name and it is on no checked alias")
 
-    def _by_alias(self, entry, year):
+    def _by_alias(self, entry, year, written, as_written):
         acts = entry["acts"]
-        enacted = [act for act in acts if year is None or act.get("from") is None or act["from"] <= year]
-        in_force = [act for act in enacted if year is None or act.get("to") is None or year <= act["to"]]
-        chosen = in_force or enacted or acts
-        narrowed = len(chosen) < len(acts)
+        if written is not None:
+            chosen = [act for act in acts if act.get("from") == written]
+            if not chosen:
+                return self._answer("not_held", named=[as_written], by="name", why="no Act this alias names has this year")
+            by = "alias and the year written"
+        else:
+            enacted = [act for act in acts if year is None or act.get("from") is None or act["from"] <= year]
+            in_force = [act for act in enacted if year is None or act.get("to") is None or year <= act["to"]]
+            chosen = in_force or enacted or acts
+            by = "alias and year" if len(chosen) < len(acts) else "alias"
         keys = [act["key"] for act in chosen if act.get("key") in self.held]
         named = [act["title"] for act in chosen if act.get("key") not in self.held]
-        by = "alias and year" if narrowed else "alias"
         if len(chosen) == 1:
             return self._answer("held" if keys else "not_held", keys, named, by=by)
         return self._answer("ambiguous", keys, named, by=by)

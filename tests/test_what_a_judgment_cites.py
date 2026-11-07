@@ -126,3 +126,35 @@ def test_a_draft_alias_the_owner_has_not_checked_resolves_nothing():
 def test_an_alias_list_of_the_wrong_shape_is_refused_whole(broken, why):
     with pytest.raises(ValueError, match=why):
         act_alias_index(broken)
+
+
+def test_names_as_judges_run_them_on_are_read_whole():
+    """A list whose second number was lost from the text still ends in its Act; an Act's name may run on through several
+    instrument words or hold a bracket; a bare "the Act" with only a year names no Act."""
+    text = ("They do not take away the rights under\narticles 21\nand\n\nthe Constitution. Under\nsections 53\nand\n\nof the Highways "
+            "Act the Justices may license. Section 9 of the Foreign Exchange Regulation Act, 1973 and section 4 of the Mines and "
+            "Minerals (Regulation and Development) Act, 1957 apply. Section 11 of the Act, 1996 and section 12 of the Act of 1961 "
+            "and section 13 of the Act 2013 name none.")
+    seen = [(item["reference"], item["act_as_written"]) for item in cited_provisions(text)]
+    assert seen == [
+        ("article 21", "Constitution"), ("section 53", "Highways Act"),
+        ("section 9", "Foreign Exchange Regulation Act, 1973"),
+        ("section 4", "Mines and Minerals (Regulation and Development) Act, 1957")]
+
+
+def test_a_checked_alias_comes_before_the_title_and_a_year_written_must_be_an_acts_the_alias_names():
+    older = {"schema": 1, "aliases": [
+        {"as_written": ["Imagined Relief Act"], "checked": True,
+         "acts": [{"key": None, "title": "Imagined Relief Act, 1880", "from": 1880, "to": 1906},
+                  {"key": "imagined relief act 1907", "title": "Imagined Relief Act, 1907", "from": 1907, "to": None}]}]}
+    resolver = ActResolver(HELD, act_alias_index(older))
+    assert resolver.resolve("Imagined Relief Act", 1890)["named"] == ["Imagined Relief Act, 1880"], "the older Act, not 'enacted later'"
+    assert resolver.resolve("Imagined Relief Act", 1950)["keys"] == ["imagined relief act 1907"]
+    assert resolver.resolve("Imagined Relief Act, 1880", 1950) == {
+        "state": "not_held", "keys": [], "named": ["Imagined Relief Act, 1880"], "by": "alias and the year written", "why": None}
+    assert resolver.resolve("Imagined Relief Act, 1907", 1890)["keys"] == ["imagined relief act 1907"], "exactly held: by name"
+    assert resolver.resolve("Imagined Relief Act, 1913", 1950)["state"] == "not_held", "no Act the alias names has that year"
+    # The Arbitration Act of the shared list: the year written decides, whatever year the judgment is.
+    resolver = ActResolver(HELD, act_alias_index(ALIASES))
+    assert resolver.resolve("Arbitration Act, 1940", 2003)["named"] == ["Arbitration Act, 1940"]
+    assert resolver.resolve("Arbitration Act, 1996", 1985)["keys"] == ["arbitration and conciliation act 1996"]

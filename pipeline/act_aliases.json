@@ -1,0 +1,996 @@
+{
+ "schema": 1,
+ "status": "DRAFT written by Claude on 7 Nov 2026 for the owner to check (plan AN.45, D104). Until an entry is checked: true it resolves nothing. Each entry: the ways judgments write a short form or abbreviation, and the Act or Acts it may be, each with the held key (null where the library does not hold it), its title, the year it was enacted (from) and the last year it was in force (to, null while it is).",
+ "aliases": [
+  {
+   "as_written": [
+    "Constitution",
+    "Indian Constitution"
+   ],
+   "acts": [
+    {
+     "key": "constitution of india 1950",
+     "title": "Constitution of India",
+     "from": 1950,
+     "to": null
+    }
+   ],
+   "checked": false,
+   "note": "What judgments call 'the Constitution'. 'Draft Constitution' and the constitutions of other countries are not on this."
+  },
+  {
+   "as_written": [
+    "Evidence Act"
+   ],
+   "acts": [
+    {
+     "key": "indian evidence act 1872",
+     "title": "Indian Evidence Act, 1872",
+     "from": 1872,
+     "to": null
+    }
+   ],
+   "checked": false
+  },
+  {
+   "as_written": [
+    "Contract Act"
+   ],
+   "acts": [
+    {
+     "key": "indian contract act 1872",
+     "title": "Indian Contract Act, 1872",
+     "from": 1872,
+     "to": null
+    }
+   ],
+   "checked": false
+  },
+  {
+   "as_written": [
+    "Penal Code",
+    "IPC",
+    "I.P.C."
+   ],
+   "acts": [
+    {
+     "key": "indian penal code 1860",
+     "title": "Indian Penal Code, 1860",
+     "from": 1860,
+     "to": null
+    }
+   ],
+   "checked": false
+  },
+  {
+   "as_written": [
+    "Criminal Procedure Code",
+    "Code of Criminal Procedure",
+    "Cr.P.C.",
+    "CrPC",
+    "Cr. P.C.",
+    "Cr.PC",
+    "CRPC"
+   ],
+   "acts": [
+    {
+     "key": null,
+     "title": "Code of Criminal Procedure, 1898",
+     "from": 1898,
+     "to": 1973
+    },
+    {
+     "key": "code of criminal procedure 1973",
+     "title": "Code of Criminal Procedure, 1973",
+     "from": 1973,
+     "to": null
+    }
+   ],
+   "checked": false,
+   "note": "The 1898 Code is not held; a judgment of 1973 or earlier that says 'Cr.P.C.' means it."
+  },
+  {
+   "as_written": [
+    "Civil Procedure Code",
+    "CPC",
+    "C.P.C.",
+    "Code of Civil Procedure"
+   ],
+   "acts": [
+    {
+     "key": "code of civil procedure 1908",
+     "title": "Code of Civil Procedure, 1908",
+     "from": 1908,
+     "to": null
+    }
+   ],
+   "checked": false
+  },
+  {
+   "as_written": [
+    "Arbitration Act"
+   ],
+   "acts": [
+    {
+     "key": null,
+     "title": "Arbitration Act, 1940",
+     "from": 1940,
+     "to": 1996
+    },
+    {
+     "key": "arbitration and conciliation act 1996",
+     "title": "Arbitration and Conciliation Act, 1996",
+     "from": 1996,
+     "to": null
+    }
+   ],
+   "checked": false,
+   "note": "1940 until 1996, then 1996. A judgment after 1996 about an arbitration begun under the 1940 Act would still say 'Arbitration Act'."
+  },
+  {
+   "as_written": [
+    "Arbitration & Conciliation Act",
+    "A&C Act",
+    "A & C Act",
+    "AC Act"
+   ],
+   "acts": [
+    {
+     "key": "arbitration and conciliation act 1996",
+     "title": "Arbitration and Conciliation Act, 1996",
+     "from": 1996,
+     "to": null
+    }
+   ],
+   "checked": false
+  },
+  {
+   "as_written": [
+    "NDPS Act",
+    "N.D.P.S. Act",
+    "NDPS"
+   ],
+   "acts": [
+    {
+     "key": "narcotic drugs and psychotropic substances act 1985",
+     "title": "Narcotic Drugs and Psychotropic Substances Act, 1985",
+     "from": 1985,
+     "to": null
+    }
+   ],
+   "checked": false
+  },
+  {
+   "as_written": [
+    "SARFAESI Act",
+    "SARFAESI"
+   ],
+   "acts": [
+    {
+     "key": "securitisation and reconstruction of financial assets and enforcement of security interest act 2002",
+     "title": "Securitisation and Reconstruction of Financial Assets and Enforcement of Security Interest Act, 2002",
+     "from": 2002,
+     "to": null
+    }
+   ],
+   "checked": false
+  },
+  {
+   "as_written": [
+    "NI Act",
+    "N.I. Act",
+    "N. I. Act",
+    "Negotiable Instruments Act"
+   ],
+   "acts": [
+    {
+     "key": "negotiable instruments act 1881",
+     "title": "Negotiable Instruments Act, 1881",
+     "from": 1881,
+     "to": null
+    }
+   ],
+   "checked": false
+  },
+  {
+   "as_written": [
+    "MRTP Act",
+    "M.R.T.P. Act"
+   ],
+   "acts": [
+    {
+     "key": "monopolies and restrictive trade practices act 1969",
+     "title": "Monopolies and Restrictive Trade Practices Act, 1969",
+     "from": 1969,
+     "to": null
+    }
+   ],
+   "checked": false
+  },
+  {
+   "as_written": [
+    "IT Act",
+    "I.T. Act"
+   ],
+   "acts": [
+    {
+     "key": null,
+     "title": "Indian Income-tax Act, 1922",
+     "from": 1922,
+     "to": 1961
+    },
+    {
+     "key": "income tax act 1961",
+     "title": "Income-tax Act, 1961",
+     "from": 1961,
+     "to": null
+    },
+    {
+     "key": "information technology act 2000",
+     "title": "Information Technology Act, 2000",
+     "from": 2000,
+     "to": null
+    }
+   ],
+   "checked": false,
+   "note": "Income-tax Act (1922, then 1961) in tax judgments; the Information Technology Act, 2000 in cyber judgments. From 2000 it is ambiguous."
+  },
+  {
+   "as_written": [
+    "Income-tax Act",
+    "Indian Income-tax Act"
+   ],
+   "acts": [
+    {
+     "key": null,
+     "title": "Indian Income-tax Act, 1922",
+     "from": 1922,
+     "to": 1961
+    },
+    {
+     "key": "income tax act 1961",
+     "title": "Income-tax Act, 1961",
+     "from": 1961,
+     "to": null
+    }
+   ],
+   "checked": false
+  },
+  {
+   "as_written": [
+    "Stamp Act"
+   ],
+   "acts": [
+    {
+     "key": "indian stamp act 1899",
+     "title": "Indian Stamp Act, 1899",
+     "from": 1899,
+     "to": null
+    }
+   ],
+   "checked": false,
+   "note": "A State's Stamp Act could be meant; only the central Act is held."
+  },
+  {
+   "as_written": [
+    "L.A. Act",
+    "LA Act",
+    "L A Act",
+    "LA. Act"
+   ],
+   "acts": [
+    {
+     "key": "land acquisition act 1894",
+     "title": "Land Acquisition Act, 1894",
+     "from": 1894,
+     "to": null
+    },
+    {
+     "key": "right to fair compensation and transparency in land acquisition rehabilitation and resettlement act 2013",
+     "title": "Right to Fair Compensation and Transparency in Land Acquisition, Rehabilitation and Resettlement Act, 2013",
+     "from": 2013,
+     "to": null
+    }
+   ],
+   "checked": false,
+   "note": "The 1894 Act can still be meant for proceedings begun under it."
+  },
+  {
+   "as_written": [
+    "Partnership Act"
+   ],
+   "acts": [
+    {
+     "key": "indian partnership act 1932",
+     "title": "Indian Partnership Act, 1932",
+     "from": 1932,
+     "to": null
+    }
+   ],
+   "checked": false
+  },
+  {
+   "as_written": [
+    "T.P. Act",
+    "TP Act",
+    "T. P. Act"
+   ],
+   "acts": [
+    {
+     "key": "transfer of property act 1882",
+     "title": "Transfer of Property Act, 1882",
+     "from": 1882,
+     "to": null
+    }
+   ],
+   "checked": false
+  },
+  {
+   "as_written": [
+    "TADA Act",
+    "TADA",
+    "T.A.D.A."
+   ],
+   "acts": [
+    {
+     "key": "terrorist and disruptive activities prevention act 1987",
+     "title": "Terrorist and Disruptive Activities (Prevention) Act, 1987",
+     "from": 1987,
+     "to": 1995
+    }
+   ],
+   "checked": false
+  },
+  {
+   "as_written": [
+    "MMDR Act",
+    "Mines and Minerals (Regulation and Development) Act"
+   ],
+   "acts": [
+    {
+     "key": "mines and minerals development and regulation act 1957",
+     "title": "Mines and Minerals (Development and Regulation) Act, 1957",
+     "from": 1957,
+     "to": null
+    }
+   ],
+   "checked": false,
+   "note": "'Regulation and Development' is how judgments often reverse the title."
+  },
+  {
+   "as_written": [
+    "PC Act",
+    "P.C. Act",
+    "Prevention of Corruption Act"
+   ],
+   "acts": [
+    {
+     "key": "prevention of corruption act 1947",
+     "title": "Prevention of Corruption Act, 1947",
+     "from": 1947,
+     "to": 1988
+    },
+    {
+     "key": "prevention of corruption act 1988",
+     "title": "Prevention of Corruption Act, 1988",
+     "from": 1988,
+     "to": null
+    }
+   ],
+   "checked": false
+  },
+  {
+   "as_written": [
+    "SEBI Act"
+   ],
+   "acts": [
+    {
+     "key": "securities and exchange board of india act 1992",
+     "title": "Securities and Exchange Board of India Act, 1992",
+     "from": 1992,
+     "to": null
+    }
+   ],
+   "checked": false
+  },
+  {
+   "as_written": [
+    "CGST Act",
+    "C.G.S.T. Act"
+   ],
+   "acts": [
+    {
+     "key": "central goods and services tax act 2017",
+     "title": "Central Goods and Services Tax Act, 2017",
+     "from": 2017,
+     "to": null
+    }
+   ],
+   "checked": false
+  },
+  {
+   "as_written": [
+    "RTI Act"
+   ],
+   "acts": [
+    {
+     "key": "right to information act 2005",
+     "title": "Right to Information Act, 2005",
+     "from": 2005,
+     "to": null
+    }
+   ],
+   "checked": false
+  },
+  {
+   "as_written": [
+    "DSPE Act"
+   ],
+   "acts": [
+    {
+     "key": "delhi special police establishment act 1946",
+     "title": "Delhi Special Police Establishment Act, 1946",
+     "from": 1946,
+     "to": null
+    }
+   ],
+   "checked": false
+  },
+  {
+   "as_written": [
+    "Aadhaar Act"
+   ],
+   "acts": [
+    {
+     "key": "aadhaar targeted delivery of financial and other subsidies benefits and services act 2016",
+     "title": "Aadhaar (Targeted Delivery of Financial and Other Subsidies, Benefits and Services) Act, 2016",
+     "from": 2016,
+     "to": null
+    }
+   ],
+   "checked": false
+  },
+  {
+   "as_written": [
+    "MSMED Act"
+   ],
+   "acts": [
+    {
+     "key": "micro small and medium enterprises development act 2006",
+     "title": "Micro, Small and Medium Enterprises Development Act, 2006",
+     "from": 2006,
+     "to": null
+    }
+   ],
+   "checked": false
+  },
+  {
+   "as_written": [
+    "COFEPOSA Act",
+    "COFEPOSA"
+   ],
+   "acts": [
+    {
+     "key": "conservation of foreign exchange and prevention of smuggling activities act 1974",
+     "title": "Conservation of Foreign Exchange and Prevention of Smuggling Activities Act, 1974",
+     "from": 1974,
+     "to": null
+    }
+   ],
+   "checked": false
+  },
+  {
+   "as_written": [
+    "I.D. Act",
+    "ID Act"
+   ],
+   "acts": [
+    {
+     "key": "industrial disputes act 1947",
+     "title": "Industrial Disputes Act, 1947",
+     "from": 1947,
+     "to": null
+    }
+   ],
+   "checked": false
+  },
+  {
+   "as_written": [
+    "RP Act",
+    "R.P. Act"
+   ],
+   "acts": [
+    {
+     "key": null,
+     "title": "Representation of the People Act, 1951",
+     "from": 1951,
+     "to": null
+    }
+   ],
+   "checked": false,
+   "note": "Not held. 'RP Act' could also mean the Act of 1950; only 1951 is listed."
+  },
+  {
+   "as_written": [
+    "MV Act",
+    "M.V. Act",
+    "Motor Vehicles Act"
+   ],
+   "acts": [
+    {
+     "key": null,
+     "title": "Motor Vehicles Act, 1939",
+     "from": 1939,
+     "to": 1988
+    },
+    {
+     "key": "motor vehicles act 1988",
+     "title": "Motor Vehicles Act, 1988",
+     "from": 1988,
+     "to": null
+    }
+   ],
+   "checked": false
+  },
+  {
+   "as_written": [
+    "D.V. Act",
+    "DV Act"
+   ],
+   "acts": [
+    {
+     "key": "protection of women from domestic violence act 2005",
+     "title": "Protection of Women from Domestic Violence Act, 2005",
+     "from": 2005,
+     "to": null
+    }
+   ],
+   "checked": false
+  },
+  {
+   "as_written": [
+    "PML Act",
+    "PMLA",
+    "P.M.L.A."
+   ],
+   "acts": [
+    {
+     "key": "prevention of money laundering act 2002",
+     "title": "Prevention of Money Laundering Act, 2002",
+     "from": 2002,
+     "to": null
+    }
+   ],
+   "checked": false
+  },
+  {
+   "as_written": [
+    "ESI Act",
+    "E.S.I. Act"
+   ],
+   "acts": [
+    {
+     "key": "employees state insurance act 1948",
+     "title": "Employees' State Insurance Act, 1948",
+     "from": 1948,
+     "to": null
+    }
+   ],
+   "checked": false
+  },
+  {
+   "as_written": [
+    "CLRA Act"
+   ],
+   "acts": [
+    {
+     "key": "contract labour regulation and abolition act 1970",
+     "title": "Contract Labour (Regulation and Abolition) Act, 1970",
+     "from": 1970,
+     "to": null
+    }
+   ],
+   "checked": false
+  },
+  {
+   "as_written": [
+    "JJ Act",
+    "J.J. Act"
+   ],
+   "acts": [
+    {
+     "key": "juvenile justice act 1986",
+     "title": "Juvenile Justice Act, 1986",
+     "from": 1986,
+     "to": 2000
+    },
+    {
+     "key": "juvenile justice care and protection of children act 2000",
+     "title": "Juvenile Justice (Care and Protection of Children) Act, 2000",
+     "from": 2000,
+     "to": 2015
+    },
+    {
+     "key": "juvenile justice care and protection of children act 2015",
+     "title": "Juvenile Justice (Care and Protection of Children) Act, 2015",
+     "from": 2015,
+     "to": null
+    }
+   ],
+   "checked": false
+  },
+  {
+   "as_written": [
+    "SFC Act"
+   ],
+   "acts": [
+    {
+     "key": "state financial corporations act 1951",
+     "title": "State Financial Corporations Act, 1951",
+     "from": 1951,
+     "to": null
+    }
+   ],
+   "checked": false
+  },
+  {
+   "as_written": [
+    "RDB Act",
+    "RDDBFI Act",
+    "DRT Act"
+   ],
+   "acts": [
+    {
+     "key": "recovery of debts and bankruptcy act 1993",
+     "title": "Recovery of Debts Due to Banks and Financial Institutions Act, 1993 (now the Recovery of Debts and Bankruptcy Act)",
+     "from": 1993,
+     "to": null
+    }
+   ],
+   "checked": false
+  },
+  {
+   "as_written": [
+    "I&B Code",
+    "IBC",
+    "I & B Code",
+    "IB Code"
+   ],
+   "acts": [
+    {
+     "key": "insolvency and bankruptcy code 2016",
+     "title": "Insolvency and Bankruptcy Code, 2016",
+     "from": 2016,
+     "to": null
+    }
+   ],
+   "checked": false
+  },
+  {
+   "as_written": [
+    "BNSS"
+   ],
+   "acts": [
+    {
+     "key": "bharatiya nagarik suraksha sanhita 2023",
+     "title": "Bharatiya Nagarik Suraksha Sanhita, 2023",
+     "from": 2023,
+     "to": null
+    }
+   ],
+   "checked": false
+  },
+  {
+   "as_written": [
+    "BNS"
+   ],
+   "acts": [
+    {
+     "key": "bharatiya nyaya sanhita 2023",
+     "title": "Bharatiya Nyaya Sanhita, 2023",
+     "from": 2023,
+     "to": null
+    }
+   ],
+   "checked": false
+  },
+  {
+   "as_written": [
+    "RBI Act"
+   ],
+   "acts": [
+    {
+     "key": "reserve bank of india act 1934",
+     "title": "Reserve Bank of India Act, 1934",
+     "from": 1934,
+     "to": null
+    }
+   ],
+   "checked": false
+  },
+  {
+   "as_written": [
+    "FERA"
+   ],
+   "acts": [
+    {
+     "key": "foreign exchange regulation act 1973",
+     "title": "Foreign Exchange Regulation Act, 1973",
+     "from": 1973,
+     "to": 1999
+    }
+   ],
+   "checked": false
+  },
+  {
+   "as_written": [
+    "FEMA"
+   ],
+   "acts": [
+    {
+     "key": "foreign exchange management act 1999",
+     "title": "Foreign Exchange Management Act, 1999",
+     "from": 1999,
+     "to": null
+    }
+   ],
+   "checked": false
+  },
+  {
+   "as_written": [
+    "Sea Customs Act"
+   ],
+   "acts": [
+    {
+     "key": null,
+     "title": "Sea Customs Act, 1878",
+     "from": 1878,
+     "to": 1962
+    }
+   ],
+   "checked": false,
+   "note": "Not held."
+  },
+  {
+   "as_written": [
+    "Limitation Act",
+    "Indian Limitation Act"
+   ],
+   "acts": [
+    {
+     "key": null,
+     "title": "Indian Limitation Act, 1908",
+     "from": 1908,
+     "to": 1963
+    },
+    {
+     "key": "limitation act 1963",
+     "title": "Limitation Act, 1963",
+     "from": 1963,
+     "to": null
+    }
+   ],
+   "checked": false
+  },
+  {
+   "as_written": [
+    "Indian Registration Act",
+    "Registration Act"
+   ],
+   "acts": [
+    {
+     "key": "registration act 1908",
+     "title": "Registration Act, 1908",
+     "from": 1908,
+     "to": null
+    }
+   ],
+   "checked": false
+  },
+  {
+   "as_written": [
+    "Succession Act"
+   ],
+   "acts": [
+    {
+     "key": "indian succession act 1925",
+     "title": "Indian Succession Act, 1925",
+     "from": 1925,
+     "to": null
+    },
+    {
+     "key": "hindu succession act 1956",
+     "title": "Hindu Succession Act, 1956",
+     "from": 1956,
+     "to": null
+    }
+   ],
+   "checked": false,
+   "note": "Ambiguous on purpose: the Indian Succession Act, 1925 or the Hindu Succession Act, 1956."
+  },
+  {
+   "as_written": [
+    "Forest Act"
+   ],
+   "acts": [
+    {
+     "key": "indian forest act 1927",
+     "title": "Indian Forest Act, 1927",
+     "from": 1927,
+     "to": null
+    }
+   ],
+   "checked": false,
+   "note": "A State's Forest Act could be meant."
+  },
+  {
+   "as_written": [
+    "Excise Act"
+   ],
+   "acts": [
+    {
+     "key": "central excise act 1944",
+     "title": "Central Excises and Salt Act, 1944",
+     "from": 1944,
+     "to": null
+    }
+   ],
+   "checked": false,
+   "note": "A State's Excise Act could be meant; this one is left to the owner."
+  },
+  {
+   "as_written": [
+    "Banking Regulation Act",
+    "B.R. Act"
+   ],
+   "acts": [
+    {
+     "key": "banking regulation act 1949",
+     "title": "Banking Regulation Act, 1949",
+     "from": 1949,
+     "to": null
+    }
+   ],
+   "checked": false
+  },
+  {
+   "as_written": [
+    "Foreign Awards Act"
+   ],
+   "acts": [
+    {
+     "key": null,
+     "title": "Foreign Awards (Recognition and Enforcement) Act, 1961",
+     "from": 1961,
+     "to": 1996
+    }
+   ],
+   "checked": false,
+   "note": "Not held."
+  },
+  {
+   "as_written": [
+    "Hindu Marriage Act",
+    "HMA"
+   ],
+   "acts": [
+    {
+     "key": "hindu marriage act 1955",
+     "title": "Hindu Marriage Act, 1955",
+     "from": 1955,
+     "to": null
+    }
+   ],
+   "checked": false
+  },
+  {
+   "as_written": [
+    "Specific Relief Act"
+   ],
+   "acts": [
+    {
+     "key": null,
+     "title": "Specific Relief Act, 1877",
+     "from": 1877,
+     "to": 1963
+    },
+    {
+     "key": "specific relief act 1963",
+     "title": "Specific Relief Act, 1963",
+     "from": 1963,
+     "to": null
+    }
+   ],
+   "checked": false
+  },
+  {
+   "as_written": [
+    "Companies Act"
+   ],
+   "acts": [
+    {
+     "key": null,
+     "title": "Indian Companies Act, 1913",
+     "from": 1913,
+     "to": 1956
+    },
+    {
+     "key": "companies act 1956",
+     "title": "Companies Act, 1956",
+     "from": 1956,
+     "to": 2013
+    },
+    {
+     "key": "companies act 2013",
+     "title": "Companies Act, 2013",
+     "from": 2013,
+     "to": null
+    }
+   ],
+   "checked": false
+  },
+  {
+   "as_written": [
+    "Consumer Protection Act"
+   ],
+   "acts": [
+    {
+     "key": "consumer protection act 1986",
+     "title": "Consumer Protection Act, 1986",
+     "from": 1986,
+     "to": 2019
+    },
+    {
+     "key": "consumer protection act 2019",
+     "title": "Consumer Protection Act, 2019",
+     "from": 2019,
+     "to": null
+    }
+   ],
+   "checked": false
+  },
+  {
+   "as_written": [
+    "POCSO Act",
+    "POCSO"
+   ],
+   "acts": [
+    {
+     "key": "protection of children from sexual offences act 2012",
+     "title": "Protection of Children from Sexual Offences Act, 2012",
+     "from": 2012,
+     "to": null
+    }
+   ],
+   "checked": false
+  },
+  {
+   "as_written": [
+    "UAPA"
+   ],
+   "acts": [
+    {
+     "key": "unlawful activities prevention act 1967",
+     "title": "Unlawful Activities (Prevention) Act, 1967",
+     "from": 1967,
+     "to": null
+    }
+   ],
+   "checked": false
+  },
+  {
+   "as_written": [
+    "Arms Act"
+   ],
+   "acts": [
+    {
+     "key": "arms act 1959",
+     "title": "Arms Act, 1959",
+     "from": 1959,
+     "to": null
+    }
+   ],
+   "checked": false
+  }
+ ]
+}
