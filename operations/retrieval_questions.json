@@ -1,0 +1,997 @@
+{
+ "about": "Legal questions put to the Acts by operations/compare_retrieval.py (plan AN.45, D107). COMPOSED, NOT SAMPLED (docs/GOLDEN_SET.md section 7): written from the golden set's verified authority (its section 6) and its scenarios, once in plain words (no Act's name, no number) and once naming the Act, each with the provisions that answer it - any one of them counts. They are not a model's own search phrases. Extend or correct them; a question needs an id used once, a style (plain or named), its words, and expect: the Act's exact title as the store holds it and the section as the store keys it (a schedule article is Article_65; a Code of Civil Procedure rule Order_XXXIX_Rule_1).",
+ "questions": [
+  {
+   "id": "Q01p",
+   "scenario": "GS-06",
+   "style": "plain",
+   "asked": "how long can the police keep a person in custody after arrest before producing him before a magistrate",
+   "expect": [
+    {
+     "act": "The Code of Criminal Procedure, 1973",
+     "section": "57"
+    },
+    {
+     "act": "The Bharatiya Nagarik Suraksha Sanhita, 2023",
+     "section": "58"
+    }
+   ]
+  },
+  {
+   "id": "Q01n",
+   "scenario": "GS-06",
+   "style": "named",
+   "asked": "Code of Criminal Procedure limit on detention of an arrested person without producing him before a magistrate",
+   "expect": [
+    {
+     "act": "The Code of Criminal Procedure, 1973",
+     "section": "57"
+    }
+   ]
+  },
+  {
+   "id": "Q02p",
+   "scenario": "GS-07",
+   "style": "plain",
+   "asked": "accused entitled to bail when the police do not complete the investigation within sixty or ninety days of remand",
+   "expect": [
+    {
+     "act": "The Code of Criminal Procedure, 1973",
+     "section": "167"
+    },
+    {
+     "act": "The Bharatiya Nagarik Suraksha Sanhita, 2023",
+     "section": "187"
+    }
+   ]
+  },
+  {
+   "id": "Q02n",
+   "scenario": "GS-07",
+   "style": "named",
+   "asked": "Code of Criminal Procedure default bail where the investigation is not completed within the time allowed after remand",
+   "expect": [
+    {
+     "act": "The Code of Criminal Procedure, 1973",
+     "section": "167"
+    }
+   ]
+  },
+  {
+   "id": "Q03p",
+   "scenario": "GS-06",
+   "style": "plain",
+   "asked": "bail in anticipation of arrest for a non-bailable offence",
+   "expect": [
+    {
+     "act": "The Code of Criminal Procedure, 1973",
+     "section": "438"
+    },
+    {
+     "act": "The Bharatiya Nagarik Suraksha Sanhita, 2023",
+     "section": "482"
+    }
+   ]
+  },
+  {
+   "id": "Q03n",
+   "scenario": "GS-06",
+   "style": "named",
+   "asked": "Code of Criminal Procedure direction for grant of bail to a person apprehending arrest",
+   "expect": [
+    {
+     "act": "The Code of Criminal Procedure, 1973",
+     "section": "438"
+    }
+   ]
+  },
+  {
+   "id": "Q04p",
+   "scenario": "GS-06",
+   "style": "plain",
+   "asked": "special power of the High Court or Court of Session to grant bail and to cancel bail already granted",
+   "expect": [
+    {
+     "act": "The Code of Criminal Procedure, 1973",
+     "section": "439"
+    }
+   ]
+  },
+  {
+   "id": "Q04n",
+   "scenario": "GS-06",
+   "style": "named",
+   "asked": "Code of Criminal Procedure special powers of High Court or Court of Session regarding bail",
+   "expect": [
+    {
+     "act": "The Code of Criminal Procedure, 1973",
+     "section": "439"
+    }
+   ]
+  },
+  {
+   "id": "Q05p",
+   "scenario": "GS-16",
+   "style": "plain",
+   "asked": "High Court inherent power to quash proceedings to prevent abuse of the process of the court",
+   "expect": [
+    {
+     "act": "The Code of Criminal Procedure, 1973",
+     "section": "482"
+    },
+    {
+     "act": "The Bharatiya Nagarik Suraksha Sanhita, 2023",
+     "section": "528"
+    }
+   ]
+  },
+  {
+   "id": "Q05n",
+   "scenario": "GS-16",
+   "style": "named",
+   "asked": "Code of Criminal Procedure saving of inherent powers of the High Court",
+   "expect": [
+    {
+     "act": "The Code of Criminal Procedure, 1973",
+     "section": "482"
+    }
+   ]
+  },
+  {
+   "id": "Q06p",
+   "scenario": "GS-08",
+   "style": "plain",
+   "asked": "maintenance for a wife, children and parents who are unable to maintain themselves",
+   "expect": [
+    {
+     "act": "The Code of Criminal Procedure, 1973",
+     "section": "125"
+    }
+   ]
+  },
+  {
+   "id": "Q06n",
+   "scenario": "GS-08",
+   "style": "named",
+   "asked": "Code of Criminal Procedure order for maintenance of wives, children and parents",
+   "expect": [
+    {
+     "act": "The Code of Criminal Procedure, 1973",
+     "section": "125"
+    }
+   ]
+  },
+  {
+   "id": "Q07p",
+   "scenario": "reserve",
+   "style": "plain",
+   "asked": "cheating and dishonestly inducing a person to deliver property",
+   "expect": [
+    {
+     "act": "The Indian Penal Code, 1860",
+     "section": "415"
+    },
+    {
+     "act": "The Indian Penal Code, 1860",
+     "section": "420"
+    },
+    {
+     "act": "The Bharatiya Nyaya Sanhita, 2023",
+     "section": "318"
+    }
+   ]
+  },
+  {
+   "id": "Q07n",
+   "scenario": "reserve",
+   "style": "named",
+   "asked": "Indian Penal Code cheating and dishonestly inducing delivery of property",
+   "expect": [
+    {
+     "act": "The Indian Penal Code, 1860",
+     "section": "420"
+    }
+   ]
+  },
+  {
+   "id": "Q08p",
+   "scenario": "GS-06",
+   "style": "plain",
+   "asked": "punishment for criminal trespass",
+   "expect": [
+    {
+     "act": "The Indian Penal Code, 1860",
+     "section": "447"
+    },
+    {
+     "act": "The Bharatiya Nyaya Sanhita, 2023",
+     "section": "329"
+    }
+   ]
+  },
+  {
+   "id": "Q08n",
+   "scenario": "GS-06",
+   "style": "named",
+   "asked": "Indian Penal Code punishment for criminal trespass",
+   "expect": [
+    {
+     "act": "The Indian Penal Code, 1860",
+     "section": "447"
+    }
+   ]
+  },
+  {
+   "id": "Q09p",
+   "scenario": "GS-12",
+   "style": "plain",
+   "asked": "suit by a person dispossessed of immovable property without his consent, otherwise than in due course of law, within six months",
+   "expect": [
+    {
+     "act": "The Specific Relief Act, 1963",
+     "section": "6"
+    }
+   ]
+  },
+  {
+   "id": "Q09n",
+   "scenario": "GS-12",
+   "style": "named",
+   "asked": "Specific Relief Act suit for recovery of possession by a person dispossessed of immovable property",
+   "expect": [
+    {
+     "act": "The Specific Relief Act, 1963",
+     "section": "6"
+    }
+   ]
+  },
+  {
+   "id": "Q10p",
+   "scenario": "GS-19",
+   "style": "plain",
+   "asked": "specific performance cannot be enforced for a person who fails to prove he has performed or been ready and willing to perform his part",
+   "expect": [
+    {
+     "act": "The Specific Relief Act, 1963",
+     "section": "16"
+    }
+   ]
+  },
+  {
+   "id": "Q10n",
+   "scenario": "GS-19",
+   "style": "named",
+   "asked": "Specific Relief Act personal bars to relief readiness and willingness",
+   "expect": [
+    {
+     "act": "The Specific Relief Act, 1963",
+     "section": "16"
+    }
+   ]
+  },
+  {
+   "id": "Q11p",
+   "scenario": "GS-19",
+   "style": "plain",
+   "asked": "the court's discretion whether to decree specific performance of a contract",
+   "expect": [
+    {
+     "act": "The Specific Relief Act, 1963",
+     "section": "20"
+    }
+   ]
+  },
+  {
+   "id": "Q11n",
+   "scenario": "GS-19",
+   "style": "named",
+   "asked": "Specific Relief Act discretion as to decreeing specific performance",
+   "expect": [
+    {
+     "act": "The Specific Relief Act, 1963",
+     "section": "20"
+    }
+   ]
+  },
+  {
+   "id": "Q12p",
+   "scenario": "GS-14",
+   "style": "plain",
+   "asked": "time spent prosecuting a civil proceeding in good faith in a court without jurisdiction is excluded in computing limitation",
+   "expect": [
+    {
+     "act": "The Limitation Act, 1963",
+     "section": "14"
+    }
+   ]
+  },
+  {
+   "id": "Q12n",
+   "scenario": "GS-14",
+   "style": "named",
+   "asked": "Limitation Act exclusion of time of proceeding bona fide in a court without jurisdiction",
+   "expect": [
+    {
+     "act": "The Limitation Act, 1963",
+     "section": "14"
+    }
+   ]
+  },
+  {
+   "id": "Q13p",
+   "scenario": "GS-14",
+   "style": "plain",
+   "asked": "a written acknowledgment signed before the period of limitation expires gives a fresh period",
+   "expect": [
+    {
+     "act": "The Limitation Act, 1963",
+     "section": "18"
+    }
+   ]
+  },
+  {
+   "id": "Q13n",
+   "scenario": "GS-14",
+   "style": "named",
+   "asked": "Limitation Act effect of acknowledgment in writing",
+   "expect": [
+    {
+     "act": "The Limitation Act, 1963",
+     "section": "18"
+    }
+   ]
+  },
+  {
+   "id": "Q14p",
+   "scenario": "GS-14",
+   "style": "plain",
+   "asked": "part payment of a debt before limitation expires gives a fresh period of limitation",
+   "expect": [
+    {
+     "act": "The Limitation Act, 1963",
+     "section": "19"
+    }
+   ]
+  },
+  {
+   "id": "Q14n",
+   "scenario": "GS-14",
+   "style": "named",
+   "asked": "Limitation Act effect of payment on account of debt or of interest on legacy",
+   "expect": [
+    {
+     "act": "The Limitation Act, 1963",
+     "section": "19"
+    }
+   ]
+  },
+  {
+   "id": "Q15p",
+   "scenario": "GS-15",
+   "style": "plain",
+   "asked": "limitation period for a suit for specific performance of a contract for sale of immovable property",
+   "expect": [
+    {
+     "act": "The Limitation Act, 1963",
+     "section": "Article_54"
+    }
+   ]
+  },
+  {
+   "id": "Q15n",
+   "scenario": "GS-15",
+   "style": "named",
+   "asked": "Limitation Act period for suit for specific performance of a contract",
+   "expect": [
+    {
+     "act": "The Limitation Act, 1963",
+     "section": "Article_54"
+    }
+   ]
+  },
+  {
+   "id": "Q16p",
+   "scenario": "GS-02",
+   "style": "plain",
+   "asked": "limitation period for a suit for possession of immovable property or any interest in it based on title",
+   "expect": [
+    {
+     "act": "The Limitation Act, 1963",
+     "section": "Article_65"
+    }
+   ]
+  },
+  {
+   "id": "Q16n",
+   "scenario": "GS-02",
+   "style": "named",
+   "asked": "Limitation Act period for possession of immovable property based on title and adverse possession",
+   "expect": [
+    {
+     "act": "The Limitation Act, 1963",
+     "section": "Article_65"
+    }
+   ]
+  },
+  {
+   "id": "Q17p",
+   "scenario": "GS-12",
+   "style": "plain",
+   "asked": "limitation for a suit where no period of limitation is provided anywhere else",
+   "expect": [
+    {
+     "act": "The Limitation Act, 1963",
+     "section": "Article_113"
+    }
+   ]
+  },
+  {
+   "id": "Q17n",
+   "scenario": "GS-12",
+   "style": "named",
+   "asked": "Limitation Act residuary article for any suit for which no period of limitation is provided",
+   "expect": [
+    {
+     "act": "The Limitation Act, 1963",
+     "section": "Article_113"
+    }
+   ]
+  },
+  {
+   "id": "Q18p",
+   "scenario": "GS-17",
+   "style": "plain",
+   "asked": "which documents relating to immovable property must compulsorily be registered",
+   "expect": [
+    {
+     "act": "The Registration Act, 1908",
+     "section": "17"
+    }
+   ]
+  },
+  {
+   "id": "Q18n",
+   "scenario": "GS-17",
+   "style": "named",
+   "asked": "Registration Act documents of which registration is compulsory",
+   "expect": [
+    {
+     "act": "The Registration Act, 1908",
+     "section": "17"
+    }
+   ]
+  },
+  {
+   "id": "Q19p",
+   "scenario": "GS-17",
+   "style": "plain",
+   "asked": "an unregistered document that required registration is not admitted as evidence of the transaction but may be used for a collateral purpose",
+   "expect": [
+    {
+     "act": "The Registration Act, 1908",
+     "section": "49"
+    }
+   ]
+  },
+  {
+   "id": "Q19n",
+   "scenario": "GS-17",
+   "style": "named",
+   "asked": "Registration Act effect of non-registration of documents required to be registered",
+   "expect": [
+    {
+     "act": "The Registration Act, 1908",
+     "section": "49"
+    }
+   ]
+  },
+  {
+   "id": "Q20p",
+   "scenario": "GS-18",
+   "style": "plain",
+   "asked": "when copies or oral accounts of a document may be given in evidence in place of the original",
+   "expect": [
+    {
+     "act": "The Indian Evidence Act, 1872",
+     "section": "65"
+    }
+   ]
+  },
+  {
+   "id": "Q20n",
+   "scenario": "GS-18",
+   "style": "named",
+   "asked": "Indian Evidence Act cases in which secondary evidence relating to documents may be given",
+   "expect": [
+    {
+     "act": "The Indian Evidence Act, 1872",
+     "section": "65"
+    }
+   ]
+  },
+  {
+   "id": "Q21p",
+   "scenario": "GS-18",
+   "style": "plain",
+   "asked": "notice that must be given to the other side to produce the original before secondary evidence is allowed",
+   "expect": [
+    {
+     "act": "The Indian Evidence Act, 1872",
+     "section": "66"
+    }
+   ]
+  },
+  {
+   "id": "Q21n",
+   "scenario": "GS-18",
+   "style": "named",
+   "asked": "Indian Evidence Act rules as to notice to produce",
+   "expect": [
+    {
+     "act": "The Indian Evidence Act, 1872",
+     "section": "66"
+    }
+   ]
+  },
+  {
+   "id": "Q22p",
+   "scenario": "GS-13",
+   "style": "plain",
+   "asked": "criminal liability when a cheque is returned unpaid because the drawer's account has insufficient funds",
+   "expect": [
+    {
+     "act": "The Negotiable Instruments Act, 1881",
+     "section": "138"
+    }
+   ]
+  },
+  {
+   "id": "Q22n",
+   "scenario": "GS-13",
+   "style": "named",
+   "asked": "Negotiable Instruments Act dishonour of cheque for insufficiency of funds in the account",
+   "expect": [
+    {
+     "act": "The Negotiable Instruments Act, 1881",
+     "section": "138"
+    }
+   ]
+  },
+  {
+   "id": "Q23p",
+   "scenario": "GS-13",
+   "style": "plain",
+   "asked": "presumption that the holder of a cheque received it for the discharge of a debt or liability",
+   "expect": [
+    {
+     "act": "The Negotiable Instruments Act, 1881",
+     "section": "139"
+    }
+   ]
+  },
+  {
+   "id": "Q23n",
+   "scenario": "GS-13",
+   "style": "named",
+   "asked": "Negotiable Instruments Act presumption in favour of the holder of a cheque",
+   "expect": [
+    {
+     "act": "The Negotiable Instruments Act, 1881",
+     "section": "139"
+    }
+   ]
+  },
+  {
+   "id": "Q24p",
+   "scenario": "GS-13",
+   "style": "plain",
+   "asked": "which court may take cognizance of a complaint of cheque dishonour and within what time the complaint must be made",
+   "expect": [
+    {
+     "act": "The Negotiable Instruments Act, 1881",
+     "section": "142"
+    }
+   ]
+  },
+  {
+   "id": "Q24n",
+   "scenario": "GS-13",
+   "style": "named",
+   "asked": "Negotiable Instruments Act cognizance of offences complaint by the payee",
+   "expect": [
+    {
+     "act": "The Negotiable Instruments Act, 1881",
+     "section": "142"
+    }
+   ]
+  },
+  {
+   "id": "Q25p",
+   "scenario": "GS-12",
+   "style": "plain",
+   "asked": "civil courts have jurisdiction to try all suits of a civil nature unless expressly or impliedly barred",
+   "expect": [
+    {
+     "act": "The Code of Civil Procedure, 1908",
+     "section": "9"
+    }
+   ]
+  },
+  {
+   "id": "Q25n",
+   "scenario": "GS-12",
+   "style": "named",
+   "asked": "Code of Civil Procedure courts to try all civil suits unless barred",
+   "expect": [
+    {
+     "act": "The Code of Civil Procedure, 1908",
+     "section": "9"
+    }
+   ]
+  },
+  {
+   "id": "Q26p",
+   "scenario": "GS-12",
+   "style": "plain",
+   "asked": "notice that must be given to the government before a suit is filed against it",
+   "expect": [
+    {
+     "act": "The Code of Civil Procedure, 1908",
+     "section": "80"
+    }
+   ]
+  },
+  {
+   "id": "Q26n",
+   "scenario": "GS-12",
+   "style": "named",
+   "asked": "Code of Civil Procedure notice before suit against the Government or a public officer",
+   "expect": [
+    {
+     "act": "The Code of Civil Procedure, 1908",
+     "section": "80"
+    }
+   ]
+  },
+  {
+   "id": "Q27p",
+   "scenario": "GS-24",
+   "style": "plain",
+   "asked": "temporary injunction to restrain a defendant from alienating or dispossessing the plaintiff while the suit is pending",
+   "expect": [
+    {
+     "act": "The Code of Civil Procedure, 1908",
+     "section": "Order_XXXIX_Rule_1"
+    },
+    {
+     "act": "The Code of Civil Procedure, 1908",
+     "section": "Order_XXXIX_Rule_2"
+    }
+   ]
+  },
+  {
+   "id": "Q27n",
+   "scenario": "GS-24",
+   "style": "named",
+   "asked": "Code of Civil Procedure Order 39 cases in which a temporary injunction may be granted",
+   "expect": [
+    {
+     "act": "The Code of Civil Procedure, 1908",
+     "section": "Order_XXXIX_Rule_1"
+    }
+   ]
+  },
+  {
+   "id": "Q28p",
+   "scenario": "GS-20",
+   "style": "plain",
+   "asked": "a buyer in possession under an unregistered agreement of sale who has performed his part can resist the seller's attempt to dispossess him",
+   "expect": [
+    {
+     "act": "The Transfer of Property Act, 1882",
+     "section": "53A"
+    }
+   ]
+  },
+  {
+   "id": "Q28n",
+   "scenario": "GS-20",
+   "style": "named",
+   "asked": "Transfer of Property Act part performance",
+   "expect": [
+    {
+     "act": "The Transfer of Property Act, 1882",
+     "section": "53A"
+    }
+   ]
+  },
+  {
+   "id": "Q29p",
+   "scenario": "GS-08",
+   "style": "plain",
+   "asked": "a divorced Muslim woman's right to a reasonable and fair provision and maintenance within the iddat period and to her mahr",
+   "expect": [
+    {
+     "act": "The Muslim Women (Protection of Rights on Divorce) Act, 1986",
+     "section": "3"
+    }
+   ]
+  },
+  {
+   "id": "Q29n",
+   "scenario": "GS-08",
+   "style": "named",
+   "asked": "Muslim Women Protection of Rights on Divorce Act mahr and reasonable and fair provision and maintenance to be made and paid",
+   "expect": [
+    {
+     "act": "The Muslim Women (Protection of Rights on Divorce) Act, 1986",
+     "section": "3"
+    }
+   ]
+  },
+  {
+   "id": "Q30p",
+   "scenario": "GS-23",
+   "style": "plain",
+   "asked": "order for payment of maintenance to a divorced Muslim woman by her relatives or the Wakf Board after the iddat period",
+   "expect": [
+    {
+     "act": "The Muslim Women (Protection of Rights on Divorce) Act, 1986",
+     "section": "4"
+    }
+   ]
+  },
+  {
+   "id": "Q30n",
+   "scenario": "GS-23",
+   "style": "named",
+   "asked": "Muslim Women Protection of Rights on Divorce Act order for payment of maintenance by relatives and the Wakf Board",
+   "expect": [
+    {
+     "act": "The Muslim Women (Protection of Rights on Divorce) Act, 1986",
+     "section": "4"
+    }
+   ]
+  },
+  {
+   "id": "Q31p",
+   "scenario": "reserve",
+   "style": "plain",
+   "asked": "petition for restitution of conjugal rights when a spouse withdraws from the society of the other without reasonable excuse",
+   "expect": [
+    {
+     "act": "The Hindu Marriage Act, 1955",
+     "section": "9"
+    }
+   ]
+  },
+  {
+   "id": "Q31n",
+   "scenario": "reserve",
+   "style": "named",
+   "asked": "Hindu Marriage Act restitution of conjugal rights",
+   "expect": [
+    {
+     "act": "The Hindu Marriage Act, 1955",
+     "section": "9"
+    }
+   ]
+  },
+  {
+   "id": "Q32p",
+   "scenario": "reserve",
+   "style": "plain",
+   "asked": "grounds on which a Hindu spouse can obtain divorce such as cruelty, desertion and adultery",
+   "expect": [
+    {
+     "act": "The Hindu Marriage Act, 1955",
+     "section": "13"
+    }
+   ]
+  },
+  {
+   "id": "Q32n",
+   "scenario": "reserve",
+   "style": "named",
+   "asked": "Hindu Marriage Act divorce",
+   "expect": [
+    {
+     "act": "The Hindu Marriage Act, 1955",
+     "section": "13"
+    }
+   ]
+  },
+  {
+   "id": "Q33p",
+   "scenario": "reserve",
+   "style": "plain",
+   "asked": "interim maintenance and litigation expenses for a spouse with no independent income while the matrimonial case is pending",
+   "expect": [
+    {
+     "act": "The Hindu Marriage Act, 1955",
+     "section": "24"
+    }
+   ]
+  },
+  {
+   "id": "Q33n",
+   "scenario": "reserve",
+   "style": "named",
+   "asked": "Hindu Marriage Act maintenance pendente lite and expenses of proceedings",
+   "expect": [
+    {
+     "act": "The Hindu Marriage Act, 1955",
+     "section": "24"
+    }
+   ]
+  },
+  {
+   "id": "Q34p",
+   "scenario": "reserve",
+   "style": "plain",
+   "asked": "welfare of the minor is the paramount consideration in appointing or declaring a guardian",
+   "expect": [
+    {
+     "act": "The Guardians and Wards Act, 1890",
+     "section": "17"
+    }
+   ]
+  },
+  {
+   "id": "Q34n",
+   "scenario": "reserve",
+   "style": "named",
+   "asked": "Guardians and Wards Act matters to be considered by the court in appointing guardian",
+   "expect": [
+    {
+     "act": "The Guardians and Wards Act, 1890",
+     "section": "17"
+    }
+   ]
+  },
+  {
+   "id": "Q35p",
+   "scenario": "reserve",
+   "style": "plain",
+   "asked": "a guardian's right to the custody of a ward who leaves or is removed from his custody",
+   "expect": [
+    {
+     "act": "The Guardians and Wards Act, 1890",
+     "section": "25"
+    }
+   ]
+  },
+  {
+   "id": "Q35n",
+   "scenario": "reserve",
+   "style": "named",
+   "asked": "Guardians and Wards Act title of guardian to custody of ward",
+   "expect": [
+    {
+     "act": "The Guardians and Wards Act, 1890",
+     "section": "25"
+    }
+   ]
+  },
+  {
+   "id": "Q36p",
+   "scenario": "GS-25",
+   "style": "plain",
+   "asked": "alienation of waqf property without the sanction of the board is void",
+   "expect": [
+    {
+     "act": "The Unified Waqf Management, Empowerment, Efficiency and Development Act, 1995",
+     "section": "51"
+    }
+   ]
+  },
+  {
+   "id": "Q36n",
+   "scenario": "GS-25",
+   "style": "named",
+   "asked": "Waqf Act alienation of waqf property without sanction of the Board",
+   "expect": [
+    {
+     "act": "The Unified Waqf Management, Empowerment, Efficiency and Development Act, 1995",
+     "section": "51"
+    }
+   ]
+  },
+  {
+   "id": "Q37p",
+   "scenario": "reserve",
+   "style": "plain",
+   "asked": "acquisition of a right of way or of light and air by uninterrupted enjoyment for twenty years",
+   "expect": [
+    {
+     "act": "The Indian Easements Act, 1882",
+     "section": "15"
+    }
+   ]
+  },
+  {
+   "id": "Q37n",
+   "scenario": "reserve",
+   "style": "named",
+   "asked": "Indian Easements Act acquisition of easement by prescription",
+   "expect": [
+    {
+     "act": "The Indian Easements Act, 1882",
+     "section": "15"
+    }
+   ]
+  },
+  {
+   "id": "Q38p",
+   "scenario": "reserve",
+   "style": "plain",
+   "asked": "an aggrieved woman's application to the magistrate for relief against domestic violence",
+   "expect": [
+    {
+     "act": "The Protection of Women from Domestic Violence Act, 2005",
+     "section": "12"
+    }
+   ]
+  },
+  {
+   "id": "Q38n",
+   "scenario": "reserve",
+   "style": "named",
+   "asked": "Protection of Women from Domestic Violence Act application to Magistrate",
+   "expect": [
+    {
+     "act": "The Protection of Women from Domestic Violence Act, 2005",
+     "section": "12"
+    }
+   ]
+  },
+  {
+   "id": "Q39p",
+   "scenario": "reserve",
+   "style": "plain",
+   "asked": "a wife's right to reside in the shared household and not to be evicted from it",
+   "expect": [
+    {
+     "act": "The Protection of Women from Domestic Violence Act, 2005",
+     "section": "17"
+    }
+   ]
+  },
+  {
+   "id": "Q39n",
+   "scenario": "reserve",
+   "style": "named",
+   "asked": "Protection of Women from Domestic Violence Act right to reside in a shared household",
+   "expect": [
+    {
+     "act": "The Protection of Women from Domestic Violence Act, 2005",
+     "section": "17"
+    }
+   ]
+  },
+  {
+   "id": "Q40p",
+   "scenario": "reserve",
+   "style": "plain",
+   "asked": "the magistrate may pass a residence order restraining the respondent from dispossessing the aggrieved woman",
+   "expect": [
+    {
+     "act": "The Protection of Women from Domestic Violence Act, 2005",
+     "section": "19"
+    }
+   ]
+  },
+  {
+   "id": "Q40n",
+   "scenario": "reserve",
+   "style": "named",
+   "asked": "Protection of Women from Domestic Violence Act residence orders",
+   "expect": [
+    {
+     "act": "The Protection of Women from Domestic Violence Act, 2005",
+     "section": "19"
+    }
+   ]
+  }
+ ]
+}
