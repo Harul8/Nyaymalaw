@@ -26,7 +26,7 @@ from nm.core_engine.retrieval import SearchUnavailable, _digest, _valid_location
 from nm.core_engine.understanding import REFERENCE, TEXT, TYPOGRAPHY, select, source_catalogue
 from nm.shared import clock_contracts
 from nm.core_engine.citations import IndexUnavailable, held_judgments
-from nm.shared.citation_contracts import find_reporter_citations, provision_references
+from nm.shared.citation_contracts import find_reporter_citations, judgment_place, provision_references
 from nm.shared.model_port import (
     ModelError, OutputTruncated, Prompt, SchemaViolation, Tier, UsageLimitReached, canonical_schema_data, estimate_tokens,
     require_schema,
@@ -2830,7 +2830,8 @@ def _judgment_pick_text(plan, searches, labels):
             if type(cited) is int:
                 where += f", cited by {cited}"
             words = re.sub(r"\s+", " ", source.get("full_text") or "").strip()
-            lines.append(f"  {label}.{number} {candidate['title']} ({where}), paragraph {candidate['locator']}: {words}")
+            at = judgment_place(candidate["locator"])
+            lines.append(f"  {label}.{number} {candidate['title']} ({where}){', ' + at if at else ''}: {words}")
     return "\n".join(lines)
 
 
@@ -3106,13 +3107,17 @@ def _extract(paragraphs, found, chosen):
             at = positions.index(position) if position in rows else None
             for near in [] if at is None else positions[max(0, at - around):at + around + 1]:
                 add(near, "beside")
-    numbered = {str(row.get("paragraph_num") or "").strip(): position for position, row in paragraphs}
+    # A paragraph cut into parts (plan AN.45) is several positions under one number: naming it names them all.
+    numbered: dict[str, list[int]] = {}
+    for position, row in paragraphs:
+        numbered.setdefault(str(row.get("paragraph_num") or "").strip(), []).append(position)
     for position in list(why):
         for named in _PARAGRAPH_NAMED.finditer(rows[position]["full_text"]):
             first, last = int(named.group(1)), int(named.group(2) or named.group(1))
             for number in range(first, min(last, first + 10) + 1):
-                if str(number) in numbered and numbered[str(number)] != position:
-                    add(numbered[str(number)], "named")
+                for other in numbered.get(str(number), ()):
+                    if other != position:
+                        add(other, "named")
     for position, row in paragraphs:
         if _ISSUES.search(row["full_text"]):
             add(position, "issues")
@@ -3439,7 +3444,8 @@ def _further_text(plan, searches, labels, picks):
                     lines.append(f"    {candidate['title']}, section {candidate['locator']}: {heading}.")
                 else:
                     words = re.sub(r"\s+", " ", source.get("full_text") or "").strip()[:300]
-                    lines.append(f"    {candidate['title']}, paragraph {candidate['locator']}: {words}")
+                    at = judgment_place(candidate["locator"])
+                    lines.append(f"    {candidate['title']}{', ' + at if at else ''}: {words}")
             note = next((item["note"] for item in (picks[kind]["proposal"] or {}).get("questions", ())
                          if item["question_id"] == label), "")
             if note.strip():
