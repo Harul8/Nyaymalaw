@@ -6,10 +6,15 @@ import threading
 from collections.abc import Mapping
 from pathlib import Path
 from types import MappingProxyType
+from nm.arrive.admin_access import roster_from
+from nm.arrive.admin_directory import AdminFileDirectory
+from nm.arrive.admin_port import AdminDirectoryPort, AdminRecordPort, AdminUsagePort
+from nm.arrive.admin_usage import AdminUsage
 from nm.arrive.advocate_contracts import utcnow
 from nm.arrive.directory_port import DirectoryPort
 from nm.arrive.mail_outbox import FileOutbox
 from nm.arrive.mail_port import MailPort
+from nm.arrive.store_admin import FileAdminRecord
 from nm.arrive.store_directory import FileDirectory
 from nm.arrive.store_usage import FileUsage
 from nm.arrive.usage_port import AllowanceUsedUp, UsagePort, UsageRefused
@@ -38,6 +43,8 @@ _SEAL = 'NM_MATTER_KEY'
 _DEFAULT_SEARCH = object()
 #: Each account's usage of the paid AI service, beside the turn attempts (plan AN.17).
 USAGE_FILE = 'usage.sqlite'
+#: What the Admin area did and who just confirmed their password (plan AN.46, piece 46g).
+ADMIN_FILE = 'admin.sqlite'
 
 
 def storage_root(settings: Mapping[str, str], root: Path) -> Path:
@@ -89,6 +96,18 @@ class Application:
         self.directory = PolicedPort(inner=directory or FileDirectory(storage, key=key),
             gate=self._gate, port=DirectoryPort, sink=Sink.STORAGE, processor_id=STORAGE_PROCESSOR,
             data_classes=(DataClass.OPERATIONAL, DataClass.RESTRICTED))
+        # The Admin area (plan AN.46, D117-D119, D126): who the settings name as admins, and three narrow ports of its own that only
+        # the Admin routes are given - the sign-in edge's directory port still cannot list accounts (A1).
+        self.admin_roster = roster_from(settings)
+        self.admin_directory = PolicedPort(inner=_DeferredAdapter(lambda: AdminFileDirectory(storage, key=key)),
+            gate=self._gate, port=AdminDirectoryPort, sink=Sink.STORAGE, processor_id=STORAGE_PROCESSOR,
+            data_classes=(DataClass.OPERATIONAL, DataClass.RESTRICTED))
+        self.admin_usage = PolicedPort(inner=AdminUsage(storage / USAGE_FILE),
+            gate=self._gate, port=AdminUsagePort, sink=Sink.STORAGE, processor_id=STORAGE_PROCESSOR,
+            data_classes=(DataClass.OPERATIONAL,))
+        self.admin_record = PolicedPort(inner=_DeferredAdapter(lambda: FileAdminRecord(storage / ADMIN_FILE)),
+            gate=self._gate, port=AdminRecordPort, sink=Sink.STORAGE, processor_id=STORAGE_PROCESSOR,
+            data_classes=(DataClass.OPERATIONAL,))
         mail_adapter, processor = ((mail, OUTBOX_PROCESSOR) if mail is not None else
                                     build_mail(settings, storage, key, self._gate))
         self.mail = PolicedPort(inner=mail_adapter, gate=self._gate, port=MailPort,

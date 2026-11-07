@@ -280,8 +280,11 @@ def test_the_composition_root_polices_every_live_destination():
     # policed again since the core engine's search (open items round, 16 Oct 2026).
     # Each account's usage of the paid AI service (owner decision O24, plan AN.17) is a destination too:
     # content-free, on this installation's storage, admitted like the turn attempts beside it.
+    # The Admin area's three ports (plan AN.46, piece 46g) read this installation's own directory, usage store and Admin record:
+    # operational and restricted account facts on local storage, admitted like the directory and usage beside them.
     expected = {"StorePort", "TurnAttemptPort", "DirectoryPort", "MailPort", "SearchPort",
-                "UploadPort", "DocumentDerivativePort", "UsagePort"}
+                "UploadPort", "DocumentDerivativePort", "UsagePort",
+                "AdminDirectoryPort", "AdminUsagePort", "AdminRecordPort"}
     assert ports and len(ports) == len(calls) == len(set(ports)), (
         "Every actual wrapper must declare its unique port destination")
     assert set(ports) == expected, "The served destination inventory must remain fully policed"
