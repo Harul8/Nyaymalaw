@@ -13,3 +13,9 @@ def words(prompt):
 def test_the_prompt_that_makes_the_judgment_search_phrases_names_the_library_court_as_telangana():
     said = words(research.JUDGMENT_PHRASES)
     assert SAID in said and "the High Court of Andhra Pradesh," not in said.replace(SAID, "")
+
+
+def test_the_prompt_that_picks_the_judgment_paragraphs_names_the_library_court_as_telangana():
+    said = words(research.JUDGMENT_PICK)
+    assert SAID in said and "the High Court of Andhra Pradesh," not in said.replace(SAID, "")
+    assert SAID in words(research.JUDGMENT_PICK_V17), "the version the research makes its call with"
