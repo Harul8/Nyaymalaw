@@ -24,6 +24,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.concurrency import run_in_threadpool
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, StrictBool, field_validator
+from nm.app.admin_api import admin_router
 from nm.app.static_assets import browser_assets_router
 from nm.app.turn_progress import STAGES as TURN_STAGES
 from nm.arrive import attempts_contracts as attempts
@@ -2728,3 +2729,8 @@ def historical_matter(matter_id: str, advocate_id: Advocate, request: Request):
 
 app.include_router(browser_assets_router(
     asset_paths=lambda: application().browser_asset_paths(), root=ROOT))
+
+# The Admin area (plan AN.46, piece 46g): its routes are given the edge's own sign-in, CSRF and failed-attempt pieces, so there is
+# no door in them the rest of the edge does not use. A signed-in advocate who is not named in the settings gets a 404.
+app.include_router(admin_router(application=application, signed_in=signed_in, csrf=CsrfProtected,
+                                admit_attempt=_admit_auth_attempt))
