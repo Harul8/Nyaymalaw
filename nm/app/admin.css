@@ -115,6 +115,7 @@ a { color: var(--accent); }
 .adm-periods button + button { border-left: 1px solid var(--rule-2); }
 .adm-periods button[aria-pressed="true"] { background: var(--accent); color: #fff; }
 .adm-periods button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.adm-pre { margin: 0.4rem 0; padding: 0.5rem 0.7rem; background: var(--surface-2); border: 1px solid var(--rule); border-radius: 8px; white-space: pre-wrap; }
 .adm-steps { margin: 0; padding-left: 1.25rem; max-width: 60rem; }
 .adm-steps li { margin: 0 0 0.4rem; }
 .adm-actions { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; margin: 0.6rem 0 0; }

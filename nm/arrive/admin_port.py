@@ -209,6 +209,24 @@ class AdminChecksPort(Protocol):
 
 # ------------------------------------------------------------------------ the library ---
 
+class AdminStagingPort(Protocol):
+    """Acts staged for the library by an admin (D122, D125): copied into a folder of their own, read by the free reading job, approved,
+    and then appended by the owner's own job with the server stopped. Nothing here reaches the library."""
+
+    def batches(self) -> list[dict]:
+        ...
+
+    def stage(self, jurisdiction: str, files: list[tuple[str, str]], now: datetime) -> dict:
+        """Raises AdminChangeRefused for a name, a size or a count that is not allowed; AdminUnavailable when it cannot be kept."""
+        ...
+
+    def approve(self, batch_id: str, actor: str, now: datetime) -> dict:
+        ...
+
+    def discard(self, batch_id: str) -> bool:
+        ...
+
+
 class AdminLibraryPort(Protocol):
     def library(self) -> Mapping[str, object]:
         """What the held law holds, described and not opened: each store's lineage facts, the Acts catalogue's counts, the earlier

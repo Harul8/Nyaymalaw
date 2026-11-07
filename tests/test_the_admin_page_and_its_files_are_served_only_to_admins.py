@@ -132,8 +132,8 @@ def test_the_script_never_builds_markup_from_what_the_server_sends():
 def test_the_script_asks_only_the_admin_api_and_the_page_loads_only_the_servers_own_files():
     assert set(re.findall(r"""ask\(\s*[`'"]([^`'"?$]*)""", SCRIPT)) <= {"/api/admin/overview", "/api/admin/users", "/api/admin/users/",
                                                                      "/api/admin/usage", "/api/admin/diagnostics", "/api/admin/access",
-                                                                     "/api/admin/library", "/api/admin/me"}
-    assert set(re.findall(r"""send\(\s*[`'"]([^`'"$]*)""", SCRIPT)) <= {"/api/admin/password", "/api/admin/users/"}
+                                                                     "/api/admin/library", "/api/admin/library/batches", "/api/admin/me"}
+    assert set(re.findall(r"""send\(\s*[`'"]([^`'"$]*)""", SCRIPT)) <= {"/api/admin/password", "/api/admin/users/", "/api/admin/library/acts/stage", "/api/admin/library/batches/"}
     assert "/api/admin/me" in SCRIPT
     for text in (SCRIPT, PAGE, STYLE):
         assert not re.search(r"https?://", text.replace("http://www.w3.org/2000/svg", "")), "no address but the server's own"

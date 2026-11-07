@@ -44,6 +44,7 @@ class AdminLibrary:
     def __init__(self, *, checks: AdminChecksPort, root: Path, corpus_dir: Path):
         self.checks, self.root, self.corpus = checks, Path(root), Path(corpus_dir)
         self._catalogues: dict[Path, tuple[tuple[int, int], dict]] = {}
+        self._held: dict[Path, tuple[tuple[int, int], frozenset]] = {}
 
     # ----------------------------------------------------------------- the Acts catalogue ---
 
@@ -59,6 +60,7 @@ class AdminLibrary:
             rows = json.loads(path.read_text(encoding="utf8"))
             if not isinstance(rows, list):
                 return None
+            self._held[path] = (key, frozenset(str(r.get("act_id")) for r in rows if isinstance(r, dict) and r.get("act_id")))
             by_jurisdiction = Counter(str(r.get("jurisdiction") or "not stated") for r in rows if isinstance(r, dict))
             by_standing = Counter(str(r.get("standing") or "not stated") for r in rows if isinstance(r, dict))
             found = {"acts": len(rows), "by_jurisdiction": self._top(by_jurisdiction), "by_standing": self._top(by_standing)}
@@ -66,6 +68,18 @@ class AdminLibrary:
             return found
         except (OSError, ValueError):
             return None
+
+    def held_act_ids(self) -> frozenset | None:
+        """The identity of every Act the Acts store was built from, or None when the catalogue cannot be read (so no Act is said to be
+        held or not held)."""
+        try:
+            record = json.loads((self.root / ".nm" / "retrieval" / "bare_acts.lineage.json").read_text(encoding="utf8"))
+            folder = (self.corpus / record["passage_store"]["path"]).parent
+        except (OSError, ValueError, KeyError, TypeError):
+            return None
+        if self._catalogue(folder) is None:
+            return None
+        return self._held[folder / "acts.json"][1]
 
     @staticmethod
     def _top(counts: Counter) -> list[dict]:

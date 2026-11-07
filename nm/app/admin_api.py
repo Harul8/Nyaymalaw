@@ -51,6 +51,17 @@ class AllowanceChange(Reason):
     usd: Decimal = Field(gt=0, le=1000, decimal_places=6)
 
 
+class StagedFile(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    name: str = Field(max_length=200)
+    text: str = Field(max_length=9_000_000)
+
+
+class StageActs(Reason):
+    jurisdiction: str = Field(max_length=80)
+    files: list[StagedFile] = Field(max_length=20)
+
+
 class UserTypeChange(Reason):
     user_type: str = Field(pattern="^(advocate|admin)$")
 
@@ -220,6 +231,41 @@ def admin_router(*, application: Callable, signed_in: Callable, csrf: object, ad
         def allow(account, session, now):
             return {"suspended": False, "changed": application().admin_accounts.set_suspended(account.id, False, now)}
         return make(request, level, account_id, Action.SUSPEND, "reinstate", body.reason, allow)
+
+    def change(request: Request, level: Level, action: Action, label: str, target: str, reason: str, do: Callable) -> dict:
+        """A change that is not to an account (the library's staging): the same one path, with a target that names what is changed."""
+        session, now = request.state.account_session, utcnow()
+        try:
+            return admin_changes.make_change(
+                record=application().admin_record, level=level, actor=session.advocate_id,
+                session_fingerprint=session.token_fingerprint, now=now, action=action, label=label, target=target,
+                reason=reason, do=lambda: do(session, now))
+        except AdminChangeRefused as exc:
+            code = getattr(exc, "code", None)
+            raise HTTPException(status_code=exc.status, detail={"code": code, "message": exc.detail} if code else exc.detail) from exc
+        except AdminUnavailable as exc:
+            raise HTTPException(status_code=503, detail=_UNAVAILABLE) from exc
+
+    @router.get("/library/batches")
+    def batches(level: Level = Depends(admin_level)) -> dict:
+        return read(lambda roster, directory, usage_port, now: admin_views.batches_view(application().admin_staging, now))
+
+    @router.post("/library/acts/stage", dependencies=[csrf])
+    def stage_acts(body: StageActs, request: Request, level: Level = Depends(admin_level)) -> dict:
+        target = f"{' '.join(body.jurisdiction.split())}: {len(body.files)} file(s)"
+        return change(request, level, Action.LIBRARY_ADD, "library acts stage", target, body.reason,
+                      lambda session, now: {"batch": application().admin_staging.stage(
+                          body.jurisdiction, [(f.name, f.text) for f in body.files], now)})
+
+    @router.post("/library/batches/{batch_id}/approve", dependencies=[csrf])
+    def approve_batch(batch_id: str, body: Reason, request: Request, level: Level = Depends(admin_level)) -> dict:
+        return change(request, level, Action.LIBRARY_ADD, "library batch approve", f"batch {batch_id}"[:254], body.reason,
+                      lambda session, now: {"batch": application().admin_staging.approve(batch_id, session.advocate_id, now)})
+
+    @router.post("/library/batches/{batch_id}/discard", dependencies=[csrf])
+    def discard_batch(batch_id: str, body: Reason, request: Request, level: Level = Depends(admin_level)) -> dict:
+        return change(request, level, Action.LIBRARY_ADD, "library batch discard", f"batch {batch_id}"[:254], body.reason,
+                      lambda session, now: {"discarded": application().admin_staging.discard(batch_id)})
 
     @router.get("/library")
     def library(level: Level = Depends(admin_level)) -> dict:

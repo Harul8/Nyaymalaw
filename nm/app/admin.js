@@ -455,11 +455,67 @@
 
   const COLLECTION = { acts: 'Acts', judgments: 'Judgments' };
 
+  const BATCH_STATE = { checked: ['adm-ok', '✓ Read, ready to approve'], 'needs attention': ['adm-warn', '! Needs attention'], approved: ['adm-ok', '✓ Approved'] };
+
+  // ADDING ACTS (plan AN.46, pieces 46m and 46o). The admin chooses Act text files and a jurisdiction; they are staged in a folder of their own
+  // and read by the free reading job, never put into the library. An approved batch shows the exact commands the owner runs, with the server
+  // stopped, to append it; the page then shows the new counts, and the batch reads "In the library".
+  async function addActsPanel() {
+    let batches;
+    try { batches = (await ask('/api/admin/library/batches')).batches; } catch (error) { return section('Add Acts', failure(error, render)); }
+    const jurisdiction = el('input', { class: 'adm-field', id: 'adm-jurisdiction', type: 'text', maxlength: 60, placeholder: 'Union of India', 'aria-label': 'Jurisdiction' });
+    const chooser = el('input', { type: 'file', id: 'adm-acts-files', accept: '.txt,text/plain', multiple: true, 'aria-label': 'Act text files' });
+    const message = el('p', { class: 'adm-dialog-message', role: 'alert' });
+    const go = el('button', { type: 'button', class: 'adm-button', text: 'Check these Acts…', onclick: async () => {
+      message.textContent = '';
+      if (!jurisdiction.value.trim() || !chooser.files.length) { message.textContent = 'Name the jurisdiction and choose at least one Act file.'; return; }
+      const files = await Promise.all([...chooser.files].map(async (file) => ({ name: file.name, text: await file.text() })));
+      const where = jurisdiction.value.trim();
+      confirmChange({ title: 'Check Acts for the library', submit: 'Check them', fields: [],
+        summary: `${plural(files.length, 'file', 'files')} for ${where} will be kept in a folder of their own and read the way the append job reads an Act. Nothing is added to the library.`,
+        run: async (v) => {
+          const done = await send('/api/admin/library/acts/stage', { jurisdiction: where, files, reason: v.reason });
+          return `Read ${plural(done.batch.acts.length, 'Act', 'Acts')}: ${done.batch.state === 'checked' ? 'ready to approve.' : 'something needs attention, see below.'}`;
+        } });
+    } });
+    go.disabled = !me.can_change;
+    const form = me.can_change ? el('div', { class: 'adm-filter' }, el('label', { for: 'adm-jurisdiction', text: 'Jurisdiction' }), jurisdiction,
+      el('label', { for: 'adm-acts-files', text: 'Act files (<year>_<number>_<title>.txt)' }), chooser, go)
+      : note('Admin (view only) can look but cannot add.');
+    const cards = batches.map((b) => {
+      if (b.unreadable) return el('article', { class: 'adm-check' }, el('header', {}, el('h3', { text: `Batch ${b.id}` }), el('span', { class: 'adm-chip adm-bad', text: '? Could not be read' })));
+      const [kind, label] = b.in_library ? ['adm-ok', '✓ In the library'] : (BATCH_STATE[b.state] || ['', b.state]);
+      const buttons = [];
+      if (me.can_change && b.state === 'checked') buttons.push(el('button', { type: 'button', class: 'adm-button', text: 'Approve…', onclick: () => confirmChange({
+        title: 'Approve this batch', submit: 'Approve', fields: [],
+        summary: 'Approving records that you have looked at what was read. It does not add anything to the library: the owner appends the batch with the commands shown afterwards, with the server stopped.',
+        run: async (v) => { await send(`/api/admin/library/batches/${encodeURIComponent(b.id)}/approve`, { reason: v.reason }); return 'Approved. The commands to run are on the batch.'; } }) }));
+      if (me.can_change) buttons.push(el('button', { type: 'button', class: 'adm-button adm-plain', text: 'Discard…', onclick: () => confirmChange({
+        title: 'Discard this batch', submit: 'Discard', fields: [], summary: 'The staged copies are removed. The library is not touched.',
+        run: async (v) => { await send(`/api/admin/library/batches/${encodeURIComponent(b.id)}/discard`, { reason: v.reason }); return 'The batch was discarded.'; } }) }));
+      return el('article', { class: 'adm-check' }, el('header', {}, el('h3', { text: `${b.jurisdiction}: ${plural(b.staged.length, 'file', 'files')}` }),
+        el('span', { class: `adm-chip ${kind}`, text: label }), el('span', { class: 'adm-note', text: `Staged ${when(b.created_at)}` })),
+        b.problem ? callout('adm-warn', b.problem) : null,
+        table({ head: ['Act', 'Sections', 'Passages', 'Sections found', 'Lines not kept', 'Notes', 'In the library'], numeric: [1, 2, 4, 5],
+          empty: 'Nothing was read.', rows: b.acts.map((a) => a.error
+            ? [a.name, el('span', { class: 'adm-chip adm-bad', text: a.error }), '', '', '', '', '']
+            : [a.act_name, num(a.sections), num(a.passages), a.ranges || '—', num(a.skipped), num(a.notes_in_all),
+              a.already_held === null ? '—' : a.already_held ? el('span', { class: 'adm-chip adm-warn', text: 'Already held' }) : 'New']) }),
+        ...b.acts.filter((a) => a.notes && a.notes.length).map((a) => el('details', {}, el('summary', { text: `Where ${a.act_name} was read as something other than sections (${num(a.notes_in_all)})` }),
+          el('ul', {}, a.notes.map((n) => el('li', { class: 'adm-mono', text: n }))))),
+        b.commands.length ? el('div', {}, el('p', { class: 'adm-note', text: 'Approved. Stop the server, run these two in a terminal in the project folder (the first reads and checks, the second appends), then start the server again. This page then shows the new counts.' }),
+          ...b.commands.map((c) => el('pre', { class: 'adm-mono adm-pre', text: c }))) : null,
+        buttons.length ? el('div', { class: 'adm-actions' }, buttons) : null);
+    });
+    return section('Add Acts', el('p', { class: 'adm-note', text: 'Choose the Act text files in the library’s own form and the jurisdiction. They are read here, free, and nothing reaches the library until the owner appends them.' }),
+      form, message, ...(cards.length ? cards : [note('No batch has been staged.')]));
+  }
+
   async function libraryPage() {
     const l = await ask('/api/admin/library');
     const root = el('div');
-    root.append(el('p', { class: 'adm-sub', text: 'What the held law holds, as its own records describe it. This page shows it and does not change it: documents are added from a terminal ' +
-      'with the server stopped (see below), so that the index being replaced is not in use.' }));
+    root.append(el('p', { class: 'adm-sub', text: 'What the held law holds, as its own records describe it, and the Acts being staged to join it. Nothing here changes the library: ' +
+      'the append replaces index files the running server holds open, so the owner runs it from a terminal with the server stopped (see below).' }));
     root.append(section('What is held', l.stores.map((s) => {
       const name = COLLECTION[s.collection] || s.collection;
       if (!s.readable) return el('article', { class: 'adm-check' }, el('header', {}, el('h3', { text: name }), el('span', { class: 'adm-chip adm-bad', text: '? Could not be read' })),
@@ -485,8 +541,9 @@
       root.append(section('Room to add', facts(Object.entries(l.disk).map(([k, v]) => [k === 'law' ? 'The disk the law is on' : 'The disk the records are on',
         `${bytes(v.free)} free of ${bytes(v.total)}`]))));
     }
+    root.append(await addActsPanel());
     root.append(section('How a document is added', el('ol', { class: 'adm-steps' },
-      el('li', { text: 'Acts: put the Act’s text file in the library’s own form, then run the append job for Acts with --dry-run first and read what it prints. It encodes only the new Acts, adds their vectors after the existing ones, rebuilds the word index, and keeps the earlier files beside the new ones.' }),
+      el('li', { text: 'Acts: stage them above and read what the check found; once approved, the commands to run appear on the batch. The append encodes only the new Acts, adds their vectors after the existing ones, rebuilds the word index, and keeps the earlier files beside the new ones.' }),
       el('li', { text: 'Judgments: the read stage cuts them into passages (the store above, “built beside”); the index stage encodes them and a swap makes the new store the one searched. Each stage is run by the owner.' }),
       el('li', { text: 'Both change the library, so the owner runs them with the server stopped. Start the server again and this page shows the new counts; the earlier files stay beside the new ones for a roll-back.' }))));
     root.append(note(`Read ${when(l.as_of)}.`));

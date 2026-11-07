@@ -12,7 +12,8 @@ from nm.arrive.admin_directory import AdminFileDirectory
 from nm.arrive.admin_checks import AdminChecks
 from nm.arrive.admin_library import AdminLibrary
 from nm.arrive.admin_port import (AdminAccountsPort, AdminChecksPort, AdminDirectoryPort, AdminLibraryPort, AdminRecordPort,
-                                  AdminTurnsPort, AdminUsagePort)
+                                  AdminStagingPort, AdminTurnsPort, AdminUsagePort)
+from nm.arrive.admin_staging import AdminStaging
 from nm.arrive.admin_turns import AdminTurns
 from nm.arrive.admin_usage import AdminUsage
 from nm.arrive.advocate_contracts import utcnow
@@ -131,8 +132,13 @@ class Application:
             gate=self._gate, port=AdminChecksPort, sink=Sink.STORAGE, processor_id=STORAGE_PROCESSOR,
             data_classes=(DataClass.OPERATIONAL,))
         # What the held law holds, described (plan AN.46, piece 46l): read from the store's own records and catalogue, never opened.
-        self.admin_library = PolicedPort(inner=AdminLibrary(checks=checks, root=self.root, corpus_dir=checks.corpus),
+        library = AdminLibrary(checks=checks, root=self.root, corpus_dir=checks.corpus)
+        self.admin_library = PolicedPort(inner=library,
             gate=self._gate, port=AdminLibraryPort, sink=Sink.STORAGE, processor_id=STORAGE_PROCESSOR,
+            data_classes=(DataClass.OPERATIONAL,))
+        # Acts an admin has staged for the library (plan AN.46, pieces 46m and 46o): in a folder of their own, read free, never appended here.
+        self.admin_staging = PolicedPort(inner=AdminStaging(storage / 'admin-staging', root=self.root, held=library.held_act_ids),
+            gate=self._gate, port=AdminStagingPort, sink=Sink.STORAGE, processor_id=STORAGE_PROCESSOR,
             data_classes=(DataClass.OPERATIONAL,))
         self.admin_record = PolicedPort(inner=_DeferredAdapter(lambda: FileAdminRecord(storage / ADMIN_FILE)),
             gate=self._gate, port=AdminRecordPort, sink=Sink.STORAGE, processor_id=STORAGE_PROCESSOR,

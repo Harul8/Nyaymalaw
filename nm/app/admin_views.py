@@ -19,7 +19,7 @@ from typing import Any, Mapping
 
 from nm.arrive.admin_access import Roster
 from nm.arrive.admin_port import (AdminAccount, AdminChecksPort, AdminDirectoryPort, AdminLibraryPort, AdminRecordPort,
-                                  AdminTurnsPort, AdminUnavailable, AdminUsagePort, Balance, Consumption)
+                                  AdminStagingPort, AdminTurnsPort, AdminUnavailable, AdminUsagePort, Balance, Consumption)
 from nm.arrive.advocate_contracts import canonical_id
 
 #: The days an admin may ask the usage pages about.
@@ -376,3 +376,8 @@ def library_view(library: AdminLibraryPort, now: datetime) -> dict:
     """What the held law holds (D122): counts and descriptions of the stores and what has been set aside or built beside them. The
     law is public, but the view still carries only descriptions - no passage, no judgment's words, no index."""
     return content_free({"as_of": now.isoformat(), **library.library()})
+
+
+def batches_view(staging: AdminStagingPort, now: datetime) -> dict:
+    """The Acts staged for the library, newest first, each with what the free reading found and what the owner runs next."""
+    return content_free({"as_of": now.isoformat(), "batches": staging.batches()})
