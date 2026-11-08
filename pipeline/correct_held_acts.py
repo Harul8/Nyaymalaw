@@ -45,6 +45,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from pipeline import build_acts_v4 as build  # noqa: E402 - the build's own reading and cutting
+from pipeline.embed_acts_wording import wording  # noqa: E402 - what the Acts' vectors are made from once they are made from wording
 from pipeline.append_bare_acts import (  # noqa: E402
     DOC_TYPE, LINEAGE, VECTOR_STORE, Store, _can_swap, _real_bm25, _real_encoder, _sha256, bm25_tokens, check_lineage,
 )
@@ -142,8 +143,12 @@ def correct(replacements: dict[str, list[dict]], store: Store, *, encode: Callab
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
     at = datetime.now(timezone.utc).isoformat(timespec="seconds")
     try:
-        # THE VECTORS: every other passage's as it was, each Act's encoded afresh, in the new order.
-        vectors = {act_id: np.asarray(encode([row["blob"]["full_text"] for row in replacements[act_id]]), dtype="float32")
+        # THE VECTORS: every other passage's as it was, each Act's encoded afresh, in the new order - from what the index's vectors are
+        # made from: the passage as shown, or, once the Acts' vectors were swapped for those made from the passages' own wording
+        # (plan AN.45 D91; the record says vector_text "wording"), the wording. A mixed index would put a corrected Act beside the rest
+        # by a different measure.
+        text_of = wording if record.get("vector_text") == "wording" else (lambda text: text)
+        vectors = {act_id: np.asarray(encode([text_of(row["blob"]["full_text"]) for row in replacements[act_id]]), dtype="float32")
                    for act_id in ordered}
         index = faiss.read_index(str(index_path))
         if index.ntotal != base or any(v.shape != (len(replacements[a]), index.d) for a, v in vectors.items()):

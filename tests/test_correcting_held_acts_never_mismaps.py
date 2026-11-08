@@ -119,6 +119,28 @@ def test_after_a_correction_vector_n_is_still_passage_n_and_every_other_passage_
     assert len(kept) == 1 and json.loads(kept[0].read_text())["passages"] == 7, "the earlier lineage record is kept beside"
 
 
+def test_a_corrected_act_is_encoded_as_the_index_was_made_from_what_it_says_or_from_the_passage_as_shown(tmp_path):
+    """Once the Acts' vectors are made from each passage's own wording (the record says vector_text "wording"), a corrected Act is encoded
+    the same way, not from the passage as shown with its naming line."""
+    seen = []
+
+    def recording(texts):
+        seen.append(list(texts))
+        return _encode(texts)
+    corrected = [_row("ACT_B", "1", "Short title."), {**_row("ACT_B", "2", "x"), "blob": {
+        **_row("ACT_B", "2", "x")["blob"], "full_text": "ACT_B s.2: Repeal of Act.\n2. The words of the section."}}]
+    (tmp_path / "shown").mkdir()
+    (tmp_path / "made").mkdir()
+    shown = _library(tmp_path / "shown")
+    job.correct({"ACT_B": corrected}, shown, encode=recording, build_bm25=_BM25())
+    assert seen[-1] == [row["blob"]["full_text"] for row in corrected]
+    made = _library(tmp_path / "made")
+    record = json.loads(made.lineage.read_text())
+    made.lineage.write_text(json.dumps({**record, "vector_text": "wording"}))
+    job.correct({"ACT_B": corrected}, made, encode=recording, build_bm25=_BM25())
+    assert seen[-1] == ["ACT_B s.1: Short title.", "2. The words of the section."]
+
+
 def test_two_acts_corrected_at_once_one_shorter_one_longer(tmp_path):
     import faiss
 
