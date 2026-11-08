@@ -140,7 +140,7 @@ def _log_stage_failure(kind, stage, exc, query_id=None):
 # The index's own tokenisation has one owner, shared with the index builds: a
 # query cut differently from the built index silently stops meeting its words.
 from nm.shared.citation_contracts import (  # noqa: E402
-    bm25_tokens, bind_provision_key, instrument_candidates, ProvisionKeyState, provision_key_binder,
+    act_alias_index, bm25_tokens, bind_provision_key, instrument_candidates, ProvisionKeyState, provision_key_binder,
     provisions_named, statute_own_title,
 )
 
@@ -1432,7 +1432,7 @@ def offered(record):
     return [*record["candidates"], *record.get("connected", ()), *record.get("named_found", ())]
 
 
-def _read_named(collection, wanted, returned, issues):
+def _read_named(collection, wanted, returned, issues, aliases=None):
     """The sections a question's plan names, each read by its number from the held Act its name is (v11; plan AN.35, piece 35b):
     the Act by the instrument register's key for its name - every kept Act the name may be, never a near title chosen for it - and
     the section by its explicit number within it (read_provision). Each entry says what became of it: read (the candidates, one
@@ -1456,7 +1456,7 @@ def _read_named(collection, wanted, returned, issues):
             entries.append({**item, "state": "not_held", "found": [], "reason": "It names no provision by its number"})
             continue
         try:
-            candidates = acts(instrument_candidates(item["act"], held))
+            candidates = acts(instrument_candidates(item["act"], held, aliases))
         except SearchUnavailable as exc:
             entries.append({**item, "state": "unavailable", "found": [], "reason": str(exc)})
             continue
@@ -1505,10 +1505,23 @@ class SearchPort(Protocol):
         ...
 
 
+def checked_aliases(path):
+    """The owner's checked short forms of Act names, as an index (plan AN.47, D132): pipeline/act_aliases.json, checked entries only, a draft
+    resolving nothing. A list that cannot be read, or is not of its schema, means no short forms: names find Acts as exact names
+    only, as before, with a warning - search never fails because of it."""
+    try:
+        return act_alias_index(json.loads(Path(path).read_text(encoding="utf8")))
+    except (OSError, ValueError) as exc:
+        log.warning("The Act alias list cannot be used; short names find no Act: %s", exc)
+        return {}
+
+
 class HybridSearcher:
     """Independent lexical/vector legs and exact source reads for both corpora."""
-    def __init__(self, collections):
+    def __init__(self, collections, aliases=None):
         self.collections = collections
+        # Plan AN.47 (D129): the owner's checked short forms propose candidate Acts where a name finds none; never a resolved identity.
+        self.aliases = aliases or {}
 
     @classmethod
     def local(cls, root=None, corpus_dir=None):
@@ -1521,7 +1534,8 @@ class HybridSearcher:
         return cls({kind: LocalCollection(corpus_dir=corpus, lineage=root / ".nm/retrieval" / file,
             doc_type=doc_type, models=models, copies=copies.get(kind)) for kind, file, doc_type in (
                 ("provision", "bare_acts.lineage.json", "bare_act"),
-                ("judgment", "judgments.lineage.json", "case_law"))})
+                ("judgment", "judgments.lineage.json", "case_law"))},
+            aliases=checked_aliases(root / "pipeline" / "act_aliases.json"))
 
     def revision(self):
         values = {kind: collection.revision() for kind, collection in self.collections.items()}
@@ -1640,7 +1654,7 @@ class HybridSearcher:
             if kind == "provision" and names and callable(getattr(collection, "instrument_keys", None)):
                 try:
                     held = collection.instrument_keys()
-                    named = [{"name": name, "candidates": list(instrument_candidates(name, held))} for name in names]
+                    named = [{"name": name, "candidates": list(instrument_candidates(name, held, self.aliases))} for name in names]
                     keys = {key for entry in named for key in entry["candidates"]}
                     within = collection.instrument_positions(keys) if keys else frozenset()
                 except SearchUnavailable as exc:
@@ -1838,7 +1852,8 @@ class HybridSearcher:
                 candidates.append(_candidate(kind, position, rows[position], revision, score, associations[position], context))
             if kind == "provision":
                 returned_here = [c for c in candidates if c["kind"] == kind]
-                named_entries, named_found = _read_named(collection, wanted, {c["position"]: c for c in returned_here}, issues)
+                named_entries, named_found = _read_named(collection, wanted, {c["position"]: c for c in returned_here}, issues,
+                                                         self.aliases)
                 connected, connections, links = _connect(collection, revision, returned_here + named_found, issues)
             if collection.revision() != revision:
                 candidates = [c for c in candidates if c["kind"] != kind]
