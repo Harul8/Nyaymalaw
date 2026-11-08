@@ -333,8 +333,12 @@ def reconcile(section_text: str, pdf_text: str | None, our_text: str | None, wor
 
 # ----------------------------------------------------------------------------- schedules
 
-_PERIOD = re.compile(r"^(?:(?:One|Two|Three|Four|Five|Six|Seven|Eight|Nine|Ten|Eleven|Twelve|Thirty|Sixty|"
-                     r"Ninety|Fifteen|Twenty)[\w -]*?(?:years?|days?|months?)|Ninety days|Thirty years)\.?$", re.I)
+# A period as the Schedule prints it. Two printings of the Limitation Act's own text were refused by the earlier pattern and the articles
+# holding them (105 and 127) dropped without a word (8 Nov 2026): an editor's mark of amendment before the number ("5[Sixty] days") and
+# the source's misprint "Three yean". The mark is not the statute's words; the misprint is kept as printed and said in the schedule notes.
+_PERIOD = re.compile(r"^(?:\d{1,2}\[\s?)?(?:(?:One|Two|Three|Four|Five|Six|Seven|Eight|Nine|Ten|Eleven|Twelve|Thirty|Sixty|"
+                     r"Ninety|Fifteen|Twenty)[\w \]-]*?(?:ye[ae][rn]s?|days?|months?)|Ninety days|Thirty years)\.?$", re.I)
+_CLEAN_PERIOD = re.compile(r"(?:years?|days?|months?)\.?$", re.I)
 _PART = re.compile(r"^(?:PART\s+[IVXL]+|(?:FIRST|SECOND|THIRD)\s+DIVISION)\b", re.I)
 
 
@@ -348,10 +352,15 @@ class Article:
     part: str = ""
 
 
-def limitation_articles(lines: list[str]) -> list[Article]:
+def limitation_articles(lines: list[str], notes: list[str] | None = None) -> list[Article]:
     """The Limitation Act's schedule as rows: an article's number alone on its line, its
     description, its period ("Three years"), then when the period begins to run - the three
-    columns of the schedule, as our text prints them one to a line."""
+    columns of the schedule, as our text prints them one to a line.
+
+    notes (the Act's schedule notes): every article whose number the text prints and that is
+    left out, because no description or no period could be read, is said there by number; so is
+    a period printed other than as years, days or months (a misprint, kept as printed). A count
+    of the articles held is never a count of those printed (docs/DEFECT_SHAPES.md S6)."""
     articles: list[Article] = []
     division = part = ""
     current: Article | None = None
@@ -370,12 +379,19 @@ def limitation_articles(lines: list[str]) -> list[Article]:
             current = None
             continue
         if not current.period and _PERIOD.match(line):
-            current.period = line
+            # An editor's mark of amendment ("5[Sixty] days") is not the statute's words.
+            current.period = " ".join(_MARK.sub("", line).split())
+            if notes is not None and not _CLEAN_PERIOD.search(current.period):
+                notes.append(f"Article {current.number}: the text prints its period as \"{current.period}\"; kept as printed")
         elif current.period:
             current.starts.append(line)
         else:
             current.description.append(line)
-    return [article for article in articles if article.description and article.period]
+    kept = [article for article in articles if article.description and article.period]
+    if notes is not None:
+        notes.extend(f"Article {article.number}: printed in the text and left out, its description or its period could not be read"
+                     for article in articles if not (article.description and article.period))
+    return kept
 
 
 #: An Order's heading as the Schedule prints it, alone on its line: "ORDER XXI", "ORDER XVI-A",
@@ -537,7 +553,7 @@ def identity(entry: dict, act: dict | None) -> tuple[str, str, str, str]:
 
 def schedules_from(back: list[str], title: str, notes: list[str] | None = None) -> tuple[list[Section], list[Article]]:
     if "limitation act, 1963" in title.lower():
-        return [], limitation_articles(back)
+        return [], limitation_articles(back, notes)
     if "code of civil procedure, 1908" in title.lower():
         return cpc_orders(back, notes), []
     return schedule_blocks(back), []

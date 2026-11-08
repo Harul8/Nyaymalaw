@@ -78,6 +78,25 @@ def test_the_limitation_acts_schedule_reads_as_its_articles():
     assert articles[0].part == "PART II--SUITS RELATING TO CONTRACTS" and articles[0].division.startswith("FIRST")
 
 
+def test_an_article_whose_period_is_printed_oddly_is_read_and_one_that_cannot_be_read_is_said_to_be_left_out():
+    """8 Nov 2026: Articles 105 ("Three yean") and 127 ("5[Sixty] days") of the real text were dropped without a word, so a search for
+    their periods found nothing. The editor's mark is not the statute's words; the misprint is kept as printed and said; an article
+    left out is named in the notes, never silently."""
+    lines = ["[See sections 2(j) and 3]", "FIRST DIVISION--SUITS", "PART X--SUITS FOR WHICH NO PERIOD IS ELSEWHERE PROVIDED",
+             "105", "By a Hindu for arrears of maintenance.", "Three yean", "When the arrears are payable.",
+             "127", "To set aside a sale in execution of a decree.", "5[Sixty] days", "The date of the sale.",
+             "128", "For possession by one dispossessed of immovable property.", "A period nobody can read", "The date of the dispossession.",
+             "129", "129 has a description and no period at all."]
+    notes: list[str] = []
+    articles = limitation_articles(lines, notes)
+    assert [(a.number, a.period, " ".join(a.starts)) for a in articles] == [
+        ("105", "Three yean", "When the arrears are payable."), ("127", "Sixty days", "The date of the sale.")]
+    assert notes == ['Article 105: the text prints its period as "Three yean"; kept as printed',
+                     "Article 128: printed in the text and left out, its description or its period could not be read",
+                     "Article 129: printed in the text and left out, its description or its period could not be read"]
+    assert limitation_articles(lines) == articles, "the notes are optional and change nothing read"
+
+
 def test_the_cpcs_first_schedule_reads_as_its_orders_rules():
     lines = ["THE FIRST SCHEDULE", "ORDER VII", "Plaint",
              "1. Particulars to be contained in plaint.—The plaint shall contain the following particulars:—",
