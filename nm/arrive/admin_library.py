@@ -105,16 +105,30 @@ class AdminLibrary:
 
     # ------------------------------------------------------------ candidates built beside ---
 
+    def _live_folders(self) -> set[Path]:
+        """The folders the stores now searched live in, by their lineage records. A judgment store swapped in keeps its read stage's
+        summary and passages file, so without this it would be listed as waiting after the very swap that made it the one searched."""
+        live = set()
+        for name in ("judgments.lineage.json", "bare_acts.lineage.json"):
+            try:
+                record = json.loads((self.root / ".nm" / "retrieval" / name).read_text(encoding="utf8"))
+                live.add((self.corpus / record["passage_store"]["path"]).parent.resolve())
+            except (OSError, ValueError, KeyError, TypeError):
+                continue
+        return live
+
     def _candidates(self) -> list[dict]:
-        """Stores built beside the live ones and not yet searched: a folder with a summary and a passages file (a read stage's output)."""
+        """Stores built beside the live ones and not yet searched: a folder with a summary and a passages file (a read stage's output),
+        unless it is the folder of a store now searched."""
         found = []
         try:
             folders = sorted(p for p in self.corpus.iterdir() if p.is_dir())
         except OSError:
             return found
+        live = self._live_folders()
         for folder in folders:
             summary = folder / "summary.json"
-            if not summary.is_file() or not (folder / "passages.jsonl").is_file():
+            if not summary.is_file() or not (folder / "passages.jsonl").is_file() or folder.resolve() in live:
                 continue
             entry: dict = {"name": folder.name, "readable": False}
             try:

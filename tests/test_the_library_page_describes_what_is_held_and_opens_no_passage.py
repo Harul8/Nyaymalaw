@@ -133,6 +133,18 @@ def test_a_store_built_beside_is_listed_with_counts_and_whether_it_has_an_index_
     assert "SECRET" not in json.dumps(library_in(places).library())
 
 
+def test_the_store_now_searched_is_not_listed_as_waiting_though_it_keeps_its_read_stages_files(places):
+    """After the swap of 8 Nov 2026 the judgment store searched is the folder that was built beside: it keeps its summary and passages
+    file. It must not be listed as waiting; a store built after it still is."""
+    store(places, "judgments", "judgments.lineage.json", "judgments_v4/judgments_v4.index", "judgments_v4/judgments_v4.db")
+    for name in ("judgments_v4", "judgments_v5"):
+        folder = places / "law" / name
+        folder.mkdir(exist_ok=True)
+        (folder / "passages.jsonl").write_text("{}\n", encoding="utf8")
+        (folder / "summary.json").write_text(json.dumps({"judgments": 5, "passages": 40}), encoding="utf8")
+    assert [c["name"] for c in library_in(places).library()["candidates"]] == ["judgments_v5"]
+
+
 def test_reading_changes_nothing(places):
     store(places, "acts", "bare_acts.lineage.json", "acts.index", "acts.db", acts=acts(("Union of India", "in force")))
     before = sorted((p.relative_to(places).as_posix(), p.stat().st_mtime_ns, p.stat().st_size) for p in places.rglob("*") if p.is_file())

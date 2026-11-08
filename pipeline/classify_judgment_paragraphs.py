@@ -2,13 +2,13 @@
 DEFAULT STAGE IS AN ESTIMATE AND MAKES NO CALL; THE RUN STAGE MAKES PAID CALLS ONLY WITH A SPEND LIMIT THE OWNER GIVES; THE LABELS GO FIRST
 TO A SIDE FILE AND INTO THE STORE ONLY WHEN THE OWNER ASKS (APPLY, WITH THE SERVER STOPPED).
 
-    .venv-arrive\\Scripts\\python.exe pipeline\\classify_judgment_paragraphs.py --folder judgments_v3
+    .venv-arrive\\Scripts\\python.exe pipeline\\classify_judgment_paragraphs.py --folder judgments_v4
         the estimate: how many passages are unknown, how many windows of a judgment they make, the cost at the model's price. No call.
-    .venv-arrive\\Scripts\\python.exe pipeline\\classify_judgment_paragraphs.py --folder judgments_v3 --stage run --spend-limit 1.00 [--windows 30]
+    .venv-arrive\\Scripts\\python.exe pipeline\\classify_judgment_paragraphs.py --folder judgments_v4 --stage run --spend-limit 1.00 [--windows 30]
         a bounded paid run: stops at the limit (or the windows); goes on from where it stopped; the labels are written to kinds.jsonl.
-    .venv-arrive\\Scripts\\python.exe pipeline\\classify_judgment_paragraphs.py --folder judgments_v3 --stage look
+    .venv-arrive\\Scripts\\python.exe pipeline\\classify_judgment_paragraphs.py --folder judgments_v4 --stage look
         what the side file holds: how many of each kind, examples, what was refused and why. No call.
-    .venv-arrive\\Scripts\\python.exe pipeline\\classify_judgment_paragraphs.py --folder judgments_v3 --stage apply     (and --stage undo)
+    .venv-arrive\\Scripts\\python.exe pipeline\\classify_judgment_paragraphs.py --folder judgments_v4 --stage apply     (and --stage undo)
         the labels into the store (only passages still unknown), listed so that undo puts them back. The server stopped.
 
 What it does. The judgment store built in plan AN.45 gives each passage the kind of the earlier passage it overlaps most; a quarter of
@@ -346,7 +346,7 @@ def real_model(allow_other: bool):
 
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--folder", required=True, help="the judgment store's folder under legal_database/vector_store, e.g. judgments_v3")
+    parser.add_argument("--folder", required=True, help="the judgment store's folder under legal_database/vector_store, e.g. judgments_v4, the store searched since 8 Nov 2026")
     parser.add_argument("--stage", choices=("estimate", "run", "look", "apply", "undo"), default="estimate")
     parser.add_argument("--spend-limit", type=float, help="run: the most to spend, in USD (required: a run without one is refused)")
     parser.add_argument("--windows", type=int, help="run: read at most this many windows")
