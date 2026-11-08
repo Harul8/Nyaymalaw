@@ -15,7 +15,7 @@
      "to": null
     }
    ],
-   "checked": false,
+   "checked": true,
    "note": "What judgments call 'the Constitution'. 'Draft Constitution' and the constitutions of other countries are not on this."
   },
   {
@@ -30,7 +30,7 @@
      "to": null
     }
    ],
-   "checked": false
+   "checked": true
   },
   {
    "as_written": [
@@ -44,7 +44,7 @@
      "to": null
     }
    ],
-   "checked": false
+   "checked": true
   },
   {
    "as_written": [
@@ -60,7 +60,7 @@
      "to": null
     }
    ],
-   "checked": false
+   "checked": true
   },
   {
    "as_written": [
@@ -86,7 +86,7 @@
      "to": null
     }
    ],
-   "checked": false,
+   "checked": true,
    "note": "The 1898 Code is not held; a judgment of 1973 or earlier that says 'Cr.P.C.' means it."
   },
   {
@@ -104,7 +104,7 @@
      "to": null
     }
    ],
-   "checked": false
+   "checked": true
   },
   {
    "as_written": [
@@ -124,7 +124,7 @@
      "to": null
     }
    ],
-   "checked": false,
+   "checked": true,
    "note": "1940 until 1996, then 1996. A judgment after 1996 about an arbitration begun under the 1940 Act would still say 'Arbitration Act'."
   },
   {
@@ -142,7 +142,7 @@
      "to": null
     }
    ],
-   "checked": false
+   "checked": true
   },
   {
    "as_written": [
@@ -158,7 +158,7 @@
      "to": null
     }
    ],
-   "checked": false
+   "checked": true
   },
   {
    "as_written": [
@@ -173,7 +173,7 @@
      "to": null
     }
    ],
-   "checked": false
+   "checked": true
   },
   {
    "as_written": [
@@ -190,7 +190,7 @@
      "to": null
     }
    ],
-   "checked": false
+   "checked": true
   },
   {
    "as_written": [
@@ -205,7 +205,7 @@
      "to": null
     }
    ],
-   "checked": false
+   "checked": true
   },
   {
    "as_written": [
@@ -232,7 +232,7 @@
      "to": null
     }
    ],
-   "checked": false,
+   "checked": true,
    "note": "Income-tax Act (1922, then 1961) in tax judgments; the Information Technology Act, 2000 in cyber judgments. From 2000 it is ambiguous."
   },
   {
@@ -254,7 +254,7 @@
      "to": null
     }
    ],
-   "checked": false
+   "checked": true
   },
   {
    "as_written": [
@@ -268,7 +268,7 @@
      "to": null
     }
    ],
-   "checked": false,
+   "checked": true,
    "note": "A State's Stamp Act could be meant; only the central Act is held."
   },
   {
@@ -292,7 +292,7 @@
      "to": null
     }
    ],
-   "checked": false,
+   "checked": true,
    "note": "The 1894 Act can still be meant for proceedings begun under it."
   },
   {
@@ -307,7 +307,7 @@
      "to": null
     }
    ],
-   "checked": false
+   "checked": true
   },
   {
    "as_written": [
@@ -323,7 +323,7 @@
      "to": null
     }
    ],
-   "checked": false
+   "checked": true
   },
   {
    "as_written": [
@@ -339,7 +339,7 @@
      "to": 1995
     }
    ],
-   "checked": false
+   "checked": true
   },
   {
    "as_written": [
@@ -354,7 +354,7 @@
      "to": null
     }
    ],
-   "checked": false,
+   "checked": true,
    "note": "'Regulation and Development' is how judgments often reverse the title."
   },
   {
@@ -377,7 +377,7 @@
      "to": null
     }
    ],
-   "checked": false
+   "checked": true
   },
   {
    "as_written": [
@@ -391,7 +391,7 @@
      "to": null
     }
    ],
-   "checked": false
+   "checked": true
   },
   {
    "as_written": [
@@ -407,7 +407,7 @@
      "to": null
     }
    ],
-   "checked": false
+   "checked": true
   },
   {
    "as_written": [
@@ -421,7 +421,7 @@
      "to": null
     }
    ],
-   "checked": false
+   "checked": true
   },
   {
    "as_written": [
@@ -435,7 +435,7 @@
      "to": null
     }
    ],
-   "checked": false
+   "checked": true
   },
   {
    "as_written": [
@@ -449,7 +449,7 @@
      "to": null
     }
    ],
-   "checked": false
+   "checked": true
   },
   {
    "as_written": [
@@ -463,7 +463,7 @@
      "to": null
     }
    ],
-   "checked": false
+   "checked": true
   },
   {
    "as_written": [
@@ -478,7 +478,7 @@
      "to": null
     }
    ],
-   "checked": false
+   "checked": true
   },
   {
    "as_written": [
@@ -493,7 +493,7 @@
      "to": null
     }
    ],
-   "checked": false
+   "checked": true
   },
   {
    "as_written": [
@@ -508,7 +508,7 @@
      "to": null
     }
    ],
-   "checked": false,
+   "checked": true,
    "note": "Not held. 'RP Act' could also mean the Act of 1950; only 1951 is listed."
   },
   {
@@ -531,7 +531,7 @@
      "to": null
     }
    ],
-   "checked": false
+   "checked": true
   },
   {
    "as_written": [
@@ -546,7 +546,7 @@
      "to": null
     }
    ],
-   "checked": false
+   "checked": true
   },
   {
    "as_written": [
@@ -562,7 +562,7 @@
      "to": null
     }
    ],
-   "checked": false
+   "checked": true
   },
   {
    "as_written": [
@@ -577,7 +577,7 @@
      "to": null
     }
    ],
-   "checked": false
+   "checked": true
   },
   {
    "as_written": [
@@ -591,7 +591,7 @@
      "to": null
     }
    ],
-   "checked": false
+   "checked": true
   },
   {
    "as_written": [
@@ -618,7 +618,7 @@
      "to": null
     }
    ],
-   "checked": false
+   "checked": true
   },
   {
    "as_written": [
@@ -632,7 +632,7 @@
      "to": null
     }
    ],
-   "checked": false
+   "checked": true
   },
   {
    "as_written": [
@@ -648,7 +648,7 @@
      "to": null
     }
    ],
-   "checked": false
+   "checked": true
   },
   {
    "as_written": [
@@ -665,7 +665,7 @@
      "to": null
     }
    ],
-   "checked": false
+   "checked": true
   },
   {
    "as_written": [
@@ -679,7 +679,7 @@
      "to": null
     }
    ],
-   "checked": false
+   "checked": true
   },
   {
    "as_written": [
@@ -693,7 +693,7 @@
      "to": null
     }
    ],
-   "checked": false
+   "checked": true
   },
   {
    "as_written": [
@@ -707,7 +707,7 @@
      "to": null
     }
    ],
-   "checked": false
+   "checked": true
   },
   {
    "as_written": [
@@ -721,7 +721,7 @@
      "to": 1999
     }
    ],
-   "checked": false
+   "checked": true
   },
   {
    "as_written": [
@@ -735,7 +735,7 @@
      "to": null
     }
    ],
-   "checked": false
+   "checked": true
   },
   {
    "as_written": [
@@ -749,7 +749,7 @@
      "to": 1962
     }
    ],
-   "checked": false,
+   "checked": true,
    "note": "Not held."
   },
   {
@@ -771,7 +771,7 @@
      "to": null
     }
    ],
-   "checked": false
+   "checked": true
   },
   {
    "as_written": [
@@ -786,7 +786,7 @@
      "to": null
     }
    ],
-   "checked": false
+   "checked": true
   },
   {
    "as_written": [
@@ -806,7 +806,7 @@
      "to": null
     }
    ],
-   "checked": false,
+   "checked": true,
    "note": "Ambiguous on purpose: the Indian Succession Act, 1925 or the Hindu Succession Act, 1956."
   },
   {
@@ -821,7 +821,7 @@
      "to": null
     }
    ],
-   "checked": false,
+   "checked": true,
    "note": "A State's Forest Act could be meant."
   },
   {
@@ -836,7 +836,7 @@
      "to": null
     }
    ],
-   "checked": false,
+   "checked": true,
    "note": "A State's Excise Act could be meant; this one is left to the owner."
   },
   {
@@ -852,7 +852,7 @@
      "to": null
     }
    ],
-   "checked": false
+   "checked": true
   },
   {
    "as_written": [
@@ -866,7 +866,7 @@
      "to": 1996
     }
    ],
-   "checked": false,
+   "checked": true,
    "note": "Not held."
   },
   {
@@ -882,7 +882,7 @@
      "to": null
     }
    ],
-   "checked": false
+   "checked": true
   },
   {
    "as_written": [
@@ -902,7 +902,7 @@
      "to": null
     }
    ],
-   "checked": false
+   "checked": true
   },
   {
    "as_written": [
@@ -928,7 +928,7 @@
      "to": null
     }
    ],
-   "checked": false
+   "checked": true
   },
   {
    "as_written": [
@@ -948,7 +948,7 @@
      "to": null
     }
    ],
-   "checked": false
+   "checked": true
   },
   {
    "as_written": [
@@ -963,7 +963,7 @@
      "to": null
     }
    ],
-   "checked": false
+   "checked": true
   },
   {
    "as_written": [
@@ -977,7 +977,7 @@
      "to": null
     }
    ],
-   "checked": false
+   "checked": true
   },
   {
    "as_written": [
@@ -991,7 +991,7 @@
      "to": null
     }
    ],
-   "checked": false
+   "checked": true
   }
  ]
 }
