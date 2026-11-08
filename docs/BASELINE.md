@@ -127,15 +127,28 @@ waqf property without sanction of Board to be void").
    the source prints the first period as "Three yean" and the second as "5[Sixty] days", which a
    reader expecting a clean period may have refused. Until they are held, a search for the period for
    arrears of maintenance or for setting aside an execution sale finds nothing, which reads as no
-   such rule (the confident-zero shape of §2.1).
+   such rule (the confident-zero shape of §2.1). **The reader is repaired (8 November 2026):** on the
+   real text it now reads all 137 Articles, takes the editor's mark out of "5[Sixty] days", keeps
+   "Three yean" as printed and says so in the Act's schedule notes, and names any Article it leaves out.
+   **The held store is not yet corrected.** A dry run of `pipeline/correct_held_acts.py --act "UNION OF
+   INDIA_1963_36_THE LIMITATION ACT, 1963" --dry-run` finds the Act's 280 held passages word for word
+   unchanged and 2 to add (351,182 → 351,184 passages). Run it without `--dry-run`, with the server
+   stopped, to correct the store (the earlier files stay beside it as `.before-<time>`).
 2. **The Wakf Act 1995 is held only under its 2025 name.** A plan that names "the Wakf Act" matches
    no held name and is told it is not held; the owner's checked short names (59) do not include it.
 
 ### 0.3 Not re-measured here
 
 The Acts' vectors in the store searched are those made from each passage as shown (its first line
-included); the vectors made from each passage's own wording are a separate candidate (plan AN.45,
-D91). Sections 1–5 below keep their dates and stores. The defects and their causes (§4) are history
+included). Vectors made from each passage's own wording (plan AN.45, D91) were built beside them on
+8 November 2026 (351,182 vectors, 60 of 60 sampled matched, `acts_v5_wording.index`) and **not swapped
+in**: the owner's comparison tool, run on its 80 composed questions over a sample library of 21,460
+passages of 57 Acts, finds them modestly worse in the product's whole search (first place 65 of 80
+against 68; 79 questions found against 80; mean 1/rank 0.873 against 0.900; 9 worse, 4 better, 67
+the same) and worse alone (first place 57 against 66; 18 worse, 6 better), most for questions that
+name the Act; the word search is the same by construction. The questions are composed, not sampled
+(`docs/GOLDEN_SET.md` §7), and the sample is not the whole library. Sections 1–5 below keep their
+dates and stores. The defects and their causes (§4) are history
 and still describe how those stores went wrong.
 
 ---
