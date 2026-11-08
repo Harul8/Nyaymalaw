@@ -145,12 +145,18 @@ def instrument_key(title: str) -> str:
     return " ".join(re.findall(r"[a-z0-9]+", text))
 
 
-def instrument_candidates(name: str, held_keys) -> tuple[str, ...]:
+def instrument_candidates(name: str, held_keys, aliases=None) -> tuple[str, ...]:
     """Held instruments a named Act may be, as search candidates only.
 
     The exact key when it is held; otherwise every held key with the same title apart
     from its year (a name given without a year, or with one no held copy carries). An
     ambiguous name keeps every candidate: this ranks search, never resolves identity.
+
+    aliases (plan AN.47, D129-D131): the owner's CHECKED short forms (act_alias_index). Tried only where the name
+    finds nothing by itself, so no name that finds an Act without them finds another with them. A short form
+    proposes every held Act its alias names; a year written beside it must be the first year of one of them (the
+    judgments' resolver says the same), and an Act the library does not hold proposes nothing. No narrowing by the
+    years an Act was in force: a search has no judgment date, and what applied on a matter's dates is for the answer.
     """
     key = instrument_key(name)
     if not key:
@@ -158,7 +164,16 @@ def instrument_candidates(name: str, held_keys) -> tuple[str, ...]:
     if key in held_keys:
         return (key,)
     title = _KEY_YEAR.sub("", key)
-    return tuple(sorted(held for held in held_keys if _KEY_YEAR.sub("", held) == title))
+    same_title = tuple(sorted(held for held in held_keys if _KEY_YEAR.sub("", held) == title))
+    if same_title or not aliases:
+        return same_title
+    entry = aliases.get(key) or aliases.get(title)
+    if not entry:
+        return ()
+    closing = _KEY_YEAR.search(key)
+    written = int(closing.group().split()[0]) if closing else None
+    return tuple(sorted({act["key"] for act in entry["acts"]
+                         if act.get("key") in held_keys and (written is None or act.get("from") == written)}))
 
 
 def provision_label(act: str, unit: str) -> str:
