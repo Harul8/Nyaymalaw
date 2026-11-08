@@ -183,6 +183,20 @@ itself. The proof-coverage gate certified itself.
 **Counterexample it must reject:** a coverage report that passes because the
 step that produced it also decided it was complete.
 
+**It happened again, in the Acts store, found on 8 November 2026.** The Limitation Act's Schedule
+holds Articles 1–137 in its source text; the store holds 135. Articles 105 (arrears of maintenance,
+"Three yean" in the source) and 127 (setting aside a sale in execution, "5[Sixty] days") are in the
+text and not in the store, and the store's own record of what it could not read (`problems.json`)
+is empty. The build left two rows out and reported none left out (why is not established; the odd
+printing of both periods is the suspect); a search for either period finds nothing, which reads as
+no such rule. Measured by comparing the
+held Article numbers with 1–137 (`docs/BASELINE.md` §0.2). Not repaired: that is a change to the Acts
+store, which the owner runs.
+
+> **CHECK S6-a.** A Schedule's held entries are compared with the numbers its own text prints, and
+> every number that is printed and not held is written to the store's problem list. A count of
+> what was held is never a count of what was there.
+
 ---
 
 ## S7 · A test pinned to behaviour instead of to a rule

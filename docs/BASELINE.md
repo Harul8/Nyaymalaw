@@ -16,7 +16,134 @@ without a store name and a date does not belong in this file.
 
 ---
 
+## 0. The library as it stands now — measured 8 November 2026
+
+**Stores named: the judgment store searched is `judgments_v4` (swapped in 8 November 2026; record
+`.nm/retrieval/judgments.lineage.json`); the Acts store searched is `acts_v5` (record
+`.nm/retrieval/bare_acts.lineage.json`).** Sections 1–5 below were measured earlier, from earlier
+stores, and say so; where this section gives a figure for the same thing, this one is the figure for
+the library now. Queries and scripts: read-only counts over each store's own database, judgment list
+and catalogue; nothing was sampled except where it says so.
+
+### 0.1 Judgments — `judgments_v4`
+
+| | |
+|---|---:|
+| Judgments | **34,037** |
+| Passages | **990,668** (median 20 a judgment, most 2,162) |
+| Judgments that print paragraph numbers | 20,745 (60.9%) |
+| Judgments that print none | 13,292 (39.1%) |
+| Judgments not in the earlier store (every kind unknown) | 249 |
+| Passages over the search model's reading limit after the cut | 2 |
+
+| Court (as the product shows it) | Judgments | Years held | After 2018 |
+|---|---:|---|---:|
+| Supreme Court of India | 29,748 | 1950–2026 | 7,477 |
+| High Court of Telangana (filed as the Andhra Pradesh High Court: 4,280 as "High Court of Andhra Pradesh", 9 as "Andhra HC (Pre-Telangana)") | 4,289 | **1954–2018** | **0** |
+
+**Check `bind-1`, run on this ingest (§1.1): Andhra Pradesh / Telangana High Court judgments with
+`year >= 2019` = 0.** The decision that every held Andhra Pradesh High Court judgment binds Telangana
+stands. The unnormalised one-row court label of §1 is gone: the court is read from the filing and
+named once.
+
+**How a passage is called (locator), by a sample of every 20th passage (49,534):** the court's
+printed paragraph number 61.8%; "passage N", for what the court never numbered, 33.8%; "opening of
+the judgment" 4.4%. Every part of a long paragraph carries its paragraph's number.
+
+**Kinds of passage (all 990,668).** Attribution to a court (§3) needs the kind to be known; 28.9% are
+still unknown.
+
+| Kind | Passages | Share | Attributable to the court? |
+|---|---:|---:|---|
+| unknown | 286,433 | 28.9% | not yet named |
+| reasoning | 243,934 | 24.6% | yes |
+| arguments | 146,990 | 14.8% | **no — counsel's submission** |
+| ratio | 146,241 | 14.8% | yes |
+| facts | 123,352 | 12.5% | recited, not held |
+| order | 38,901 | 3.9% | yes |
+| headnote | 4,817 | 0.5% | no — not the court's |
+
+**What the judgments cite** (read from their own words; the build left 3,890 notes on how a judgment
+was read — a paragraph that runs on and was cut, a judgment the earlier store did not hold): the
+reporter citation of the judgment itself found in 26,785 judgments; 207,029 citations of other cases
+in 24,146 judgments; **301,804 citations of a section, by what the Act resolved to:** held
+237,556 (78.7%), the Act named but not held 28,670 (9.5%), not decided 33,353 (11.1%), ambiguous
+(two Acts of that name in force that year) 2,225 (0.7%). The Acts were named by exact name or by the
+59 short names the owner checked (115 ways of writing, `pipeline/act_aliases.json`); nothing was
+guessed.
+
+**Vectors and word index:** 990,668 vectors of 1,024 dimensions made by `BAAI/bge-large-en-v1.5`,
+4,057,776,173 bytes; a word index of the same 990,668 passages; at recording, 60 of 60 sampled
+passages encoded again matched their stored vector.
+
+### 0.2 Acts — `acts_v5`
+
+| | |
+|---|---:|
+| Acts | **1,621** (Union of India 1,259; Telangana 362) |
+| Passages | **351,182** (one vector each) |
+| Standing, as India Code gives it | in force 1,174; not stated 242; not in force 205 |
+| Instruments the search keeps (the one-copy register) | 1,587 kept; 44 copies not searched; 2 excluded |
+
+Passages by kind: sub-section 110,343; clause 109,419; section head 66,190; sub-clause 40,640;
+proviso 18,733; explanation 5,339; illustration 383; schedule article 135.
+
+**Principal Acts now (sections as the store numbers them).** An Act is held once, under the name its
+text now carries.
+
+| Act | Sections | Standing (India Code) |
+|---|---:|---|
+| Code of Civil Procedure, 1908 | 882 | in force |
+| Indian Penal Code, 1860 | 574 | not in force |
+| Bharatiya Nagarik Suraksha Sanhita, 2023 | 537 | in force |
+| Code of Criminal Procedure, 1973 (filed 1974) | 606 | not in force |
+| Bharatiya Nyaya Sanhita, 2023 | 358 | in force |
+| Bharatiya Sakshya Adhiniyam, 2023 | 170 | in force |
+| Indian Evidence Act, 1872 | 180 | not in force |
+| Negotiable Instruments Act, 1881 | 166 | in force |
+| Limitation Act, 1963 | 32 sections + **135 Articles of the Schedule** | in force |
+| Transfer of Property Act, 1882 | 149 | in force |
+| Unified Waqf Management, Empowerment, Efficiency and Development Act, 1995 (the Wakf Act, 1995, as renamed in 2025) | 126 | in force |
+| Registration Act, 1908 | 97 | in force |
+| Indian Easements Act, 1882 | 64 | in force |
+| Guardians and Wards Act, 1890 | 55 | in force |
+| Specific Relief Act, 1963 | 48 | in force |
+| Hindu Marriage Act, 1955 | 37 | in force |
+| Family Courts Act, 1984 | 23 | in force |
+| Muslim Women (Protection of Rights on Divorce) Act, 1986 | 7 | in force |
+
+The six provisions of §2.2 are held in `acts_v5`: Specific Relief Act s.6 (7 passages), Muslim Women
+Act s.3 (12), Negotiable Instruments Act s.138 (6), Indian Evidence Act s.65 (8), Limitation Act
+Article 65 (1), and the Wakf Act s.51, now s.51 of the Unified Waqf Management Act ("Alienation of
+waqf property without sanction of Board to be void").
+
+**Two findings of this measurement.**
+
+1. **Two Articles of the Limitation Act's Schedule are not held.** Of Articles 1–137, 105 ("By a
+   Hindu for arrears of maintenance", three years) and 127 ("To set aside a sale in execution of a
+   decree", sixty days) are in the Act's source text
+   (`legal_database/raw_data/BareActs/Union of India/1963_0_The Limitation Act, 1963.txt`) and are
+   not among the 135 held. Articles 54 and 65 are held. Why these two were dropped is not established;
+   the source prints the first period as "Three yean" and the second as "5[Sixty] days", which a
+   reader expecting a clean period may have refused. Until they are held, a search for the period for
+   arrears of maintenance or for setting aside an execution sale finds nothing, which reads as no
+   such rule (the confident-zero shape of §2.1).
+2. **The Wakf Act 1995 is held only under its 2025 name.** A plan that names "the Wakf Act" matches
+   no held name and is told it is not held; the owner's checked short names (59) do not include it.
+
+### 0.3 Not re-measured here
+
+The Acts' vectors in the store searched are those made from each passage as shown (its first line
+included); the vectors made from each passage's own wording are a separate candidate (plan AN.45,
+D91). Sections 1–5 below keep their dates and stores. The defects and their causes (§4) are history
+and still describe how those stores went wrong.
+
+---
+
 ## 1. Judgements
+
+> **Superseded for the library now by §0.1.** The figures below are those of 29 August 2026,
+> measured from `caselaws_v2_parents.json`.
 
 | Court | Judgements | Years held | Post-2018 |
 |---|---:|---|---:|
@@ -175,6 +302,10 @@ Each of these was retrieved verbatim on 29 August 2026, with its locator:
 
 ### 2.3 Bare-act search artefacts, measured 29 September 2026
 
+> **Superseded for the library now by §0.2:** the Acts store searched is `acts_v5`, 351,182 passages
+> of 1,621 Acts, one copy of each instrument; the 414,710 passages and `bareacts_v3` below are the
+> store of 29 September.
+
 The bare-act search set contains **414,710 passages** in `chunks.db`
 (`doc_type='bare_act'`, positions 0–414,709), **414,710 vectors** in
 `bareacts_v3.index` (1,024 dimensions, inner product on normalised vectors),
@@ -194,6 +325,10 @@ curated-manifest entry before the product will read its sections as candidates.
 ---
 
 ## 3. Case paragraphs — what may be attributed to a court
+
+> **Superseded for the library now by §0.1:** the judgment store searched is `judgments_v4`, 990,668
+> passages cut on the courts' own paragraphs. The 1,015,780 chunks and their kinds below are those of
+> the earlier store, cut by size.
 
 1,015,780 case-law chunks, by `atom_type`:
 
