@@ -3652,12 +3652,14 @@ function askedLine(question, entry) {
     : entry.how === 'late' ? `You answered after NM had gone on: ${said}` : `You answered: ${said}`;
 }
 
-async function openTurnQuestions(entry) {
+// given (plan AN.48, 48d): a matter waiting for the advocate - { view, said, submit(answers) } - whose questions its stop shows and
+// whose answers go to the matter; none - the window of a turn being worked on, as before.
+async function openTurnQuestions(entry, given = null) {
   if (entry.questionsOpen || !entry.turnId) return;
   entry.questionsOpen = true;
   let view;
   try {
-    view = await api(`/api/turn-question?turn_id=${encodeURIComponent(entry.turnId)}`);
+    view = given ? given.view : await api(`/api/turn-question?turn_id=${encodeURIComponent(entry.turnId)}`);
   } catch {
     entry.questionsOpen = false;  // nothing is asked now, or it could not be read; the progress says again if it is
     return;
@@ -3679,7 +3681,7 @@ async function openTurnQuestions(entry) {
   later.type = 'button';
   later.addEventListener('click', () => dialog.close());
   heading.append(title, later);
-  dialog.append(heading, make('p', '', view.defaults_applied
+  dialog.append(heading, make('p', '', given ? given.said : view.defaults_applied
     ? 'NM went on with the answers it names below. If yours differ, answer now and it will redo what depends on them.'
     : 'NM is waiting for your answer before it writes the parts that depend on it; after two minutes it goes on with the '
       + 'answer it names below.'));
@@ -3691,7 +3693,8 @@ async function openTurnQuestions(entry) {
     set.appendChild(make('legend', '', `${question.header}: ${question.question}`));
     set.appendChild(make('p', 'quiet', question.why));
     const assumed = (view.answers || []).find((item) => item.id === question.id && item.how === 'assumed');
-    set.appendChild(make('p', 'quiet', assumed ? askedLine(question, assumed)
+    set.appendChild(make('p', 'quiet', assumed ? askedLine(question, assumed) : given
+      ? `NM's own answer, were you to go on end to end: ${question.default.join('; ')}`
       : `If you do not answer, NM goes on with: ${question.default.join('; ')}`));
     if (taken[question.id]) {
       set.appendChild(make('p', '', askedLine(question, taken[question.id])));
@@ -3739,6 +3742,7 @@ async function openTurnQuestions(entry) {
       if (chosen.length || other) answers[field.question.id] = { chosen, other };
     }
     if (!Object.keys(answers).length) { status.textContent = 'Choose an answer or write your own.'; return; }
+    if (given) { dialog.close(); given.submit(answers); return; }
     sendAnswers.disabled = true;
     try {
       await api('/api/turn-question', { method: 'POST', headers: { 'content-type': 'application/json' },
@@ -5430,6 +5434,25 @@ function renderWaiting(entry) {
   }
   box.appendChild(make('p', 'waiting-head', card.done_said));
   box.appendChild(make('p', 'waiting-next', card.next_said));
+  // Plan AN.48 (48d; D142): NM's questions wait for the advocate's answers - no default - answered here.
+  const asked = Array.isArray(card.questions) ? card.questions : [];
+  const open = asked.filter((question) => !question.answer);
+  if (open.length) {
+    const ask = make('p', 'waiting-asked', `NM asks ${open.length === 1 ? 'a question' : `${open.length} questions`} before it `
+      + 'writes what depends on the answers:');
+    const answer = make('button', '', open.length === 1 ? "Answer NM's question" : "Answer NM's questions");
+    answer.type = 'button';
+    answer.disabled = Boolean(activeDelivery);
+    answer.addEventListener('click', () => openTurnQuestions(entry, {
+      view: { questions: asked, defaults_applied: false,
+        answers: asked.filter((question) => question.answer).map((question) => ({ id: question.id,
+          chosen: question.answer.chosen, other: question.answer.other, how: 'answered' })) },
+      said: 'NM waits for your answer before it writes what depends on it; it does not go on with a default.',
+      submit: (answers) => answerTurn(entry, answers) }));
+    ask.appendChild(make('span', '', ' '));
+    ask.appendChild(answer);
+    box.appendChild(ask);
+  }
   if (Array.isArray(card.noticed) && card.noticed.length) {
     box.appendChild(make('p', 'waiting-noticed-head', 'NM noticed, though you did not ask - say if you want it looked at:'));
     const list = make('ul', 'waiting-noticed');
@@ -5821,7 +5844,8 @@ async function deliver(entry) {
         intent.queued.push({ text: entry.lastSent, files: [] });
         renderQueued();
       }
-    } else if ((entry.endpoint === '/api/turn/go' || entry.endpoint === '/api/turn/message') && e.status === 409) {
+    } else if (['/api/turn/go', '/api/turn/message', '/api/turn/answers'].includes(entry.endpoint)
+        && [409, 422].includes(e.status)) {
       // Plan AN.48: a go-ahead the matter no longer waits for is said on its card, read again from the conversation.
       entry.goError = (entry.refusal && entry.refusal.why) || e.message;
       entry.state = 'stopped';
@@ -6009,6 +6033,18 @@ function messageTurn(entry, text) {
   entry.endpoint = '/api/turn/message';
   entry.envelope = JSON.stringify({ chat_id: chatId, turn_id: entry.turnId, message: text,
     ...(refs.length ? { document_refs: refs } : {}) });
+  entry.stopped = null;
+  deliver(entry);
+}
+
+// ANSWERS AT A STOP (plan AN.48, 48d; D154): kept with NM's questions; a step that stopped for them goes on once all are answered.
+function answerTurn(entry, answers) {
+  if (activeDelivery || !ownsIntent(entry.context)) return;
+  const chatId = entry.chatId || entry.context.chatId || entry.request?.chat_id;
+  if (!chatId) return;
+  entry.goError = null;
+  entry.endpoint = '/api/turn/answers';
+  entry.envelope = JSON.stringify({ chat_id: chatId, turn_id: entry.turnId, answers });
   entry.stopped = null;
   deliver(entry);
 }

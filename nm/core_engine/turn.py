@@ -231,8 +231,8 @@ class _Later:
     stand, and, after its sections, what changed since they began and which disputes that touches (None: the whole answer).
     The writing waits only on the questions the model asked: those code asks (D87) are waited on by the research that asks them."""
 
-    def __init__(self, asking, base):
-        self.asking, self.base = asking, base
+    def __init__(self, asking, base, gate=None):
+        self.asking, self.base, self.gate = asking, base, gate
 
     def _waited_on(self):
         return [question for question in self.asking.questions if question.get("asked_by", "model") != "code"]
@@ -249,7 +249,14 @@ class _Later:
         return any(not question["depends"] or dispute_id in question["depends"] for question in self._waited_on())
 
     def wait(self):
-        """Until the answers, or after WAIT the defaults, stand (D39)."""
+        """Until the answers, or after WAIT the defaults, stand (D39). Plan AN.48 (48d; D142, D154): step by step, a section whose
+        dispute a question names is not written on a default - while an answer is still to come, the step ends here, and resumes
+        once every question is answered."""
+        if self.gate is not None and self.gate.asks():
+            given = self.asking.answers()
+            if any(given.get(question["id"], {}).get("how") not in ("answered", "late") for question in self._waited_on()):
+                raise stepwise.Waiting(stepwise.ASKED)
+            return
         self.asking.wait_for([question["id"] for question in self._waited_on()])
 
     def since(self, version):
@@ -622,7 +629,7 @@ def _prepare(model, context, searcher, *, case_index, provision_reader, progress
         # Plan AN.48 (48a1): researched - every dispute's research waited for and saved, then the turn stops for the go-ahead.
         _all_researched(parts, kept, keep)
         gate.after("research")
-    later = _Later(asking, context) if asking is not None else None
+    later = _Later(asking, context, gate=gate) if asking is not None else None
     if later is not None:
         context = later.context()
     researched = answer_sections.Researched(context, plan, parts)
@@ -1111,7 +1118,9 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
             asking, fresh = holder["asking"], holder["asking"] is None
             if fresh:
                 state = again["state"] if again is not None else {"questions": [], "answers": []}
-                asking = questions.Asking(state["questions"], hold=sealed, report=report)
+                # Plan AN.48 (48d): end to end step by step, the defaults stand at once (D135, D142); otherwise as before.
+                asking = questions.Asking(state["questions"], hold=sealed, report=report,
+                                          **({"wait": gate.question_wait()} if gate.question_wait() is not None else {}))
                 if asking.questions:
                     asking.start(given={entry["id"]: {"chosen": entry["chosen"], "other": entry["other"]}
                                         for entry in state["answers"] if entry["how"] != "assumed"})
@@ -1157,6 +1166,11 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
             log.info("Questions code did not show: %s", "; ".join(item["why"] for item in refused))
         shown = {position - 1 for position in range(1, len(asked) + 1)} - {item["position"] - 1 for item in refused}
         ids, asking = opened(admitted) if admitted else ([], holder["asking"])
+        if gate.asks() and asking is not None and ids:
+            # Plan AN.48 (48d; D154): step by step, code's question ends the research step until it is answered.
+            given = asking.answers()
+            if any(identity is not None and given.get(identity, {}).get("how") not in ("answered", "late") for identity in ids):
+                raise stepwise.Waiting(stepwise.ASKED)
         answers = asking.wait_for(ids) if asking is not None and ids else {}
         by_place = dict(zip(sorted(shown), ids))
         out = []

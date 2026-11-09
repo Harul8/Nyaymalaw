@@ -32,7 +32,8 @@ from nm.arrive.advocate_contracts import PASSWORD_RESET_MINUTES, SESSION_IDLE_MI
 from nm.arrive.directory_port import AccountBusy, AuthenticationUnavailable
 from nm.arrive.professional_access import read_professional_status
 from nm.core_engine.conversation import (CONTRACT as CONVERSATION_CONTRACT, HEADER, SHOWN, ConversationRefused,
-                                         TurnContext, chat_matter_id, checked_rows, queued_of, shown_of, stored_chat, title_of)
+                                         TurnContext, asking_of, chat_matter_id, checked_rows, queued_of, shown_of, stored_chat,
+                                         title_of)
 from nm.core_engine import documents as document_rules
 from nm.core_engine import research_note, voice
 from nm.core_engine.response_rendering import unit_index
@@ -1525,6 +1526,26 @@ def go_turn(req: TurnGo, advocate_id: Advocate, request: Request, background: Ba
         session_current=lambda: _session_current(request, advocate_id)), req, request, advocate_id, background)
 
 
+class TurnAnswers(BaseModel):
+    """Answers to NM's questions given while a matter waits (plan AN.48, 48d): by question ID, {"chosen": [labels], "other": "own
+    words"}."""
+    model_config = ConfigDict(extra='forbid')
+    chat_id: str = Field(min_length=1, max_length=200)
+    turn_id: str = Field(min_length=1, max_length=200)
+    answers: dict[str, dict] = Field(min_length=1, max_length=10)
+
+
+@app.post('/api/turn/answers', dependencies=[CsrfProtected])
+def answer_turn(req: TurnAnswers, advocate_id: Advocate, request: Request, background: BackgroundTasks) -> _Released:
+    """Answers given at a stop (plan AN.48, 48d; D142, D154): kept with NM's questions; a step that stopped for them resumes by
+    itself once every question is answered."""
+    if not _session_current(request, advocate_id):
+        raise HTTPException(401, 'not signed in')
+    return _answered(lambda: application().answer_turn(
+        advocate_id=advocate_id, chat_id=req.chat_id, turn_id=req.turn_id, answers=req.answers,
+        session_current=lambda: _session_current(request, advocate_id)), req, request, advocate_id, background)
+
+
 class TurnMessage(BaseModel):
     """A message sent while a matter waits for the advocate (plan AN.48, 48c)."""
     model_config = ConfigDict(extra='forbid')
@@ -1687,7 +1708,7 @@ def _saved_state(advocate_id, chat_id, turn_id):
     held = _held(matter)
     if held is None or held['turn_id'] != turn_id:
         return {}
-    return {'state': 'stopped', 'chat_id': chat_id, 'stopped': _stopped_of(held)}
+    return {'state': 'stopped', 'chat_id': chat_id, 'stopped': _stopped_of(held, _asked(matter, held))}
 
 
 class QuestionAnswers(BaseModel):
@@ -1997,7 +2018,7 @@ def chat(chat_id: str, advocate_id: Advocate, request: Request, response: Respon
             'matter_version': matter.version, 'turns': turns,
             # Plan AN.43 (D84): the title the conversation shows at its beginning; None until NM names it.
             'title': _title_text(matter),
-            **({'pending': _pending(advocate_id, held)} if held else {}),
+            **({'pending': _pending(advocate_id, held, _asked(matter, held))} if held else {}),
             **({'queued': queued} if queued else {})}
 
 
@@ -2017,7 +2038,16 @@ def chat_title(chat_id: str, advocate_id: Advocate, request: Request, response: 
     return {'chat_id': chat_id, 'title': _title_text(matter)}
 
 
-def _pending(advocate_id, held):
+def _asked(matter, held):
+    """Plan AN.48 (48d): what a waiting matter asked, as its window sealed it - its questions and the answers given - or None."""
+    try:
+        asked = asking_of(matter, held['turn_id'])
+    except ValueError:
+        return None
+    return asked['state'] if asked else None
+
+
+def _pending(advocate_id, held, asked=None):
     """A turn being worked on, as the page reads it (plan AN.41, D66-D69): its message and files, what its answer has shown, the
     work it has finished (D68), whether NM is working on it now and, where it is not, why it stopped (D69) and whether NM goes on
     by itself (D73); what steered it (AN.42, D79)."""
@@ -2029,11 +2059,11 @@ def _pending(advocate_id, held):
         pending['work'] = _work_of(held)
         pending['steers'] = [steer['text'] for steer in held['steers']]
     if not working:
-        pending['stopped'] = _stopped_of(held)
+        pending['stopped'] = _stopped_of(held, asked)
     return pending
 
 
-def _stopped_of(held):
+def _stopped_of(held, asked=None):
     """Why a turn stopped part-way, in code's words (D69): what was finished and what was not, what must be put right before
     Continue works, and whether NM continues it by itself (D73) - only after a restart, the message having been sent already."""
     stopped = held.get('stopped') or {}
@@ -2045,7 +2075,7 @@ def _stopped_of(held):
             'unfinished': _unfinished_said(work) if work is not None else [],
             # Plan AN.48 (48a4): a matter waiting for the advocate's go-ahead - what was done, what comes next, the go-aheads its
             # stop offers and what NM noticed that was not asked; None for any other stop.
-            'waiting': stepwise.card(held)}
+            'waiting': stepwise.card(held, asked)}
 
 
 def _work_of(held):

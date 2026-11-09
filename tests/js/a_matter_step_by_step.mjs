@@ -129,4 +129,30 @@ const button = (node, text) => (node._text === text ? node : (node.children || [
   assert.deepEqual(texts(card).slice(0, 2), ['You: What is the stamp duty?', ' NM: Taken as a new question; it waits.']);
 }
 
+// --- NM's questions wait for the advocate's answers, answered at the stop (48d) ----------------------------------------------------
+{
+  const opened = [];
+  const page = vm.createContext({ document: { createElement: (tag) => new Element(tag) }, activeDelivery: null, goTurn: () => {},
+    openTurnQuestions: (entry, given) => opened.push(given), answerTurn: (entry, answers) => opened.push(['sent', answers]) });
+  vm.runInContext(fn('renderWaiting'), page);
+  const question = { id: 'q1', header: 'Your client', question: 'Whom do you act for?', why: 'It decides who is adverse.',
+    choices: [{ label: 'The buyer', description: '' }], multiple: false, default: ['The buyer'], answer: null };
+  const card = page.renderWaiting({ turnId: 't1', stopped: { code: 'waiting', waiting: { done_said: 'NM needs your answers.',
+    next_said: 'Answer below.', gos: [], noticed: [], heard: [], questions: [question] } } });
+  assert.ok(texts(card).includes('NM asks a question before it writes what depends on the answers:'));
+  button(card, "Answer NM's question").click();
+  assert.equal(opened.length, 1);
+  assert.equal(opened[0].view.questions[0].id, 'q1');
+  assert.ok(opened[0].said.includes('does not go on with a default'));
+  opened[0].submit({ q1: { chosen: ['The buyer'], other: '' } });
+  assert.equal(JSON.stringify(opened[1]), JSON.stringify(['sent', { q1: { chosen: ['The buyer'], other: '' } }]));
+  const delivered = [];
+  const route = vm.createContext({ activeDelivery: null, ownsIntent: () => true,
+    deliver: (entry) => delivered.push([entry.endpoint, entry.envelope]) });
+  vm.runInContext(fn('answerTurn'), route);
+  route.answerTurn({ turnId: 't1', context: { chatId: 'c1' } }, { q1: { chosen: ['The buyer'], other: '' } });
+  assert.deepEqual(delivered, [['/api/turn/answers', JSON.stringify({ chat_id: 'c1', turn_id: 't1',
+    answers: { q1: { chosen: ['The buyer'], other: '' } } })]]);
+}
+
 console.log('a matter step by step: ok');

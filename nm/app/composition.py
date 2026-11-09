@@ -488,6 +488,47 @@ class Application:
             heard_only(kind, judgement['said'], queued=[*queued, {'text': message, 'documents': []}])
         heard_only('unclear', f"{judgement['said']} {judgement['ask']}".strip())
 
+    def answer_turn(self, *, advocate_id, chat_id, turn_id, answers, session_current):
+        """Answers to NM's questions given while a matter waits (plan AN.48, 48d; D142, D154): taken as the window takes them,
+        and kept with its questions. A step that stopped for them resumes by itself from its saved work once every question is
+        answered; otherwise the answers wait for the step that needs them, and the stop says they are taken. ConversationRefused
+        where the matter does not wait here, asks nothing, or an answer cannot be taken."""
+        from nm.core_engine import questions, steps as stepwise
+        from nm.core_engine.conversation import ConversationRefused, asking_of, save_asking
+        matter, held = self._held(advocate_id, chat_id)
+        if held is None or held['turn_id'] != turn_id or stepwise.waiting_of(held) is None:
+            raise ConversationRefused('This matter is not waiting for your go-ahead.', status=409, code='not_waiting')
+        if self.turn_running(advocate_id, turn_id):
+            raise ConversationRefused('NM is already working on this answer.', code='turn_in_progress')
+        try:
+            asked = asking_of(matter, turn_id)
+        except ValueError:
+            asked = None
+        if asked is None:
+            raise ConversationRefused('NM is not asking anything about this matter.', status=409, code='no_question')
+        window = questions.Asking(asked['state']['questions'])
+        window.start(given={entry['id']: {'chosen': entry['chosen'], 'other': entry['other']}
+                            for entry in asked['state']['answers'] if entry['how'] in ('answered', 'late')})
+        try:
+            window.receive(answers)
+        except questions.Refused as exc:
+            raise ConversationRefused(str(exc), status=422, code='answer_refused') from exc
+        state = window.state()
+        save_asking(self.store, matter, turn_id, state)
+        if stepwise.waiting_of(held) == stepwise.ASKED and not stepwise.unanswered(state):
+            asked_for = held['request']
+            # D154: the step that stopped for the answers goes on from its saved work, under its own go-ahead.
+            return self.run_turn(advocate_id=advocate_id, session_current=session_current,
+                                 document_refs=tuple(asked_for.get('document_refs', ())), model_choice=asked_for.get('model'),
+                                 effort=asked_for.get('effort'), message=held['message'], turn_id=turn_id,
+                                 chat_id=asked_for['chat_id'], go={**held['go'], 'waiting': None})
+        left = len(stepwise.unanswered(state))
+        said = ('Your answer is taken.' + (f' NM still needs {left} more.' if left and stepwise.waiting_of(held) == stepwise.ASKED
+                                           else ''))
+        refusal = ConversationRefused(said, status=409, code='heard', retryable=False)
+        refusal.kept, refusal.heard = True, {'taken': 'answer', 'said': said}
+        raise refusal
+
     def discard_turn(self, *, advocate_id, chat_id, turn_id, session_current):
         """Discard (plan AN.41, D71): the red message and its buttons go; the answer that stopped is saved as it stopped. Returns
         the saved response, or None where that turn is not stopped in this conversation."""

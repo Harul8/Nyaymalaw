@@ -478,6 +478,16 @@ def save_waiting(store, matter, held, queued=None):
     return _written(store, candidate, matter.version)
 
 
+def save_asking(store, matter, turn_id, state):
+    """Plan AN.48 (48d): save the answers given to what a matter waiting for the advocate asked - no step running - in the
+    window's own sealed form (hold_asking's). Returns the conversation as written."""
+    questions.check_asked(state)
+    metadata = {**(matter.intake_answers or {}), ASKING: {"turn_id": turn_id, "state": deepcopy(state)}}
+    candidate = replace(matter, intake_answers=metadata, version=matter.version + 1)
+    asking_of(candidate)
+    return _written(store, candidate, matter.version)
+
+
 def drop_asking(store, matter):
     """Withdraw what a turn asked that was never saved with it - its turn stopped before showing anything, and another message
     came (plan AN.37, D40). Returns the conversation as written, or as it was where nothing was asked."""

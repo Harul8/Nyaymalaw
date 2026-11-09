@@ -25,6 +25,10 @@ STEPS = ("understand", "research", "write", "finish")
 AFTER = {"understand": "understood", "research": "researched", "write": "written"}
 #: The step a stop after each leads to, where every dispute is taken together (48a).
 NEXT = {"understood": "research", "researched": "write", "written": "finish"}
+#: 48d (D142, D154): a step that needs the advocate's answer to NM's questions stops for it, and resumes once they are answered.
+ASKED = "asked"
+#: Every stop a matter may wait at.
+WAITS = (*NEXT, ASKED)
 #: The first calls of the finish step: while finishing is not allowed they are not sent - the turn stops before the check across the
 #: analyses, or before the overview where there is nothing to check across (48a contract).
 FINISHING = frozenset({"core_response_cross_check", "core_response_overview"})
@@ -48,14 +52,14 @@ NEXT_SAID = {
 }
 #: The history's line for a conversation waiting for the advocate (D164).
 WAITING_SAID = {"understood": "Waiting for you: research", "researched": "Waiting for you: the analyses",
-                "written": "Waiting for you: finish"}
+                "written": "Waiting for you: finish", ASKED: "Waiting for your answers"}
 
 
 class Waiting(Exception):
     """The step the advocate allowed is done; the turn stops for their go-ahead (D134). Not a failure: what was done is saved."""
 
     def __init__(self, after):
-        if after not in NEXT:
+        if after not in WAITS:
             raise ValueError("A turn waits only after a step that stops")
         super().__init__(f"Waiting for the advocate after the matter was {after}")
         self.after = after
@@ -82,7 +86,7 @@ def valid(go):
                      and all(isinstance(name, str) and name.strip() for name in disputes)
                      and len(set(disputes)) == len(disputes))
                 and (waiting is None or isinstance(waiting, dict) and set(waiting) == {"after", "at"}
-                     and waiting["after"] in NEXT and isinstance(waiting["at"], str) and bool(waiting["at"].strip())))
+                     and waiting["after"] in WAITS and isinstance(waiting["at"], str) and bool(waiting["at"].strip())))
     except (KeyError, TypeError, AttributeError):
         return False
 
@@ -161,8 +165,11 @@ def given(go, choice, *, held, disputes=None):
     wait, the choice is not one its stop offers, or a dispute named is not one it can take that step for."""
     waiting = go.get("waiting") if isinstance(go, dict) else None
     after = waiting.get("after") if isinstance(waiting, dict) else None
-    if not valid(go) or after not in NEXT or choice not in GOS:
+    if not valid(go) or after not in WAITS or choice not in GOS:
         raise ValueError("This conversation is not waiting for that")
+    if after == ASKED and choice not in ("end_to_end", "done"):
+        # 48d (D154): a step stopped for answers resumes once they are given; meanwhile only end to end or done.
+        raise ValueError("Answer NM's questions first, or go on end to end on NM's own understanding")
     state = state_of(held.get("steps"))
     unresearched, unwritten = _left(state)
     if disputes is not None and (not isinstance(disputes, list) or not disputes or len(set(disputes)) != len(disputes)):
@@ -198,6 +205,21 @@ class Gate:
     @property
     def stepwise(self):
         return self.allowed is not None
+
+    @property
+    def end_to_end(self):
+        """Whether this run goes on to the end without stopping (D135): it may both write and finish."""
+        return self.allowed is not None and {"write", "finish"} <= self.allowed
+
+    def asks(self):
+        """48d (D142, D154): whether a question not yet answered ends this run's step - step by step, short of end to end. End
+        to end goes on at once on NM's own understanding (question_wait); a run without steps waits as before."""
+        return self.stepwise and not self.end_to_end
+
+    def question_wait(self):
+        """How long the window waits for an answer before its default stands (questions.Asking's wait): none, end to end step by
+        step (D135, D142); the window's own WAIT otherwise, as before (None)."""
+        return 0 if self.end_to_end else None
 
     def allows(self, step):
         return self.allowed is None or step in self.allowed
@@ -237,13 +259,24 @@ class Gate:
         return frozenset(written) | (self.disputes & frozenset(researched))
 
 
-def card(held):
-    """What the stop says (48a4, 48b), from the saved record alone: after which step it waits, what was done and what comes next,
-    the go-aheads it offers - each dispute's next step, the same for all of them at once, End to end and Done - and what NM noticed
-    that the advocate did not ask about, offered, never done (D164). None where the turn does not wait."""
+def card(held, asked=None):
+    """What the stop says (48a4, 48b, 48d), from the saved record alone: after which step it waits, what was done and what comes
+    next, the go-aheads it offers - each dispute's next step, the same for all of them at once, End to end and Done - what NM
+    noticed that the advocate did not ask about, offered, never done (D164), and NM's questions with the answers given so far
+    (asked: the window's sealed state, questions.Asking.state). None where the turn does not wait."""
     after = waiting_of(held)
     if after is None:
         return None
+    questions = _questions(asked)
+    if after == ASKED:
+        open_now = [question for question in questions if question["answer"] is None]
+        gos = [{"choice": "end_to_end", "disputes": None, "said": "End to end, on NM's own understanding"},
+               {"choice": "done", "disputes": None, "said": "Done: save as it stands"}]
+        return {"after": after, "done_said": "NM needs your answers before it goes on.",
+                "next_said": (f"Answer NM's question{'s' if len(open_now) != 1 else ''} below; NM goes on by itself once "
+                              "they are answered."),
+                "gos": gos, "disputes": [], "noticed": noticed(held.get("steps") or {}), "questions": questions,
+                "at": held["go"]["waiting"]["at"], "heard": _heard(held)}
     steps = held.get("steps") or {}
     state = state_of(steps)
     unresearched, unwritten = _left(state)
@@ -293,10 +326,32 @@ def card(held):
             "disputes": [] if state["whole"] else [
                 {"id": name, "name": names[name], "researched": name in state["researched"],
                  "written": name in state["written"]} for name in state["order"]],
-            "noticed": noticed(steps), "at": held["go"]["waiting"]["at"],
-            # 48c (D146): the messages heard while the matter waited, and how NM took each.
-            "heard": [{"text": entry["text"], "said": entry["said"], "taken": entry["taken"]}
-                      for entry in (held["go"].get("heard") or ())][-5:]}
+            "noticed": noticed(steps), "at": held["go"]["waiting"]["at"], "questions": questions, "heard": _heard(held)}
+
+
+def _heard(held):
+    """48c (D146): the messages heard while the matter waited, and how NM took each - the latest five."""
+    return [{"text": entry["text"], "said": entry["said"], "taken": entry["taken"]}
+            for entry in (held["go"].get("heard") or ())][-5:]
+
+
+def _questions(asked):
+    """48d: NM's questions as the stop shows them - each with its choices and default, and the answer given (None where it waits
+    for one; an assumption NM went on with is no answer)."""
+    if not isinstance(asked, dict):
+        return []
+    answers = {entry.get("id"): entry for entry in asked.get("answers") or () if entry.get("how") in ("answered", "late")}
+    return [{"id": question["id"], "header": question.get("header", ""), "question": question["question"],
+             "why": question.get("why", ""), "choices": question.get("choices") or [],
+             "multiple": bool(question.get("multiple")), "default": question.get("default") or [],
+             "answer": ({"chosen": answers[question["id"]]["chosen"], "other": answers[question["id"]]["other"]}
+                        if question["id"] in answers else None)}
+            for question in asked.get("questions") or ()]
+
+
+def unanswered(asked):
+    """48d: the questions of the window's sealed state not yet answered by the advocate."""
+    return [question["id"] for question in _questions(asked) if question["answer"] is None]
 
 
 #: The points the papers show that matter beyond what was asked (research connections, AN.33), offered at a stop (D164).
