@@ -26,8 +26,8 @@ def test_a_message_sent_step_by_step_stops_at_each_step_and_done_saves_the_answe
     assert sent.status_code == 409 and sent.json()["detail"]["code"] == "waiting" and sent.json()["detail"]["kept"] is True
     stop = waiting(served)
     assert stop["code"] == "waiting" and stop["by_itself"] is False, "a waiting matter is never continued by itself (D153)"
-    assert stop["waiting"]["after"] == "understood" and [g["choice"] for g in stop["waiting"]["gos"]] == [
-        "next", "end_to_end", "done"]
+    choices = [g["choice"] for g in stop["waiting"]["gos"]]
+    assert stop["waiting"]["after"] == "understood" and "research" in choices and choices[-2:] == ["end_to_end", "done"]
     listed = served.client.get("/api/work").json()["chats"]
     assert [chat.get("waiting") for chat in listed] == ["Waiting for you: research"]
     assert not scripted.payloads("core_response_writer")
@@ -39,7 +39,7 @@ def test_a_message_sent_step_by_step_stops_at_each_step_and_done_saves_the_answe
     written = go(served, "next")
     assert written.status_code == 409 and waiting(served)["waiting"]["after"] == "written"
     assert scripted.payloads("core_response_writer") and not scripted.payloads("core_response_cross_check")
-    assert [g["choice"] for g in waiting(served)["waiting"]["gos"]] == ["next"]
+    assert [g["choice"] for g in waiting(served)["waiting"]["gos"]] == ["done"]
 
     saved = go(served, "next")
     assert saved.status_code == 200, saved.text
@@ -53,6 +53,9 @@ def test_end_to_end_at_a_stop_runs_the_rest_and_done_before_an_analysis_saves_it
     scripted_answers(served, Scripted())
     assert served.client.post("/api/turn", json=SENT).status_code == 409
     assert go(served, "sideways").status_code == 422, "only the go-aheads a stop offers"
+    named = served.client.post("/api/turn/go", json={"chat_id": CHAT, "turn_id": "turn-1", "choice": "write",
+                                                      "disputes": ["D1"]})
+    assert named.status_code == 409 and named.json()["detail"]["code"] == "not_offered", "no analysis before its research"
     whole = go(served, "end_to_end")
     assert whole.status_code == 200 and whole.json()["committed"] == "committed"
 

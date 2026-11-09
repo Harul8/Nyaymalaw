@@ -494,7 +494,11 @@ class Researched:
         with self._lock:
             if self._whole is not None:
                 return self._whole
-        record = research.assemble(self.plan, [future.result() for future in self._parts.values()])
+        # Plan AN.48 (48b; register item 1): an answer some of whose disputes were not researched records them as not finished,
+        # as a stopped answer's research does; one with every dispute researched is assembled as before.
+        partly = set(self._parts) < set(research.dispute_work(self.plan))
+        record = research.assemble(self.plan, [future.result() for future in self._parts.values()],
+                                   **({"unfinished": research.UNFINISHED} if partly else {}))
         made = (record, answer_sources.build(self.context, record), research.execution(record))
         with self._lock:
             if self._whole is None:
@@ -1100,7 +1104,8 @@ class _Answering:
 
 def answer(calls, context, record, sources, *, interpretation, execution, worked, case_index=None,
            provision_reader=None, report=None, released=None, researched=None,
-           contract=response_writer.PRESENTED_CONTRACT, later=None, done=None, cases=None, case_done=None, steered=False):
+           contract=response_writer.PRESENTED_CONTRACT, later=None, done=None, cases=None, case_done=None, steered=False,
+           only=None):
     """Every section of the answer, side by side, then (for several disputes) the check
     across them with any correction, and the overview. Returns the sections in the
     answer's layout, the check across them (None, its record, or why it could not be
@@ -1130,7 +1135,11 @@ def answer(calls, context, record, sources, *, interpretation, execution, worked
     was. cases: each dispute's case set out already, by its section's index (str); case_done(index, case) is told each case as it
     is set out (D67). steered (plan AN.42, D79): the answer continues with what the advocate steered it with - each section kept is
     admitted and reviewed again from its own words against the steered conversation, and written again only where its review finds
-    it wanting; the check across the sections and the overview are made again."""
+    it wanting; the check across the sections and the overview are made again.
+
+    only (plan AN.48, piece 48b; its register of exceptions, item 1): the disputes whose sections are written now or kept - those
+    the advocate named, with those already written; the other sections are not written and are not returned, and the check across
+    the sections and the overview read those returned. None, or an answer of one part: every section, as before."""
     researched = researched or Researched.ready(context, record, sources, execution)
 
     def answering_on(context):
@@ -1153,6 +1162,9 @@ def answer(calls, context, record, sources, *, interpretation, execution, worked
             return waited["answering"]
     layout = answering.layout
     indices = list(range(1, len(layout))) if len(layout) > 1 else [0]
+    if only is not None and len(layout) > 1:
+        # 48b: only the sections of the disputes named are written; the others wait.
+        indices = [index for index in indices if layout[index]["dispute_id"] in only]
     kept = {saved["part"]: saved for saved in (done or {}).get("sections") or ()
             if saved["part"] in indices and saved["dispute_id"] == layout[saved["part"]]["dispute_id"]
             and (saved["fallback"] is None or saved["fallback"]["reason"] not in NOT_MADE)}
@@ -1166,9 +1178,11 @@ def answer(calls, context, record, sources, *, interpretation, execution, worked
 
     def publish():
         # An answer with one section is whole when it passes; an answer's first showing is a
-        # section that passed, not a note alone.
+        # section that passed, not a note alone. (Plan AN.48, 48b: an answer of several parts publishes each section as it passes
+        # even where only one is written now - the same answers as before, which have several sections exactly where the layout
+        # has several parts.)
         current = {**shown_before, **state["sections"]}
-        if released is not None and len(indices) > 1 and any(shown(saved) is not None for saved in state["sections"].values()):
+        if released is not None and len(layout) > 1 and any(shown(saved) is not None for saved in state["sections"].values()):
             released({"sections": [deepcopy(current[index]) for index in indices if index in current],
                       "waiting": [index for index in indices if index not in current],
                       "cross_check": deepcopy(state["cross_check"]), "overview": deepcopy(state["overview"]),
@@ -1208,10 +1222,15 @@ def answer(calls, context, record, sources, *, interpretation, execution, worked
         # The check across the sections and the overview read the answers as they stand.
         answering = answering_on(later.context())
         failures.append(answering.failures)
-    if all(saved["fallback"] is not None and saved["fallback"]["reason"] in NOT_MADE
-           for saved in sections):
+    if sections and all(saved["fallback"] is not None and saved["fallback"]["reason"] in NOT_MADE
+                        for saved in sections):
         failed = {scope: exc for found in failures for scope, exc in found.items()}
         raise next(failed[f"s{index}"] for index in indices)
+    if only is not None and sections and len(indices) < len(layout) - 1:
+        # 48b: the sections not written now stand in the answer as not finished, as a stopped answer's do (interrupted), so that
+        # the check across the sections and the overview read the answer's whole layout.
+        sections = interrupted({"sections": sections, "cross_check": None, "overview": None}, researched.whole()[0],
+                               kept=KEPT in sections[0], looked=LOOKS in sections[0])[0]
     many, crossed, overview = len(layout) > 1, None, None
     if whole and done["cross_check"] is not None:
         crossed = done["cross_check"]

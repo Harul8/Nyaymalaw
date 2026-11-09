@@ -600,8 +600,10 @@ def _prepare(model, context, searcher, *, case_index, provision_reader, progress
     with replay_scope.Pool(max_workers=1) as pool:
         working = (pool.submit(calculation.work_out, calls, context, held_acts)
                    if held_acts is not None and _needs_research(plan) and kept["limits"] is None else None)
+        # Plan AN.48 (48b): only the disputes the advocate named are researched now; None - every dispute, as before.
         parts = research.retrieve_parts(plan, searcher, context, model=calls, progress=report, started=started,
-                                        case_index=case_index, done=kept["parts"], settle=settle)
+                                        case_index=case_index, done=kept["parts"], settle=settle,
+                                        only=gate.research_only(kept["parts"]))
         if keep is not None:
             # D67: each dispute's research saved as it finishes.
             for dispute_id, future in parts.items():
@@ -644,18 +646,25 @@ def _prepare(model, context, searcher, *, case_index, provision_reader, progress
         before = set(state.get("before") or ())
         shown(elements, {"sections": [saved for saved in state["sections"] if saved["part"] not in before],
                          "cross_check": state["cross_check"], "overview": state["overview"]}, calls.metrics())
+    # Plan AN.48 (48b): only the analyses of the disputes named are written now, with those written before; None - every one.
+    written_before = {saved["dispute_id"] for saved in (kept["answered"] or {}).get("sections") or ()
+                      if (saved["fallback"] or {}).get("reason") != "interrupted"}
+    write_only = gate.write_only(set(parts), written_before)
     # Turn v9 (AN.28): each section written for the advocate and placed, its failing pieces given a second
     # look and then blocked one by one (writer v14), reviewed by review v12, and laid out as rendering v19.
     sections, crossed, overview = answer_sections.answer(
         calls, context, None, None, interpretation=interpreted, execution=None, worked=limits,
         case_index=case_index, provision_reader=provision_reader, report=report, released=released,
         researched=researched, contract=response_writer.CASED_CONTRACT, later=later, done=kept["answered"],
-        cases=kept["cases"], case_done=keep.case if keep is not None else None, steered=steered and bool(kept["answered"]))
+        cases=kept["cases"], case_done=keep.case if keep is not None else None, steered=steered and bool(kept["answered"]),
+        only=write_only)
     # Plan AN.48 (48a1): written - an answer with several analyses stopped before the check across them (steps.Gate.call); one
     # with a single analysis stops here, before it is saved.
     gate.after("write")
     if later is not None:
         context = later.context()
+    # Plan AN.48 (48b): finished with the analyses of some disputes, the others stand as not finished (answer_sections.answer),
+    # and code's words above the answer say so (process).
     record, sources, execution = researched.whole()
     elements = response_rendering.render_sections(context, record, sources, sections=sections, cross_check=crossed,
                                                   overview=overview, time_limits=limits,
@@ -770,6 +779,9 @@ def discard(store, matter, advocate_id, turn_id, *, running=lambda turn_id: Fals
     return save_shown(store, matter, advocate_id, held, session_current=session_current)
 
 
+#: Said above a matter worked step by step that the advocate finished with the analyses of some of its disputes (plan AN.48, 48b).
+PARTLY_SAID = (STOPS["done"] + " NM wrote the analyses you asked for - {written} of {of} disputes; the others are marked below as "
+               "not finished, and NM can take them up if you ask.")
 #: Said above a matter worked step by step that the advocate finished before any analysis was written (plan AN.48, 48a3).
 DONE_SAID = (STOPS["done"] + " What NM did before you finished is below; what it was not asked to do is marked as not "
              "finished.")
@@ -1273,10 +1285,13 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
         raise
     keeper.close()
     _reporter(progress)("saving")
+    # Plan AN.48 (48b): a matter finished with the analyses of some of its disputes says so above the answer.
+    partly = stepwise.unasked(activity["sections"]) if gate.stepwise and "sections" in activity else None
     try:
         response = commit_turn(store, holder["context"], elements=elements, activities=activity,
                                records=checklist.records(context.payload(), activity),
-                               metrics=metrics, session_current=session_current)
+                               metrics=metrics, session_current=session_current,
+                               **({"service_status": PARTLY_SAID.format(written=partly[0], of=partly[1])} if partly else {}))
     except ConversationRefused as exc:
         # A subsequent request checks the durable response before the attempt.
         # Unconfirmed ownership never permits repeating the effect.

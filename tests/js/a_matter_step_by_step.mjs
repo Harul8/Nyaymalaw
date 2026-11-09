@@ -33,15 +33,16 @@ const button = (node, text) => (node._text === text ? node : (node.children || [
 {
   const gone = [];
   const context = vm.createContext({ document: { createElement: (tag) => new Element(tag) }, activeDelivery: null,
-    goTurn: (entry, choice) => gone.push([entry.turnId, choice]), continueTurn: () => gone.push(['continue']),
+    goTurn: (entry, choice, disputes) => gone.push([entry.turnId, choice, disputes]), continueTurn: () => gone.push(['continue']),
     discardTurn: () => gone.push(['discard']), openAiSharing: () => {} });
   vm.runInContext(fn('renderWaiting') + fn('renderStopped'), context);
   const entry = { turnId: 't1', stopped: { code: 'waiting', why: 'NM is waiting for your go-ahead on this matter.',
     waiting: { after: 'understood', next: 'research',
       done_said: 'NM has read your papers and understood the matter: its disputes and their legal questions are on the board.',
       next_said: 'Next: research the law for each dispute.',
-      gos: [{ choice: 'next', said: 'Go ahead: research' }, { choice: 'end_to_end', said: 'End to end' },
-        { choice: 'done', said: 'Done: save as it stands' }],
+      gos: [{ choice: 'research', disputes: null, said: 'Research all' },
+        { choice: 'research', disputes: ['D1'], said: 'Research: The shop lease' },
+        { choice: 'end_to_end', disputes: null, said: 'End to end' }, { choice: 'done', disputes: null, said: 'Done: save as it stands' }],
       noticed: ['A time limit may have run: filing the appeal - the last day was 2026-10-01, 39 days ago.'] } } };
   const card = context.renderStopped(entry);
   assert.equal(card.className, 'waiting-card', 'waiting is not a failure: not red');
@@ -50,15 +51,17 @@ const button = (node, text) => (node._text === text ? node : (node.children || [
     'Next: research the law for each dispute.',
     'NM noticed, though you did not ask - say if you want it looked at:',
     'A time limit may have run: filing the appeal - the last day was 2026-10-01, 39 days ago.',
-    'Go ahead: research', 'End to end', 'Done: save as it stands']);
+    'Research all', 'Research: The shop lease', 'End to end', 'Done: save as it stands']);
   assert.ok(!texts(card).includes('Continue') && !texts(card).includes('Discard'));
-  button(card, 'Go ahead: research').click();
+  button(card, 'Research all').click();
+  button(card, 'Research: The shop lease').click();
   button(card, 'End to end').click();
   button(card, 'Done: save as it stands').click();
-  assert.deepEqual(gone, [['t1', 'next'], ['t1', 'end_to_end'], ['t1', 'done']]);
+  assert.equal(JSON.stringify(gone), JSON.stringify([['t1', 'research', null], ['t1', 'research', ['D1']], ['t1', 'end_to_end', null],
+    ['t1', 'done', null]]));
   // While another answer is worked on, no go-ahead can be given.
   context.activeDelivery = { entry: {} };
-  assert.equal(button(context.renderStopped(entry), 'Go ahead: research').disabled, true);
+  assert.equal(button(context.renderStopped(entry), 'Research all').disabled, true);
   // Any other stop is still the red message.
   context.activeDelivery = null;
   const red = context.renderStopped({ turnId: 't2', stopped: { code: 'stopped', why: 'You stopped NM.', finished: [],
@@ -75,6 +78,11 @@ const button = (node, text) => (node._text === text ? node : (node.children || [
   const entry = { turnId: 't1', context: { chatId: 'c1' }, stopped: { code: 'waiting' }, goError: 'earlier' };
   context.goTurn(entry, 'end_to_end');
   assert.deepEqual(delivered, [['/api/turn/go', JSON.stringify({ chat_id: 'c1', turn_id: 't1', choice: 'end_to_end' })]]);
+  // 48b: research or an analysis names its disputes.
+  context.goTurn(entry, 'research', ['D2']);
+  assert.deepEqual(delivered[1], ['/api/turn/go', JSON.stringify({ chat_id: 'c1', turn_id: 't1', choice: 'research',
+    disputes: ['D2'] })]);
+  delivered.pop();
   assert.equal(entry.stopped, null);
   assert.equal(entry.goError, null);
   context.activeDelivery = { entry: {} };

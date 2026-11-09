@@ -384,11 +384,12 @@ class Application:
                              effort=asked.get('effort'), message=held['message'], turn_id=turn_id,
                              chat_id=asked['chat_id'], go=go)
 
-    def go_turn(self, *, advocate_id, chat_id, turn_id, choice, session_current):
-        """The advocate's go-ahead at a stop (plan AN.48, 48a3): "next" - the step after the one the matter waits after; "end_to_end"
-        - every remaining step without stopping (D135); "done" - finish with what is written and save it as one answer (D147), or,
-        before any analysis is written, save the matter as it stands with no step run. ConversationRefused where the matter does not
-        wait for the advocate here, or the go-ahead is not one its stop offers."""
+    def go_turn(self, *, advocate_id, chat_id, turn_id, choice, session_current, disputes=None):
+        """The advocate's go-ahead at a stop (plan AN.48, 48a3, 48b): "research" or "write" - that step for the disputes named
+        (None: every dispute it can now take, D163); "next" - the next step for every dispute; "end_to_end" - every remaining step
+        without stopping (D135); "done" - finish with what is written and save it as one answer (D147), or, before any analysis is
+        written, save the matter as it stands with no step run. ConversationRefused where the matter does not wait for the
+        advocate here, or the go-ahead is not one its stop offers."""
         from nm.core_engine import steps as stepwise, turn
         from nm.core_engine.conversation import ConversationRefused
         matter, held = self._held(advocate_id, chat_id)
@@ -396,9 +397,8 @@ class Application:
             raise ConversationRefused('This matter is not waiting for your go-ahead.', status=409, code='not_waiting')
         if self.turn_running(advocate_id, turn_id):
             raise ConversationRefused('NM is already working on this answer.', code='turn_in_progress')
-        written = bool((held['steps'].get('answered') or {}).get('sections'))
         try:
-            go = stepwise.given(held['go'], choice, written=written)
+            go = stepwise.given(held['go'], choice, held=held, disputes=list(disputes) if disputes is not None else None)
         except ValueError as exc:
             raise ConversationRefused('NM cannot take that go-ahead for this matter now.', status=409,
                                       code='not_offered') from exc

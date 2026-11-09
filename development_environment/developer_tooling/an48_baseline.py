@@ -520,16 +520,30 @@ def run(app, inputs):
     return result, failure, time.time() - started
 
 
-def run_steps(app, inputs, key, run_dir):
+def run_steps(app, inputs, key, run_dir, *, one_by_one=False):
     """The same message worked step by step (plan AN.48, 48a): sent, then Go ahead at each stop until it is saved. Each go-ahead is
-    given as go_turn gives it (steps.given from the saved stop), with the saved papers as the first run had them. Returns (result,
-    failure, seconds, the stops it made)."""
+    given as go_turn gives it (steps.given from the saved stop), with the saved papers as the first run had them. one_by_one (48b):
+    each dispute in turn - its research, then its analysis - before the next; then Done. Returns (result, failure, seconds, the
+    stops it made, each with the dispute it was for)."""
     from nm.core_engine import steps as stepwise
     from nm.core_engine.conversation import ConversationRefused, chat_matter_id, shown_of, stored_chat
     from nm.shared.store_file_store import FileMatterStore
     started, stops, result, failure, go = time.time(), [], None, None, stepwise.first()
     store = FileMatterStore(run_dir, key=key)
-    for _ in range(6):
+
+    def next_of(held):
+        if not one_by_one:
+            return stepwise.given(held["go"], "next", held=held)
+        state = stepwise.state_of(held["steps"])
+        for name in state["order"]:
+            if name in state["researched"] and name not in state["written"]:
+                stops.append(f"write {name}")
+                return stepwise.given(held["go"], "write", held=held, disputes=None if state["whole"] else [name])
+            if name not in state["researched"]:
+                stops.append(f"research {name}")
+                return stepwise.given(held["go"], "research", held=held, disputes=None if state["whole"] else [name])
+        return stepwise.given(held["go"], "done", held=held)
+    for _ in range(24):
         try:
             result = app.run_turn(advocate_id=ADVOCATE, session_current=lambda: True, message=inputs["message"],
                                   turn_id=TURN_ID, documents=copy.deepcopy(inputs["documents"]), go=go)
@@ -541,7 +555,7 @@ def run_steps(app, inputs, key, run_dir):
                 break
             held = shown_of(store.load(chat_matter_id(ADVOCATE, stored_chat(ADVOCATE, None, TURN_ID))))
             stops.append(stepwise.waiting_of(held))
-            go = stepwise.given(held["go"], "next", written=bool((held["steps"]["answered"] or {}).get("sections")))
+            go = next_of(held)
         except Exception as exc:  # noqa: BLE001 -- how the turn ended is the finding; kept, not hidden
             failure = {"type": type(exc).__qualname__, "message": str(exc)[:300], "code": getattr(exc, "code", None),
                        "kept": getattr(exc, "kept", None), "trace": traceback.format_exc(limit=12)}
@@ -850,7 +864,7 @@ def replay(args):
     threading.Thread(target=heartbeat, args=(stop, started), kwargs={"book": book, "replay": port}, daemon=True).start()
     stops = None
     if args.steps:
-        result, failure, seconds, stops = run_steps(app, inputs, key, run_dir)
+        result, failure, seconds, stops = run_steps(app, inputs, key, run_dir, one_by_one=args.one_by_one)
     else:
         result, failure, seconds = run(app, inputs)
     stop.set()
@@ -897,6 +911,7 @@ def main():
     parser.add_argument("--tag")
     parser.add_argument("--shift-day", type=int, default=0)
     parser.add_argument("--steps", action="store_true", help="replay the message worked step by step (plan AN.48, 48a)")
+    parser.add_argument("--one-by-one", action="store_true", help="with --steps: dispute by dispute (plan AN.48, 48b)")
     parser.add_argument("--conversation")
     parser.add_argument("--row", type=int)
     args = parser.parse_args()

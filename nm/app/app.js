@@ -5437,7 +5437,8 @@ function renderWaiting(entry) {
     button.type = 'button';
     button.dataset.choice = go.choice;
     button.disabled = Boolean(activeDelivery);
-    button.addEventListener('click', () => goTurn(entry, go.choice));
+    // Plan AN.48 (48b): a go-ahead for research or an analysis names its disputes; none means every dispute it can take.
+    button.addEventListener('click', () => goTurn(entry, go.choice, Array.isArray(go.disputes) ? go.disputes : null));
     buttons.appendChild(button);
   });
   box.appendChild(buttons);
@@ -5957,15 +5958,17 @@ function continueTurn(entry, { byItself = false } = {}) {
   deliver(entry);
 }
 
-// GO AHEAD, END TO END, DONE (plan AN.48, 48a3): the matter waiting for the advocate goes on - the next step, every remaining step, or
-// the finish - and stops again or is saved as one answer; Done before any analysis saves it as it stands.
-function goTurn(entry, choice) {
+// GO AHEAD, END TO END, DONE (plan AN.48, 48a3, 48b): the matter waiting for the advocate goes on - research or the analyses for the
+// disputes named, every remaining step, or the finish - and stops again or is saved as one answer; Done before any analysis saves it
+// as it stands.
+function goTurn(entry, choice, disputes = null) {
   if (activeDelivery || !ownsIntent(entry.context)) return;
   const chatId = entry.chatId || entry.context.chatId || entry.request?.chat_id;
   if (!chatId) return;
   entry.goError = null;
   entry.endpoint = '/api/turn/go';
-  entry.envelope = JSON.stringify({ chat_id: chatId, turn_id: entry.turnId, choice });
+  entry.envelope = JSON.stringify({ chat_id: chatId, turn_id: entry.turnId, choice,
+    ...(Array.isArray(disputes) && disputes.length ? { disputes } : {}) });
   entry.stopped = null;
   deliver(entry);
 }

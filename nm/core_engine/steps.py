@@ -1,12 +1,15 @@
-"""Plan AN.48, piece 48a: a matter worked step by step, as a junior works with a senior (owner decisions D134-D166, 9 Nov 2026).
+"""Plan AN.48, pieces 48a-48b: a matter worked step by step, dispute by dispute, as a junior works with a senior (owner decisions
+D134-D166, 9 Nov 2026).
 
 A message sent step by step runs one step at a time and stops for the advocate's go-ahead after each: (1) understand - the papers
 read and the matter understood, with its disputes and their legal questions, which today's understanding makes together (D134's
 steps 1-3, D152); (2) research; (3) write - each dispute's case, its analysis, review and repairs; (4) finish - the check across the
-analyses, the overview and the save as one answer (D147). End to end runs every remaining step without stopping (D135); Done
-finishes with what is written. This module holds the step runner's own rules: which step may run, where the turn stops, the record
-of a turn waiting for the advocate, and what its stop says. The orchestration lives in turn.process; the research, the citations,
-the checks, the board and the reading pane are unchanged (D143).
+analyses, the overview and the save as one answer (D147). Research and the analyses run for the disputes the advocate names - one,
+several or all (48b; D144, D163); the others wait. End to end runs every remaining step for every dispute without stopping (D135);
+Done finishes with what is written. This module holds the step runner's own rules: which step may run and for which disputes, where
+the turn stops, the record of a turn waiting for the advocate, and what its stop says and offers. The orchestration lives in
+turn.process; the research, the citations, the checks, the board and the reading pane are unchanged (D143), but for the one switch
+of 48b (register item 1): research.retrieve_parts and answer_sections.answer each take which disputes run.
 
 A message sent without asking for steps runs end to end exactly as before 48a: the recorded replay (D151) and every earlier test run
 so. The record of a turn being worked on gains one addition, "go" (48a2); a record without it is read as before.
@@ -20,28 +23,24 @@ MODE = "steps"
 STEPS = ("understand", "research", "write", "finish")
 #: What is done when the turn stops after each step that stops.
 AFTER = {"understand": "understood", "research": "researched", "write": "written"}
-#: The step a stop after each leads to.
+#: The step a stop after each leads to, where every dispute is taken together (48a).
 NEXT = {"understood": "research", "researched": "write", "written": "finish"}
 #: The first calls of the finish step: while finishing is not allowed they are not sent - the turn stops before the check across the
-#: analyses (48a contract).
+#: analyses, or before the overview where there is nothing to check across (48a contract).
 FINISHING = frozenset({"core_response_cross_check", "core_response_overview"})
-#: What the advocate may give at a stop (48a3): the next step's go-ahead, end to end, or done.
-GOS = ("next", "end_to_end", "done")
+#: What the advocate may give at a stop (48a3, 48b): the next step for every dispute, research or the analyses for the disputes
+#: named, end to end, or done.
+GOS = ("next", "research", "write", "end_to_end", "done")
 _FIELDS = {"mode", "allowed", "n", "waiting"}
 _MOST_STEPS = 10_000
+_MOST_DISPUTES = 50
 
-#: What a stop says was done, and what comes next, in plain words (48a4).
-DONE_SAID = {
-    "understood": "NM has read your papers and understood the matter: its disputes and their legal questions are on the board.",
-    "researched": "NM has researched the law for each dispute; what it found is listed under each dispute.",
-    "written": "NM has written and checked the analysis of each dispute; it is shown below.",
-}
+#: What a stop says comes next where every dispute is taken together, in plain words (48a4).
 NEXT_SAID = {
-    "research": "Next: research the law for each dispute.",
-    "write": "Next: write and check the analysis of each dispute.",
+    "research": "Next: research the law - for one dispute, several or all of them.",
+    "write": "Next: write and check the analysis - for one dispute, several or all of those researched.",
     "finish": "Next: check the analyses against each other, write the overview and save the answer.",
 }
-GO_SAID = {"research": "Go ahead: research", "write": "Go ahead: write the analyses", "finish": "Done: finish and save"}
 #: The history's line for a conversation waiting for the advocate (D164).
 WAITING_SAID = {"understood": "Waiting for you: research", "researched": "Waiting for you: the analyses",
                 "written": "Waiting for you: finish"}
@@ -63,16 +62,20 @@ def first():
 
 
 def valid(go):
-    """Whether a turn's go-ahead record has the form 48a2 saves (conversation.shown_of reads it so)."""
+    """Whether a turn's go-ahead record has the form 48a2 saves (conversation.shown_of reads it so): 48b adds the disputes named,
+    a record of 48a's form, without them, meaning every dispute."""
     try:
-        waiting = go["waiting"]
-        return (isinstance(go, dict) and set(go) == _FIELDS and go["mode"] == MODE
+        waiting, disputes = go["waiting"], go.get("disputes")
+        return (isinstance(go, dict) and set(go) in (_FIELDS, _FIELDS | {"disputes"}) and go["mode"] == MODE
                 and isinstance(go["allowed"], list) and go["allowed"] and all(step in STEPS for step in go["allowed"])
                 and len(set(go["allowed"])) == len(go["allowed"])
                 and type(go["n"]) is int and 1 <= go["n"] <= _MOST_STEPS
+                and (disputes is None or isinstance(disputes, list) and 0 < len(disputes) <= _MOST_DISPUTES
+                     and all(isinstance(name, str) and name.strip() for name in disputes)
+                     and len(set(disputes)) == len(disputes))
                 and (waiting is None or isinstance(waiting, dict) and set(waiting) == {"after", "at"}
                      and waiting["after"] in NEXT and isinstance(waiting["at"], str) and bool(waiting["at"].strip())))
-    except (KeyError, TypeError):
+    except (KeyError, TypeError, AttributeError):
         return False
 
 
@@ -90,33 +93,81 @@ def waited(go, after):
     return {**go, "waiting": {"after": after, "at": datetime.now(timezone.utc).isoformat()}}
 
 
-def given(go, choice, *, written):
-    """The go-ahead the advocate gives a waiting turn (48a3): "next" (the step after the one it waits after), "end_to_end" (every
-    remaining step without stopping, D135) or "done" (finish with what is written, D147). Returns the go-ahead for the next run, or
-    None for Done before any analysis is written - the matter is then saved as it stands, with no step run. ValueError where the
-    turn does not wait or the choice is not one it offers."""
+#: The one unit of an answer written as a whole - a message with at most one dispute to research (response_writer.parts).
+WHOLE = "whole"
+
+
+def state_of(steps):
+    """Where each of a matter's disputes stands, from the steps saved (48b): the disputes the answer is written dispute by dispute
+    for - those with questions to research, in the understanding's order, exactly as the answer's parts are laid out
+    (response_writer.parts) - with their names, those researched and those whose analysis is written. An answer with at most one
+    such dispute is one unit, WHOLE. Known only once the matter is understood."""
+    from nm.core_engine import research  # imported here: the research imports what reads this module's records
+    understood = (steps or {}).get("understood") or {}
+    plan = understood.get("plan") or {}
+    disputes = ((plan.get("proposal") or {}).get("understanding") or {}).get("disputes") or []
+    names = {dispute["id"]: dispute.get("name") or dispute["id"] for dispute in disputes}
+    try:
+        groups = list(research.dispute_work(plan)) if plan else []
+    except (KeyError, TypeError, AttributeError):
+        groups = []
+    kept = set((steps or {}).get("parts") or {})
+    shown = [saved for saved in ((steps or {}).get("answered") or {}).get("sections") or ()
+             if not (saved.get("fallback") or {}).get("reason") == "interrupted"]
+    if len(groups) > 1:
+        return {"order": groups, "names": {name: names.get(name, name) for name in groups}, "whole": False,
+                "researched": kept & set(groups), "written": {saved.get("dispute_id") for saved in shown} & set(groups)}
+    return {"order": [WHOLE], "names": {WHOLE: names.get(groups[0], "the answer") if groups else "the answer"}, "whole": True,
+            "researched": {WHOLE} if understood and set(groups) <= kept else set(), "written": {WHOLE} if shown else set()}
+
+
+def _left(state):
+    """The disputes still to research, and those researched still to write, in the matter's order."""
+    unresearched = [name for name in state["order"] if name not in state["researched"]]
+    unwritten = [name for name in state["order"] if name in state["researched"] and name not in state["written"]]
+    return unresearched, unwritten
+
+
+def given(go, choice, *, held, disputes=None):
+    """The go-ahead the advocate gives a waiting turn (48a3, 48b): "research" or "write" for the disputes named (None: every
+    dispute that step can now take), "next" (the next step for every dispute), "end_to_end" (every remaining step for every dispute,
+    without stopping, D135) or "done" (finish with what is written, D147). Returns the go-ahead for the next run, or None for Done
+    before any analysis is written - the matter is then saved as it stands, with no step run. ValueError where the turn does not
+    wait, the choice is not one its stop offers, or a dispute named is not one it can take that step for."""
     waiting = go.get("waiting") if isinstance(go, dict) else None
     after = waiting.get("after") if isinstance(waiting, dict) else None
     if not valid(go) or after not in NEXT or choice not in GOS:
         raise ValueError("This conversation is not waiting for that")
-    step = NEXT[after]
+    state = state_of(held.get("steps"))
+    unresearched, unwritten = _left(state)
+    if disputes is not None and (not isinstance(disputes, list) or not disputes or len(set(disputes)) != len(disputes)):
+        raise ValueError("Name each dispute once")
     if choice == "next":
-        allowed = [step]
-    elif choice == "end_to_end":
-        allowed = list(STEPS[STEPS.index(step):])
-    elif written:
-        allowed = ["finish"]
-    else:
-        return None
-    return {"mode": MODE, "allowed": allowed, "n": go["n"] + 1, "waiting": None}
+        choice = "research" if unresearched else "write" if unwritten else "done"
+    if choice in ("research", "write"):
+        open_now = unresearched if choice == "research" else unwritten
+        if not open_now or disputes is not None and (state["whole"] or not set(disputes) <= set(open_now)):
+            raise ValueError("That step is not open for those disputes")
+        named = None if disputes is None or set(disputes) == set(open_now) else [name for name in state["order"] if name in disputes]
+        return {"mode": MODE, "allowed": [choice], "n": go["n"] + 1, "waiting": None, "disputes": named}
+    if disputes is not None:
+        raise ValueError("End to end and Done are for the whole matter")
+    if choice == "end_to_end":
+        start = "research" if unresearched else "write" if unwritten else "finish"
+        return {"mode": MODE, "allowed": list(STEPS[STEPS.index(start):]), "n": go["n"] + 1, "waiting": None, "disputes": None}
+    if state["written"]:
+        return {"mode": MODE, "allowed": ["finish"], "n": go["n"] + 1, "waiting": None, "disputes": None}
+    return None
 
 
 class Gate:
-    """Where a run of a turn stops (48a1). None: no go-ahead was asked for - the run goes end to end, as before 48a."""
+    """Where a run of a turn stops, and which disputes it runs (48a1, 48b). None: no go-ahead was asked for - the run goes end to
+    end for every dispute, as before 48a."""
 
     def __init__(self, go):
         self.go = go
         self.allowed = None if go is None else frozenset(go["allowed"])
+        self.disputes = None if go is None or go.get("disputes") is None else frozenset(go["disputes"])
 
     @property
     def stepwise(self):
@@ -138,22 +189,84 @@ class Gate:
         if operation in FINISHING and not self.allows("finish"):
             raise Waiting("written")
 
+    def research_only(self, researched):
+        """The disputes this run's research covers (research.retrieve_parts' only, 48b): None for every dispute, as before; where
+        research is not allowed, only those already researched, which are kept and not searched again."""
+        if self.allowed is None or "research" in self.allowed and self.disputes is None:
+            return None
+        if "research" not in self.allowed:
+            return frozenset(researched)
+        return frozenset(researched) | self.disputes
+
+    def write_only(self, researched, written):
+        """The disputes whose analyses this run writes or keeps (answer_sections.answer's only, 48b): None for every dispute, as
+        before; where writing is not allowed, only those already written; where it is, those named that are researched, or every
+        dispute researched."""
+        if self.allowed is None or "write" in self.allowed and self.disputes is None and "research" in self.allowed:
+            return None
+        if "write" not in self.allowed:
+            return frozenset(written)
+        if self.disputes is None:
+            return frozenset(researched) | frozenset(written)
+        return frozenset(written) | (self.disputes & frozenset(researched))
+
 
 def card(held):
-    """What the stop says (48a4), from the saved record alone: after which step it waits, what was done and what comes next, the
-    go-ahead it offers and what NM noticed that the advocate did not ask about - offered, never done (D164). None where the turn
-    does not wait."""
+    """What the stop says (48a4, 48b), from the saved record alone: after which step it waits, what was done and what comes next,
+    the go-aheads it offers - each dispute's next step, the same for all of them at once, End to end and Done - and what NM noticed
+    that the advocate did not ask about, offered, never done (D164). None where the turn does not wait."""
     after = waiting_of(held)
     if after is None:
         return None
-    step = NEXT[after]
     steps = held.get("steps") or {}
-    written = bool(((steps.get("answered") or {}).get("sections")) or ())
-    gos = [{"choice": "next", "said": GO_SAID[step]}]
-    if step != "finish":
-        gos.append({"choice": "end_to_end", "said": "End to end"})
-        gos.append({"choice": "done", "said": "Done: save as it stands" if not written else "Done: finish with what is written"})
-    return {"after": after, "next": step, "done_said": DONE_SAID[after], "next_said": NEXT_SAID[step], "gos": gos,
+    state = state_of(steps)
+    unresearched, unwritten = _left(state)
+    total, names = len(state["order"]), state["names"]
+    written = [name for name in state["order"] if name in state["written"]]
+    done_said = {
+        "understood": "NM has read your papers and understood the matter: its disputes and their legal questions are on the board.",
+        "researched": ("NM has researched the law; what it found is on the board." if state["whole"] else
+                       f"NM has researched the law for {len(state['researched'])} of {total} dispute{'s' if total != 1 else ''}; "
+                       "what it found is listed under each dispute."),
+        "written": ("NM has written and checked the answer; it is shown below." if state["whole"] else
+                    f"NM has written and checked the analysis of {len(written)} of {total} dispute{'s' if total != 1 else ''}; "
+                    "it is shown below."),
+    }[after]
+    gos = []
+    if state["whole"]:
+        # An answer written as a whole: its steps, without disputes to name.
+        if unresearched:
+            gos.append({"choice": "research", "disputes": None, "said": "Go ahead: research the law"})
+        if unwritten:
+            gos.append({"choice": "write", "disputes": None, "said": "Go ahead: write the answer"})
+    else:
+        if len(unresearched) > 1:
+            gos.append({"choice": "research", "disputes": None, "said": "Research all"})
+        gos += [{"choice": "research", "disputes": [name], "said": f"Research: {names[name]}"} for name in unresearched]
+        if len(unwritten) > 1:
+            gos.append({"choice": "write", "disputes": None, "said": "Write all researched"})
+        gos += [{"choice": "write", "disputes": [name], "said": f"Write the analysis: {names[name]}"} for name in unwritten]
+    if unresearched or unwritten:
+        gos.append({"choice": "end_to_end", "disputes": None, "said": "End to end"})
+    gos.append({"choice": "done", "disputes": None, "said": (
+        "Done: check the analyses against each other and save" if len(written) > 1 else
+        "Done: finish and save" if written else "Done: save as it stands")})
+    if state["whole"]:
+        next_said = ("Next: research the law." if unresearched else "Next: write and check the answer." if unwritten
+                     else "Next: save the answer.")
+    elif after == "written" and not unresearched and not unwritten:
+        next_said = NEXT_SAID["finish"]
+    elif unresearched and not state["researched"]:
+        next_said = NEXT_SAID["research"]
+    else:
+        parts = ([f"research {len(unresearched)} more" ] if unresearched else []) + (
+            [f"write {len(unwritten)} analys{'es' if len(unwritten) != 1 else 'is'}"] if unwritten else [])
+        next_said = ("Next, as you choose: " + " or ".join(parts) + "; or finish with what is written."
+                     if parts else NEXT_SAID["finish"])
+    return {"after": after, "done_said": done_said, "next_said": next_said, "gos": gos,
+            "disputes": [] if state["whole"] else [
+                {"id": name, "name": names[name], "researched": name in state["researched"],
+                 "written": name in state["written"]} for name in state["order"]],
             "noticed": noticed(steps), "at": held["go"]["waiting"]["at"]}
 
 
@@ -180,6 +293,13 @@ def noticed(steps):
     except (AttributeError, TypeError):
         return []
     return said[:8]
+
+
+def unasked(sections):
+    """The analyses a matter finished step by step was saved without (48b): (written, of how many), or None where every dispute's
+    analysis is written."""
+    left = sum(1 for saved in sections if ((saved.get("fallback") or {}).get("reason")) == "interrupted")
+    return None if not left else (len(sections) - left, len(sections))
 
 
 def waiting_said(held):

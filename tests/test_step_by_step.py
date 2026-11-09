@@ -1,9 +1,11 @@
-"""A matter worked step by step, as a junior works with a senior (plan AN.48, piece 48a; owner decisions D134-D166, 9 Nov 2026).
+"""A matter worked step by step, dispute by dispute, as a junior works with a senior (plan AN.48, pieces 48a-48b; owner decisions
+D134-D166, 9 Nov 2026).
 
 Sent step by step, a message stops for the advocate's go-ahead after each step - understood, researched, written - and Done finishes
 it as one answer; end to end runs the rest without stopping; a message sent without asking for steps runs end to end exactly as
-before. Each stop keeps everything finished (the AN.41 record), with the go-ahead and after which step it waits (48a2); each step
-claims its own attempt (D150). Offline: scripted models and a synthetic store; the words are invented."""
+before. Research and the analyses run for the disputes the advocate names; the others wait (48b). Each stop keeps everything
+finished (the AN.41 record), with the go-ahead and after which step it waits (48a2); each step claims its own attempt (D150).
+Offline: scripted models and a synthetic store; the words are invented."""
 import pytest
 
 from nm.core_engine import steps, turn
@@ -35,8 +37,18 @@ def waits(store, model, go, after):
     return record
 
 
+def go(record, choice, disputes=None):
+    return steps.given(record["go"], choice, held=record, disputes=disputes)
+
+
 def research_made(model):
     return [name for name, _ in model.calls if name in RESEARCH]
+
+
+def picked(model):
+    """The disputes whose law was chosen, by the pick calls made for them."""
+    return {payload.get("dispute", {}).get("id") or payload.get("dispute_id") for name, payload in model.calls
+            if name == "core_research_pick"}
 
 
 def test_each_step_stops_for_the_advocate_and_done_saves_the_answer_end_to_end_would(store, tmp_path):
@@ -47,18 +59,19 @@ def test_each_step_stops_for_the_advocate_and_done_saves_the_answer_end_to_end_w
     assert not research_made(model), "nothing is researched before the advocate's go-ahead"
     assert not scripted.payloads("core_response_writer")
 
-    researched = waits(store, model, steps.given(understood["go"], "next", written=False), "researched")
+    researched = waits(store, model, go(understood, "next"), "researched")
     assert set(researched["steps"]["parts"]) == {"D1", "D2"} and researched["steps"]["answered"] is None
     assert research_made(model) and not scripted.payloads("core_response_writer"), "researched, nothing written"
 
-    written = waits(store, model, steps.given(researched["go"], "next", written=False), "written")
+    written = waits(store, model, go(researched, "next"), "written")
     assert len(written["steps"]["answered"]["sections"]) == 2 and written["steps"]["answered"]["cross_check"] is None
     assert len(scripted.payloads("core_response_writer")) == 2
     assert not scripted.payloads("core_response_cross_check") and not scripted.payloads("core_response_overview")
 
     before = len(research_made(model))
-    response = run(store, model, go=steps.given(written["go"], "done", written=True))
+    response = run(store, model, go=go(written, "done"))
     assert response["committed"] == "committed" and held(store) is None
+    assert response.get("service_status") is None, "every analysis written: nothing to say above the answer"
     assert len(scripted.payloads("core_response_writer")) == 2, "the analyses are not written again"
     assert len(scripted.payloads("core_response_cross_check")) == 1 and len(scripted.payloads("core_response_overview")) == 1
     assert len(research_made(model)) == before, "nor researched again"
@@ -72,19 +85,76 @@ def test_each_step_stops_for_the_advocate_and_done_saves_the_answer_end_to_end_w
     assert mine == theirs
 
 
+def test_one_dispute_is_researched_and_written_while_the_other_waits_then_the_other(store):
+    """48b (D144, D163): research and the analysis run only for the dispute named; the other waits, offered at each stop."""
+    scripted = Scripted()
+    model = through_turns(scripted)
+    understood = waits(store, model, steps.first(), "understood")
+    offered = [(g["choice"], g["disputes"]) for g in steps.card(understood)["gos"]]
+    assert offered == [("research", None), ("research", ["D1"]), ("research", ["D2"]), ("end_to_end", None), ("done", None)]
+
+    first = waits(store, model, go(understood, "research", ["D1"]), "researched")
+    assert set(first["steps"]["parts"]) == {"D1"}, "only the dispute named is researched"
+    gos = [(g["choice"], g["disputes"]) for g in steps.card(first)["gos"]]
+    assert ("research", ["D2"]) in gos and ("write", ["D1"]) in gos and ("write", ["D2"]) not in gos
+
+    written = waits(store, model, go(first, "write", ["D1"]), "written")
+    assert [s["dispute_id"] for s in written["steps"]["answered"]["sections"]] == ["D1"]
+    assert len(scripted.payloads("core_response_writer", "D1")) == 1 and not scripted.payloads("core_response_writer", "D2")
+    assert not scripted.payloads("core_response_overview"), "the overview waits for the advocate to finish"
+
+    second = waits(store, model, go(written, "research", ["D2"]), "researched")
+    assert set(second["steps"]["parts"]) == {"D1", "D2"}
+    both = waits(store, model, go(second, "write", ["D2"]), "written")
+    assert sorted(s["dispute_id"] for s in both["steps"]["answered"]["sections"]) == ["D1", "D2"]
+    assert len(scripted.payloads("core_response_writer", "D1")) == 1, "the first analysis is not written again"
+    assert [g["said"] for g in steps.card(both)["gos"]] == ["Done: check the analyses against each other and save"]
+
+    response = run(store, model, go=go(both, "done"))
+    assert response["committed"] == "committed" and response.get("service_status") is None
+    assert len(scripted.payloads("core_response_cross_check")) == 1
+
+
+def test_done_with_one_analysis_of_two_saves_it_and_says_the_other_was_not_asked_for(store):
+    model = through_turns(Scripted())
+    understood = waits(store, model, steps.first(), "understood")
+    first = waits(store, model, go(understood, "research", ["D1"]), "researched")
+    written = waits(store, model, go(first, "write", ["D1"]), "written")
+    response = run(store, model, go=go(written, "done"))
+    assert response["committed"] == "committed" and held(store) is None
+    assert response["service_status"] == turn.PARTLY_SAID.format(written=1, of=2)
+    activity = turn.saved_rows(store.load(chat_matter_id("owner", response["chat_id"])), "owner")[0]["activities"]
+    assert [((s["fallback"] or {}).get("reason")) for s in activity["sections"]] == [None, "interrupted"]
+
+
+def test_a_dispute_is_offered_only_for_the_step_it_can_take(store):
+    model = through_turns(Scripted())
+    understood = waits(store, model, steps.first(), "understood")
+    with pytest.raises(ValueError):
+        go(understood, "write", ["D1"])  # not researched yet
+    with pytest.raises(ValueError):
+        go(understood, "research", ["D9"])  # no such dispute
+    with pytest.raises(ValueError):
+        go(understood, "end_to_end", ["D1"])  # end to end is for the whole matter
+    first = waits(store, model, go(understood, "research", ["D1"]), "researched")
+    with pytest.raises(ValueError):
+        go(first, "research", ["D1"])  # already researched
+
+
 def test_end_to_end_at_a_stop_runs_every_remaining_step_without_stopping(store):
     scripted = Scripted()
     model = through_turns(scripted)
     understood = waits(store, model, steps.first(), "understood")
-    response = run(store, model, go=steps.given(understood["go"], "end_to_end", written=False))
-    assert response["committed"] == "committed" and held(store) is None
+    first = waits(store, model, go(understood, "research", ["D1"]), "researched")
+    response = run(store, model, go=go(first, "end_to_end"))
+    assert response["committed"] == "committed" and held(store) is None and response.get("service_status") is None
     assert len(scripted.payloads("core_response_writer")) == 2 and len(scripted.payloads("core_response_overview")) == 1
 
 
 def test_done_before_any_analysis_saves_the_matter_as_it_stands_with_no_step_run(store):
     model = through_turns(Scripted())
     understood = waits(store, model, steps.first(), "understood")
-    assert steps.given(understood["go"], "done", written=False) is None, "Done before an analysis runs no step"
+    assert go(understood, "done") is None, "Done before an analysis runs no step"
     matter = store.load(chat_matter_id("owner", understood["request"]["chat_id"]))
     response = turn.done(store, matter, "owner", "t1", session_current=lambda: True)
     assert response["service_status"].startswith(turn.STOPS["done"])
@@ -112,7 +182,7 @@ def test_each_step_claims_an_attempt_of_its_own_and_a_waiting_turn_is_not_releas
         run(store, model, go=steps.first(), attempts=attempts)
     understood = held(store)
     with pytest.raises(ConversationRefused):
-        run(store, model, go=steps.given(understood["go"], "next", written=False), attempts=attempts)
+        run(store, model, go=go(understood, "next"), attempts=attempts)
     import sqlite3
     with sqlite3.connect(store._root / "attempts.sqlite") as db:
         rows = db.execute("select state, code from turn_attempts").fetchall()
@@ -124,17 +194,17 @@ def test_the_stop_says_what_was_done_what_comes_next_and_what_it_offers(store):
     model = through_turns(Scripted())
     understood = waits(store, model, steps.first(), "understood")
     card = steps.card(understood)
-    assert card["after"] == "understood" and card["next"] == "research"
-    assert [go["choice"] for go in card["gos"]] == ["next", "end_to_end", "done"]
-    assert card["done_said"] == steps.DONE_SAID["understood"] and steps.waiting_said(understood) == "Waiting for you: research"
+    assert card["after"] == "understood" and card["next_said"] == steps.NEXT_SAID["research"]
+    assert [d["id"] for d in card["disputes"]] == ["D1", "D2"] and not any(d["researched"] for d in card["disputes"])
+    assert card["done_said"].startswith("NM has read your papers") and steps.waiting_said(understood) == "Waiting for you: research"
 
 
 def test_a_go_ahead_is_refused_where_the_turn_does_not_wait_for_it():
+    record = {"steps": {}, "go": steps.first()}
     with pytest.raises(ValueError):
-        steps.given(steps.first(), "next", written=False)  # not waiting
+        steps.given(steps.first(), "next", held=record)  # not waiting
     waiting = steps.waited(steps.first(), "understood")
     with pytest.raises(ValueError):
-        steps.given(waiting, "sideways", written=False)
-    assert steps.given(waiting, "next", written=False) == {"mode": "steps", "allowed": ["research"], "n": 2, "waiting": None}
-    assert steps.given(waiting, "end_to_end", written=False)["allowed"] == ["research", "write", "finish"]
+        steps.given(waiting, "sideways", held={"steps": {}, "go": waiting})
     assert not steps.valid({**waiting, "allowed": ["dance"]}) and steps.valid(waiting)
+    assert steps.valid({**waiting, "disputes": ["D1"]}) and not steps.valid({**waiting, "disputes": []})

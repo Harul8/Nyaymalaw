@@ -1504,21 +1504,24 @@ def continue_turn(req: TurnOf, advocate_id: Advocate, request: Request, backgrou
 
 
 class TurnGo(BaseModel):
-    """The advocate's go-ahead at a stop of a matter worked step by step (plan AN.48, 48a3)."""
+    """The advocate's go-ahead at a stop of a matter worked step by step (plan AN.48, 48a3, 48b): the step, and for research or
+    the analyses the disputes it is for (none: every dispute that step can now take)."""
+    model_config = ConfigDict(extra='forbid')
     chat_id: str = Field(min_length=1, max_length=200)
     turn_id: str = Field(min_length=1, max_length=200)
-    choice: Literal['next', 'end_to_end', 'done']
+    choice: Literal['next', 'research', 'write', 'end_to_end', 'done']
+    disputes: list[Annotated[str, Field(min_length=1, max_length=200)]] | None = Field(default=None, min_length=1, max_length=50)
 
 
 @app.post('/api/turn/go', dependencies=[CsrfProtected])
 def go_turn(req: TurnGo, advocate_id: Advocate, request: Request, background: BackgroundTasks) -> _Released:
-    """Go ahead, End to end or Done at a stop (plan AN.48, 48a3; D134-D135, D147): the matter goes on from what it finished - the
-    next step, every remaining step, or the finish - and stops again, or is saved as one answer. Done before any analysis saves it
-    as it stands."""
+    """Go ahead, End to end or Done at a stop (plan AN.48, 48a3, 48b; D134-D135, D144, D147, D163): the matter goes on from what it
+    finished - research or the analyses for the disputes named, the next step, every remaining step, or the finish - and stops
+    again, or is saved as one answer. Done before any analysis saves it as it stands."""
     if not _session_current(request, advocate_id):
         raise HTTPException(401, 'not signed in')
     return _answered(lambda: application().go_turn(
-        advocate_id=advocate_id, chat_id=req.chat_id, turn_id=req.turn_id, choice=req.choice,
+        advocate_id=advocate_id, chat_id=req.chat_id, turn_id=req.turn_id, choice=req.choice, disputes=req.disputes,
         session_current=lambda: _session_current(request, advocate_id)), req, request, advocate_id, background)
 
 

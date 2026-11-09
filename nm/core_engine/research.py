@@ -3209,7 +3209,7 @@ def start_search(searcher, work):
 
 
 def retrieve_parts(plan, searcher, context, model=None, *, progress=None, started=None, case_index=None, done=None,
-                   settle=None):
+                   settle=None, only=None):
     """v10: every question searched side by side in the answer's order (owner, 20 Oct 2026:
     step 1), and each dispute's provisions and judgment paragraphs picked as soon as its own
     questions are searched (21 Oct 2026: step 4). Returns each dispute's part as a future, in
@@ -3221,7 +3221,9 @@ def retrieve_parts(plan, searcher, context, model=None, *, progress=None, starte
     caller as saved research is checked (validate); each is used as it is and its questions are not searched again.
     settle (plan AN.37, D87): asks the advocate code's questions and waits for the answers - settle(questions) gives each
     question's answer, by its place - which Act a name read as more than one held Act means, before the dispute's pick, and which
-    judgment a citation held more than once means, once for the turn, before the judgments cited are read. None asks nothing."""
+    judgment a citation held more than once means, once for the turn, before the judgments cited are read. None asks nothing.
+    only (plan AN.48, piece 48b; its register of exceptions, item 1): the disputes researched now - those the advocate named, with
+    those done; the plan's other disputes are not searched and have no part. None: every dispute, as before."""
     if accept(plan["proposal"], context) != plan:
         raise ValueError("Research plan differs from its original sources")
     report = progress or (lambda stage, **detail: None)
@@ -3229,6 +3231,9 @@ def retrieve_parts(plan, searcher, context, model=None, *, progress=None, starte
     groups = dispute_work(plan)
     done = {dispute_id: part for dispute_id, part in (done or {}).items() if dispute_id in groups}
     kept = {work["id"] for dispute_id in done for work in groups[dispute_id]}
+    if only is not None:
+        # 48b: the questions of a dispute not named now are not searched.
+        kept |= {work["id"] for dispute_id, works in groups.items() if dispute_id not in only for work in works}
     asked, outcomes, early = [], {}, []
     for work in plan["work"]:
         queries = search_queries(work)
@@ -3291,7 +3296,8 @@ def retrieve_parts(plan, searcher, context, model=None, *, progress=None, starte
         further, judgments = _further(model, searcher, plan, searches, picks, report, cited_now(), context)
         return _part(plan, dispute_id, searches, failures, picks, judgments, further=further, meant=meant)
     # Piece 35e: the judgments the papers and messages cite, looked up once for every dispute.
-    cited = cited_judgments(context, case_index) if len(done) < len(groups) else []
+    cited = cited_judgments(context, case_index) if any(
+        dispute_id not in done and (only is None or dispute_id in only) for dispute_id in groups) else []
     disputes = {d["id"]: d for d in (plan["proposal"].get("understanding") or {}).get("disputes", [])}
     asked_cited, cited_lock = {}, threading.Lock()
 
@@ -3308,7 +3314,7 @@ def retrieve_parts(plan, searcher, context, model=None, *, progress=None, starte
         if dispute_id in done:
             parts[dispute_id] = Future()
             parts[dispute_id].set_result(done[dispute_id])
-        else:
+        elif only is None or dispute_id in only:
             parts[dispute_id] = pool.submit(researched, dispute_id, works)
     pool.shutdown(wait=False)
     return parts
