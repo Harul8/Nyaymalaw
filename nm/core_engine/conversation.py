@@ -13,7 +13,7 @@ from copy import deepcopy
 from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 
-from nm.core_engine import questions, reasoning
+from nm.core_engine import questions, reasoning, steps as stepwise
 from nm.core_engine.documents import checked_material
 from nm.shared.model_config import DEFAULT_TURN_MODEL, TURN_CHOICES
 from nm.shared.store_port import StaleWrite
@@ -35,6 +35,9 @@ _SHOWN_FIELDS = {"turn_id", "request", "message", "documents", "activity", "elem
 #: as the step finishes (STEPS), and why it stopped where it stopped part-way (D69). Its activity is never kept beside its steps:
 #: it is derived from them (turn.activity_of), so nothing is saved twice. A record of the earlier form is read as it was saved.
 _SENT_FIELDS = (_SHOWN_FIELDS - {"activity"}) | {"steps", "stopped", "steers"}
+#: From plan AN.48 (48a2, 9 Nov 2026) a matter worked step by step also keeps its go-ahead (steps.valid): which steps the run may
+#: take, the step's number and, where it waits for the advocate, after which step. A record without it is read as before.
+_STEPPED_FIELDS = _SENT_FIELDS | {"go"}
 #: Each step's result, as it finished: the understanding of the matter and the research plan ({"interpretation", "plan"}), the time
 #: limits, each dispute's research by its id, each dispute's case by the index of its section, and what the answer has shown - its
 #: sections done, the check across them and the overview (the answering's own state). None, or empty, until the step finishes.
@@ -269,7 +272,8 @@ def shown_of(matter, *, copied=True):
     held = (matter.intake_answers or {}).get(SHOWN) if matter is not None else None
     if held is None:
         return None
-    if (not isinstance(held, dict) or set(held) not in (_SHOWN_FIELDS, _SENT_FIELDS) or not _nonempty(held["turn_id"])
+    if (not isinstance(held, dict) or set(held) not in (_SHOWN_FIELDS, _SENT_FIELDS, _STEPPED_FIELDS)
+            or not _nonempty(held["turn_id"])
             or not isinstance(held["request"], dict) or not isinstance(held["elements"], list)
             or type(held["base_version"]) is not int or held["base_version"] < 0
             or any(type(e) is not dict or type(e.get("text")) is not str for e in held["elements"])
@@ -293,7 +297,8 @@ def _sent_valid(held):
             and (stopped is None or isinstance(stopped, dict) and set(stopped) == {"code", "at"}
                  and isinstance(stopped["code"], str) and _STOP_CODE.match(stopped["code"]) is not None
                  and _nonempty(stopped["at"]))
-            and _steers_valid(held["steers"]))
+            and _steers_valid(held["steers"])
+            and ("go" not in held or stepwise.valid(held["go"])))
 
 
 def _steers_valid(steers):
@@ -308,13 +313,14 @@ def _steers_valid(steers):
         return False
 
 
-def sent(turn_id, request, message, documents, base_version, *, at, steps=None, steers=()):
+def sent(turn_id, request, message, documents, base_version, *, at, steps=None, steers=(), go=None):
     """A turn being worked on as it is saved when Send is pressed (plan AN.41, D66): its message and files, nothing done yet - or,
-    where the same message continues where it stopped, the steps it had finished (D70) and what steered it (D79)."""
+    where the same message continues where it stopped, the steps it had finished (D70) and what steered it (D79). go (plan AN.48,
+    48a2): the go-ahead of a matter worked step by step; None (end to end) keeps the record exactly as before."""
     return {"turn_id": turn_id, "request": deepcopy(request), "message": message, "documents": deepcopy(list(documents)),
             "elements": [], "metrics": {}, "at": at, "base_version": base_version,
             "steps": deepcopy(steps) if steps is not None else {name: {} if name in ("parts", "cases") else None for name in STEPS},
-            "stopped": None, "steers": deepcopy(list(steers))}
+            "stopped": None, "steers": deepcopy(list(steers)), **({"go": deepcopy(go)} if go is not None else {})}
 
 
 def hold_shown(store, context, held, *, private=False):

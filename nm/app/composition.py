@@ -253,11 +253,17 @@ class Application:
         return self._model_for(advocate_id, session_current=session_current,
                                audio_model=self.live_transcription_model)
 
-    def run_turn(self, *, advocate_id, session_current, document_refs=(), model_choice=None, effort=None, **request):
+    def run_turn(self, *, advocate_id, session_current, document_refs=(), model_choice=None, effort=None, steps=None, go=None,
+                 **request):
         """One turn for an advocate. model_choice and effort: what they chose for it (plan AN.33, D23) - the model every text call
-        of the turn runs on, and how hard each reasons; None: as configured, at the table's own levels."""
-        from nm.core_engine import routing, titles
+        of the turn runs on, and how hard each reasons; None: as configured, at the table's own levels. steps (plan AN.48, 48a):
+        "interactive" - the message is worked step by step, stopping for the advocate's go-ahead after each step; anything else -
+        end to end, as before. go: the go-ahead of a matter already worked step by step (go_turn, continue_turn)."""
+        from nm.core_engine import routing, steps as stepwise, titles
         from nm.core_engine.turn import process
+
+        if go is None and steps == 'interactive':
+            go = stepwise.first()
 
         if document_refs:
             # The documents sent with the message, read from this advocate's own space;
@@ -310,7 +316,7 @@ class Application:
                              propose=self.propose_questions, desk=self.questions.bound(advocate_id),
                              stopping=running.stop.is_set, steers=running.take, attach=running.attach,
                              # Plan AN.43 (D82): the conversation's title, on the turn's own model port - metered as any call.
-                             entitle=lambda given: titles.entitle(model, given), **request)
+                             entitle=lambda given: titles.entitle(model, given), go=go, **request)
             ended = 'finished'
             outcome = 'answered'
             if isinstance(result, Mapping):
@@ -371,10 +377,43 @@ class Application:
         if self.turn_running(advocate_id, turn_id):
             raise ConversationRefused('NM is already working on this answer.', code='turn_in_progress')
         asked = held['request']
+        # Plan AN.48 (48a5): a step of a matter worked step by step continues as the same step, under its own go-ahead.
+        go = {**held['go'], 'waiting': None} if held.get('go') else None
         return self.run_turn(advocate_id=advocate_id, session_current=session_current,
                              document_refs=tuple(asked.get('document_refs', ())), model_choice=asked.get('model'),
                              effort=asked.get('effort'), message=held['message'], turn_id=turn_id,
-                             chat_id=asked['chat_id'])
+                             chat_id=asked['chat_id'], go=go)
+
+    def go_turn(self, *, advocate_id, chat_id, turn_id, choice, session_current):
+        """The advocate's go-ahead at a stop (plan AN.48, 48a3): "next" - the step after the one the matter waits after; "end_to_end"
+        - every remaining step without stopping (D135); "done" - finish with what is written and save it as one answer (D147), or,
+        before any analysis is written, save the matter as it stands with no step run. ConversationRefused where the matter does not
+        wait for the advocate here, or the go-ahead is not one its stop offers."""
+        from nm.core_engine import steps as stepwise, turn
+        from nm.core_engine.conversation import ConversationRefused
+        matter, held = self._held(advocate_id, chat_id)
+        if held is None or held['turn_id'] != turn_id or stepwise.waiting_of(held) is None:
+            raise ConversationRefused('This matter is not waiting for your go-ahead.', status=409, code='not_waiting')
+        if self.turn_running(advocate_id, turn_id):
+            raise ConversationRefused('NM is already working on this answer.', code='turn_in_progress')
+        written = bool((held['steps'].get('answered') or {}).get('sections'))
+        try:
+            go = stepwise.given(held['go'], choice, written=written)
+        except ValueError as exc:
+            raise ConversationRefused('NM cannot take that go-ahead for this matter now.', status=409,
+                                      code='not_offered') from exc
+        if go is None:
+            saved = turn.done(self.store, matter, advocate_id, turn_id,
+                              running=lambda held_turn: self.turn_running(advocate_id, held_turn),
+                              session_current=session_current)
+            if saved is None:
+                raise ConversationRefused('This matter is not waiting for your go-ahead.', status=409, code='not_waiting')
+            return saved
+        asked = held['request']
+        return self.run_turn(advocate_id=advocate_id, session_current=session_current,
+                             document_refs=tuple(asked.get('document_refs', ())), model_choice=asked.get('model'),
+                             effort=asked.get('effort'), message=held['message'], turn_id=turn_id,
+                             chat_id=asked['chat_id'], go=go)
 
     def discard_turn(self, *, advocate_id, chat_id, turn_id, session_current):
         """Discard (plan AN.41, D71): the red message and its buttons go; the answer that stopped is saved as it stopped. Returns
@@ -536,7 +575,8 @@ def _how_a_turn_ended(exc) -> str:
     from nm.core_engine.documents import DocumentRefused
     from nm.shared.external_ai_contracts import ModelPermissionRefused
     if isinstance(exc, ConversationRefused):
-        if exc.code == 'stopped':
+        # Plan AN.48: a step of a matter worked step by step ends waiting for the advocate, as an answer the advocate stopped does.
+        if exc.code in ('stopped', 'waiting'):
             return 'stopped'
         if exc.status in (401, 402, 403, 422, 429):  # signed out, allowance, not permitted, not accepted, too many
             return 'refused'

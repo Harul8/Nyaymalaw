@@ -99,7 +99,7 @@ class TurnCalls:
     their receipts. No nested stage receives a fresh allowance.
     """
     def __init__(self, model, *, corrections_used=0, reserve_correction=None, effort=reasoning.DEFAULT_CHOICE, chosen=None,
-                 stronger=None, stopping=None):
+                 stronger=None, stopping=None, gate=None):
         if (type(corrections_used) is not int or not 0 <= corrections_used <= ALLOWANCE
                 or (reserve_correction is not None and not callable(reserve_correction))):
             raise ValueError("Correction ownership must come from a checked attempt")
@@ -128,6 +128,9 @@ class TurnCalls:
         self.stronger, self.evidence = stronger, set()
         #: Whether the advocate has stopped the answer (plan AN.42, D78): asked before every call is sent. None: never stopped.
         self.stopping = stopping
+        #: Plan AN.48 (48a1): told each call's operation before it is sent, for a matter worked step by step - it raises where that
+        #: call belongs to a step the advocate has not yet allowed (steps.Gate.call). None: every call is sent, as before.
+        self.gate = gate
 
     def successor(self):
         """The calls of the same turn as it goes on after a steer (plan AN.42, D79): the record of its calls, the corrections made
@@ -135,7 +138,8 @@ class TurnCalls:
         repaired anew. This one sends no further call: whatever of the earlier work is still under way stops at its next call."""
         with self._lock:
             after = TurnCalls(self.inner, corrections_used=self.corrections_used, reserve_correction=self.reserve_correction,
-                              effort=self.effort, chosen=self.chosen, stronger=self.stronger, stopping=self.stopping)
+                              effort=self.effort, chosen=self.chosen, stronger=self.stronger, stopping=self.stopping,
+                              gate=self.gate)
             after.calls, after.expected, after.evidence = self.calls, dict(self.expected), set(self.evidence)
             self.stopping = lambda: True
         return after
@@ -223,6 +227,8 @@ class TurnCalls:
             raise ReleaseWithheld("This turn's release scope is withheld")
         if self.stopping is not None and self.stopping():
             raise StopRequested("The advocate stopped this answer")
+        if self.gate is not None:
+            self.gate(prompt.operation)
         feedback = self.correction
         if feedback is not None and feedback["operation"] == prompt.operation:
             payload = json.loads(prompt.user)

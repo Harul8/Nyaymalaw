@@ -18,7 +18,7 @@ from datetime import datetime, timezone
 
 from nm.core_engine import answer_sections, answer_sources, calculation, case_strength, checklist, estimates, questions
 from nm.core_engine import reasoning, replay_scope, research, response_rendering, response_writer
-from nm.core_engine import titles, understanding
+from nm.core_engine import steps as stepwise, titles, understanding
 from nm.core_engine.calls import CorrectionUnavailable, ReleaseWithheld, StopRequested, TurnCalls
 from nm.core_engine.conversation import (
     ConversationRefused, TurnContext, asking_of, chat_matter_id, checked_rows, commit_turn, committed_version, digest,
@@ -100,6 +100,10 @@ STOPS = {
     "stopped": "You stopped NM part-way through this answer.",
     "not_saved": "NM finished this answer but could not save it.",
     "failed": "Something went wrong on NM's side part-way through this message.",
+    # Plan AN.48 (D134): a matter worked step by step stops for the advocate's go-ahead after each step; Done before any analysis
+    # was written saves it as it stands (48a3).
+    "waiting": "NM is waiting for your go-ahead on this matter.",
+    "done": "You finished this matter here.",
 }
 #: What each cause needs before Continue can work (D70): put right first, said with the red message.
 STOP_NEEDS = {
@@ -469,15 +473,18 @@ class _Keeper:
         if thread is not None and thread is not threading.current_thread():
             thread.join()
 
-    def stop(self, code, *, answered=None):
+    def stop(self, code, *, answered=None, waiting=None):
         """The turn stopped part-way (D69): why, saved with everything it finished, at once. answered: the whole answer, where it
-        was finished but not saved. Raises nothing; False where it could not be written."""
+        was finished but not saved. waiting (plan AN.48, 48a2): the step after which a matter worked step by step waits for the
+        advocate's go-ahead. Raises nothing; False where it could not be written."""
         self.close()
 
         def stopped(held):
             held["stopped"] = {"code": code, "at": datetime.now(timezone.utc).isoformat()}
             if answered is not None:
                 held["elements"], held["steps"] = answered[0], {**held["steps"], "answered": answered[1]}
+            if waiting is not None:
+                held["go"] = stepwise.waited(held["go"], waiting)
         return self.now(stopped)
 
     # The steps, as each finishes (D67).
@@ -500,7 +507,8 @@ class _Keeper:
 
 
 def prepare(model, context, searcher, *, case_index=None, provision_reader=None, progress=None,
-            held_acts=None, shown=None, ask=None, keep=None, resume=None, steered=False, on_understood=None, settle=None):
+            held_acts=None, shown=None, ask=None, keep=None, resume=None, steered=False, on_understood=None, settle=None,
+            gate=None):
     """Prepare and admit one response, dispute by dispute (turn v7, owner decisions P25-P27, P29).
     No persistence or external action occurs here. shown (P26): told, each time the answer
     shows more, its elements so far and the answering's state they come from (its sections done,
@@ -518,17 +526,39 @@ def prepare(model, context, searcher, *, case_index=None, provision_reader=None,
     is done. steered (plan AN.42, D79): the conversation carries what the advocate steered the answer with since those steps were
     saved - the understanding is made again from it, each dispute's research kept where the new plan asks exactly what it
     answered, and each section shown reviewed again against it from its own words. on_understood (plan AN.43): told the context and the
-    plan as soon as the matter is understood (or was, before it stopped), for what is made from them beside the answer."""
+    plan as soon as the matter is understood (or was, before it stopped), for what is made from them beside the answer.
+    gate (plan AN.48, 48a1): where a matter worked step by step stops for the advocate's go-ahead (steps.Gate) - after the
+    understanding, after the research (every dispute's research waited for and saved first) and before the check across the
+    analyses - raising steps.Waiting. None: end to end, as before."""
     with replay_scope.turn():
         return _prepare(model, context, searcher, case_index=case_index, provision_reader=provision_reader,
                         progress=progress, held_acts=held_acts, shown=shown, ask=ask, keep=keep, resume=resume,
-                        steered=steered, on_understood=on_understood, settle=settle)
+                        steered=steered, on_understood=on_understood, settle=settle, gate=gate)
+
+
+def _all_researched(parts, kept, keep):
+    """Plan AN.48 (48a1): the research step ends only when every dispute's research has finished, each saved as it finished; a
+    dispute whose research failed fails the step as today, after what did finish is saved."""
+    failed = None
+    for dispute_id, future in parts.items():
+        if dispute_id in kept["parts"]:
+            continue
+        try:
+            part = future.result()
+        except Exception as exc:  # noqa: BLE001 -- the first failure is raised to its owner below, once the rest is saved
+            failed = failed or exc
+            continue
+        if keep is not None:
+            keep.part(dispute_id, part)  # saved now, whether or not the dispute's own callback has run yet
+    if failed is not None:
+        raise failed
 
 
 def _prepare(model, context, searcher, *, case_index, provision_reader, progress, held_acts, shown, ask, keep, resume,
-             steered, on_understood, settle=None):
+             steered, on_understood, settle=None, gate=None):
     report = _reporter(progress)
     calls = model if isinstance(model, TurnCalls) else TurnCalls(model)
+    gate = gate if gate is not None else stepwise.Gate(None)
     kept = _kept(resume, context, report) if resume and not steered else _NOTHING_KEPT
     report("understanding")
     # Plan AN.37 (D41, D45): what the turn is expected to cost - roughly now, from the papers sent, and again once its plan is
@@ -542,8 +572,10 @@ def _prepare(model, context, searcher, *, case_index, provision_reader, progress
     if kept["understood"] is not None:
         interpreted, plan = kept["understood"]
     else:
+        # Plan AN.48 (D141): a step that may not research begins no search either.
         interpreted, plan = _interpreted(calls, context, report,
-                                         early=lambda work: started.update(research.start_search(searcher, work)))
+                                         early=(lambda work: started.update(research.start_search(searcher, work)))
+                                         if gate.allows("research") else None)
         if keep is not None:
             keep.understood(interpreted, plan)
         if steered and resume:
@@ -560,6 +592,8 @@ def _prepare(model, context, searcher, *, case_index, provision_reader, progress
         disputes = len(response_writer.parts({"contract": research.CONTRACT, "plan": plan}))
         calls.expect("planned", estimates.turn_planned_usd(priced, calls.estimate()["spent_usd"], max(1, disputes - 1),
                                                            calls.effort))
+    # Plan AN.48 (D134, 48a1): understood - a matter worked step by step stops here for the advocate's go-ahead to research.
+    gate.after("understand")
     # Step 4 (owner, 21 Oct 2026; P26 as first decided): each dispute is researched as its own
     # part, and its section is written as soon as that part is ready; the time limits are
     # worked out beside the search, only where research is needed.
@@ -582,6 +616,10 @@ def _prepare(model, context, searcher, *, case_index, provision_reader, progress
                   working.result() if working is not None else calculation.skipped())
     if keep is not None and kept["limits"] is None:
         keep.limits(limits)
+    if not gate.allows("write"):
+        # Plan AN.48 (48a1): researched - every dispute's research waited for and saved, then the turn stops for the go-ahead.
+        _all_researched(parts, kept, keep)
+        gate.after("research")
     later = _Later(asking, context) if asking is not None else None
     if later is not None:
         context = later.context()
@@ -613,6 +651,9 @@ def _prepare(model, context, searcher, *, case_index, provision_reader, progress
         case_index=case_index, provision_reader=provision_reader, report=report, released=released,
         researched=researched, contract=response_writer.CASED_CONTRACT, later=later, done=kept["answered"],
         cases=kept["cases"], case_done=keep.case if keep is not None else None, steered=steered and bool(kept["answered"]))
+    # Plan AN.48 (48a1): written - an answer with several analyses stopped before the check across them (steps.Gate.call); one
+    # with a single analysis stops here, before it is saved.
+    gate.after("write")
     if later is not None:
         context = later.context()
     record, sources, execution = researched.whole()
@@ -729,6 +770,24 @@ def discard(store, matter, advocate_id, turn_id, *, running=lambda turn_id: Fals
     return save_shown(store, matter, advocate_id, held, session_current=session_current)
 
 
+#: Said above a matter worked step by step that the advocate finished before any analysis was written (plan AN.48, 48a3).
+DONE_SAID = (STOPS["done"] + " What NM did before you finished is below; what it was not asked to do is marked as not "
+             "finished.")
+
+
+def done(store, matter, advocate_id, turn_id, *, running=lambda turn_id: False, session_current):
+    """Done (plan AN.48, 48a3; D147) before any analysis is written: the matter waiting for the advocate is saved as it stands,
+    as Discard saves (D71), with code's words that the advocate finished it here; no step runs. Returns the saved response, or None
+    where that turn does not wait for the advocate here."""
+    try:
+        held = shown_of(matter)
+    except ValueError:
+        return None
+    if held is None or held["turn_id"] != turn_id or running(turn_id) or stepwise.waiting_of(held) is None:
+        return None
+    return save_shown(store, matter, advocate_id, held, session_current=session_current, service_status=DONE_SAID)
+
+
 def _validate_sections(activity, context, elements):
     """The check of a v6 or v7 turn as it is saved: its understanding, research and time limits,
     every section, trim, correction, cross-check and overview bound to their evidence
@@ -831,7 +890,7 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
             attempts: TurnAttemptPort | None = None, case_index=None, provision_reader=None,
             progress=None, documents=(), held_acts=None, running=lambda turn_id: False,
             chosen_model=None, effort=None, propose=None, desk=None, stronger=None, stopping=None, steers=None,
-            attach=None, entitle=None):
+            attach=None, entitle=None, go=None):
     """One turn. chosen_model and effort: what the advocate chose for it (plan AN.33, D23) - the model, which the caller's model
     port already runs every call on, and the effort, which moves every call of the turn (calls.TurnCalls); both recorded with the
     turn's metrics, and in its request where they are not the defaults. None: not chosen (the defaults, unrecorded).
@@ -850,7 +909,11 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
     versions - write(change) runs change(context) under the turn's lock of writes and keeps the context it returns.
     entitle (plan AN.43, D82, D84): given what is known of the matter (titles.material), the title the model writes for the
     conversation, as code admits it, or None; asked once the matter is understood, beside the answer, where the conversation has no
-    title yet - once named, it stays as named."""
+    title yet - once named, it stays as named.
+
+    go (plan AN.48, piece 48a): the go-ahead of a matter worked step by step (steps.first, steps.given) - which steps this run may
+    take. The run stops when they are done, with the code 'waiting' and everything it finished kept (as a stop keeps it, D69), for
+    the advocate's next go-ahead; each step claims an attempt of its own (D150). None: end to end, exactly as before."""
     if not session_current():
         raise ConversationRefused("Sign in again before continuing.", status=401)
     effort = reasoning.DEFAULT_CHOICE if effort is None else effort
@@ -902,7 +965,8 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
     if attempts is None:
         raise ConversationRefused("Conversation processing is not configured.", status=503,
                                   code="attempt_storage_unavailable")
-    identity = digest([advocate_id, context.chat_id, turn_id])
+    gate = stepwise.Gate(go)
+    identity = digest([advocate_id, context.chat_id, turn_id, *stepwise.attempt_part(go)])
     # The committed conversation the request was made on: what a turn shows while it works
     # is saved beside it, and a same request sent again still matches (P27).
     binding = digest({"request": context.request, "version": committed_version(context.rows),
@@ -921,7 +985,8 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
 
     calls = TurnCalls(model, corrections_used=claim["corrections_used"],
                       reserve_correction=lambda: attempts.consume_correction(identity, token),
-                      effort=effort, chosen=chosen, stronger=stronger, stopping=stopping)
+                      effort=effort, chosen=chosen, stronger=stronger, stopping=stopping,
+                      gate=gate.call if gate.stepwise else None)
     # What the answer shows as each part passes is saved beside the conversation then (P27),
     # and the page told how much there is to show (P26).
     holder, report = {"context": context, "shown": 0, "asking": None, "model": None}, _reporter(progress)
@@ -938,7 +1003,7 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
     # sent again - Continue - starts from what it saved (D70), with what steered it (D79).
     resume = (None if same is None else same["steps"] if "steps" in same else steps_from(same))
     held = sent(turn_id, context.request, context.message, context.documents, base,
-                at=datetime.now(timezone.utc).isoformat(), steps=resume, steers=same.get("steers", ()) if resume else ())
+                at=datetime.now(timezone.utc).isoformat(), steps=resume, steers=same.get("steers", ()) if resume else (), go=go)
     if resume is not None:
         held["elements"], held["metrics"] = same["elements"], same["metrics"]
     if held["steers"]:
@@ -1045,6 +1110,10 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
                                    if question.get("asked_by", "model") != "code"]
             elif propose is None:
                 holder["model"] = []
+            elif gate.stepwise and resume is not None and resume.get("limits") is not None:
+                # Plan AN.48 (48a1): a matter worked step by step is asked its questions once, in the step that researched it (its
+                # time limits are saved after them); where that step asked nothing, a later step does not ask again.
+                holder["model"] = []
             else:
                 understanding = (plan.get("proposal") or {}).get("understanding") or {}
                 disputes = [dispute["id"] for dispute in understanding.get("disputes") or []]
@@ -1095,7 +1164,7 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
                 elements, activity, metrics = prepare(calls, context.payload(), searcher,
                     case_index=case_index, provision_reader=provision_reader, progress=progress,
                     held_acts=held_acts, shown=shown, ask=ask, keep=keeper, resume=resume, steered=steered,
-                    on_understood=entitled, settle=settle)
+                    on_understood=entitled, settle=settle, gate=gate)
                 break
             except StopRequested:
                 taken = steers() if steers is not None else []
@@ -1135,6 +1204,18 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
     except AttemptRefused as exc:
         keeper.close()
         raise _attempt_refusal(exc) from exc
+    except stepwise.Waiting as exc:
+        # Plan AN.48 (D134, 48a1-48a2): the step the advocate allowed is done; the matter waits for their go-ahead, with all it
+        # finished kept - the title first, where it is still being written. Not a failure: the step's attempt is retryable, so
+        # that the go-ahead (or Continue) goes on from here.
+        if titling:
+            titling["thread"].join(TITLE_WAIT)
+        refusal = ConversationRefused(STOPS["waiting"], status=409, code="waiting", retryable=True)
+        keeper.stop("waiting", waiting=exc.after)
+        refusal.kept = True
+        finish("retryable", "waiting")
+        refusal.metrics = calls.metrics()
+        raise refusal from exc
     except StopRequested as exc:
         # Plan AN.42 (D78): stopped by the advocate after the step in progress; every piece finished is kept.
         refusal = ConversationRefused(STOPS["stopped"] + " What NM had finished is kept.", status=409, code="stopped",

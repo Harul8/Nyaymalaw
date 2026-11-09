@@ -704,6 +704,17 @@ button.board-card:focus-visible { outline: 2px solid var(--accent); outline-offs
 .failure.stopped .refusal-head { color: #a3271b; font-weight: 600; margin: 0 0 0.4rem; }
 .failure.stopped .stopped-actions { display: flex; gap: 0.5rem; margin-top: 0.6rem; }
 .failure.limit .refusal-head { color: #4f3a10; margin: 0 0 0.4rem; }
+/* A matter worked step by step waiting for the advocate's go-ahead (plan AN.48, 48a4): the accent of a step to take, not red. */
+.waiting-card {
+  border: 1px solid var(--accent-b); background: var(--accent-w); color: var(--ink);
+  padding: 0.85rem 1rem; border-radius: 10px; font-size: 0.92rem; margin: 0 0 1.6rem;
+}
+.waiting-card .waiting-head { font-weight: 600; margin: 0 0 0.35rem; }
+.waiting-card .waiting-next { margin: 0 0 0.5rem; color: var(--ink-2); }
+.waiting-card .waiting-noticed-head { margin: 0.4rem 0 0.2rem; color: var(--ink-2); }
+.waiting-card .waiting-noticed { margin: 0 0 0.5rem 1.1rem; padding: 0; color: var(--ink-2); }
+.waiting-card .waiting-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.6rem; }
+.rail .waiting-line, .row .waiting-line { color: var(--accent); }
 
 /* THE ANSWER'S OWN HEADER (plan AN.20; the signed-off design): the NM mark, Nyaymalaw and the time the
    answer was made, above its first line. */

@@ -48,8 +48,12 @@ import traceback
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
+#: The code that runs: the checkout this tool is in - a copy where a piece is built (build rules, AN.48 column 6).
 ROOT = Path(__file__).resolve().parents[2]
-DATA = ROOT / ".nm" / "baselines" / "an48"
+#: The installation whose settings, key and recording it reads: NM_BASELINE_HOME, or the same checkout. A copy's code is so replayed
+#: against the one recording, which never leaves the installation's own folder.
+HOME = Path(os.environ.get("NM_BASELINE_HOME") or ROOT)
+DATA = HOME / ".nm" / "baselines" / "an48"
 ADVOCATE = "baseline@example.test"
 TURN_ID = "turn-an48-baseline-1"
 VERSIONS = {"harness": "an48-baseline-v1"}
@@ -75,12 +79,15 @@ def unseal(path, key):
 def load_environment():
     sys.path.insert(0, str(ROOT))
     os.chdir(ROOT)
+    import nm
+    if not Path(nm.__file__).resolve().is_relative_to(ROOT.resolve()):
+        sys.exit(f"The code imported is not this checkout's ({nm.__file__}); nothing run.")
     from nm.shared.model_config import load_dotenv
-    load_dotenv(ROOT / ".env")
+    load_dotenv(HOME / ".env")
 
 
 def matter_key():
-    return os.environ.get("NM_MATTER_KEY") or (ROOT / ".nm" / "matter.key").read_text(encoding="utf8").strip()
+    return os.environ.get("NM_MATTER_KEY") or (HOME / ".nm" / "matter.key").read_text(encoding="utf8").strip()
 
 
 def run_environment(run_dir):
@@ -482,7 +489,7 @@ class SearchReplayer:
 # --------------------------------------------------------------------------------------------------------------- the turn ---
 def build(run_dir, model, search, case_index, held_acts):
     from nm.app.composition import Application
-    app = Application(root=ROOT, model=model, legal_search=search, environment=run_environment(run_dir), audit_root=run_dir)
+    app = Application(root=HOME, model=model, legal_search=search, environment=run_environment(run_dir), audit_root=run_dir)
     app.case_index = case_index
     app.held_acts = held_acts
     return app
@@ -511,6 +518,35 @@ def run(app, inputs):
                    "code": getattr(exc, "code", None), "kept": getattr(exc, "kept", None),
                    "trace": traceback.format_exc(limit=12)}
     return result, failure, time.time() - started
+
+
+def run_steps(app, inputs, key, run_dir):
+    """The same message worked step by step (plan AN.48, 48a): sent, then Go ahead at each stop until it is saved. Each go-ahead is
+    given as go_turn gives it (steps.given from the saved stop), with the saved papers as the first run had them. Returns (result,
+    failure, seconds, the stops it made)."""
+    from nm.core_engine import steps as stepwise
+    from nm.core_engine.conversation import ConversationRefused, chat_matter_id, shown_of, stored_chat
+    from nm.shared.store_file_store import FileMatterStore
+    started, stops, result, failure, go = time.time(), [], None, None, stepwise.first()
+    store = FileMatterStore(run_dir, key=key)
+    for _ in range(6):
+        try:
+            result = app.run_turn(advocate_id=ADVOCATE, session_current=lambda: True, message=inputs["message"],
+                                  turn_id=TURN_ID, documents=copy.deepcopy(inputs["documents"]), go=go)
+            break
+        except ConversationRefused as exc:
+            if exc.code != "waiting":
+                failure = {"type": type(exc).__qualname__, "message": str(exc)[:300], "code": exc.code,
+                           "kept": getattr(exc, "kept", None), "trace": traceback.format_exc(limit=12)}
+                break
+            held = shown_of(store.load(chat_matter_id(ADVOCATE, stored_chat(ADVOCATE, None, TURN_ID))))
+            stops.append(stepwise.waiting_of(held))
+            go = stepwise.given(held["go"], "next", written=bool((held["steps"]["answered"] or {}).get("sections")))
+        except Exception as exc:  # noqa: BLE001 -- how the turn ended is the finding; kept, not hidden
+            failure = {"type": type(exc).__qualname__, "message": str(exc)[:300], "code": getattr(exc, "code", None),
+                       "kept": getattr(exc, "kept", None), "trace": traceback.format_exc(limit=12)}
+            break
+    return result, failure, time.time() - started, stops
 
 
 def saved(run_dir, key):
@@ -664,8 +700,8 @@ def prepare(args):
     from nm.shared.store_file_store import FileMatterStore
     import secrets
     key = matter_key()
-    owner = Path(os.environ.get("NM_MATTER_STORE") or ROOT / ".nm")
-    owner = owner if owner.is_absolute() else ROOT / owner
+    owner = Path(os.environ.get("NM_MATTER_STORE") or HOME / ".nm")
+    owner = owner if owner.is_absolute() else HOME / owner
     if not args.conversation or args.row is None:
         sys.exit("prepare needs --conversation (a conversation's file in the store) and --row; nothing written.")
     matter = FileMatterStore(owner, key=key).load(args.conversation)
@@ -732,9 +768,9 @@ def record(args):
     run_dir = fresh_run_dir("record")
     env = run_environment(run_dir)
     sink, book = ModelSink(), Book()
-    search = SearchRecorder(HybridSearcher.local(root=ROOT, corpus_dir=env.get("NM_CORPUS_DIR")), book)
-    case_index = Recorded(CaseIdentityIndex.local(ROOT), "case_index", book)
-    held_acts = Recorded(HeldActs(env.get("NM_BARE_ACTS_DIR") or ROOT / "legal_database" / "raw_data" / "BareActs"),
+    search = SearchRecorder(HybridSearcher.local(root=HOME, corpus_dir=env.get("NM_CORPUS_DIR")), book)
+    case_index = Recorded(CaseIdentityIndex.local(HOME), "case_index", book)
+    held_acts = Recorded(HeldActs(env.get("NM_BARE_ACTS_DIR") or HOME / "legal_database" / "raw_data" / "BareActs"),
                          "held_acts", book)
     app = build(run_dir, recording_adapter(env, sink), search, case_index, held_acts)
     setting_before = clock_contracts.setting()
@@ -812,14 +848,22 @@ def replay(args):
     app = build(run_dir, replay_adapter(env, port), SearchReplayer(book), Replayed("case_index", book), Replayed("held_acts", book))
     stop, started = threading.Event(), time.time()
     threading.Thread(target=heartbeat, args=(stop, started), kwargs={"book": book, "replay": port}, daemon=True).start()
-    result, failure, seconds = run(app, inputs)
+    stops = None
+    if args.steps:
+        result, failure, seconds, stops = run_steps(app, inputs, key, run_dir)
+    else:
+        result, failure, seconds = run(app, inputs)
     stop.set()
     state = saved(run_dir, key)
     before = recording["saved"]
-    row_diffs = differences(normal(before["rows"]), normal(state["rows"]))
-    result_diffs = differences(normal(recording["result"]), normal(result))
+    # Worked step by step, each run keeps the calls it made itself (as Continue does): the saved answer's metrics are set aside, and
+    # that every recorded call was made, each exactly once, is what the counts below show.
+    drop = VOLATILE | {"metrics"} if args.steps else VOLATILE
+    row_diffs = differences(normal(before["rows"], drop), normal(state["rows"], drop))
+    result_diffs = differences(normal(recording["result"], drop), normal(result, drop))
     unused = [i for i in range(len(port.records)) if i not in port.used]
-    report = {"mode": "replay", "tag": args.tag, "replayed_on": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+    report = {"mode": "replay step by step" if args.steps else "replay", "tag": args.tag, "stops": stops,
+              "replayed_on": datetime.now(timezone.utc).isoformat(timespec="seconds"),
               "seconds": round(seconds, 1), "model_answers_served": len(port.served), "model_requests_missed": len(port.misses),
               "recorded_answers_unused": len(unused), "held_law_served": book.served, "held_law_missed": len(book.misses),
               "held_law_reused": len(book.reused), "saved_rows_equal": not row_diffs, "result_equal": not result_diffs,
@@ -852,6 +896,7 @@ def main():
     parser.add_argument("--recording")
     parser.add_argument("--tag")
     parser.add_argument("--shift-day", type=int, default=0)
+    parser.add_argument("--steps", action="store_true", help="replay the message worked step by step (plan AN.48, 48a)")
     parser.add_argument("--conversation")
     parser.add_argument("--row", type=int)
     args = parser.parse_args()

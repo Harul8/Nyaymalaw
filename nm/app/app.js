@@ -1021,6 +1021,13 @@ function historyChatRow(chat, generation, session) {
   details.textContent = `${chat.turn_count} message${chat.turn_count === 1 ? '' : 's'}`
     + historyWhen(chat.last_updated);
   row.append(title, details);
+  // Plan AN.48 (D164): where the conversation waits for the advocate, and for what.
+  if (typeof chat.waiting === 'string' && chat.waiting) {
+    const waiting = document.createElement('div');
+    waiting.className = 'hint waiting-line';
+    waiting.textContent = chat.waiting;
+    row.appendChild(waiting);
+  }
   const open = () => {
     const selection = restorePendingChat(chat.chat_id);
     const selectedGeneration = state.railGeneration;
@@ -5402,9 +5409,45 @@ function renderWork(work, parts, where = null) {
   return box;
 }
 
+// PLAN AN.48 (48a4; D134-D135, D147, D164): A MATTER WORKED STEP BY STEP WAITS FOR THE ADVOCATE. Not a failure, so not red: what
+// NM has done, what comes next, the go-aheads it offers - the next step, End to end, Done - and what it noticed that was not asked,
+// offered and never done. In the conversation area only: the board and the reading pane are unchanged (D60).
+function renderWaiting(entry) {
+  const card = entry.stopped.waiting;
+  const make = (tag, className, text) => {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  };
+  const box = make('div', 'waiting-card');
+  box.setAttribute('role', 'status');
+  box.appendChild(make('p', 'waiting-head', card.done_said));
+  box.appendChild(make('p', 'waiting-next', card.next_said));
+  if (Array.isArray(card.noticed) && card.noticed.length) {
+    box.appendChild(make('p', 'waiting-noticed-head', 'NM noticed, though you did not ask - say if you want it looked at:'));
+    const list = make('ul', 'waiting-noticed');
+    for (const item of card.noticed) list.appendChild(make('li', '', item));
+    box.appendChild(list);
+  }
+  if (entry.goError) box.appendChild(make('p', 'refusal-gap', `Not taken: ${entry.goError}`));
+  const buttons = make('div', 'waiting-actions');
+  (card.gos || []).forEach((go, index) => {
+    const button = make('button', index === 0 ? '' : 'ghost', go.said);
+    button.type = 'button';
+    button.dataset.choice = go.choice;
+    button.disabled = Boolean(activeDelivery);
+    button.addEventListener('click', () => goTurn(entry, go.choice));
+    buttons.appendChild(button);
+  });
+  box.appendChild(buttons);
+  return box;
+}
+
 // The red message (D69): why, what is finished and what is not, what must be put right first; Continue and Discard (D70, D71).
 function renderStopped(entry) {
   const stopped = entry.stopped || {};
+  if (stopped.code === 'waiting' && stopped.waiting) return renderWaiting(entry);
   const box = document.createElement('div');
   box.className = 'failure stopped';
   box.setAttribute('role', 'status');
@@ -5651,6 +5694,9 @@ async function send(message, { workProduct, keepInMatter = false, fromBox = fals
     ...(documents.length ? { document_refs: documents.map((document) => document.document_ref) } : {}),
     // Plan AN.33 (D23): the model and the effort chosen for this message travel where they are not the defaults.
     ...(state.turnChoice || {}),
+    // Plan AN.48 (D134): every message is worked step by step, stopping for the advocate's go-ahead after each step; End to end
+    // is given at a stop (D135).
+    steps: 'interactive',
   });
   activeIntent.pending.push(entry);
   state.turns.push(entry);
@@ -5757,6 +5803,12 @@ async function deliver(entry) {
       entry.state = 'stopped';
       entry.error = null;
       refreshStopped(entry, entry.chatId || intent.chatId || entry.request?.chat_id);
+    } else if (entry.endpoint === '/api/turn/go' && e.status === 409) {
+      // Plan AN.48: a go-ahead the matter no longer waits for is said on its card, read again from the conversation.
+      entry.goError = (entry.refusal && entry.refusal.why) || e.message;
+      entry.state = 'stopped';
+      entry.error = null;
+      refreshStopped(entry, entry.chatId || intent.chatId || entry.request?.chat_id);
     }
     // D73: no reply at all - the server is being restarted. The page waits for it and follows the answer, which NM continues.
     if (!e.status && !entry.cancelled && !(e.name === 'AbortError')) {
@@ -5813,6 +5865,8 @@ async function refreshStopped(entry, chatId) {
     entry.chatId = chatId;
     takePending(entry, pending);
     repaint();
+    // Plan AN.48 (D139): a matter waiting for the advocate shows what it has so far on the board - its disputes once understood.
+    if (pending.stopped && pending.stopped.code === 'waiting') loadChatBoard(chatId);
   } catch (error) { /* the red message says what the refusal said */ }
 }
 
@@ -5899,6 +5953,19 @@ function continueTurn(entry, { byItself = false } = {}) {
   }
   entry.endpoint = '/api/turn/continue';
   entry.envelope = JSON.stringify({ chat_id: chatId, turn_id: entry.turnId });
+  entry.stopped = null;
+  deliver(entry);
+}
+
+// GO AHEAD, END TO END, DONE (plan AN.48, 48a3): the matter waiting for the advocate goes on - the next step, every remaining step, or
+// the finish - and stops again or is saved as one answer; Done before any analysis saves it as it stands.
+function goTurn(entry, choice) {
+  if (activeDelivery || !ownsIntent(entry.context)) return;
+  const chatId = entry.chatId || entry.context.chatId || entry.request?.chat_id;
+  if (!chatId) return;
+  entry.goError = null;
+  entry.endpoint = '/api/turn/go';
+  entry.envelope = JSON.stringify({ chat_id: chatId, turn_id: entry.turnId, choice });
   entry.stopped = null;
   deliver(entry);
 }

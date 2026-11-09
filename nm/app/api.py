@@ -16,7 +16,7 @@ from copy import deepcopy
 from datetime import date
 from math import ceil
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 from urllib.parse import quote, unquote
 from fastapi import (BackgroundTasks, Cookie, Depends, FastAPI, Header, HTTPException, Query, Request, Response,
                      WebSocket, WebSocketDisconnect)
@@ -44,6 +44,7 @@ from nm.core_engine.turn import RECORDS_CONTRACT as RECORDS_CORE_TURN
 from nm.core_engine import answer_sections
 from nm.core_engine.turn import LEGACY_CONTRACT as LEGACY_CORE_TURN, STOP_NEEDS, STOPS, activity_of, saved_rows
 from nm.core_engine import research, response_writer
+from nm.core_engine import steps as stepwise
 from nm.core_engine.retrieval import offered
 from nm.core_engine import checklist
 from nm.core_engine.retrieval import SearchUnavailable
@@ -383,6 +384,9 @@ class TurnRequest(BaseModel):
     #: Documents sent with this message, by their exact references (owner decisions,
     #: 15 Oct 2026); each is read from the signed-in advocate's own space only.
     document_refs: list[Annotated[str, Field(max_length=120)]] = Field(default_factory=list, max_length=TURN_DOCUMENT_LIMIT)
+    #: Plan AN.48 (48a; D134-D135): "interactive" - the message is worked step by step, stopping for the advocate's go-ahead after
+    #: each step (the page asks for it unless the advocate chose end to end); absent or "end_to_end" - end to end, as before.
+    steps: Literal['interactive', 'end_to_end'] | None = None
     today: date | None = None
     jurisdiction: str = FORUM
     work_product: str = ""
@@ -1478,7 +1482,7 @@ def turn(req: TurnRequest, advocate_id: Advocate, request: Request, background: 
     return _answered(lambda: application().run_turn(advocate_id=advocate_id,
             message=req.message, turn_id=req.turn_id, chat_id=req.chat_id,
             matter_id=req.matter_id, expected_version=req.expected_version,
-            document_refs=req.document_refs, model_choice=req.model, effort=req.effort,
+            document_refs=req.document_refs, model_choice=req.model, effort=req.effort, steps=req.steps,
             session_current=lambda: _session_current(request, advocate_id)), req, request, advocate_id, background)
 
 
@@ -1496,6 +1500,25 @@ def continue_turn(req: TurnOf, advocate_id: Advocate, request: Request, backgrou
         raise HTTPException(401, 'not signed in')
     return _answered(lambda: application().continue_turn(
         advocate_id=advocate_id, chat_id=req.chat_id, turn_id=req.turn_id,
+        session_current=lambda: _session_current(request, advocate_id)), req, request, advocate_id, background)
+
+
+class TurnGo(BaseModel):
+    """The advocate's go-ahead at a stop of a matter worked step by step (plan AN.48, 48a3)."""
+    chat_id: str = Field(min_length=1, max_length=200)
+    turn_id: str = Field(min_length=1, max_length=200)
+    choice: Literal['next', 'end_to_end', 'done']
+
+
+@app.post('/api/turn/go', dependencies=[CsrfProtected])
+def go_turn(req: TurnGo, advocate_id: Advocate, request: Request, background: BackgroundTasks) -> _Released:
+    """Go ahead, End to end or Done at a stop (plan AN.48, 48a3; D134-D135, D147): the matter goes on from what it finished - the
+    next step, every remaining step, or the finish - and stops again, or is saved as one answer. Done before any analysis saves it
+    as it stands."""
+    if not _session_current(request, advocate_id):
+        raise HTTPException(401, 'not signed in')
+    return _answered(lambda: application().go_turn(
+        advocate_id=advocate_id, chat_id=req.chat_id, turn_id=req.turn_id, choice=req.choice,
         session_current=lambda: _session_current(request, advocate_id)), req, request, advocate_id, background)
 
 
@@ -1776,6 +1799,10 @@ def _derived_line(store, matter_id):
             if line['chat'] is not None:
                 # Plan AN.43 (D81): the line is shown under its title; until there is one, the page shows the message's first words.
                 line['chat']['title'] = _title_text(matter)
+                # Plan AN.48 (D164): where the conversation waits for the advocate, and for what.
+                waiting = stepwise.waiting_said(_held(matter))
+                if waiting:
+                    line['chat']['waiting'] = waiting
     else:
         # Old records remain history; reading never upgrades their contracts.
         line['matter'] = {'matter_id': matter.id, 'matter': matter.title, 'state': 'historical'}
@@ -1982,7 +2009,10 @@ def _stopped_of(held):
     return {'code': code, 'why': STOPS.get(code, STOPS['failed']), 'needs': STOP_NEEDS.get(code),
             'by_itself': 'steps' in held and not stopped, 'at': stopped.get('at'),
             'finished': _finished_said(work) if work is not None else [],
-            'unfinished': _unfinished_said(work) if work is not None else []}
+            'unfinished': _unfinished_said(work) if work is not None else [],
+            # Plan AN.48 (48a4): a matter waiting for the advocate's go-ahead - what was done, what comes next, the go-aheads its
+            # stop offers and what NM noticed that was not asked; None for any other stop.
+            'waiting': stepwise.card(held)}
 
 
 def _work_of(held):
