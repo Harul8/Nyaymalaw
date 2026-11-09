@@ -26,6 +26,7 @@ import json
 from copy import deepcopy
 
 from nm.core_engine import answer_sources, reasoning, research, response_writer
+from nm.core_engine.understanding import advocate_messages
 from nm.shared.citation_contracts import statute_title
 from nm.shared.model_port import (ModelError, Prompt, SchemaViolation, Tier, UsageLimitReached, canonical_schema_data,
                                   estimate_tokens, require_schema)
@@ -98,12 +99,10 @@ def material(context, part, sources, dispute):
     law = {passage["id"]: answer_sources.aliases(sources)[passage["id"]] for passage in shown
            if passage["id"] in answer_sources.aliases(sources)}
     points = response_writer.coverage_items(part, offered, context)
-    said = [row["text"] for row in context.get("conversation", ()) if row.get("record_role") == "original_account"]
-    latest = (context.get("latest") or {}).get("text")
     # Plan AN.35's cost finding (owner, 5 Nov 2026: "do 1"): the points and the advocate's messages, the same for every dispute
     # of a turn (about 57 thousand tokens on the 4 Nov answer), lead, so that the calls about its other disputes read them from the
     # provider's cache (SHARED); the dispute and its held law follow.
-    payload = {"points": points, "advocate_messages": [*said, *([latest] if latest else [])],
+    payload = {"points": points, "advocate_messages": [row["text"] for row in advocate_messages(context)],
                "dispute": {key: deepcopy(dispute.get(key)) for key in ("id", "name", "between", "legal_questions", "rights_at_stake",
                                                                      "relief_sought", "missing_facts")},
                # Plan AN.36 (piece 36b): each document's title once, by its passages' group.

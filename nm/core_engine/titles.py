@@ -14,6 +14,7 @@ import logging
 import re
 
 from nm.core_engine import reasoning
+from nm.core_engine.understanding import advocate_messages
 
 log = logging.getLogger(__name__)
 
@@ -37,8 +38,6 @@ SCHEMA = {"type": "object", "additionalProperties": False, "required": ["title"]
 def material(context, plan=None):
     """What the title is written from: the advocate's messages, and the matter as NM understood it where it has (the plan's
     understanding) - the parties with the one marked as the client, the disputes by name, the summary. Nothing else."""
-    said = [row["text"] for row in (context or {}).get("conversation", ()) if row.get("record_role") == "original_account"]
-    latest = ((context or {}).get("latest") or {}).get("text")
     understanding = ((plan or {}).get("proposal") or {}).get("understanding") or {}
     matter = {}
     if understanding.get("parties"):
@@ -49,7 +48,7 @@ def material(context, plan=None):
         matter["disputes"] = [dispute.get("name") for dispute in understanding["disputes"]]
     if understanding.get("summary"):
         matter["summary"] = understanding["summary"]
-    return {"advocate_messages": [*said, *([latest] if latest else [])], **({"matter": matter} if matter else {})}
+    return {"advocate_messages": [row["text"] for row in advocate_messages(context)], **({"matter": matter} if matter else {})}
 
 
 def understood(plan):

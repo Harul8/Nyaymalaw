@@ -1,7 +1,7 @@
 {
  "why": "Plan AN.48, D143: the strong pieces stay as they are; re-pinned only for an exception in AN.48's register (column 6).",
  "files": {
-  "nm/core_engine/research.py": "c6b13de918e366a34cb086eb1d19a489471099fce107da90f4cd70c7e14d4a73",
+  "nm/core_engine/research.py": "fb3a4243d7078f2fb482d3d7ca601bcd92e7c4153edbf5956c3892ddadfa9f16",
   "nm/core_engine/retrieval.py": "2416ef54c74d23021077ae537884030073302c57e82afacf04fd82ceafa46538",
   "nm/core_engine/citations.py": "7ada35e8590d07679f84219563ec6682611e5f7d90f0a0c5bec23202decc514d",
   "nm/shared/citation_contracts.py": "09d32744352335cae4d9907d8c0622e16af73df234547238a5552ece2e5e015b",
@@ -10,11 +10,11 @@
   "nm/core_engine/response_review.py": "ae6b36e6a37f05a4a91d9d0aca0568007c4d30877259d1e89525e981cfedb70c",
   "nm/core_engine/answer_sections.py": "8b192190eb7914929e54c0cc8df8b959c502b12c9bf143e8be2cf4e63ba3d891",
   "nm/core_engine/response_writer.py": "27e7f6110521c2ad20d99a84becea6e53561ed6c9abcdecc2992f756352eab19",
-  "nm/core_engine/case_strength.py": "ef1302f0676c134e4b158a4cf468b0b7010f95a57dc4af114aa0aaef1a25e2e3",
-  "nm/core_engine/response_rendering.py": "c238ffcb7c2cb40aedb3b0ef0c6f88bb6c57b8f62d040fb97c03f5663bbfa901",
-  "nm/core_engine/calculation.py": "33536d565a84b61ac3d795839707cbfbd063b0a28a5ea8163d5f0e4fa0b3fef1",
-  "nm/core_engine/understanding.py": "eed436729b10bfef7ad8e4962e11df2e1066667288c5af9442a60929018c85aa",
-  "nm/core_engine/questions.py": "a380678dbd16db0468d573eb3012a7d71ba54d97705f03e8ef0ed0be086e3aef",
+  "nm/core_engine/case_strength.py": "0548add0ede2a908d2a4c187e096ad9583b3bb9e99833bc11e48efbc850fb118",
+  "nm/core_engine/response_rendering.py": "f2d90882ae8c30ac4a1313d3d8e762137ead39c2a8a4b1cbb0ebf386060413a9",
+  "nm/core_engine/calculation.py": "557b2800cb86433a23b80e602207072173a7221e457455c0e9485a0de0172928",
+  "nm/core_engine/understanding.py": "4e0938c7c3741396b7e008d2f90d5437f3c121930c1ab83bbab46fac37931099",
+  "nm/core_engine/questions.py": "cbd01082cd170d417592c440dbc77d0d55c56fe466c81624698e5ebf73dd409d",
   "nm/core_engine/matter_board.py": "77facbbad08ccbb1520fda0ff823e0a643b84c549f5edd2e0619b318df305426",
   "nm/core_engine/checklist.py": "8769979354ea31f38ec161f7e036dab94934e8e5842eaf70742ceac59ada5bae"
  },
@@ -24,6 +24,14 @@
    "nm/core_engine/answer_sections.py"
   ],
   "5 (48h, plan AN.48 register)": [
+   "nm/core_engine/understanding.py"
+  ],
+  "6 (48h's sweep, found building 48g; plan AN.48 register)": [
+   "nm/core_engine/calculation.py",
+   "nm/core_engine/case_strength.py",
+   "nm/core_engine/questions.py",
+   "nm/core_engine/research.py",
+   "nm/core_engine/response_rendering.py",
    "nm/core_engine/understanding.py"
   ]
  }

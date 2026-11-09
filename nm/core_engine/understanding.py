@@ -115,6 +115,16 @@ def source_catalogue(context):
     return result
 
 
+def advocate_messages(context):
+    """The advocate's own messages in a turn's context, oldest first: their earlier messages, the latest one (where it has words),
+    then what they added after it while the matter waited (plan AN.48, D159; its register of exceptions, item 6). Every step that
+    reads the advocate's messages reads these; a context without additions gives exactly the messages it gave before."""
+    context = context or {}
+    latest = context.get("latest") or {}
+    return [*(row for row in context.get("conversation", ()) if row.get("record_role") == "original_account"),
+            *([latest] if latest.get("text") else []), *context.get("added", ())]
+
+
 def conversation_aliases(rows):
     """Short IDs for the conversation's sources, as the models are shown them (16 Oct
     2026): M1, M2... for the messages in order and DOC1, DOC2... for the document pages

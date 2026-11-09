@@ -210,10 +210,12 @@ def _day(value, what):
 
 
 def _facts_in(context, catalogue):
-    """Where a date may be quoted from, in the order searched: the latest message, the
-    documents sent, then the advocate's earlier messages, latest first. Our own earlier
-    notes are not facts."""
-    order = [context["latest"]["source_id"], *(row["source_id"] for row in context.get("documents", ())),
+    """Where a date may be quoted from, in the order searched: the latest message, what the
+    advocate added after it while the matter waited, latest first (plan AN.48, D159; register
+    item 6), the documents sent, then the advocate's earlier messages, latest first. Our own
+    earlier notes are not facts."""
+    order = [context["latest"]["source_id"], *(row["source_id"] for row in reversed(context.get("added", ()))),
+             *(row["source_id"] for row in context.get("documents", ())),
              *(row["source_id"] for row in reversed(context["conversation"]))]
     return [identity for identity in dict.fromkeys(order)
             if catalogue[identity].get("record_role") in ("original_account", "supplied_document")]

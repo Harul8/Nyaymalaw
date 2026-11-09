@@ -23,7 +23,7 @@ from datetime import date
 from nm.core_engine import figures, reasoning
 from nm.core_engine.replay_scope import known, once
 from nm.core_engine.retrieval import SearchUnavailable, _digest, _valid_location, in_force, validate_search
-from nm.core_engine.understanding import REFERENCE, TEXT, TYPOGRAPHY, select, source_catalogue
+from nm.core_engine.understanding import REFERENCE, TEXT, TYPOGRAPHY, advocate_messages, select, source_catalogue
 from nm.shared import clock_contracts
 from nm.core_engine.citations import IndexUnavailable, held_judgments
 from nm.shared.citation_contracts import find_reporter_citations, judgment_place, provision_references
@@ -613,6 +613,10 @@ def conversation_text(context):
                else "Our research assistant (an earlier note, not the advocate's words)")
         lines.append(f"[{number}] {who}: {row['text']}")
     lines += ["", "Latest message from the advocate (the one we act on now):", context["latest"]["text"]]
+    if context.get("added"):
+        # Plan AN.48 (D159; register item 6): what the advocate added after it while the matter waited, as their own words.
+        lines += ["", "Added by the advocate after that message, while the matter waited for them (their own words, oldest "
+                      "first):", *(f"- {row['text']}" for row in context["added"])]
     if "documents" in context:
         lines += ["", "Documents the advocate sent (each page says what its document says; "
                       "these are not the advocate's own words):"]
@@ -962,8 +966,7 @@ def _figure_problems(understanding, context):
     beside it (figures.quantities_in); it is the papers' own if the same number stands against the same unit, or the same amount of
     the same kind, in a message or a paper. One problem for each figure, naming every place it is stated. What an earlier note of
     ours or a record of the matter holds is not a message or a paper."""
-    sources = [row["text"] for row in context["conversation"] if row.get("record_role") == "original_account"]
-    sources += [context["latest"]["text"]] + [row["text"] for row in context.get("documents", ())]
+    sources = [row["text"] for row in advocate_messages(context)] + [row["text"] for row in context.get("documents", ())]
     pairs, amounts = set(), set()
     for text in sources:
         for _, number, unit in figures.quantities_in(" ".join(text.split())):
@@ -998,8 +1001,7 @@ SLIP_FIX = ("Decide whether the words were copied with a slip - a letter or digi
 def code_checks(understanding, context):
     """Mechanical checks only; meaning is the model's work."""
     problems = []
-    advocate = _bare(" ".join([row["text"] for row in context["conversation"]
-                               if row.get("record_role") == "original_account"] + [context["latest"]["text"]]))
+    advocate = _bare(" ".join(row["text"] for row in advocate_messages(context)))
     # A fact may rest on a document the advocate sent; where its words appear is the
     # code's to establish (owner decisions, 15 Oct 2026). From research v14 (AN.33, D18) the tolerant finder: a slip in copying
     # that cannot change the meaning is no problem, and what is a problem is settled by the model that revises, from the page's
@@ -1255,9 +1257,7 @@ def _file_context(context, documents, whole):
     where the file is within WHOLE_FILE_TOKENS, every page of it under its paper's name - so that the step knows what the matter is
     about and who is who while it answers for its own pages. From plan AN.34 (piece 34b) the whole file, its own pages among them,
     so that every call shown it opens with the same text and the cache keeps it once for the rest."""
-    said = [row["text"] for row in context.get("conversation", ()) if row.get("record_role") == "original_account"]
-    latest = (context.get("latest") or {}).get("text")
-    lines = ["The advocate's messages, oldest first:", *(f"- {words}" for words in [*said, *([latest] if latest else [])])]
+    lines = ["The advocate's messages, oldest first:", *(f"- {row['text']}" for row in advocate_messages(context))]
     if whole:
         lines += ["", "The whole file, for context - the pages you read for among them:"]
         lines += [f'Paper "{other["name"]}", {"part" if other["recording"] else "page"} {page["page"]}: {page["text"]}'
@@ -1934,9 +1934,7 @@ def _all_pages(documents):
 
 def _papers_text(context, documents):
     """What the connections step is shown: the advocate's messages, oldest first, and every page of every paper under its name."""
-    said = [row["text"] for row in context.get("conversation", ()) if row.get("record_role") == "original_account"]
-    latest = (context.get("latest") or {}).get("text")
-    lines = ["The advocate's messages, oldest first:", *(f"- {words}" for words in [*said, *([latest] if latest else [])]), "",
+    lines = ["The advocate's messages, oldest first:", *(f"- {row['text']}" for row in advocate_messages(context)), "",
              "The papers:"]
     for document in documents:
         lines.append(f'\nPaper "{document["name"]}"' + (" (a recording, transcribed by AI)" if document["recording"] else ""))
@@ -2311,9 +2309,7 @@ def _points_text(context, understanding, events, connections):
     """What the weighing is shown (v14, piece 33h): the advocate's messages, the understanding's disputes with their legal questions,
     and every point read by its ID - each event with its paper, date, kind, what, who says it and the page's words; each point read
     side by side with its kind, point and why it matters."""
-    said = [row["text"] for row in context.get("conversation", ()) if row.get("record_role") == "original_account"]
-    latest = (context.get("latest") or {}).get("text")
-    lines = ["The advocate's messages, oldest first:", *(f"- {words}" for words in [*said, *([latest] if latest else [])]), "",
+    lines = ["The advocate's messages, oldest first:", *(f"- {row['text']}" for row in advocate_messages(context)), "",
              _matter_text(understanding, understanding["disputes"]), "", "The points the papers were read for:"]
     lines += [json.dumps({"id": event["id"], "paper": event["document"], "date": event["date"], "kind": event["kind"],
                           "what": event["what"], "said_by": event["said_by"], "words": event["words"]}, ensure_ascii=False)

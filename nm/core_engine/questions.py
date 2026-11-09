@@ -406,6 +406,7 @@ def propose(calls, context, interpreted, plan, asked_before):
     import json
 
     from nm.core_engine import reasoning
+    from nm.core_engine.understanding import advocate_messages
     from nm.shared.model_port import ModelError, Prompt, SchemaViolation, Tier, UsageLimitReached, canonical_schema_data
 
     understanding = (plan.get("proposal") or {}).get("understanding") or {}
@@ -414,8 +415,6 @@ def propose(calls, context, interpreted, plan, asked_before):
                 for dispute in understanding.get("disputes") or []]
     if not disputes:
         return []
-    said = [row["text"] for row in context.get("conversation", ()) if row.get("record_role") == "original_account"]
-    latest = (context.get("latest") or {}).get("text")
     # Plan AN.37 (piece 37e): what code and the reading found that only the advocate may settle - the model decides whether
     # any of it is worth asking.
     proposal = plan.get("proposal") or {}
@@ -424,7 +423,7 @@ def propose(calls, context, interpreted, plan, asked_before):
                                for item in proposal.get("connections") or [] if item.get("kind") == "papers_differ"],
              "pages_not_read": [{"paper": item.get("name"), "page": item.get("page"), "why": item.get("reason")}
                                 for item in context.get("unread_document_pages") or ()]}
-    user = json.dumps({"advocate_messages": [*said, *([latest] if latest else [])], "disputes": disputes,
+    user = json.dumps({"advocate_messages": [row["text"] for row in advocate_messages(context)], "disputes": disputes,
                        "found_in_the_papers": found, "asked_before": list(asked_before)}, ensure_ascii=False)
     try:
         receipt = calls.structured(Prompt(system=PROPOSE, user=user, operation=OPERATION, effort=reasoning.effort("questions")),

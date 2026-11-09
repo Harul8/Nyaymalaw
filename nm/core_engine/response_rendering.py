@@ -7,6 +7,7 @@ import re
 
 from nm.core_engine import answer_sections, calculation, checklist, copy_figures, limitation, research, response_authorities
 from nm.core_engine import response_review, response_writer
+from nm.core_engine.understanding import advocate_messages
 from nm.shared.citation_contracts import case_short_names, statute_title
 from nm.shared.model_port import USAGE_LIMIT_WORDS
 
@@ -1049,9 +1050,7 @@ def _given_words(words, context, version=research.EXACT_FINDER):
     note code builds. version: the finder the research record was made under (research v14:
     the tolerant one; plan AN.33, piece 33m)."""
     pieces = research.fact_pieces(words)
-    advocate = research._bare(" ".join(
-        [row["text"] for row in context["conversation"] if row.get("record_role") == "original_account"]
-        + [context["latest"]["text"]]))
+    advocate = research._bare(" ".join(row["text"] for row in advocate_messages(context)))
     pages = research.Pages.of_context(context, version)
     return bool(pieces) and all(piece in advocate or pages.holding(piece) is not None for piece in pieces)
 
