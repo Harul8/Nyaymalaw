@@ -80,8 +80,9 @@ def test_the_limitation_acts_schedule_reads_as_its_articles():
 
 def test_an_article_whose_period_is_printed_oddly_is_read_and_one_that_cannot_be_read_is_said_to_be_left_out():
     """8 Nov 2026: Articles 105 ("Three yean") and 127 ("5[Sixty] days") of the real text were dropped without a word, so a search for
-    their periods found nothing. The editor's mark is not the statute's words; the misprint is kept as printed and said; an article
-    left out is named in the notes, never silently."""
+    their periods found nothing. The editor's mark is not the statute's words; the misprint is read as the unit it garbles ("Three
+    years", 9 Nov 2026: it had been kept as printed, so a word search for "three years" missed Article 105) and the printed form is
+    said in the notes; an article left out is named in the notes, never silently."""
     lines = ["[See sections 2(j) and 3]", "FIRST DIVISION--SUITS", "PART X--SUITS FOR WHICH NO PERIOD IS ELSEWHERE PROVIDED",
              "105", "By a Hindu for arrears of maintenance.", "Three yean", "When the arrears are payable.",
              "127", "To set aside a sale in execution of a decree.", "5[Sixty] days", "The date of the sale.",
@@ -90,11 +91,21 @@ def test_an_article_whose_period_is_printed_oddly_is_read_and_one_that_cannot_be
     notes: list[str] = []
     articles = limitation_articles(lines, notes)
     assert [(a.number, a.period, " ".join(a.starts)) for a in articles] == [
-        ("105", "Three yean", "When the arrears are payable."), ("127", "Sixty days", "The date of the sale.")]
-    assert notes == ['Article 105: the text prints its period as "Three yean"; kept as printed',
+        ("105", "Three years", "When the arrears are payable."), ("127", "Sixty days", "The date of the sale.")]
+    assert notes == ['Article 105: the text prints its period as "Three yean"; read as "Three years"',
                      "Article 128: printed in the text and left out, its description or its period could not be read",
                      "Article 129: printed in the text and left out, its description or its period could not be read"]
     assert limitation_articles(lines) == articles, "the notes are optional and change nothing read"
+
+
+def test_a_garbled_unit_is_read_as_its_own_unit_singular_only_after_one_and_a_whole_word_is_left_alone():
+    lines = ["FIRST DIVISION--SUITS", "1", "A.", "One yean", "When x.", "2", "B.", "Twelve yeer.", "When y.", "3", "C.", "Three months",
+             "When z.", "4", "D.", "Thirty days", "When w.", "5", "E.", "Three year", "When v."]
+    notes: list[str] = []
+    periods = {article.number: article.period for article in limitation_articles(lines, notes)}
+    assert periods["1"] == "One year" and periods["2"] == "Twelve years."
+    assert periods["4"] == "Thirty days" and periods["5"] == "Three year", "a whole word is never changed"
+    assert [note.split(":")[0] for note in notes] == ["Article 1", "Article 2"], "only a period actually changed is noted"
 
 
 def test_the_cpcs_first_schedule_reads_as_its_orders_rules():

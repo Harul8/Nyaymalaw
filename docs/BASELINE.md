@@ -128,8 +128,9 @@ waqf property without sanction of Board to be void").
    reader expecting a clean period may have refused. Until they are held, a search for the period for
    arrears of maintenance or for setting aside an execution sale finds nothing, which reads as no
    such rule (the confident-zero shape of §2.1). **The reader is repaired (8 November 2026):** on the
-   real text it now reads all 137 Articles, takes the editor's mark out of "5[Sixty] days", keeps
-   "Three yean" as printed and says so in the Act's schedule notes, and names any Article it leaves out.
+   real text it now reads all 137 Articles, takes the editor's mark out of "5[Sixty] days", reads
+   "Three yean" as "Three years" (changed 9 November 2026; first it kept the misprint as printed) and says
+   so in the Act's schedule notes, and names any Article it leaves out.
    **The held store was corrected on 9 November 2026 (the owner ran the job, server stopped).** The
    Act's 280 held passages stayed word for word unchanged and 2 were added (351,182 → 351,184
    passages), at positions 80717 (Article 105) and 80739 (Article 127). Checked afterwards, reading
@@ -138,8 +139,10 @@ waqf property without sanction of Board to be void").
    Act has 137 Articles; the Act that follows it starts at 80750. The earlier files are kept beside
    the live ones as `.before-20261109T041124` (about 2.4 GB: the passage store, the vector index and the word index; the
    owner's to remove). Article 105's
-   period is stored as the text prints it, "Three yean" (the misprint is recorded in the Act's
-   schedule notes), so a word search for "three years" does not match it; the meaning search can.
+   period is **still stored as the text prints it, "Three yean"**, so a word search for "three years"
+   does not match it; the meaning search can. The reader now reads it as "Three years" (a dry run
+   finds 281 of the Act's 282 passages unchanged and only this one changed); the store changes when the
+   owner runs the correction for the Limitation Act a second time, server stopped.
 2. **The Wakf Act 1995 is held only under its 2025 name.** A plan that names "the Wakf Act" matches
    no held name and is told it is not held; the owner's checked short names (59) do not include it.
 

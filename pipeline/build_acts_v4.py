@@ -335,10 +335,25 @@ def reconcile(section_text: str, pdf_text: str | None, our_text: str | None, wor
 
 # A period as the Schedule prints it. Two printings of the Limitation Act's own text were refused by the earlier pattern and the articles
 # holding them (105 and 127) dropped without a word (8 Nov 2026): an editor's mark of amendment before the number ("5[Sixty] days") and
-# the source's misprint "Three yean". The mark is not the statute's words; the misprint is kept as printed and said in the schedule notes.
+# the source's misprint "Three yean". The mark is not the statute's words; the misprint is read as the unit it garbles ("Three years") and the
+# printed form is said in the schedule notes (9 Nov 2026: it had been kept as printed, so a word search for "three years" missed Article 105).
 _PERIOD = re.compile(r"^(?:\d{1,2}\[\s?)?(?:(?:One|Two|Three|Four|Five|Six|Seven|Eight|Nine|Ten|Eleven|Twelve|Thirty|Sixty|"
                      r"Ninety|Fifteen|Twenty)[\w \]-]*?(?:ye[ae][rn]s?|days?|months?)|Ninety days|Thirty years)\.?$", re.I)
 _CLEAN_PERIOD = re.compile(r"(?:years?|days?|months?)\.?$", re.I)
+#: The unit closing a period as the pattern above accepts it, whole or garbled ("yean", "yeer"): its first letter says which unit it is.
+_UNIT = re.compile(r"(ye[ae][rn]s?|days?|months?)(\.?)$", re.I)
+_UNITS = {"y": "year", "d": "day", "m": "month"}
+
+
+def _period_read(printed: str) -> str:
+    """A period with its closing unit spelled as the word it garbles: "Three yean" -> "Three years", "One yean" -> "One year". Plural unless
+    the count before it is "One" alone. A period whose unit is already a whole word is returned as printed."""
+    match = _UNIT.search(printed)
+    if match is None or _CLEAN_PERIOD.search(printed):
+        return printed
+    lead = printed[:match.start()]
+    unit = _UNITS[match.group(1)[0].lower()]
+    return f"{lead}{unit}{'' if lead.strip().lower() == 'one' else 's'}{match.group(2)}"
 _PART = re.compile(r"^(?:PART\s+[IVXL]+|(?:FIRST|SECOND|THIRD)\s+DIVISION)\b", re.I)
 
 
@@ -359,7 +374,7 @@ def limitation_articles(lines: list[str], notes: list[str] | None = None) -> lis
 
     notes (the Act's schedule notes): every article whose number the text prints and that is
     left out, because no description or no period could be read, is said there by number; so is
-    a period printed other than as years, days or months (a misprint, kept as printed). A count
+    a period whose unit is printed garbled (a misprint, read as the unit it garbles, the printed form said). A count
     of the articles held is never a count of those printed (docs/DEFECT_SHAPES.md S6)."""
     articles: list[Article] = []
     division = part = ""
@@ -380,9 +395,10 @@ def limitation_articles(lines: list[str], notes: list[str] | None = None) -> lis
             continue
         if not current.period and _PERIOD.match(line):
             # An editor's mark of amendment ("5[Sixty] days") is not the statute's words.
-            current.period = " ".join(_MARK.sub("", line).split())
-            if notes is not None and not _CLEAN_PERIOD.search(current.period):
-                notes.append(f"Article {current.number}: the text prints its period as \"{current.period}\"; kept as printed")
+            printed = " ".join(_MARK.sub("", line).split())
+            current.period = _period_read(printed)
+            if notes is not None and current.period != printed:
+                notes.append(f"Article {current.number}: the text prints its period as \"{printed}\"; read as \"{current.period}\"")
         elif current.period:
             current.starts.append(line)
         else:
