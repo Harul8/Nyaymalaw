@@ -440,6 +440,18 @@ def noticed(steps):
     return said[:8]
 
 
+def limit_rests_on(steps, item):
+    """48g (D161): whether a worked-out time limit runs from the date of the event the item is - the event's date, as the papers'
+    timeline sorts it, is a limit's starting day."""
+    plan = (((steps or {}).get("understood") or {}).get("plan") or {})
+    events = {event.get("id"): event for event in (plan.get("proposal") or {}).get("chronology") or () if isinstance(event, dict)}
+    event = events.get(item)
+    if not event or not event.get("sort"):
+        return False
+    starts = {((entry.get("start") or {}).get("date") or "") for entry in ((steps or {}).get("limits") or {}).get("calculations") or ()}
+    return event["sort"] in starts
+
+
 def unasked(sections):
     """The analyses a matter finished step by step was saved without (48b): (written, of how many), or None where every dispute's
     analysis is written."""

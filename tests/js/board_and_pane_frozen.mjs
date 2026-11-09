@@ -103,10 +103,12 @@ const dispute = { id: 'D1', name: 'The boundary dispute', between: ['the client'
       rows: [['Last day', '10 March 2029'], ['Result', 'Open'], ['Days left', '856']] }] } };
 const board = {
   state: 'ready', understanding: { confirmed: false, open_points: ['The chronology is not set out.'] }, disputes: [dispute],
-  facts: [{ id: 'F1', fact: 'The gate was locked.', certainty: 'reported', from: 'advocate' }], instructions: ['Do not write to them.'],
+  // Plan AN.48 (48g, D148; register item 3, re-pinned for it alone): a fact and an event the advocate corrected.
+  facts: [{ id: 'F1', fact: 'The gate was locked.', certainty: 'reported', from: 'advocate', corrected: { value: 'The gate was open.' } }],
+  instructions: ['Do not write to them.'],
   related_points: [], parties: [], subjects: [],
   timeline: { state: 'ready', events: [{ id: 'E1', date: '1 May 2020', dated: true, kind: 'other', what: 'The sum was agreed.',
-    said_by: 'a caller', document: 'call.pdf', pages: [1], words: 'agreed', located: true }],
+    said_by: 'a caller', document: 'call.pdf', pages: [1], words: 'agreed', located: true, corrected: { value: '1 June 2020' } }],
   documents: [{ name: 'call.pdf', pages_read: 1, events: 1, state: 'read', why: '' }] },
   copies: [{ first: { document: 'a.pdf', page: 2 }, second: { document: 'b.pdf', page: 5 }, figures: [{ first: '6.06', second: '6.16', after: '' }] }],
   set_aside: [{ what: 'A sale read twice', document: 'a.pdf', why: 'The page does not record it.' }],

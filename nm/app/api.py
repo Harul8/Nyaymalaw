@@ -2278,11 +2278,32 @@ def chat_board(chat_id: str, advocate_id: Advocate, request: Request, response: 
     held = _held(matter)
     if held is not None and ('steps' not in held or held['steps']['understood'] is not None):
         rows = [*rows, _held_row(matter, rows, held)]
-    board = matter_board(rows)
+    board = _corrected(matter_board(rows), rows, held)
     if not _session_current(request, advocate_id):
         raise HTTPException(401, 'not signed in')
     response.headers['Cache-Control'] = 'no-store'
     return {'chat_id': chat_id, **board}
+
+
+def _corrected(board, rows, held):
+    """Plan AN.48 (48g, D148; its register of exceptions, item 3): the corrected value on the board item each correction of the
+    advocate's changes - a fact or an event of the papers' timeline - marked as theirs, the latest correction of an item standing.
+    No message number: the page numbers none (the M-numbers are what the models are shown, and in a later turn they count NM's own
+    notes too). The board otherwise as matter_board makes it; nothing marked where nothing was corrected."""
+    corrections = {}
+    for added in [*(row.get('added', ()) for row in rows if 'added' in row), (held or {}).get('added', ())]:
+        for entry in added:
+            if isinstance(entry.get('corrects'), dict):
+                corrections[entry['corrects']['item']] = {'value': entry['corrects']['value']}
+    if not corrections or board.get('state') != 'ready':
+        return board
+    facts = [{**fact, 'corrected': corrections[fact['id']]} if fact.get('id') in corrections else fact
+             for fact in board.get('facts', ())]
+    timeline = board.get('timeline') or {}
+    if timeline.get('state') == 'ready':
+        timeline = {**timeline, 'events': [{**event, 'corrected': corrections[event['id']]} if event.get('id') in corrections
+                                           else event for event in timeline['events']]}
+    return {**board, 'facts': facts, 'timeline': timeline}
 
 
 def _held_row(matter, rows, held):

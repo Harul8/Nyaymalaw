@@ -487,8 +487,18 @@ class Application:
             # 48h (D159): kept as the advocate's message, after the latest one, citable; the research stays as it is.
             state = stepwise.state_of(held['steps'])
             written = [name for name in state['order'] if name in state['written']]
+            critical = judgement['critical']
+            if kind == 'correction' and judgement.get('item'):
+                # 48g (D148): kept with the item it corrects, for the board's mark.
+                entry = {**entry, 'corrects': {'item': judgement['item'], 'value': judgement['value']}}
+                if stepwise.limit_rests_on(held['steps'], judgement['item']):
+                    # D161 (Claude's detail): a date a worked-out time limit runs from is critical by code - the limits are
+                    # worked out again.
+                    critical = True
+                    held['steps'] = {**held['steps'], 'limits': None}
+                    matter = save_waiting(self.store, matter, held)
             listened = stepwise.heard(held['go'], message, kind, judgement['said'])
-            if judgement['critical'] and written:
+            if critical and written:
                 # D161: critical - the analyses written are checked against it at once, each written again where wanting.
                 go = {'mode': stepwise.MODE, 'allowed': ['write'], 'n': held['go']['n'] + 1, 'waiting': None,
                       'disputes': None if state['whole'] else written, **stepwise._carried(listened), 'recheck': True}

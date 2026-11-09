@@ -366,6 +366,7 @@
        [
         "span.board-when",
         "span",
+        "span.board-corrected",
         "span.board-status"
        ]
       ]
@@ -415,7 +416,8 @@
      "p.board-fact",
      [
       "span.board-certainty.reported",
-      "span"
+      "span",
+      "span.board-corrected"
      ]
     ],
     "h3.board-h \"Your standing instructions\"",

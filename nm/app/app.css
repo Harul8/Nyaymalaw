@@ -718,6 +718,8 @@ button.board-card:focus-visible { outline: 2px solid var(--accent); outline-offs
 /* 48c (D146): a message sent while the matter waited, and how NM took it - the advocate's words, then NM's. */
 .waiting-card .waiting-heard { margin: 0 0 0.35rem; color: var(--ink-2); }
 .waiting-card .waiting-heard-you { font-style: italic; }
+/* 48g (D148): a board item the advocate corrected - their value, marked as theirs. */
+.board-corrected { color: var(--accent-2); font-weight: 600; }
 .waiting-card .waiting-tentative { margin: 0.5rem 0 0; color: var(--ink-3); font-size: 0.86rem; }
 
 /* THE ANSWER'S OWN HEADER (plan AN.20; the signed-off design): the NM mark, Nyaymalaw and the time the

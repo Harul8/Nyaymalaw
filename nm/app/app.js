@@ -4125,6 +4125,11 @@ function eventPlace(event) {
   return `${event.document}, ${event.recording ? 'part' : 'page'}${pages.length > 1 ? 's' : ''} ${pages.join(', ')}`;
 }
 
+// Plan AN.48 (48g, D148): a board item the advocate corrected shows their value, marked as theirs; the paper's own reading stays.
+function correctedMark(corrected, make) {
+  return make('span', 'board-corrected', ` · Corrected by you: ${corrected.value}`);
+}
+
 // The events as lists: the first few, and the rest folded under a line that says how many.
 function eventRows(events, make) {
   const rows = (items) => {
@@ -4138,6 +4143,8 @@ function eventRows(events, make) {
         item.appendChild(make('span', 'board-status', ` · read as ${event.date_as_read}, a date NM finds nowhere in your papers`));
       }
       if (event.kind === 'pending') item.appendChild(make('span', 'board-certainty', 'Pending'));
+      // Plan AN.48 (48g, D148): the value the advocate gave in place of what NM read, marked as theirs.
+      if (event.corrected) item.appendChild(correctedMark(event.corrected, make));
       // Research v14 (plan AN.33, D19): how the weighing of the points found it, for which dispute.
       if (event.weight) {
         const effect = { helps: 'helps your client', hurts: 'hurts your client', both: 'cuts both ways' }[event.effect];
@@ -4425,6 +4432,7 @@ function renderChatBoard(board) {
       const row = make('p', 'board-fact');
       row.appendChild(make('span', `board-certainty ${fact.certainty}`, CERTAINTY[fact.certainty] || fact.certainty));
       row.appendChild(make('span', '', ` ${fact.fact}`));
+      if (fact.corrected) row.appendChild(correctedMark(fact.corrected, make));
       if (fact.from === 'document') row.appendChild(make('span', 'board-status', ` · ${factPlace(fact)}`));
       fold.appendChild(row);
     }
@@ -5099,6 +5107,7 @@ function renderDisputeDetail(dispute, board) {
       const li = make('li');
       li.appendChild(make('span', `board-certainty ${fact.certainty}`, CERTAINTY[fact.certainty] || fact.certainty));
       li.appendChild(make('span', '', ` ${fact.fact}`));
+      if (fact.corrected) li.appendChild(correctedMark(fact.corrected, make));
       if (fact.words) li.appendChild(make('blockquote', 'detail-words', fact.words));
       li.appendChild(make('p', 'board-meta', factPlace(fact)));
       ul.appendChild(li);

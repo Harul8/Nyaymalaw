@@ -148,7 +148,7 @@ def checked_rows(matter, advocate_id, *, copied=True):
                 questions.check_asked(row["asked"])
             if "steers" in row and (not row["steers"] or not _steers_valid(row["steers"])):
                 raise ValueError("conversation steers")
-            if "added" in row and (not row["added"] or not _steers_valid(row["added"])):
+            if "added" in row and (not row["added"] or not _added_valid(row["added"])):
                 raise ValueError("conversation additions")
             if (row["contract"] != CONTRACT or type(row["sequence"]) is not int
                     or row["sequence"] != sequence
@@ -320,7 +320,20 @@ def _sent_valid(held):
                  and _nonempty(stopped["at"]))
             and _steers_valid(held["steers"])
             and ("go" not in held or stepwise.valid(held["go"]))
-            and ("added" not in held or "go" in held and bool(held["added"]) and _steers_valid(held["added"])))
+            and ("added" not in held or "go" in held and bool(held["added"]) and _added_valid(held["added"])))
+
+
+def _added_valid(added):
+    """Plan AN.48 (48h, 48g): the advocate's messages added while a matter waited - each as a steer is kept, and, where it corrects
+    what NM read, the item it corrects and the value it gives ({"item", "value"})."""
+    try:
+        plain = [{key: entry[key] for key in ("text", "documents", "at")} for entry in added]
+        return (_steers_valid(plain) and all(set(entry) <= {"text", "documents", "at", "corrects"} for entry in added)
+                and all("corrects" not in entry or isinstance(entry["corrects"], dict)
+                        and set(entry["corrects"]) == {"item", "value"} and _nonempty(entry["corrects"]["item"])
+                        and _nonempty(entry["corrects"]["value"]) for entry in added))
+    except (KeyError, TypeError):
+        return False
 
 
 def _steers_valid(steers):
