@@ -2802,7 +2802,12 @@ function renderTurn(entry) {
     now.textContent = `${label}…`;
     const time = document.createElement('div');
     time.className = 'progress-time';
-    time.textContent = `${took(progress.elapsed_seconds)} so far. Most answers take a few minutes.`;
+    // Plan AN.48 (48e, D140): a step worked step by step says how long it should take - tentative.
+    const tentative = Number.isInteger(progress.tentative_seconds) ? Math.max(1, Math.round(progress.tentative_seconds / 60)) : 0;
+    time.textContent = tentative
+      ? `${took(progress.elapsed_seconds)} so far. This step should take about ${tentative} minute${tentative === 1 ? '' : 's'} `
+        + '(tentative).'
+      : `${took(progress.elapsed_seconds)} so far. Most answers take a few minutes.`;
     box.append(now, time);
     if (entry.restartNote) box.appendChild(Object.assign(document.createElement('div'), {
       className: 'progress-note', textContent: entry.restartNote }));
@@ -5471,6 +5476,12 @@ function renderWaiting(entry) {
     buttons.appendChild(button);
   });
   box.appendChild(buttons);
+  // Plan AN.48 (48e, D140): how long each go-ahead should take - tentative.
+  const timed = (card.gos || []).filter((go) => go.tentative);
+  if (timed.length) {
+    box.appendChild(make('p', 'waiting-tentative', `Tentative times - ${timed.map((go) => `${go.said}: ${go.tentative}`)
+      .join('; ')}.`));
+  }
   return box;
 }
 

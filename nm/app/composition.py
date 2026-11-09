@@ -290,6 +290,9 @@ class Application:
             if stage == 'shown':  # the answer showed more (owner decisions P26-P27)
                 self.turn_progress.shown(advocate_id, turn_id, detail.get('shown'), detail.get('chat_id'))
                 return
+            if stage == 'tentative':  # plan AN.48 (48e): how long the step should take, said while it runs
+                self.turn_progress.tentative(advocate_id, turn_id, detail.get('seconds'))
+                return
             if stage in ('sent', 'saved'):  # the message, then the work finished, saved with the conversation (plan AN.41)
                 self.turn_progress.saved(advocate_id, turn_id, detail.get('saved', 0), detail.get('chat_id'))
                 return

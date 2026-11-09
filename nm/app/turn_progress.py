@@ -111,6 +111,17 @@ class TurnProgress:
                 row = self._rows[(advocate_id, turn_id)] = {"started": now, "ended": None, "state": "working", "steps": []}
             row["saved"], row["chat_id"] = max(count, row.get("saved", 0)), chat_id
 
+    def tentative(self, advocate_id, turn_id, seconds):
+        """Plan AN.48 (48e, D140): how long the step being worked on should take, in seconds - tentative."""
+        if type(seconds) is not int or seconds < 0 or not isinstance(advocate_id, str) or not isinstance(turn_id, str):
+            return
+        now = self._clock()
+        with self._lock:
+            row = self._rows.get((advocate_id, turn_id))
+            if row is None or row["ended"] is not None:
+                row = self._rows[(advocate_id, turn_id)] = {"started": now, "ended": None, "state": "working", "steps": []}
+            row["tentative"] = seconds
+
     def end(self, advocate_id, turn_id, state):
         """state is "finished" (an answer was saved or replayed) or "stopped"."""
         with self._lock:
@@ -134,6 +145,7 @@ class TurnProgress:
                     "shown": row.get("shown", 0), "chat_id": row.get("chat_id"), "saved": row.get("saved", 0),
                     "parts": {name: dict(part) for name, part in (row.get("parts") or {}).items()},
                     "elapsed_seconds": int(until - row["started"]),
+                    **({"tentative_seconds": row["tentative"]} if "tentative" in row else {}),
                     "steps": [{"label": STAGES[step["stage"]],
                                "seconds": int((steps[i + 1]["at"] if i + 1 < len(steps) else until) - step["at"])}
                               for i, step in enumerate(steps)]}

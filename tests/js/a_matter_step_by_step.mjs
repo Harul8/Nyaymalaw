@@ -155,4 +155,14 @@ const button = (node, text) => (node._text === text ? node : (node.children || [
     answers: { q1: { chosen: ['The buyer'], other: '' } } })]]);
 }
 
+// --- tentative times at a stop (48e) ---------------------------------------------------------------------------------------
+{
+  const page = vm.createContext({ document: { createElement: (tag) => new Element(tag) }, activeDelivery: null, goTurn: () => {} });
+  vm.runInContext(fn('renderWaiting'), page);
+  const card = page.renderWaiting({ turnId: 't1', stopped: { code: 'waiting', waiting: { done_said: 'Done.', next_said: 'Next.',
+    noticed: [], heard: [], questions: [], gos: [{ choice: 'research', disputes: null, said: 'Research all', tentative: 'about 3 minutes' },
+      { choice: 'done', disputes: null, said: 'Done: save as it stands', tentative: null }] } } });
+  assert.ok(texts(card).includes('Tentative times - Research all: about 3 minutes.'));
+}
+
 console.log('a matter step by step: ok');

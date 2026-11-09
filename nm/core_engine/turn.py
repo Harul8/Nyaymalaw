@@ -11,6 +11,7 @@ from __future__ import annotations
 import logging
 import re
 import threading
+import time
 
 from copy import deepcopy
 from dataclasses import replace
@@ -18,7 +19,7 @@ from datetime import datetime, timezone
 
 from nm.core_engine import answer_sections, answer_sources, calculation, case_strength, checklist, estimates, questions
 from nm.core_engine import reasoning, replay_scope, research, response_rendering, response_writer
-from nm.core_engine import steps as stepwise, titles, understanding
+from nm.core_engine import steps as stepwise, tentative, titles, understanding
 from nm.core_engine.calls import CorrectionUnavailable, ReleaseWithheld, StopRequested, TurnCalls
 from nm.core_engine.conversation import (
     ConversationRefused, TurnContext, asking_of, chat_matter_id, checked_rows, commit_turn, committed_version, digest,
@@ -480,7 +481,7 @@ class _Keeper:
         if thread is not None and thread is not threading.current_thread():
             thread.join()
 
-    def stop(self, code, *, answered=None, waiting=None):
+    def stop(self, code, *, answered=None, waiting=None, timed=None):
         """The turn stopped part-way (D69): why, saved with everything it finished, at once. answered: the whole answer, where it
         was finished but not saved. waiting (plan AN.48, 48a2): the step after which a matter worked step by step waits for the
         advocate's go-ahead. Raises nothing; False where it could not be written."""
@@ -491,7 +492,9 @@ class _Keeper:
             if answered is not None:
                 held["elements"], held["steps"] = answered[0], {**held["steps"], "answered": answered[1]}
             if waiting is not None:
-                held["go"] = stepwise.waited(held["go"], waiting)
+                # Plan AN.48 (48e, D140): the step's tentative time kept beside the time it took.
+                go = stepwise.timed(held["go"], *timed) if timed is not None else held["go"]
+                held["go"] = stepwise.waited(go, waiting)
         return self.now(stopped)
 
     # The steps, as each finishes (D67).
@@ -1045,6 +1048,12 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
         raise ConversationRefused("Your message could not be saved, so NM has not started on it. Sending it again is safe.",
                                   status=503, code="message_not_saved", retryable=True) from exc
     report("sent", chat_id=context.chat_id)
+    # Plan AN.48 (48e, D140): a step's tentative time, said while it runs and kept beside the time it took.
+    began = time.monotonic()
+    estimated = (stepwise.estimate(go, None if rethought else resume, tentative.pages_of(context.documents))
+                 if gate.stepwise else None)
+    if estimated is not None:
+        report("tentative", seconds=estimated)
 
     def write_beside(change):
         with beside:
@@ -1247,7 +1256,7 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
         if titling:
             titling["thread"].join(TITLE_WAIT)
         refusal = ConversationRefused(STOPS["waiting"], status=409, code="waiting", retryable=True)
-        keeper.stop("waiting", waiting=exc.after)
+        keeper.stop("waiting", waiting=exc.after, timed=(estimated, time.monotonic() - began))
         refusal.kept = True
         finish("retryable", "waiting")
         refusal.metrics = calls.metrics()
@@ -1311,6 +1320,9 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
     _reporter(progress)("saving")
     # Plan AN.48 (48b): a matter finished with the analyses of some of its disputes says so above the answer.
     partly = stepwise.unasked(activity["sections"]) if gate.stepwise and "sections" in activity else None
+    if gate.stepwise:
+        # 48e (D140): each step's tentative time beside the time it took, kept with the answer's own record.
+        metrics = {**metrics, "steps_timed": stepwise.timed(go, estimated, time.monotonic() - began)["times"]}
     try:
         response = commit_turn(store, holder["context"], elements=elements, activities=activity,
                                records=checklist.records(context.payload(), activity),

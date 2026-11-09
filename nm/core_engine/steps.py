@@ -18,6 +18,8 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
+from nm.core_engine import tentative
+
 MODE = "steps"
 #: The steps of a matter, in order.
 STEPS = ("understand", "research", "write", "finish")
@@ -36,8 +38,12 @@ FINISHING = frozenset({"core_response_cross_check", "core_response_overview"})
 #: named, end to end, or done.
 GOS = ("next", "research", "write", "end_to_end", "done")
 _FIELDS = {"mode", "allowed", "n", "waiting"}
-#: What a go-ahead record may add (48b: the disputes named; 48c: the messages heard while the matter waited).
-_ADDED = ({"disputes"}, {"heard"})
+#: What a go-ahead record may add (48b: the disputes named; 48c: the messages heard while the matter waited; 48e: each step's
+#: tentative time beside the time it took).
+_ADDED = ({"disputes"}, {"heard"}, {"times"})
+#: The steps timed, kept with the matter while it is worked on (48e): the most recent, at most so many.
+MOST_TIMED = 100
+_TIMED = {"n", "steps", "estimate_s", "actual_s"}
 _MOST_STEPS = 10_000
 _MOST_DISPUTES = 50
 #: The messages heard while a matter waited, kept with it while it is worked on (48c): the most recent, at most so many.
@@ -74,8 +80,12 @@ def valid(go):
     """Whether a turn's go-ahead record has the form 48a2 saves (conversation.shown_of reads it so): 48b adds the disputes named,
     a record of 48a's form, without them, meaning every dispute."""
     try:
-        waiting, disputes, heard = go["waiting"], go.get("disputes"), go.get("heard", [])
+        waiting, disputes, heard, times = go["waiting"], go.get("disputes"), go.get("heard", []), go.get("times", [])
         return (isinstance(go, dict) and _FIELDS <= set(go) <= _FIELDS.union(*_ADDED) and go["mode"] == MODE
+                and isinstance(times, list) and len(times) <= MOST_TIMED
+                and all(isinstance(entry, dict) and set(entry) == _TIMED and type(entry["n"]) is int
+                        and isinstance(entry["steps"], list) and all(step in STEPS for step in entry["steps"])
+                        and type(entry["estimate_s"]) is int and type(entry["actual_s"]) is int for entry in times)
                 and isinstance(heard, list) and len(heard) <= MOST_HEARD
                 and all(isinstance(entry, dict) and set(entry) == _HEARD and all(isinstance(entry[key], str) for key in _HEARD)
                         and entry["text"].strip() for entry in heard)
@@ -112,8 +122,36 @@ def heard(go, text, taken, said):
 
 
 def _carried(go):
-    """What a go-ahead carries on to the next step's: the messages heard (48c)."""
-    return {"heard": list(go["heard"])} if go.get("heard") else {}
+    """What a go-ahead carries on to the next step's: the messages heard (48c) and the steps timed (48e)."""
+    return {**({"heard": list(go["heard"])} if go.get("heard") else {}),
+            **({"times": list(go["times"])} if go.get("times") else {})}
+
+
+def timed(go, estimate, actual):
+    """The go-ahead record with this step's tentative time kept beside the time it took (48e, D140), in seconds."""
+    entry = {"n": go["n"], "steps": list(go["allowed"]), "estimate_s": int(estimate), "actual_s": int(actual)}
+    return {**go, "times": [*(go.get("times") or ()), entry][-MOST_TIMED:]}
+
+
+def estimate(go, steps, pages=0):
+    """A run's tentative time in seconds (48e, D140): its steps, for the disputes it takes - the understanding for the pages read,
+    the research and the analyses for the disputes named (or every one the step can take), the finish for the analyses checked
+    across."""
+    state = state_of(steps) if (steps or {}).get("understood") else None
+    allowed, named = set(go["allowed"]), go.get("disputes")
+    unresearched, unwritten = _left(state) if state else ([], [])
+    total, to_write = 0, 0
+    if "understand" in allowed:
+        total += tentative.seconds("understand", pages)
+    if "research" in allowed and state:
+        total += tentative.seconds("research", len(named) if named else len(unresearched))
+    if "write" in allowed and state:
+        to_write = len(named) if named and "research" not in allowed else (
+            len(named) if named else len(unwritten) + (len(unresearched) if "research" in allowed else 0))
+        total += tentative.seconds("write", to_write)
+    if "finish" in allowed and state:
+        total += tentative.seconds("finish", len(state["written"]) + to_write)
+    return total
 
 
 def rethink(go):
@@ -270,8 +308,8 @@ def card(held, asked=None):
     questions = _questions(asked)
     if after == ASKED:
         open_now = [question for question in questions if question["answer"] is None]
-        gos = [{"choice": "end_to_end", "disputes": None, "said": "End to end, on NM's own understanding"},
-               {"choice": "done", "disputes": None, "said": "Done: save as it stands"}]
+        gos = _timed_gos(held, [{"choice": "end_to_end", "disputes": None, "said": "End to end, on NM's own understanding"},
+                                {"choice": "done", "disputes": None, "said": "Done: save as it stands"}])
         return {"after": after, "done_said": "NM needs your answers before it goes on.",
                 "next_said": (f"Answer NM's question{'s' if len(open_now) != 1 else ''} below; NM goes on by itself once "
                               "they are answered."),
@@ -310,6 +348,7 @@ def card(held, asked=None):
     gos.append({"choice": "done", "disputes": None, "said": (
         "Done: check the analyses against each other and save" if len(written) > 1 else
         "Done: finish and save" if written else "Done: save as it stands")})
+    gos = _timed_gos(held, gos)
     if state["whole"]:
         next_said = ("Next: research the law." if unresearched else "Next: write and check the answer." if unwritten
                      else "Next: save the answer.")
@@ -327,6 +366,18 @@ def card(held, asked=None):
                 {"id": name, "name": names[name], "researched": name in state["researched"],
                  "written": name in state["written"]} for name in state["order"]],
             "noticed": noticed(steps), "at": held["go"]["waiting"]["at"], "questions": questions, "heard": _heard(held)}
+
+
+def _timed_gos(held, gos):
+    """48e (D140): each go-ahead a stop offers, with its tentative time - none for Done before any analysis, which runs no step."""
+    out = []
+    for option in gos:
+        try:
+            go = given(held["go"], option["choice"], held=held, disputes=option.get("disputes"))
+        except ValueError:
+            go = None
+        out.append({**option, "tentative": tentative.said(estimate(go, held.get("steps"))) if go is not None else None})
+    return out
 
 
 def _heard(held):

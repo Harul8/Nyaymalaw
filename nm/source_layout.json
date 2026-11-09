@@ -74,6 +74,7 @@
     "nm.core_engine.retrieval": "core",
     "nm.core_engine.routing": "core",
     "nm.core_engine.steps": "core",
+    "nm.core_engine.tentative": "core",
     "nm.core_engine.titles": "core",
     "nm.core_engine.turn": "core",
     "nm.core_engine.understanding": "core",
@@ -140,7 +141,7 @@
   "expected_roles": {
     "adapters": 37,
     "bootstrap": 5,
-    "core": 40,
+    "core": 41,
     "domain": 37,
     "edge": 3,
     "infrastructure": 1,
