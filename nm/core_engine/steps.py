@@ -40,7 +40,7 @@ GOS = ("next", "research", "write", "end_to_end", "done")
 _FIELDS = {"mode", "allowed", "n", "waiting"}
 #: What a go-ahead record may add (48b: the disputes named; 48c: the messages heard while the matter waited; 48e: each step's
 #: tentative time beside the time it took).
-_ADDED = ({"disputes"}, {"heard"}, {"times"})
+_ADDED = ({"disputes"}, {"heard"}, {"times"}, {"recheck"})
 #: The steps timed, kept with the matter while it is worked on (48e): the most recent, at most so many.
 MOST_TIMED = 100
 _TIMED = {"n", "steps", "estimate_s", "actual_s"}
@@ -82,6 +82,7 @@ def valid(go):
     try:
         waiting, disputes, heard, times = go["waiting"], go.get("disputes"), go.get("heard", []), go.get("times", [])
         return (isinstance(go, dict) and _FIELDS <= set(go) <= _FIELDS.union(*_ADDED) and go["mode"] == MODE
+                and go.get("recheck", True) is True
                 and isinstance(times, list) and len(times) <= MOST_TIMED
                 and all(isinstance(entry, dict) and set(entry) == _TIMED and type(entry["n"]) is int
                         and isinstance(entry["steps"], list) and all(step in STEPS for step in entry["steps"])
@@ -124,7 +125,13 @@ def heard(go, text, taken, said):
 def _carried(go):
     """What a go-ahead carries on to the next step's: the messages heard (48c) and the steps timed (48e)."""
     return {**({"heard": list(go["heard"])} if go.get("heard") else {}),
-            **({"times": list(go["times"])} if go.get("times") else {})}
+            **({"times": list(go["times"])} if go.get("times") else {}),
+            **({"recheck": True} if go.get("recheck") else {})}
+
+
+def rechecked(go):
+    """The go-ahead record once the analyses written before the advocate's later messages are checked again (48h, D162)."""
+    return {key: value for key, value in go.items() if key != "recheck"}
 
 
 def timed(go, estimate, actual):
@@ -239,6 +246,9 @@ class Gate:
         self.go = go
         self.allowed = None if go is None else frozenset(go["allowed"])
         self.disputes = None if go is None or go.get("disputes") is None else frozenset(go["disputes"])
+        #: 48h (D161-D162): the analyses written before the advocate's later messages are to be checked again against them, in
+        #: the next run that writes or finishes; set once that run has checked them.
+        self.recheck, self.rechecked = go is not None and go.get("recheck") is True, False
 
     @property
     def stepwise(self):

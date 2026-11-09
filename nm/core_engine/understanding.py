@@ -102,8 +102,9 @@ SCHEMA = {"type": "object", "additionalProperties": False, "required": list(KIND
 
 def source_catalogue(context):
     """Server context only. Preserve exact words and provenance, including NM roles and
-    the pages of documents the advocate sent."""
-    rows = [*context["conversation"], context["latest"], *context.get("documents", ())]
+    the pages of documents the advocate sent. Plan AN.48 (48h, D159; its register of exceptions, item 5): what the advocate
+    added while a matter waited, as their own messages after the latest one; a context without them is as before."""
+    rows = [*context["conversation"], context["latest"], *context.get("added", ()), *context.get("documents", ())]
     result = {}
     for row in rows:
         identity = row["source_id"]

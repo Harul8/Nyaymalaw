@@ -2289,7 +2289,8 @@ def _held_row(matter, rows, held):
     """A turn still being worked on, as the board reads a saved turn: its understanding and
     research, and the checklist of each dispute's section shown so far."""
     context = TurnContext(matter, held['request']['chat_id'], held['turn_id'], held['message'], tuple(rows),
-                          documents=tuple(held['documents']), steers=tuple(held.get('steers', ()))).payload()
+                          documents=tuple(held['documents']), steers=tuple(held.get('steers', ())),
+                          added=tuple(held.get('added', ()))).payload()
     # Plan AN.41 (D67): derived from the steps it saved; nothing to show before the matter is understood.
     activity = {key: value for key, value in (activity_of(held, context) or {}).items() if key != 'waiting'}
     return {'turn_id': held['turn_id'], 'message': held['message'], 'documents': held['documents'],
@@ -2716,7 +2717,8 @@ def _held_sources(matter, rows, turn_id):
         return None
     try:
         context = TurnContext(matter, held['request']['chat_id'], turn_id, held['message'], tuple(rows),
-                              documents=tuple(held['documents']), steers=tuple(held.get('steers', ()))).payload()
+                              documents=tuple(held['documents']), steers=tuple(held.get('steers', ())),
+                          added=tuple(held.get('added', ()))).payload()
         activity = activity_of(held, context)
     except (KeyError, TypeError, ValueError):
         return None

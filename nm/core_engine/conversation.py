@@ -38,6 +38,8 @@ _SENT_FIELDS = (_SHOWN_FIELDS - {"activity"}) | {"steps", "stopped", "steers"}
 #: From plan AN.48 (48a2, 9 Nov 2026) a matter worked step by step also keeps its go-ahead (steps.valid): which steps the run may
 #: take, the step's number and, where it waits for the advocate, after which step. A record without it is read as before.
 _STEPPED_FIELDS = _SENT_FIELDS | {"go"}
+#: Plan AN.48 (48h, D159): with what the advocate added while the matter waited, kept as their own messages.
+_ADDED_FIELDS = _STEPPED_FIELDS | {"added"}
 #: Each step's result, as it finished: the understanding of the matter and the research plan ({"interpretation", "plan"}), the time
 #: limits, each dispute's research by its id, each dispute's case by the index of its section, and what the answer has shown - its
 #: sections done, the check across them and the overview (the answering's own state). None, or empty, until the step finishes.
@@ -146,6 +148,8 @@ def checked_rows(matter, advocate_id, *, copied=True):
                 questions.check_asked(row["asked"])
             if "steers" in row and (not row["steers"] or not _steers_valid(row["steers"])):
                 raise ValueError("conversation steers")
+            if "added" in row and (not row["added"] or not _steers_valid(row["added"])):
+                raise ValueError("conversation additions")
             if (row["contract"] != CONTRACT or type(row["sequence"]) is not int
                     or row["sequence"] != sequence
                     or row["previous"] != previous or row["digest"] != digest(body)
@@ -197,6 +201,9 @@ class TurnContext:
     asked: dict | None = None
     #: What the advocate steered the answer with while it was worked on (plan AN.42, D79), in the order it came.
     steers: tuple[dict, ...] = ()
+    #: Plan AN.48 (48h, D159): what the advocate added while the matter waited for them - each {"text", "documents", "at"} - kept
+    #: as their own messages after the latest one, in the order it came.
+    added: tuple[dict, ...] = ()
 
     @property
     def request(self):
@@ -205,12 +212,14 @@ class TurnContext:
     def payload(self):
         conversation, pages, unread = [], [], []
         for row in self.rows:
-            steered = row.get("steers", ())
-            pages += document_sources(row["turn_id"], _with_steered(row.get("documents", ()), steered))
-            unread += _unread_pages(row["turn_id"], _with_steered(row.get("documents", ()), steered))
+            steered, added = row.get("steers", ()), row.get("added", ())
+            pages += document_sources(row["turn_id"], _with_steered(row.get("documents", ()), steered, added))
+            unread += _unread_pages(row["turn_id"], _with_steered(row.get("documents", ()), steered, added))
             conversation.append({"source_id": row["turn_id"] + ":advocate",
                                  "turn_id": row["turn_id"], "speaker": "advocate",
                                  "record_role": "original_account", "text": said(row["message"], steered)})
+            # Plan AN.48 (48h, D159): what the advocate added while that matter waited, as their own messages after it.
+            conversation.extend(added_messages(row["turn_id"], added))
             response = row["response"]
             text = "\n\n".join(e["text"] for e in response["elements"])
             conversation.append({"source_id": row["turn_id"] + ":nm",
@@ -226,8 +235,8 @@ class TurnContext:
                 conversation.extend(questions.conversation_rows(row["turn_id"], row["asked"]))
         latest = {"source_id": self.turn_id + ":advocate", "turn_id": self.turn_id,
                   "speaker": "advocate", "record_role": "original_account", "text": said(self.message, self.steers)}
-        pages += document_sources(self.turn_id, _with_steered(self.documents, self.steers))
-        unread += _unread_pages(self.turn_id, _with_steered(self.documents, self.steers))
+        pages += document_sources(self.turn_id, _with_steered(self.documents, self.steers, self.added))
+        unread += _unread_pages(self.turn_id, _with_steered(self.documents, self.steers, self.added))
         context = {"position": "follow_up" if self.rows else "first", "latest": latest,
                    "conversation": conversation,
                    "current_records": deepcopy(self.rows[-1]["records"]) if self.rows else {},
@@ -241,6 +250,10 @@ class TurnContext:
         # and the understanding were made before the asking and read none of it; the writing, the review and the case read it.
         if self.asked is not None:
             context["answers"] = questions.context_answers(self.asked["questions"], self.asked["answers"])
+        # Plan AN.48 (48h, D159): only a matter given more words while it waited carries them, after the latest message, so that
+        # every other context stays exactly as it was.
+        if self.added:
+            context["added"] = added_messages(self.turn_id, self.added)
         return context
 
 
@@ -250,9 +263,17 @@ def said(message, steers=()):
     return "\n\n".join([message, *(steer["text"] for steer in steers)])
 
 
-def _with_steered(documents, steers):
-    """A turn's documents and, after them, those that came with what steered it (D79): numbered on from the message's own."""
-    return [*documents, *(document for steer in steers for document in steer["documents"])]
+def _with_steered(documents, steers, added=()):
+    """A turn's documents and, after them, those that came with what steered it (D79) and with what the advocate added while the
+    matter waited (plan AN.48, 48h): numbered on from the message's own."""
+    return [*documents, *(document for steer in [*steers, *added] for document in steer["documents"])]
+
+
+def added_messages(turn_id, added):
+    """Plan AN.48 (48h, D159): what the advocate added while a matter waited, as their own messages - each its own source, after
+    the turn's message, labelled as their own account and quoted word for word."""
+    return [{"source_id": f"{turn_id}:added{number}", "turn_id": turn_id, "speaker": "advocate",
+             "record_role": "original_account", "text": entry["text"]} for number, entry in enumerate(added, 1)]
 
 
 def stored_chat(advocate_id, chat_id, turn_id):
@@ -272,7 +293,7 @@ def shown_of(matter, *, copied=True):
     held = (matter.intake_answers or {}).get(SHOWN) if matter is not None else None
     if held is None:
         return None
-    if (not isinstance(held, dict) or set(held) not in (_SHOWN_FIELDS, _SENT_FIELDS, _STEPPED_FIELDS)
+    if (not isinstance(held, dict) or set(held) not in (_SHOWN_FIELDS, _SENT_FIELDS, _STEPPED_FIELDS, _ADDED_FIELDS)
             or not _nonempty(held["turn_id"])
             or not isinstance(held["request"], dict) or not isinstance(held["elements"], list)
             or type(held["base_version"]) is not int or held["base_version"] < 0
@@ -298,7 +319,8 @@ def _sent_valid(held):
                  and isinstance(stopped["code"], str) and _STOP_CODE.match(stopped["code"]) is not None
                  and _nonempty(stopped["at"]))
             and _steers_valid(held["steers"])
-            and ("go" not in held or stepwise.valid(held["go"])))
+            and ("go" not in held or stepwise.valid(held["go"]))
+            and ("added" not in held or "go" in held and bool(held["added"]) and _steers_valid(held["added"])))
 
 
 def _steers_valid(steers):
@@ -313,14 +335,15 @@ def _steers_valid(steers):
         return False
 
 
-def sent(turn_id, request, message, documents, base_version, *, at, steps=None, steers=(), go=None):
+def sent(turn_id, request, message, documents, base_version, *, at, steps=None, steers=(), go=None, added=()):
     """A turn being worked on as it is saved when Send is pressed (plan AN.41, D66): its message and files, nothing done yet - or,
     where the same message continues where it stopped, the steps it had finished (D70) and what steered it (D79). go (plan AN.48,
     48a2): the go-ahead of a matter worked step by step; None (end to end) keeps the record exactly as before."""
     return {"turn_id": turn_id, "request": deepcopy(request), "message": message, "documents": deepcopy(list(documents)),
             "elements": [], "metrics": {}, "at": at, "base_version": base_version,
             "steps": deepcopy(steps) if steps is not None else {name: {} if name in ("parts", "cases") else None for name in STEPS},
-            "stopped": None, "steers": deepcopy(list(steers)), **({"go": deepcopy(go)} if go is not None else {})}
+            "stopped": None, "steers": deepcopy(list(steers)), **({"go": deepcopy(go)} if go is not None else {}),
+            **({"added": deepcopy(list(added))} if added else {})}
 
 
 def hold_shown(store, context, held, *, private=False):
@@ -583,6 +606,8 @@ def commit_turn(store, context, *, elements, activities, records=None, work=None
         row["documents"] = deepcopy(list(context.documents))
     if context.steers:
         row["steers"] = deepcopy(list(context.steers))
+    if context.added:
+        row["added"] = deepcopy(list(context.added))
     if context.asked is not None:
         row["asked"] = questions.check_asked(deepcopy(context.asked))
         # The page shows what was asked, and how each answer came to stand, above the answer it shaped.

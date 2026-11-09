@@ -451,11 +451,11 @@ class Application:
             refusal.kept, refusal.heard = True, {'taken': taken, 'said': said}
             raise refusal
 
-        def ran(go, *, added=None):
+        def ran(go, **words):
             return self.run_turn(advocate_id=advocate_id, session_current=session_current,
                                  document_refs=tuple(asked.get('document_refs', ())), model_choice=asked.get('model'),
                                  effort=asked.get('effort'), message=held['message'], turn_id=turn_id,
-                                 chat_id=asked['chat_id'], go=go, **({'added': added} if added else {}))
+                                 chat_id=asked['chat_id'], go=go, **words)
         if documents:
             judgement = {'kind': 'information', 'said': 'Taken as new papers for the matter: NM reads the matter again with them.'}
         else:
@@ -479,10 +479,27 @@ class Application:
                                  running=lambda held_turn: self.turn_running(advocate_id, held_turn),
                                  session_current=session_current)
             return ran(go)
-        if kind in ('information', 'correction', 'rethink'):
+        entry = {'text': message, 'documents': list(documents), 'at': datetime.now(timezone.utc).isoformat()}
+        if kind == 'rethink':
             go = stepwise.rethink(stepwise.heard(held['go'], message, kind, judgement['said']))
-            return ran(go, added=[{'text': message, 'documents': list(documents),
-                                   'at': datetime.now(timezone.utc).isoformat()}])
+            return ran(go, steered_with=[entry])
+        if kind in ('information', 'correction'):
+            # 48h (D159): kept as the advocate's message, after the latest one, citable; the research stays as it is.
+            state = stepwise.state_of(held['steps'])
+            written = [name for name in state['order'] if name in state['written']]
+            listened = stepwise.heard(held['go'], message, kind, judgement['said'])
+            if judgement['critical'] and written:
+                # D161: critical - the analyses written are checked against it at once, each written again where wanting.
+                go = {'mode': stepwise.MODE, 'allowed': ['write'], 'n': held['go']['n'] + 1, 'waiting': None,
+                      'disputes': None if state['whole'] else written, **stepwise._carried(listened), 'recheck': True}
+                return ran(go, appended=[entry])
+            # D161-D162: not critical - nothing is redone now; the analyses written are checked against it once, at Done.
+            held['added'] = [*held.get('added', ()), entry]
+            held['go'] = {**listened, **({'recheck': True} if written else {})}
+            save_waiting(self.store, matter, held)
+            refusal = ConversationRefused(judgement['said'], status=409, code='heard', retryable=False)
+            refusal.kept, refusal.heard = True, {'taken': kind, 'said': judgement['said']}
+            raise refusal
         if kind == 'question':
             try:
                 queued = queued_of(matter)
@@ -497,7 +514,7 @@ class Application:
         answered; otherwise the answers wait for the step that needs them, and the stop says they are taken. ConversationRefused
         where the matter does not wait here, asks nothing, or an answer cannot be taken."""
         from nm.core_engine import questions, steps as stepwise
-        from nm.core_engine.conversation import ConversationRefused, asking_of, save_asking
+        from nm.core_engine.conversation import ConversationRefused, asking_of, save_asking, save_waiting
         matter, held = self._held(advocate_id, chat_id)
         if held is None or held['turn_id'] != turn_id or stepwise.waiting_of(held) is None:
             raise ConversationRefused('This matter is not waiting for your go-ahead.', status=409, code='not_waiting')
@@ -517,14 +534,28 @@ class Application:
         except questions.Refused as exc:
             raise ConversationRefused(str(exc), status=422, code='answer_refused') from exc
         state = window.state()
-        save_asking(self.store, matter, turn_id, state)
+        matter = save_asking(self.store, matter, turn_id, state)
+        # 48h (D159): the answers given here are the advocate's messages too, after the latest one, citable as theirs.
+        from datetime import datetime, timezone
+        said = {question['id']: question['question'] for question in state['questions']}
+        words = '\n'.join(f'Answer to NM\'s question "{said[identity]}": '
+                          + '; '.join([*value.get('chosen', ()), *([value['other']] if value.get('other') else [])])
+                          for identity, value in answers.items() if identity in said)
+        entry = {'text': words, 'documents': [], 'at': datetime.now(timezone.utc).isoformat()}
+        written = stepwise.state_of(held['steps'])['written']
         if stepwise.waiting_of(held) == stepwise.ASKED and not stepwise.unanswered(state):
             asked_for = held['request']
             # D154: the step that stopped for the answers goes on from its saved work, under its own go-ahead.
             return self.run_turn(advocate_id=advocate_id, session_current=session_current,
                                  document_refs=tuple(asked_for.get('document_refs', ())), model_choice=asked_for.get('model'),
                                  effort=asked_for.get('effort'), message=held['message'], turn_id=turn_id,
-                                 chat_id=asked_for['chat_id'], go={**held['go'], 'waiting': None})
+                                 chat_id=asked_for['chat_id'], go={**held['go'], 'waiting': None,
+                                                                   **({'recheck': True} if written else {})},
+                                 appended=[entry])
+        held['added'] = [*held.get('added', ()), entry]
+        if written:
+            held['go'] = {**held['go'], 'recheck': True}
+        save_waiting(self.store, matter, held)
         left = len(stepwise.unanswered(state))
         said = ('Your answer is taken.' + (f' NM still needs {left} more.' if left and stepwise.waiting_of(held) == stepwise.ASKED
                                            else ''))

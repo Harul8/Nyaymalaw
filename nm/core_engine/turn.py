@@ -481,7 +481,7 @@ class _Keeper:
         if thread is not None and thread is not threading.current_thread():
             thread.join()
 
-    def stop(self, code, *, answered=None, waiting=None, timed=None):
+    def stop(self, code, *, answered=None, waiting=None, timed=None, rechecked=False):
         """The turn stopped part-way (D69): why, saved with everything it finished, at once. answered: the whole answer, where it
         was finished but not saved. waiting (plan AN.48, 48a2): the step after which a matter worked step by step waits for the
         advocate's go-ahead. Raises nothing; False where it could not be written."""
@@ -494,7 +494,7 @@ class _Keeper:
             if waiting is not None:
                 # Plan AN.48 (48e, D140): the step's tentative time kept beside the time it took.
                 go = stepwise.timed(held["go"], *timed) if timed is not None else held["go"]
-                held["go"] = stepwise.waited(go, waiting)
+                held["go"] = stepwise.waited(stepwise.rechecked(go) if rechecked else go, waiting)
         return self.now(stopped)
 
     # The steps, as each finishes (D67).
@@ -570,6 +570,14 @@ def _prepare(model, context, searcher, *, case_index, provision_reader, progress
     calls = model if isinstance(model, TurnCalls) else TurnCalls(model)
     gate = gate if gate is not None else stepwise.Gate(None)
     kept = _kept(resume, context, report) if resume and not steered else _NOTHING_KEPT
+    # Plan AN.48 (48h; D161-D162): the analyses written before the advocate's later messages are reviewed again from their own words
+    # against everything said, and written again only where the review finds them wanting - in the next run that writes or
+    # finishes; until then they stay as they were checked.
+    rechecking = bool(gate.recheck and not steered and resume and ((resume.get("answered") or {}).get("sections"))
+                      and (gate.allows("write") or gate.allows("finish")))
+    if rechecking:
+        kept["answered"] = resume["answered"]
+        gate.rechecked = True
     report("understanding")
     # Plan AN.37 (D41, D45): what the turn is expected to cost - roughly now, from the papers sent, and again once its plan is
     # known - kept beside what it spends, for diagnostics only.
@@ -666,8 +674,8 @@ def _prepare(model, context, searcher, *, case_index, provision_reader, progress
         calls, context, None, None, interpretation=interpreted, execution=None, worked=limits,
         case_index=case_index, provision_reader=provision_reader, report=report, released=released,
         researched=researched, contract=response_writer.CASED_CONTRACT, later=later, done=kept["answered"],
-        cases=kept["cases"], case_done=keep.case if keep is not None else None, steered=steered and bool(kept["answered"]),
-        only=write_only)
+        cases=kept["cases"], case_done=keep.case if keep is not None else None,
+        steered=(steered and bool(kept["answered"])) or rechecking, only=write_only)
     # Plan AN.48 (48a1): written - an answer with several analyses stopped before the check across them (steps.Gate.call); one
     # with a single analysis stops here, before it is saved.
     gate.after("write")
@@ -729,7 +737,7 @@ def save_shown(store, matter, advocate_id, held, *, session_current, service_sta
         context = TurnContext(matter, held["request"]["chat_id"], held["turn_id"], held["message"], tuple(rows),
                               documents=tuple(held["documents"]), choice=choice,
                               asked=asking["state"] if asking is not None else None,
-                              steers=tuple(held.get("steers", ())))
+                              steers=tuple(held.get("steers", ())), added=tuple(held.get("added", ())))
         if context.request != held["request"] or any(row["turn_id"] == held["turn_id"] for row in rows):
             raise ValueError("What was shown belongs to another request")
     except (ValueError, KeyError, TypeError, SchemaViolation) as exc:
@@ -912,7 +920,7 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
             attempts: TurnAttemptPort | None = None, case_index=None, provision_reader=None,
             progress=None, documents=(), held_acts=None, running=lambda turn_id: False,
             chosen_model=None, effort=None, propose=None, desk=None, stronger=None, stopping=None, steers=None,
-            attach=None, entitle=None, go=None, added=None):
+            attach=None, entitle=None, go=None, steered_with=None, appended=None):
     """One turn. chosen_model and effort: what the advocate chose for it (plan AN.33, D23) - the model, which the caller's model
     port already runs every call on, and the effort, which moves every call of the turn (calls.TurnCalls); both recorded with the
     turn's metrics, and in its request where they are not the defaults. None: not chosen (the defaults, unrecorded).
@@ -936,8 +944,10 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
     go (plan AN.48, piece 48a): the go-ahead of a matter worked step by step (steps.first, steps.given) - which steps this run may
     take. The run stops when they are done, with the code 'waiting' and everything it finished kept (as a stop keeps it, D69), for
     the advocate's next go-ahead; each step claims an attempt of its own (D150). None: end to end, exactly as before.
-    added (plan AN.48, 48c): what the advocate added while the matter waited - each {"text", "documents", "at"}, as a steer is -
-    joining the matter as their words; the matter is understood again with them (D149's rethink)."""
+    steered_with (plan AN.48, 48c): the advocate's words that make the matter be thought again while it waited - each {"text",
+    "documents", "at"}, as a steer is - joining it as their words; the matter is understood again with them (D149's rethink).
+    appended (48h, D159): what the advocate added while the matter waited, kept as their own messages after the latest one;
+    the research stays as it is."""
     if not session_current():
         raise ConversationRefused("Sign in again before continuing.", status=401)
     effort = reasoning.DEFAULT_CHOICE if effort is None else effort
@@ -1026,7 +1036,7 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
     # Plan AN.41 (D66): the message and its files are saved with the conversation before any AI work begins. The same message
     # sent again - Continue - starts from what it saved (D70), with what steered it (D79).
     resume = (None if same is None else same["steps"] if "steps" in same else steps_from(same))
-    rethought = bool(added) and resume is not None
+    rethought = bool(steered_with) and resume is not None
     if rethought:
         # Plan AN.48 (48c; D149's rethink, today's Steer): what the advocate added while the matter waited joins it as their words;
         # the matter is understood again with them, each dispute's research kept where the new plan asks what it answered, and
@@ -1034,11 +1044,16 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
         resume = {**resume, "answered": None, "cases": {}}
     held = sent(turn_id, context.request, context.message, context.documents, base,
                 at=datetime.now(timezone.utc).isoformat(), steps=resume,
-                steers=[*(same.get("steers", ()) if same is not None and resume is not None else ()), *(added or ())], go=go)
+                steers=[*(same.get("steers", ()) if same is not None and resume is not None else ()), *(steered_with or ())],
+                go=go, added=[*(same.get("added", ()) if same is not None and resume is not None else ()), *(appended or ())])
     if resume is not None:
         held["elements"], held["metrics"] = ([] if rethought else same["elements"]), same["metrics"]
     if held["steers"]:
         context = replace(context, steers=tuple(held["steers"]))
+        holder["context"] = context
+    if held.get("added"):
+        # Plan AN.48 (48h, D159): the advocate's added messages, in every step still to come.
+        context = replace(context, added=tuple(held["added"]))
         holder["context"] = context
     keeper = _Keeper(store, holder, beside, held, report)
     try:
@@ -1256,7 +1271,7 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
         if titling:
             titling["thread"].join(TITLE_WAIT)
         refusal = ConversationRefused(STOPS["waiting"], status=409, code="waiting", retryable=True)
-        keeper.stop("waiting", waiting=exc.after, timed=(estimated, time.monotonic() - began))
+        keeper.stop("waiting", waiting=exc.after, timed=(estimated, time.monotonic() - began), rechecked=gate.rechecked)
         refusal.kept = True
         finish("retryable", "waiting")
         refusal.metrics = calls.metrics()

@@ -90,17 +90,31 @@ def test_a_go_ahead_the_stop_does_not_offer_is_asked_again_then_taken_as_unclear
     assert steps.waiting_of(held(served)) == "understood" and held(served)["steps"]["parts"] == {}
 
 
-def test_information_joins_the_matter_as_the_advocates_words_and_it_is_understood_again(served):
+def test_information_joins_the_matter_as_the_advocates_own_message_and_nothing_is_redone(served):
+    """48h (D159) refines 48c: information is kept as the advocate's message after the latest one; the matter is not understood
+    again for it."""
     waiting_matter(served)
     reader = Reader(judged(kind="information", disputes=["D2"], critical=True,
                            said="Taken as new information: the notice was served on 3 March."))
     reading(served, reader)
     calls_before = len(served.model.calls)
     reply = say(served, "The notice was served on 3 March.")
+    assert reply.status_code == 409 and reply.json()["detail"]["code"] == "heard"
+    record = held(served)
+    assert [entry["text"] for entry in record["added"]] == ["The notice was served on 3 March."] and record["steers"] == []
+    assert steps.waiting_of(record) == "understood" and record["go"]["heard"][-1]["taken"] == "information"
+    assert len(served.model.calls) == calls_before, "nothing written yet to check: nothing is redone"
+
+
+def test_a_rethink_joins_the_matter_as_the_advocates_words_and_it_is_understood_again(served):
+    waiting_matter(served)
+    reading(served, Reader(judged(kind="rethink", said="Taken as a request to rethink the matter.")))
+    calls_before = len(served.model.calls)
+    reply = say(served, "Look at this as a tenancy matter, not a sale.")
     assert reply.status_code == 409 and reply.json()["detail"]["code"] == "waiting"
     record = held(served)
-    assert [steer["text"] for steer in record["steers"]] == ["The notice was served on 3 March."]
-    assert steps.waiting_of(record) == "understood" and record["go"]["heard"][-1]["taken"] == "information"
+    assert [steer["text"] for steer in record["steers"]] == ["Look at this as a tenancy matter, not a sale."]
+    assert steps.waiting_of(record) == "understood" and record["go"]["heard"][-1]["taken"] == "rethink"
     understood_again = [name for name, _ in served.model.calls[calls_before:] if name == "core_research_understand"]
     assert understood_again, "the matter is understood again with the advocate's words"
 

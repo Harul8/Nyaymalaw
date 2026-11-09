@@ -13,7 +13,7 @@
   "nm/core_engine/case_strength.py": "ef1302f0676c134e4b158a4cf468b0b7010f95a57dc4af114aa0aaef1a25e2e3",
   "nm/core_engine/response_rendering.py": "c238ffcb7c2cb40aedb3b0ef0c6f88bb6c57b8f62d040fb97c03f5663bbfa901",
   "nm/core_engine/calculation.py": "33536d565a84b61ac3d795839707cbfbd063b0a28a5ea8163d5f0e4fa0b3fef1",
-  "nm/core_engine/understanding.py": "0f9be366c507921f00e1ab39bddcd75fd3da1afac4fad7f470c80589511938a6",
+  "nm/core_engine/understanding.py": "eed436729b10bfef7ad8e4962e11df2e1066667288c5af9442a60929018c85aa",
   "nm/core_engine/questions.py": "a380678dbd16db0468d573eb3012a7d71ba54d97705f03e8ef0ed0be086e3aef",
   "nm/core_engine/matter_board.py": "77facbbad08ccbb1520fda0ff823e0a643b84c549f5edd2e0619b318df305426",
   "nm/core_engine/checklist.py": "8769979354ea31f38ec161f7e036dab94934e8e5842eaf70742ceac59ada5bae"
@@ -22,6 +22,9 @@
   "1 (48b, plan AN.48 register)": [
    "nm/core_engine/research.py",
    "nm/core_engine/answer_sections.py"
+  ],
+  "5 (48h, plan AN.48 register)": [
+   "nm/core_engine/understanding.py"
   ]
  }
 }
