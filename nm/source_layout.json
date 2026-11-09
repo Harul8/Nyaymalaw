@@ -60,6 +60,7 @@
     "nm.core_engine.figures_v12": "core",
     "nm.core_engine.limitation": "core",
     "nm.core_engine.matter_board": "core",
+    "nm.core_engine.message_reader": "core",
     "nm.core_engine.page_reading": "core",
     "nm.core_engine.questions": "core",
     "nm.core_engine.reasoning": "core",
@@ -139,7 +140,7 @@
   "expected_roles": {
     "adapters": 37,
     "bootstrap": 5,
-    "core": 39,
+    "core": 40,
     "domain": 37,
     "edge": 3,
     "infrastructure": 1,

@@ -902,7 +902,7 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
             attempts: TurnAttemptPort | None = None, case_index=None, provision_reader=None,
             progress=None, documents=(), held_acts=None, running=lambda turn_id: False,
             chosen_model=None, effort=None, propose=None, desk=None, stronger=None, stopping=None, steers=None,
-            attach=None, entitle=None, go=None):
+            attach=None, entitle=None, go=None, added=None):
     """One turn. chosen_model and effort: what the advocate chose for it (plan AN.33, D23) - the model, which the caller's model
     port already runs every call on, and the effort, which moves every call of the turn (calls.TurnCalls); both recorded with the
     turn's metrics, and in its request where they are not the defaults. None: not chosen (the defaults, unrecorded).
@@ -925,7 +925,9 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
 
     go (plan AN.48, piece 48a): the go-ahead of a matter worked step by step (steps.first, steps.given) - which steps this run may
     take. The run stops when they are done, with the code 'waiting' and everything it finished kept (as a stop keeps it, D69), for
-    the advocate's next go-ahead; each step claims an attempt of its own (D150). None: end to end, exactly as before."""
+    the advocate's next go-ahead; each step claims an attempt of its own (D150). None: end to end, exactly as before.
+    added (plan AN.48, 48c): what the advocate added while the matter waited - each {"text", "documents", "at"}, as a steer is -
+    joining the matter as their words; the matter is understood again with them (D149's rethink)."""
     if not session_current():
         raise ConversationRefused("Sign in again before continuing.", status=401)
     effort = reasoning.DEFAULT_CHOICE if effort is None else effort
@@ -1014,10 +1016,17 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
     # Plan AN.41 (D66): the message and its files are saved with the conversation before any AI work begins. The same message
     # sent again - Continue - starts from what it saved (D70), with what steered it (D79).
     resume = (None if same is None else same["steps"] if "steps" in same else steps_from(same))
+    rethought = bool(added) and resume is not None
+    if rethought:
+        # Plan AN.48 (48c; D149's rethink, today's Steer): what the advocate added while the matter waited joins it as their words;
+        # the matter is understood again with them, each dispute's research kept where the new plan asks what it answered, and
+        # the analyses written before are written again once asked for.
+        resume = {**resume, "answered": None, "cases": {}}
     held = sent(turn_id, context.request, context.message, context.documents, base,
-                at=datetime.now(timezone.utc).isoformat(), steps=resume, steers=same.get("steers", ()) if resume else (), go=go)
+                at=datetime.now(timezone.utc).isoformat(), steps=resume,
+                steers=[*(same.get("steers", ()) if same is not None and resume is not None else ()), *(added or ())], go=go)
     if resume is not None:
-        held["elements"], held["metrics"] = same["elements"], same["metrics"]
+        held["elements"], held["metrics"] = ([] if rethought else same["elements"]), same["metrics"]
     if held["steers"]:
         context = replace(context, steers=tuple(held["steers"]))
         holder["context"] = context
@@ -1169,7 +1178,8 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
         """Plan AN.41 (D69): the turn stopped part-way; all it finished is kept with why, for Continue or Discard."""
         keeper.stop(code, answered=answered)
         exc.kept = True
-    steered = False
+    # Plan AN.48 (48c): a matter given words while it waited is understood again with them, as a steer is (D79).
+    steered = rethought
     try:
         while True:
             try:

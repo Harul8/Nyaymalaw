@@ -415,6 +415,79 @@ class Application:
                              effort=asked.get('effort'), message=held['message'], turn_id=turn_id,
                              chat_id=asked['chat_id'], go=go)
 
+    def message_turn(self, *, advocate_id, chat_id, turn_id, message, session_current, document_refs=()):
+        """A message sent while a matter waits for the advocate (plan AN.48, 48c; D146, D158): the message reader judges what it is.
+        A go-ahead runs its step, as its button would; information, a correction or a rethink joins the matter as the advocate's
+        words and the matter is understood again with them (D149); a new question waits above the message box until the matter is
+        done; an unclear message is answered with the question that would settle it. Papers sent with it are information. How NM
+        took the message is kept with the matter ('heard') and said at its stop. Returns the step's outcome as go_turn does, or
+        raises ConversationRefused 'heard' (kept) where no step runs. Where the reader cannot be reached the message is kept and
+        the stop says so."""
+        from datetime import datetime, timezone
+        from nm.core_engine import message_reader, steps as stepwise, turn
+        from nm.core_engine.conversation import ConversationRefused, queued_of, save_waiting
+        from nm.shared.model_port import ModelError
+        matter, held = self._held(advocate_id, chat_id)
+        if held is None or held['turn_id'] != turn_id or stepwise.waiting_of(held) is None:
+            raise ConversationRefused('This matter is not waiting for your go-ahead.', status=409, code='not_waiting')
+        if self.turn_running(advocate_id, turn_id):
+            raise ConversationRefused('NM is already working on this answer.', code='turn_in_progress')
+        documents = []
+        if document_refs:
+            from nm.core_engine import documents as turn_documents
+            if self.documents is None:
+                raise turn_documents.DocumentRefused("Documents cannot be read on this installation.")
+            documents = turn_documents.turn_material([self.documents.load(advocate_id, ref) for ref in document_refs])
+        asked = held['request']
+
+        def heard_only(taken, said, *, queued=None):
+            """No step runs: what NM heard is kept with the matter and said at its stop."""
+            held['go'] = stepwise.heard(held['go'], message, taken, said)
+            save_waiting(self.store, matter, held, queued=queued)
+            refusal = ConversationRefused(said, status=409, code='heard', retryable=False)
+            refusal.kept, refusal.heard = True, {'taken': taken, 'said': said}
+            raise refusal
+
+        def ran(go, *, added=None):
+            return self.run_turn(advocate_id=advocate_id, session_current=session_current,
+                                 document_refs=tuple(asked.get('document_refs', ())), model_choice=asked.get('model'),
+                                 effort=asked.get('effort'), message=held['message'], turn_id=turn_id,
+                                 chat_id=asked['chat_id'], go=go, **({'added': added} if added else {}))
+        if documents:
+            judgement = {'kind': 'information', 'said': 'Taken as new papers for the matter: NM reads the matter again with them.'}
+        else:
+            choice = asked.get('model')
+            model = self._model_for(advocate_id, session_current=session_current,
+                                    text_model=DEFAULT_TURN_MODEL if choice == AUTO_TURN else choice)
+            try:
+                judgement = message_reader.read(model, held, message)
+            except ModelError:
+                logging.getLogger('nm.turns').warning('A message sent while a matter waited could not be read.')
+                heard_only('unread', 'NM could not read this message just now. It is kept here: use the buttons, or send it '
+                                     'again.')
+        kind = judgement['kind']
+        if kind == 'go':
+            listened = stepwise.heard(held['go'], message, kind, judgement['said'])['heard']
+            go = {**judgement['go'], 'heard': listened} if judgement['go'] is not None else None
+            if go is None:  # Done before any analysis: saved as it stands
+                held['go'] = stepwise.heard(held['go'], message, kind, judgement['said'])
+                matter = save_waiting(self.store, matter, held)
+                return turn.done(self.store, matter, advocate_id, turn_id,
+                                 running=lambda held_turn: self.turn_running(advocate_id, held_turn),
+                                 session_current=session_current)
+            return ran(go)
+        if kind in ('information', 'correction', 'rethink'):
+            go = stepwise.rethink(stepwise.heard(held['go'], message, kind, judgement['said']))
+            return ran(go, added=[{'text': message, 'documents': list(documents),
+                                   'at': datetime.now(timezone.utc).isoformat()}])
+        if kind == 'question':
+            try:
+                queued = queued_of(matter)
+            except ValueError:
+                queued = []
+            heard_only(kind, judgement['said'], queued=[*queued, {'text': message, 'documents': []}])
+        heard_only('unclear', f"{judgement['said']} {judgement['ask']}".strip())
+
     def discard_turn(self, *, advocate_id, chat_id, turn_id, session_current):
         """Discard (plan AN.41, D71): the red message and its buttons go; the answer that stopped is saved as it stopped. Returns
         the saved response, or None where that turn is not stopped in this conversation."""

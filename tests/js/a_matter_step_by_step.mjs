@@ -108,4 +108,25 @@ const button = (node, text) => (node._text === text ? node : (node.children || [
   assert.ok(!texts(plain).some((text) => text.startsWith('Waiting')));
 }
 
+// --- a message while the matter waits goes to it, and the stop says how NM took it (48c) ---------------------------------------
+{
+  const delivered = [];
+  const box = { value: 'Go ahead with the lease.' };
+  const context = vm.createContext({ activeDelivery: null, ownsIntent: () => true, attachments: [{ summary: { document_ref: 'doc_1' } }],
+    renderAttachments: () => {}, sizeComposer: () => {}, $: () => box,
+    deliver: (entry) => delivered.push([entry.endpoint, entry.envelope]) });
+  vm.runInContext(fn('messageTurn'), context);
+  const entry = { turnId: 't1', context: { chatId: 'c1', text: 'Go ahead with the lease.' }, stopped: { code: 'waiting' } };
+  context.messageTurn(entry, 'Go ahead with the lease.');
+  assert.deepEqual(delivered, [['/api/turn/message', JSON.stringify({ chat_id: 'c1', turn_id: 't1',
+    message: 'Go ahead with the lease.', document_refs: ['doc_1'] })]]);
+  assert.equal(box.value, '', 'the message leaves the box');
+  assert.equal(entry.lastSent, 'Go ahead with the lease.');
+  const page = vm.createContext({ document: { createElement: (tag) => new Element(tag) }, activeDelivery: null, goTurn: () => {} });
+  vm.runInContext(fn('renderWaiting'), page);
+  const card = page.renderWaiting({ turnId: 't1', stopped: { code: 'waiting', waiting: { done_said: 'Done.', next_said: 'Next.',
+    gos: [], noticed: [], heard: [{ text: 'What is the stamp duty?', said: 'Taken as a new question; it waits.', taken: 'question' }] } } });
+  assert.deepEqual(texts(card).slice(0, 2), ['You: What is the stamp duty?', ' NM: Taken as a new question; it waits.']);
+}
+
 console.log('a matter step by step: ok');

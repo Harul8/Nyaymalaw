@@ -32,8 +32,13 @@ FINISHING = frozenset({"core_response_cross_check", "core_response_overview"})
 #: named, end to end, or done.
 GOS = ("next", "research", "write", "end_to_end", "done")
 _FIELDS = {"mode", "allowed", "n", "waiting"}
+#: What a go-ahead record may add (48b: the disputes named; 48c: the messages heard while the matter waited).
+_ADDED = ({"disputes"}, {"heard"})
 _MOST_STEPS = 10_000
 _MOST_DISPUTES = 50
+#: The messages heard while a matter waited, kept with it while it is worked on (48c): the most recent, at most so many.
+MOST_HEARD = 30
+_HEARD = {"text", "taken", "said", "at"}
 
 #: What a stop says comes next where every dispute is taken together, in plain words (48a4).
 NEXT_SAID = {
@@ -65,8 +70,11 @@ def valid(go):
     """Whether a turn's go-ahead record has the form 48a2 saves (conversation.shown_of reads it so): 48b adds the disputes named,
     a record of 48a's form, without them, meaning every dispute."""
     try:
-        waiting, disputes = go["waiting"], go.get("disputes")
-        return (isinstance(go, dict) and set(go) in (_FIELDS, _FIELDS | {"disputes"}) and go["mode"] == MODE
+        waiting, disputes, heard = go["waiting"], go.get("disputes"), go.get("heard", [])
+        return (isinstance(go, dict) and _FIELDS <= set(go) <= _FIELDS.union(*_ADDED) and go["mode"] == MODE
+                and isinstance(heard, list) and len(heard) <= MOST_HEARD
+                and all(isinstance(entry, dict) and set(entry) == _HEARD and all(isinstance(entry[key], str) for key in _HEARD)
+                        and entry["text"].strip() for entry in heard)
                 and isinstance(go["allowed"], list) and go["allowed"] and all(step in STEPS for step in go["allowed"])
                 and len(set(go["allowed"])) == len(go["allowed"])
                 and type(go["n"]) is int and 1 <= go["n"] <= _MOST_STEPS
@@ -91,6 +99,23 @@ def waiting_of(held):
 def waited(go, after):
     """The go-ahead record of a turn that has stopped to wait after a step."""
     return {**go, "waiting": {"after": after, "at": datetime.now(timezone.utc).isoformat()}}
+
+
+def heard(go, text, taken, said):
+    """The go-ahead record with a message heard while the matter waited, and how NM took it (48c, D146): the latest MOST_HEARD."""
+    entry = {"text": text, "taken": taken, "said": said, "at": datetime.now(timezone.utc).isoformat()}
+    return {**go, "heard": [*(go.get("heard") or ()), entry][-MOST_HEARD:]}
+
+
+def _carried(go):
+    """What a go-ahead carries on to the next step's: the messages heard (48c)."""
+    return {"heard": list(go["heard"])} if go.get("heard") else {}
+
+
+def rethink(go):
+    """The go-ahead of a matter to be understood again with what the advocate added (48c; D149's rethink, today's Steer): the
+    understanding only, then a stop."""
+    return {"mode": MODE, "allowed": ["understand"], "n": go["n"] + 1, "waiting": None, "disputes": None, **_carried(go)}
 
 
 #: The one unit of an answer written as a whole - a message with at most one dispute to research (response_writer.parts).
@@ -149,14 +174,15 @@ def given(go, choice, *, held, disputes=None):
         if not open_now or disputes is not None and (state["whole"] or not set(disputes) <= set(open_now)):
             raise ValueError("That step is not open for those disputes")
         named = None if disputes is None or set(disputes) == set(open_now) else [name for name in state["order"] if name in disputes]
-        return {"mode": MODE, "allowed": [choice], "n": go["n"] + 1, "waiting": None, "disputes": named}
+        return {"mode": MODE, "allowed": [choice], "n": go["n"] + 1, "waiting": None, "disputes": named, **_carried(go)}
     if disputes is not None:
         raise ValueError("End to end and Done are for the whole matter")
     if choice == "end_to_end":
         start = "research" if unresearched else "write" if unwritten else "finish"
-        return {"mode": MODE, "allowed": list(STEPS[STEPS.index(start):]), "n": go["n"] + 1, "waiting": None, "disputes": None}
+        return {"mode": MODE, "allowed": list(STEPS[STEPS.index(start):]), "n": go["n"] + 1, "waiting": None, "disputes": None,
+                **_carried(go)}
     if state["written"]:
-        return {"mode": MODE, "allowed": ["finish"], "n": go["n"] + 1, "waiting": None, "disputes": None}
+        return {"mode": MODE, "allowed": ["finish"], "n": go["n"] + 1, "waiting": None, "disputes": None, **_carried(go)}
     return None
 
 
@@ -267,7 +293,10 @@ def card(held):
             "disputes": [] if state["whole"] else [
                 {"id": name, "name": names[name], "researched": name in state["researched"],
                  "written": name in state["written"]} for name in state["order"]],
-            "noticed": noticed(steps), "at": held["go"]["waiting"]["at"]}
+            "noticed": noticed(steps), "at": held["go"]["waiting"]["at"],
+            # 48c (D146): the messages heard while the matter waited, and how NM took each.
+            "heard": [{"text": entry["text"], "said": entry["said"], "taken": entry["taken"]}
+                      for entry in (held["go"].get("heard") or ())][-5:]}
 
 
 #: The points the papers show that matter beyond what was asked (research connections, AN.33), offered at a stop (D164).

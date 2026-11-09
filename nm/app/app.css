@@ -715,6 +715,9 @@ button.board-card:focus-visible { outline: 2px solid var(--accent); outline-offs
 .waiting-card .waiting-noticed { margin: 0 0 0.5rem 1.1rem; padding: 0; color: var(--ink-2); }
 .waiting-card .waiting-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.6rem; }
 .rail .waiting-line, .row .waiting-line { color: var(--accent); }
+/* 48c (D146): a message sent while the matter waited, and how NM took it - the advocate's words, then NM's. */
+.waiting-card .waiting-heard { margin: 0 0 0.35rem; color: var(--ink-2); }
+.waiting-card .waiting-heard-you { font-style: italic; }
 
 /* THE ANSWER'S OWN HEADER (plan AN.20; the signed-off design): the NM mark, Nyaymalaw and the time the
    answer was made, above its first line. */

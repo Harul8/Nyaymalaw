@@ -5422,6 +5422,12 @@ function renderWaiting(entry) {
   };
   const box = make('div', 'waiting-card');
   box.setAttribute('role', 'status');
+  // Plan AN.48 (48c; D146): the messages sent while the matter waited, and how NM took each - for the advocate to correct.
+  for (const heard of Array.isArray(card.heard) ? card.heard : []) {
+    const line = make('p', 'waiting-heard');
+    line.append(make('span', 'waiting-heard-you', `You: ${heard.text}`), make('span', 'waiting-heard-nm', ` NM: ${heard.said}`));
+    box.appendChild(line);
+  }
   box.appendChild(make('p', 'waiting-head', card.done_said));
   box.appendChild(make('p', 'waiting-next', card.next_said));
   if (Array.isArray(card.noticed) && card.noticed.length) {
@@ -5670,6 +5676,10 @@ async function send(message, { workProduct, keepInMatter = false, fromBox = fals
   // Plan AN.40 (D61): a file still being uploaded or read holds the message, which goes by itself once it is read.
   if (attachmentsReading()) { holdSend(message, { workProduct, keepInMatter, fromBox }); return; }
   if (attachments.length > 1) await relookAttachments();
+  // Plan AN.48 (48c; D146): while a matter waits for the advocate, a message belongs to it - NM reads how it was meant.
+  const waitingEntry = activeIntent.pending.find((entry) => entry.state === 'stopped' && entry.stopped
+    && entry.stopped.code === 'waiting');
+  if (waitingEntry) { messageTurn(waitingEntry, message); return; }
   const documents = attachments.map((item) => ({ document_ref: item.summary.document_ref,
     name: item.summary.name, recording: Boolean(item.summary.recording), pages_read: item.summary.pages_read,
     pages_read_by_ai: item.summary.pages_read_by_ai, pages_unread: item.summary.unread.length }));
@@ -5804,7 +5814,14 @@ async function deliver(entry) {
       entry.state = 'stopped';
       entry.error = null;
       refreshStopped(entry, entry.chatId || intent.chatId || entry.request?.chat_id);
-    } else if (entry.endpoint === '/api/turn/go' && e.status === 409) {
+      // Plan AN.48 (48c): a new question heard while the matter waits goes as the next message, once the matter is done.
+      if (entry.refusal.heard && entry.refusal.heard.taken === 'question' && entry.lastSent
+          && !(intent.queued || []).some((item) => item.text === entry.lastSent)) {
+        if (!Array.isArray(intent.queued)) intent.queued = [];
+        intent.queued.push({ text: entry.lastSent, files: [] });
+        renderQueued();
+      }
+    } else if ((entry.endpoint === '/api/turn/go' || entry.endpoint === '/api/turn/message') && e.status === 409) {
       // Plan AN.48: a go-ahead the matter no longer waits for is said on its card, read again from the conversation.
       entry.goError = (entry.refusal && entry.refusal.why) || e.message;
       entry.state = 'stopped';
@@ -5969,6 +5986,29 @@ function goTurn(entry, choice, disputes = null) {
   entry.endpoint = '/api/turn/go';
   entry.envelope = JSON.stringify({ chat_id: chatId, turn_id: entry.turnId, choice,
     ...(Array.isArray(disputes) && disputes.length ? { disputes } : {}) });
+  entry.stopped = null;
+  deliver(entry);
+}
+
+// A MESSAGE WHILE A MATTER WAITS (plan AN.48, 48c; D146, D158): it goes to the matter - NM reads whether it is a go-ahead, added
+// information, a correction, a rethink or a new question, acts on it or asks, and says at the stop how it took it. Files attached go
+// with it, as papers for the matter.
+function messageTurn(entry, text) {
+  if (activeDelivery || !ownsIntent(entry.context)) return;
+  const chatId = entry.chatId || entry.context.chatId || entry.request?.chat_id;
+  if (!chatId || !String(text || '').trim()) return;
+  const refs = attachments.filter((item) => item.summary && item.summary.document_ref)
+    .map((item) => item.summary.document_ref);
+  attachments = [];
+  renderAttachments();
+  $('message').value = '';
+  if (entry.context) entry.context.text = '';
+  sizeComposer();
+  entry.goError = null;
+  entry.lastSent = text;
+  entry.endpoint = '/api/turn/message';
+  entry.envelope = JSON.stringify({ chat_id: chatId, turn_id: entry.turnId, message: text,
+    ...(refs.length ? { document_refs: refs } : {}) });
   entry.stopped = null;
   deliver(entry);
 }

@@ -464,6 +464,20 @@ def save_queued(store, matter, queued):
     return _written(store, with_queued(matter, queued), matter.version)
 
 
+def save_waiting(store, matter, held, queued=None):
+    """Plan AN.48 (48c): save the record of a matter waiting for the advocate - no step running - with what it heard since, and,
+    where given, what waits to be sent as the next message, in one write. The record is checked as it is read. Returns the
+    conversation as written."""
+    metadata = {**(matter.intake_answers or {}), SHOWN: deepcopy(held)}
+    if queued is not None:
+        metadata = {key: value for key, value in metadata.items() if key != QUEUED} | ({QUEUED: deepcopy(list(queued))}
+                                                                                     if queued else {})
+    candidate = replace(matter, intake_answers=metadata, version=matter.version + 1)
+    shown_of(candidate, copied=False)
+    queued_of(candidate)
+    return _written(store, candidate, matter.version)
+
+
 def drop_asking(store, matter):
     """Withdraw what a turn asked that was never saved with it - its turn stopped before showing anything, and another message
     came (plan AN.37, D40). Returns the conversation as written, or as it was where nothing was asked."""

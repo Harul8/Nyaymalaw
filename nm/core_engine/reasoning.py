@@ -53,6 +53,8 @@ STEPS = {
     "questions": ("medium", False),
     # Plan AN.43 (D82): a conversation's title in the history - a short judgement on what tells the matter apart, small to read.
     "title": ("medium", False),
+    # Plan AN.48 (48c): a message sent while a matter waits, read for what it is - a judgement on the advocate's words, small to read.
+    "message_reader": ("medium", False),
     # Research: the measured search steps stay at the release's own setting (owner decision, 14 Oct 2026).
     "phrases": (None, False), "judgment_phrases": (None, False), "pick": (None, False), "judgment_pick": (None, False),
     # The answer: a section and the overview, the review, the check across the sections, and the second looks.

@@ -1525,6 +1525,33 @@ def go_turn(req: TurnGo, advocate_id: Advocate, request: Request, background: Ba
         session_current=lambda: _session_current(request, advocate_id)), req, request, advocate_id, background)
 
 
+class TurnMessage(BaseModel):
+    """A message sent while a matter waits for the advocate (plan AN.48, 48c)."""
+    model_config = ConfigDict(extra='forbid')
+    chat_id: str = Field(min_length=1, max_length=200)
+    turn_id: str = Field(min_length=1, max_length=200)
+    message: str = Field(min_length=1, max_length=20000)
+    document_refs: list[Annotated[str, Field(max_length=120)]] = Field(default_factory=list, max_length=TURN_DOCUMENT_LIMIT)
+
+    @field_validator("message")
+    @classmethod
+    def preserve_original_message(cls, value: str) -> str:
+        _not_blank(value)
+        return value
+
+
+@app.post('/api/turn/message', dependencies=[CsrfProtected])
+def message_turn(req: TurnMessage, advocate_id: Advocate, request: Request, background: BackgroundTasks) -> _Released:
+    """A message while a matter waits (plan AN.48, 48c; D146, D158): NM takes it as part of the matter in hand - a go-ahead, added
+    information, a correction, a rethink - or as a new question that waits, or asks how it was meant; and says how it took it."""
+    if not _session_current(request, advocate_id):
+        raise HTTPException(401, 'not signed in')
+    return _answered(lambda: application().message_turn(
+        advocate_id=advocate_id, chat_id=req.chat_id, turn_id=req.turn_id, message=req.message,
+        document_refs=tuple(req.document_refs), session_current=lambda: _session_current(request, advocate_id)),
+        req, request, advocate_id, background)
+
+
 @app.post('/api/turn/discard', dependencies=[CsrfProtected])
 def discard_turn(req: TurnOf, advocate_id: Advocate, request: Request, background: BackgroundTasks) -> _Released:
     """Discard (plan AN.41, D71): the red message and its Continue and Discard go; the answer that stopped is saved as it stopped,
@@ -1711,6 +1738,9 @@ def _conversation_error(exc, req=None):
     if getattr(exc, 'kept', False):
         # Plan AN.41 (D69): the answer stopped part-way and what NM finished is kept with the conversation.
         detail['kept'] = True
+    if isinstance(getattr(exc, 'heard', None), dict):
+        # Plan AN.48 (48c): how NM took a message sent while the matter waited, where no step ran.
+        detail['heard'] = exc.heard
     if req is not None:
         detail.update(turn_id=req.turn_id, chat_id=req.chat_id)
     return detail
