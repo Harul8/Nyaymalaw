@@ -136,17 +136,19 @@ waqf property without sanction of Board to be void").
    passages), at positions 80717 (Article 105) and 80739 (Article 127). Checked afterwards, reading
    only: the passage store, the vector index and the word index each hold 351,184; positions run
    without a gap; the lineage record agrees (index bytes, word-index parameters, passage count); the
-   Act has 137 Articles; the Act that follows it starts at 80750. The earlier files are kept beside
-   the live ones as `.before-20261109T041124` (about 2.4 GB: the passage store, the vector index and the word index; the
-   owner's to remove). Article 105's
+   Act has 137 Articles; the Act that follows it starts at 80750. The earlier files were kept beside
+   the live ones as `.before-20261109T041124` (the passage store, the vector index and the word index) and
+   removed at the owner's word on 9 November 2026. Article 105's
    period was first stored as the text prints it, "Three yean". The reader now reads it as "Three
    years" (the printed form is in the Act's schedule notes) and the owner's second correction the same
    day (server stopped) put it in the store: 281 of the Act's 282 passages unchanged, only Article 105
    changed, 351,184 passages still. Checked afterwards, reading only: the three stores agree, positions
    run without a gap, the lineage record agrees (three corrections recorded), and the vectors of
    Articles 104, 105, 106, 127 and of the Act's last passage and the next Act's first are each their
-   passage's (similarity 1.0 on encoding it again). A second set of earlier files is kept beside the live
-   ones as `.before-20261109T062754` (about 2.4 GB more; the owner's to remove).
+   passage's (similarity 1.0 on encoding it again). A second set of earlier files (`.before-20261109T062754`)
+   was kept the same way and removed with the first at the owner's word, 9 November 2026: 4.4 GB came
+   back (C: free 36.5 to 40.9 GB); the live files were not touched, and their sizes still agree with the
+   lineage record. The two small earlier lineage records stay in `.nm/retrieval/`.
 2. **The Wakf Act 1995 is held only under its 2025 name.** A plan that names "the Wakf Act" matches
    no held name and is told it is not held; the owner's checked short names (59) do not include it.
 
