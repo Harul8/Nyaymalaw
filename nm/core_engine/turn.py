@@ -515,6 +515,14 @@ class _Keeper:
     def case(self, index, case):
         self.later(lambda held: held.update(steps={**held["steps"], "cases": {**held["steps"]["cases"], str(index): case}}))
 
+    def grown(self, steps, disputes):
+        """Plan AN.48 (48i): the plan grown by questions added for what is new, the research kept moved onto it, the grown
+        disputes' research, cases and analyses dropped to be made again, and their questions taken off the go-ahead's proposals."""
+        def grow(held):
+            held["steps"] = {**held["steps"], **{key: steps[key] for key in ("understood", "parts", "cases", "answered")}}
+            held["go"] = stepwise.unproposed(held["go"], disputes)
+        self.later(grow)
+
 
 def prepare(model, context, searcher, *, case_index=None, provision_reader=None, progress=None,
             held_acts=None, shown=None, ask=None, keep=None, resume=None, steered=False, on_understood=None, settle=None,
@@ -564,11 +572,49 @@ def _all_researched(parts, kept, keep):
         raise failed
 
 
+def _grown(calls, context, resume, adding, report, keep):
+    """Plan AN.48 (48i; D156): the questions a later message raised, researched now. Each joins the plan after its own questions
+    (research v19), so that every other question keeps its identity; every other dispute's research is moved onto the grown plan, to
+    be checked as saved research is checked; the grown disputes' research, cases and analyses are dropped, to be made again - their
+    earlier searches given back to the search, so that only the new questions are searched. Returns the steps to resume from and
+    those searches, or what it was given where nothing could be added."""
+    understood = resume["understood"]
+    plan = understood["plan"]
+    proposal = research.with_questions(calls, plan, adding, report)
+    if proposal is plan["proposal"]:
+        return resume, {}
+    grown = research.accept(proposal, context)
+    layout = response_writer.parts({"contract": research.CONTRACT, "plan": grown})
+    whole = len(layout) <= 1
+    disputes = {entry["dispute_id"] for entry in adding}
+    started = {}
+    for dispute_id in disputes:
+        if dispute_id in resume["parts"]:
+            started.update(research.searched_before(grown, resume["parts"][dispute_id]))
+    parts = {dispute_id: research.rebased(part, grown) for dispute_id, part in resume["parts"].items() if dispute_id not in disputes}
+    cases = {key: case for key, case in (resume.get("cases") or {}).items()
+             if not whole and int(key) < len(layout) and layout[int(key)]["dispute_id"] not in disputes}
+    answered = resume.get("answered")
+    if answered is not None:
+        kept_sections = [saved for saved in answered["sections"] if not whole and saved.get("dispute_id") not in disputes]
+        if len(kept_sections) != len(answered["sections"]):
+            answered = {"sections": kept_sections, "cross_check": None, "overview": None}
+    steps = {**resume, "understood": {**understood, "plan": grown}, "parts": parts, "cases": cases, "answered": answered}
+    if keep is not None:
+        keep.grown(steps, disputes)
+    return steps, started
+
+
 def _prepare(model, context, searcher, *, case_index, provision_reader, progress, held_acts, shown, ask, keep, resume,
              steered, on_understood, settle=None, gate=None):
     report = _reporter(progress)
     calls = model if isinstance(model, TurnCalls) else TurnCalls(model)
     gate = gate if gate is not None else stepwise.Gate(None)
+    # Plan AN.48 (48i; D156): the questions proposed for what is new, added to the plan in a run that researches their disputes.
+    started = {}
+    adding = gate.adding() if resume and not steered and resume.get("understood") else []
+    if adding:
+        resume, started = _grown(calls, context, resume, adding, report, keep)
     kept = _kept(resume, context, report) if resume and not steered else _NOTHING_KEPT
     # Plan AN.48 (48h; D161-D162): the analyses written before the advocate's later messages are reviewed again from their own words
     # against everything said, and written again only where the review finds them wanting - in the next run that writes or
@@ -586,7 +632,6 @@ def _prepare(model, context, searcher, *, case_index, provision_reader, progress
         calls.expect("start", estimates.turn_start_usd(priced, _papers(context), calls.effort))
     # Plan AN.33 (D28; piece 33q): the held law is searched as soon as the understanding and its search phrases are final, beside
     # the papers' side-by-side reading and the weighing; each search begun so is used once, as it would have been made.
-    started = {}
     if kept["understood"] is not None:
         interpreted, plan = kept["understood"]
     else:

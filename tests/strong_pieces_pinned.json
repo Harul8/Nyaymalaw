@@ -1,7 +1,7 @@
 {
  "why": "Plan AN.48, D143: the strong pieces stay as they are; re-pinned only for an exception in AN.48's register (column 6).",
  "files": {
-  "nm/core_engine/research.py": "fb3a4243d7078f2fb482d3d7ca601bcd92e7c4153edbf5956c3892ddadfa9f16",
+  "nm/core_engine/research.py": "b12010dbb0d88d993dbd74bda93cc9468d286f161da5e16693d641d5ac392755",
   "nm/core_engine/retrieval.py": "2416ef54c74d23021077ae537884030073302c57e82afacf04fd82ceafa46538",
   "nm/core_engine/citations.py": "7ada35e8590d07679f84219563ec6682611e5f7d90f0a0c5bec23202decc514d",
   "nm/shared/citation_contracts.py": "09d32744352335cae4d9907d8c0622e16af73df234547238a5552ece2e5e015b",
@@ -33,6 +33,9 @@
    "nm/core_engine/research.py",
    "nm/core_engine/response_rendering.py",
    "nm/core_engine/understanding.py"
+  ],
+  "4 (48i, plan AN.48 register)": [
+   "nm/core_engine/research.py"
   ]
  }
 }

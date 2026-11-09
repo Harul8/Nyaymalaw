@@ -488,6 +488,18 @@ class Application:
             state = stepwise.state_of(held['steps'])
             written = [name for name in state['order'] if name in state['written']]
             critical = judgement['critical']
+            said = judgement['said']
+            proposed = [{'dispute_id': entry['dispute'], 'question': entry['question'], 'why_needed': entry['why_needed'],
+                         'law_to_check': entry['law_to_check'], 'source': f"{turn_id}:added{len(held.get('added', ())) + 1}"}
+                        for entry in (judgement.get('new_questions') or ())]
+            if proposed:
+                # 48i (D156): what is new offered for research, run only on the advocate's go-ahead (D136, D144); code says it.
+                def offered(entry):
+                    name = 'this matter' if state['whole'] else state['names'].get(entry['dispute_id'], entry['dispute_id'])
+                    question = entry['question'] if entry['question'][-1:] in '.?!' else entry['question'] + '.'
+                    return f'NM can research what is new for {name}: {question}'
+                said = ' '.join([said, *(offered(entry) for entry in proposed),
+                                 'Choose Research what is new to have it researched.']).strip()
             if kind == 'correction' and judgement.get('item'):
                 # 48g (D148): kept with the item it corrects, for the board's mark.
                 entry = {**entry, 'corrects': {'item': judgement['item'], 'value': judgement['value']}}
@@ -497,7 +509,9 @@ class Application:
                     critical = True
                     held['steps'] = {**held['steps'], 'limits': None}
                     matter = save_waiting(self.store, matter, held)
-            listened = stepwise.heard(held['go'], message, kind, judgement['said'])
+            listened = stepwise.heard(held['go'], message, kind, said)
+            if proposed:
+                listened = stepwise.proposing(listened, proposed)
             if critical and written:
                 # D161: critical - the analyses written are checked against it at once, each written again where wanting.
                 go = {'mode': stepwise.MODE, 'allowed': ['write'], 'n': held['go']['n'] + 1, 'waiting': None,
@@ -507,8 +521,8 @@ class Application:
             held['added'] = [*held.get('added', ()), entry]
             held['go'] = {**listened, **({'recheck': True} if written else {})}
             save_waiting(self.store, matter, held)
-            refusal = ConversationRefused(judgement['said'], status=409, code='heard', retryable=False)
-            refusal.kept, refusal.heard = True, {'taken': kind, 'said': judgement['said']}
+            refusal = ConversationRefused(said, status=409, code='heard', retryable=False)
+            refusal.kept, refusal.heard = True, {'taken': kind, 'said': said}
             raise refusal
         if kind == 'question':
             try:

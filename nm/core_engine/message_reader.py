@@ -35,13 +35,13 @@ PROMPT = """You are an Indian advocate's junior, working through a matter with t
 
 Purpose: take the message the way the advocate meant it, so that the work goes on as they want and nothing they said is lost.
 
-Outcome: kind - what the message is: go (a go-ahead for the work: research or the analysis for disputes it names, the next step, everything remaining end to end, or that the matter is done); information (facts or papers added to the matter); correction (it corrects something we read from the papers or understood of the matter); rethink (it asks us to understand the matter again, or changes what is asked); question (a new question that is not about this matter); or unclear, where you cannot tell. For a go-ahead, the choice and the disputes it names, by their ids, from what can be asked for next. For information or a correction, the disputes it touches by their ids (none where it touches the matter as a whole), whether it is critical - whether work already done or about to be done would be wrong or incomplete without it - and for a correction what it corrects, in a few words, with item - the id of what we read that it corrects, from what we read
+Outcome: kind - what the message is: go (a go-ahead for the work: research or the analysis for disputes it names, the next step, everything remaining end to end, or that the matter is done); information (facts or papers added to the matter); correction (it corrects something we read from the papers or understood of the matter); rethink (it asks us to understand the matter again, or changes what is asked); question (a new question that is not about this matter); or unclear, where you cannot tell. For a go-ahead, the choice and the disputes it names, by their ids, from what can be asked for next. For information or a correction, the disputes it touches by their ids (none where it touches the matter as a whole), whether it is critical - whether work already done or about to be done would be wrong or incomplete without it - and for a correction what it corrects, in a few words, and new_questions - the legal questions it raises that a dispute's research has not asked (each with the dispute's id, the question as a lawyer would put it, why it is needed and the law to check first), none where it raises none - with item - the id of what we read that it corrects, from what we read
 of the matter (a fact or an event of the papers' timeline), or empty where it corrects none of them - and value, the corrected
 value in the advocate's words. Then said: in a sentence or two, to the advocate, how you took the message, so that they can correct you. Where it is unclear, ask: the one short question that would settle it.
 
 Work in a loop: read the message against where the matter stands, decide what it is, check your reading against the advocate's exact words and the disputes as named, correct it, then answer."""
 SCHEMA = {"type": "object", "additionalProperties": False,
-          "required": ["kind", "choice", "disputes", "critical", "corrects", "item", "value", "said", "ask"],
+          "required": ["kind", "choice", "disputes", "critical", "corrects", "item", "value", "new_questions", "said", "ask"],
           "properties": {"kind": {"type": "string", "enum": list(KINDS)},
                          "choice": {"type": ["string", "null"], "enum": [*CHOICES, None]},
                          "disputes": {"type": "array", "items": {"type": "string"}},
@@ -49,6 +49,12 @@ SCHEMA = {"type": "object", "additionalProperties": False,
                          "corrects": {"type": "string"},
                          "item": {"type": "string"},
                          "value": {"type": "string"},
+                         "new_questions": {"type": "array", "items": {
+                             "type": "object", "additionalProperties": False,
+                             "required": ["dispute", "question", "why_needed", "law_to_check"],
+                             "properties": {"dispute": {"type": "string"}, "question": {"type": "string"},
+                                            "why_needed": {"type": "string"},
+                                            "law_to_check": {"type": "array", "items": {"type": "string"}}}}},
                          "said": {"type": "string"},
                          "ask": {"type": "string"}}}
 
@@ -60,12 +66,22 @@ def material(held, message):
     earlier = [held.get("message") or "", *(steer.get("text") or "" for steer in held.get("steers") or ())]
     return {"where_the_matter_stands": {"done": card.get("done_said"), "next": card.get("next_said"),
                                         "disputes": card.get("disputes") or [],
+                                        # 48i: the legal questions each dispute's research asks, so that a new one can be told.
+                                        "questions_each_dispute_asks": asked_questions(held),
                                         "can_be_asked_for": [{"choice": go["choice"], "disputes": go.get("disputes"),
                                                               "said": go["said"]} for go in card.get("gos") or ()]},
             "earlier_messages": [text for text in earlier if text.strip()],
             # 48g: what NM read of the matter, by id, so that a correction can name what it changes.
             "what_we_read": read_items(held),
             "new_message": message}
+
+
+def asked_questions(held):
+    """48i: each of the matter's disputes by id, with the legal questions its research asks."""
+    plan = (((held or {}).get("steps") or {}).get("understood") or {}).get("plan") or {}
+    disputes = (((plan.get("proposal") or {}).get("understanding") or {}).get("disputes")) or []
+    return [{"dispute": dispute["id"], "questions": [question.get("question", "") for question in dispute.get("legal_questions") or ()]}
+            for dispute in disputes if isinstance(dispute, dict) and dispute.get("id")]
 
 
 def read_items(held):
@@ -94,7 +110,7 @@ def admitted(data, held):
     said = data.get("said") if isinstance(data.get("said"), str) and data["said"].strip() else SAID[kind]
     judgement = {"kind": kind, "choice": None, "disputes": [], "go": None, "critical": data.get("critical") is True,
                  "corrects": (data.get("corrects") or "").strip() if isinstance(data.get("corrects"), str) else "",
-                 "item": "", "value": "", "said": " ".join(said.split()), "ask": ""}
+                 "item": "", "value": "", "new_questions": [], "said": " ".join(said.split()), "ask": ""}
     if kind == "go":
         choice = data.get("choice")
         disputes = [name for name in named if name in state["order"]] or None
@@ -107,6 +123,14 @@ def admitted(data, held):
         judgement.update(choice=choice, disputes=disputes or [], go=go)
     elif kind in ("information", "correction"):
         judgement["disputes"] = [name for name in named if name in state["order"]]
+        # 48i (D156): the questions it raises for what is new, each for one of the matter's disputes and in words.
+        ids = {entry["dispute"] for entry in asked_questions(held) if entry["questions"]}
+        judgement["new_questions"] = [
+            {"dispute": entry["dispute"], "question": " ".join(entry["question"].split()),
+             "why_needed": " ".join(str(entry.get("why_needed") or "").split()),
+             "law_to_check": [" ".join(law.split()) for law in entry.get("law_to_check") or () if isinstance(law, str) and law.strip()]}
+            for entry in data.get("new_questions") or () if isinstance(entry, dict) and entry.get("dispute") in ids
+            and isinstance(entry.get("question"), str) and entry["question"].strip()][:stepwise.MOST_PROPOSED]
         if kind == "correction":
             # 48g (D148): the item it changes must be one NM read of this matter; otherwise none is marked, and NM says so.
             items = read_items(held)
@@ -148,4 +172,4 @@ def read(model, held, message):
         log.info("The message reader's judgement was not admitted: %s", why)
         asked = {**given, "your_last_judgement": data, "why_it_cannot_be_taken": why}
     return {"kind": "unclear", "choice": None, "disputes": [], "go": None, "critical": False, "corrects": "", "item": "",
-            "value": "", "said": SAID["unclear"], "ask": ASK}
+            "value": "", "new_questions": [], "said": SAID["unclear"], "ask": ASK}

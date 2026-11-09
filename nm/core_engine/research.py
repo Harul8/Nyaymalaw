@@ -108,42 +108,47 @@ FEW_CONTRACT = "core_research_v17"
 #: - the rule and what qualifies or completes it - and keeps at most SECTIONS_A_QUESTION of them, the further pick only what is left
 #: of them; sections named by number and those linked by their Acts count within them. v17 and earlier records replay as they were.
 CONTRACT = "core_research_v18"
+#: v19 (plan AN.48, piece 48i; owner decision D156; its register of exceptions, item 4): v18 whose plan holds legal questions added
+#: for what is new - a later message from the advocate raised them - each one of its dispute's questions, its work numbered after
+#: all the plan's own so that every other question keeps its identity, with that message as its source beside the latest. A record
+#: takes v19 only when its plan holds such questions (plan_contract); every other record is v18, exactly as before.
+ADDED_CONTRACT = "core_research_v19"
 #: v18: at most this many provisions a question are chosen (D36: "2-5 relevants section").
 SECTIONS_A_QUESTION = 5
 #: v17: at most this many judgments a dispute are read in full (the owner, D34: "top 2, 3, 4, or 5").
 IN_FULL = 5
 #: The plans that set out the matter as disputes and legal questions (v7 on).
 QUESTION_PLANS = (PICKED_CONTRACT, JUDGMENT_PICKED_CONTRACT, PURPOSED_CONTRACT, PER_DISPUTE_CONTRACT, JUDGMENTS_READ_CONTRACT,
-                  CHRONICLED_CONTRACT, WHOLE_FILE_CONTRACT, SETTLED_CONTRACT, NAMED_CONTRACT, FURTHER_CONTRACT, FEW_CONTRACT, CONTRACT)
+                  CHRONICLED_CONTRACT, WHOLE_FILE_CONTRACT, SETTLED_CONTRACT, NAMED_CONTRACT, FURTHER_CONTRACT, FEW_CONTRACT, CONTRACT, ADDED_CONTRACT)
 _QUESTION_PLANS = QUESTION_PLANS
 #: The records that pick judgment paragraphs and answer in parts per dispute (v8 on).
 JUDGMENT_PICKS = (JUDGMENT_PICKED_CONTRACT, PURPOSED_CONTRACT, PER_DISPUTE_CONTRACT, JUDGMENTS_READ_CONTRACT,
-                  CHRONICLED_CONTRACT, WHOLE_FILE_CONTRACT, SETTLED_CONTRACT, NAMED_CONTRACT, FURTHER_CONTRACT, FEW_CONTRACT, CONTRACT)
+                  CHRONICLED_CONTRACT, WHOLE_FILE_CONTRACT, SETTLED_CONTRACT, NAMED_CONTRACT, FURTHER_CONTRACT, FEW_CONTRACT, CONTRACT, ADDED_CONTRACT)
 #: The records that keep each dispute's picks apart (v10 on).
 BY_DISPUTE = (PER_DISPUTE_CONTRACT, JUDGMENTS_READ_CONTRACT, CHRONICLED_CONTRACT, WHOLE_FILE_CONTRACT, SETTLED_CONTRACT,
-              NAMED_CONTRACT, FURTHER_CONTRACT, FEW_CONTRACT, CONTRACT)
+              NAMED_CONTRACT, FURTHER_CONTRACT, FEW_CONTRACT, CONTRACT, ADDED_CONTRACT)
 #: The records that read the chosen judgments whole or as extracts (v11 on).
 JUDGMENTS_READ = (JUDGMENTS_READ_CONTRACT, CHRONICLED_CONTRACT, WHOLE_FILE_CONTRACT, SETTLED_CONTRACT, NAMED_CONTRACT,
-                  FURTHER_CONTRACT, FEW_CONTRACT, CONTRACT)
+                  FURTHER_CONTRACT, FEW_CONTRACT, CONTRACT, ADDED_CONTRACT)
 #: The records that also keep the chronology of the documents (v12 on).
-CHRONICLED = (CHRONICLED_CONTRACT, WHOLE_FILE_CONTRACT, SETTLED_CONTRACT, NAMED_CONTRACT, FURTHER_CONTRACT, FEW_CONTRACT, CONTRACT)
+CHRONICLED = (CHRONICLED_CONTRACT, WHOLE_FILE_CONTRACT, SETTLED_CONTRACT, NAMED_CONTRACT, FURTHER_CONTRACT, FEW_CONTRACT, CONTRACT, ADDED_CONTRACT)
 #: The records whose papers are read with the whole file in view, their dates checked by code (v13 on).
-WHOLE_FILE = (WHOLE_FILE_CONTRACT, SETTLED_CONTRACT, NAMED_CONTRACT, FURTHER_CONTRACT, FEW_CONTRACT, CONTRACT)
+WHOLE_FILE = (WHOLE_FILE_CONTRACT, SETTLED_CONTRACT, NAMED_CONTRACT, FURTHER_CONTRACT, FEW_CONTRACT, CONTRACT, ADDED_CONTRACT)
 #: The records checked with the tolerant finder, whose failed checks a model settles (v14 on).
-SETTLED = (SETTLED_CONTRACT, NAMED_CONTRACT, FURTHER_CONTRACT, FEW_CONTRACT, CONTRACT)
+SETTLED = (SETTLED_CONTRACT, NAMED_CONTRACT, FURTHER_CONTRACT, FEW_CONTRACT, CONTRACT, ADDED_CONTRACT)
 #: v15 and v16: every judgment a dispute's pick chose is read (piece 35a); v17 reads in full only the few chosen so (36a).
 EVERY_CHOSEN = (NAMED_CONTRACT, FURTHER_CONTRACT)
 #: v17 (piece 36a): the judgments read in full are the few the picks name, at most IN_FULL a dispute.
-FEW_IN_FULL = (FEW_CONTRACT, CONTRACT)
+FEW_IN_FULL = (FEW_CONTRACT, CONTRACT, ADDED_CONTRACT)
 #: v18 (piece 36e): each question chooses at most SECTIONS_A_QUESTION provisions.
-FEW_SECTIONS = (CONTRACT,)
+FEW_SECTIONS = (CONTRACT, ADDED_CONTRACT)
 #: v15 (plan AN.35, piece 35b): each question's plan names the sections to read first, each read by its number (search v11).
-NAMED_LAW = (NAMED_CONTRACT, FURTHER_CONTRACT, FEW_CONTRACT, CONTRACT)
+NAMED_LAW = (NAMED_CONTRACT, FURTHER_CONTRACT, FEW_CONTRACT, CONTRACT, ADDED_CONTRACT)
 #: v16 (piece 35d): each dispute's law still missing is searched for once.
-FURTHER_LAW = (FURTHER_CONTRACT, FEW_CONTRACT, CONTRACT)
+FURTHER_LAW = (FURTHER_CONTRACT, FEW_CONTRACT, CONTRACT, ADDED_CONTRACT)
 CONTRACTS = (LEGACY_CONTRACT, PREVIOUS_CONTRACT, WINDOWED_CONTRACT, ACCOUNT_CONTRACT, INSTRUMENTED_CONTRACT,
              PICKED_CONTRACT, JUDGMENT_PICKED_CONTRACT, PURPOSED_CONTRACT, PER_DISPUTE_CONTRACT, JUDGMENTS_READ_CONTRACT,
-             CHRONICLED_CONTRACT, WHOLE_FILE_CONTRACT, SETTLED_CONTRACT, NAMED_CONTRACT, FURTHER_CONTRACT, FEW_CONTRACT, CONTRACT)
+             CHRONICLED_CONTRACT, WHOLE_FILE_CONTRACT, SETTLED_CONTRACT, NAMED_CONTRACT, FURTHER_CONTRACT, FEW_CONTRACT, CONTRACT, ADDED_CONTRACT)
 #: The papers a record step sees whole (D1, the owner: "a safe fixed limit like 100k tokens"): above it, each call sees the paper
 #: it answers for, with the advocate's messages.
 WHOLE_FILE_TOKENS = 100_000
@@ -567,6 +572,12 @@ _NAMING_QUESTION = STATUTE_PHRASES_V15["properties"]["questions"]["items"]
 SCHEMA_V15["properties"]["statute_phrases"] = {"type": "array", "items": _object({
     "dispute_id": STRING, "questions": {"type": "array", "items": {
         **_NAMING_QUESTION, "required": [key for key in _NAMING_QUESTION["required"] if key != "sections"]}}})}
+#: v19 (plan AN.48, piece 48i): the questions added for what is new - each one of its dispute's legal questions, with the message it
+#: came from - whose work the plan numbers after its own.
+ADDED_QUESTION = _object({"question_id": STRING, "dispute_id": STRING, "source": REFERENCE})
+SCHEMA_V19 = deepcopy(SCHEMA_V15)
+SCHEMA_V19["properties"]["added_questions"] = {"type": "array", "minItems": 1, "items": ADDED_QUESTION}
+SCHEMA_V19["required"] = [*SCHEMA_V15["required"], "added_questions"]
 
 
 def _source_windows(context):
@@ -2571,6 +2582,17 @@ def _accept_v7(proposal, context, schema=SCHEMA, contract=None):
     if "weights" in data:
         issues.extend(_weight_issues(data))
     questions = {q["id"]: (dispute, q) for dispute in understanding["disputes"] for q in dispute["legal_questions"]}
+    # v19 (plan AN.48, 48i; D156): the questions added for what is new come after the plan's own, so that each of those keeps its
+    # work's number; each carries the message it came from beside the latest.
+    later = {}
+    for entry in data.get("added_questions", ()):
+        owner = questions.get(entry["question_id"])
+        if owner is None or owner[0]["id"] != entry["dispute_id"] or entry["question_id"] in later:
+            raise SchemaViolation("An added question names no question of its dispute, or is added twice")
+        later[entry["question_id"]] = select(entry["source"], catalogue)
+    if later:
+        questions = {**{key: value for key, value in questions.items() if key not in later},
+                     **{key: questions[key] for key in later}}
     statute, judgment = {}, {}
     for entry in data["statute_phrases"]:
         for item in entry["questions"]:
@@ -2604,7 +2626,8 @@ def _accept_v7(proposal, context, schema=SCHEMA, contract=None):
             named = {(" ".join(item["act"].split()), reference): None
                      for item in statute.get(question_id, {}).get("sections", []) if item["act"].strip() and item["section"].strip()
                      for reference in (provision_references(item["section"]) or (" ".join(item["section"].split()),))}
-            work.append({"id": identity, "sources": [deepcopy(latest)], "search_account": [],
+            work.append({"id": identity, "sources": [deepcopy(latest), *([deepcopy(later[question_id])] if question_id in later else [])],
+                         "search_account": [],
                          "dispute": {"id": dispute["id"], "name": dispute["name"], "between": list(dispute["between"])},
                          "question_id": question_id, "question": question["question"],
                          "why_needed": question["why_needed"], "law_to_check": list(question["law_to_check"]),
@@ -2616,10 +2639,12 @@ def _accept_v7(proposal, context, schema=SCHEMA, contract=None):
     return {"proposal": data, "work": work, "issues": issues, "semantic_review": "pending"}
 
 
-def accept(proposal, context, *, contract=CONTRACT):
+def accept(proposal, context, *, contract=None):
     """A research plan's proposal admitted against the conversation it was made from. Once within a turn or a replay (plan AN.41,
     step 1; P35): each dispute's research, and the research continuing where it stopped, is checked against the same plan, and
-    admitting it again for each found nothing new - about 5 s a dispute on the 4 Nov 2026 matter."""
+    admitting it again for each found nothing new - about 5 s a dispute on the 4 Nov 2026 matter. contract: by default the version
+    the proposal's records take (plan_contract) - v19 for one holding questions added for what is new, v18 otherwise."""
+    contract = contract or plan_contract({"proposal": proposal})
     return once(("plan", id(proposal), id(context), contract), (proposal, context),
                 lambda: _accept(proposal, context, contract=contract))
 
@@ -2628,7 +2653,7 @@ def _accept(proposal, context, *, contract=CONTRACT):
     if contract not in CONTRACTS:
         raise ValueError("Unknown research contract")
     if contract in _QUESTION_PLANS:
-        return _accept_v7(proposal, context, SCHEMA_V15 if contract in NAMED_LAW else SCHEMA_V14 if contract in SETTLED
+        return _accept_v7(proposal, context, SCHEMA_V19 if contract == ADDED_CONTRACT else SCHEMA_V15 if contract in NAMED_LAW else SCHEMA_V14 if contract in SETTLED
                           else SCHEMA_V13 if contract in WHOLE_FILE
                           else SCHEMA_V12 if contract in CHRONICLED
                           else SCHEMA if contract in (PURPOSED_CONTRACT, PER_DISPUTE_CONTRACT, JUDGMENTS_READ_CONTRACT)
@@ -3014,10 +3039,11 @@ def _state(plan, searches, failures, picks):
         search["state"] == "partial" for search in searches.values())) else "evaluated"
 
 
-def _part(plan, dispute_id, searches, failures, chosen, judgments, contract=CONTRACT, further=None, meant=None):
+def _part(plan, dispute_id, searches, failures, chosen, judgments, contract=None, further=None, meant=None):
     """One dispute's part of a v10 or v11 record: its questions' searches and gaps, its own
     picks, (v11) the judgments it reads, (v16) its further search and (plan AN.37, D87) the names read as more than one held Act,
     each with the Act the advocate said it means (None: NM's judgement) - only where there were any."""
+    contract = contract or plan_contract(plan)
     ids = [w["id"] for w in dispute_work(plan)[dispute_id]]
     searches = {i: searches[i] for i in ids if i in searches}
     failures = {i: failures[i] for i in ids if i in failures}
@@ -3702,12 +3728,79 @@ def assemble(plan, parts, *, unfinished=None):
         if (part.get("meant") or {}).get(dispute_id):
             meant[dispute_id] = deepcopy(part["meant"][dispute_id])
     order = [w["id"] for w in plan["work"]]
-    record = {"contract": CONTRACT, "plan": deepcopy(plan),
+    record = {"contract": plan_contract(plan), "plan": deepcopy(plan),
               "searches": {i: searches[i] for i in order if i in searches},
               "failures": {i: failures[i] for i in order if i in failures}, **chosen, "judgments": judgments,
               "further": further, **({"meant": meant} if meant else {})}
     record["state"] = _state(plan, record["searches"], record["failures"], picks_of(record))
     return record
+
+
+def plan_contract(plan):
+    """The research version a plan's records take (plan AN.48, 48i): v19 where its proposal holds questions added for what is new,
+    v18 otherwise."""
+    proposal = plan.get("proposal") if isinstance(plan, dict) else None
+    return ADDED_CONTRACT if isinstance(proposal, dict) and "added_questions" in proposal else CONTRACT
+
+
+def with_questions(model, plan, proposed, report=None):
+    """Plan AN.48 (48i; D156): a plan's proposal with the legal questions a later message from the advocate raised - each added to its
+    dispute, numbered after that dispute's own (D1Q4 ...), given search phrases by today's phrase steps for those questions alone,
+    and listed as added (v19), so that the plan numbers their work after its own. proposed: [{"dispute_id", "question", "why_needed",
+    "law_to_check", "source"}], source being the owned ID of the message each came from. A question for no dispute of the plan, or
+    for a matter that needs no research, is not added. A phrase step that fails is a failure the plan records, and its question is
+    then researched by none - an issue, as for any question. Returns the proposal as it was where nothing is added."""
+    proposal = deepcopy(plan["proposal"])
+    understanding = proposal["understanding"]
+    if not understanding.get("needs_research"):
+        return plan["proposal"]
+    disputes = {dispute["id"]: dispute for dispute in understanding["disputes"]}
+    taken = {question["id"] for dispute in understanding["disputes"] for question in dispute["legal_questions"]}
+    added, listed = set(), list(proposal.get("added_questions") or ())
+    for entry in proposed:
+        dispute = disputes.get(entry["dispute_id"])
+        if dispute is None:
+            continue
+        numbers = [int(match.group(1)) for question in dispute["legal_questions"]
+                   if (match := re.fullmatch(re.escape(dispute["id"]) + r"Q(\d+)", question["id"]))]
+        number = max(numbers, default=len(dispute["legal_questions"])) + 1
+        while f"{dispute['id']}Q{number}" in taken:
+            number += 1
+        identity = f"{dispute['id']}Q{number}"
+        taken.add(identity)
+        added.add(identity)
+        dispute["legal_questions"].append({"id": identity, "question": entry["question"], "why_needed": entry["why_needed"],
+                                           "open_alternative": "", "law_to_check": list(entry["law_to_check"])})
+        listed.append({"question_id": identity, "dispute_id": dispute["id"], "source": {"source_id": entry["source"], "quote": None}})
+    if not added:
+        return plan["proposal"]
+    fresh = {**understanding, "disputes": [{**dispute, "legal_questions": [question for question in dispute["legal_questions"]
+                                                                            if question["id"] in added]}
+                                           for dispute in understanding["disputes"]]}
+    statute, judgment, missed = _phrases(model, fresh, report or (lambda stage, **detail: None))
+    return {**proposal, "statute_phrases": [*proposal["statute_phrases"], *statute],
+            "judgment_phrases": [*proposal["judgment_phrases"], *judgment], "failures": [*proposal["failures"], *missed],
+            "added_questions": listed}
+
+
+def rebased(part, plan):
+    """Plan AN.48 (48i): a dispute's saved research as part of the plan it now belongs to - one grown by questions added for what is
+    new - for validate to check as saved research is checked: it passes where its dispute's questions are unchanged."""
+    return {**part, "contract": plan_contract(plan), "plan": deepcopy(plan)}
+
+
+def searched_before(plan, part):
+    """Plan AN.48 (48i): what a dispute's saved research searched, given to retrieve_parts as searches already made (its started),
+    each for the work item it was made for where that item still searches exactly so: only the dispute's new questions are then
+    searched."""
+    made = {}
+    for work in dispute_work(plan).get(part.get("part"), ()):
+        if work["id"] in part["searches"]:
+            queries = search_queries(work)
+            done = Future()
+            done.set_result(deepcopy(part["searches"][work["id"]]))
+            made[_search_key(work, queries, search_instruments(work), search_named(work))] = done
+    return made
 
 
 def part_of(record, dispute_id):

@@ -40,7 +40,10 @@ GOS = ("next", "research", "write", "end_to_end", "done")
 _FIELDS = {"mode", "allowed", "n", "waiting"}
 #: What a go-ahead record may add (48b: the disputes named; 48c: the messages heard while the matter waited; 48e: each step's
 #: tentative time beside the time it took).
-_ADDED = ({"disputes"}, {"heard"}, {"times"}, {"recheck"})
+_ADDED = ({"disputes"}, {"heard"}, {"times"}, {"recheck"}, {"proposed"})
+#: 48i (D156): at most this many legal questions proposed for what is new wait on a go-ahead record.
+MOST_PROPOSED = 20
+_PROPOSED = {"dispute_id", "question", "why_needed", "law_to_check", "source"}
 #: The steps timed, kept with the matter while it is worked on (48e): the most recent, at most so many.
 MOST_TIMED = 100
 _TIMED = {"n", "steps", "estimate_s", "actual_s"}
@@ -87,6 +90,11 @@ def valid(go):
                 and all(isinstance(entry, dict) and set(entry) == _TIMED and type(entry["n"]) is int
                         and isinstance(entry["steps"], list) and all(step in STEPS for step in entry["steps"])
                         and type(entry["estimate_s"]) is int and type(entry["actual_s"]) is int for entry in times)
+                and isinstance(go.get("proposed", []), list) and len(go.get("proposed", [])) <= MOST_PROPOSED
+                and all(isinstance(entry, dict) and set(entry) == _PROPOSED and isinstance(entry["why_needed"], str)
+                        and all(isinstance(entry[key], str) and entry[key].strip() for key in ("dispute_id", "question", "source"))
+                        and isinstance(entry["law_to_check"], list) and all(isinstance(law, str) for law in entry["law_to_check"])
+                        for entry in go.get("proposed", []))
                 and isinstance(heard, list) and len(heard) <= MOST_HEARD
                 and all(isinstance(entry, dict) and set(entry) == _HEARD and all(isinstance(entry[key], str) for key in _HEARD)
                         and entry["text"].strip() for entry in heard)
@@ -123,10 +131,24 @@ def heard(go, text, taken, said):
 
 
 def _carried(go):
-    """What a go-ahead carries on to the next step's: the messages heard (48c) and the steps timed (48e)."""
+    """What a go-ahead carries on to the next step's: the messages heard (48c), the steps timed (48e), the re-check owed (48h) and
+    the questions proposed for what is new (48i)."""
     return {**({"heard": list(go["heard"])} if go.get("heard") else {}),
             **({"times": list(go["times"])} if go.get("times") else {}),
-            **({"recheck": True} if go.get("recheck") else {})}
+            **({"recheck": True} if go.get("recheck") else {}),
+            **({"proposed": list(go["proposed"])} if go.get("proposed") else {})}
+
+
+def proposing(go, entries):
+    """The go-ahead record with the legal questions a message raised for what is new (48i, D156), each {"dispute_id", "question",
+    "why_needed", "law_to_check", "source"}: offered for research, run only on the advocate's go-ahead."""
+    return {**go, "proposed": [*(go.get("proposed") or ()), *entries][-MOST_PROPOSED:]}
+
+
+def unproposed(go, disputes):
+    """The go-ahead record without the questions proposed for those disputes, once they are added to the plan (48i)."""
+    left = [entry for entry in go.get("proposed") or () if entry["dispute_id"] not in disputes]
+    return {**{key: value for key, value in go.items() if key != "proposed"}, **({"proposed": left} if left else {})}
 
 
 def rechecked(go):
@@ -146,7 +168,7 @@ def estimate(go, steps, pages=0):
     across."""
     state = state_of(steps) if (steps or {}).get("understood") else None
     allowed, named = set(go["allowed"]), go.get("disputes")
-    unresearched, unwritten = _left(state) if state else ([], [])
+    unresearched, unwritten = _open(state, go) if state else ([], [])
     total, to_write = 0, 0
     if "understand" in allowed:
         total += tentative.seconds("understand", pages)
@@ -163,8 +185,10 @@ def estimate(go, steps, pages=0):
 
 def rethink(go):
     """The go-ahead of a matter to be understood again with what the advocate added (48c; D149's rethink, today's Steer): the
-    understanding only, then a stop."""
-    return {"mode": MODE, "allowed": ["understand"], "n": go["n"] + 1, "waiting": None, "disputes": None, **_carried(go)}
+    understanding only, then a stop. Questions proposed for what is new before it are dropped (48i): the matter is understood again
+    with everything said."""
+    return {"mode": MODE, "allowed": ["understand"], "n": go["n"] + 1, "waiting": None, "disputes": None,
+            **{key: value for key, value in _carried(go).items() if key != "proposed"}}
 
 
 #: The one unit of an answer written as a whole - a message with at most one dispute to research (response_writer.parts).
@@ -202,6 +226,22 @@ def _left(state):
     return unresearched, unwritten
 
 
+def _open(state, go):
+    """_left, with the disputes whose research a later message asks to extend for what is new (48i) open to research again."""
+    unresearched, unwritten = _left(state)
+    return unresearched + [name for name in _newly(state, go) if name not in unresearched], unwritten
+
+
+def _newly(state, go):
+    """The disputes researched before whose research the questions proposed for what is new would extend (48i), in order."""
+    wanted = {entry["dispute_id"] for entry in (go or {}).get("proposed") or ()}
+    if not wanted:
+        return []
+    if state["whole"]:
+        return [WHOLE] if WHOLE in state["researched"] else []
+    return [name for name in state["order"] if name in wanted and name in state["researched"]]
+
+
 def given(go, choice, *, held, disputes=None):
     """The go-ahead the advocate gives a waiting turn (48a3, 48b): "research" or "write" for the disputes named (None: every
     dispute that step can now take), "next" (the next step for every dispute), "end_to_end" (every remaining step for every dispute,
@@ -216,7 +256,7 @@ def given(go, choice, *, held, disputes=None):
         # 48d (D154): a step stopped for answers resumes once they are given; meanwhile only end to end or done.
         raise ValueError("Answer NM's questions first, or go on end to end on NM's own understanding")
     state = state_of(held.get("steps"))
-    unresearched, unwritten = _left(state)
+    unresearched, unwritten = _open(state, go)
     if disputes is not None and (not isinstance(disputes, list) or not disputes or len(set(disputes)) != len(disputes)):
         raise ValueError("Name each dispute once")
     if choice == "next":
@@ -249,6 +289,8 @@ class Gate:
         #: 48h (D161-D162): the analyses written before the advocate's later messages are to be checked again against them, in
         #: the next run that writes or finishes; set once that run has checked them.
         self.recheck, self.rechecked = go is not None and go.get("recheck") is True, False
+        #: 48i (D156): the questions proposed for what is new; a run that researches their disputes adds them to the plan.
+        self.proposed = [] if go is None else list(go.get("proposed") or ())
 
     @property
     def stepwise(self):
@@ -271,6 +313,12 @@ class Gate:
 
     def allows(self, step):
         return self.allowed is None or step in self.allowed
+
+    def adding(self):
+        """48i (D156): the questions proposed for what is new that this run researches - those of the disputes it researches."""
+        if not self.proposed or self.allowed is None or "research" not in self.allowed:
+            return []
+        return [entry for entry in self.proposed if self.disputes is None or entry["dispute_id"] in self.disputes]
 
     def after(self, step):
         """Called once a step is done: the turn stops here unless a later step is allowed. A step the go-ahead passes through was
@@ -327,7 +375,8 @@ def card(held, asked=None):
                 "at": held["go"]["waiting"]["at"], "heard": _heard(held)}
     steps = held.get("steps") or {}
     state = state_of(steps)
-    unresearched, unwritten = _left(state)
+    unresearched, unwritten = _open(state, held["go"])
+    newly = set(_newly(state, held["go"]))
     total, names = len(state["order"]), state["names"]
     written = [name for name in state["order"] if name in state["written"]]
     done_said = {
@@ -343,13 +392,16 @@ def card(held, asked=None):
     if state["whole"]:
         # An answer written as a whole: its steps, without disputes to name.
         if unresearched:
-            gos.append({"choice": "research", "disputes": None, "said": "Go ahead: research the law"})
+            gos.append({"choice": "research", "disputes": None,
+                        "said": "Go ahead: research what is new" if newly else "Go ahead: research the law"})
         if unwritten:
             gos.append({"choice": "write", "disputes": None, "said": "Go ahead: write the answer"})
     else:
         if len(unresearched) > 1:
             gos.append({"choice": "research", "disputes": None, "said": "Research all"})
-        gos += [{"choice": "research", "disputes": [name], "said": f"Research: {names[name]}"} for name in unresearched]
+        gos += [{"choice": "research", "disputes": [name],
+                 "said": f"Research what is new: {names[name]}" if name in newly else f"Research: {names[name]}"}
+                for name in unresearched]
         if len(unwritten) > 1:
             gos.append({"choice": "write", "disputes": None, "said": "Write all researched"})
         gos += [{"choice": "write", "disputes": [name], "said": f"Write the analysis: {names[name]}"} for name in unwritten]
