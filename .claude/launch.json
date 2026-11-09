@@ -3,7 +3,7 @@
   "configurations": [
     {
       "name": "nm",
-      "runtimeExecutable": "python",
+      "runtimeExecutable": ".venv-arrive\\Scripts\\python.exe",
       "runtimeArgs": [
         "-c",
         "import runpy, sys; sys.path[:0] = ['.']; sys.argv = ['nm.app.main', '--port', '8071']; runpy.run_module('nm.app.main', run_name='__main__')"
