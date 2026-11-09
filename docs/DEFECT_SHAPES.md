@@ -193,8 +193,8 @@ no such rule. Measured by comparing the
 held Article numbers with 1–137 (`docs/BASELINE.md` §0.2). Repaired on 9 November 2026: the reader
 now reads all 137, and the owner ran the correction of the store (351,182 → 351,184 passages). Article
 105's period was first stored as the source's misprint "Three yean"; the reader now reads it as "Three
-years" and says the printed form in the Act's schedule notes (the store holds the misprint until the
-correction is run a second time).
+years" and says the printed form in the Act's schedule notes; the owner's second correction put that
+in the store the same day.
 
 > **CHECK S6-a.** A Schedule's held entries are compared with the numbers its own text prints, and
 > every number that is printed and not held is written to the store's problem list. A count of
