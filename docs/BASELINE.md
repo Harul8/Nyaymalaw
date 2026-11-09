@@ -81,12 +81,12 @@ passages encoded again matched their stored vector.
 | | |
 |---|---:|
 | Acts | **1,621** (Union of India 1,259; Telangana 362) |
-| Passages | **351,182** (one vector each) |
+| Passages | **351,184** (one vector each; 351,182 until the Limitation Act's two missing Articles were added, 9 November 2026) |
 | Standing, as India Code gives it | in force 1,174; not stated 242; not in force 205 |
 | Instruments the search keeps (the one-copy register) | 1,587 kept; 44 copies not searched; 2 excluded |
 
 Passages by kind: sub-section 110,343; clause 109,419; section head 66,190; sub-clause 40,640;
-proviso 18,733; explanation 5,339; illustration 383; schedule article 135.
+proviso 18,733; explanation 5,339; illustration 383; schedule article 137 (135 before 9 November 2026).
 
 **Principal Acts now (sections as the store numbers them).** An Act is held once, under the name its
 text now carries.
@@ -101,7 +101,7 @@ text now carries.
 | Bharatiya Sakshya Adhiniyam, 2023 | 170 | in force |
 | Indian Evidence Act, 1872 | 180 | not in force |
 | Negotiable Instruments Act, 1881 | 166 | in force |
-| Limitation Act, 1963 | 32 sections + **135 Articles of the Schedule** | in force |
+| Limitation Act, 1963 | 32 sections + **137 Articles of the Schedule** (135 until 9 November 2026) | in force |
 | Transfer of Property Act, 1882 | 149 | in force |
 | Unified Waqf Management, Empowerment, Efficiency and Development Act, 1995 (the Wakf Act, 1995, as renamed in 2025) | 126 | in force |
 | Registration Act, 1908 | 97 | in force |
@@ -130,10 +130,16 @@ waqf property without sanction of Board to be void").
    such rule (the confident-zero shape of §2.1). **The reader is repaired (8 November 2026):** on the
    real text it now reads all 137 Articles, takes the editor's mark out of "5[Sixty] days", keeps
    "Three yean" as printed and says so in the Act's schedule notes, and names any Article it leaves out.
-   **The held store is not yet corrected.** A dry run of `pipeline/correct_held_acts.py --act "UNION OF
-   INDIA_1963_36_THE LIMITATION ACT, 1963" --dry-run` finds the Act's 280 held passages word for word
-   unchanged and 2 to add (351,182 → 351,184 passages). Run it without `--dry-run`, with the server
-   stopped, to correct the store (the earlier files stay beside it as `.before-<time>`).
+   **The held store was corrected on 9 November 2026 (the owner ran the job, server stopped).** The
+   Act's 280 held passages stayed word for word unchanged and 2 were added (351,182 → 351,184
+   passages), at positions 80717 (Article 105) and 80739 (Article 127). Checked afterwards, reading
+   only: the passage store, the vector index and the word index each hold 351,184; positions run
+   without a gap; the lineage record agrees (index bytes, word-index parameters, passage count); the
+   Act has 137 Articles; the Act that follows it starts at 80750. The earlier files are kept beside
+   the live ones as `.before-20261109T041124` (about 2.4 GB: the passage store, the vector index and the word index; the
+   owner's to remove). Article 105's
+   period is stored as the text prints it, "Three yean" (the misprint is recorded in the Act's
+   schedule notes), so a word search for "three years" does not match it; the meaning search can.
 2. **The Wakf Act 1995 is held only under its 2025 name.** A plan that names "the Wakf Act" matches
    no held name and is told it is not held; the owner's checked short names (59) do not include it.
 
@@ -141,8 +147,9 @@ waqf property without sanction of Board to be void").
 
 The Acts' vectors in the store searched are those made from each passage as shown (its first line
 included). Vectors made from each passage's own wording (plan AN.45, D91) were built beside them on
-8 November 2026 (351,182 vectors, 60 of 60 sampled matched, `acts_v5_wording.index`) and **not swapped
-in**: the owner's comparison tool, run on its 80 composed questions over a sample library of 21,460
+8 November 2026 (351,182 vectors, 60 of 60 sampled matched, `acts_v5_wording.index`; the store now
+holds 351,184 after the 9 November correction, so that candidate is two vectors short and its index
+stage would be run again before any swap) and **not swapped in**: the owner's comparison tool, run on its 80 composed questions over a sample library of 21,460
 passages of 57 Acts, finds them modestly worse in the product's whole search (first place 65 of 80
 against 68; 79 questions found against 80; mean 1/rank 0.873 against 0.900; 9 worse, 4 better, 67
 the same) and worse alone (first place 57 against 66; 18 worse, 6 better), most for questions that
@@ -315,7 +322,7 @@ Each of these was retrieved verbatim on 29 August 2026, with its locator:
 
 ### 2.3 Bare-act search artefacts, measured 29 September 2026
 
-> **Superseded for the library now by §0.2:** the Acts store searched is `acts_v5`, 351,182 passages
+> **Superseded for the library now by §0.2:** the Acts store searched is `acts_v5`, 351,184 passages
 > of 1,621 Acts, one copy of each instrument; the 414,710 passages and `bareacts_v3` below are the
 > store of 29 September.
 
