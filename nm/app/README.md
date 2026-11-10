@@ -18,6 +18,8 @@ This index follows the shipped [source-layout manifest](../source_layout.json). 
 - [composition.py](composition.py) — Selects concrete ports, adapters and shipped browser assets.
 - [main.py](main.py) — Wires the ASGI application and command-line startup.
 - [model_permission.py](model_permission.py) — Owner-approved OpenAI text route, narrowed by each authenticated advocate.
+- [step_jobs.py](step_jobs.py) — The server's own step threads: a short wait, the limits and the queue, each step's record (plan AN.48, 48f1-48f3).
+- [step_worker.py](step_worker.py) — The step worker process and the web server's side of it, through the shared store (plan AN.48, 48f4).
 
 ### Contracts and package
 
@@ -37,6 +39,8 @@ This index follows the shipped [source-layout manifest](../source_layout.json). 
 Only the exact declared `/static/<name>` URLs are public; Python and private files in the same folders are never a static population.
 
 Usage (plans AN.17 and AN.19): `GET /api/usage` tells the page the plan and the percentage of the allowance left, and the notice due; `POST /api/usage/notice` records that a notice was shown. Every model call made for an advocate is metered (`composition.py`), and once nothing is left new paid work is refused before it starts, in the owner's words; the Usage and plan window in [index.html](index.html) shows only what the server says.
+
+Steps as jobs (plan AN.48, piece 48f; owner decision D167): every route that runs a step hands it to [step_jobs.py](step_jobs.py) - the server's own step threads, at most so many at once and for one advocate, each step's content-free record kept for the next start - and waits a short while; a step still working answers "working" and the page reads what it answered from `GET /api/turn/outcome`, following its progress on the stream `GET /api/turn-events`. With `NM_STEP_WORKER=separate` the steps run in a worker process of their own, [step_worker.py](step_worker.py), which the web server reaches through a shared, sealed store. How to host NM that way: [docs/HOSTING.md](../../docs/HOSTING.md).
 
 Fonts (plan AN.18): Source Serif 4 and Source Sans 3 are served from [fonts/](fonts/), with their open licence, through `fonts.css`; no font service is asked for anything.
 

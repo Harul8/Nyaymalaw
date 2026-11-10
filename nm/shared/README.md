@@ -39,6 +39,8 @@ This index follows the shipped [source-layout manifest](../source_layout.json). 
 ### Ports
 
 - [model_port.py](model_port.py) — Defines model requests, tool calls, results and usage.
+- [step_record_port.py](step_record_port.py) — Content-free records of the steps a server has taken, for its next start (plan AN.48, 48f3).
+- [step_share_port.py](step_share_port.py) — What the web server and the step worker share when steps run apart (plan AN.48, 48f4).
 - [storage_errors_port.py](storage_errors_port.py) — Expected sealed-object failures, reachable without importing a concrete adapter.
 - [store_port.py](store_port.py) — Defines the transaction and matter-storage boundary.
 
@@ -57,6 +59,8 @@ This index follows the shipped [source-layout manifest](../source_layout.json). 
 - [model_transport.py](model_transport.py) — One retry/error/accounting policy for every external model transport.
 - [optional_adapter.py](optional_adapter.py) — Whether an optional library can actually be imported.
 - [policed_port_adapter.py](policed_port_adapter.py) — Wraps fixed-destination ports with shared egress checks.
+- [step_record_store.py](step_record_store.py) — The step records in SQLite: whose step, which turn and route, the sign-in by fingerprint; never words.
+- [step_share_store.py](step_share_store.py) — The web server's and the step worker's shared SQLite store; every word in it sealed.
 - [store_documents.py](store_documents.py) — Immutable document derivatives sealed under the existing per-matter custody.
 - [store_envelope.py](store_envelope.py) — Wraps a separate matter data key outside the application process.
 - [store_file_store.py](store_file_store.py) — Matter storage: encrypted at rest, atomic, version-checked.

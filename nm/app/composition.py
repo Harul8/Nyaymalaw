@@ -750,7 +750,23 @@ class Application:
                 'corpus': 'configured_unverified' if self.legal_search is not None else 'not_connected',
                 'brain': {'engine': 'core_engine', 'state': 'development', 'stages': [
                     'understanding', 'research_planning', 'held_retrieval',
-                    'response_writing', 'authority_checks', 'independent_review', 'atomic_release']}}
+                    'response_writing', 'authority_checks', 'independent_review', 'atomic_release']},
+                'steps': self.steps_state()}
+
+    def steps_state(self):
+        """Plan AN.48 (48f6, D167): where the steps are worked, and how many wait and are at work - counts only, never whose or
+        what. A web server whose steps the step worker works says whether the worker has been heard from within BEAT_LASTS."""
+        if self.steps_mode == 'web':
+            from nm.app import step_worker
+            try:
+                beats = self.step_share.workers()
+            except Exception:  # noqa: BLE001 - a store that cannot be read says no worker is known to be there
+                beats = []
+            heard = [beat for beat in beats if beat[1] <= step_worker.BEAT_LASTS]
+            return {'mode': 'separate', 'worker': 'alive' if heard else 'not heard from',
+                    'waiting': sum(beat[2] for beat in heard), 'working': sum(beat[3] for beat in heard)}
+        return {'mode': self.steps_mode, 'waiting': self.step_jobs.count_waiting(),
+                'working': self.step_jobs.count_working()}
 
 
 def _document_desk(raw_store, storage, gate, settings):
