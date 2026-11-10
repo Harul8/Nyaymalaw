@@ -175,6 +175,26 @@ def follow_code(serve_args, *, child=("-m", "nm.app.main")):
         heartbeat.unlink(missing_ok=True)
 
 
+def _take_up_what_an_earlier_run_left(application):
+    """The turns an earlier run of this server was working on are released (D73), then the steps it left taken up again by the
+    server itself where they can be (plan AN.48, 48f3, D167) - before any page can ask to continue them."""
+    from nm.shared.turn_attempt_port import AttemptRefused
+    try:
+        released = application.turns_of_an_earlier_run_released()
+    except AttemptRefused as exc:  # the server still starts; such an answer then waits on Continue
+        print(f"The answers an earlier run was working on could not be released: {exc.code}", file=sys.stderr)
+        return
+    if released:
+        print(f"{released} answer(s) an earlier run was working on can continue where they stopped.", file=sys.stderr)
+    try:
+        taken = api.continue_interrupted_steps(application)
+    except Exception as exc:  # noqa: BLE001 - the server still starts; each such turn waits for its advocate, as before (D73)
+        print(f"The steps an earlier run left could not be taken up: {type(exc).__name__}", file=sys.stderr)
+    else:
+        if taken:
+            print(f"{taken} step(s) an earlier run left were taken up again.", file=sys.stderr)
+
+
 def create_app(application: Application | None = None):
     """Wire the composition root into the served path and return the ASGI app."""
     api.set_application(application or Application())
@@ -220,24 +240,14 @@ def main(argv: list[str] | None = None) -> int:
             _leave_with_supervisor(os.environ[HEARTBEAT_FILE])
 
     # Plan AN.41 (D73): what the earlier run of this server was working on stopped with it; each such answer is made able to
-    # continue where it stopped, by itself once its advocate's page is back. Its start is the one owner that knows this.
-    from nm.shared.turn_attempt_port import AttemptRefused
-    try:
-        released = application.turns_of_an_earlier_run_released()
-    except AttemptRefused as exc:  # the server still starts; such an answer then waits on Continue
-        print(f"The answers an earlier run was working on could not be released: {exc.code}", file=sys.stderr)
+    # continue where it stopped, by itself once its advocate's page is back. Its start is the one owner that knows this. Plan AN.48
+    # (48f4): where the steps run in a worker process of their own, the worker's start owns that, and a web server restarting
+    # alone stops none of them.
+    if application.steps_mode == "web":
+        print("The steps are worked by the step worker (NM_STEP_WORKER=separate): start it with python -m nm.app.step_worker.",
+              file=sys.stderr)
     else:
-        if released:
-            print(f"{released} answer(s) an earlier run was working on can continue where they stopped.", file=sys.stderr)
-        # Plan AN.48 (48f3, D167): the steps that run left, taken up again by the server itself where they can be - once its claims
-        # are released, and before any page can ask to continue them.
-        try:
-            taken = api.continue_interrupted_steps()
-        except Exception as exc:  # noqa: BLE001 - the server still starts; each such turn waits for its advocate, as before (D73)
-            print(f"The steps an earlier run left could not be taken up: {type(exc).__name__}", file=sys.stderr)
-        else:
-            if taken:
-                print(f"{taken} step(s) an earlier run left were taken up again.", file=sys.stderr)
+        _take_up_what_an_earlier_run_left(application)
 
     warm_search = getattr(getattr(application, "legal_search", None), "warm", None)
     if callable(warm_search):

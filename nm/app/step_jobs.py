@@ -159,6 +159,16 @@ class StepJobs:
             job = self._jobs.get((advocate_id, turn_id))
         return None if job is None else job["future"]
 
+    def count_waiting(self) -> int:
+        """How many steps wait for a place (48f4: the worker's beat says it)."""
+        with self._lock:
+            return len(self._waiting)
+
+    def count_working(self) -> int:
+        """How many steps are at work."""
+        with self._lock:
+            return sum(self._working.values())
+
     def waiting(self, advocate_id: str, turn_id: str) -> bool:
         """Whether that step waits for a free place, not yet begun."""
         with self._lock:

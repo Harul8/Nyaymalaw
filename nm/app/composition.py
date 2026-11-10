@@ -76,7 +76,9 @@ class Application:
     def __init__(self, *, root: Path | None = None, model: ModelPort | None = None,
                  store=None, directory=None, mail=None, legal_search=_DEFAULT_SEARCH,
                  environment: Mapping[str, str] | None = None,
-                 audit_root: Path | None = None):
+                 audit_root: Path | None = None, steps: str | None = None):
+        """steps (plan AN.48, 48f4): where this process stands to the steps - "inside" (it works them, as always), "web" (a web
+        server whose steps the step worker works) or "worker" (that worker); None: as NM_STEP_WORKER says ("separate": web)."""
         if environment is None:
             load_dotenv(ROOT / '.env')
         settings = MappingProxyType(dict(os.environ if environment is None else environment))
@@ -170,13 +172,29 @@ class Application:
             port=SearchPort, sink=Sink.INDEX, processor_id=INDEX_PROCESSOR,
             data_classes=(DataClass.CLIENT_MATTER,))
         self.case_index = _DeferredAdapter(lambda: CaseIdentityIndex.local(self.root))
-        # What each running turn is doing, for its own advocate (memory only).
-        self.turn_progress = TurnProgress()
+        # Plan AN.48 (48f4, D167): where this process stands to the steps, and, where they run in a worker process of their own,
+        # what it shares with the other (sealed under the installation's key, as conversations are).
+        from nm.app import step_worker
+        self.steps_mode = steps if steps in step_worker.MODES else step_worker.mode_from(settings.get('NM_STEP_WORKER'))
+        self.step_share = None
+        if self.steps_mode != 'inside':
+            from nm.shared.step_share_port import StepSharePort
+            from nm.shared.step_share_store import FileStepShare
+            from nm.shared.store_file_store import _Cipher
+            self.step_share = PolicedPort(inner=_DeferredAdapter(lambda: FileStepShare(storage / 'step-share.sqlite', _Cipher(key))),
+                gate=self._gate, port=StepSharePort, sink=Sink.STORAGE, processor_id=STORAGE_PROCESSOR,
+                data_classes=(DataClass.CLIENT_MATTER, DataClass.OPERATIONAL))
+        # What each running turn is doing, for its own advocate (memory only; 48f4: the worker's, told to the web server).
+        self.turn_progress = (TurnProgress() if self.steps_mode == 'inside' else
+                              step_worker.SharedProgress(self.step_share) if self.steps_mode == 'web' else
+                              step_worker.MirroredProgress(self.step_share))
         # Plan AN.48 (48f1, D167): the steps this server works on its own step threads, and how long a request waits for one;
         # 48f2: how many work at once, and for one advocate - each step that waits for a place told its place in its progress.
-        self.step_jobs = StepJobs(wait_seconds=wait_from(settings.get('NM_STEP_WAIT_SECONDS')),
-                                  at_once=count_from(settings.get('NM_STEPS_AT_ONCE'), AT_ONCE),
-                                  per_advocate=count_from(settings.get('NM_STEPS_PER_ADVOCATE'), PER_ADVOCATE))
+        # 48f4: a web server hands them to the worker and waits for them the same while.
+        wait = wait_from(settings.get('NM_STEP_WAIT_SECONDS'))
+        self.step_jobs = (step_worker.RemoteSteps(self.step_share, wait_seconds=wait) if self.steps_mode == 'web' else
+                          StepJobs(wait_seconds=wait, at_once=count_from(settings.get('NM_STEPS_AT_ONCE'), AT_ONCE),
+                                   per_advocate=count_from(settings.get('NM_STEPS_PER_ADVOCATE'), PER_ADVOCATE)))
         self.step_jobs.placed = lambda advocate_id, turn_id, ahead: self.turn_progress.report(
             advocate_id, turn_id, 'queued', {'ahead': ahead})
         # A step that waited and was then refused as it began, before its run said anything, says working no longer.
@@ -198,7 +216,9 @@ class Application:
         self.live_transcription_model = (settings.get('NM_LIVE_TRANSCRIBE_MODEL') or 'gpt-live-transcribe').strip()
         # Plan AN.37 (D37-D40): the windows of questions turns have open, and what proposes the questions (piece 37d).
         from nm.core_engine import questions
-        self.questions = QuestionDesk()
+        # 48f4: a web server reads the worker's windows and hands it the answers; the worker shows the windows it opens.
+        self.questions = (QuestionDesk() if self.steps_mode == 'inside' else step_worker.SharedDesk(self.step_share)
+                          if self.steps_mode == 'web' else MirroredDesk(self.step_share))
         self.propose_questions = questions.propose
         # Plan AN.41-AN.42: the turns this process is working on, each with the advocate's Stop and the steers waiting for it.
         self._running, self._running_lock = {}, threading.Lock()
@@ -621,7 +641,12 @@ class Application:
     def stop_turn(self, advocate_id, turn_id):
         """Stop (plan AN.42, D78): the answer stops after the step in progress. Plan AN.48 (48f2): a step still waiting for a free
         place is taken out instead - nothing of it ran and nothing was charged - and one just begun is stopped as it reaches the
-        point Stop is heard at. False where this process is not working on it."""
+        point Stop is heard at. False where this process is not working on it. 48f4: a web server asks the step worker, which says
+        whether it heard."""
+        if self.steps_mode == 'web':
+            from nm.app import step_worker
+            verdict = step_worker.ask_worker(self.step_share, advocate_id, turn_id, 'stop', {})
+            return bool(verdict and verdict.get('stopping'))
         with self._running_lock:
             running = self._running.get((advocate_id, turn_id))
             if running is None:
@@ -637,11 +662,14 @@ class Application:
     def steer_turn(self, *, advocate_id, turn_id, text, document_refs=()):
         """Steer (plan AN.42, D79): the message goes into the answer being worked on, with the documents sent with it as they were
         read; the answer stops after the step in progress and goes on with it. False where this process is not working on it -
-        the answer has finished, and the page sends the message as the next one."""
+        the answer has finished, and the page sends the message as the next one. 48f4: a web server reads the documents and hands
+        the steer to the step worker, which says whether the turn took it."""
         from datetime import datetime, timezone
-        with self._running_lock:
-            running = self._running.get((advocate_id, turn_id))
-        if running is None or not self.turn_running(advocate_id, turn_id):
+        running = None
+        if self.steps_mode != 'web':
+            with self._running_lock:
+                running = self._running.get((advocate_id, turn_id))
+        if self.steps_mode != 'web' and running is None or not self.turn_running(advocate_id, turn_id):
             return False
         documents = []
         if document_refs:
@@ -649,14 +677,39 @@ class Application:
             if self.documents is None:
                 raise turn_documents.DocumentRefused("Documents cannot be read on this installation.")
             documents = turn_documents.turn_material([self.documents.load(advocate_id, ref) for ref in document_refs])
-        running.add({'text': text, 'documents': list(documents), 'at': datetime.now(timezone.utc).isoformat()})
+        steer = {'text': text, 'documents': list(documents), 'at': datetime.now(timezone.utc).isoformat()}
+        if self.steps_mode == 'web':
+            from nm.app import step_worker
+            verdict = step_worker.ask_worker(self.step_share, advocate_id, turn_id, 'steer', steer)
+            return bool(verdict and verdict.get('taken'))
+        running.add(steer)
+        return True
+
+    def steered(self, advocate_id, turn_id, steer):
+        """Plan AN.48 (48f4): the step worker's part of Steer - a steer the web server read, into the turn this process works on."""
+        with self._running_lock:
+            running = self._running.get((advocate_id, turn_id))
+        if running is None or not self.turn_running(advocate_id, turn_id):
+            return False
+        running.add(steer)
         return True
 
     def save_queued(self, *, advocate_id, chat_id, queued):
         """What waits to be sent as the next message of a conversation (plan AN.42, D77), saved with it: on the versions of the
-        turn this process is working on in it, where there is one, so that neither write undoes the other."""
+        turn this process is working on in it, where there is one, so that neither write undoes the other. 48f4: a web server hands
+        it to the step worker, which works the turns; where no worker is there, no turn is at work, and it is saved here."""
         from nm.core_engine.conversation import chat_matter_id, hold_queued, save_queued
         from nm.shared.store_port import StaleWrite
+        if self.steps_mode == 'web':
+            from nm.app import step_worker
+            if step_worker.alive(self.step_share):
+                verdict = step_worker.ask_worker(self.step_share, advocate_id, '', 'queued',
+                                                 {'chat_id': chat_id, 'queued': queued})
+                if verdict is not None and verdict.get('missing'):
+                    raise LookupError('Conversation not available.')
+                if verdict is None or not verdict.get('saved'):
+                    raise OSError('What waits could not be saved with the conversation.')
+                return
         with self._running_lock:
             writers = [running.writer for running in self._running.values()
                        if running.advocate_id == advocate_id and running.chat_id == chat_id and running.writer is not None]
@@ -823,6 +876,54 @@ class QuestionDesk:
         """The advocate's answers for that turn's window: "taken", or "closed" where there is no open window."""
         asking = self.window(advocate_id, turn_id)
         return "closed" if asking is None else asking.receive(given)
+
+
+class MirroredDesk(QuestionDesk):
+    """The step worker's windows of questions (plan AN.48, 48f4): each one a turn opens shown in the shared store for the web
+    server's page, kept shown as it changes, and taken out when it closes; answers reach it from the web server through the worker."""
+
+    def __init__(self, share):
+        super().__init__()
+        self._share = share
+
+    def _show(self, advocate_id, turn_id, asking):
+        try:
+            self._share.show_window(advocate_id, turn_id, asking.view())
+        except Exception as exc:  # noqa: BLE001 - shown again at the worker's next look
+            logging.getLogger('nm.steps').warning('A window of questions could not be shown (%s).', type(exc).__name__)
+
+    def bound(self, advocate_id):
+        inner, desk = super().bound(advocate_id), self
+
+        class _Bound:
+            def open(self, turn_id, asking):
+                inner.open(turn_id, asking)
+                desk._show(advocate_id, turn_id, asking)
+        return _Bound()
+
+    def close(self, advocate_id, turn_id):
+        super().close(advocate_id, turn_id)
+        try:
+            self._share.close_window(advocate_id, turn_id)
+        except Exception as exc:  # noqa: BLE001 - the worker's next start closes every window it left
+            logging.getLogger('nm.steps').warning('A window of questions could not be closed (%s).', type(exc).__name__)
+
+    def answer(self, advocate_id, turn_id, given):
+        state = super().answer(advocate_id, turn_id, given)
+        asking = self.window(advocate_id, turn_id)
+        if asking is not None:
+            self._show(advocate_id, turn_id, asking)
+        return state
+
+    def show_open(self):
+        """Each open window shown as it now is; one that has closed by itself taken out."""
+        with self._lock:
+            held = list(self._open.items())
+        for (advocate_id, turn_id), asking in held:
+            if asking.open():
+                self._show(advocate_id, turn_id, asking)
+            else:
+                self.close(advocate_id, turn_id)
 
 
 def _require_session(check):

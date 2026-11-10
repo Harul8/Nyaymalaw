@@ -17,6 +17,7 @@
     "nm.app.model_permission": "bootstrap",
     "nm.app.static_assets": "edge",
     "nm.app.step_jobs": "bootstrap",
+    "nm.app.step_worker": "bootstrap",
     "nm.app.turn_progress": "domain",
     "nm.arrive": "domain",
     "nm.arrive.account_confirmation_contracts": "domain",
@@ -125,6 +126,8 @@
     "nm.shared.sqlite_creation": "adapters",
     "nm.shared.step_record_port": "ports",
     "nm.shared.step_record_store": "adapters",
+    "nm.shared.step_share_port": "ports",
+    "nm.shared.step_share_store": "adapters",
     "nm.shared.storage_errors_port": "ports",
     "nm.shared.held_acts": "adapters",
     "nm.shared.store_documents": "adapters",
@@ -142,13 +145,13 @@
     "nm.work_the_file.matter_contracts": "domain"
   },
   "expected_roles": {
-    "adapters": 38,
-    "bootstrap": 6,
+    "adapters": 39,
+    "bootstrap": 7,
     "core": 41,
     "domain": 37,
     "edge": 3,
     "infrastructure": 1,
-    "ports": 13
+    "ports": 14
   },
   "browser_assets": {
     "app.css": "nm/app/app.css",

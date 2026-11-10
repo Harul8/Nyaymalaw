@@ -1466,7 +1466,33 @@ def _converted(run, req, *, signed_in, active):
     return _release(output)
 
 
-def _answered(run, req, request, advocate_id, background, *, held=False, route='send', choice=None, disputes=None):
+def _run_of(app, advocate_id, spec, signed_in):
+    """The run a step names (plan AN.48, 48f4): {"route": send | continue | go | answers | message, "given": what its request
+    gave} - the same call in the web server's own process or in the step worker's."""
+    route, given = spec['route'], spec['given']
+    if route == 'send':
+        return lambda: app.run_turn(advocate_id=advocate_id, message=given['message'], turn_id=given['turn_id'],
+                                    chat_id=given['chat_id'], matter_id=given['matter_id'],
+                                    expected_version=given['expected_version'], document_refs=given['document_refs'],
+                                    model_choice=given['model'], effort=given['effort'], steps=given['steps'],
+                                    session_current=signed_in)
+    if route == 'continue':
+        return lambda: app.continue_turn(advocate_id=advocate_id, chat_id=given['chat_id'], turn_id=given['turn_id'],
+                                         session_current=signed_in)
+    if route == 'go':
+        return lambda: app.go_turn(advocate_id=advocate_id, chat_id=given['chat_id'], turn_id=given['turn_id'],
+                                   choice=given['choice'], disputes=given['disputes'], session_current=signed_in)
+    if route == 'answers':
+        return lambda: app.answer_turn(advocate_id=advocate_id, chat_id=given['chat_id'], turn_id=given['turn_id'],
+                                       answers=given['answers'], session_current=signed_in)
+    if route == 'message':
+        return lambda: app.message_turn(advocate_id=advocate_id, chat_id=given['chat_id'], turn_id=given['turn_id'],
+                                        message=given['message'], document_refs=tuple(given['document_refs']),
+                                        session_current=signed_in)
+    raise ValueError(f'not a step: {route}')
+
+
+def _answered(spec, req, request, advocate_id, background, *, held=False):
     """One run of a turn - sent, or continued (plan AN.41) - and its answer released, or refused in code's own words; while it
     runs the advocate counts as active (D65). What NM finished and kept, where it stopped part-way, is said (kept).
     Plan AN.48 (48f1, D167): the run is a step worked on the server's own step threads. The request waits for it a short while and
@@ -1474,15 +1500,22 @@ def _answered(run, req, request, advocate_id, background, *, held=False, route='
     what it answers - this same answer or refusal - is read from /api/turn/outcome. 48f2: a step stopped while it waits for a free
     place is refused as such - held: the turn is already kept with its conversation (every route but a message sent). 48f3: the
     step's content-free record - route, conversation, a go-ahead's choice and disputes, the sign-in's fingerprint - for the next
-    start, should the server stop first."""
+    start, should the server stop first. 48f4: spec names the run (_run_of); a web server hands it to the step worker."""
+    app = application()
+    token = request.cookies.get('nm_session', '')
+    given = spec['given']
+    record = {'route': spec['route'], 'chat_id': req.chat_id, 'choice': given.get('choice'),
+              'disputes': list(given['disputes']) if given.get('disputes') else None,
+              'session': token_fingerprint(token) if token else None}
+    if app.steps_mode == 'web':
+        return _handed(app, spec, req, advocate_id, held, record)
+    run = _run_of(app, advocate_id, spec, lambda: _session_current(request, advocate_id))
+
     def step():
         return _converted(run, req, signed_in=lambda: _session_current(request, advocate_id),
                           active=lambda: _active_while_working(request))
 
-    token = request.cookies.get('nm_session', '')
-    record = {'route': route, 'chat_id': req.chat_id, 'choice': choice, 'disputes': list(disputes) if disputes else None,
-              'session': token_fingerprint(token) if token else None}
-    jobs = application().step_jobs
+    jobs = app.step_jobs
     future = jobs.start(advocate_id, req.turn_id, step, cancelled=lambda: _stopped_before_start(req, held), record=record)
     done, released = jobs.answered(future)
     if not done:
@@ -1495,6 +1528,64 @@ def _answered(run, req, request, advocate_id, background, *, held=False, route='
 
 
 _steps_log = logging.getLogger('nm.steps')
+
+
+def _handed(app, spec, req, advocate_id, held, record):
+    """A web server's step (plan AN.48, 48f4): handed to the step worker and waited for as 48f1 waits - its answer or refusal as
+    its request's own, or 'working' while it goes on. A turn already at work is followed, not handed again."""
+    if app.turn_running(advocate_id, req.turn_id):
+        return JSONResponse(status_code=202, content=_working(advocate_id, req.turn_id, req.chat_id), headers={'Cache-Control': 'no-store'})
+    app.turn_progress.taken(advocate_id, req.turn_id)
+    handed = app.step_jobs.ask(advocate_id, req.turn_id, {'spec': spec, 'req': {'turn_id': req.turn_id, 'chat_id': req.chat_id},
+                                                         'held': held, 'record': record})
+    answered = app.step_jobs.wait_for(handed)
+    if answered is None:
+        return JSONResponse(status_code=202, content=_working(advocate_id, req.turn_id, req.chat_id), headers={'Cache-Control': 'no-store'})
+    return _raised(answered)
+
+
+def _raised(answered):
+    """What a step the worker worked answered, as its request says it (48f4): the answer, or the refusal raised."""
+    if answered.get('status') == 200:
+        return _Released.model_validate(answered['body'])
+    raise HTTPException(answered['status'], answered.get('detail'))
+
+
+def _outcome_of(future):
+    """What a step answered, for the web server (48f4): {"status": 200, "body"} or a refusal's {"status", "detail"}; an error nobody
+    expected is the server error a request would have had."""
+    try:
+        released = future.result()
+    except HTTPException as exc:
+        return {'status': exc.status_code, 'detail': exc.detail}
+    except BaseException:  # noqa: BLE001 - _after_step names it in the worker's log
+        return {'status': 500, 'detail': 'The server could not complete this request.'}
+    return {'status': 200, 'body': released.model_dump(mode='json')}
+
+
+def work_handed_step(app, number, advocate_id, turn_id, asked):
+    """The step worker's part of a step the web server handed it (48f4): worked as the web server's own process would have worked
+    it - on the step threads, within the limits, with its record - under the sign-in it was asked under, by its fingerprint; what
+    it answered told back."""
+    from types import SimpleNamespace
+    req, record = SimpleNamespace(**asked['req']), asked['record']
+    fingerprint = record.get('session')
+
+    def signed_in():
+        return bool(fingerprint) and _still_signed_in(advocate_id, fingerprint, app)
+    run = _run_of(app, advocate_id, asked['spec'], signed_in)
+    future = app.step_jobs.start(
+        advocate_id, turn_id,
+        lambda: _converted(run, req, signed_in=signed_in, active=lambda: _kept_working(advocate_id, fingerprint, app)),
+        cancelled=lambda: _stopped_before_start(req, asked['held']), record=record)
+
+    def told(done):
+        try:
+            app.step_share.answer(number, _outcome_of(done))
+        except Exception as exc:  # noqa: BLE001 - the web server then reads the conversation, as after a restart (D73)
+            _steps_log.warning('What a step answered could not be told to the web server (%s).', type(exc).__name__)
+        _after_step(done, advocate_id)
+    future.add_done_callback(told)
 
 
 def _stopped_before_start(req, held):
@@ -1530,25 +1621,26 @@ def _after_step(future, advocate_id):
             _history_log.warning('A conversation line could not be prepared after its step (%s).', type(exc).__name__)
 
 
-def _still_signed_in(advocate_id, fingerprint):
+def _still_signed_in(advocate_id, fingerprint, app=None):
     """Whether the sign-in a step taken up again was asked under still holds (plan AN.48, 48f3): by its fingerprint, as every call
-    of the step asks, exactly as a request's own sign-in is asked."""
+    of the step asks, exactly as a request's own sign-in is asked. app: the application whose directory asks (48f4's worker)."""
     try:
-        return application().directory.working_session(advocate_id, fingerprint, utcnow()) is not None
+        return (app or application()).directory.working_session(advocate_id, fingerprint, utcnow()) is not None
     except (AccountBusy, AuthenticationUnavailable, OSError, ValueError):
         return False
 
 
 @contextmanager
-def _kept_working(advocate_id, fingerprint):
+def _kept_working(advocate_id, fingerprint, app=None):
     """While a step taken up again works, NM working counts as the advocate's activity (D65), as it does for a step their own
     request began - by the sign-in's fingerprint, every _ACTIVE_EVERY seconds."""
     done = threading.Event()
+    directory = (app or application()).directory
 
     def keep():
-        while not done.wait(_ACTIVE_EVERY):
+        while fingerprint and not done.wait(_ACTIVE_EVERY):
             try:
-                application().directory.keep_working_session(advocate_id, fingerprint, utcnow())
+                directory.keep_working_session(advocate_id, fingerprint, utcnow())
             except (AccountBusy, AuthenticationUnavailable, OSError, ValueError) as exc:
                 logging.getLogger('nm.session').warning('A session could not be kept active while NM worked (%s).',
                                                         type(exc).__name__)
@@ -1559,7 +1651,7 @@ def _kept_working(advocate_id, fingerprint):
         done.set()
 
 
-def continue_interrupted_steps():
+def continue_interrupted_steps(app=None):
     """At the server's start (plan AN.48, 48f3; D167, D73): each step an earlier run of the server took and did not end is taken up
     again by the server itself, where that can be done from what was kept, without waiting for the advocate's page. A step that had
     begun, whose turn its conversation holds as stopped by the restart, is continued as Continue continues it (D70) - the rule the
@@ -1567,17 +1659,17 @@ def continue_interrupted_steps():
     while a matter waited, not yet begun, were never kept here, and are said as they always were. Only while the advocate's sign-in
     still holds, by its fingerprint; otherwise the turn waits for them with its red message, and continues once they are back (D73).
     Each record read is let go; a step taken up keeps its own. Returns how many were taken up. Called once the earlier run's claims
-    are released (composition.turns_of_an_earlier_run_released)."""
+    are released (composition.turns_of_an_earlier_run_released). app: the application that works the steps (48f4: the worker's)."""
     from types import SimpleNamespace
-    app = application()
+    app = app or application()
     taken = 0
     for left in app.step_records.left():
         advocate_id, turn_id, fingerprint = left['advocate_id'], left['turn_id'], left['session']
         app.step_records.ended(advocate_id, turn_id)
-        if not fingerprint or not _still_signed_in(advocate_id, fingerprint):
+        if not fingerprint or not _still_signed_in(advocate_id, fingerprint, app):
             continue
         chat_id = left['chat_id'] or stored_chat(advocate_id, None, turn_id)
-        signed_in = (lambda a=advocate_id, f=fingerprint: _still_signed_in(a, f))
+        signed_in = (lambda a=advocate_id, f=fingerprint: _still_signed_in(a, f, app))
         if left['begun'] or left['route'] == 'continue':
             stopped = _saved_state(advocate_id, chat_id, turn_id)
             if stopped.get('state') != 'stopped' or not (stopped.get('stopped') or {}).get('by_itself'):
@@ -1598,7 +1690,7 @@ def continue_interrupted_steps():
         future = app.step_jobs.start(
             advocate_id, turn_id,
             lambda run=run, req=req, s=signed_in, a=advocate_id, f=fingerprint: _converted(
-                run, req, signed_in=s, active=lambda: _kept_working(a, f)),
+                run, req, signed_in=s, active=lambda: _kept_working(a, f, app)),
             cancelled=lambda req=req: _stopped_before_start(req, True), record=record)
         future.add_done_callback(lambda finished, a=advocate_id: _after_step(finished, a))
         taken += 1
@@ -1616,11 +1708,11 @@ def turn(req: TurnRequest, advocate_id: Advocate, request: Request, background: 
             'Describe the requested work in your message instead.', 'code': 'unsupported_action_settings',
             'committed': 'unconfirmed', 'turn_id': req.turn_id, 'chat_id': req.chat_id,
             'retryable': False})
-    return _answered(lambda: application().run_turn(advocate_id=advocate_id,
-            message=req.message, turn_id=req.turn_id, chat_id=req.chat_id,
-            matter_id=req.matter_id, expected_version=req.expected_version,
-            document_refs=req.document_refs, model_choice=req.model, effort=req.effort, steps=req.steps,
-            session_current=lambda: _session_current(request, advocate_id)), req, request, advocate_id, background)
+    return _answered({'route': 'send', 'given': {
+            'message': req.message, 'turn_id': req.turn_id, 'chat_id': req.chat_id,
+            'matter_id': req.matter_id, 'expected_version': req.expected_version,
+            'document_refs': req.document_refs, 'model': req.model, 'effort': req.effort, 'steps': req.steps}},
+        req, request, advocate_id, background)
 
 
 class TurnOf(BaseModel):
@@ -1635,10 +1727,8 @@ def continue_turn(req: TurnOf, advocate_id: Advocate, request: Request, backgrou
     stopped - each step it finished kept where it still passes its check - and is saved once it is finished."""
     if not _session_current(request, advocate_id):
         raise HTTPException(401, 'not signed in')
-    return _answered(lambda: application().continue_turn(
-        advocate_id=advocate_id, chat_id=req.chat_id, turn_id=req.turn_id,
-        session_current=lambda: _session_current(request, advocate_id)), req, request, advocate_id, background, held=True,
-        route='continue')
+    return _answered({'route': 'continue', 'given': {'chat_id': req.chat_id, 'turn_id': req.turn_id}},
+                     req, request, advocate_id, background, held=True)
 
 
 class TurnGo(BaseModel):
@@ -1658,10 +1748,9 @@ def go_turn(req: TurnGo, advocate_id: Advocate, request: Request, background: Ba
     again, or is saved as one answer. Done before any analysis saves it as it stands."""
     if not _session_current(request, advocate_id):
         raise HTTPException(401, 'not signed in')
-    return _answered(lambda: application().go_turn(
-        advocate_id=advocate_id, chat_id=req.chat_id, turn_id=req.turn_id, choice=req.choice, disputes=req.disputes,
-        session_current=lambda: _session_current(request, advocate_id)), req, request, advocate_id, background, held=True,
-        route='go', choice=req.choice, disputes=req.disputes)
+    return _answered({'route': 'go', 'given': {'chat_id': req.chat_id, 'turn_id': req.turn_id, 'choice': req.choice,
+                                              'disputes': req.disputes}},
+                     req, request, advocate_id, background, held=True)
 
 
 class TurnAnswers(BaseModel):
@@ -1679,10 +1768,8 @@ def answer_turn(req: TurnAnswers, advocate_id: Advocate, request: Request, backg
     itself once every question is answered."""
     if not _session_current(request, advocate_id):
         raise HTTPException(401, 'not signed in')
-    return _answered(lambda: application().answer_turn(
-        advocate_id=advocate_id, chat_id=req.chat_id, turn_id=req.turn_id, answers=req.answers,
-        session_current=lambda: _session_current(request, advocate_id)), req, request, advocate_id, background, held=True,
-        route='answers')
+    return _answered({'route': 'answers', 'given': {'chat_id': req.chat_id, 'turn_id': req.turn_id, 'answers': req.answers}},
+                     req, request, advocate_id, background, held=True)
 
 
 class TurnMessage(BaseModel):
@@ -1706,10 +1793,9 @@ def message_turn(req: TurnMessage, advocate_id: Advocate, request: Request, back
     information, a correction, a rethink - or as a new question that waits, or asks how it was meant; and says how it took it."""
     if not _session_current(request, advocate_id):
         raise HTTPException(401, 'not signed in')
-    return _answered(lambda: application().message_turn(
-        advocate_id=advocate_id, chat_id=req.chat_id, turn_id=req.turn_id, message=req.message,
-        document_refs=tuple(req.document_refs), session_current=lambda: _session_current(request, advocate_id)),
-        req, request, advocate_id, background, held=True, route='message')
+    return _answered({'route': 'message', 'given': {'chat_id': req.chat_id, 'turn_id': req.turn_id, 'message': req.message,
+                                                   'document_refs': list(req.document_refs)}},
+                     req, request, advocate_id, background, held=True)
 
 
 @app.post('/api/turn/discard', dependencies=[CsrfProtected])
@@ -1846,6 +1932,14 @@ def turn_outcome(turn_id: str, advocate_id: Advocate, request: Request) -> _Rele
         raise HTTPException(401, 'not signed in')
     if not turn_id or len(turn_id) > 200:
         raise HTTPException(422, 'A turn identity is required.')
+    if application().steps_mode == 'web':  # 48f4: the step worker's word on it, kept in the shared store
+        handed = application().step_jobs.latest(advocate_id, turn_id)
+        if handed is None:
+            raise HTTPException(404, {'code': 'no_step', 'why': 'NM holds no step of this message now.'})
+        answered = handed.answered()
+        if answered is None:
+            return JSONResponse(status_code=202, content=_working(advocate_id, turn_id, None), headers={'Cache-Control': 'no-store'})
+        return _raised(answered)
     future = application().step_jobs.of(advocate_id, turn_id)
     if future is None:
         raise HTTPException(404, {'code': 'no_step', 'why': 'NM holds no step of this message now.'})

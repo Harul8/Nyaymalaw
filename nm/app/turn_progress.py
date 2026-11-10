@@ -20,6 +20,7 @@ from __future__ import annotations
 import re
 import threading
 import time
+from copy import deepcopy
 
 KEEP_SECONDS = 900
 STAGES = {
@@ -146,16 +147,34 @@ class TurnProgress:
             row = self._rows.get((advocate_id, turn_id))
             if row is None:
                 return {"state": "unknown"}
-            steps, until = row["steps"], row["ended"] if row["ended"] is not None else now
-            current = steps[-1] if steps else None
-            return {"state": row["state"],
-                    "stage": current["stage"] if current else None,
-                    "label": _label(current["stage"], row.get("detail") or {}) if current else None,
-                    "detail": dict(row.get("detail") or {}),
-                    "shown": row.get("shown", 0), "chat_id": row.get("chat_id"), "saved": row.get("saved", 0),
-                    "parts": {name: dict(part) for name, part in (row.get("parts") or {}).items()},
-                    "elapsed_seconds": int(until - row["started"]),
-                    **({"tentative_seconds": row["tentative"]} if "tentative" in row else {}),
-                    "steps": [{"label": STAGES[step["stage"]],
-                               "seconds": int((steps[i + 1]["at"] if i + 1 < len(steps) else until) - step["at"])}
-                              for i, step in enumerate(steps)]}
+            return _view(row, now)
+
+    def raw(self, advocate_id, turn_id):
+        """The turn's row as it is kept - its times on this progress's clock - for another process to read (plan AN.48, 48f4: the
+        step worker's rows, read by the web server). None where there is none."""
+        with self._lock:
+            row = self._rows.get((advocate_id, turn_id))
+            return None if row is None else deepcopy(row)
+
+    @staticmethod
+    def view(row, now, keep=KEEP_SECONDS):
+        """What read() says of a kept row at now, on the clock it was kept on: unknown once it ended over keep seconds ago."""
+        if not row or row.get("ended") is not None and now - row["ended"] > keep:
+            return {"state": "unknown"}
+        return _view(row, now)
+
+
+def _view(row, now):
+    steps, until = row["steps"], row["ended"] if row["ended"] is not None else now
+    current = steps[-1] if steps else None
+    return {"state": row["state"],
+            "stage": current["stage"] if current else None,
+            "label": _label(current["stage"], row.get("detail") or {}) if current else None,
+            "detail": dict(row.get("detail") or {}),
+            "shown": row.get("shown", 0), "chat_id": row.get("chat_id"), "saved": row.get("saved", 0),
+            "parts": {name: dict(part) for name, part in (row.get("parts") or {}).items()},
+            "elapsed_seconds": int(until - row["started"]),
+            **({"tentative_seconds": row["tentative"]} if "tentative" in row else {}),
+            "steps": [{"label": STAGES[step["stage"]],
+                       "seconds": int((steps[i + 1]["at"] if i + 1 < len(steps) else until) - step["at"])}
+                      for i, step in enumerate(steps)]}
