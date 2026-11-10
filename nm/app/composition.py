@@ -43,6 +43,7 @@ from nm.shared.turn_attempt_port import TurnAttemptPort
 from nm.shared.turn_attempt_store import FileTurnAttempts
 from nm.core_engine.retrieval import HybridSearcher, SearchPort
 from nm.core_engine.citations import CaseIdentityIndex
+from nm.app.step_jobs import StepJobs, wait_from
 from nm.app.turn_progress import TurnProgress
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -171,6 +172,8 @@ class Application:
         self.case_index = _DeferredAdapter(lambda: CaseIdentityIndex.local(self.root))
         # What each running turn is doing, for its own advocate (memory only).
         self.turn_progress = TurnProgress()
+        # Plan AN.48 (48f1, D167): the steps this server works on its own step threads, and how long a request waits for one.
+        self.step_jobs = StepJobs(wait_seconds=wait_from(settings.get('NM_STEP_WAIT_SECONDS')))
         # The Acts time limits may be worked out under (owner decisions, 15 Oct 2026).
         from nm.shared.held_acts import HeldActs
         self.held_acts = HeldActs(settings.get('NM_BARE_ACTS_DIR')

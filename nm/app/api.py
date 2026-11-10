@@ -1442,31 +1442,70 @@ def _active_while_working(request):
 
 def _answered(run, req, request, advocate_id, background):
     """One run of a turn - sent, or continued (plan AN.41) - and its answer released, or refused in code's own words; while it
-    runs the advocate counts as active (D65). What NM finished and kept, where it stopped part-way, is said (kept)."""
-    try:
-        with _active_while_working(request):
-            output = run()
-    except ConversationRefused as exc:
-        raise HTTPException(exc.status, _conversation_error(exc, req)) from exc
-    except document_rules.DocumentRefused as exc:
-        raise HTTPException(422, {'why': str(exc), 'code': 'document_refused', 'committed': 'not_committed',
-                                  'turn_id': req.turn_id, 'chat_id': req.chat_id, 'retryable': False}) from exc
-    except ModelPermissionRefused as exc:
+    runs the advocate counts as active (D65). What NM finished and kept, where it stopped part-way, is said (kept).
+    Plan AN.48 (48f1, D167): the run is a step worked on the server's own step threads. The request waits for it a short while and
+    answers exactly as before where it is done by then; otherwise it answers that the step is working (202), the step goes on, and
+    what it answers - this same answer or refusal - is read from /api/turn/outcome."""
+    def step():
+        try:
+            with _active_while_working(request):
+                output = run()
+        except ConversationRefused as exc:
+            raise HTTPException(exc.status, _conversation_error(exc, req)) from exc
+        except document_rules.DocumentRefused as exc:
+            raise HTTPException(422, {'why': str(exc), 'code': 'document_refused', 'committed': 'not_committed',
+                                      'turn_id': req.turn_id, 'chat_id': req.chat_id, 'retryable': False}) from exc
+        except ModelPermissionRefused as exc:
+            if not _session_current(request, advocate_id):
+                raise HTTPException(401, {'why': 'Sign in again before continuing.', 'code': 'signed_out',
+                                          'committed': 'not_committed', 'turn_id': req.turn_id, 'chat_id': req.chat_id,
+                                          'retryable': True, **({'kept': True} if getattr(exc, 'kept', False) else {})}) from exc
+            # No receipt lookup is implied by permission refusal: an earlier attempt
+            # with this request identity may already be saved.
+            raise HTTPException(403, {'why': str(exc), 'code': 'model_permission_required',
+                'committed': 'unconfirmed', 'turn_id': req.turn_id, 'chat_id': req.chat_id,
+                'retryable': False, **({'kept': True} if getattr(exc, 'kept', False) else {})}) from exc
         if not _session_current(request, advocate_id):
-            raise HTTPException(401, {'why': 'Sign in again before continuing.', 'code': 'signed_out',
-                                      'committed': 'not_committed', 'turn_id': req.turn_id, 'chat_id': req.chat_id,
-                                      'retryable': True, **({'kept': True} if getattr(exc, 'kept', False) else {})}) from exc
-        # No receipt lookup is implied by permission refusal: an earlier attempt
-        # with this request identity may already be saved.
-        raise HTTPException(403, {'why': str(exc), 'code': 'model_permission_required',
-            'committed': 'unconfirmed', 'turn_id': req.turn_id, 'chat_id': req.chat_id,
-            'retryable': False, **({'kept': True} if getattr(exc, 'kept', False) else {})}) from exc
-    if not _session_current(request, advocate_id):
-        raise HTTPException(401, 'not signed in')
-    released = _release(output)
+            raise HTTPException(401, 'not signed in')
+        return _release(output)
+
+    jobs = application().step_jobs
+    future = jobs.start(advocate_id, req.turn_id, step)
+    done, released = jobs.answered(future)
+    if not done:
+        future.add_done_callback(lambda finished: _after_step(finished, advocate_id))
+        return JSONResponse(status_code=202, content=_working(advocate_id, req.turn_id, req.chat_id),
+                            headers={'Cache-Control': 'no-store'})
     if released.chat_id:  # once the answer has gone, the history's line of this conversation is made ready (O29)
         background.add_task(_prepare_chat_line, advocate_id, released.chat_id)
     return released
+
+
+_steps_log = logging.getLogger('nm.steps')
+
+
+def _working(advocate_id, turn_id, chat_id):
+    """What a request answers while its step goes on (plan AN.48, 48f1): that it is working, for which turn and conversation."""
+    return {'working': True, 'turn_id': turn_id,
+            'chat_id': chat_id or application().turn_progress.read(advocate_id, turn_id).get('chat_id')}
+
+
+def _after_step(future, advocate_id):
+    """A step that went on after its request answered, once it is done (plan AN.48, 48f1): the history's line of its conversation
+    made ready (O29), as its request would have had it; an error nobody expected logged, as the server logs one a request raises.
+    Its refusal, in code's words, is read from /api/turn/outcome."""
+    try:
+        released = future.result()
+    except HTTPException:
+        return
+    except BaseException as exc:  # noqa: BLE001 - ahead of the page's reading it, the server's log names it
+        _steps_log.error('A step ended in an error the server did not expect (%s).', type(exc).__name__, exc_info=exc)
+        return
+    if released.chat_id:
+        try:
+            _prepare_chat_line(advocate_id, released.chat_id)
+        except Exception as exc:  # noqa: BLE001 - the line is made when the history is next opened
+            _history_log.warning('A conversation line could not be prepared after its step (%s).', type(exc).__name__)
 
 
 @app.post('/api/turn', dependencies=[CsrfProtected])
@@ -1693,6 +1732,23 @@ def turn_progress(turn_id: str, advocate_id: Advocate, request: Request, chat_id
     # how many questions the window asks, so that the page opens it again when code adds one while the turn works.
     return {**seen, 'asking': True, 'asked': len(window.view()['questions']), 'stage': 'waiting_for_answer',
             'label': TURN_STAGES['waiting_for_answer']}
+
+
+@app.get('/api/turn/outcome')
+def turn_outcome(turn_id: str, advocate_id: Advocate, request: Request) -> _Released:
+    """What a step that went on after its request answered has answered (plan AN.48, 48f1; D167): its answer, or its refusal with
+    the status and words its request would have had; while it works, that it is working (202). The advocate reads only their own.
+    404 where this server holds no step of that turn - it was restarted: the conversation says where the turn stands (D73)."""
+    if not _session_current(request, advocate_id):
+        raise HTTPException(401, 'not signed in')
+    if not turn_id or len(turn_id) > 200:
+        raise HTTPException(422, 'A turn identity is required.')
+    future = application().step_jobs.of(advocate_id, turn_id)
+    if future is None:
+        raise HTTPException(404, {'code': 'no_step', 'why': 'NM holds no step of this message now.'})
+    if not future.done():
+        return JSONResponse(status_code=202, content=_working(advocate_id, turn_id, None), headers={'Cache-Control': 'no-store'})
+    return future.result()
 
 
 def _saved_state(advocate_id, chat_id, turn_id):

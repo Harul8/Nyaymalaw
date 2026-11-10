@@ -5789,10 +5789,13 @@ async function deliver(entry) {
     }
     watcher = watchProgress(entry);
     // Plan AN.41 (D70): Continue sends the same turn by its own route, which reads its message and files as saved.
-    const answer = await api(entry.endpoint || '/api/turn', {
+    let answer = await api(entry.endpoint || '/api/turn', {
       method: 'POST', headers: { 'content-type': 'application/json' },
       signal: stop.signal, body: entry.envelope,
     });
+    // Plan AN.48 (48f1, D167): a step still working when the server's wait ended goes on by itself; what it answers - this same
+    // answer, or its refusal as the request would have said it - is read once it is done.
+    if (answer && answer.working === true) answer = await stepOutcome(entry, answer, stop.signal);
     if (entry.attempt !== attempt) return;
     if (current()) snapshotIntent();
     entry.answer = answer;
@@ -5915,6 +5918,37 @@ async function deliver(entry) {
     }
     if (!['reconnecting', 'stopped'].includes(entry.state)) releaseQueued(entry);
   }
+}
+
+// PLAN AN.48 (48f1, D167): A STEP THAT WENT ON BY ITSELF. The server answered that it is working; what it answers is read when it is
+// done - exactly what the request would have answered, its refusal included. A moment without the network is waited out. Where the
+// server no longer holds the step (it was restarted), the error carries no status, so that the page follows the conversation as it
+// does after a restart (D73).
+const STEP_EVERY_MS = 2000;
+async function stepOutcome(entry, working, signal) {
+  if (working.chat_id) entry.chatId = working.chat_id;
+  for (let tries = 0; ; tries += 1) {
+    await pauseFor(STEP_EVERY_MS, signal);
+    let seen;
+    try {
+      seen = await api(`/api/turn/outcome?turn_id=${encodeURIComponent(entry.turnId)}`, { signal });
+    } catch (error) {
+      if (error?.status === 404 && error.detail?.code === 'no_step') throw new Error('NM no longer holds this step.');
+      if (!error?.status && !error?.obsolete && error?.name !== 'AbortError' && tries < 400) continue;
+      throw error;
+    }
+    if (!(seen && seen.working === true)) return seen;
+    if (seen.chat_id) entry.chatId = seen.chat_id;
+  }
+}
+
+function pauseFor(ms, signal) {
+  return new Promise((resolve, reject) => {
+    const aborted = () => reject(Object.assign(new Error('The request was cancelled.'), { name: 'AbortError' }));
+    if (signal && signal.aborted) { aborted(); return; }
+    const timer = setTimeout(resolve, ms);
+    if (signal) signal.addEventListener('abort', () => { clearTimeout(timer); aborted(); }, { once: true });
+  });
 }
 
 // PLAN AN.41 (D69, D70): WHY AN ANSWER STOPPED, AND WHAT IT FINISHED, as the conversation keeps it - never guessed by the page.

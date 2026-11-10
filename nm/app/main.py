@@ -47,11 +47,16 @@ HEARTBEAT_SECONDS, HEARTBEAT_STALE = 5.0, 60.0
 
 
 class _InFlight:
-    """Counts the HTTP requests and sockets being served, for the supervisor only."""
+    """Counts the HTTP requests and sockets being served, for the supervisor only - and, from plan AN.48 (48f1, D167), the steps
+    that go on after their request has answered (hold)."""
 
     def __init__(self, app, path):
         self.app, self.path, self.count, self.lock = app, Path(path), 0, threading.Lock()
         self._move(0)
+
+    def hold(self, step):
+        """A step worked after its request answered: +1 as it begins, -1 as it ends."""
+        self._move(step)
 
     def _move(self, step):
         with self.lock:
@@ -226,6 +231,8 @@ def main(argv: list[str] | None = None) -> int:
     served = api.app
     if os.environ.get(IN_FLIGHT_FILE):
         served = _InFlight(api.app, os.environ[IN_FLIGHT_FILE])
+        # Plan AN.48 (48f1): a step that goes on after its request answered is in flight too, until it ends.
+        application.step_jobs.hold = served.hold
         if os.environ.get(HEARTBEAT_FILE):
             _leave_with_supervisor(os.environ[HEARTBEAT_FILE])
     uvicorn.run(served, host=args.host, port=args.port, log_level="warning")
