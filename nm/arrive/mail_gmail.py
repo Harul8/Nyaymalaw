@@ -80,16 +80,17 @@ class GmailMail:
                                    'No automatic retry was sent.') from None
 
     def _secret(self) -> str:
-        """The secret as its file holds it now. Bounded, so a mistaken path cannot load a large file."""
+        """The secret as its file holds it now. Bounded, so a mistaken path cannot load a large file. A byte-order mark, which
+        some Windows tools put at the start of a file they save as UTF-8, is not part of the secret ('utf-8-sig' drops it)."""
         if self.password_file is not None:
-            with self.password_file.open('r', encoding='utf8') as source:
+            with self.password_file.open('r', encoding='utf-8-sig') as source:
                 text = source.read(257)
             # Google shows an app password in groups of four letters; the spaces between them are not part of it.
             password = ''.join(text.split())
             if not password or len(text) > 256 or any(not 33 <= ord(c) <= 126 for c in password):
                 raise ValueError('invalid credential')
             return password
-        with self.token_file.open('r', encoding='utf8') as source:
+        with self.token_file.open('r', encoding='utf-8-sig') as source:
             token = source.read(8193).strip()
         if not token or len(token) > 8192 or any(c.isspace() or ord(c) < 32 for c in token):
             raise ValueError('invalid credential')

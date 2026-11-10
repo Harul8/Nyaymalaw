@@ -198,6 +198,22 @@ def test_an_app_password_failure_says_nothing_of_the_secret_and_is_not_retried(a
     assert sum(event[0] == "connect" for event in observed) == 1
 
 
+@pytest.mark.parametrize("way", ["app password", "access token"])
+def test_a_secret_file_saved_with_a_byte_order_mark_is_read_without_it(transport, app_password, way):
+    """Some Windows tools (PowerShell 5.1's UTF-8, older Notepad) begin a UTF-8 file with a byte-order mark; it is no part of
+    the secret, so the sender still signs in."""
+    adapter, _, observed, _ = app_password if way == "app password" else transport
+    secret, wanted = ((adapter.password_file, APP_PASSWORD) if way == "app password" else
+                      (adapter.token_file, "synthetic-AccessToken"))
+    secret.write_bytes(b"\xef\xbb\xbf" + wanted.encode("utf8") + b"\r\n")
+    adapter.send(confirmation_mail(ADVOCATE, "123456"))
+    if way == "app password":
+        assert ("login", SENDER, SIGNED_IN_WITH) in observed
+    else:
+        assert [event[2] for event in observed if event[0] == "auth"] == [
+            "user=sender@example.test\x01auth=Bearer synthetic-AccessToken\x01\x01"]
+
+
 def test_a_replaced_app_password_is_read_at_the_next_send(app_password):
     adapter, _, observed, _ = app_password
     adapter.send(confirmation_mail(ADVOCATE, "123456"))
