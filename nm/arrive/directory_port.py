@@ -232,6 +232,15 @@ class DirectoryPort(Protocol):
         """Renew a still-live session following explicit user activity."""
         ...
 
+    def working_session(self, advocate_id: str, fingerprint: str, now: datetime) -> Session | None:
+        """Plan AN.48 (48f3): the live session a step was asked under, by its fingerprint, for a step the server takes up again by
+        itself after a restart; None as session() refuses one (no device presents it)."""
+        ...
+
+    def keep_working_session(self, advocate_id: str, fingerprint: str, now: datetime) -> Session | None:
+        """While such a step works, NM working counts as the advocate's activity (D65)."""
+        ...
+
     def identity(self, advocate_id: str) -> AdvocateIdentity | None:
         """For rendering who is signed in. Requires a live session upstream."""
         ...

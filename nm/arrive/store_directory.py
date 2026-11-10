@@ -1387,6 +1387,29 @@ class FileDirectory:
         # A failed activity write must not promise a longer offline window.
         return self.session(token, device, now)
 
+    def working_session(self, advocate_id: str, fingerprint: str, now: datetime) -> Session | None:
+        """Plan AN.48 (48f3, D167): the live session a step was asked under, found by its fingerprint - for a step the server
+        takes up again by itself after a restart, which no device presents. None where it is unknown, another advocate's, ended,
+        expired or idle, exactly as session() refuses one; the token itself is never needed or kept."""
+        if not isinstance(fingerprint, str) or len(fingerprint) != 64 or set(fingerprint) - set("0123456789abcdef"):
+            return None
+        session = self._read_session(fingerprint)
+        if session is None or session.advocate_id != advocate_id:
+            return None
+        if not session.live_at(now):
+            self._note(session.advocate_id, f"session refused for a step taken up again: {session.why_not(now)}")
+            return None
+        return session
+
+    def keep_working_session(self, advocate_id: str, fingerprint: str, now: datetime) -> Session | None:
+        """While such a step works, NM working counts as the advocate's activity (plan AN.41, D65), as it does for a step their own
+        request began: the idle limit runs from when it finishes."""
+        session = self.working_session(advocate_id, fingerprint, now)
+        if session is None:
+            return None
+        self._record_activity(session, now)
+        return self.working_session(advocate_id, fingerprint, now)
+
     def sessions_for(self, advocate_id: str) -> tuple[Session, ...]:
         """Every session issued to this advocate, live or ended. BK-31.
 

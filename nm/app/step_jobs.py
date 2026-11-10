@@ -16,6 +16,7 @@ D79, reaches only a step at work).
 from __future__ import annotations
 
 import contextvars
+import logging
 import threading
 import time
 from concurrent.futures import Future
@@ -30,6 +31,8 @@ KEEP_SECONDS = 900
 #: the law search shares one graphics card, the AI service limits the calls a minute, and NM's own processing of a big matter is
 #: heavy. Claude's figures (plan AN.48, 48f2), for the owner to correct.
 AT_ONCE, PER_ADVOCATE = 3, 2
+
+_log = logging.getLogger("nm.steps")
 
 
 def wait_from(setting, default=WAIT_SECONDS):
@@ -77,12 +80,27 @@ class StepJobs:
         #: Told (advocate_id, turn_id) when a step it answers for ends or is taken out (composition: its progress ends, where the
         #: run did not end it itself - a step that waited, then was refused as it began, says working no longer).
         self.settled = None
+        #: 48f3: the content-free record of each step this server answers for - taken, begun, ended - so that its next start knows
+        #: what an earlier run left (nm.shared.step_record_port). None: no record is kept.
+        self.records = None
         self._here = threading.local()
 
     def running_here(self, advocate_id: str, turn_id: str) -> bool:
         """Whether this very thread is working the step its turn answers for. A step that waited for a place has progress saying
         it is working from then on; its own checks against a second run of its turn are about any other (composition)."""
         return getattr(self._here, "key", None) == (advocate_id, turn_id)
+
+    def _recorded(self, change, advocate_id, turn_id, **fields):
+        """A step's record changed (48f3). A record that cannot be kept loses that record and nothing else; a record that is not a
+        step's (a programming error) is raised."""
+        if self.records is None:
+            return
+        try:
+            getattr(self.records, change)(advocate_id, turn_id, **fields)
+        except (ValueError, TypeError):
+            raise
+        except Exception as exc:  # noqa: BLE001 - the record is the next start's help; a step never fails for it
+            _log.warning("A step record could not be %s (%s).", change, type(exc).__name__)
 
     def _held(self, step):
         if self.hold is not None:
@@ -91,20 +109,34 @@ class StepJobs:
             except Exception:  # noqa: BLE001 - the count is the supervisor's courtesy; a step never fails for it
                 pass
 
-    def start(self, advocate_id: str, turn_id: str, work, *, cancelled=None) -> Future:
+    def start(self, advocate_id: str, turn_id: str, work, *, cancelled=None, record=None) -> Future:
         """work, run on a step thread of its own in the caller's context once a place is free; its Future carries what it returned
         or raised. A later step of the same turn (Continue, a go-ahead) takes the earlier one's place once that is done; while it
         waits or works, what the turn answers stays that step's - a second request for it (another tab) is answered by its own
-        Future only. cancelled: what its Future raises when its advocate stops it before it begins (StepCancelled if none)."""
+        Future only. cancelled: what its Future raises when its advocate stops it before it begins (StepCancelled if none).
+        record (48f3): the step's content-free record - route, conversation, a go-ahead's choice and disputes, the sign-in's
+        fingerprint - kept while the step is the one its turn answers for."""
         future: Future = Future()
+        key = (advocate_id, turn_id)
         job = {"future": future, "done": None, "advocate": advocate_id, "turn": turn_id, "work": work,
-               "context": contextvars.copy_context(), "stop": False,
+               "context": contextvars.copy_context(), "stop": False, "recorded": False,
                "cancelled": cancelled or (lambda: StepCancelled("You stopped this before NM began on it."))}
         with self._lock:
             self._prune()
-            current = self._jobs.get((advocate_id, turn_id))
-            if current is None or current["future"].done():
-                self._jobs[(advocate_id, turn_id)] = job
+            current = self._jobs.get(key)
+            registered = current is None or current["future"].done()
+            if registered:
+                self._jobs[key] = job
+        if registered and record is not None:  # kept before the step can begin, so that its record never says less than it did
+            try:
+                self._recorded("taken", advocate_id, turn_id, **record)
+            except (ValueError, TypeError):
+                with self._lock:
+                    if self._jobs.get(key) is job:
+                        del self._jobs[key]
+                raise
+            job["recorded"] = True
+        with self._lock:
             self._waiting.append(job)
         self._held(1)
         self._dispatch()
@@ -141,6 +173,8 @@ class StepJobs:
                 return False
             self._waiting.remove(job)
             job["done"] = self._clock()
+        if job["recorded"]:
+            self._recorded("ended", advocate_id, turn_id)
         job["future"].set_exception(job["cancelled"]())
         self._settle(advocate_id, turn_id)
         self._held(-1)
@@ -190,6 +224,8 @@ class StepJobs:
 
     def _begin(self, job):
         future = job["future"]
+        if job["recorded"]:
+            self._recorded("begun", job["advocate"], job["turn"])
 
         def run():
             try:
@@ -222,7 +258,9 @@ class StepJobs:
             current = self._jobs.get((job["advocate"], job["turn"]))
             if current is job:
                 job["done"] = self._clock()
-        if current is job:  # a later step of the turn, taken since, has progress of its own
+        if current is job:  # a later step of the turn, taken since, keeps its own record and its own progress
+            if job["recorded"]:
+                self._recorded("ended", job["advocate"], job["turn"])
             self._settle(job["advocate"], job["turn"])
         self._held(-1)
         self._dispatch()

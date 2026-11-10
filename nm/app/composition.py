@@ -181,6 +181,13 @@ class Application:
             advocate_id, turn_id, 'queued', {'ahead': ahead})
         # A step that waited and was then refused as it began, before its run said anything, says working no longer.
         self.step_jobs.settled = lambda advocate_id, turn_id: self.turn_progress.end(advocate_id, turn_id, 'stopped')
+        # 48f3: what each step is, kept content-free beside the turn attempts, so that the next start takes up what this run left.
+        from nm.shared.step_record_port import StepRecordPort
+        from nm.shared.step_record_store import FileStepRecords
+        self.step_records = PolicedPort(inner=_DeferredAdapter(lambda: FileStepRecords(storage / 'step-records.sqlite')),
+            gate=self._gate, port=StepRecordPort, sink=Sink.STORAGE, processor_id=STORAGE_PROCESSOR,
+            data_classes=(DataClass.OPERATIONAL,))
+        self.step_jobs.records = self.step_records
         # The Acts time limits may be worked out under (owner decisions, 15 Oct 2026).
         from nm.shared.held_acts import HeldActs
         self.held_acts = HeldActs(settings.get('NM_BARE_ACTS_DIR')

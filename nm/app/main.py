@@ -210,6 +210,15 @@ def main(argv: list[str] | None = None) -> int:
     create_app(application)
     import uvicorn
 
+    served = api.app
+    if os.environ.get(IN_FLIGHT_FILE):
+        served = _InFlight(api.app, os.environ[IN_FLIGHT_FILE])
+        # Plan AN.48 (48f1): a step that goes on after its request answered is in flight too, until it ends - from before any step
+        # is taken up below (48f3).
+        application.step_jobs.hold = served.hold
+        if os.environ.get(HEARTBEAT_FILE):
+            _leave_with_supervisor(os.environ[HEARTBEAT_FILE])
+
     # Plan AN.41 (D73): what the earlier run of this server was working on stopped with it; each such answer is made able to
     # continue where it stopped, by itself once its advocate's page is back. Its start is the one owner that knows this.
     from nm.shared.turn_attempt_port import AttemptRefused
@@ -220,6 +229,15 @@ def main(argv: list[str] | None = None) -> int:
     else:
         if released:
             print(f"{released} answer(s) an earlier run was working on can continue where they stopped.", file=sys.stderr)
+        # Plan AN.48 (48f3, D167): the steps that run left, taken up again by the server itself where they can be - once its claims
+        # are released, and before any page can ask to continue them.
+        try:
+            taken = api.continue_interrupted_steps()
+        except Exception as exc:  # noqa: BLE001 - the server still starts; each such turn waits for its advocate, as before (D73)
+            print(f"The steps an earlier run left could not be taken up: {type(exc).__name__}", file=sys.stderr)
+        else:
+            if taken:
+                print(f"{taken} step(s) an earlier run left were taken up again.", file=sys.stderr)
 
     warm_search = getattr(getattr(application, "legal_search", None), "warm", None)
     if callable(warm_search):
@@ -228,13 +246,6 @@ def main(argv: list[str] | None = None) -> int:
     # the first opening of the history after a start reads small lines and opens no large file.
     threading.Thread(target=api.prepare_history, name="history-warm", daemon=True).start()
     print(json.dumps(health, indent=2))
-    served = api.app
-    if os.environ.get(IN_FLIGHT_FILE):
-        served = _InFlight(api.app, os.environ[IN_FLIGHT_FILE])
-        # Plan AN.48 (48f1): a step that goes on after its request answered is in flight too, until it ends.
-        application.step_jobs.hold = served.hold
-        if os.environ.get(HEARTBEAT_FILE):
-            _leave_with_supervisor(os.environ[HEARTBEAT_FILE])
     uvicorn.run(served, host=args.host, port=args.port, log_level="warning")
     return 0
 

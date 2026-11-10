@@ -123,6 +123,8 @@
     "nm.shared.source_layout": "infrastructure",
     "nm.shared.spoken_contracts": "domain",
     "nm.shared.sqlite_creation": "adapters",
+    "nm.shared.step_record_port": "ports",
+    "nm.shared.step_record_store": "adapters",
     "nm.shared.storage_errors_port": "ports",
     "nm.shared.held_acts": "adapters",
     "nm.shared.store_documents": "adapters",
@@ -140,13 +142,13 @@
     "nm.work_the_file.matter_contracts": "domain"
   },
   "expected_roles": {
-    "adapters": 37,
+    "adapters": 38,
     "bootstrap": 6,
     "core": 41,
     "domain": 37,
     "edge": 3,
     "infrastructure": 1,
-    "ports": 12
+    "ports": 13
   },
   "browser_assets": {
     "app.css": "nm/app/app.css",
