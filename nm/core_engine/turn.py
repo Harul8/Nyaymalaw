@@ -722,7 +722,12 @@ def _prepare(model, context, searcher, *, case_index, provision_reader, progress
         cases=kept["cases"], case_done=keep.case if keep is not None else None,
         steered=(steered and bool(kept["answered"])) or rechecking, only=write_only)
     # Plan AN.48 (48a1): written - an answer with several analyses stopped before the check across them (steps.Gate.call); one
-    # with a single analysis stops here, before it is saved.
+    # with a single analysis stops here, before it is saved. An answer of several saves each analysis as it passes
+    # (answer_sections.answer's released); one of a single part is released only whole, at its end - so where the turn stops
+    # here, that part is saved first, as the others are, and the stop shows it and offers Done (found by the pilot's browser test,
+    # D171, 10 Nov 2026: the stop said "written", kept nothing of it and offered to write it again).
+    if not gate.allows("finish") and [saved["part"] for saved in sections] == [0]:
+        released({"sections": sections, "waiting": [], "cross_check": crossed, "overview": overview})
     gate.after("write")
     if later is not None:
         context = later.context()

@@ -208,3 +208,38 @@ def test_a_go_ahead_is_refused_where_the_turn_does_not_wait_for_it():
         steps.given(waiting, "sideways", held={"steps": {}, "go": waiting})
     assert not steps.valid({**waiting, "allowed": ["dance"]}) and steps.valid(waiting)
     assert steps.valid({**waiting, "disputes": ["D1"]}) and not steps.valid({**waiting, "disputes": []})
+
+
+def test_a_matter_of_one_dispute_shows_its_written_answer_at_the_stop_and_done_saves_it_without_writing_it_again(store):
+    """Found by the pilot's browser test (plan AN.48, D171, 10 Nov 2026). An answer of a single analysis is released only whole,
+    at its end (answer_sections.answer), so the stop after writing it kept nothing of it: it said the answer was written and
+    shown, showed nothing, and offered to write it again - to be paid for and lost again. The stop now keeps the analysis and
+    shows it, and offers Done alone; Done saves the answer without writing it again."""
+    from tests.test_core_answer_sections import ANSWERING
+    from tests.test_core_turn import ScriptedModel
+
+    scripted = Scripted()
+    model = ScriptedModel(legal=True, disputes=1)
+    research = model.structured
+
+    def structured(prompt, schema, tier, **kwargs):
+        if prompt.operation in ANSWERING:
+            return scripted.structured(prompt, schema, tier, **kwargs)
+        return research(prompt, schema, tier, **kwargs)
+    model.structured = structured
+
+    understood = waits(store, model, steps.first(), "understood")
+    researched = waits(store, model, go(understood, "next"), "researched")
+    written = waits(store, model, go(researched, "next"), "written")
+    sections = written["steps"]["answered"]["sections"]
+    assert len(sections) == 1 and sections[0]["part"] == 0 and sections[0]["fallback"] is None
+    assert written["elements"], "the written answer is shown at the stop"
+    card = steps.card(written)
+    assert card["done_said"] == "NM has written and checked the answer; it is shown below."
+    assert [offered["choice"] for offered in card["gos"]] == ["done"] and card["next_said"] == "Next: save the answer."
+    assert steps.waiting_said(written) == "Waiting for you: finish"
+    assert len(scripted.payloads("core_response_writer")) == 1
+
+    response = run(store, model, go=go(written, "done"))
+    assert response["committed"] == "committed" and response["elements"] and held(store) is None
+    assert len(scripted.payloads("core_response_writer")) == 1, "the analysis is not written again"
