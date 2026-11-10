@@ -5440,6 +5440,8 @@ function renderWaiting(entry) {
   };
   const box = make('div', 'waiting-card');
   box.setAttribute('role', 'status');
+  // Plan AN.48 (D175): how NM took a follow-up - from its earlier understanding of the matter, or with the whole matter read again.
+  if (typeof card.taken === 'string' && card.taken) box.appendChild(make('p', 'waiting-taken', card.taken));
   // Plan AN.48 (48c; D146): the messages sent while the matter waited, and how NM took each - for the advocate to correct.
   for (const heard of Array.isArray(card.heard) ? card.heard : []) {
     const line = make('p', 'waiting-heard');

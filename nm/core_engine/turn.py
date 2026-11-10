@@ -17,7 +17,7 @@ from copy import deepcopy
 from dataclasses import replace
 from datetime import datetime, timezone
 
-from nm.core_engine import answer_sections, answer_sources, calculation, case_strength, checklist, estimates, questions
+from nm.core_engine import answer_sections, answer_sources, calculation, case_strength, checklist, estimates, follow_up, questions
 from nm.core_engine import reasoning, replay_scope, research, response_rendering, response_writer
 from nm.core_engine import steps as stepwise, tentative, titles, understanding
 from nm.core_engine.calls import CorrectionUnavailable, ReleaseWithheld, StopRequested, TurnCalls
@@ -182,9 +182,16 @@ def understood(calls, context, searcher, report, held_acts=None):
     return interpreted, record, limits
 
 
-def _interpreted(calls, context, report, early=None):
+def _interpreted(calls, context, report, early=None, interpreted=None):
     """The message's interpretation and the matter's understanding, side by side, and the
-    research plan; returns the interpretation and the plan."""
+    research plan; returns the interpretation and the plan. interpreted (plan AN.48, D175): the message's interpretation where it
+    was made already, beside NM's follow-up reader - the matter is then understood from the whole conversation with it, as
+    beside it, and the message is not read twice."""
+    if interpreted is not None:
+        if not research.carries_matter(interpreted):
+            return interpreted, research.plan(calls, context, interpreted)  # the plan for no matter, without a call
+        return interpreted, calls.checked("core_research_plan", lambda: research.plan(
+            calls, context, progress=report, restrictions=lambda: _restrictions(interpreted), early=early))
     # The matter's first understanding reads the conversation itself, so it is written
     # beside the message's interpretation (owner, 18 Oct 2026, for speed); its next step
     # waits for the interpretation, which says whether there is a matter to research at all.
@@ -515,6 +522,11 @@ class _Keeper:
     def case(self, index, case):
         self.later(lambda held: held.update(steps={**held["steps"], "cases": {**held["steps"]["cases"], str(index): case}}))
 
+    def taken(self, route, said):
+        """Plan AN.48 (D175): how a follow-up's turn started - from NM's earlier understanding of the matter, or with the whole
+        matter read again - in code's words, kept on the go-ahead record for its stops to say."""
+        self.later(lambda held: held.update(go=stepwise.taking(held["go"], route, said)) if held.get("go") else None)
+
     def grown(self, steps, disputes):
         """Plan AN.48 (48i): the plan grown by questions added for what is new, the research kept moved onto it, the grown
         disputes' research, cases and analyses dropped to be made again, and their questions taken off the go-ahead's proposals."""
@@ -526,7 +538,7 @@ class _Keeper:
 
 def prepare(model, context, searcher, *, case_index=None, provision_reader=None, progress=None,
             held_acts=None, shown=None, ask=None, keep=None, resume=None, steered=False, on_understood=None, settle=None,
-            gate=None):
+            gate=None, follow=None):
     """Prepare and admit one response, dispute by dispute (turn v7, owner decisions P25-P27, P29).
     No persistence or external action occurs here. shown (P26): told, each time the answer
     shows more, its elements so far and the answering's state they come from (its sections done,
@@ -547,11 +559,13 @@ def prepare(model, context, searcher, *, case_index=None, provision_reader=None,
     plan as soon as the matter is understood (or was, before it stopped), for what is made from them beside the answer.
     gate (plan AN.48, 48a1): where a matter worked step by step stops for the advocate's go-ahead (steps.Gate) - after the
     understanding, after the research (every dispute's research waited for and saved first) and before the check across the
-    analyses - raising steps.Waiting. None: end to end, as before."""
+    analyses - raising steps.Waiting. None: end to end, as before. follow (plan AN.48, D175): the last saved answer's understanding
+    of the matter (follow_up.earlier), where the message is a follow-up worked step by step - the turn then starts from it unless
+    the message changes the matter (follow_up.continued); None: understood from the whole conversation, as before."""
     with replay_scope.turn():
         return _prepare(model, context, searcher, case_index=case_index, provision_reader=provision_reader,
                         progress=progress, held_acts=held_acts, shown=shown, ask=ask, keep=keep, resume=resume,
-                        steered=steered, on_understood=on_understood, settle=settle, gate=gate)
+                        steered=steered, on_understood=on_understood, settle=settle, gate=gate, follow=follow)
 
 
 def _all_researched(parts, kept, keep):
@@ -606,7 +620,7 @@ def _grown(calls, context, resume, adding, report, keep):
 
 
 def _prepare(model, context, searcher, *, case_index, provision_reader, progress, held_acts, shown, ask, keep, resume,
-             steered, on_understood, settle=None, gate=None):
+             steered, on_understood, settle=None, gate=None, follow=None):
     report = _reporter(progress)
     calls = model if isinstance(model, TurnCalls) else TurnCalls(model)
     gate = gate if gate is not None else stepwise.Gate(None)
@@ -635,12 +649,25 @@ def _prepare(model, context, searcher, *, case_index, provision_reader, progress
     if kept["understood"] is not None:
         interpreted, plan = kept["understood"]
     else:
-        # Plan AN.48 (D141): a step that may not research begins no search either.
-        interpreted, plan = _interpreted(calls, context, report,
-                                         early=(lambda work: started.update(research.start_search(searcher, work)))
-                                         if gate.allows("research") else None)
-        if keep is not None:
-            keep.understood(interpreted, plan)
+        # Plan AN.48 (D175): a follow-up starts from NM's last understanding of the matter unless the message changes the matter.
+        taken = follow_up.continued(calls, context, follow, report) if follow is not None and not steered else None
+        if taken is not None and taken["route"] == follow_up.KEPT:
+            interpreted, plan = taken["interpretation"], taken["plan"]
+            # Each dispute the follow-up adds nothing to keeps its research, checked as saved research is checked.
+            kept = {**kept, "parts": dict(taken["parts"])}
+            if keep is not None:
+                keep.understood(interpreted, plan)
+                keep.parts_kept(kept["parts"])
+        else:
+            # Plan AN.48 (D141): a step that may not research begins no search either.
+            interpreted, plan = _interpreted(calls, context, report,
+                                             early=(lambda work: started.update(research.start_search(searcher, work)))
+                                             if gate.allows("research") else None,
+                                             interpreted=(taken or {}).get("interpretation"))
+            if keep is not None:
+                keep.understood(interpreted, plan)
+        if taken is not None and taken.get("said") and keep is not None:
+            keep.taken(taken["route"], taken["said"])
         if steered and resume:
             # D79: what was finished before the steer is kept only where it still answers what the new plan asks.
             kept = _kept(resume, context, report, plan=plan, steered=True)
@@ -1268,13 +1295,16 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
         exc.kept = True
     # Plan AN.48 (48c): a matter given words while it waited is understood again with them, as a steer is (D79).
     steered = rethought
+    # Plan AN.48 (D175): a follow-up worked step by step, not yet understood, may start from the last saved answer's understanding.
+    follow = (follow_up.earlier(context.rows)
+              if gate.stepwise and not rethought and not (resume or {}).get("understood") else None)
     try:
         while True:
             try:
                 elements, activity, metrics = prepare(calls, context.payload(), searcher,
                     case_index=case_index, provision_reader=provision_reader, progress=progress,
                     held_acts=held_acts, shown=shown, ask=ask, keep=keeper, resume=resume, steered=steered,
-                    on_understood=entitled, settle=settle, gate=gate)
+                    on_understood=entitled, settle=settle, gate=gate, follow=follow)
                 break
             except StopRequested:
                 taken = steers() if steers is not None else []

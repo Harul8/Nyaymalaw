@@ -127,6 +127,12 @@ const button = (node, text) => (node._text === text ? node : (node.children || [
   const card = page.renderWaiting({ turnId: 't1', stopped: { code: 'waiting', waiting: { done_said: 'Done.', next_said: 'Next.',
     gos: [], noticed: [], heard: [{ text: 'What is the stamp duty?', said: 'Taken as a new question; it waits.', taken: 'question' }] } } });
   assert.deepEqual(texts(card).slice(0, 2), ['You: What is the stamp duty?', ' NM: Taken as a new question; it waits.']);
+  // D175: how NM took a follow-up - from its earlier understanding, or with the whole matter read again - comes first.
+  const followed = page.renderWaiting({ turnId: 't2', stopped: { code: 'waiting', waiting: { done_said: 'Done.', next_said: 'Next.',
+    gos: [], noticed: [], heard: [], taken: 'NM kept its understanding of the matter and its reading of your papers.' } } });
+  assert.equal(followed.children[0].className, 'waiting-taken');
+  assert.deepEqual(texts(followed).slice(0, 2), ['NM kept its understanding of the matter and its reading of your papers.', 'Done.']);
+  assert.ok(!texts(card).some((text) => text.startsWith('NM kept')), 'no line where nothing was taken');
 }
 
 // --- NM's questions wait for the advocate's answers, answered at the stop (48d) ----------------------------------------------------

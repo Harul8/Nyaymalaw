@@ -39,8 +39,10 @@ FINISHING = frozenset({"core_response_cross_check", "core_response_overview"})
 GOS = ("next", "research", "write", "end_to_end", "done")
 _FIELDS = {"mode", "allowed", "n", "waiting"}
 #: What a go-ahead record may add (48b: the disputes named; 48c: the messages heard while the matter waited; 48e: each step's
-#: tentative time beside the time it took).
-_ADDED = ({"disputes"}, {"heard"}, {"times"}, {"recheck"}, {"proposed"})
+#: tentative time beside the time it took; D175: how a follow-up's turn started).
+_ADDED = ({"disputes"}, {"heard"}, {"times"}, {"recheck"}, {"proposed"}, {"taken"})
+#: D175: how a follow-up's turn started - from NM's earlier understanding of the matter, or with the whole matter read again.
+TAKEN_ROUTES = ("kept", "afresh")
 #: 48i (D156): at most this many legal questions proposed for what is new wait on a go-ahead record.
 MOST_PROPOSED = 20
 _PROPOSED = {"dispute_id", "question", "why_needed", "law_to_check", "source"}
@@ -95,6 +97,7 @@ def valid(go):
                         and all(isinstance(entry[key], str) and entry[key].strip() for key in ("dispute_id", "question", "source"))
                         and isinstance(entry["law_to_check"], list) and all(isinstance(law, str) for law in entry["law_to_check"])
                         for entry in go.get("proposed", []))
+                and _taken_valid(go.get("taken"))
                 and isinstance(heard, list) and len(heard) <= MOST_HEARD
                 and all(isinstance(entry, dict) and set(entry) == _HEARD and all(isinstance(entry[key], str) for key in _HEARD)
                         and entry["text"].strip() for entry in heard)
@@ -108,6 +111,18 @@ def valid(go):
                      and waiting["after"] in WAITS and isinstance(waiting["at"], str) and bool(waiting["at"].strip())))
     except (KeyError, TypeError, AttributeError):
         return False
+
+
+def _taken_valid(taken):
+    """D175: none, or how a follow-up's turn started - its route and code's words."""
+    return taken is None or (isinstance(taken, dict) and set(taken) == {"route", "said"} and taken["route"] in TAKEN_ROUTES
+                             and isinstance(taken["said"], str) and bool(taken["said"].strip()))
+
+
+def taking(go, route, said):
+    """The go-ahead record with how a follow-up's turn started (D175): from NM's earlier understanding ("kept") or with the whole
+    matter read again ("afresh"), in code's words."""
+    return {**go, "taken": {"route": route, "said": said}}
 
 
 def waiting_of(held):
@@ -131,12 +146,13 @@ def heard(go, text, taken, said):
 
 
 def _carried(go):
-    """What a go-ahead carries on to the next step's: the messages heard (48c), the steps timed (48e), the re-check owed (48h) and
-    the questions proposed for what is new (48i)."""
+    """What a go-ahead carries on to the next step's: the messages heard (48c), the steps timed (48e), the re-check owed (48h),
+    the questions proposed for what is new (48i) and how a follow-up's turn started (D175)."""
     return {**({"heard": list(go["heard"])} if go.get("heard") else {}),
             **({"times": list(go["times"])} if go.get("times") else {}),
             **({"recheck": True} if go.get("recheck") else {}),
-            **({"proposed": list(go["proposed"])} if go.get("proposed") else {})}
+            **({"proposed": list(go["proposed"])} if go.get("proposed") else {}),
+            **({"taken": dict(go["taken"])} if go.get("taken") else {})}
 
 
 def proposing(go, entries):
@@ -186,9 +202,9 @@ def estimate(go, steps, pages=0):
 def rethink(go):
     """The go-ahead of a matter to be understood again with what the advocate added (48c; D149's rethink, today's Steer): the
     understanding only, then a stop. Questions proposed for what is new before it are dropped (48i): the matter is understood again
-    with everything said."""
+    with everything said - and so is how a follow-up's turn started (D175): the whole matter is read again."""
     return {"mode": MODE, "allowed": ["understand"], "n": go["n"] + 1, "waiting": None, "disputes": None,
-            **{key: value for key, value in _carried(go).items() if key != "proposed"}}
+            **{key: value for key, value in _carried(go).items() if key not in ("proposed", "taken")}}
 
 
 #: The one unit of an answer written as a whole - a message with at most one dispute to research (response_writer.parts).
@@ -372,7 +388,7 @@ def card(held, asked=None):
                 "next_said": (f"Answer NM's question{'s' if len(open_now) != 1 else ''} below; NM goes on by itself once "
                               "they are answered."),
                 "gos": gos, "disputes": [], "noticed": noticed(held.get("steps") or {}), "questions": questions,
-                "at": held["go"]["waiting"]["at"], "heard": _heard(held)}
+                "at": held["go"]["waiting"]["at"], "heard": _heard(held), "taken": _taken(held)}
     steps = held.get("steps") or {}
     state = state_of(steps)
     unresearched, unwritten = _open(state, held["go"])
@@ -380,7 +396,8 @@ def card(held, asked=None):
     total, names = len(state["order"]), state["names"]
     written = [name for name in state["order"] if name in state["written"]]
     done_said = {
-        "understood": "NM has read your papers and understood the matter: its disputes and their legal questions are on the board.",
+        "understood": KEPT_SAID if (held["go"].get("taken") or {}).get("route") == "kept" else
+                      "NM has read your papers and understood the matter: its disputes and their legal questions are on the board.",
         "researched": ("NM has researched the law; what it found is on the board." if state["whole"] else
                        f"NM has researched the law for {len(state['researched'])} of {total} dispute{'s' if total != 1 else ''}; "
                        "what it found is listed under each dispute."),
@@ -427,7 +444,17 @@ def card(held, asked=None):
             "disputes": [] if state["whole"] else [
                 {"id": name, "name": names[name], "researched": name in state["researched"],
                  "written": name in state["written"]} for name in state["order"]],
-            "noticed": noticed(steps), "at": held["go"]["waiting"]["at"], "questions": questions, "heard": _heard(held)}
+            "noticed": noticed(steps), "at": held["go"]["waiting"]["at"], "questions": questions, "heard": _heard(held),
+            "taken": _taken(held)}
+
+
+#: What the stop after a follow-up's first step says was done where it started from NM's earlier understanding (D175).
+KEPT_SAID = "NM has taken up your message on the matter as it understood it: its disputes and their legal questions are on the board."
+
+
+def _taken(held):
+    """D175: code's words on how a follow-up's turn started, or None."""
+    return (held["go"].get("taken") or {}).get("said")
 
 
 def _timed_gos(held, gos):
