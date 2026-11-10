@@ -41,7 +41,7 @@ def test_so_many_steps_work_at_once_and_so_many_for_one_advocate_the_rest_first_
     gates["b1"].set()
     assert b1.result(5) == "b1"
     # b's place is free; a is still at its own limit, so c begins before a's second.
-    assert until(lambda: c1.running()) and jobs.waiting("a", "t2") and placed[-1] == ("a", "t2", 0)
+    assert until(lambda: c1.running() and placed[-1] == ("a", "t2", 0)) and jobs.waiting("a", "t2")
     gates["a1"].set()
     assert a1.result(5) == "a1" and until(lambda: a2.running())
     for name in ("a2", "c1"):
@@ -109,3 +109,55 @@ def test_a_step_waiting_for_a_place_says_so_and_stopped_there_is_refused_unsaved
         assert outcome(served, turn).json()["detail"]["code"] == "waiting", "each works as it would have alone"
     assert served.store.load(chat_matter_id(OWNER, stored_chat(OWNER, None, "turn-2"))) is None, "nothing of it was saved"
     assert len(served.model.calls) > calls
+
+
+def test_a_go_ahead_that_waited_for_a_place_is_not_refused_by_its_own_waiting(served):
+    """A step that waits for a place has progress saying it is working from then on; the go-ahead's own check against a second
+    run of its turn must not count that step itself (found building 48f3, 10 Nov 2026: only messages sent had been tried waiting)."""
+    from nm.core_engine import steps as stepwise
+    from nm.core_engine.conversation import shown_of
+    scripted_answers(served, Scripted())
+    waiting = served.client.post("/api/turn", json={**SENT, "turn_id": "turn-b"})
+    assert waiting.json()["detail"]["code"] == "waiting"
+    chat_b = waiting.json()["detail"]["chat_id"] or stored_chat(OWNER, None, "turn-b")
+    held = Held(served)
+    served.app.step_jobs.wait_seconds, served.app.step_jobs.at_once = 0.2, 1
+    assert served.client.post("/api/turn", json=SENT).status_code == 202
+    assert held.entered.wait(10)
+    go = served.client.post("/api/turn/go", json={"chat_id": chat_b, "turn_id": "turn-b", "choice": "research"})
+    assert go.status_code == 202
+    progress = served.client.get("/api/turn-progress", params={"turn_id": "turn-b"}).json()
+    assert progress["label"] == "Waiting for NM to be free - yours is next"
+    held.go.set()
+    for turn in ("turn-1", "turn-b"):
+        served.app.step_jobs.of(OWNER, turn).exception(timeout=30)
+    later = outcome(served, "turn-b")
+    assert later.status_code == 409 and later.json()["detail"]["code"] == "waiting", later.json()
+    assert stepwise.waiting_of(shown_of(served.store.load(chat_matter_id(OWNER, chat_b)))) == "researched"
+
+
+def test_a_step_that_waited_then_was_refused_as_it_began_says_working_no_longer(served):
+    """A go-ahead the matter no longer offers by the time its place is free is refused as it begins, before its run says anything:
+    its progress, which said it was waiting, ends with it - the turn is not left looking busy (found building 48f3, 10 Nov 2026)."""
+    from nm.core_engine.conversation import shown_of
+    scripted_answers(served, Scripted())
+    waiting = served.client.post("/api/turn", json={**SENT, "turn_id": "turn-b"})
+    chat_b = waiting.json()["detail"]["chat_id"] or stored_chat(OWNER, None, "turn-b")
+    held = Held(served)
+    served.app.step_jobs.wait_seconds, served.app.step_jobs.at_once = 0.2, 1
+    assert served.client.post("/api/turn", json=SENT).status_code == 202
+    assert held.entered.wait(10)
+    unready = served.client.post("/api/turn/go", json={"chat_id": chat_b, "turn_id": "turn-b", "choice": "write",
+                                                       "disputes": ["D1"]})  # D1 is not researched yet
+    assert unready.status_code == 202
+    held.go.set()
+    for turn in ("turn-1", "turn-b"):
+        served.app.step_jobs.of(OWNER, turn).exception(timeout=30)
+    refused = outcome(served, "turn-b")
+    assert refused.status_code == 409 and refused.json()["detail"]["code"] == "not_offered"
+    assert served.client.get("/api/turn-progress", params={"turn_id": "turn-b"}).json()["state"] != "working"
+    assert not served.app.turn_running(OWNER, "turn-b")
+    served.app.step_jobs.wait_seconds = 20
+    research = served.client.post("/api/turn/go", json={"chat_id": chat_b, "turn_id": "turn-b", "choice": "research"})
+    assert research.status_code == 409 and research.json()["detail"]["code"] == "waiting", "and it goes on when asked"
+    assert shown_of(served.store.load(chat_matter_id(OWNER, chat_b)))["steps"]["parts"]

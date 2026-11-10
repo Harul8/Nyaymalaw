@@ -74,6 +74,15 @@ class StepJobs:
         #: Told (advocate_id, turn_id, ahead) whenever a waiting step's place is said: how many wait before it (composition: its
         #: progress).
         self.placed = None
+        #: Told (advocate_id, turn_id) when a step it answers for ends or is taken out (composition: its progress ends, where the
+        #: run did not end it itself - a step that waited, then was refused as it began, says working no longer).
+        self.settled = None
+        self._here = threading.local()
+
+    def running_here(self, advocate_id: str, turn_id: str) -> bool:
+        """Whether this very thread is working the step its turn answers for. A step that waited for a place has progress saying
+        it is working from then on; its own checks against a second run of its turn are about any other (composition)."""
+        return getattr(self._here, "key", None) == (advocate_id, turn_id)
 
     def _held(self, step):
         if self.hold is not None:
@@ -133,6 +142,7 @@ class StepJobs:
             self._waiting.remove(job)
             job["done"] = self._clock()
         job["future"].set_exception(job["cancelled"]())
+        self._settle(advocate_id, turn_id)
         self._held(-1)
         self._dispatch()
         return True
@@ -185,6 +195,9 @@ class StepJobs:
             try:
                 if not future.set_running_or_notify_cancel():
                     return
+                with self._lock:
+                    if self._jobs.get((job["advocate"], job["turn"])) is job:
+                        self._here.key = (job["advocate"], job["turn"])
                 try:
                     result = job["context"].run(job["work"])
                 except BaseException as exc:  # noqa: BLE001 - carried whole to whoever waits for the step or reads its outcome
@@ -209,8 +222,17 @@ class StepJobs:
             current = self._jobs.get((job["advocate"], job["turn"]))
             if current is job:
                 job["done"] = self._clock()
+        if current is job:  # a later step of the turn, taken since, has progress of its own
+            self._settle(job["advocate"], job["turn"])
         self._held(-1)
         self._dispatch()
+
+    def _settle(self, advocate_id, turn_id):
+        if self.settled is not None:
+            try:
+                self.settled(advocate_id, turn_id)
+            except Exception:  # noqa: BLE001 - the progress is auxiliary; what the step answered is not changed by it
+                pass
 
     def _prune(self):
         now = self._clock()

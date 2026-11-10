@@ -179,6 +179,8 @@ class Application:
                                   per_advocate=count_from(settings.get('NM_STEPS_PER_ADVOCATE'), PER_ADVOCATE))
         self.step_jobs.placed = lambda advocate_id, turn_id, ahead: self.turn_progress.report(
             advocate_id, turn_id, 'queued', {'ahead': ahead})
+        # A step that waited and was then refused as it began, before its run said anything, says working no longer.
+        self.step_jobs.settled = lambda advocate_id, turn_id: self.turn_progress.end(advocate_id, turn_id, 'stopped')
         # The Acts time limits may be worked out under (owner decisions, 15 Oct 2026).
         from nm.shared.held_acts import HeldActs
         self.held_acts = HeldActs(settings.get('NM_BARE_ACTS_DIR')
@@ -663,7 +665,11 @@ class Application:
         save_queued(self.store, matter, queued)
 
     def turn_running(self, advocate_id, turn_id):
-        """Whether one of this advocate's turns is being worked on in this process now."""
+        """Whether one of this advocate's turns is being worked on in this process now. Plan AN.48 (48f2): not counting the step this
+        very thread works for that turn - one that waited for a place has progress saying it is working from then on, and its own
+        checks against a second run of its turn (Continue, a go-ahead, Done) are about any other."""
+        if self.step_jobs.running_here(advocate_id, turn_id):
+            return False
         return self.turn_progress.read(advocate_id, turn_id).get('state') == 'working'
 
     def browser_asset_paths(self):
