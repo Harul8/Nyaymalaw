@@ -6336,43 +6336,77 @@ const PROGRESS_EVERY_MS = 2000;
 function watchProgress(entry, onFinished, onStopped = null) {
   let stopped = false;
   let timer = null;
+  let stream = null;
   // The browser's timers are called directly: invoked as an object's method they
   // throw "Illegal invocation" and every send failed (found 15 Oct 2026).
   const stop = () => {
     stopped = true;
     if (timer !== null) clearTimeout(timer);
+    if (stream) { stream.close(); stream = null; }
   };
+  const where = () => {
+    const chatId = entry.chatId || (entry.context && entry.context.chatId) || null;
+    return `turn_id=${encodeURIComponent(entry.turnId)}` + (chatId ? `&chat_id=${encodeURIComponent(chatId)}` : '');
+  };
+  // What the turn is doing, taken in - asked for, or told by the server (plan AN.48, 48f5). True once the watch has ended.
+  function heard(seen) {
+    entry.progress = seen;
+    if (seen.chat_id) entry.chatId = seen.chat_id;
+    // Plan AN.41 (D68): the work finished has been saved again: read it from the conversation (D77: and what waits goes with it).
+    if (Number.isInteger(seen.saved) && seen.saved > (entry.savedCount ?? -1) && seen.chat_id) {
+      entry.savedCount = seen.saved;
+      showSoFar(entry, seen.chat_id);
+      if (entry.context && Array.isArray(entry.context.queued) && entry.context.queued.length) saveQueued(entry.context);
+    }
+    // Plan AN.37: a window of questions has opened; it is shown once by itself, and from the progress after - and by itself
+    // again when a question is added to it while the turn works (D87).
+    if (seen.asking === true && !entry.questionsOpen
+        && (!entry.questionsSeen || (seen.asked || 0) > (entry.questionsSeenCount || 0))) openTurnQuestions(entry);
+    if (Number.isInteger(seen.shown) && seen.shown > (entry.shownCount || 0) && seen.chat_id) {
+      entry.shownCount = seen.shown;
+      showSoFar(entry, seen.chat_id);
+    }
+    repaint();
+    if (onFinished && seen.state === 'finished') { stop(); onFinished(); return true; }
+    if (onFinished && seen.state !== 'working') { stop(); if (onStopped) onStopped(); return true; }
+    return false;
+  }
   async function poll() {
     if (stopped) return;
     try {
-      const chatId = entry.chatId || (entry.context && entry.context.chatId) || null;
-      const seen = await api(`/api/turn-progress?turn_id=${encodeURIComponent(entry.turnId)}`
-        + (chatId ? `&chat_id=${encodeURIComponent(chatId)}` : ''));
+      const seen = await api(`/api/turn-progress?${where()}`);
       if (stopped) return;
-      entry.progress = seen;
-      if (seen.chat_id) entry.chatId = seen.chat_id;
-      // Plan AN.41 (D68): the work finished has been saved again: read it from the conversation (D77: and what waits goes with it).
-      if (Number.isInteger(seen.saved) && seen.saved > (entry.savedCount ?? -1) && seen.chat_id) {
-        entry.savedCount = seen.saved;
-        showSoFar(entry, seen.chat_id);
-        if (entry.context && Array.isArray(entry.context.queued) && entry.context.queued.length) saveQueued(entry.context);
-      }
-      // Plan AN.37: a window of questions has opened; it is shown once by itself, and from the progress after - and by itself
-      // again when a question is added to it while the turn works (D87).
-      if (seen.asking === true && !entry.questionsOpen
-          && (!entry.questionsSeen || (seen.asked || 0) > (entry.questionsSeenCount || 0))) openTurnQuestions(entry);
-      if (Number.isInteger(seen.shown) && seen.shown > (entry.shownCount || 0) && seen.chat_id) {
-        entry.shownCount = seen.shown;
-        showSoFar(entry, seen.chat_id);
-      }
-      repaint();
-      if (onFinished && seen.state === 'finished') { stop(); onFinished(); return; }
-      if (onFinished && seen.state !== 'working') { stop(); if (onStopped) onStopped(); return; }
+      if (heard(seen)) return;
     } catch (error) {
       // Progress is auxiliary: the send or the saved conversation still decides.
       if (onFinished || error?.status === 401) { stop(); return; }
     }
     if (!stopped) timer = setTimeout(poll, PROGRESS_EVERY_MS);
+  }
+  // Plan AN.48 (48f5, D167): the server tells the page as the turn changes. Where the stream cannot be had - a browser without it,
+  // a network or proxy that blocks it, a sign-in that has ended - the page asks every 2 seconds, as before.
+  if (typeof EventSource === 'function') {
+    try {
+      stream = new EventSource(`/api/turn-events?${where()}`);
+      stream.onmessage = (event) => {
+        if (stopped) return;
+        let seen = null;
+        try { seen = JSON.parse(event.data); } catch (error) { return; }
+        if (!seen || typeof seen !== 'object') return;
+        // The stream has said its last word: it is closed here, not opened again by the browser.
+        if (['finished', 'stopped'].includes(seen.state) && stream) { stream.close(); stream = null; }
+        heard(seen);
+      };
+      stream.onerror = () => {
+        if (!stream) return;
+        stream.close();
+        stream = null;
+        if (!stopped) timer = setTimeout(poll, 0);
+      };
+      return { stop };
+    } catch (error) {
+      stream = null;
+    }
   }
   timer = setTimeout(poll, onFinished ? 0 : PROGRESS_EVERY_MS);
   return { stop };

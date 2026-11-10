@@ -27,6 +27,8 @@ PAGE_TESTS = [
     "a_matter_step_by_step.mjs",
     # Plan AN.48, piece 48f1 (D167): a step still working when the server's wait ends is read once it is done.
     "steps_run_as_jobs.mjs",
+    # Plan AN.48, piece 48f5 (D167): the server tells the page as a step changes; where it cannot, the page asks as before.
+    "progress_told_by_the_server.mjs",
 ]
 #: Run, with the cases it is given, by tests/test_the_screen_never_folds_a_disclosure.py.
 RUN_ELSEWHERE = {"render_turn_partition.mjs"}

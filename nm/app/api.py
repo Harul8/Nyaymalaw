@@ -6,10 +6,12 @@ engine routes are deliberately absent; their saved files are not modified.
 from __future__ import annotations
 import asyncio
 import hmac
+import json
 import logging
 import os
 import re
 import threading
+import time
 from collections import OrderedDict
 from contextlib import contextmanager
 from copy import deepcopy
@@ -21,7 +23,7 @@ from urllib.parse import quote, unquote
 from fastapi import (BackgroundTasks, Cookie, Depends, FastAPI, Header, HTTPException, Query, Request, Response,
                      WebSocket, WebSocketDisconnect)
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from starlette.concurrency import run_in_threadpool
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, StrictBool, field_validator
 from nm.app.admin_api import admin_router
@@ -1911,6 +1913,11 @@ def turn_progress(turn_id: str, advocate_id: Advocate, request: Request, chat_id
         raise HTTPException(401, 'not signed in')
     if not turn_id or len(turn_id) > 200 or chat_id is not None and not 0 < len(chat_id) <= 200:
         raise HTTPException(422, 'A turn identity is required.')
+    return _progress_seen(advocate_id, turn_id, chat_id)
+
+
+def _progress_seen(advocate_id, turn_id, chat_id):
+    """What the advocate's own turn in progress is doing - what /api/turn-progress answers and /api/turn-events tells (48f5)."""
     seen = application().turn_progress.read(advocate_id, turn_id)
     if seen.get('state') == 'unknown':
         seen = {**seen, **_saved_state(advocate_id, chat_id or stored_chat(advocate_id, None, turn_id), turn_id)}
@@ -1921,6 +1928,48 @@ def turn_progress(turn_id: str, advocate_id: Advocate, request: Request, chat_id
     # how many questions the window asks, so that the page opens it again when code adds one while the turn works.
     return {**seen, 'asking': True, 'asked': len(window.view()['questions']), 'stage': 'waiting_for_answer',
             'label': TURN_STAGES['waiting_for_answer']}
+
+
+#: Plan AN.48 (48f5, D167): how often the stream looks at the turn; how often it says the time so far (which also keeps a hosting
+#: proxy from closing a quiet stream); how long a turn not yet known may stay unknown; how long one stream lasts before the page asks
+#: again. In seconds.
+_EVENTS_EVERY, _EVENTS_TICK, _EVENTS_UNKNOWN, _EVENTS_LAST = 0.5, 2.0, 60.0, 1800.0
+
+
+@app.get('/api/turn-events')
+async def turn_events(turn_id: str, advocate_id: Advocate, request: Request, chat_id: str | None = None):
+    """What the advocate's own turn in progress is doing, told to the page as it changes (plan AN.48, 48f5; D167): the words
+    /api/turn-progress gives, as server-sent events - each change at once, and the time so far every _EVENTS_TICK seconds. It ends
+    once the turn has finished or stopped (its last word said), when the sign-in no longer holds, when a turn not yet known stays
+    unknown, or after half an hour; the page then asks again. Where a network blocks the stream, the page asks /api/turn-progress
+    every 2 seconds, as before."""
+    if not await run_in_threadpool(_session_current, request, advocate_id):
+        raise HTTPException(401, 'not signed in')
+    if not turn_id or len(turn_id) > 200 or chat_id is not None and not 0 < len(chat_id) <= 200:
+        raise HTTPException(422, 'A turn identity is required.')
+
+    async def told():
+        said, began = None, time.monotonic()
+        sent = checked = began
+        yield 'retry: 2000\n\n'
+        while not await request.is_disconnected():
+            seen = await run_in_threadpool(_progress_seen, advocate_id, turn_id, chat_id)
+            now = time.monotonic()
+            changed = {key: value for key, value in seen.items() if key not in ('elapsed_seconds', 'steps')}
+            if changed != said or now - sent >= _EVENTS_TICK:
+                said, sent = changed, now
+                yield f'data: {json.dumps(seen)}\n\n'
+                if seen.get('state') in ('finished', 'stopped'):
+                    return
+            if seen.get('state') == 'unknown' and now - began >= _EVENTS_UNKNOWN or now - began >= _EVENTS_LAST:
+                return
+            if now - checked >= 30:
+                checked = now
+                if not await run_in_threadpool(_session_current, request, advocate_id):
+                    return
+            await asyncio.sleep(_EVENTS_EVERY)
+    return StreamingResponse(told(), media_type='text/event-stream',
+                             headers={'Cache-Control': 'no-store', 'X-Accel-Buffering': 'no'})
 
 
 @app.get('/api/turn/outcome')

@@ -185,8 +185,10 @@ class Asking:
 
 
 def test_nm_s_questions_are_read_from_the_worker_and_answered_there(split):
+    from nm.app import step_worker
     split.start_worker()
-    assert until(lambda: split.web.questions.window(OWNER, "turn-1") is None)
+    assert until(lambda: step_worker.alive(split.web.step_share)), "the worker has beaten: the web server knows it is there"
+    assert split.web.questions.window(OWNER, "turn-1") is None
     asking = Asking()
     split.worker_app.questions.bound(OWNER).open("turn-1", asking)
     window = split.web.questions.window(OWNER, "turn-1")

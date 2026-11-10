@@ -64,7 +64,8 @@ def test_how_each_answer_stands_is_said_and_a_closed_window_sends_the_answers_as
 
 def test_the_progress_opens_the_window_once_and_offers_it_while_it_is_open():
     script = (ROOT / "nm/app/app.js").read_text(encoding="utf-8")
-    poll = script[script.index("async function poll() {"):script.index("function watchProgress(") + 4000]
+    # Plan AN.48 (48f5): what the progress says is taken in by one function, whether the page asked for it or the server told it.
+    poll = script[script.index("function heard(seen) {"):script.index("function watchProgress(") + 4000]
     assert "seen.asking === true && !entry.questionsOpen" in poll
     # Plan AN.37 (D87): opened by itself once, and again when code adds a question to it while the turn works.
     assert "(!entry.questionsSeen || (seen.asked || 0) > (entry.questionsSeenCount || 0))" in poll
