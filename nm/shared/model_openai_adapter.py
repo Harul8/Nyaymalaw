@@ -79,6 +79,36 @@ from nm.shared.text_contracts import blank
 # time where a step needs judgement.
 _RESPONSES_EFFORT = {"gpt-6-luna": "low", "gpt-6.1-sol": "low", "gpt-6.1-terra": "low"}
 
+# Plan AN.48 (D174, 10 Nov 2026): a stalled request is noticed and sent again within minutes, not after the AI client's default
+# 600 s (two such stalls cost the pilot's browser test ten minutes each). How long a Responses request may take before it is given
+# up and tried again (model_transport's retry), by the effort it reasons at, in seconds: about two and a half times the slowest
+# such call measured (the D151 turn on 6 Luna - medium at most 71 s, high at most 184 s, low under a minute); max was not
+# measured and is given twenty minutes, more than the 600 s that could cut a long max call short. Connecting is given 10 s.
+_TIME_LIMIT = {"low": 180.0, "medium": 180.0, "high": 420.0, "max": 1200.0}
+_CONNECT_LIMIT = 10.0
+# TCP keep-alive on each connection of the client NM builds (D174): after 30 s of silence the system asks the other end every
+# 10 s, and after 3 unanswered asks the connection fails - a dead connection is noticed within about a minute and the request
+# sent again, while a connection whose answer is still being worked on answers the asks and is kept.
+_KEEPALIVE_IDLE, _KEEPALIVE_EVERY, _KEEPALIVE_COUNT = 30, 10, 3
+
+
+def _keepalive_options():
+    import socket
+    options = [(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)]
+    for name, value in (("TCP_KEEPIDLE", _KEEPALIVE_IDLE), ("TCP_KEEPINTVL", _KEEPALIVE_EVERY),
+                        ("TCP_KEEPCNT", _KEEPALIVE_COUNT)):
+        if hasattr(socket, name):
+            options.append((socket.IPPROTO_TCP, getattr(socket, name), value))
+    if not hasattr(socket, "TCP_KEEPIDLE") and hasattr(socket, "TCP_KEEPALIVE"):  # macOS names the idle time so
+        options.append((socket.IPPROTO_TCP, socket.TCP_KEEPALIVE, _KEEPALIVE_IDLE))
+    return options
+
+
+def _time_limit(effort):
+    """The time limit of one Responses request at this effort (D174), as the AI client takes a request's own limit."""
+    import httpx2
+    return httpx2.Timeout(_TIME_LIMIT.get(effort, max(_TIME_LIMIT.values())), connect=_CONNECT_LIMIT)
+
 _FINISH_REASONS: dict[str, Completion] = {
     "stop": Completion.COMPLETE,
     "end_turn": Completion.COMPLETE,
@@ -327,10 +357,12 @@ class OpenAIModelAdapter:
             verify = truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
         # The approved recipient must not redirect text/credentials elsewhere.
         # Disable implicit environment proxies as well as transport redirects.
+        # D174: every connection sends keep-alive probes, so a dead one fails within about a minute.
         kwargs: dict[str, Any] = {
             "api_key": cfg.api_key, "max_retries": 0,
             "http_client": httpx.Client(
-                follow_redirects=False, trust_env=False, verify=verify),
+                follow_redirects=False, trust_env=False,
+                transport=httpx.HTTPTransport(verify=verify, socket_options=_keepalive_options())),
             "base_url": cfg.base_url or "https://api.openai.com/v1",
         }
         self._client = OpenAI(**kwargs)
@@ -821,6 +853,9 @@ class OpenAIModelAdapter:
         if schema is not None:
             kwargs["text"] = {"format": {"type": "json_schema", "name": "nm_result",
                                          "strict": True, "schema": on_the_wire(schema)}}
+        # D174: each request of the call - its count, where one is made, and its generation - is given up after its effort's limit,
+        # rather than after the client's default 600 s; the generation is then sent again.
+        limit = _time_limit(kwargs["reasoning"]["effort"])
         request_budget = self._call_budget
         if isinstance(request_budget, SessionCallBudget):
             # This is a non-generative provider request, with the identical
@@ -830,7 +865,7 @@ class OpenAIModelAdapter:
             if self._before_dispatch is not None:
                 self._before_dispatch()
             try:
-                counted = self._client.responses.input_tokens.count(**count_payload)
+                counted = self._client.responses.input_tokens.count(**count_payload, timeout=limit)
             except Exception as exc:
                 normalised = normalise_error(exc)
                 if normalised is exc:
@@ -851,7 +886,7 @@ class OpenAIModelAdapter:
         first = _lead(opening) if opening is not None else None
         try:
             response, retries = self._retrying_counted(
-                lambda: self._client.responses.create(**kwargs), model=cfg.model,
+                lambda: self._client.responses.create(**kwargs, timeout=limit), model=cfg.model,
                 call_budget=request_budget, ledger_response=self._responses_receipt)
         finally:
             if first is not None:
