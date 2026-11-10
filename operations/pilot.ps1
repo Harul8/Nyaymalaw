@@ -34,12 +34,24 @@ $env:PYTHONUTF8 = '1'
 $log = Join-Path $root '.nm\pilot-server.log'
 if ("$python$log" -match ' ') { throw 'The checkout path has a space in it; this launcher expects one without.' }
 Set-Location $root
+
+function Write-Note([string]$text) {
+    # A note the log cannot take now (a stopped server may still hold the file a moment) is let go: it must never end the loop.
+    try { Add-Content -Path $log -Value "---- $(Get-Date -Format s) $text" -Encoding utf8 -ErrorAction Stop } catch { }
+}
+
 while ($true) {
-    Add-Content -Path $log -Value "---- $(Get-Date -Format s) starting the pilot on port $Port" -Encoding utf8
-    # cmd appends both of the server's streams to the log: Windows PowerShell 5.1 would turn each line the server writes to its
-    # error stream into an error record, and stop this script at the first one.
-    & cmd.exe /d /c "$python -m nm.app.main --no-follow-code --host 127.0.0.1 --port $Port >> $log 2>&1"
-    $code = $LASTEXITCODE
-    Add-Content -Path $log -Value "---- $(Get-Date -Format s) the pilot stopped (exit $code); starting again in 10 s" -Encoding utf8
+    try {
+        Write-Note "starting the pilot on port $Port"
+        # cmd appends both of the server's streams to the log: Windows PowerShell 5.1 would turn each line the server writes to
+        # its error stream into an error record, and stop this script at the first one.
+        & cmd.exe /d /c "$python -m nm.app.main --no-follow-code --host 127.0.0.1 --port $Port >> $log 2>&1"
+        $code = $LASTEXITCODE
+        Start-Sleep -Seconds 2
+        Write-Note "the pilot stopped (exit $code); starting again in 10 s"
+    } catch {
+        # Whatever went wrong here, the pilot is started again: a launcher that ends leaves it down until the next sign-in.
+        Write-Note "the launcher met an error ($($_.Exception.GetType().Name)); starting again in 10 s"
+    }
     Start-Sleep -Seconds 10
 }
