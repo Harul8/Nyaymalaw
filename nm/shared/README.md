@@ -27,6 +27,7 @@ This index follows the shipped [source-layout manifest](../source_layout.json). 
 - [clock_contracts.py](clock_contracts.py) — Types authoritative dates and timezone-aware clock readings.
 - [deployment_contracts.py](deployment_contracts.py) — Evidence about a deployment is evidence about one exact candidate.
 - [egress_contracts.py](egress_contracts.py) — Where privileged material is allowed to go, decided before it goes.
+- [egress_log_store.py](egress_log_store.py) — The outgoing-data log: one file a day, a day over 90 days old compressed, over a year deleted; whole lines from two processes at once.
 - [external_ai_contracts.py](external_ai_contracts.py) — Attributed permission to process matter text, not legal/compliance clearance.
 - [gates_contracts.py](gates_contracts.py) — Defines named release gates and their required conditions.
 - [identity_contracts.py](identity_contracts.py) — Binds evidence to the exact running code identity.

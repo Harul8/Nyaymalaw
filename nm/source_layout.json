@@ -99,6 +99,7 @@
     "nm.shared.clock_contracts": "domain",
     "nm.shared.deployment_contracts": "domain",
     "nm.shared.egress_contracts": "domain",
+    "nm.shared.egress_log_store": "adapters",
     "nm.shared.egress_policy": "bootstrap",
     "nm.shared.external_ai_contracts": "domain",
     "nm.shared.gates_contracts": "domain",
@@ -145,7 +146,7 @@
     "nm.work_the_file.matter_contracts": "domain"
   },
   "expected_roles": {
-    "adapters": 39,
+    "adapters": 40,
     "bootstrap": 7,
     "core": 41,
     "domain": 37,

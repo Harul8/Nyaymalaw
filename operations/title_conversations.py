@@ -122,10 +122,9 @@ def main(argv: list[str] | None = None) -> int:
     config = load(dict(os.environ))
     usage = FileUsage(storage / USAGE_FILE)
 
-    def audit(line):
-        from nm.arrive.advocate_contracts import utcnow
-        with (ROOT / ".nm" / "egress.log").open("a", encoding="utf8") as handle:
-            handle.write(utcnow().isoformat(timespec="seconds") + "\t" + line + "\n")
+    from nm.shared.egress_log_store import EgressLog
+    # The served application's outgoing-data log (plan AN.48, D169): its day's file under .nm, as the application writes it.
+    audit = EgressLog(ROOT / ".nm").write
 
     def allowance():
         if usage.standing(args.account)["left"] <= 0:

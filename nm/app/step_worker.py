@@ -305,6 +305,9 @@ def main(argv=None):
         print(f"REFUSED TO START: {type(exc).__name__}: {exc}", file=sys.stderr)
         return 2
     api.set_application(app)
+    # Plan AN.48 (D169): the outgoing-data log this worker writes too, swept now and once a day after.
+    from nm.shared.egress_log_store import keep as keep_egress_log
+    keep_egress_log(app.egress_log)
     worker = StepWorker(app)
     for name in ("SIGTERM", "SIGINT", "SIGBREAK"):
         if hasattr(signal, name):

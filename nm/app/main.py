@@ -31,6 +31,7 @@ from pathlib import Path
 
 from nm.app import api
 from nm.app.composition import Application
+from nm.shared.egress_log_store import keep as keep_egress_log
 from nm.shared.identity_contracts import source_fingerprint
 
 #: How often the supervisor looks at the code, how long a change must hold still,
@@ -255,6 +256,9 @@ def main(argv: list[str] | None = None) -> int:
     # The conversation history's lines (owner decision O29), made ready in the background, newest first, so
     # the first opening of the history after a start reads small lines and opens no large file.
     threading.Thread(target=api.prepare_history, name="history-warm", daemon=True).start()
+    # Plan AN.48 (D169): the outgoing-data log swept now and once a day after - a day over 90 days old compressed, over a year
+    # deleted - by each process that writes it.
+    keep_egress_log(application.egress_log)
     print(json.dumps(health, indent=2))
     uvicorn.run(served, host=args.host, port=args.port, log_level="warning")
     return 0

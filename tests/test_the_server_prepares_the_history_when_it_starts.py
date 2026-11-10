@@ -15,22 +15,49 @@ from nm.app import main
 pytestmark = pytest.mark.class_a
 
 
-def start(monkeypatch, prepare):
+class SweptLog:
+    """The outgoing-data log's stand-in (plan AN.48, D169): says when, and on which thread, it was swept."""
+
+    def __init__(self, hold=None):
+        self.swept, self.hold = threading.Event(), hold
+
+    def sweep(self, today=None):
+        self.on = threading.current_thread()
+        self.swept.set()
+        if self.hold is not None:
+            self.hold.wait(10)
+
+
+def start(monkeypatch, prepare, log=None):
     """Run the one-process server's start-up; returns what the stand-in web server saw when it was started."""
     import uvicorn
 
-    # Plan AN.41 (D73): at its start the server also releases the answers an earlier run of it was working on.
+    # Plan AN.41 (D73): at its start the server also releases the answers an earlier run of it was working on, and (plan AN.48,
+    # 48f3) takes up the steps it left; the one process works its steps itself (48f4, steps_mode "inside").
     released = []
     monkeypatch.setattr(main, "Application", lambda: SimpleNamespace(
-        health=lambda: {"runtime": "ready"}, legal_search=None,
+        health=lambda: {"runtime": "ready"}, legal_search=None, steps_mode="inside", egress_log=log or SweptLog(),
         turns_of_an_earlier_run_released=lambda: released.append(1) or 0))
     monkeypatch.setattr(main.api, "set_application", lambda application: None)
+    monkeypatch.setattr(main.api, "continue_interrupted_steps", lambda application: 0)
     monkeypatch.setattr(main.api, "prepare_history", prepare)
     seen = []
     monkeypatch.setattr(uvicorn, "run", lambda app, **kwargs: seen.append(kwargs))
     assert main.main(["--no-follow-code", "--port", "8099"]) == 0
     assert released == [1], "the answers of an earlier run released once, as the server starts"
     return seen
+
+
+def test_the_outgoing_data_log_is_swept_at_start_on_a_thread_of_its_own_and_the_server_does_not_wait_for_it(monkeypatch):
+    hold = threading.Event()
+    log = SweptLog(hold)
+    try:
+        assert start(monkeypatch, lambda: None, log), "the server was started"
+        assert log.swept.wait(10), "the log was not swept as the server started"
+        assert log.on.name == "egress-log-sweep" and log.on.daemon and log.on is not threading.main_thread()
+        assert not hold.is_set(), "the server was started without waiting for the sweep to end"
+    finally:
+        hold.set()
 
 
 def test_the_history_is_prepared_on_a_thread_of_its_own_and_the_server_does_not_wait_for_it(monkeypatch):
@@ -65,8 +92,9 @@ def test_a_preparation_that_fails_does_not_stop_the_server(monkeypatch):
 
 
 def test_a_check_only_start_prepares_nothing(monkeypatch):
-    called = []
-    monkeypatch.setattr(main, "Application", lambda: SimpleNamespace(health=lambda: {"runtime": "ready"}, legal_search=None))
+    called, log = [], SweptLog()
+    monkeypatch.setattr(main, "Application", lambda: SimpleNamespace(health=lambda: {"runtime": "ready"}, legal_search=None,
+                                                                     steps_mode="inside", egress_log=log))
     monkeypatch.setattr(main.api, "prepare_history", lambda: called.append(True))
     assert main.main(["--check"]) == 0
-    assert called == []
+    assert called == [] and not log.swept.is_set()

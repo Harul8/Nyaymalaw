@@ -32,6 +32,7 @@ from nm.app.turn_progress import STAGES as TURN_STAGES
 from nm.arrive import attempts_contracts as attempts
 from nm.arrive.advocate_contracts import PASSWORD_RESET_MINUTES, SESSION_IDLE_MINUTES, csrf_token, token_fingerprint, utcnow
 from nm.arrive.directory_port import AccountBusy, AuthenticationUnavailable
+from nm.arrive.mail_port import MailNotConfirmed
 from nm.arrive.professional_access import read_professional_status
 from nm.core_engine.conversation import (CONTRACT as CONVERSATION_CONTRACT, HEADER, SHOWN, ConversationRefused,
                                          TurnContext, asking_of, chat_matter_id, checked_rows, queued_of, shown_of, stored_chat,
@@ -53,6 +54,7 @@ from nm.core_engine import checklist
 from nm.core_engine.retrieval import SearchUnavailable
 from nm.shared.citation_contracts import judgment_place, provision_label, statute_title
 from nm.core_engine.reasoning import CHOICES as EFFORT_CHOICES, DEFAULT_CHOICE as DEFAULT_EFFORT
+from nm.shared.egress_contracts import EgressRefused
 from nm.shared.external_ai_contracts import ModelPermissionRefused
 from nm.shared.model_config import DEFAULT_TURN_MODEL, TURN_CHOICES
 from nm.shared.model_port import USAGE_LIMIT_MESSAGE, ModelError, UsageLimitReached
@@ -86,6 +88,10 @@ _RESET_REFUSED = (
     'That reset link is not valid or has expired. Nothing was changed. Ask for '
     'a new link from Forgot password.')
 _mail_log = logging.getLogger('nm.account_mail')
+#: What a send of account mail that did not go raises, said by every caller as a delivery failure and never as a programming error
+#: (plan AN.48, D168): the outbox could not write, the outbound policy refused the route, or the channel did not confirm it took
+#: the message (Gmail refused or unreachable, its sign-in refused, delivery disabled).
+_MAIL_NOT_SENT = (OSError, EgressRefused, MailNotConfirmed)
 try:
     SERVING = source_fingerprint()
 except Exception as exc:
@@ -870,7 +876,7 @@ def _send_confirmation(email: str, code: str | None) -> None:
     from nm.arrive.mail_contracts import confirmation_mail
     try:
         application().mail.send(confirmation_mail(email, code))
-    except (OSError, RuntimeError) as exc:
+    except _MAIL_NOT_SENT as exc:
         _mail_log.error('confirmation not queued: %s', type(exc).__name__)
         raise HTTPException(503, 'Confirmation delivery could not be confirmed. '
                             'Wait before requesting another code.') from None
@@ -1006,7 +1012,6 @@ def _send_reset_link(email: str, configured: str, fallback: str, now) -> None:
     traceback, separately, so it cannot pass for a delivery problem.
     """
     from nm.arrive.mail_contracts import password_reset_mail
-    from nm.shared.egress_contracts import EgressRefused
 
     mail = application().mail
     base = configured or (
@@ -1022,7 +1027,7 @@ def _send_reset_link(email: str, configured: str, fallback: str, now) -> None:
         # The link opens the app, which lives at /app now that nyaymalaw.in opens the public
         # homepage (plan AN.16); the token stays in the fragment, never sent to the server.
         mail.send(password_reset_mail(email, f"{base}/app#reset={token}"))
-    except (OSError, EgressRefused) as exc:
+    except _MAIL_NOT_SENT as exc:
         _mail_log.error("password reset link not delivered: %s", type(exc).__name__)
     except Exception:  # noqa: BLE001 -- a programming error, reported as one
         _mail_log.exception("password reset link failed with a programming error")
@@ -1033,7 +1038,6 @@ def _send_reset_link_for_an_admin(email: str, request: Request, now) -> str:
     mailbox), "local-outbox" (written to this installation's own outbox, from which no mail leaves), "no-address" (the account has no
     address to send to), "not-configured" (a mailbox-delivering channel with no NM_PUBLIC_URL, so no link is built) or "not-delivered"."""
     from nm.arrive.mail_contracts import password_reset_mail
-    from nm.shared.egress_contracts import EgressRefused
 
     mail = application().mail
     delivers = bool(getattr(mail, "delivers_to_mailbox", True))
@@ -1046,7 +1050,7 @@ def _send_reset_link_for_an_admin(email: str, request: Request, now) -> str:
         return "not-configured"
     try:
         mail.send(password_reset_mail(email, f"{base}/app#reset={token}"))
-    except (OSError, EgressRefused) as exc:
+    except _MAIL_NOT_SENT as exc:
         _mail_log.error("password reset link not delivered: %s", type(exc).__name__)
         return "not-delivered"
     return "mailed" if delivers else "local-outbox"

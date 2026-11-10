@@ -28,6 +28,7 @@ from nm.arrive.turn_event_port import TurnEventPort, TurnEventRefused
 from nm.arrive.usage_port import AllowanceUsedUp, UsagePort, UsageRefused
 from nm.shared.deployment_contracts import shares_value_with
 from nm.shared.egress_contracts import DataClass, EgressRefused, Gatekeeper, Sink
+from nm.shared.egress_log_store import EgressLog, keep_days_from
 from nm.shared.egress_policy import INDEX_PROCESSOR, OUTBOX_PROCESSOR, STORAGE_PROCESSOR, egress_policy
 from nm.shared.model_config import AUTO_TURN, DEFAULT_TURN_MODEL, TURN_MODELS, load, load_dotenv
 from nm.shared.model_metered import MeteredModel
@@ -85,6 +86,9 @@ class Application:
         self.environment = settings
         self.root = root or ROOT
         self.audit_root = Path(audit_root) if audit_root is not None else self.root / '.nm'
+        # The outgoing-data log (plan AN.48, D169): one file a day in the audit root, kept a year; swept by the processes that
+        # serve (nm/app/main.py, nm/app/step_worker.py), never by building an application.
+        self.egress_log = EgressLog(self.audit_root, keep_days=keep_days_from(settings.get('NM_EGRESS_LOG_KEEP_DAYS')))
         self.config = load(dict(settings))
         key = settings.get('NM_MATTER_KEY') or _ensure_local_key(self.root)
         _refuse_a_shared_seal(key, settings)
@@ -146,9 +150,10 @@ class Application:
         self.admin_record = PolicedPort(inner=_DeferredAdapter(lambda: FileAdminRecord(storage / ADMIN_FILE)),
             gate=self._gate, port=AdminRecordPort, sink=Sink.STORAGE, processor_id=STORAGE_PROCESSOR,
             data_classes=(DataClass.OPERATIONAL,))
-        mail_adapter, processor = ((mail, OUTBOX_PROCESSOR) if mail is not None else
-                                    build_mail(settings, storage, key, self._gate))
-        self.mail = PolicedPort(inner=mail_adapter, gate=self._gate, port=MailPort,
+        # Account mail through the gate that admits its sender: NM's own for the outbox, the owner's Gmail exception's (D168).
+        mail_adapter, processor, mail_gate = ((mail, OUTBOX_PROCESSOR, self._gate) if mail is not None else
+                                              build_mail(settings, storage, key, self._gate))
+        self.mail = PolicedPort(inner=mail_adapter, gate=mail_gate, port=MailPort,
             sink=Sink.MAIL, processor_id=processor,
             data_classes=(DataClass.OPERATIONAL, DataClass.RESTRICTED))
         self._model_adapter = model if model is not None else build_model(self.config)
@@ -737,10 +742,7 @@ class Application:
 
     def _egress_audit(self, line):
         try:
-            path = self.audit_root / 'egress.log'
-            path.parent.mkdir(parents=True, exist_ok=True)
-            with path.open('a', encoding='utf8') as handle:
-                handle.write(utcnow().isoformat(timespec='seconds') + '\t' + line + '\n')
+            self.egress_log.write(line)
         except OSError:
             pass
 
@@ -948,11 +950,29 @@ def _require_session(check):
         raise ModelPermissionRefused('Sign in again before continuing.')
 
 
-def build_mail(settings, root, key, gate):
-    """Disabled unless both delivery and NM's processor policy admit Gmail.
+#: The owner's exception for account mail (plan AN.48, D168, 10 Nov 2026): Gmail may carry NM's account mail - the confirmation
+#: and password-reset messages, operational and restricted data - and nothing else. Recorded here, at the composition root, as the
+#: OpenAI exception is (nm/app/model_permission.py): the reviewed inventory still admits no mail provider, so the gate of every
+#: other route still refuses Gmail, and only the mail port's own gate (gmail_policy) admits it.
+GMAIL_BASIS = 'OWNER-2026-11-10-GLOBAL-GMAIL-ACCOUNT-MAIL'
 
-    This runtime currently admits local processors only. Enabling a flag alone
-    must not approve Google or transfer any account data to it.
+
+def gmail_policy():
+    from nm.arrive.mail_gmail import GMAIL_PROCESSOR, MAIL_CLASSES
+    from nm.shared.egress_contracts import Policy, ProcessingException, Processor
+    return Policy(
+        processors=(Processor(GMAIL_PROCESSOR, 'global', (Sink.MAIL,), MAIL_CLASSES, GMAIL_BASIS),),
+        processing_exceptions=(ProcessingException(GMAIL_PROCESSOR, 'global', Sink.MAIL, MAIL_CLASSES, GMAIL_BASIS),))
+
+
+def build_mail(settings, root, key, gate):
+    """The account-mail adapter, the processor it is, and the gate that admits it.
+
+    The sealed local outbox by default, through NM's own gate. Gmail (D168) only when NM_MAIL_PROVIDER=gmail and
+    NM_MAIL_DELIVERY=enabled, through a gate of its own that admits Gmail for account mail alone (gmail_policy), writing to the
+    same outgoing-data log. It signs in with a Google app password (NM_GMAIL_APP_PASSWORD_FILE) or an OAuth access token
+    (NM_GMAIL_TOKEN_FILE): one of the two, each a local file read at each send. A provider named without delivery enabled
+    sends nothing.
     """
     from nm.arrive.mail_gmail import GMAIL_PROCESSOR, MAIL_CLASSES, DisabledMail, GmailMail
 
@@ -963,15 +983,19 @@ def build_mail(settings, root, key, gate):
     if provider == 'local-outbox':
         if delivery == 'enabled':
             raise ValueError('A local outbox cannot enable real email delivery.')
-        return FileOutbox(root, key=key), OUTBOX_PROCESSOR
+        return FileOutbox(root, key=key), OUTBOX_PROCESSOR, gate
     if provider != 'gmail':
         raise ValueError('Unknown account-mail provider.')
     if delivery == 'disabled':
-        return DisabledMail(), OUTBOX_PROCESSOR
-    gate.permit(Sink.MAIL, GMAIL_PROCESSOR, MAIL_CLASSES)
-    adapter = GmailMail(settings.get('NM_MAIL_SENDER', ''),
-                        Path(settings.get('NM_GMAIL_TOKEN_FILE', '')), gate, enabled=True)
-    return adapter, GMAIL_PROCESSOR
+        return DisabledMail(), OUTBOX_PROCESSOR, gate
+    mail_gate = Gatekeeper(policy=gmail_policy(), audit=gate.audit)
+    mail_gate.permit(Sink.MAIL, GMAIL_PROCESSOR, MAIL_CLASSES)
+    password, token = settings.get('NM_GMAIL_APP_PASSWORD_FILE', ''), settings.get('NM_GMAIL_TOKEN_FILE', '')
+    if bool(password) == bool(token):
+        raise ValueError('Gmail needs NM_GMAIL_APP_PASSWORD_FILE or NM_GMAIL_TOKEN_FILE: one of the two.')
+    adapter = GmailMail(settings.get('NM_MAIL_SENDER', ''), Path(token) if token else None, mail_gate, enabled=True,
+                        password_file=Path(password) if password else None)
+    return adapter, GMAIL_PROCESSOR, mail_gate
 
 
 class SharedSealRefused(RuntimeError):

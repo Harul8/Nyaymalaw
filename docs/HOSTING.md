@@ -1,6 +1,7 @@
 # Hosting Nyaymalaw for other advocates
 
-Plan AN.48, piece 48f6 (owner decision D167, 10 Nov 2026), with the hosting review of the same day. What it takes to run NM on a
+Plan AN.48, piece 48f6 (owner decision D167, 10 Nov 2026), with the hosting review of the same day and the owner's decisions it
+left (D168: Gmail sends account mail; D169: the outgoing-data log kept a year). What it takes to run NM on a
 machine other advocates reach, as built by 48f1-48f5, and what the machine and its operator must supply. Each statement below was
 checked against the code; where NM does not yet do something, it says so.
 
@@ -33,6 +34,9 @@ Both processes read the same settings (the `.env` file or the machine's environm
 | `NM_MATTER_KEY` | a long random secret | Seals everything in the store. Without it NM makes `.nm/matter.key` once. Lose it and every conversation and paper is unreadable; it may not be the AI key (NM refuses to start if it is). |
 | `NM_CLAMSCAN`, `NM_CLAMAV_DATABASE` | the ClamAV scanner and its definitions folder | Every paper is checked for malware before it is read. Without a scanner, papers are held and never read: advocates cannot send papers. |
 | `NM_CORPUS_DIR`, `NM_BARE_ACTS_DIR` | the law library's folders | Default to `legal_database/vector_store` and `legal_database/raw_data/BareActs` under the checkout. |
+| `NM_MAIL_PROVIDER`, `NM_MAIL_DELIVERY`, `NM_MAIL_SENDER`, `NM_GMAIL_APP_PASSWORD_FILE` | `gmail`, `enabled`, the sending address, the app password's file | Account email through Gmail; see "Sending account email with Gmail" below. Unset, account mail waits in the machine's own outbox. |
+| `NM_PUBLIC_REGISTRATION` | `enabled` | Opens public sign-up, once mail reaches real mailboxes and `NM_PUBLIC_URL` is set. Unset, only accounts the operator enrols exist. |
+| `NM_EGRESS_LOG_KEEP_DAYS` | `365` (default) | How many days the outgoing-data log is kept. A longer period may be set; nothing under 180 days is taken. See "Logs". |
 | `FORWARDED_ALLOW_IPS` | the proxy's address | Only where the proxy is on another machine or container; NM trusts the proxy's forwarded headers from `127.0.0.1` already. |
 
 ## The web proxy in front
@@ -77,14 +81,50 @@ location / {
   unavailable while email delivery is disabled. Existing accounts can still sign in."
 - **Account mail goes to a sealed outbox on the machine** by default, not to anyone's inbox. A password reset waits there until the
   operator reads it with `python operations/outbox.py --email <address>` and passes the link on.
-- **Real email** needs a provider NM's outbound policy admits. The code has a Gmail sender (`NM_MAIL_PROVIDER=gmail`,
-  `NM_MAIL_DELIVERY=enabled`, `NM_MAIL_SENDER`, `NM_GMAIL_TOKEN_FILE`), but the outbound policy admits no mail provider yet: enabling
-  one is a decision of its own.
+- **Real email goes through Gmail** (owner decision D168, 10 Nov 2026), set up as below.
 - **Until then, enrol each advocate yourself**: `python operations/enrol.py --id <email> --name "<name>" ...` prints a password once;
   hand it over safely. Invitations (`operations/invite.py`) need a client that sends the invitation header; the page cannot accept
   one yet.
 - **The first admin** is made with `python operations/admin.py make-admin --account <email> --operator <you> --reason "first admin"`;
   allowances and user types are then set in the Admin area.
+
+### Sending account email with Gmail
+
+NM sends two kinds of email, and only these: the six-digit code that confirms a new account's address, and the link that sets a new
+password. Nothing about any matter is ever in them. NM's outbound policy admits Gmail for these messages alone, under the owner's
+exception (basis `OWNER-2026-11-10-GLOBAL-GMAIL-ACCOUNT-MAIL`); every other route still refuses Gmail.
+
+1. **The sending account.** Use a Gmail address kept for NM (a Google Workspace address on your own domain reads better to
+   advocates). Turn on 2-Step Verification for it (Google Account > Security).
+2. **An app password.** In that account open Security > 2-Step Verification > App passwords (or go straight to
+   `myaccount.google.com/apppasswords`), name it "Nyaymalaw", and create it. Google shows 16 letters in four groups; the spaces are
+   not part of it, and NM ignores them. Google offers no app passwords to an account under Advanced Protection or one whose second
+   step is a security key only, and a Workspace administrator can turn them off.
+3. **The secret file.** Save the app password in a file of its own on the hosting machine, outside the checkout, readable only by
+   the account NM runs as (Linux: `chmod 600`; Windows: only that account in the file's security settings). It is read at each send
+   and never copied into a log, an error or the project; to change the password, replace the file - no restart is needed.
+4. **The settings**, for both processes:
+
+   ```
+   NM_MAIL_PROVIDER=gmail
+   NM_MAIL_DELIVERY=enabled
+   NM_MAIL_SENDER=<the Gmail address>
+   NM_GMAIL_APP_PASSWORD_FILE=<the file's absolute path>
+   NM_PUBLIC_URL=https://<your domain>
+   ```
+
+   NM refuses to start if delivery is enabled without exactly one sign-in file (the app password's, or `NM_GMAIL_TOKEN_FILE`: an
+   OAuth access token kept fresh by another tool, which NM does not refresh).
+5. **Check it.** After restarting, `GET /api/account-capabilities` says `"mail_delivery": "mailbox"`. Ask for a password reset for
+   your own account from the sign-in page and see the mail arrive.
+6. **Public sign-up**, if wanted: `NM_PUBLIC_REGISTRATION=enabled`.
+
+NM signs in to `smtp.gmail.com` on port 465 over TLS 1.2 or later, with the server's certificate checked. A send Gmail does not accept
+(a refused sign-in, an unreachable server, a refused address) is logged as not delivered, naming neither the address nor the link,
+and is never retried by itself; the advocate can ask again, and an admin sending a reset link is told it was not delivered. Revoking
+the app password in the Google account stops NM's email at once. Gmail limits how much one account sends - about 500 messages a day
+from a personal Gmail account and about 2,000 from a Workspace account, counted over a rolling day, by Google's figures, which
+Google may change - ample for confirmations and resets, but a reason to move to a mail service as NM grows.
 
 ## The law library and its models
 
@@ -113,6 +153,8 @@ installed separately. The Anthropic adapter's package is not on the list; hostin
   is sealed.
 - Keep `NM_MATTER_KEY` (or `.nm/matter.key`) **apart from** the backups and as safely: a backup without its key cannot be read, and the
   key with a backup opens everything.
+- Back up the outgoing-data log too (`.nm/egress-*` under the checkout) where its year must outlast the machine.
+- Keep the Gmail app password's file out of the backups of the code; if it is backed up, as safely as the key.
 - Test a restore on another machine before relying on it.
 
 ## Restarts and updates
@@ -126,9 +168,16 @@ installed separately. The Anthropic adapter's package is not on the list; hostin
 
 ## Logs
 
-- The outbound-data log (`.nm/egress.log` under the checkout, whatever `NM_MATTER_STORE` says) records every send to an outside
-  service and only ever grows (174 MB on the development machine): rotate it with the machine's own tool (logrotate, or a scheduled
-  task).
+- **The outgoing-data log** (owner decision D169) is in `.nm/` under the checkout, whatever `NM_MATTER_STORE` says: one file a day,
+  `egress-YYYY-MM-DD.log` by UTC date, one content-free line for every reach to a destination - which kind, which processor, which
+  kinds of data and how many bytes; never content, an address or a secret. Both processes write to the same day's file, each line
+  whole.
+- **It keeps itself**: each process sweeps it as it starts and a minute after each UTC midnight. A day over 90 days old is compressed
+  (`.log.gz`, read back before the plain file is deleted); a day over a year old is deleted - the year the Digital Personal Data
+  Protection Rules 2025 ask logs of personal-data processing to be kept. `NM_EGRESS_LOG_KEEP_DAYS` sets another period; nothing
+  under 180 days, the CERT-In directions' period, is taken. Do not rotate or compress these files with another tool.
+- **The single `egress.log` of earlier versions** is taken in at the first start, whole, as the file of the last day it holds, and
+  goes a year after that day.
 - Each process writes its warnings to its own console; let the supervisor keep them.
 
 ## Checked before handing over
