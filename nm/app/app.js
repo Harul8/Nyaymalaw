@@ -6209,8 +6209,10 @@ async function steerQueued(intent, item) {
     $('attachments-status').textContent = 'Added to the answer NM is working on.';
     saveQueued(intent);
   } catch (error) {
+    // Plan AN.48 (48f2): a step still waiting for a free place is not yet at work, so the line goes as the next message too.
     $('attachments-status').textContent = error?.status === 409
-      ? 'NM had already finished this answer, so this message goes as the next one.'
+      ? (error.detail?.code === 'not_begun' ? 'NM has not begun on this message yet, so this one goes as the next message.'
+        : 'NM had already finished this answer, so this message goes as the next one.')
       : `Not added: ${error.message}`;
   } finally {
     item.steering = false;

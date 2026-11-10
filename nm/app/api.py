@@ -1440,12 +1440,13 @@ def _active_while_working(request):
         done.set()
 
 
-def _answered(run, req, request, advocate_id, background):
+def _answered(run, req, request, advocate_id, background, *, held=False):
     """One run of a turn - sent, or continued (plan AN.41) - and its answer released, or refused in code's own words; while it
     runs the advocate counts as active (D65). What NM finished and kept, where it stopped part-way, is said (kept).
     Plan AN.48 (48f1, D167): the run is a step worked on the server's own step threads. The request waits for it a short while and
     answers exactly as before where it is done by then; otherwise it answers that the step is working (202), the step goes on, and
-    what it answers - this same answer or refusal - is read from /api/turn/outcome."""
+    what it answers - this same answer or refusal - is read from /api/turn/outcome. 48f2: a step stopped while it waits for a free
+    place is refused as such - held: the turn is already kept with its conversation (every route but a message sent)."""
     def step():
         try:
             with _active_while_working(request):
@@ -1470,7 +1471,7 @@ def _answered(run, req, request, advocate_id, background):
         return _release(output)
 
     jobs = application().step_jobs
-    future = jobs.start(advocate_id, req.turn_id, step)
+    future = jobs.start(advocate_id, req.turn_id, step, cancelled=lambda: _stopped_before_start(req, held))
     done, released = jobs.answered(future)
     if not done:
         future.add_done_callback(lambda finished: _after_step(finished, advocate_id))
@@ -1482,6 +1483,15 @@ def _answered(run, req, request, advocate_id, background):
 
 
 _steps_log = logging.getLogger('nm.steps')
+
+
+def _stopped_before_start(req, held):
+    """A step its advocate stopped while it waited for a free place (plan AN.48, 48f2): nothing of it ran and nothing was charged.
+    A message sent was not saved; a turn already kept stays as it was, its red message or stop card read from the conversation."""
+    return HTTPException(409, {'why': 'You stopped this before NM began on it: nothing of it ran and nothing was charged.'
+                               + ('' if held else ' Sending it again is safe.'), 'code': 'stopped_before_start',
+                               'committed': 'not_committed', 'turn_id': req.turn_id, 'chat_id': req.chat_id,
+                               'retryable': True, **({'kept': True} if held else {})})
 
 
 def _working(advocate_id, turn_id, chat_id):
@@ -1540,7 +1550,7 @@ def continue_turn(req: TurnOf, advocate_id: Advocate, request: Request, backgrou
         raise HTTPException(401, 'not signed in')
     return _answered(lambda: application().continue_turn(
         advocate_id=advocate_id, chat_id=req.chat_id, turn_id=req.turn_id,
-        session_current=lambda: _session_current(request, advocate_id)), req, request, advocate_id, background)
+        session_current=lambda: _session_current(request, advocate_id)), req, request, advocate_id, background, held=True)
 
 
 class TurnGo(BaseModel):
@@ -1562,7 +1572,7 @@ def go_turn(req: TurnGo, advocate_id: Advocate, request: Request, background: Ba
         raise HTTPException(401, 'not signed in')
     return _answered(lambda: application().go_turn(
         advocate_id=advocate_id, chat_id=req.chat_id, turn_id=req.turn_id, choice=req.choice, disputes=req.disputes,
-        session_current=lambda: _session_current(request, advocate_id)), req, request, advocate_id, background)
+        session_current=lambda: _session_current(request, advocate_id)), req, request, advocate_id, background, held=True)
 
 
 class TurnAnswers(BaseModel):
@@ -1582,7 +1592,7 @@ def answer_turn(req: TurnAnswers, advocate_id: Advocate, request: Request, backg
         raise HTTPException(401, 'not signed in')
     return _answered(lambda: application().answer_turn(
         advocate_id=advocate_id, chat_id=req.chat_id, turn_id=req.turn_id, answers=req.answers,
-        session_current=lambda: _session_current(request, advocate_id)), req, request, advocate_id, background)
+        session_current=lambda: _session_current(request, advocate_id)), req, request, advocate_id, background, held=True)
 
 
 class TurnMessage(BaseModel):
@@ -1609,7 +1619,7 @@ def message_turn(req: TurnMessage, advocate_id: Advocate, request: Request, back
     return _answered(lambda: application().message_turn(
         advocate_id=advocate_id, chat_id=req.chat_id, turn_id=req.turn_id, message=req.message,
         document_refs=tuple(req.document_refs), session_current=lambda: _session_current(request, advocate_id)),
-        req, request, advocate_id, background)
+        req, request, advocate_id, background, held=True)
 
 
 @app.post('/api/turn/discard', dependencies=[CsrfProtected])
@@ -1674,6 +1684,9 @@ def steer_turn(req: TurnSteer, advocate_id: Advocate, request: Request):
     except document_rules.DocumentRefused as exc:
         raise HTTPException(422, {'why': str(exc), 'code': 'document_refused'}) from exc
     if not taken:
+        if application().step_jobs.waiting(advocate_id, req.turn_id):  # plan AN.48 (48f2): Steer reaches only a step at work
+            raise HTTPException(409, {'code': 'not_begun', 'why': 'NM has not begun on this message yet, so yours goes as the '
+                                      'next one.'})
         raise HTTPException(409, {'code': 'finished', 'why': 'NM had already finished this answer, so your message goes as the '
                                   'next one.'})
     return {'state': 'taken'}

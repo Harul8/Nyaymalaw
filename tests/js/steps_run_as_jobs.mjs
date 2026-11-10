@@ -100,4 +100,25 @@ async function delivered(replies) {
   assert.deepEqual(asked, ['/api/turn']);
 }
 
+// Plan AN.48 (48f2): a line steered into a step still waiting for a free place stays, to go as the next message, and the page says
+// that NM has not begun on it yet.
+{
+  const page = app.replace(/\r\n/g, '\n');
+  const fn = (name) => {
+    const at = Math.min(...[`\nfunction ${name}(`, `\nasync function ${name}(`].map((s) => page.indexOf(s)).filter((i) => i >= 0));
+    return page.slice(at, page.indexOf('\n}\n', at) + 3);
+  };
+  const status = { textContent: '' };
+  const context = vm.createContext({ READING_STATES: ['converting', 'uploading', 'reading_scans'], queuedFiles: new Set(),
+    $: () => status, repaint: () => {}, paintSend: () => {}, renderQueued: () => {}, encodeURIComponent,
+    api: async () => { throw Object.assign(new Error('not begun'), { status: 409, detail: { code: 'not_begun' } }); } });
+  vm.runInContext(fn('unqueue') + fn('saveQueued') + fn('steerQueued'), context);
+  const line = { text: 'Also consider the notice.', files: [] };
+  const intent = { chatId: 'c1', queued: [line] };
+  context.activeDelivery = { entry: { turnId: 't1', context: intent, steers: [] } };
+  await context.steerQueued(intent, line);
+  assert.equal(intent.queued.length, 1, 'the line stays, to go as the next message');
+  assert.equal(status.textContent, 'NM has not begun on this message yet, so this one goes as the next message.');
+}
+
 console.log('steps run as jobs: ok');

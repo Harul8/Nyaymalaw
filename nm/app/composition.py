@@ -43,7 +43,7 @@ from nm.shared.turn_attempt_port import TurnAttemptPort
 from nm.shared.turn_attempt_store import FileTurnAttempts
 from nm.core_engine.retrieval import HybridSearcher, SearchPort
 from nm.core_engine.citations import CaseIdentityIndex
-from nm.app.step_jobs import StepJobs, wait_from
+from nm.app.step_jobs import AT_ONCE, PER_ADVOCATE, StepJobs, count_from, wait_from
 from nm.app.turn_progress import TurnProgress
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -172,8 +172,13 @@ class Application:
         self.case_index = _DeferredAdapter(lambda: CaseIdentityIndex.local(self.root))
         # What each running turn is doing, for its own advocate (memory only).
         self.turn_progress = TurnProgress()
-        # Plan AN.48 (48f1, D167): the steps this server works on its own step threads, and how long a request waits for one.
-        self.step_jobs = StepJobs(wait_seconds=wait_from(settings.get('NM_STEP_WAIT_SECONDS')))
+        # Plan AN.48 (48f1, D167): the steps this server works on its own step threads, and how long a request waits for one;
+        # 48f2: how many work at once, and for one advocate - each step that waits for a place told its place in its progress.
+        self.step_jobs = StepJobs(wait_seconds=wait_from(settings.get('NM_STEP_WAIT_SECONDS')),
+                                  at_once=count_from(settings.get('NM_STEPS_AT_ONCE'), AT_ONCE),
+                                  per_advocate=count_from(settings.get('NM_STEPS_PER_ADVOCATE'), PER_ADVOCATE))
+        self.step_jobs.placed = lambda advocate_id, turn_id, ahead: self.turn_progress.report(
+            advocate_id, turn_id, 'queued', {'ahead': ahead})
         # The Acts time limits may be worked out under (owner decisions, 15 Oct 2026).
         from nm.shared.held_acts import HeldActs
         self.held_acts = HeldActs(settings.get('NM_BARE_ACTS_DIR')
@@ -308,6 +313,9 @@ class Application:
             mine = key not in self._running
             if mine:
                 self._running[key] = running
+                # Plan AN.48 (48f2): a Stop pressed as this step began, before Stop could reach it here.
+                if self.step_jobs.stop_asked(advocate_id, turn_id):
+                    running.stop.set()
             else:
                 running = self._running[key]
         ended, began, outcome, metrics, replayed = 'stopped', utcnow(), 'failed', None, False
@@ -602,10 +610,17 @@ class Application:
                             session_current=session_current)
 
     def stop_turn(self, advocate_id, turn_id):
-        """Stop (plan AN.42, D78): the answer stops after the step in progress. False where this process is not working on it."""
+        """Stop (plan AN.42, D78): the answer stops after the step in progress. Plan AN.48 (48f2): a step still waiting for a free
+        place is taken out instead - nothing of it ran and nothing was charged - and one just begun is stopped as it reaches the
+        point Stop is heard at. False where this process is not working on it."""
         with self._running_lock:
             running = self._running.get((advocate_id, turn_id))
-        if running is None or not self.turn_running(advocate_id, turn_id):
+            if running is None:
+                if self.step_jobs.cancel(advocate_id, turn_id):
+                    self.turn_progress.end(advocate_id, turn_id, 'stopped')
+                    return True
+                return self.step_jobs.ask_stop(advocate_id, turn_id)
+        if not self.turn_running(advocate_id, turn_id):
             return False
         running.stop.set()
         return True

@@ -43,9 +43,19 @@ STAGES = {
     # Plan AN.41 (D70) and AN.42 (D79).
     "continuing": "Checking the work already finished",
     "steering": "Taking in what you added",
+    # Plan AN.48 (48f2, D167): the step waits for a free place on the server; 'ahead' says how many wait before it.
+    "queued": "Waiting for NM to be free",
 }
 #: Counts a stage may report; anything else is dropped.
-DETAIL = ("done", "total", "round")
+DETAIL = ("done", "total", "round", "ahead")
+
+
+def _label(stage, detail):
+    """What the page says the turn is doing: the stage's words, and a waiting step's place (48f2)."""
+    if stage == "queued" and type(detail.get("ahead")) is int:
+        ahead = detail["ahead"]
+        return f"{STAGES[stage]} - {'yours is next' if not ahead else f'{ahead} ahead of yours'}"
+    return STAGES[stage]
 #: A part of the answer by code's own name for it (D68): a dispute's section, a correction after the check across the sections,
 #: the overview or that check itself.
 _PART = re.compile(r"(?:s|e)[0-9]{1,3}\Z|[ox]\Z")
@@ -140,7 +150,7 @@ class TurnProgress:
             current = steps[-1] if steps else None
             return {"state": row["state"],
                     "stage": current["stage"] if current else None,
-                    "label": STAGES[current["stage"]] if current else None,
+                    "label": _label(current["stage"], row.get("detail") or {}) if current else None,
                     "detail": dict(row.get("detail") or {}),
                     "shown": row.get("shown", 0), "chat_id": row.get("chat_id"), "saved": row.get("saved", 0),
                     "parts": {name: dict(part) for name, part in (row.get("parts") or {}).items()},
