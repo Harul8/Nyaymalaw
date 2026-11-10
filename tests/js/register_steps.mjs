@@ -5,7 +5,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const app = fs.readFileSync(new URL('../../nm/app/app.js', import.meta.url), 'utf8');
+// Read as the browser runs it, whatever line endings the checkout gave the file (a Windows checkout gives CRLF).
+const app = fs.readFileSync(new URL('../../nm/app/app.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
 const start = app.indexOf('function markSteps(card, current) {');
 const end = app.indexOf("$('reg-back').addEventListener('click'", start);
 const after = app.indexOf('});', end) + 3;

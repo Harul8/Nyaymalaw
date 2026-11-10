@@ -94,9 +94,18 @@ without one the search runs on the processor, which works but makes research slo
 
 ## Installing
 
-The project lists what it needs in `pyproject.toml`: install it with the `openai`, `semantic` and `documents` extras, on Python 3.11
-or later. Those list only lowest versions, so a fresh install can pull newer releases than the ones tested here; freeze the working
-set (`pip freeze`) from a machine where NM runs and install the host from that. ClamAV is installed separately.
+Use Python 3.11 or later and install from `requirements-hosting.txt`: every package the server needs at run time, pinned to the
+versions NM is run and tested with (`pyproject.toml` names only the lowest versions, so installing from it can pull releases nobody
+has run NM with). The list is written by `development_environment/developer_tooling/hosting_requirements.py` from the working
+environment, and a test says when an upgrade there has left it behind.
+
+```
+pip install -r requirements-hosting.txt
+```
+
+Torch is pinned by version only, because its build is the machine's choice: on Linux the standard package carries the graphics-card
+build; on Windows, for a graphics card, install torch 2.6.0 from the PyTorch index's CUDA 12.4 build first, then the list. ClamAV is
+installed separately. The Anthropic adapter's package is not on the list; hosting on the OpenAI account does not need it.
 
 ## Backups
 

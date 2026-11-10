@@ -25,12 +25,15 @@ def use_up(served, who=OWNER, micro_usd=TRIAL_MICRO_USD):
 def test_every_call_of_a_served_turn_is_kept_against_the_account(served):
     reply = successful(served)
     totals = served.app.usage.totals()
-    assert totals["calls"] == len(served.model.calls) == 9 and totals["not_established"] == 0
+    # The turn's 9 calls, and the call that names the conversation (plan AN.43, D82): made on the turn's own model port and
+    # metered like any call; the stand-in model answers it apart from the turn's calls (served.model.titled).
+    assert served.model.titled == 1
+    assert totals["calls"] == len(served.model.calls) + served.model.titled == 10 and totals["not_established"] == 0
     assert {row["outcome"] for row in totals["by_outcome"]} == {"ok"}
     assert served.app.usage.standing(OWNER)["granted"] == TRIAL_MICRO_USD
     # Reopening the saved answer makes no call, so it records none.
     assert successful(served, chat_id=reply["chat_id"])["replayed"]
-    assert served.app.usage.totals()["calls"] == 9
+    assert served.app.usage.totals()["calls"] == 10
 
 
 def test_a_failed_call_is_kept_too(served):
