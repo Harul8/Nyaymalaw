@@ -597,20 +597,17 @@
     </div>
 
     <form id="composer" class="composer" autocomplete="off">
-      <!-- PLAN AN.42 (D77): what is written while NM works on an answer waits here, a line each, and goes once the answer is done;
-           Edit puts a message back in the box below, Discard removes it. -->
-      <ul id="queued" class="queued" aria-label="Messages waiting to be sent" hidden></ul>
-      <label class="sr-only" for="message">Your instruction or brief</label>
-      <textarea id="message" rows="1" placeholder="Tell NM what you need, ask a question, or add material."></textarea>
-      <!-- Documents attached to this message (owner decisions, 15 Oct 2026): checked for
-           malware and read before the message can carry them. -->
-      <ul id="attachments" class="attachments" aria-label="Documents attached to this message" hidden></ul>
-      <p id="attachments-status" class="attachments-status" role="status" aria-live="polite"></p>
-      <input id="attach-files" type="file" multiple hidden
-             accept=".pdf,.docx,.txt,.png,.jpg,.jpeg,.mp3,.m4a,.wav,.webm,.ogg,.oga,.opus,.aac,.flac,.amr,.3gp,audio/*"
-             aria-label="Choose documents, photos or recordings to attach">
-      <div class="composer-row">
-        <div class="composer-tools">
+      <!-- PLAN AN.48 (D173; owner, 10 Nov 2026: "make the chatbox like Claude one"): one slim box - the plus on its left, the
+           brief, then Send and the mic on its right - and under it, in small words, the model and the effort for the message. -->
+      <div class="composer-box">
+        <!-- PLAN AN.42 (D77): what is written while NM works on an answer waits here, a line each, and goes once the answer is
+             done; Edit puts a message back in the box below, Discard removes it. -->
+        <ul id="queued" class="queued" aria-label="Messages waiting to be sent" hidden></ul>
+        <!-- Documents attached to this message (owner decisions, 15 Oct 2026): checked for
+             malware and read before the message can carry them. -->
+        <ul id="attachments" class="attachments" aria-label="Documents attached to this message" hidden></ul>
+        <p id="attachments-status" class="attachments-status" role="status" aria-live="polite"></p>
+        <div class="composer-line">
           <!-- F-C-01. THE PLUS: documents, photos and recordings are attached to the
                message and read or transcribed; a voice note is recorded here (owner
                decisions, 15 Oct 2026). Video is not read. -->
@@ -628,9 +625,26 @@
               <button type="button" role="menuitem" id="plus-record">Record a voice note</button>
             </div>
           </div>
+          <label class="sr-only" for="message">Your instruction or brief</label>
+          <textarea id="message" rows="1" placeholder="Tell NM what you need, ask a question, or add material."></textarea>
+          <!-- PLAN AN.42 (D74-D76), drawn as D173 asks: Send is a return arrow. While NM works on an answer, or a message waits
+               for its files, it is a turning ring with a stop in its middle; words typed or a file attached meanwhile bring
+               the arrow back. -->
+          <button type="submit" class="send-button" id="send" data-state="send" aria-label="Send" title="Send">
+            <svg class="send-arrow" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" focusable="false">
+              <path d="M15.5 4.5v5a2.5 2.5 0 0 1-2.5 2.5H4.8M8.4 8.4 4.8 12l3.6 3.6" fill="none" stroke="currentColor"
+                    stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <svg class="send-ring" viewBox="0 0 24 24" width="28" height="28" aria-hidden="true" focusable="false">
+              <circle class="ring-track" cx="12" cy="12" r="10" fill="none" stroke-width="2"/>
+              <path class="ring-arc" d="M12 2a10 10 0 0 1 10 10" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round"/>
+              <rect class="ring-stop" x="8.5" y="8.5" width="7" height="7" rx="1.5" fill="currentColor"/>
+            </svg>
+          </button>
           <!-- F-C-02. THE MIC: say the brief instead of typing it. The words are
                transcribed by this installation's own speech model and come back
-               into the box above to be checked; the recording is not kept. -->
+               into the brief box to be checked; the recording is not kept. -->
           <button type="button" id="dictate" class="tool-button" aria-pressed="false">
             <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" focusable="false">
               <rect x="7" y="2.5" width="6" height="10" rx="3" fill="none" stroke="currentColor"
@@ -640,33 +654,24 @@
             </svg>
             <span class="sr-only">Dictate the brief</span>
           </button>
-          <!-- PLAN AN.33 (D23): the model and the effort for this message, from the server's own lists; 6 Luna and Medium
-               each time a conversation opens. -->
-          <label class="sr-only" for="turn-model">Model for this message</label>
-          <select id="turn-model" class="turn-choice" aria-describedby="turn-cost" data-default="gpt-6-luna">
-            <option value="gpt-6-luna" selected>6 Luna</option>
-          </select>
-          <label class="sr-only" for="turn-effort">How hard NM reasons for this message</label>
-          <select id="turn-effort" class="turn-choice" data-default="medium">
-            <option value="medium" selected>Medium</option>
-          </select>
-          <span class="hint turn-cost" id="turn-cost" hidden></span>
-          <span class="hint" id="hint">Enter to send · Shift+Enter for a new line</span>
         </div>
-        <!-- PLAN AN.42 (D74-D76): Send is a round up-arrow. While NM works on an answer, or a message waits for its files, it is
-             a turning ring with a stop in its middle; words typed or a file attached meanwhile bring the arrow back. -->
-        <button type="submit" class="send-button" id="send" data-state="send" aria-label="Send" title="Send">
-          <svg class="send-arrow" viewBox="0 0 20 20" width="18" height="18" aria-hidden="true" focusable="false">
-            <path d="M10 15.5V4.8M5.2 9.6 10 4.8l4.8 4.8" fill="none" stroke="currentColor" stroke-width="2"
-                  stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          <svg class="send-ring" viewBox="0 0 24 24" width="28" height="28" aria-hidden="true" focusable="false">
-            <circle class="ring-track" cx="12" cy="12" r="10" fill="none" stroke-width="2"/>
-            <path class="ring-arc" d="M12 2a10 10 0 0 1 10 10" fill="none" stroke="currentColor" stroke-width="2"
-                  stroke-linecap="round"/>
-            <rect class="ring-stop" x="8.5" y="8.5" width="7" height="7" rx="1.5" fill="currentColor"/>
-          </svg>
-        </button>
+      </div>
+      <input id="attach-files" type="file" multiple hidden
+             accept=".pdf,.docx,.txt,.png,.jpg,.jpeg,.mp3,.m4a,.wav,.webm,.ogg,.oga,.opus,.aac,.flac,.amr,.3gp,audio/*"
+             aria-label="Choose documents, photos or recordings to attach">
+      <div class="composer-under">
+        <span class="hint" id="hint">Enter to send · Shift+Enter for a new line</span>
+        <span class="hint turn-cost" id="turn-cost" hidden></span>
+        <!-- PLAN AN.33 (D23): the model and the effort for this message, from the server's own lists; 6 Luna and Medium
+             each time a conversation opens. -->
+        <label class="sr-only" for="turn-model">Model for this message</label>
+        <select id="turn-model" class="turn-choice" aria-describedby="turn-cost" data-default="gpt-6-luna">
+          <option value="gpt-6-luna" selected>6 Luna</option>
+        </select>
+        <label class="sr-only" for="turn-effort">How hard NM reasons for this message</label>
+        <select id="turn-effort" class="turn-choice" data-default="medium">
+          <option value="medium" selected>Medium</option>
+        </select>
       </div>
       <p id="dictation-state" class="dictation-state" role="status" aria-live="polite"></p>
     </form>

@@ -528,9 +528,15 @@ button.board-card:focus-visible { outline: 2px solid var(--accent); outline-offs
 .answer-checked { margin: 1.2rem 0 0.4rem; font-size: 0.9rem; color: var(--ink-2); border: 1px solid var(--rule-2);
   border-radius: 10px; padding: 0.6rem 0.9rem; background: var(--surface); }
 .answer-checked > summary { cursor: pointer; color: var(--ink-2); font-weight: 600; }
-/* Plan AN.33 (D23): the model and the effort for a message, beside the send box; what was chosen, under a reply. */
-.turn-choice { font: inherit; font-size: 0.85rem; color: var(--ink-2); background: var(--surface); border: 1px solid var(--rule-2);
-  border-radius: 8px; padding: 0.2rem 0.4rem; min-height: 2rem; }
+/* Plan AN.33 (D23): the model and the effort for a message, in small words under the send box (D173, like Claude's); what was
+   chosen, under a reply. */
+.turn-choice { font: inherit; font-size: 0.8rem; color: var(--ink-2); border: 0; border-radius: 6px; min-height: 2rem;
+  padding: 0.15rem 1.15rem 0.15rem 0.45rem; cursor: pointer; appearance: none; -webkit-appearance: none;
+  /* As wide as the choice shown, not the longest one offered; where a browser cannot size it so, no wider than this. */
+  field-sizing: content; max-width: min(14rem, 45vw); text-overflow: ellipsis;
+  background: transparent no-repeat right 0.3rem center / 0.6rem
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%236b7280' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); }
+.turn-choice:hover, .turn-choice:focus-visible { background-color: var(--surface-2); color: var(--ink); }
 .turn-cost { color: var(--ink-3); }
 .reply-chosen { color: var(--ink-3); font-size: 0.82rem; }
 .checked-part { margin: 0.6rem 0 0.2rem; font-weight: 600; }
@@ -755,28 +761,39 @@ button.board-card:focus-visible { outline: 2px solid var(--accent); outline-offs
 }
 
 /* -------------------------------------------------------------- composer --- */
+/* PLAN AN.48 (D173; owner, 10 Nov 2026: "make the chatbox like Claude one"): one slim box - the plus, the brief, Send and the mic
+   in one line - with the model and the effort in small words under it. */
 .composer {
-  flex: none; background: var(--surface);
+  flex: none;
   margin: 0.35rem var(--talk-gutter, 2.2rem) max(0.75rem, env(safe-area-inset-bottom));
-  padding: 0.55rem 0.8rem; border: 1px solid var(--field); border-radius: 14px;
-  box-shadow: 0 1px 2px rgba(27, 32, 41, 0.05);
+}
+.composer-box {
+  background: var(--surface); padding: 0.2rem 0.35rem; border: 1px solid var(--field); border-radius: 18px;
+  box-shadow: 0 1px 3px rgba(27, 32, 41, 0.07);
 }
 /* The box itself shows the focus: a blue edge and a pale ring, so the ring is never drawn
    inside the box it belongs to. */
-.composer:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-w); }
+.composer-box:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-w); }
+/* The brief grows upwards as it is written; the plus, Send and the mic stay on its last line. */
+.composer-line { display: flex; align-items: flex-end; gap: 0.1rem; }
 .composer textarea {
-  width: 100%; margin: 0; display: block; min-height: 44px; max-height: min(160px, 20dvh);
+  flex: 1 1 auto; min-width: 0; margin: 0; display: block; min-height: 44px; max-height: min(160px, 20dvh);
   font-family: var(--f-sans); font-size: 1rem; line-height: 1.6;
-  padding: 0.5rem; border: 0; border-radius: 8px; overflow-y: auto;
+  padding: 0.5rem 0.35rem; border: 0; border-radius: 8px; overflow-y: auto;
   background: var(--surface); color: var(--ink); resize: none;
 }
 .composer textarea:focus { outline: none; }
+.composer-under {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 0.15rem 0.25rem;
+  margin: 0.25rem 0.5rem 0;
+}
+.composer-under > #hint { margin-right: auto; }
+@media (max-width: 560px) { .composer-under > #hint { display: none; } }
 .composer-row {
   margin: 0.5rem auto 0; display: flex;
   align-items: center; justify-content: space-between; gap: 1rem;
 }
-/* F-C-01, F-C-02. The plus and the mic, just under the brief. */
-.composer-tools { align-items: center; display: flex; flex-wrap: wrap; gap: 0.4rem; min-width: 0; }
+/* F-C-01, F-C-02. The plus on the left of the brief; the mic on its right, after Send (D173). */
 .tool-button {
   align-items: center; border-radius: 999px; display: inline-flex; justify-content: center;
   min-height: 44px; padding: 0; width: 44px; border-color: transparent; background: transparent; color: var(--ink-2);
@@ -812,17 +829,18 @@ button.primary {
 button.primary:hover { background: var(--accent-2); border-color: var(--accent-2); color: #fff; }
 button.primary:disabled { opacity: 0.5; cursor: default; }
 button.ghost { border: none; background: none; color: var(--accent); padding: 0.45rem 0.3rem; font-size: 0.78rem; }
-/* PLAN AN.42 (D74-D76): Send as a round up-arrow; a turning ring with a stop while NM works or a message waits for its files. */
+/* PLAN AN.42 (D74-D76), drawn as D173 asks: Send as a return arrow in the line, like the plus and the mic; a turning ring with a
+   stop while NM works or a message waits for its files. */
 .send-button {
   flex: none; width: 44px; height: 44px; min-height: 44px; padding: 0; border-radius: 999px;
   display: inline-flex; align-items: center; justify-content: center;
-  background: var(--accent); border-color: var(--accent); color: #fff;
+  background: transparent; border-color: transparent; color: var(--ink-2);
 }
-.send-button:hover { background: var(--accent-2); border-color: var(--accent-2); }
+.send-button:hover { background: var(--surface-2); color: var(--accent); }
 .send-button:disabled { opacity: 0.5; cursor: default; }
 .send-button .send-ring { display: none; }
 .send-button[data-state="working"], .send-button[data-state="waiting"] {
-  background: var(--surface); border-color: var(--rule-2); color: var(--accent);
+  background: transparent; border-color: transparent; color: var(--accent);
 }
 .send-button[data-state="working"]:hover, .send-button[data-state="waiting"]:hover { background: var(--surface-2); }
 .send-button[data-state="working"] .send-arrow, .send-button[data-state="waiting"] .send-arrow { display: none; }

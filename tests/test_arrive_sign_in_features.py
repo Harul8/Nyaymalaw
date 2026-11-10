@@ -1428,10 +1428,12 @@ def _nothing_kept(client, data: bytes) -> None:
 
 # ---------------------------------------------------------------- F-C-01 ---
 
-@then("under the brief a plus button offers Attach documents, photos or recordings, and Record a voice note")
-def plus_button_under_the_brief(app_page, page_script):
+@then("beside the brief a plus button offers Attach documents, photos or recordings, and Record a voice note")
+def plus_button_beside_the_brief(app_page, page_script):
     composer = _composer(app_page)
-    assert composer.index('id="message"') < composer.index('id="plus-toggle"')
+    # Plan AN.48 (D173; owner, 10 Nov 2026: "make the chatbox like Claude one"): the plus, the brief, Send and the mic in one line.
+    line = composer[composer.index('class="composer-line"'):]
+    assert line.index('id="plus-toggle"') < line.index('id="message"') < line.index('id="send"') < line.index('id="dictate"')
     items = re.findall(
         r'<button type="button" role="menuitem" id="(plus-[a-z]+)">([^<]+)</button>', composer)
     assert items == [("plus-attach", "Attach documents, photos or recordings"),
