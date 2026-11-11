@@ -507,7 +507,8 @@ def test_privileged_text_may_never_reach_diagnostic_telemetry():
         refuse,
     )
 
-    assert set(NEVER_CLIENT_MATERIAL) == {Sink.TELEMETRY, Sink.SUPPORT}
+    # Plan AN.48, D176: and starting NM's own machines, which needs nothing of a matter.
+    assert set(NEVER_CLIENT_MATERIAL) == {Sink.TELEMETRY, Sink.SUPPORT, Sink.COMPUTE}
     for sink in NEVER_CLIENT_MATERIAL:
         admitted = Policy(processors=(Processor(
             processor_id="diagnostics", region="in", purposes=(sink,),

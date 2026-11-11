@@ -169,8 +169,10 @@ class Application:
                 Path(budget_path), settings.get('NM_EVAL_MAX_USD', '25'), models=models))
         # Configuration is not corpus readiness; models and indices load on demand.
         # Explicit None supports isolated flows without making provider-specific choices.
-        search = (HybridSearcher.local(root=self.root,
-            corpus_dir=settings.get('NM_CORPUS_DIR')) if legal_search is _DEFAULT_SEARCH else legal_search)
+        # Plan AN.48, D176 (48f7-48f8): on the hosted installation the reranker runs on NM's own graphics machine (None: here).
+        self.reranker = build_reranker(settings, self.root, self._gate) if legal_search is _DEFAULT_SEARCH else None
+        search = (HybridSearcher.local(root=self.root, corpus_dir=settings.get('NM_CORPUS_DIR'), reranker=self.reranker)
+                  if legal_search is _DEFAULT_SEARCH else legal_search)
         # The held-law index is a destination too: each query carries the advocate's words.
         # In this process, but policed like every other destination (open items round, 16 Oct 2026).
         self.legal_search = None if search is None else PolicedPort(inner=search, gate=self._gate,
@@ -353,6 +355,10 @@ class Application:
             else:
                 running = self._running[key]
         ended, began, outcome, metrics, replayed = 'stopped', utcnow(), 'failed', None, False
+        if self.reranker is not None and search_may_run(go):
+            # Plan AN.48, D176 (48f8): the search's graphics machine is asked to start as the message is taken, so that it is up by
+            # research.
+            self.reranker.wake_soon()
         try:
             result = process(model, self.store, self.legal_search, advocate_id=advocate_id,
                              session_current=session_current, attempts=self.turn_attempts,
@@ -963,6 +969,53 @@ def gmail_policy():
     return Policy(
         processors=(Processor(GMAIL_PROCESSOR, 'global', (Sink.MAIL,), MAIL_CLASSES, GMAIL_BASIS),),
         processing_exceptions=(ProcessingException(GMAIL_PROCESSOR, 'global', Sink.MAIL, MAIL_CLASSES, GMAIL_BASIS),))
+
+
+#: The owner's exceptions for the hosted search (plan AN.48, D176 (3), 11 Nov 2026), recorded at the composition root as Gmail's is:
+#: NM's own reranker, on the owner's graphics machine in India, may receive the legal questions and law passages, for reranking only;
+#: AWS's requests that read and start NM's own machines carry no client material. Only the reranker's own gate admits either.
+RERANKER_BASIS = 'OWNER-2026-11-11-IN-OWN-RERANKER'
+MACHINE_START_BASIS = 'OWNER-2026-11-11-IN-MACHINE-START'
+
+
+def reranker_policy():
+    from nm.shared.egress_contracts import Policy, Processor
+    from nm.shared.rerank_remote import (MACHINE_CONTROL_CLASSES, MACHINE_CONTROL_PROCESSOR, RERANKER_CLASSES,
+                                         RERANKER_PROCESSOR)
+    return Policy(processors=(
+        Processor(RERANKER_PROCESSOR, 'in', (Sink.INDEX,), RERANKER_CLASSES, RERANKER_BASIS),
+        Processor(MACHINE_CONTROL_PROCESSOR, 'in', (Sink.COMPUTE,), MACHINE_CONTROL_CLASSES, MACHINE_START_BASIS)))
+
+
+def search_may_run(go):
+    """Whether a run of a turn may search the law (plan AN.48, D176, 48f8): end to end, or a step that understands the matter (its
+    understanding may search early) or researches it. A step that only writes or finishes searches nothing."""
+    from nm.core_engine import steps as stepwise
+    gate = stepwise.Gate(go)
+    return gate.allows('understand') or gate.allows('research')
+
+
+def build_reranker(settings, root, gate):
+    """The reranker on NM's own graphics machine (plan AN.48, D176, 48f7-48f8), where NM_RERANKER_URL names its service: with the
+    file of the secret the two machines share (NM_RERANKER_SECRET_FILE, an absolute path) and, to wake the machine, its AWS
+    instance ID (NM_RERANKER_INSTANCE) and region (NM_RERANKER_REGION, Mumbai by default). None where no address is set: the
+    reranker runs in this process, as before. Its requests pass a gate of their own (reranker_policy), writing to the same
+    outgoing-data log. A machine named without an address, or an address without its secret file, refuses to start NM."""
+    url = (settings.get('NM_RERANKER_URL') or '').strip()
+    secret = (settings.get('NM_RERANKER_SECRET_FILE') or '').strip()
+    instance = (settings.get('NM_RERANKER_INSTANCE') or '').strip()
+    if not url:
+        if secret or instance:
+            raise ValueError('A reranker machine is configured without NM_RERANKER_URL.')
+        return None
+    if not secret or not Path(secret).is_absolute():
+        raise ValueError('NM_RERANKER_URL needs NM_RERANKER_SECRET_FILE, the absolute path of the secret both machines share.')
+    from nm.core_engine.retrieval import RERANK_MODEL, RERANK_TOKENS
+    from nm.shared.rerank_remote import MachineWaker, RemoteReranker
+    own = Gatekeeper(policy=reranker_policy(), audit=gate.audit)
+    waker = (MachineWaker(instance, (settings.get('NM_RERANKER_REGION') or 'ap-south-1').strip(), own) if instance else None)
+    return RemoteReranker(url, Path(secret), own, root / '.nm' / 'models' / RERANK_MODEL.replace('/', '__'),
+                          model=RERANK_MODEL, max_length=RERANK_TOKENS, waker=waker)
 
 
 def build_mail(settings, root, key, gate):

@@ -29,6 +29,7 @@ from nm.shared.external_ai_contracts import ModelPermissionRefused
 from nm.shared.model_config import DEFAULT_TURN_MODEL
 from nm.shared.egress_contracts import EgressRefused
 from nm.shared.model_port import USAGE_LIMIT_MESSAGE, ContextOverflow, ModelError, SchemaViolation, Tier, UsageLimitReached
+from nm.shared.rerank_port import BUDGET_PAUSED, GRAPHICS_UNAVAILABLE, ResearchPaused
 from nm.shared.store_port import StaleWrite
 from nm.shared.turn_attempt_port import AttemptRefused, TurnAttemptPort
 
@@ -105,12 +106,18 @@ STOPS = {
     # was written saves it as it stands (48a3).
     "waiting": "NM is waiting for your go-ahead on this matter.",
     "done": "You finished this matter here.",
+    # Plan AN.48, D176 (the owner's decisions of 11 Nov 2026): the hosted search's graphics machine could not be started, or this
+    # month's hosting budget has stopped it - research pauses, keeping what NM finished.
+    GRAPHICS_UNAVAILABLE: "NM's research paused: the machine its search runs on could not be started just now.",
+    BUDGET_PAUSED: "NM's research paused: this month's hosting budget has been reached.",
 }
 #: What each cause needs before Continue can work (D70): put right first, said with the red message.
 STOP_NEEDS = {
     "signed_out": "Sign in again, then press Continue.",
     "model_permission_required": "Turn AI data sharing back on, then press Continue.",
     "usage_limit": "Continue works once more usage is available.",
+    GRAPHICS_UNAVAILABLE: "Press Continue in a few minutes.",
+    BUDGET_PAUSED: "Continue works once the budget is raised or the next month begins.",
 }
 #: Plan AN.41 (D66, D71): a turn saved as it stopped before NM had finished any part of it - the advocate's message and files,
 #: and code's words on why it stopped, with nothing of an answer.
@@ -1362,6 +1369,17 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
                                       retryable=True)
         stopped("stopped", refusal)
         finish("retryable", "stopped")
+        refusal.metrics = calls.metrics()
+        raise refusal from exc
+    except ResearchPaused as exc:
+        # Plan AN.48, D176 (the owner's decisions of 11 Nov 2026): the search's graphics machine could not be started, or this
+        # month's budget has stopped it. Research pauses rather than going on unranked: every piece finished is kept, and Continue
+        # takes it up. Only the reason's code is logged - never matter text.
+        log.warning("Research paused: %s", exc.code)
+        refusal = ConversationRefused(STOPS[exc.code] + " What NM had finished is kept.", status=503, code=exc.code,
+                                      retryable=True)
+        stopped(exc.code, refusal)
+        finish("retryable", exc.code)
         refusal.metrics = calls.metrics()
         raise refusal from exc
     except ModelPermissionRefused as exc:

@@ -22,7 +22,7 @@ from packaging.utils import canonicalize_name
 
 ROOT = Path(__file__).resolve().parents[2]
 TARGET = ROOT / "requirements-hosting.txt"
-EXTRAS = ("openai", "semantic", "documents")
+EXTRAS = ("openai", "semantic", "documents", "aws")  # aws: plan AN.48, D176 - the hosted search's graphics machine
 LEFT_OUT = {"pip", "setuptools", "wheel", "nyaymalaw"}
 HEADER = """\
 # The packages a hosting machine installs for NM, pinned to the versions NM is run and tested with (docs/HOSTING.md).

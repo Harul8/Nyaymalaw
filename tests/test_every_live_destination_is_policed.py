@@ -286,7 +286,10 @@ def test_the_composition_root_polices_every_live_destination():
                 "UploadPort", "DocumentDerivativePort", "UsagePort",
                 "AdminDirectoryPort", "AdminUsagePort", "AdminRecordPort", "AdminTurnsPort", "AdminChecksPort", "AdminAccountsPort", "AdminLibraryPort", "AdminStagingPort",
                 # One content-free line per finished turn (plan AN.46, piece 46h; D120): operational, on local storage.
-                "TurnEventPort"}
+                "TurnEventPort",
+                # Plan AN.48 (48f1, 48f4; D167): the steps' own records and what the web server and the step worker share, sealed on
+                # local storage. Policed since 48f; this list was not brought up to them then (found 11 Nov 2026, D176's run).
+                "StepRecordPort", "StepSharePort"}
     assert ports and len(ports) == len(calls) == len(set(ports)), (
         "Every actual wrapper must declare its unique port destination")
     assert set(ports) == expected, "The served destination inventory must remain fully policed"
@@ -331,6 +334,8 @@ POLICED: dict[Sink, str] = {
     # Account mail is wired through the generic `PolicedPort`, so the module
     # that names its sink is the composition root that admits it.
     Sink.MAIL: "nm/app/composition.py",
+    # Plan AN.48, D176: starting NM's own graphics machine, through the reranker adapter's own gate.
+    Sink.COMPUTE: "nm/shared/rerank_remote.py",
 }
 
 #: Sinks with NO destination, each with the evidence of its absence -- a claim

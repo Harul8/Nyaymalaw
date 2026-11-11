@@ -35,6 +35,9 @@ acquisition = ["pymupdf>=1.24"]
 # Local born-digital extraction; scanned pages are drawn as images in the same
 # bounded process and read by the model (owner decision, 15 Oct 2026).
 documents = ["pypdf>=6,<7", "pypdfium2>=5,<6", "Pillow>=12,<13"]
+# The hosted installation on AWS (plan AN.48, D176): the reranker on NM's own graphics machine, reached over the private network,
+# and the AWS client that wakes that machine.
+aws = ["httpx>=0.27", "boto3>=1.44,<2"]
 dev = [
     "jsonschema>=4.26,<5",
     "pytest>=8.0",

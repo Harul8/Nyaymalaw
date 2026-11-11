@@ -25,6 +25,8 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Protocol
 
+from nm.shared.rerank_port import ResearchPaused
+
 EMBED_MODEL = "BAAI/bge-large-en-v1.5"
 RERANK_MODEL = "BAAI/bge-reranker-v2-m3"
 DIMENSIONS = 1024
@@ -204,8 +206,11 @@ def _ranked_positions(ranked: object) -> tuple[list[int], int]:
 
 
 class _Models:
-    def __init__(self, folder: Path) -> None:
+    def __init__(self, folder: Path, reranker=None) -> None:
         self.folder = folder
+        #: Plan AN.48, D176 (48f7): the reranker on NM's own graphics machine, where the installation has one - the same model,
+        #: reading as here, with its own tokenizer and predict (nm/shared/rerank_remote.py); None: the reranker loads here.
+        self.reranker = reranker
         self._loaded: dict | None = None
         self.lock = threading.RLock()
         # Copies of each model's tokenizer that text preparation borrows (borrowed()).
@@ -214,6 +219,8 @@ class _Models:
         self._returned = threading.Condition()
 
     def _model(self, which):
+        if which == "reranking" and self.reranker is not None:
+            return self.reranker
         with self.lock:
             if self._loaded is None:
                 self._loaded = {}
@@ -707,7 +714,9 @@ class LocalCollection:
         # One probe pages in the vector index and starts the device kernels;
         # its results are discarded and nothing is cached as evidence.
         self.semantic_many(("warm-up",), 1)
-        self.rerank([("warm-up", "warm-up")])
+        if self.models.reranker is None:
+            # Plan AN.48, D176: a reranker on NM's own graphics machine is not woken at start; an advocate's message wakes it.
+            self.rerank([("warm-up", "warm-up")])
 
     def _open(self):
         if self._loaded is not None:
@@ -1524,12 +1533,13 @@ class HybridSearcher:
         self.aliases = aliases or {}
 
     @classmethod
-    def local(cls, root=None, corpus_dir=None):
+    def local(cls, root=None, corpus_dir=None, reranker=None):
+        """reranker (plan AN.48, D176): the reranker on NM's own graphics machine, where the installation has one; None: here."""
         root = Path(root or Path(__file__).resolve().parents[2])
         corpus = Path(corpus_dir or os.environ.get("NM_CORPUS_DIR") or root / "legal_database/vector_store")
         if not corpus.is_absolute():
             corpus = root / corpus
-        models = _Models(root / ".nm/models")
+        models = _Models(root / ".nm/models", reranker=reranker)
         copies = {"provision": root / "pipeline" / "instrument_copies.json"}
         return cls({kind: LocalCollection(corpus_dir=corpus, lineage=root / ".nm/retrieval" / file,
             doc_type=doc_type, models=models, copies=copies.get(kind)) for kind, file, doc_type in (
@@ -1808,6 +1818,10 @@ class HybridSearcher:
                 elif kind == "judgment":
                     scored = _judgment_order(scored, rows, standing)
                 stages.append({"kind": kind, "query_id": None, "stage": "rerank", "state": "evaluated", "hits": len(usable)})
+            except ResearchPaused:
+                # Plan AN.48, D176 (the owner's decisions of 11 Nov 2026): the graphics machine could not be had - research pauses,
+                # rather than going on unranked; the turn stops there, keeping what it finished, for Continue.
+                raise
             except Exception as exc:
                 _log_stage_failure(kind, "rerank", exc)
                 issues.append({"kind": kind, "query_id": None, "stage": "rerank", "reason": type(exc).__name__})

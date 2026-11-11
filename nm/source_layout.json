@@ -122,6 +122,8 @@
     "nm.shared.operation_contracts": "domain",
     "nm.shared.optional_adapter": "adapters",
     "nm.shared.policed_port_adapter": "adapters",
+    "nm.shared.rerank_port": "ports",
+    "nm.shared.rerank_remote": "adapters",
     "nm.shared.source_excerpt_contracts": "domain",
     "nm.shared.source_layout": "infrastructure",
     "nm.shared.spoken_contracts": "domain",
@@ -147,13 +149,13 @@
     "nm.work_the_file.matter_contracts": "domain"
   },
   "expected_roles": {
-    "adapters": 40,
+    "adapters": 41,
     "bootstrap": 7,
     "core": 42,
     "domain": 37,
     "edge": 3,
     "infrastructure": 1,
-    "ports": 14
+    "ports": 15
   },
   "browser_assets": {
     "app.css": "nm/app/app.css",

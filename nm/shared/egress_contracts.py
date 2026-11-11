@@ -59,6 +59,9 @@ class Sink(str, Enum):
     #: into text. It is the client's instructions in the advocate's voice, so it
     #: is client matter material wherever it is sent.
     TRANSCRIPTION = "transcription"
+    #: Plan AN.48, D176 (owner, 11 Nov 2026): reading and starting NM's own machines - the graphics machine that reranks. It
+    #: carries the machine's identity and nothing of any matter, and may never carry client material.
+    COMPUTE = "compute"
 
 
 class DataClass(str, Enum):
@@ -70,8 +73,8 @@ class DataClass(str, Enum):
 #: Sinks that may never carry client material, whatever a processor inventory
 #: says. A diagnostic pipeline is read by whoever is on call, retained by a
 #: vendor's default policy and forwarded to a crash aggregator; none of that is
-#: a decision anybody made about a privileged brief.
-NEVER_CLIENT_MATERIAL = (Sink.TELEMETRY, Sink.SUPPORT)
+#: a decision anybody made about a privileged brief. Starting a machine (D176) needs nothing of a matter either.
+NEVER_CLIENT_MATERIAL = (Sink.TELEMETRY, Sink.SUPPORT, Sink.COMPUTE)
 
 #: The only region this product operates in. `docs/blueprint/SECURITY_PRIVACY.md`
 #: §2.6 records it as a PRODUCT POLICY and explicitly not a claim that the law

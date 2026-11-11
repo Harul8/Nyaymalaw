@@ -178,11 +178,12 @@ def test_the_home_region_and_the_forbidden_sinks_are_stated_once():
     POLICY and explicitly not a claim that the law requires it. This module
     enforces the policy without asserting the law."""
     assert HOME_REGION == "in"
-    assert set(NEVER_CLIENT_MATERIAL) == {Sink.TELEMETRY, Sink.SUPPORT}
+    # Plan AN.48, D176: starting NM's own machines needs nothing of a matter either.
+    assert set(NEVER_CLIENT_MATERIAL) == {Sink.TELEMETRY, Sink.SUPPORT, Sink.COMPUTE}
 
 
 def test_every_sink_is_named_rather_than_defaulted():
     """A new destination is a change to the enum, not an unlisted default."""
     assert {s.value for s in Sink} == {
         "model", "media", "storage", "index", "backup", "support", "telemetry",
-        "mail", "transcription"}
+        "mail", "transcription", "compute"}
