@@ -1245,8 +1245,8 @@ def a_dispute_or_item_opens_in_the_reading_pane(page_script):
     assert ("window.NmBrainSources.showContent(item.need,\n        renderChecklistItem(item, dispute), row, false, "
             "`${groupTitle} · ${place}`)") in card
     detail = _function(page_script, "renderDisputeDetail")
-    for part in ("`Between ${dispute.between.join(' · ')}`", "dispute.why_it_matters", "'Time limits'",
-                 "'Where it was picked up from'", "'Legal questions'", "`Why it was asked: ${question.why}`",
+    for part in ("`Between ${dispute.between.join(' · ')}`", "dispute.why_it_matters", "`Time limits (${limits.length})`",
+                 "`The facts it rests on (${facts.length})`", "`The legal questions researched (${dispute.questions.length})`", "`Why it was asked: ${question.why}`",
                  "'Rights at stake'", "'Relief sought'", "'Still needed'", "'Related points for your decision'"):
         assert part in detail, part
     item = _function(page_script, "renderChecklistItem")

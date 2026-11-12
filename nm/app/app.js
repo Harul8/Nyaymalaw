@@ -3181,9 +3181,7 @@ function renderTurn(entry) {
           + `${listed.length - shown - weak} not yet shown.${toGet ? ` ${toGet} to get.` : ''}`
           + `${unfound ? ` For ${unfound} of its points NM could not find the quoted words in the law it read.` : ''}`));
         if (CASE_STATES[view.state]) summary.appendChild(say('check-none', CASE_STATES[view.state]));
-        summary.appendChild(say('board-lede', `This is NM’s working list: ${view.state === 'checked' ? 'a second look checked it and ' : ''}`
-          + 'code looked for each quotation of law in the passage it names. It did not go through the independent review that the '
-          + 'sections of this answer did.'));
+        summary.appendChild(say('board-lede', caseCheckedLine(view)));
         if (el.dispute && el.dispute.name) {
           const where = document.createElement('button');
           where.type = 'button';
@@ -4851,6 +4849,61 @@ function deadlineChips(limits) {
   return chips;
 }
 
+// HOW A CASE WAS CHECKED, IN CODE'S WORDS (plan AN.49, D185), ONE COPY: said wherever the account is shown, outside any fold. A second
+// look is claimed only where one was made.
+function caseCheckedLine(view) {
+  return `This is NM’s working list: ${view && view.state === 'checked' ? 'a second look checked it and ' : ''}`
+    + 'code looked for each quotation of law in the passage it names. It did not go through the independent review that the '
+    + 'sections of an answer do.';
+}
+
+// A CASE AS ITS LINES (plan AN.39, D52, D56-D57), ONE COPY (plan AN.49, 49b): each thing the law requires, and each thing the other side
+// will rely on, as one line with its mark that opens alone in the reading pane. The board's card draws them under its dispute; the
+// whole-dispute view draws the same lines inside its fold, so a point is opened the same way from either.
+function caseLines(view, dispute, place) {
+  const make = (tag, className, text) => {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  };
+  const line = (className, mark, words, srLabel, open) => {
+    const li = make('li');
+    const row = make('button', className);
+    row.type = 'button';
+    const said = make('span', 'item-words');
+    said.appendChild(make('span', 't short', words));
+    if (srLabel) said.appendChild(make('span', 'sr', ` · ${srLabel}`));
+    const sign = make('span', 'st st--' + mark);
+    sign.setAttribute('aria-hidden', 'true');
+    row.append(sign, said);
+    row.addEventListener('click', () => open(row));
+    li.appendChild(row);
+    return li;
+  };
+  const out = [make('p', 'group', 'What the law requires')];
+  const ul = make('ul', 'checklist');
+  for (const item of view.elements || []) {
+    const mark = CASE_MARKS[item.status] || CASE_MARKS.missing;
+    ul.appendChild(line(`item item--${mark.mark}`, mark.mark, item.label || item.element, mark.label,
+      (row) => window.NmBrainSources.showContent(item.label || item.element, renderCaseItem(item, view, dispute, caseHolder(dispute)),
+        row, false, `What the law requires · ${place}`)));
+  }
+  out.push(ul);
+  const other = view.other_side || [];
+  if (other.length) {
+    out.push(make('p', 'group', 'The other side will rely on'));
+    const theirs = make('ul', 'checklist');
+    for (const item of other) {
+      theirs.appendChild(line('item item--other', 'other', item.label || item.relies_on, '',
+        (row) => window.NmBrainSources.showContent(item.label || item.relies_on, renderOtherSideItem(item, dispute, caseHolder(dispute)),
+          row, false, `The other side will rely on · ${place}`)));
+    }
+    out.push(theirs);
+  }
+  return out;
+}
+
 function renderDisputeCard(dispute, board, number = null) {
   const make = (tag, className, text) => {
     const node = document.createElement(tag);
@@ -4903,41 +4956,7 @@ function renderDisputeCard(dispute, board, number = null) {
           + 'finding that the law requires nothing.'));
       return section;
     }
-    const place = number ? `Dispute ${number}` : dispute.name;
-    const line = (className, mark, words, srLabel, open) => {
-      const li = make('li');
-      const row = make('button', className);
-      row.type = 'button';
-      const said = make('span', 'item-words');
-      said.appendChild(make('span', 't short', words));
-      if (srLabel) said.appendChild(make('span', 'sr', ` · ${srLabel}`));
-      const sign = make('span', 'st st--' + mark);
-      sign.setAttribute('aria-hidden', 'true');
-      row.append(sign, said);
-      row.addEventListener('click', () => open(row));
-      li.appendChild(row);
-      return li;
-    };
-    section.appendChild(make('p', 'group', 'What the law requires'));
-    const ul = make('ul', 'checklist');
-    for (const item of elements) {
-      const mark = CASE_MARKS[item.status] || CASE_MARKS.missing;
-      ul.appendChild(line(`item item--${mark.mark}`, mark.mark, item.label || item.element, mark.label,
-        (row) => window.NmBrainSources.showContent(item.label || item.element, renderCaseItem(item, view, dispute, caseHolder(dispute)),
-          row, false, `What the law requires · ${place}`)));
-    }
-    section.appendChild(ul);
-    const other = view.other_side || [];
-    if (other.length) {
-      section.appendChild(make('p', 'group', 'The other side will rely on'));
-      const theirs = make('ul', 'checklist');
-      for (const item of other) {
-        theirs.appendChild(line('item item--other', 'other', item.label || item.relies_on, '',
-          (row) => window.NmBrainSources.showContent(item.label || item.relies_on, renderOtherSideItem(item, dispute, caseHolder(dispute)),
-            row, false, `The other side will rely on · ${place}`)));
-      }
-      section.appendChild(theirs);
-    }
+    section.append(...caseLines(view, dispute, number ? `Dispute ${number}` : dispute.name));
     return section;
   }
   const meta = make('p', 'dmeta');
@@ -5125,12 +5144,42 @@ function renderDisputeDetail(dispute, board) {
   if (dispute.law && dispute.law.state === 'not_assessed') {
     out.push(part('What the law requires', make('p', 'check-none', `Not yet assessed. ${dispute.law.why}`)));
   }
+  // PLAN AN.49 (49b; D179; owner, 12 Nov 2026: the pane "is a bit cluttered today and difficult to follow"): A SUMMARY WITH FOLDS. Open
+  // at the top: who it is between, why it matters and the last days. Below, each part closed under its name and count; nothing is
+  // removed. The case is its lines, each opening alone as from the board, never the whole account again. What discloses - the law
+  // not assessed, a case NM could not set out, a second look not made, how the case was checked - stays outside every fold.
+  const fold = (title, ...content) => {
+    const section = make('details', 'how-checked detail-fold');
+    section.appendChild(make('summary', '', title));
+    section.append(...content);
+    return section;
+  };
   const limits = (dispute.checklist && dispute.checklist.time_limits) || [];
   const chips = deadlineChips(limits);
   if (chips.length) {
     const meta = make('p', 'dmeta');
     meta.append(...chips);
     out.push(meta);
+  }
+  if (dispute.checklist && 'case' in dispute.checklist) {
+    const view = dispute.checklist.case;
+    const elements = (view && view.elements) || [];
+    if (!view) {
+      out.push(make('p', 'check-none', 'NM could not set out what would make this case stronger when it last answered.'));
+    } else {
+      if (CASE_STATES[view.state]) out.push(make('p', 'check-none', CASE_STATES[view.state]));
+      if (elements.length) {
+        out.push(make('p', 'board-lede', caseCheckedLine(view)));
+        const shown = elements.filter((item) => item.status === 'shown').length;
+        const toGet = (view.to_get || []).length;
+        const number = (board.disputes || []).length > 1 ? board.disputes.findIndex((held) => held.id === dispute.id) + 1 : 0;
+        out.push(fold(`The case (${shown} of ${elements.length} shown by the papers${toGet ? ` · ${toGet} to get` : ''})`,
+          ...caseLines(view, dispute, number ? `Dispute ${number}` : dispute.name)));
+      } else if (view.state !== 'unavailable') {
+        out.push(make('p', 'check-none', 'NM set out no element for this dispute from the law it read. That is what this '
+          + 'research returned, not a finding that the law requires nothing.'));
+      }
+    }
   }
   // Each time limit as code worked it out, or why it could not be (18 Oct 2026).
   if (limits.length) {
@@ -5143,11 +5192,7 @@ function renderDisputeDetail(dispute, board) {
         ? `Last day ${rows.get('Last day')} · ${timeLimitStanding(rows)}` : timeLimitStanding(rows)));
       ul.appendChild(li);
     }
-    out.push(part('Time limits', ul));
-  }
-  if (dispute.checklist && 'case' in dispute.checklist) {
-    out.push(part('What makes the case stronger', ...(dispute.checklist.case ? renderCaseBlock(dispute.checklist.case, caseHolder(dispute))
-      : [make('p', 'check-none', 'NM could not set out what would make this case stronger when it last answered.')])));
+    out.push(fold(`Time limits (${limits.length})`, ul));
   }
   const facts = (dispute.fact_ids || []).map((id) => board.facts.find((fact) => fact.id === id)).filter(Boolean);
   if (facts.length) {
@@ -5161,7 +5206,7 @@ function renderDisputeDetail(dispute, board) {
       li.appendChild(make('p', 'board-meta', factPlace(fact)));
       ul.appendChild(li);
     }
-    out.push(part('Where it was picked up from', ul));
+    out.push(fold(`The facts it rests on (${facts.length})`, ul));
   }
   if (dispute.questions.length) {
     const ol = make('ol', 'detail-list');
@@ -5174,16 +5219,21 @@ function renderDisputeDetail(dispute, board) {
       if (question.open) li.appendChild(make('p', 'board-meta', `Still open: ${question.open}`));
       ol.appendChild(li);
     }
-    out.push(part('Legal questions', ol));
+    out.push(fold(`The legal questions researched (${dispute.questions.length})`, ol));
   }
-  if (dispute.rights_at_stake.length) out.push(part('Rights at stake', list(dispute.rights_at_stake)));
-  if (dispute.relief_sought.length) out.push(part('Relief sought', list(dispute.relief_sought)));
-  if (dispute.still_needed.length) out.push(part('Still needed', list(dispute.still_needed)));
   const related = board.related_points.filter((point) => (point.dispute_id
     ? point.dispute_id === dispute.id : point.dispute === dispute.name));
+  const stake = [];
+  if (dispute.rights_at_stake.length) stake.push(part('Rights at stake', list(dispute.rights_at_stake)));
+  if (dispute.relief_sought.length) stake.push(part('Relief sought', list(dispute.relief_sought)));
+  if (dispute.still_needed.length) stake.push(part('Still needed', list(dispute.still_needed)));
   if (related.length) {
-    out.push(part('Related points for your decision',
+    stake.push(part('Related points for your decision',
       list(related.map((point) => (point.why ? `${point.point} — ${point.why}` : point.point)))));
+  }
+  if (stake.length) {
+    out.push(fold(`What is at stake (${dispute.rights_at_stake.length + dispute.relief_sought.length
+      + dispute.still_needed.length + related.length})`, ...stake));
   }
   out.push(make('p', 'board-lede', 'NM’s understanding from your messages and documents. Facts are as you '
     + 'or a document gave them, not proved.'));

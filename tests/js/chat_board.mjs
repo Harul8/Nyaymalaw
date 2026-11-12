@@ -99,8 +99,8 @@ const board = {
   assert.equal(opened[0].trigger, card);
   const detail = opened[0].content.map(text).join('\n');
   for (const part of ['Between The client · The neighbour', 'The client cannot reach the property without the path.',
-    'Where it was picked up from', 'ownership is disputed', 'From your messages', 'From photo.jpg, page 1 (read by AI)',
-    'Legal questions', 'Can the client establish an easement?', 'Research: researched',
+    'The facts it rests on (', 'ownership is disputed', 'From your messages', 'From photo.jpg, page 1 (read by AI)',
+    'The legal questions researched (', 'Can the client establish an easement?', 'Research: researched',
     'Why it was asked: It decides the right of way.', 'Still open: How long the path has been used.',
     'Research: search failed', 'Rights at stake', 'A right of way', 'Relief sought', 'An injunction',
     'Still needed', 'Related points for your decision', 'Any other access — It affects necessity.']) {

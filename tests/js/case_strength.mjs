@@ -115,7 +115,7 @@ assert.ok(outside && !walk(beside).includes(outside), 'the summary stands outsid
 const said = outside.textContent;
 for (const part of [`NM set out ${view.elements.length} things the law requires for this dispute:`, 'shown by the papers', 'shown only weakly',
   'not yet shown.', `${view.to_get.length} to get.`, 'NM could not find the quoted words in the law it read.',
-  'This is NM’s working list:', 'It did not go through the independent review that the sections of this answer did.',
+  'This is NM’s working list:', 'It did not go through the independent review that the sections of an answer do.',
   'Show this dispute on the matter board']) {
   assert.ok(said.includes(part), part);
 }
@@ -174,7 +174,15 @@ for (const part of ['1 · The boundary dispute', '1 of 2 shown by the papers', '
 assert.ok(!cardText.includes('NM found nothing this dispute needs'), 'a case is never read as an empty checklist');
 const detail = context.renderDisputeDetail(dispute, board);
 const detailText = detail.map((node) => node.textContent).join('\n');
-assert.ok(detailText.includes('What makes the case stronger') && detailText.includes('The postal receipt — from the client'));
+// Plan AN.49 (49b; D179): the whole-dispute view is a summary with folds. The case is its lines under one closed fold, each
+// opening alone; the whole account is not drawn again, and how it was checked is said outside the fold.
+const caseFold = detail.find((node) => node.tagName === 'DETAILS' && node.children[0].textContent.startsWith('The case ('));
+assert.ok(caseFold && caseFold.open === false, 'the case is one closed fold');
+assert.ok(caseFold.children[0].textContent.includes(`of ${view.elements.length} shown by the papers`));
+assert.ok(caseFold.textContent.includes('Possession for the period the law requires') && caseFold.textContent.includes('Notice before the suit'));
+assert.ok(!detailText.includes('The revenue entries show it year after year.'), 'the whole account is not repeated in this view');
+assert.ok(detail.some((node) => node.tagName !== 'DETAILS' && node.textContent.startsWith('This is NM’s working list:')),
+  'how the case was checked stands outside the fold');
 const none = context.renderDisputeCard({ ...dispute, checklist: { ...dispute.checklist, case: null } }, board, 1);
 assert.ok(none.textContent.includes('NM could not set out what would make this case stronger when it last answered.'));
 

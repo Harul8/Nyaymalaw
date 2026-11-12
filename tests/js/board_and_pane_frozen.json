@@ -128,10 +128,82 @@
       "span.chip.deadline.open"
      ]
     ],
+    "p.board-lede",
     [
-     "section.detail-section",
+     "details.how-checked.detail-fold",
      [
-      "h3.detail-h \"Time limits\"",
+      "summary \"The case (1 of 2 shown by the papers · 1 to get)\"",
+      "p.group",
+      [
+       "ul.checklist",
+       [
+        [
+         "li",
+         [
+          [
+           "button.item.item--in_hand \"Possession for twelve years · Shown by the papers\"",
+           [
+            "span.st.st--in_hand",
+            [
+             "span.item-words",
+             [
+              "span.t.short",
+              "span.sr"
+             ]
+            ]
+           ]
+          ]
+         ]
+        ],
+        [
+         "li",
+         [
+          [
+           "button.item.item--coming_or_unclear \"Notice before the suit · Shown only weakly\"",
+           [
+            "span.st.st--coming_or_unclear",
+            [
+             "span.item-words",
+             [
+              "span.t.short",
+              "span.sr"
+             ]
+            ]
+           ]
+          ]
+         ]
+        ]
+       ]
+      ],
+      "p.group",
+      [
+       "ul.checklist",
+       [
+        [
+         "li",
+         [
+          [
+           "button.item.item--other \"Their later entry\"",
+           [
+            "span.st.st--other",
+            [
+             "span.item-words",
+             [
+              "span.t.short"
+             ]
+            ]
+           ]
+          ]
+         ]
+        ]
+       ]
+      ]
+     ]
+    ],
+    [
+     "details.how-checked.detail-fold",
+     [
+      "summary \"Time limits (1)\"",
       [
        "ul.detail-list",
        [
@@ -140,89 +212,6 @@
          [
           "p.detail-question",
           "p.board-meta"
-         ]
-        ]
-       ]
-      ]
-     ]
-    ],
-    [
-     "section.detail-section",
-     [
-      "h3.detail-h \"What makes the case stronger\"",
-      "h4.board-h \"What the law requires\"",
-      [
-       "ul.case-list",
-       [
-        [
-         "li.case-element",
-         [
-          [
-           "p.case-head",
-           [
-            "span.st.st--in_hand",
-            "span.t"
-           ]
-          ],
-          "p.board-meta",
-          "p",
-          "blockquote.detail-words",
-          [
-           "p.req-law",
-           [
-            "button.cite \"s.4, Imagined Relief Act, 1907\""
-           ]
-          ],
-          [
-           "p.board-meta",
-           [
-            "button.cite \"entries.pdf, page 2\""
-           ]
-          ]
-         ]
-        ],
-        [
-         "li.case-element",
-         [
-          [
-           "p.case-head",
-           [
-            "span.st.st--coming_or_unclear",
-            "span.t"
-           ]
-          ],
-          "p.board-meta",
-          "p",
-          "p.board-meta",
-          "p.board-meta"
-         ]
-        ]
-       ]
-      ],
-      "h4.board-h \"What to get\"",
-      [
-       "ul.board-list",
-       [
-        [
-         "li",
-         [
-          "p.detail-question",
-          "p.board-meta",
-          "p",
-          "p.board-meta"
-         ]
-        ]
-       ]
-      ],
-      "h4.board-h \"What the other side will rely on\"",
-      [
-       "ul.board-list",
-       [
-        [
-         "li",
-         [
-          "p.detail-question",
-          "p"
          ]
         ]
        ]
