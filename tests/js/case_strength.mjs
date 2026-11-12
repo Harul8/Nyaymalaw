@@ -106,7 +106,34 @@ const has = (name) => (node) => String(node.className).split(/\s+/).includes(nam
 const [beside] = walk(turn).filter(has('answer-case'));
 assert.ok(beside, 'the case is drawn beside the section');
 assert.equal(beside.tagName, 'DETAILS');
-assert.equal(beside.open, true, 'open: what the case needs is read with the section');
+// Plan AN.49 (49a; D177, D185, D187a-b): the answer opens on the advice. The whole account is folded, drawn closed; what must not
+// be missed stands outside the fold, in code's words.
+assert.equal(beside.open, false, 'closed: the answer opens on the advice');
+assert.ok(beside.children[0].textContent.startsWith('What makes the case stronger: the whole list ('), 'the fold says how long it is');
+const [outside] = walk(turn).filter(has('case-summary'));
+assert.ok(outside && !walk(beside).includes(outside), 'the summary stands outside the fold');
+const said = outside.textContent;
+for (const part of [`NM set out ${view.elements.length} things the law requires for this dispute:`, 'shown by the papers', 'shown only weakly',
+  'not yet shown.', `${view.to_get.length} to get.`, 'NM could not find the quoted words in the law it read.',
+  'This is NM’s working list:', 'It did not go through the independent review that the sections of this answer did.',
+  'Show this dispute on the matter board']) {
+  assert.ok(said.includes(part), part);
+}
+const counted = (status) => view.elements.filter((item) => item.status === status).length;
+assert.ok(said.includes(`${counted('shown')} shown by the papers, ${counted('weak')} shown only weakly, `
+  + `${view.elements.length - counted('shown') - counted('weak')} not yet shown.`), 'the counts are the saved case’s own');
+// A second look that could not be made is said outside the fold, never only inside it; a case with no requirement stays open.
+const turnOf = (given) => context.renderTurn({ brief: 'What do we need?', answer: { turn_id: 't2', chat_id: 'c1',
+  elements: [label('HEADING', 'The boundary dispute'), label('CASE', 'What makes the case stronger',
+    { case: given, dispute: { id: 'D1', name: 'The boundary dispute' } })],
+  metrics: { gates_fired: [], outcome: 'ok', latency_ms: 1, llm_calls: 1, tokens: { in: 1, out: 1 }, cost_usd: 0, violations: [],
+    tier_downgrades: [] } } });
+const [unsure] = walk(turnOf({ ...view, state: 'unchecked' })).filter(has('case-summary'));
+assert.ok(unsure.textContent.includes('NM’s second look at this list could not be made'), 'said outside the fold');
+assert.ok(!unsure.textContent.includes('a second look checked it'), 'no second look is claimed where none was made');
+const unset = walk(turnOf({ state: 'unavailable', elements: [], to_get: [], other_side: [] }));
+assert.equal(unset.filter(has('case-summary')).length, 0);
+assert.equal(unset.filter(has('answer-case'))[0].open, true, 'one sentence is not folded');
 const text = beside.textContent;
 for (const part of ['What makes the case stronger', 'What the law requires',
   'Possession for the period the law requires', 'Shown by the papers · For your client to prove',

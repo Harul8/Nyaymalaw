@@ -3146,15 +3146,64 @@ function renderTurn(entry) {
     // WHAT YOUR PAPERS RECORD (plan AN.33, D20; piece 33m): every point NM read from the papers, built by code from the
     // record and folded at the end, so that none is lost whatever the advice takes up; what NM could not check on a page, a
     // date found nowhere, the differences between papers and what was set aside are each said as such.
-    // WHAT MAKES THE CASE STRONGER (plan AN.35; rendering v20), beside its dispute's section, open.
+    // WHAT MAKES THE CASE STRONGER (plan AN.35; rendering v20), beside its dispute's section.
+    // PLAN AN.49 (49a; D177, D185, D187a-b; owner, 12 Nov 2026: "a more crisper and sharper summary in the chat window"): the answer
+    // opens on the advice. The whole account is folded, drawn closed, for every answer saved or new - nothing saved changes. What
+    // must not be missed stands outside the fold, in code's words from the saved case: how the requirements stand, what there is to
+    // get, a quotation NM could not find, a second look that could not be made, and how the list was checked. A case with no
+    // requirement is one sentence and stays open.
     if (el.kind === 'CASE' && el.case) {
+      const view = el.case;
+      const listed = view.elements || [];
       const fold = document.createElement('details');
       fold.className = 'answer-checked answer-case';
-      fold.open = true;
+      fold.open = !listed.length;
       const opener = document.createElement('summary');
-      opener.textContent = el.text;
+      opener.textContent = listed.length ? `${el.text}: the whole list (${listed.length})` : el.text;
       fold.appendChild(opener);
-      fold.append(...renderCaseBlock(el.case, caseHolderOf(entry.answer)));
+      fold.append(...renderCaseBlock(view, caseHolderOf(entry.answer)));
+      if (listed.length) {
+        const say = (className, text) => {
+          const line = document.createElement('p');
+          line.className = className;
+          line.textContent = text;
+          return line;
+        };
+        const stand = (status) => listed.filter((item) => item.status === status).length;
+        const shown = stand('shown');
+        const weak = stand('weak');
+        const toGet = (view.to_get || []).length;
+        const unfound = [...listed, ...(view.other_side || [])].filter((item) => item.law && item.law.found === false).length;
+        const summary = document.createElement('div');
+        summary.className = 'case-summary';
+        summary.appendChild(say('board-lede', `NM set out ${listed.length} ${listed.length === 1 ? 'thing' : 'things'} the law `
+          + `requires for this dispute: ${shown} shown by the papers, ${weak} shown only weakly, `
+          + `${listed.length - shown - weak} not yet shown.${toGet ? ` ${toGet} to get.` : ''}`
+          + `${unfound ? ` For ${unfound} of its points NM could not find the quoted words in the law it read.` : ''}`));
+        if (CASE_STATES[view.state]) summary.appendChild(say('check-none', CASE_STATES[view.state]));
+        summary.appendChild(say('board-lede', `This is NM’s working list: ${view.state === 'checked' ? 'a second look checked it and ' : ''}`
+          + 'code looked for each quotation of law in the passage it names. It did not go through the independent review that the '
+          + 'sections of this answer did.'));
+        if (el.dispute && el.dispute.name) {
+          const where = document.createElement('button');
+          where.type = 'button';
+          where.className = 'cite';
+          where.textContent = 'Show this dispute on the matter board';
+          where.addEventListener('click', () => {
+            const card = Array.from(document.querySelectorAll('.board-disputes .dispute'))
+              .find((dispute) => dispute.getAttribute('aria-label') === el.dispute.name);
+            if (!card) return;
+            card.scrollIntoView({ block: 'nearest' });
+            const title = card.querySelector('.dtitle');
+            if (title) title.focus();
+          });
+          const line = document.createElement('p');
+          line.className = 'req-law';
+          line.appendChild(where);
+          summary.appendChild(line);
+        }
+        into.appendChild(summary);
+      }
       into.appendChild(fold);
       return;
     }
