@@ -868,8 +868,9 @@ class Application:
     #
     # WHAT EACH ACT IS. The store: its folder takes a write, and a saved matter opens under this installation's secret. The held
     # law, each collection: its own `warm`, which opens its passages and both indexes, loads the local models, answers one
-    # query and scores one pair with the reranker. The malware scanner: it is asked about harmless bytes. Account mail and the
-    # AI service have no free act of their own yet and are said as NOT CHECKED - never as ready.
+    # query and scores one pair with the reranker. The malware scanner: it is asked about harmless bytes. The outgoing-data
+    # log: its folder takes a write (D236: while it does not, nothing is sent outside this computer). Account mail and the AI
+    # service have no free act of their own yet and are said as NOT CHECKED - never as ready.
     #
     # WHO ASKS. The check command and the start measure (`measure=True`: the search's act loads the models, so it takes as long
     # as warming does). A health request shows what was last measured (`measure=False`) and measures nothing.
@@ -878,6 +879,7 @@ class Application:
         if measure:
             self._readiness = {'the store': self._store_readiness(), **self._law_readiness(),
                                'the malware scanner': self._scanner_readiness(),
+                               'the outgoing-data log': self._log_readiness(),
                                'account mail': {'state': NOT_CHECKED, 'why': 'no check of account mail is built yet: nothing '
                                                 'here tries whether a message can leave'},
                                'the AI service': {'state': NOT_CHECKED, 'why': 'no free check of the AI account is built yet: '
@@ -886,7 +888,8 @@ class Application:
         if kept is None:
             unmeasured = {'state': NOT_CHECKED, 'why': 'not measured since this process started'}
             kept = {name: dict(unmeasured) for name in ('the store', 'the held law: provision', 'the held law: judgment',
-                                                         'the malware scanner', 'account mail', 'the AI service')}
+                                                         'the malware scanner', 'the outgoing-data log', 'account mail',
+                                                         'the AI service')}
         return {name: dict(entry) for name, entry in kept.items()}
 
     def _store_readiness(self) -> dict:
@@ -932,6 +935,21 @@ class Application:
                 # The search's own refusal, a library that does not import, or a file that is not there: its words say which.
                 measured[f'the held law: {name}'] = {'state': NOT_READY, 'why': str(exc) or type(exc).__name__}
         return measured
+
+    def _log_readiness(self) -> dict:
+        """Whether the outgoing-data log's folder takes a write (plan AN.53, D236): while it does not, nothing is sent outside
+        this computer (`_egress_audit`). The act is a file made and removed in the folder, never a line in the log, which holds
+        one line for each reach to a destination and nothing else."""
+        folder = getattr(self.egress_log, 'folder', self.audit_root)
+        try:
+            Path(folder).mkdir(parents=True, exist_ok=True)
+            handle, probe = tempfile.mkstemp(dir=str(folder), prefix='readiness-', suffix='.tmp')
+            os.close(handle)
+            os.unlink(probe)
+        except OSError as exc:
+            return {'state': NOT_READY, 'why': f"the outgoing-data log's folder does not take a write ({type(exc).__name__}): "
+                    'nothing is sent outside this computer until it does'}
+        return {'state': READY, 'why': ''}
 
     def _scanner_readiness(self) -> dict:
         if self.documents is None:

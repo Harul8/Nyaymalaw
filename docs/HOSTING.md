@@ -234,6 +234,13 @@ copy back whole and opens everything; and puts back only some files, which are r
   `egress-YYYY-MM-DD.log` by UTC date, one content-free line for every reach to a destination - which kind, which processor, which
   kinds of data and how many bytes; never content, an address or a secret. Both processes write to the same day's file, each line
   whole.
+- **A log that cannot be written stops what would leave this computer** (plan AN.53, D236). Each line is written before the reach
+  it records. While a line cannot be written - a full disk, a wrong permission on the folder - nothing is sent to a recipient
+  outside this computer (the AI service, Gmail): the advocate is told NM could not send what the message needed, what NM had
+  finished is kept, and Continue works as soon as the log can be written again; nothing needs restarting. Sign-in, saving and the
+  local search go on, and each line lost is counted in the Admin diagnostics. `--check` shows it as `the outgoing-data log: not
+  ready`, and the server's console says it once. Where account mail leaves by Gmail, an unwritable log at start-up refuses the
+  start.
 - **It keeps itself**: each process sweeps it as it starts and a minute after each UTC midnight. A day over 90 days old is compressed
   (`.log.gz`, read back before the plain file is deleted); a day over a year old is deleted - the year the Digital Personal Data
   Protection Rules 2025 ask logs of personal-data processing to be kept. `NM_EGRESS_LOG_KEEP_DAYS` sets another period; nothing

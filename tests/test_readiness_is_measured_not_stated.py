@@ -28,6 +28,7 @@ SECRET = "a-readiness-control-secret-" + "k" * 24
 MODEL = {"NM_MODEL_PROVIDER": "scripted", "NM_MODEL_ROUTINE": "scripted-1", "NM_EMBED_MODEL": "text-embedding-3-large"}
 STORE, PROVISIONS, JUDGMENTS, SCANNER = "the store", "the held law: provision", "the held law: judgment", "the malware scanner"
 MAIL, AI = "account mail", "the AI service"
+LOG = "the outgoing-data log"
 
 
 @pytest.fixture
@@ -87,12 +88,12 @@ def test_with_an_empty_library_and_no_scanner_each_is_named_not_ready_with_why(c
 def test_every_capability_is_one_of_three_states_and_none_is_ready_unmeasured(code, tmp_path, monkeypatch):
     app = _built(code, tmp_path)
     before = app.readiness(measure=False)
-    assert set(before) == {STORE, PROVISIONS, JUDGMENTS, SCANNER, MAIL, AI}
+    assert set(before) == {STORE, PROVISIONS, JUDGMENTS, SCANNER, LOG, MAIL, AI}
     assert {entry["state"] for entry in before.values()} == {NOT_CHECKED}, "nothing is ready that nobody tried"
     _scanner(app, monkeypatch, ("clear", ""))
     measured = app.readiness()
     assert {entry["state"] for entry in measured.values()} <= {READY, NOT_READY, NOT_CHECKED}
-    assert [measured[name]["state"] for name in (STORE, PROVISIONS, JUDGMENTS, SCANNER)] == [READY] * 4
+    assert [measured[name]["state"] for name in (STORE, PROVISIONS, JUDGMENTS, SCANNER, LOG)] == [READY] * 5
     assert composition.not_ready(measured) == ()
     assert app.readiness(measure=False) == measured, "what was measured is kept for a health request to show"
 
@@ -170,3 +171,25 @@ def test_a_store_folder_that_takes_no_write_is_not_ready(code, tmp_path, monkeyp
     monkeypatch.setattr(composition.tempfile, "mkstemp", refuse)
     measured = app.readiness()[STORE]
     assert measured["state"] == NOT_READY and "write" in measured["why"]
+
+
+def test_the_outgoing_data_log_is_ready_when_its_folder_takes_a_write_and_no_line_is_added_to_it(code, tmp_path):
+    """Plan AN.53, D236's last clause: readiness shows a log that cannot be written. The act is a write to the log's folder,
+    never a line in the log itself, which holds one line for each reach to a destination and nothing else."""
+    app = _built(code, tmp_path)
+    assert app.readiness()[LOG]["state"] == READY
+
+    def held():
+        return {p.name: p.read_bytes() for p in (tmp_path / "logs").iterdir()}
+    before = held()  # the lines of the reaches made so far: building the application, and the store's own check
+    assert app._log_readiness()["state"] == READY
+    assert held() == before, "the log's own check adds no line and leaves nothing behind"
+
+
+def test_a_log_folder_that_takes_no_write_is_not_ready_and_says_what_follows(code, tmp_path):
+    app = _built(code, tmp_path)
+    (tmp_path / "blocked").write_text("a file where the log's folder should be", encoding="utf8")
+    app.egress_log.folder = tmp_path / "blocked"
+    measured = app.readiness()[LOG]
+    assert measured["state"] == NOT_READY and "nothing is sent outside this computer" in measured["why"]
+    assert LOG in composition.not_ready(app.readiness())
