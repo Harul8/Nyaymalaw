@@ -267,9 +267,69 @@ def _matter(d: dict) -> Matter:
 #: that is the whole point of putting the matter in it.
 #: How long a commit waits for another turn to finish writing the SAME
 #: matter. Long enough that an ordinary turn never meets it, short
-#: enough that a crashed holder does not stall a practice.
+#: enough that a live holder that hangs does not stall a practice (a
+#: holder that dies lets the lock go at once: `claim`).
 _LOCK_TIMEOUT = 10.0
 _LOCK_POLL = 0.02
+
+
+class Claim:
+    """A process's hold on one file: an operating-system lock that closing
+    the file lets go, and that the death of the process lets go too, so a
+    server killed in the middle of a save leaves nothing behind (plan AN.50,
+    D187; the mechanism the account claim uses, store_directory)."""
+
+    def __init__(self, handle) -> None:
+        self._handle = handle
+
+    def release(self) -> None:
+        if self._handle.closed:
+            return
+        try:
+            self._handle.seek(0)
+            if os.name == "nt":
+                import msvcrt
+
+                msvcrt.locking(self._handle.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                import fcntl
+
+                fcntl.flock(self._handle.fileno(), fcntl.LOCK_UN)
+        finally:
+            # Closing lets the lock go even where unlocking it failed.
+            self._handle.close()
+
+
+def claim(path: Path) -> Claim | None:
+    """This process's claim on `path`, or None while another holds it.
+
+    The file is made where it is missing and is never removed: its being
+    there means nothing, and only the lock on its first byte is the claim.
+    A failure to open or prepare the file is raised as itself, never taken
+    for another holder.
+    """
+    handle = path.open("a+b")
+    try:
+        if path.stat().st_size == 0:
+            handle.write(b"0")
+            handle.flush()
+        handle.seek(0)
+        try:
+            if os.name == "nt":
+                import msvcrt
+
+                msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+            else:
+                import fcntl
+
+                fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError:  # held by another (BlockingIOError is an OSError)
+            handle.close()
+            return None
+    except BaseException:
+        handle.close()
+        raise
+    return Claim(handle)
 
 
 _SEP = "__"
@@ -476,14 +536,13 @@ class FileMatterStore:
     def _locked(self, matter_id: MatterId):
         """Exclusive access to one matter, for the length of a commit.
 
-        `O_CREAT | O_EXCL` is atomic on POSIX and on Windows, needs no
-        third-party library, and behaves the same on the junction-mounted
-        paths this project already uses.
-
-        THE LOCK NAMES ITS HOLDER. A lock file carrying nothing is one
-        nobody can reason about when it is found at 3am: this one holds
-        the pid and the time it was taken, so a stale lock is identifiable
-        rather than guessed at.
+        THE LOCK IS THE OPERATING SYSTEM'S (plan AN.50, D187): a `claim` on
+        the matter's lock file, which its holder's death lets go. It was the
+        lock file's existence, made by an exclusive create and removed
+        after; a server killed between the two left the file, and every
+        later save of that matter waited and was refused until someone
+        removed it by hand (F-08). Now a killed holder leaves nothing that
+        refuses the next save, and no sweeper is needed beside the lock.
 
         A WAIT THAT NEVER ENDS IS A HANG, so it gives up and says so. The
         caller sees `StaleWrite`, which is already the answer to `somebody
@@ -492,31 +551,28 @@ class FileMatterStore:
         """
         lock = self._matters / f"{_storage_component(matter_id, kind='matter ID')}.lock"
         deadline = time.monotonic() + _LOCK_TIMEOUT
-        fd = None
-        while fd is None:
-            try:
-                fd = os.open(str(lock), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-            except FileExistsError:
-                if time.monotonic() >= deadline:
-                    raise StaleWrite(
-                        f"matter {matter_id} is being written by another "
-                        f"turn and did not become free within "
-                        f"{_LOCK_TIMEOUT}s. Re-derive and try again; the "
-                        f"lock file is {lock.name} and names its holder."
-                    ) from None
-                time.sleep(_LOCK_POLL)
+        held = claim(lock)
+        while held is None:
+            if time.monotonic() >= deadline:
+                raise StaleWrite(
+                    f"matter {matter_id} is being written by another "
+                    f"turn and did not become free within "
+                    f"{_LOCK_TIMEOUT}s. Re-derive and try again."
+                )
+            time.sleep(_LOCK_POLL)
+            held = claim(lock)
         try:
-            with os.fdopen(fd, "w") as fh:
-                fh.write(f"pid={os.getpid()} at={time.time():.3f}")
             yield
         finally:
             # HOUSEKEEPING. The commit inside the block either happened or it
             # did not, and releasing the lock does not change which -- so a
             # failure here must never surface as a failed save the caller
             # retries against a matter that was already written. A lock that
-            # could not be released stays, and the next writer's `StaleWrite`
-            # already names its holder.
-            discard(lock)
+            # could not be unlocked is let go when its file is closed.
+            try:
+                held.release()
+            except OSError:
+                pass
 
     def list_for(self, advocate_id: str) -> MatterList:
         out, unreadable, saved_at = [], [], []
