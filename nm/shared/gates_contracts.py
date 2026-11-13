@@ -35,8 +35,13 @@ direction and right in the other:
     survives is replaced by a note code builds, G-FALLBACK). A missing
     supported result (G-EFFECT) withholds only its NEED; uncertain independent
     review coverage (G-INCOMPLETE) discloses that NEED and cannot certify its
-    review completion. Each row's built flag records whether its owner is
-    wired.
+    review completion.
+
+A row's built flag is its owner's claim and is not evidence that the gate is
+wired (plan AN.54, D230): on 13 November 2026 the served code named 16 of the
+45 gates and the other 29 nowhere outside this table.
+tests/test_a_gate_marked_built_is_consulted.py searches the served code for
+each gate and lists the ones nothing names; a new gate with no caller fails it.
 
 Response, scope and recovery are read from this table. A unit-level mismatch
 cannot acquire TURN scope merely because it was detected inside a turn.
