@@ -63,7 +63,47 @@ from nm.shared.identity_contracts import source_fingerprint
 from nm.shared.traceability_contracts import implements
 
 ROOT = Path(__file__).resolve().parents[2]
-app = FastAPI(title='Nyaymalaw', version='0.2.0')
+# Plan AN.53 (53a, D216; the review's F-22): the framework's three documentation addresses listed every route, the Admin ones
+# among them, to anyone not signed in (D117: the Admin area tells no advocate it exists). They are switched off here.
+app = FastAPI(title='Nyaymalaw', version='0.2.0', docs_url=None, redoc_url=None, openapi_url=None)
+
+#: What every page may load: its own files only. The pages load nothing from elsewhere and carry no inline script.
+CONTENT_POLICY = ("default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; "
+                  "font-src 'self'; connect-src 'self'; worker-src 'self'; frame-src 'self'; frame-ancestors 'self'; "
+                  "object-src 'none'; base-uri 'none'; form-action 'self'")
+#: The headers every answer carries (53a). The content policy is sent REPORT-ONLY for now: a browser then says in its console
+#: what the policy would have refused and refuses nothing, because no browser has yet been driven over the pages with it (the
+#: research note's print frame and the dictation socket are the places to look). It is enforced by renaming this one header,
+#: after that check. The page may be framed only by NM itself (it frames its own print view).
+SECURITY_HEADERS = ((b'x-content-type-options', b'nosniff'), (b'x-frame-options', b'SAMEORIGIN'),
+                    (b'referrer-policy', b'same-origin'),
+                    (b'content-security-policy-report-only', CONTENT_POLICY.encode('ascii')))
+#: Sent only on an answer to a request that came over HTTPS (as the proxy says, which NM is started to trust): a year.
+HTTPS_ONLY = (b'strict-transport-security', b'max-age=31536000')
+
+
+class SecurityHeaders:
+    """One layer that adds NM's security headers to every HTTP answer - a page, a file, an API answer, an error - without
+    reading or holding any of it, so a stream stays a stream. A header the answer already carries is left as it is."""
+
+    def __init__(self, inner):
+        self.inner = inner
+
+    async def __call__(self, scope, receive, send):
+        if scope['type'] != 'http':
+            return await self.inner(scope, receive, send)
+        wanted = SECURITY_HEADERS + ((HTTPS_ONLY,) if scope.get('scheme') == 'https' else ())
+
+        async def sending(message):
+            if message['type'] == 'http.response.start':
+                headers = list(message.get('headers') or ())
+                has = {name.lower() for name, _ in headers}
+                message = {**message, 'headers': headers + [pair for pair in wanted if pair[0] not in has]}
+            await send(message)
+        await self.inner(scope, receive, sending)
+
+
+app.add_middleware(SecurityHeaders)
 _application = None
 _TRUSTED_ORIGINS = 'NM_TRUSTED_ORIGINS'
 _CSRF_REFUSED = 'This request could not be verified as coming from the Nyaymalaw page in this browser. Reload the page and try again.'
