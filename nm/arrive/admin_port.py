@@ -184,6 +184,11 @@ class AdminTurnsPort(Protocol):
 
 # ------------------------------------------------------------------------ diagnostics ---
 
+#: Plan AN.53 (53e, D220): the file in the store where each line the outgoing-data log could not take is counted - one time a
+#: line, nothing else.
+UNWRITTEN_LOG_LINES = "outgoing-log-unwritten.log"
+
+
 class AdminChecksPort(Protocol):
     """The sources the diagnostics are made of: counts, sizes and short names, nothing an advocate wrote (D119). A method whose source
     cannot be read returns None (or raises AdminUnavailable), and only that check says so (D128)."""
@@ -204,6 +209,10 @@ class AdminChecksPort(Protocol):
         ...
 
     def outbox(self) -> Mapping[str, object]:
+        ...
+
+    def outgoing_log(self, since: datetime) -> Mapping[str, int] | None:
+        """How many lines the outgoing-data log could not take since `since` (plan AN.53, 53e). None where that cannot be read."""
         ...
 
 
