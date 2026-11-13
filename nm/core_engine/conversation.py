@@ -633,13 +633,18 @@ def commit_turn(store, context, *, elements, activities, records=None, work=None
     candidate = replace(context.matter, brain_chat=(*context.rows, row),
                         intake_answers=metadata, version=version)
     checked_rows(candidate, context.matter.advocate_id, copied=False)
+    # Plan AN.50 (50b, D188): whether the store refused the save before writing it. A save refused as stale - the conversation
+    # moved under it, or another write held it too long - wrote nothing; an OS error may be a lost acknowledgement of a write
+    # that still lands, so its outcome stays unknown unless the reload holds the answer.
+    refused = False
     try:
         committed = store.commit(candidate, expected_version=context.matter.version)
-    except (OSError, StaleWrite):
+    except (OSError, StaleWrite) as exc:
+        refused = isinstance(exc, StaleWrite)
         try:
             committed = store.load(context.matter.id)
         except (OSError, ValueError):
-            committed = None
+            committed, refused = None, False
     if committed is not None:
         for saved in checked_rows(committed, context.matter.advocate_id):
             if saved["turn_id"] == context.turn_id and saved["request"] == context.request:
@@ -647,6 +652,12 @@ def commit_turn(store, context, *, elements, activities, records=None, work=None
                     raise ConversationRefused("Sign in again to reopen your saved conversation.",
                                               status=401, committed="committed")
                 return deepcopy(saved["response"])
+    if refused:
+        # Known not saved: the refusal wrote nothing and a clean reload does not hold the answer. The turn keeps the answer for
+        # Continue, which saves it on the conversation as it then stands, with no model call (turn: "not_committed").
+        raise ConversationRefused("NM finished this answer but could not save it, because the conversation changed while it "
+                                  "was being saved. Press Continue to save it.", status=409, code="not_saved",
+                                  committed="not_committed", retryable=True)
     raise ConversationRefused("The save could not be confirmed. Retry the same message safely.",
                               status=503, code="save_unconfirmed", committed="unconfirmed",
                               retryable=True)
