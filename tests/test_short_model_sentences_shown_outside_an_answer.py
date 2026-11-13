@@ -123,3 +123,14 @@ def test_a_reading_that_only_repeats_what_code_said_is_not_said_twice():
     fixed = message_reader.SAID["question"]
     assert shown_words.said(fixed, fixed) == fixed
     assert shown_words.after(fixed + " NM kept its understanding.", "nm kept its understanding") == fixed + " NM kept its understanding."
+
+
+# ---- the conversation's title (51b3) ----
+
+def test_a_title_with_a_link_or_a_request_for_a_secret_is_not_shown_and_an_ordinary_one_is():
+    from nm.core_engine import titles
+
+    assert titles.admitted("Lease dispute - see www.example.test") == (None, "it carries a link")
+    assert titles.admitted("Send your password to continue")[0] is None
+    assert titles.admitted("Lease dispute: notice sent late") == ("Lease dispute: notice sent late", None), (
+        "a title is a name, not a status: words of something done are its subject, and stay")

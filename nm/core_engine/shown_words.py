@@ -36,12 +36,22 @@ _EFFECT = re.compile(
     rf"|\b(?:i|we|nm)(?:'ll|\s+will|\s+shall|\s+am\s+going\s+to|\s+is\s+going\s+to|\s+are\s+going\s+to)\b", re.I)
 
 
+def unsafe(line: str) -> str:
+    """Why NM never shows these model words anywhere outside an answer, or "" where nothing forbids them: a link, or a request
+    for a secret. For words that are a name and not a sentence to the advocate (a conversation's title), this is the whole test."""
+    if _LINK.search(line):
+        return "it carries a link"
+    if _SECRET.search(line):
+        return "it asks for a password, a code or a card"
+    return ""
+
+
 def reading(words) -> str:
     """A model's wording as NM may show it - one line, ended, at most LONGEST - or "" where it may not be shown."""
     if not isinstance(words, str):
         return ""
     line = " ".join(words.split())
-    if not line or _LINK.search(line) or _SECRET.search(line) or _EFFECT.search(line):
+    if not line or unsafe(line) or _EFFECT.search(line):
         return ""
     if len(line) > LONGEST:
         line = line[:LONGEST].rsplit(" ", 1)[0].rstrip(" ,;:-") + "…"

@@ -66,6 +66,11 @@ def admitted(text):
         return None, "the title is empty"
     if len(title.split()) > MOST_WORDS:
         return None, f"the title has {len(title.split())} words; at most {MOST_WORDS} are shown"
+    # Plan AN.51 (51b, D196): a title is model words shown outside an answer, so it passes the same door as the others.
+    from nm.core_engine import shown_words
+    forbidden = shown_words.unsafe(title)
+    if forbidden:
+        return None, forbidden
     return title, None
 
 
