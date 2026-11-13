@@ -18,8 +18,8 @@ from concurrent.futures import ThreadPoolExecutor
 
 from nm.core_engine import reasoning
 from nm.shared.external_ai_contracts import ModelPermissionRefused
-from nm.shared.model_port import (USAGE_LIMIT_WORDS, ContentRefused, ModelError, PageImage, Prompt, Tier,
-                                  UsageLimitReached)
+from nm.shared.model_port import (REQUEST_REJECTED_WORDS, USAGE_LIMIT_WORDS, ContentRefused, ModelError, PageImage, Prompt,
+                                  RequestRejected, Tier, UsageLimitReached)
 
 CONTRACT = "core_page_reading_v1"
 OPERATION = "core_page_reading"
@@ -189,6 +189,12 @@ def _read_once(model, name, number, image, *, first=None, found=()):
         # which promises a retry that cannot succeed. The provider's own words stay in the diagnosis.
         log.warning("A page waits to be read again: %s: %s", type(exc).__name__, exc)
         return {"number": number, "state": "unread", "code": "scanned", "reason": USAGE_LIMIT_WORDS}, None
+    except RequestRejected as exc:
+        # The AI service rejected NM's own request (plan AN.52, 52i2, D215): a fault in this installation, not an outage. The
+        # page waits to be read once that is put right, and says so - not "just now". The provider's words are the operator's,
+        # logged as an error since someone must act on them; they are not kept with the paper.
+        log.error("A page waits to be read again: %s: %s", type(exc).__name__, exc)
+        return {"number": number, "state": "unread", "code": "scanned", "reason": REQUEST_REJECTED_WORDS}, None
     except ModelError as exc:
         # Expected provider outcomes (unavailable, cut short, malformed): the page waits.
         # Why is kept for diagnosis (17 Oct 2026): the failure's kind and message, no page text.

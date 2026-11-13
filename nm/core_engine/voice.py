@@ -14,7 +14,7 @@ import logging
 
 from nm.core_engine.documents import AUDIO
 from nm.shared.external_ai_contracts import ModelPermissionRefused
-from nm.shared.model_port import USAGE_LIMIT_WORDS, ModelError, UsageLimitReached
+from nm.shared.model_port import REQUEST_REJECTED_WORDS, USAGE_LIMIT_WORDS, ModelError, RequestRejected, UsageLimitReached
 
 CONTRACT = "core_voice_v1"
 OPERATION = "core_voice_note"
@@ -46,6 +46,11 @@ def transcribe_note(model, name, data, fmt):
         # now", which promises a retry that cannot succeed. The provider's own words stay in the diagnosis.
         log.warning("A recording waits to be transcribed again: %s: %s", type(exc).__name__, exc)
         return {"number": 1, "state": "unread", "code": "audio", "reason": USAGE_LIMIT_WORDS}, None
+    except RequestRejected as exc:
+        # The AI service rejected NM's own request (plan AN.52, 52i2, D215): said as the installation's fault, and the recording
+        # waits to be transcribed once that is put right. The provider's words go to the server's log, as an error.
+        log.error("A recording waits to be transcribed again: %s: %s", type(exc).__name__, exc)
+        return {"number": 1, "state": "unread", "code": "audio", "reason": REQUEST_REJECTED_WORDS}, None
     except ModelError as exc:
         # Expected provider outcomes (unavailable, refused, malformed): the recording waits.
         # Why is kept for diagnosis (17 Oct 2026): the failure's kind and message, no words heard.

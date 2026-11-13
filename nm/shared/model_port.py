@@ -81,6 +81,14 @@ class UsageLimitReached(ModelError):
 #: are the only places the words are written.
 USAGE_LIMIT_MESSAGE = "You have run out of your usage limits. Please upgrade to continue accessing NM."
 USAGE_LIMIT_WORDS = "you have run out of your usage limits; please upgrade to continue accessing NM"
+#: What NM tells an advocate when the AI service rejected NM's own request outside a turn (plan AN.52, 52i2, D215): reading a
+#: paper or a recording, dictation, a message read while a matter waits. As a sentence and as the clause a page or recording
+#: keeps as its reason. Never "just now": the same request is rejected again until the installation is put right. These two are
+#: the only places the words are written; a turn says it in its own stop (nm/core_engine/turn.py, STOPS["request_rejected"]).
+REQUEST_REJECTED_MESSAGE = ("The AI service rejected NM's own request. That is a fault in how this installation of NM is set "
+                            "up, or in NM, and not in what you sent; whoever runs this installation needs to put it right.")
+REQUEST_REJECTED_WORDS = ("the AI service rejected NM's own request - a fault in how this installation of NM is set up, or in "
+                          "NM, and not in what you sent; it can be tried again once that is put right")
 
 
 class ProviderUnavailable(ModelError):
