@@ -381,6 +381,47 @@ def claim(path: Path) -> Claim | None:
     return Claim(handle)
 
 
+#: Plan AN.50 (50h, D194; the review's F-36): how long the rename that puts a
+#: finished file in its place waits, on Windows, for a reader to let go of the
+#: file it replaces. A reader holds a matter for the moment it takes to read.
+_PUBLISH_WAIT = 2.0
+_WINDOWS = os.name == "nt"
+
+
+def publish(finished: str | Path, path: str | Path) -> None:
+    """Put the finished file in place of `path`: the whole new file or the
+    whole old one, never a mixture, and (plan AN.50, 50h) durably.
+
+    ON WINDOWS a rename onto a file is refused while any reader has that file
+    open, so a save that met a reader was reported as not made (measured, 11
+    Nov 2026). The rename is tried again for a bounded moment; a file still
+    held after it refuses the save as before, and nothing is left behind.
+
+    ELSEWHERE no reader refuses the rename, and the folder is flushed after
+    it. The file's bytes were flushed before the rename, but the name they are
+    published under is the folder's, and until the folder is flushed a save
+    the advocate was told of can be gone after a power loss. Windows offers no
+    way to flush a folder. NOT RUN ON LINUX YET: nothing in this project has
+    been; the hosted machine is where this half is first exercised.
+    """
+    if _WINDOWS:
+        deadline = time.monotonic() + _PUBLISH_WAIT
+        while True:
+            try:
+                os.replace(finished, path)
+                return
+            except PermissionError:
+                if time.monotonic() >= deadline:
+                    raise
+                time.sleep(_LOCK_POLL)
+    os.replace(finished, path)
+    folder = os.open(os.path.dirname(os.path.abspath(path)), os.O_RDONLY)
+    try:
+        os.fsync(folder)
+    finally:
+        os.close(folder)
+
+
 #: Plan AN.50 (50d1, D190): the folder of a store where each server and step
 #: worker working on it holds a file of its own for its life, and the file a
 #: key rotation holds while it has the store to itself.
@@ -676,7 +717,7 @@ class FileMatterStore:
                 fh.write(record)
                 fh.flush()
                 os.fsync(fh.fileno())
-            os.replace(tmp, path)
+            publish(tmp, path)
         except OSError:
             if tmp is not None:
                 discard(Path(tmp))
@@ -723,7 +764,7 @@ class FileMatterStore:
                     fh.write(blob)
                     fh.flush()
                     os.fsync(fh.fileno())
-                os.replace(tmp, p)
+                publish(tmp, p)
             except BaseException:
                 # A ROLLBACK: the write failed, so the partial temporary must
                 # go. Routed through `discard` so a failure removing it cannot
@@ -880,7 +921,7 @@ class FileMatterStore:
         try:
             with os.fdopen(fd, "wb") as fh:
                 fh.write(blob)
-            os.replace(tmp, path)
+            publish(tmp, path)
         except BaseException:
             discard(Path(tmp))
             raise
