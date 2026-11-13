@@ -1,0 +1,74 @@
+"""One process works the steps of a store at a time (plan AN.50, piece 50f; D192; the review's F-17).
+
+A second step worker started on a store already being worked ran its start-up recovery: it released the claims of the turns an
+earlier run was working on - which were the first worker's, still at work - and took up their steps again, so one message could
+be worked twice. The process that works the steps now holds one operating-system lock on the store for its life, taken before its
+start-up recovery; a second refuses to start and takes up nothing. Each process also marks itself alive on the store, which the key
+rotation refuses to work beside, and refuses to start while a rotation has the store (D190). Offline: the worker's application
+and loop are stood in for; the store is a temporary folder.
+"""
+from __future__ import annotations
+
+import signal
+from types import SimpleNamespace
+
+import pytest
+
+from nm.app import api, composition, step_worker
+from nm.shared import egress_log_store
+from nm.shared.store_file_store import REKEYING, alive_on, claim
+
+pytestmark = pytest.mark.class_a
+
+
+@pytest.fixture
+def worker(tmp_path, monkeypatch):
+    """The step worker's start, with its application and loop stood in for: how many times its start-up recovery ran, and what
+    it held while it worked."""
+    store = tmp_path / "store"
+    store.mkdir()
+    seen = {"started": 0, "held": None}
+    monkeypatch.setattr(composition, "Application", lambda **_: SimpleNamespace(
+        environment={"NM_MATTER_STORE": str(store)}, root=tmp_path, step_share=None, egress_log=None, legal_search=None))
+    monkeypatch.setattr(api, "set_application", lambda app: None)
+    monkeypatch.setattr(egress_log_store, "keep", lambda log: None)
+    monkeypatch.setattr(signal, "signal", lambda *_: None)
+    monkeypatch.setattr(step_worker.StepWorker, "start", lambda self: seen.update(started=seen["started"] + 1))
+
+    def run(self):
+        seen["held"] = (claim(store / step_worker.STEPS_LOCK) is None, alive_on(store))
+    monkeypatch.setattr(step_worker.StepWorker, "run", run)
+    return store, seen
+
+
+def test_a_second_worker_on_the_same_store_refuses_to_start_and_releases_no_claim(worker):
+    store, seen = worker
+    first = claim(store / step_worker.STEPS_LOCK)  # the first worker, at work
+    try:
+        assert step_worker.main() == 2
+    finally:
+        first.release()
+    assert seen["started"] == 0, "it took up nothing of an earlier run, so no claim of the first's turns was released"
+    assert alive_on(store) == [], "and it leaves no mark of being alive"
+
+
+def test_a_worker_alone_on_its_store_holds_the_steps_and_its_mark_while_it_works(worker):
+    store, seen = worker
+    assert step_worker.main() == 0
+    assert seen["started"] == 1
+    held, marks = seen["held"]
+    assert held, "the steps are held while it works"
+    assert len(marks) == 1 and marks[0].startswith("worker-")
+    again = claim(store / step_worker.STEPS_LOCK)
+    assert again is not None, "a worker that ended lets the steps go"
+    again.release()
+
+
+def test_a_worker_does_not_start_while_a_key_rotation_has_the_store(worker):
+    store, seen = worker
+    rotation = claim(store / REKEYING)
+    try:
+        assert step_worker.main() == 2
+    finally:
+        rotation.release()
+    assert seen["started"] == 0 and alive_on(store) == []

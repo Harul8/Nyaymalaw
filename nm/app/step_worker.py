@@ -21,6 +21,7 @@ import signal
 import sys
 import threading
 import time
+from pathlib import Path
 
 from nm.app.turn_progress import KEEP_SECONDS, TurnProgress
 from nm.core_engine.questions import Refused
@@ -36,6 +37,30 @@ MODES = ("inside", "web", "worker")
 def mode_from(setting):
     """'web' where the settings say the steps run in a worker of their own (NM_STEP_WORKER=separate); otherwise 'inside'."""
     return "web" if (setting or "").strip().lower() == "separate" else "inside"
+
+
+#: Plan AN.50 (50f, D192; the review's F-17): the file in the store that the one process working its steps holds for its life - the
+#: step worker, or a server that works its own steps. A second refuses to start, before the start-up recovery that would release
+#: the claims of the turns the first is still working.
+STEPS_LOCK = "steps.lock"
+
+
+def take_the_store(storage, kind, *, steps):
+    """Plan AN.50 (50f; D190, D192): this process marked alive on the store at `storage` (kind: 'server' or 'worker'), and, where it
+    works the steps, holding them for its life. Returns what it holds, to be kept for the process's life, and None; or None and why
+    it may not start, holding nothing. Taken before anything of an earlier run is taken up."""
+    from nm.shared.store_file_store import claim, hold_alive, rekeying
+    marked = hold_alive(storage, kind)
+    if rekeying(storage):
+        marked.release()
+        return None, "a key rotation has this store now; start again once it has finished"
+    if not steps:
+        return (marked,), None
+    held = claim(Path(storage) / STEPS_LOCK)
+    if held is None:
+        marked.release()
+        return None, "another process works the steps of this store (a server that works its own, or the step worker)"
+    return (marked, held), None
 
 
 def alive(share):
@@ -298,11 +323,16 @@ class StepWorker:
 def main(argv=None):
     """The step worker: the application in its worker's part, its start, then its loop until stopped."""
     from nm.app import api
-    from nm.app.composition import Application
+    from nm.app.composition import Application, storage_root
     try:
         app = Application(steps="worker")
     except Exception as exc:
         print(f"REFUSED TO START: {type(exc).__name__}: {exc}", file=sys.stderr)
+        return 2
+    # Plan AN.50 (50f, D192): one owner of the steps at a time, before the start-up recovery below.
+    held, why = take_the_store(storage_root(app.environment, app.root), "worker", steps=True)
+    if held is None:
+        print(f"REFUSED TO START: {why}.", file=sys.stderr)
         return 2
     api.set_application(app)
     # Plan AN.48 (D169): the outgoing-data log this worker writes too, swept now and once a day after.
