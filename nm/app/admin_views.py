@@ -364,6 +364,12 @@ def diagnostics_view(roster: Roster, usage: AdminUsagePort, turns: AdminTurnsPor
     except AdminUnavailable:
         found.append(_could_not("mail", "Account mail"))
 
+    lost = checks.outgoing_log(day_ago)
+    found.append(_could_not("outgoing_log", "The outgoing-data log (lines it could not take in the last 24 hours)")
+                 if lost is None else
+                 _check("outgoing_log", "The outgoing-data log (lines it could not take in the last 24 hours)",
+                        "attention" if lost["lines_not_written"] else "ok", dict(lost)))
+
     found.append(_check("admin_setting", "The admin list in the server's settings", "attention" if roster.rejected else "ok",
                         {"admins": len(roster.levels), "entries_ignored": roster.rejected}))
     counts = {name: sum(1 for c in found if c["state"] == name) for name in ("ok", "attention", "note", "unavailable")}

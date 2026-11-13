@@ -35,6 +35,7 @@ from typing import Union, get_args, get_origin, get_type_hints
 
 from nm.shared.names_contracts import discard
 from nm.shared.operation_contracts import save_stamp
+from nm.shared.storage_errors_port import StoredObjectUnreadable
 from nm.shared.store_envelope import KeyUnavailable
 from nm.shared.store_port import MatterList, StaleWrite
 from nm.shared.store_sealing import MatterSealer, is_envelope
@@ -66,6 +67,33 @@ class EncryptionNotConfigured(RuntimeError):
 #: opens a higher one.
 MATTER_FORMAT = 1
 _FORMAT_KEY = "stored_format"
+
+
+class SavedMatterUnreadable(StoredObjectUnreadable, ValueError):
+    """A saved matter's file will not open (plan AN.53, 53j4).
+
+    THE STORE'S OWN ERROR, AND ONE A FAILED READING IS ALREADY CAUGHT AS. Every
+    place that reads a matter and can fail catches the disk's error and a
+    record that does not read as one (a ValueError); a file that would not
+    open was neither, so each caller that had not been told of it answered an
+    advocate's damaged conversation with a server error. This is both, so no
+    caller has to be told. A key that cannot be reached (KeyUnavailable) is an
+    installation's failure, not one file's damage, and is never made this.
+    """
+
+
+_AS_A_FAILED_READING: dict[type, type] = {}
+
+
+def _as_a_failed_reading(exc: StoredObjectUnreadable) -> StoredObjectUnreadable:
+    """The same error, still of its own kind - a caller or a test that names
+    WrappedKeyUnreadable or an unknown sealed format still has exactly that -
+    and also a SavedMatterUnreadable."""
+    kind = _AS_A_FAILED_READING.get(type(exc))
+    if kind is None:
+        kind = _AS_A_FAILED_READING[type(exc)] = type(
+            type(exc).__name__, (SavedMatterUnreadable, type(exc)), {"__module__": type(exc).__module__})
+    return kind(*exc.args)
 
 
 class SavedShapeUnknown(ValueError):
@@ -118,9 +146,12 @@ class _Cipher:
             )
         self._raw = key.encode("utf8")
         self._fernet = None
+        #: What this cipher raises for bytes it will not open; its users say it in their own words (plan AN.53, 53j1).
+        self.will_not_open: tuple[type[Exception], ...] = ()
         try:
-            from cryptography.fernet import Fernet
+            from cryptography.fernet import Fernet, InvalidToken
 
+            self.will_not_open = (InvalidToken,)
             digest = hashlib.sha256(self._raw).digest()
             self._fernet = Fernet(base64.urlsafe_b64encode(digest))
             self.scheme = "fernet"
@@ -653,7 +684,13 @@ class FileMatterStore:
         record of another kind that also would not open.
         """
         if self._sealer is None or not is_envelope(blob):
-            return self._cipher.decrypt(blob)
+            try:
+                return self._cipher.decrypt(blob)
+            except self._cipher.will_not_open as exc:
+                # ONE ERROR FOR A RECORD THAT WILL NOT OPEN (plan AN.53, 53j1). An envelope that will not open raises
+                # StoredObjectUnreadable; this path let the cipher library's own error out, which no caller names, so
+                # an emptied or overwritten file was a different failure from a truncated one.
+                raise StoredObjectUnreadable("a saved record could not be opened") from exc
         return self._sealer.open(str(matter_id), blob)
 
     def _path(self, matter_id: MatterId) -> Path:
@@ -673,7 +710,12 @@ class FileMatterStore:
         # record of the NEXT save and take its own, current file for an older copy. Read in this order, a record of
         # save N means the file of save N was already in place, so the file read after it is N or later.
         known = self._last_saved(matter_id)
-        data = self._open(matter_id, read_published(path))
+        try:
+            data = self._open(matter_id, read_published(path))
+        except KeyUnavailable:
+            raise
+        except StoredObjectUnreadable as exc:
+            raise _as_a_failed_reading(exc) from exc
         matter = _matter(*_said_format(json.loads(data.decode("utf8"))))
         if matter.id != matter_id:
             raise ValueError("the saved matter identity conflicts with its storage name")

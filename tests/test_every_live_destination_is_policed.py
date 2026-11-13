@@ -296,7 +296,10 @@ def test_the_composition_root_polices_every_live_destination():
                 "UploadPort", "DocumentDerivativePort", "UsagePort",
                 "AdminDirectoryPort", "AdminUsagePort", "AdminRecordPort", "AdminTurnsPort", "AdminChecksPort", "AdminAccountsPort", "AdminLibraryPort", "AdminStagingPort",
                 # One content-free line per finished turn (plan AN.46, piece 46h; D120): operational, on local storage.
-                "TurnEventPort"}
+                "TurnEventPort",
+                # The steps handed to the worker and each step's record (plan AN.48, 48f; entered here under plan AN.53, D220:
+                # the composition root has policed both since 48f, and this inventory had not been told): sealed, local storage.
+                "StepSharePort", "StepRecordPort"}
     assert ports and len(ports) == len(calls) == len(set(ports)), (
         "Every actual wrapper must declare its unique port destination")
     assert set(ports) == expected, "The served destination inventory must remain fully policed"

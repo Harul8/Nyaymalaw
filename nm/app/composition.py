@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import os
 import re
+import sys
 import threading
 from collections.abc import Mapping
 from pathlib import Path
@@ -11,8 +12,8 @@ from nm.arrive.admin_access import Level, roster_from
 from nm.arrive.admin_directory import AdminFileDirectory
 from nm.arrive.admin_checks import AdminChecks
 from nm.arrive.admin_library import AdminLibrary
-from nm.arrive.admin_port import (AdminAccountsPort, AdminChecksPort, AdminDirectoryPort, AdminLibraryPort, AdminRecordPort,
-                                  AdminStagingPort, AdminTurnsPort, AdminUsagePort)
+from nm.arrive.admin_port import (UNWRITTEN_LOG_LINES, AdminAccountsPort, AdminChecksPort, AdminDirectoryPort, AdminLibraryPort,
+                                  AdminRecordPort, AdminStagingPort, AdminTurnsPort, AdminUsagePort)
 from nm.arrive.admin_staging import AdminStaging
 from nm.arrive.admin_turns import AdminTurns
 from nm.arrive.admin_usage import AdminUsage
@@ -94,6 +95,9 @@ class Application:
         _refuse_a_shared_seal(key, settings)
         self._gate = Gatekeeper(policy=egress_policy(self.root), audit=self._egress_audit)
         storage = storage_root(settings, self.root)
+        # Plan AN.53 (53e, D220): where a line the outgoing-data log could not take is counted - in the store, since the log's
+        # own folder is the one that failed - one time and nothing else a line, for the Admin diagnostics.
+        self._log_unwritten, self._log_failure_said = Path(storage) / UNWRITTEN_LOG_LINES, False
         raw_store = store or FileMatterStore(storage, key=key)
         self.store = PolicedPort(inner=raw_store,
             gate=self._gate, port=StorePort, sink=Sink.STORAGE, processor_id=STORAGE_PROCESSOR)
@@ -754,10 +758,22 @@ class Application:
         return browser_assets(root=ROOT)
 
     def _egress_audit(self, line):
+        """One line of the outgoing-data log (D169). A line that cannot be written is NEVER SILENT (plan AN.53, 53e, D220; the
+        review's F-30): it is counted where the Admin diagnostics read it, by whichever process failed, and said once on this
+        process's console. The call itself still goes: whether an unwritable log should refuse the call is the owner's decision."""
         try:
             self.egress_log.write(line)
-        except OSError:
-            pass
+        except OSError as exc:
+            if not self._log_failure_said:
+                self._log_failure_said = True
+                print(f"THE OUTGOING-DATA LOG COULD NOT BE WRITTEN ({type(exc).__name__}). Calls go on; each line lost is counted "
+                      "in the Admin diagnostics.", file=sys.stderr, flush=True)
+            try:
+                from nm.shared.egress_log_store import _append
+                self._log_unwritten.parent.mkdir(parents=True, exist_ok=True)
+                _append(self._log_unwritten, (utcnow().isoformat() + chr(10)).encode("ascii"))
+            except OSError:
+                pass  # the store refuses too: said above, and every other check of the diagnostics will show it
 
     def health(self):
         routine = self.config.for_tier(Tier.ROUTINE)

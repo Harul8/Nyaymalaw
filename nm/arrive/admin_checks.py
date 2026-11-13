@@ -17,11 +17,11 @@ import os
 import shutil
 import sqlite3
 from contextlib import closing
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 from typing import Mapping
 
-from nm.arrive.admin_port import AdminUnavailable
+from nm.arrive.admin_port import UNWRITTEN_LOG_LINES, AdminUnavailable
 
 _log = logging.getLogger("nm.admin")
 #: How much of the end of the sign-in log is read: recent behaviour only.
@@ -145,6 +145,18 @@ class AdminChecks:
         return {"configured": True, "present": Path(scan).exists(), "definitions_age_days": age}
 
     # --------------------------------------------------------------------- the outbox ---
+
+    def outgoing_log(self, since: datetime) -> Mapping[str, int] | None:
+        """How many lines the outgoing-data log could not take since `since`, as the processes that failed to write them counted
+        them (one time a line, nothing else). Zero where none ever failed; None where the count cannot be read."""
+        path = self.storage / UNWRITTEN_LOG_LINES
+        if not path.exists():
+            return {"lines_not_written": 0}
+        try:
+            times = path.read_text(encoding="ascii", errors="replace").split()
+        except OSError:
+            return None
+        return {"lines_not_written": sum(1 for at in times if at >= since.isoformat())}
 
     def outbox(self) -> Mapping[str, object]:
         """How many messages wait in the local outbox, and whether any mail leaves this computer at all."""
