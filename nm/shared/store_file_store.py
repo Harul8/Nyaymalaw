@@ -422,6 +422,23 @@ def publish(finished: str | Path, path: str | Path) -> None:
         os.close(folder)
 
 
+def read_published(path: Path) -> bytes:
+    """The bytes of a file that `publish` puts in place (plan AN.50, 50h3). ON WINDOWS a read that meets the rename
+    putting a new file there is refused for that instant, as the rename is by a reader: the reader's side of the same
+    finding (seen 13 Nov 2026: a matter read while another thread saved it failed with a permission error). It is
+    tried again for the same bounded moment; a file still refused after it raises as before."""
+    if not _WINDOWS:
+        return path.read_bytes()
+    deadline = time.monotonic() + _PUBLISH_WAIT
+    while True:
+        try:
+            return path.read_bytes()
+        except PermissionError:
+            if time.monotonic() >= deadline:
+                raise
+            time.sleep(_LOCK_POLL)
+
+
 #: Plan AN.50 (50d1, D190): the folder of a store where each server and step
 #: worker working on it holds a file of its own for its life, and the file a
 #: key rotation holds while it has the store to itself.
@@ -637,11 +654,16 @@ class FileMatterStore:
     def _read(self, matter_id: str, path: Path) -> Matter:
         """One saved matter file, opened, checked to be the matter its name
         says and (plan AN.50, 50e) the file this store last saved there."""
-        data = self._open(matter_id, path.read_bytes())
+        # THE RECORD IS READ BEFORE THE FILE (found 13 Nov 2026 by many reads beside many saves). A save puts the file
+        # in place and then its record; a reader outside the save's lock that read the file first could then read the
+        # record of the NEXT save and take its own, current file for an older copy. Read in this order, a record of
+        # save N means the file of save N was already in place, so the file read after it is N or later.
+        known = self._last_saved(matter_id)
+        data = self._open(matter_id, read_published(path))
         matter = _matter(*_said_format(json.loads(data.decode("utf8"))))
         if matter.id != matter_id:
             raise ValueError("the saved matter identity conflicts with its storage name")
-        self._check_last_saved(matter_id, matter.version, data)
+        self._check_last_saved(matter_id, matter.version, data, known)
         return matter
 
     # ------------------------------------------- the record of the last save ---
@@ -682,8 +704,8 @@ class FileMatterStore:
             return None
         return record["version"], record["sha256"]
 
-    def _check_last_saved(self, matter_id: str, version: int, data: bytes) -> None:
-        known = self._last_saved(matter_id)
+    def _check_last_saved(self, matter_id: str, version: int, data: bytes, known: tuple[int, str] | None) -> None:
+        """known: the record of the last save, read BEFORE the file was (see `_read`)."""
         if known is None or version > known[0]:
             # Not assessed, or AHEAD of its record: a save whose record was not
             # written (the process ended between the two, or code from before

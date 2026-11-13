@@ -117,3 +117,53 @@ def test_elsewhere_a_folder_that_cannot_be_flushed_is_said_and_still_let_go(tmp_
     finally:
         monkeypatch.undo()
     assert closed == [99], "a save not known to be durable is not reported as made"
+
+
+# ---- the reader's side (50h3) ----
+
+@on_windows
+def test_a_read_that_meets_a_save_being_put_in_place_is_tried_again_and_reads_the_matter(store, monkeypatch):
+    real, refused = Path.read_bytes, []
+
+    def meeting_the_rename(self):
+        if self.suffix == ".nm" and len(refused) < 3:
+            refused.append(self.name)
+            raise PermissionError(13, "Permission denied")
+        return real(self)
+    monkeypatch.setattr(Path, "read_bytes", meeting_the_rename)
+    assert store.load("matter-1").title == "First" and len(refused) == 3
+
+
+@on_windows
+def test_a_matter_that_stays_refused_past_the_bound_is_still_an_error_and_never_an_absent_matter(store, monkeypatch):
+    monkeypatch.setattr(store_file_store, "_PUBLISH_WAIT", 0.2)
+
+    def refused(self):
+        raise PermissionError(13, "Permission denied")
+    monkeypatch.setattr(Path, "read_bytes", refused)
+    with pytest.raises(PermissionError):
+        store.load("matter-1")
+
+
+@on_windows
+def test_many_reads_beside_many_saves_of_one_matter_all_read_a_whole_matter(store):
+    stop, failed, read = threading.Event(), [], [0]
+
+    def reading_it():
+        while not stop.is_set():
+            try:
+                assert store.load("matter-1").title.startswith(("First", "Save"))
+                read[0] += 1
+            except Exception as exc:  # noqa: BLE001 - reported below
+                failed.append(repr(exc))
+    readers = [threading.Thread(target=reading_it) for _ in range(3)]
+    for each in readers:
+        each.start()
+    try:
+        for version in range(2, 42):
+            save(store, f"Save {version}", version)
+    finally:
+        stop.set()
+        for each in readers:
+            each.join(30)
+    assert not failed and read[0] > 40, failed[:3]
