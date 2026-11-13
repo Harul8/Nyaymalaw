@@ -23,7 +23,7 @@ from nm.core_engine import steps as stepwise, tentative, titles, understanding
 from nm.core_engine.calls import CorrectionUnavailable, ReleaseWithheld, StopRequested, TurnCalls
 from nm.core_engine.conversation import (
     ConversationRefused, TurnContext, asking_of, chat_matter_id, checked_rows, commit_turn, committed_version, digest,
-    drop_asking, drop_shown, hold_asking, hold_shown, hold_title, open_turn, sent, shown_of, stored_chat, title_of,
+    drop_asking, drop_shown, hold_asking, hold_shown, hold_title, open_turn, sent, shown_of, steering_of, stored_chat, title_of,
 )
 from nm.shared.external_ai_contracts import ModelPermissionRefused
 from nm.shared.model_config import DEFAULT_TURN_MODEL
@@ -1115,6 +1115,13 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
     # Plan AN.41 (D66): the message and its files are saved with the conversation before any AI work begins. The same message
     # sent again - Continue - starts from what it saved (D70), with what steered it (D79).
     resume = (None if same is None else same["steps"] if "steps" in same else steps_from(same))
+    if same is not None and resume is not None:
+        # Plan AN.52 (52h, D214): a steer the advocate was told was taken, saved beside the conversation, which the run that
+        # was to take it never did (a restart came first). It joins the turn now as the advocate's words, as any steer does.
+        has = {(steer["text"], steer["at"]) for steer in same.get("steers", ())}
+        lost = [steer for steer in steering_of(context.matter, turn_id) if (steer["text"], steer["at"]) not in has]
+        if lost:
+            steered_with = [*lost, *(steered_with or ())]
     rethought = bool(steered_with) and resume is not None
     if rethought:
         # Plan AN.48 (48c; D149's rethink, today's Steer): what the advocate added while the matter waited joins it as their words;

@@ -687,6 +687,20 @@ class Application:
             from nm.app import step_worker
             verdict = step_worker.ask_worker(self.step_share, advocate_id, turn_id, 'steer', steer)
             return bool(verdict and verdict.get('taken'))
+        return self._steer_saved_then_taken(running, steer)
+
+    def _steer_saved_then_taken(self, running, steer):
+        """Plan AN.52 (52h, D214): a steer is saved beside its conversation before it is said to be taken, so a restart before
+        the turn's next step does not lose the advocate's correction. Where it cannot be saved - the turn has just been saved,
+        or the store refused - it is NOT taken, and the page sends the message as the next one, as it does for a turn that has
+        finished. A turn that has not yet reached its conversation (its first moments) takes it in memory, as before."""
+        from nm.core_engine.conversation import hold_steer
+        from nm.shared.store_port import StaleWrite
+        if running.writer is not None:
+            try:
+                running.writer(lambda context: hold_steer(self.store, context, steer))
+            except (OSError, StaleWrite, ValueError):
+                return False
         running.add(steer)
         return True
 
@@ -696,8 +710,7 @@ class Application:
             running = self._running.get((advocate_id, turn_id))
         if running is None or not self.turn_running(advocate_id, turn_id):
             return False
-        running.add(steer)
-        return True
+        return self._steer_saved_then_taken(running, steer)
 
     def save_queued(self, *, advocate_id, chat_id, queued):
         """What waits to be sent as the next message of a conversation (plan AN.42, D77), saved with it: on the versions of the

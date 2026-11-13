@@ -492,6 +492,36 @@ def save_title(store, matter, title):
     return _written(store, candidate, matter.version)
 
 
+#: Plan AN.52 (52h, D214; the review's F-20): the steers a turn being worked on was told to take, saved beside the
+#: conversation BEFORE the advocate is told "taken" - each with the turn it is for. Until now a steer lived only in the
+#: server's memory until the turn's next step took it, so a restart in between lost the advocate's correction silently.
+STEERING = "core_steering"
+
+
+def steering_of(matter, turn_id):
+    """The steers saved for this turn before it took them, oldest first; [] where there are none or they cannot be read
+    reliably (a steer that cannot be read is not put into an answer)."""
+    saved = (matter.intake_answers or {}).get(STEERING, []) if matter is not None else []
+    if not isinstance(saved, list) or any(not isinstance(entry, dict) or set(entry) != {"turn_id", "steer"} for entry in saved):
+        return []
+    mine = [entry["steer"] for entry in saved if entry["turn_id"] == turn_id]
+    return deepcopy(mine) if _steers_valid(mine) else []
+
+
+def hold_steer(store, context, steer):
+    """Save a steer beside the conversation of the turn being worked on, on that turn's own versions, before it is said to be
+    taken (D214). Steers saved for an earlier turn, which ended without them, are dropped. Returns the turn's context at the
+    version written."""
+    if not _steers_valid([steer]):
+        raise ValueError("The steer could not be read reliably")
+
+    def build(matter):
+        kept = [{"turn_id": context.turn_id, "steer": each} for each in steering_of(matter, context.turn_id)]
+        metadata = {**(matter.intake_answers or {}), STEERING: [*kept, {"turn_id": context.turn_id, "steer": deepcopy(steer)}]}
+        return replace(matter, intake_answers=metadata, version=matter.version + 1)
+    return _beside(store, context, build, (STEERING,))
+
+
 def queued_of(matter):
     """What waits to go as the next message of the conversation, as it was saved: a list, empty where nothing waits. ValueError
     where it cannot be read reliably."""
@@ -658,7 +688,9 @@ def commit_turn(store, context, *, elements, activities, records=None, work=None
         response["questions_asked"] = deepcopy(row["asked"])
     row["digest"] = digest(row)
     # The turn's commit replaces what it showed and asked while it worked (P27; plan AN.37), in the same write.
-    metadata = {**{key: value for key, value in context.matter.intake_answers.items() if key not in (SHOWN, ASKING)}, HEADER: {
+    # (Plan AN.52, 52h: and the steers saved for it before it took them - they are in its own record now.)
+    metadata = {**{key: value for key, value in context.matter.intake_answers.items()
+                   if key not in (SHOWN, ASKING, STEERING)}, HEADER: {
         "contract": CONTRACT, "chat_id": context.chat_id,
         "turn_count": len(context.rows) + 1, "tail_digest": row["digest"]}}
     candidate = replace(context.matter, brain_chat=(*context.rows, row),
