@@ -4593,7 +4593,7 @@ function renderCaseBlock(view, holder = null) {
     for (const ask of toGet) {
       const li = make('li');
       li.appendChild(make('p', 'detail-question', `${ask.what} — from ${ask.from_whom}`));
-      li.appendChild(make('p', 'board-meta', `For: ${ask.for}`));
+      li.appendChild(make('p', 'board-meta', `For: ${(ask.serves || [ask.for]).join('; ')}`));
       if (ask.why) li.appendChild(make('p', '', ask.why));
       if (ask.helps) li.appendChild(make('p', 'board-meta', ask.helps));
       ul.appendChild(li);
@@ -4737,7 +4737,8 @@ function renderCaseItem(item, view, dispute, holder) {
   stands.push(...casePoints(item.points || [], holder));
   if (!(item.points || []).length) stands.push(make('p', '', 'Not in your messages or documents yet.'));
   out.push(block('Where it stands', ...stands));
-  const asks = ((view && view.to_get) || []).filter((ask) => ask.for === item.element);
+  // A thing to get of a gathered case serves every requirement it names (plan AN.49, 49e); one saved earlier, the one it is for.
+  const asks = ((view && view.to_get) || []).filter((ask) => (ask.serves || [ask.for]).includes(item.element));
   if (asks.length) {
     const ul = make('ul', 'board-list');
     for (const ask of asks) {
@@ -4877,9 +4878,137 @@ function caseCheckedLine(view) {
     + 'sections of an answer do.';
 }
 
+// ONE LINE OF A CASE (plan AN.39, D52): its mark and its short words - with, for a heading of a gathered case, its count (plan AN.49,
+// 49e) - opening in the reading pane.
+function caseLine(className, mark, words, srLabel, open, sub = '') {
+  const make = (tag, name, text) => {
+    const node = document.createElement(tag);
+    if (name) node.className = name;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  };
+  const li = make('li');
+  const row = make('button', className);
+  row.type = 'button';
+  const said = make('span', 'item-words');
+  said.appendChild(make('span', 't short', words));
+  if (sub) said.appendChild(make('span', 'sub', sub));
+  if (srLabel) said.appendChild(make('span', 'sr', ` · ${srLabel}`));
+  const sign = make('span', 'st st--' + mark);
+  sign.setAttribute('aria-hidden', 'true');
+  row.append(sign, said);
+  row.addEventListener('click', () => open(row));
+  li.appendChild(row);
+  return li;
+}
+
+// A thing the law requires, as one line opening alone in the pane; and a thing the other side will rely on, the same way.
+function caseElementLine(item, view, dispute, place) {
+  const mark = CASE_MARKS[item.status] || CASE_MARKS.missing;
+  return caseLine(`item item--${mark.mark}`, mark.mark, item.label || item.element, mark.label,
+    (row) => window.NmBrainSources.showContent(item.label || item.element, renderCaseItem(item, view, dispute, caseHolder(dispute)),
+      row, false, `What the law requires · ${place}`));
+}
+
+function caseOtherLine(item, dispute, place) {
+  return caseLine('item item--other', 'other', item.label || item.relies_on, '',
+    (row) => window.NmBrainSources.showContent(item.label || item.relies_on, renderOtherSideItem(item, dispute, caseHolder(dispute)),
+      row, false, `The other side will rely on · ${place}`));
+}
+
+// A case of the gathered version (core_case_v3) carries its headings; one saved before it does not, and is drawn as it was (P46).
+function caseGathered(view) {
+  return Boolean(view) && Array.isArray(view.headings);
+}
+
+// How the least-shown of several requirements stands: the mark a heading, or a thing that decides the dispute, carries.
+function caseLeastShown(items) {
+  const status = ['missing', 'weak', 'shown'].find((held) => items.some((item) => item.status === held));
+  return CASE_MARKS[status] || CASE_MARKS.missing;
+}
+
+// THE CASE GATHERED (plan AN.49, 49e; D181-D182; owner, 12 Nov 2026: "consolidate and bring logically connected aspects into one
+// bullet"): the few things that most decide the dispute, each opening in the pane with what it concerns; then each heading as one
+// line with how many of its requirements the papers show, opening its requirements in the pane, where each opens alone as before.
+// The headings and what decides it are the model's, checked by its second look; every count and mark is code's, from the saved case.
+function caseGatheredLines(view, dispute, place) {
+  const make = (tag, className, text) => {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  };
+  const elements = view.elements || [];
+  const out = [];
+  const decides = view.decides || [];
+  if (decides.length) {
+    out.push(make('p', 'group', 'Most needs attention now'));
+    const ul = make('ul', 'checklist');
+    for (const item of decides) {
+      const concerned = (item.elements || []).map((number) => elements[number - 1]).filter(Boolean);
+      const mark = concerned.length ? caseLeastShown(concerned).mark : 'other';
+      ul.appendChild(caseLine(`item item--${mark}`, mark, item.what, '', (row) => window.NmBrainSources.showContent(item.what,
+        renderDecidingItem(item, view, dispute, place), row, false, `Most needs attention now · ${place}`)));
+    }
+    out.push(ul);
+  }
+  out.push(make('p', 'group', 'What the law requires'));
+  const ul = make('ul', 'checklist');
+  view.headings.forEach((heading, index) => {
+    const under = elements.filter((item) => item.heading === index + 1);
+    if (!under.length) return;
+    const shown = under.filter((item) => item.status === 'shown').length;
+    const mark = caseLeastShown(under);
+    const list = make('ul', 'checklist');
+    for (const item of under) list.appendChild(caseElementLine(item, view, dispute, place));
+    ul.appendChild(caseLine(`item item--${mark.mark}`, mark.mark, heading, '',
+      (row) => window.NmBrainSources.showContent(heading, [list], row, false, `What the law requires · ${place}`),
+      `${shown} of ${under.length} shown`));
+  });
+  // Every requirement is drawn: one under no heading of the list (the server puts none there) is a line of its own.
+  for (const item of elements) {
+    if (!(item.heading >= 1 && item.heading <= view.headings.length)) ul.appendChild(caseElementLine(item, view, dispute, place));
+  }
+  out.push(ul);
+  return out;
+}
+
+// WHAT MOST DECIDES THE DISPUTE, ONE THING IN THE READING PANE (plan AN.49, 49e; D182): why it decides it, then the requirements and
+// the points of the other side it concerns, each opening alone as from the board.
+function renderDecidingItem(item, view, dispute, place) {
+  const make = (tag, className, text) => {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  };
+  const block = (title, ...content) => {
+    const section = make('section', 'req-block');
+    section.appendChild(make('h4', '', title));
+    section.append(...content);
+    return section;
+  };
+  const out = [];
+  if (item.why) out.push(make('p', '', item.why));
+  const elements = (item.elements || []).map((number) => (view.elements || [])[number - 1]).filter(Boolean);
+  if (elements.length) {
+    const ul = make('ul', 'checklist');
+    for (const element of elements) ul.appendChild(caseElementLine(element, view, dispute, place));
+    out.push(block('What the law requires', ul));
+  }
+  const theirs = (item.other_side || []).map((number) => (view.other_side || [])[number - 1]).filter(Boolean);
+  if (theirs.length) {
+    const ul = make('ul', 'checklist');
+    for (const other of theirs) ul.appendChild(caseOtherLine(other, dispute, place));
+    out.push(block('What the other side will rely on', ul));
+  }
+  return out;
+}
+
 // A CASE AS ITS LINES (plan AN.39, D52, D56-D57), ONE COPY (plan AN.49, 49b): each thing the law requires, and each thing the other side
-// will rely on, as one line with its mark that opens alone in the reading pane. The board's card draws them under its dispute; the
-// whole-dispute view draws the same lines inside its fold, so a point is opened the same way from either.
+// will rely on, as one line with its mark that opens alone in the reading pane - or, for a case of the gathered version, what most
+// decides it and its headings (49e). The board's card draws them under its dispute; the whole-dispute view draws the same lines
+// inside its fold, so a point is opened the same way from either.
 function caseLines(view, dispute, place, { otherAsLine = false } = {}) {
   const make = (tag, className, text) => {
     const node = document.createElement(tag);
@@ -4887,37 +5016,19 @@ function caseLines(view, dispute, place, { otherAsLine = false } = {}) {
     if (text !== undefined) node.textContent = text;
     return node;
   };
-  const line = (className, mark, words, srLabel, open) => {
-    const li = make('li');
-    const row = make('button', className);
-    row.type = 'button';
-    const said = make('span', 'item-words');
-    said.appendChild(make('span', 't short', words));
-    if (srLabel) said.appendChild(make('span', 'sr', ` · ${srLabel}`));
-    const sign = make('span', 'st st--' + mark);
-    sign.setAttribute('aria-hidden', 'true');
-    row.append(sign, said);
-    row.addEventListener('click', () => open(row));
-    li.appendChild(row);
-    return li;
-  };
-  const out = [make('p', 'group', 'What the law requires')];
-  const ul = make('ul', 'checklist');
-  for (const item of view.elements || []) {
-    const mark = CASE_MARKS[item.status] || CASE_MARKS.missing;
-    ul.appendChild(line(`item item--${mark.mark}`, mark.mark, item.label || item.element, mark.label,
-      (row) => window.NmBrainSources.showContent(item.label || item.element, renderCaseItem(item, view, dispute, caseHolder(dispute)),
-        row, false, `What the law requires · ${place}`)));
+  const out = [];
+  if (caseGathered(view)) {
+    out.push(...caseGatheredLines(view, dispute, place));
+  } else {
+    out.push(make('p', 'group', 'What the law requires'));
+    const ul = make('ul', 'checklist');
+    for (const item of view.elements || []) ul.appendChild(caseElementLine(item, view, dispute, place));
+    out.push(ul);
   }
-  out.push(ul);
   const other = view.other_side || [];
   if (other.length) {
     const theirs = make('ul', 'checklist');
-    for (const item of other) {
-      theirs.appendChild(line('item item--other', 'other', item.label || item.relies_on, '',
-        (row) => window.NmBrainSources.showContent(item.label || item.relies_on, renderOtherSideItem(item, dispute, caseHolder(dispute)),
-          row, false, `The other side will rely on · ${place}`)));
-    }
+    for (const item of other) theirs.appendChild(caseOtherLine(item, dispute, place));
     if (otherAsLine) {
       // Plan AN.49 (49c; D180): on the board the other side is one line with its count; its list opens in the reading pane, where
       // each thing opens alone as before.
@@ -5008,7 +5119,14 @@ function renderDisputeCard(dispute, board, number = null, fold = null) {
           + 'finding that the law requires nothing.'));
       return section;
     }
-    return folded(caseLines(view, dispute, number ? `Dispute ${number}` : dispute.name, { otherAsLine: true }), elements.length);
+    const lines = caseLines(view, dispute, number ? `Dispute ${number}` : dispute.name, { otherAsLine: true });
+    if (caseGathered(view)) {
+      // Plan AN.49 (49e; D185): with the gathered account, code's line on how it was checked - and that the second look was not made,
+      // where it was not - stands above its lines.
+      lines.unshift(make('p', 'board-lede', caseCheckedLine(view)));
+      if (CASE_STATES[view.state]) lines.unshift(make('p', 'check-none', CASE_STATES[view.state]));
+    }
+    return folded(lines, elements.length);
   }
   const meta = make('p', 'dmeta');
   meta.append(...deadlineChips(listed.time_limits));

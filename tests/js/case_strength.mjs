@@ -341,4 +341,77 @@ assert.ok(none.textContent.includes('NM could not set out what would make this c
     related_points: [], parties: [], subjects: [] }));
   assert.equal(toggleOf(alone), undefined, 'a board of one dispute has no fold');
 }
+// THE CASE GATHERED (plan AN.49, 49e; D182, D185): a case of the gathered version shows under its dispute code's line on how it was
+// checked, what most decides it, and each heading as one line with how many of its requirements the papers show. A heading opens its
+// requirements in the pane, each opening alone as before; a thing that decides it opens what it concerns; a thing to get is listed
+// under every requirement it serves. A case saved earlier is drawn as before (above).
+{
+  const opened = [];
+  context.window.NmBrainSources = { ...context.window.NmBrainSources,
+    showContent: (title, content, opener, back, kind) => opened.push({ title, content: Array.from(content), opener, kind }) };
+  context.state.turns = [];
+  const gathered = {
+    state: 'unchecked',
+    headings: ['Possession', 'Notice'],
+    elements: [
+      { ...view.elements[0], label: 'Possession for twelve years', heading: 1 },
+      { element: 'Possession that was open', label: 'Open possession', proves: 'client', status: 'weak', why: 'One entry only.',
+        law: null, points: [], heading: 1 },
+      { ...view.elements[1], heading: 2 },
+    ],
+    to_get: [{ what: 'The client’s statement', from_whom: 'the client', why: 'It speaks to both.', helps: 'It fills the gaps.',
+      for: 'Possession that was open', serves: ['Possession that was open', 'Notice before the suit'] }],
+    other_side: [{ ...view.other_side[0], label: 'Their later entry', attacks: 1 }],
+    decides: [{ what: 'Whether the possession was open', why: 'Everything turns on it.', elements: [2], other_side: [1] }],
+  };
+  const gatheredDispute = { ...dispute, checklist: { ...dispute.checklist, case: gathered } };
+  const card = context.renderDisputeCard(gatheredDispute, board, 1);
+  const lines = walk(card).filter((node) => node.tagName === 'BUTTON' && has('item')(node));
+  assert.deepEqual(lines.map((row) => row.children[1].children.map((part) => part.textContent)), [
+    ['Whether the possession was open'], ['Possession', '1 of 2 shown'], ['Notice', '0 of 1 shown']], 'three lines for the case');
+  assert.deepEqual(lines.map((row) => row.className),
+    ['item item--coming_or_unclear', 'item item--coming_or_unclear', 'item item--not_given'], 'each marked as its least-shown requirement');
+  const cardText = card.textContent;
+  const at = (part) => { const index = cardText.indexOf(part); assert.ok(index >= 0, part); return index; };
+  assert.ok(at('NM’s second look at this list could not be made') < at('This is NM’s working list: code looked for each quotation')
+    && at('This is NM’s working list:') < at('Most needs attention now') && at('Most needs attention now') < at('What the law requires'),
+    'how it was checked stands above its lines');
+  for (const part of ['1 of 3 shown by the papers', '1 to get', 'The other side will rely on (1)']) at(part);
+  assert.ok(!cardText.includes('a second look checked it'), 'no second look is claimed where none was made');
+  assert.ok(!cardText.includes('Possession for twelve years'), 'the requirements are under their headings');
+
+  lines[1].handlers.click();
+  let pane = opened.at(-1);
+  assert.equal(pane.title, 'Possession');
+  assert.equal(pane.kind, 'What the law requires · Dispute 1');
+  const under = pane.content.flatMap(walk).filter((node) => node.tagName === 'BUTTON' && has('item')(node));
+  assert.deepEqual(under.map((row) => row.children[1].children[0].textContent), ['Possession for twelve years', 'Open possession']);
+  under[1].handlers.click();
+  pane = opened.at(-1);
+  assert.equal(pane.title, 'Open possession');
+  assert.ok(pane.content.map((node) => node.textContent).join('\n').includes('The client’s statement — from the client'));
+  lines[2].handlers.click();
+  opened.at(-1).content.flatMap(walk).filter((node) => node.tagName === 'BUTTON' && has('item')(node))[0].handlers.click();
+  assert.equal(opened.at(-1).title, 'Notice before the suit');
+  assert.ok(opened.at(-1).content.map((node) => node.textContent).join('\n').includes('The client’s statement — from the client'),
+    'a thing to get is listed under every requirement it serves');
+
+  lines[0].handlers.click();
+  pane = opened.at(-1);
+  assert.equal(pane.title, 'Whether the possession was open');
+  assert.equal(pane.kind, 'Most needs attention now · Dispute 1');
+  const decided = pane.content.map((node) => node.textContent).join('\n');
+  for (const part of ['Everything turns on it.', 'What the law requires', 'Open possession', 'What the other side will rely on',
+    'Their later entry']) {
+    assert.ok(decided.includes(part), part);
+  }
+  assert.ok(!decided.includes('Possession for twelve years'), 'only what it concerns');
+
+  const whole = context.renderCaseBlock(gathered).map((node) => node.textContent).join('\n');
+  assert.ok(whole.includes('For: Possession that was open; Notice before the suit'), 'the answer names every requirement it serves');
+  const detail = context.renderDisputeDetail(gatheredDispute, board);
+  const caseFold = detail.find((node) => node.tagName === 'DETAILS' && node.children[0].textContent.startsWith('The case ('));
+  assert.ok(caseFold.textContent.includes('Most needs attention now') && caseFold.textContent.includes('1 of 2 shown'),
+    'the whole-dispute view draws the same gathered lines');
+}
 console.log('case_strength.mjs: ok');
