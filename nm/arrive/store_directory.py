@@ -1141,37 +1141,7 @@ class FileDirectory:
         return (tuple(mine), tuple(here))
 
     def _attempt_rows(self) -> tuple[list, int] | None:
-        """Every line of the attempt log that can be read, as (when, who, where), and how many
-        could not be; None where the log itself cannot be opened.
-
-        ONE BAD LINE IS ONE BAD LINE (plan AN.53, 53c1, D218; the review's F-28). A line that
-        was no line - cut short when the server stopped, a stray byte - made the whole log
-        unreadable, and an unreadable limiter refuses every sign-in until somebody mends the
-        file by hand. Such a line is skipped and counted. It can hide at most the one failure
-        it was; every line that can be read still limits. A log that cannot be opened at all
-        is still 'the limiter cannot run'.
-        """
-        if not self._attempts.exists():
-            return [], 0
-        try:
-            raw = self._attempts.read_bytes()
-        except OSError:
-            return None
-        lines = raw.split(b"\n")
-        if lines and lines[-1] == b"":
-            lines.pop()  # the end of the last whole line, not a line
-        rows, skipped = [], 0
-        for line in lines:
-            try:
-                stamp, who, where = line.decode("utf8").rstrip("\r").split("\t")
-                when = datetime.fromisoformat(stamp)
-                if when.utcoffset() is None:
-                    raise ValueError("a time with no offset cannot be placed")
-            except ValueError:  # not text, not three fields, or no time: UnicodeDecodeError is a ValueError
-                skipped += 1
-                continue
-            rows.append((when, who, where))
-        return rows, skipped
+        return attempt_log_rows(self._attempts)
 
     def skipped_attempt_lines(self) -> int | None:
         """How many lines of the attempt log cannot be read and are skipped; None where the
@@ -1633,3 +1603,40 @@ class FileDirectory:
 def _one_log_field(value: object) -> str:
     """Keep untrusted identity/source text inside one tab-separated field."""
     return " ".join(str(value).replace("\t", " ").splitlines())
+
+
+def attempt_log_rows(path: Path) -> tuple[list, int] | None:
+    """Every line of a sign-in attempt log that can be read, as (when, who, where), and how
+    many could not be; None where the log itself cannot be opened. The one rule for what a
+    line of that log is: the limiter reads it (`FileDirectory.failures_since`) and so do the
+    Admin diagnostics (plan AN.53, 53c4), which show the count.
+
+    ONE BAD LINE IS ONE BAD LINE (plan AN.53, 53c1, D218; the review's F-28). A line that
+    was no line - cut short when the server stopped, a stray byte - made the whole log
+    unreadable, and an unreadable limiter refuses every sign-in until somebody mends the
+    file by hand. Such a line is skipped and counted. It can hide at most the one failure
+    it was; every line that can be read still limits. A log that cannot be opened at all
+    is still 'the limiter cannot run'.
+    """
+    path = Path(path)
+    if not path.exists():
+        return [], 0
+    try:
+        raw = path.read_bytes()
+    except OSError:
+        return None
+    lines = raw.split(b"\n")
+    if lines and lines[-1] == b"":
+        lines.pop()  # the end of the last whole line, not a line
+    rows, skipped = [], 0
+    for line in lines:
+        try:
+            stamp, who, where = line.decode("utf8").rstrip("\r").split("\t")
+            when = datetime.fromisoformat(stamp)
+            if when.utcoffset() is None:
+                raise ValueError("a time with no offset cannot be placed")
+        except ValueError:  # not text, not three fields, or no time: UnicodeDecodeError is a ValueError
+            skipped += 1
+            continue
+        rows.append((when, who, where))
+    return rows, skipped

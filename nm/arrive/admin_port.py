@@ -211,6 +211,10 @@ class AdminChecksPort(Protocol):
     def outbox(self) -> Mapping[str, object]:
         ...
 
+    def limiter_log(self) -> Mapping[str, int] | None:
+        """How many lines of the sign-in limiter's log are skipped as unreadable (plan AN.53, 53c4). None where it cannot be opened."""
+        ...
+
     def outgoing_log(self, since: datetime) -> Mapping[str, int] | None:
         """How many lines the outgoing-data log could not take since `since` (plan AN.53, 53e). None where that cannot be read."""
         ...

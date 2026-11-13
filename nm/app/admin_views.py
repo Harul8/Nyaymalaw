@@ -350,6 +350,13 @@ def diagnostics_view(roster: Roster, usage: AdminUsagePort, turns: AdminTurnsPor
                             "attention" if sign_ins["wrong_password"] + sign_ins["unknown_account"] >= BUSY_WRONG_SIGN_INS else "ok",
                             dict(sign_ins)))
 
+    # Plan AN.53 (53c4, D218): a line of the limiter's log that cannot be read is skipped, not a refusal of every sign-in; it
+    # can hide the one failed attempt it was, so the operator is shown how many there are.
+    skipped = checks.limiter_log()
+    found.append(_could_not("limiter_log", "The sign-in limiter's log (lines it cannot read)") if skipped is None else
+                 _check("limiter_log", "The sign-in limiter's log (lines it cannot read)",
+                        "attention" if skipped["lines_skipped"] else "ok", dict(skipped)))
+
     disk = checks.disk()
     if disk is None:
         found.append(_could_not("disk", "Free disk"))

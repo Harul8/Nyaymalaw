@@ -101,3 +101,30 @@ def test_the_operator_is_told_once_of_lines_skipped_and_never_what_they_held(tmp
             directory.failures_since(WHO, WHERE, SINCE)
     said = [record.getMessage() for record in caplog.records]
     assert len(said) == 1 and "1" in said[0] and "secret-looking" not in said[0]
+
+
+# ----- the count on the Admin diagnostics (plan AN.53, 53c4): the operator sees it on a page, not only in the server's log -----
+
+def test_the_admin_checks_count_the_skipped_lines_by_the_directorys_own_rule(tmp_path):
+    from nm.arrive.admin_checks import AdminChecks
+    directory = _directory(tmp_path)
+    checks = AdminChecks(storage=tmp_path, root=tmp_path, settings={})
+    assert checks.limiter_log() == {"lines_skipped": 0}, "no log yet: nothing skipped"
+    _fail(directory, 2)
+    with (tmp_path / "attempts.log").open("ab") as log:
+        log.write(b"not a line of the log\n2026-11-13T11:58:00\tno-offset@example.test\t203.0.113.7\n")
+    assert checks.limiter_log() == {"lines_skipped": 2} and directory.skipped_attempt_lines() == 2, "one rule, read by both"
+
+
+def test_the_admin_checks_say_a_limiter_log_that_cannot_be_opened_as_not_readable(tmp_path):
+    from nm.arrive.admin_checks import AdminChecks
+    (tmp_path / "attempts.log").mkdir()
+    assert AdminChecks(storage=tmp_path, root=tmp_path, settings={}).limiter_log() is None
+
+
+@pytest.mark.parametrize("skipped, state", [({"lines_skipped": 0}, "ok"), ({"lines_skipped": 3}, "attention"), (None, "unavailable")])
+def test_the_diagnostics_show_the_skipped_lines_and_call_for_attention(skipped, state):
+    from tests.test_the_diagnostics_say_what_is_well_from_counts_and_sizes_and_never_from_anyones_work import Checks, view
+    shown = view(Checks(limiter_log=skipped))
+    check, = [c for c in shown["checks"] if c["id"] == "limiter_log"]
+    assert check["state"] == state and check["facts"] == (skipped or {})

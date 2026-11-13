@@ -87,6 +87,14 @@ class AdminChecks:
             counts[next((name for name, start in _AUTH_KINDS if what.startswith(start)), "other")] += 1
         return counts
 
+    def limiter_log(self) -> Mapping[str, int] | None:
+        """How many lines of the sign-in limiter's log cannot be read and are skipped (plan AN.53, 53c4): a count by the
+        directory's own rule for what a line is, never what a line held. None where the log cannot be opened - the limiter then
+        cannot run and sign-in is refused, which the page shows as 'could not be checked'."""
+        from nm.arrive.store_directory import attempt_log_rows
+        read = attempt_log_rows(self.storage / "attempts.log")
+        return None if read is None else {"lines_skipped": read[1]}
+
     # --------------------------------------------------------------------- the disk ---
 
     def disk(self) -> Mapping[str, Mapping[str, int]] | None:

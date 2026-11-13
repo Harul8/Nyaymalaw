@@ -193,6 +193,7 @@ class Checks:
     def law(self): return self.parts["law"]
     def scanner(self): return self.parts["scanner"]
     def outgoing_log(self, since): return self.parts.get("outgoing_log", {"lines_not_written": 0})  # plan AN.53, 53e
+    def limiter_log(self): return self.parts.get("limiter_log", {"lines_skipped": 0})  # plan AN.53, 53c4
 
     def outbox(self):
         if self.parts["outbox"] is None:
@@ -215,9 +216,9 @@ def view(checks=None, usage=None, turns=None, serving=CURRENT, roster=ROSTER):
 def test_a_well_service_is_ok_on_every_check_but_notes_that_mail_stays_on_this_computer():
     page = view()
     assert states(page) == {"server": "ok", "model_service": "ok", "turns_in_progress": "ok", "recent_turns": "ok",
-                            "law_acts": "ok", "scanner": "ok", "sign_in_security": "ok", "disk": "ok", "mail": "note",
-                            "outgoing_log": "ok", "admin_setting": "ok"}
-    assert page["summary"] == {"ok": 10, "attention": 0, "note": 1, "unavailable": 0} and content_free(page)
+                            "law_acts": "ok", "scanner": "ok", "sign_in_security": "ok", "limiter_log": "ok", "disk": "ok",
+                            "mail": "note", "outgoing_log": "ok", "admin_setting": "ok"}
+    assert page["summary"] == {"ok": 11, "attention": 0, "note": 1, "unavailable": 0} and content_free(page)
     assert next(c for c in page["checks"] if c["id"] == "server")["facts"]["running_code"] == "abcdef012345"
 
 
@@ -275,7 +276,8 @@ def test_a_source_that_cannot_be_read_makes_only_its_own_check_unavailable():
     page = view(Checks(turn_attempts=None, sign_ins=None, disk=None, outbox=None), Usage(fails=True), Turns(fails=True))
     assert states(page) == {"server": "ok", "model_service": "unavailable", "turns_in_progress": "unavailable",
                             "recent_turns": "unavailable", "law_acts": "ok", "scanner": "ok", "sign_in_security": "unavailable",
-                            "disk": "unavailable", "mail": "unavailable", "outgoing_log": "ok", "admin_setting": "ok"}
+                            "limiter_log": "ok", "disk": "unavailable", "mail": "unavailable", "outgoing_log": "ok",
+                            "admin_setting": "ok"}
     assert page["summary"]["unavailable"] == 6
 
 
