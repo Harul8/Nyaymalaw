@@ -60,6 +60,7 @@ from nm.shared.model_config import DEFAULT_TURN_MODEL, TURN_CHOICES
 from nm.shared.model_port import USAGE_LIMIT_MESSAGE, ModelError, UsageLimitReached
 from nm.shared.clock_contracts import FORUM
 from nm.shared.identity_contracts import source_fingerprint
+from nm.shared.storage_errors_port import StoredObjectUnreadable
 from nm.shared.traceability_contracts import implements
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -318,6 +319,11 @@ def signed_in(request: Request, nm_session: str | None = Cookie(default=None),
 
 
 Advocate = Annotated[str, Depends(signed_in)]
+
+# WHAT READING A SAVED CONVERSATION RAISES WHEN IT CANNOT BE READ (plan AN.53, 53j2): the disk; a record that opens and does not
+# read as one; and the store's own word for a file that will not open, which these addresses did not catch - so an advocate's own
+# damaged conversation was a server error at every one of them. Another kind of failure is not caught here and stays loud.
+_UNREADABLE = (OSError, ValueError, StoredObjectUnreadable)
 
 def _origins(request: Request) -> set[str]:
     configured = (os.environ.get(_TRUSTED_ORIGINS) or "").strip()
@@ -1855,7 +1861,7 @@ def discard_turn(req: TurnOf, advocate_id: Advocate, request: Request, backgroun
                                             session_current=lambda: _session_current(request, advocate_id))
     except ConversationRefused as exc:
         raise HTTPException(exc.status, _conversation_error(exc, req)) from exc
-    except (OSError, ValueError) as exc:
+    except _UNREADABLE as exc:
         raise HTTPException(503, 'This conversation could not be read reliably.') from exc
     if output is None:
         raise HTTPException(409, {'code': 'nothing_to_discard', 'why': 'There is no answer that stopped part-way here.',
@@ -1940,7 +1946,7 @@ def save_queued(chat_id: str, req: Queued, advocate_id: Advocate, request: Reque
                                   queued=[item.model_dump() for item in req.queued if item.text.strip()])
     except LookupError as exc:
         raise HTTPException(404, 'Conversation not available.') from exc
-    except (OSError, ValueError) as exc:
+    except _UNREADABLE as exc:
         raise HTTPException(503, {'code': 'queue_not_saved', 'why': 'What waits could not be saved with the conversation.'}) from exc
     return {'state': 'saved'}
 
@@ -2045,7 +2051,7 @@ def _saved_state(advocate_id, chat_id, turn_id):
     """Where a turn this process does not know stands in its saved conversation (D73): {} where it is not there."""
     try:
         matter = application().store.load_for(chat_matter_id(advocate_id, chat_id), advocate_id)
-    except (OSError, ValueError):
+    except _UNREADABLE:
         return {}
     if matter is None:
         return {}
@@ -2151,7 +2157,7 @@ def _read_chat(chat_id, advocate_id, request):
                 raise HTTPException(401, 'not signed in')
             return kept[1], kept[2]
         matter = store.load_for(matter_id, advocate_id)
-    except (OSError, ValueError) as exc:
+    except _UNREADABLE as exc:
         raise HTTPException(503, 'This conversation could not be read reliably.') from exc
     if not _session_current(request, advocate_id):
         raise HTTPException(401, 'not signed in')
@@ -2384,7 +2390,7 @@ def chat_title(chat_id: str, advocate_id: Advocate, request: Request, response: 
     file alone, which reading the whole conversation for it would not need. None until NM names it."""
     try:
         matter = application().store.load_for(chat_matter_id(advocate_id, chat_id), advocate_id)
-    except (OSError, ValueError) as exc:
+    except _UNREADABLE as exc:
         raise HTTPException(503, 'This conversation could not be read reliably.') from exc
     if not _session_current(request, advocate_id):
         raise HTTPException(401, 'not signed in')
@@ -3216,7 +3222,22 @@ def _how_read(rows, source_id):
 @app.get('/api/matters/{matter_id}')
 @app.get('/api/matters/{matter_id}/transcript')
 def historical_matter(matter_id: str, advocate_id: Advocate, request: Request):
-    matter = application().store.load_for(matter_id, advocate_id)
+    store = application().store
+    try:
+        matter = store.load_for(matter_id, advocate_id)
+    except _UNREADABLE as exc:
+        # Plan AN.53 (53j2, D225): the store refuses a name that is no storage name, and a file it cannot open, by raising. Which
+        # it was is the store's to say: a name no saved file recorded as this advocate's bears is not there (a malformed one among
+        # them, and a damaged file nobody is recorded as owning, said to no advocate since 53b1); their own, damaged, is said so.
+        if not _session_current(request, advocate_id):
+            raise HTTPException(401, 'not signed in') from exc
+        try:
+            own = any(name == matter_id and known for name, _signature, _saved, known in store.saved_files_for(advocate_id))
+        except OSError:
+            own = False
+        if not own:
+            raise HTTPException(404, 'Matter not available.') from exc
+        raise HTTPException(503, 'This matter could not be read reliably.') from exc
     if not _session_current(request, advocate_id):
         raise HTTPException(401, 'not signed in')
     if matter is None:
