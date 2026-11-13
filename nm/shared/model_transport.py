@@ -9,12 +9,12 @@ import threading
 import time
 
 from nm.shared.model_port import (
-    ConfigurationError,
     ContentRefused,
     ContextOverflow,
     ModelError,
     ProviderUnavailable,
     RateLimited,
+    RequestRejected,
     UsageLimitReached,
 )
 
@@ -113,14 +113,16 @@ def normalise_error(exc: Exception) -> Exception:
         return RateLimited(message)
     if name in {"APIConnectionError", "APITimeoutError", "InternalServerError", "OverloadedError"}:
         return ProviderUnavailable(message)
+    # Plan AN.52 (52i, D215; the review's F-31): the provider's rejection of NM's own request - not authorised, no such model,
+    # malformed - has its own name. It was a plain ConfigurationError, which the engine's handlers took for an outage.
     if name in {"AuthenticationError", "PermissionDeniedError", "NotFoundError"}:
-        return ConfigurationError(message)
+        return RequestRejected(message)
     if name in {"BadRequestError", "UnprocessableEntityError"}:
         if "context_length_exceeded" in low or "maximum context length" in low:
             return ContextOverflow(message)
         if "content_filter" in low or "content policy" in low:
             return ContentRefused(message)
-        return ConfigurationError(message)
+        return RequestRejected(message)
     if name == "APIStatusError":
         return ProviderUnavailable(message)
     return exc

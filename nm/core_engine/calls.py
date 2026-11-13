@@ -11,8 +11,8 @@ from copy import deepcopy
 from dataclasses import replace
 
 from nm.core_engine import estimates, reasoning, routing
-from nm.shared.model_port import (ConfigurationError, ContextOverflow, ModelError, ModelResult, Prompt, SchemaViolation, TierUnavailable,
-                                  estimate_tokens)
+from nm.shared.model_port import (ConfigurationError, ContextOverflow, ModelError, ModelResult, Prompt, RequestRejected,
+                                  SchemaViolation, TierUnavailable, estimate_tokens)
 
 log = logging.getLogger(__name__)
 
@@ -89,6 +89,15 @@ class ReleaseWithheld(ModelError):
 class StopRequested(Exception):
     """The advocate stopped the answer (plan AN.42, D78): no further call is sent, and a call already sent finishes and is paid
     for. Not a model failure: no section is answered with a note for it, and the turn stops, keeping every step finished."""
+
+
+class OwnRequestRejected(Exception):
+    """The provider rejected NM's own request part-way through a turn (plan AN.52, 52i, D215; the review's F-31): malformed, not
+    authorised, or naming a model it does not have. NOT A MODEL FAILURE, ON PURPOSE - as StopRequested is not. The engine's
+    handlers of a model error are written for a service that may be back in a moment: they go on without the step, or say the
+    service could not be reached and offer Continue. None of that is true of a request the provider will reject again, so this
+    is raised at the one door every call of a turn goes through and none of them catches it: the turn stops, keeping every
+    step finished, and says so in code's words (nm/core_engine/turn.py). What the provider said is its cause."""
 
 
 class TurnCalls:
@@ -268,6 +277,9 @@ class TurnCalls:
             rejected = getattr(exc, "rejected_result", None)
             if rejected is not None:
                 self.last_output = deepcopy(rejected.data)
+            if isinstance(exc, RequestRejected):
+                # Recorded below as the call it was, by its own name; then the turn's stop, not a model error (52i).
+                raise OwnRequestRejected(str(exc)) from exc
             raise
         finally:
             usage = getattr(receipt, "usage", None)

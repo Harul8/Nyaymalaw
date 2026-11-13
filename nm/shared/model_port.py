@@ -169,6 +169,17 @@ class ConfigurationError(ModelError):
     """
 
 
+class RequestRejected(ConfigurationError):
+    """THE PROVIDER REJECTED NM'S OWN REQUEST (plan AN.52, 52i, D215): it answered
+    that the request was malformed, not authorised, or named a model it does not
+    have. That is a fault in this installation's settings or in NM's code, not an
+    outage: the same request will be rejected again, so nothing sends it again,
+    and nothing goes on as if the service had merely been away. It is a
+    ConfigurationError still, so a caller that is not a turn handles it as it
+    did; a turn stops on it (nm/core_engine/calls.py).
+    """
+
+
 # ------------------------------------------------------------- data types ---
 
 

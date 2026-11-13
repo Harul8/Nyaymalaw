@@ -20,7 +20,7 @@ from datetime import datetime, timezone
 from nm.core_engine import answer_sections, answer_sources, calculation, case_strength, checklist, estimates, follow_up, questions
 from nm.core_engine import reasoning, replay_scope, research, response_rendering, response_writer
 from nm.core_engine import steps as stepwise, tentative, titles, understanding
-from nm.core_engine.calls import CorrectionUnavailable, ReleaseWithheld, StopRequested, TurnCalls
+from nm.core_engine.calls import CorrectionUnavailable, OwnRequestRejected, ReleaseWithheld, StopRequested, TurnCalls
 from nm.core_engine.conversation import (
     ConversationRefused, TurnContext, asking_of, chat_matter_id, checked_rows, commit_turn, committed_version, digest,
     drop_asking, drop_shown, hold_asking, hold_shown, hold_title, open_turn, sent, shown_of, steering_of, stored_chat, title_of,
@@ -105,6 +105,10 @@ STOPS = {
     # list, or a call whose line in the outgoing-data log could not be written. Nothing was sent.
     "sending_refused": "This installation of NM could not send what this message needed sent, so nothing was sent and NM could "
                        "not go on with it.",
+    # Plan AN.52 (52i, D215): the AI service rejected NM's own request - malformed, not authorised, or naming a model it does not
+    # have. A fault in this installation's settings or in NM, never in the advocate's message; it is not an outage.
+    "request_rejected": "The AI service rejected NM's own request. That is a fault in how this installation of NM is set up, or "
+                        "in NM, and not in your message; NM could not go on with it.",
     # Plan AN.48 (D134): a matter worked step by step stops for the advocate's go-ahead after each step; Done before any analysis
     # was written saves it as it stands (48a3).
     "waiting": "NM is waiting for your go-ahead on this matter.",
@@ -116,6 +120,7 @@ STOP_NEEDS = {
     "model_permission_required": "Turn AI data sharing back on, then press Continue.",
     "usage_limit": "Continue works once more usage is available.",
     "sending_refused": "This is for whoever runs this installation to put right; Continue works once it is.",
+    "request_rejected": "This is for whoever runs this installation to put right; Continue works once it is.",
 }
 #: Plan AN.41 (D66, D71): a turn saved as it stopped before NM had finished any part of it - the advocate's message and files,
 #: and code's words on why it stopped, with nothing of an answer.
@@ -1401,6 +1406,20 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
         stopped("sending_refused", refusal)
         refusal.diagnosis = _diagnosis("sending_refused", exc, calls)
         log.warning("Message not answered: %s (%s)", refusal.diagnosis, str(exc)[:300])
+        finish("retryable", refusal.diagnosis)
+        refusal.metrics = calls.metrics()
+        raise refusal from exc
+    except OwnRequestRejected as exc:
+        # NM'S OWN REJECTED REQUEST IS NOT AN OUTAGE (plan AN.52, 52i, D215; the review's F-31; defect shape S10). It came here as
+        # a model error: the turn went on without the step and saved an answer, or said the service could not be reached and
+        # offered a Continue that could never work. It is a stop of its own: said in code's words, what NM had finished kept,
+        # nothing sent again. What the provider said is the operator's - in the server's log and the attempt's diagnosis.
+        said = exc.__cause__ or exc
+        refusal = ConversationRefused(STOPS["request_rejected"] + " What NM had finished is kept.", status=503,
+                                      code="request_rejected", retryable=True)
+        stopped("request_rejected", refusal)
+        refusal.diagnosis = _diagnosis("request_rejected", said, calls)
+        log.error("Message not answered: %s (%s: %s)", refusal.diagnosis, type(said).__name__, str(said)[:300])
         finish("retryable", refusal.diagnosis)
         refusal.metrics = calls.metrics()
         raise refusal from exc
