@@ -161,7 +161,8 @@ installed separately. The Anthropic adapter's package is not on the list; hostin
   - *Sealed under the installation secret alone:* an advocate's settings inside their account record, pending accounts, reset
     links, the mail outbox, and the words of the steps handed to the worker.
   - *Plain text:* the account records themselves, whose file names are the advocates' email addresses (passwords are kept only as
-    salted hashes); the sign-in files and the two sign-in logs; each turn's counts and timings; ratings of replies; the record of
+    salted hashes); the sign-in files, each with the record of its owner beside it (a hash,
+    no address), and the two sign-in logs; each turn's counts and timings; ratings of replies; the record of
     each matter's last saved version and the record of its owner (`matter-owners/`, a hash of the account's identifier, no
     address); and the identifying columns of the small databases (whose step, whose usage).
   Encrypt the disk and the backups for this reason, and give the folder to the account NM runs as and to no other.

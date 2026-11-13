@@ -31,7 +31,7 @@ import os
 import secrets
 import threading
 from dataclasses import replace
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from nm.arrive import attempts_contracts as attempts
@@ -53,6 +53,7 @@ from nm.arrive.advocate_contracts import (
     open_session,
     registration_email,
     token_fingerprint,
+    utcnow,
 )
 from nm.arrive.directory_port import (  # noqa: F401
     AccountBusy,
@@ -1325,7 +1326,80 @@ class FileDirectory:
         self._write_session(session)
         return token
 
+    # --------------------------------------- the record of a sign-in's owner ---
+    #
+    # WHOSE A SIGN-IN IS, WITHOUT READING IT (plan AN.53, 53c2, D218; the
+    # review's F-28). Whose a sign-in file is was known only by reading it, so
+    # a listing of one advocate's sign-ins read every advocate's, and one file
+    # that could not be read had no owner: it refused the list, 'sign out
+    # everywhere' and the password reset of EVERY advocate. Beside each
+    # sign-in file there is now a record of its owner: a hash of the account's
+    # identifier and nothing else, written before the sign-in itself and, for
+    # a sign-in from before there were such records, when it is first listed.
+    #
+    # IT DOES NOT DECIDE WHOSE A SIGN-IN IS. The file does, and a listing still
+    # compares the file's own owner. The record only lets a file recorded as
+    # another's be passed over unread, and lets a file that cannot be read be
+    # known as this advocate's - to be said to them, and ended for them.
+
+    def _session_owner_path(self, fingerprint: str) -> Path:
+        return self._sessions / f"{fingerprint}.owner"
+
+    @staticmethod
+    def _session_owner_mark(advocate_id: str) -> str:
+        return hashlib.sha256(b"nm-session-owner\0" + str(advocate_id).encode("utf8")).hexdigest()
+
+    def _session_owner(self, fingerprint: str) -> str | None:
+        """The mark of the sign-in's recorded owner, or None where none can be read."""
+        try:
+            mark = self._session_owner_path(fingerprint).read_text(encoding="ascii").strip()
+        except (OSError, ValueError):
+            return None
+        return mark if len(mark) == 64 and not set(mark) - set("0123456789abcdef") else None
+
+    def _record_session_owner(self, fingerprint: str, advocate_id: str) -> None:
+        """A record that cannot be written leaves the owner not known, which the next listing
+        mends where the file can be read: it never fails a sign-in."""
+        mark = self._session_owner_mark(advocate_id)
+        if self._session_owner(fingerprint) == mark:
+            return
+        path = self._session_owner_path(fingerprint)
+        temporary = path.with_name(f".{path.name}.{secrets.token_hex(8)}.tmp")
+        try:
+            with temporary.open("x", encoding="ascii") as handle:
+                handle.write(mark)
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.replace(temporary, path)
+        except OSError:
+            pass
+        finally:
+            discard(temporary)
+
+    def _sessions_of(self, advocate_id: str) -> list[tuple[str, Session | None, bool]]:
+        """The sign-in files that are, or may be, this advocate's: (fingerprint, the sign-in or
+        None where its file cannot be read, whether it is RECORDED as theirs). A file recorded as
+        another's is passed over unread. One with no record is read to learn whose it is, and
+        recorded; where it cannot be read it is returned as nobody's on record."""
+        mine, found = self._session_owner_mark(advocate_id), []
+        if not self._sessions.exists():
+            return found
+        for path in sorted(self._sessions.glob("*.nm")):
+            recorded = self._session_owner(path.stem)
+            if recorded is not None and recorded != mine:
+                continue
+            session = self._read_session(path.stem)
+            if session is None:
+                found.append((path.stem, None, recorded == mine))
+                continue
+            if recorded is None:
+                self._record_session_owner(path.stem, session.advocate_id)
+            if session.advocate_id == advocate_id:
+                found.append((path.stem, session, True))
+        return found
+
     def _write_session(self, session: Session) -> None:
+        self._record_session_owner(session.token_fingerprint, session.advocate_id)
         self._replace_advocate(
             self._session_path(session.token_fingerprint),
             {
@@ -1434,19 +1508,15 @@ class FileDirectory:
         an hour ago on a device they do not recognise. Filtering here would
         make the interesting half unreachable.
 
-        A session that cannot be decoded has unknown ownership. Refuse the
-        inventory rather than hiding a potentially active device from its owner.
+        A session of this advocate's that cannot be decoded, or one nobody is
+        recorded as owning, refuses the inventory rather than hiding a
+        potentially active device from its owner. One recorded as another
+        advocate's is not read and refuses nothing here (plan AN.53, 53c2).
         """
-        out: list[Session] = []
-        if not self._sessions.exists():
-            return ()
-        for path in sorted(self._sessions.glob("*.nm")):
-            session = self._read_session(path.stem)
-            if session is None:
-                raise SessionsUnavailable("The complete session list could not be read.")
-            if session.advocate_id == advocate_id:
-                out.append(session)
-        return tuple(out)
+        found = self._sessions_of(advocate_id)
+        if any(session is None for _fingerprint, session, _recorded in found):
+            raise SessionsUnavailable("The complete session list could not be read.")
+        return tuple(session for _fingerprint, session, _recorded in found)
 
     def close_selected_session(
         self, advocate_id: str, reference: str, why: str, *, except_token: str
@@ -1479,7 +1549,24 @@ class FileDirectory:
 
         keep = token_fingerprint(except_token or "")
         ended = 0
-        for session in self.sessions_for(advocate_id):
+        found = self._sessions_of(advocate_id)
+        # Before anything is ended: a file nobody is recorded as owning may be this advocate's
+        # sign-in, so 'every sign-in ended' cannot be claimed and nothing is.
+        if any(session is None and not recorded for _fingerprint, session, recorded in found):
+            raise SessionsUnavailable("The complete session list could not be read.")
+        for fingerprint, session, _recorded in found:
+            if session is None:
+                # THIS ADVOCATE'S, AND IT CANNOT BE READ (plan AN.53, 53c2). It is ended, not
+                # skipped: a record that says so is put in its place, so a file that became
+                # readable again could not be a live sign-in that outlived 'sign out everywhere'
+                # or a password reset. What it held of the device and its times is lost and said.
+                now = utcnow()
+                self._write_session(Session(
+                    token_fingerprint=fingerprint, advocate_id=advocate_id, device="unknown",
+                    issued_at=now, expires_at=now + timedelta(seconds=1), ended_because=why,
+                    client_label="A sign-in whose record could not be read"))
+                ended += 1
+                continue
             if session.token_fingerprint == keep or session.ended_because:
                 continue
             self._write_session(replace(session, ended_because=why))
