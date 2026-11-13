@@ -2044,10 +2044,10 @@ def turn_outcome(turn_id: str, advocate_id: Advocate, request: Request) -> _Rele
 def _saved_state(advocate_id, chat_id, turn_id):
     """Where a turn this process does not know stands in its saved conversation (D73): {} where it is not there."""
     try:
-        matter = application().store.load(chat_matter_id(advocate_id, chat_id))
+        matter = application().store.load_for(chat_matter_id(advocate_id, chat_id), advocate_id)
     except (OSError, ValueError):
         return {}
-    if matter is None or matter.advocate_id != advocate_id:
+    if matter is None:
         return {}
     if any(row.get('turn_id') == turn_id for row in matter.brain_chat):
         return {'state': 'finished', 'chat_id': chat_id}
@@ -2150,12 +2150,12 @@ def _read_chat(chat_id, advocate_id, request):
             if not _session_current(request, advocate_id):
                 raise HTTPException(401, 'not signed in')
             return kept[1], kept[2]
-        matter = store.load(matter_id)
+        matter = store.load_for(matter_id, advocate_id)
     except (OSError, ValueError) as exc:
         raise HTTPException(503, 'This conversation could not be read reliably.') from exc
     if not _session_current(request, advocate_id):
         raise HTTPException(401, 'not signed in')
-    if matter is None or matter.advocate_id != advocate_id:
+    if matter is None:
         raise HTTPException(404, 'Conversation not available.')
     try:
         # Plan AN.41 (D69-D71): an answer that stopped part-way is no longer saved by reading the conversation; it waits, with
@@ -2185,7 +2185,9 @@ def _derived_line(store, matter_id):
             return None
         if matter.id != matter_id:
             raise ValueError("the saved matter identity conflicts with its storage name")
-    except Exception:  # noqa: BLE001 -- named, never swallowed: listed as unreadable
+    except Exception as exc:  # noqa: BLE001 -- named, never swallowed: listed as unreadable
+        # Said to its owner by the history where the store has its owner's record, and here to the operator in any case.
+        _history_log.warning('A saved file could not be read for the history (%s).', type(exc).__name__)
         return {'v': _LINE_VERSION, 'owner': None}
     line = {'v': _LINE_VERSION, 'owner': matter.advocate_id}
     if HEADER in matter.intake_answers:
@@ -2305,16 +2307,24 @@ def work(advocate_id: Advocate, request: Request,
     Without one, all of it."""
     store = application().store
     chats, matters, unavailable = [], [], []
-    saved = store.saved_files()
-    with _KEPT_LOCK:  # a file no longer saved leaves the history
-        for gone in set(_LISTED) - {matter_id for matter_id, _, _ in saved}:
+    # Plan AN.53 (53b, D217): the store's listing for this advocate - no file recorded as another's is in it, so none of
+    # another's is opened and no line of another's is read. `owned` is True where the store's record says the file is this
+    # advocate's, and None where no owner is recorded and the file itself says whose it is.
+    saved = store.saved_files_for(advocate_id)
+    with _KEPT_LOCK:  # a file of this advocate's no longer saved leaves the history
+        listed = {matter_id for matter_id, _, _, _ in saved}
+        for gone in [matter_id for matter_id, kept in _LISTED.items()
+                     if kept[1].get('owner') == advocate_id and matter_id not in listed]:
             del _LISTED[gone]
-    for matter_id, signature, saved_at in sorted(saved, key=lambda entry: entry[2], reverse=True):
+    for matter_id, signature, saved_at, owned in sorted(saved, key=lambda entry: entry[2], reverse=True):
         line = _listed(store, matter_id, signature)
         if line is None:
             continue
         if line['owner'] is None:
-            unavailable.append(matter_id)
+            # A file that could not be read is said to the advocate it is recorded as belonging to, and to no other: one
+            # nobody is recorded as owning is in the server's log (`_derived_line`) and the store's own list of them.
+            if owned:
+                unavailable.append(matter_id)
         elif line['owner'] != advocate_id:
             continue
         elif line.get('unavailable'):
@@ -2373,12 +2383,12 @@ def chat_title(chat_id: str, advocate_id: Advocate, request: Request, response: 
     """The conversation's title (plan AN.43, D84), for the page to show at its beginning once NM has named it: read from the saved
     file alone, which reading the whole conversation for it would not need. None until NM names it."""
     try:
-        matter = application().store.load(chat_matter_id(advocate_id, chat_id))
+        matter = application().store.load_for(chat_matter_id(advocate_id, chat_id), advocate_id)
     except (OSError, ValueError) as exc:
         raise HTTPException(503, 'This conversation could not be read reliably.') from exc
     if not _session_current(request, advocate_id):
         raise HTTPException(401, 'not signed in')
-    if matter is None or matter.advocate_id != advocate_id:
+    if matter is None:
         raise HTTPException(404, 'Conversation not available.')
     response.headers['Cache-Control'] = 'no-store'
     return {'chat_id': chat_id, 'title': _title_text(matter)}
@@ -3206,10 +3216,10 @@ def _how_read(rows, source_id):
 @app.get('/api/matters/{matter_id}')
 @app.get('/api/matters/{matter_id}/transcript')
 def historical_matter(matter_id: str, advocate_id: Advocate, request: Request):
-    matter = application().store.load(matter_id)
+    matter = application().store.load_for(matter_id, advocate_id)
     if not _session_current(request, advocate_id):
         raise HTTPException(401, 'not signed in')
-    if matter is None or matter.advocate_id != advocate_id:
+    if matter is None:
         raise HTTPException(404, 'Matter not available.')
     raise HTTPException(409, 'This matter belongs to the earlier brain. Its saved data is retained; opening it in the rebuilt brain is not available yet.')
 
