@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import os
 import random
+import re
+import threading
 import time
 
 from nm.shared.model_port import (
@@ -22,6 +25,52 @@ NO_CREDIT = frozenset({"insufficient_quota", "credit_balance_exhausted", "billin
 #: Provider failures that pass (17 Oct 2026: one dropped connection in a turn's twenty
 #: calls had ended the whole turn): retried like rate limits, within the same bound.
 TRANSIENT = frozenset({"APIConnectionError", "APITimeoutError", "InternalServerError", "OverloadedError"})
+
+
+#: Plan AN.52 (52f, D212; the review's F-14). A provider that refuses a call for its rate says how long to wait, and a
+#: per-minute limit does not clear in the second and a half the fixed pauses gave it. The wait it states is honoured, and
+#: the waits of one call together never pass WAIT_CAP seconds: past that the call fails as it did, and its stage's own
+#: bounded recovery decides.
+WAIT_CAP = 60.0
+#: How many requests this process has out to a provider at once, at most. A turn sends several large calls side by side
+#: and every advocate shares one account, so without a bound a busy server walks into the rate limit by itself. Set with
+#: NM_PROVIDER_REQUESTS_AT_ONCE; read once, when the first call is made.
+REQUESTS_AT_ONCE = 16
+_gate = None
+_gate_made = threading.Lock()
+_SAID_WAIT = re.compile(r"try again in\s+(\d+(?:\.\d+)?)\s*(ms|s)(?![a-z])", re.I)
+
+
+def _out():
+    """The process's one bound on requests out to a provider at once."""
+    global _gate
+    with _gate_made:
+        if _gate is None:
+            try:
+                most = int(os.environ.get("NM_PROVIDER_REQUESTS_AT_ONCE", "") or REQUESTS_AT_ONCE)
+            except ValueError:
+                most = REQUESTS_AT_ONCE
+            _gate = threading.BoundedSemaphore(max(1, most))
+        return _gate
+
+
+def stated_wait(exc: Exception) -> float | None:
+    """The seconds a provider says to wait before the call is made again, or None where it says none: its retry-after
+    headers first, then the words of its refusal ("try again in 5.2s")."""
+    headers = getattr(getattr(exc, "response", None), "headers", None)
+    for name, unit in (("retry-after-ms", 0.001), ("retry-after", 1.0)):
+        try:
+            value = headers.get(name) if headers is not None else None
+            if value is not None:
+                seconds = float(value) * unit
+                if seconds >= 0:
+                    return seconds
+        except (TypeError, ValueError, AttributeError):
+            continue  # a date, or no number: the next way of saying it
+    said = _SAID_WAIT.search(str(exc))
+    if said:
+        return float(said.group(1)) * (0.001 if said.group(2).lower() == "ms" else 1.0)
+    return None
 
 
 def _transient(exc: Exception) -> bool:
@@ -86,13 +135,17 @@ def request_with_retries(
     ledger_response=lambda response: response,
 ):
     """Unknown/failed attempts keep their reservations, including on retry. Rate limits
-    and transient provider failures are retried within the bound; nothing else is."""
+    and transient provider failures are retried within the bound; nothing else is. A wait the
+    provider states is honoured within WAIT_CAP, and the request itself is made within the
+    process's bound on requests out at once (plan AN.52, 52f) - never held while waiting."""
+    waited = 0.0
     for attempt in range(MAX_RETRIES):
         if before_dispatch is not None:
             before_dispatch()
         reservation = call_budget.reserve(model) if call_budget else None
         try:
-            response = fn()
+            with _out():
+                response = fn()
             if reservation is not None:
                 call_budget.settle(reservation, ledger_response(response))
             return response, attempt
@@ -102,8 +155,15 @@ def request_with_retries(
                 normalised.retries = attempt
             if (isinstance(normalised, RateLimited) or _transient(exc)) and not isinstance(
                     normalised, UsageLimitReached) and attempt < MAX_RETRIES - 1:
-                time.sleep(0.5 * (2**attempt) + random.uniform(0, 0.2))
-                continue
+                pause = 0.5 * (2**attempt) + random.uniform(0, 0.2)
+                stated = stated_wait(exc)
+                if stated is not None:
+                    pause = max(pause, stated + random.uniform(0, 0.2))
+                if waited + pause <= WAIT_CAP:
+                    waited += pause
+                    time.sleep(pause)
+                    continue
+                # The provider asks for longer than one call may wait: it fails now, as a rate limit, for its stage.
             if normalised is exc:
                 raise
             raise normalised from exc
