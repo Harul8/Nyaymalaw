@@ -33,6 +33,7 @@ from pathlib import Path
 
 from cryptography.fernet import Fernet
 
+from nm.shared.names_contracts import discard
 from nm.shared.storage_errors_port import StoredObjectUnreadable
 from nm.shared.store_envelope import (
     CrossMatterAccess,
@@ -93,20 +94,44 @@ class MatterSealer:
         the file the winner had created and not yet written, read nothing, and
         failed on empty JSON. The exclusive create IS the question, so it is
         the only thing asked.
+
+        THE RECORD IS WHOLE BEFORE IT HAS ITS NAME (plan AN.50, 50h, D194). It
+        was created under its name and then written, so a process that ended
+        between the two left an empty record: every later use of that matter's
+        identifier waited and was refused, and no new key may be made over a
+        record that exists. It is now written and flushed beside its name and
+        given the name in one step that fails where the name is taken - still
+        the one question asked - so the name is never there half-written.
         """
         self._keys.mkdir(parents=True, exist_ok=True)
         path = self._keys / f"{matter_id}.key"
         fresh = new_data_key()
+        wrapped = self._ring.wrap(matter_id, fresh)
+        record = json.dumps(wrapped.as_dict()).encode("utf8")
+        beside = path.with_name(f"{path.name}.{os.getpid()}.{os.urandom(4).hex()}.new")
         try:
-            wrapped = self._ring.wrap(matter_id, fresh)
-            with path.open("xb") as handle:
-                handle.write(json.dumps(wrapped.as_dict()).encode("utf8"))
+            with beside.open("xb") as handle:
+                handle.write(record)
                 handle.flush()
                 os.fsync(handle.fileno())
+            try:
+                os.link(beside, path)     # fails where the name is taken
+            except FileExistsError:
+                return self._read_key(matter_id, path)   # somebody else won; read theirs
+            except OSError:
+                # A folder that gives no second name to a file (some shared
+                # and removable drives): the record is made under its name as
+                # it was before this piece, where the same question is asked.
+                try:
+                    with path.open("xb") as handle:
+                        handle.write(record)
+                        handle.flush()
+                        os.fsync(handle.fileno())
+                except FileExistsError:
+                    return self._read_key(matter_id, path)
             return wrapped, fresh
-        except FileExistsError:
-            pass                          # somebody else won; read theirs
-        return self._read_key(matter_id, path)
+        finally:
+            discard(beside)
 
     def _read_key(self, matter_id: str, path: Path) -> tuple[WrappedKey, bytes]:
         """The winner's key record, waiting for it to be COMPLETE.
@@ -135,7 +160,11 @@ class MatterSealer:
                     f"did not finish; the matter is not readable until that "
                     f"record is restored, and minting a new key here would "
                     f"make every record already written under the old one "
-                    f"permanently unreadable.")
+                    f"permanently unreadable. Where nothing of this matter "
+                    f"was ever saved - a start that ended as it made the "
+                    f"record, before records were written whole - the empty "
+                    f"file may be deleted by the operator, and is never "
+                    f"deleted here.")
             time.sleep(_POLL)
 
     @staticmethod
