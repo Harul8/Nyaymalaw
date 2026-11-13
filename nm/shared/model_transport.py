@@ -7,6 +7,7 @@ import random
 import re
 import threading
 import time
+from contextlib import contextmanager
 
 from nm.shared.model_port import (
     ContentRefused,
@@ -25,6 +26,24 @@ NO_CREDIT = frozenset({"insufficient_quota", "credit_balance_exhausted", "billin
 #: Provider failures that pass (17 Oct 2026: one dropped connection in a turn's twenty
 #: calls had ended the whole turn): retried like rate limits, within the same bound.
 TRANSIENT = frozenset({"APIConnectionError", "APITimeoutError", "InternalServerError", "OverloadedError"})
+#: Plan AN.52 (52i4, D215; the review's F-31): of those, the failures after which the provider may still have done the work - and
+#: billed it - though NM let the attempt go and sent it again: the client stopped waiting, or the connection was lost. A rate
+#: limit and the provider's own server error are not among them: the provider says it did not do the work.
+MAY_HAVE_BEEN_BILLED = frozenset({"APITimeoutError", "APIConnectionError"})
+_let_go = threading.local()
+
+
+@contextmanager
+def attempts_let_go():
+    """The attempts of the calls this thread makes inside it that were let go and sent again after the provider may have done the
+    work (MAY_HAVE_BEEN_BILLED), each by the name of its failure. The meter opens it around a call (nm/shared/model_metered.py),
+    which alone knows whose call it is; outside it nothing is noted."""
+    outer = getattr(_let_go, "attempts", None)
+    _let_go.attempts = []
+    try:
+        yield _let_go.attempts
+    finally:
+        _let_go.attempts = outer
 
 
 #: Plan AN.52 (52f, D212; the review's F-14). A provider that refuses a call for its rate says how long to wait, and a
@@ -163,6 +182,9 @@ def request_with_retries(
                     pause = max(pause, stated + random.uniform(0, 0.2))
                 if waited + pause <= WAIT_CAP:
                     waited += pause
+                    noted = getattr(_let_go, "attempts", None)
+                    if noted is not None and type(exc).__name__ in MAY_HAVE_BEEN_BILLED:
+                        noted.append(type(exc).__name__)  # let go and sent again: it may have been billed (52i4)
                     time.sleep(pause)
                     continue
                 # The provider asks for longer than one call may wait: it fails now, as a rate limit, for its stage.

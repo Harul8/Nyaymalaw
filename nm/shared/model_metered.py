@@ -28,6 +28,13 @@ used up. A call already sent finishes and is charged.
 Speech is priced by the minute (`AUDIO_PRICE_PER_MINUTE`): a recording at the duration the provider
 reports, a live dictation at the audio sent, when it closes.
 
+AN ATTEMPT LET GO THAT MAY HAVE BEEN BILLED IS A RECORD OF ITS OWN (plan AN.52, 52i4, D215; the review's F-31). The
+transport sends a request again where the one before it failed in a way that may pass; where the client stopped waiting or the
+connection was lost, the provider may have done the work and billed it all the same. One record of the call - answered, at the
+answering attempt's cost - read as a whole cost in the operator's totals. Each such attempt is kept as a record of its own,
+before the call's: outcome 'abandoned', one attempt, its cost not established and so charged to no allowance, counted among the
+costs not established. The call's own record is as it was, its attempts counting every attempt.
+
 A RECORD NEVER FAILS A CALL. The call has been made and paid for; like a trace that cannot be kept, a
 record that cannot be kept is counted in `dropped` and logged, never raised into the advocate's work.
 What a record holds is fixed (nm/arrive/usage_port.py, CALL_FIELDS): names and numbers, no prompt,
@@ -43,6 +50,7 @@ from decimal import ROUND_CEILING, Decimal, InvalidOperation
 from typing import Any
 
 from nm.shared.model_port import ModelError, ModelPort, Tier, TierUnavailable
+from nm.shared.model_transport import attempts_let_go
 
 log = logging.getLogger(__name__)
 
@@ -116,13 +124,16 @@ class MeteredModel:
 
     def transcribe(self, audio: bytes, **request):
         self._ask_before()
-        try:
-            heard = self.inner.transcribe(audio, **request)
-        except TierUnavailable:
-            raise
-        except ModelError as exc:
-            self._keep(lambda: self._failed("transcribe", "transcription", "", exc))
-            raise
+        with attempts_let_go() as let_go:
+            try:
+                heard = self.inner.transcribe(audio, **request)
+            except TierUnavailable:
+                raise
+            except ModelError as exc:
+                self._keep_let_go(let_go, "transcribe", "transcription", "", lambda: "")
+                self._keep(lambda: self._failed("transcribe", "transcription", "", exc))
+                raise
+        self._keep_let_go(let_go, "transcribe", "transcription", "", lambda: heard.model)
         self._keep(lambda: self._heard(heard))
         return heard
 
@@ -147,16 +158,24 @@ class MeteredModel:
     def _metered(self, kind: str, prompt, tier: Tier, run):
         operation = getattr(prompt, "operation", None) or ("embed" if kind == "embed" else "")
         self._ask_before()
-        try:
-            result = run()
-        except TierUnavailable:
-            raise  # NM's own refusal before anything was sent; the tracer may use the routine tier.
-        except ModelError as exc:
-            self._keep(lambda: self._failed(kind, operation, tier.value, exc,
-                                            asked=lambda: self.inner.resolved_model(tier)))
-            raise
+        with attempts_let_go() as let_go:
+            try:
+                result = run()
+            except TierUnavailable:
+                raise  # NM's own refusal before anything was sent; the tracer may use the routine tier.
+            except ModelError as exc:
+                self._keep_let_go(let_go, kind, operation, tier.value, lambda: self.inner.resolved_model(tier))
+                self._keep(lambda: self._failed(kind, operation, tier.value, exc,
+                                                asked=lambda: self.inner.resolved_model(tier)))
+                raise
+        self._keep_let_go(let_go, kind, operation, tier.value, lambda: result.model)
         self._keep(lambda: self._answered(kind, operation, tier.value, result))
         return result
+
+    def _keep_let_go(self, let_go, kind, operation, tier, model) -> None:
+        """Each attempt the transport let go after the provider may have done the work, as a record of its own (52i4)."""
+        for _ in let_go:
+            self._keep(lambda: self._call(kind, operation, tier, model(), "abandoned", 0))
 
     def _answered(self, kind, operation, tier, result):
         """An answered call, at the cost the adapter established from the provider's usage report."""
