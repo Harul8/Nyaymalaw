@@ -149,13 +149,61 @@ installed separately. The Anthropic adapter's package is not on the list; hostin
 
 ## Backups
 
-- Back up the whole `NM_MATTER_STORE` folder: conversations, papers, accounts, usage, the outbox and the step stores - everything in it
-  is sealed.
+- **Stop, then copy** (plan AN.50, D191). Stop the step worker, then the web server, and only then copy the whole `NM_MATTER_STORE`
+  folder; start them again after the copy. A copy of a folder in use is not a backup: a save can land between two files of it, and
+  the small databases in it (accounts' usage, the steps) copied in the middle of a write come out stale or damaged. Where the
+  machine's disk can be snapshotted as a whole at one instant, stop the processes first all the same.
+- Back up the whole folder: conversations, papers, accounts, usage, the outbox and the step stores - what holds client words in it
+  is sealed. Never back up, or put back, some of its folders without the others.
 - Keep `NM_MATTER_KEY` (or `.nm/matter.key`) **apart from** the backups and as safely: a backup without its key cannot be read, and the
   key with a backup opens everything.
 - Back up the outgoing-data log too (`.nm/egress-*` under the checkout) where its year must outlast the machine.
 - Keep the Gmail app password's file out of the backups of the code; if it is backed up, as safely as the key.
 - Test a restore on another machine before relying on it.
+
+### Restoring
+
+1. Stop the step worker and the web server.
+2. Move the damaged folder aside (do not delete it yet) and put the **whole** backed-up folder in its place, with the key it was
+   sealed under.
+3. Start the web server and the worker.
+
+A restore puts everything back as it was at the backup, and that is all of it: conversations saved after the backup are gone; an
+account made after it does not exist; and a password changed, a sign-in ended, an account suspended or an allowance changed after
+the backup is as it was before the change - make those changes again. Usage counted after the backup is forgotten.
+
+**An older copy of one conversation is refused.** Each save records, in `saved-versions/` in the store, which version of the
+conversation it saved. A conversation file older than its record - put there by restoring some files and not others, or by a
+copying tool - is not opened and not saved over; the advocate's history lists it as a conversation that could not be read, and the
+others open as usual. Putting the folder back whole brings its records with it, so a whole restore opens. Where one older file is
+deliberately the one meant, stop the processes and delete that conversation's file in `saved-versions/`; it then opens as it is,
+and its next save records it. This notices accidents; it is not a seal against someone who can change the folder.
+
+The drill is a test, run offline on a temporary store with invented conversations:
+`tests/test_a_restored_store_opens_as_the_backup_left_it.py` copies a stopped store, goes on working, loses the folder, puts the
+copy back whole and opens everything; and puts back only some files, which are refused.
+
+## Changing the secret
+
+`python operations/rekey_matter_store.py` replaces `NM_MATTER_KEY` with a new secret (plan AN.50, D190). Run
+`python operations/rekey_matter_store.py --dry-run` first: it changes nothing and says what it would do, or why it refuses.
+
+- **Stop the step worker and the web server first.** The command refuses while either is alive on the store, and neither starts
+  while it runs.
+- It needs the store folder to hold only NM's own files. A file it can neither open with the present secret nor recognise as
+  deliberately unsealed refuses the run, as does a link to elsewhere: nothing is skipped. This is one more reason to give
+  `NM_MATTER_STORE` a folder of its own.
+- It copies the whole store into `rekey-backup-<time>` inside the store and writes the new secret to `new-matter.key` in the store
+  (or to `--new-key-file`) **before** it changes anything. It never overwrites a key file that is already there.
+- Each re-keyed file is written beside the old one, checked to open with the new secret to exactly what the old one held, swapped
+  in and checked again. A failure or an interruption puts back exactly what had been swapped, and says which files it put back and
+  which it could not. Exit 0: done. Exit 1: refused, or failed with everything put back - the old secret still opens everything.
+  Exit 3: a put-back did not finish - keep both secrets and run it again with `--restore`.
+- When it has finished: set `NM_MATTER_KEY` to the contents of the new key file for both processes, move that file out of the store
+  to where the key is kept, start the processes, and check that conversations open. Only then delete `rekey-backup-<time>`: it is
+  the whole store under the **old** secret, and the command leaves it for the operator to remove.
+- A run the machine itself stopped part-way leaves `rekey-in-progress.json` in the store; the next run refuses until
+  `python operations/rekey_matter_store.py --restore` has put back what that run listed.
 
 ## Restarts and updates
 
