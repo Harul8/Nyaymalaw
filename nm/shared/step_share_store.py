@@ -65,6 +65,11 @@ _TABLES = {
 }
 
 
+#: Plan AN.52 (52g): what stands in a request's answer while the worker has taken it and not yet answered. Not sealed: it
+#: holds nothing.
+_TAKING = b"taking"
+
+
 class StepShareRefused(Exception):
     """The shared store could not be opened or holds something it did not make."""
 
@@ -161,10 +166,27 @@ class FileStepShare:
                               (advocate_id, turn_id, kind, self._seal(asked), self._clock())).lastrowid
 
     def controls(self):
-        """The worker reads what is asked, oldest first: [(number, advocate_id, turn_id, kind, asked)]."""
+        """The worker TAKES what is asked, oldest first: [(number, advocate_id, turn_id, kind, asked)]. Plan AN.52 (52g, D213):
+        each is marked as taken in the same transaction that reads it, so a request is either taken here or withdrawn by the one
+        who asked (`withdraw`), never both - a request the page was told had not landed cannot land later."""
         with self._transaction() as db:
-            rows = db.execute("SELECT id,advocate_id,turn_id,kind,asked FROM controls WHERE state='new' ORDER BY id").fetchall()
+            rows = db.execute("SELECT id,advocate_id,turn_id,kind,asked FROM controls WHERE state='new' AND answered IS NULL "
+                              "ORDER BY id").fetchall()
+            db.executemany("UPDATE controls SET answered=? WHERE id=?", [(_TAKING, row[0]) for row in rows])
         return [(number, advocate_id, turn_id, kind, self._open(asked)) for number, advocate_id, turn_id, kind, asked in rows]
+
+    def withdraw(self, number) -> bool:
+        """The one who asked stops waiting (52g): the request is removed unless the worker has taken it. True where it was
+        withdrawn (or is no longer there); False where the worker has it, and its word is still to come."""
+        with self._transaction() as db:
+            gone = db.execute("DELETE FROM controls WHERE id=? AND state='new' AND answered IS NULL", (number,)).rowcount
+            return bool(gone) or db.execute("SELECT 1 FROM controls WHERE id=?", (number,)).fetchone() is None
+
+    def withdraw_all(self) -> int:
+        """At the worker's start (52g): what was asked of the run before it is asked of no one now - a Stop left from before a
+        restart must not stop the step taken up after it. Returns how many were let go."""
+        with self._transaction() as db:
+            return db.execute("DELETE FROM controls WHERE state='new'").rowcount
 
     def verdict(self, number, answered):
         with self._transaction() as db:

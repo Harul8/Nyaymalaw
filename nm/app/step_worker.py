@@ -150,8 +150,19 @@ class SharedDesk:
 
 
 def ask_worker(share, advocate_id, turn_id, kind, asked, *, wait=VERDICT_WAIT):
-    """What is asked of a step at work, sent to the worker; its word on it, or None where it did not answer within wait."""
+    """What is asked of a step at work, sent to the worker; its word on it, or None where it did not answer within wait.
+    Plan AN.52 (52g, D213; the review's F-19): a request not answered in time is WITHDRAWN before None is returned, so what
+    the page is then told had not landed - a Stop, a Steer - cannot land later. Where the worker took it in that same moment,
+    its word is waited for a little longer and returned: the request did land."""
     number = share.control(advocate_id, turn_id, kind, asked)
+    end = time.monotonic() + wait
+    while time.monotonic() < end:
+        verdict = share.verdict_of(number)
+        if verdict is not None:
+            return verdict
+        time.sleep(LOOK_EVERY / 2)
+    if share.withdraw(number):
+        return None
     end = time.monotonic() + wait
     while time.monotonic() < end:
         verdict = share.verdict_of(number)
@@ -254,6 +265,7 @@ class StepWorker:
         and the steps it left taken up (48f3)."""
         from nm.app.main import _take_up_what_an_earlier_run_left
         self.share.close_windows()
+        self.share.withdraw_all()  # 52g: what was asked of the run before this one is asked of no one now
         for advocate_id, turn_id, raw in self.share.all_progress():
             if raw.get("ended") is not None:
                 continue

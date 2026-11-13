@@ -314,7 +314,7 @@ def test_the_application_writes_its_log_by_day_and_takes_the_single_file_in_whol
     assert not (audit / "egress.log").exists()
 
 
-def test_the_step_worker_sweeps_the_log_it_writes_as_it_starts(monkeypatch):
+def test_the_step_worker_sweeps_the_log_it_writes_as_it_starts(monkeypatch, tmp_path):
     from nm.app import api, composition, step_worker
     from nm.shared import egress_log_store
 
@@ -335,7 +335,9 @@ def test_the_step_worker_sweeps_the_log_it_writes_as_it_starts(monkeypatch):
         def stop(self):
             pass
 
-    monkeypatch.setattr(composition, "Application", lambda steps: SimpleNamespace(egress_log=log, legal_search=None))
+    # Plan AN.50 (50f1): the worker marks itself alive on its store and holds the steps there first, so the stand-in names one.
+    monkeypatch.setattr(composition, "Application", lambda steps: SimpleNamespace(
+        egress_log=log, legal_search=None, environment={"NM_MATTER_STORE": str(tmp_path)}, root=tmp_path))
     monkeypatch.setattr(api, "set_application", lambda app: None)
     monkeypatch.setattr(egress_log_store, "keep", kept.append)
     monkeypatch.setattr(step_worker, "StepWorker", Worker)
