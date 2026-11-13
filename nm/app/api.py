@@ -104,6 +104,79 @@ class SecurityHeaders:
         await self.inner(scope, receive, sending)
 
 
+# PLAN AN.53 (53d1; D219 with the numbers of D235; the review's F-29): EVERY ROUTE HAS A SIZE. Only the two routes that take a
+# file looked at a request's size; every other read whatever body it was sent, whole, before anything looked at it - sign-in
+# among them, which anyone can reach.
+#: The most a request's body may be. Above what the fields the routes admit can come to (what waits to be sent: twenty messages
+#: of 20,000 characters, 1.2 MB in an Indian script), so that this never refuses what another rule allows.
+BODY_LIMIT = 2 * 1024 * 1024
+#: The two routes that take a paper or a recording, and their size: the larger of the two maxima they state themselves, which
+#: each then holds its own kind to (a document 16 MB, a recording 25 MB).
+FILE_BODY_LIMIT = document_rules.MAX_AUDIO_BYTES
+FILE_ROUTES = frozenset({('POST', '/api/documents'), ('POST', '/api/dictation')})
+
+
+class _BodyTooLarge(Exception):
+    """A body that did not say its size, or said less than it sent, passed the size while it was being read."""
+
+
+class BodyLimit:
+    """One layer that holds every HTTP request to a size. A request that says it is larger is refused without a byte of it being
+    read; one that does not say - or says less than it sends - is read only until it has passed the size. Nothing is held here:
+    the body goes on to the route as it arrives."""
+
+    def __init__(self, inner):
+        self.inner = inner
+
+    async def __call__(self, scope, receive, send):
+        if scope['type'] != 'http':
+            return await self.inner(scope, receive, send)
+        limit = FILE_BODY_LIMIT if (scope.get('method'), scope.get('path')) in FILE_ROUTES else BODY_LIMIT
+        declared = next((value for name, value in scope.get('headers') or () if name == b'content-length'), None)
+        if declared is not None and not declared.isdigit():
+            return await self._refuse(send, 400, 'The size this request states is not a number.', 'request_size_unreadable')
+        if declared is not None and int(declared) > limit:
+            return await self._refuse(send, 413, self._why(limit), 'request_too_large')
+        seen, begun, over = 0, False, False
+
+        async def receiving():
+            nonlocal seen, over
+            message = await receive()
+            if message.get('type') == 'http.request':
+                seen += len(message.get('body') or b'')
+                if seen > limit:
+                    over = True
+                    raise _BodyTooLarge
+            return message
+
+        async def sending(message):
+            nonlocal begun
+            if over:
+                return  # what the route makes of a reading that was stopped is not the answer; the size's refusal is
+            begun = begun or message['type'] == 'http.response.start'
+            await send(message)
+        try:
+            await self.inner(scope, receiving, sending)
+        except _BodyTooLarge:
+            pass
+        if over and not begun:  # an answer already begun cannot be taken back; the reading has stopped either way
+            await self._refuse(send, 413, self._why(limit), 'request_too_large')
+
+    @staticmethod
+    def _why(limit):
+        return f'This request is larger than NM accepts ({limit // (1024 * 1024)} MB at most).'
+
+    @staticmethod
+    async def _refuse(send, status, why, code):
+        body = json.dumps({'detail': {'why': why, 'code': code}}).encode('utf-8')
+        await send({'type': 'http.response.start', 'status': status,
+                    'headers': [(b'content-type', b'application/json'), (b'content-length', str(len(body)).encode('ascii')),
+                                (b'cache-control', b'no-store'), (b'connection', b'close')]})
+        await send({'type': 'http.response.body', 'body': body})
+
+
+# The size is held inside the security headers, so that its refusal carries them as every answer does (53a).
+app.add_middleware(BodyLimit)
 app.add_middleware(SecurityHeaders)
 _application = None
 _TRUSTED_ORIGINS = 'NM_TRUSTED_ORIGINS'
@@ -141,6 +214,9 @@ except Exception as exc:
 #: Documents one message may carry (owner decisions, 15 Oct 2026). The page holds the same number (DOCUMENTS_PER_MESSAGE in
 #: nm/app/app.js, kept equal by a test) so that it never sends what is refused here.
 TURN_DOCUMENT_LIMIT = 10
+#: Plan AN.53 (53d1, D235): the most characters a message that opens a turn may be. Five times what its follow-up fields hold,
+#: because a first message may carry a pasted brief; a count of characters must not refuse what an advocate legitimately sends.
+OPENING_MESSAGE_LIMIT = 100_000
 
 
 def _turn_not_accepted(problems):
@@ -411,7 +487,8 @@ class TurnRequest(BaseModel):
     # NO `advocate_id`. It came from the body, which means the caller asserted
     # who they were and the product recorded that assertion on the file. It now
     # comes from the session, and there is no field here to override it with.
-    message: str = Field(min_length=1)
+    # Plan AN.53 (53d1, D235): a message that opens a turn may carry a pasted brief, and is not without end.
+    message: str = Field(min_length=1, max_length=OPENING_MESSAGE_LIMIT)
 
     @field_validator("message")
     @classmethod
@@ -420,10 +497,10 @@ class TurnRequest(BaseModel):
         _not_blank(value)
         return value
 
-    matter_id: str | None = None
-    chat_id: str | None = None
-    thread_id: str | None = None
-    turn_id: str | None = None
+    matter_id: str | None = Field(default=None, max_length=200)
+    chat_id: str | None = Field(default=None, max_length=200)
+    thread_id: str | None = Field(default=None, max_length=200)
+    turn_id: str | None = Field(default=None, max_length=200)
     #: The model and the effort the advocate chose for this message (plan AN.33, D23), from the server's own lists
     #: (/api/turn-choices); 6 Luna and medium unless chosen.
     model: str = DEFAULT_TURN_MODEL
@@ -602,7 +679,10 @@ app.add_exception_handler(RequestValidationError, invalid_request)
 app.add_exception_handler(AuthenticationUnavailable, unavailable_authentication)
 
 class Credentials(BaseModel):
-    advocate_id: NonBlank = Field(min_length=1)
+    # Plan AN.53 (53d1, D235): the name is at most what an email address can be. THE PASSWORD HAS NO LENGTH OF ITS OWN HERE, on
+    # purpose: an account made before new passwords were bounded may hold a longer one and must still sign in
+    # (tests/test_public_email_registration.py); what bounds it is the size of the request (BODY_LIMIT).
+    advocate_id: NonBlank = Field(min_length=1, max_length=320)
     password: str = Field(min_length=1)
 
 
