@@ -21,10 +21,10 @@ from tests.test_core_served import OWNER, send, served, successful  # noqa: F401
 pytestmark = pytest.mark.class_a
 
 
-def test_a_save_refused_because_a_late_title_moved_the_conversation_is_not_saved_and_continue_saves_it_with_no_model_call(
-        served, monkeypatch):
+def late_title(served, monkeypatch, *, keeping_fails=False):
     """The review's trigger, reproduced: the conversation's title, still being written when the answer is ready, lands after
-    the turn has stopped waiting for it and moves the conversation's version under the final save."""
+    the turn has stopped waiting for it and moves the conversation's version under the final save. keeping_fails: the store
+    will not take the turn's record of why it stopped either. Returns the store's own save."""
     monkeypatch.setattr(turn, "TITLE_WAIT", 0.05)
     release, original_call, original_commit = threading.Event(), served.model.structured, served.store.commit
 
@@ -39,9 +39,17 @@ def test_a_save_refused_because_a_late_title_moved_the_conversation_is_not_saved
             deadline = time.monotonic() + 30
             while title_of(served.store.load(matter.id)) is None and time.monotonic() < deadline:
                 time.sleep(0.01)
+        if keeping_fails and ((matter.intake_answers or {}).get("core_shown") or {}).get("stopped"):
+            raise OSError("Synthetic store that will not take the stop")
         return original_commit(matter, **kwargs)
     monkeypatch.setattr(served.model, "structured", calling)
     monkeypatch.setattr(served.store, "commit", saving)
+    return original_commit
+
+
+def test_a_save_refused_because_a_late_title_moved_the_conversation_is_not_saved_and_continue_saves_it_with_no_model_call(
+        served, monkeypatch):
+    original_commit = late_title(served, monkeypatch)
     reply = send(served)
     assert reply.status_code == 409, reply.text
     detail = reply.json()["detail"]
@@ -60,6 +68,23 @@ def test_a_save_refused_because_a_late_title_moved_the_conversation_is_not_saved
     (matter,) = served.store.list_for(OWNER).matters
     assert len(matter.brain_chat) == 1 and title_of(matter) is not None, "saved on the conversation as it now stands"
     assert successful(served)["replayed"], "and only once"
+
+
+def test_an_answer_the_store_would_not_keep_is_not_said_to_be_kept(served, monkeypatch):
+    """Plan AN.50 (50b3): 'kept' is said only where the turn's record of why it stopped was written."""
+    original_commit = late_title(served, monkeypatch, keeping_fails=True)
+    reply = send(served)
+    assert reply.status_code == 409, reply.text
+    detail = reply.json()["detail"]
+    assert (detail["code"], detail["committed"], detail["retryable"]) == ("not_saved", "not_committed", True)
+    assert "kept" not in detail, "the stop was not written, so it is not said to be kept"
+    (matter,) = served.store.list_for(OWNER).matters
+    assert matter.brain_chat == () and shown_of(matter)["stopped"] is None
+    monkeypatch.setattr(served.store, "commit", original_commit)
+    saved = successful(served)  # the same message sent again goes on from the steps that were kept
+    assert not saved["replayed"] and saved["elements"]
+    (matter,) = served.store.list_for(OWNER).matters
+    assert len(matter.brain_chat) == 1
 
 
 class Refusing:

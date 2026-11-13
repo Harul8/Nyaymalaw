@@ -1292,9 +1292,9 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
             log.warning("What an unanswered turn showed could not be withdrawn", exc_info=True)
 
     def stopped(code, exc, *, answered=None):
-        """Plan AN.41 (D69): the turn stopped part-way; all it finished is kept with why, for Continue or Discard."""
-        keeper.stop(code, answered=answered)
-        exc.kept = True
+        """Plan AN.41 (D69): the turn stopped part-way; all it finished is kept with why, for Continue or Discard. Kept is said
+        only where it was written (plan AN.50, 50b3): a stop the store would not take is not shown as kept."""
+        exc.kept = bool(keeper.stop(code, answered=answered))
     # Plan AN.48 (48c): a matter given words while it waited is understood again with them, as a steer is (D79).
     steered = rethought
     # Plan AN.48 (D175): a follow-up worked step by step, not yet understood, may start from the last saved answer's understanding.
@@ -1353,8 +1353,8 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
         if titling:
             titling["thread"].join(TITLE_WAIT)
         refusal = ConversationRefused(STOPS["waiting"], status=409, code="waiting", retryable=True)
-        keeper.stop("waiting", waiting=exc.after, timed=(estimated, time.monotonic() - began), rechecked=gate.rechecked)
-        refusal.kept = True
+        refusal.kept = bool(keeper.stop("waiting", waiting=exc.after, timed=(estimated, time.monotonic() - began),
+                                        rechecked=gate.rechecked))
         finish("retryable", "waiting")
         refusal.metrics = calls.metrics()
         raise refusal from exc
