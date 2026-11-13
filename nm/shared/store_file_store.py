@@ -35,6 +35,7 @@ from typing import Union, get_args, get_origin, get_type_hints
 
 from nm.shared.names_contracts import discard
 from nm.shared.operation_contracts import save_stamp
+from nm.shared.storage_errors_port import StoredObjectUnreadable
 from nm.shared.store_envelope import KeyUnavailable
 from nm.shared.store_port import MatterList, StaleWrite
 from nm.shared.store_sealing import MatterSealer, is_envelope
@@ -118,9 +119,12 @@ class _Cipher:
             )
         self._raw = key.encode("utf8")
         self._fernet = None
+        #: What this cipher raises for bytes it will not open; its users say it in their own words (plan AN.53, 53j1).
+        self.will_not_open: tuple[type[Exception], ...] = ()
         try:
-            from cryptography.fernet import Fernet
+            from cryptography.fernet import Fernet, InvalidToken
 
+            self.will_not_open = (InvalidToken,)
             digest = hashlib.sha256(self._raw).digest()
             self._fernet = Fernet(base64.urlsafe_b64encode(digest))
             self.scheme = "fernet"
@@ -653,7 +657,13 @@ class FileMatterStore:
         record of another kind that also would not open.
         """
         if self._sealer is None or not is_envelope(blob):
-            return self._cipher.decrypt(blob)
+            try:
+                return self._cipher.decrypt(blob)
+            except self._cipher.will_not_open as exc:
+                # ONE ERROR FOR A RECORD THAT WILL NOT OPEN (plan AN.53, 53j1). An envelope that will not open raises
+                # StoredObjectUnreadable; this path let the cipher library's own error out, which no caller names, so
+                # an emptied or overwritten file was a different failure from a truncated one.
+                raise StoredObjectUnreadable("a saved record could not be opened") from exc
         return self._sealer.open(str(matter_id), blob)
 
     def _path(self, matter_id: MatterId) -> Path:
