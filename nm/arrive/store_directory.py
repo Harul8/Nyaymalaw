@@ -31,7 +31,6 @@ import secrets
 import threading
 from dataclasses import replace
 from datetime import datetime
-from io import BufferedRandom
 from pathlib import Path
 
 from nm.arrive import attempts_contracts as attempts
@@ -68,7 +67,7 @@ from nm.arrive.professional_access_contracts import ProfessionalApproval
 from nm.arrive.advocate_memory_contracts import AdvocateMemory
 from nm.shared.external_ai_contracts import NOTICE_VERSION, ModelPermission
 from nm.shared.names_contracts import discard
-from nm.shared.store_file_store import _Cipher
+from nm.shared.store_file_store import Claim, _Cipher, claim
 from nm.shared.traceability_contracts import implements
 
 # A public door must not grow an unbounded history even with many sources.
@@ -98,27 +97,6 @@ _INVITATION_REFUSED = (
 #: F-A-04 removed recovery codes from the product; a record that still carries any of these
 #: has them dropped at its next successful sign-in or password reset.
 RETIRED_RECOVERY_FIELDS = ("recovery_codes", "recovery_codes_issued_at", "recovery_generation")
-
-
-class _AccountClaim:
-    """A non-blocking OS lock; closing it also releases it after a crash."""
-
-    def __init__(self, handle: BufferedRandom) -> None:
-        self._handle = handle
-
-    def release(self) -> None:
-        if self._handle.closed:
-            return
-        self._handle.seek(0)
-        if os.name == "nt":
-            import msvcrt
-
-            msvcrt.locking(self._handle.fileno(), msvcrt.LK_UNLCK, 1)
-        else:
-            import fcntl
-
-            fcntl.flock(self._handle.fileno(), fcntl.LOCK_UN)
-        self._handle.close()
 
 
 @implements("A1")
@@ -546,7 +524,7 @@ class FileDirectory:
         digest = hashlib.sha256(canonical_id(advocate_id).encode("utf8")).hexdigest()
         return self._account_locks / f"{digest}.lock"
 
-    def _claim_account(self, advocate_id: str) -> _AccountClaim | None:
+    def _claim_account(self, advocate_id: str) -> Claim | None:
         """Own account access across workers; the OS retires crashed claims.
 
         Held by sign-in, by a password reset and by an approval write, so a
@@ -555,26 +533,13 @@ class FileDirectory:
         return self._claim_path(self._account_lock_path(advocate_id))
 
     @staticmethod
-    def _claim_path(path: Path) -> _AccountClaim | None:
-        """Shared nonblocking process claim for an explicitly owned record."""
-        handle = path.open("a+b")
-        try:
-            if path.stat().st_size == 0:
-                handle.write(b"0")
-                handle.flush()
-            handle.seek(0)
-            if os.name == "nt":
-                import msvcrt
-
-                msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
-            else:
-                import fcntl
-
-                fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-            return _AccountClaim(handle)
-        except (OSError, BlockingIOError):
-            handle.close()
-            return None
+    def _claim_path(path: Path) -> Claim | None:
+        """Shared nonblocking process claim for an explicitly owned record: the
+        operating system's lock, which the death of its holder lets go - one
+        mechanism, the file store's `claim`, for the accounts and the matters
+        alike (plan AN.50, D187). A failure to prepare the file is raised as
+        itself, never taken for another holder."""
+        return claim(path)
 
     def authenticate_and_open_session(
         self,
