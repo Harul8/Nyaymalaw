@@ -590,9 +590,11 @@ button.board-card:focus-visible { outline: 2px solid var(--accent); outline-offs
   padding: 14px 16px; }
 .how-checked { border-top: 1px solid var(--rule); padding-top: 10px; font-size: 0.82rem; color: var(--ink-3); }
 .how-checked summary { cursor: pointer; color: var(--ink-2); }
-.checked-plainly { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 12px; margin: 8px 0; }
-.checked-plainly dt { color: var(--ink-3); }
-.checked-plainly dd { margin: 0; color: var(--ink-2); }
+/* Plan AN.49 (D184): the fold opens on code's one plain sentence, read as easily as the label pairs it replaces; what these
+   checks do not decide follows it once; every check is behind 'All checks'. */
+.checked-sentence { margin: 8px 0 4px; color: var(--ink-2); line-height: 1.5; }
+.checked-not { margin: 0 0 8px; }
+.all-checks { margin-top: 6px; }
 /* A checklist item in the pane. */
 .req-status { display: flex; gap: 8px; align-items: center; font-weight: 600; font-size: 0.9rem; }
 .req-block { display: grid; gap: 6px; }
