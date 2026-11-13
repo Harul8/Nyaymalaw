@@ -29,8 +29,8 @@ import threading
 import time
 from pathlib import Path
 
-from nm.app import api
-from nm.app.composition import Application
+from nm.app import api, step_worker
+from nm.app.composition import Application, storage_root
 from nm.shared.egress_log_store import keep as keep_egress_log
 from nm.shared.identity_contracts import source_fingerprint
 
@@ -228,6 +228,13 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(health, indent=2))
         return 0 if health["runtime"] == "ready" else 1
 
+    # Plan AN.50 (50f, D190, D192): this server marked alive on its store and, where it works its own steps, their one owner -
+    # before anything an earlier run left is taken up below. A second refuses to start.
+    held, why = step_worker.take_the_store(storage_root(application.environment, application.root), "server",
+                                           steps=application.steps_mode != "web")
+    if held is None:
+        print(f"REFUSED TO START: {why}.", file=sys.stderr)
+        return 2
     create_app(application)
     import uvicorn
 
