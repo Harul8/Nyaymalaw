@@ -305,14 +305,14 @@ def claim(path: Path) -> Claim | None:
 
     The file is made where it is missing and is never removed: its being
     there means nothing, and only the lock on its first byte is the claim.
-    A failure to open or prepare the file is raised as itself, never taken
-    for another holder.
+    NOTHING IS WRITTEN TO IT. The lock may lie beyond the end of an empty
+    file; a first byte written by each new claimant raced on Windows, where
+    one claimant's write fell inside the other's lock and was refused
+    (measured 13 Nov 2026, two password resets at once). A failure to open
+    the file is raised as itself, never taken for another holder.
     """
     handle = path.open("a+b")
     try:
-        if path.stat().st_size == 0:
-            handle.write(b"0")
-            handle.flush()
         handle.seek(0)
         try:
             if os.name == "nt":

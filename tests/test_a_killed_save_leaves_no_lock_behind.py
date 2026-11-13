@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import subprocess
 import sys
+import threading
 import time
 from dataclasses import replace
 from pathlib import Path
@@ -75,6 +76,34 @@ def test_a_live_holder_still_makes_a_save_wait_and_then_refuses_it(tmp_path, mon
         held.release()
     store.commit(replace(matter, title="Once free"), expected_version=matter.version)
     assert store.load("matter-1").title == "Once free"
+
+
+def test_claims_racing_for_a_new_lock_file_leave_exactly_one_holder_and_none_fails(tmp_path):
+    """Measured 13 Nov 2026: a first byte written by each new claimant fell, on Windows, inside the other's lock and was refused
+    with an error - two password resets at once. Nothing is written now; the lock lies beyond the end of the empty file."""
+    for round_ in range(40):
+        path = tmp_path / f"race-{round_}.lock"
+        start, done, got, failed = threading.Barrier(4), threading.Barrier(4), [], []
+
+        def take():
+            start.wait()
+            try:
+                held = claim(path)
+            except OSError as exc:  # the defect: a racing claimant's error
+                failed.append(exc)
+                held = None
+            got.append(held)
+            done.wait()
+            if held is not None:
+                held.release()
+        threads = [threading.Thread(target=take) for _ in range(4)]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join(timeout=30)
+        assert not failed, failed
+        assert sum(held is not None for held in got) == 1
+        assert path.read_bytes() == b"", "nothing is written to a lock file"
 
 
 def test_a_failure_to_open_the_lock_file_is_raised_as_itself_and_never_taken_for_another_holder(tmp_path):
