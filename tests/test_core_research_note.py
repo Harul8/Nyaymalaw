@@ -218,6 +218,37 @@ def test_the_note_carries_a_disputes_case_in_full_with_how_it_was_checked():
         assert [block["text"] for block in empty][1:] == said, state
 
 
+def test_the_note_sets_out_a_gathered_case_as_the_board_gathers_it():
+    """Plan AN.49 (D233's note piece): a case of the gathered version (core_case_v3) is set out in the note as the board gathers
+    it - what most decides the dispute, then each heading with its count and its requirements, each thing to get with every
+    requirement it serves, and the heading each point of the other side goes against. Invented examples."""
+    def element(name, status, heading):
+        return {"element": name, "label": name, "proves": "client", "status": status, "why": "Why.", "law": None, "points": [],
+                "heading": heading}
+    view = {"state": "checked", "headings": ["Possession", "Notice"],
+            "elements": [element("Possession for twelve years", "shown", 1), element("Notice before the suit", "missing", 2),
+                         element("Possession that was open", "weak", 1)],
+            "to_get": [{"what": "The client's statement", "from_whom": "the client", "why": "It speaks to both.", "helps": "",
+                        "for": "Notice before the suit", "serves": ["Notice before the suit", "Possession that was open"]}],
+            "other_side": [{"relies_on": "Their later entry", "label": "Their later entry", "answer": "", "law": None, "points": [],
+                            "attacks": 1}],
+            "decides": [{"what": "Whether the possession was open", "why": "Everything turns on it.", "elements": [3],
+                         "other_side": [1]}]}
+    blocks = research_note._case_blocks({"kind": "CASE", "text": "What makes the case stronger", "case": view})
+    assert [block["text"] for block in blocks][2:] == [
+        "Most needs attention now:",
+        "• Whether the possession was open. Everything turns on it. It concerns: Possession that was open. The other side's: "
+        "Their later entry.",
+        "Possession: 1 of 2 shown by the papers.",
+        "Shown by the papers, for the client to prove: Possession for twelve years. Why.",
+        "Shown only weakly, for the client to prove: Possession that was open. Why.",
+        "Notice: 0 of 1 shown by the papers.",
+        "Not yet shown, for the client to prove: Notice before the suit. Why.",
+        "• To get, from the client: The client's statement (for: Notice before the suit; Possession that was open). It speaks "
+        "to both.",
+        "The other side will rely on: Their later entry. It goes against: Possession."]
+
+
 def test_the_notes_line_on_how_a_case_was_checked_is_the_pages_line():
     """The note and the page say one line (plan AN.49, D185): the page's own words, read from app.js, for a case a second
     look checked and for one it did not."""

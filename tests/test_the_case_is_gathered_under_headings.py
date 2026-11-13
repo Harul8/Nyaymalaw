@@ -167,9 +167,11 @@ def test_the_view_keeps_what_the_pages_read_today_and_adds_the_gathering():
         ("Notice before the suit", ["Notice before the suit"]),
         ("Notice before the suit", ["Notice before the suit", "Possession without the owner's leave"])]
     assert [item["attacks"] for item in view["other_side"]] == [1, 0, 0] and view["decides"] == case["decides"]
-    # The note as it is drawn today reads the view as before: each ask said once, for the first element it serves.
+    # The note reads the view (D233's note piece): its headings with their counts, and each ask for every element it serves.
     said = [block["text"] for block in research_note._case_blocks({"text": "The boundary dispute", "case": view})]
-    assert "• To get, from the client: The client's statement (for: Notice before the suit). The law requires it. It proves it." in said
+    assert "Possession: 1 of 2 shown by the papers." in said and f"{OTHER}: 0 of 2 shown by the papers." in said
+    assert ("• To get, from the client: The client's statement (for: Notice before the suit; Possession without the owner's "
+            "leave). The law requires it. It proves it.") in said
 
 
 def test_the_gathered_shape_keeps_every_field_of_v2_and_differs_from_it():

@@ -66,7 +66,10 @@ def _case_blocks(element):
     other side will rely on. THE NOTE IS THE DOCUMENT OF DETAIL (plan AN.49, D185-D186, 13 Nov 2026): the account in full, as
     the answer's own account on the page sets it out - code's line on how it was checked; each point of the papers with its
     pages, or that its words were not found on a page; an element called shown with no point found; that no element was set
-    out; what each thing to get is for and what it helps; a law the library does not list as in force."""
+    out; what each thing to get is for and what it helps; a law the library does not list as in force. A CASE OF THE GATHERED
+    VERSION (plan AN.49, D233's note piece; core_case_v3) is set out as the board gathers it: what most decides the dispute,
+    then each heading with how many of its requirements the papers show and its requirements under it; each thing to get with
+    every requirement it serves; the heading each point of the other side goes against."""
     case = element.get("case") or {}
     blocks = [{"kind": "subheading", "text": element["text"], "refs": []}]
 
@@ -95,22 +98,50 @@ def _case_blocks(element):
             pages = "; ".join(f"{page['document']}, {page['page']}" for page in point.get("pages") or ())
             where = f" ({pages})" if pages else ""
             said(f"In the papers{where}: {point['what']}")
-    for item in elements:
+    def requirement(item):
         said(f"{_STANDS.get(item['status'], item['status'])}, {_PROVES.get(item['proves'], '')}: {item['element']}. {item['why']}"
              + law(item.get("law")))
         if item.get("called") and item["called"] != item["status"]:
             said("Called shown, but none of its points was found on its page.")
         points(item.get("points"))
+
+    def named(numbers, items, key):
+        return [items[number - 1][key] for number in numbers or () if isinstance(number, int) and 1 <= number <= len(items)]
+    headings = case.get("headings") if isinstance(case.get("headings"), list) else None
+    if headings is None:
+        for item in elements:
+            requirement(item)
+    else:
+        if case.get("decides"):
+            said("Most needs attention now:")
+        for item in case.get("decides") or ():
+            concerns, theirs = named(item.get("elements"), elements, "element"), named(item.get("other_side"), other, "relies_on")
+            said(f"• {item['what']}." + (f" {item['why']}" if item.get("why") else "")
+                 + (f" It concerns: {'; '.join(concerns)}." if concerns else "")
+                 + (f" The other side's: {'; '.join(theirs)}." if theirs else ""))
+        for number, heading in enumerate(headings, 1):
+            under = [item for item in elements if item.get("heading") == number]
+            if under:
+                said(f"{heading}: {sum(item['status'] == 'shown' for item in under)} of {len(under)} shown by the papers.")
+                for item in under:
+                    requirement(item)
+        # Every requirement is set out: one under no heading of the list (the server puts none there) on its own.
+        for item in elements:
+            if not (isinstance(item.get("heading"), int) and 1 <= item["heading"] <= len(headings)):
+                requirement(item)
     if not elements and case.get("state") != "unavailable":
         said("NM set out no element for this dispute from the law it read. That is what this research returned, not a finding "
              "that the law requires nothing.")
     for ask in to_get:
-        serves = f" (for: {ask['for']})" if ask.get("for") else ""
+        serving = ask.get("serves") or ([ask["for"]] if ask.get("for") else [])
+        serves = f" (for: {'; '.join(serving)})" if serving else ""
         helps = f" {ask['helps']}" if ask.get("helps") else ""
         said(f"• To get, from {ask['from_whom']}: {ask['what']}{serves}. {ask['why']}{helps}")
     for item in other:
         answers = f" What answers it: {item['answer']}" if item.get("answer") else ""
-        said(f"The other side will rely on: {item['relies_on']}.{answers}" + law(item.get("law")))
+        against = named([item.get("attacks")], [{"name": heading} for heading in headings or ()], "name")
+        against = f" It goes against: {against[0]}." if against else ""
+        said(f"The other side will rely on: {item['relies_on']}.{against}{answers}" + law(item.get("law")))
         points(item.get("points"))
     return blocks
 
