@@ -30,32 +30,27 @@ from tests.test_the_answer_takes_up_every_order_and_point_or_says_why import Ope
 pytestmark = pytest.mark.class_a
 ROOT = Path(__file__).resolve().parent.parent
 
-#: step -> (level, whether a large input raises it)
-TABLE = {
-    "message": ("medium", False),
-    "understand": ("medium", True), "check": ("medium", True), "revise": ("high", True),
-    "chronology": ("medium", True), "transfers": ("medium", True), "connections": ("medium", True),
-    "chronology_check": ("high", True), "transfers_check": ("high", True), "connections_check": ("high", True),
-    "chronology_second": ("high", True), "weigh": ("medium", True), "weigh_check": ("high", True),
-    "case": ("medium", True), "case_check": ("high", True),  # plan AN.35, piece 35c1
-    "further": ("medium", False),  # plan AN.35, piece 35d
-    "questions": ("medium", False),  # plan AN.37, piece 37d
-    "title": ("medium", False),  # plan AN.43, D82
-    "phrases": (None, False), "judgment_phrases": (None, False), "pick": (None, False), "judgment_pick": (None, False),
-    "write": ("medium", False), "overview": ("medium", False), "review": ("medium", False), "cross_check": ("medium", False),
-    "repair": ("high", False), "take_up": ("high", False),
-    "calculate": ("medium", False), "calculate_correct": ("high", False),
-    "read_page": (None, False), "read_again": ("medium", False), "relook": ("medium", False),
-}
+#: The search steps that keep the release's own setting (owner decision, 14 Oct 2026).
+OWN_SETTING = ("phrases", "judgment_phrases", "pick", "judgment_pick")
+#: Writing and reviewing, kept at medium by the first paid run of the new build (1 Nov 2026).
+AT_MEDIUM = ("write", "overview", "review", "cross_check")
 
 
-def test_the_table_is_what_the_plan_decided():
-    assert reasoning.STEPS == TABLE and reasoning.LEVELS == ("low", "medium", "high") and reasoning.LARGE_FILE_TOKENS == 60_000
+def test_the_table_keeps_the_rules_the_plan_decided():
+    """D227 (plan AN.54, piece 54b): these tests read the code's own table, not a copy of it kept by hand, so a step added to the
+    table is tested the day it is added - a copy left the message reader of 48c untested and this file failing from 9 Nov 2026. What
+    the plan decided is pinned as its rules: each level is one the table sets, or the release's own; the search steps keep the
+    release's own setting; writing and reviewing stay at medium."""
+    assert reasoning.LEVELS == ("low", "medium", "high") and reasoning.LARGE_FILE_TOKENS == 60_000
+    for step, (level, sized) in reasoning.STEPS.items():
+        assert (level is None or level in reasoning.LEVELS) and isinstance(sized, bool), step
+    assert all(reasoning.STEPS[step] == (None, False) for step in OWN_SETTING)
+    assert all(reasoning.STEPS[step] == ("medium", False) for step in AT_MEDIUM)
 
 
-@pytest.mark.parametrize("step", sorted(TABLE))
+@pytest.mark.parametrize("step", sorted(reasoning.STEPS))
 def test_a_step_asks_its_level_a_large_input_a_level_more_a_look_again_a_level_more_and_never_above_high(step):
-    level, sized = TABLE[step]
+    level, sized = reasoning.STEPS[step]
     big = reasoning.LARGE_FILE_TOKENS + 1
     if level is None:
         assert reasoning.effort(step, tokens=big, again=True) is None, "the release's own setting stays its own"
@@ -180,6 +175,16 @@ def test_the_message_is_read_at_medium():
     model = Understood({"units": [unit()]})
     understanding.understand(model, typed())
     assert model.calls[0][0].effort == "medium" and understanding.MAX_OUTPUT >= 16000
+
+
+def test_a_message_sent_while_a_matter_waits_is_read_at_medium():
+    """Plan AN.48 (48c): the reader of a message sent while a matter waits asks the table for its step, as every call does (D227)."""
+    from nm.core_engine import message_reader
+    spy = Spy({"kind": "unclear", "choice": None, "disputes": [], "critical": False, "corrects": "", "item": "", "value": "",
+               "new_questions": [], "said": "", "ask": "Which of the two notices do you mean?"})
+    judgement = message_reader.read(spy, {}, "Use the second notice.")
+    assert judgement["kind"] == "unclear" and [prompt.operation for prompt in spy.prompts] == [message_reader.OPERATION]
+    assert spy.prompts[0].effort == reasoning.effort("message_reader") == "medium"
 
 
 def test_the_time_limits_are_worked_out_at_medium_and_their_correction_looks_again_at_high(store):
