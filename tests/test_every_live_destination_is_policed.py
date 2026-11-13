@@ -96,6 +96,14 @@ class _RecordingStore:
         self.reached.append("saved_files")
         return ()
 
+    def load_for(self, matter_id, advocate_id):
+        self.reached.append("load_for")
+        return None
+
+    def saved_files_for(self, advocate_id):
+        self.reached.append("saved_files_for")
+        return ()
+
     def kept_line(self, matter_id, signature):
         self.reached.append("kept_line")
         return None
@@ -183,6 +191,8 @@ def _arguments_for(method: str) -> tuple:
         "list_for": ("advocate@example.test",),
         "signature": ("m-1",),
         "saved_files": (),
+        "load_for": ("m-1", "advocate@example.test"),
+        "saved_files_for": ("advocate@example.test",),
         "kept_line": ("m-1", (1, 1)),
         "keep_line": ("m-1", (1, 1), {"owner": "advocate@example.test"}),
         "record_turn": ({"turn": 1},),

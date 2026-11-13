@@ -62,7 +62,10 @@ def test_list_refuses_a_legacy_ciphertext_alias_with_another_saved_identity(tmp_
     alias.write_bytes(store._cipher.encrypt(json.dumps(_enc(saved)).encode("utf8")))
     listing = store.list_for("adv")
     assert [row.id for row in listing.matters] == ["matter-1"]
-    assert listing.unreadable == ("matter-2",)
+    # Plan AN.53 (53b, D217): a file that cannot be opened and that nobody is recorded as owning is named to no
+    # advocate - what it holds cannot be trusted to say whose it is - and is listed for the operator instead.
+    assert listing.unreadable == ()
+    assert store.unowned_unreadable() == ("matter-2",)
 
 
 @pytest.mark.parametrize("matter,turn", [

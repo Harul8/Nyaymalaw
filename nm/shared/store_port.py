@@ -93,6 +93,20 @@ class StorePort(Protocol):
         """Every saved matter as (id, signature, when last saved), without opening any (P35)."""
         ...
 
+    def load_for(self, matter_id: MatterId, advocate_id: str) -> Matter | None:
+        """The advocate's own matter, or None where there is none or it is another's (plan AN.53,
+        53b, D217): the comparison of owners is the store's, so no caller can forget it, and
+        another advocate's matter that cannot be opened is not said to be damaged."""
+        ...
+
+    def saved_files_for(self, advocate_id: str) -> tuple[tuple[str, tuple[int, int], str, bool | None], ...]:
+        """`saved_files` for one advocate (plan AN.53, 53b, D217): every saved matter not recorded
+        as another's, as (id, signature, when last saved, owned), without opening any. `owned` is
+        True where the store's record says it is this advocate's, and None where no owner is
+        recorded: the caller opens such a file to learn whose it is, and names it to nobody where
+        it cannot be opened."""
+        ...
+
     def kept_line(self, matter_id: MatterId, signature: tuple[int, int]) -> dict | None:
         """The conversation history's line for exactly this version of this saved matter, if one
         was kept (P35, O29): the small record the history needs, so listing does not open a large
