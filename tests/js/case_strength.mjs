@@ -119,6 +119,22 @@ for (const part of [`NM set out ${view.elements.length} things the law requires 
   'Show this dispute on the matter board']) {
   assert.ok(said.includes(part), part);
 }
+// 'Show this dispute on the matter board' opens the dispute's card where the board shows one at a time (49c), and leaves an
+// open card as it is.
+{
+  const [show] = walk(outside).filter((node) => node.tagName === 'BUTTON' && node.textContent === 'Show this dispute on the matter board');
+  for (const [expanded, clicks] of [['false', 1], ['true', 0]]) {
+    const toggle = Object.assign(el('button'), { clicks: 0, click() { this.clicks += 1; }, getAttribute: () => expanded });
+    const title = Object.assign(el('button'), { focused: false, focus() { this.focused = true; } });
+    const card = { getAttribute: (name) => (name === 'aria-label' ? 'The boundary dispute' : null), scrollIntoView() {},
+      querySelector: (selector) => ({ '.dispute-toggle': toggle, '.dtitle': title })[selector] || null };
+    document.querySelectorAll = () => [card];
+    show.handlers.click();
+    assert.equal(toggle.clicks, clicks, `a card ${expanded === 'false' ? 'closed is opened' : 'open is left as it is'}`);
+    assert.equal(title.focused, true);
+  }
+  document.querySelectorAll = () => [];
+}
 const counted = (status) => view.elements.filter((item) => item.status === status).length;
 assert.ok(said.includes(`${counted('shown')} shown by the papers, ${counted('weak')} shown only weakly, `
   + `${view.elements.length - counted('shown') - counted('weak')} not yet shown.`), 'the counts are the saved case’s own');

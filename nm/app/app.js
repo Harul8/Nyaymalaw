@@ -3195,6 +3195,9 @@ function renderTurn(entry) {
             const card = Array.from(document.querySelectorAll('.board-disputes .dispute'))
               .find((dispute) => dispute.getAttribute('aria-label') === el.dispute.name);
             if (!card) return;
+            // A board of several disputes shows one open at a time (49c, D180): this one is opened, as its own button opens it.
+            const toggle = card.querySelector('.dispute-toggle');
+            if (toggle && toggle.getAttribute('aria-expanded') === 'false') toggle.click();
             card.scrollIntoView({ block: 'nearest' });
             const title = card.querySelector('.dtitle');
             if (title) title.focus();
