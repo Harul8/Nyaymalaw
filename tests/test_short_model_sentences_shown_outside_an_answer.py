@@ -93,3 +93,33 @@ def test_a_follow_ups_own_wording_is_kept_apart_from_codes_sentence_as_its_readi
                                        "said": " You are asking whether  the suit is still within time. "}, BEFORE)
     assert judgement["said"] == follow_up.SAID["same_matter"], "the status is code's"
     assert judgement["reading"] == "You are asking whether the suit is still within time."
+
+
+# ---- the reader of a message sent while a matter waits (51b2) ----
+
+HELD = {"steps": {"understood": {"plan": BEFORE["plan"]}}, "go": {}}
+
+
+@pytest.mark.parametrize("kind", ["information", "correction", "rethink", "question", "unclear"])
+def test_a_waiting_matters_message_sentence_claiming_a_saved_correction_is_admitted_as_codes_own_words(kind):
+    judgement, why = message_reader.admitted({"kind": kind, "disputes": [], "said": CLAIM, "ask": CLAIM}, HELD)
+    assert why is None
+    assert judgement["said"].startswith(message_reader.SAID[kind]) and "saved the correction" not in judgement["said"]
+    assert "example.test" not in judgement["said"] and "NM's reading" not in judgement["said"]
+    if kind == "unclear":
+        assert judgement["ask"] == message_reader.ASK
+
+
+def test_a_waiting_matters_reading_comes_last_after_everything_code_says():
+    judgement, _ = message_reader.admitted({"kind": "correction", "disputes": [],
+                                            "said": "You are correcting the date of the notice."}, HELD)
+    assert judgement["said"].startswith(message_reader.SAID["correction"])
+    assert judgement["said"].endswith("NM's reading: You are correcting the date of the notice.")
+    assert judgement["said"].index("the board is not marked") < judgement["said"].index("NM's reading"), (
+        "code's own account of what it did comes before the model's wording")
+
+
+def test_a_reading_that_only_repeats_what_code_said_is_not_said_twice():
+    fixed = message_reader.SAID["question"]
+    assert shown_words.said(fixed, fixed) == fixed
+    assert shown_words.after(fixed + " NM kept its understanding.", "nm kept its understanding") == fixed + " NM kept its understanding."

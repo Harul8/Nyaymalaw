@@ -72,7 +72,8 @@ def test_a_go_ahead_in_words_runs_its_step_for_the_dispute_named(served):
     assert set(record["steps"]["parts"]) == {"D1"} and steps.waiting_of(record) == "researched"
     assert record["go"]["heard"][-1]["text"] == "Go ahead with the first dispute."
     card = served.client.get(f"/api/chats/{CHAT}").json()["pending"]["stopped"]["waiting"]
-    assert card["heard"][-1]["said"] == "Taken as your go-ahead to research D1."
+    # Plan AN.51 (51b, D196): code's own sentence first; the reader's wording after it, marked.
+    assert card["heard"][-1]["said"] == "Taken as your go-ahead. NM's reading: Taken as your go-ahead to research D1."
     seen = reader.asked[0]
     assert seen["new_message"] == "Go ahead with the first dispute."
     assert [d["id"] for d in seen["where_the_matter_stands"]["disputes"]] == ["D1", "D2"]
@@ -136,7 +137,9 @@ def test_an_unclear_message_is_asked_about(served):
     reading(served, Reader(judged(kind="unclear", said="I could not tell how you meant this.",
                                   ask="Is this a new fact for the lease dispute?")))
     reply = say(served, "Also the lease.")
-    assert reply.json()["detail"]["heard"]["said"] == "I could not tell how you meant this. Is this a new fact for the lease dispute?"
+    assert reply.json()["detail"]["heard"]["said"] == (
+        "NM could not tell how you meant this message. NM's reading: I could not tell how you meant this. "
+        "Is this a new fact for the lease dispute?")
 
 
 def test_a_reader_that_cannot_be_reached_loses_no_message(served):

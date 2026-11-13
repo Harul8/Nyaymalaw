@@ -49,8 +49,11 @@ def reading(words) -> str:
 
 
 def after(code_says: str, shown: str) -> str:
-    """Code's words, then a reading already admitted by `reading`, marked; code's words alone where there is none."""
-    return f"{code_says} {MARK} {shown}" if shown else code_says
+    """Code's words, then a reading already admitted by `reading`, marked; code's words alone where there is none, or where
+    the reading only repeats what code has said."""
+    if not shown or shown.rstrip(".?!…").lower() in code_says.lower():
+        return code_says
+    return f"{code_says} {MARK} {shown}"
 
 
 def said(fixed: str, words) -> str:

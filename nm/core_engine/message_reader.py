@@ -15,7 +15,7 @@ from __future__ import annotations
 import json
 import logging
 
-from nm.core_engine import reasoning, steps as stepwise
+from nm.core_engine import reasoning, shown_words, steps as stepwise
 
 log = logging.getLogger(__name__)
 
@@ -107,7 +107,9 @@ def admitted(data, held):
     unknown = [name for name in named if name not in state["order"]]
     if unknown and not state["whole"]:
         return None, f"these are not the matter's disputes: {', '.join(unknown)}"
-    said = data.get("said") if isinstance(data.get("said"), str) and data["said"].strip() else SAID[kind]
+    # Plan AN.51 (51b, D196): code's own sentence for the kind is NM's status; the reader's wording is added last, after
+    # everything code says, marked as NM's reading, where it may be shown at all (shown_words).
+    said, reading = SAID[kind], shown_words.reading(data.get("said"))
     judgement = {"kind": kind, "choice": None, "disputes": [], "go": None, "critical": data.get("critical") is True,
                  "corrects": (data.get("corrects") or "").strip() if isinstance(data.get("corrects"), str) else "",
                  "item": "", "value": "", "new_questions": [], "said": " ".join(said.split()), "ask": ""}
@@ -146,8 +148,8 @@ def admitted(data, held):
                 judgement["said"] = (judgement["said"] + " NM could not tell which item of what it read this corrects, so the "
                                      "board is not marked; say which, if it matters.").strip()
     elif kind == "unclear":
-        ask = data.get("ask") if isinstance(data.get("ask"), str) and data["ask"].strip() else ASK
-        judgement["ask"] = " ".join(ask.split())
+        judgement["ask"] = shown_words.asked(ASK, data.get("ask"))
+    judgement["said"] = shown_words.after(judgement["said"], reading)
     return judgement, None
 
 
