@@ -26,6 +26,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import logging
 import os
 import secrets
 import threading
@@ -170,6 +171,8 @@ class FileDirectory:
         self._sessions = self._root / "sessions"
         self._audit = self._root / "auth.log"
         self._attempts = self._root / "attempts.log"
+        # Plan AN.53 (53c1): how many lines of that log the last warning spoke of, so the operator is told once.
+        self._skipped_said = 0
         self._registration_attempts = self._root / "registration-attempts.json"
         self._registration_lock = self._root / "registration-attempts.lock"
         self._invitations = self._root / "invitations"
@@ -1113,27 +1116,21 @@ class FileDirectory:
         None means the limiter could not run, not that there were no failures.
         New credential attempts must refuse admission until it is restored.
         """
-        if not self._attempts.exists():
-            return ((), ())
-        try:
-            raw = self._attempts.read_text(encoding="utf8")
-        except (OSError, UnicodeError):
+        read = self._attempt_rows()
+        if read is None:
             return None
+        rows, skipped = read
+        if skipped != self._skipped_said:
+            if skipped:
+                # The count only: what a line that is no line holds is never written anywhere else.
+                logging.getLogger("nm.arrive").warning(
+                    "%d line(s) of the sign-in limiter's log could not be read and were skipped.", skipped)
+            self._skipped_said = skipped
 
         wanted = canonical_id(advocate_id)
         mine: list = []
         here: list = []
-        for line in raw.splitlines():
-            parts = line.split("\t")
-            if len(parts) != 3:
-                return None
-            stamp, who, where = parts
-            try:
-                when = datetime.fromisoformat(stamp)
-            except ValueError:
-                return None
-            if when.utcoffset() is None:
-                return None
+        for when, who, where in rows:
             if when < since:
                 continue
             if who == wanted:
@@ -1142,6 +1139,56 @@ class FileDirectory:
                 here.append(when)
         return (tuple(mine), tuple(here))
 
+    def _attempt_rows(self) -> tuple[list, int] | None:
+        """Every line of the attempt log that can be read, as (when, who, where), and how many
+        could not be; None where the log itself cannot be opened.
+
+        ONE BAD LINE IS ONE BAD LINE (plan AN.53, 53c1, D218; the review's F-28). A line that
+        was no line - cut short when the server stopped, a stray byte - made the whole log
+        unreadable, and an unreadable limiter refuses every sign-in until somebody mends the
+        file by hand. Such a line is skipped and counted. It can hide at most the one failure
+        it was; every line that can be read still limits. A log that cannot be opened at all
+        is still 'the limiter cannot run'.
+        """
+        if not self._attempts.exists():
+            return [], 0
+        try:
+            raw = self._attempts.read_bytes()
+        except OSError:
+            return None
+        lines = raw.split(b"\n")
+        if lines and lines[-1] == b"":
+            lines.pop()  # the end of the last whole line, not a line
+        rows, skipped = [], 0
+        for line in lines:
+            try:
+                stamp, who, where = line.decode("utf8").rstrip("\r").split("\t")
+                when = datetime.fromisoformat(stamp)
+                if when.utcoffset() is None:
+                    raise ValueError("a time with no offset cannot be placed")
+            except ValueError:  # not text, not three fields, or no time: UnicodeDecodeError is a ValueError
+                skipped += 1
+                continue
+            rows.append((when, who, where))
+        return rows, skipped
+
+    def skipped_attempt_lines(self) -> int | None:
+        """How many lines of the attempt log cannot be read and are skipped; None where the
+        log cannot be opened. For the operator's side: a count, never what a line held."""
+        read = self._attempt_rows()
+        return None if read is None else read[1]
+
+    def _attempts_end_mid_line(self) -> bool:
+        """Whether the attempt log's last line was cut short, so the next is begun afresh."""
+        try:
+            with self._attempts.open("rb") as fh:
+                if fh.seek(0, os.SEEK_END) == 0:
+                    return False
+                fh.seek(-1, os.SEEK_END)
+                return fh.read(1) != b"\n"
+        except OSError:
+            return False
+
     def note_failure(self, advocate_id: str, source: str, now: datetime) -> None:
         """One durable line per failed attempt; unavailable is an explicit refusal.
 
@@ -1149,10 +1196,13 @@ class FileDirectory:
         same shape the auth log beside it has held since slice 1.
         """
         try:
+            # A line cut short before this one (the server stopped mid-write) is ended first, so that this
+            # failure is a line of its own and is counted (plan AN.53, 53c1).
+            begin = "\n" if self._attempts_end_mid_line() else ""
             with self._attempts.open("a", encoding="utf8") as fh:
                 who = _one_log_field(canonical_id(advocate_id))
                 where = _one_log_field(source)
-                fh.write(f"{now.isoformat()}\t{who}\t{where}\n")
+                fh.write(f"{begin}{now.isoformat()}\t{who}\t{where}\n")
                 fh.flush()
                 os.fsync(fh.fileno())
         except OSError as exc:
