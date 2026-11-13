@@ -30,7 +30,7 @@ import time
 from pathlib import Path
 
 from nm.app import api, step_worker
-from nm.app.composition import Application, storage_root
+from nm.app.composition import NOT_CHECKED, Application, not_ready, storage_root
 from nm.shared.egress_log_store import keep as keep_egress_log
 from nm.shared.identity_contracts import source_fingerprint
 
@@ -230,7 +230,7 @@ def create_app(application: Application | None = None):
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="nyaymalaw")
     ap.add_argument("--check", action="store_true",
-                    help="wire everything, print health, and exit")
+                    help="wire everything, measure readiness, print it, and exit: non-zero where anything is not ready")
     ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--port", type=int, default=8000)
     ap.add_argument("--no-follow-code", action="store_true",
@@ -250,8 +250,22 @@ def main(argv: list[str] | None = None) -> int:
 
     health = application.health()
     if args.check:
-        print(json.dumps(health, indent=2))
-        return 0 if health["runtime"] == "ready" else 1
+        # Plan AN.52 (52a2, D207; the review's F-11): the check MEASURES. It printed health, which says 'ready' whatever is
+        # true, and so exited 0 whenever the application could be built. Each capability is now tried by a real act; one that is
+        # not ready is named on a line of its own with why, and fails the check. 'Not checked' is said and fails nothing:
+        # nothing was learned about it.
+        measured = application.readiness()
+        kept = list(application.kept_in_code_folder())
+        print(json.dumps({**health, "readiness": measured, "kept_in_code_folder": kept}, indent=2))
+        for name, entry in measured.items():
+            if entry["state"] == NOT_CHECKED:
+                print(f"NOT CHECKED: {name}: {entry['why']}", file=sys.stderr)
+        for name in not_ready(measured):
+            print(f"NOT READY: {name}: {measured[name]['why']}", file=sys.stderr)
+        if kept:
+            print(f"KEPT UNDER THE CODE: {', '.join(kept)}. On a hosted server give each a path of its own "
+                  "(NM_MATTER_STORE, NM_MATTER_KEY_FILE, NM_EGRESS_LOG_DIR).", file=sys.stderr)
+        return 0 if health["runtime"] == "ready" and not not_ready(measured) else 1
 
     # Plan AN.50 (50f, D190, D192): this server marked alive on its store and, where it works its own steps, their one owner -
     # before anything an earlier run left is taken up below. A second refuses to start.

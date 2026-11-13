@@ -100,8 +100,10 @@ def test_a_preparation_that_fails_does_not_stop_the_server(monkeypatch, tmp_path
 
 def test_a_check_only_start_prepares_nothing(monkeypatch):
     called, log = [], SweptLog()
+    # Plan AN.52 (52a2): the check measures readiness; this stand-in is ready and keeps nothing under the code.
     monkeypatch.setattr(main, "Application", lambda: SimpleNamespace(health=lambda: {"runtime": "ready"}, legal_search=None,
-                                                                     steps_mode="inside", egress_log=log))
+                                                                     steps_mode="inside", egress_log=log,
+                                                                     readiness=lambda: {}, kept_in_code_folder=lambda: ()))
     monkeypatch.setattr(main.api, "prepare_history", lambda: called.append(True))
     assert main.main(["--check"]) == 0
     assert called == [] and not log.swept.is_set()

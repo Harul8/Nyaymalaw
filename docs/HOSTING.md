@@ -244,7 +244,14 @@ copy back whole and opens everything; and puts back only some files, which are r
 
 ## Checked before handing over
 
-- `python -m nm.app.main --check` prints the health and exits; it must say `"runtime": "ready"`.
+- `python -m nm.app.main --check` measures readiness, prints it and exits (plan AN.52, D207). It tries each capability with a real
+  act - the store's folder takes a write and a saved conversation opens under the secret; each collection of the held law opens,
+  answers one query and reranks one pair (this loads the search models, so it takes as long as the first search does); the
+  malware scanner clears harmless bytes - and says `ready`, `not ready` or `not checked` for each. **It must exit 0.** Each
+  capability that is not ready is named on a line beginning `NOT READY:` with why, and the command exits 1. `NOT CHECKED:` lines
+  (account mail and the AI service have no free check yet) do not fail it. A line beginning `KEPT UNDER THE CODE:` names which of
+  the store, the key and the outgoing-data log still have no path of their own. Run it with the same settings the server runs
+  with. It starts no server.
 - With both processes running, `GET /api/health` must say `"steps": {"mode": "separate", "worker": "alive", ...}`; with one process,
   `"mode": "inside"`. Either way it says how many steps wait and how many are at work - counts only, never whose or what. An outside
   monitor that reads it can say when the worker stops.
