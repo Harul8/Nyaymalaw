@@ -3,8 +3,8 @@
 The function that writes the log of everything NM sends out caught a write failure and did nothing: with a full disk or a
 permissions slip, calls kept leaving with no line written and nothing shown anywhere, although this log is the kept record of
 processing (D169). Each line the log cannot take is now counted in the store, by whichever process failed to write it, and the
-Admin diagnostics show the count and call for attention. The call itself still goes: whether an unwritable log should refuse
-it is the owner's decision. Offline: a temporary store; the log's failure is stood in for.
+Admin diagnostics show the count and call for attention. What stays on this computer still goes on; what would leave it is
+refused since plan AN.53's 53e4 (D236). Offline: a temporary store; the log's failure is stood in for.
 """
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -40,12 +40,18 @@ class Refusing:
         raise PermissionError("the log's folder refuses the write")
 
 
-def test_a_line_the_log_could_not_take_is_counted_said_once_and_does_not_stop_the_call(app, tmp_path, capsys):
+def test_a_line_the_log_could_not_take_is_counted_said_once_and_does_not_stop_what_stays_on_this_computer(app, tmp_path, capsys):
+    """CHANGED BY PLAN AN.53 (53e4, D236), 13 Nov 2026. This test passed a line that named no recipient and held that the call
+    it records still goes. D236 decides the question 53e left: what would leave this computer is refused while its line cannot
+    be written, and a line that names no recipient cannot be known to stay. So the line here names the store, which stays on
+    this computer and goes on as before; the refusals are in
+    tests/test_an_unwritable_log_refuses_what_would_leave_this_computer.py."""
     app.egress_log = Refusing()
+    line = "egress permitted sink=storage processor=local-disk purpose=storage classes=['client_matter'] bytes=0"
     for _ in range(3):
-        app._egress_audit("a line of the log")  # returns: the call it records still goes
+        app._egress_audit(line)  # returns: what it records stays on this computer, and goes on
     assert len((tmp_path / UNWRITTEN_LOG_LINES).read_text(encoding="ascii").split()) == 3
-    assert "a line of the log" not in (tmp_path / UNWRITTEN_LOG_LINES).read_text(encoding="ascii"), "a time, never the line"
+    assert "local-disk" not in (tmp_path / UNWRITTEN_LOG_LINES).read_text(encoding="ascii"), "a time, never the line"
     assert capsys.readouterr().err.count("THE OUTGOING-DATA LOG COULD NOT BE WRITTEN") == 1
 
 

@@ -32,7 +32,8 @@ from nm.shared.deployment_contracts import shares_value_with
 from nm.shared.egress_contracts import DataClass, EgressRefused, Gatekeeper, Sink
 from nm.shared.egress_log_store import EgressLog, keep_days_from
 from nm.shared.storage_errors_port import StoredObjectUnreadable
-from nm.shared.egress_policy import INDEX_PROCESSOR, OUTBOX_PROCESSOR, STORAGE_PROCESSOR, egress_policy
+from nm.shared.egress_policy import (CONTROLLED_LOCAL_PROCESSORS, INDEX_PROCESSOR, LOCAL_BASIS, OUTBOX_PROCESSOR,
+                                     STORAGE_PROCESSOR, egress_policy)
 from nm.shared.model_config import AUTO_TURN, DEFAULT_TURN_MODEL, TURN_MODELS, load, load_dotenv
 from nm.shared.model_metered import MeteredModel
 from nm.shared.model_openai_adapter import OpenAIModelAdapter
@@ -66,6 +67,9 @@ def storage_root(settings: Mapping[str, str], root: Path) -> Path:
     """Where this installation keeps its records: NM_MATTER_STORE, or .nm under its root. One rule,
     read by the application and by an operator command that needs one store and not the rest."""
     return Path(settings.get('NM_MATTER_STORE') or Path(root) / '.nm')
+
+#: The recipient an outgoing-data line names, as the gate writes it (nm/shared/egress_contracts.py, audit_line).
+_RECIPIENT = re.compile(r'(?:^| )processor=(\S+)')
 
 #: Plan AN.52 (52a, D207; the review's F-11): the three things readiness says of a capability. 'Not checked' is its own state:
 #: a capability nobody tried is never 'ready'.
@@ -815,22 +819,45 @@ class Application:
         return browser_assets(root=ROOT)
 
     def _egress_audit(self, line):
-        """One line of the outgoing-data log (D169). A line that cannot be written is NEVER SILENT (plan AN.53, 53e, D220; the
-        review's F-30): it is counted where the Admin diagnostics read it, by whichever process failed, and said once on this
-        process's console. The call itself still goes: whether an unwritable log should refuse the call is the owner's decision."""
+        """One line of the outgoing-data log (D169), written before the dispatch it records is made.
+
+        A LINE THAT CANNOT BE WRITTEN IS NEVER SILENT (plan AN.53, 53e, D220; the review's F-30): it is counted where the Admin
+        diagnostics read it, by whichever process failed, and said once on this process's console.
+
+        AND WHAT WOULD LEAVE THIS COMPUTER IS REFUSED (plan AN.53, 53e4, D236). The log is the kept record of what NM sends
+        out; client material sent with no record of it is the one thing that record exists to prevent. So while a line cannot
+        be written, a dispatch the gate permitted to a recipient outside this computer is refused here, before it is made, and
+        goes again once the log can be written. What stays on this computer - a receiver the reviewed list holds as in-process -
+        goes on: refusing it would stop sign-in and saving for a fault in a log. A line that names no recipient cannot be known
+        to stay, and is refused. A dispatch the gate itself refused is left to the gate's own reason."""
         try:
             self.egress_log.write(line)
+            return
         except OSError as exc:
-            if not self._log_failure_said:
-                self._log_failure_said = True
-                print(f"THE OUTGOING-DATA LOG COULD NOT BE WRITTEN ({type(exc).__name__}). Calls go on; each line lost is counted "
-                      "in the Admin diagnostics.", file=sys.stderr, flush=True)
-            try:
-                from nm.shared.egress_log_store import _append
-                self._log_unwritten.parent.mkdir(parents=True, exist_ok=True)
-                _append(self._log_unwritten, (utcnow().isoformat() + chr(10)).encode("ascii"))
-            except OSError:
-                pass  # the store refuses too: said above, and every other check of the diagnostics will show it
+            cause = type(exc).__name__
+        if not self._log_failure_said:
+            self._log_failure_said = True
+            print(f"THE OUTGOING-DATA LOG COULD NOT BE WRITTEN ({cause}). Nothing is sent outside this computer until it can "
+                  "be; what stays on it goes on. Each line lost is counted in the Admin diagnostics.", file=sys.stderr, flush=True)
+        try:
+            from nm.shared.egress_log_store import _append
+            self._log_unwritten.parent.mkdir(parents=True, exist_ok=True)
+            _append(self._log_unwritten, (utcnow().isoformat() + chr(10)).encode("ascii"))
+        except OSError:
+            pass  # the store refuses too: said above, and every other check of the diagnostics will show it
+        if line.startswith('egress REFUSED '):
+            return
+        named = _RECIPIENT.search(line)
+        if named is not None and self._stays_on_this_computer(named.group(1)):
+            return
+        # The recipient's name is the operator's: it is in the gate's line and the server's log, never in these words.
+        raise EgressRefused('this installation did not send what was asked: the record of what is sent could not be written '
+                            f'({cause}), and nothing leaves this computer without its line in that record')
+
+    def _stays_on_this_computer(self, processor_id: str) -> bool:
+        """Whether the reviewed list holds this receiver as in-process: named as one, and admitted on that basis."""
+        held = self._gate.policy.find(processor_id)
+        return (processor_id in CONTROLLED_LOCAL_PROCESSORS and held is not None and held.approval_id == LOCAL_BASIS)
 
     # ------------------------------------------------------------------ readiness ---
     #
