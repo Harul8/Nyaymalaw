@@ -221,8 +221,9 @@ def proxy_trust_said(trust) -> str:
     return said
 
 
-#: Plan AN.52 (52a6, D237): the operator's one switch to start a server that is not ready, and the value that sets it.
-START_UNREADY, SERVE_ANYWAY = "NM_START_UNREADY", "serve"
+#: Plan AN.52 (52a7; D242, the owner's correction of D237): what the start does where NM is not ready is the operator's to set.
+#: Unset, or 'serve': it says what is not ready and goes on. 'refuse': it measures first and refuses (what 52a6 built).
+START_UNREADY, SERVE_ANYWAY, REFUSE = "NM_START_UNREADY", "serve", "refuse"
 _LAW = ("the held law: provision", "the held law: judgment")
 
 
@@ -236,12 +237,17 @@ def _warm_what_was_not_measured(application, measured) -> None:
 
 
 def _measure_in_the_background(application) -> None:
-    """The start that was told to serve anyway (NM_START_UNREADY=serve): readiness is measured on a thread of its own, and what
-    is not ready is printed when it is known. The public health answer is 'down' from then until it is ready."""
+    """THE START SAYS WHAT IS NOT READY AND GOES ON (D242): readiness is measured on a thread of its own, so the start does not
+    wait for it, and each capability that is not ready is printed with why when it is known. The server serves all the same;
+    the public health answer is 'down' from then until NM is ready."""
     def measure():
         measured = application.readiness()
-        for name in not_ready(measured):
+        unready = not_ready(measured)
+        for name in unready:
             print(f"NOT READY: {name}: {measured[name]['why']}", file=sys.stderr, flush=True)
+        if unready:
+            print("NM is serving all the same: what needs these will fail until they are put right. `python -m nm.app.main "
+                  f"--check` shows the same; {START_UNREADY}={REFUSE} makes the start refuse instead.", file=sys.stderr, flush=True)
         _warm_what_was_not_measured(application, measured)
     threading.Thread(target=measure, name="readiness", daemon=True).start()
 
@@ -292,25 +298,29 @@ def main(argv: list[str] | None = None) -> int:
                   "(NM_MATTER_STORE, NM_MATTER_KEY_FILE, NM_EGRESS_LOG_DIR).", file=sys.stderr)
         return 0 if health["runtime"] == "ready" and not not_ready(measured) else 1
 
-    # Plan AN.52 (52a6, D237, D207; the review's F-11): THE START MEASURES, AND REFUSES WHERE NM IS NOT READY. The check command
-    # failed on what was not ready; the start did not ask, so a server could start without its library, its store or its
-    # record of what it sends, take an advocate's message and fail it part-way. Readiness is measured here, before the store is
-    # held, anything of an earlier run is taken up, or a request is taken; a start that is refused has held nothing. 'Not
-    # checked' never refuses. Measuring opens the held law, so the start waits as long as warming did in the background.
-    serve_anyway = (os.environ.get(START_UNREADY) or "").strip().lower() == SERVE_ANYWAY
+    # Plan AN.52 (52a7; D242, the owner's correction of D237; D207; the review's F-11): THE START SAYS WHAT IS NOT READY AND GOES
+    # ON. 52a6 made the start measure first and refuse; the owner, asked which it should do, answered "print and go on". So the
+    # server starts at once and readiness is measured in the background (below), each capability that is not ready printed with
+    # why. THE REFUSAL IS THE OPERATOR'S CHOICE: with NM_START_UNREADY=refuse readiness is measured here, before the store is
+    # held, anything of an earlier run is taken up, or a request is taken, and a start where NM is not ready is refused, having
+    # held nothing; 'not checked' never refuses. A value that is neither is refused and named: a mistyped 'refuse' must not
+    # quietly serve.
+    chosen = (os.environ.get(START_UNREADY) or "").strip().lower()
+    if chosen not in ("", SERVE_ANYWAY, REFUSE):
+        print(f"REFUSED TO START: {START_UNREADY} is set to a value NM does not know. Leave it unset (or '{SERVE_ANYWAY}') for a "
+              f"start that says what is not ready and goes on, or set '{REFUSE}' for one that refuses where NM is not ready.",
+              file=sys.stderr)
+        return 2
+    serve_anyway = chosen != REFUSE
     measured = None
-    if serve_anyway:
-        print(f"STARTING WITHOUT WAITING TO KNOW WHETHER NM IS READY ({START_UNREADY}={SERVE_ANYWAY}): readiness is measured in "
-              "the background and what is not ready is printed when it is known. This is the setting for development; a hosted "
-              "server does not set it.", file=sys.stderr, flush=True)
-    else:
+    if not serve_anyway:
         measured = application.readiness()
         unready = not_ready(measured)
         if unready:
             for name in unready:
                 print(f"REFUSED TO START: {name} is not ready: {measured[name]['why']}", file=sys.stderr)
             print(f"Put right what is named above and start again; `python -m nm.app.main --check` shows the same without "
-                  f"starting. To start a development server anyway, set {START_UNREADY}={SERVE_ANYWAY}.", file=sys.stderr)
+                  f"starting. Without {START_UNREADY}={REFUSE} the start says what is not ready and goes on.", file=sys.stderr)
             return 2
 
     # Plan AN.50 (50f, D190, D192): this server marked alive on its store and, where it works its own steps, their one owner -
@@ -342,8 +352,8 @@ def main(argv: list[str] | None = None) -> int:
     else:
         _take_up_what_an_earlier_run_left(application)
 
-    # The held law is opened by measuring readiness (52a6): in the background where the start was told to serve anyway, and
-    # otherwise already, above - where only a search that readiness could not check is still to be warmed.
+    # The held law is opened by measuring readiness: in the background (D242, the rule), or already, above, where the operator
+    # asked the start to refuse - where only a search that readiness could not check is still to be warmed.
     if serve_anyway:
         _measure_in_the_background(application)
     else:

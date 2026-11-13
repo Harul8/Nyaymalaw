@@ -35,7 +35,7 @@ Both processes read the same settings (the `.env` file or the machine's environm
 | `NM_MATTER_KEY` | a long random secret | Seals everything in the store. Without it NM makes `.nm/matter.key` once. Lose it and every conversation and paper is unreadable; it may not be the AI key (NM refuses to start if it is). |
 | `NM_MATTER_KEY_FILE` | a file outside the code and the store | Instead of `NM_MATTER_KEY`: a file that holds the secret, so it can be kept apart from the code, the data and the backups. NM reads it and never writes it. NM refuses to start if the file is missing or empty, or if both this and `NM_MATTER_KEY` are set. |
 | `NM_EGRESS_LOG_DIR` | a folder of its own | Where the outgoing-data log is kept. Unset, it is `.nm` under the code, which a deployment replaces. See "Logs". |
-| `NM_START_UNREADY` | unset on a hosted server | NM measures its readiness at every start and refuses to start where anything is not ready (plan AN.52, D237). `serve` starts at once anyway, says so, and prints what is not ready when it is known: the setting for development only. |
+| `NM_START_UNREADY` | unset, or `refuse` | Unset (or `serve`), NM starts at once, measures its readiness in the background and prints a `NOT READY:` line for each capability that is not ready, then serves all the same (plan AN.52, D242: the owner's rule). `refuse` makes the start measure first and refuse to start where anything is not ready. Any other value refuses the start and says so. |
 | `NM_CLAMSCAN`, `NM_CLAMAV_DATABASE` | the ClamAV scanner and its definitions folder | Every paper is checked for malware before it is read. Without a scanner, papers are held and never read: advocates cannot send papers. |
 | `NM_CORPUS_DIR`, `NM_BARE_ACTS_DIR` | the law library's folders | Default to `legal_database/vector_store` and `legal_database/raw_data/BareActs` under the checkout. |
 | `NM_MAIL_PROVIDER`, `NM_MAIL_DELIVERY`, `NM_MAIL_SENDER`, `NM_GMAIL_APP_PASSWORD_FILE` | `gmail`, `enabled`, the sending address, the app password's file | Account email through Gmail; see "Sending account email with Gmail" below. Unset, account mail waits in the machine's own outbox. |
@@ -260,10 +260,12 @@ copy back whole and opens everything; and puts back only some files, which are r
   (account mail and the AI service have no free check yet) do not fail it. A line beginning `KEPT UNDER THE CODE:` names which of
   the store, the key and the outgoing-data log still have no path of their own. Run it with the same settings the server runs
   with. It starts no server.
-- **The server's own start does the same measuring, and refuses** (plan AN.52, D237): it prints a line beginning `REFUSED TO START:`
-  for each capability that is not ready and exits 2, having held nothing. So a server that is running was ready when it started.
-  The start waits for the search models to load before it takes a request. `NM_START_UNREADY=serve` is the one way to start a
-  server that is not ready; leave it unset on a hosted server.
+- **The server's own start does the same measuring, says what is not ready, and goes on** (plan AN.52, D242): it starts at once,
+  measures in the background and prints a line beginning `NOT READY:` for each capability that is not ready, with why. It serves
+  all the same, so what needs that capability fails until it is put right, and `GET /api/health` says `down` meanwhile. Read the
+  start's output, or run `--check`, after every start. With `NM_START_UNREADY=refuse` the start measures first and refuses instead:
+  it prints `REFUSED TO START:` for each and exits 2, having held nothing, and waits for the search models to load before it takes
+  a request.
 - `GET /api/health` answers anyone with one word (plan AN.52, D207): `{"status": "up"}`, or `{"status": "down"}` with HTTP 503. It is
   down where the last readiness measurement found a capability not ready, or where the steps are the step worker's and the worker
   has not been heard from - so an outside monitor that reads it can say when the worker stops. It names no provider, model or
