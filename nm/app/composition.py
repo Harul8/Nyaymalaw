@@ -539,7 +539,7 @@ class Application:
         from datetime import datetime, timezone
         from nm.core_engine import message_reader, steps as stepwise, turn
         from nm.core_engine.conversation import ConversationRefused, queued_of, save_waiting
-        from nm.shared.model_port import ModelError
+        from nm.shared.model_port import REQUEST_REJECTED_MESSAGE, ModelError, RequestRejected
         matter, held = self._held(advocate_id, chat_id)
         if held is None or held['turn_id'] != turn_id or stepwise.waiting_of(held) is None:
             raise ConversationRefused('This matter is not waiting for your go-ahead.', status=409, code='not_waiting')
@@ -574,6 +574,11 @@ class Application:
                                     text_model=DEFAULT_TURN_MODEL if choice == AUTO_TURN else choice)
             try:
                 judgement = message_reader.read(model, held, message)
+            except RequestRejected as exc:
+                # Plan AN.52 (52i3, D215): the AI service rejected NM's own request - the installation's fault, not "just now".
+                logging.getLogger('nm.rejected').error('A message sent while a matter waited ended on a rejected request: %s', exc)
+                heard_only('unread', REQUEST_REJECTED_MESSAGE + ' Your message is kept here: use the buttons, or send it again '
+                                     'once that is put right.')
             except ModelError:
                 logging.getLogger('nm.turns').warning('A message sent while a matter waited could not be read.')
                 heard_only('unread', 'NM could not read this message just now. It is kept here: use the buttons, or send it '

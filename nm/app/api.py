@@ -57,7 +57,7 @@ from nm.core_engine.reasoning import CHOICES as EFFORT_CHOICES, DEFAULT_CHOICE a
 from nm.shared.egress_contracts import EgressRefused
 from nm.shared.external_ai_contracts import ModelPermissionRefused
 from nm.shared.model_config import DEFAULT_TURN_MODEL, TURN_CHOICES
-from nm.shared.model_port import USAGE_LIMIT_MESSAGE, ModelError, UsageLimitReached
+from nm.shared.model_port import REQUEST_REJECTED_MESSAGE, USAGE_LIMIT_MESSAGE, ModelError, RequestRejected, UsageLimitReached
 from nm.shared.clock_contracts import FORUM
 from nm.shared.identity_contracts import source_fingerprint
 from nm.shared.storage_errors_port import StoredObjectUnreadable
@@ -2869,6 +2869,9 @@ def _receive_document(advocate_id, request, name, data):
 
 
 _READING_FAILURES = (ModelPermissionRefused, UsageLimitReached, ModelError, document_rules.DocumentRefused, OSError)
+#: Plan AN.52 (52i3, D215): where the AI service rejected NM's own request outside a turn, the provider's words - the operator's,
+#: and never the advocate's - are written here, as an error, since someone must act on them.
+_rejected_log = logging.getLogger('nm.rejected')
 
 
 def _reading_error(exc):
@@ -2878,6 +2881,10 @@ def _reading_error(exc):
         return {'status': 403, 'why': str(exc), 'code': 'model_permission_required'}
     if isinstance(exc, UsageLimitReached):
         return {'status': 402, 'why': USAGE_LIMIT_MESSAGE, 'code': 'usage_limit'}
+    if isinstance(exc, RequestRejected):
+        # Plan AN.52 (52i3, D215): the AI service rejected NM's own request - the installation's fault, never "try again".
+        _rejected_log.error('A reading ended on a rejected request: %s', exc)
+        return {'status': 503, 'why': REQUEST_REJECTED_MESSAGE, 'code': 'request_rejected'}
     if isinstance(exc, ModelError):
         return {'status': 503, 'why': 'The pages could not be read just now. Try again.', 'code': 'document_reading_unavailable'}
     if isinstance(exc, document_rules.DocumentRefused):
@@ -2998,6 +3005,10 @@ def _dictate(advocate_id, request, name, data):
         raise HTTPException(403, {'why': str(exc), 'code': 'model_permission_required'}) from exc
     except UsageLimitReached as exc:
         raise HTTPException(402, {'why': USAGE_LIMIT_MESSAGE, 'code': 'usage_limit'}) from exc
+    except RequestRejected as exc:
+        # Plan AN.52 (52i3, D215): not "just now": the same request is rejected until the installation is put right.
+        _rejected_log.error('A dictation ended on a rejected request: %s', exc)
+        raise HTTPException(503, {'why': REQUEST_REJECTED_MESSAGE, 'code': 'request_rejected'}) from exc
     except ModelError as exc:
         raise HTTPException(503, {'why': 'The dictation could not be transcribed just now. Try again.',
                                   'code': 'dictation_unavailable'}) from exc
@@ -3059,6 +3070,9 @@ async def live_dictation(websocket: WebSocket):
         return await refuse(str(exc))
     except UsageLimitReached:
         return await refuse(USAGE_LIMIT_MESSAGE)
+    except RequestRejected as exc:
+        _rejected_log.error('Live words ended on a rejected request: %s', exc)  # plan AN.52 (52i3, D215)
+        return await refuse(REQUEST_REJECTED_MESSAGE)
     except ModelError:
         return await refuse('Live words are not available just now.')
 
