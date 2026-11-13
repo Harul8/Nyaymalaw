@@ -101,6 +101,10 @@ STOPS = {
     "stopped": "You stopped NM part-way through this answer.",
     "not_saved": "NM finished this answer but could not save it.",
     "failed": "Something went wrong on NM's side part-way through this message.",
+    # Plan AN.53 (53e3, D236): the installation refused to send what this message needed sent - a recipient not on its reviewed
+    # list, or a call whose line in the outgoing-data log could not be written. Nothing was sent.
+    "sending_refused": "This installation of NM could not send what this message needed sent, so nothing was sent and NM could "
+                       "not go on with it.",
     # Plan AN.48 (D134): a matter worked step by step stops for the advocate's go-ahead after each step; Done before any analysis
     # was written saves it as it stands (48a3).
     "waiting": "NM is waiting for your go-ahead on this matter.",
@@ -111,6 +115,7 @@ STOP_NEEDS = {
     "signed_out": "Sign in again, then press Continue.",
     "model_permission_required": "Turn AI data sharing back on, then press Continue.",
     "usage_limit": "Continue works once more usage is available.",
+    "sending_refused": "This is for whoever runs this installation to put right; Continue works once it is.",
 }
 #: Plan AN.41 (D66, D71): a turn saved as it stopped before NM had finished any part of it - the advocate's message and files,
 #: and code's words on why it stopped, with nothing of an answer.
@@ -1386,6 +1391,19 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
         stopped("model_permission_required" if session_current() else "signed_out", exc)
         finish("retryable", "model_permission_required")
         raise
+    except EgressRefused as exc:
+        # A DISPATCH THE INSTALLATION REFUSED IS A STOP OF ITS OWN (plan AN.53, 53e3, D236). It went out of the turn as it was:
+        # what NM had finished was kept, the advocate was answered with a server error, and the stop was recorded as NM's own
+        # fault. It is not a model's failure and nothing here retries it; it is never turned into an answer. The gate's own line
+        # - which recipient, which kind of material - is the operator's: it is logged, and the advocate is told in code's words.
+        refusal = ConversationRefused(STOPS["sending_refused"] + " What NM had finished is kept.", status=503,
+                                      code="sending_refused", retryable=True)
+        stopped("sending_refused", refusal)
+        refusal.diagnosis = _diagnosis("sending_refused", exc, calls)
+        log.warning("Message not answered: %s (%s)", refusal.diagnosis, str(exc)[:300])
+        finish("retryable", refusal.diagnosis)
+        refusal.metrics = calls.metrics()
+        raise refusal from exc
     except ModelError as exc:
         if isinstance(exc, ContextOverflow):
             withdraw()
