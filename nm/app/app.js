@@ -944,7 +944,9 @@ function followPending(intent, pending, chatId) {
     entry.following = true;
     followAs(entry);
     checkIdle();
-    watchProgress(entry, () => { entry.following = false; unfollow(entry); nmFinished(); restorePendingChat(chatId); },
+    // 53i (D224): its conversation is read again only while the advocate is still in it; opened later, it is read then.
+    watchProgress(entry, () => { entry.following = false; unfollow(entry); nmFinished();
+      if (ownsIntent(intent)) restorePendingChat(chatId); },
       () => { entry.following = false; unfollow(entry); nmFinished(); refreshStopped(entry, chatId); });
     return;
   }
@@ -6144,6 +6146,9 @@ async function deliver(entry) {
     if (!current()) return;
     restoreIntent();
     await saveProtectedDraft({previousKey});
+    // Plan AN.53 (53i, D224): A LATE REPLY ACTS ONLY ON ITS OWN CONVERSATION. Saving the draft is a wait; an advocate who opened
+    // another conversation meanwhile stays in it - this answer is read from its own conversation when that is opened again.
+    if (!current()) return;
     state.matterId = intent.matterId;
     if (Number.isInteger(answer.matter_version)) state.matterVersion = answer.matter_version;
     repaint();
@@ -6209,6 +6214,7 @@ async function deliver(entry) {
         intent.pending = intent.pending.filter((item) => item !== entry);
         state.matterId = openedId;
         await saveProtectedDraft({previousKey});
+        if (!current()) return;  // 53i: the advocate left during that wait
       }
       if (Number.isInteger(entry.refusal.matter_version)) {
         state.matterVersion = entry.refusal.matter_version;
@@ -6315,6 +6321,8 @@ async function reconnect(entry) {
         if (error?.status === 401) return;
         continue;  // not back yet
       }
+      // 53i (D224): the server's word is a wait too; a conversation the advocate has left is not opened over the one they are in.
+      if (state.ended || !ownsIntent(entry.context)) return;
       if (seen.chat_id) entry.chatId = seen.chat_id;
       if (seen.state === 'working') {
         entry.state = 'sending';
@@ -6433,7 +6441,8 @@ async function discardTurn(entry) {
     entry.stopped = null;
     const intent = entry.context;
     if (intent) intent.pending = (intent.pending || []).filter((item) => item !== entry);
-    if (Number.isInteger(answer.matter_version)) state.matterVersion = answer.matter_version;
+    // 53i (D224): the version is its own conversation's, never given to another the advocate has opened since.
+    if (Number.isInteger(answer.matter_version) && ownsIntent(entry.context)) state.matterVersion = answer.matter_version;
     releaseQueued(entry);
   } catch (error) {
     entry.discardError = error.message;
@@ -6734,7 +6743,8 @@ function watchProgress(entry, onFinished, onStopped = null) {
 async function showSoFar(entry, chatId) {
   try {
     const chat = await api(`/api/chats/${encodeURIComponent(chatId)}`);
-    takeTitle(chatId, chat.title);
+    // 53i (D224): the page keeps one title, the open conversation's; a turn still worked on in another does not take it.
+    if (ownsIntent(entry.context)) takeTitle(chatId, chat.title);
     if (entry.answer || !chat.pending || chat.pending.turn_id !== entry.turnId) return;
     entry.shownElements = chat.pending.elements;
     if (chat.pending.work) entry.work = chat.pending.work;
