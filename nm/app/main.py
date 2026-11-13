@@ -196,6 +196,31 @@ def _take_up_what_an_earlier_run_left(application):
             print(f"{taken} step(s) an earlier run left were taken up again.", file=sys.stderr)
 
 
+#: Plan AN.53 (53c3, D218; the review's F-28): the senders NM believes about a visitor's address and scheme where the operator
+#: names none - this machine, by both its loopback addresses, which is where the hosting guide puts the proxy.
+PROXY_TRUSTED_BY_DEFAULT = "127.0.0.1,::1"
+
+
+def proxy_trust(environment) -> dict:
+    """Whose X-Forwarded-For and X-Forwarded-Proto NM believes, as the web server's own settings. The sign-in limits count wrong
+    answers by the visitor's address, and behind a proxy that address is whatever this trust lets through: believed from too
+    many senders, a visitor writes their own address and is never paused; from too few, every visitor is the proxy and one
+    visitor's wrong answers pause sign-in for all. It was the web server library's default, stated nowhere in NM. It is NM's
+    own now: this machine unless the operator names the proxy (FORWARDED_ALLOW_IPS), handed to the web server at its start."""
+    named = (environment.get("FORWARDED_ALLOW_IPS") or "").strip()
+    return {"proxy_headers": True, "forwarded_allow_ips": named or PROXY_TRUSTED_BY_DEFAULT}
+
+
+def proxy_trust_said(trust) -> str:
+    """The line the start prints, so the operator sees the trust the server runs with."""
+    senders = trust["forwarded_allow_ips"]
+    said = f"A visitor's address and scheme (X-Forwarded-For, X-Forwarded-Proto) are believed from: {senders}."
+    if "*" in senders.split(","):
+        said += (" WARNING: that is any sender. A visitor can then write their own address, and the sign-in limits count by"
+                 " it: name the proxy's address in FORWARDED_ALLOW_IPS instead.")
+    return said
+
+
 def create_app(application: Application | None = None):
     """Wire the composition root into the served path and return the ASGI app."""
     api.set_application(application or Application())
@@ -267,7 +292,9 @@ def main(argv: list[str] | None = None) -> int:
     # deleted - by each process that writes it.
     keep_egress_log(application.egress_log)
     print(json.dumps(health, indent=2))
-    uvicorn.run(served, host=args.host, port=args.port, log_level="warning")
+    trust = proxy_trust(os.environ)
+    print(proxy_trust_said(trust), file=sys.stderr)
+    uvicorn.run(served, host=args.host, port=args.port, log_level="warning", **trust)
     return 0
 
 

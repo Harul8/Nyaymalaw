@@ -38,7 +38,7 @@ Both processes read the same settings (the `.env` file or the machine's environm
 | `NM_MAIL_PROVIDER`, `NM_MAIL_DELIVERY`, `NM_MAIL_SENDER`, `NM_GMAIL_APP_PASSWORD_FILE` | `gmail`, `enabled`, the sending address, the app password's file | Account email through Gmail; see "Sending account email with Gmail" below. Unset, account mail waits in the machine's own outbox. |
 | `NM_PUBLIC_REGISTRATION` | `enabled` | Opens public sign-up, once mail reaches real mailboxes and `NM_PUBLIC_URL` is set. Unset, only accounts the operator enrols exist. |
 | `NM_EGRESS_LOG_KEEP_DAYS` | `365` (default) | How many days the outgoing-data log is kept. A longer period may be set; nothing under 180 days is taken. See "Logs". |
-| `FORWARDED_ALLOW_IPS` | the proxy's address | Only where the proxy is on another machine or container; NM trusts the proxy's forwarded headers from `127.0.0.1` already. |
+| `FORWARDED_ALLOW_IPS` | the proxy's address | Only where the proxy is on another machine or container; NM believes the proxy's forwarded headers from this machine (`127.0.0.1` and `::1`) already, and says at start-up whom it believes. Never `*`: a visitor could then write their own address, and the sign-in limits count by it. |
 
 ## The web proxy in front
 
