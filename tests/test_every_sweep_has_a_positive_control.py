@@ -46,6 +46,9 @@ ROOT = Path(__file__).resolve().parents[1]
 #: sweep test  ->  the test that proves it can fail.
 #: A sweep with no control is a sweep that has never been shown to work.
 CONTROLS: dict[str, str] = {
+    # Plan AN.53 (53b3): the app asks the store for the advocate's own matter.
+    "test_no_module_of_the_app_loads_a_matter_without_saying_whose":
+        "test_the_sweep_sees_a_planted_owner_blind_load",
     # P36 / J-5 -- the identifier sweep whose population is the CODE rather
     # than one scripted conversation. Its control plants a leak in a branch no
     # fixture reaches, which is the whole reason the static population exists.
