@@ -364,16 +364,40 @@ def hold_shown(store, context, held, *, private=False):
     the turn is committed (P27). The conversation's turns are unchanged. Returns the turn's
     context at the version written. private: held is the caller's own copy, which nothing changes afterwards (plan AN.41: the
     record of a turn being worked on is written often, and copying it each time is work the write does not need)."""
-    metadata = {**context.matter.intake_answers, SHOWN: held if private else deepcopy(held)}
-    metadata.setdefault(HEADER, {"contract": CONTRACT, "chat_id": context.chat_id, "turn_count": 0,
-                                 "tail_digest": None})
-    candidate = replace(context.matter, intake_answers=metadata, version=context.matter.version + 1)
-    # The turns were checked when the turn opened, and this write leaves them as they were: only a conversation this write begins
-    # has its header checked here (plan AN.41: a long conversation's turns took about a second to check, on every write).
-    if context.matter.version == 0:
-        checked_rows(candidate, context.matter.advocate_id, copied=False)
-    shown_of(candidate, copied=False)
-    return replace(context, matter=_written(store, candidate, context.matter.version))
+    record = held if private else deepcopy(held)
+
+    def build(matter):
+        metadata = {**matter.intake_answers, SHOWN: record}
+        metadata.setdefault(HEADER, {"contract": CONTRACT, "chat_id": context.chat_id, "turn_count": 0,
+                                     "tail_digest": None})
+        candidate = replace(matter, intake_answers=metadata, version=matter.version + 1)
+        # The turns were checked when the turn opened, and this write leaves them as they were: only a conversation this write
+        # begins has its header checked here (plan AN.41: a long conversation's turns took about a second to check, on every write).
+        if matter.version == 0:
+            checked_rows(candidate, matter.advocate_id, copied=False)
+        shown_of(candidate, copied=False)
+        return candidate
+    return _beside(store, context, build, (SHOWN,))
+
+
+def _beside(store, context, build, owned):
+    """A write beside the conversation on the versions of a turn being worked on: build(matter) is the conversation as the write
+    leaves it, made from the conversation it is written on; owned: the keys it rewrites. Returns the turn's context at the
+    version written.
+
+    Plan AN.50 (50b4, D188): where another write, made outside this turn's own writer, moved the conversation and left its turns
+    and what this write rewrites exactly as this turn last wrote them, the write is made again, once, on the conversation as it
+    now stands - nothing of the other write and nothing of this one is lost, and the record of a finished answer that could not
+    be saved is kept for Continue. Where anything this write rewrites was changed by another, it is refused as before."""
+    try:
+        return replace(context, matter=_written(store, build(context.matter), context.matter.version))
+    except StaleWrite:
+        current, known = store.load(context.matter.id), context.matter
+        if (current is None or current.advocate_id != known.advocate_id or current.brain_chat != known.brain_chat
+                or any(digest((current.intake_answers or {}).get(key)) != digest((known.intake_answers or {}).get(key))
+                       for key in (HEADER, *owned))):
+            raise
+        return replace(context, matter=_written(store, build(current), current.version))
 
 
 def _written(store, candidate, expected_version):
@@ -411,12 +435,16 @@ def hold_asking(store, context, state):
     """Seal what this turn has asked, and the answers as they stand, beside its conversation (plan AN.37, D40). The
     conversation's turns are unchanged. Returns the turn's context at the version written."""
     questions.check_asked(state)
-    metadata = {**context.matter.intake_answers, ASKING: {"turn_id": context.turn_id, "state": deepcopy(state)}}
-    metadata.setdefault(HEADER, {"contract": CONTRACT, "chat_id": context.chat_id, "turn_count": 0,
-                                 "tail_digest": None})
-    candidate = replace(context.matter, intake_answers=metadata, version=context.matter.version + 1)
-    checked_rows(candidate, context.matter.advocate_id, copied=False)
-    return replace(context, matter=_written(store, candidate, context.matter.version))
+    asked = {"turn_id": context.turn_id, "state": deepcopy(state)}
+
+    def build(matter):
+        metadata = {**matter.intake_answers, ASKING: asked}
+        metadata.setdefault(HEADER, {"contract": CONTRACT, "chat_id": context.chat_id, "turn_count": 0,
+                                     "tail_digest": None})
+        candidate = replace(matter, intake_answers=metadata, version=matter.version + 1)
+        checked_rows(candidate, matter.advocate_id, copied=False)
+        return candidate
+    return _beside(store, context, build, (ASKING,))
 
 
 #: What the advocate wrote while a turn was worked on, waiting to go as the next message (plan AN.42, D77): each message's words
@@ -448,10 +476,11 @@ def title_of(matter):
 def hold_title(store, context, title):
     """Save the conversation's title beside it, on the versions of its turn being worked on (D82). Returns the turn's context at the
     version written."""
-    metadata = {**context.matter.intake_answers, TITLE: dict(title)}
-    candidate = replace(context.matter, intake_answers=metadata, version=context.matter.version + 1)
-    title_of(candidate)
-    return replace(context, matter=_written(store, candidate, context.matter.version))
+    def build(matter):
+        candidate = replace(matter, intake_answers={**matter.intake_answers, TITLE: dict(title)}, version=matter.version + 1)
+        title_of(candidate)
+        return candidate
+    return _beside(store, context, build, (TITLE,))
 
 
 def save_title(store, matter, title):
@@ -492,7 +521,7 @@ def with_queued(matter, queued):
 def hold_queued(store, context, queued):
     """Save what waits to be sent beside a conversation whose turn is being worked on, on that turn's own versions (D77). Returns the
     turn's context at the version written."""
-    return replace(context, matter=_written(store, with_queued(context.matter, queued), context.matter.version))
+    return _beside(store, context, lambda matter: with_queued(matter, queued), (QUEUED,))
 
 
 def save_queued(store, matter, queued):
@@ -540,9 +569,11 @@ def drop_shown(store, context):
     where nothing was held."""
     if SHOWN not in context.matter.intake_answers and ASKING not in context.matter.intake_answers:
         return context
-    metadata = {key: value for key, value in context.matter.intake_answers.items() if key not in (SHOWN, ASKING)}
-    candidate = replace(context.matter, intake_answers=metadata, version=context.matter.version + 1)
-    return replace(context, matter=_written(store, candidate, context.matter.version))
+
+    def build(matter):
+        metadata = {key: value for key, value in matter.intake_answers.items() if key not in (SHOWN, ASKING)}
+        return replace(matter, intake_answers=metadata, version=matter.version + 1)
+    return _beside(store, context, build, (SHOWN, ASKING))
 
 
 def open_turn(store, *, advocate_id, message, turn_id, chat_id=None, matter_id=None,

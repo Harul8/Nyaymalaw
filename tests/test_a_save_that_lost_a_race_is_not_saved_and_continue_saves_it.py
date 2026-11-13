@@ -9,16 +9,74 @@ that case). Offline: the scripted model and a temporary store; the words are inv
 """
 import threading
 import time
+from dataclasses import replace
 
 import pytest
 
 from nm.core_engine import titles, turn
-from nm.core_engine.conversation import ConversationRefused, commit_turn, open_turn, shown_of, title_of
+from nm.core_engine.conversation import (
+    SHOWN, ConversationRefused, commit_turn, hold_shown, open_turn, sent, shown_of, title_of,
+)
 from nm.shared.store_file_store import FileMatterStore
 from nm.shared.store_port import StaleWrite
 from tests.test_core_served import OWNER, send, served, successful  # noqa: F401 - pytest fixture
 
 pytestmark = pytest.mark.class_a
+
+
+def renamed_meanwhile(store, matter_id, title="Renamed meanwhile"):
+    """Another write, made outside the turn's own writer, moves the conversation's version."""
+    current = store.load(matter_id)
+    return store.commit(replace(current, title=title, version=current.version + 1), expected_version=current.version)
+
+
+def test_a_write_from_outside_the_turn_that_moved_the_conversation_leaves_the_answer_kept_for_continue(served, monkeypatch):
+    """Plan AN.50 (50b4, D188): the final save is refused as stale and the turn's record of the finished answer is written again
+    on the conversation as it now stands - the other write's change and the answer both kept - so Continue saves it."""
+    original = served.store.commit
+    moved = []
+
+    def racing(matter, **kwargs):
+        if matter.brain_chat and not moved:
+            moved.append(renamed_meanwhile(served.store, matter.id))
+        return original(matter, **kwargs)
+    monkeypatch.setattr(served.store, "commit", racing)
+    reply = send(served)
+    assert reply.status_code == 409, reply.text
+    detail = reply.json()["detail"]
+    assert (detail["code"], detail["committed"], detail["retryable"], detail.get("kept")) == (
+        "not_saved", "not_committed", True, True)
+    (matter,) = served.store.list_for(OWNER).matters
+    held = shown_of(matter)
+    assert matter.brain_chat == () and held["stopped"]["code"] == "not_saved" and held["steps"]["answered"]["sections"]
+    assert matter.title == "Renamed meanwhile", "the other write's change is kept"
+    calls = len(served.model.calls)
+    monkeypatch.setattr(served.store, "commit", original)
+    saved = successful(served)  # Continue
+    assert len(served.model.calls) == calls and saved["elements"] == held["elements"]
+    (matter,) = served.store.list_for(OWNER).matters
+    assert len(matter.brain_chat) == 1 and matter.title == "Renamed meanwhile"
+
+
+def test_a_write_beside_is_made_again_only_where_nothing_it_rewrites_was_changed_by_another(tmp_path):
+    store = FileMatterStore(tmp_path, key="synthetic-not-a-secret")
+    context = open_turn(store, advocate_id="owner", message="Words", turn_id="t1")
+
+    def record(words):
+        return {**sent("t1", context.request, "Words", (), 0, at="2026-11-13T00:00:00+00:00"),
+                "elements": [{"text": words}]}
+    context = hold_shown(store, context, record("First part."))
+    renamed_meanwhile(store, context.matter.id)
+    context = hold_shown(store, context, record("Second part."))
+    saved = store.load(context.matter.id)
+    assert saved.title == "Renamed meanwhile" and shown_of(saved)["elements"] == [{"text": "Second part."}]
+    # Another writer changes what this turn showed: nothing of it may be put back, so the write is refused.
+    current = store.load(context.matter.id)
+    store.commit(replace(current, intake_answers={**current.intake_answers, SHOWN: record("Another's part.")},
+                         version=current.version + 1), expected_version=current.version)
+    with pytest.raises(StaleWrite):
+        hold_shown(store, context, record("Third part."))
+    assert shown_of(store.load(context.matter.id))["elements"] == [{"text": "Another's part."}]
 
 
 def late_title(served, monkeypatch, *, keeping_fails=False):
