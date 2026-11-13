@@ -28,6 +28,7 @@ Both processes read the same settings (the `.env` file or the machine's environm
 | `NM_STEP_WAIT_SECONDS` | `20` (default) | How long a request waits for its step before answering "working". Keep it under the proxy's request timeout. |
 | `NM_STEPS_AT_ONCE` | `3` (default) | Steps at work at once on the machine. Raise it only if the graphics card, the AI account's rate limit and the processor allow. |
 | `NM_STEPS_PER_ADVOCATE` | `2` (default) | Steps at work at once for one advocate, so that one cannot take every place. |
+| `NM_PROVIDER_REQUESTS_AT_ONCE` | `16` (default) | Requests each process has out to the AI provider at once. A refusal for the account's rate is waited out as long as the provider says, up to a minute a call; lower this where refusals are frequent. |
 | `NM_PUBLIC_URL` | `https://<your domain>` | Where NM lives. Password-reset links are built from it and public sign-up needs it; without it no reset link goes by mail. |
 | `NM_TRUSTED_ORIGINS` | `https://<your domain>` | The page's address the server accepts changes from. Behind a proxy NM otherwise compares the page with its own inner address and refuses every change as cross-site. |
 | `NM_MATTER_STORE` | a folder of its own | Conversations, accounts, usage, papers and the step stores. Use a fresh folder, not the development `.nm`, which also holds test reports and logs. |
@@ -153,8 +154,16 @@ installed separately. The Anthropic adapter's package is not on the list; hostin
   folder; start them again after the copy. A copy of a folder in use is not a backup: a save can land between two files of it, and
   the small databases in it (accounts' usage, the steps) copied in the middle of a write come out stale or damaged. Where the
   machine's disk can be snapshotted as a whole at one instant, stop the processes first all the same.
-- Back up the whole folder: conversations, papers, accounts, usage, the outbox and the step stores - what holds client words in it
-  is sealed. Never back up, or put back, some of its folders without the others.
+- Back up the whole folder: conversations, papers, accounts, usage, the outbox and the step stores. Never back up, or put back,
+  some of its folders without the others.
+- **Not everything in the folder is sealed** (plan AN.53, D222), so treat a backup, and the disk itself, as holding personal data:
+  - *Sealed, each matter under its own key:* conversations, papers as sent, the text read from them, and the history's lines.
+  - *Sealed under the installation secret alone:* an advocate's settings inside their account record, pending accounts, reset
+    links, the mail outbox, and the words of the steps handed to the worker.
+  - *Plain text:* the account records themselves, whose file names are the advocates' email addresses (passwords are kept only as
+    salted hashes); the sign-in files and the two sign-in logs; each turn's counts and timings; ratings of replies; the record of
+    each matter's last saved version; and the identifying columns of the small databases (whose step, whose usage).
+  Encrypt the disk and the backups for this reason, and give the folder to the account NM runs as and to no other.
 - Keep `NM_MATTER_KEY` (or `.nm/matter.key`) **apart from** the backups and as safely: a backup without its key cannot be read, and the
   key with a backup opens everything.
 - Back up the outgoing-data log too (`.nm/egress-*` under the checkout) where its year must outlast the machine.
