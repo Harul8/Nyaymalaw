@@ -198,6 +198,11 @@ UNWIRED: dict[str, str] = {
     "nm.Archives.legal_brain.retrieve.hybrid_sections":
         "imported only by the Act-store corpus jobs in pipeline/ (append_bare_acts, "
         "build_acts_v4), which build the index the served search reads",
+    # Plan AN.49, piece 49d (13 Nov 2026): built and tested beside the writing step, which is one of the pinned strong pieces
+    # (D143). Deleted from here when the owner's register entry allows the writing step to call it.
+    "nm.core_engine.case_gathered":
+        "the gathered account of the case, built for plan AN.49 (49d) and waiting for the owner's register entry before "
+        "the pinned writing step may call it; no served turn uses it yet",
 }
 
 
