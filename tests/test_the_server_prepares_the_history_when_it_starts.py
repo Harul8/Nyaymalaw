@@ -74,7 +74,10 @@ def test_the_history_is_prepared_on_a_thread_of_its_own_and_the_server_does_not_
 
     seen = start(monkeypatch, tmp_path, prepare)
     try:
-        assert seen == [{"host": "127.0.0.1", "port": 8099, "log_level": "warning"}], "the server was started"
+        # Plan AN.53 (53c3): the start hands the web server NM's own trust in a proxy's address headers.
+        assert seen == [{"host": "127.0.0.1", "port": 8099, "log_level": "warning", "proxy_headers": True,
+                         "forwarded_allow_ips": seen[0].get("forwarded_allow_ips")}], "the server was started"
+        assert seen[0]["forwarded_allow_ips"], "with the senders it believes named"
         assert started.wait(10), "the history was never prepared"
         assert ran_on[0].name == "history-warm" and ran_on[0].daemon, "a daemon thread of its own"
         assert ran_on[0] is not threading.main_thread()
