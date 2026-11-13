@@ -97,7 +97,9 @@ def test_a_follow_up_on_the_same_matter_keeps_the_understanding_and_researches_o
     assert record["go"]["taken"]["route"] == "kept"
     shown = card(served)
     assert shown["done_said"] == steps.KEPT_SAID
-    assert shown["taken"].startswith("Taken as a new question on Dispute 1. NM kept its understanding of the matter")
+    # Plan AN.51 (51b, D196): code's own sentence for the kind stands first; the reader's wording comes last, marked.
+    assert shown["taken"].startswith(follow_up.SAID["same_matter"] + " NM kept its understanding of the matter")
+    assert shown["taken"].endswith("NM's reading: Taken as a new question on Dispute 1.")
     assert NEW["question"] in shown["taken"] and "The law found before for Dispute 2 is kept." in shown["taken"]
     seen, = asked
     assert seen["new_message"] == FOLLOW["message"] and seen["earlier_messages"] == [SENT["message"]]
@@ -138,8 +140,8 @@ def test_a_follow_up_that_changes_the_matter_reads_it_all_again_and_says_so(serv
     assert "core_research_understand" in made and made.count("core_understanding") == 1, "read again; the message read once"
     record = held(served)
     assert record["go"]["taken"] == {"route": "afresh",
-                                     "said": "NM read the whole matter again from the start. Your message adds when the notice was "
-                                             "served."}
+                                     "said": f"NM read the whole matter again from the start. {follow_up.SAID[kind]} NM's reading: "
+                                             "Your message adds when the notice was served."}
     assert record["steps"]["parts"] == {}
     assert card(served)["done_said"].startswith("NM has read your papers and understood the matter")
 
@@ -304,13 +306,14 @@ PLAN = {"proposal": {"understanding": {"disputes": [
 def test_the_reader_s_judgement_is_admitted_only_for_the_matter_s_own_disputes():
     before = {"plan": PLAN, "parts": {}}
     judgement, why = follow_up.admitted({"kind": "same_matter", "new_questions": [NEW], "said": " Taken  as asked. "}, before)
-    assert why is None and judgement == {"kind": "same_matter", "new_questions": [NEW], "said": "Taken as asked."}
+    assert why is None and judgement == {"kind": "same_matter", "new_questions": [NEW], "said": follow_up.SAID["same_matter"],
+                                         "reading": "Taken as asked."}
     assert follow_up.admitted({"kind": "same_matter", "new_questions": [{**NEW, "dispute": "D9"}], "said": ""}, before)[0] is None
     assert follow_up.admitted({"kind": "same_matter", "new_questions": [{**NEW, "question": " "}], "said": ""}, before)[0] is None
     assert follow_up.admitted({"kind": "same_matter", "new_questions": [NEW] * 21, "said": ""}, before)[0] is None
     assert follow_up.admitted({"kind": "guess", "new_questions": [], "said": ""}, before)[0] is None
     other, _ = follow_up.admitted({"kind": "changes_matter", "new_questions": [NEW], "said": ""}, before)
-    assert other == {"kind": "changes_matter", "new_questions": [], "said": follow_up.SAID["changes_matter"]}
+    assert other == {"kind": "changes_matter", "new_questions": [], "said": follow_up.SAID["changes_matter"], "reading": ""}
 
 
 def test_a_judgement_that_cannot_be_admitted_is_asked_once_more_then_taken_as_unclear():
@@ -329,7 +332,7 @@ def test_a_judgement_that_cannot_be_admitted_is_asked_once_more_then_taken_as_un
                "conversation": [{"source_id": "t1:advocate", "record_role": "original_account", "text": "The lease."},
                                 {"source_id": "t1:nm", "record_role": "nm_interpretation", "text": "Our answer."}]}
     judgement = follow_up.read(reader, {"plan": PLAN, "parts": {}}, context)
-    assert judgement == {"kind": "unclear", "new_questions": [], "said": follow_up.SAID["unclear"]}
+    assert judgement == {"kind": "unclear", "new_questions": [], "said": follow_up.SAID["unclear"], "reading": ""}
     assert len(reader.users) == 2 and "why_it_cannot_be_taken" in reader.users[1]
     assert reader.users[0]["earlier_messages"] == ["The lease."], "the advocate's own messages, not NM's"
 

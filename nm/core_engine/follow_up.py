@@ -20,7 +20,7 @@ from __future__ import annotations
 import json
 import logging
 
-from nm.core_engine import message_reader, reasoning, replay_scope, research, understanding
+from nm.core_engine import message_reader, reasoning, replay_scope, research, shown_words, understanding
 from nm.shared.model_port import ModelError, Prompt, SchemaViolation, Tier, UsageLimitReached, canonical_schema_data
 
 log = logging.getLogger(__name__)
@@ -32,7 +32,8 @@ KINDS = ("same_matter", "changes_matter", "another_matter", "unclear")
 KEPT, AFRESH = "kept", "afresh"
 #: The most legal questions a follow-up may add (as many as the message reader may propose for what is new, 48i).
 MOST = 20
-#: What NM says of a follow-up where the reader gave no words code can show, by kind.
+#: What NM says of a follow-up, by kind: code's own words, which always stand. The reader's wording is shown after them as NM's
+#: reading, where it may be shown at all (plan AN.51, 51b, D196: shown_words).
 SAID = {"same_matter": "Taken as a question on the matter as NM understood it.",
         "changes_matter": "Your message adds to or changes the matter as NM understood it.",
         "another_matter": "Your message is about another matter.",
@@ -99,11 +100,11 @@ def material(before, context):
 
 
 def admitted(data, before):
-    """The reader's judgement as code admits it - {"kind", "new_questions", "said"} - or (None, why) where it cannot be."""
+    """The reader's judgement as code admits it - {"kind", "new_questions", "said", "reading"} - or (None, why) where it cannot
+    be. said: code's fixed sentence for the kind. reading: the reader's own wording as it may be shown, or "" (shown_words)."""
     if not isinstance(data, dict) or data.get("kind") not in KINDS:
         return None, "the kind is not one of the kinds given"
     kind = data["kind"]
-    said = " ".join(data["said"].split()) if isinstance(data.get("said"), str) and data["said"].strip() else SAID[kind]
     questions = []
     if kind == "same_matter":
         ids = {entry["dispute"] for entry in message_reader.asked_questions(_held(before)) if entry["questions"]}
@@ -119,7 +120,7 @@ def admitted(data, before):
                       "why_needed": " ".join(str(entry.get("why_needed") or "").split()),
                       "law_to_check": [" ".join(law.split()) for law in entry.get("law_to_check") or ()
                                        if isinstance(law, str) and law.strip()]} for entry in given]
-    return {"kind": kind, "new_questions": questions, "said": said}, None
+    return {"kind": kind, "new_questions": questions, "said": SAID[kind], "reading": shown_words.reading(data.get("said"))}, None
 
 
 def read(model, before, context):
@@ -139,7 +140,7 @@ def read(model, before, context):
             return judgement
         log.info("The follow-up reader's judgement was not admitted: %s", why)
         asked = {**given, "your_last_judgement": data, "why_it_cannot_be_taken": why}
-    return {"kind": "unclear", "new_questions": [], "said": SAID["unclear"]}
+    return {"kind": "unclear", "new_questions": [], "said": SAID["unclear"], "reading": ""}
 
 
 def _asks(work):
@@ -224,7 +225,8 @@ def continued(calls, context, before, report):
     if judgement is None:
         return _again("unread", interpretation)
     if judgement["kind"] != "same_matter":
-        return {"route": AFRESH, "said": f"{AGAIN}. {judgement['said']}", "interpretation": interpretation}
+        return {"route": AFRESH, "said": shown_words.after(f"{AGAIN}. {judgement['said']}", judgement["reading"]),
+                "interpretation": interpretation}
     report("continuing")
     plan_before = before["plan"]
     try:
@@ -264,13 +266,14 @@ def continued(calls, context, before, report):
 
 
 def _kept_said(judgement, plan, adding, parts):
-    """Code's words on the kept route: how the message was taken, what was kept and what is added for research."""
+    """Code's words on the kept route: how the message was taken, what was kept and what is added for research - and, after all
+    of them, the reader's own wording, marked as NM's reading, where it may be shown (plan AN.51, 51b)."""
     names = {dispute["id"]: dispute.get("name") or dispute["id"] for dispute in plan["proposal"]["understanding"]["disputes"]}
     added = "; ".join(f"{names.get(entry['dispute_id'], entry['dispute_id'])}: {entry['question']}" for entry in adding)
     kept = [names.get(dispute_id, dispute_id) for dispute_id in research.dispute_work(plan) if dispute_id in parts]
-    return " ".join(part for part in (
+    return shown_words.after(" ".join(part for part in (
         judgement["said"],
         "NM kept its understanding of the matter and its reading of your papers"
         + (f", and adds for research - {added}" if added else "") + ".",
         f"The law found before for {', '.join(kept)} is kept." if kept else "",
-        ASK_AGAIN) if part)
+        ASK_AGAIN) if part), judgement["reading"])
