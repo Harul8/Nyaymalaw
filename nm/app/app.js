@@ -792,7 +792,9 @@ async function api(path, options, { sessionBound = true } = {}) {
 async function loadHealth() {
   const el = $('health');
   try {
-    const h = await api('/api/health');
+    // Plan AN.52 (52a4, D207): what the page shows of the server is told to a signed-in advocate only, at one address, asked
+    // once: the library's line, whether the model is a stand-in, and whether the running code is the code on disk.
+    const h = await api('/api/health/detail');
     // J-7. THE MASTHEAD SPEAKS THE ADVOCATE'S LANGUAGE.
     //
     // MEASURED: `openai/gpt-4o-mini-2024-07-18 · hard: not configured ·
@@ -816,9 +818,12 @@ async function loadHealth() {
       ? 'Message labelling, response preparation and response review are connected.'
       : 'Library availability does not establish legal coverage or currency.';
     el.classList.toggle('bad', !readable && !chatOnly);
-    $('rehearsal-warning').hidden = h.provider !== 'scripted';
+    // The server no longer names its provider; it says whether the model is a stand-in.
+    $('rehearsal-warning').hidden = h.rehearsal !== true;
+    showBuild(h);
   } catch (e) {
     if (e.obsolete) return;
+    showBuild(null, e);
     // A CONFIGURATION THAT WAS REFUSED IS AN ADVOCATE-FACING FACT: the
     // product cannot answer. The detail stays in the title.
     el.textContent = 'Not ready — I cannot answer on this matter yet';
@@ -10061,6 +10066,8 @@ $('casefile-matter').addEventListener('change', (ev) => showCasefile(ev.target.v
 function showGate(message) {
   $('gate').hidden = false;
   $('masthead').hidden = true;
+  // Plan AN.52 (52a4, D207): what a signed-in advocate was told of the code is not left up for whoever is here next.
+  $('build-warning').hidden = true;
   PANES.forEach((p) => { $(`pane-${p}`).hidden = true; });
   // THE GATE IS ALWAYS THE SIGN-IN FORM. It is reached from a failed sign-in,
   // from Sign out, and from a session that did not resolve -- and whichever
@@ -10319,32 +10326,23 @@ $('usage-plan-dialog').addEventListener('close', () => { ++usagePlanRequest; });
 // the fingerprint it froze at import and the fingerprint of the tree now. The
 // browser cannot see the tree and the tree cannot see the process.
 //
-// RUN AT BOOT, BEFORE THE SESSION RESOLVES, because what this catches happens
-// on the gate. On 6 September 2026 a registration was refused by a password
-// rule that had been changed three commits earlier, and the screenshot of the
-// old message was the only evidence that anything was wrong.
+// PLAN AN.52 (52a4, D207): SHOWN ONCE SIGNED IN, FROM THE SAME ANSWER AS THE LIBRARY'S LINE. It was asked at the page's start,
+// before the session resolved, of the address that answers anyone - which says up or down only now, and nothing of the code to
+// a visitor. The server says it in a sentence with no fingerprint; since AN.48 it restarts itself when its code changes on disk,
+// which is what this banner asked a person to do.
 //
 // THE THIRD STATE IS SHOWN. "Could not be checked" is not "current" -- a
 // banner that appears only on a proven mismatch reads as an all-clear on
 // every run where the check itself failed.
-async function checkBuild() {
+function showBuild(h, failed = null) {
   const el = $('build-warning');
-  try {
-    // Build identity is public and independent of whichever session boot resolves.
-    const h = await api('/api/health', undefined, { sessionBound: false });
-    if (h.code_state === 'current') { el.hidden = true; return; }
-    el.className = `build-warning${h.code_state === 'stale' ? '' : ' unknown'}`;
-    el.textContent = h.code_state === 'stale'
-      ? `This server is running code that is no longer on disk (${h.serving},`
-        + ` tree is ${h.tree}). Everything below is the older build. Restart it.`
-      : `The build could not be identified: ${h.why || 'no reason given'}.`;
-    el.hidden = false;
-  } catch (e) {
-    // A HEALTH CALL THAT FAILS IS ALSO NOT AN ALL-CLEAR.
-    el.className = 'build-warning unknown';
-    el.textContent = `The build could not be identified: ${e.message}.`;
-    el.hidden = false;
-  }
+  if (h && h.code_state === 'current') { el.hidden = true; return; }
+  const stale = Boolean(h) && h.code_state === 'stale' && typeof h.why === 'string' && h.why.trim();
+  el.className = `build-warning${stale ? '' : ' unknown'}`;
+  // A HEALTH CALL THAT FAILS IS ALSO NOT AN ALL-CLEAR.
+  el.textContent = stale ? h.why
+    : `The build could not be identified: ${(failed && failed.message) || (h && h.why) || 'no reason given'}.`;
+  el.hidden = false;
 }
 
 // THE RESET LINK OPENS THIS PAGE with `#reset=<token>`. Taken once, then
@@ -10379,7 +10377,6 @@ window.addEventListener('hashchange', () => {
 });
 
 async function boot() {
-  checkBuild();
   if (takeResetToken()) {
     openReset();
     return;

@@ -140,18 +140,24 @@ def test_health_needs_no_session(client):
     assert client.get("/api/health").status_code == 200
 
 
-def test_the_page_checks_before_the_session_resolves():
-    """A check wired after sign-in would have missed all three incidents."""
+def test_the_page_shows_the_build_once_signed_in_and_not_before():
+    """CHANGED BY PLAN AN.52 (52a4, D207), 13 Nov 2026. This test held that the page checks the build in boot(), before the
+    session call, so that the banner showed on the sign-in screen - where, on 6 Sept 2026, a registration was refused by a rule
+    three commits old. D207 tells a visitor nothing of the code (the public answer is up or down only), so the page cannot
+    know it before sign-in: it reads the state once signed in, from the same answer as the library's line, and takes the banner
+    down when the sign-in screen is shown. What that costs is said here, not hidden: a stale server is no longer named on the
+    sign-in screen; since AN.48 the server restarts itself when its code changes on disk. The page's behaviour is tested in
+    tests/test_the_page_reads_the_servers_state_once_signed_in.py."""
     import pathlib
 
     script = (pathlib.Path(__file__).resolve().parents[1]
               / "nm/app/app.js").read_text(encoding="utf-8")
     boot = script[script.index("async function boot()"):]
     boot = boot[:boot.index("\n}")]
-    assert "checkBuild()" in boot, (
-        "boot() does not check the build, so the banner appears only after a "
-        "successful sign-in -- and the registration screen is where the stale "
-        "rule was refusing people")
-    assert boot.index("checkBuild()") < boot.index("/api/session"), (
-        "the build check runs after the session call, so a server too old to "
-        "answer /api/session reports a connection problem instead of its age")
+    assert "/api/health" not in boot and "showBuild" not in boot, (
+        "boot() asks about the build before anyone has signed in; the address that answers a visitor says up or down only, "
+        "so the banner would read 'could not be identified' for everyone")
+    signed_in = script[script.index("async function loadHealth() {"):]
+    signed_in = signed_in[:signed_in.index("\n}")]
+    assert "/api/health/detail" in signed_in and "showBuild(h)" in signed_in and "showBuild(null, e)" in signed_in, (
+        "the state of the build is shown from the signed-in answer, and a failed asking is not an all-clear")
