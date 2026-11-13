@@ -332,6 +332,64 @@ def claim(path: Path) -> Claim | None:
     return Claim(handle)
 
 
+#: Plan AN.50 (50d1, D190): the folder of a store where each server and step
+#: worker working on it holds a file of its own for its life, and the file a
+#: key rotation holds while it has the store to itself.
+ALIVE = "alive"
+REKEYING = "rekeying.lock"
+
+
+def hold_alive(root: str | Path, kind: str) -> Claim:
+    """Mark this process alive on the store at `root` for as long as it keeps
+    the returned claim (plan AN.50, 50d1, D190). The operating system lets go
+    of it when the process ends, however it ends, so nothing is left to mean
+    "alive" after a crash. kind: what the process is, as a word ("server",
+    "worker"). Each claim has a file of its own, so a reused process number
+    never meets an ended process's file."""
+    if not re.fullmatch(r"[a-z]+", kind):
+        raise ValueError("what is alive is named by one lower-case word")
+    folder = Path(root) / ALIVE
+    folder.mkdir(parents=True, exist_ok=True)
+    held = claim(folder / f"{kind}-{os.getpid()}-{os.urandom(4).hex()}.lock")
+    if held is None:
+        raise OSError("this process's own mark of being alive is held by another")
+    return held
+
+
+def alive_on(root: str | Path) -> list[str]:
+    """What is alive on the store at `root`: the name of each file a server or
+    worker holds (plan AN.50, 50d1). A file nobody holds was left by a process
+    that ended, and is removed."""
+    folder = Path(root) / ALIVE
+    found = []
+    for path in sorted(folder.glob("*.lock")) if folder.is_dir() else ():
+        held = claim(path)
+        if held is None:
+            found.append(path.stem)
+            continue
+        held.release()
+        try:
+            path.unlink()
+        except OSError:
+            pass  # removed again when next looked at
+    return found
+
+
+def rekeying(root: str | Path) -> bool:
+    """Whether a key rotation has the store at `root` to itself now (plan
+    AN.50, 50d1): a server or worker that marked itself alive and then finds
+    this refuses to start, and the rotation refuses while anything is alive,
+    so the two never work on the store together."""
+    path = Path(root) / REKEYING
+    if not path.exists():
+        return False
+    held = claim(path)
+    if held is None:
+        return True
+    held.release()
+    return False
+
+
 _SEP = "__"
 
 
