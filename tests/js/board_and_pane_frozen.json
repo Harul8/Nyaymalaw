@@ -429,17 +429,7 @@
     "details.how-checked",
     [
      "summary \"How NM checked this\"",
-     [
-      "dl.checked-plainly",
-      [
-       "dt",
-       "dd",
-       "dt",
-       "dd",
-       "dt",
-       "dd"
-      ]
-     ]
+     "p.checked-sentence"
     ]
    ]
   ]

@@ -319,7 +319,7 @@ const afterBoardRead = reader.open(answer, element, 0, 0, opener);
 assert.equal(passageText(), source.text);
 reads.at(-1).resolve(saved); await afterBoardRead;
 assert.equal(passageText(), source.text);
-assert.doesNotMatch(nodes.get('brain-source-body').textContent, /Supporting words/);
+assert.doesNotMatch(nodes.get('brain-source-body').textContent, /The words relied on/);
 
 const changedMetadata = reader.open(bodyAnswer, bodyElement, 1, 2, opener);
 reads.at(-1).resolve({...legalSource, label:'Different saved label'}); await changedMetadata;
@@ -454,8 +454,8 @@ for (const [role, label] of [
   const labeled = {...checkedBoard, verification:{...checkedBoard.verification,
     assertion_role:role, source_role:role, source_treatment:'not_shown'}};
   assert.equal(reader.openRecordSource(labeled, boardOpener), true);
-  assert.ok(nodes.get('brain-source-body').textContent.includes(`Statement role: ${label}`));
-  assert.match(nodes.get('brain-source-body').textContent, /Treatment in the source: Not shown/);
+  assert.ok(nodes.get('brain-source-body').textContent.includes(`What the statement is: ${label}`));
+  assert.match(nodes.get('brain-source-body').textContent, /What the court did with it: Not shown/);
 }
 const crossKindRelated = {...checkedBoard, verification:{...checkedBoard.verification,
   context_statements:[{assertion_role:'party_submission', assertion_statement:'A related submission.',
@@ -477,7 +477,7 @@ async function inspectAuthority(selected, inspection, clientInspection = null) {
   // Shown at once, its saved checks being read; checks the page holds are never shown.
   assert.equal(passageText(), selected.text);
   if (['provision', 'judgment'].includes(selected.kind)) assert.match(nodes.get('brain-source-body').textContent, /Source checks: Being read/);
-  assert.doesNotMatch(nodes.get('brain-source-body').textContent, /Provision readback|Citation lookup/);
+  assert.doesNotMatch(nodes.get('brain-source-body').textContent, /Read again from NM’s library|In NM’s library:/);
   reads.at(-1).resolve({...selected, authority_inspection:inspection}); await pending;
   assert.equal(passageText(), selected.text);
   assert.equal(JSON.stringify(item), before, 'Display evidence must not mutate canonical response sources');
@@ -495,25 +495,42 @@ const caseEvidence = {citation_id:'c1', text:'(2000) 1 SCC 10', lookup:'found',
     detail:'These words are not in the held text.', attribution:'single_candidate'}]};
 let authorityText = await inspectAuthority(secondParagraph,
   authorityView(secondParagraph, {case_checks:[caseEvidence]}));
-assert.match(authorityText, /Citation lookup: Found in the held corpus/);
-assert.match(authorityText, /Name comparison: Matches the recorded name/);
-assert.match(authorityText, /Citation resolves to this passage’s judgment/);
-assert.match(authorityText, /Quotation wording: Words not found in the held judgment text/);
-assert.match(authorityText, /Legal validity: Not assessed/);
+assert.match(authorityText, /In NM’s library: Found/);
+assert.match(authorityText, /Name check: Matches the name NM holds/);
+assert.match(authorityText, /Which judgment: This passage’s judgment/);
+assert.match(authorityText, /In the judgment NM holds: Not found/);
+assert.equal(authorityText.split('whether the judgment is still good law').length - 1, 1, 'what was not checked, said once');
 assert.ok(authorityText.includes('<em>Exact reported words</em>'));
 assert.equal(descendants(nodes.get('brain-source-body'), 'em').length, 0);
 assert.equal(descendants(nodes.get('brain-source-body'), 'section').length, 1);
 assert.equal(descendants(nodes.get('brain-source-body'), 'section')[0].attributes.get('aria-label'),
-  'Saved source checks');
+  'What code checked');
 assert.doesNotMatch(authorityText, /Source checks: Found|Verified authority|Citation verified/);
+// AN.49 (D184): the fold opens on one plain sentence of code's, then what these checks do not decide, said once; every
+// saved check is behind 'All checks'.
+{
+  const fold = nodes.get('brain-source-body').children.find((child) => child.className === 'how-checked');
+  assert.deepEqual(fold.children.map((child) => child.className || child.tagName),
+    ['SUMMARY', 'checked-sentence', 'checked-not', 'all-checks']);
+  assert.equal(fold.children[1].textContent, 'Code found the citation in NM’s library and did not find the quoted words in '
+    + 'the judgment NM holds; the independent review also checked this use.');
+  assert.equal(fold.children[2].textContent, 'These checks do not show whether the judgment is still good law.');
+  assert.equal(fold.children[3].tagName, 'DETAILS');
+  assert.equal(fold.children[3].children[0].textContent, 'All checks');
+  assert.equal(descendants(fold.children[3], 'section').length, 1, 'every saved check is behind All checks');
+}
 
-for (const [lookup, label] of [['ambiguous','More than one held judgment'],
-  ['unavailable','Could not be checked'], ['not_held','Not held by Nyaymalaw'], ['future_state','Not assessed']]) {
+for (const [lookup, label, said] of [
+  ['ambiguous','More than one judgment matches', 'Code found more than one judgment in NM’s library for the citation;'],
+  ['unavailable','Could not be checked', 'Code could not look the citation up;'],
+  ['not_held','Not held', 'Code did not find the citation in NM’s library;'],
+  ['future_state','Not assessed', 'Code did not assess the citation;']]) {
   authorityText = await inspectAuthority(secondParagraph, authorityView(secondParagraph,
     {case_checks:[{...caseEvidence, lookup, name_check:null, quotes:[], association:'unresolved_association'}]}));
-  assert.ok(authorityText.includes(`Citation lookup: ${label}`));
-  assert.match(authorityText, /Name comparison: Not assessed/);
-  assert.match(authorityText, /Quotation check: Not assessed/);
+  assert.ok(authorityText.includes(`In NM’s library: ${label}`));
+  assert.ok(authorityText.includes(said), lookup);
+  assert.match(authorityText, /Name check: Not assessed/);
+  assert.match(authorityText, /Quoted words: Not assessed/);
 }
 
 authorityText = await inspectAuthority(secondParagraph, authorityView(secondParagraph, {
@@ -521,31 +538,35 @@ authorityText = await inspectAuthority(secondParagraph, authorityView(secondPara
     selected_support_mentions:[{source_id:secondParagraph.id, text:'(2000) 1 SCC 10',
       source_role_proposal:'quoted_authority'}], quotes:[{quote:'Exact reported words', result:'found',
       attribution:'unresolved', detail:'These words occur in the held text; read their context.'}]}]}));
-assert.match(authorityText, /Citation resolves to a different judgment from the passage used/);
-assert.match(authorityText, /Citation mentioned in this passage: \(2000\) 1 SCC 10/);
-assert.match(authorityText, /Quotation wording: Words found in the held judgment text/);
-assert.match(authorityText, /Quotation association: Candidate judgment unresolved/);
-assert.match(authorityText, /Name comparison: No name supplied/);
+assert.match(authorityText, /Which judgment: A different judgment from the passage used/);
+assert.match(authorityText, /Citation that appears in this passage: \(2000\) 1 SCC 10/);
+assert.match(authorityText, /In the judgment NM holds: Found word for word/);
+assert.match(authorityText, /Whose words: Which judgment they come from is not settled/);
+assert.match(authorityText, /Name check: No name was given/);
 assert.doesNotMatch(authorityText, /False citation|Court adopted/);
+// The sentence says what did not come out clean, as the line above the fold does.
+assert.ok(authorityText.includes('Code found the citation in NM’s library, found that a citation is of a different judgment '
+  + 'from the passage used and found the quoted words in the judgment NM holds;'));
 
 authorityText = await inspectAuthority(secondParagraph, authorityView(secondParagraph,
   {case_checks:[{...caseEvidence, matching_source_ids:['other-used-source']}]}));
-assert.match(authorityText, /Citation resolves to another judgment used in this response paragraph/);
-assert.doesNotMatch(authorityText, /Citation resolves to this passage’s judgment/);
+assert.match(authorityText, /Which judgment: Another judgment used in the same paragraph of the answer/);
+assert.doesNotMatch(authorityText, /Which judgment: This passage’s judgment/);
 
-for (const [state, label] of [['matched','Matches the selected saved passage'],
-  ['different_snapshot','Readback differs from the selected saved passage'],
+for (const [state, label] of [['matched','Matches this passage'],
+  ['different_snapshot','Differs from this passage'],
   ['unavailable','Could not be checked'], ['ambiguous','More than one provision matches'],
-  ['not_held','Not held under the selected Act and reference'], ['future_state','Not assessed']]) {
+  ['not_held','Not held under that Act and number'], ['future_state','Not assessed']]) {
   authorityText = await inspectAuthority(legalSource, authorityView(legalSource,
     {provision_checks:[{source_id:legalSource.id, state, reason:'Saved exact readback detail.',
                        legal_version:'not_assessed'}],
      provision_mentions:[{text:'Section 7', act_name_association:'not_assessed',
                           reason:'The wording alone does not resolve which Act is meant.'}]}));
-  assert.ok(authorityText.includes(`Provision readback: ${label}`));
-  assert.match(authorityText, /Legal version and applicability: Not assessed/);
-  assert.match(authorityText, /Act-name association: Not assessed/);
-  assert.doesNotMatch(authorityText, /Citation lookup:/);
+  assert.ok(authorityText.includes(`Read again from NM’s library: ${label}`));
+  assert.equal(authorityText.split('These checks do not show which version of the law was in force, whether it applies to '
+    + 'these facts or which Act a provision named in the answer belongs to.').length - 1, 1, 'what was not checked, said once');
+  if (state === 'matched') assert.ok(authorityText.includes('Code confirmed it against the provision NM’s library holds;'));
+  assert.doesNotMatch(authorityText, /In NM’s library:/);
 }
 
 for (const evidence of [undefined, {contract:'future_view'},
@@ -555,7 +576,7 @@ for (const evidence of [undefined, {contract:'future_view'},
   authorityText = await inspectAuthority(legalSource, evidence,
     authorityView(legalSource, {provision_checks:[{state:'matched'}]}));
   assert.match(authorityText, /Source checks: Not assessed/);
-  assert.doesNotMatch(authorityText, /Provision readback: Matches/,
+  assert.doesNotMatch(authorityText, /Read again from NM’s library: Matches/,
     'Unconfirmed client evidence cannot replace missing saved evidence');
 }
 authorityText = await inspectAuthority(legalSource, authorityView(legalSource,
@@ -566,12 +587,12 @@ assert.match(authorityText, /earlier response/);
 
 authorityText = await inspectAuthority(conversationSource, authorityView(conversationSource,
   {case_checks:[caseEvidence]}));
-assert.doesNotMatch(authorityText, /Saved source checks|Citation lookup|Legal validity/,
+assert.doesNotMatch(authorityText, /What code checked|In NM’s library|still good law/,
   'An account passage must not acquire a legal-status panel');
 reader.openRecordSource({...checkedBoard, authority_inspection:authorityView(checkedBoard,
   {case_checks:[caseEvidence]})}, boardOpener);
 assert.match(nodes.get('brain-source-body').textContent, /Source checks: Not assessed/);
-assert.doesNotMatch(nodes.get('brain-source-body').textContent, /Citation lookup: Found/,
+assert.doesNotMatch(nodes.get('brain-source-body').textContent, /In NM’s library: Found/,
   'Historical direct record metadata is not an authenticated authority read receipt');
 console.log('PASS separate saved authority checks, unresolved neighbors, legacy and exact passage preservation');
 // Append to tests/js/brain_sources.mjs after review. These are presentation checks,
@@ -602,13 +623,13 @@ for (const activity_contract of ['core_turn_v1', 'core_turn_v2']) {
   reads.at(-1).resolve(inspected); await opening;
   const pane = nodes.get('brain-source-body');
   const paragraphs = descendants(pane, 'p').map(item => item.textContent);
-  assert.ok(paragraphs.includes(`NM response: ${mixedResponse}`));
-  assert.ok(paragraphs.includes('Source passage role: Legislative text'));
-  assert.ok(paragraphs.includes(`Supporting source words: ${exactSourceWords}`));
-  assert.ok(paragraphs.includes('Related source passage: Related judgment · Paragraph 4'));
-  assert.ok(paragraphs.includes('Related source role: Court reasoning · Not shown'));
-  assert.ok(paragraphs.includes('Related source words: The court explains the limited reasoning.'));
-  assert.ok(paragraphs.includes('Related source words: The court rejected that argument.'));
+  assert.ok(paragraphs.includes(`What the answer says: ${mixedResponse}`));
+  assert.ok(paragraphs.includes('What the passage is: Legislative text'));
+  assert.ok(paragraphs.includes(`The words relied on: ${exactSourceWords}`));
+  assert.ok(paragraphs.includes('A related passage: Related judgment · Paragraph 4'));
+  assert.ok(paragraphs.includes('What it is: Court reasoning · Not shown'));
+  assert.ok(paragraphs.includes('Its words: The court explains the limited reasoning.'));
+  assert.ok(paragraphs.includes('Its words: The court rejected that argument.'));
   assert.equal(pane.textContent.split(mixedResponse).length - 1, 1,
     'The NM paragraph is separate; a source role must not be prefixed to the same paragraph again');
   assert.equal(passageOf(pane).textContent, exactSourceWords);
@@ -637,8 +658,8 @@ for (const inspection of [undefined,
   await opening;
   const text = nodes.get('brain-source-body').textContent;
   assert.ok(text.includes(`Statement used: ${archivalStatement}`));
-  assert.ok(text.includes('Statement role: Court conclusion'));
-  assert.ok(!text.includes(`NM response: ${mixedResponse}`));
+  assert.ok(text.includes('What the statement is: Court conclusion'));
+  assert.ok(!text.includes(`What the answer says: ${mixedResponse}`));
 }
 console.log('PASS NM response versus source role, related source words, known-core and archival distinction');
 
@@ -674,7 +695,7 @@ console.log('PASS NM response versus source role, related source words, known-co
   // A check that did not come out clean is said above the fold; a version 4 turn's checks are read.
   assert.match(byClass('source-attention').textContent, /did not come out clean/);
   assert.doesNotMatch(body().textContent, /saved check evidence is unavailable/);
-  assert.match(body().textContent, /Provision readback: Readback differs from the selected saved passage/);
+  assert.match(body().textContent, /Read again from NM’s library: Differs from this passage/);
   assert.equal(byClass('brain-source-window passage'), undefined, 'no window of a little context');
   const passage = passageOf(body());
   assert.ok(!passage.hidden);
@@ -685,8 +706,15 @@ console.log('PASS NM response versus source role, related source words, known-co
   const checks = byClass('how-checked');
   assert.equal(checks.tagName, 'DETAILS');
   assert.equal(checks.children[0].textContent, 'How NM checked this');
-  assert.match(checks.textContent, /Supporting source words: within three years/);
+  assert.match(checks.textContent, /The words relied on: within three years/);
   assert.equal(body().children.at(-1), checks, 'the checks come last, folded');
+  // AN.49 (D184): one plain sentence of code's first, what these checks do not decide said once, every check behind All checks.
+  assert.equal(checks.children[1].textContent, 'Code found its words in the held text exactly as quoted and found that the '
+    + 'provision, read again from NM’s library, differs from this passage; the independent review also checked this use.');
+  assert.equal(checks.children[2].textContent,
+    'These checks do not show which version of the law was in force or whether it applies to these facts.');
+  assert.equal(checks.children.at(-1).className, 'all-checks');
+  assert.equal(checks.children.at(-1).children[0].textContent, 'All checks');
   // Checked against the design (18 Oct 2026): a qualification that only repeats the badge is
   // not said twice; that no court treatment applies stays under the checks; supporting words
   // that are the whole passage are not marked.
@@ -698,7 +726,7 @@ console.log('PASS NM response versus source role, related source words, known-co
   const untreatedOpening = reader.open({...lawAnswer, elements:[untreatedElement]}, untreatedElement, 0, 0, opener);
   reads.at(-1).resolve({...untreated}); await untreatedOpening;
   assert.equal(byClass('source-role').textContent, 'Legislative text');
-  assert.match(byClass('how-checked').textContent, /Treatment in the source: Not applicable/);
+  assert.match(byClass('how-checked').textContent, /What the court did with it: Not applicable/);
   assert.equal(passageText(), 'Three years from delivery.');
   assert.equal(passageOf(body()).children.length, 0, 'nothing marked when the words are the whole passage');
   assert.equal(byClass('brain-source-window passage'), undefined);
@@ -729,6 +757,9 @@ console.log('PASS NM response versus source role, related source words, known-co
   assert.equal(nodes.get('brain-source-kind').textContent, 'Held judgment');
   assert.equal(byClass('source-where').textContent, 'paragraph 73');
   assert.equal(byClass('source-role').textContent, 'Party submission · Court rejected');
+  // What the court did with it is in the sentence (D184), from the saved treatment.
+  assert.equal(byClass('how-checked').children[1].textContent,
+    'Code found its words in the held text exactly as quoted; the court rejected this submission.');
 
   // Back returns to what was open before, read again through the saved-source route.
   const back = nodes.get('brain-source-back');
@@ -779,10 +810,10 @@ console.log('PASS NM response versus source role, related source words, known-co
   reads.at(-1).resolve({...page, reading:{by:'ai', legible:'part'}}); await scanned;
   assert.equal(nodes.get('brain-source-kind').textContent, 'Document you sent · read by AI from a scan');
   assert.equal(byClass('source-role warn').textContent, 'Part of this page could not be read');
-  // How NM checked this opens on what the source is used for, its words and who checked it.
+  // How NM checked this opens on one plain sentence of code's (AN.49, D184).
   const plainly = byClass('how-checked').children[1];
-  assert.equal(plainly.className, 'checked-plainly');
-  assert.deepEqual(plainly.children.map((child) => child.textContent), ['Words', 'Found on the page exactly as quoted']);
+  assert.equal(plainly.className, 'checked-sentence');
+  assert.equal(plainly.textContent, 'Code found its words on the page exactly as quoted.');
   reader.close();
   assert.equal(nodes.get('brain-source-back').disabled, true);
   // Closed, the pane holds nothing and is not shown (P38, 21 Oct 2026).
@@ -798,7 +829,7 @@ console.log('PASS NM response versus source role, related source words, known-co
     reads.at(-1).resolve({...statute, authority_inspection:{...v4, activity_contract}}); await opening;
     assert.match(byClass('source-attention').textContent, /did not come out clean/, activity_contract);
     assert.doesNotMatch(body().textContent, /saved check evidence is unavailable/, activity_contract);
-    assert.match(body().textContent, /Provision readback: Readback differs/, activity_contract);
+    assert.match(body().textContent, /Read again from NM’s library: Differs/, activity_contract);
   }
   for (const activity_contract of ['core_turn_v0', 'core_turn_7x', 'later_turn_v7']) {
     const opening = reader.open(lawAnswer, lawElement, 0, 0, opener);
@@ -813,10 +844,13 @@ console.log('PASS NM response versus source role, related source words, known-co
   assert.match(byClass('how-checked').textContent, /Source checks: Being read/);
   assert.equal(byClass('source-attention'), undefined, 'no check is said before it is read');
   byClass('how-checked').open = true; byClass('how-checked').handlers.get('toggle')();
+  const allChecks = () => byClass('how-checked').children.find((child) => child.className === 'all-checks');
+  allChecks().open = true; allChecks().handlers.get('toggle')();
   body().scrollTop = 240;
   reads.at(-1).resolve({...statute, authority_inspection:{...v4, activity_contract:'core_turn_v7'}}); await slow;
   assert.ok(!passageOf(body()).hidden);
   assert.equal(byClass('how-checked').open, true);
+  assert.equal(allChecks().open, true, 'All checks stays as the advocate left it');
   assert.equal(body().scrollTop, 240);
   assert.match(byClass('source-attention').textContent, /did not come out clean/);
   assert.equal(nodes.get('brain-source-status').textContent, '');
@@ -897,9 +931,10 @@ console.log('PASS the whole Act or judgment a click away, read by identity, the 
   assert.equal(passageOf(body()).children.find((child) => child.tagName === 'MARK').textContent, 'the rule of seven');
   assert.equal(byClass('source-expand').textContent, 'Read the whole Act');
   const checks = byClass('how-checked');
-  assert.deepEqual(checks.children[1].children.map((child) => child.textContent),
-    ['Used for', '“Possession for the period”', 'Words', 'Found in the held text exactly as quoted', 'Checked by', 'Code (exact words)']);
-  assert.doesNotMatch(body().textContent, /Saved source checks|saved check evidence/, 'no paragraph checks are claimed');
+  assert.equal(checks.children[1].textContent,
+    'Used for “Possession for the period”. Code found its words in the held text exactly as quoted.');
+  assert.equal(checks.children.length, 2, 'no other check is claimed, so there is no All checks');
+  assert.doesNotMatch(body().textContent, /What code checked|saved check evidence/, 'no paragraph checks are claimed');
   // A page a point stands on opens the same way, the whole document a click away.
   const page = reader.openPassage(where, 'turn-9:d1p2', opener);
   reads.at(-1).resolve({brain:true, id:'turn-9:d1p2', kind:'document', label:'Sale deed', title:'Sale deed', locator:'page 2',

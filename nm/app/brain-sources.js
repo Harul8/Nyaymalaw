@@ -117,12 +117,15 @@ window.NmBrainSources = (() => {
       || (inspection.provision_checks || []).some((check) => check.state !== 'matched');
   }
 
+  // EVERY SAVED CHECK, IN PLAIN WORDS (plan AN.49, D184, 13 Nov 2026): each check as it was saved, under a label an advocate
+  // can read. What these checks do not decide is said once for the passage (notChecked), not once for each check, and what
+  // the citation check covers, as the saved check words it, is said once too.
   function authorityDetails(source, inspection) {
     if (!legal(source)) return [];
     const section = document.createElement('section');
-    section.setAttribute('aria-label', 'Saved source checks');
+    section.setAttribute('aria-label', 'What code checked');
     const heading = document.createElement('p');
-    heading.className = 'hint'; heading.textContent = 'Saved source checks';
+    heading.className = 'hint'; heading.textContent = 'What code checked';
     section.appendChild(heading);
     const line = (label, text) => {
       if (!words(text)) return;
@@ -140,55 +143,148 @@ window.NmBrainSources = (() => {
     }
     if (inspection.state === 'not_assessed') {
       line('Source checks', 'Not assessed');
-      line('Scope', inspection.reason);
+      line('Why', inspection.reason);
     }
+    const covers = [];
     for (const check of inspection.case_checks || []) {
       line('Citation', check.text);
-      line('Citation lookup', ({found:'Found in the held corpus', not_held:'Not held by Nyaymalaw',
-        ambiguous:'More than one held judgment — identity unresolved',
+      line('In NM’s library', ({found:'Found', not_held:'Not held',
+        ambiguous:'More than one judgment matches; which one is meant is not settled',
         unavailable:'Could not be checked'})[check.lookup] || 'Not assessed');
-      line('Name in the response', check.name_given);
-      line('Name comparison', ({matches_recorded_name:'Matches the recorded name',
-        not_given:'No name supplied beside this citation'})[check.name_check] || 'Not assessed');
+      line('Name given in the answer', check.name_given);
+      line('Name check', ({matches_recorded_name:'Matches the name NM holds',
+        not_given:'No name was given beside the citation'})[check.name_check] || 'Not assessed');
       for (const judgment of check.judgments || []) {
-        line('Held record', [judgment.title, judgment.court, judgment.decided_on].filter(words).join(' · '));
+        line('Judgment NM holds', [judgment.title, judgment.court, judgment.decided_on].filter(words).join(' · '));
       }
-      line('Relation to this passage', ({matched:check.matching_source_ids?.includes(source.id)
-          ? 'Citation resolves to this passage’s judgment'
-          : 'Citation resolves to another judgment used in this response paragraph',
-        different_used_identity:'Citation resolves to a different judgment from the passage used',
-        unresolved_association:'Not resolved'})[check.association] || 'Not assessed');
+      line('Which judgment', ({matched:check.matching_source_ids?.includes(source.id)
+          ? 'This passage’s judgment'
+          : 'Another judgment used in the same paragraph of the answer',
+        different_used_identity:'A different judgment from the passage used',
+        unresolved_association:'Not settled'})[check.association] || 'Not assessed');
       for (const mention of check.selected_support_mentions || []) {
-        line('Citation mentioned in this passage', mention.text);
+        line('Citation that appears in this passage', mention.text);
       }
-      line('Identity-check scope', check.association_scope);
-      if (!check.quotes?.length) line('Quotation check', 'Not assessed — no quotation check is recorded.');
+      if (words(check.association_scope) && !covers.includes(check.association_scope)) covers.push(check.association_scope);
+      if (!check.quotes?.length) line('Quoted words', 'Not assessed — no check of quoted words is recorded.');
       for (const quote of check.quotes || []) {
-        line('Quotation', quote.quote);
-        line('Quotation wording', ({found:'Words found in the held judgment text',
-          not_found:'Words not found in the held judgment text'})[quote.result] || 'Not assessed');
-        line('Quotation association', quote.attribution === 'single_candidate'
-          ? 'One candidate judgment; the speaker and legal effect require context'
-          : 'Candidate judgment unresolved');
-        line('Quotation-check scope', quote.detail);
+        line('Quoted words', quote.quote);
+        line('In the judgment NM holds', ({found:'Found word for word',
+          not_found:'Not found'})[quote.result] || 'Not assessed');
+        line('Whose words', quote.attribution === 'single_candidate'
+          ? 'There is one judgment they could come from; who says them and their legal effect depend on the context'
+          : 'Which judgment they come from is not settled');
+        line('About this check', quote.detail);
       }
-      line('Legal validity', 'Not assessed by these identity and wording checks');
     }
+    for (const scope of covers) line('What the citation check covers', scope);
     for (const check of inspection.provision_checks || []) {
-      line('Provision readback', ({matched:'Matches the selected saved passage',
-        different_snapshot:'Readback differs from the selected saved passage',
-        not_held:'Not held under the selected Act and reference',
-        ambiguous:'More than one provision matches — reference unresolved',
+      line('Read again from NM’s library', ({matched:'Matches this passage',
+        different_snapshot:'Differs from this passage',
+        not_held:'Not held under that Act and number',
+        ambiguous:'More than one provision matches; which one is meant is not settled',
         unavailable:'Could not be checked'})[check.state] || 'Not assessed');
-      line('Readback detail', check.reason);
-      line('Legal version and applicability', 'Not assessed by this source-identity check');
+      line('Detail', check.reason);
     }
     for (const mention of inspection.provision_mentions || []) {
-      line('Provision reference in the response', mention.text);
-      line('Act-name association', 'Not assessed');
-      line('Reference detail', mention.reason);
+      line('Provision named in the answer', mention.text);
+      line('Detail', mention.reason);
     }
     return [section];
+  }
+
+  // A list in prose: 'a', 'a and b', 'a, b and c'.
+  const listed = (items, joiner) => (items.length < 2 ? items.join('')
+    : `${items.slice(0, -1).join(', ')} ${joiner} ${items[items.length - 1]}`);
+
+  // What code's saved look-ups of the citations found (plan AN.49, D184), with what it found of the words the answer quotes
+  // and of which judgment each citation is; for several citations, how many of them were found.
+  function citationSaid(checks) {
+    if (!checks.length) return [];
+    const said = [];
+    if (checks.length === 1) {
+      said.push(({found:'found the citation in NM’s library', not_held:'did not find the citation in NM’s library',
+        ambiguous:'found more than one judgment in NM’s library for the citation',
+        unavailable:'could not look the citation up'})[checks[0].lookup] || 'did not assess the citation');
+    } else {
+      const found = checks.filter((check) => check.lookup === 'found').length;
+      said.push(found === checks.length ? `found all ${checks.length} citations in NM’s library`
+        : `found ${found} of the ${checks.length} citations in NM’s library`);
+    }
+    if (checks.some((check) => check.association === 'different_used_identity')) {
+      said.push('found that a citation is of a different judgment from the passage used');
+    }
+    const quotes = checks.flatMap((check) => check.quotes || []);
+    const missing = quotes.filter((quote) => quote.result === 'not_found').length;
+    if (missing) {
+      said.push(quotes.length === 1 ? 'did not find the quoted words in the judgment NM holds'
+        : `did not find ${missing} of the ${quotes.length} quotations in the judgment NM holds`);
+    } else if (quotes.length && quotes.every((quote) => quote.result === 'found')) {
+      said.push('found the quoted words in the judgment NM holds');
+    }
+    return said;
+  }
+
+  // What code found when it read the provision again from NM's library by its Act and number.
+  function provisionSaid(checks) {
+    return [...new Set(checks.map((check) => check.state))].map((state) => ({
+      matched:'confirmed it against the provision NM’s library holds',
+      different_snapshot:'found that the provision, read again from NM’s library, differs from this passage',
+      not_held:'did not find the provision under that Act and number in NM’s library',
+      ambiguous:'found more than one provision in NM’s library for that reference',
+      unavailable:'could not read the provision again from NM’s library'})[state] || 'did not assess the provision');
+  }
+
+  // What the court did with it, where a passage of a judgment says so and code checked the passage that shows it. What the
+  // passage is - a conclusion, a submission - is its badge's to say.
+  function courtSaid(source) {
+    if (source.kind !== 'judgment') return '';
+    const role = source.verification?.assertion_role;
+    const treatment = String(source.verification?.source_treatment || '').replace('_', ' ');
+    if (['adopted', 'rejected', 'qualified'].includes(treatment)) {
+      return `the court ${treatment} ${role === 'party_submission' ? 'this submission' : 'it'}`;
+    }
+    return treatment === 'not shown' && !['court_conclusion', 'court_reasoning'].includes(role)
+      ? 'what the court did with it is not shown' : '';
+  }
+
+  // ONE PLAIN SENTENCE (plan AN.49, D184, 13 Nov 2026), built by code from the saved checks alone: what the source is used
+  // for; its words found exactly or not; the citation or the provision found in NM's library or not; what the court did
+  // with it; and who checked it, as 'Checked by' said before. A check that did not come out clean is in it, and above the
+  // fold as before.
+  function checkedSentence(source, inspection, {phrase, exact, reviewed, codeOnly}) {
+    const found = [];
+    if (exact) found.push(`found its words ${source.kind === 'document' ? 'on the page' : 'in the held text'} exactly as quoted`);
+    if (legal(source) && coreInspection(source, inspection)) {
+      found.push(...citationSaid(inspection.case_checks), ...provisionSaid(inspection.provision_checks));
+    }
+    const parts = [];
+    if (found.length) parts.push(`Code ${listed(found, 'and')}`);
+    const court = courtSaid(source);
+    if (court) parts.push(court);
+    if (reviewed) {
+      parts.push(found.length ? 'the independent review also checked this use'
+        : 'it was checked by code (exact words) and the independent review');
+    } else if (codeOnly && !found.length) {
+      parts.push('it was checked by code (exact words)');
+    }
+    const used = words(phrase) ? `Used for “${phrase}”.` : '';
+    if (!parts.length) return used;
+    return [used, `${capitalised(parts.join('; '))}.`].filter(words).join(' ');
+  }
+
+  // What these checks do not decide, said once for the passage (plan AN.49, D184), where each check used to say it again:
+  // whether a judgment is still good law; which version of the law was in force and whether it applies; which Act a
+  // provision named in the answer belongs to.
+  function notChecked(source, inspection) {
+    if (!legal(source) || !coreInspection(source, inspection)) return '';
+    const open = [];
+    if (inspection.case_checks.length) open.push('whether the judgment is still good law');
+    if (inspection.provision_checks.length) {
+      open.push('which version of the law was in force', 'whether it applies to these facts');
+    }
+    if (inspection.provision_mentions.length) open.push('which Act a provision named in the answer belongs to');
+    return open.length ? `These checks do not show ${listed(open, 'or')}.` : '';
   }
 
   const ROLES = {legislative_text:'Legislative text', court_conclusion:'Court conclusion',
@@ -285,8 +381,8 @@ window.NmBrainSources = (() => {
   }
 
   // THE PASSAGE FIRST (owner decisions, 17 Oct 2026; the design of that day): what it is
-  // and where it is from, the passage, and how NM checked it folded below: in a few words
-  // first, then every saved check. THE RELEVANT PASSAGE ONLY (plan AN.39, D53-D54; owner, 4 Nov
+  // and where it is from, the passage, and how NM checked it folded below: one plain sentence
+  // first, then every saved check behind 'All checks' (AN.49, D184). THE RELEVANT PASSAGE ONLY (plan AN.39, D53-D54; owner, 4 Nov
   // 2026: "just the excact paragraph, with section/act name or judgement name, an option to read
   // the full document"): the paragraph or the part of the section, whole, with the words used
   // marked where they are saved; the whole a click away - a paper the advocate sent from its own
@@ -297,7 +393,7 @@ window.NmBrainSources = (() => {
   function populate(source, choices = null, inspection = null, responseText = null, answer = null, phrase = null,
                     kept = null, {unpaired = false} = {}) {
     const coreResponse = coreInspection(source, inspection) && words(responseText);
-    opened = {whole:false, checks:false};
+    opened = {whole:false, checks:false, all:false};
     const view_ = opened;
     const make = (tag, className, text) => {
       const item = document.createElement(tag);
@@ -367,62 +463,67 @@ window.NmBrainSources = (() => {
     checks.open = Boolean(kept?.checks);
     view_.checks = checks.open;
     checks.addEventListener('toggle', () => { view_.checks = checks.open; });
-    // In a few words first (the design, 18 Oct 2026): what the source is used for, its words
-    // and who checked it; every saved check follows.
-    const plainly = make('dl', 'checked-plainly');
-    const say = (label, value) => { if (words(value)) plainly.append(make('dt', '', label), make('dd', '', value)); };
-    say('Used for', words(phrase) ? `“${phrase}”` : '');
-    say('Words', words(given) && source.text.includes(given)
-      ? (source.kind === 'document' ? 'Found on the page exactly as quoted' : 'Found in the held text exactly as quoted')
-      : '');
-    say('Checked by', source.brain === true && inspection?.contract === 'core_source_authority_view_v1'
-      ? 'Code (exact words) and the independent review' : unpaired && words(excerpt) ? 'Code (exact words)' : '');
-    if (plainly.children.length) checks.appendChild(plainly);
+    // ONE PLAIN SENTENCE FIRST (plan AN.49, D184, 13 Nov 2026; before it, the few words of the design of 18 Oct 2026): what the
+    // source is used for and what its saved checks found, in code's words; what these checks do not decide, said once; then
+    // every saved check behind 'All checks'.
+    const sentence = checkedSentence(source, inspection, {phrase, exact:words(given) && source.text.includes(given),
+      reviewed:source.brain === true && inspection?.contract === 'core_source_authority_view_v1',
+      codeOnly:unpaired && words(excerpt)});
+    if (sentence) checks.appendChild(make('p', 'checked-sentence', sentence));
+    const unchecked = notChecked(source, inspection);
+    if (unchecked) checks.appendChild(make('p', 'checked-not', unchecked));
     if (unpaired) {
       // No paragraph of the answer used it, so there are no paragraph checks to fold here (D52).
-      if (plainly.children.length) shown.push(checks);
+      if (sentence) shown.push(checks);
       return finish(shown, kept);
     }
+    const all = make('details', 'all-checks');
+    all.appendChild(make('summary', '', 'All checks'));
+    all.open = Boolean(kept?.all);
+    view_.all = all.open;
+    all.addEventListener('toggle', () => { view_.all = all.open; });
     if (coreResponse) {
-      checks.append(make('p', 'brain-source-excerpt', `NM response: ${responseText}`),
-        make('p', 'hint', 'Selected source passage'));
+      all.append(make('p', 'brain-source-excerpt', `What the answer says: ${responseText}`),
+        make('p', 'hint', 'The passage used for it'));
     }
-    checks.append(make('p', 'hint', source.locator), ...authorityDetails(source, inspection));
+    all.append(make('p', 'hint', source.locator), ...authorityDetails(source, inspection));
     if (source.provenance_status === 'not_recorded') {
-      checks.appendChild(make('p', 'hint', 'Statement-role labels were not recorded for this saved response.'));
+      all.appendChild(make('p', 'hint', 'What each passage is was not recorded for this saved answer.'));
     }
     for (const [label, text] of [
       ...(coreResponse ? [] : [['Statement used', source.verification?.assertion_statement]]),
-      [coreResponse ? 'Source passage role' : 'Statement role', role],
-      ['Support check', source.verification?.reason],
-      [coreResponse ? 'Supporting source words' : 'Supporting words', source.verification?.support_excerpt],
-      ['Limiting condition', source.verification?.scope_excerpt],
-      ['Who states the proposition', source.verification?.owner_label],
-      ['Attribution words', source.verification?.owner_excerpt],
-      ['Treatment in the source', treatment],
-      ['Treatment words', source.verification?.treatment_excerpt],
+      [coreResponse ? 'What the passage is' : 'What the statement is', role],
+      ['How its support was checked', source.verification?.reason],
+      ['The words relied on', source.verification?.support_excerpt],
+      ['A condition that limits it', source.verification?.scope_excerpt],
+      ['Who says it', source.verification?.owner_label],
+      ['The words that show who says it', source.verification?.owner_excerpt],
+      ['What the court did with it', treatment],
+      ['The words that show what the court did', source.verification?.treatment_excerpt],
     ]) {
       // A document page has no court treatment, and its author is whoever it shows.
       if (!text || (source.kind === 'document' && [
-        'Who states the proposition', 'Treatment in the source', 'Treatment words'].includes(label))) continue;
-      checks.appendChild(make('p', 'brain-source-excerpt', `${label}: ${text}`));
+        'Who says it', 'What the court did with it', 'The words that show what the court did'].includes(label))) continue;
+      all.appendChild(make('p', 'brain-source-excerpt', `${label}: ${text}`));
     }
     for (const statement of source.verification?.context_statements || []) {
       const related = roleLabel(statement) || 'Related statement';
       const handled = treatmentLabel(statement);
       for (const [label, text] of [
         ...(coreResponse
-          ? [['Related source passage', [statement.title, statement.locator].filter(words).join(' · ')],
-             ['Related source role', `${related}${handled ? ` · ${handled}` : ''}`]]
+          ? [['A related passage', [statement.title, statement.locator].filter(words).join(' · ')],
+             ['What it is', `${related}${handled ? ` · ${handled}` : ''}`]]
           : [['Related statement', `${related}${handled ? ` · ${handled}` : ''}: ${statement.assertion_statement}`]]),
         ['Speaker', statement.owner_label === 'document' ? '' : statement.owner_label],
-        [coreResponse ? 'Related source words' : 'Statement words', statement.support_excerpt],
-        ['Attribution words', statement.owner_excerpt], ['Treatment words', statement.treatment_excerpt],
+        ['Its words', statement.support_excerpt],
+        ['The words that show who says it', statement.owner_excerpt],
+        ['The words that show what the court did', statement.treatment_excerpt],
       ]) {
         if (!text) continue;
-        checks.appendChild(make('p', 'brain-source-excerpt', `${label}: ${text}`));
+        all.appendChild(make('p', 'brain-source-excerpt', `${label}: ${text}`));
       }
     }
+    checks.appendChild(all);
     shown.push(checks);
     finish(shown, kept);
   }
