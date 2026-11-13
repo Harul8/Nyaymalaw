@@ -2274,7 +2274,9 @@ function replyFooter(entry, copyText) {
   });
   foot.appendChild(copy);
   if (answer.matter_id && answer.turn_id) foot.appendChild(rateControl(answer, status));
-  if (noteAvailable(answer)) foot.appendChild(noteControl(answer, status));
+  // THE NOTE OFFERED PLAINLY (plan AN.49, D186): the conversation shows the advice with the detail folded; the note holds
+  // all of it opened out, with every source, so the foot of every answer says so.
+  if (noteAvailable(answer)) foot.appendChild(noteControl(answer, status, 'The full note, with every source:'));
   const at = answeredAt(answer);
   if (at) foot.appendChild(at);
   // Plan AN.33 (D23): the model and the effort the answer ran with, as the turn recorded them.
@@ -2302,12 +2304,14 @@ function noteUrl(answer) {
   return `/api/chats/${encodeURIComponent(answer.chat_id)}/turns/${encodeURIComponent(answer.turn_id)}/note`;
 }
 
-function noteControl(answer, status) {
+// called: what the control is called where it stands - under an answer, what the note holds (AN.49, D186); in the matter's
+// files, under their heading 'Research notes', the plain name.
+function noteControl(answer, status, called = 'Research note:') {
   const box = document.createElement('span');
   box.className = 'note-control';
   const label = document.createElement('span');
   label.className = 'note-label';
-  label.textContent = 'Research note:';
+  label.textContent = called;
   const word = document.createElement('button');
   word.type = 'button'; word.className = 'ghost note-format';
   word.textContent = 'Word';

@@ -86,4 +86,10 @@ assert.ok(foot.children.some((kid) => kid.className === 'reply-chosen' && kid.te
 const older = replyFooter({ answer: { metrics: {} } }, () => '');
 assert.ok(!older.children.some((kid) => kid.className === 'reply-chosen'), 'an answer saved before says nothing');
 
+// Plan AN.49 (D186): the foot of every answer that can be kept offers the note plainly, saying what it holds.
+context.noteAvailable = () => true;
+context.noteControl = (_answer, _status, called) => Object.assign(el('span'), { className: 'note-control', called });
+const offering = replyFooter({ answer: { metrics: {} } }, () => '');
+assert.equal(offering.children.find((kid) => kid.className === 'note-control').called, 'The full note, with every source:');
+
 console.log('turn choice: ok');

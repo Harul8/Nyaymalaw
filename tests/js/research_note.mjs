@@ -63,6 +63,16 @@ const note = { title: 'Research note', file_name: 'Research note 2026-10-15 - Wa
   assert.equal(context.noteFileName("attachment; filename*=UTF-8''Note%20%E2%80%94%20memo.docx"), 'Note — memo.docx');
 }
 
+// The control: what it is called where it stands (plan AN.49, D186: under an answer, what the note holds), then Word and PDF.
+{
+  const { context } = harness();
+  const status = new Node('span');
+  const named = (control) => control.children.map((child) => child.textContent);
+  assert.deepEqual(named(context.noteControl(answer, status)), ['Research note:', 'Word', 'PDF']);
+  assert.deepEqual(named(context.noteControl(answer, status, 'The full note, with every source:')),
+    ['The full note, with every source:', 'Word', 'PDF']);
+}
+
 // Word: the server's file is saved under the server's name.
 {
   const reply = { ok: true, status: 200, blob: async () => 'bytes',
