@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import ast
 import pathlib
+import sys
 
 import pytest
 
@@ -173,9 +174,26 @@ def test_said_has_no_fallback_to_the_value():
 # the moment they landed. A checker that always returns [] passes a sweep
 # identically -- and one of them did, on every commit for weeks (B-049).
 #
-# The offender is planted in a REAL file under `nm/`, because both scanners
+# The offender is planted in a real file under `nm/`, because both scanners
 # walk the tree. A synthetic fixture would prove the scanner compiles, not
 # that it can see.
+#
+# IN A COPY OF `nm/`, NOT THE REAL FOLDER (13 Nov 2026). The offender used to be
+# put into the real `nm/` for a moment. The application refuses to be built
+# while the Python files there differ from `nm/source_layout.json`, so with the
+# tests run several at once, whichever test built the application in that
+# moment failed - a different one each run. The scanners are pointed at a copy
+# of the product's Python files for the length of the test: the same walk, over
+# the same files and one more.
+
+
+def _own_copy(tmp_path, monkeypatch) -> pathlib.Path:
+    for source in _sources():
+        copy = tmp_path / source.relative_to(ROOT)
+        copy.parent.mkdir(parents=True, exist_ok=True)
+        copy.write_bytes(source.read_bytes())
+    monkeypatch.setattr(sys.modules[__name__], "ROOT", tmp_path)
+    return tmp_path
 
 
 def test_the_phrase_sweep_can_see_underscores_merely_removed():
@@ -237,9 +255,9 @@ def test_no_enum_value_reaches_the_advocate():
           "internal vocabulary.")
 
 
-def test_the_value_scan_can_see_an_identifier_reaching_the_advocate():
+def test_the_value_scan_can_see_an_identifier_reaching_the_advocate(tmp_path, monkeypatch):
     """Plant an Element whose text renders a raw enum value."""
-    planted = ROOT / "nm" / "work_the_file" / "_speaks_in_identifiers.py"
+    planted = _own_copy(tmp_path, monkeypatch) / "nm" / "work_the_file" / "_speaks_in_identifiers.py"
     planted.write_text(block_of((
         "from nm.advise.answer_contracts import Element, ElementKind",
         "from nm.work_the_file.matter_contracts import Side",
@@ -255,9 +273,9 @@ def test_the_value_scan_can_see_an_identifier_reaching_the_advocate():
         planted.unlink()
 
 
-def test_the_complete_scan_can_see_an_enum_that_never_checks_itself():
+def test_the_complete_scan_can_see_an_enum_that_never_checks_itself(tmp_path, monkeypatch):
     """Plant a `Spoken` enum with no `complete()` call."""
-    planted = ROOT / "nm" / "shared" / "_never_completes.py"
+    planted = _own_copy(tmp_path, monkeypatch) / "nm" / "shared" / "_never_completes.py"
     planted.write_text(block_of((
         "from enum import Enum, nonmember",
         "",
