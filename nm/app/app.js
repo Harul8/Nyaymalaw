@@ -4453,8 +4453,21 @@ function renderChatBoard(board) {
   }
   const disputes = make('section', 'board-disputes');
   disputes.setAttribute('aria-label', board.disputes.length === 1 ? 'Dispute' : `Disputes (${board.disputes.length})`);
-  board.disputes.forEach((dispute, index) => disputes.appendChild(
-    renderDisputeCard(dispute, board, board.disputes.length > 1 ? index + 1 : null)));
+  // PLAN AN.49 (49c; D180): ONE DISPUTE OPEN AT A TIME on a board of several. The first, the most urgent, is open until the advocate
+  // opens another or closes it; which one is the page's own for the visit (state.boardOpen: an id, or '' for none), never saved.
+  const many = board.disputes.length > 1;
+  const cards = [];
+  const openId = !many ? null : state.boardOpen === '' ? ''
+    : board.disputes.some((dispute) => dispute.id === state.boardOpen) ? state.boardOpen : board.disputes[0].id;
+  const choose = (id) => {
+    state.boardOpen = id;
+    for (const [held, card] of cards) if (card.setOpen) card.setOpen(held.id === id);
+  };
+  board.disputes.forEach((dispute, index) => {
+    const card = renderDisputeCard(dispute, board, many ? index + 1 : null, many ? { open: dispute.id === openId, choose } : null);
+    cards.push([dispute, card]);
+    disputes.appendChild(card);
+  });
   out.push(disputes);
   out.push(...renderTimeline(board.timeline, make));
   out.push(...renderCopies(board.copies, make));
@@ -4860,7 +4873,7 @@ function caseCheckedLine(view) {
 // A CASE AS ITS LINES (plan AN.39, D52, D56-D57), ONE COPY (plan AN.49, 49b): each thing the law requires, and each thing the other side
 // will rely on, as one line with its mark that opens alone in the reading pane. The board's card draws them under its dispute; the
 // whole-dispute view draws the same lines inside its fold, so a point is opened the same way from either.
-function caseLines(view, dispute, place) {
+function caseLines(view, dispute, place, { otherAsLine = false } = {}) {
   const make = (tag, className, text) => {
     const node = document.createElement(tag);
     if (className) node.className = className;
@@ -4892,19 +4905,30 @@ function caseLines(view, dispute, place) {
   out.push(ul);
   const other = view.other_side || [];
   if (other.length) {
-    out.push(make('p', 'group', 'The other side will rely on'));
     const theirs = make('ul', 'checklist');
     for (const item of other) {
       theirs.appendChild(line('item item--other', 'other', item.label || item.relies_on, '',
         (row) => window.NmBrainSources.showContent(item.label || item.relies_on, renderOtherSideItem(item, dispute, caseHolder(dispute)),
           row, false, `The other side will rely on · ${place}`)));
     }
-    out.push(theirs);
+    if (otherAsLine) {
+      // Plan AN.49 (49c; D180): on the board the other side is one line with its count; its list opens in the reading pane, where
+      // each thing opens alone as before.
+      const all = make('button', 'board-line', `The other side will rely on (${other.length})`);
+      all.type = 'button';
+      all.addEventListener('click', () => window.NmBrainSources.showContent('The other side will rely on', [theirs], all, false, place));
+      out.push(all);
+    } else {
+      out.push(make('p', 'group', 'The other side will rely on'), theirs);
+    }
   }
   return out;
 }
 
-function renderDisputeCard(dispute, board, number = null) {
+// fold (plan AN.49, 49c; D180; owner, 12 Nov 2026: the board "is listing quite a many bullets there under each dispute"): on a board
+// of several disputes, {open, choose}: whether this card's lines are open, and what is called with the dispute's id (or '' to close it)
+// when its button is pressed. The card's name, last days and counts always show; a board of one dispute has no fold.
+function renderDisputeCard(dispute, board, number = null, fold = null) {
   const make = (tag, className, text) => {
     const node = document.createElement(tag);
     if (className) node.className = className;
@@ -4918,6 +4942,27 @@ function renderDisputeCard(dispute, board, number = null) {
   title.addEventListener('click', () => window.NmBrainSources.showContent(dispute.name,
     renderDisputeDetail(dispute, board), title, false, number ? `Dispute ${number}` : 'Dispute'));
   section.appendChild(title);
+  // The card's lines: straight under it on a board of one dispute; on a board of several, in a body its button opens and closes.
+  const folded = (lines, count) => {
+    if (!fold) {
+      section.append(...lines);
+      return section;
+    }
+    const body = make('div', 'dispute-body');
+    body.append(...lines);
+    const toggle = make('button', 'ghost dispute-toggle');
+    toggle.type = 'button';
+    section.setOpen = (open) => {
+      section.isOpen = Boolean(open);
+      body.hidden = !section.isOpen;
+      toggle.textContent = section.isOpen ? 'Hide its points' : `Show its points (${count})`;
+      toggle.setAttribute('aria-expanded', String(section.isOpen));
+    };
+    toggle.addEventListener('click', () => fold.choose(section.isOpen ? '' : dispute.id));
+    section.setOpen(fold.open);
+    section.append(toggle, body);
+    return section;
+  };
   const listed = dispute.checklist;
   if (!listed) {
     // An earlier conversation's board, before checklists, says what it said then.
@@ -4956,8 +5001,7 @@ function renderDisputeCard(dispute, board, number = null) {
           + 'finding that the law requires nothing.'));
       return section;
     }
-    section.append(...caseLines(view, dispute, number ? `Dispute ${number}` : dispute.name));
-    return section;
+    return folded(caseLines(view, dispute, number ? `Dispute ${number}` : dispute.name, { otherAsLine: true }), elements.length);
   }
   const meta = make('p', 'dmeta');
   meta.append(...deadlineChips(listed.time_limits));
@@ -4969,10 +5013,11 @@ function renderDisputeCard(dispute, board, number = null) {
     return section;
   }
   const place = number ? `Dispute ${number}` : dispute.name;
+  const lines = [];
   for (const [group, groupTitle] of CHECK_GROUPS) {
     const items = listed.items.filter((item) => item.group === group);
     if (!items.length) continue;
-    section.appendChild(make('p', 'group', groupTitle));
+    lines.push(make('p', 'group', groupTitle));
     const ul = make('ul', 'checklist');
     for (const item of items) {
       const li = make('li');
@@ -4991,9 +5036,9 @@ function renderDisputeCard(dispute, board, number = null) {
       li.appendChild(row);
       ul.appendChild(li);
     }
-    section.appendChild(ul);
+    lines.push(ul);
   }
-  return section;
+  return folded(lines, listed.items.length);
 }
 
 function checkState(item) {

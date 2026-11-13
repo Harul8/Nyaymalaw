@@ -167,10 +167,11 @@ const board = { facts: [], related_points: [] };
 const card = context.renderDisputeCard(dispute, board, 1);
 const cardText = card.textContent;
 for (const part of ['1 · The boundary dispute', '1 of 2 shown by the papers', 'What the law requires',
-  'Possession for the period the law requires', 'Notice before the suit', '1 to get', 'The other side will rely on',
-  'Their own later entry in the record']) {
+  'Possession for the period the law requires', 'Notice before the suit', '1 to get', 'The other side will rely on (1)']) {
   assert.ok(cardText.includes(part), part);
 }
+// Plan AN.49 (49c; D180): on the board the other side is one line with its count; what they rely on is in the pane.
+assert.ok(!cardText.includes('Their own later entry in the record'), 'the other side is one line on the board');
 assert.ok(!cardText.includes('NM found nothing this dispute needs'), 'a case is never read as an empty checklist');
 const detail = context.renderDisputeDetail(dispute, board);
 const detailText = detail.map((node) => node.textContent).join('\n');
@@ -209,7 +210,7 @@ assert.ok(none.textContent.includes('NM could not set out what would make this c
   const card = context.renderDisputeCard(labelled, board, 1);
   const rows = walk(card).filter((node) => node.tagName === 'BUTTON' && has('item')(node));
   assert.deepEqual(Array.from(rows, (row) => row.children[1].children[0].textContent),
-    ['Possession for twelve years', 'Notice before the suit', 'Their later entry'], 'short names; a saved case\'s own words where none');
+    ['Possession for twelve years', 'Notice before the suit'], 'short names; a saved case\'s own words where none');
   assert.ok(!card.textContent.includes('The revenue entries show it'), 'the detail is in the pane, not on the board');
   const said = (pane) => pane.content.map((node) => node.textContent).join('\n');
   const within = (pane, test) => pane.content.flatMap(walk).filter(test);
@@ -248,8 +249,16 @@ assert.ok(none.textContent.includes('NM could not set out what would make this c
   assert.equal(message.value, 'About "Notice before the suit" (The boundary dispute):\n'
     + 'About "Notice before the suit" (The boundary dispute): this is not available.');
 
-  // What the other side will rely on, alone, with what answers it.
-  rows[2].handlers.click();
+  // What the other side will rely on: one line on the board that opens its list (49c), where each thing opens alone, with what answers it.
+  const [theirLine] = walk(card).filter((node) => node.tagName === 'BUTTON' && has('board-line')(node));
+  assert.equal(theirLine.textContent, 'The other side will rely on (1)');
+  theirLine.handlers.click();
+  pane = opened.at(-1);
+  assert.equal(pane.title, 'The other side will rely on');
+  assert.equal(pane.kind, 'Dispute 1');
+  const [theirs] = within(pane, (node) => node.tagName === 'BUTTON' && has('item')(node));
+  assert.equal(theirs.children[1].children[0].textContent, 'Their later entry');
+  theirs.handlers.click();
   pane = opened.at(-1);
   assert.equal(pane.kind, 'The other side will rely on · Dispute 1');
   assert.ok(said(pane).includes('Their own later entry in the record') && said(pane).includes('What answers it')
@@ -282,5 +291,38 @@ assert.ok(none.textContent.includes('NM could not set out what would make this c
     parties: [], subjects: [] });
   assert.equal(legend.className, 'legend');
   assert.deepEqual(Array.from(legend.children, (entry) => entry.textContent), ['Shown by the papers', 'Shown only weakly', 'Not yet shown']);
+}
+
+// ONE DISPUTE OPEN AT A TIME (plan AN.49, 49c; D180): on a board of several disputes the first is open and the others show their name
+// and counts with a button; opening one closes the other; a board of one dispute has no such button.
+{
+  const second = { ...dispute, id: 'D2', name: 'The rent dispute' };
+  context.state.boardOpen = undefined;
+  const draw = () => context.renderChatBoard({ state: 'ready', disputes: [dispute, second], facts: [], instructions: [],
+    related_points: [], parties: [], subjects: [] });
+  const cardsOf = (nodes) => nodes.flatMap(walk).filter(has('dispute'));
+  const toggleOf = (card) => walk(card).find(has('dispute-toggle'));
+  const bodyOf = (card) => walk(card).find(has('dispute-body'));
+  let [first, other] = cardsOf(draw());
+  assert.equal(bodyOf(first).hidden, false, 'the first, the most urgent, is open');
+  assert.equal(bodyOf(other).hidden, true);
+  assert.equal(toggleOf(first).textContent, 'Hide its points');
+  assert.equal(toggleOf(other).textContent, `Show its points (${view.elements.length})`);
+  assert.ok(other.textContent.includes('2 · The rent dispute') && other.textContent.includes('shown by the papers'),
+    'a closed card keeps its name and counts');
+  toggleOf(other).handlers.click();
+  assert.equal(bodyOf(other).hidden, false);
+  assert.equal(bodyOf(first).hidden, true, 'opening one closes the other');
+  // Which one is open is kept for the visit: the board drawn again shows the same one.
+  [first, other] = cardsOf(draw());
+  assert.equal(bodyOf(other).hidden, false);
+  assert.equal(bodyOf(first).hidden, true);
+  toggleOf(other).handlers.click();
+  assert.equal(bodyOf(other).hidden, true, 'the open one can be closed');
+  [first, other] = cardsOf(draw());
+  assert.ok(bodyOf(first).hidden && bodyOf(other).hidden, 'and stays closed');
+  const [alone] = cardsOf(context.renderChatBoard({ state: 'ready', disputes: [dispute], facts: [], instructions: [],
+    related_points: [], parties: [], subjects: [] }));
+  assert.equal(toggleOf(alone), undefined, 'a board of one dispute has no fold');
 }
 console.log('case_strength.mjs: ok');
