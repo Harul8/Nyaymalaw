@@ -537,6 +537,17 @@ _INSECURE = "xor-keystream(NOT-SECURE)"
 _SAVED = "saved-versions"
 _SAVED_FORMAT = 1
 
+#: Plan AN.53 (53b, D217): the folder of a store where each matter's owner is
+#: recorded beside it, and the shape of that record.
+_OWNERS = "matter-owners"
+_OWNER_FORMAT = 1
+
+
+def owner_mark(advocate_id: str) -> str:
+    """What an owner record holds of an advocate: a hash of the account's
+    identifier, so the record names nobody. It is compared, never read back."""
+    return hashlib.sha256(b"nm-matter-owner\0" + str(advocate_id).encode("utf8")).hexdigest()
+
 
 class RolledBack(ValueError):
     """The matter file on disk is not the one this store last saved: an older
@@ -560,6 +571,9 @@ class FileMatterStore:
         # Made on the first line kept, like the transcripts (P35, O29).
         self._lines = self._root / "history-lines"
         self._keys = self._root / "keys"
+        # Plan AN.53 (53b): the owner records this process has read or written.
+        # A matter's owner never changes, so a record once known is not read again.
+        self._owner_marks: dict[str, str] = {}
         self._matters.mkdir(parents=True, exist_ok=True)
         self._metrics.mkdir(parents=True, exist_ok=True)
         seal = key if key is not None else os.environ.get("NM_MATTER_KEY", "")
@@ -664,6 +678,7 @@ class FileMatterStore:
         if matter.id != matter_id:
             raise ValueError("the saved matter identity conflicts with its storage name")
         self._check_last_saved(matter_id, matter.version, data, known)
+        self._record_owner(matter_id, matter.advocate_id)
         return matter
 
     # ------------------------------------------- the record of the last save ---
@@ -744,6 +759,109 @@ class FileMatterStore:
             if tmp is not None:
                 discard(Path(tmp))
 
+    # ---------------------------------------------- the record of the owner ---
+    #
+    # THE STORE KNOWS WHOSE EACH MATTER IS (plan AN.53, 53b, D217; the review's
+    # F-21). Whose a saved file is was known only by opening it. So a listing
+    # did work for every advocate's file on behalf of one, each caller had to
+    # remember to compare the owner, and a file that could not be opened had
+    # no owner at all: the history named it to every advocate and marked
+    # every advocate's history as partial.
+    #
+    # Each matter now has a small record beside it of its owner, written when
+    # the matter is first saved and whenever it is read and has none. It
+    # holds a hash of the account's identifier and nothing else, and is not
+    # sealed, like the record of the last save.
+    #
+    # WHAT IT IS NOT. It is not what decides whose a matter is: the sealed
+    # file is, and every load for an advocate still compares the file's own
+    # owner. The record only lets the store leave a file alone - not open
+    # it, not name it - for an advocate it is recorded as not belonging to.
+    # A matter with no record, or one that cannot be read, is NOT KNOWN: it
+    # is offered to the caller as such, opened to learn whose it is, and a
+    # file like that which cannot be opened is named to no advocate (see
+    # `unowned_unreadable` for the operator's side).
+
+    def _owner_path(self, matter_id: str) -> Path:
+        return self._root / _OWNERS / f"{_storage_component(matter_id, kind='matter ID')}.json"
+
+    def _owner_mark(self, matter_id: str) -> str | None:
+        """The mark of the matter's recorded owner, or None where it is not known."""
+        known = self._owner_marks.get(matter_id)
+        if known is not None:
+            return known
+        try:
+            record = json.loads(self._owner_path(matter_id).read_text(encoding="utf8"))
+        except (OSError, ValueError):
+            return None
+        if (not isinstance(record, dict) or record.get("format") != _OWNER_FORMAT
+                or not isinstance(record.get("owner"), str) or not record["owner"]):
+            return None
+        self._owner_marks[matter_id] = record["owner"]
+        return record["owner"]
+
+    def _record_owner(self, matter_id: str, advocate_id: str) -> None:
+        """Called with what a file that was just saved or opened says of its
+        owner. Written once: a record that already says so is left alone. A
+        record that could not be written leaves the owner not known, which
+        the next read mends - so it never fails a save or a read."""
+        mark = owner_mark(advocate_id)
+        tmp = None
+        try:
+            if self._owner_mark(matter_id) == mark:
+                return
+            path = self._owner_path(matter_id)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            fd, tmp = tempfile.mkstemp(dir=str(path.parent), suffix=".tmp")
+            with os.fdopen(fd, "wb") as fh:
+                fh.write(json.dumps({"format": _OWNER_FORMAT, "owner": mark}).encode("utf8"))
+                fh.flush()
+                os.fsync(fh.fileno())
+            publish(tmp, path)
+            self._owner_marks[matter_id] = mark
+        except OSError:
+            if tmp is not None:
+                discard(Path(tmp))
+
+    def load_for(self, matter_id: MatterId, advocate_id: str) -> Matter | None:
+        """The advocate's own matter, or None: where there is none, and where
+        it is another's - which is then neither opened nor, if it cannot be
+        opened, said to be damaged. A matter of the advocate's own, or one
+        nobody is recorded as owning, that cannot be opened raises as `load`
+        does."""
+        mark = self._owner_mark(str(matter_id))
+        if mark is not None and mark != owner_mark(advocate_id):
+            return None
+        matter = self.load(matter_id)
+        return matter if matter is not None and matter.advocate_id == advocate_id else None
+
+    def saved_files_for(self, advocate_id: str) -> tuple[tuple[str, tuple[int, int], str, bool | None], ...]:
+        """`saved_files`, without the files recorded as another advocate's,
+        each with whether it is known to be this advocate's: True, or None
+        where no owner is recorded and the file itself must say."""
+        mine, out = owner_mark(advocate_id), []
+        for matter_id, signature, saved_at in self.saved_files():
+            try:
+                mark = self._owner_mark(matter_id)
+            except ValueError:  # a file whose name is no matter's: not known, and its reading says why
+                mark = None
+            if mark is None or mark == mine:
+                out.append((matter_id, signature, saved_at, True if mark == mine else None))
+        return tuple(out)
+
+    def unowned_unreadable(self) -> tuple[str, ...]:
+        """The saved files that cannot be opened and that nobody is recorded
+        as owning: named to no advocate, and so listed here for the operator.
+        It opens each file that has no owner record."""
+        out = []
+        for matter_id, _signature, _saved_at in self.saved_files():
+            try:
+                if self._owner_mark(matter_id) is None:
+                    self._read(matter_id, self._matters / f"{matter_id}.nm")
+            except Exception:  # noqa: BLE001 -- named, never swallowed
+                out.append(matter_id)
+        return tuple(out)
+
     def commit(self, matter: Matter, *, expected_version: int) -> Matter:
         """Write the matter, or refuse because the file moved underneath.
 
@@ -794,6 +912,7 @@ class FileMatterStore:
                 discard(Path(tmp))
                 raise
             self._record_last_saved(str(matter.id), matter.version, data)
+            self._record_owner(str(matter.id), matter.advocate_id)
             return matter
 
     @contextmanager
@@ -840,25 +959,28 @@ class FileMatterStore:
 
     def list_for(self, advocate_id: str) -> MatterList:
         out, unreadable, saved_at = [], [], []
-        for p in sorted(self._matters.glob("*.nm")):
+        # Plan AN.53 (53b): only the files not recorded as another advocate's.
+        for matter_id, _signature, stamp, owned in self.saved_files_for(advocate_id):
             try:
-                _storage_component(p.stem, kind="matter ID")
-                m = self._read(p.stem, p)
+                _storage_component(matter_id, kind="matter ID")
+                m = self._read(matter_id, self._matters / f"{matter_id}.nm")
             except Exception:  # noqa: BLE001 -- named, never swallowed
                 # One unreadable matter must not take the whole list down, and
                 # it must not VANISH either. It used to `continue` here with a
                 # comment claiming the caller reported it; the caller received a
                 # bare tuple and could not tell six matters from seven with one
-                # corrupt. The id is carried out so the board can say so.
-                unreadable.append(p.stem)
+                # corrupt. The id is carried out so the board can say so - to
+                # the advocate it is recorded as belonging to, and to no other:
+                # one nobody is recorded as owning is in `unowned_unreadable`.
+                if owned:
+                    unreadable.append(matter_id)
                 continue
             if m.advocate_id == advocate_id:
                 out.append(m)
                 # F-B-14. WHEN IT WAS LAST SAVED is the file's own write time:
                 # every commit replaces the file whole, so this moves on every
                 # kind of change and on nothing else.
-                saved_at.append((str(m.id), save_stamp(
-                    datetime.fromtimestamp(p.stat().st_mtime, tz=timezone.utc))))
+                saved_at.append((str(m.id), stamp))
         return MatterList(tuple(out), tuple(unreadable), tuple(saved_at))
 
     def signature(self, matter_id: MatterId) -> tuple[int, int] | None:
