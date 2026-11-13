@@ -68,6 +68,8 @@ const context = {
   stateBlock: (_kind, message) => Object.assign(el('div'), { textContent: message }),
   replyFooter: () => el('div'), openSourceReader() {}, $: (id) => document.getElementById(id), withOpeningNotes: (turns) => turns,
   reconcileIntent() {}, sizeComposer() {}, Event: class { constructor(type) { this.type = type; } },
+  // Plan AN.49 (49f): the answers window that a dispute's 'Tell NM about these' opens reads the files under the message box.
+  attachments: [],
 };
 context.globalThis = context;
 vm.createContext(context);

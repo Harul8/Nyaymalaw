@@ -3604,7 +3604,14 @@ function needAnswersMessage(questions, answers) {
   return said.length ? `My answers to your questions:\n\n${said.join('\n\n')}` : '';
 }
 
-function openNeedAnswers(entry, questions) {
+// The same window for other rows (plan AN.49, 49f; D183): its title, the line under it, what it says when nothing is written and how
+// what was written becomes the one message, as 'Tell NM about these' on a dispute uses it.
+function openNeedAnswers(entry, questions, {
+  called = 'Answer what NM asked',
+  lede = 'Answer what you can and leave the rest blank. Your answers go to NM as your next message, each under the question it answers.',
+  empty = 'Write an answer to at least one question.',
+  compose = (answers) => needAnswersMessage(questions, answers),
+} = {}) {
   const make = (tag, className, text) => {
     const node = document.createElement(tag);
     if (className) node.className = className;
@@ -3618,14 +3625,13 @@ function openNeedAnswers(entry, questions) {
   const dialog = make('dialog', 'account-dialog need-answers');
   dialog.setAttribute('aria-labelledby', 'need-answers-title');
   const heading = make('div', 'dialog-heading');
-  const title = make('h2', '', 'Answer what NM asked');
+  const title = make('h2', '', called);
   title.id = 'need-answers-title';
   const close = make('button', 'ghost', 'Close');
   close.type = 'button';
   close.addEventListener('click', () => dialog.close());
   heading.append(title, close);
-  dialog.append(heading, make('p', '', 'Answer what you can and leave the rest blank. Your answers go to NM as your next '
-    + 'message, each under the question it answers.'));
+  dialog.append(heading, make('p', '', lede));
   const boxes = questions.map((question, index) => {
     const box = make('textarea');
     box.id = `need-answer-${index}`;
@@ -3656,8 +3662,8 @@ function openNeedAnswers(entry, questions) {
   cancel.type = 'button';
   cancel.addEventListener('click', () => dialog.close());
   sendAnswers.addEventListener('click', () => {
-    const message = needAnswersMessage(questions, boxes.map((box) => box.value));
-    if (!message) { status.textContent = 'Write an answer to at least one question.'; return; }
+    const message = compose(boxes.map((box) => box.value));
+    if (!message) { status.textContent = empty; return; }
     if (usageUsedUp()) { status.textContent = (usage && usage.limit) || 'Sending is paused until you upgrade.'; return; }
     const blocked = attachmentsBlockSend({ reading: false });
     if (blocked) { status.textContent = blocked; return; }
@@ -4676,14 +4682,50 @@ function caseHolderOf(answer) {
   return answer && answer.chat_id && answer.turn_id ? { chat_id: answer.chat_id, turn_id: answer.turn_id } : null;
 }
 
+function caseEntry(dispute) {
+  return [...(state.turns || [])].reverse().find((entry) => (entry.answer && entry.answer.elements || []).some((el) => el.kind === 'CASE'
+    && el.case && el.dispute && el.dispute.id === dispute.id)) || null;
+}
+
 function caseHolder(dispute) {
-  for (const entry of [...(state.turns || [])].reverse()) {
-    if ((entry.answer && entry.answer.elements || []).some((el) => el.kind === 'CASE' && el.case && el.dispute
-        && el.dispute.id === dispute.id)) {
-      return caseHolderOf(entry.answer);
-    }
+  const entry = caseEntry(dispute);
+  return entry ? caseHolderOf(entry.answer) : null;
+}
+
+// SEVERAL THINGS ANSWERED IN ONE REPLY (plan AN.49, 49f; D183; owner, 12 Nov 2026: the advocate "can respond to multiple aspects in
+// one response"): 'Tell NM about these' on a dispute opens the answers window of 'What I need from you' (AN.37) with a row for each
+// thing to get of a gathered case or, for a case saved earlier, each requirement not yet shown. What the advocate writes in each goes
+// as one message, each part in the words the single 'Tell NM about this' puts in the message box. No new route, no new model step.
+function caseTellRows(view) {
+  if (!view || view.state === 'unavailable') return [];
+  if (caseGathered(view)) {
+    return (view.to_get || []).map((ask) => ({ group: null, about: ask.what,
+      text: `${ask.what} — from ${ask.from_whom} (for: ${(ask.serves || [ask.for]).join('; ')})` }));
   }
-  return null;
+  return (view.elements || []).filter((item) => item.status !== 'shown').map((item) => ({ group: null,
+    about: item.label || item.element, text: `${item.label || item.element} · ${(CASE_MARKS[item.status] || CASE_MARKS.missing).label}` }));
+}
+
+function caseTellMessage(dispute, rows, answers) {
+  return rows.map((row, index) => [row, String((answers || [])[index] || '').trim()]).filter(([, said]) => said)
+    .map(([row, said]) => `About "${row.about}" (${dispute.name}): ${said}`).join('\n\n');
+}
+
+function caseTellButton(dispute, rows) {
+  const tell = document.createElement('button');
+  tell.type = 'button';
+  tell.className = 'ghost case-tell';
+  tell.textContent = 'Tell NM about these';
+  // What was written and not sent is kept while the page is open: with the answer that holds the case, or the page's own.
+  tell.addEventListener('click', () => openNeedAnswers(caseEntry(dispute) || (state.turns || []).at(-1)
+    || (state.caseTell || (state.caseTell = {})), rows, {
+    called: 'Tell NM about these',
+    lede: 'Say what you have, do not have or will get, in your own words, and leave the rest blank. It goes to NM as your next '
+      + 'message, each part under what it is about.',
+    empty: 'Write about at least one of them.',
+    compose: (answers) => caseTellMessage(dispute, rows, answers),
+  }));
+  return tell;
 }
 
 // The point of a dispute's case an answer's "what to get" is for, with the case it belongs to; none where the answer holds none.
@@ -5126,6 +5168,9 @@ function renderDisputeCard(dispute, board, number = null, fold = null) {
       lines.unshift(make('p', 'board-lede', caseCheckedLine(view)));
       if (CASE_STATES[view.state]) lines.unshift(make('p', 'check-none', CASE_STATES[view.state]));
     }
+    // Plan AN.49 (49f; D183): several things told in one reply.
+    const rows = caseTellRows(view);
+    if (rows.length) lines.push(caseTellButton(dispute, rows));
     return folded(lines, elements.length);
   }
   const meta = make('p', 'dmeta');

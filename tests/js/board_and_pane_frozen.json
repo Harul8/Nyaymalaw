@@ -84,7 +84,8 @@
         ]
        ]
       ],
-      "button.board-line \"The other side will rely on (1)\""
+      "button.board-line \"The other side will rely on (1)\"",
+      "button.ghost.case-tell \"Tell NM about these\""
      ]
     ]
    ]

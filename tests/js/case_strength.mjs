@@ -414,4 +414,66 @@ assert.ok(none.textContent.includes('NM could not set out what would make this c
   assert.ok(caseFold.textContent.includes('Most needs attention now') && caseFold.textContent.includes('1 of 2 shown'),
     'the whole-dispute view draws the same gathered lines');
 }
+// SEVERAL THINGS IN ONE REPLY (plan AN.49, 49f; D183): 'Tell NM about these' on a dispute opens the answers window of AN.37 with a row
+// for each thing to get of a gathered case or, for a case saved earlier, each requirement not yet shown; what is written goes as one
+// message, each part in the words the single 'Tell NM about this' uses; what was written and not sent is kept while the page is open.
+{
+  const sent = [];
+  Object.assign(context, { attachments: [], usageUsedUp: () => false, attachmentsBlockSend: () => '', heldSend: null,
+    activeDelivery: null, send: (message) => sent.push(message), repaint() {} });
+  const dialogs = [];
+  const create = document.createElement;
+  document.createElement = (tag) => {
+    const node = create(tag);
+    if (tag === 'dialog') Object.assign(node, { showModal() { dialogs.push(node); }, close() { node.closed = true; } });
+    return node;
+  };
+  context.state.turns = [];
+  const tellOf = (card) => walk(card).find((node) => node.tagName === 'BUTTON' && node.textContent === 'Tell NM about these');
+  const rowsOf = (shown) => walk(shown).filter(has('need-answer-question')).map((node) => node.textContent);
+  const boxesOf = (shown) => walk(shown).filter((node) => node.tagName === 'TEXTAREA');
+  const press = (shown, words) => walk(shown).find((node) => node.tagName === 'BUTTON' && node.textContent === words).handlers.click();
+  const write = (box, words) => { box.value = words; box.handlers.input(); };
+
+  // A case saved earlier: a row for each requirement not yet shown.
+  tellOf(context.renderDisputeCard(dispute, board, 1)).handlers.click();
+  let dialog = dialogs.at(-1);
+  assert.equal(walk(dialog).find((node) => node.tagName === 'H2').textContent, 'Tell NM about these');
+  assert.deepEqual(rowsOf(dialog), ['Notice before the suit · Not yet shown']);
+  press(dialog, 'Send answers');
+  assert.equal(sent.length, 0, 'nothing written, nothing sent');
+  assert.ok(dialog.textContent.includes('Write about at least one of them.'));
+  write(boxesOf(dialog)[0], ' It was posted on 3 March. ');
+  press(dialog, 'Send answers');
+  assert.deepEqual(sent, ['About "Notice before the suit" (The boundary dispute): It was posted on 3 March.'],
+    'in the words the single button puts in the message box');
+
+  // A gathered case: a row for each thing to get, with every requirement it serves; one message for what was written.
+  const asked = { state: 'checked', headings: ['Notice'], elements: [{ ...view.elements[1], heading: 1 }], other_side: [], decides: [],
+    to_get: [{ what: 'The postal receipt', from_whom: 'the client', why: 'It proves the posting.', helps: '',
+      for: 'Notice before the suit', serves: ['Notice before the suit'] },
+    { what: 'The acknowledgment card', from_whom: 'the post office', why: 'It proves receipt.', helps: '',
+      for: 'Notice before the suit', serves: ['Notice before the suit'] }] };
+  const askedDispute = { ...dispute, checklist: { ...dispute.checklist, case: asked } };
+  tellOf(context.renderDisputeCard(askedDispute, board, 1)).handlers.click();
+  dialog = dialogs.at(-1);
+  assert.deepEqual(rowsOf(dialog), ['The postal receipt — from the client (for: Notice before the suit)',
+    'The acknowledgment card — from the post office (for: Notice before the suit)']);
+  write(boxesOf(dialog)[1], 'We will have it next week.');
+  press(dialog, 'Cancel');
+  tellOf(context.renderDisputeCard(askedDispute, board, 1)).handlers.click();
+  dialog = dialogs.at(-1);
+  assert.deepEqual(boxesOf(dialog).map((box) => box.value), ['', 'We will have it next week.'], 'what was written is kept');
+  write(boxesOf(dialog)[0], 'The client has it.');
+  press(dialog, 'Send answers');
+  assert.equal(sent.at(-1), 'About "The postal receipt" (The boundary dispute): The client has it.\n\n'
+    + 'About "The acknowledgment card" (The boundary dispute): We will have it next week.');
+
+  // Nothing to tell: no button where the papers show every requirement, or a gathered case has nothing to get.
+  const allShown = { ...view, elements: [view.elements[0]], to_get: [] };
+  assert.equal(tellOf(context.renderDisputeCard({ ...dispute, checklist: { ...dispute.checklist, case: allShown } }, board, 1)), undefined);
+  assert.equal(tellOf(context.renderDisputeCard({ ...askedDispute, checklist: { ...askedDispute.checklist,
+    case: { ...asked, to_get: [] } } }, board, 1)), undefined);
+  document.createElement = create;
+}
 console.log('case_strength.mjs: ok');
