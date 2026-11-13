@@ -325,11 +325,17 @@ Advocate = Annotated[str, Depends(signed_in)]
 # damaged conversation was a server error at every one of them. Another kind of failure is not caught here and stays loud.
 _UNREADABLE = (OSError, ValueError, StoredObjectUnreadable)
 
-def _origins(request: Request) -> set[str]:
+def _trusted_origins(own: str) -> set[str]:
+    """THE ORIGINS THAT MAY MAKE A CREDENTIALLED REQUEST, WRITTEN ONCE (plan AN.53, 53j3; D225): those the server's settings name,
+    or, where they name none, the server's own - which an HTTP request and the dictation socket each know in their own way."""
     configured = (os.environ.get(_TRUSTED_ORIGINS) or "").strip()
     if configured:
         return {o.strip().rstrip("/") for o in configured.split(",") if o.strip()}
-    return {str(request.base_url).rstrip("/")}
+    return {own.rstrip("/")}
+
+
+def _origins(request: Request) -> set[str]:
+    return _trusted_origins(str(request.base_url))
 
 
 def _require_origin(request: Request, *, allow_absent: bool = False) -> None:
@@ -2873,10 +2879,8 @@ def _socket_advocate(websocket: WebSocket):
     """The signed-in advocate on a socket this page opened, or None: the same exact
     origin policy and session as every other credentialled route."""
     origin = (websocket.headers.get('origin') or '').rstrip('/')
-    configured = (os.environ.get(_TRUSTED_ORIGINS) or '').strip()
     page = f"{'https' if websocket.url.scheme == 'wss' else 'http'}://{websocket.url.netloc}"
-    trusted = ({o.strip().rstrip('/') for o in configured.split(',') if o.strip()} if configured else {page})
-    if not origin or origin not in trusted:
+    if not origin or origin not in _trusted_origins(page):
         return None
     directory = application().directory
     session = directory.session(websocket.cookies.get('nm_session', ''),
