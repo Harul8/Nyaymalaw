@@ -158,8 +158,19 @@ class FileTurnAttempts:
             raise AttemptRefused("unconfirmed")
         raise AttemptRefused("terminal")
 
-    def claim(self, identity: str, request_digest: str) -> dict:
-        if not _opaque(identity) or not _opaque(request_digest):
+    def claim(self, identity: str, request_digest: str, *, unsaved: bool = False) -> dict:
+        """The request's claim: its fencing token and the corrections it has used.
+
+        AN ATTEMPT LEFT 'UNCONFIRMED' HAS AN OWNER (plan AN.50, D188): the next
+        request for the same message. Its caller reads the conversation first;
+        where it found the answer saved it returns that and never claims, and
+        where it found none it says so - unsaved - and the attempt is settled
+        as retryable and claimed, its corrections kept. A write of the earlier
+        attempt that lands late cannot make a second answer: the conversation's
+        save is version-checked. Without unsaved, 'unconfirmed' is refused as
+        before, so no caller repeats a possible effect without having looked.
+        """
+        if not _opaque(identity) or not _opaque(request_digest) or type(unsaved) is not bool:
             raise AttemptRefused("conflict")
         token = secrets.token_hex(32)
         with self._transaction() as db:
@@ -171,7 +182,7 @@ class FileTurnAttempts:
             else:
                 if prior[1] != request_digest:
                     raise AttemptRefused("conflict")
-                if prior[4] != "retryable":
+                if prior[4] != "retryable" and not (unsaved and prior[4] == "unconfirmed"):
                     self._refuse_state(prior[4])
                 corrections_used = prior[3]
                 db.execute("UPDATE turn_attempts SET token=?,state='running',code=NULL WHERE identity=?",

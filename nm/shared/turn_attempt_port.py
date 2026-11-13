@@ -10,8 +10,10 @@ class AttemptRefused(Exception):
 
 @runtime_checkable
 class TurnAttemptPort(Protocol):
-    def claim(self, identity: str, request_digest: str) -> dict:
-        """Return token/corrections_used (a count), or refuse ambiguous or terminal ownership."""
+    def claim(self, identity: str, request_digest: str, *, unsaved: bool = False) -> dict:
+        """Return token/corrections_used (a count), or refuse ambiguous or terminal ownership. unsaved (plan AN.50, D188): the
+        caller has read the conversation and found no answer saved for this request, so an attempt left unconfirmed is settled
+        as retryable and claimed."""
         ...
 
     def consume_correction(self, identity: str, token: str) -> None:
