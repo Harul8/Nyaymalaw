@@ -535,9 +535,67 @@ def serving_state() -> dict:
     }
 
 
+#: Plan AN.52 (52a3): the words readiness uses for a capability's state. They are the composition root's (READY, NOT_READY in
+#: nm/app/composition.py), which this edge does not import; a test holds the two to each other.
+_READY, _NOT_READY = 'ready', 'not ready'
+_LAW = ('the held law: provision', 'the held law: judgment')
+
+
+def _measured_readiness(wired) -> dict:
+    """What readiness last measured, measuring nothing now; {} for an application that has no such owner."""
+    readiness = getattr(wired, 'readiness', None)
+    return readiness(measure=False) if callable(readiness) else {}
+
+
 @app.get("/api/health")
-def health() -> dict:
-    return {**application().health(), **serving_state()}
+def health(response: Response) -> dict:
+    """UP OR DOWN, AND NOTHING ELSE (plan AN.52, 52a3, D207; the review's F-11). This address answers anyone, signed in or not.
+    It said the provider's and the model's names, the fingerprints of the running code and of the code on disk, where the steps
+    are worked and how many wait - and 'ready' whatever was true. It is 'down' where readiness last measured a capability as
+    not ready, where the steps are a separate worker's and it is not heard from, or where the application cannot be asked at
+    all; which, and why, is not said here. What the page
+    needs is at /api/health/detail, for a signed-in advocate."""
+    try:
+        wired = application()
+        steps = wired.health().get('steps') or {}
+        # An outside monitor read the steps line here to say when the step worker had stopped (D167). It is told the same thing
+        # in the one word it is now given: where the steps are another process's and that process is not heard from, down.
+        down = (any(entry.get('state') == _NOT_READY for entry in _measured_readiness(wired).values())
+                or (steps.get('mode') == 'separate' and steps.get('worker') != 'alive'))
+    except Exception:  # noqa: BLE001 -- whatever stops the application being asked, this address still answers: down
+        logging.getLogger('nm.health').warning('The health answer could not ask the application; answered down.', exc_info=True)
+        down = True
+    response.headers['Cache-Control'] = 'no-store'
+    if down:
+        response.status_code = 503
+    return {'status': 'down' if down else 'up'}
+
+
+@app.get("/api/health/detail")
+def health_detail(advocate_id: Advocate, request: Request, response: Response) -> dict:
+    """What the page shows of the server's state, for a signed-in advocate (plan AN.52, 52a3, D207): whether the library can be
+    read, as readiness measured it; how the steps stand (D167); whether the running code is the code on disk; whether the model
+    is a stand-in; and each capability's state. No provider, no model, no fingerprint, and no reason for a state - a reason is
+    the search's or the store's own words and can hold a path; those are the operator's (the check command) and the Admin
+    area's."""
+    wired = application()
+    said, measured, build = wired.health(), _measured_readiness(wired), serving_state()
+    if not _session_current(request, advocate_id):
+        raise HTTPException(401, 'not signed in')
+    law = [measured.get(name, {}).get('state') for name in _LAW]
+    corpus = ('not_connected' if getattr(wired, 'legal_search', None) is None else
+              'NOT READABLE' if _NOT_READY in law else
+              'readable' if law == [_READY, _READY] else 'configured_unverified')
+    detail = {'runtime': said.get('runtime'), 'corpus': corpus, 'steps': said.get('steps'),
+              'rehearsal': said.get('provider') == 'scripted', 'code_state': build['code_state'],
+              'readiness': {name: entry.get('state') for name, entry in measured.items()}}
+    if build['code_state'] == 'stale':
+        detail['why'] = ('This server is running code that is no longer on disk. Everything it serves is the older code. '
+                         'Restart it.')
+    elif 'why' in build:
+        detail['why'] = build['why']  # 'could not be computed': a sentence, never a fingerprint
+    response.headers['Cache-Control'] = 'no-store'
+    return detail
 
 
 app.add_exception_handler(RequestValidationError, invalid_request)

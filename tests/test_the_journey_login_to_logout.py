@@ -552,7 +552,8 @@ def test_phase_5d_the_masthead_is_not_a_configuration_dump(page, journey):
     `hard: not configured` reads as something broken, `fernet` is a cipher
     name, and the model id is ours. None of it is a fact about their matter.
     """
-    with page.expect_response(lambda reply: reply.url.endswith("/api/health")
+    # Plan AN.52 (52a3): what the page shows of the server is at /api/health/detail, behind sign-in.
+    with page.expect_response(lambda reply: reply.url.endswith("/api/health/detail")
                               and reply.request.method == "GET", timeout=30000) as checked:
         _sign_in(page, journey)
     # WAIT FOR THE LINE TO RESOLVE. `loadHealth()` is async and the field
@@ -562,7 +563,7 @@ def test_phase_5d_the_masthead_is_not_a_configuration_dump(page, journey):
     response = checked.value
     assert response.status == 200, response.text()
     health = response.json()
-    assert health["corpus"] in ("readable", "NOT READABLE")
+    assert health["corpus"] in ("readable", "NOT READABLE", "configured_unverified")
     expected = ("Legal library available · check the scope of each result"
                 if health["corpus"] == "readable" else
                 "Legal library unavailable · authority-backed research is limited")
@@ -1046,10 +1047,11 @@ def test_the_journey_is_actually_driving_a_browser(page, journey):
     # The script ran: `boot()` resolves the session and reveals the gate.
     assert page.is_visible("#login-id"), "the sign-in form never appeared"
 
+    # Plan AN.52 (52a3, D207): a visitor is told up or down only. Whether the server runs the tree under test is behind
+    # sign-in now (/api/health/detail), and the harness starts this server from this tree itself.
     health = json.loads(
         urllib.request.urlopen(journey["base"] + "/api/health").read())
-    assert health["code_state"] == "current", (
-        f"the server is not running the tree under test: {health}")
+    assert health == {"status": "up"}, f"the server does not say it is up: {health}"
     # THE WIRED ADAPTER, NOT THE ENVIRONMENT. This read
     # `os.environ["NM_MODEL_PROVIDER"]` and failed on the first run -- on a
     # machine where that is legitimately `openai` for ordinary work, while

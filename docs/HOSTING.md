@@ -252,9 +252,13 @@ copy back whole and opens everything; and puts back only some files, which are r
   (account mail and the AI service have no free check yet) do not fail it. A line beginning `KEPT UNDER THE CODE:` names which of
   the store, the key and the outgoing-data log still have no path of their own. Run it with the same settings the server runs
   with. It starts no server.
-- With both processes running, `GET /api/health` must say `"steps": {"mode": "separate", "worker": "alive", ...}`; with one process,
-  `"mode": "inside"`. Either way it says how many steps wait and how many are at work - counts only, never whose or what. An outside
-  monitor that reads it can say when the worker stops.
+- `GET /api/health` answers anyone with one word (plan AN.52, D207): `{"status": "up"}`, or `{"status": "down"}` with HTTP 503. It is
+  down where the last readiness measurement found a capability not ready, or where the steps are the step worker's and the worker
+  has not been heard from - so an outside monitor that reads it can say when the worker stops. It names no provider, model or
+  code fingerprint, and does not say which thing is wrong: `--check` does, and the Admin diagnostics.
+- A signed-in advocate's page reads `GET /api/health/detail`: `"steps": {"mode": "separate", "worker": "alive", ...}` with both
+  processes running, `"mode": "inside"` with one; how many steps wait and how many are at work - counts only, never whose or what;
+  whether the library can be read; and each capability's state.
 - The drills (`development_environment/developer_tooling/step_drills.py`) run offline on a throwaway store under a short temporary
   path, with the stand-in models the tests use - no paid call, never the installation's own conversations or accounts:
   - `restart`: a step whose process is killed in the middle is taken up by the next start, by itself, to the same result as a run

@@ -123,18 +123,20 @@ def test_a_tree_that_cannot_be_read_is_not_an_all_clear(monkeypatch):
 
 # ============================== on the wire =================================
 
-def test_health_carries_the_state(client):
-    """It has to reach the page, and `/api/health` is what the page asks —
-    BEFORE the session resolves, because the thing this catches happens on the
-    gate."""
+def test_health_no_longer_carries_the_state_to_a_visitor(client):
+    """CHANGED BY PLAN AN.52 (52a3, D207), 13 Nov 2026. This test held that the build state, with both fingerprints, reaches
+    the page from `/api/health` BEFORE the session resolves, so the banner could show on the sign-in screen. D207 takes the
+    code's fingerprints out of what anyone not signed in is told: the public answer is up or down only, and the state (without
+    fingerprints) is at /api/health/detail for a signed-in advocate - tested in
+    tests/test_the_public_health_answer_says_up_or_down_only.py. The banner therefore no longer shows on the sign-in screen;
+    since AN.48 the server restarts itself when its code changes on disk, which is what the banner asked a person to do."""
     body = client.get("/api/health").json()
-    assert body["code_state"] in ("current", "stale", "not_assessed")
-    assert body["serving"] and body["tree"]
+    assert body == {"status": "up"}
+    assert api.SERVING not in str(body)
 
 
 def test_health_needs_no_session(client):
-    """Or the banner cannot appear on the sign-in screen, which is exactly
-    where the stale password rule was refusing registrations."""
+    """It still answers a visitor: that the server is up."""
     assert client.get("/api/health").status_code == 200
 
 

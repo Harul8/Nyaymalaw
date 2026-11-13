@@ -451,7 +451,7 @@ def test_the_live_workspace_is_local_and_keyboard_navigable_at_each_width(
         nodes.map(el => el.href || el.src).filter(url =>
           new URL(url, location.href).origin !== location.origin)""")
     assert linked_assets == [] and page.external_assets == []
-    assert page.request.get(journey["base"] + "/api/health").json()["code_state"] == "current"
+    assert page.request.get(journey["base"] + "/api/health/detail").json()["code_state"] == "current"
     assert not page.errors, page.errors
 
 
