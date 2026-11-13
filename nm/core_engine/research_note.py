@@ -52,31 +52,69 @@ _CASE_STATES = {"unchecked": "NM's second look at this list could not be made, s
                 "unavailable": "NM could not set out what would make this case stronger this time."}
 
 
+def case_checked_line(case):
+    """How a dispute's case was checked, in code's words (plan AN.49, D185): the line the page shows wherever the account is
+    (app.js, caseCheckedLine), said in the note too. A second look is claimed only where one was made."""
+    second = "a second look checked it and " if case.get("state") == "checked" else ""
+    return (f"This is NM's working list: {second}code looked for each quotation of law in the passage it names. It did not "
+            "go through the independent review that the sections of an answer do.")
+
+
 def _case_blocks(element):
     """Rendering v20: what makes a dispute's case stronger, as the page shows it, in the note's own order: a sub-heading, then each
     element with how it stands and the law's words (or that NM could not find them in the law it read), what to get, and what the
-    other side will rely on."""
+    other side will rely on. THE NOTE IS THE DOCUMENT OF DETAIL (plan AN.49, D185-D186, 13 Nov 2026): the account in full, as
+    the answer's own account on the page sets it out - code's line on how it was checked; each point of the papers with its
+    pages, or that its words were not found on a page; an element called shown with no point found; that no element was set
+    out; what each thing to get is for and what it helps; a law the library does not list as in force."""
     case = element.get("case") or {}
     blocks = [{"kind": "subheading", "text": element["text"], "refs": []}]
+
+    def said(text):
+        blocks.append({"kind": "paragraph", "refs": [], "text": text})
     if case.get("state") in _CASE_STATES:
-        blocks.append({"kind": "paragraph", "text": _CASE_STATES[case["state"]], "refs": []})
+        said(_CASE_STATES[case["state"]])
+    elements, to_get, other = case.get("elements") or (), case.get("to_get") or (), case.get("other_side") or ()
+    if elements or to_get or other:
+        said(case_checked_line(case))
 
     def law(given):
         if not given:
             return ""
         if not given.get("found"):
             return f' NM could not find these words in the law it read: "{given["words"]}".'
-        return f' {given["title"]}, {given["locator"]}: "{given["words"]}".'
-    for item in case.get("elements") or ():
-        blocks.append({"kind": "paragraph", "refs": [], "text": (
-            f"{_STANDS.get(item['status'], item['status'])}, {_PROVES.get(item['proves'], '')}: {item['element']}. {item['why']}"
-            + law(item.get("law")))})
-    for ask in case.get("to_get") or ():
-        blocks.append({"kind": "paragraph", "refs": [], "text": f"• To get, from {ask['from_whom']}: {ask['what']}. {ask['why']}"})
-    for item in case.get("other_side") or ():
-        blocks.append({"kind": "paragraph", "refs": [], "text": f"The other side will rely on: {item['relies_on']}. What answers it: "
-                                                                f"{item['answer']}" + law(item.get("law"))})
+        force = given["in_force"].strip() if isinstance(given.get("in_force"), str) else ""
+        place = ", ".join(part for part in (given["title"], given["locator"], force) if part)
+        return f' {place}: "{given["words"]}".'
+
+    def points(given):
+        for point in given or ():
+            if not point.get("located"):
+                said(f"Not found on a page, so it rests on nothing yet: {point['what']}")
+                continue
+            pages = "; ".join(f"{page['document']}, {page['page']}" for page in point.get("pages") or ())
+            where = f" ({pages})" if pages else ""
+            said(f"In the papers{where}: {point['what']}")
+    for item in elements:
+        said(f"{_STANDS.get(item['status'], item['status'])}, {_PROVES.get(item['proves'], '')}: {item['element']}. {item['why']}"
+             + law(item.get("law")))
+        if item.get("called") and item["called"] != item["status"]:
+            said("Called shown, but none of its points was found on its page.")
+        points(item.get("points"))
+    if not elements and case.get("state") != "unavailable":
+        said("NM set out no element for this dispute from the law it read. That is what this research returned, not a finding "
+             "that the law requires nothing.")
+    for ask in to_get:
+        serves = f" (for: {ask['for']})" if ask.get("for") else ""
+        helps = f" {ask['helps']}" if ask.get("helps") else ""
+        said(f"• To get, from {ask['from_whom']}: {ask['what']}{serves}. {ask['why']}{helps}")
+    for item in other:
+        answers = f" What answers it: {item['answer']}" if item.get("answer") else ""
+        said(f"The other side will rely on: {item['relies_on']}.{answers}" + law(item.get("law")))
+        points(item.get("points"))
     return blocks
+
+
 _SUGGESTED = {"better": "Could add or put better", "could_go": "Could go"}
 
 

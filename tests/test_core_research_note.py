@@ -167,3 +167,66 @@ def test_an_answer_laid_out_for_the_advocate_keeps_its_order_with_its_folds_open
         ("paragraph", "Could go: A paragraph repeats itself.")]
     shown = paragraphs(research_note.docx(note, row["response"]["at"]))
     assert ("More on this", "Heading3") in shown and ("How NM checked this answer", "Heading2") in shown
+
+
+def test_the_note_carries_a_disputes_case_in_full_with_how_it_was_checked():
+    """Plan AN.49 (D185, D186; piece 49h): the note is the document of detail. A dispute's case is carried in full, as the
+    answer's own account on the page sets it out, with code's line on how it was checked - a second look claimed only where
+    one was made. Invented examples."""
+    view = {"state": "checked", "elements": [
+        {"element": "Possession for the period the law requires", "proves": "client", "status": "shown",
+         "why": "The entries show it.",
+         "law": {"found": True, "kind": "provision", "title": "Imagined Relief Act, 1907", "locator": "Section 4",
+                 "words": "possession for twelve years", "source_id": "P:abc",
+                 "in_force": "not in force according to India Code (checked 19 Oct 2026)"},
+         "points": [{"what": "The entries name the client as in possession.", "located": True,
+                     "pages": [{"document": "entries.pdf", "page": "page 2", "source_id": "t1:d1p2"},
+                               {"document": "entries.pdf", "page": "page 3", "source_id": "t1:d1p3"}]}]},
+        {"element": "Notice before the suit", "proves": "client", "status": "missing", "called": "shown",
+         "why": "Nothing shows it.", "law": None,
+         "points": [{"what": "The client says the notice went by post.", "located": False, "pages": []}]}],
+        "to_get": [{"what": "The postal receipt", "from_whom": "the client", "why": "It proves the date of posting.",
+                    "helps": "It shows the notice was sent in time.", "for": "Notice before the suit"}],
+        "other_side": [{"relies_on": "Their later entry", "answer": "", "law": None,
+                        "points": [{"what": "The entry is dated after the suit.", "located": True,
+                                    "pages": [{"document": "register.pdf", "page": "page 9", "source_id": "t1:d2p9"}]}]}]}
+    blocks = research_note._case_blocks({"kind": "CASE", "text": "What makes the case stronger", "case": view})
+    assert [block["text"] for block in blocks] == [
+        "What makes the case stronger",
+        "This is NM's working list: a second look checked it and code looked for each quotation of law in the passage it "
+        "names. It did not go through the independent review that the sections of an answer do.",
+        "Shown by the papers, for the client to prove: Possession for the period the law requires. The entries show it. "
+        "Imagined Relief Act, 1907, Section 4, not in force according to India Code (checked 19 Oct 2026): "
+        '"possession for twelve years".',
+        "In the papers (entries.pdf, page 2; entries.pdf, page 3): The entries name the client as in possession.",
+        "Not yet shown, for the client to prove: Notice before the suit. Nothing shows it.",
+        "Called shown, but none of its points was found on its page.",
+        "Not found on a page, so it rests on nothing yet: The client says the notice went by post.",
+        "• To get, from the client: The postal receipt (for: Notice before the suit). It proves the date of posting. "
+        "It shows the notice was sent in time.",
+        "The other side will rely on: Their later entry.",
+        "In the papers (register.pdf, page 9): The entry is dated after the suit."]
+    assert blocks[0]["kind"] == "subheading" and all(block["kind"] == "paragraph" and block["refs"] == []
+                                                     for block in blocks[1:])
+    # Nothing set out is said, never read as the law requiring nothing; a case NM could not set out carries no line on
+    # how a list was checked, as there is no list.
+    for state, said in (("checked", ["NM set out no element for this dispute from the law it read. That is what this "
+                                     "research returned, not a finding that the law requires nothing."]),
+                        ("unavailable", ["NM could not set out what would make this case stronger this time."])):
+        empty = research_note._case_blocks({"kind": "CASE", "text": "What makes the case stronger",
+                                            "case": {"state": state, "elements": [], "to_get": [], "other_side": []}})
+        assert [block["text"] for block in empty][1:] == said, state
+
+
+def test_the_notes_line_on_how_a_case_was_checked_is_the_pages_line():
+    """The note and the page say one line (plan AN.49, D185): the page's own words, read from app.js, for a case a second
+    look checked and for one it did not."""
+    import re
+    from pathlib import Path
+    page = (Path(__file__).resolve().parents[1] / "nm" / "app" / "app.js").read_text(encoding="utf8")
+    body = page[page.index("function caseCheckedLine(view) {"):]
+    body = body[body.index("return ") + len("return "):body.index(";\n}")]
+    for state, second in (("checked", "a second look checked it and "), ("unchecked", "")):
+        said = body.replace("${view && view.state === 'checked' ? 'a second look checked it and ' : ''}", second)
+        shown = "".join(quoted or plain for quoted, plain in re.findall(r"`([^`]*)`|'([^']*)'", said))
+        assert research_note.case_checked_line({"state": state}).replace("'", "\u2019") == shown, state

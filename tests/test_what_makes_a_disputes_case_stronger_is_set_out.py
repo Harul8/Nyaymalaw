@@ -153,10 +153,13 @@ def test_the_research_note_keeps_what_makes_the_case_stronger_as_the_page_shows_
     assert [block["text"] for block in blocks] == [
         "What makes the case stronger",
         "NM's second look at this list could not be made, so it stands as first set out.",
+        # Plan AN.49 (D185): how the account was checked, in code's words; no second look is claimed where none was made.
+        "This is NM's working list: code looked for each quotation of law in the passage it names. It did not go through the "
+        "independent review that the sections of an answer do.",
         "Shown only weakly, for the client to prove: Possession for the period the law requires. Only one entry shows it. "
         'Imagined Relief Act, 1907, Section 4: "possession for twelve years".',
         "Not yet shown, for the client to prove: Notice before the suit. Nothing shows it. NM could not find these words in the law "
         'it read: "notice in writing".',
-        "• To get, from the client: The postal receipt. It proves the date of posting.",
+        "• To get, from the client: The postal receipt (for: Notice before the suit). It proves the date of posting.",
         "The other side will rely on: Their later entry. What answers it: It was made after the suit."]
     assert blocks[0]["kind"] == "subheading" and all(block["kind"] == "paragraph" for block in blocks[1:])
