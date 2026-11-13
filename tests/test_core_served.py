@@ -292,7 +292,8 @@ def test_lost_save_acknowledgement_returns_durable_receipt_without_reexecution(s
     assert len(served.model.calls) == 9
 
 
-def test_unconfirmed_save_retry_only_reads_receipt_and_never_reexecutes_effects(served, monkeypatch):
+def unconfirmed_save(served, monkeypatch):
+    """The answer's save fails with an OS error whose write may yet land: its outcome is unknown. Returns the save not made."""
     original = served.store.commit
     pending = []
     def fail(matter, **kwargs):
@@ -309,17 +310,30 @@ def test_unconfirmed_save_retry_only_reads_receipt_and_never_reexecutes_effects(
     assert "Counsel" not in response.text
     no_answer_saved(served)
     monkeypatch.setattr(served.store, "commit", original)
-    unconfirmed = send(served)
-    assert unconfirmed.status_code == 503
-    assert unconfirmed.json()["detail"]["code"] == "attempt_unconfirmed"
-    assert len(served.model.calls) == 9
-    no_answer_saved(served)
+    return original, pending[0]
+
+
+def test_unconfirmed_save_retry_only_reads_receipt_and_never_reexecutes_effects(served, monkeypatch):
+    original, (matter, kwargs) = unconfirmed_save(served, monkeypatch)
     # A delayed confirmation supplies the exact original candidate. A retry
     # reads that durable receipt; it does not generate or apply another effect.
-    original(pending[0][0], **pending[0][1])
+    original(matter, **kwargs)
     reply = successful(served)
     assert reply["replayed"] and len(served.model.calls) == 9
     assert len(served.store.load(chat_matter_id(OWNER, reply["chat_id"])).brain_chat) == 1
+
+
+def test_an_unconfirmed_save_is_settled_by_the_next_request_and_a_late_write_cannot_make_a_second_answer(served, monkeypatch):
+    """Plan AN.50 (50b2, D188): the message is never refused for ever. The next request reads the conversation, finds no answer
+    saved, and works the message again; the first save's write, landing late, is refused by the version-checked save."""
+    original, (matter, kwargs) = unconfirmed_save(served, monkeypatch)
+    reply = successful(served)
+    assert not reply["replayed"] and len(served.model.calls) > 9, "worked again, the first answer never having been saved"
+    from nm.shared.store_port import StaleWrite
+    with pytest.raises(StaleWrite):
+        original(matter, **kwargs)
+    assert len(served.store.load(chat_matter_id(OWNER, reply["chat_id"])).brain_chat) == 1
+    assert successful(served)["replayed"]
 
 
 def test_review_correction_rechecks_complete_context_and_saves_once(served):

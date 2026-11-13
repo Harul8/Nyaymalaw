@@ -1083,7 +1083,9 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
     binding = digest({"request": context.request, "version": committed_version(context.rows),
                       "previous": context.rows[-1]["digest"] if context.rows else None})
     try:
-        claim = attempts.claim(identity, binding)
+        # Plan AN.50 (50b2, D188): the conversation was read just now and holds no answer to this request (one saved is
+        # returned above, without a claim), so an attempt whose save could not be confirmed is settled here and goes on.
+        claim = attempts.claim(identity, binding, unsaved=True)
     except AttemptRefused as exc:
         raise _attempt_refusal(exc) from exc
     token = claim["token"]
