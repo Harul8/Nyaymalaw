@@ -368,10 +368,7 @@ def alive_on(root: str | Path) -> list[str]:
             found.append(path.stem)
             continue
         held.release()
-        try:
-            path.unlink()
-        except OSError:
-            pass  # removed again when next looked at
+        discard(path)  # where it could not be removed, it is removed when next looked at
     return found
 
 
@@ -426,6 +423,19 @@ _LINE_FORMAT = 1
 #: wheel can run the suite, and dressing that in envelope encryption would
 #: make an explicitly insecure mode look like the secure one.
 _INSECURE = "xor-keystream(NOT-SECURE)"
+
+#: Plan AN.50 (50e, D191): the folder of a store where each matter's last
+#: save is recorded beside it - its version and a hash of what was saved -
+#: and the shape of that record.
+_SAVED = "saved-versions"
+_SAVED_FORMAT = 1
+
+
+class RolledBack(ValueError):
+    """The matter file on disk is not the one this store last saved: an older
+    copy has been put in its place, or another file at the same version (plan
+    AN.50, 50e, D191; the review's F-13). It is refused, never loaded as the
+    current conversation and never saved over."""
 
 
 
@@ -532,11 +542,95 @@ class FileMatterStore:
         p = self._path(matter_id)
         if not p.exists():
             return None
-        matter = _matter(json.loads(
-            self._open(str(matter_id), p.read_bytes()).decode("utf8")))
+        return self._read(str(matter_id), p)
+
+    def _read(self, matter_id: str, path: Path) -> Matter:
+        """One saved matter file, opened, checked to be the matter its name
+        says and (plan AN.50, 50e) the file this store last saved there."""
+        data = self._open(matter_id, path.read_bytes())
+        matter = _matter(json.loads(data.decode("utf8")))
         if matter.id != matter_id:
             raise ValueError("the saved matter identity conflicts with its storage name")
+        self._check_last_saved(matter_id, matter.version, data)
         return matter
+
+    # ------------------------------------------- the record of the last save ---
+    #
+    # AN OLDER COPY IS NOTICED (plan AN.50, 50e, D191; the review's F-13). The
+    # only evidence of which save a matter file is was the version number
+    # inside it, so an older copy put back in its place - by a restore of some
+    # files and not others, a copying tool, a hand - loaded cleanly as the
+    # current conversation and accepted new saves on top (measured, 11 Nov
+    # 2026). Each save now leaves a small record beside the matter, written
+    # inside the save's own lock: the version saved and a hash of what was
+    # saved. A file below its record is refused.
+    #
+    # THE HASH IS OF WHAT WAS SAVED, BEFORE SEALING, so sealing the same matter
+    # again under a new secret (the key rotation, 50d) leaves it the file that
+    # was saved. The record holds no client words and is not sealed, like the
+    # metrics.
+    #
+    # WHAT IT IS NOT. It is not a seal against tampering: whoever can replace
+    # the file can remove the record. It notices accidents. A matter with no
+    # record (saved before there were any), or one whose record cannot be
+    # read, is NOT ASSESSED and loads as it did; its next save writes the
+    # record. A folder restored whole brings its records with it and loads as
+    # the backup left it: that is a restore, and the operator chose it.
+
+    def _saved_path(self, matter_id: str) -> Path:
+        return self._root / _SAVED / f"{_storage_component(matter_id, kind='matter ID')}.json"
+
+    def _last_saved(self, matter_id: str) -> tuple[int, str] | None:
+        """The version and hash this store last saved for the matter, or None
+        where that is not known."""
+        try:
+            record = json.loads(self._saved_path(matter_id).read_text(encoding="utf8"))
+        except (OSError, ValueError):
+            return None
+        if (not isinstance(record, dict) or record.get("format") != _SAVED_FORMAT
+                or type(record.get("version")) is not int or not isinstance(record.get("sha256"), str)):
+            return None
+        return record["version"], record["sha256"]
+
+    def _check_last_saved(self, matter_id: str, version: int, data: bytes) -> None:
+        known = self._last_saved(matter_id)
+        if known is None or version > known[0]:
+            # Not assessed, or AHEAD of its record: a save whose record was not
+            # written (the process ended between the two, or code from before
+            # there were records saved it). Forward is never a rollback.
+            return
+        if version < known[0]:
+            raise RolledBack(
+                f"matter {matter_id} was last saved at version {known[0]} and the file "
+                f"in its place is version {version}: an older copy. It is not loaded as "
+                "current. Put back the file that was saved; or, where the older copy is "
+                f"the one meant, stop the server and remove {_SAVED}/{matter_id}.json.")
+        if hashlib.sha256(data).hexdigest() != known[1]:
+            raise RolledBack(
+                f"matter {matter_id} is at version {version}, as last saved, and is not "
+                "the file that was saved: another copy has been put in its place. It is "
+                "not loaded as current.")
+
+    def _record_last_saved(self, matter_id: str, version: int, data: bytes) -> None:
+        """Called inside the matter's lock, after its file is in place. A
+        record that could not be written leaves the file ahead of its record,
+        which loads and which the next save mends - so it never fails a save
+        that has happened."""
+        path = self._saved_path(matter_id)
+        record = json.dumps({"format": _SAVED_FORMAT, "version": version,
+                             "sha256": hashlib.sha256(data).hexdigest()}).encode("utf8")
+        tmp = None
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            fd, tmp = tempfile.mkstemp(dir=str(path.parent), suffix=".tmp")
+            with os.fdopen(fd, "wb") as fh:
+                fh.write(record)
+                fh.flush()
+                os.fsync(fh.fileno())
+            os.replace(tmp, path)
+        except OSError:
+            if tmp is not None:
+                discard(Path(tmp))
 
     def commit(self, matter: Matter, *, expected_version: int) -> Matter:
         """Write the matter, or refuse because the file moved underneath.
@@ -571,9 +665,8 @@ class FileMatterStore:
                     f"{current.version} while this turn was deriving. Re-derive "
                     f"against the current state rather than overwriting it."
                 )
-            blob = self._seal(
-                str(matter.id), json.dumps(_enc(matter)).encode("utf8"),
-                create_key=current is None)
+            data = json.dumps(_enc(matter)).encode("utf8")
+            blob = self._seal(str(matter.id), data, create_key=current is None)
             # Atomic: a crash mid-write leaves the previous file intact.
             fd, tmp = tempfile.mkstemp(dir=str(self._matters), suffix=".tmp")
             try:
@@ -588,6 +681,7 @@ class FileMatterStore:
                 # replace the exception that says what actually went wrong.
                 discard(Path(tmp))
                 raise
+            self._record_last_saved(str(matter.id), matter.version, data)
             return matter
 
     @contextmanager
@@ -637,10 +731,7 @@ class FileMatterStore:
         for p in sorted(self._matters.glob("*.nm")):
             try:
                 _storage_component(p.stem, kind="matter ID")
-                m = _matter(json.loads(
-                    self._open(p.stem, p.read_bytes()).decode("utf8")))
-                if m.id != p.stem:
-                    raise ValueError("the saved matter identity conflicts with its storage name")
+                m = self._read(p.stem, p)
             except Exception:  # noqa: BLE001 -- named, never swallowed
                 # One unreadable matter must not take the whole list down, and
                 # it must not VANISH either. It used to `continue` here with a
