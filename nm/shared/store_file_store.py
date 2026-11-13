@@ -57,6 +57,24 @@ class EncryptionNotConfigured(RuntimeError):
     """
 
 
+#: Plan AN.50 (50g, D193; the review's F-34): the shape of a saved matter, as a
+#: number each saved matter says. MOVE IT ON BY ONE whenever a field is added
+#: to, taken from or renamed in any type a matter is rebuilt from (`_decode`):
+#: tests/test_a_saved_matter_says_its_format.py pins the shape of each number
+#: and fails when the shape has changed and the number has not. Code that
+#: reads a lower number reads it as that number's code wrote it; it never
+#: opens a higher one.
+MATTER_FORMAT = 1
+_FORMAT_KEY = "stored_format"
+
+
+class SavedShapeUnknown(ValueError):
+    """The saved matter holds what this code would drop: it says a format newer
+    than this code reads, or says this code's format and holds a field this
+    code does not declare. It is refused - not opened, so never saved back
+    without what the newer code kept in it (plan AN.50, 50g, D193; P46)."""
+
+
 _STORAGE_COMPONENT = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}\Z")
 
 
@@ -185,7 +203,7 @@ def _enc(obj):
     return obj
 
 
-def _decode(cls, value):
+def _decode(cls, value, strict=False):
     """Rebuild a dataclass from its own field list, not from a hand-written one.
 
     `_enc` uses `asdict` and therefore encodes every field a type has. The
@@ -198,6 +216,12 @@ def _decode(cls, value):
     of drifting. `tests/test_store_roundtrip.py` populates every field of every
     persisted type and asserts equality, so the day one stops surviving is the
     day the build goes red.
+
+    strict (plan AN.50, 50g): the record says it is of this code's own format,
+    so a saved field this code does not declare is REFUSED and never dropped.
+    Without it - a matter saved before matters said their format, or of an
+    earlier format - a field this code does not declare is left behind as it
+    always was: it cannot be told from one this code's authors took away.
     """
     if value is None:
         return None
@@ -205,11 +229,11 @@ def _decode(cls, value):
     origin = get_origin(cls)
     if origin in (Union, UnionType):
         inner = [a for a in get_args(cls) if a is not type(None)]
-        return _decode(inner[0], value) if inner else value
+        return _decode(inner[0], value, strict) if inner else value
     if origin in (tuple, list, set, frozenset):
         args = get_args(cls)
         item = args[0] if args else None
-        seq = [_decode(item, v) if item else v for v in value]
+        seq = [_decode(item, v, strict) if item else v for v in value]
         # BACK TO THE DECLARED TYPE. A field declared `frozenset[str]`
         # that returns a list is the exact shape this decoder was
         # rewritten to prevent -- encoded faithfully, restored as
@@ -229,9 +253,17 @@ def _decode(cls, value):
                 declared = {field.name for field in fields(cls)}
                 if not isinstance(value, dict) or set(value) != declared:
                     raise ValueError(f"{cls.__name__} stored fields do not match its closed schema")
+            if strict and isinstance(value, dict):
+                unknown = sorted(set(value) - {field.name for field in fields(cls)})
+                if unknown:
+                    # The names only: what a field holds may be client words.
+                    raise SavedShapeUnknown(
+                        f"a saved {cls.__name__} holds fields this code does not declare "
+                        f"({', '.join(map(str, unknown))}) in a matter that says it is format "
+                        f"{MATTER_FORMAT}: it is not opened, so they are not dropped")
             hints = get_type_hints(cls)
             return cls(**{f.name: _decode(hints.get(f.name, object),
-                                          value.get(f.name))
+                                          value.get(f.name), strict)
                           for f in fields(cls) if f.name in value})
         if issubclass(cls, Enum):
             return cls(value)
@@ -244,7 +276,24 @@ def _fact(d: dict) -> Fact:
     return _decode(Fact, d)
 
 
-def _matter(d: dict) -> Matter:
+def _said_format(document):
+    """A saved matter's document without the format it says, and whether it is
+    of this code's own format (plan AN.50, 50g). A matter saved before matters
+    said their format says none and is read as it always was."""
+    if not isinstance(document, dict) or _FORMAT_KEY not in document:
+        return document, False
+    said = document[_FORMAT_KEY]
+    if type(said) is not int or said < 1:
+        raise SavedShapeUnknown("the saved matter's format is not a number this code knows")
+    if said > MATTER_FORMAT:
+        raise SavedShapeUnknown(
+            f"this matter was saved as format {said} and this code reads up to format "
+            f"{MATTER_FORMAT}: newer code saved it. It is not opened by this version, so "
+            "nothing the newer code kept in it is dropped; run the version that saved it")
+    return {key: value for key, value in document.items() if key != _FORMAT_KEY}, said == MATTER_FORMAT
+
+
+def _matter(d: dict, strict: bool = False) -> Matter:
     """THE SAME SYMMETRY, at the top level.
 
     This was a hand-written field list for one release longer than the
@@ -254,7 +303,7 @@ def _matter(d: dict) -> Matter:
 
     There is now no hand-written decoder anywhere in this module.
     """
-    return _decode(Matter, d)
+    return _decode(Matter, d, strict)
 
 
 # ------------------------------------------------------------------ store ---
@@ -548,7 +597,7 @@ class FileMatterStore:
         """One saved matter file, opened, checked to be the matter its name
         says and (plan AN.50, 50e) the file this store last saved there."""
         data = self._open(matter_id, path.read_bytes())
-        matter = _matter(json.loads(data.decode("utf8")))
+        matter = _matter(*_said_format(json.loads(data.decode("utf8"))))
         if matter.id != matter_id:
             raise ValueError("the saved matter identity conflicts with its storage name")
         self._check_last_saved(matter_id, matter.version, data)
@@ -665,7 +714,7 @@ class FileMatterStore:
                     f"{current.version} while this turn was deriving. Re-derive "
                     f"against the current state rather than overwriting it."
                 )
-            data = json.dumps(_enc(matter)).encode("utf8")
+            data = json.dumps({**_enc(matter), _FORMAT_KEY: MATTER_FORMAT}).encode("utf8")
             blob = self._seal(str(matter.id), data, create_key=current is None)
             # Atomic: a crash mid-write leaves the previous file intact.
             fd, tmp = tempfile.mkstemp(dir=str(self._matters), suffix=".tmp")
