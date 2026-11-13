@@ -42,12 +42,21 @@ class ReadingJobs:
     """What waits for the AI read as a background job the page asks after, with page-by-page progress (plan AN.25, P4): one request
     no longer holds the browser for the 80 seconds or more a long scan takes, which a proxy that cuts requests at 60 would refuse.
     A job is the advocate's own - keyed by them and the document - and is kept for KEPT seconds after it ends, so the page that asks
-    after it can read how it ended."""
+    after it can read how it ended.
+
+    ONE ADVOCATE HAS AT_ONCE READINGS AT ONCE (plan AN.53, 53d2; D219, D235; the review's F-29). Each reading began a thread of
+    its own the moment it was asked for, with no count. A reading asked for beyond the count is not refused: it waits, in the
+    order asked, shown as a reading that has not yet read a page, and begins when one of that advocate's ends. What waits holds
+    no thread. Another advocate's readings are not held up."""
 
     KEPT = 600.0
+    #: The most of one advocate's readings that run at once: the most papers one message carries (TURN_DOCUMENT_LIMIT).
+    AT_ONCE = 10
 
     def __init__(self, clock=time.monotonic):
         self._jobs, self._lock, self._clock = {}, threading.Lock(), clock
+        #: For each advocate: how many readings are running, and those that wait their turn, in the order asked.
+        self._running, self._waiting = {}, {}
 
     def start(self, advocate_id, ref, total, work, explain):
         """Begin work(progress) -> the document's summary, unless this document is already being read, and say where it stands.
@@ -78,10 +87,31 @@ class ReadingJobs:
                              "code": "document_reading_failed"}
             with self._lock:
                 job.update(state="failed" if error else "done", document=document, error=error, ended=self._clock())
+                # Its place goes to the one of this advocate's that has waited longest; with none waiting, it is given up.
+                waiting = self._waiting.get(advocate_id)
+                following = waiting.pop(0) if waiting else None
+                if following is None:
+                    self._running[advocate_id] -= 1
+                    if not self._running[advocate_id]:
+                        del self._running[advocate_id]
+                        self._waiting.pop(advocate_id, None)
+            if following is not None:
+                self._begin(following)
 
-        threading.Thread(target=run, daemon=True, name="nm-document-reading").start()
+        with self._lock:
+            begins = self._running.get(advocate_id, 0) < self.AT_ONCE
+            if begins:
+                self._running[advocate_id] = self._running.get(advocate_id, 0) + 1
+            else:
+                self._waiting.setdefault(advocate_id, []).append(run)
+        if begins:
+            self._begin(run)
         with self._lock:
             return self._shown(job)
+
+    @staticmethod
+    def _begin(run):
+        threading.Thread(target=run, daemon=True, name="nm-document-reading").start()
 
     def status(self, advocate_id, ref):
         """Where this advocate's reading of the document stands, or None where there is none (never begun, long over, or lost when
