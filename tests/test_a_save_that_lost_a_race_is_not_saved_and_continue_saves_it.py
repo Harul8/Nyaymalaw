@@ -5,7 +5,9 @@ the conversation's title once did. The refusal writes nothing, and a clean reloa
 outcome known: not saved. It used to be said as 'could not be confirmed', and the message's attempt was then refused for ever.
 Now the answer is kept and Continue saves it on the conversation as it then stands, with no model call. An outcome still
 unknown - an OS error whose write may yet land, or a reload that fails - stays 'unconfirmed' (tests/test_core_served.py keeps
-that case). Offline: the scripted model and a temporary store; the words are invented.
+that case). Plan AN.50 (50c, D189): nothing writes beside the conversation once its final save begins, so the late title that
+once moved it, and a message queued meanwhile, now wait for the save and are written on the conversation as saved. Offline: the
+scripted model and a temporary store; the words are invented.
 """
 import threading
 import time
@@ -15,7 +17,7 @@ import pytest
 
 from nm.core_engine import titles, turn
 from nm.core_engine.conversation import (
-    SHOWN, ConversationRefused, commit_turn, hold_shown, open_turn, sent, shown_of, title_of,
+    HEADER, SHOWN, ConversationRefused, commit_turn, hold_shown, open_turn, queued_of, sent, shown_of, title_of,
 )
 from nm.shared.store_file_store import FileMatterStore
 from nm.shared.store_port import StaleWrite
@@ -79,58 +81,84 @@ def test_a_write_beside_is_made_again_only_where_nothing_it_rewrites_was_changed
     assert shown_of(store.load(context.matter.id))["elements"] == [{"text": "Another's part."}]
 
 
-def late_title(served, monkeypatch, *, keeping_fails=False):
-    """The review's trigger, reproduced: the conversation's title, still being written when the answer is ready, lands after
-    the turn has stopped waiting for it and moves the conversation's version under the final save. keeping_fails: the store
-    will not take the turn's record of why it stopped either. Returns the store's own save."""
+def landing_under_the_save(served, monkeypatch, write):
+    """As the answer's final save begins, write(matter) starts another write beside the conversation and is given a second to
+    land under the save. Returns what landed (one bool) and the store's own save."""
+    landed, original_commit = [], served.store.commit
+
+    def saving(matter, **kwargs):
+        if matter.brain_chat and not landed:
+            arrived = write(matter)
+            deadline = time.monotonic() + 1
+            while not arrived(served.store.load(matter.id)) and time.monotonic() < deadline:
+                time.sleep(0.01)
+            landed.append(arrived(served.store.load(matter.id)))
+        return original_commit(matter, **kwargs)
+    monkeypatch.setattr(served.store, "commit", saving)
+    return landed, original_commit
+
+
+def until(condition, seconds=30):
+    deadline = time.monotonic() + seconds
+    while not condition() and time.monotonic() < deadline:
+        time.sleep(0.01)
+    return condition()
+
+
+def test_a_title_arriving_after_the_wait_and_before_the_save_waits_for_the_save_and_is_then_kept_with_it(served, monkeypatch):
+    """Plan AN.50 (50c, D189; the review's trigger for F-07): the conversation's title, still being written when the answer is
+    ready, arrives after the turn has stopped waiting for it and before the answer is saved. It once moved the conversation
+    under the save, which was then refused. Nothing writes beside the conversation once the final save begins: the title waits
+    for the save and is then written on the conversation as saved."""
     monkeypatch.setattr(turn, "TITLE_WAIT", 0.05)
-    release, original_call, original_commit = threading.Event(), served.model.structured, served.store.commit
+    release, original_call = threading.Event(), served.model.structured
 
     def calling(prompt, schema, tier, **kwargs):
         if prompt.operation == titles.OPERATION:
-            release.wait(30)  # the title is slow: it is written only once the final save has begun
+            release.wait(30)  # the title is slow: it is ready only once the final save has begun
         return original_call(prompt, schema, tier, **kwargs)
-
-    def saving(matter, **kwargs):
-        if matter.brain_chat and not release.is_set():
-            release.set()
-            deadline = time.monotonic() + 30
-            while title_of(served.store.load(matter.id)) is None and time.monotonic() < deadline:
-                time.sleep(0.01)
-        if keeping_fails and ((matter.intake_answers or {}).get("core_shown") or {}).get("stopped"):
-            raise OSError("Synthetic store that will not take the stop")
-        return original_commit(matter, **kwargs)
     monkeypatch.setattr(served.model, "structured", calling)
-    monkeypatch.setattr(served.store, "commit", saving)
-    return original_commit
+    landed, _ = landing_under_the_save(served, monkeypatch,
+                                       lambda matter: release.set() or (lambda saved: title_of(saved) is not None))
+    saved = successful(served)
+    assert landed == [False], "the title did not move the conversation under the save"
+    assert until(lambda: title_of(served.store.list_for(OWNER).matters[0]) is not None), "the title is written after it"
+    (matter,) = served.store.list_for(OWNER).matters
+    assert len(matter.brain_chat) == 1 and matter.brain_chat[0]["response"]["elements"] == saved["elements"]
 
 
-def test_a_save_refused_because_a_late_title_moved_the_conversation_is_not_saved_and_continue_saves_it_with_no_model_call(
-        served, monkeypatch):
-    original_commit = late_title(served, monkeypatch)
-    reply = send(served)
-    assert reply.status_code == 409, reply.text
-    detail = reply.json()["detail"]
-    assert (detail["code"], detail["committed"], detail["retryable"], detail.get("kept")) == (
-        "not_saved", "not_committed", True, True)
-    assert "elements" not in detail, "a refusal carries no answer"
+def test_a_message_queued_as_the_answer_is_saved_waits_for_the_save_and_is_then_kept_with_it(served, monkeypatch):
+    """Plan AN.50 (50c, D189): what waits to be sent, written by the turn's own writer while the answer is being saved, waits for
+    the save and is then written on the conversation as saved - neither write undoes the other."""
+    waiting, queuing = [{"text": "Then the second notice.", "documents": []}], []
+
+    def queue(matter):
+        queuing.append(threading.Thread(target=served.app.save_queued, kwargs={
+            "advocate_id": OWNER, "chat_id": matter.intake_answers[HEADER]["chat_id"], "queued": waiting}))
+        queuing[0].start()
+        return lambda saved: queued_of(saved) == waiting
+    landed, _ = landing_under_the_save(served, monkeypatch, queue)
+    saved = successful(served)
+    queuing[0].join(30)
+    assert landed == [False] and not queuing[0].is_alive()
     (matter,) = served.store.list_for(OWNER).matters
-    held = shown_of(matter)
-    assert matter.brain_chat == () and held["stopped"]["code"] == "not_saved" and held["steps"]["answered"]["sections"]
-    assert title_of(matter) is not None, "the title that moved the conversation is kept"
-    calls = len(served.model.calls)
-    monkeypatch.setattr(served.store, "commit", original_commit)
-    saved = successful(served)  # Continue: the same message sent again
-    assert len(served.model.calls) == calls, "the kept answer is saved with no model call"
-    assert not saved["replayed"] and saved["elements"] == held["elements"]
-    (matter,) = served.store.list_for(OWNER).matters
-    assert len(matter.brain_chat) == 1 and title_of(matter) is not None, "saved on the conversation as it now stands"
-    assert successful(served)["replayed"], "and only once"
+    assert len(matter.brain_chat) == 1 and matter.brain_chat[0]["response"]["elements"] == saved["elements"]
+    assert queued_of(matter) == waiting, "what waits is kept with the saved answer"
 
 
 def test_an_answer_the_store_would_not_keep_is_not_said_to_be_kept(served, monkeypatch):
-    """Plan AN.50 (50b3): 'kept' is said only where the turn's record of why it stopped was written."""
-    original_commit = late_title(served, monkeypatch, keeping_fails=True)
+    """Plan AN.50 (50b3): 'kept' is said only where the turn's record of why it stopped was written. A write from outside the
+    turn moves the conversation under the save, and the store will not take the record of why the turn stopped either."""
+    original_commit = served.store.commit
+
+    def racing(matter, **kwargs):
+        if matter.brain_chat and not racing.moved:
+            racing.moved = renamed_meanwhile(served.store, matter.id)
+        if ((matter.intake_answers or {}).get(SHOWN) or {}).get("stopped"):
+            raise OSError("Synthetic store that will not take the stop")
+        return original_commit(matter, **kwargs)
+    racing.moved = None
+    monkeypatch.setattr(served.store, "commit", racing)
     reply = send(served)
     assert reply.status_code == 409, reply.text
     detail = reply.json()["detail"]

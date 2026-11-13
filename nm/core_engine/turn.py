@@ -1149,8 +1149,16 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
     if estimated is not None:
         report("tentative", seconds=estimated)
 
+    # Plan AN.50 (50c, D189): nothing writes beside the conversation once its final save begins - the save holds the lock each such
+    # write takes - and a write that waited for it (a late title, a message queued meanwhile) is made on the conversation as saved.
+    final = {"saved": False}
+
     def write_beside(change):
         with beside:
+            if final["saved"]:
+                current = store.load(holder["context"].matter.id)
+                if current is not None and current.advocate_id == holder["context"].matter.advocate_id:
+                    holder["context"] = replace(holder["context"], matter=current)
             holder["context"] = change(holder["context"])
     if attach is not None:
         attach(advocate_id, context.chat_id, write_beside)
@@ -1421,13 +1429,19 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
         # 48e (D140): each step's tentative time beside the time it took, kept with the answer's own record.
         metrics = {**metrics, "steps_timed": stepwise.timed(go, estimated, time.monotonic() - began)["times"]}
     try:
-        response = commit_turn(store, holder["context"], elements=elements, activities=activity,
-                               records=checklist.records(context.payload(), activity),
-                               metrics=metrics, session_current=session_current,
-                               **({"service_status": PARTLY_SAID.format(written=partly[0], of=partly[1])} if partly else {}))
+        records = checklist.records(context.payload(), activity)
+        partly_said = {"service_status": PARTLY_SAID.format(written=partly[0], of=partly[1])} if partly else {}
+        with beside:  # 50c: the final save holds the lock every write beside the conversation takes, so none lands under it
+            try:
+                response = commit_turn(store, holder["context"], elements=elements, activities=activity, records=records,
+                                       metrics=metrics, session_current=session_current, **partly_said)
+            except ConversationRefused as exc:
+                final["saved"] = exc.committed == "committed"
+                raise
+            final["saved"] = True
     except ConversationRefused as exc:
-        # A subsequent request checks the durable response before the attempt.
-        # Unconfirmed ownership never permits repeating the effect.
+        # A later request reads the conversation before the attempt (plan AN.50, 50b2b): an answer saved is returned with no model
+        # call, one known not saved is kept for Continue (below), and an outcome that could not be confirmed is settled by it.
         state = {"committed": "finished", "not_committed": "retryable"}.get(exc.committed, "unconfirmed")
         if state == "retryable":
             # Plan AN.41: the finished answer is kept for Continue, which saves it.
