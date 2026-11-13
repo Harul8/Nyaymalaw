@@ -33,6 +33,7 @@ from pathlib import Path
 
 from cryptography.fernet import Fernet
 
+from nm.shared.storage_errors_port import StoredObjectUnreadable
 from nm.shared.store_envelope import (
     CrossMatterAccess,
     KeyUnavailable,
@@ -46,6 +47,17 @@ from nm.shared.store_envelope import (
 #: One small write, so this is generous rather than tight.
 KEY_RECORD_TIMEOUT = 5.0
 _POLL = 0.02
+
+#: The format a sealed record says it is: written by `seal`, checked by `open`
+#: (plan AN.50, 50g, D193). Every sealed record has carried it since there were
+#: any, so a record without it was not written by `seal`.
+SEALED_FORMAT = 1
+
+
+class SealedFormatUnknown(StoredObjectUnreadable):
+    """The sealed record says it is of a format this code does not read: code
+    newer than this one wrote it. It is refused, never opened as if it were the
+    format this code knows (plan AN.50, 50g; the review's F-34)."""
 
 
 def is_envelope(blob: bytes) -> bool:
@@ -154,7 +166,7 @@ class MatterSealer:
                 raise KeyUnavailable("The matter key is unavailable; no new key was created.")
             _, data_key = self._read_key(matter_id, path)
         return json.dumps({
-            "envelope": 1,
+            "envelope": SEALED_FORMAT,
             "matter_id": matter_id,
             "ciphertext": base64.b64encode(
                 self._cipher(data_key).encrypt(data)).decode("ascii"),
@@ -169,6 +181,14 @@ class MatterSealer:
         except Exception as exc:  # noqa: BLE001 -- unreadable is not empty
             raise WrappedKeyUnreadable(
                 f"sealed record is unreadable: {exc}") from exc
+        said = doc.get("envelope") if isinstance(doc, dict) else None
+        if type(said) is not int or said != SEALED_FORMAT:
+            # THE NUMBER WAS WRITTEN AND NEVER READ (F-34). A record of another
+            # format opened as this one is read by rules it was not written to.
+            raise SealedFormatUnknown(
+                f"this sealed record says it is format {said!r} and this code reads "
+                f"format {SEALED_FORMAT}: it was not written by this version of NM and "
+                "is not opened as if it had been")
         if belongs_to != str(matter_id):
             # THE RECORD NAMES ITS OWN MATTER, so a record moved under another
             # matter's name is caught here rather than producing a confusing
