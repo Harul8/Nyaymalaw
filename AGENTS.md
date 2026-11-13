@@ -249,8 +249,13 @@ boundary so the change applies to comparable matters and requests. Use the
 observed case as a regression example, not as a condition, keyword, prompt
 exception, or dispute-specific branch. Remove redundant paths rather than
 layering another special case on top.
-Use one turn-owned ledger for conditional corrections and semantic recovery;
-nested activities cannot reset its bound. Trigger recovery from typed owned
+Use one turn-owned ledger for conditional corrections and semantic recovery.
+Its total is durable per turn: no retry, restart, Continue, step or steer
+resets it, and nested activities cannot reset it. Within that total each scope
+(the shared steps, each section, each edit) has its own small allowance, which
+starts afresh with each run of the turn. Two small auxiliary calls, the
+conversation's title and the reader of a message sent while a matter waits,
+each ask once more on their own, outside the ledger. Trigger recovery from typed owned
 failures and preserve the complete original sources for rechecking. A completed
 provider object rejected for shape may be quarantined only for explicit per-unit
 owner validation; it remains rejected until its required admission checks pass.

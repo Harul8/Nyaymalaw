@@ -101,11 +101,26 @@ class OwnRequestRejected(Exception):
 
 
 class TurnCalls:
-    """Construct once per turn; pass this same object to every model stage.
+    """Construct once per run of a turn; pass this same object to every model stage of it.
 
     The model adapter owns bounded transport retries and the durable dollar cap.
     This owner bounds semantic/shape correction across activities and records
-    their receipts. No nested stage receives a fresh allowance.
+    their receipts.
+
+    THE BOUND, AS IT IS (plan AN.53, 53f; D221 as refined by D243; the review's
+    F-23), and as AGENTS.md states it:
+    - the turn's total, ALLOWANCE, is durable: the attempt store keeps what was
+      used (reserve_correction spends it there first), so no retry, restart,
+      Continue, step or steer resets it, and a run begins from it
+      (corrections_used), never from nothing;
+    - within it each scope has its own allowance - the shared steps
+      SHARED_ALLOWANCE between them, each section SECTION_ALLOWANCE, each
+      cross-check edit EDIT_ALLOWANCE - which starts afresh with each run of the
+      turn (a new TurnCalls) and after a steer (successor); no nested stage
+      receives a fresh total;
+    - outside it, two small calls each ask once more on their own: the
+      conversation's title (nm/core_engine/titles.py) and the reader of a
+      message sent while a matter waits (nm/core_engine/message_reader.py).
     """
     def __init__(self, model, *, corrections_used=0, reserve_correction=None, effort=reasoning.DEFAULT_CHOICE, chosen=None,
                  stronger=None, stopping=None, gate=None):
