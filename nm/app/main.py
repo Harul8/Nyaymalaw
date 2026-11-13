@@ -221,6 +221,31 @@ def proxy_trust_said(trust) -> str:
     return said
 
 
+#: Plan AN.52 (52a6, D237): the operator's one switch to start a server that is not ready, and the value that sets it.
+START_UNREADY, SERVE_ANYWAY = "NM_START_UNREADY", "serve"
+_LAW = ("the held law: provision", "the held law: judgment")
+
+
+def _warm_what_was_not_measured(application, measured) -> None:
+    """Measuring readiness opens each collection of the held law, which is what warming did. A search that readiness could not
+    check (it offers no act of its own) is warmed as before, so the first search does not wait for it; one that was measured is
+    not loaded a second time."""
+    warm = getattr(getattr(application, "legal_search", None), "warm", None)
+    if callable(warm) and any(measured.get(name, {}).get("state") == NOT_CHECKED for name in _LAW):
+        warm()
+
+
+def _measure_in_the_background(application) -> None:
+    """The start that was told to serve anyway (NM_START_UNREADY=serve): readiness is measured on a thread of its own, and what
+    is not ready is printed when it is known. The public health answer is 'down' from then until it is ready."""
+    def measure():
+        measured = application.readiness()
+        for name in not_ready(measured):
+            print(f"NOT READY: {name}: {measured[name]['why']}", file=sys.stderr, flush=True)
+        _warm_what_was_not_measured(application, measured)
+    threading.Thread(target=measure, name="readiness", daemon=True).start()
+
+
 def create_app(application: Application | None = None):
     """Wire the composition root into the served path and return the ASGI app."""
     api.set_application(application or Application())
@@ -267,6 +292,27 @@ def main(argv: list[str] | None = None) -> int:
                   "(NM_MATTER_STORE, NM_MATTER_KEY_FILE, NM_EGRESS_LOG_DIR).", file=sys.stderr)
         return 0 if health["runtime"] == "ready" and not not_ready(measured) else 1
 
+    # Plan AN.52 (52a6, D237, D207; the review's F-11): THE START MEASURES, AND REFUSES WHERE NM IS NOT READY. The check command
+    # failed on what was not ready; the start did not ask, so a server could start without its library, its store or its
+    # record of what it sends, take an advocate's message and fail it part-way. Readiness is measured here, before the store is
+    # held, anything of an earlier run is taken up, or a request is taken; a start that is refused has held nothing. 'Not
+    # checked' never refuses. Measuring opens the held law, so the start waits as long as warming did in the background.
+    serve_anyway = (os.environ.get(START_UNREADY) or "").strip().lower() == SERVE_ANYWAY
+    measured = None
+    if serve_anyway:
+        print(f"STARTING WITHOUT WAITING TO KNOW WHETHER NM IS READY ({START_UNREADY}={SERVE_ANYWAY}): readiness is measured in "
+              "the background and what is not ready is printed when it is known. This is the setting for development; a hosted "
+              "server does not set it.", file=sys.stderr, flush=True)
+    else:
+        measured = application.readiness()
+        unready = not_ready(measured)
+        if unready:
+            for name in unready:
+                print(f"REFUSED TO START: {name} is not ready: {measured[name]['why']}", file=sys.stderr)
+            print(f"Put right what is named above and start again; `python -m nm.app.main --check` shows the same without "
+                  f"starting. To start a development server anyway, set {START_UNREADY}={SERVE_ANYWAY}.", file=sys.stderr)
+            return 2
+
     # Plan AN.50 (50f, D190, D192): this server marked alive on its store and, where it works its own steps, their one owner -
     # before anything an earlier run left is taken up below. A second refuses to start.
     held, why = step_worker.take_the_store(storage_root(application.environment, application.root), "server",
@@ -296,9 +342,13 @@ def main(argv: list[str] | None = None) -> int:
     else:
         _take_up_what_an_earlier_run_left(application)
 
-    warm_search = getattr(getattr(application, "legal_search", None), "warm", None)
-    if callable(warm_search):
-        threading.Thread(target=warm_search, name="search-warm", daemon=True).start()
+    # The held law is opened by measuring readiness (52a6): in the background where the start was told to serve anyway, and
+    # otherwise already, above - where only a search that readiness could not check is still to be warmed.
+    if serve_anyway:
+        _measure_in_the_background(application)
+    else:
+        threading.Thread(target=_warm_what_was_not_measured, args=(application, measured), name="search-warm",
+                         daemon=True).start()
     # The conversation history's lines (owner decision O29), made ready in the background, newest first, so
     # the first opening of the history after a start reads small lines and opens no large file.
     threading.Thread(target=api.prepare_history, name="history-warm", daemon=True).start()

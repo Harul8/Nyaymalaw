@@ -89,7 +89,8 @@ def server(tmp_path, monkeypatch):
     def start(steps):
         monkeypatch.setattr(served, "Application", lambda: SimpleNamespace(
             environment={"NM_MATTER_STORE": str(store)}, root=tmp_path, steps_mode=steps, egress_log=None, legal_search=None,
-            health=lambda: {"runtime": "ready"}))
+            health=lambda: {"runtime": "ready"},
+            readiness=lambda: {}))  # plan AN.52 (52a6): the start measures readiness; this stand-in has nothing not ready
         return served.main(["--no-follow-code"])
     monkeypatch.delenv(served.IN_FLIGHT_FILE, raising=False)
     monkeypatch.setattr(served, "create_app", lambda application=None: None)
