@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import ast
 import pathlib
+import sys
 
 import pytest
 
@@ -340,16 +341,24 @@ def test_no_declaration_outlives_its_wiring():
     assert not gone, f"declared and no longer exists: {gone}"
 
 
-def test_the_scan_can_see_an_unreached_module():
+def test_the_scan_can_see_an_unreached_module(tmp_path, monkeypatch):
     """THE POSITIVE CONTROL. A scan over a tree whose modules all happen to be
-    imported proves nothing about the scan."""
-    probe = ROOT / "nm" / "work_the_file" / "_unreached_probe.py"
-    probe.write_text("VALUE = 1\n", encoding="utf8")
-    try:
-        orphans = _modules() - _reached_from_production()
-        assert "nm.work_the_file._unreached_probe" in orphans, (
-            "the scan did not see a module nothing imports")
-    finally:
-        probe.unlink()
+    imported proves nothing about the scan.
+
+    The probe is put into a COPY of the product's Python files, which the scan
+    is pointed at for this test (13 Nov 2026). It used to go into the real
+    `nm/` for a moment, and the application refuses to be built while the
+    files there differ from `nm/source_layout.json`: with the tests run
+    several at once, whichever test built the application then failed."""
+    for source in _sources():
+        copy = tmp_path / source.relative_to(ROOT)
+        copy.parent.mkdir(parents=True, exist_ok=True)
+        copy.write_bytes(source.read_bytes())
+    monkeypatch.setattr(sys.modules[__name__], "ROOT", tmp_path)
+    (tmp_path / "nm" / "work_the_file" / "_unreached_probe.py").write_text("VALUE = 1\n", encoding="utf8")
+    orphans = _modules() - _reached_from_production()
+    assert "nm.work_the_file._unreached_probe" in orphans, (
+        "the scan did not see a module nothing imports")
+    assert "nm.app.api" not in orphans and len(_modules()) > 50, "and it walked the whole copy, not an empty folder"
 
 

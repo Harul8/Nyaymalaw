@@ -11,6 +11,8 @@ import contextlib
 import pathlib
 from datetime import date, datetime, timezone
 
+import sys
+
 import pytest
 
 pytestmark = pytest.mark.class_a
@@ -204,36 +206,46 @@ def test_the_session_cookie_is_secure_when_the_connection_is():
 
 
 @contextlib.contextmanager
-def _planted(name: str, body: str):
-    """A real module under `nm/`, removed however the block exits.
+def _planted(name: str, body: str, tmp_path, monkeypatch):
+    """A module under `nm/`, in a COPY of the product's Python files that the
+    sweeps are pointed at for the length of the test.
 
     UNDER `nm/` BECAUSE THAT IS WHERE THE SWEEPS LOOK. A fixture anywhere
     else would prove the matcher works, not that the walk reaches it.
+
+    IN A COPY, NOT THE REAL FOLDER (13 Nov 2026). The probe used to be put
+    into the real `nm/` for a moment. The application refuses to be built
+    while the Python files there differ from `nm/source_layout.json`, so with
+    the tests run several at once, whichever test built the application in
+    that moment failed - a different one each run. The walk is the same walk,
+    over the same files and one more.
     """
-    path = ROOT / "nm" / "work_the_file" / ("_" + name + "_probe.py")
+    for source in _sources():
+        copy = tmp_path / source.relative_to(ROOT)
+        copy.parent.mkdir(parents=True, exist_ok=True)
+        copy.write_bytes(source.read_bytes())
+    monkeypatch.setattr(sys.modules[__name__], "ROOT", tmp_path)
+    path = tmp_path / "nm" / "work_the_file" / ("_" + name + "_probe.py")
     path.write_text(body + chr(10), encoding="utf8")
-    try:
-        yield path
-    finally:
-        path.unlink(missing_ok=True)
+    yield path
 
 
-def test_the_assert_sweep_can_see_a_guard_it_would_delete():
-    with _planted("assert", chr(10).join(('def f(x):', "    assert x, 'a guard'",))):
+def test_the_assert_sweep_can_see_a_guard_it_would_delete(tmp_path, monkeypatch):
+    with _planted("assert", chr(10).join(('def f(x):', "    assert x, 'a guard'",)), tmp_path, monkeypatch):
         with pytest.raises(AssertionError, match="_assert_probe"):
             test_no_guard_in_the_product_is_an_assert()
 
 
-def test_the_clock_sweep_can_see_a_call_to_the_machine():
+def test_the_clock_sweep_can_see_a_call_to_the_machine(tmp_path, monkeypatch):
     body = chr(10).join((
         'from datetime import date', '', 'def when():',
         '    return date.today()',))
-    with _planted("clock", body):
+    with _planted("clock", body, tmp_path, monkeypatch):
         with pytest.raises(AssertionError, match="_clock_probe"):
             test_nothing_in_the_product_asks_the_machine_what_day_it_is()
 
 
-def test_the_forum_sweep_can_see_a_second_owner():
-    with _planted("forum", chr(10).join(('WHERE = "Telangana"',))):
+def test_the_forum_sweep_can_see_a_second_owner(tmp_path, monkeypatch):
+    with _planted("forum", chr(10).join(('WHERE = "Telangana"',)), tmp_path, monkeypatch):
         with pytest.raises(AssertionError, match="_forum_probe"):
             test_the_jurisdiction_has_one_owner()
