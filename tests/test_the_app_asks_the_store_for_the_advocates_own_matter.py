@@ -16,7 +16,9 @@ pytestmark = pytest.mark.class_a
 
 APP = Path(__file__).resolve().parents[1] / "nm" / "app"
 #: (module, function) that may call the store's owner-blind load, each for its reason.
-OWNER_BLIND = {("api.py", "_derived_line"): "opens a saved file to learn whose it is, for the history's kept line"}
+OWNER_BLIND = {("api.py", "_derived_line"): "opens a saved file to learn whose it is, for the history's kept line",
+               # Plan AN.52 (52a1): the store's readiness opens the smallest saved matters to show the secret opens the store.
+               ("composition.py", "_store_readiness"): "opens a saved matter for no advocate; nothing of it is kept or returned"}
 
 
 def owner_blind_loads(source: str, module: str) -> list[tuple[str, str, int]]:

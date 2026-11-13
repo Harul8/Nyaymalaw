@@ -4,6 +4,7 @@ import logging
 import os
 import re
 import sys
+import tempfile
 import threading
 from collections.abc import Mapping
 from pathlib import Path
@@ -30,6 +31,7 @@ from nm.arrive.usage_port import AllowanceUsedUp, UsagePort, UsageRefused
 from nm.shared.deployment_contracts import shares_value_with
 from nm.shared.egress_contracts import DataClass, EgressRefused, Gatekeeper, Sink
 from nm.shared.egress_log_store import EgressLog, keep_days_from
+from nm.shared.storage_errors_port import StoredObjectUnreadable
 from nm.shared.egress_policy import INDEX_PROCESSOR, OUTBOX_PROCESSOR, STORAGE_PROCESSOR, egress_policy
 from nm.shared.model_config import AUTO_TURN, DEFAULT_TURN_MODEL, TURN_MODELS, load, load_dotenv
 from nm.shared.model_metered import MeteredModel
@@ -43,7 +45,7 @@ from nm.shared.store_file_store import FileMatterStore
 from nm.shared.store_port import StorePort
 from nm.shared.turn_attempt_port import TurnAttemptPort
 from nm.shared.turn_attempt_store import FileTurnAttempts
-from nm.core_engine.retrieval import HybridSearcher, SearchPort
+from nm.core_engine.retrieval import HybridSearcher, SearchPort, SearchUnavailable
 from nm.core_engine.citations import CaseIdentityIndex
 from nm.app.step_jobs import AT_ONCE, PER_ADVOCATE, StepJobs, count_from, wait_from
 from nm.app.turn_progress import TurnProgress
@@ -64,6 +66,21 @@ def storage_root(settings: Mapping[str, str], root: Path) -> Path:
     """Where this installation keeps its records: NM_MATTER_STORE, or .nm under its root. One rule,
     read by the application and by an operator command that needs one store and not the rest."""
     return Path(settings.get('NM_MATTER_STORE') or Path(root) / '.nm')
+
+#: Plan AN.52 (52a, D207; the review's F-11): the three things readiness says of a capability. 'Not checked' is its own state:
+#: a capability nobody tried is never 'ready'.
+READY, NOT_READY, NOT_CHECKED = 'ready', 'not ready', 'not checked'
+#: How many saved matters the store's check opens at most, smallest first: enough that one damaged file does not speak for the
+#: store, few enough that the check stays cheap on a store of thousands.
+STORE_PROBES = 3
+#: What the malware scanner is asked about: harmless bytes, so anything but 'clear' is the scanner's own state.
+SCANNER_PROBE = b'Nyaymalaw readiness probe: harmless text.'
+
+
+def not_ready(measured: Mapping[str, Mapping[str, str]]) -> tuple[str, ...]:
+    """The capabilities a readiness answer names as not ready, in its order."""
+    return tuple(name for name, entry in measured.items() if entry['state'] == NOT_READY)
+
 
 def log_root(settings: Mapping[str, str], root: Path) -> Path:
     """Where the outgoing-data log is kept: NM_EGRESS_LOG_DIR, or .nm under the root (plan AN.52, 52e, D211). It was .nm under the
@@ -814,6 +831,89 @@ class Application:
                 _append(self._log_unwritten, (utcnow().isoformat() + chr(10)).encode("ascii"))
             except OSError:
                 pass  # the store refuses too: said above, and every other check of the diagnostics will show it
+
+    # ------------------------------------------------------------------ readiness ---
+    #
+    # READINESS IS MEASURED, NOT STATED (plan AN.52, 52a, D207; the review's F-11). `health` below answers 'ready' whatever is
+    # true, and calls the held law 'configured_unverified'. Here is the one owner of the question: for each capability a cheap
+    # real act, and one of three answers - ready, not ready (with why, in plain words), or not checked. It reads no advocate's
+    # words into its answer and names no secret, provider or model.
+    #
+    # WHAT EACH ACT IS. The store: its folder takes a write, and a saved matter opens under this installation's secret. The held
+    # law, each collection: its own `warm`, which opens its passages and both indexes, loads the local models, answers one
+    # query and scores one pair with the reranker. The malware scanner: it is asked about harmless bytes. Account mail and the
+    # AI service have no free act of their own yet and are said as NOT CHECKED - never as ready.
+    #
+    # WHO ASKS. The check command and the start measure (`measure=True`: the search's act loads the models, so it takes as long
+    # as warming does). A health request shows what was last measured (`measure=False`) and measures nothing.
+
+    def readiness(self, *, measure: bool = True) -> dict:
+        if measure:
+            self._readiness = {'the store': self._store_readiness(), **self._law_readiness(),
+                               'the malware scanner': self._scanner_readiness(),
+                               'account mail': {'state': NOT_CHECKED, 'why': 'no check of account mail is built yet: nothing '
+                                                'here tries whether a message can leave'},
+                               'the AI service': {'state': NOT_CHECKED, 'why': 'no free check of the AI account is built yet: '
+                                                  'the first paid call is what shows it'}}
+        kept = getattr(self, '_readiness', None)
+        if kept is None:
+            unmeasured = {'state': NOT_CHECKED, 'why': 'not measured since this process started'}
+            kept = {name: dict(unmeasured) for name in ('the store', 'the held law: provision', 'the held law: judgment',
+                                                         'the malware scanner', 'account mail', 'the AI service')}
+        return {name: dict(entry) for name, entry in kept.items()}
+
+    def _store_readiness(self) -> dict:
+        try:
+            handle, probe = tempfile.mkstemp(dir=str(self._storage), prefix='readiness-', suffix='.tmp')
+            os.close(handle)
+            os.unlink(probe)
+        except OSError as exc:
+            return {'state': NOT_READY, 'why': f"the store's folder does not take a write ({type(exc).__name__})"}
+        try:
+            saved = sorted(self.store.saved_files(), key=lambda entry: entry[1][1])[:STORE_PROBES]
+        except OSError as exc:
+            return {'state': NOT_READY, 'why': f"the store's folder could not be listed ({type(exc).__name__})"}
+        if not saved:
+            return {'state': READY, 'why': 'nothing is saved yet, so no saved matter was opened'}
+        failed = None
+        for matter_id, _signature, _saved_at in saved:
+            try:
+                # Opened to show that this installation's secret opens the store; nothing of it is kept or returned.
+                self.store.load(matter_id)
+                return {'state': READY, 'why': ''}
+            except (OSError, ValueError, StoredObjectUnreadable) as exc:
+                failed = type(exc).__name__
+        return {'state': NOT_READY, 'why': f'none of the {len(saved)} smallest saved matters opens under this installation\'s '
+                f'secret ({failed}): the secret may not be the one the store was sealed under'}
+
+    def _law_readiness(self) -> dict:
+        names = ('provision', 'judgment')
+        if self.legal_search is None:
+            return {f'the held law: {name}': {'state': NOT_READY, 'why': 'no search of the held law is connected'}
+                    for name in names}
+        collections = getattr(self.legal_search, 'collections', None)
+        measured = {}
+        for name in names:
+            collection = collections.get(name) if isinstance(collections, Mapping) else None
+            if collection is None or not callable(getattr(collection, 'warm', None)):
+                measured[f'the held law: {name}'] = {'state': NOT_CHECKED, 'why': 'this search offers no check of its own'}
+                continue
+            try:
+                collection.warm()
+                measured[f'the held law: {name}'] = {'state': READY, 'why': ''}
+            except (SearchUnavailable, ImportError, OSError) as exc:
+                # The search's own refusal, a library that does not import, or a file that is not there: its words say which.
+                measured[f'the held law: {name}'] = {'state': NOT_READY, 'why': str(exc) or type(exc).__name__}
+        return measured
+
+    def _scanner_readiness(self) -> dict:
+        if self.documents is None:
+            return {'state': NOT_READY, 'why': 'papers cannot be received on this installation: its store cannot seal them'}
+        state, reason = self.documents.checker.check(SCANNER_PROBE)
+        if state == 'clear':
+            return {'state': READY, 'why': ''}
+        return {'state': NOT_READY, 'why': reason if state == 'unavailable' else
+                f'the scanner did not clear a harmless probe ({state}), so every paper would be held'}
 
     def kept_in_code_folder(self) -> tuple[str, ...]:
         """Which of the store, the key and the outgoing-data log this installation keeps under its code (plan AN.52, 52e, D211):
