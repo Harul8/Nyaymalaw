@@ -409,8 +409,8 @@ class Application:
     def _held(self, advocate_id, chat_id):
         """The conversation and the turn being worked on in it, as saved: (matter, held), held None where there is none."""
         from nm.core_engine.conversation import chat_matter_id, shown_of
-        matter = self.store.load(chat_matter_id(advocate_id, chat_id))
-        if matter is None or matter.advocate_id != advocate_id:
+        matter = self.store.load_for(chat_matter_id(advocate_id, chat_id), advocate_id)  # the store compares the owner (AN.53, 53b)
+        if matter is None:
             return None, None
         try:
             return matter, shown_of(matter)
@@ -741,8 +741,8 @@ class Application:
                 return
             except (OSError, StaleWrite, ValueError):
                 pass  # that turn has just been saved: what waits is saved on the conversation as it now is
-        matter = self.store.load(chat_matter_id(advocate_id, chat_id))
-        if matter is None or matter.advocate_id != advocate_id:
+        matter = self.store.load_for(chat_matter_id(advocate_id, chat_id), advocate_id)  # the store compares the owner (AN.53, 53b)
+        if matter is None:
             raise LookupError('Conversation not available.')
         save_queued(self.store, matter, queued)
 
