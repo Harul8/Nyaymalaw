@@ -33,6 +33,8 @@ Both processes read the same settings (the `.env` file or the machine's environm
 | `NM_TRUSTED_ORIGINS` | `https://<your domain>` | The page's address the server accepts changes from. Behind a proxy NM otherwise compares the page with its own inner address and refuses every change as cross-site. |
 | `NM_MATTER_STORE` | a folder of its own | Conversations, accounts, usage, papers and the step stores. Use a fresh folder, not the development `.nm`, which also holds test reports and logs. |
 | `NM_MATTER_KEY` | a long random secret | Seals everything in the store. Without it NM makes `.nm/matter.key` once. Lose it and every conversation and paper is unreadable; it may not be the AI key (NM refuses to start if it is). |
+| `NM_MATTER_KEY_FILE` | a file outside the code and the store | Instead of `NM_MATTER_KEY`: a file that holds the secret, so it can be kept apart from the code, the data and the backups. NM reads it and never writes it. NM refuses to start if the file is missing or empty, or if both this and `NM_MATTER_KEY` are set. |
+| `NM_EGRESS_LOG_DIR` | a folder of its own | Where the outgoing-data log is kept. Unset, it is `.nm` under the code, which a deployment replaces. See "Logs". |
 | `NM_CLAMSCAN`, `NM_CLAMAV_DATABASE` | the ClamAV scanner and its definitions folder | Every paper is checked for malware before it is read. Without a scanner, papers are held and never read: advocates cannot send papers. |
 | `NM_CORPUS_DIR`, `NM_BARE_ACTS_DIR` | the law library's folders | Default to `legal_database/vector_store` and `legal_database/raw_data/BareActs` under the checkout. |
 | `NM_MAIL_PROVIDER`, `NM_MAIL_DELIVERY`, `NM_MAIL_SENDER`, `NM_GMAIL_APP_PASSWORD_FILE` | `gmail`, `enabled`, the sending address, the app password's file | Account email through Gmail; see "Sending account email with Gmail" below. Unset, account mail waits in the machine's own outbox. |
@@ -166,9 +168,9 @@ installed separately. The Anthropic adapter's package is not on the list; hostin
     each matter's last saved version and the record of its owner (`matter-owners/`, a hash of the account's identifier, no
     address); and the identifying columns of the small databases (whose step, whose usage).
   Encrypt the disk and the backups for this reason, and give the folder to the account NM runs as and to no other.
-- Keep `NM_MATTER_KEY` (or `.nm/matter.key`) **apart from** the backups and as safely: a backup without its key cannot be read, and the
+- Keep `NM_MATTER_KEY` (or the file `NM_MATTER_KEY_FILE` names, or `.nm/matter.key`) **apart from** the backups and as safely: a backup without its key cannot be read, and the
   key with a backup opens everything.
-- Back up the outgoing-data log too (`.nm/egress-*` under the checkout) where its year must outlast the machine.
+- Back up the outgoing-data log too (`egress-*` in `NM_EGRESS_LOG_DIR`, or in `.nm/` under the checkout where that is unset) where its year must outlast the machine.
 - Keep the Gmail app password's file out of the backups of the code; if it is backed up, as safely as the key.
 - Test a restore on another machine before relying on it.
 
@@ -227,7 +229,8 @@ copy back whole and opens everything; and puts back only some files, which are r
 
 ## Logs
 
-- **The outgoing-data log** (owner decision D169) is in `.nm/` under the checkout, whatever `NM_MATTER_STORE` says: one file a day,
+- **The outgoing-data log** (owner decision D169) is in the folder `NM_EGRESS_LOG_DIR` names, or in `.nm/` under the checkout
+  where that is unset - never in `NM_MATTER_STORE`: one file a day,
   `egress-YYYY-MM-DD.log` by UTC date, one content-free line for every reach to a destination - which kind, which processor, which
   kinds of data and how many bytes; never content, an address or a secret. Both processes write to the same day's file, each line
   whole.

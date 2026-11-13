@@ -65,6 +65,46 @@ def storage_root(settings: Mapping[str, str], root: Path) -> Path:
     read by the application and by an operator command that needs one store and not the rest."""
     return Path(settings.get('NM_MATTER_STORE') or Path(root) / '.nm')
 
+def log_root(settings: Mapping[str, str], root: Path) -> Path:
+    """Where the outgoing-data log is kept: NM_EGRESS_LOG_DIR, or .nm under the root (plan AN.52, 52e, D211). It was .nm under the
+    code whatever the store's setting said, so a hosted server kept a year's record of processing in the folder a deployment
+    replaces."""
+    return Path(settings.get('NM_EGRESS_LOG_DIR') or Path(root) / '.nm')
+
+
+class KeyFileRefused(RuntimeError):
+    """The installation secret is named in a way NM will not guess at (plan AN.52, 52e): a key file that cannot be read or is
+    empty, or the secret named in two places. NM makes a key only at its default place, for a store that is beside it."""
+
+
+def installation_secret(settings: Mapping[str, str], root: Path) -> tuple[str, Path | None]:
+    """The secret that seals the store, and the file it is kept in where it is in one (plan AN.52, 52e, D211; the review's F-15).
+
+    THREE WAYS, AND NEVER TWO AT ONCE. NM_MATTER_KEY holds it as a setting (no file). NM_MATTER_KEY_FILE names a file that holds
+    it, so that it can be kept apart from the code and from the data and its backups; that file is read and never written. With
+    neither, NM makes one once in .nm under its root, as it always has.
+
+    A NAMED FILE THAT IS NOT THERE REFUSES. Making a key at a path somebody mistyped would start a second, empty-looking
+    installation over a store whose every matter is sealed under another secret, and the first save would add matters under the
+    new one."""
+    named = (settings.get('NM_MATTER_KEY_FILE') or '').strip()
+    if not named:
+        return (settings['NM_MATTER_KEY'], None) if settings.get('NM_MATTER_KEY') else (
+            _ensure_local_key(root), Path(root) / '.nm' / 'matter.key')
+    if settings.get('NM_MATTER_KEY'):
+        raise KeyFileRefused('NM_MATTER_KEY and NM_MATTER_KEY_FILE are both set. Name the secret in one place: NM does not '
+                             'choose between them, since the one not chosen may be the one the store is sealed under.')
+    try:
+        secret = Path(named).read_text(encoding='utf8').strip()
+    except (OSError, UnicodeError) as exc:
+        raise KeyFileRefused(f'NM_MATTER_KEY_FILE names {named}, which could not be read ({type(exc).__name__}). Put the '
+                             'installation secret there. NM makes no key at a named path: one made at a mistyped path would '
+                             'not open the store.') from exc
+    if not secret:
+        raise KeyFileRefused(f'NM_MATTER_KEY_FILE names {named}, which is empty. Put the installation secret there.')
+    return secret, Path(named)
+
+
 def build_model(config):
     provider = config.for_tier(Tier.ROUTINE).provider
     if provider == 'openai':
@@ -86,15 +126,15 @@ class Application:
         settings = MappingProxyType(dict(os.environ if environment is None else environment))
         self.environment = settings
         self.root = root or ROOT
-        self.audit_root = Path(audit_root) if audit_root is not None else self.root / '.nm'
+        self.audit_root = Path(audit_root) if audit_root is not None else log_root(settings, self.root)
         # The outgoing-data log (plan AN.48, D169): one file a day in the audit root, kept a year; swept by the processes that
         # serve (nm/app/main.py, nm/app/step_worker.py), never by building an application.
         self.egress_log = EgressLog(self.audit_root, keep_days=keep_days_from(settings.get('NM_EGRESS_LOG_KEEP_DAYS')))
         self.config = load(dict(settings))
-        key = settings.get('NM_MATTER_KEY') or _ensure_local_key(self.root)
+        key, self._key_file = installation_secret(settings, self.root)
         _refuse_a_shared_seal(key, settings)
         self._gate = Gatekeeper(policy=egress_policy(self.root), audit=self._egress_audit)
-        storage = storage_root(settings, self.root)
+        storage = self._storage = storage_root(settings, self.root)
         # Plan AN.53 (53e, D220): where a line the outgoing-data log could not take is counted - in the store, since the log's
         # own folder is the one that failed - one time and nothing else a line, for the Admin diagnostics.
         self._log_unwritten, self._log_failure_said = Path(storage) / UNWRITTEN_LOG_LINES, False
@@ -774,6 +814,14 @@ class Application:
                 _append(self._log_unwritten, (utcnow().isoformat() + chr(10)).encode("ascii"))
             except OSError:
                 pass  # the store refuses too: said above, and every other check of the diagnostics will show it
+
+    def kept_in_code_folder(self) -> tuple[str, ...]:
+        """Which of the store, the key and the outgoing-data log this installation keeps under its code (plan AN.52, 52e, D211):
+        none of them on a hosted server, where the code folder is what a deployment replaces. A key held as a setting is in no
+        folder. Named, so that a start or a readiness check can say it; this decides nothing."""
+        code = Path(self.root).resolve()
+        kept = (('the store', self._storage), ('the key', self._key_file), ('the outgoing-data log', self.audit_root))
+        return tuple(name for name, path in kept if path is not None and Path(path).resolve().is_relative_to(code))
 
     def health(self):
         routine = self.config.for_tier(Tier.ROUTINE)
