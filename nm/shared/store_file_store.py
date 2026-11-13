@@ -69,6 +69,33 @@ MATTER_FORMAT = 1
 _FORMAT_KEY = "stored_format"
 
 
+class SavedMatterUnreadable(StoredObjectUnreadable, ValueError):
+    """A saved matter's file will not open (plan AN.53, 53j4).
+
+    THE STORE'S OWN ERROR, AND ONE A FAILED READING IS ALREADY CAUGHT AS. Every
+    place that reads a matter and can fail catches the disk's error and a
+    record that does not read as one (a ValueError); a file that would not
+    open was neither, so each caller that had not been told of it answered an
+    advocate's damaged conversation with a server error. This is both, so no
+    caller has to be told. A key that cannot be reached (KeyUnavailable) is an
+    installation's failure, not one file's damage, and is never made this.
+    """
+
+
+_AS_A_FAILED_READING: dict[type, type] = {}
+
+
+def _as_a_failed_reading(exc: StoredObjectUnreadable) -> StoredObjectUnreadable:
+    """The same error, still of its own kind - a caller or a test that names
+    WrappedKeyUnreadable or an unknown sealed format still has exactly that -
+    and also a SavedMatterUnreadable."""
+    kind = _AS_A_FAILED_READING.get(type(exc))
+    if kind is None:
+        kind = _AS_A_FAILED_READING[type(exc)] = type(
+            type(exc).__name__, (SavedMatterUnreadable, type(exc)), {"__module__": type(exc).__module__})
+    return kind(*exc.args)
+
+
 class SavedShapeUnknown(ValueError):
     """The saved matter holds what this code would drop: it says a format newer
     than this code reads, or says this code's format and holds a field this
@@ -683,7 +710,12 @@ class FileMatterStore:
         # record of the NEXT save and take its own, current file for an older copy. Read in this order, a record of
         # save N means the file of save N was already in place, so the file read after it is N or later.
         known = self._last_saved(matter_id)
-        data = self._open(matter_id, read_published(path))
+        try:
+            data = self._open(matter_id, read_published(path))
+        except KeyUnavailable:
+            raise
+        except StoredObjectUnreadable as exc:
+            raise _as_a_failed_reading(exc) from exc
         matter = _matter(*_said_format(json.loads(data.decode("utf8"))))
         if matter.id != matter_id:
             raise ValueError("the saved matter identity conflicts with its storage name")
