@@ -113,3 +113,54 @@ class Activity:
                 hear(total)
             except Exception:  # noqa: BLE001 - the count is the hearer's courtesy; no work ever fails for it
                 pass
+
+
+# ------------------------------------------------------------------------------------------------ the orderly stop ---
+#
+# AN ORDERLY STOP (plan AN.52, 52c3, D209; the review's F-12). A process stopped on a signal ended at once, and every step at work
+# on its threads - daemon threads - was cut off part-way. Now the process that is stopping closes its step jobs - no waiting step
+# begins here, and each keeps its record for the next start to take up, as any step an earlier run left - then waits until
+# nothing in its ledger is held, or the limit passes, and says what it waited for and what it left. Only then does it end. Work
+# cut off at the limit is taken up as after any restart: a step continues where it stopped (D73), a reading is asked for again.
+
+#: How long an orderly stop waits for the work at hand, in seconds, unless NM_STOP_WAIT_SECONDS says otherwise. A step's single
+#: longest call writes for two to four minutes; most end well within this. Give whatever stops the process (systemd's
+#: TimeoutStopSec, a container's stop timeout) longer than this, or it will cut the work off itself.
+STOP_WAIT = 120.0
+#: The most a setting may ask for.
+STOP_WAIT_MOST = 3600.0
+
+
+def stop_wait_from(setting, default=STOP_WAIT):
+    """The wait NM_STOP_WAIT_SECONDS names: a number of seconds from 0 to an hour; anything else is the default."""
+    try:
+        seconds = float(str(setting).strip())
+    except (TypeError, ValueError):
+        return default
+    return seconds if 0 <= seconds <= STOP_WAIT_MOST else default
+
+
+def _said(counts) -> str:
+    return ", ".join(f"{count} {kind}{'' if count == 1 else 's'}" for kind, count in counts.items())
+
+
+def stop_in_order(activity, close_steps, *, limit, say, clock=time.monotonic, pause=time.sleep, every=0.1) -> dict:
+    """Close the steps (close_steps() -> how many waiting steps are kept for the next start), wait until nothing is held in
+    the ledger or limit seconds pass, and say both. Returns what was still held when it stopped waiting: {} for a clean stop."""
+    kept = close_steps()
+    held = activity.counts()
+    say("STOPPING IN ORDER: no new step begins here"
+        + (f" ({kept} waiting step{'' if kept == 1 else 's'} kept for the next start)" if kept else "")
+        + (f"; waiting up to {limit:g} s for the work at hand: {_said(held)}." if held else "; nothing is at work."))
+    if not held:
+        return {}
+    deadline = clock() + limit
+    while not activity.may_stop() and clock() < deadline:
+        pause(every)
+    left = activity.counts()
+    if left:
+        say(f"STOPPED WITH WORK AT HAND after {limit:g} s: {_said(left)}. It is taken up at the next start as after any restart: "
+            "a step continues where it stopped, and a reading is asked for again.")
+    else:
+        say("Stopped: the work at hand ended first.")
+    return left

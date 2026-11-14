@@ -26,6 +26,7 @@ Both processes read the same settings (the `.env` file or the machine's environm
 |---|---|---|
 | `NM_STEP_WORKER` | `separate` | The web server hands each step to the worker. Unset, one process works everything, as on the laptop. |
 | `NM_STEP_WAIT_SECONDS` | `20` (default) | How long a request waits for its step before answering "working". Keep it under the proxy's request timeout. |
+| `NM_STOP_WAIT_SECONDS` | `120` (default) | How long a process that is told to stop waits for the work at hand - a step at work, a paper being read, a save - before it ends (from 0 to 3600). Give the supervisor's own stop timeout longer than this (systemd `TimeoutStopSec=150`), or it cuts the work off itself. See "Restarts and updates". |
 | `NM_STEPS_AT_ONCE` | `3` (default) | Steps at work at once on the machine. Raise it only if the graphics card, the AI account's rate limit and the processor allow. |
 | `NM_STEPS_PER_ADVOCATE` | `2` (default) | Steps at work at once for one advocate, so that one cannot take every place. |
 | `NM_PROVIDER_REQUESTS_AT_ONCE` | `16` (default) | Requests each process has out to the AI provider at once. A refusal for the account's rate is waited out as long as the provider says, up to a minute a call; lower this where refusals are frequent. |
@@ -222,8 +223,13 @@ copy back whole and opens everything; and puts back only some files, which are r
 ## Restarts and updates
 
 - **Restarting the web server** stops no step: the worker goes on, and the pages pick up again when the server is back.
-- **Restarting the worker** stops the steps at work. At its start it takes each one up again by itself, from the work already saved,
-  as long as the advocate's sign-in still holds; a message that had not yet begun was never kept and is said as before ("NM was
+- **A stop is orderly** (plan AN.52, D209). Told to stop (SIGTERM, Ctrl-C), a process begins no step that was still waiting - it is
+  kept, and the next start takes it up - and waits up to `NM_STOP_WAIT_SECONDS` for the work at hand to end, saying on its console
+  what it waits for (`STOPPING IN ORDER: ...`) and what, if anything, it had to leave (`STOPPED WITH WORK AT HAND: ...`). The web
+  server first lets its open requests end, as the web server library always has: a page following a step holds its stream open
+  until that step ends.
+- **Restarting the worker** stops the steps still at work once its wait is over. At its start it takes each one up again by itself,
+  from the work already saved, as long as the advocate's sign-in still holds; a message that had not yet begun was never kept and is said as before ("NM was
   restarted before your message reached it"), and the page's own draft lets the advocate send it again.
 - **To update NM**: stop the worker (it is safe at any time), stop the web server, update the code, start the worker, start the web
   server. Steps that were at work are taken up again by the worker.

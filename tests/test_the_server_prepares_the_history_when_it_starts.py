@@ -11,6 +11,8 @@ from types import SimpleNamespace
 import pytest
 
 from nm.app import main
+from nm.app.activity import Activity
+from nm.app.step_jobs import StepJobs
 
 pytestmark = pytest.mark.class_a
 
@@ -40,6 +42,7 @@ def start(monkeypatch, store, prepare, log=None):
     monkeypatch.setattr(main, "Application", lambda: SimpleNamespace(
         health=lambda: {"runtime": "ready"}, legal_search=None, steps_mode="inside", egress_log=log or SweptLog(),
         readiness=lambda: {},  # plan AN.52 (52a6): the start measures readiness; this stand-in has nothing not ready
+        activity=Activity(), step_jobs=StepJobs(),  # 52c3: the stop in order once serving ends reads them
         environment={"NM_MATTER_STORE": str(store)}, root=store,
         turns_of_an_earlier_run_released=lambda: released.append(1) or 0))
     monkeypatch.setattr(main.api, "set_application", lambda application: None)

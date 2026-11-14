@@ -16,6 +16,8 @@ from types import SimpleNamespace
 import pytest
 
 from nm.app import api, composition, step_worker
+from nm.app.activity import Activity
+from nm.app.step_jobs import StepJobs
 from nm.shared import egress_log_store
 from nm.shared.store_file_store import REKEYING, alive_on, claim
 
@@ -30,7 +32,8 @@ def worker(tmp_path, monkeypatch):
     store.mkdir()
     seen = {"started": 0, "held": None}
     monkeypatch.setattr(composition, "Application", lambda **_: SimpleNamespace(
-        environment={"NM_MATTER_STORE": str(store)}, root=tmp_path, step_share=None, egress_log=None, legal_search=None))
+        environment={"NM_MATTER_STORE": str(store)}, root=tmp_path, step_share=None, egress_log=None, legal_search=None,
+        activity=Activity(), step_jobs=StepJobs()))  # plan AN.52 (52c3): the worker's stop in order reads them
     monkeypatch.setattr(api, "set_application", lambda app: None)
     monkeypatch.setattr(egress_log_store, "keep", lambda log: None)
     monkeypatch.setattr(signal, "signal", lambda *_: None)
@@ -90,7 +93,8 @@ def server(tmp_path, monkeypatch):
         monkeypatch.setattr(served, "Application", lambda: SimpleNamespace(
             environment={"NM_MATTER_STORE": str(store)}, root=tmp_path, steps_mode=steps, egress_log=None, legal_search=None,
             health=lambda: {"runtime": "ready"},
-            readiness=lambda: {}))  # plan AN.52 (52a6): the start measures readiness; this stand-in has nothing not ready
+            readiness=lambda: {},  # plan AN.52 (52a6): the start measures readiness; this stand-in has nothing not ready
+            activity=Activity(), step_jobs=StepJobs()))  # 52c3: the stop in order once serving ends reads them
         return served.main(["--no-follow-code"])
     monkeypatch.delenv(served.IN_FLIGHT_FILE, raising=False)
     monkeypatch.setattr(served, "create_app", lambda application=None: None)

@@ -21,6 +21,8 @@ from types import SimpleNamespace
 
 import pytest
 
+from nm.app.activity import Activity
+from nm.app.step_jobs import StepJobs
 from nm.shared import egress_log_store as store
 from nm.shared.egress_log_store import COMPRESS_AFTER_DAYS, FLOOR_DAYS, KEEP_DAYS, EgressLog, keep, keep_days_from
 
@@ -337,7 +339,8 @@ def test_the_step_worker_sweeps_the_log_it_writes_as_it_starts(monkeypatch, tmp_
 
     # Plan AN.50 (50f1): the worker marks itself alive on its store and holds the steps there first, so the stand-in names one.
     monkeypatch.setattr(composition, "Application", lambda steps: SimpleNamespace(
-        egress_log=log, legal_search=None, environment={"NM_MATTER_STORE": str(tmp_path)}, root=tmp_path))
+        egress_log=log, legal_search=None, environment={"NM_MATTER_STORE": str(tmp_path)}, root=tmp_path,
+        activity=Activity(), step_jobs=StepJobs()))  # plan AN.52 (52c3): the worker's stop in order reads them
     monkeypatch.setattr(api, "set_application", lambda app: None)
     monkeypatch.setattr(egress_log_store, "keep", kept.append)
     monkeypatch.setattr(step_worker, "StepWorker", Worker)

@@ -209,6 +209,11 @@ class RemoteSteps:
         """Whether that step waits, not yet at work (48f2's Steer refusal)."""
         return SharedProgress(self._share).waiting(advocate_id, turn_id)
 
+    def close(self) -> int:
+        """An orderly stop of the web server (plan AN.52, 52c3): its steps are the worker's, which stops them in order itself;
+        nothing waits here to be kept."""
+        return 0
+
     def running_here(self, advocate_id, turn_id):
         return False
 
@@ -332,6 +337,17 @@ class StepWorker:
         self._stop.set()
 
 
+def work_until_stopped(worker, app, *, say=None) -> dict:
+    """The worker's loop until a stop is asked, then AN ORDERLY STOP (plan AN.52, 52c3, D209; the review's F-12): no waiting step
+    begins, the work at hand is let end - up to NM_STOP_WAIT_SECONDS - and only then may the process end. It ended with the loop,
+    and every step at work was cut off part-way. Returns what was still at work when it stopped waiting ({} for none)."""
+    from nm.app.activity import stop_in_order, stop_wait_from
+    worker.run()
+    return stop_in_order(app.activity, app.step_jobs.close,
+                         limit=stop_wait_from(app.environment.get("NM_STOP_WAIT_SECONDS")),
+                         say=say or (lambda line: print(line, file=sys.stderr, flush=True)))
+
+
 def main(argv=None):
     """The step worker: the application in its worker's part, its start, then its loop until stopped."""
     from nm.app import api
@@ -359,7 +375,7 @@ def main(argv=None):
     if callable(warm):
         threading.Thread(target=warm, name="search-warm", daemon=True).start()
     print(f"The step worker {worker.name} is working the steps.", flush=True)
-    worker.run()
+    work_until_stopped(worker, app)
     return 0
 
 

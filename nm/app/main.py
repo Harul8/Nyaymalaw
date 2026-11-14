@@ -30,7 +30,7 @@ import time
 from pathlib import Path
 
 from nm.app import api, step_worker
-from nm.app.activity import Activity
+from nm.app.activity import Activity, stop_in_order, stop_wait_from
 from nm.app.composition import NOT_CHECKED, Application, not_ready, storage_root
 from nm.shared.egress_log_store import keep as keep_egress_log
 from nm.shared.identity_contracts import source_fingerprint
@@ -374,6 +374,11 @@ def main(argv: list[str] | None = None) -> int:
     trust = proxy_trust(os.environ)
     print(proxy_trust_said(trust), file=sys.stderr)
     uvicorn.run(served, host=args.host, port=args.port, log_level="warning", **trust)
+    # Plan AN.52 (52c3, D209): the web server has stopped taking requests (a stop signal ends it); the work at hand - a step at work,
+    # a paper being read, a save - is let end, up to NM_STOP_WAIT_SECONDS, before the process does.
+    stop_in_order(application.activity, application.step_jobs.close,
+                  limit=stop_wait_from(os.environ.get("NM_STOP_WAIT_SECONDS")),
+                  say=lambda line: print(line, file=sys.stderr, flush=True))
     return 0
 
 

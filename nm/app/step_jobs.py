@@ -84,6 +84,8 @@ class StepJobs:
         #: what an earlier run left (nm.shared.step_record_port). None: no record is kept.
         self.records = None
         self._here = threading.local()
+        #: Plan AN.52 (52c3, D209): closed by an orderly stop - from then on no waiting step begins here.
+        self._closed = False
 
     def running_here(self, advocate_id: str, turn_id: str) -> bool:
         """Whether this very thread is working the step its turn answers for. A step that waited for a place has progress saying
@@ -138,9 +140,24 @@ class StepJobs:
             job["recorded"] = True
         with self._lock:
             self._waiting.append(job)
-        self._held(1)
-        self._dispatch()
+            closed = self._closed
+        if not closed:  # 52c3: a step asked for once the stop has begun is kept for the next start, neither begun nor held here
+            self._held(1)
+            self._dispatch()
         return future
+
+    def close(self) -> int:
+        """AN ORDERLY STOP (plan AN.52, 52c3, D209): from now on no waiting step begins here. Each that waits keeps its record
+        (48f3), so the next start takes it up as it takes up any step an earlier run left; it is let go of in the ledger, since it
+        will not run in this process. A step at work goes on to its end. Returns how many waiting steps were kept so."""
+        with self._lock:
+            if self._closed:
+                return 0
+            self._closed = True
+            kept = len(self._waiting)
+        for _ in range(kept):
+            self._held(-1)
+        return kept
 
     def answered(self, future: Future):
         """(True, what the step returned) where it is done within the wait - raising what it raised - else (False, None). A step
@@ -183,12 +200,14 @@ class StepJobs:
                 return False
             self._waiting.remove(job)
             job["done"] = self._clock()
+            closed = self._closed
         if job["recorded"]:
             self._recorded("ended", advocate_id, turn_id)
         job["future"].set_exception(job["cancelled"]())
         self._settle(advocate_id, turn_id)
-        self._held(-1)
-        self._dispatch()
+        if not closed:  # 52c3: once closed, a waiting step was let go of in the ledger already
+            self._held(-1)
+            self._dispatch()
         return True
 
     def ask_stop(self, advocate_id: str, turn_id: str) -> bool:
@@ -212,6 +231,8 @@ class StepJobs:
         tell each step still waiting its place."""
         begun = []
         with self._lock:
+            if self._closed:  # 52c3: an orderly stop has begun; no waiting step begins here
+                return
             working = sum(self._working.values())
             for job in list(self._waiting):
                 if working >= self.at_once:

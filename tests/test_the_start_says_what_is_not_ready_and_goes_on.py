@@ -20,7 +20,9 @@ from types import SimpleNamespace
 import pytest
 
 from nm.app import main
+from nm.app.activity import Activity
 from nm.app.composition import NOT_CHECKED, NOT_READY, READY
+from nm.app.step_jobs import StepJobs
 
 pytestmark = pytest.mark.class_a
 
@@ -53,7 +55,8 @@ def start(monkeypatch, tmp_path):
         monkeypatch.setattr(main, "Application", lambda: SimpleNamespace(
             health=lambda: {"runtime": "ready"}, readiness=readiness, legal_search=search, steps_mode="inside",
             egress_log=_Log(), environment={"NM_MATTER_STORE": str(tmp_path)}, root=tmp_path,
-            turns_of_an_earlier_run_released=lambda: took.append("earlier turns") or 0))
+            turns_of_an_earlier_run_released=lambda: took.append("earlier turns") or 0,
+            activity=Activity(), step_jobs=StepJobs()))  # plan AN.52 (52c3): the stop in order once serving ends reads them
         monkeypatch.setattr(main.api, "set_application", lambda application: None)
         monkeypatch.setattr(main.api, "continue_interrupted_steps", lambda application: 0)
         monkeypatch.setattr(main.api, "prepare_history", lambda: None)
