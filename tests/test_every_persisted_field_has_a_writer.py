@@ -115,7 +115,19 @@ def optional_fields() -> tuple[tuple[type, dataclasses.Field], ...]:
 # ================================ the writers ===============================
 
 def _keywords(tree: ast.AST) -> tuple[set[str], set[str]]:
-    """(`Class.field` where the write could be attributed, bare `field` else).
+    """(`Class.field` where the write could be attributed, bare `field` else)."""
+    attributed, bare, _replaced = _keyword_writes(tree)
+    return attributed, bare
+
+
+def _keyword_writes(tree: ast.AST) -> tuple[set[str], set[str], set[str]]:
+    """(`Class.field` where the write could be attributed, bare `field` else, and the bare ones written by `replace(...)`).
+
+    THE THIRD SET (14 Nov 2026). Bare is every keyword of every call that is not a constructor - a method's, a helper's - which
+    is right for asking whether a name is written at all and wrong for retiring a reservation: `job.update(document=...)`,
+    `escalated(evidence=...)` and `_record_schema(chronology=True)` retired `Provenance.document`, `Thread.evidence` and
+    `Thread.chronology`, which nothing writes. Of the calls that cannot be attributed, only `replace(...)` can write a record's
+    field, so a reservation is retired by an attributed write or by a `replace`.
 
     A DIRECT CONSTRUCTOR CALL SAYS WHICH TYPE IT WRITES. `replace(x, ...)`
     does not -- `x` is a name and its type is not statically known here -- so
@@ -128,6 +140,7 @@ def _keywords(tree: ast.AST) -> tuple[set[str], set[str]]:
     """
     attributed: set[str] = set()
     bare: set[str] = set()
+    replaced: set[str] = set()
 
     def visit(node: ast.AST, annotations: dict[str, str]) -> None:
         """ONE VISIT PER NODE, in its innermost scope.
@@ -149,11 +162,15 @@ def _keywords(tree: ast.AST) -> tuple[set[str], set[str]]:
                     attributed.add(f"{target}.{kw.arg}")
                 else:
                     bare.add(kw.arg)
+                    func = node.func
+                    if (isinstance(func, ast.Name) and func.id == "replace") or (
+                            isinstance(func, ast.Attribute) and func.attr == "replace"):
+                        replaced.add(kw.arg)
         for child in ast.iter_child_nodes(node):
             visit(child, annotations)
 
     visit(tree, {})
-    return attributed, bare
+    return attributed, bare, replaced
 
 
 def _annotations(scope: ast.AST) -> dict[str, str]:
@@ -210,14 +227,16 @@ def _class_called(node: ast.Call, annotations: dict[str, str]) -> str:
     return ""
 
 
-def _swept(package: str) -> tuple[set[str], set[str]]:
+def _swept(package: str) -> tuple[set[str], set[str], set[str]]:
     attributed: set[str] = set()
     bare: set[str] = set()
+    replaced: set[str] = set()
     for path in sorted((ROOT / package).rglob("*.py")):
-        a, b = _keywords(ast.parse(path.read_text(encoding="utf8")))
+        a, b, r = _keyword_writes(ast.parse(path.read_text(encoding="utf8")))
         attributed |= a
         bare |= b
-    return attributed, bare
+        replaced |= r
+    return attributed, bare, replaced
 
 
 def written_in(package: str) -> set[str]:
@@ -227,17 +246,20 @@ def written_in(package: str) -> set[str]:
     checks below ask. The reservation check asks a narrower question and uses
     `written_precisely`.
     """
-    attributed, bare = _swept(package)
+    attributed, bare, _replaced = _swept(package)
     return bare | {name.split(".")[-1] for name in attributed}
 
 
 def written_precisely(package: str) -> tuple[set[str], set[str]]:
-    """(`Class.field` writes, bare writes that could not be attributed).
+    """(`Class.field` writes, `replace(...)` writes that could not be attributed).
 
     Kept separate so a caller has to decide which it means. Collapsing them is
-    what let `ProofPosition(material=...)` retire `Fact.material`.
+    what let `ProofPosition(material=...)` retire `Fact.material`; counting any
+    call's keyword as a write is what let `job.update(document=...)` retire
+    `Provenance.document` (14 Nov 2026).
     """
-    return _swept(package)
+    attributed, _bare, replaced = _swept(package)
+    return attributed, replaced
 
 
 # ========================== the declared reservations =======================
@@ -428,7 +450,7 @@ def test_no_reservation_outlives_its_writer():
     closed. Same arrangement as `UNWIRED` in test_reached_from_production and
     `CLOSED` in test_three_states.
     """
-    attributed, bare = written_precisely("nm")
+    attributed, bare = written_precisely("nm")  # bare: the `replace(...)` writes that could not be attributed
     # ATTRIBUTED FIRST, AND THE BARE SET IS THE FALLBACK. A constructor call
     # says which type it writes: `ProofPosition(material=...)` is not a writer
     # of `Fact.material`, and reading the bare name alone said it was -- which
@@ -536,3 +558,15 @@ def test_the_open_reservations_say_they_are_open():
         if "B-091" in why:
             assert why.startswith("OPEN"), (
                 f"{name} names the open defect but does not read as open")
+
+
+def test_a_method_or_a_helpers_keyword_does_not_retire_a_reservation():
+    """The third set's control (14 Nov 2026): only an attributed write or a `replace` retires one."""
+    attributed, bare, replaced = _keyword_writes(_planted(
+        "def f(other, job):",
+        "    job.update(material=1)",
+        "    helper(material=2)",
+        "    replace(other, document=3)",
+    ))
+    assert {"material", "document"} <= bare, "still written, for the question whether a name is written at all"
+    assert replaced == {"document"} and not attributed, "only the replace can retire a reservation"
