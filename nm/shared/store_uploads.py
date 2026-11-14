@@ -3,6 +3,9 @@
 Unique objects are fully written before the existing matter CAS names them.
 A failed CAS can leave an unreferenced sealed object; it cannot expose a
 partial receipt or plaintext. This slice does not claim garbage collection.
+
+A paper's parts are removed together, by the paper's own name (plan AN.53, D244):
+when the conversation that named it is erased, or when nothing names it.
 """
 from __future__ import annotations
 
@@ -45,6 +48,25 @@ def _resolved_is_within(path: PurePath, root: PurePath) -> bool:
     return _containment_identity(path).is_relative_to(_containment_identity(root))
 
 
+#: A paper's own name, the part of its objects' names before the first hyphen (plan AN.53, D244): no hyphen, no path.
+_STEM = re.compile(r"[A-Za-z0-9_]{1,99}")
+
+
+def _erase_named(folder: Path, stem: str) -> tuple[str, ...]:
+    """Remove every object in one matter's folder named `stem-...`: one paper's parts, or each record of its text (plan AN.53,
+    D244). Returns the names of those that could not be removed. Unlinking never follows a link, so nothing outside the folder
+    is touched; what is not there is not an error."""
+    if not isinstance(stem, str) or not _STEM.fullmatch(stem):
+        raise ValueError("a paper is removed by its own name")
+    left = []
+    for path in sorted(folder.glob(f"{stem}-*.nm")) if folder.is_dir() else ():
+        try:
+            path.unlink(missing_ok=True)
+        except OSError:
+            left.append(path.stem)
+    return tuple(left)
+
+
 class SealedUploadStore:
     def __init__(self, root: Path, sealer: MatterSealer) -> None:
         self._root = (root / "uploads").resolve()
@@ -70,6 +92,11 @@ class SealedUploadStore:
             handle.write(sealed)
             handle.flush()
             os.fsync(handle.fileno())
+
+    def erase(self, matter_id: str, stem: str) -> tuple[str, ...]:
+        """Remove every part of one paper in the matter's scope - an advocate's document space (plan AN.53, D244). Returns the
+        parts that could not be removed. The scope's key is kept: every other paper in it is sealed under it too."""
+        return _erase_named(self._path(matter_id, stem).parent, stem)
 
     def read(self, matter_id: str, object_id: str) -> bytes:
         path = self._path(matter_id, object_id)

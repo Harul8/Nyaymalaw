@@ -16,3 +16,7 @@ class UploadPort(Protocol):
     def read(self, matter_id: str, object_id: str) -> bytes:
         """Open one bounded object in the named matter's key scope, or raise."""
         ...
+
+    def erase(self, matter_id: str, stem: str) -> tuple[str, ...]:
+        """Remove every part named `stem-...` in the matter's scope (plan AN.53, D244); return those that could not be."""
+        ...
