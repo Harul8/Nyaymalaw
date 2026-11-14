@@ -63,7 +63,8 @@ def owned(served):
     reply = successful(served)
     matter = served.store.list_for(OWNER).matters[0]
     return {"chat_id": reply["chat_id"], "turn_id": reply["turn_id"], "matter_id": matter.id, "element": 0, "source": 0,
-            "tag": "S1", "document_ref": "doc-of-the-owner", "account_id": OWNER, "batch_id": "batch-1"}
+            "tag": "S1", "document_ref": "doc-of-the-owner", "account_id": OWNER, "batch_id": "batch-1",
+            "ref": matter.id}  # plan AN.53 (D241): a deleted conversation's reference, the owner's own
 
 
 def test_the_route_table_is_read_and_holds_the_routes_this_test_is_for():

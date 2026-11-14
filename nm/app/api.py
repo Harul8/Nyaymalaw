@@ -1701,6 +1701,12 @@ def _answered(spec, req, request, advocate_id, background, *, held=False):
     step's content-free record - route, conversation, a go-ahead's choice and disputes, the sign-in's fingerprint - for the next
     start, should the server stop first. 48f4: spec names the run (_run_of); a web server hands it to the step worker."""
     app = application()
+    # Plan AN.53 (D241, 53h3a): a message to a conversation its advocate deleted, from a page left open, is refused here - before
+    # NM does any work - since nothing may be saved to it until it is put back.
+    if req.chat_id and any(said['matter_id'] == chat_matter_id(advocate_id, req.chat_id)
+                           for said in app.store.deleted_for(advocate_id)):
+        raise HTTPException(410, {'code': 'conversation_deleted',
+                                  'why': 'This conversation was deleted. Put it back to go on with it.'})
     token = request.cookies.get('nm_session', '')
     given = spec['given']
     record = {'route': spec['route'], 'chat_id': req.chat_id, 'choice': given.get('choice'),
@@ -2559,6 +2565,123 @@ def chat_title(chat_id: str, advocate_id: Advocate, request: Request, response: 
         raise HTTPException(404, 'Conversation not available.')
     response.headers['Cache-Control'] = 'no-store'
     return {'chat_id': chat_id, 'title': _title_text(matter)}
+
+
+# ------------------------------------------------------------------ deleted, put back, erased ---
+#
+# AN ADVOCATE DELETES A CONVERSATION (plan AN.53, D241's third piece, its routes - 53h3a). The store marks a conversation
+# deleted, puts it back for thirty days and erases it, its own key first (53h1, 53h2); these are the advocate's four ways in.
+# A deleted conversation is gone from the history and every address of it at once - this server lets go of what it kept of it
+# - and a message sent to it from a page left open is refused before NM does any work (_answered). Only the advocate's own:
+# the store decides whose a conversation is, and another's is not there for them. A conversation NM is working on is not
+# deleted, since its answer could then not be saved; once NM has finished or stopped, it can be.
+
+def _let_go(matter_id):
+    """What this process kept of a conversation - its reading and its history line - let go of (P35, O29)."""
+    with _KEPT_LOCK:
+        _READ.pop(matter_id, None)
+        _LISTED.pop(matter_id, None)
+
+
+def _kept_chat(store, matter_id):
+    """The history's line of a conversation as it was last kept, read without opening the conversation: {chat_id, preview,
+    title, turn_count}, or {} where none was kept (a deleted conversation is read by nothing - D241)."""
+    try:
+        signature = store.signature(matter_id)
+        line = store.kept_line(matter_id, signature) if signature is not None else None
+    except _UNREADABLE:
+        return {}
+    chat = line.get('chat') if isinstance(line, dict) else None
+    return chat if isinstance(chat, dict) else {}
+
+
+@app.delete('/api/chats/{chat_id}', dependencies=[CsrfProtected])
+def delete_chat(chat_id: str, advocate_id: Advocate, request: Request):
+    """Delete the advocate's own conversation (D241): it leaves the history at once and can be put back for thirty days; its
+    reference names it in the list of what was deleted."""
+    if not _session_current(request, advocate_id):
+        raise HTTPException(401, 'not signed in')
+    store, matter_id = application().store, chat_matter_id(advocate_id, chat_id)
+    try:
+        matter = store.load_for(matter_id, advocate_id)
+    except _UNREADABLE:
+        matter = None  # the advocate's own conversation that will not open may be deleted all the same; nothing works on it
+    held = _held(matter) if matter is not None else None
+    if held is not None and application().turn_running(advocate_id, held['turn_id']):
+        raise HTTPException(409, {'code': 'conversation_at_work',
+                                  'why': 'NM is working on this conversation. Stop it, or let it finish, and then delete it.'})
+    try:
+        marked = store.mark_deleted(matter_id, advocate_id, utcnow())
+    except ValueError as exc:  # one nobody is recorded as owning and that will not open: never another advocate's to delete
+        raise HTTPException(404, 'Conversation not available.') from exc
+    except OSError as exc:
+        raise HTTPException(503, {'code': 'not_deleted', 'why': 'The conversation could not be deleted. Nothing was changed.'}) from exc
+    if marked is None:
+        raise HTTPException(404, 'Conversation not available.')
+    _let_go(matter_id)
+    return {'state': 'deleted', 'chat_id': chat_id, 'ref': matter_id, 'deleted_at': marked['deleted_at'],
+            'erased_after': marked['erased_after']}
+
+
+@app.get('/api/deleted-chats')
+def deleted_chats(advocate_id: Advocate, request: Request, response: Response):
+    """What the advocate deleted and can still put back (D241), oldest first: each by its reference, with the name the history
+    showed for it where one was kept, when it was deleted and when it will be erased."""
+    if not _session_current(request, advocate_id):
+        raise HTTPException(401, 'not signed in')
+    store = application().store
+    try:
+        deleted = store.deleted_for(advocate_id)
+    except OSError as exc:
+        raise HTTPException(503, 'What was deleted could not be read just now.') from exc
+    rows = []
+    for said in deleted:
+        chat = _kept_chat(store, said['matter_id'])
+        rows.append({'ref': said['matter_id'], 'chat_id': chat.get('chat_id'), 'title': chat.get('title'),
+                     'preview': chat.get('preview'), 'deleted_at': said['deleted_at'], 'erased_after': said['erased_after']})
+    response.headers['Cache-Control'] = 'no-store'
+    return {'deleted': rows}
+
+
+@app.post('/api/deleted-chats/{ref}/put-back', dependencies=[CsrfProtected])
+def put_back_chat(ref: str, advocate_id: Advocate, request: Request):
+    """Put back a conversation the advocate deleted, as it was (D241)."""
+    if not _session_current(request, advocate_id):
+        raise HTTPException(401, 'not signed in')
+    store = application().store
+    try:
+        put_back = store.put_back(ref, advocate_id)
+    except ValueError as exc:  # a reference that names no conversation of theirs
+        raise HTTPException(404, 'Nothing to put back.') from exc
+    except OSError as exc:
+        raise HTTPException(503, {'code': 'not_put_back', 'why': 'The conversation could not be put back. Nothing was changed.'}) from exc
+    if not put_back:
+        raise HTTPException(404, 'Nothing to put back.')
+    _let_go(ref)
+    return {'state': 'put_back', 'chat_id': _kept_chat(store, ref).get('chat_id')}
+
+
+@app.post('/api/deleted-chats/{ref}/erase', dependencies=[CsrfProtected])
+def erase_chat(ref: str, advocate_id: Advocate, request: Request):
+    """Erase now a conversation the advocate deleted, its own key first (D241): it cannot be undone. Only one they deleted - the
+    page asks them to say so first."""
+    if not _session_current(request, advocate_id):
+        raise HTTPException(401, 'not signed in')
+    store = application().store
+    try:
+        if not any(said['matter_id'] == ref for said in store.deleted_for(advocate_id)):
+            raise HTTPException(404, 'Nothing to erase.')
+        chat_id = _kept_chat(store, ref).get('chat_id')
+        receipt = store.erase(ref, advocate_id)
+    except ValueError as exc:
+        raise HTTPException(404, 'Nothing to erase.') from exc
+    except OSError as exc:
+        raise HTTPException(503, {'code': 'not_erased', 'why': 'The conversation could not be erased. It stays deleted, and can '
+                                  'be erased again.'}) from exc
+    if receipt is None:
+        raise HTTPException(404, 'Nothing to erase.')
+    _let_go(ref)
+    return {'state': 'erased', 'chat_id': chat_id, 'left': len(receipt['left'])}
 
 
 def _asked(matter, held):
