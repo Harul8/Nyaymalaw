@@ -113,7 +113,8 @@ def test_the_further_search_is_asked_for_in_plain_words_and_each_section_it_name
                  "nothing is searched again", "ask only for law the question needs"):
         assert part in words, part
     assert reasoning.STEPS["further"] == ("medium", False)
-    assert research.FURTHER_LAW == (research.FURTHER_CONTRACT, research.FEW_CONTRACT, research.CONTRACT)
+    # v19 (AN.48, 48i) searches further as v18 does: v18 whose plan holds the questions added since (entered 14 Nov 2026, D227).
+    assert research.FURTHER_LAW == (research.FURTHER_CONTRACT, research.FEW_CONTRACT, research.CONTRACT, research.ADDED_CONTRACT)
     assert research.NAMED_CONTRACT in research.NAMED_LAW
     assert research.NAMED_CONTRACT not in research.FURTHER_LAW and research.NAMED_CONTRACT in research.EVERY_CHOSEN
     ctx = context("Find the applicable law.")

@@ -14,7 +14,7 @@ import pytest
 
 from nm.core_engine import research
 from nm.core_engine.conversation import chat_matter_id
-from nm.core_engine.research import CHRONICLED, CONTRACT, JUDGMENTS_READ_CONTRACT, accept, plan, retrieve, validate
+from nm.core_engine.research import ADDED_CONTRACT, CHRONICLED, CONTRACT, JUDGMENTS_READ_CONTRACT, accept, plan, retrieve, validate
 from nm.core_engine.turn import saved_rows
 from nm.shared.model_port import SchemaViolation, UsageLimitReached
 from tests.test_core_research import Model, _result, operations, proposal, searcher
@@ -173,11 +173,12 @@ def test_the_contracts_before_v12_keep_their_shape_and_v12_needs_the_chronology(
     ctx = bundle()
     before = accept(proposal(chronology=False), ctx, contract=JUDGMENTS_READ_CONTRACT)
     # v13 (AN.28) keeps the chronology as v12 did, read with the whole file in view and its dates checked; v14 (AN.33) too, its
-    # failed checks settled; v15 (AN.35) too, every judgment chosen read; v16 too, the law still missing searched for once.
+    # failed checks settled; v15 (AN.35) too, every judgment chosen read; v16 too, the law still missing searched for once; v19
+    # (AN.48, 48i) too: v18 whose plan holds the questions added since (entered 14 Nov 2026, plan AN.54, D227).
     assert "chronology" not in before["proposal"] and CHRONICLED == ("core_research_v12", "core_research_v13", "core_research_v14",
                                                                       "core_research_v15", "core_research_v16", "core_research_v17",
-                                                                      CONTRACT)
-    assert CONTRACT == "core_research_v18"
+                                                                      CONTRACT, ADDED_CONTRACT)
+    assert CONTRACT == "core_research_v18" and ADDED_CONTRACT == "core_research_v19"
     with pytest.raises(SchemaViolation, match="undeclared"):
         accept(proposal(), ctx, contract=JUDGMENTS_READ_CONTRACT)
     with pytest.raises(SchemaViolation, match="missing"):
