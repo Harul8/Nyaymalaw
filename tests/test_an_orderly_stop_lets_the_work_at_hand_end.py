@@ -162,7 +162,7 @@ def test_the_one_process_server_stops_in_order_once_its_web_server_has_stopped(m
         health=lambda: {"runtime": "ready"}, readiness=lambda: {}, legal_search=None, steps_mode="inside",
         egress_log=SimpleNamespace(), environment={"NM_MATTER_STORE": str(tmp_path)}, root=tmp_path,
         turns_of_an_earlier_run_released=lambda: 0, activity=ledger, step_jobs=jobs,
-        store=SimpleNamespace(sweep_deleted=lambda now: ())))
+        store=SimpleNamespace(sweep_deleted=lambda now, look=None: ())))
     monkeypatch.setattr(main.api, "set_application", lambda application: None)
     monkeypatch.setattr(main.api, "continue_interrupted_steps", lambda application: 0)
     monkeypatch.setattr(main.api, "prepare_history", lambda: None)

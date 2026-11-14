@@ -264,25 +264,51 @@ DELETED_SWEEP_EVERY = 24 * 60 * 60
 
 def _keep_deleted(application, *, every=DELETED_SWEEP_EVERY):
     """At the start, and once a day after, the conversations their advocates deleted PUT_BACK_DAYS or more ago are erased, each
-    its own key first (plan AN.53, D241). NM never deletes a conversation by itself: only what an advocate deleted is swept, by
-    the serving process alone - the step worker never sweeps."""
+    its own key first (plan AN.53, D241), and then their papers (D244). NM never deletes a conversation by itself: only what an
+    advocate deleted is swept, by the serving process alone - the step worker never sweeps."""
     from datetime import datetime, timezone
-
-    from nm.shared.store_file_store import PUT_BACK_DAYS
 
     def sweep():
         while True:
-            try:
-                erased = application.store.sweep_deleted(datetime.now(timezone.utc))
-            except OSError as exc:  # the store's own failure: said now, and tried again at the next sweep
-                print(f"The conversations deleted {PUT_BACK_DAYS} days ago or more could not be swept ({type(exc).__name__}).",
-                      file=sys.stderr, flush=True)
-            else:
-                if erased:
-                    print(f"{len(erased)} conversation(s) deleted {PUT_BACK_DAYS} days ago or more were erased.", file=sys.stderr,
-                          flush=True)
+            _sweep_deleted(application, datetime.now(timezone.utc))
             time.sleep(every)
     threading.Thread(target=sweep, name="deleted-sweep", daemon=True).start()
+
+
+def _sweep_deleted(application, now):
+    """One sweep: what was deleted PUT_BACK_DAYS or more before now is erased, its own key first (D241); then each paper an erased
+    conversation named that no other conversation of its advocate's still names, from that advocate's own space (D244). A
+    conversation whose record could not be opened named what cannot be known: its papers are kept, for the sweep of papers
+    nothing names. Says what it did, by counts only."""
+    from nm.app.documents import papers_named
+    from nm.shared.store_file_store import PUT_BACK_DAYS
+
+    looked = []
+    try:
+        erased = application.store.sweep_deleted(now, look=lambda owner, record: looked.append((owner, record)))
+    except OSError as exc:  # the store's own failure: said now, and tried again at the next sweep
+        print(f"The conversations deleted {PUT_BACK_DAYS} days ago or more could not be swept ({type(exc).__name__}).",
+              file=sys.stderr, flush=True)
+    else:
+        if erased:
+            print(f"{len(erased)} conversation(s) deleted {PUT_BACK_DAYS} days ago or more were erased.", file=sys.stderr,
+                  flush=True)
+    # Each erased conversation's papers - those that were looked at as it was erased, even where the sweep then failed.
+    named, unknown = {}, 0
+    for owner, record in looked:
+        if owner is None or record is None:
+            unknown += 1
+            continue
+        named.setdefault(owner, set()).update(papers_named(record))
+    papers = {"erased": 0, "kept": 0, "left": 0}
+    for owner, theirs in named.items():
+        for kind, count in api.erase_papers(application, owner, frozenset(theirs)).items():
+            papers[kind] += count
+    if any(papers.values()) or unknown:
+        print(f"Their papers: {papers['erased']} erased, {papers['kept']} kept (another conversation names them, or one could "
+              f"not be read), {papers['left']} left part-way, to be tried again"
+              + (f"; what {unknown} of them named could not be read, and their papers are kept." if unknown else "."),
+              file=sys.stderr, flush=True)
 
 
 def create_app(application: Application | None = None):

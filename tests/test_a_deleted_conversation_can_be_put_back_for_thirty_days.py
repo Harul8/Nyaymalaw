@@ -128,7 +128,7 @@ def test_the_serving_process_sweeps_at_once_and_again_and_a_store_that_fails_is_
     from nm.app import main
     swept, again = [], threading.Event()
 
-    def sweep_deleted(now):
+    def sweep_deleted(now, look=None):
         swept.append(now)
         if len(swept) == 1:
             raise OSError("the store's folder refuses")
