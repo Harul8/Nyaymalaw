@@ -336,6 +336,8 @@ def test_the_composition_root_polices_every_live_destination():
                 "TurnRecordSweepPort",
                 # The turns' attempts' retention (plan AN.53, D241: 90 days after a turn ended), its narrow port likewise.
                 "TurnAttemptSweepPort",
+                # The steps' records' retention (plan AN.53, D241: 90 days), its narrow port likewise.
+                "StepRecordSweepPort",
                 # The steps handed to the worker and each step's record (plan AN.48, 48f; entered here under plan AN.53, D220:
                 # the composition root has policed both since 48f, and this inventory had not been told): sealed, local storage.
                 "StepSharePort", "StepRecordPort"}

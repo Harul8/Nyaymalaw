@@ -295,10 +295,21 @@ def _sweep_attempts(application, now):
         gone = application.turn_attempt_sweep.sweep(now - timedelta(days=ENDED_KEPT_DAYS))
     except AttemptRefused:  # its own failure, already logged by the store: tried again at the next sweep
         print("The turns' attempts could not be swept now.", file=sys.stderr, flush=True)
+    else:
+        if gone:
+            print(f"{gone} attempt(s) of turns that ended {ENDED_KEPT_DAYS} days ago or more were removed.", file=sys.stderr,
+                  flush=True)
+    # And the records of steps kept that long - a go-ahead whose advocate's sign-in lapsed and who never came back.
+    import sqlite3
+
+    from nm.shared.step_record_store import TAKEN_KEPT_DAYS, StepRecordsRefused
+    try:
+        gone = application.step_record_sweep.sweep(now - timedelta(days=TAKEN_KEPT_DAYS))
+    except (StepRecordsRefused, OSError, sqlite3.Error) as exc:
+        print(f"The steps' records could not be swept now ({type(exc).__name__}).", file=sys.stderr, flush=True)
         return
     if gone:
-        print(f"{gone} attempt(s) of turns that ended {ENDED_KEPT_DAYS} days ago or more were removed.", file=sys.stderr,
-              flush=True)
+        print(f"{gone} record(s) of steps taken {TAKEN_KEPT_DAYS} days ago or more were let go.", file=sys.stderr, flush=True)
 
 
 def _sweep_turn_lines(application, now):

@@ -165,7 +165,8 @@ def test_the_one_process_server_stops_in_order_once_its_web_server_has_stopped(m
         store=SimpleNamespace(sweep_deleted=lambda now, look=None: (), sweep_metrics=lambda before: 0),
         documents=None, directory=SimpleNamespace(sweep_expired=lambda now: {"registrations": 0, "resets": 0, "sign_ins": 0}),
             turn_record_sweep=SimpleNamespace(sweep=lambda before: 0),
-            turn_attempt_sweep=SimpleNamespace(sweep=lambda before: 0)))
+            turn_attempt_sweep=SimpleNamespace(sweep=lambda before: 0),
+            step_record_sweep=SimpleNamespace(sweep=lambda before: 0)))
     monkeypatch.setattr(main.api, "set_application", lambda application: None)
     monkeypatch.setattr(main.api, "continue_interrupted_steps", lambda application: 0)
     monkeypatch.setattr(main.api, "prepare_history", lambda: None)

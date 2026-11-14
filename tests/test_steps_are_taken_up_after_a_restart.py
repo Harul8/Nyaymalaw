@@ -34,7 +34,10 @@ def test_the_records_hold_no_words_go_with_their_steps_and_never_fail_one(tmp_pa
     records.taken("a@example.test", "t1", route="go", chat_id="c1", choice="research", disputes=["D1", "D2"], session="f" * 64)
     records.taken("a@example.test", "t2", route="send")
     records.begun("a@example.test", "t1")
-    assert records.left() == [
+    left = records.left()
+    # When each was taken (plan AN.53, D241: kept 90 days from then; 14 Nov 2026), a time with its zone and no words.
+    assert all(datetime.fromisoformat(each.pop("taken_at")).utcoffset() is not None for each in left)
+    assert left == [
         {"advocate_id": "a@example.test", "turn_id": "t1", "chat_id": "c1", "route": "go", "choice": "research",
          "disputes": ["D1", "D2"], "session": "f" * 64, "begun": True},
         {"advocate_id": "a@example.test", "turn_id": "t2", "chat_id": None, "route": "send", "choice": None, "disputes": None,

@@ -19,5 +19,15 @@ class StepRecordPort(Protocol):
         ...
 
     def left(self) -> list:
-        """At the server's start: every step an earlier run of it took and did not end."""
+        """At the server's start: every step an earlier run of it took and did not end, with when each was taken."""
+        ...
+
+
+@runtime_checkable
+class StepRecordSweepPort(Protocol):
+    """The step records' retention (plan AN.53, D241: 90 days, with the turns' attempts), a narrow port of its own that only the
+    daily sweep is given."""
+
+    def sweep(self, before) -> int:
+        """Remove the records of steps taken before `before`; how many."""
         ...
