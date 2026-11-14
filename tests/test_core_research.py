@@ -711,11 +711,19 @@ def test_an_interpretation_with_issues_never_spares_the_loop():
     assert model.calls
 
 
+def _recorded(path):
+    """A replay needs the recording it replays. outputs/ is kept out of the repository (.gitignore): where the recording is not
+    in this checkout - a fresh clone, the runner - the replay says so and is skipped; where it is, it runs (14 Nov 2026, D227)."""
+    if not path.is_file():
+        pytest.skip(f"the recording this replays is not in this checkout: {path.name}")
+
+
 def test_served_v4_research_record_replays_with_its_labelled_queries():
     from pathlib import Path
     from nm.core_engine.research import WINDOWED_CONTRACT
     root = (Path(__file__).resolve().parents[1] / "outputs/core-engine-build-20261010"
             / "browser-gpt6-cache-v1-diagnostics/0842eaae89c44f4093705de0664dd9eb")
+    _recorded(root / "008-research-retrieve-input.json")
     saved = json.loads((root / "008-research-retrieve-input.json").read_text(encoding="utf-8"))["value"]
     record = json.loads((root / "009-research-retrieve-output.json").read_text(encoding="utf-8"))["value"]["result"]
     assert record["contract"] == WINDOWED_CONTRACT
@@ -727,6 +735,7 @@ def test_served_v4_research_record_replays_with_its_labelled_queries():
 def test_real_frozen_v2_search_replays_without_new_query_construction():
     from pathlib import Path
     root = Path(__file__).resolve().parents[1] / "outputs/core-engine-build-20261010"
+    _recorded(root / "live-served-capacity-remeasurement-writer-1-input.json")
     captured = json.loads((root / "live-served-capacity-remeasurement-writer-1-input.json").read_text(encoding="utf-8"))
     record = captured["research"]
     assert record["contract"] == "core_research_v2"
