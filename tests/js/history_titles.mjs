@@ -39,7 +39,7 @@ assert.equal(context.historyTitle({ preview: '' }), 'Conversation');
 // <empty title> and once NM names it, let it stay that way"): the conversation's title once, at its beginning.
 const thread = vm.createContext({ document: { createElement: (tag) => new Element(tag) }, activeIntent: { chatId: null },
   state: { turns: [] } });
-vm.runInContext(fn('threadTitle') + fn('takeTitle'), thread);
+vm.runInContext(fn('shownChatId') + fn('threadTitle') + fn('takeTitle'), thread);
 assert.equal(thread.threadTitle().length, 0, 'nothing before the first message is sent');
 thread.state.turns = [{ turnId: 't1', chatId: 'new_c1' }];
 let [heading] = thread.threadTitle();

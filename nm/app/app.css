@@ -2253,3 +2253,17 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visib
 .turn-progress .progress-dispute-name { font-weight: 600; }
 .turn-progress .progress-questions, .turn-progress .progress-law, .turn-progress .progress-section { color: var(--ink-3); }
 .turn-progress .progress-note, .turn-progress .progress-steer { margin-top: 0.3rem; font-size: 0.92em; color: var(--ink-3); }
+
+/* ---------------------------------------------------- deleting a conversation (plan AN.53, D241) --- */
+.rail-head .rail-deleted { margin-left: auto; font-size: 0.85rem; padding: 0.2rem 0.55rem; }
+.thread-title + .thread-delete { display: block; margin: -0.7rem 0 1rem auto; font-size: 0.85rem; padding: 0.2rem 0.6rem; }
+.delete-chat-named { font: 600 1.05rem/1.4 var(--f-serif); margin: 0.2rem 0 0.8rem; overflow-wrap: anywhere; }
+.delete-chat-actions { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 1rem; }
+button.danger { color: var(--signal); border-color: var(--signal); }
+button.danger:hover, button.danger:focus-visible { background: var(--signal-w); }
+.deleted-chats-list { display: grid; gap: 0.6rem; margin-top: 0.8rem; }
+.deleted-row { display: grid; grid-template-columns: 1fr auto auto; gap: 0.2rem 0.5rem; align-items: center;
+  padding: 0.6rem 0.7rem; border: 1px solid var(--rule); border-radius: 6px; }
+.deleted-row .deleted-name { grid-column: 1 / -1; margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+.deleted-row .hint { margin: 0; }
+@media (max-width: 30rem) { .deleted-row { grid-template-columns: 1fr 1fr; } .deleted-row .hint { grid-column: 1 / -1; } }

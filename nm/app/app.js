@@ -5927,15 +5927,148 @@ function renderShownSoFar(elements) {
 // PLAN AN.43 (D84; owner, 5 Nov 2026: "put the heading just once in the begining, after the first message is saved, till the NM
 // names it, we can put <empty title> and once NM names it, let it stay that way"): the conversation's title once, at its beginning,
 // from when its first message is sent (saved at Send, AN.41 D66) - empty until NM names it, then as NM named it.
+// The conversation the page shows: a first message's is known by the turn's progress before its answer names it on the page.
+function shownChatId() {
+  return (activeIntent && activeIntent.chatId) || (state.turns.find((entry) => entry.chatId) || {}).chatId || null;
+}
+
 function threadTitle() {
   if (!state.turns.some((entry) => entry.turnId || entry.answer)) return [];
-  // A first message's conversation is known by the turn's progress before its answer names it on the page.
-  const chatId = (activeIntent && activeIntent.chatId) || (state.turns.find((entry) => entry.chatId) || {}).chatId || null;
+  const chatId = shownChatId();
   const known = state.chatTitle && state.chatTitle.chatId === chatId ? state.chatTitle.text : null;
   const heading = document.createElement('h2');
   heading.className = known ? 'thread-title' : 'thread-title unnamed';
   heading.textContent = typeof known === 'string' ? known : '';
-  return [heading];
+  if (!chatId) return [heading];
+  // Plan AN.53 (D241): the conversation's own Delete, once it is saved - it asks first, naming the conversation.
+  const remove = document.createElement('button');
+  remove.type = 'button';
+  remove.className = 'ghost thread-delete';
+  remove.textContent = 'Delete';
+  remove.setAttribute('aria-label', 'Delete this conversation');
+  remove.addEventListener('click', () => askToDeleteChat(chatId, typeof known === 'string' ? known : null));
+  return [heading, remove];
+}
+
+// DELETING A CONVERSATION (plan AN.53, D241). Asked first, naming the conversation: Delete takes it out of the history at once,
+// to be put back within thirty days from Recently deleted; Erase now erases it for good, its own key first. The server's own
+// words are said where it refuses - while NM is working on the conversation, above all.
+function deletedDay(at) {
+  const day = new Date(at);
+  return Number.isNaN(day.getTime()) ? ''
+    : day.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function askToDeleteChat(chatId, named) {
+  const dialog = $('delete-chat-dialog');
+  const first = (state.turns.find((entry) => entry.brief) || {}).brief || '';
+  $('delete-chat-named').textContent = `“${historyTitle({ title: named, preview: first })}”`;
+  $('delete-chat-status').textContent = '';
+  for (const id of ['delete-chat-confirm', 'delete-chat-erase']) $(id).disabled = false;
+  dialog.dataset.chatId = chatId;
+  if (!dialog.open) dialog.showModal();
+  $('delete-chat-confirm').focus();
+}
+
+async function deleteChat({ erase = false } = {}) {
+  const dialog = $('delete-chat-dialog');
+  const chatId = dialog.dataset.chatId;
+  if (!chatId) return;
+  const buttons = ['delete-chat-confirm', 'delete-chat-erase'].map((id) => $(id));
+  buttons.forEach((button) => { button.disabled = true; });
+  $('delete-chat-status').textContent = erase ? 'Erasing…' : 'Deleting…';
+  let deleted;
+  try {
+    deleted = await api(`/api/chats/${encodeURIComponent(chatId)}`, { method: 'DELETE' });
+  } catch (e) {
+    if (e.obsolete) return;
+    $('delete-chat-status').textContent = e.status === 409 ? e.message
+      : `It could not be ${erase ? 'erased' : 'deleted'}: ${e.message}`;
+    buttons.forEach((button) => { button.disabled = false; });
+    return;
+  }
+  // Deleted: it has left the history, whatever becomes of an erasure asked for with it - and the page says which it was.
+  let told = erase ? 'The conversation was erased.'
+    : 'The conversation was deleted. For 30 days you can put it back from Recently deleted, in the conversation history.';
+  if (erase) {
+    try {
+      await api(`/api/deleted-chats/${encodeURIComponent(deleted.ref)}/erase`, { method: 'POST' });
+    } catch (e) {
+      if (e.obsolete) return;
+      told = `The conversation was deleted, but it could not be erased now: ${e.message.replace(/[.\s]+$/, '')}. `
+        + 'You can erase it, or put it back, from Recently deleted, in the conversation history.';
+    }
+  }
+  dialog.close();
+  delete dialog.dataset.chatId;
+  $('delete-chat-status').textContent = '';
+  if (shownChatId() === chatId) startMatter();
+  loadMatterList();
+  const said = $('deleted-said');
+  said.textContent = told;
+  clearTimeout(said.clearing);
+  said.clearing = setTimeout(() => { said.textContent = ''; }, 15000);
+}
+
+async function openDeletedChats() {
+  const dialog = $('deleted-chats-dialog');
+  if (!dialog.open) dialog.showModal();
+  await showDeletedChats();
+}
+
+async function showDeletedChats(said = '') {
+  const list = $('deleted-chats-list');
+  $('deleted-chats-status').textContent = said || 'Reading what you deleted…';
+  let deleted;
+  try {
+    deleted = (await api('/api/deleted-chats')).deleted;
+  } catch (e) {
+    if (e.obsolete) return;
+    $('deleted-chats-status').textContent = `What you deleted could not be read: ${e.message.replace(/[.\s]+$/, '')}. `
+      + 'Nothing was changed.';
+    return;
+  }
+  $('deleted-chats-status').textContent = said || (deleted.length ? '' : 'Nothing you deleted is waiting to be erased.');
+  list.replaceChildren(...deleted.map((entry) => {
+    const row = document.createElement('div');
+    row.className = 'deleted-row';
+    row.dataset.deletedChatId = entry.chat_id || '';
+    const name = document.createElement('p');
+    name.className = 'deleted-name';
+    name.textContent = entry.title || entry.preview ? historyTitle(entry) : 'A conversation';
+    if (entry.preview) name.title = entry.preview;  // its first words, as the history shows them, to tell like-named ones apart
+    const when = document.createElement('p');
+    when.className = 'hint';
+    when.textContent = `Deleted ${deletedDay(entry.deleted_at)} · erased for good after ${deletedDay(entry.erased_after)}`;
+    const back = document.createElement('button');
+    back.type = 'button';
+    back.className = 'ghost';
+    back.textContent = 'Put back';
+    back.setAttribute('aria-label', `Put back: ${name.textContent}`);
+    back.addEventListener('click', () => changeDeletedChat(entry, 'put-back'));
+    const erase = document.createElement('button');
+    erase.type = 'button';
+    erase.className = 'ghost danger';
+    erase.textContent = 'Erase now';
+    erase.setAttribute('aria-label', `Erase now: ${name.textContent}`);
+    erase.addEventListener('click', () => changeDeletedChat(entry, 'erase'));
+    row.append(name, when, back, erase);
+    return row;
+  }));
+}
+
+async function changeDeletedChat(entry, change) {
+  const named = entry.title || entry.preview ? historyTitle(entry) : 'this conversation';
+  if (change === 'erase' && !window.confirm(`Erase “${named}” now? This cannot be undone.`)) return;
+  try {
+    await api(`/api/deleted-chats/${encodeURIComponent(entry.ref)}/${change}`, { method: 'POST' });
+  } catch (e) {
+    if (e.obsolete) return;
+    $('deleted-chats-status').textContent = `It could not be ${change === 'erase' ? 'erased' : 'put back'}: ${e.message}`;
+    return;
+  }
+  loadMatterList();
+  await showDeletedChats(change === 'erase' ? `“${named}” was erased.` : `“${named}” is back in your history.`);
 }
 
 // The title as the conversation now says it (D84): kept once named; asked for again only while it is not.
@@ -10649,6 +10782,12 @@ new ResizeObserver(() => {
 }).observe($('build-warning'));
 
 $('sessions-close').addEventListener('click', () => $('sessions-dialog').close());
+// Plan AN.53 (D241): deleting a conversation, and what was deleted.
+$('delete-chat-close').addEventListener('click', () => $('delete-chat-dialog').close());
+$('delete-chat-confirm').addEventListener('click', () => deleteChat());
+$('delete-chat-erase').addEventListener('click', () => deleteChat({ erase: true }));
+$('deleted-chats-open').addEventListener('click', () => openDeletedChats());
+$('deleted-chats-close').addEventListener('click', () => $('deleted-chats-dialog').close());
 $('sessions-dialog').addEventListener('close', () => {
   state.sessionsGeneration += 1;
   $('sessions-body').textContent = '';

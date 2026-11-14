@@ -448,6 +448,8 @@
   <aside class="rail" id="rail" aria-labelledby="rail-title">
     <div class="rail-head">
       <h2 id="rail-title">Conversation history</h2>
+      <!-- Plan AN.53 (D241): what the advocate deleted, to put back within thirty days or erase now. -->
+      <button type="button" id="deleted-chats-open" class="ghost rail-deleted">Recently deleted</button>
     </div>
     <div class="rail-meta" id="rail-meta"></div>
     <div id="rail-body"></div>
@@ -578,6 +580,8 @@
          cell -- which put the board in the chat's column and the chat below it. -->
     <p id="draft-status" class="draft-status" role="status"></p>
     <p id="draft-restored" class="draft-status" role="status"></p>
+    <!-- Plan AN.53 (D241): what became of a conversation the advocate deleted, said where they are looking next. -->
+    <p id="deleted-said" class="draft-status" role="status" aria-live="polite"></p>
     <button type="button" id="jump-latest" class="ghost jump-latest" hidden>Jump to latest</button>
 
     <!-- HOW MUCH USAGE IS LEFT (owner decisions O22, O23; plan P53), above the message box: at
@@ -1109,6 +1113,28 @@
   <div id="sessions-body" aria-live="polite"></div>
   <div id="sessions-action-state" role="status"></div>
   <button type="button" id="sessions-revoke" class="ghost" hidden>End other sessions</button>
+</dialog>
+<!-- DELETING A CONVERSATION (plan AN.53, D241): asked first, naming the conversation; it can be put back for thirty days, or
+     erased now, which cannot be undone. -->
+<dialog id="delete-chat-dialog" class="account-dialog" aria-labelledby="delete-chat-title" aria-describedby="delete-chat-named">
+  <div class="dialog-heading"><h2 id="delete-chat-title">Delete this conversation?</h2>
+    <button type="button" id="delete-chat-close" class="ghost">Cancel</button></div>
+  <p id="delete-chat-named" class="delete-chat-named"></p>
+  <p class="help">It leaves your history now. For 30 days you can put it back from Recently deleted; after that the conversation
+    is erased for good. A backup made before then may keep a copy for up to 35 days more.</p>
+  <p id="delete-chat-status" role="status" aria-live="polite"></p>
+  <div class="delete-chat-actions">
+    <button type="button" id="delete-chat-confirm" class="primary">Delete</button>
+    <button type="button" id="delete-chat-erase" class="ghost danger">Erase now &ndash; this cannot be undone</button>
+  </div>
+</dialog>
+<dialog id="deleted-chats-dialog" class="account-dialog" aria-labelledby="deleted-chats-title">
+  <div class="dialog-heading"><h2 id="deleted-chats-title">Recently deleted</h2>
+    <button type="button" id="deleted-chats-close" class="ghost">Close</button></div>
+  <p class="help">Conversations you deleted in the last 30 days. Put one back, or erase it now; after 30 days each is erased for
+    good.</p>
+  <p id="deleted-chats-status" role="status" aria-live="polite"></p>
+  <div id="deleted-chats-list" class="deleted-chats-list"></div>
 </dialog>
 <!-- THE OPENAI NOTICE, accepted once: at registration or in Profile → AI data sharing
      (owner decisions, 21 September and 15 October 2026). Its own tick-box, apart from
