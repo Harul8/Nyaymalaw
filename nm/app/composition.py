@@ -48,6 +48,7 @@ from nm.shared.turn_attempt_port import TurnAttemptPort
 from nm.shared.turn_attempt_store import FileTurnAttempts
 from nm.core_engine.retrieval import HybridSearcher, SearchPort, SearchUnavailable
 from nm.core_engine.citations import CaseIdentityIndex
+from nm.app.activity import Activity
 from nm.app.step_jobs import AT_ONCE, PER_ADVOCATE, StepJobs, count_from, wait_from
 from nm.app.turn_progress import TurnProgress
 
@@ -146,6 +147,9 @@ class Application:
             load_dotenv(ROOT / '.env')
         settings = MappingProxyType(dict(os.environ if environment is None else environment))
         self.environment = settings
+        # Plan AN.52 (52c1, D209): the one ledger of the work going on in this process - what a stop must not cut off, and how
+        # long the process has had nothing to do. Every owner of long work below holds its kind in it.
+        self.activity = Activity()
         self.root = root or ROOT
         self.audit_root = Path(audit_root) if audit_root is not None else log_root(settings, self.root)
         # The outgoing-data log (plan AN.48, D169): one file a day in the audit root, kept a year; swept by the processes that
@@ -276,6 +280,8 @@ class Application:
             gate=self._gate, port=StepRecordPort, sink=Sink.STORAGE, processor_id=STORAGE_PROCESSOR,
             data_classes=(DataClass.OPERATIONAL,))
         self.step_jobs.records = self.step_records
+        # 52c1: a step waiting or working is held in the ledger in every mode - not only while a supervisor counts it (main.py).
+        self.step_jobs.hold = lambda step: self.activity.move('step', step)
         # The Acts time limits may be worked out under (owner decisions, 15 Oct 2026).
         from nm.shared.held_acts import HeldActs
         self.held_acts = HeldActs(settings.get('NM_BARE_ACTS_DIR')

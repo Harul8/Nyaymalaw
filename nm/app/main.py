@@ -30,6 +30,7 @@ import time
 from pathlib import Path
 
 from nm.app import api, step_worker
+from nm.app.activity import Activity
 from nm.app.composition import NOT_CHECKED, Application, not_ready, storage_root
 from nm.shared.egress_log_store import keep as keep_egress_log
 from nm.shared.identity_contracts import source_fingerprint
@@ -48,33 +49,37 @@ HEARTBEAT_SECONDS, HEARTBEAT_STALE = 5.0, 60.0
 
 
 class _InFlight:
-    """Counts the HTTP requests and sockets being served, for the supervisor only - and, from plan AN.48 (48f1, D167), the steps
-    that go on after their request has answered (hold)."""
+    """The supervisor's count of what is in flight, written to the file it reads: the HTTP requests and sockets being served,
+    held as 'request', and - from plan AN.48 (48f1, D167) - the steps that go on after their request has answered (hold).
 
-    def __init__(self, app, path):
-        self.app, self.path, self.count, self.lock = app, Path(path), 0, threading.Lock()
-        self._move(0)
+    From plan AN.52 (52c1, D209) it is a ledger's total (nm/app/activity.py): the application's own, in which every owner of long
+    work holds its kind - so a paper read on a thread of its own is in flight for the supervisor too, which a count of requests
+    and steps missed. Given no ledger, it keeps one of its own."""
+
+    def __init__(self, app, path, activity=None):
+        self.app, self.path = app, Path(path)
+        self.activity = activity if activity is not None else Activity()
+        self.activity.tell(self._write)
+
+    @property
+    def count(self):
+        return self.activity.total()
 
     def hold(self, step):
         """A step worked after its request answered: +1 as it begins, -1 as it ends."""
-        self._move(step)
+        self.activity.move("step", step)
 
-    def _move(self, step):
-        with self.lock:
-            self.count += step
-            try:
-                self.path.write_text(str(self.count), encoding="ascii")
-            except OSError:
-                pass  # the supervisor then sees the last count it could read
+    def _write(self, total):
+        try:
+            self.path.write_text(str(total), encoding="ascii")
+        except OSError:
+            pass  # the supervisor then sees the last count it could read
 
     async def __call__(self, scope, receive, send):
         if scope["type"] not in ("http", "websocket"):
             return await self.app(scope, receive, send)
-        self._move(1)
-        try:
+        with self.activity.held("request"):
             await self.app(scope, receive, send)
-        finally:
-            self._move(-1)
 
 
 def _leave_with_supervisor(heartbeat, *, every=HEARTBEAT_SECONDS, stale=HEARTBEAT_STALE):
@@ -335,10 +340,10 @@ def main(argv: list[str] | None = None) -> int:
 
     served = api.app
     if os.environ.get(IN_FLIGHT_FILE):
-        served = _InFlight(api.app, os.environ[IN_FLIGHT_FILE])
-        # Plan AN.48 (48f1): a step that goes on after its request answered is in flight too, until it ends - from before any step
-        # is taken up below (48f3).
-        application.step_jobs.hold = served.hold
+        # Plan AN.52 (52c1): the supervisor's count is the application's own ledger - its requests held here, and every other long
+        # piece of work by its owner (a step that goes on after its request answered among them, 48f1, from before any step is
+        # taken up below, 48f3).
+        served = _InFlight(api.app, os.environ[IN_FLIGHT_FILE], activity=application.activity)
         if os.environ.get(HEARTBEAT_FILE):
             _leave_with_supervisor(os.environ[HEARTBEAT_FILE])
 
