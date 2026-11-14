@@ -16,6 +16,7 @@ import threading
 import time
 from contextlib import nullcontext
 from copy import deepcopy
+from datetime import datetime, timedelta
 
 from nm.arrive.advocate_contracts import utcnow
 from nm.core_engine import copy_figures, documents, page_reading, voice
@@ -24,11 +25,15 @@ from nm.open_matter.document_local import DocumentParserDefect, ExtractionRefuse
 from nm.open_matter.document_text_port import AdmittedDocument, DocumentFormat, TextState
 from nm.open_matter.matter_documents_port import MAX_DERIVATIVE_BYTES
 from nm.open_matter.media_contracts import MediaKind, Processor, Quarantine, admitted
+from nm.shared.storage_errors_port import StoredObjectUnreadable
 
 CHUNK = 1024 * 1024
 _REFERENCE = re.compile(r"(doc_[0-9a-f]{24})-([0-9a-f]{64})")
 #: A paper's own name, wherever a conversation's saved record names it (plan AN.53, D244): the name the desk gives each paper.
 _PAPER = re.compile(r"(?<![0-9A-Za-z_])doc_[0-9a-f]{24}(?![0-9a-f])")
+#: D241: a paper uploaded and never sent with a message is kept this many days from when it was received; then, where no
+#: conversation of its advocate's names it, it is erased by the same test as an erased conversation's papers (D244).
+UNSENT_DAYS = 30
 #: The type an original is handed back with; a photograph's is read from its own bytes.
 ORIGINAL_TYPES = {"pdf": "application/pdf", "text": "text/plain; charset=utf-8",
                   "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -413,6 +418,24 @@ class DocumentDesk:
                 stuck = True
             (left if stuck else erased).append(paper)
         return {"erased": erased, "kept": [paper for paper in named if paper in still], "left": left, "unread": 0}
+
+    def sweep_unsent(self, advocate_id, now, naming):
+        """The advocate's papers received UNSENT_DAYS or more before now that no conversation of theirs names - never sent with a
+        message, or left by an erasure cut off part-way - erased by the same test as an erased conversation's papers (plan
+        AN.53, D241, D244). A paper none of whose records can be read is of an age that cannot be known, and is kept. Returns
+        what erase returns."""
+        before, old = now - timedelta(days=UNSENT_DAYS), set()
+        for name in self.texts.names(space(advocate_id)):
+            paper = name.split("-")[0]
+            if paper in old:
+                continue
+            try:
+                received = datetime.fromisoformat(self.load(advocate_id, name)["received_at"])
+            except (DocumentRefused, StoredObjectUnreadable, KeyError, TypeError, ValueError):  # its age cannot be known from it
+                continue
+            if received.utcoffset() is not None and received <= before:
+                old.add(paper)
+        return self.erase(advocate_id, old, naming)
 
     def load(self, advocate_id, ref):
         """The exact record a reference names, from the advocate's own space only."""

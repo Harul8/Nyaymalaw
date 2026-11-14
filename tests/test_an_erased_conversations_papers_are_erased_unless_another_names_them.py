@@ -167,3 +167,63 @@ def test_a_paper_the_malware_check_held_has_only_its_text_and_that_is_erased(des
     assert desk.erase(ADVOCATE, {held["document_id"]}, _nobody_else)["erased"] == [held["document_id"]]
     with pytest.raises(DocumentRefused):
         desk.load(ADVOCATE, ref)
+
+
+# ------------------------------------------------------- papers never sent, after thirty days (53h4a2) ---
+
+def test_a_paper_received_thirty_days_ago_that_nothing_names_is_erased_and_a_younger_one_is_kept(desk, tmp_path):
+    """Plan AN.53, D241 and D244 (53h4a2): a paper uploaded and never sent with a message is kept 30 days from its receipt."""
+    from datetime import datetime, timedelta, timezone
+
+    from nm.app.documents import UNSENT_DAYS
+    now = datetime(2026, 11, 14, 9, 0, tzinfo=timezone.utc)
+    desk.clock = lambda: now - timedelta(days=UNSENT_DAYS, minutes=1)
+    old, old_ref = _sent(desk)
+    theirs, theirs_ref = _sent(desk, advocate=OTHER)
+    desk.clock = lambda: now - timedelta(days=UNSENT_DAYS - 1)
+    young, young_ref = _sent(desk, words="A paper received yesterday but one, a month on.")
+    asked = []
+
+    def naming(advocate_id, papers):
+        asked.append(set(papers))
+        return frozenset(), 0
+    said = desk.sweep_unsent(ADVOCATE, now, naming)
+    assert said == {"erased": [old["document_id"]], "kept": [], "left": [], "unread": 0}
+    assert asked == [{old["document_id"]}], "only the old paper is asked about"
+    assert _gone(desk, tmp_path, ADVOCATE, old, old_ref)
+    assert desk.load(ADVOCATE, young_ref) == young and desk.load(OTHER, theirs_ref) == theirs
+
+
+def test_an_old_paper_a_conversation_names_is_kept_and_nothing_goes_where_one_could_not_be_read(desk):
+    from datetime import datetime, timedelta, timezone
+    now = datetime(2026, 11, 14, 9, 0, tzinfo=timezone.utc)
+    desk.clock = lambda: now - timedelta(days=90)
+    sent, ref = _sent(desk)
+    assert desk.sweep_unsent(ADVOCATE, now, lambda advocate_id, papers: (frozenset(papers), 0))["kept"] == [sent["document_id"]]
+    assert desk.sweep_unsent(ADVOCATE, now, lambda advocate_id, papers: (frozenset(), 1))["unread"] == 1
+    assert desk.load(ADVOCATE, ref) == sent
+
+
+def test_a_paper_whose_record_cannot_be_read_is_of_an_age_not_known_and_is_kept(desk, tmp_path):
+    from datetime import datetime, timedelta, timezone
+    now = datetime(2026, 11, 14, 9, 0, tzinfo=timezone.utc)
+    desk.clock = lambda: now - timedelta(days=90)
+    sent, ref = _sent(desk)
+    for path in tmp_path.rglob(f"{ref}.nm"):
+        path.write_bytes(b"damaged beyond reading")
+    assert desk.sweep_unsent(ADVOCATE, now, _nobody_else) == {"erased": [], "kept": [], "left": [], "unread": 0}
+    assert originals(tmp_path, sent), "its original is kept with it"
+
+
+def test_a_paper_with_a_reading_since_is_aged_from_when_it_was_first_received(desk, tmp_path):
+    from datetime import datetime, timedelta, timezone
+
+    from nm.app.documents import space
+    now = datetime(2026, 11, 14, 9, 0, tzinfo=timezone.utc)
+    desk.clock = lambda: now - timedelta(days=40)
+    sent, ref = _sent(desk)
+    again = {**sent, "pages": [{**sent["pages"][0], "text": sent["pages"][0]["text"] + " (read again)"}]}
+    body = json.dumps(again, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    desk.texts.put(space(ADVOCATE), documents.reference(again), body)
+    assert desk.sweep_unsent(ADVOCATE, now, _nobody_else)["erased"] == [sent["document_id"]]
+    assert list((tmp_path / "document-text").rglob(f"{sent['document_id']}-*.nm")) == [], "every reading of it goes"
