@@ -152,10 +152,14 @@ def test_a_ready_resident_engine_scans_the_streamed_bytes(installed, monkeypatch
 
 
 def test_a_resident_engine_that_stops_hands_the_scan_back_to_the_command_line(installed, monkeypatch):
+    import socket
     calls = scanner(monkeypatch, 0)
-    clamd = FakeClamd()
-    clamd.server.close()
-    installed._port, installed._ready = clamd.port, True
+    # A port nothing listens on, as a stopped engine's is. Closing a fake engine's socket did not stop it on Linux, where a thread
+    # waiting in accept() keeps it listening (found 14 Nov 2026; on Windows the close stops it).
+    with socket.socket() as probe:
+        probe.bind(("127.0.0.1", 0))
+        stopped = probe.getsockname()[1]
+    installed._port, installed._ready = stopped, True
     assert installed.check(b"x") == ("clear", "no threat found by ClamAV")
     assert len(calls) == 1 and installed._ready is False
 
