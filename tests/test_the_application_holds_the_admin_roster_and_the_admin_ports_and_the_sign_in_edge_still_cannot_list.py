@@ -23,7 +23,8 @@ pytestmark = pytest.mark.class_a
 NOW = datetime(2026, 11, 7, 12, 0, tzinfo=timezone.utc)
 
 
-def application(tmp_path, admins):
+def built(tmp_path, admins):
+    """An application of its own for each test, built here - not the wired one (named so, 14 Nov 2026, plan AN.54, D227)."""
     directory = FileDirectory(tmp_path, key=KEY)
     for who in ("boss@example.test", "advocate@example.test"):
         directory.enrol(Enrolment(AdvocateIdentity(who, who), enrol(PASSWORD)))
@@ -40,31 +41,31 @@ def application(tmp_path, admins):
 
 
 def test_the_settings_name_the_admins_and_everyone_else_is_an_advocate(tmp_path):
-    app = application(tmp_path, "Boss@Example.test:admin, other@example.test:view-only")
+    app = built(tmp_path, "Boss@Example.test:admin, other@example.test:view-only")
     assert app.admin_roster.level_of("boss@example.test") is Level.ADMIN
     assert app.admin_roster.level_of("other@example.test") is Level.VIEW_ONLY
     assert app.admin_roster.level_of("advocate@example.test") is None
 
 
 def test_without_the_setting_nobody_is_an_admin(tmp_path):
-    assert application(tmp_path, None).admin_roster.named() == ()
+    assert built(tmp_path, None).admin_roster.named() == ()
 
 
 def test_the_admin_directory_lists_the_accounts_the_application_holds(tmp_path):
-    app = application(tmp_path, "boss@example.test:admin")
+    app = built(tmp_path, "boss@example.test:admin")
     listing = app.admin_directory.listing(NOW)
     assert [a.id for a in listing.accounts] == ["advocate@example.test", "boss@example.test"]
 
 
 def test_the_admin_usage_reader_is_the_same_file_the_application_meters_into(tmp_path):
-    app = application(tmp_path, "boss@example.test:admin")
+    app = built(tmp_path, "boss@example.test:admin")
     assert app.admin_usage.balances() == {}  # nothing used yet, and reading started nobody's trial
     app.usage.standing("advocate@example.test")
     assert len(app.admin_usage.balances()) == 1
 
 
 def test_the_admin_record_is_made_at_its_first_use_and_not_before(tmp_path):
-    app = application(tmp_path, "boss@example.test:admin")
+    app = built(tmp_path, "boss@example.test:admin")
     assert not (tmp_path / ADMIN_FILE).exists()
     entry = app.admin_record.append(AuditEntry(NOW, "boss@example.test", "allowance.add", "advocate@example.test",
                                                "Development account", "done"))
@@ -72,7 +73,7 @@ def test_the_admin_record_is_made_at_its_first_use_and_not_before(tmp_path):
 
 
 def test_the_directory_port_the_sign_in_edge_holds_still_cannot_list_who_exists(tmp_path):
-    app = application(tmp_path, "boss@example.test:admin")
+    app = built(tmp_path, "boss@example.test:admin")
     for name in ("listing", "list_accounts", "accounts", "list_advocates"):
         with pytest.raises(AttributeError):
             getattr(app.directory, name)
