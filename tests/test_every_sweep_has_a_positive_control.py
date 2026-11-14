@@ -46,6 +46,12 @@ ROOT = Path(__file__).resolve().parents[1]
 #: sweep test  ->  the test that proves it can fail.
 #: A sweep with no control is a sweep that has never been shown to work.
 CONTROLS: dict[str, str] = {
+    # Plan AN.54 (D227, 14 Nov 2026): three sweeps that had none, each now with a planted member that must be found.
+    "test_claims_racing_for_a_new_lock_file_leave_exactly_one_holder_and_none_fails":
+        "test_the_race_sees_a_claimant_that_fails",
+    "test_no_call_sets_a_level_by_hand": "test_the_scan_sees_a_level_set_by_hand",
+    "test_no_module_of_the_engine_names_one_kind_of_matter":
+        "test_the_scan_sees_a_module_that_names_one_kind_of_matter",
     # Plan AN.53 (53b3): the app asks the store for the advocate's own matter.
     "test_no_module_of_the_app_loads_a_matter_without_saying_whose":
         "test_the_sweep_sees_a_planted_owner_blind_load",

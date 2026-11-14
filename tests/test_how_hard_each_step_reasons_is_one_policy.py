@@ -72,15 +72,28 @@ def test_every_step_the_product_runs_has_a_level():
 
 def test_no_call_sets_a_level_by_hand():
     """A second home for the rule is the defect (one rule, one owner): outside the table, no source sets effort to a level."""
-    pattern = re.compile(r"""effort["']?\s*[=:]\s*["'](?:low|medium|high)["']""")
     found = []
     for path in sorted((ROOT / "nm").rglob("*.py")):
         if "Archives" in path.parts or "__pycache__" in path.parts:
             continue
-        for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
-            if pattern.search(line) and not line.lstrip().startswith("#"):
-                found.append(f"{path.relative_to(ROOT)}:{number}: {line.strip()[:90]}")
+        for number, line in _set_by_hand(path.read_text(encoding="utf-8")):
+            found.append(f"{path.relative_to(ROOT)}:{number}: {line.strip()[:90]}")
     assert not found, found
+
+
+_BY_HAND = re.compile(r"""effort["']?\s*[=:]\s*["'](?:low|medium|high)["']""")
+
+
+def _set_by_hand(text):
+    """Each line of `text` that sets an effort to a level by hand, with its number; a comment is not a setting."""
+    return [(number, line) for number, line in enumerate(text.splitlines(), 1)
+            if _BY_HAND.search(line) and not line.lstrip().startswith("#")]
+
+
+def test_the_scan_sees_a_level_set_by_hand():
+    """The positive control (plan AN.54, D227, 14 Nov 2026): a planted setting is found, and a comment is not."""
+    planted = 'ask(model, effort="high")\n# effort="low" said in a comment\nshape = {"effort": "medium"}\nask(model)\n'
+    assert [number for number, _line in _set_by_hand(planted)] == [1, 3]
 
 
 def test_the_research_steps_ask_the_table_and_the_check_of_a_revision_looks_again():

@@ -44,11 +44,19 @@ def test_no_module_of_the_engine_names_one_kind_of_matter(path):
     if path.name == "research.py":
         start, end = text.index(FROZEN_FROM), text.index(FROZEN_TO)
         text = text[:start] + text[end:]
-    found = []
-    for number, line in enumerate(text.splitlines(), 1):
-        if WORDS.search(line):
-            found.append(f"{number}: {line.strip()[:100]}")
+    found = [f"{number}: {line.strip()[:100]}" for number, line in _naming_a_kind(text)]
     assert not found, found
+
+
+def _naming_a_kind(text):
+    """Each line of `text` that names one kind of matter, with its number."""
+    return [(number, line) for number, line in enumerate(text.splitlines(), 1) if WORDS.search(line)]
+
+
+def test_the_scan_sees_a_module_that_names_one_kind_of_matter():
+    """The positive control (plan AN.54, D227, 14 Nov 2026): planted words of one kind of matter are found."""
+    planted = "def ask(text):\n    return 'the sale deed of the plot'\n# nothing here\nunits = 'two acres'\n"
+    assert [number for number, _line in _naming_a_kind(planted)] == [2, 4]
 
 
 @pytest.mark.parametrize("name", ["app.js", "index.html", "app.css"])

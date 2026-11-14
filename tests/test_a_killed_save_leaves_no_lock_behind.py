@@ -83,24 +83,7 @@ def test_claims_racing_for_a_new_lock_file_leave_exactly_one_holder_and_none_fai
     with an error - two password resets at once. Nothing is written now; the lock lies beyond the end of the empty file."""
     for round_ in range(40):
         path = tmp_path / f"race-{round_}.lock"
-        start, done, got, failed = threading.Barrier(4), threading.Barrier(4), [], []
-
-        def take():
-            start.wait()
-            try:
-                held = claim(path)
-            except OSError as exc:  # the defect: a racing claimant's error
-                failed.append(exc)
-                held = None
-            got.append(held)
-            done.wait()
-            if held is not None:
-                held.release()
-        threads = [threading.Thread(target=take) for _ in range(4)]
-        for thread in threads:
-            thread.start()
-        for thread in threads:
-            thread.join(timeout=30)
+        got, failed = _race(path, claim)
         assert not failed, failed
         assert sum(held is not None for held in got) == 1
         assert path.read_bytes() == b"", "nothing is written to a lock file"
@@ -110,3 +93,39 @@ def test_a_failure_to_open_the_lock_file_is_raised_as_itself_and_never_taken_for
     with pytest.raises(OSError) as raised:
         claim(tmp_path / "no-such-folder" / "matter-1.lock")
     assert isinstance(raised.value, FileNotFoundError)
+
+
+def _race(path, claiming):
+    """Four claimants at once for one new lock file: what each got, and the errors any of them met."""
+    start, done, got, failed = threading.Barrier(4), threading.Barrier(4), [], []
+
+    def take():
+        start.wait()
+        try:
+            held = claiming(path)
+        except OSError as exc:  # the defect: a racing claimant's error
+            failed.append(exc)
+            held = None
+        got.append(held)
+        done.wait()
+        if held is not None:
+            held.release()
+    threads = [threading.Thread(target=take) for _ in range(4)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=30)
+    return got, failed
+
+
+def test_the_race_sees_a_claimant_that_fails(tmp_path):
+    """The positive control (plan AN.54, D227, 14 Nov 2026): a claimant that errors is reported, so 'none fails' can fail."""
+    asked = []
+
+    def one_fails(path):
+        asked.append(path)
+        if len(asked) == 2:
+            raise PermissionError("planted")
+        return claim(path)
+    got, failed = _race(tmp_path / "planted.lock", one_fails)
+    assert [type(exc) for exc in failed] == [PermissionError] and sum(held is not None for held in got) == 1
