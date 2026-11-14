@@ -3,7 +3,9 @@
 
 D244: a conversation's papers go after it, unless another conversation the advocate keeps still names them, and none on a guess.
 Two things only the store can give for that. A LAST LOOK: the erasure and the sweep hand the caller each conversation's owner and
-saved record inside its lock, before its key is destroyed - after that nothing can read what it named. The sweep's owner is the
+saved record, read inside its lock before its key is destroyed - after that nothing can read what it named - and given once it is
+erased: never for one whose erasure failed, which can still be put back with its papers (found 14 Nov 2026, before the sweep
+asked for the look: given first, a failed erasure's papers would have gone without it). The sweep's owner is the
 one its deletion mark names, never what the record merely says: a conversation whose record names someone else is left, as one
 whose owner record does already was. NAMING: which of some papers any conversation of the advocate's still names - in use, or
 deleted and not yet erased - and how many that may be theirs could not be read. Nothing asks for either yet (Erase now and the
@@ -42,18 +44,50 @@ def _saved(store, matter_id, papers=(), advocate=OWNER):
 
 # --------------------------------------------------------------------------------------- the last look ---
 
-def test_erase_gives_a_last_look_before_the_key_goes(tmp_path):
+def test_erase_gives_a_last_look_read_before_the_key_went_once_it_is_erased(tmp_path):
     store = _store(tmp_path)
     _saved(store, "m_one", [A, B])
     seen = []
 
     def look(owner, record):
-        seen.append((owner, record, (tmp_path / "keys" / "m_one.key").exists()))
+        seen.append((owner, record, (tmp_path / "keys" / "m_one.key").exists(), (tmp_path / "matters" / "m_one.nm").exists()))
     receipt = store.erase("m_one", OWNER, look=look)
     assert receipt["key_destroyed"] is True
-    [(owner, record, key_there)] = seen
-    assert owner == OWNER and key_there, "looked at while its key was still there"
+    [(owner, record, key_there, file_there)] = seen
+    assert owner == OWNER and not key_there and not file_there, "given once it is erased"
     assert A.encode() in record and B.encode() in record and json.loads(record)["id"] == "m_one", "the record as saved"
+
+
+def test_an_erasure_that_fails_gives_no_look_and_it_keeps_its_papers_to_be_put_back(tmp_path, monkeypatch):
+    store = _store(tmp_path)
+    _saved(store, "m_one", [A])
+
+    def refuse(matter_id):
+        raise PermissionError("the key's folder refuses")
+    monkeypatch.setattr(store._sealer, "destroy", refuse)
+    with pytest.raises(PermissionError):
+        store.erase("m_one", OWNER, look=lambda *args: pytest.fail("no look at what was not erased"))
+    assert store.naming(OWNER, {A}) == (frozenset({A}), 0), "it still names its paper"
+
+
+def test_a_sweep_that_fails_part_way_looks_only_at_those_it_erased(tmp_path, monkeypatch):
+    store = _store(tmp_path)
+    _saved(store, "m_a", [A])
+    _saved(store, "m_b", [B])
+    for matter_id in ("m_a", "m_b"):
+        store.mark_deleted(matter_id, OWNER, NOW)
+    destroying = store._sealer.destroy
+
+    def refuse_the_second(matter_id):
+        if matter_id == "m_b":
+            raise PermissionError("the key's folder refuses")
+        return destroying(matter_id)
+    monkeypatch.setattr(store._sealer, "destroy", refuse_the_second)
+    seen = []
+    with pytest.raises(PermissionError):
+        store.sweep_deleted(LATER, look=lambda owner, record: seen.append(A.encode() in record))
+    assert seen == [True], "the first, erased, was looked at; the second, not erased, was not"
+    assert [said["matter_id"] for said in store.deleted_for(OWNER)] == ["m_b"], "and it is swept again"
 
 
 def test_a_conversation_that_cannot_be_opened_is_looked_at_as_nothing_and_erased(tmp_path):

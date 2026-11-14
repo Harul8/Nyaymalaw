@@ -928,8 +928,9 @@ class FileMatterStore:
     # owner's policy, lets an advocate delete a conversation of their own with everything that belongs to it; this erases what
     # the store keeps of it - the conversation, its turns' records, its ratings, its line in the history, and the records of its
     # last save and of its owner. Its papers are kept in the advocate's document space, shared by their conversations, and go
-    # after it (D244): the caller is given a LAST LOOK at the conversation before its key goes - its owner and its saved record -
-    # and asks NAMING which of the papers it named another conversation of the advocate's still names.
+    # after it (D244): the caller is given a LAST LOOK at the conversation - its owner, and its saved record as read before its
+    # key went - once it is erased, and never for one whose erasure failed; and asks NAMING which of the papers it named another
+    # conversation of the advocate's still names.
     #
     # THE KEY FIRST. The conversation's own data key is destroyed before any file is removed, so that whatever is left of it
     # anywhere - a copy, a backup, a file that could not be removed - can never be read. A key that cannot be destroyed removes
@@ -942,16 +943,17 @@ class FileMatterStore:
     def erase(self, matter_id: MatterId, advocate_id: str, *, look=None) -> dict | None:
         """Erase the advocate's own conversation; None where there is none of theirs. Returns {matter_id, own_key,
         key_destroyed, left}: left names any file that could not be removed, which can no longer be read. look(owner, record),
-        where given, is the last look at it before its key goes (D244): the advocate, and its saved record, or None where the
-        record cannot be opened."""
+        where given, is the last look at it (D244): the advocate, and its saved record as read before its key went, or None where
+        the record could not be opened - given once it is erased, and never where the erasure fails."""
         matter_id = _storage_component(str(matter_id), kind="matter ID")
         with self._locked(matter_id):
             if not self._whose(matter_id, advocate_id):
                 return None
+            looked = self._looked_at(matter_id) if look is not None else None
+            receipt = self._erase(matter_id)
             if look is not None:
-                looked = self._looked_at(matter_id)
                 look(advocate_id, looked[1] if looked is not None and looked[0] == advocate_id else None)
-            return self._erase(matter_id)
+            return receipt
 
     def _looked_at(self, matter_id: str) -> tuple[str, bytes] | None:
         """A saved conversation's owner, as its record says, and the record itself (D244); None where it cannot be opened."""
@@ -1094,8 +1096,9 @@ class FileMatterStore:
     def sweep_deleted(self, now: datetime, *, look=None) -> tuple[str, ...]:
         """Erase every conversation its advocate deleted PUT_BACK_DAYS or more before now, its own key first; returns which. One
         whose mark cannot be read is never erased on it; one whose owner record, or whose own record, names someone else than
-        its mark is left. look(owner, record), where given, is the last look at each before its key goes (D244): its owner and
-        its saved record, or (None, None) where the record cannot be opened."""
+        its mark is left. look(owner, record), where given, is the last look at each (D244): its owner and its saved record as
+        read before its key went, or (None, None) where the record could not be opened - given once it is erased, and never for
+        one whose erasure failed."""
         erased = []
         folder = self._root / _DELETED
         for path in sorted(folder.glob("*.json")) if folder.is_dir() else ():
@@ -1114,10 +1117,10 @@ class FileMatterStore:
                 looked = self._looked_at(matter_id)
                 if looked is not None and owner_mark(looked[0]) != mark["owner"]:
                     continue
-                if look is not None:
-                    look(*(looked if looked is not None else (None, None)))
                 self._erase(matter_id)
                 erased.append(matter_id)
+                if look is not None:
+                    look(*(looked if looked is not None else (None, None)))
         return tuple(erased)
 
     def _erasable(self, matter_id: str) -> list[Path]:
