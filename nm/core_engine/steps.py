@@ -501,22 +501,22 @@ _NOTICED_KINDS = ("after_time_limit", "against_client", "after_death", "papers_d
 def noticed(steps):
     """What NM noticed that the advocate did not ask about, in code's words from what the steps saved: a time limit worked out that
     may have run, and the points the papers show together (D164). Read only; an unreadable record notices nothing."""
-    said = []
+    points = []
     try:
         limits = steps.get("limits") or {}
         for entry in limits.get("calculations") or ():
             standing = entry.get("standing") or {}
             if standing.get("state") == "expired":
-                said.append(f"A time limit may have run: {entry.get('what')} - the last day was "
+                points.append(f"A time limit may have run: {entry.get('what')} - the last day was "
                             f"{(entry.get('working') or {}).get('last_day')}, {standing.get('days')} days ago.")
         plan = (steps.get("understood") or {}).get("plan") or {}
         for item in (plan.get("proposal") or {}).get("connections") or ():
             if item.get("kind") in _NOTICED_KINDS and isinstance(item.get("point"), str) and item["point"].strip():
                 why = item.get("why_it_matters")
-                said.append(item["point"].strip() + (f" ({why.strip()})" if isinstance(why, str) and why.strip() else ""))
+                points.append(item["point"].strip() + (f" ({why.strip()})" if isinstance(why, str) and why.strip() else ""))
     except (AttributeError, TypeError):
         return []
-    return said[:8]
+    return points[:8]  # at most eight points, each whole
 
 
 def limit_rests_on(steps, item):

@@ -30,6 +30,7 @@ from nm.shared.model_config import DEFAULT_TURN_MODEL
 from nm.shared.egress_contracts import EgressRefused
 from nm.shared.model_port import USAGE_LIMIT_MESSAGE, ContextOverflow, ModelError, SchemaViolation, Tier, UsageLimitReached
 from nm.shared.store_port import StaleWrite
+from nm.shared.text_contracts import snippet
 from nm.shared.turn_attempt_port import AttemptRefused, TurnAttemptPort
 
 LEGACY_CONTRACT = "core_turn_v1"
@@ -1419,7 +1420,7 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
                                       code="request_rejected", retryable=True)
         stopped("request_rejected", refusal)
         refusal.diagnosis = _diagnosis("request_rejected", said, calls)
-        log.error("Message not answered: %s (%s: %s)", refusal.diagnosis, type(said).__name__, str(said)[:300])
+        log.error("Message not answered: %s (%s: %s)", refusal.diagnosis, type(said).__name__, snippet(str(said), 300))
         finish("retryable", refusal.diagnosis)
         refusal.metrics = calls.metrics()
         raise refusal from exc
