@@ -106,6 +106,10 @@ class DocumentDerivativePort(Protocol):
         """Remove every record named `stem-...` in the matter's scope (plan AN.53, D244); return those that could not be."""
         ...
 
+    def names(self, matter_id: str) -> tuple[str, ...]:
+        """The name of every record in the matter's scope, without opening any (plan AN.53, D241, D244)."""
+        ...
+
 
 @dataclass(frozen=True)
 class MatterDocumentSearch:

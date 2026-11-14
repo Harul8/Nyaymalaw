@@ -101,3 +101,29 @@ def test_the_delete_goes_through_the_policed_wrapper_and_a_refused_destination_r
     assert len(_records(tmp_path, SPACE)) == 6
     policed.gate.policy = approved
     assert policed.erase(SPACE, PAPER) == () and _records(tmp_path, SPACE) == [OTHER_PAPER] * 3
+
+
+# ------------------------------------------------------------------- what a space holds (53h4a1) ---
+
+def test_the_store_names_every_record_in_a_space_and_opens_none(tmp_path, monkeypatch):
+    """Plan AN.53, D241 and D244 (53h4a1): the sweep of papers nothing names begins from what a space holds."""
+    texts = _texts(tmp_path)
+    monkeypatch.setattr(texts._sealer, "open", lambda *args: pytest.fail("nothing is opened to name it"))
+    named = texts.names(SPACE)
+    assert [name.split("-")[0] for name in named] == [PAPER] * 3 + [OTHER_PAPER] * 3 and list(named) == sorted(named)
+    assert set(named) == {_record(SPACE, paper, reading)[0] for paper in (PAPER, OTHER_PAPER) for reading in range(3)}
+    assert texts.names("docs_" + "c" * 40) == (), "a space with no papers holds none"
+    texts.erase(SPACE, PAPER)
+    assert [name.split("-")[0] for name in texts.names(SPACE)] == [OTHER_PAPER] * 3
+
+
+@pytest.mark.parametrize("space", ["../document-text", "docs_a/b", "", "."])
+def test_only_a_space_of_the_store_is_named(tmp_path, space):
+    with pytest.raises(ValueError):
+        _texts(tmp_path).names(space)
+
+
+def test_the_port_declares_the_listing_so_the_policed_wrapper_gates_it():
+    from nm.open_matter.matter_documents_port import DocumentDerivativePort
+    from nm.shared.policed_port_adapter import port_methods
+    assert "names" in port_methods(DocumentDerivativePort)

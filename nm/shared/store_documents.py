@@ -85,6 +85,12 @@ class SealedDocumentStore:
         key is kept: every other paper in it is sealed under it too."""
         return _erase_named(self._path(matter_id, stem).parent, stem)
 
+    def names(self, matter_id):
+        """The name of every record in the matter's scope - '<paper>-<its digest>' - for the sweep of papers nothing names (plan
+        AN.53, D241, D244). Names only: nothing is opened."""
+        folder = self._path(matter_id, "names").parent
+        return tuple(sorted(path.stem for path in folder.glob("*.nm"))) if folder.is_dir() else ()
+
     def forget(self, matter_id, object_id, sha256):
         path = self._path(matter_id, object_id)
         self._digest(sha256)
