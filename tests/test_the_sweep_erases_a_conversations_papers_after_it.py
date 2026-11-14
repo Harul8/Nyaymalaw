@@ -106,3 +106,62 @@ def test_a_conversation_whose_record_could_not_be_read_keeps_its_papers_and_says
     said = capsys.readouterr().err
     assert "1 conversation(s)" in said and "could not be read, and their papers are kept" in said
     assert papers.client.get(f"/api/documents/{ref}").status_code == 200, "kept for the sweep of papers nothing names"
+
+
+# ---------------------------------------------------------- papers never sent, swept daily (53h4a3) ---
+
+def _received(served, client, days_ago, words):
+    """A paper uploaded `days_ago` days before now, as its record says."""
+    from nm.arrive.advocate_contracts import utcnow
+    served.app.documents.clock = lambda: utcnow() - timedelta(days=days_ago)
+    try:
+        return _upload(client, words)
+    finally:
+        served.app.documents.clock = utcnow
+
+
+def test_each_accounts_old_papers_that_nothing_names_are_swept_and_the_rest_kept(papers, capsys):
+    """Plan AN.53, D241 and D244 (53h4a3): every day the serving process sweeps each account's papers never sent."""
+    from nm.app.documents import UNSENT_DAYS
+    other = papers.login(OTHER)
+    old_mine = _received(papers, papers.client, UNSENT_DAYS + 1, "An old paper of mine, never sent.")
+    old_theirs = _received(papers, other, UNSENT_DAYS + 1, "An old paper of theirs, never sent.")
+    old_sent = _received(papers, papers.client, UNSENT_DAYS + 5, "An old paper, sent with a message.")
+    _sent(papers, old_sent, "turn-1")
+    young = _received(papers, papers.client, UNSENT_DAYS - 1, "A paper uploaded a month ago, not quite.")
+    main._sweep_unsent_papers(papers.app, datetime.now(timezone.utc))
+    assert papers.client.get(f"/api/documents/{old_mine}").status_code == 404
+    assert other.get(f"/api/documents/{old_theirs}").status_code == 404, "each account's own, from its own space"
+    assert papers.client.get(f"/api/documents/{old_sent}/original").status_code == 200, "named by its conversation, kept"
+    assert papers.client.get(f"/api/documents/{young}").status_code == 200
+    said = capsys.readouterr().err
+    assert said.startswith(f"2 paper(s) received {UNSENT_DAYS} days ago or more") and "doc_" not in said, "counts, never a name"
+
+
+def test_an_account_list_that_cannot_be_read_sweeps_nothing_and_says_so(papers, monkeypatch, capsys):
+    from nm.app.documents import UNSENT_DAYS
+    from nm.arrive.admin_port import AdminUnavailable
+    old = _received(papers, papers.client, UNSENT_DAYS + 1, "An old paper, never sent.")
+
+    def unlisted(now):
+        raise AdminUnavailable("the accounts folder refuses")
+    monkeypatch.setattr(papers.app.admin_directory, "listing", unlisted)
+    main._sweep_unsent_papers(papers.app, datetime.now(timezone.utc))
+    assert "the accounts could not be listed (AdminUnavailable)" in capsys.readouterr().err
+    assert papers.client.get(f"/api/documents/{old}").status_code == 200
+
+
+def test_an_account_whose_conversations_cannot_be_read_keeps_its_papers_and_is_said(papers, capsys):
+    from nm.app.documents import UNSENT_DAYS
+    old = _received(papers, papers.client, UNSENT_DAYS + 1, "An old paper, never sent.")
+    chat = _sent(papers, _upload(papers.client), "turn-1")
+    (papers.store._root / "matters" / f"{chat_matter_id(OWNER, chat)}.nm").write_bytes(b"damaged beyond reading")
+    main._sweep_unsent_papers(papers.app, datetime.now(timezone.utc))
+    assert "the papers of 1 account(s) were kept" in capsys.readouterr().err
+    assert papers.client.get(f"/api/documents/{old}").status_code == 200
+
+
+def test_the_daily_sweep_sweeps_the_papers_never_sent_after_the_deleted_conversations():
+    import inspect
+    loop = inspect.getsource(main._keep_deleted)
+    assert loop.index("_sweep_deleted(application, now)") < loop.index("_sweep_unsent_papers(application, now)")

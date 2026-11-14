@@ -270,9 +270,41 @@ def _keep_deleted(application, *, every=DELETED_SWEEP_EVERY):
 
     def sweep():
         while True:
-            _sweep_deleted(application, datetime.now(timezone.utc))
+            now = datetime.now(timezone.utc)
+            _sweep_deleted(application, now)
+            _sweep_unsent_papers(application, now)
             time.sleep(every)
     threading.Thread(target=sweep, name="deleted-sweep", daemon=True).start()
+
+
+def _sweep_unsent_papers(application, now):
+    """Each advocate's papers received UNSENT_DAYS or more before now that no conversation of theirs names - never sent with a
+    message, or left by an erasure cut off part-way - erased (plan AN.53, D241, D244), account by account as the directory lists
+    them. An account whose record cannot be read is passed over, and its papers kept. Says what it did, by counts only."""
+    from nm.app.documents import UNSENT_DAYS
+    from nm.arrive.admin_port import AdminUnavailable
+
+    if application.documents is None:
+        return
+    try:
+        accounts = [account.id for account in application.admin_directory.listing(now).accounts if account.readable]
+    except (AdminUnavailable, OSError) as exc:  # said now, and tried again at the next sweep
+        print(f"The papers never sent could not be swept: the accounts could not be listed ({type(exc).__name__}).",
+              file=sys.stderr, flush=True)
+        return
+    erased = left = unread = failed = 0
+    for advocate_id in accounts:
+        try:
+            said = application.documents.sweep_unsent(advocate_id, now, application.store.naming)
+        except OSError:  # this advocate's space or conversations could not be read now: theirs are tried again next time
+            failed += 1
+            continue
+        erased, left, unread = erased + len(said["erased"]), left + len(said["left"]), unread + bool(said["unread"])
+    if erased or left or unread or failed:
+        print(f"{erased} paper(s) received {UNSENT_DAYS} days ago or more and named by no conversation were erased"
+              + (f"; {left} left part-way, to be tried again" if left else "")
+              + (f"; the papers of {unread} account(s) were kept, a conversation of theirs could not be read" if unread else "")
+              + (f"; {failed} account(s) could not be swept now" if failed else "") + ".", file=sys.stderr, flush=True)
 
 
 def _sweep_deleted(application, now):
