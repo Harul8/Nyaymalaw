@@ -21,6 +21,7 @@ from nm.arrive.account_confirmation_contracts import PENDING_HOURS
 from nm.arrive.advocate_contracts import AdvocateIdentity, Enrolment, enrol, registration_consent, utcnow
 from nm.arrive.store_directory import EXPIRED_KEPT_DAYS, FileDirectory
 from tests.registration import CONSENT
+from tests.test_core_served import served  # noqa: F401 - served is a fixture
 from tests.test_turn_contract import KEY
 
 pytestmark = pytest.mark.class_a
@@ -92,3 +93,34 @@ def test_the_directory_port_declares_the_sweep_so_the_policed_wrapper_gates_it()
     from nm.arrive.directory_port import DirectoryPort
     from nm.shared.policed_port_adapter import port_methods
     assert "sweep_expired" in port_methods(DirectoryPort)
+
+
+# ---------------------------------------------------------------------------- swept daily (53h4b2) ---
+
+def test_the_daily_sweep_removes_them_from_the_served_directory(served, capsys):
+    from nm.app import main
+    _begun(served.app.directory, "long-expired@example.test", EXPIRED_KEPT_DAYS + 1)
+    main._sweep_expired(served.app, NOW)
+    said = capsys.readouterr().err
+    assert f"1 registration(s) and 0 password-reset link(s) expired {EXPIRED_KEPT_DAYS} days ago or more were removed." in said
+    assert "long-expired" not in said, "counts, never a name"
+    main._sweep_expired(served.app, NOW)
+    assert capsys.readouterr().err == "", "nothing more to say"
+
+
+def test_a_directory_that_cannot_be_swept_is_said_and_tried_again(served, monkeypatch, capsys):
+    from nm.app import main
+
+    def refuses(now):
+        raise PermissionError("the folder refuses")
+    monkeypatch.setattr(served.app.directory, "sweep_expired", refuses)
+    main._sweep_expired(served.app, NOW)
+    assert "Expired registrations and reset links could not be swept (PermissionError)." in capsys.readouterr().err
+
+
+def test_the_daily_loop_sweeps_them_after_the_papers():
+    import inspect
+
+    from nm.app import main
+    loop = inspect.getsource(main._keep_deleted)
+    assert loop.index("_sweep_unsent_papers(application, now)") < loop.index("_sweep_expired(application, now)")

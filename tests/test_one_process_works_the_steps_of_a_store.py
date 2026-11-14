@@ -95,7 +95,8 @@ def server(tmp_path, monkeypatch):
             health=lambda: {"runtime": "ready"},
             readiness=lambda: {},  # plan AN.52 (52a6): the start measures readiness; this stand-in has nothing not ready
             activity=Activity(), step_jobs=StepJobs(),  # 52c3: the stop in order once serving ends reads them
-            store=SimpleNamespace(sweep_deleted=lambda now, look=None: ()), documents=None))  # plan AN.53 (D241): the serving process sweeps
+            store=SimpleNamespace(sweep_deleted=lambda now, look=None: ()), documents=None,
+            directory=SimpleNamespace(sweep_expired=lambda now: {"registrations": 0, "resets": 0})))  # plan AN.53 (D241): the serving process sweeps
         return served.main(["--no-follow-code"])
     monkeypatch.delenv(served.IN_FLIGHT_FILE, raising=False)
     monkeypatch.setattr(served, "create_app", lambda application=None: None)
