@@ -136,7 +136,7 @@ def test_the_serving_process_sweeps_at_once_and_again_and_a_store_that_fails_is_
         if len(swept) > 2:
             threading.Event().wait()  # holds this test's sweeping thread: it must not sweep on for the rest of the session
         return ("m_old",)
-    main._keep_deleted(SimpleNamespace(store=SimpleNamespace(sweep_deleted=sweep_deleted), documents=None,
+    main._keep_deleted(SimpleNamespace(store=SimpleNamespace(sweep_deleted=sweep_deleted, sweep_metrics=lambda before: 0), documents=None,
                                        directory=SimpleNamespace(sweep_expired=lambda now: {"registrations": 0, "resets": 0}),
             turn_record_sweep=SimpleNamespace(sweep=lambda before: 0)),
                        every=0.05)

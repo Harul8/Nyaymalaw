@@ -157,6 +157,10 @@ class StorePort(Protocol):
         """Every recorded turn on one matter, oldest first."""
         ...
 
+    def sweep_metrics(self, before) -> int:
+        """Remove the turns' metrics written before `before` (plan AN.53, D241: kept two years); how many."""
+        ...
+
     def record_metrics(self, metrics: dict) -> None:
         """Written even when the turn failed."""
         ...

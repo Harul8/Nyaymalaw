@@ -1380,6 +1380,22 @@ class FileMatterStore:
         path = self._metrics / f"{turn_id}.json"
         path.write_text(json.dumps(metrics, indent=2), encoding="utf8")
 
+    def sweep_metrics(self, before: datetime) -> int:
+        """Every turn's metrics written before `before` go (plan AN.53, D241: the counts and timings of turns, which hold no
+        content, are kept two years); returns how many. Aged by when each was last written; one that cannot be removed is left
+        for the next sweep."""
+        if before.utcoffset() is None:
+            raise ValueError("a sweep is dated with its offset")
+        cut, gone = before.timestamp(), 0
+        for path in sorted(self._metrics.glob("*.json")):
+            try:
+                if path.stat().st_mtime < cut:
+                    path.unlink()
+                    gone += 1
+            except OSError:  # gone meanwhile, or it will not go now: the next sweep sees it again
+                continue
+        return gone
+
     # ------------------------------------------------------- transcripts ---
     #
     # A TRANSCRIPT IS NOT A METRIC, and the difference decides how it is

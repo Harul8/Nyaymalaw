@@ -291,10 +291,18 @@ def _sweep_turn_lines(application, now):
         gone = application.turn_record_sweep.sweep(now - timedelta(days=KEPT_DAYS))
     except TurnEventRefused:  # its own failure, already logged by the record: tried again at the next sweep
         print("The turn record could not be swept now.", file=sys.stderr, flush=True)
+    else:
+        if gone:
+            print(f"{gone} line(s) of turns that ended two years ago or more were removed from the turn record.", file=sys.stderr,
+                  flush=True)
+    # The turns' metrics beside the conversations: counts and timings too, kept as long.
+    try:
+        gone = application.store.sweep_metrics(now - timedelta(days=KEPT_DAYS))
+    except OSError as exc:
+        print(f"The turns' metrics could not be swept now ({type(exc).__name__}).", file=sys.stderr, flush=True)
         return
     if gone:
-        print(f"{gone} line(s) of turns that ended two years ago or more were removed from the turn record.", file=sys.stderr,
-              flush=True)
+        print(f"{gone} turn metrics file(s) written two years ago or more were removed.", file=sys.stderr, flush=True)
 
 
 def _sweep_expired(application, now):

@@ -89,3 +89,38 @@ def test_the_daily_loop_sweeps_the_turn_record_with_the_others():
     from nm.app import main
     loop = inspect.getsource(main._keep_deleted)
     assert loop.index("_sweep_expired(application, now)") < loop.index("_sweep_turn_lines(application, now)")
+
+
+# ----------------------------------------------------------- the turns' metrics beside the conversations ---
+
+def _metrics(store, turn_id, days_ago):
+    import os
+    store.record_metrics({"turn_id": turn_id, "seconds": 90})
+    written = (datetime.now(timezone.utc) - timedelta(days=days_ago)).timestamp()
+    os.utime(store._metrics / f"{turn_id}.json", (written, written))
+
+
+def test_the_turns_metrics_written_two_years_ago_or_more_go_and_the_rest_stay(tmp_path):
+    from nm.shared.store_file_store import FileMatterStore
+    store = FileMatterStore(tmp_path, key="metrics-retention-" + "k" * 32)
+    for turn_id, days in (("turn-old", KEPT_DAYS + 2), ("turn-recent", KEPT_DAYS - 2), ("turn-today", 0)):
+        _metrics(store, turn_id, days)
+    assert store.sweep_metrics(datetime.now(timezone.utc) - timedelta(days=KEPT_DAYS)) == 1
+    assert sorted(path.stem for path in store._metrics.glob("*.json")) == ["turn-recent", "turn-today"]
+    with pytest.raises(ValueError):
+        store.sweep_metrics(datetime(2026, 11, 14))
+
+
+def test_the_store_port_declares_the_metrics_sweep():
+    from nm.shared.policed_port_adapter import port_methods
+    from nm.shared.store_port import StorePort
+    assert "sweep_metrics" in port_methods(StorePort)
+
+
+def test_the_daily_step_sweeps_the_served_stores_metrics_too(served, capsys):
+    from nm.app import main
+    _metrics(served.store, "turn-old", KEPT_DAYS + 2)
+    _metrics(served.store, "turn-new", 1)
+    main._sweep_turn_lines(served.app, datetime.now(timezone.utc))
+    assert "1 turn metrics file(s) written two years ago or more were removed." in capsys.readouterr().err
+    assert sorted(path.stem for path in served.store._metrics.glob("*.json")) == ["turn-new"]

@@ -120,6 +120,10 @@ class _RecordingStore:
         self.reached.append("deleted_for")
         return ()
 
+    def sweep_metrics(self, before):
+        self.reached.append("sweep_metrics")
+        return 0
+
     def sweep_deleted(self, now, *, look=None):
         self.reached.append("sweep_deleted")
         return ()
@@ -222,6 +226,7 @@ def _arguments_for(method: str) -> tuple:
         "put_back": ("m-1", "advocate@example.test"),
         "deleted_for": ("advocate@example.test",),
         "sweep_deleted": (None,),
+        "sweep_metrics": (None,),
         "saved_files_for": ("advocate@example.test",),
         "kept_line": ("m-1", (1, 1)),
         "keep_line": ("m-1", (1, 1), {"owner": "advocate@example.test"}),
