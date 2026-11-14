@@ -66,8 +66,8 @@ def test_what_was_deleted_is_listed_with_its_name_and_when_it_will_be_erased_and
 def test_a_deleted_conversation_is_erased_at_once_when_its_advocate_asks_and_cannot_be_put_back(served, chat):
     ref = _delete(served.client, chat).json()["ref"]
     erased = served.client.post(f"/api/deleted-chats/{ref}/erase")
-    assert erased.status_code == 200 and erased.json() == {"state": "erased", "chat_id": chat, "left": 0}, (
-        "named from its kept line, so the page can close it where it is open")
+    assert erased.status_code == 200 and erased.json() == {"state": "erased", "chat_id": chat, "left": 0, "papers": {
+        "erased": 0, "kept": 0, "left": 0}}, "named from its kept line, so the page can close it where it is open"
     assert served.client.get("/api/deleted-chats").json()["deleted"] == []
     assert served.client.post(f"/api/deleted-chats/{ref}/put-back").status_code == 404, "an erasure cannot be undone"
     assert served.store.load(chat_matter_id(OWNER, chat)) is None

@@ -27,6 +27,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from starlette.concurrency import run_in_threadpool
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, StrictBool, field_validator
 from nm.app.admin_api import admin_router
+from nm.app.documents import papers_named
 from nm.app.static_assets import browser_assets_router
 from nm.app.turn_progress import STAGES as TURN_STAGES
 from nm.arrive import attempts_contracts as attempts
@@ -2664,15 +2665,15 @@ def put_back_chat(ref: str, advocate_id: Advocate, request: Request):
 @app.post('/api/deleted-chats/{ref}/erase', dependencies=[CsrfProtected])
 def erase_chat(ref: str, advocate_id: Advocate, request: Request):
     """Erase now a conversation the advocate deleted, its own key first (D241): it cannot be undone. Only one they deleted - the
-    page asks them to say so first."""
+    page asks them to say so first. Then its papers, unless another conversation of theirs still names them (D244)."""
     if not _session_current(request, advocate_id):
         raise HTTPException(401, 'not signed in')
-    store = application().store
+    store, named = application().store, []
     try:
         if not any(said['matter_id'] == ref for said in store.deleted_for(advocate_id)):
             raise HTTPException(404, 'Nothing to erase.')
         chat_id = _kept_chat(store, ref).get('chat_id')
-        receipt = store.erase(ref, advocate_id)
+        receipt = store.erase(ref, advocate_id, look=lambda owner, record: named.append(papers_named(record or b'')))
     except ValueError as exc:
         raise HTTPException(404, 'Nothing to erase.') from exc
     except OSError as exc:
@@ -2681,7 +2682,33 @@ def erase_chat(ref: str, advocate_id: Advocate, request: Request):
     if receipt is None:
         raise HTTPException(404, 'Nothing to erase.')
     _let_go(ref)
-    return {'state': 'erased', 'chat_id': chat_id, 'left': len(receipt['left'])}
+    return {'state': 'erased', 'chat_id': chat_id, 'left': len(receipt['left']),
+            'papers': erase_papers(application(), advocate_id, frozenset().union(*named))}
+
+
+_papers_log = logging.getLogger('nm.papers')
+
+
+def erase_papers(app, advocate_id, named):
+    """What an erased conversation named, erased in its turn (plan AN.53, D244): each paper no other conversation of the
+    advocate's still names, from their own space only. The conversation is erased whatever becomes of its papers: one that
+    could not be erased now is kept, and found again by the sweep of papers nothing names. Returns how many papers were erased,
+    were kept because another conversation names them or one could not be read, and were left part-way."""
+    if not named or app.documents is None:
+        return {'erased': 0, 'kept': len(named), 'left': 0}
+    try:
+        said = app.documents.erase(advocate_id, named, app.store.naming)
+    except OSError as exc:
+        _papers_log.warning('The papers of an erased conversation could not be erased now (%s); they are kept.',
+                            type(exc).__name__)
+        return {'erased': 0, 'kept': len(named), 'left': 0}
+    if said['unread']:
+        _papers_log.warning('The papers of an erased conversation are kept: %d conversation(s) of the advocate could not be read.',
+                            said['unread'])
+    if said['left']:
+        _papers_log.warning('%d paper(s) of an erased conversation could not all be removed; each is tried again.',
+                            len(said['left']))
+    return {'erased': len(said['erased']), 'kept': len(said['kept']), 'left': len(said['left'])}
 
 
 def _asked(matter, held):
