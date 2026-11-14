@@ -27,6 +27,8 @@ from nm.open_matter.media_contracts import MediaKind, Processor, Quarantine, adm
 
 CHUNK = 1024 * 1024
 _REFERENCE = re.compile(r"(doc_[0-9a-f]{24})-([0-9a-f]{64})")
+#: A paper's own name, wherever a conversation's saved record names it (plan AN.53, D244): the name the desk gives each paper.
+_PAPER = re.compile(r"(?<![0-9A-Za-z_])doc_[0-9a-f]{24}(?![0-9a-f])")
 #: The type an original is handed back with; a photograph's is read from its own bytes.
 ORIGINAL_TYPES = {"pdf": "application/pdf", "text": "text/plain; charset=utf-8",
                   "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -37,6 +39,14 @@ _log = logging.getLogger(__name__)
 def space(advocate_id):
     """The advocate's own document space, under its own encryption key."""
     return "docs_" + hashlib.sha256(advocate_id.encode("utf-8")).hexdigest()[:40]
+
+
+def papers_named(record):
+    """Every paper a conversation's saved record names (plan AN.53, D244), wherever in it: a message's papers, one added while NM
+    worked, a turn not yet finished. Read from the record's whole text, so that no place a paper is named in is missed - a name
+    found where it is not a paper's only keeps that paper longer."""
+    text = record.decode("utf-8", errors="replace") if isinstance(record, (bytes, bytearray)) else str(record)
+    return frozenset(_PAPER.findall(text))
 
 
 class ReadingJobs:
@@ -375,6 +385,34 @@ class DocumentDesk:
         if record["format"] not in documents.AUDIO or record["check"]["state"] != "clear":
             raise DocumentRefused("This is not a recording that can be played.")
         return self._original(advocate_id, record), documents.AUDIO[record["format"]]
+
+    def erase(self, advocate_id, named, naming):
+        """What an erased conversation named, erased in its turn (plan AN.53, D244): each of those papers that no conversation the
+        advocate keeps still names - its original's parts first, then every record of its text - from their own space only.
+        naming(advocate_id, papers) -> (those a kept conversation names, how many of the advocate's conversations could not be
+        read): where any could not be read nothing is erased, since whether it names a paper cannot be known. A paper whose
+        original could not all be removed keeps its text, by which it is found and erased again; a store that fails leaves that
+        paper and goes on to the next. Returns {erased, kept, left, unread}: papers erased, papers kept, papers some file of
+        which is left, and how many conversations could not be read."""
+        named = sorted(set(named))
+        if not named:
+            return {"erased": [], "kept": [], "left": [], "unread": 0}
+        still, unread = naming(advocate_id, frozenset(named))
+        if unread:
+            return {"erased": [], "kept": named, "left": [], "unread": unread}
+        where, erased, left = space(advocate_id), [], []
+        for paper in named:
+            if paper in still:
+                continue
+            try:
+                stuck = self.originals.erase(where, paper)
+                if not stuck:
+                    stuck = self.texts.erase(where, paper)
+            except OSError:
+                _log.warning("A paper of an erased conversation could not be erased; it is tried again later")
+                stuck = True
+            (left if stuck else erased).append(paper)
+        return {"erased": erased, "kept": [paper for paper in named if paper in still], "left": left, "unread": 0}
 
     def load(self, advocate_id, ref):
         """The exact record a reference names, from the advocate's own space only."""
