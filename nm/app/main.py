@@ -257,6 +257,34 @@ def _measure_in_the_background(application) -> None:
     threading.Thread(target=measure, name="readiness", daemon=True).start()
 
 
+#: Plan AN.53 (D241): how often the serving process sweeps the conversations their advocates deleted, in seconds - at its
+#: start and once a day after.
+DELETED_SWEEP_EVERY = 24 * 60 * 60
+
+
+def _keep_deleted(application, *, every=DELETED_SWEEP_EVERY):
+    """At the start, and once a day after, the conversations their advocates deleted PUT_BACK_DAYS or more ago are erased, each
+    its own key first (plan AN.53, D241). NM never deletes a conversation by itself: only what an advocate deleted is swept, by
+    the serving process alone - the step worker never sweeps."""
+    from datetime import datetime, timezone
+
+    from nm.shared.store_file_store import PUT_BACK_DAYS
+
+    def sweep():
+        while True:
+            try:
+                erased = application.store.sweep_deleted(datetime.now(timezone.utc))
+            except OSError as exc:  # the store's own failure: said now, and tried again at the next sweep
+                print(f"The conversations deleted {PUT_BACK_DAYS} days ago or more could not be swept ({type(exc).__name__}).",
+                      file=sys.stderr, flush=True)
+            else:
+                if erased:
+                    print(f"{len(erased)} conversation(s) deleted {PUT_BACK_DAYS} days ago or more were erased.", file=sys.stderr,
+                          flush=True)
+            time.sleep(every)
+    threading.Thread(target=sweep, name="deleted-sweep", daemon=True).start()
+
+
 def create_app(application: Application | None = None):
     """Wire the composition root into the served path and return the ASGI app."""
     api.set_application(application or Application())
@@ -370,6 +398,8 @@ def main(argv: list[str] | None = None) -> int:
     # Plan AN.48 (D169): the outgoing-data log swept now and once a day after - a day over 90 days old compressed, over a year
     # deleted - by each process that writes it.
     keep_egress_log(application.egress_log)
+    # Plan AN.53 (D241): the conversations deleted thirty days ago or more, erased now and once a day after.
+    _keep_deleted(application)
     print(json.dumps(health, indent=2))
     trust = proxy_trust(os.environ)
     print(proxy_trust_said(trust), file=sys.stderr)

@@ -27,7 +27,7 @@ import tempfile
 import time
 from contextlib import contextmanager
 from dataclasses import asdict, fields, is_dataclass
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from enum import Enum
 from pathlib import Path
 from types import UnionType
@@ -568,7 +568,16 @@ _INSECURE = "xor-keystream(NOT-SECURE)"
 _SAVED = "saved-versions"
 _SAVED_FORMAT = 1
 #: The store's own folders, never removed by an erasure that empties them (plan AN.53, D241).
-_KEPT_FOLDERS = frozenset({"matters", "history-lines", "transcripts", "v2", "feedback", "saved-versions", "matter-owners", "keys"})
+_KEPT_FOLDERS = frozenset({"matters", "history-lines", "transcripts", "v2", "feedback", "saved-versions", "matter-owners", "keys",
+                           "deleted"})
+#: Plan AN.53 (D241's second piece): the folder where each conversation its advocate deleted is marked, the shape of a mark, and
+#: how many days a deleted conversation can be put back before the sweep erases it.
+_DELETED = "deleted"
+_DELETED_FORMAT = 1
+PUT_BACK_DAYS = 30
+#: A deletion mark that is there and cannot be read: the conversation stays deleted - read by nothing, written by nothing - and
+#: is never erased on it.
+_UNREADABLE_MARK = object()
 
 #: Plan AN.53 (53b, D217): the folder of a store where each matter's owner is
 #: recorded beside it, and the shape of that record.
@@ -705,7 +714,8 @@ class FileMatterStore:
 
     def load(self, matter_id: MatterId) -> Matter | None:
         p = self._path(matter_id)
-        if not p.exists():
+        if not p.exists() or self._deleted_mark(str(matter_id)) is not None:
+            # A conversation its advocate deleted is read by nothing until it is put back (plan AN.53, D241).
             return None
         return self._read(str(matter_id), p)
 
@@ -894,7 +904,8 @@ class FileMatterStore:
                 mark = self._owner_mark(matter_id)
             except ValueError:  # a file whose name is no matter's: not known, and its reading says why
                 mark = None
-            if mark is None or mark == mine:
+            if (mark is None or mark == mine) and not self._deleted_path(matter_id).exists():
+                # D241: a deleted conversation leaves the history at once, whoever's it is.
                 out.append((matter_id, signature, saved_at, True if mark == mine else None))
         return tuple(out)
 
@@ -931,26 +942,135 @@ class FileMatterStore:
         """Erase the advocate's own conversation; None where there is none of theirs. Returns {matter_id, own_key,
         key_destroyed, left}: left names any file that could not be removed, which can no longer be read."""
         matter_id = _storage_component(str(matter_id), kind="matter ID")
-        path = self._path(matter_id)
         with self._locked(matter_id):
-            mark = self._owner_mark(matter_id)
-            if mark is None:
-                if not path.exists():
-                    return None
-                try:
-                    whose = self._read(matter_id, path).advocate_id
-                except Exception as exc:  # noqa: BLE001 -- whatever stops it opening, whose it is cannot be known
-                    raise ErasureRefused(f"matter {matter_id} cannot be opened and nobody is recorded as owning it: it is "
-                                         "not erased") from exc
-                if whose != advocate_id:
-                    return None
-            elif mark != owner_mark(advocate_id):
+            if not self._whose(matter_id, advocate_id):
                 return None
-            own_key = self._sealer is not None and (self._keys / f"{matter_id}.key").exists()
-            destroyed = self._sealer.destroy(matter_id) if self._sealer is not None else False
-            left = [str(target.relative_to(self._root)) for target in self._erasable(matter_id) if not self._remove(target)]
-            self._owner_marks.pop(matter_id, None)
-            return {"matter_id": matter_id, "own_key": own_key, "key_destroyed": destroyed, "left": left}
+            return self._erase(matter_id)
+
+    def _whose(self, matter_id: str, advocate_id: str) -> bool | None:
+        """True where the conversation is the advocate's own, False where it is another's, None where there is none. Its owner
+        record says; where there is none, the file itself, which must open. Raises ErasureRefused where it cannot be opened and
+        nobody is recorded as owning it: nothing is done to a conversation on a guess."""
+        mark = self._owner_mark(matter_id)
+        if mark is not None:
+            return mark == owner_mark(advocate_id)
+        path = self._path(matter_id)
+        if not path.exists():
+            return None
+        try:
+            return self._read(matter_id, path).advocate_id == advocate_id
+        except Exception as exc:  # noqa: BLE001 -- whatever stops it opening, whose it is cannot be known
+            raise ErasureRefused(f"matter {matter_id} cannot be opened and nobody is recorded as owning it: nothing is done "
+                                 "to it") from exc
+
+    def _erase(self, matter_id: str) -> dict:
+        """Called inside the matter's lock, its owner decided: the key first, then every file."""
+        own_key = self._sealer is not None and (self._keys / f"{matter_id}.key").exists()
+        destroyed = self._sealer.destroy(matter_id) if self._sealer is not None else False
+        left = [str(target.relative_to(self._root)) for target in self._erasable(matter_id) if not self._remove(target)]
+        self._owner_marks.pop(matter_id, None)
+        return {"matter_id": matter_id, "own_key": own_key, "key_destroyed": destroyed, "left": left}
+
+    # ------------------------------------------------------- deleted, and put back ---
+    #
+    # DELETE, AS AN ADVOCATE DOES (plan AN.53, D241's second piece). A conversation its advocate deletes leaves their history at
+    # once and, for PUT_BACK_DAYS, can be put back: for an advocate an accidental deletion of a client's matter is the likelier
+    # harm than a late erasure. After that the sweep erases it, its own key first. NM NEVER DELETES A CONVERSATION BY ITSELF:
+    # only one its advocate deleted is ever swept. While it is deleted nothing reads it (load) and nothing writes to it (commit),
+    # so a stale page's message neither brings it back nor is erased with it. The mark beside it holds a hash of its owner and
+    # the moment it was deleted, nothing else, and is not sealed, like the owner record.
+
+    def _deleted_path(self, matter_id: str) -> Path:
+        return self._root / _DELETED / f"{_storage_component(matter_id, kind='matter ID')}.json"
+
+    def _deleted_mark(self, matter_id: str):
+        """The deletion mark ({owner, at}), None where the conversation is not deleted, or _UNREADABLE_MARK."""
+        try:
+            record = json.loads(self._deleted_path(matter_id).read_text(encoding="utf8"))
+        except FileNotFoundError:
+            return None
+        except (OSError, ValueError):
+            return _UNREADABLE_MARK
+        try:
+            if (not isinstance(record, dict) or record.get("format") != _DELETED_FORMAT
+                    or not isinstance(record.get("owner"), str) or not isinstance(record.get("at"), str)):
+                return _UNREADABLE_MARK
+            at = datetime.fromisoformat(record["at"])
+        except ValueError:
+            return _UNREADABLE_MARK
+        return _UNREADABLE_MARK if at.utcoffset() is None else {"owner": record["owner"], "at": at}
+
+    @staticmethod
+    def _deleted_said(matter_id: str, at: datetime) -> dict:
+        return {"matter_id": matter_id, "deleted_at": at.isoformat(),
+                "erased_after": (at + timedelta(days=PUT_BACK_DAYS)).isoformat()}
+
+    def mark_deleted(self, matter_id: MatterId, advocate_id: str, at: datetime) -> dict | None:
+        """Delete the advocate's own conversation, to be put back within PUT_BACK_DAYS; None where there is none of theirs. A
+        conversation deleted again keeps its first date: the days run from the first deletion."""
+        matter_id = _storage_component(str(matter_id), kind="matter ID")
+        if at.utcoffset() is None:
+            raise ValueError("a deletion is dated with its offset")
+        with self._locked(matter_id):
+            if not self._whose(matter_id, advocate_id):
+                return None
+            existing = self._deleted_mark(matter_id)
+            if isinstance(existing, dict):
+                return self._deleted_said(matter_id, existing["at"])
+            path = self._deleted_path(matter_id)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            fd, tmp = tempfile.mkstemp(dir=str(path.parent), suffix=".tmp")
+            try:
+                with os.fdopen(fd, "wb") as fh:
+                    fh.write(json.dumps({"format": _DELETED_FORMAT, "owner": owner_mark(advocate_id),
+                                         "at": at.isoformat()}).encode("utf8"))
+                    fh.flush()
+                    os.fsync(fh.fileno())
+                publish(tmp, path)
+            except BaseException:
+                discard(Path(tmp))
+                raise
+            return self._deleted_said(matter_id, at)
+
+    def put_back(self, matter_id: MatterId, advocate_id: str) -> bool:
+        """Put back the advocate's own deleted conversation, as it was deleted; False where there is none of theirs to put back."""
+        matter_id = _storage_component(str(matter_id), kind="matter ID")
+        with self._locked(matter_id):
+            if self._deleted_mark(matter_id) is None or not self._whose(matter_id, advocate_id):
+                return False
+            return self._remove(self._deleted_path(matter_id))
+
+    def deleted_for(self, advocate_id: str) -> tuple[dict, ...]:
+        """The advocate's own deleted conversations, each with when it was deleted and when it will be erased; oldest first."""
+        mine, out = owner_mark(advocate_id), []
+        folder = self._root / _DELETED
+        for path in sorted(folder.glob("*.json")) if folder.is_dir() else ():
+            mark = self._deleted_mark(path.stem)
+            if isinstance(mark, dict) and mark["owner"] == mine:
+                out.append(self._deleted_said(path.stem, mark["at"]))
+        return tuple(sorted(out, key=lambda said: (said["deleted_at"], said["matter_id"])))
+
+    def sweep_deleted(self, now: datetime) -> tuple[str, ...]:
+        """Erase every conversation its advocate deleted PUT_BACK_DAYS or more before now, its own key first; returns which. One
+        whose mark cannot be read is never erased on it; one whose owner record names someone else than its mark is left."""
+        erased = []
+        folder = self._root / _DELETED
+        for path in sorted(folder.glob("*.json")) if folder.is_dir() else ():
+            matter_id = path.stem
+            try:
+                _storage_component(matter_id, kind="matter ID")
+            except ValueError:
+                continue
+            with self._locked(matter_id):
+                mark = self._deleted_mark(matter_id)
+                if not isinstance(mark, dict) or now < mark["at"] + timedelta(days=PUT_BACK_DAYS):
+                    continue
+                recorded = self._owner_mark(matter_id)
+                if recorded is not None and recorded != mark["owner"]:
+                    continue
+                self._erase(matter_id)
+                erased.append(matter_id)
+        return tuple(erased)
 
     def _erasable(self, matter_id: str) -> list[Path]:
         """Every file the store keeps of one conversation, the conversation first and its owner record last - so that an erasure
@@ -965,7 +1085,8 @@ class FileMatterStore:
         rated = self._feedback / matter_id
         if rated.is_dir():
             found += sorted(rated.glob("*/*.json"))
-        return [*found, self._saved_path(matter_id), self._owner_path(matter_id)]
+        # The owner record, then the deletion mark, last: an erasure cut off part-way can be asked for again, and swept again.
+        return [*found, self._saved_path(matter_id), self._owner_path(matter_id), self._deleted_path(matter_id)]
 
     def _remove(self, path: Path) -> bool:
         """Remove one file, and the folders it leaves empty below the store's own; True where it is gone."""
@@ -998,6 +1119,10 @@ class FileMatterStore:
             raise ValueError("expected_version must be a nonnegative integer")
         p = self._path(matter.id)
         with self._locked(matter.id):
+            if self._deleted_mark(str(matter.id)) is not None:
+                # Plan AN.53 (D241): nothing writes to a conversation its advocate deleted - a stale page's save must neither
+                # bring it back nor be erased with it, and nothing new is begun under its name until it is put back or erased.
+                raise StaleWrite(f"matter {matter.id} was deleted by its advocate and is not written to; put it back first.")
             current = self.load(matter.id)
             if current is None and expected_version != 0:
                 # Absence is an initial-create precondition, not permission

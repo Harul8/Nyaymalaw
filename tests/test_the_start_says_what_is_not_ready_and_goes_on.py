@@ -56,7 +56,8 @@ def start(monkeypatch, tmp_path):
             health=lambda: {"runtime": "ready"}, readiness=readiness, legal_search=search, steps_mode="inside",
             egress_log=_Log(), environment={"NM_MATTER_STORE": str(tmp_path)}, root=tmp_path,
             turns_of_an_earlier_run_released=lambda: took.append("earlier turns") or 0,
-            activity=Activity(), step_jobs=StepJobs()))  # plan AN.52 (52c3): the stop in order once serving ends reads them
+            activity=Activity(), step_jobs=StepJobs(),  # plan AN.52 (52c3): the stop in order once serving ends reads them
+            store=SimpleNamespace(sweep_deleted=lambda now: ())))  # plan AN.53 (D241): the serving process sweeps
         monkeypatch.setattr(main.api, "set_application", lambda application: None)
         monkeypatch.setattr(main.api, "continue_interrupted_steps", lambda application: 0)
         monkeypatch.setattr(main.api, "prepare_history", lambda: None)

@@ -104,6 +104,23 @@ class StorePort(Protocol):
         its own key destroyed first; None where there is none of theirs. Never another's, and never on a guess."""
         ...
 
+    def mark_deleted(self, matter_id: MatterId, advocate_id: str, at) -> "dict | None":
+        """Delete the advocate's own conversation as an advocate does (plan AN.53, D241): it leaves their history at once, and
+        nothing reads or writes it; it can be put back for PUT_BACK_DAYS, then the sweep erases it. None where none of theirs."""
+        ...
+
+    def put_back(self, matter_id: MatterId, advocate_id: str) -> bool:
+        """Put back the advocate's own deleted conversation, as it was (D241); False where there is none of theirs to put back."""
+        ...
+
+    def deleted_for(self, advocate_id: str) -> tuple:
+        """The advocate's own deleted conversations, each with when it was deleted and when it will be erased (D241)."""
+        ...
+
+    def sweep_deleted(self, now) -> tuple:
+        """Erase what its advocate deleted PUT_BACK_DAYS or more before now, each its own key first; which were erased (D241)."""
+        ...
+
     def saved_files_for(self, advocate_id: str) -> tuple[tuple[str, tuple[int, int], str, bool | None], ...]:
         """`saved_files` for one advocate (plan AN.53, 53b, D217): every saved matter not recorded
         as another's, as (id, signature, when last saved, owned), without opening any. `owned` is

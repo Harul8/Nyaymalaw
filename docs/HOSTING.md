@@ -154,6 +154,9 @@ installed separately. The Anthropic adapter's package is not on the list; hostin
 
 ## Backups
 
+- **Deleted conversations, and how long backups are kept** (plan AN.53, D241). A conversation its advocate deletes can be put back
+  for 30 days; the web server then erases it, its own key first, at its start and once a day. A backup made before that still
+  holds it and its key: keep backups at most 35 days, so that an erased conversation is gone from every copy within 65 days.
 - **Stop, then copy** (plan AN.50, D191). Stop the step worker, then the web server, and only then copy the whole `NM_MATTER_STORE`
   folder; start them again after the copy. A copy of a folder in use is not a backup: a save can land between two files of it, and
   the small databases in it (accounts' usage, the steps) copied in the middle of a write come out stale or damaged. Where the

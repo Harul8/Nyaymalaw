@@ -104,6 +104,22 @@ class _RecordingStore:
         self.reached.append("erase")
         return None
 
+    def mark_deleted(self, matter_id, advocate_id, at):
+        self.reached.append("mark_deleted")
+        return None
+
+    def put_back(self, matter_id, advocate_id):
+        self.reached.append("put_back")
+        return False
+
+    def deleted_for(self, advocate_id):
+        self.reached.append("deleted_for")
+        return ()
+
+    def sweep_deleted(self, now):
+        self.reached.append("sweep_deleted")
+        return ()
+
     def saved_files_for(self, advocate_id):
         self.reached.append("saved_files_for")
         return ()
@@ -197,6 +213,10 @@ def _arguments_for(method: str) -> tuple:
         "saved_files": (),
         "load_for": ("m-1", "advocate@example.test"),
         "erase": ("m-1", "advocate@example.test"),
+        "mark_deleted": ("m-1", "advocate@example.test", None),
+        "put_back": ("m-1", "advocate@example.test"),
+        "deleted_for": ("advocate@example.test",),
+        "sweep_deleted": (None,),
         "saved_files_for": ("advocate@example.test",),
         "kept_line": ("m-1", (1, 1)),
         "keep_line": ("m-1", (1, 1), {"owner": "advocate@example.test"}),
