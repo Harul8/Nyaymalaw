@@ -16,7 +16,7 @@ import pytest
 
 from nm.shared.model_config import load, load_dotenv
 from nm.shared.model_openai_adapter import OpenAIModelAdapter
-from nm.shared.model_port import Prompt, Tier
+from nm.shared.model_port import ConfigurationError, Prompt, Tier
 
 pytestmark = pytest.mark.class_c
 
@@ -24,7 +24,10 @@ pytestmark = pytest.mark.class_c
 @pytest.fixture(scope="module")
 def adapter():
     load_dotenv()
-    cfg = load()
+    try:
+        cfg = load()
+    except ConfigurationError as exc:  # no model is configured here at all (14 Nov 2026: it was an error, not a skip)
+        pytest.skip(f"no model configured: {exc}")
     if not cfg.for_tier(Tier.ROUTINE).api_key:
         pytest.skip("no NM_MODEL_API_KEY configured")
     return OpenAIModelAdapter(cfg)
