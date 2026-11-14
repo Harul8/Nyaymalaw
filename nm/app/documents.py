@@ -14,6 +14,7 @@ import re
 import secrets
 import threading
 import time
+from contextlib import nullcontext
 from copy import deepcopy
 
 from nm.arrive.advocate_contracts import utcnow
@@ -53,10 +54,13 @@ class ReadingJobs:
     #: The most of one advocate's readings that run at once: the most papers one message carries (TURN_DOCUMENT_LIMIT).
     AT_ONCE = 10
 
-    def __init__(self, clock=time.monotonic):
+    def __init__(self, clock=time.monotonic, activity=None):
         self._jobs, self._lock, self._clock = {}, threading.Lock(), clock
         #: For each advocate: how many readings are running, and those that wait their turn, in the order asked.
         self._running, self._waiting = {}, {}
+        #: Plan AN.52 (52c2, D209): the process's ledger, in which each reading is held from when it is asked for - a reading that
+        #: waits its turn included - until it ends, so that no stop cuts one off. None: no ledger (a desk built on its own).
+        self._activity = activity
 
     def start(self, advocate_id, ref, total, work, explain):
         """Begin work(progress) -> the document's summary, unless this document is already being read, and say where it stands.
@@ -70,6 +74,8 @@ class ReadingJobs:
                 return self._shown(job)
             job = {"state": "reading", "done": 0, "total": total, "document": None, "error": None, "ended": None}
             self._jobs[key] = job
+        if self._activity is not None:
+            self._activity.move("reading", 1)
 
         def progress(done, count):
             with self._lock:
@@ -95,6 +101,8 @@ class ReadingJobs:
                     if not self._running[advocate_id]:
                         del self._running[advocate_id]
                         self._waiting.pop(advocate_id, None)
+            if self._activity is not None:
+                self._activity.move("reading", -1)
             if following is not None:
                 self._begin(following)
 
@@ -137,10 +145,13 @@ class ReadingJobs:
 
 
 class DocumentDesk:
-    def __init__(self, *, prepare_space, originals, texts, checker, reader, clock=utcnow):
+    def __init__(self, *, prepare_space, originals, texts, checker, reader, clock=utcnow, activity=None):
         self.prepare_space, self.originals, self.texts = prepare_space, originals, texts
         self.checker, self.reader, self.clock = checker, reader, clock
-        self.jobs = ReadingJobs()
+        #: Plan AN.52 (52c2, D209): the process's ledger, in which an upload is held while it is scanned and read, and each reading
+        #: while it is asked for and runs. None: no ledger (a desk built on its own).
+        self.activity = activity
+        self.jobs = ReadingJobs(activity=activity)
 
     def receive(self, advocate_id, name, data):
         name = documents.document_name(name)
@@ -153,9 +164,11 @@ class DocumentDesk:
                                   else "A document can be at most 16 MB.")
         sha = hashlib.sha256(data).hexdigest()
         document_id = "doc_" + secrets.token_hex(12)
-        state, reason = self.checker.check(data)
-        pages, observed, failure = (self._read(advocate_id, document_id, fmt, data, sha)
-                                    if state == "clear" else ([], None, None))
+        # The malware check and the reading of its words on this computer are held in the ledger while they run (52c2).
+        with (self.activity.held("scan") if self.activity is not None else nullcontext()):
+            state, reason = self.checker.check(data)
+            pages, observed, failure = (self._read(advocate_id, document_id, fmt, data, sha)
+                                        if state == "clear" else ([], None, None))
         record = documents.receipt(
             document_id=document_id, name=name, fmt=fmt, sha256=sha, size=len(data),
             received_at=self.clock().isoformat(), check={"state": state, "reason": reason, "checker": self.checker.name},

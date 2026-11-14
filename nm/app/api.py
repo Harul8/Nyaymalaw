@@ -391,6 +391,9 @@ def signed_in(request: Request, nm_session: str | None = Cookie(default=None),
     if session is None or application().directory.identity(session.advocate_id) is None:
         raise HTTPException(status_code=401, detail="not signed in")
     request.state.account_session = session
+    # Plan AN.52 (52c2, D209): a signed-in advocate acted - the sign of life a hosted server's idle timer runs from. A request no
+    # one is signed in for is not one (an outside monitor asks the health address every minute).
+    application().activity.signed_in_action()
     return session.advocate_id
 
 
@@ -2998,7 +3001,8 @@ def _dictate(advocate_id, request, name, data):
     try:
         model = application().dictation_reader(
             advocate_id, session_current=lambda: _session_current(request, advocate_id))
-        text, _ = voice.dictate(model, data, fmt)
+        with application().activity.held('dictation'):  # 52c2: held in the ledger while it is transcribed
+            text, _ = voice.dictate(model, data, fmt)
     except ModelPermissionRefused as exc:
         if not _session_current(request, advocate_id):
             raise HTTPException(401, 'not signed in') from exc
@@ -3086,7 +3090,11 @@ async def live_dictation(websocket: WebSocket):
                 return
 
     pump = asyncio.create_task(to_page())
+    ledger = application().activity
     try:
+        # Plan AN.52 (52c2, D209): live words are held in the ledger for the life of their session, from the provider's session
+        # being open until it is closed below.
+        ledger.move('dictation', 1)
         while not pump.done():
             message = await websocket.receive()
             if message['type'] == 'websocket.disconnect':
@@ -3119,6 +3127,7 @@ async def live_dictation(websocket: WebSocket):
             await session.close()
         except ModelError as exc:
             _live_log.warning('Live dictation ledger not settled: %s', type(exc).__name__)
+        ledger.move('dictation', -1)
         try:
             await websocket.close()
         except (RuntimeError, WebSocketDisconnect):

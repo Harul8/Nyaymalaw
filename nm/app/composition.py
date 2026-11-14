@@ -164,11 +164,11 @@ class Application:
         # own folder is the one that failed - one time and nothing else a line, for the Admin diagnostics.
         self._log_unwritten, self._log_failure_said = Path(storage) / UNWRITTEN_LOG_LINES, False
         raw_store = store or FileMatterStore(storage, key=key)
-        self.store = PolicedPort(inner=raw_store,
+        self.store = PolicedPort(inner=_SavesHeld(raw_store, self.activity),
             gate=self._gate, port=StorePort, sink=Sink.STORAGE, processor_id=STORAGE_PROCESSOR)
         # An advocate's documents (owner decisions, 15 Oct 2026): checked by ClamAV,
         # read on this installation, sealed under the advocate's own key.
-        self.documents = _document_desk(raw_store, storage, self._gate, settings)
+        self.documents = _document_desk(raw_store, storage, self._gate, settings, self.activity)
         self.turn_attempts = PolicedPort(inner=_DeferredAdapter(
             lambda: FileTurnAttempts(storage / 'turn-attempts.sqlite')),
             gate=self._gate, port=TurnAttemptPort, sink=Sink.STORAGE, processor_id=STORAGE_PROCESSOR,
@@ -1004,7 +1004,7 @@ class Application:
                 'working': self.step_jobs.count_working()}
 
 
-def _document_desk(raw_store, storage, gate, settings):
+def _document_desk(raw_store, storage, gate, settings, activity=None):
     """None where the store cannot seal originals (insecure test ciphers, fakes)."""
     if not all(hasattr(raw_store, name) for name in ('upload_storage', 'document_storage', 'prepare_custody')):
         return None
@@ -1028,7 +1028,23 @@ def _document_desk(raw_store, storage, gate, settings):
                               processor_id=STORAGE_PROCESSOR),
         texts=PolicedPort(inner=texts, gate=gate, port=DocumentDerivativePort, sink=Sink.STORAGE,
                           processor_id=STORAGE_PROCESSOR),
-        checker=checker, reader=LocalDocumentText())
+        checker=checker, reader=LocalDocumentText(), activity=activity)
+
+
+class _SavesHeld:
+    """The store, with each save held in the ledger while it is written (plan AN.52, 52c2, D209): a stop must not cut a save off,
+    and every save of a conversation - a turn's, a title's, a steer's, a message that waits - goes through this one door. Every
+    other part of the store is the store's own, unchanged."""
+
+    def __init__(self, inner, activity):
+        self._store, self._activity = inner, activity
+
+    def commit(self, matter, *, expected_version):
+        with self._activity.held('save'):
+            return self._store.commit(matter, expected_version=expected_version)
+
+    def __getattr__(self, name):
+        return getattr(self._store, name)
 
 
 class _DeferredAdapter:
