@@ -82,6 +82,7 @@ _BATCH = 900
 #: passages were, or its words and the index's never meet -- so the index builds that
 #: import this and the live search share one owner of the tokenisation.
 from nm.shared.citation_contracts import bm25_tokens  # noqa: E402,F401
+from nm.shared.text_contracts import refuses_blank_text  # noqa: E402
 
 
 class Unavailable(RuntimeError):
@@ -115,6 +116,9 @@ def faiss_header(path: Path) -> tuple[bytes, int, int]:
     return head[:4], struct.unpack("<i", head[4:8])[0], struct.unpack("<q", head[8:16])[0]
 
 
+# A stored record that names no Act, section or wording is read as "" (passages()): that emptiness is a state a passage must be
+# able to say, so each field is exempted by name (plan AN.54, D227, 14 Nov 2026).
+@refuses_blank_text("act_id", "act_name", "section", "text")
 @dataclass(frozen=True)
 class Passage:
     position: int

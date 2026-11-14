@@ -15,6 +15,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Mapping, Protocol, Sequence
 
+from nm.shared.text_contracts import refuses_blank_text
+
 
 class AdminUnavailable(RuntimeError):
     """A source the Admin area reads could not be opened. The view says so; it never shows an empty list instead."""
@@ -32,6 +34,7 @@ class SessionLine:
     live: bool
 
 
+@refuses_blank_text()
 @dataclass(frozen=True)
 class AdminAccount:
     """What an admin may see of one account (D119). `readable=False`: the record would not open, and every other
@@ -155,6 +158,7 @@ class AdminUsagePort(Protocol):
 
 # --------------------------------------------------------------------- the turn record ---
 
+@refuses_blank_text()
 @dataclass(frozen=True)
 class TurnDay:
     """How many turns ended on one Indian day, by how they ended (D120). No account, model or word of a turn."""

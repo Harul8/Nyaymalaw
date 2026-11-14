@@ -33,6 +33,7 @@ from enum import Enum
 from typing import Any, Mapping, Protocol, runtime_checkable
 
 from nm.shared.budget_contracts import Completion
+from nm.shared.text_contracts import refuses_blank_text
 
 
 class Tier(str, Enum):
@@ -217,6 +218,8 @@ MAX_AUDIO_BYTES = 25 * 1024 * 1024
 AUDIO_TYPES = ("audio/mpeg", "audio/mp4", "audio/wav", "audio/webm")
 
 
+# A recording in which nothing was heard is said by an empty text, so `text` is exempt; the provider and model name the call.
+@refuses_blank_text("text")
 @dataclass(frozen=True)
 class Transcription:
     """What a speech model heard in one recording, and the call's receipt."""
