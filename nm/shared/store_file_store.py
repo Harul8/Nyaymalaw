@@ -567,6 +567,8 @@ _INSECURE = "xor-keystream(NOT-SECURE)"
 #: and the shape of that record.
 _SAVED = "saved-versions"
 _SAVED_FORMAT = 1
+#: The store's own folders, never removed by an erasure that empties them (plan AN.53, D241).
+_KEPT_FOLDERS = frozenset({"matters", "history-lines", "transcripts", "v2", "feedback", "saved-versions", "matter-owners", "keys"})
 
 #: Plan AN.53 (53b, D217): the folder of a store where each matter's owner is
 #: recorded beside it, and the shape of that record.
@@ -578,6 +580,11 @@ def owner_mark(advocate_id: str) -> str:
     """What an owner record holds of an advocate: a hash of the account's
     identifier, so the record names nobody. It is compared, never read back."""
     return hashlib.sha256(b"nm-matter-owner\0" + str(advocate_id).encode("utf8")).hexdigest()
+
+
+class ErasureRefused(ValueError):
+    """A conversation is not erased on a guess (plan AN.53, D241): one that cannot be opened and that nobody is recorded as
+    owning cannot be known to be the asking advocate's."""
 
 
 class RolledBack(ValueError):
@@ -903,6 +910,76 @@ class FileMatterStore:
             except Exception:  # noqa: BLE001 -- named, never swallowed
                 out.append(matter_id)
         return tuple(out)
+
+    # ------------------------------------------------------------------ erasure ---
+    #
+    # THE STORE'S ONE DELETE (plan AN.53, D241's first piece; the review's F-35). Nothing in NM could delete anything. D241, the
+    # owner's policy, lets an advocate delete a conversation of their own with everything that belongs to it; this erases what
+    # the store keeps of it - the conversation, its turns' records, its ratings, its line in the history, and the records of its
+    # last save and of its owner. Its papers are kept in the advocate's document space, shared by their conversations, and go by
+    # a piece of their own.
+    #
+    # THE KEY FIRST. The conversation's own data key is destroyed before any file is removed, so that whatever is left of it
+    # anywhere - a copy, a backup, a file that could not be removed - can never be read. A key that cannot be destroyed removes
+    # nothing. A conversation from before there were keys of their own has none to destroy: its files are removed, and the
+    # receipt says so.
+    #
+    # ONLY THE ADVOCATE'S OWN, and never on a guess: another's conversation is not there for them (None, nothing changes), and
+    # one that cannot be opened is erased by its owner only where the owner record says it is theirs.
+
+    def erase(self, matter_id: MatterId, advocate_id: str) -> dict | None:
+        """Erase the advocate's own conversation; None where there is none of theirs. Returns {matter_id, own_key,
+        key_destroyed, left}: left names any file that could not be removed, which can no longer be read."""
+        matter_id = _storage_component(str(matter_id), kind="matter ID")
+        path = self._path(matter_id)
+        with self._locked(matter_id):
+            mark = self._owner_mark(matter_id)
+            if mark is None:
+                if not path.exists():
+                    return None
+                try:
+                    whose = self._read(matter_id, path).advocate_id
+                except Exception as exc:  # noqa: BLE001 -- whatever stops it opening, whose it is cannot be known
+                    raise ErasureRefused(f"matter {matter_id} cannot be opened and nobody is recorded as owning it: it is "
+                                         "not erased") from exc
+                if whose != advocate_id:
+                    return None
+            elif mark != owner_mark(advocate_id):
+                return None
+            own_key = self._sealer is not None and (self._keys / f"{matter_id}.key").exists()
+            destroyed = self._sealer.destroy(matter_id) if self._sealer is not None else False
+            left = [str(target.relative_to(self._root)) for target in self._erasable(matter_id) if not self._remove(target)]
+            self._owner_marks.pop(matter_id, None)
+            return {"matter_id": matter_id, "own_key": own_key, "key_destroyed": destroyed, "left": left}
+
+    def _erasable(self, matter_id: str) -> list[Path]:
+        """Every file the store keeps of one conversation, the conversation first and its owner record last - so that an erasure
+        cut off part-way can be asked for again by the same advocate."""
+        found = [self._path(matter_id), self._line_path(matter_id)]
+        named = self._transcripts / "v2" / _transcript_component(matter_id)
+        if named.is_dir():
+            found += sorted(named.glob("*.nm"))
+        if self._transcripts.is_dir():
+            found += [p for p in sorted(self._transcripts.glob(f"{matter_id}{_SEP}*.nm"))
+                      if len(_legacy_split_positions(p.stem)) == 1]
+        rated = self._feedback / matter_id
+        if rated.is_dir():
+            found += sorted(rated.glob("*/*.json"))
+        return [*found, self._saved_path(matter_id), self._owner_path(matter_id)]
+
+    def _remove(self, path: Path) -> bool:
+        """Remove one file, and the folders it leaves empty below the store's own; True where it is gone."""
+        try:
+            path.unlink(missing_ok=True)
+        except OSError:
+            return False
+        for folder in (path.parent, path.parent.parent):
+            if folder != self._root and self._root in folder.parents and folder.name not in _KEPT_FOLDERS:
+                try:
+                    folder.rmdir()
+                except OSError:
+                    break  # not empty, or not a folder this erasure made empty
+        return True
 
     def commit(self, matter: Matter, *, expected_version: int) -> Matter:
         """Write the matter, or refuse because the file moved underneath.

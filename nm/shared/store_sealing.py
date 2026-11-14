@@ -133,6 +133,25 @@ class MatterSealer:
         finally:
             discard(beside)
 
+    def destroy(self, matter_id: str) -> bool:
+        """DESTROY THIS MATTER'S KEY (plan AN.53, D241): the first step of erasing a conversation, so that every record sealed under
+        it - wherever a copy of one is left, a backup included - can never be opened again (open() says the key is missing; nothing
+        makes a new one in its place). True where there was a key, False where there was none. A key that cannot be removed raises,
+        and the caller then removes nothing else (FileMatterStore.erase)."""
+        for stray in self._keys.glob(f"{matter_id}.key.*.new"):  # a key record a process was writing when it ended
+            stray.unlink(missing_ok=True)
+        try:
+            (self._keys / f"{matter_id}.key").unlink()
+        except FileNotFoundError:
+            return False
+        if os.name != "nt":  # the removal is the folder's, flushed as a save's rename is (store_file_store.publish)
+            folder = os.open(str(self._keys), os.O_RDONLY)
+            try:
+                os.fsync(folder)
+            finally:
+                os.close(folder)
+        return True
+
     def _read_key(self, matter_id: str, path: Path) -> tuple[WrappedKey, bytes]:
         """The winner's key record, waiting for it to be COMPLETE.
 

@@ -99,6 +99,11 @@ class StorePort(Protocol):
         another advocate's matter that cannot be opened is not said to be damaged."""
         ...
 
+    def erase(self, matter_id: MatterId, advocate_id: str) -> "dict | None":
+        """THE STORE'S ONE DELETE (plan AN.53, D241): the advocate's own conversation and every record the store keeps of it,
+        its own key destroyed first; None where there is none of theirs. Never another's, and never on a guess."""
+        ...
+
     def saved_files_for(self, advocate_id: str) -> tuple[tuple[str, tuple[int, int], str, bool | None], ...]:
         """`saved_files` for one advocate (plan AN.53, 53b, D217): every saved matter not recorded
         as another's, as (id, signature, when last saved, owned), without opening any. `owned` is
