@@ -42,6 +42,7 @@ from __future__ import annotations
 
 import ast
 import pathlib
+import re
 
 import pytest
 
@@ -91,7 +92,9 @@ def folds_defined(sources) -> list[tuple[str, str, bool]]:
         for node in ast.walk(tree):
             if not isinstance(node, ast.FunctionDef):
                 continue
-            if "fold" not in node.name.lower():
+            # "fold" as a word part, not the "fold" in "folder" (found 14 Nov 2026: two functions about folders on disk were
+            # reported as text folds).
+            if not re.search(r"fold(?!er)", node.name.lower()):
                 continue
             rel = path.relative_to(PACKAGE.parent).as_posix()
             out.append((rel, node.name, "fold" in _calls(node)))
@@ -181,3 +184,11 @@ def test_the_pattern_scan_catches_a_planted_regex():
     planted = ast.parse('import re\n_W = re.compile(r"[a-z0-9]+")\n')
     assert word_patterns([(PACKAGE / "planted.py", planted)]) \
         == ["nm/planted.py"]
+
+
+def test_a_name_about_a_folder_is_not_a_fold_and_a_fold_is_still_found():
+    """The negative and positive controls of the name test (14 Nov 2026)."""
+    planted = ast.parse("def kept_in_code_folder(): return 1\ndef _my_fold(text): return text.lower()\n"
+                        "def casefolded(text): return text.casefold()\n")
+    found = {name for _mod, name, _calls in folds_defined([(PACKAGE / "planted.py", planted)])}
+    assert found == {"_my_fold", "casefolded"}
