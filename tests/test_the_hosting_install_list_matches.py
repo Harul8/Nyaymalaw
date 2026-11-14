@@ -5,6 +5,7 @@ dependency pyproject.toml names, each pinned exactly. Offline: reads the install
 import importlib.util
 from pathlib import Path
 
+import pytest
 from packaging.requirements import Requirement
 from packaging.utils import canonicalize_name
 
@@ -25,6 +26,12 @@ def pinned():
 
 
 def test_the_list_is_what_this_environment_runs_nm_with():
+    # The list is written in the environment NM is run and tested in. A pinned line whose platform this environment does not meet
+    # shows it was written on another platform - a clone on Linux, the runner - where the comparison is not this environment's to
+    # make (14 Nov 2026, plan AN.54, D227); where it was written, it is made.
+    foreign = [str(requirement) for requirement in pinned() if requirement.marker is not None and not requirement.marker.evaluate()]
+    if foreign:
+        pytest.skip(f"the list was written on another platform ({foreign[0]}); it is checked where it is written")
     assert tool().main(["--check"]) == 0, ("requirements-hosting.txt no longer matches the environment NM is tested in: run "
                                           "development_environment/developer_tooling/hosting_requirements.py")
 
