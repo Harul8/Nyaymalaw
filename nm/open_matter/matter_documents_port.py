@@ -102,6 +102,10 @@ class DocumentDerivativePort(Protocol):
         """Remove this exact object or report failure; approval is the service owner's job."""
         ...
 
+    def erase(self, matter_id: str, stem: str) -> tuple[str, ...]:
+        """Remove every record named `stem-...` in the matter's scope (plan AN.53, D244); return those that could not be."""
+        ...
+
 
 @dataclass(frozen=True)
 class MatterDocumentSearch:

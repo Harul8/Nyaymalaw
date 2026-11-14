@@ -3,6 +3,9 @@
 No filenames or model-selected paths. Receipt metadata lives in StorePort, not
 here. Restored ciphertext can only be used after the service checks current
 admission/permission/tombstones against the owning matter.
+
+Every record of one paper's text is removed together, by the paper's own name
+(plan AN.53, D244), as its original's parts are by the upload store.
 """
 
 from __future__ import annotations
@@ -18,7 +21,7 @@ from nm.open_matter.matter_documents_port import MAX_DERIVATIVE_BYTES
 from nm.shared.names_contracts import discard
 from nm.shared.storage_errors_port import StoredObjectUnreadable
 from nm.shared.store_sealing import MatterSealer
-from nm.shared.store_uploads import _resolved_is_within
+from nm.shared.store_uploads import _erase_named, _resolved_is_within
 
 
 class SealedDocumentStore:
@@ -75,6 +78,12 @@ class SealedDocumentStore:
         if hashlib.sha256(data).hexdigest() != sha256:
             raise ValueError("the derivative does not match its published identity")
         return data
+
+    def erase(self, matter_id, stem):
+        """Remove every record of one paper's text in the matter's scope - an advocate's document space (plan AN.53, D244): the
+        first reading and each made since, named '<paper>-<its digest>'. Returns those that could not be removed. The scope's
+        key is kept: every other paper in it is sealed under it too."""
+        return _erase_named(self._path(matter_id, stem).parent, stem)
 
     def forget(self, matter_id, object_id, sha256):
         path = self._path(matter_id, object_id)
