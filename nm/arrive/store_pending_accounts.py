@@ -60,6 +60,14 @@ class PendingAccounts:
         except (sqlite3.Error, InvalidToken, json.JSONDecodeError) as exc:
             raise RegistrationUnavailable("Account confirmation is unavailable.") from exc
 
+    def sweep(self, before):
+        """Every pending registration that expired at or before `before` goes (plan AN.53, D241: one is kept at most 30 days after
+        it expires, whether or not anybody registers meanwhile); returns how many. Where none was ever held, nothing is made."""
+        if not self.path.exists():
+            return 0
+        with self.transaction() as db:
+            return db.execute("DELETE FROM pending WHERE expires <= ?", (before.timestamp(),)).rowcount
+
     def address_key(self, email):
         return hashlib.sha256(registration_email(email).encode()).hexdigest()
 

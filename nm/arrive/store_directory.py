@@ -99,10 +99,30 @@ _INVITATION_REFUSED = (
 #: F-A-04 removed recovery codes from the product; a record that still carries any of these
 #: has them dropped at its next successful sign-in or password reset.
 RETIRED_RECOVERY_FIELDS = ("recovery_codes", "recovery_codes_issued_at", "recovery_generation")
+#: Plan AN.53 (D241): a pending registration or a password-reset link is kept at most this many days after it expires.
+EXPIRED_KEPT_DAYS = 30
 
 
 @implements("A1")
 class FileDirectory:
+    def sweep_expired(self, now: datetime) -> dict:
+        """Pending registrations and password-reset links that expired EXPIRED_KEPT_DAYS or more before now go (plan AN.53,
+        D241): until now each went only when the next of its kind was asked for, and with nobody asking, never. Returns how
+        many of each went; registrations None where they could not be swept now (or are not kept on this installation). A
+        reset link whose record cannot be read has an expiry that cannot be known, and is kept."""
+        from nm.arrive.store_pending_accounts import PendingAccounts
+
+        before, resets = now - timedelta(days=EXPIRED_KEPT_DAYS), 0
+        for path in sorted(self._resets.glob("*.nm")):
+            reset = self._read_reset(path.stem)
+            if reset is not None and reset.expires_at <= before and discard(path):
+                resets += 1
+        try:
+            registrations = PendingAccounts(self).sweep(before)
+        except RegistrationUnavailable:
+            registrations = None
+        return {"registrations": registrations, "resets": resets}
+
     def begin_pending_registration(self, enrolment: Enrolment, now: datetime) -> dict:
         from nm.arrive.store_pending_accounts import PendingAccounts
 

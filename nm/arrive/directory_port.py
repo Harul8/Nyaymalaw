@@ -106,6 +106,10 @@ class DirectoryPort(Protocol):
         """The advocate's own choice of live words, by account-lock compare-and-set."""
         ...
 
+    def sweep_expired(self, now: datetime) -> dict:
+        """Pending registrations and password-reset links expired 30 days or more before now go (plan AN.53, D241); how many."""
+        ...
+
     def begin_pending_registration(self, enrolment: Enrolment, now: datetime) -> dict:
         """Hold a bounded inactive signup and return the internal mail challenge."""
         ...
