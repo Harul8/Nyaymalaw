@@ -100,9 +100,13 @@ class _RecordingStore:
         self.reached.append("load_for")
         return None
 
-    def erase(self, matter_id, advocate_id):
+    def erase(self, matter_id, advocate_id, *, look=None):
         self.reached.append("erase")
         return None
+
+    def naming(self, advocate_id, papers):
+        self.reached.append("naming")
+        return frozenset(), 0
 
     def mark_deleted(self, matter_id, advocate_id, at):
         self.reached.append("mark_deleted")
@@ -116,7 +120,7 @@ class _RecordingStore:
         self.reached.append("deleted_for")
         return ()
 
-    def sweep_deleted(self, now):
+    def sweep_deleted(self, now, *, look=None):
         self.reached.append("sweep_deleted")
         return ()
 
@@ -213,6 +217,7 @@ def _arguments_for(method: str) -> tuple:
         "saved_files": (),
         "load_for": ("m-1", "advocate@example.test"),
         "erase": ("m-1", "advocate@example.test"),
+        "naming": ("advocate@example.test", frozenset()),
         "mark_deleted": ("m-1", "advocate@example.test", None),
         "put_back": ("m-1", "advocate@example.test"),
         "deleted_for": ("advocate@example.test",),

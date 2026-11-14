@@ -927,8 +927,9 @@ class FileMatterStore:
     # THE STORE'S ONE DELETE (plan AN.53, D241's first piece; the review's F-35). Nothing in NM could delete anything. D241, the
     # owner's policy, lets an advocate delete a conversation of their own with everything that belongs to it; this erases what
     # the store keeps of it - the conversation, its turns' records, its ratings, its line in the history, and the records of its
-    # last save and of its owner. Its papers are kept in the advocate's document space, shared by their conversations, and go by
-    # a piece of their own.
+    # last save and of its owner. Its papers are kept in the advocate's document space, shared by their conversations, and go
+    # after it (D244): the caller is given a LAST LOOK at the conversation before its key goes - its owner and its saved record -
+    # and asks NAMING which of the papers it named another conversation of the advocate's still names.
     #
     # THE KEY FIRST. The conversation's own data key is destroyed before any file is removed, so that whatever is left of it
     # anywhere - a copy, a backup, a file that could not be removed - can never be read. A key that cannot be destroyed removes
@@ -938,14 +939,54 @@ class FileMatterStore:
     # ONLY THE ADVOCATE'S OWN, and never on a guess: another's conversation is not there for them (None, nothing changes), and
     # one that cannot be opened is erased by its owner only where the owner record says it is theirs.
 
-    def erase(self, matter_id: MatterId, advocate_id: str) -> dict | None:
+    def erase(self, matter_id: MatterId, advocate_id: str, *, look=None) -> dict | None:
         """Erase the advocate's own conversation; None where there is none of theirs. Returns {matter_id, own_key,
-        key_destroyed, left}: left names any file that could not be removed, which can no longer be read."""
+        key_destroyed, left}: left names any file that could not be removed, which can no longer be read. look(owner, record),
+        where given, is the last look at it before its key goes (D244): the advocate, and its saved record, or None where the
+        record cannot be opened."""
         matter_id = _storage_component(str(matter_id), kind="matter ID")
         with self._locked(matter_id):
             if not self._whose(matter_id, advocate_id):
                 return None
+            if look is not None:
+                looked = self._looked_at(matter_id)
+                look(advocate_id, looked[1] if looked is not None and looked[0] == advocate_id else None)
             return self._erase(matter_id)
+
+    def _looked_at(self, matter_id: str) -> tuple[str, bytes] | None:
+        """A saved conversation's owner, as its record says, and the record itself (D244); None where it cannot be opened."""
+        try:
+            data = self._open(matter_id, read_published(self._path(matter_id)))
+            owner = json.loads(data.decode("utf8")).get("advocate_id")
+        except Exception:  # noqa: BLE001 -- whatever stops it opening, what it names cannot be known
+            return None
+        return (owner, data) if isinstance(owner, str) else None
+
+    def naming(self, advocate_id: str, papers) -> tuple[frozenset[str], int]:
+        """Which of these papers a conversation the advocate keeps names - one in use, or one deleted and not yet erased - and how
+        many of the conversations that may be theirs could not be read (plan AN.53, D244): a paper goes with the last
+        conversation that names it, and none on a guess. Read from each record's text by the paper's own name; a name found
+        inside a longer one only keeps that paper longer. Nothing is shown or changed."""
+        wanted, named, unread, mine = {str(paper) for paper in papers}, set(), 0, owner_mark(advocate_id)
+        for matter_id, _signature, _saved_at in self.saved_files():
+            if not wanted - named:
+                break
+            try:
+                mark = self._owner_mark(matter_id)
+            except ValueError:  # a file whose name is no matter's: whose it is, its reading says
+                mark = None
+            if mark is not None and mark != mine:
+                continue
+            looked = self._looked_at(matter_id)
+            if looked is None:
+                try:
+                    unread += self._path(matter_id).exists()  # one erased meanwhile names nothing
+                except ValueError:  # a file whose name is no matter's and that will not open: whose it is cannot be known
+                    unread += 1
+                continue
+            if looked[0] == advocate_id:
+                named |= {paper for paper in wanted if paper.encode("utf8") in looked[1]}
+        return frozenset(named), unread
 
     def _whose(self, matter_id: str, advocate_id: str) -> bool | None:
         """True where the conversation is the advocate's own, False where it is another's, None where there is none. Its owner
@@ -1050,9 +1091,11 @@ class FileMatterStore:
                 out.append(self._deleted_said(path.stem, mark["at"]))
         return tuple(sorted(out, key=lambda said: (said["deleted_at"], said["matter_id"])))
 
-    def sweep_deleted(self, now: datetime) -> tuple[str, ...]:
+    def sweep_deleted(self, now: datetime, *, look=None) -> tuple[str, ...]:
         """Erase every conversation its advocate deleted PUT_BACK_DAYS or more before now, its own key first; returns which. One
-        whose mark cannot be read is never erased on it; one whose owner record names someone else than its mark is left."""
+        whose mark cannot be read is never erased on it; one whose owner record, or whose own record, names someone else than
+        its mark is left. look(owner, record), where given, is the last look at each before its key goes (D244): its owner and
+        its saved record, or (None, None) where the record cannot be opened."""
         erased = []
         folder = self._root / _DELETED
         for path in sorted(folder.glob("*.json")) if folder.is_dir() else ():
@@ -1068,6 +1111,11 @@ class FileMatterStore:
                 recorded = self._owner_mark(matter_id)
                 if recorded is not None and recorded != mark["owner"]:
                     continue
+                looked = self._looked_at(matter_id)
+                if looked is not None and owner_mark(looked[0]) != mark["owner"]:
+                    continue
+                if look is not None:
+                    look(*(looked if looked is not None else (None, None)))
                 self._erase(matter_id)
                 erased.append(matter_id)
         return tuple(erased)

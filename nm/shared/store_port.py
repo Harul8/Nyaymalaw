@@ -99,9 +99,15 @@ class StorePort(Protocol):
         another advocate's matter that cannot be opened is not said to be damaged."""
         ...
 
-    def erase(self, matter_id: MatterId, advocate_id: str) -> "dict | None":
+    def erase(self, matter_id: MatterId, advocate_id: str, *, look=None) -> "dict | None":
         """THE STORE'S ONE DELETE (plan AN.53, D241): the advocate's own conversation and every record the store keeps of it,
-        its own key destroyed first; None where there is none of theirs. Never another's, and never on a guess."""
+        its own key destroyed first; None where there is none of theirs. Never another's, and never on a guess. look(owner,
+        record): the last look at it before its key goes, for its papers (D244)."""
+        ...
+
+    def naming(self, advocate_id: str, papers) -> tuple:
+        """Which of these papers a conversation the advocate keeps still names, and how many that may be theirs could not be read
+        (plan AN.53, D244): a paper goes with the last conversation that names it, and none on a guess."""
         ...
 
     def mark_deleted(self, matter_id: MatterId, advocate_id: str, at) -> "dict | None":
@@ -117,8 +123,9 @@ class StorePort(Protocol):
         """The advocate's own deleted conversations, each with when it was deleted and when it will be erased (D241)."""
         ...
 
-    def sweep_deleted(self, now) -> tuple:
-        """Erase what its advocate deleted PUT_BACK_DAYS or more before now, each its own key first; which were erased (D241)."""
+    def sweep_deleted(self, now, *, look=None) -> tuple:
+        """Erase what its advocate deleted PUT_BACK_DAYS or more before now, each its own key first; which were erased (D241).
+        look(owner, record): the last look at each before its key goes, for its papers (D244)."""
         ...
 
     def saved_files_for(self, advocate_id: str) -> tuple[tuple[str, tuple[int, int], str, bool | None], ...]:
