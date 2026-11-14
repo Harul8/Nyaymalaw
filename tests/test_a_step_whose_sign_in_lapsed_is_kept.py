@@ -11,6 +11,7 @@ Offline: the served application with stand-in models; the words are invented.
 from __future__ import annotations
 
 import logging
+import threading
 
 import pytest
 
@@ -31,6 +32,13 @@ LAPSED = "0" * 64
 def _waiting(served):
     scripted_answers(served, Scripted())
     assert served.client.post("/api/turn", json=SENT).json()["detail"]["code"] == "waiting"
+    # The reply can come before the step's own ending lets its record go (found 14 Nov 2026, once in a full run): wait for it,
+    # or that late ending would let go the record a test writes next for the same turn.
+    for _ in range(500):
+        if not served.app.step_records.left():
+            return
+        threading.Event().wait(0.02)
+    pytest.fail("the first message's step never let its record go")
 
 
 def _left(served):
