@@ -53,14 +53,14 @@ def test_a_registration_that_expired_thirty_days_ago_goes_and_the_rest_wait(tmp_
     _begun(directory, "lately-expired@example.test", EXPIRED_KEPT_DAYS - 1)
     _begun(directory, "long-expired@example.test", EXPIRED_KEPT_DAYS + 1)
     assert _pending(directory) == 3
-    assert directory.sweep_expired(NOW) == {"registrations": 1, "resets": 0}
+    assert directory.sweep_expired(NOW) == {"registrations": 1, "resets": 0, "sign_ins": 0}
     assert _pending(directory) == 2
-    assert directory.sweep_expired(NOW) == {"registrations": 0, "resets": 0}, "a second sweep finds nothing more"
+    assert directory.sweep_expired(NOW) == {"registrations": 0, "resets": 0, "sign_ins": 0}, "a second sweep finds nothing more"
 
 
 def test_where_no_registration_was_ever_held_nothing_is_made(tmp_path):
     directory = FileDirectory(tmp_path, KEY)
-    assert directory.sweep_expired(NOW) == {"registrations": 0, "resets": 0}
+    assert directory.sweep_expired(NOW) == {"registrations": 0, "resets": 0, "sign_ins": 0}
     assert not (tmp_path / "pending-accounts.sqlite3").exists()
 
 
@@ -78,7 +78,7 @@ def test_a_reset_link_that_expired_thirty_days_ago_goes_and_the_rest_are_kept(tm
     assert directory.issue_password_reset("old@example.test", NOW - timedelta(days=EXPIRED_KEPT_DAYS + 1))
     before = _links(directory)
     assert len(before) == 3
-    assert directory.sweep_expired(NOW) == {"registrations": 0, "resets": 1}
+    assert directory.sweep_expired(NOW) == {"registrations": 0, "resets": 1, "sign_ins": 0}
     assert len(_links(directory)) == 2
 
 

@@ -107,7 +107,8 @@ class DirectoryPort(Protocol):
         ...
 
     def sweep_expired(self, now: datetime) -> dict:
-        """Pending registrations and password-reset links expired 30 days or more before now go (plan AN.53, D241); how many."""
+        """Pending registrations and password-reset links expired 30 days or more before now go (plan AN.53, D241), and sign-ins
+        ended 90 days or more before, each account's latest kept (D245); how many of each."""
         ...
 
     def begin_pending_registration(self, enrolment: Enrolment, now: datetime) -> dict:

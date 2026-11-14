@@ -312,7 +312,7 @@ def _sweep_expired(application, now):
     """Pending registrations and password-reset links that expired 30 days or more before now go (plan AN.53, D241), whoever
     asks for what. Says how many, by count only."""
     from nm.arrive.directory_port import AuthenticationUnavailable
-    from nm.arrive.store_directory import EXPIRED_KEPT_DAYS
+    from nm.arrive.store_directory import ENDED_SIGN_INS_KEPT_DAYS, EXPIRED_KEPT_DAYS
 
     try:
         said = application.directory.sweep_expired(now)
@@ -324,6 +324,9 @@ def _sweep_expired(application, now):
     if said["registrations"] or said["resets"]:
         print(f"{said['registrations'] or 0} registration(s) and {said['resets']} password-reset link(s) expired "
               f"{EXPIRED_KEPT_DAYS} days ago or more were removed.", file=sys.stderr, flush=True)
+    if said["sign_ins"]:
+        print(f"{said['sign_ins']} sign-in(s) that ended {ENDED_SIGN_INS_KEPT_DAYS} days ago or more were removed; each account's "
+              "latest is kept.", file=sys.stderr, flush=True)
 
 
 def _sweep_unsent_papers(application, now):

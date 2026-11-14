@@ -101,6 +101,8 @@ _INVITATION_REFUSED = (
 RETIRED_RECOVERY_FIELDS = ("recovery_codes", "recovery_codes_issued_at", "recovery_generation")
 #: Plan AN.53 (D241): a pending registration or a password-reset link is kept at most this many days after it expires.
 EXPIRED_KEPT_DAYS = 30
+#: Plan AN.53 (D245): a sign-in is kept at most this many days after it ends - and each account's latest whatever its age.
+ENDED_SIGN_INS_KEPT_DAYS = 90
 
 
 @implements("A1")
@@ -109,7 +111,8 @@ class FileDirectory:
         """Pending registrations and password-reset links that expired EXPIRED_KEPT_DAYS or more before now go (plan AN.53,
         D241): until now each went only when the next of its kind was asked for, and with nobody asking, never. Returns how
         many of each went; registrations None where they could not be swept now (or are not kept on this installation). A
-        reset link whose record cannot be read has an expiry that cannot be known, and is kept."""
+        reset link whose record cannot be read has an expiry that cannot be known, and is kept. And the sign-ins that ended
+        ENDED_SIGN_INS_KEPT_DAYS or more before now, but each account's latest (D245)."""
         from nm.arrive.store_pending_accounts import PendingAccounts
 
         before, resets = now - timedelta(days=EXPIRED_KEPT_DAYS), 0
@@ -121,7 +124,35 @@ class FileDirectory:
             registrations = PendingAccounts(self).sweep(before)
         except RegistrationUnavailable:
             registrations = None
-        return {"registrations": registrations, "resets": resets}
+        return {"registrations": registrations, "resets": resets, "sign_ins": self._sweep_sign_ins(now)}
+
+    def _sweep_sign_ins(self, now: datetime) -> int:
+        """D245: each sign-in whose end - its expiry, which no sign-in outlives, signed out early or not - is
+        ENDED_SIGN_INS_KEPT_DAYS or more before now goes, with its files of use and owner; but each account's most recent sign-in
+        is kept whatever its age, so that the Admin area's last sign-in stays true. One whose record cannot be read is kept: its
+        end and its owner cannot be known. Returns how many went."""
+        if not self._sessions.exists():
+            return 0
+        before, latest, old = now - timedelta(days=ENDED_SIGN_INS_KEPT_DAYS), {}, []
+        for path in sorted(self._sessions.glob("*.nm")):
+            session = self._read_session(path.stem)
+            if session is None:
+                continue
+            owner = canonical_id(session.advocate_id)
+            mark = (session.issued_at, session.token_fingerprint)
+            if owner not in latest or mark > latest[owner]:
+                latest[owner] = mark
+            if session.expires_at <= before:
+                old.append((owner, mark, session.token_fingerprint))
+        gone = 0
+        for owner, mark, fingerprint in old:
+            if latest[owner] == mark:
+                continue
+            if discard(self._session_path(fingerprint)):
+                discard(self._activity_path(fingerprint))
+                discard(self._session_owner_path(fingerprint))
+                gone += 1
+        return gone
 
     def begin_pending_registration(self, enrolment: Enrolment, now: datetime) -> dict:
         from nm.arrive.store_pending_accounts import PendingAccounts
