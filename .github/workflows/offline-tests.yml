@@ -1,0 +1,35 @@
+# THE OFFLINE TESTS ON EVERY PUSH (plan AN.54, piece 54a; owner decision D226). A hosted runner that touches neither the owner's
+# laptop nor the server runs the tests that need no corpus and no model, and their result shows on the commit. No model is called and
+# nothing is paid: this runner is given no key, and the tests that need one skip, saying so. It does not replace the owner's browser
+# acceptance, and it does not change the rule against large runs on the laptop.
+name: offline tests
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      # The page's own tests run its script in Node (tests/js); without Node they would be skipped.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      # What the served application and its tests use, from pyproject.toml's own lists. The search's libraries without the
+      # embedding model (torch and sentence-transformers): no test here loads a model.
+      - name: Install what the tests use
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[openai,anthropic,knowledge,documents,dev,bdd]" "numpy>=2.0" "faiss-cpu>=1.15" "bm25s>=0.3" pytest-xdist
+      # The browser journeys (tests/test_the_journey*) drive a real page and are run where a browser is installed for them.
+      - name: The offline tests
+        run: python -m pytest tests -o addopts="" -q -n 4 -p no:cacheprovider --ignore-glob='tests/test_the_journey*'

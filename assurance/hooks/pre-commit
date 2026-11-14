@@ -7,8 +7,10 @@
 # IT NO LONGER BLOCKS A COMMIT. On 15 September 2026 the product owner removed
 # the gate from the commit path: checks are run by hand and the commit decision
 # is taken by a person. This hook only keeps the code graph current and prints
-# the graph's review summary. `python assurance/gate/check.py` still exists and
-# is run when someone decides to run it.
+# the graph's review summary. The gate script it once named
+# (assurance/gate/check.py) no longer exists; the offline tests run on every push
+# on a hosted runner instead (.github/workflows/offline-tests.yml; plan AN.54,
+# piece 54a, D226), and by hand: python -m pytest tests.
 #
 # NOT `cp` INTO .git/hooks. Measured 12 September 2026: the copy there was
 # two revisions behind this file -- it lacked `--require-index` and the
