@@ -97,7 +97,8 @@ def server(tmp_path, monkeypatch):
             activity=Activity(), step_jobs=StepJobs(),  # 52c3: the stop in order once serving ends reads them
             store=SimpleNamespace(sweep_deleted=lambda now, look=None: (), sweep_metrics=lambda before: 0), documents=None,
             directory=SimpleNamespace(sweep_expired=lambda now: {"registrations": 0, "resets": 0, "sign_ins": 0}),
-            turn_record_sweep=SimpleNamespace(sweep=lambda before: 0)))  # plan AN.53 (D241): the serving process sweeps
+            turn_record_sweep=SimpleNamespace(sweep=lambda before: 0),
+            turn_attempt_sweep=SimpleNamespace(sweep=lambda before: 0)))  # plan AN.53 (D241): the serving process sweeps
         return served.main(["--no-follow-code"])
     monkeypatch.delenv(served.IN_FLIGHT_FILE, raising=False)
     monkeypatch.setattr(served, "create_app", lambda application=None: None)

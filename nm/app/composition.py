@@ -45,7 +45,7 @@ from nm.shared.policed_port_adapter import PolicedPort
 from nm.shared.source_layout import browser_assets
 from nm.shared.store_file_store import FileMatterStore
 from nm.shared.store_port import StorePort
-from nm.shared.turn_attempt_port import TurnAttemptPort
+from nm.shared.turn_attempt_port import TurnAttemptPort, TurnAttemptSweepPort
 from nm.shared.turn_attempt_store import FileTurnAttempts
 from nm.core_engine.retrieval import HybridSearcher, SearchPort, SearchUnavailable
 from nm.core_engine.citations import CaseIdentityIndex
@@ -170,9 +170,13 @@ class Application:
         # An advocate's documents (owner decisions, 15 Oct 2026): checked by ClamAV,
         # read on this installation, sealed under the advocate's own key.
         self.documents = _document_desk(raw_store, storage, self._gate, settings, self.activity)
-        self.turn_attempts = PolicedPort(inner=_DeferredAdapter(
-            lambda: FileTurnAttempts(storage / 'turn-attempts.sqlite')),
+        attempts = _DeferredAdapter(lambda: FileTurnAttempts(storage / 'turn-attempts.sqlite'))
+        self.turn_attempts = PolicedPort(inner=attempts,
             gate=self._gate, port=TurnAttemptPort, sink=Sink.STORAGE, processor_id=STORAGE_PROCESSOR,
+            data_classes=(DataClass.OPERATIONAL,))
+        # Their retention (plan AN.53, D241: 90 days after the turn ended), through a narrow port only the daily sweep is given.
+        self.turn_attempt_sweep = PolicedPort(inner=attempts,
+            gate=self._gate, port=TurnAttemptSweepPort, sink=Sink.STORAGE, processor_id=STORAGE_PROCESSOR,
             data_classes=(DataClass.OPERATIONAL,))
         # Each account's usage of the paid AI service and the allowance it draws on (owner decision
         # O24, plan AN.17): content-free, beside the turn attempts.

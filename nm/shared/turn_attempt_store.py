@@ -15,6 +15,7 @@ import re
 import secrets
 import sqlite3
 from contextlib import closing, contextmanager
+from datetime import datetime, timezone
 from pathlib import Path
 
 from nm.shared.sqlite_creation import create_if_absent, why
@@ -22,17 +23,33 @@ from nm.shared.turn_attempt_port import AttemptRefused
 
 _log = logging.getLogger("nm.attempts")
 
-VERSION = 3
+VERSION = 4
 #: Corrections one turn may make in all, held as a count so a retried turn never receives
 #: fresh corrections. From version 3 (owner decision P25, 19 Oct 2026) each section of an
 #: answer has its own rewrites, so the turn's total is larger; nm.core_engine.calls owns how
 #: they are shared out.
 ALLOWANCE = 32
+#: Plan AN.53 (D241): a turn's attempt is kept this many days after the turn finished or stopped.
+ENDED_KEPT_DAYS = 90
 _HASH = re.compile(r"[0-9a-f]{64}\Z")
 _CODE = re.compile(r"[A-Za-z][A-Za-z0-9_-]{0,79}\Z")
 _FINAL = {"retryable", "terminal", "finished", "unconfirmed"}
 _STATES = _FINAL | {"running"}
+#: Version 4 (plan AN.53, D241: a turn's attempt is kept 90 days after it ends): when it ended, set as it stops running and
+#: never while it runs, so that the sweep can remove what has ended and never a claim that may still be at work.
 _SQL = f"""CREATE TABLE turn_attempts (
+    identity TEXT PRIMARY KEY NOT NULL CHECK(length(identity)=64),
+    request_digest TEXT NOT NULL CHECK(length(request_digest)=64),
+    token TEXT NOT NULL CHECK(length(token)=64),
+    corrections_used INTEGER NOT NULL CHECK(corrections_used BETWEEN 0 AND {ALLOWANCE}),
+    state TEXT NOT NULL CHECK(state IN ('running','retryable','terminal','finished','unconfirmed')),
+    code TEXT,
+    ended_at TEXT CHECK((state = 'running') = (ended_at IS NULL))
+)"""
+_FIELDS = "identity,request_digest,token,corrections_used,state,code"
+#: Version 3: version 4 without when each attempt ended. Carried over with every record; an attempt already ended is taken as
+#: ending at the carrying over, so it is kept its full 90 days from then.
+_SQL_V3 = f"""CREATE TABLE turn_attempts (
     identity TEXT PRIMARY KEY NOT NULL CHECK(length(identity)=64),
     request_digest TEXT NOT NULL CHECK(length(request_digest)=64),
     token TEXT NOT NULL CHECK(length(token)=64),
@@ -40,7 +57,11 @@ _SQL = f"""CREATE TABLE turn_attempts (
     state TEXT NOT NULL CHECK(state IN ('running','retryable','terminal','finished','unconfirmed')),
     code TEXT
 )"""
-_FIELDS = "identity,request_digest,token,corrections_used,state,code"
+
+
+def _now():
+    """When something ended, as the store writes it: UTC to the second, so that text order is time order."""
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
 #: Version 1 held one allowance, used or not; version 2 held a count of at most two.
 #: Exactly these tables are carried over with their records unchanged; any other schema
 #: is still refused.
@@ -85,12 +106,14 @@ class FileTurnAttempts:
                 db.execute("BEGIN IMMEDIATE")
                 version = db.execute("PRAGMA user_version").fetchone()[0]
                 objects = self._objects(db)
-                if (version, True) in ((1, self._is(objects, _SQL_V1)), (2, self._is(objects, _SQL_V2))):
+                if (version, True) in ((1, self._is(objects, _SQL_V1)), (2, self._is(objects, _SQL_V2)),
+                                       (3, self._is(objects, _SQL_V3))):
                     used = "correction_used" if version == 1 else "corrections_used"
                     db.execute("ALTER TABLE turn_attempts RENAME TO turn_attempts_earlier")
                     db.execute(_SQL)
-                    db.execute(f"INSERT INTO turn_attempts ({_FIELDS}) SELECT identity,request_digest,"
-                               f"token,{used},state,code FROM turn_attempts_earlier")
+                    db.execute(f"INSERT INTO turn_attempts ({_FIELDS},ended_at) SELECT identity,request_digest,"
+                               f"token,{used},state,code,CASE state WHEN 'running' THEN NULL ELSE ? END "
+                               f"FROM turn_attempts_earlier", (_now(),))
                     db.execute("DROP TABLE turn_attempts_earlier")
                     db.execute(f"PRAGMA user_version={VERSION}")
                 self._schema(db)
@@ -177,7 +200,7 @@ class FileTurnAttempts:
             prior = self._row(db, identity)
             if prior is None:
                 corrections_used = 0
-                db.execute(f"INSERT INTO turn_attempts ({_FIELDS}) VALUES (?,?,?,0,'running',NULL)",
+                db.execute(f"INSERT INTO turn_attempts ({_FIELDS},ended_at) VALUES (?,?,?,0,'running',NULL,NULL)",
                            (identity, request_digest, token))
             else:
                 if prior[1] != request_digest:
@@ -185,7 +208,7 @@ class FileTurnAttempts:
                 if prior[4] != "retryable" and not (unsaved and prior[4] == "unconfirmed"):
                     self._refuse_state(prior[4])
                 corrections_used = prior[3]
-                db.execute("UPDATE turn_attempts SET token=?,state='running',code=NULL WHERE identity=?",
+                db.execute("UPDATE turn_attempts SET token=?,state='running',code=NULL,ended_at=NULL WHERE identity=?",
                            (token, identity))
         return {"token": token, "corrections_used": corrections_used}
 
@@ -213,7 +236,8 @@ class FileTurnAttempts:
         if not _code(code) or code is None:
             raise AttemptRefused("conflict")
         with self._transaction() as db:
-            return db.execute("UPDATE turn_attempts SET state='retryable',code=? WHERE state='running'", (code,)).rowcount
+            return db.execute("UPDATE turn_attempts SET state='retryable',code=?,ended_at=? WHERE state='running'",
+                              (code, _now())).rowcount
 
     def finish(self, identity: str, token: str, state: str, code: str | None = None) -> None:
         if (not _opaque(identity) or not _opaque(token) or not isinstance(state, str)
@@ -227,7 +251,18 @@ class FileTurnAttempts:
                 if (prior[4], prior[5]) == (state, code):
                     return  # Exact retry after a lost acknowledgement, not a new transition.
                 self._refuse_state(prior[4])
-            changed = db.execute("UPDATE turn_attempts SET state=?,code=? "
-                "WHERE identity=? AND token=? AND state='running'", (state, code, identity, token))
+            changed = db.execute("UPDATE turn_attempts SET state=?,code=?,ended_at=? "
+                "WHERE identity=? AND token=? AND state='running'", (state, code, _now(), identity, token))
             if changed.rowcount != 1:
                 raise AttemptRefused("conflict")
+
+    def sweep(self, before: datetime) -> int:
+        """Every attempt that ended before `before` goes (plan AN.53, D241: kept 90 days after the turn finished or stopped);
+        returns how many. A claim still running is never removed: its recovery has an owner, the server's start, never elapsed
+        time. A message sent again after its attempt is gone finds its answer in the conversation first, which returns it without
+        a claim (core_engine.turn); one that never got an answer starts afresh."""
+        if not isinstance(before, datetime) or before.utcoffset() is None:
+            raise AttemptRefused("conflict")
+        cut = before.astimezone(timezone.utc).isoformat(timespec="seconds")
+        with self._transaction() as db:
+            return db.execute("DELETE FROM turn_attempts WHERE state != 'running' AND ended_at < ?", (cut,)).rowcount

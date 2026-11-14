@@ -59,7 +59,8 @@ def start(monkeypatch, tmp_path):
             activity=Activity(), step_jobs=StepJobs(),  # plan AN.52 (52c3): the stop in order once serving ends reads them
             store=SimpleNamespace(sweep_deleted=lambda now, look=None: (), sweep_metrics=lambda before: 0), documents=None,
             directory=SimpleNamespace(sweep_expired=lambda now: {"registrations": 0, "resets": 0, "sign_ins": 0}),
-            turn_record_sweep=SimpleNamespace(sweep=lambda before: 0)))  # plan AN.53 (D241): the serving process sweeps
+            turn_record_sweep=SimpleNamespace(sweep=lambda before: 0),
+            turn_attempt_sweep=SimpleNamespace(sweep=lambda before: 0)))  # plan AN.53 (D241): the serving process sweeps
         monkeypatch.setattr(main.api, "set_application", lambda application: None)
         monkeypatch.setattr(main.api, "continue_interrupted_steps", lambda application: 0)
         monkeypatch.setattr(main.api, "prepare_history", lambda: None)

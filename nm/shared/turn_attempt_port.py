@@ -29,3 +29,12 @@ class TurnAttemptPort(Protocol):
         """At the server's start (plan AN.41, D73): each claim still running, left by an earlier run of the server, made
         retryable with its allowance retained. Returns how many."""
         ...
+
+
+class TurnAttemptSweepPort(Protocol):
+    """The attempts' retention (plan AN.53, D241: 90 days after a turn finished or stopped), a narrow port of its own that only
+    the daily sweep is given: the turn path's port claims, corrects and finishes, and removes nothing."""
+
+    def sweep(self, before) -> int:
+        """Remove the attempts that ended before `before`, never one still running; how many."""
+        ...

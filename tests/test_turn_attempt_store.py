@@ -7,7 +7,7 @@ import sqlite3
 import pytest
 
 from nm.shared.turn_attempt_port import AttemptRefused, TurnAttemptPort
-from nm.shared.turn_attempt_store import _SQL_V1, _SQL_V2, ALLOWANCE, FileTurnAttempts
+from nm.shared.turn_attempt_store import _SQL_V1, _SQL_V2, ALLOWANCE, VERSION, FileTurnAttempts
 
 pytestmark = pytest.mark.class_a
 
@@ -224,7 +224,7 @@ def test_a_version_one_store_is_carried_over_with_its_records(tmp_path):
     refused("terminal", lambda: ledger.consume_correction(IDENTITY, claim["token"]))
     refused("terminal", lambda: ledger.claim(OTHER, REQUEST))
     with sqlite3.connect(path) as db:
-        assert db.execute("PRAGMA user_version").fetchone()[0] == 3
+        assert db.execute("PRAGMA user_version").fetchone()[0] == VERSION
         assert [r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE name NOT LIKE 'sqlite_%'")] == ["turn_attempts"]
 
 
@@ -243,5 +243,5 @@ def test_a_version_two_store_is_carried_over_with_its_counts(tmp_path):
     ledger.consume_correction(IDENTITY, claim["token"])
     refused("terminal", lambda: ledger.claim(OTHER, REQUEST))
     with sqlite3.connect(path) as db:
-        assert db.execute("PRAGMA user_version").fetchone()[0] == 3
+        assert db.execute("PRAGMA user_version").fetchone()[0] == VERSION
         assert db.execute("SELECT corrections_used FROM turn_attempts WHERE identity=?", (IDENTITY,)).fetchone() == (3,)
