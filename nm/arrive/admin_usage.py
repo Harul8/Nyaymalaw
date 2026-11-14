@@ -44,7 +44,8 @@ _GROUP_SQL = {
     "day,model": (_DAY, "model"),
     "account,day": ("account", _DAY),
 }
-assert set(_GROUP_SQL) == set(GROUPINGS)
+if set(_GROUP_SQL) != set(GROUPINGS):  # one list of groupings: a module whose statements disagree with it does not load
+    raise RuntimeError("the Admin usage groupings and their statements disagree")
 
 
 def _instant(value: datetime) -> str:
