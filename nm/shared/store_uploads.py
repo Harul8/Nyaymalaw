@@ -16,6 +16,7 @@ from pathlib import Path, PurePath, PureWindowsPath
 from cryptography.exceptions import InvalidTag
 
 from nm.open_matter.intake_contracts import MAX_CHUNK_BYTES
+from nm.shared.names_contracts import discard
 from nm.shared.storage_errors_port import StoredObjectUnreadable
 from nm.shared.store_sealing import MatterSealer
 
@@ -58,13 +59,7 @@ def _erase_named(folder: Path, stem: str) -> tuple[str, ...]:
     is touched; what is not there is not an error."""
     if not isinstance(stem, str) or not _STEM.fullmatch(stem):
         raise ValueError("a paper is removed by its own name")
-    left = []
-    for path in sorted(folder.glob(f"{stem}-*.nm")) if folder.is_dir() else ():
-        try:
-            path.unlink(missing_ok=True)
-        except OSError:
-            left.append(path.stem)
-    return tuple(left)
+    return tuple(path.stem for path in (sorted(folder.glob(f"{stem}-*.nm")) if folder.is_dir() else ()) if not discard(path))
 
 
 class SealedUploadStore:

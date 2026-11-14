@@ -19,7 +19,6 @@ import json
 import logging
 import os
 import re
-import shutil
 import subprocess
 import sys
 import uuid
@@ -28,6 +27,7 @@ from pathlib import Path
 from typing import Callable, Mapping
 
 from nm.arrive.admin_port import AdminChangeRefused, AdminUnavailable
+from nm.shared.names_contracts import discard_tree
 
 _log = logging.getLogger("nm.admin")
 MAX_FILES = 20
@@ -129,7 +129,7 @@ class AdminStaging:
             for name, text in files:
                 (base / "files" / name).write_text(text, encoding="utf8", newline="\n")
         except OSError as exc:
-            shutil.rmtree(base, ignore_errors=True)
+            discard_tree(base)  # what was begun goes with it where it can; the refusal is said either way
             raise AdminUnavailable("the files could not be staged") from exc
         batch = {"id": batch_id, "created_at": now.isoformat(timespec="seconds"), "jurisdiction": " ".join(jurisdiction.split()),
                  "staged": [{"name": name, "bytes": len(text.encode("utf8"))} for name, text in files], "acts": [], "state": "needs attention",
@@ -173,8 +173,6 @@ class AdminStaging:
         base = self._path(batch_id)
         if not base.exists():
             raise AdminChangeRefused(404, "There is no such batch.")
-        try:
-            shutil.rmtree(base)
-        except OSError as exc:
-            raise AdminUnavailable("the batch could not be removed") from exc
+        if not discard_tree(base):
+            raise AdminUnavailable("the batch could not be removed")
         return True

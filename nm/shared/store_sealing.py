@@ -139,11 +139,13 @@ class MatterSealer:
         makes a new one in its place). True where there was a key, False where there was none. A key that cannot be removed raises,
         and the caller then removes nothing else (FileMatterStore.erase)."""
         for stray in self._keys.glob(f"{matter_id}.key.*.new"):  # a key record a process was writing when it ended
-            stray.unlink(missing_ok=True)
-        try:
-            (self._keys / f"{matter_id}.key").unlink()
-        except FileNotFoundError:
+            if not discard(stray):
+                raise OSError(f"a key record of matter {matter_id} could not be removed: nothing of it is erased")
+        key = self._keys / f"{matter_id}.key"
+        if not key.exists():
             return False
+        if not discard(key):
+            raise OSError(f"the key of matter {matter_id} could not be destroyed: nothing of it is erased")
         if os.name != "nt":  # the removal is the folder's, flushed as a save's rename is (store_file_store.publish)
             folder = os.open(str(self._keys), os.O_RDONLY)
             try:

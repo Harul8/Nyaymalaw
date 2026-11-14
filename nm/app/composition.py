@@ -31,6 +31,7 @@ from nm.arrive.usage_port import AllowanceUsedUp, UsagePort, UsageRefused
 from nm.shared.deployment_contracts import shares_value_with
 from nm.shared.egress_contracts import DataClass, EgressRefused, Gatekeeper, Sink
 from nm.shared.egress_log_store import EgressLog, keep_days_from
+from nm.shared.names_contracts import discard
 from nm.shared.storage_errors_port import StoredObjectUnreadable
 from nm.shared.egress_policy import (CONTROLLED_LOCAL_PROCESSORS, INDEX_PROCESSOR, LOCAL_BASIS, OUTBOX_PROCESSOR,
                                      STORAGE_PROCESSOR, egress_policy)
@@ -912,7 +913,8 @@ class Application:
         try:
             handle, probe = tempfile.mkstemp(dir=str(self._storage), prefix='readiness-', suffix='.tmp')
             os.close(handle)
-            os.unlink(probe)
+            if not discard(Path(probe)):  # what it writes it must be able to remove again
+                raise OSError("a file written there would not go")
         except OSError as exc:
             return {'state': NOT_READY, 'why': f"the store's folder does not take a write ({type(exc).__name__})"}
         try:
@@ -961,7 +963,8 @@ class Application:
             Path(folder).mkdir(parents=True, exist_ok=True)
             handle, probe = tempfile.mkstemp(dir=str(folder), prefix='readiness-', suffix='.tmp')
             os.close(handle)
-            os.unlink(probe)
+            if not discard(Path(probe)):
+                raise OSError("a file written there would not go")
         except OSError as exc:
             return {'state': NOT_READY, 'why': f"the outgoing-data log's folder does not take a write ({type(exc).__name__}): "
                     'nothing is sent outside this computer until it does'}

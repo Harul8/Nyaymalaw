@@ -34,6 +34,7 @@ from nm.app.activity import Activity, stop_in_order, stop_wait_from
 from nm.app.composition import NOT_CHECKED, Application, not_ready, storage_root
 from nm.shared.egress_log_store import keep as keep_egress_log
 from nm.shared.identity_contracts import source_fingerprint
+from nm.shared.names_contracts import discard
 
 #: How often the supervisor looks at the code, how long a change must hold still,
 #: and how long a stopped child waits before it is started again.
@@ -177,8 +178,10 @@ def follow_code(serve_args, *, child=("-m", "nm.app.main")):
             child.terminate()
         return 0
     finally:
-        counter.unlink(missing_ok=True)
-        heartbeat.unlink(missing_ok=True)
+        # This run's own temporary files: one that will not go is left to the system's temporary folder, and the next run makes
+        # its own.
+        discard(counter)
+        discard(heartbeat)
 
 
 def _take_up_what_an_earlier_run_left(application):

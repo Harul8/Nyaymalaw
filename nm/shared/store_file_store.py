@@ -1141,9 +1141,7 @@ class FileMatterStore:
 
     def _remove(self, path: Path) -> bool:
         """Remove one file, and the folders it leaves empty below the store's own; True where it is gone."""
-        try:
-            path.unlink(missing_ok=True)
-        except OSError:
+        if not discard(path):
             return False
         for folder in (path.parent, path.parent.parent):
             if folder != self._root and self._root in folder.parents and folder.name not in _KEPT_FOLDERS:
@@ -1389,11 +1387,11 @@ class FileMatterStore:
         cut, gone = before.timestamp(), 0
         for path in sorted(self._metrics.glob("*.json")):
             try:
-                if path.stat().st_mtime < cut:
-                    path.unlink()
-                    gone += 1
-            except OSError:  # gone meanwhile, or it will not go now: the next sweep sees it again
+                old = path.stat().st_mtime < cut
+            except OSError:  # gone meanwhile
                 continue
+            if old and discard(path):  # one that will not go now is seen again by the next sweep
+                gone += 1
         return gone
 
     # ------------------------------------------------------- transcripts ---

@@ -31,6 +31,8 @@ from contextlib import contextmanager
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
+from nm.shared.names_contracts import discard
+
 KEEP_DAYS = 365
 FLOOR_DAYS = 180
 COMPRESS_AFTER_DAYS = 90
@@ -138,7 +140,8 @@ class EgressLog:
                 _rename_unless_there(claimed, target)
             except FileExistsError:
                 _append_whole_lines(claimed, target)
-                claimed.unlink()
+                if not discard(claimed):
+                    raise OSError("the claimed log would not go")
         except OSError as exc:  # left claimed: the next sweep takes it in
             _log.warning('The single outgoing-data log was not taken in whole yet (%s).', type(exc).__name__)
             return False
@@ -186,7 +189,7 @@ def _alone(lock: Path):
     except (FileExistsError, PermissionError):  # held, or (Windows) being let go by its sweep this moment
         try:
             if time.time() - lock.stat().st_mtime >= LEFT_FOR:
-                lock.unlink()
+                discard(lock)  # one that will not go stays held, as this sweep is told
         except OSError:
             pass
         yield False
@@ -194,10 +197,7 @@ def _alone(lock: Path):
     try:
         yield True
     finally:
-        try:
-            lock.unlink()
-        except OSError:
-            pass
+        discard(lock)  # one that will not go is let go by the next sweep once it is LEFT_FOR old
 
 
 def _append(path: Path, data: bytes) -> None:
@@ -271,7 +271,8 @@ def _rename_unless_there(source: Path, target: Path) -> None:
             raise FileExistsError(str(target)) from None
         os.rename(source, target)
         return
-    os.unlink(source)
+    if not discard(source):
+        raise OSError("the name it was linked from would not go")
 
 
 def _append_whole_lines(source: Path, target: Path) -> None:
@@ -306,16 +307,14 @@ def _compress(path: Path) -> int:
         os.replace(part, final)
         if path.stat().st_size != size:  # written to meanwhile: it stays, and the next sweep compresses it again
             return 0
-        path.unlink()
+        if not discard(path):
+            raise OSError("the day's plain file would not go")
         return 1
     except OSError as exc:
         _log.warning('A day of the outgoing-data log could not be compressed (%s); it stays as it is.', type(exc).__name__)
         return 0
     finally:
-        try:
-            part.unlink(missing_ok=True)
-        except OSError:
-            pass
+        discard(part)
 
 
 def _read_back(part: Path) -> bytes:
@@ -328,11 +327,9 @@ def _read_back(part: Path) -> bytes:
 
 
 def _remove(path: Path) -> int:
-    try:
-        path.unlink()
+    if not path.exists():
+        return 0
+    if discard(path):
         return 1
-    except FileNotFoundError:
-        return 0
-    except OSError as exc:
-        _log.warning('A file of the outgoing-data log could not be deleted (%s).', type(exc).__name__)
-        return 0
+    _log.warning('A file of the outgoing-data log could not be deleted.')
+    return 0
