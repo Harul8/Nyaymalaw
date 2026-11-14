@@ -231,6 +231,18 @@ CLOSED: dict[str, str] = {
             "than a fourth role. The three-state answer for a delegated attempt "
             "lives on ResultStatus, whose NOT_ESTABLISHED is the unrun-specialist "
             "case, not on which role was asked.",
+    # Entered 14 Nov 2026 (plan AN.54, D227): five vocabularies the scan took for outcomes, each read at its definition.
+    "Action": "WHAT an Admin area request does - SEE, or one named change (D116) - chosen by the route that serves it and "
+              "checked against the asker's level. A request that does nothing is not a request; there is no outcome here.",
+    "Level": "an Admin's level, ADMIN or VIEW_ONLY. Someone with no level is not on the Admin roster and is no admin at all: the "
+             "absence is the roster's, and a member meaning 'unknown' would be a level a request could be granted under.",
+    "PreferenceKey": "WHICH preference an advocate set in their memory. A preference not set is the key's absence from the "
+                     "memory, not a member; a key nobody chose would be a setting nobody made.",
+    "AuthorityRole": "the role a recorded source span plays for a provision's revision - wording, enactment, amendment, "
+                     "commencement, repeal, transition - and a span without one is refused at construction. What could not "
+                     "be established about a revision is said on TransitionState.NOT_ASSESSED in the same module.",
+    "RevisionKind": "what a recorded text is, the original or an amended wording; a text of neither kind is not recorded. As "
+                    "AuthorityRole, the third state for a revision lives on TransitionState.NOT_ASSESSED.",
 }
 
 
