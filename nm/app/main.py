@@ -274,8 +274,27 @@ def _keep_deleted(application, *, every=DELETED_SWEEP_EVERY):
             _sweep_deleted(application, now)
             _sweep_unsent_papers(application, now)
             _sweep_expired(application, now)
+            _sweep_turn_lines(application, now)
             time.sleep(every)
     threading.Thread(target=sweep, name="deleted-sweep", daemon=True).start()
+
+
+def _sweep_turn_lines(application, now):
+    """The turn record's lines of turns that ended KEPT_DAYS (two years) or more before now go (plan AN.53, D241): counts and
+    timings, which hold no content. Says how many."""
+    from datetime import timedelta
+
+    from nm.arrive.store_turn_events import KEPT_DAYS
+    from nm.arrive.turn_event_port import TurnEventRefused
+
+    try:
+        gone = application.turn_record_sweep.sweep(now - timedelta(days=KEPT_DAYS))
+    except TurnEventRefused:  # its own failure, already logged by the record: tried again at the next sweep
+        print("The turn record could not be swept now.", file=sys.stderr, flush=True)
+        return
+    if gone:
+        print(f"{gone} line(s) of turns that ended two years ago or more were removed from the turn record.", file=sys.stderr,
+              flush=True)
 
 
 def _sweep_expired(application, now):

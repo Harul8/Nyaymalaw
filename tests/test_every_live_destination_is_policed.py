@@ -327,6 +327,8 @@ def test_the_composition_root_polices_every_live_destination():
                 "AdminDirectoryPort", "AdminUsagePort", "AdminRecordPort", "AdminTurnsPort", "AdminChecksPort", "AdminAccountsPort", "AdminLibraryPort", "AdminStagingPort",
                 # One content-free line per finished turn (plan AN.46, piece 46h; D120): operational, on local storage.
                 "TurnEventPort",
+                # The same record's retention (plan AN.53, D241: two years), through a narrow port only the daily sweep is given.
+                "TurnRecordSweepPort",
                 # The steps handed to the worker and each step's record (plan AN.48, 48f; entered here under plan AN.53, D220:
                 # the composition root has policed both since 48f, and this inventory had not been told): sealed, local storage.
                 "StepSharePort", "StepRecordPort"}

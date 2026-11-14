@@ -22,6 +22,8 @@ from nm.shared.sqlite_creation import create_if_absent, why
 _log = logging.getLogger("nm.turns")
 
 VERSION = 1
+#: Plan AN.53 (D241): the counts and timings of turns, which hold no content, are kept two years - a leap day included.
+KEPT_DAYS = 731
 #: The names a line carries (a model, an effort): one short word each, with no spaces, so no sentence can be written through one.
 _NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:/-]{0,119}\Z")
 _SQL = {
@@ -120,6 +122,13 @@ class FileTurnEvents:
         except (OSError, sqlite3.Error, ValueError) as exc:
             _log.warning("A turn line was refused by the record (%s).", why(exc))
             raise TurnEventRefused("storage") from None
+
+    def sweep(self, before) -> int:
+        """Every line of a turn that ended before `before` goes (plan AN.53, D241: the counts and timings of turns, which hold no
+        content, are kept two years); returns how many."""
+        cut = _utc(before, "sweep").isoformat()
+        with self._transaction() as db:
+            return db.execute("DELETE FROM turns WHERE ended_at < ?", (cut,)).rowcount
 
     def record(self, account_id: str, event: dict) -> None:
         account, values = _account(account_id), _checked(event)

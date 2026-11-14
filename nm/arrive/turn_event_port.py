@@ -30,3 +30,12 @@ class TurnEventPort(Protocol):
     def record(self, account_id: str, event: dict) -> None:
         """Keep one line, with exactly EVENT_FIELDS."""
         ...
+
+
+class TurnRecordSweepPort(Protocol):
+    """The turn record's retention (plan AN.53, D241: the counts and timings of turns are kept two years), a narrow port of its own
+    that only the daily sweep is given: the turn path's port can still only add a line."""
+
+    def sweep(self, before) -> int:
+        """Remove the lines of turns that ended before `before`; how many."""
+        ...

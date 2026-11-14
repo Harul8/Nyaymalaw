@@ -26,7 +26,7 @@ from nm.arrive.store_admin import FileAdminRecord
 from nm.arrive.store_directory import FileDirectory
 from nm.arrive.store_turn_events import FileTurnEvents
 from nm.arrive.store_usage import FileUsage
-from nm.arrive.turn_event_port import TurnEventPort, TurnEventRefused
+from nm.arrive.turn_event_port import TurnEventPort, TurnEventRefused, TurnRecordSweepPort
 from nm.arrive.usage_port import AllowanceUsedUp, UsagePort, UsageRefused
 from nm.shared.deployment_contracts import shares_value_with
 from nm.shared.egress_contracts import DataClass, EgressRefused, Gatekeeper, Sink
@@ -180,8 +180,13 @@ class Application:
             gate=self._gate, port=UsagePort, sink=Sink.STORAGE, processor_id=STORAGE_PROCESSOR,
             data_classes=(DataClass.OPERATIONAL,))
         # One content-free line when each turn ends (plan AN.46, piece 46h; owner decision D120), in a sidecar of its own.
-        self.turn_events = PolicedPort(inner=_DeferredAdapter(lambda: FileTurnEvents(storage / TURN_EVENTS_FILE)),
+        turn_record = _DeferredAdapter(lambda: FileTurnEvents(storage / TURN_EVENTS_FILE))
+        self.turn_events = PolicedPort(inner=turn_record,
             gate=self._gate, port=TurnEventPort, sink=Sink.STORAGE, processor_id=STORAGE_PROCESSOR,
+            data_classes=(DataClass.OPERATIONAL,))
+        # Its retention (plan AN.53, D241: two years), through a narrow port of its own that only the daily sweep is given.
+        self.turn_record_sweep = PolicedPort(inner=turn_record,
+            gate=self._gate, port=TurnRecordSweepPort, sink=Sink.STORAGE, processor_id=STORAGE_PROCESSOR,
             data_classes=(DataClass.OPERATIONAL,))
         self.directory = PolicedPort(inner=directory or FileDirectory(storage, key=key),
             gate=self._gate, port=DirectoryPort, sink=Sink.STORAGE, processor_id=STORAGE_PROCESSOR,
