@@ -121,11 +121,15 @@ def test_a_go_ahead_not_yet_begun_is_given_again_as_given(served):
 
 
 def test_nothing_is_taken_up_without_its_words_or_once_the_sign_in_no_longer_holds(served):
+    """CHANGED BY PLAN AN.52 (52c4, D209), 14 Nov 2026. This test held that a go-ahead whose sign-in no longer holds is let go at
+    the start, with nothing taken up. D209: a recorded step is let go only after its sign-in is checked, and is kept where the
+    sign-in has lapsed - so the go-ahead is still there after the start (tests/test_a_step_whose_sign_in_lapsed_is_kept.py).
+    Nothing is taken up, as before, and a message that never began is still let go."""
     scripted_answers(served, Scripted())
     assert served.client.post("/api/turn", json=SENT).json()["detail"]["code"] == "waiting"
     calls = len(served.model.calls)
     served.app.step_records.taken(OWNER, "turn-2", route="send", session=fingerprint_of(served))  # a message never begun
     served.app.step_records.taken(OWNER, "turn-1", route="go", chat_id=CHAT, choice="research", session="0" * 64)
     assert api.continue_interrupted_steps() == 0
-    assert served.app.step_records.left() == [] and len(served.model.calls) == calls
+    assert [left["turn_id"] for left in served.app.step_records.left()] == ["turn-1"] and len(served.model.calls) == calls
     assert stepwise.waiting_of(held(served)) == "understood", "the matter waits for its advocate, as it did"

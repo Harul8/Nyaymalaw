@@ -1857,16 +1857,27 @@ def continue_interrupted_steps(app=None):
     page's own continuing by itself follows; a go-ahead that had not begun is given again, as given. A message, answers or a message
     while a matter waited, not yet begun, were never kept here, and are said as they always were. Only while the advocate's sign-in
     still holds, by its fingerprint; otherwise the turn waits for them with its red message, and continues once they are back (D73).
-    Each record read is let go; a step taken up keeps its own. Returns how many were taken up. Called once the earlier run's claims
-    are released (composition.turns_of_an_earlier_run_released). app: the application that works the steps (48f4: the worker's)."""
+    A record is let go only once its step is taken up, or can never be: a step taken up keeps a record of its own. Returns how many
+    were taken up. Called once the earlier run's claims are released (composition.turns_of_an_earlier_run_released). app: the
+    application that works the steps (48f4: the worker's).
+
+    KEPT WHERE THE SIGN-IN HAS LAPSED (plan AN.52, 52c4, D209; the review's F-12). Each record was let go first and its sign-in
+    checked after, so a go-ahead given before the restart by an advocate whose sign-in lapsed meanwhile was lost - and every step
+    was, when the sign-ins could not be read at that start. Now a step that could be taken up - a go-ahead, or one that had begun -
+    is let go only after its sign-in is checked, and is kept where it has lapsed or could not be checked: the next start checks it
+    again. A message that never began kept no words and could never be taken up; it is let go, as is a record with no sign-in."""
     from types import SimpleNamespace
     app = app or application()
-    taken = 0
+    taken = kept = 0
     for left in app.step_records.left():
         advocate_id, turn_id, fingerprint = left['advocate_id'], left['turn_id'], left['session']
-        app.step_records.ended(advocate_id, turn_id)
-        if not fingerprint or not _still_signed_in(advocate_id, fingerprint, app):
+        if not fingerprint or not (left['begun'] or left['route'] in ('continue', 'go')):
+            app.step_records.ended(advocate_id, turn_id)
             continue
+        if not _still_signed_in(advocate_id, fingerprint, app):
+            kept += 1
+            continue
+        app.step_records.ended(advocate_id, turn_id)
         chat_id = left['chat_id'] or stored_chat(advocate_id, None, turn_id)
         signed_in = (lambda a=advocate_id, f=fingerprint: _still_signed_in(a, f, app))
         if left['begun'] or left['route'] == 'continue':
@@ -1893,6 +1904,9 @@ def continue_interrupted_steps(app=None):
             cancelled=lambda req=req: _stopped_before_start(req, True), record=record)
         future.add_done_callback(lambda finished, a=advocate_id: _after_step(finished, a))
         taken += 1
+    if kept:
+        _steps_log.warning('%d step(s) an earlier run left are kept: the sign-in each was asked under has lapsed or could not be '
+                           'checked. Each is checked again at the next start.', kept)
     return taken
 
 
