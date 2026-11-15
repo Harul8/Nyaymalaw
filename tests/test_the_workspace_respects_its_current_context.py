@@ -680,7 +680,7 @@ def test_drafts_and_unsubmitted_intake_belong_to_the_selected_file(page, journey
 def test_lost_acknowledgement_and_expired_session_keep_the_exact_turn_envelope(
     page, journey, readback,
 ):
-    pytest.skip("written for a matter's transcript read-back and the History pane's recorded turns; its rule - an expired session keeps a message's exact envelope for one retry - is to be written again for the conversation window (AN.54)")
+    pytest.skip("written for a matter's transcript read-back and the History pane's recorded turns; its rule - an expired session keeps a message's exact envelope for one retry - is driven for the conversation window by tests/test_the_journey_of_a_lost_reply_across_an_expired_session.py")
     _sign_in(page, journey)
     matter_id = _new_matter(page, "Lost acknowledgement reauthentication")
     held = _HeldReply(page, "**/api/turn")

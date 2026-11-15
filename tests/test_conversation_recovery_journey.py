@@ -34,7 +34,8 @@ def reopen(page, mid):
 def test_recovery_is_on_demand_and_success_disappears_without_losing_text(page, journey):
     pytest.skip("Recover a draft is offered only from a matter's records under the file icon, which is shown for a matter saved "
                 "before conversations and for the opening form, no longer shown (owner, 15-17 Oct 2026); a conversation's "
-                "draft is kept on the device as it is typed")
+                "draft is kept on the device as it is typed and comes back when it is reopened "
+                "(tests/test_the_journey_of_a_conversations_unsent_words.py)")
     _sign_in(page, journey)
     _start_matter(page)
     page.click("#in-go")
@@ -62,7 +63,8 @@ def test_recovery_is_on_demand_and_success_disappears_without_losing_text(page, 
 def test_recovery_does_not_offer_another_matters_draft(page, journey):
     pytest.skip("Recover a draft is offered only from a matter's records under the file icon, which is shown for a matter saved "
                 "before conversations and for the opening form, no longer shown (owner, 15-17 Oct 2026); a conversation's "
-                "draft is kept on the device as it is typed")
+                "draft is kept on the device as it is typed and comes back when it is reopened "
+                "(tests/test_the_journey_of_a_conversations_unsent_words.py)")
     _sign_in(page, journey)
     _start_matter(page)
     page.click("#in-go")
@@ -166,7 +168,8 @@ def test_cleared_composer_recovers_receipt_and_retries_exactly_once_after_reload
 ):
     pytest.skip("Recover a draft is offered only from a matter's records under the file icon, which is shown for a matter saved "
                 "before conversations and for the opening form, no longer shown (owner, 15-17 Oct 2026); a conversation's "
-                "draft is kept on the device as it is typed")
+                "draft is kept on the device as it is typed and comes back when it is reopened "
+                "(tests/test_the_journey_of_a_conversations_unsent_words.py)")
     _open_matter(page, journey, client="Synthetic receipt survives reload")
     mid, _ = saved(page)
     calls = []
