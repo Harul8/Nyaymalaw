@@ -73,7 +73,9 @@ def test_a_new_store_is_made_whole_and_no_temporary_file_is_left(tmp_path):
     FileUsage(path)
     assert [p.name for p in tmp_path.iterdir()] == ["usage.sqlite"]
     with closing(sqlite3.connect(path)) as db:
-        assert {row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")} == {"grants", "calls", "notices"}
+        # Plan AN.53 (53h4h): and what a sweep of rows eight years old carried, kept so that no balance changes.
+        assert {row[0] for row in db.execute("SELECT name FROM sqlite_master WHERE type='table'")} == {
+            "grants", "calls", "notices", "carried"}
 
 
 def test_a_refusal_says_the_kind_of_fault_and_nothing_a_log_must_not_hold(tmp_path, caplog):

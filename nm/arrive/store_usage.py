@@ -1,8 +1,17 @@
 """Each account's usage of the paid AI service, kept content-free in one sidecar store (plan AN.17).
 
 SQLite, with the turn-attempt store's BEGIN IMMEDIATE transactions and its refusal of any schema it
-did not make (nm/shared/turn_attempt_store.py). Three tables: what each account was given (its trial,
-once, and what an operator adds), what each call cost, and the last usage notice it was shown. An
+did not make (nm/shared/turn_attempt_store.py). Four tables: what each account was given (its trial,
+once, and what an operator adds), what each call cost, the last usage notice it was shown, and what
+was carried when old rows went (below).
+
+KEPT EIGHT YEARS, AS A BILLING RECORD (plan AN.53, 53h4h, D241 (confirm)). A balance is summed from
+the rows, so a sweep that removed old rows would change it; and the store gives an account its trial
+whenever it has no trial row, so a trial swept away would be given again. So `sweep` CARRIES what it
+removes: for each account, the sums of the calls and grants it took away - given, spent, how many
+calls, how many whose cost was not established - are added to its row of `carried`, and every reader
+of a balance or a total counts them. Each account's trial row is kept whatever its age. A store of
+the first version is carried to the second in place, with nothing in it changed. An
 account is named by the SHA-256 of its canonical id, as its account claim already is
 (nm/arrive/store_directory.py): no email address is written here, and no prompt, message, answer or
 file can be, since a call's record holds only its kind, names and numbers.
@@ -24,14 +33,17 @@ from nm.shared.sqlite_creation import create_if_absent, why
 
 _log = logging.getLogger("nm.usage")
 
-VERSION = 1
+VERSION = 2
+#: Plan AN.53 (53h4h, D241): how many years the usage ledger keeps its rows - what each account used and was given - as a billing
+#: record (confirm); what goes is carried, so that no balance changes.
+USAGE_KEPT_YEARS = 8
 #: The most an operator may add in one grant, in millionths of a dollar: a typo of a few zeros is
 #: refused rather than given away (USD 1,000).
 GRANT_LIMIT = 1_000_000_000
 #: The names a call record carries (an operation, a tier, a model, an error's class): one short word
 #: each, with no spaces, so no sentence can be written through a record.
 _NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:/-]{0,119}\Z")
-_SQL = {
+_SQL_V1 = {
     ("table", "grants"): """CREATE TABLE grants (
         id INTEGER PRIMARY KEY,
         account TEXT NOT NULL CHECK(length(account)=64),
@@ -64,6 +76,26 @@ _SQL = {
         step INTEGER NOT NULL CHECK(step BETWEEN 1 AND 50)
     )""",
 }
+#: The second version (plan AN.53, 53h4h): the first, and what a sweep carried for each account.
+_SQL = {
+    **_SQL_V1,
+    ("table", "carried"): """CREATE TABLE carried (
+        account TEXT PRIMARY KEY NOT NULL CHECK(length(account)=64),
+        granted INTEGER NOT NULL CHECK(granted >= 0),
+        spent INTEGER NOT NULL CHECK(spent >= 0),
+        calls INTEGER NOT NULL CHECK(calls >= 0),
+        not_established INTEGER NOT NULL CHECK(not_established >= 0),
+        through TEXT NOT NULL
+    )""",
+}
+
+
+def years_before(moment: datetime, years: int) -> datetime:
+    """The same day and time `years` years before, on the calendar; a 29 February with none that year is the 28th."""
+    try:
+        return moment.replace(year=moment.year - years)
+    except ValueError:
+        return moment.replace(year=moment.year - years, day=28)
 
 
 def _flat(sql):
@@ -116,6 +148,11 @@ class FileUsage:
             with closing(sqlite3.connect(self.path, timeout=10)) as db, db:
                 db.execute("PRAGMA synchronous=FULL")
                 db.execute("BEGIN IMMEDIATE")
+                # The first version, exactly as it was made, is carried to the second in place (53h4h): its rows are as they
+                # were, with nothing carried yet. Anything else is refused below, as it was.
+                if self._version(db) == 1:
+                    db.execute(_SQL[("table", "carried")])
+                    db.execute(f"PRAGMA user_version={VERSION}")
                 self._schema(db)
         except (OSError, sqlite3.Error, ValueError) as exc:
             _log.warning("The usage store could not be opened (%s).", why(exc))
@@ -132,11 +169,23 @@ class FileUsage:
         return db.execute("SELECT type,name,sql FROM sqlite_master WHERE name NOT LIKE 'sqlite_%'").fetchall()
 
     @classmethod
-    def _schema(cls, db):
+    def _version(cls, db) -> int | None:
+        """Which version of this store's schema the file holds - 1 or 2, each exactly as this store makes it - or None."""
         found = {(kind, name): _flat(sql) for kind, name, sql in cls._objects(db)}
-        if (db.execute("PRAGMA user_version").fetchone()[0] != VERSION
-                or found != {key: _flat(sql) for key, sql in _SQL.items()}):
+        version = db.execute("PRAGMA user_version").fetchone()[0]
+        for number, sql in ((1, _SQL_V1), (VERSION, _SQL)):
+            if version == number and found == {key: _flat(text) for key, text in sql.items()}:
+                return number
+        return None
+
+    @classmethod
+    def _schema(cls, db, *, earlier: bool = False) -> int:
+        """The store's own rule for a file it made: the current version, or - for a reader that only reads (the Admin area,
+        which must not carry it) - the first as well. Returns which."""
+        version = cls._version(db)
+        if version != VERSION and not (earlier and version == 1):
             raise ValueError("the usage store has a schema it did not make")
+        return version
 
     @contextmanager
     def _transaction(self):
@@ -158,6 +207,10 @@ class FileUsage:
                    (account, TRIAL_MICRO_USD, _now()))
         granted = db.execute("SELECT COALESCE(SUM(micro_usd),0) FROM grants WHERE account=?", (account,)).fetchone()[0]
         spent = db.execute("SELECT COALESCE(SUM(micro_usd),0) FROM calls WHERE account=?", (account,)).fetchone()[0]
+        # 53h4h: what a sweep carried counts as it did before it went.
+        carried = db.execute("SELECT granted, spent FROM carried WHERE account=?", (account,)).fetchone()
+        if carried is not None:
+            granted, spent = granted + carried[0], spent + carried[1]
         row = db.execute("SELECT step FROM notices WHERE account=?", (account,)).fetchone()
         return {"granted": granted, "spent": spent, "left": percent_left(granted, spent),
                 "noticed": row[0] if row else None}
@@ -209,5 +262,36 @@ class FileUsage:
                 "SELECT COUNT(*),COALESCE(SUM(micro_usd),0),COALESCE(SUM(micro_usd IS NULL),0) FROM calls").fetchone()
             granted = db.execute("SELECT COALESCE(SUM(micro_usd),0) FROM grants").fetchone()[0]
             accounts = db.execute("SELECT COUNT(DISTINCT account) FROM grants").fetchone()[0]
-            return {"accounts": accounts, "granted": granted, "calls": calls, "micro_usd": cost,
-                    "not_established": unknown, "by_model": grouped("model"), "by_outcome": grouped("outcome")}
+            # 53h4h: what a sweep carried is in the overall numbers, as it was before it went, and said apart; the groupings by
+            # model and by outcome are of the calls kept.
+            held, c_calls, c_cost, c_unknown, c_granted = db.execute(
+                "SELECT COUNT(*),COALESCE(SUM(calls),0),COALESCE(SUM(spent),0),COALESCE(SUM(not_established),0),"
+                "COALESCE(SUM(granted),0) FROM carried WHERE calls > 0 OR granted > 0").fetchone()
+            return {"accounts": accounts, "granted": granted + c_granted, "calls": calls + c_calls, "micro_usd": cost + c_cost,
+                    "not_established": unknown + c_unknown, "by_model": grouped("model"), "by_outcome": grouped("outcome"),
+                    "carried": {"accounts": held, "calls": c_calls, "micro_usd": c_cost, "not_established": c_unknown,
+                                "granted": c_granted}}
+
+    def sweep(self, before: datetime) -> dict:
+        """D241: the calls and the operator's grants written before `before` go, each account's sums carried first, so that no
+        balance or total changes; each account's trial row is kept whatever its age, so that none is given twice. In one
+        transaction: carried and removed together, or neither. Returns how many of each went."""
+        if not isinstance(before, datetime) or before.utcoffset() is None:
+            raise ValueError("a sweep is asked for at a time that has its zone")
+        cutoff = before.astimezone(timezone.utc).isoformat(timespec="seconds")  # the text the rows are written in
+        carry = ("INSERT INTO carried (account,granted,spent,calls,not_established,through) VALUES (?,?,?,?,?,?) "
+                 "ON CONFLICT(account) DO UPDATE SET granted=granted+excluded.granted, spent=spent+excluded.spent, "
+                 "calls=calls+excluded.calls, not_established=not_established+excluded.not_established, "
+                 "through=MAX(through, excluded.through)")
+        with self._transaction() as db:
+            for account, spent, calls, unknown in db.execute(
+                    "SELECT account, COALESCE(SUM(micro_usd),0), COUNT(*), COALESCE(SUM(micro_usd IS NULL),0) FROM calls "
+                    "WHERE at < ? GROUP BY account", (cutoff,)).fetchall():
+                db.execute(carry, (account, 0, spent, calls, unknown, cutoff))
+            for account, granted in db.execute(
+                    "SELECT account, SUM(micro_usd) FROM grants WHERE at < ? AND kind <> 'trial' GROUP BY account",
+                    (cutoff,)).fetchall():
+                db.execute(carry, (account, granted, 0, 0, 0, cutoff))
+            calls = db.execute("DELETE FROM calls WHERE at < ?", (cutoff,)).rowcount
+            grants = db.execute("DELETE FROM grants WHERE at < ? AND kind <> 'trial'", (cutoff,)).rowcount
+        return {"calls": calls, "grants": grants}

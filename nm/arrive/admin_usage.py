@@ -61,12 +61,16 @@ class AdminUsage:
     def __init__(self, path):
         self.path = Path(path).resolve()
 
-    def _read(self, sql: str, params: tuple = ()) -> list[tuple]:
+    def _read(self, sql: str, params: tuple = (), *, carried: bool = False) -> list[tuple]:
+        """Rows of the store. carried: a reading of what a sweep carried (plan AN.53, 53h4h), which a store of the first version
+        - read here as it is, since this only reads and must not carry it - does not have: none."""
         if not self.path.exists():
             return []
         try:
             with closing(sqlite3.connect(self.path.as_uri() + "?mode=ro", uri=True, timeout=10)) as db:
-                FileUsage._schema(db)  # the store's own rule for a file it made
+                version = FileUsage._schema(db, earlier=True)  # the store's own rule for a file it made
+                if carried and version == 1:
+                    return []
                 return db.execute(sql, params).fetchall()
         except (OSError, sqlite3.Error, ValueError) as exc:
             _log.warning("The usage store could not be read for the admin area (%s).", why(exc))
@@ -75,6 +79,9 @@ class AdminUsage:
     def balances(self) -> Mapping[str, Balance]:
         granted = dict(self._read("SELECT account, SUM(micro_usd) FROM grants GROUP BY account"))
         spent = dict(self._read("SELECT account, COALESCE(SUM(micro_usd),0) FROM calls GROUP BY account"))
+        # 53h4h: what a sweep carried counts as it did before it went, as the store's own standing counts it.
+        for account, given, used in self._read("SELECT account, granted, spent FROM carried", carried=True):
+            granted[account], spent[account] = granted.get(account, 0) + given, spent.get(account, 0) + used
         return {account: Balance(granted.get(account, 0), spent.get(account, 0),
                                  percent_left(granted.get(account, 0), spent.get(account, 0)))
                 for account in sorted(set(granted) | set(spent))}
