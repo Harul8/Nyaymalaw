@@ -3,8 +3,8 @@
 On Windows a rename onto a file is refused while any reader has that file open, so a save that met a reader was reported as not
 made. It is now tried again for a bounded moment; a file still held after it refuses the save as before and nothing is left
 behind. Elsewhere the folder is flushed after the rename, so the name a save is published under survives a power loss - that
-half is exercised here with the operating system's calls stood in for, and has not been run on Linux. Offline: a temporary store
-and invented matters.
+half is exercised here with the operating system's calls stood in for, on any machine; on Linux it is also run with the real calls
+(tests/test_the_rename_that_publishes_a_save_is_durable_on_linux.py). Offline: a temporary store and invented matters.
 """
 from __future__ import annotations
 

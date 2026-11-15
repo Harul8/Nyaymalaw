@@ -432,8 +432,12 @@ def publish(finished: str | Path, path: str | Path) -> None:
     it. The file's bytes were flushed before the rename, but the name they are
     published under is the folder's, and until the folder is flushed a save
     the advocate was told of can be gone after a power loss. Windows offers no
-    way to flush a folder. NOT RUN ON LINUX YET: nothing in this project has
-    been; the hosted machine is where this half is first exercised.
+    way to flush a folder. RUN ON LINUX (plan AN.50, 15 Nov 2026): a real
+    store saved through the operating system's own calls, each file put in
+    place followed by a flush of its folder after the rename
+    (tests/test_the_rename_that_publishes_a_save_is_durable_on_linux.py).
+    That a flushed folder survives a real power loss is the file system's
+    promise, on the hosted machine's own disk, and is not measured here.
     """
     if _WINDOWS:
         deadline = time.monotonic() + _PUBLISH_WAIT
