@@ -60,13 +60,22 @@ def test_an_admin_closes_a_suspended_account_from_its_page(page, journey, admin_
     _signed_in_as_the_admin(page, journey)
     _account_page(page, journey)
     assert page.get_by_role("button", name="Close the account…").count() == 0, "an active account offers no closure"
-    _dialog_for(page, "Suspend the account…", password=journey["password"])
+    suspending = _dialog_for(page, "Suspend the account…", password=journey["password"])
+    assert "Why (one line, kept in the audit log)" in suspending.inner_text(), "another change's dialog is as it was"
     page.get_by_role("button", name="Suspend", exact=True).click()
     page.get_by_role("button", name="Close the account…").wait_for(timeout=15000)
 
     dialog = _dialog_for(page, "Close the account…", password=None)
     said = dialog.inner_text()
-    assert "cannot be undone" in said and "conversations" in said and "papers" in said
+    # D246 (3): what goes, said.
+    for goes in ("every conversation of theirs, kept or deleted", "all the papers they sent", "they can no longer sign in",
+                 "It cannot be undone"):
+        assert goes in said, goes
+    # D246 (4) and (5): what is kept, and the backups, said at the closure.
+    for kept in ("eight years as a billing record", "two years", "90 days", "sign-in logs’ lines for a year",
+                 "audit log, which keeps that you closed the account", "gone from every copy within 35 days"):
+        assert kept in said, kept
+    assert "Whose written request, and its date" in said, "the reason says whose request it is"
     page.fill("#adm-f-address", "someone-else@example.test")
     page.get_by_role("button", name="Close the account", exact=True).click()
     page.wait_for_function("document.querySelector('#adm-dialog .adm-dialog-message').textContent.includes('address')",

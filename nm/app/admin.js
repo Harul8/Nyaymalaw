@@ -581,7 +581,7 @@
   // One dialog for every change: what will happen, the fields it needs, the reason, and - only when the server has not had it from this
   // session in the last ten minutes - the admin's password. Nothing is sent until the admin presses the button, and the password is
   // sent to the server's own password check and nowhere else; it is cleared from the field as soon as it is sent.
-  async function confirmChange({ title, summary, fields, submit, run }) {
+  async function confirmChange({ title, summary, fields, submit, run, reasonLabel = 'Why (one line, kept in the audit log)' }) {
     let status;
     try { status = await ask('/api/admin/me'); } catch (error) { flash = { kind: 'adm-bad', text: error.message }; return render(); }
     const dialog = $('adm-dialog');
@@ -601,8 +601,9 @@
     passwordRow.hidden = !needPassword;
     const go = el('button', { type: 'submit', class: 'adm-button', text: submit });
     const cancel = el('button', { type: 'button', class: 'adm-button adm-plain', text: 'Cancel', onclick: () => dialog.close() });
-    const form = el('form', { method: 'dialog', class: 'adm-dialog-form' }, el('h2', { id: 'adm-dialog-title', text: title }), el('p', { text: summary }),
-      rows, el('div', { class: 'adm-dialog-row' }, el('label', { for: 'adm-f-reason', text: 'Why (one line, kept in the audit log)' }), inputs.reason,
+    const said = (Array.isArray(summary) ? summary : [summary]).map((text) => el('p', { text }));
+    const form = el('form', { method: 'dialog', class: 'adm-dialog-form' }, el('h2', { id: 'adm-dialog-title', text: title }), ...said,
+      rows, el('div', { class: 'adm-dialog-row' }, el('label', { for: 'adm-f-reason', text: reasonLabel }), inputs.reason,
         el('span', { class: 'adm-note', text: 'At most 200 characters. Do not put an advocate’s case in it.' })),
       passwordRow, message, el('div', { class: 'adm-dialog-buttons' }, cancel, go));
     form.addEventListener('submit', async (event) => {
@@ -669,19 +670,23 @@
         title: `Reinstate ${who}`, submit: 'Reinstate', fields: [], summary: `${who} will be shown as active again.`,
         run: async (v) => { await send(`/api/admin/users/${encodeURIComponent(u.id)}/reinstate`, { reason: v.reason }); return `${who} is active again.`; } }) }));
       // Plan AN.53, 53h7d (D241, D246): the second step of a closure, offered only once the account is suspended; the address
-      // is typed, and the reason names the advocate's written request.
+      // is typed, the reason says whose written request it is, and what goes, what is kept and the backups are said.
       buttons.push(el('button', { type: 'button', class: 'adm-button adm-plain', text: 'Close the account…', onclick: () => confirmChange({
         title: `Close ${who}’s account`, submit: 'Close the account',
-        summary: `Only at ${who}’s own written request. This erases every conversation of theirs, kept or deleted, and all the papers they sent, ` +
-          'then their account: they can no longer sign in, and none of it can be put back. It cannot be undone. ' +
-          'What they used of their allowance stays in the usage ledger, without their conversations.',
-        fields: [{ name: 'address', label: 'Type the account’s address to close it', maxlength: 320,
-          help: `${u.id}. In Why, name the written request: its date and how it came.` }],
+        summary: [
+          `Only at ${who}’s own written request. This erases every conversation of theirs, kept or deleted, and all the papers they sent, ` +
+            'then their account: they can no longer sign in, and none of it can be put back. It cannot be undone.',
+          'Kept, as for every account: what they used and were allowed, under a digest of the account, for eight years as a billing record; ' +
+            'the counts and timings of their turns, which hold no content, for two years; their turns’ attempt and step records for 90 days; ' +
+            'the sign-in logs’ lines for a year; and the audit log, which keeps that you closed the account, when and why.',
+          'A backup made before the closure still holds the account; it is gone from every copy within 35 days.'],
+        fields: [{ name: 'address', label: 'Type the account’s address to close it', maxlength: 320, help: `The address is ${u.id}.` }],
+        reasonLabel: 'Whose written request, and its date (one line, kept in the audit log)',
         run: async (v) => {
           const done = await send(`/api/admin/users/${encodeURIComponent(u.id)}/close`, { address: v.address.trim(), reason: v.reason });
           history.replaceState(null, '', '#users');
           return `${who}’s account is closed: ${plural(done.conversations, 'conversation', 'conversations')} and ` +
-            `${plural(done.papers, 'paper', 'papers')} were erased, and ${plural(done.sign_ins, 'sign-in', 'sign-ins')} ended.`;
+            `${plural(done.papers, 'paper', 'papers')} were erased, and ${plural(done.sign_ins, 'sign-in record', 'sign-in records')} removed.`;
         } }) }));
     } else {
       buttons.push(el('button', { type: 'button', class: 'adm-button adm-plain', text: 'Suspend the account…', onclick: () => confirmChange({
