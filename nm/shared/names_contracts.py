@@ -1,6 +1,6 @@
-"""Removing a name, when the decision has already been made.
+"""Removing a name, when the decision has already been made - and making a name given last.
 
-    from nm.shared.names_contracts import discard, discard_tree
+    from nm.shared.names_contracts import discard, discard_tree, flush_folder
 
 THE RULE, stated without the site that exposed it
 ---------------------------------------------------
@@ -62,6 +62,7 @@ into a red build with nowhere to go.
 """
 from __future__ import annotations
 
+import os
 import shutil
 from pathlib import Path
 
@@ -108,4 +109,26 @@ def discard_tree(path: Path) -> bool:
         return False
     except OSError:
         return False
+    return True
+
+
+def flush_folder(folder: Path, *, windows: bool | None = None) -> bool:
+    """Make the names given in `folder` last: flush the folder itself (plan AN.50, 50h1 and its sweep; D194).
+
+    A file's bytes are its writer's to flush before the file is named. The name - given by a rename, or by a link that names a
+    file only where no file has that name - is the folder's, and until the folder is flushed it can be gone after a power loss,
+    with what was told of it. ONE OWNER, below every store that gives names, so the sealer (which the matter store imports) can
+    use it as publish does.
+
+    Windows offers no way to flush a folder: there nothing is asked and False is returned; elsewhere True, once flushed. A
+    folder that cannot be flushed RAISES OSError - after it is let go - and is never passed over. windows: the caller's own
+    decision where it has made one (publish's); otherwise this platform's.
+    """
+    if (os.name == "nt") if windows is None else windows:
+        return False
+    handle = os.open(os.fspath(folder), os.O_RDONLY)
+    try:
+        os.fsync(handle)
+    finally:
+        os.close(handle)
     return True

@@ -33,7 +33,7 @@ from pathlib import Path
 from types import UnionType
 from typing import Union, get_args, get_origin, get_type_hints
 
-from nm.shared.names_contracts import discard
+from nm.shared.names_contracts import discard, flush_folder
 from nm.shared.operation_contracts import save_stamp
 from nm.shared.storage_errors_port import StoredObjectUnreadable
 from nm.shared.store_envelope import KeyUnavailable
@@ -450,11 +450,7 @@ def publish(finished: str | Path, path: str | Path) -> None:
                     raise
                 time.sleep(_LOCK_POLL)
     os.replace(finished, path)
-    folder = os.open(os.path.dirname(os.path.abspath(path)), os.O_RDONLY)
-    try:
-        os.fsync(folder)
-    finally:
-        os.close(folder)
+    flush_folder(Path(os.path.dirname(os.path.abspath(path))), windows=False)  # the one folder flush (names_contracts)
 
 
 def read_published(path: Path) -> bytes:
