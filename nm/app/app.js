@@ -6241,7 +6241,10 @@ async function deliver(entry) {
   let watcher = null;
   try {
     if (!await saveProtectedDraft()) {
-      throw new Error('The retry details could not be saved on this device. No request was sent.');
+      // NOTHING WAS SENT, and that is what the page says - never a reply gone missing, which D73 reads as a restart (found
+      // mending the browser journeys, 15 Nov 2026: this was shown as "NM was restarted before your message reached it").
+      throw Object.assign(new Error('The retry details could not be saved on this device. No request was sent.'),
+        { notSent: true });
     }
     watcher = watchProgress(entry);
     // Plan AN.41 (D70): Continue sends the same turn by its own route, which reads its message and files as saved.
@@ -6334,8 +6337,10 @@ async function deliver(entry) {
       entry.error = null;
       refreshStopped(entry, stoppedChat(entry, intent));
     }
+    // Refused here before anything was sent: known not sent, and said so.
+    if (e.notSent) entry.state = 'not_committed';
     // D73: no reply at all - the server is being restarted. The page waits for it and follows the answer, which NM continues.
-    if (!e.status && !entry.cancelled && !(e.name === 'AbortError')) {
+    if (!e.status && !e.notSent && !entry.cancelled && !(e.name === 'AbortError')) {
       entry.state = 'reconnecting';
       entry.error = null;
       reconnect(entry);
