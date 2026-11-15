@@ -32,6 +32,7 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 from nm.shared.names_contracts import discard
+from nm.shared.store_file_store import publish
 
 KEEP_DAYS = 365
 FLOOR_DAYS = 180
@@ -292,19 +293,24 @@ def _append_whole_lines(source: Path, target: Path) -> None:
 
 def _compress(path: Path) -> int:
     """(Holding the lock.) A day's plain file compressed beside it, read back whole and compared, and only then the plain file
-    deleted. 1 when compressed; 0 when the copy could not be made and checked - the plain file then stays for the next sweep."""
+    deleted. 1 when compressed; 0 when the copy could not be made and checked - the plain file then stays for the next sweep.
+    The copy's bytes are flushed, and it is put in place by the one publish, which flushes the folder after the rename (plan
+    AN.50, 50h1's sweep, D194), before the plain file goes: a power loss cannot leave the kept day empty or gone."""
     final = path.with_name(path.name + '.gz')
     part = path.with_name(f'{final.name}.{os.getpid()}-{secrets.token_hex(4)}.part')
     try:
         plain, size = hashlib.sha256(), 0
-        with path.open('rb') as source, gzip.open(part, 'wb', compresslevel=6) as sink:
-            for block in iter(lambda: source.read(_BLOCK), b''):
-                plain.update(block)
-                size += len(block)
-                sink.write(block)
+        with path.open('rb') as source, part.open('xb') as raw:
+            with gzip.GzipFile(fileobj=raw, mode='wb', compresslevel=6) as sink:
+                for block in iter(lambda: source.read(_BLOCK), b''):
+                    plain.update(block)
+                    size += len(block)
+                    sink.write(block)
+            raw.flush()
+            os.fsync(raw.fileno())
         if _read_back(part) != plain.digest():
             raise OSError('the compressed copy did not read back as the day it was made from')
-        os.replace(part, final)
+        publish(part, final)
         if path.stat().st_size != size:  # written to meanwhile: it stays, and the next sweep compresses it again
             return 0
         if not discard(path):
