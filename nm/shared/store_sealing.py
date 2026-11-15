@@ -33,7 +33,7 @@ from pathlib import Path
 
 from cryptography.fernet import Fernet
 
-from nm.shared.names_contracts import discard
+from nm.shared.names_contracts import discard, flush_folder
 from nm.shared.storage_errors_port import StoredObjectUnreadable
 from nm.shared.store_envelope import (
     CrossMatterAccess,
@@ -129,6 +129,9 @@ class MatterSealer:
                         os.fsync(handle.fileno())
                 except FileExistsError:
                     return self._read_key(matter_id, path)
+            # THE NAME LASTS (plan AN.50, D194): a key record whose name a power loss took would leave every matter sealed
+            # under it unreadable, so its folder is flushed once the name is given, by the one folder flush.
+            flush_folder(self._keys)
             return wrapped, fresh
         finally:
             discard(beside)

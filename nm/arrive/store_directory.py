@@ -70,7 +70,7 @@ from nm.arrive.directory_port import (  # noqa: F401
 from nm.arrive.professional_access_contracts import ProfessionalApproval
 from nm.arrive.advocate_memory_contracts import AdvocateMemory
 from nm.shared.external_ai_contracts import NOTICE_VERSION, ModelPermission
-from nm.shared.names_contracts import discard
+from nm.shared.names_contracts import discard, flush_folder
 from nm.shared.store_file_store import Claim, _Cipher, claim, publish, read_published
 from nm.shared.traceability_contracts import implements
 
@@ -532,6 +532,7 @@ class FileDirectory:
                 handle.flush()
                 os.fsync(handle.fileno())
             os.link(temporary, path)
+            flush_folder(path.parent)  # the account's name lasts once given (plan AN.50, D194)
         except FileExistsError as exc:
             raise AlreadyEnrolled(
                 f"{enrolment.identity.id} is already enrolled. Overwriting "

@@ -21,7 +21,7 @@ from collections.abc import Callable
 from contextlib import closing
 from pathlib import Path
 
-from nm.shared.names_contracts import discard
+from nm.shared.names_contracts import discard, flush_folder
 
 
 def create_if_absent(path: str | Path, build: Callable[[sqlite3.Connection], None]) -> None:
@@ -46,6 +46,8 @@ def create_if_absent(path: str | Path, build: Callable[[sqlite3.Connection], Non
             os.link(made, path)  # atomic, and it refuses to replace: one creator wins
         except FileExistsError:
             pass  # another caller published first; its store is the store
+        else:
+            flush_folder(path.parent)  # its name lasts once given (plan AN.50, D194)
     finally:
         discard(made)
 
