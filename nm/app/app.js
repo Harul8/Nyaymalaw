@@ -922,6 +922,37 @@ async function restorePendingChat(chatId) {
   // Plan AN.42 (D77): what waits to be sent is kept with the conversation.
   if (Array.isArray(restored.queued) && restored.queued.length) await restoreQueued(activeIntent, restored.queued, restored.pending);
   repaint();
+  await takeBackSavedWords(chatId);
+}
+
+// A CONVERSATION'S UNSENT WORDS COME BACK WITH IT (found mending the browser journeys, 15 Nov 2026). They are kept on the device as
+// they are typed ("Saved on this device"), but the page read them back only from Recover a draft, which a conversation does not
+// offer: after a reload they were kept and could not be had. Opening a conversation whose message box is empty takes back the last
+// words saved for it, and says so. A saved message still waiting to be sent or confirmed is left to Recover a draft, which follows it.
+async function takeBackSavedWords(chatId) {
+  const context = activeIntent;
+  const session = state.sessionGeneration;
+  const mine = () => session === state.sessionGeneration && activeIntent === context && context.chatId === chatId
+    && !context.text.trim() && !context.pending.length;
+  if (!chatId || !context || !mine()) return;
+  try {
+    await draftUnlock;
+    const vault = draftVault;
+    if (!vault?.key || !mine()) return;
+    const drafts = await vault.list();
+    if (!mine()) return;
+    const saved = drafts
+      .filter((kept) => kept.intent.advocate === state.advocate && kept.intent.workspace === state.workspace
+        && kept.intent.chatId === chatId && !kept.intent.matterId && String(kept.intent.text || '').trim()
+        && !(kept.intent.pending || []).length)
+      .sort((a, b) => b.savedAt - a.savedAt)[0];
+    if (!saved) return;
+    context.text = saved.intent.text;
+    context.editedAt = saved.savedAt;
+    restoreIntent();
+    paintSend();
+    showDraftRestored();
+  } catch (error) { /* the words stay in the device's keeping, for Recover a draft */ }
 }
 
 // The answer being worked on, followed by a page that did not send it (a reload, another tab, a restart): it is the answer this page
