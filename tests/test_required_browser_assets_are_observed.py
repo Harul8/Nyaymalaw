@@ -15,7 +15,9 @@ page = _base_page
 
 @pytest.mark.parametrize("delivery", ["unavailable", "empty", "aborted"])
 def test_navigation_refuses_an_undelivered_required_script(page, journey, delivery):
-    target = "/static/matter-workspace.js"
+    # The page's own controller: matter-workspace.js was, until the workspace became the conversation window (owner, 15 and 16
+    # Oct 2026) and app.js the script that runs it.
+    target = "/static/app.js"
     document = page.request.get(journey["base"] + "/app")
     assert document.status == 200
     assert f'<script src="{target}"></script>' in document.text()
