@@ -32,6 +32,9 @@ def reopen(page, mid):
 
 
 def test_recovery_is_on_demand_and_success_disappears_without_losing_text(page, journey):
+    pytest.skip("Recover a draft is offered only from a matter's records under the file icon, which is shown for a matter saved "
+                "before conversations and for the opening form, no longer shown (owner, 15-17 Oct 2026); a conversation's "
+                "draft is kept on the device as it is typed")
     _sign_in(page, journey)
     _start_matter(page)
     page.click("#in-go")
@@ -57,6 +60,9 @@ def test_recovery_is_on_demand_and_success_disappears_without_losing_text(page, 
 
 
 def test_recovery_does_not_offer_another_matters_draft(page, journey):
+    pytest.skip("Recover a draft is offered only from a matter's records under the file icon, which is shown for a matter saved "
+                "before conversations and for the opening form, no longer shown (owner, 15-17 Oct 2026); a conversation's "
+                "draft is kept on the device as it is typed")
     _sign_in(page, journey)
     _start_matter(page)
     page.click("#in-go")
@@ -76,9 +82,7 @@ def test_recovery_does_not_offer_another_matters_draft(page, journey):
 
 def test_a_save_failure_does_not_disappear_like_a_success(page, journey):
     _sign_in(page, journey)
-    _start_matter(page)
-    page.click("#in-go")
-    saved(page)
+    _start_matter(page)  # a conversation opens on its message box; there is no opening form to record first
     page.evaluate(
         "() => { Storage.prototype.setItem = function() { "
         "throw Error('Synthetic quota failure'); }; }"
@@ -95,9 +99,7 @@ def test_a_save_failure_does_not_disappear_like_a_success(page, journey):
 @pytest.mark.parametrize("width,height", WIDTHS)
 def test_composer_is_reachable_and_ime_enter_is_not_a_send(page, journey, width, height):
     _sign_in(page, journey, width, height)
-    _start_matter(page)
-    page.click("#in-go")
-    saved(page)
+    _start_matter(page)  # a conversation opens on its message box; there is no opening form to record first
     page.fill("#message", "Synthetic multi-dispute instruction")
     requests = []
     page.on(
@@ -123,6 +125,9 @@ def test_composer_is_reachable_and_ime_enter_is_not_a_send(page, journey, width,
 
 @pytest.mark.parametrize("outcome", ["reply", "failure", "cancel"])
 def test_send_consumes_only_the_submitted_draft_before_the_response(page, journey, outcome):
+    if outcome == "cancel":
+        pytest.skip("Cancel, which abandoned the browser's request, was replaced by Stop (plan AN.42, D74-D78): the ring "
+                    "stops NM after the step in progress on the server; there is no request for the page to abandon")
     _open_matter(page, journey, client="Synthetic composer lifecycle")
     held = []
     page.route("**/api/turn", lambda route: held.append(route))
@@ -150,7 +155,8 @@ def test_send_consumes_only_the_submitted_draft_before_the_response(page, journe
     assert page.locator("#message").input_value() == message
     assert page.locator("#thread .brief").last.inner_text() == message
     if outcome != "reply":
-        assert page.get_by_role("button", name="Send this brief again", exact=True).is_visible()
+        # A reply that never came is asked after on the server first (D73); the retry is offered once that is known.
+        page.get_by_role("button", name="Send this brief again", exact=True).wait_for(timeout=15000)
     assert not page.errors
 
 
@@ -158,6 +164,9 @@ def test_send_consumes_only_the_submitted_draft_before_the_response(page, journe
 def test_cleared_composer_recovers_receipt_and_retries_exactly_once_after_reload(
     page, journey, committed
 ):
+    pytest.skip("Recover a draft is offered only from a matter's records under the file icon, which is shown for a matter saved "
+                "before conversations and for the opening form, no longer shown (owner, 15-17 Oct 2026); a conversation's "
+                "draft is kept on the device as it is typed")
     _open_matter(page, journey, client="Synthetic receipt survives reload")
     mid, _ = saved(page)
     calls = []
@@ -225,6 +234,8 @@ def test_failed_receipt_protection_never_dispatches_or_loses_the_text(page, jour
 def test_matter_header_is_one_line_and_opening_record_is_only_in_casefile(
     page, journey, width, height
 ):
+    pytest.skip("the opening record and the Case file are a matter's records, reached only from a matter saved before "
+                "conversations; a conversation's header is its title (owner, 16-17 Oct 2026)")
     _sign_in(page, journey, width, height)
     _start_matter(page)
     title = (
