@@ -78,10 +78,24 @@ def engine_doubles():
     harness's own default answers every call with one sentence, which the engine's steps cannot read, so every answer was
     withheld and no conversation was saved - the journeys then failed before the page under test was reached. No call leaves
     this machine: both are synthetic."""
+    from nm.core_engine import follow_up
+    from nm.shared.budget_contracts import Completion
+    from nm.shared.model_port import ModelResult, Usage
     from tests.test_core_turn import ScriptedModel, searcher
 
     model = ScriptedModel(legal=True)
     model.provider = "scripted"
+    first = model.structured
+
+    def structured(prompt, schema, tier, **kwargs):
+        # A FOLLOW-UP IS READ AS CHANGING THE MATTER, so the conversation is understood again whole - a path the stand-in serves.
+        # It knows no follow-up reader of its own (the served tests script one where they test it), and without this every
+        # second message in a journey ended in a server error from the stand-in, not from NM.
+        if prompt.operation == follow_up.OPERATION:
+            return ModelResult(None, {"kind": "changes_matter", "new_questions": [], "said": "Read again with this message."},
+                               tier, "synthetic", "fixture", Usage(1, 1, 0), 0, completion=Completion.COMPLETE)
+        return first(prompt, schema, tier, **kwargs)
+    model.structured = structured
     return {"model": model, "search": searcher()}
 
 
