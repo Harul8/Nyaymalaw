@@ -40,6 +40,8 @@ class Action(str, Enum):
     INVITE = "invite"
     SUSPEND = "suspend"
     USER_TYPE = "user-type"
+    #: An account closed at the advocate's written request (plan AN.53, 53h7c; D241, D246): it cannot be undone.
+    CLOSE = "close"
     LIBRARY_ADD = "library-add"
     LIBRARY_SWITCH = "library-switch"
 

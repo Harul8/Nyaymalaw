@@ -3605,4 +3605,4 @@ app.include_router(browser_assets_router(
 # no door in them the rest of the edge does not use. A signed-in advocate who is not named in the settings gets a 404.
 app.include_router(admin_router(application=application, signed_in=signed_in, csrf=CsrfProtected,
                                 admit_attempt=_admit_auth_attempt, serving=serving_state,
-                                send_reset=_send_reset_link_for_an_admin))
+                                send_reset=_send_reset_link_for_an_admin, let_go=_let_go))

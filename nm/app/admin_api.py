@@ -47,6 +47,11 @@ class Reason(BaseModel):
     reason: str = Field(max_length=2000)
 
 
+class Closure(Reason):
+    """A closure (plan AN.53, 53h7c; D246): the account's address, typed by the Admin, beside the reason naming the request."""
+    address: str = Field(max_length=320)
+
+
 class AllowanceChange(Reason):
     usd: Decimal = Field(gt=0, le=1000, decimal_places=6)
 
@@ -68,7 +73,8 @@ class UserTypeChange(Reason):
 
 def admin_router(*, application: Callable, signed_in: Callable, csrf: object, admit_attempt: Callable,
                  serving: Callable[[], dict] = lambda: {},
-                 send_reset: Callable[[str, Request, object], str] = lambda email, request, now: "not-configured") -> APIRouter:
+                 send_reset: Callable[[str, Request, object], str] = lambda email, request, now: "not-configured",
+                 let_go: Callable[[str], None] = lambda matter_id: None) -> APIRouter:
     router = APIRouter(prefix="/api/admin")
 
     def admin_level(advocate_id: str = Depends(signed_in)) -> Level:
@@ -231,6 +237,30 @@ def admin_router(*, application: Callable, signed_in: Callable, csrf: object, ad
         def allow(account, session, now):
             return {"suspended": False, "changed": application().admin_accounts.set_suspended(account.id, False, now)}
         return make(request, level, account_id, Action.SUSPEND, "reinstate", body.reason, allow)
+
+    @router.post("/users/{account_id}/close", dependencies=[csrf])
+    def close(account_id: str, body: Closure, request: Request, level: Level = Depends(admin_level)) -> dict:
+        """Close an account at the advocate's written request (plan AN.53, 53h7c; D241, D246). It cannot be undone, so more is
+        asked than of any other change: the account suspended first, its address typed, and never an admin's or one's own.
+        The application erases its conversations and papers, then its record (53h7b); what this process holds of those
+        conversations is let go of."""
+        wanted = canonical_id(account_id)
+        if application().admin_level_of(wanted) is not None:
+            raise HTTPException(status_code=409, detail="This account is an admin. Admins are not closed from here: make it an "
+                                                        "advocate first, or take it out of the server's settings if it is named there.")
+        if wanted and wanted == canonical_id(request.state.account_session.advocate_id):
+            raise HTTPException(status_code=409, detail="You cannot close your own account. Another admin can.")
+        if not wanted or canonical_id(body.address) != wanted:
+            raise HTTPException(status_code=422, detail="Type the account's address exactly to close it.")
+
+        def end(account, session, now):
+            if not account.suspended:
+                raise AdminChangeRefused(409, "Suspend this account first; then close it.")
+            said = application().close_account(account.id, now)
+            for matter_id in said["erased"]:
+                let_go(matter_id)
+            return {"closed": True, **{name: value for name, value in said.items() if name != "erased"}}
+        return make(request, level, account_id, Action.CLOSE, "close", body.reason, end)
 
     def change(request: Request, level: Level, action: Action, label: str, target: str, reason: str, do: Callable) -> dict:
         """A change that is not to an account (the library's staging): the same one path, with a target that names what is changed."""
