@@ -28,6 +28,8 @@ from nm.open_matter.media_contracts import MediaKind, Processor, Quarantine, adm
 from nm.shared.storage_errors_port import StoredObjectUnreadable
 
 CHUNK = 1024 * 1024
+#: Plan AN.53 (53h5, D241): the most papers one advocate keeps - each with its original and every record of its text.
+PAPERS_KEPT_MOST = 2000
 _REFERENCE = re.compile(r"(doc_[0-9a-f]{24})-([0-9a-f]{64})")
 #: A paper's own name, wherever a conversation's saved record names it (plan AN.53, D244): the name the desk gives each paper.
 _PAPER = re.compile(r"(?<![0-9A-Za-z_])doc_[0-9a-f]{24}(?![0-9a-f])")
@@ -177,6 +179,12 @@ class DocumentDesk:
         if not 0 < len(data) <= documents.max_bytes(fmt):
             raise DocumentRefused("A recording can be at most 25 MB." if fmt in documents.AUDIO
                                   else "A document can be at most 16 MB.")
+        # Plan AN.53 (53h5, D241): at most PAPERS_KEPT_MOST papers for one advocate, refused before anything of it is checked or
+        # stored. Two sent in the same moment at the edge may both be taken: the count is a bound of care, not of exactness.
+        if self.papers_kept(advocate_id) >= PAPERS_KEPT_MOST:
+            raise DocumentRefused(f"NM keeps at most {PAPERS_KEPT_MOST:,} papers for one advocate, and yours has reached it. "
+                                  "Erase conversations you no longer need from Recently deleted, or delete them: their papers "
+                                  "go with them.")
         sha = hashlib.sha256(data).hexdigest()
         document_id = "doc_" + secrets.token_hex(12)
         # The malware check and the reading of its words on this computer are held in the ledger while they run (52c2).
@@ -200,6 +208,12 @@ class DocumentDesk:
                 self.originals.put(where, f"{document_id}-{start // CHUNK}", data[start:start + CHUNK])
         self.texts.put(where, documents.reference(record), body)
         return record
+
+    def papers_kept(self, advocate_id):
+        """How many papers the advocate's own space keeps: each once, however many records of its text it has (a paper read again
+        has one more). Counted from the records' names, without opening any (53h5)."""
+        names = self.texts.names(space(advocate_id))
+        return len({match.group(1) for match in map(_REFERENCE.fullmatch, names) if match is not None})
 
     def _admitted(self, advocate_id, document_id, fmt, data, sha):
         admission = admitted(document_id, MediaKind.DOCUMENT, purpose="legal research for the advocate's question",
