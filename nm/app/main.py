@@ -357,6 +357,8 @@ def _sweep_expired(application, now):
     if said["sign_ins"]:
         print(f"{said['sign_ins']} sign-in(s) that ended {ENDED_SIGN_INS_KEPT_DAYS} days ago or more were removed; each account's "
               "latest is kept.", file=sys.stderr, flush=True)
+    if said["log_lines"]:  # plan AN.53 (53h4g, D241): the two sign-in logs keep a year
+        print(f"{said['log_lines']} line(s) of the sign-in logs a year old or more were removed.", file=sys.stderr, flush=True)
 
 
 def _sweep_unsent_papers(application, now):

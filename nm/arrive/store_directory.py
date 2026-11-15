@@ -30,6 +30,8 @@ import logging
 import os
 import secrets
 import threading
+import time
+from contextlib import contextmanager
 from dataclasses import replace
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -69,7 +71,7 @@ from nm.arrive.professional_access_contracts import ProfessionalApproval
 from nm.arrive.advocate_memory_contracts import AdvocateMemory
 from nm.shared.external_ai_contracts import NOTICE_VERSION, ModelPermission
 from nm.shared.names_contracts import discard
-from nm.shared.store_file_store import Claim, _Cipher, claim
+from nm.shared.store_file_store import Claim, _Cipher, claim, publish, read_published
 from nm.shared.traceability_contracts import implements
 
 # A public door must not grow an unbounded history even with many sources.
@@ -103,6 +105,11 @@ RETIRED_RECOVERY_FIELDS = ("recovery_codes", "recovery_codes_issued_at", "recove
 EXPIRED_KEPT_DAYS = 30
 #: Plan AN.53 (D245): a sign-in is kept at most this many days after it ends - and each account's latest whatever its age.
 ENDED_SIGN_INS_KEPT_DAYS = 90
+#: Plan AN.53 (53h4g, D241): a line of either sign-in log is kept this many days, then goes (confirm: taken as the same kind of
+#: record as the outgoing-data log, which is kept a year).
+SIGN_IN_LOGS_KEPT_DAYS = 365
+#: How long a writer of a sign-in log waits for a trim in progress before writing all the same, in seconds.
+SIGN_IN_LOG_WAIT = 5.0
 
 
 @implements("A1")
@@ -124,7 +131,40 @@ class FileDirectory:
             registrations = PendingAccounts(self).sweep(before)
         except RegistrationUnavailable:
             registrations = None
-        return {"registrations": registrations, "resets": resets, "sign_ins": self._sweep_sign_ins(now)}
+        return {"registrations": registrations, "resets": resets, "sign_ins": self._sweep_sign_ins(now),
+                "log_lines": self._trim_sign_in_logs(now)}
+
+    # ------------------------------------------------------------------ the two sign-in logs (plan AN.53, 53h4g) ---
+
+    @contextmanager
+    def _sign_in_logs_held(self, wait: float):
+        """The two sign-in logs' lock, for as long as the block lasts: yields the hold, or None where it was not to be had within
+        `wait` seconds or its file cannot be opened. A writer writes either way - a failed attempt is never left uncounted, nor a
+        sign-in refused, for want of it; only a line written while a trim worked could then be lost, and the trim takes moments."""
+        deadline = time.monotonic() + wait
+        held = None
+        while True:
+            try:
+                held = claim(self._sign_in_logs_lock)
+            except OSError:
+                break
+            if held is not None or time.monotonic() >= deadline:
+                break
+            time.sleep(0.02)
+        try:
+            yield held
+        finally:
+            if held is not None:
+                held.release()
+
+    def _trim_sign_in_logs(self, now: datetime) -> int:
+        """D241: each line of the two sign-in logs written SIGN_IN_LOGS_KEPT_DAYS or more before now goes. Only with the logs'
+        lock, not waited for: where a writer holds it now, the logs are trimmed at the next day's sweep. Returns how many went."""
+        cutoff = now - timedelta(days=SIGN_IN_LOGS_KEPT_DAYS)
+        with self._sign_in_logs_held(0) as held:
+            if held is None:
+                return 0
+            return sum(_trim_sign_in_log(path, cutoff) for path in (self._attempts, self._audit))
 
     def _sweep_sign_ins(self, now: datetime) -> int:
         """D245: each sign-in whose end - its expiry, which no sign-in outlives, signed out early or not - is
@@ -223,6 +263,9 @@ class FileDirectory:
         self._sessions = self._root / "sessions"
         self._audit = self._root / "auth.log"
         self._attempts = self._root / "attempts.log"
+        #: Plan AN.53 (53h4g): held by each writer of the two sign-in logs and by their trim, so that no line is written while a
+        #: trim rewrites the file. Nothing is written to it; only the lock on it is the hold.
+        self._sign_in_logs_lock = self._root / "sign-in-logs.lock"
         # Plan AN.53 (53c1): how many lines of that log the last warning spoke of, so the operator is told once.
         self._skipped_said = 0
         self._registration_attempts = self._root / "registration-attempts.json"
@@ -1218,15 +1261,17 @@ class FileDirectory:
         same shape the auth log beside it has held since slice 1.
         """
         try:
-            # A line cut short before this one (the server stopped mid-write) is ended first, so that this
-            # failure is a line of its own and is counted (plan AN.53, 53c1).
-            begin = "\n" if self._attempts_end_mid_line() else ""
-            with self._attempts.open("a", encoding="utf8") as fh:
-                who = _one_log_field(canonical_id(advocate_id))
-                where = _one_log_field(source)
-                fh.write(f"{begin}{now.isoformat()}\t{who}\t{where}\n")
-                fh.flush()
-                os.fsync(fh.fileno())
+            # Plan AN.53 (53h4g): written with the logs' lock, so that no trim rewrites the file under this line.
+            with self._sign_in_logs_held(SIGN_IN_LOG_WAIT):
+                # A line cut short before this one (the server stopped mid-write) is ended first, so that this
+                # failure is a line of its own and is counted (plan AN.53, 53c1).
+                begin = "\n" if self._attempts_end_mid_line() else ""
+                with self._attempts.open("a", encoding="utf8") as fh:
+                    who = _one_log_field(canonical_id(advocate_id))
+                    where = _one_log_field(source)
+                    fh.write(f"{begin}{now.isoformat()}\t{who}\t{where}\n")
+                    fh.flush()
+                    os.fsync(fh.fileno())
         except OSError as exc:
             raise AuthenticationUnavailable("Attempt could not be recorded.") from exc
 
@@ -1641,7 +1686,8 @@ class FileDirectory:
         without the key is an audit nobody reads.
         """
         try:
-            with self._audit.open("a", encoding="utf8") as fh:
+            # Plan AN.53 (53h4g): with the logs' lock, as the attempt log is written.
+            with self._sign_in_logs_held(SIGN_IN_LOG_WAIT), self._audit.open("a", encoding="utf8") as fh:
                 who = _one_log_field(advocate_id)
                 event = _one_log_field(what)
                 fh.write(f"{datetime.now().isoformat()}\t{who}\t{event}\n")
@@ -1649,6 +1695,50 @@ class FileDirectory:
             # Never fail a login because the log is unwritable. The record is
             # worth having and it is not worth locking an advocate out for.
             pass
+
+
+def _sign_in_log_time(line: bytes) -> datetime | None:
+    """When a line of either sign-in log was written, or None where its first field is no time. The limiter's log writes a time
+    with its offset; the reasons' log writes this computer's local time with none, which is read as local time."""
+    try:
+        when = datetime.fromisoformat(line.decode("utf8").split("\t", 1)[0].strip())
+    except ValueError:  # not text, or no time: UnicodeDecodeError is a ValueError
+        return None
+    return when if when.utcoffset() is not None else when.astimezone()
+
+
+def _trim_sign_in_log(path: Path, cutoff: datetime) -> int:
+    """One sign-in log without its lines written at `cutoff` or before (plan AN.53, 53h4g, D241). A line whose time cannot be read
+    is kept: its age cannot be known. A last line cut short stays as it is, so the next writer still begins a line of its own.
+    The new log replaces the old whole, never a mixture; nothing old, it is not rewritten. A log that cannot be read is kept as
+    it is and tried again at the next sweep. The caller holds the logs' lock."""
+    try:
+        raw = read_published(path) if path.exists() else b""
+    except OSError:
+        logging.getLogger("nm.arrive").warning("A sign-in log could not be read to be trimmed (%s); it is tried again "
+                                               "tomorrow.", path.name)
+        return 0
+    if not raw:
+        return 0
+    lines = raw.split(b"\n")
+    last = lines.pop()  # empty after a last newline; otherwise a line cut short, kept as it is
+    kept = [line for line in lines if (_sign_in_log_time(line) or cutoff + timedelta(seconds=1)) > cutoff]
+    gone = len(lines) - len(kept)
+    if not gone:
+        return 0
+    trimmed = path.with_name(path.name + ".trimming")
+    try:
+        with trimmed.open("wb") as handle:
+            handle.write(b"\n".join([*kept, last]))
+            handle.flush()
+            os.fsync(handle.fileno())
+        publish(trimmed, path)
+    except OSError:
+        discard(trimmed)
+        logging.getLogger("nm.arrive").warning("A sign-in log could not be trimmed (%s); it is tried again tomorrow.",
+                                               path.name)
+        return 0
+    return gone
 
 
 def _one_log_field(value: object) -> str:
