@@ -111,6 +111,14 @@ class AdminAccountsPort(Protocol):
         """End every live session of the account except the one whose fingerprint is given. Returns how many were ended."""
         ...
 
+    def close(self, account_id: str, now: datetime) -> dict:
+        """Close a suspended account in the directory (plan AN.53, 53h7a; D241, D246): its sign-ins with their files, its draft
+        keys and any reset link of its still waiting go, and its record last. Returns how many of each went. Raises
+        AdminChangeRefused for an account that is not there, cannot be read, is not suspended or is being changed just now;
+        AdminUnavailable where a sign-in of it cannot be read or something of it could not be removed - nothing more is removed,
+        and the record stays, so the closure is made again."""
+        ...
+
 
 # ------------------------------------------------------------------------- usage ---
 

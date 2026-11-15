@@ -216,6 +216,12 @@ class FileDirectory:
 
         return PendingAccounts(self).confirm(email, code, flow, credential, now)
 
+    def _draft_key_path(self, advocate_id: str, device: str) -> Path:
+        """Where the draft key of one account on one device is kept, named by a digest of the two: the one rule for its name (the
+        key itself, and a closed account's keys found to go, plan AN.53, 53h7a)."""
+        namespace = hashlib.sha256(json.dumps([canonical_id(advocate_id), device]).encode("utf8")).hexdigest()
+        return self._root / "draft-keys" / f"{namespace}.nm"
+
     def device_draft_key(self, advocate_id: str, device: str) -> dict:
         """One stable, protected key per account/device; no client material here."""
         from cryptography.fernet import InvalidToken
@@ -224,12 +230,10 @@ class FileDirectory:
             raise ValueError("a current account and device are required")
         if self._cipher.scheme != "fernet":
             raise ValueError("authenticated draft protection is unavailable")
-        namespace = hashlib.sha256(
-            json.dumps([canonical_id(advocate_id), device]).encode("utf8")
-        ).hexdigest()
-        folder = self._root / "draft-keys"
+        path = self._draft_key_path(advocate_id, device)
+        namespace = path.stem
+        folder = path.parent
         folder.mkdir(exist_ok=True)
-        path = folder / f"{namespace}.nm"
         claim = self._claim_account(advocate_id)
         if claim is None:
             raise AccountBusy("account access is already changing")

@@ -25,6 +25,7 @@ from nm.arrive.admin_port import (AdminAccount, AdminChangeRefused, AdminUnavail
 from nm.arrive.advocate_contracts import AdvocateIdentity, canonical_id
 from nm.arrive.directory_port import SessionsUnavailable
 from nm.arrive.store_directory import FileDirectory
+from nm.shared.names_contracts import discard
 
 #: The most sessions listed for one account (the newest); older ones are history the page does not need.
 SESSIONS_SHOWN = 20
@@ -191,6 +192,48 @@ class AdminFileDirectory(FileDirectory):
             except OSError as exc:
                 raise AdminUnavailable("the account could not be written") from exc
             return True
+        finally:
+            claim.release()
+
+    def close(self, account_id: str, now: datetime) -> dict:
+        """CLOSE A SUSPENDED ACCOUNT, ITS RECORD LAST (plan AN.53, 53h7a; D241, D246). Under the directory's own claim on the
+        account - the one sign-in, a password reset and every change hold - so a closure cannot cross a sign-in. Its sign-ins go
+        with their files of use and owner, then the draft key of each device it signed in from, then any reset link of its still
+        waiting, and last the record, which holds its identity, its credential and its settings. Nothing on a guess: a sign-in of
+        it that cannot be read refuses the closure before anything goes, and anything that cannot be removed stops it there with
+        the record kept, so that the closure is made again. Its conversations and papers are not the directory's: they go first,
+        by the application (53h7b)."""
+        wanted = canonical_id(account_id)
+        claim = self._claim_account(wanted)
+        if claim is None:
+            raise AdminChangeRefused(409, "This account is being changed just now. Try again in a moment.")
+        try:
+            doc = self._read(wanted)
+            if not isinstance(doc, dict):
+                if self._auth_state.last_failure == self.UNKNOWN:
+                    raise AdminChangeRefused(404, "There is no such account.")
+                raise AdminChangeRefused(409, "This account's record could not be read, so it was not closed.")
+            if not doc.get("suspended"):
+                raise AdminChangeRefused(409, "Suspend this account first: only a suspended account can be closed.")
+            try:
+                sessions = self.sessions_for(wanted)
+            except (OSError, SessionsUnavailable) as exc:
+                raise AdminUnavailable("a sign-in of this account could not be read, so nothing was closed") from exc
+            resets = []
+            if self._resets.exists():
+                for path in sorted(self._resets.glob("*.nm")):
+                    reset = self._read_reset(path.stem)  # one that cannot be read has an owner that cannot be known: kept
+                    if reset is not None and canonical_id(reset.advocate_id) == wanted:
+                        resets.append(path)
+            drafts = sorted({self._draft_key_path(wanted, session.device) for session in sessions})
+            drafts = [path for path in drafts if path.exists()]
+            files = [path for session in sessions for path in (self._session_path(session.token_fingerprint),
+                     self._activity_path(session.token_fingerprint), self._session_owner_path(session.token_fingerprint))]
+            if not all(discard(path) for path in (*files, *drafts, *resets)):
+                raise AdminUnavailable("something of this account could not be removed; its record is kept")
+            if not discard(self._advocate_path(wanted)):
+                raise AdminUnavailable("the account record could not be removed")
+            return {"sign_ins": len(sessions), "draft_keys": len(drafts), "reset_links": len(resets)}
         finally:
             claim.release()
 
