@@ -17,7 +17,8 @@ from tests.test_the_workspace_respects_its_current_context import (
 from tests.test_the_workspace_respects_its_current_context import journey as _base_journey
 from tests.test_the_workspace_respects_its_current_context import page as _base_page
 
-pytestmark = pytest.mark.journey
+pytestmark = [pytest.mark.journey,
+              pytest.mark.skip(reason="a changed instruction is recorded through a matter's cover and read back in its History pane, both reached only from a matter saved before conversations (owner, 16 and 17 Oct 2026); a conversation's saved answers are read back exactly as saved (P46), which tests/test_the_journey_login_to_logout.py (phases 8b and 9) checks")]
 journey = _base_journey
 page = _base_page
 

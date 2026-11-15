@@ -33,7 +33,8 @@ sys.path.insert(0, str(ROOT))
 from tests.test_the_journey_login_to_logout import _intake, _start_matter  # noqa: E402
 from tests.test_the_journey_login_to_logout import _tab as _open_surface  # noqa: E402
 
-pytestmark = [pytest.mark.journey, pytest.mark.class_d]
+pytestmark = [pytest.mark.journey, pytest.mark.class_d,
+              pytest.mark.skip(reason="the governance pane is part of a matter's Case file, reached only from a matter saved before conversations (owner, 16 and 17 Oct 2026); custody and decisions are not yet offered for a conversation")]
 
 BRIEF = ("We act for Ledger Traders in a recovery suit against Kiran Steels. "
          "Goods were supplied against invoices on 14 March 2023 and were "

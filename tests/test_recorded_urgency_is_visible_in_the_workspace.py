@@ -13,7 +13,8 @@ from tests.test_the_workspace_respects_its_current_context import (
 from tests.test_the_workspace_respects_its_current_context import journey as _base_journey
 from tests.test_the_workspace_respects_its_current_context import page as _base_page
 
-pytestmark = pytest.mark.journey
+pytestmark = [pytest.mark.journey,
+              pytest.mark.skip(reason="a danger is recorded through a matter's Protective handoff, a record under its file icon, reached only from a matter saved before conversations (owner, 16 and 17 Oct 2026)")]
 journey = _base_journey
 page = _base_page
 

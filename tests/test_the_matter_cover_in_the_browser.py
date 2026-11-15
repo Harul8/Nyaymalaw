@@ -11,7 +11,8 @@ from tests.test_the_journey_login_to_logout import (
     _open_matter,
 )
 
-pytestmark = pytest.mark.journey
+pytestmark = [pytest.mark.journey,
+              pytest.mark.skip(reason="the matter cover is a matter's record under its file icon, reached only from a matter saved before conversations (owner, 16 and 17 Oct 2026); a conversation's own records are its board and its files")]
 journey = journey_support.journey
 page = journey_support.page
 

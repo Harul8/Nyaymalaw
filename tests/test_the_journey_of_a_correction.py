@@ -32,7 +32,8 @@ import pytest
 from tests.test_the_journey_login_to_logout import _intake as _current_intake
 from tests.test_the_journey_login_to_logout import _tab as _open_surface
 
-pytestmark = pytest.mark.journey
+pytestmark = [pytest.mark.journey,
+              pytest.mark.skip(reason="the correction is made in a matter's Case file, reached only from a matter saved before conversations (owner, 16 and 17 Oct 2026); a conversation is corrected by the advocate's own words through Steer (plan AN.42, D79), which its own tests cover")]
 
 playwright_api = pytest.importorskip(
     "playwright.sync_api",

@@ -70,28 +70,24 @@ def test_email_registration_opens_own_workspace_and_matter(page, journey, width)
     page.fill("#login-password", journey["password"])
     page.click("#login-go")
     page.wait_for_selector("#masthead:not([hidden])")
-    assert email in page.inner_text("#workspace-name")
+    # F-A-17: the name the account holds, or its email while it has none (the workspace's name beside it was taken off).
+    assert email in page.inner_text("#who-name")
     assert page.inner_text("#who-detail") != " · "
     support._reach_rail(page, width)
-    assert page.locator("#rail-body .row[data-matter-id]").count() == 0
+    page.wait_for_selector("#rail-body .row, #rail-body .empty, #rail-body p", timeout=15000)
+    assert page.locator("#rail-body .row[data-chat-id]").count() == 0, "a new account's history is its own, and empty"
     support._start_matter(page)
-    support._intake(page, client=f"Synthetic Self Registration {width}")
-    with page.expect_response(lambda response: response.url.endswith("/api/turn")
-                              and response.request.method == "POST") as pending:
-        support._advise(page, support.BRIEF)
-    turn = pending.value
-    assert turn.status == 200
-    matter_id = turn.json()["matter_id"]
+    support._advise(page, support.BRIEF)  # a new matter is a conversation, saved with its first message
+    matter_id = page.evaluate("() => shownChatId()")
     assert matter_id
-    assert page.request.get(f"{journey['base']}/api/matters/{matter_id}/cover").status == 200
+    assert page.request.get(f"{journey['base']}/api/chats/{matter_id}").status == 200
     page.reload()
     page.wait_for_selector("#masthead:not([hidden])")
     support._reach_rail(page, width)
-    row = page.locator(f'#rail-body .row[data-matter-id="{matter_id}"]')
+    row = page.locator(f'#rail-body .row[data-chat-id="{matter_id}"]')
     row.wait_for(state="visible")
     row.click()
-    page.wait_for_function("id => document.querySelector('#pane-advise').dataset.matterId === id",
-                           arg=matter_id)
+    page.wait_for_function("id => shownChatId() === id", arg=matter_id)
     page.wait_for_function("brief => document.querySelector('#thread').textContent.includes(brief)",
                            arg=support.BRIEF)
     assert support.BRIEF in page.inner_text("#thread")
@@ -210,6 +206,8 @@ def test_full_length_email_stays_readable_on_a_phone(page, journey):
     page.fill("#login-password", journey["password"])
     page.click("#login-go")
     page.wait_for_selector("#masthead:not([hidden])")
-    assert email in page.inner_text("#workspace-name")
+    # On a phone the account's name is in the person menu: the whole email, readable, and nothing scrolls sideways.
+    support._open_account_menu(page)
+    assert email in page.inner_text("#profile-email")
     assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
     assert not page.errors

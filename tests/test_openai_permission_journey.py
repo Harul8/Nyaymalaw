@@ -31,10 +31,11 @@ def test_existing_account_can_accept_reload_withdraw_and_keep_its_matter(
     page, journey, width, height
 ):
     support._sign_in(page, journey, width, height)
+    # A CONVERSATION IS THE MATTER (owner, 15 and 16 Oct 2026), saved with its first message: there is no opening form to
+    # record first.
     support._start_matter(page)
-    page.click("#in-go")
-    page.wait_for_selector("#composer:not([hidden])")
-    mid = page.get_attribute("#pane-advise", "data-matter-id")
+    support._advise(page, f"Permission at {width}px. {support.BRIEF}")
+    mid = page.evaluate("() => shownChatId()")
     assert mid
     open_permission(page)
     assert not page.is_checked("#ai-sharing-accept")
@@ -56,9 +57,9 @@ def test_existing_account_can_accept_reload_withdraw_and_keep_its_matter(
     assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
     page.click("#ai-sharing-close")
     support._reach_rail(page, width)
-    page.locator(f'#rail-body [data-matter-id="{mid}"]').click()
+    page.locator(f'#rail-body [data-chat-id="{mid}"]').click()
+    page.wait_for_function("id => shownChatId() === id", arg=mid)
     page.wait_for_selector("#composer:not([hidden])")
-    assert page.get_attribute("#pane-advise", "data-matter-id") == mid
     support._sign_out(page)
     assert page.is_hidden("#ai-sharing-dialog")
     assert page.inner_text("#ai-sharing-status") == ""
@@ -88,9 +89,9 @@ def test_permission_refusal_keeps_the_matter_and_offers_the_actual_settings(page
     """Rendering control only; real dispatcher refusal is tested through the API."""
     support._sign_in(page, journey)
     support._start_matter(page)
-    page.click("#in-go")
-    page.wait_for_selector("#composer:not([hidden])")
-    mid = page.get_attribute("#pane-advise", "data-matter-id")
+    support._advise(page, f"Permission refusal. {support.BRIEF}")  # the conversation, saved with its first message
+    mid = page.evaluate("() => shownChatId()")
+    assert mid
     page.route(
         "**/api/turn",
         lambda route: route.fulfill(
@@ -113,7 +114,7 @@ def test_permission_refusal_keeps_the_matter_and_offers_the_actual_settings(page
     page.wait_for_selector("#ai-sharing-dialog[open]")
     assert "outside India" in page.inner_text("#ai-sharing-dialog")
     assert page.is_hidden("#intake")
-    assert page.get_attribute("#pane-advise", "data-matter-id") == mid
+    assert page.evaluate("() => shownChatId()") == mid, "the refusal keeps the conversation it was sent in"
     page.click("#ai-sharing-close")
     assert page.is_visible("#message")
     assert page.input_value("#message") == ""
@@ -121,5 +122,5 @@ def test_permission_refusal_keeps_the_matter_and_offers_the_actual_settings(page
         page.locator("#thread .brief").last.inner_text()
         == "Synthetic brief: please assess the supplied records."
     )
-    assert page.get_by_role("button", name="Send this brief again", exact=True).is_visible()
+    page.get_by_role("button", name="Send this brief again", exact=True).wait_for(timeout=15000)
     assert not page.errors

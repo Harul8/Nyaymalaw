@@ -37,7 +37,8 @@ import pathlib
 
 import pytest
 
-pytestmark = pytest.mark.journey
+pytestmark = [pytest.mark.journey,
+              pytest.mark.skip(reason="Preparation and the tabs it was reached by are not on the page since the owner's decisions of 15 and 16 Oct 2026; every width is walked now by tests/test_the_journey_login_to_logout.py (phases 3 and 14) and tests/test_the_workspace_respects_its_current_context.py")]
 
 playwright_api = pytest.importorskip(
     "playwright.sync_api",

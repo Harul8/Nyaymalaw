@@ -10,7 +10,8 @@ from tests.test_the_journey_login_to_logout import WIDTHS, _sign_in, _start_matt
 from tests.test_the_journey_login_to_logout import journey as _base_journey
 from tests.test_the_journey_login_to_logout import page as _base_page
 
-pytestmark = pytest.mark.journey
+pytestmark = [pytest.mark.journey,
+              pytest.mark.skip(reason="the opening form is not shown since the owner's decisions of 15 and 16 Oct 2026: a new matter is a conversation, opened on its message box and saved with its first message (tests/test_the_journey_login_to_logout.py drives it)")]
 journey = _base_journey
 page = _base_page
 
