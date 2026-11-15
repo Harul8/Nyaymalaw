@@ -93,3 +93,14 @@ class UsagePort(Protocol):
         """What every call cost, for the operator: overall, by model and by outcome, with the calls whose
         cost was not established counted apart."""
         ...
+
+
+@runtime_checkable
+class UsageSweepPort(Protocol):
+    """The usage ledger's retention (plan AN.53, 53h4h, D241: eight years, as a billing record), a narrow port of its own that only
+    the daily sweep is given: the turn path's port reads a standing and records a call, and removes nothing."""
+
+    def sweep(self, before) -> dict:
+        """Remove the calls and the operator's grants written before `before`, each account's sums carried so that no balance
+        changes, and each trial kept; how many of each went: {'calls', 'grants'}."""
+        ...

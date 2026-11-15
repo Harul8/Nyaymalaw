@@ -279,8 +279,27 @@ def _keep_deleted(application, *, every=DELETED_SWEEP_EVERY):
             _sweep_expired(application, now)
             _sweep_turn_lines(application, now)
             _sweep_attempts(application, now)
+            _sweep_usage(application, now)
             time.sleep(every)
     threading.Thread(target=sweep, name="deleted-sweep", daemon=True).start()
+
+
+def _sweep_usage(application, now):
+    """The usage ledger's calls and operator's grants written USAGE_KEPT_YEARS (8) or more years before now go (plan AN.53, 53h4h,
+    D241), each account's sums carried so that no balance changes, and each trial kept. Says how many, by counts only."""
+    import sqlite3
+
+    from nm.arrive.store_usage import USAGE_KEPT_YEARS, years_before
+    from nm.arrive.usage_port import UsageRefused
+
+    try:
+        gone = application.usage_sweep.sweep(years_before(now, USAGE_KEPT_YEARS))
+    except (UsageRefused, OSError, sqlite3.Error) as exc:  # said now, and tried again at the next sweep
+        print(f"The usage ledger could not be swept now ({type(exc).__name__}).", file=sys.stderr, flush=True)
+        return
+    if gone["calls"] or gone["grants"]:
+        print(f"{gone['calls']} call(s) and {gone['grants']} grant(s) of the usage ledger written {USAGE_KEPT_YEARS} years ago or "
+              "more were removed, their sums carried so that no balance changes.", file=sys.stderr, flush=True)
 
 
 def _sweep_attempts(application, now):

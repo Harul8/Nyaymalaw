@@ -27,7 +27,7 @@ from nm.arrive.store_directory import FileDirectory
 from nm.arrive.store_turn_events import FileTurnEvents
 from nm.arrive.store_usage import FileUsage
 from nm.arrive.turn_event_port import TurnEventPort, TurnEventRefused, TurnRecordSweepPort
-from nm.arrive.usage_port import AllowanceUsedUp, UsagePort, UsageRefused
+from nm.arrive.usage_port import AllowanceUsedUp, UsagePort, UsageRefused, UsageSweepPort
 from nm.shared.deployment_contracts import shares_value_with
 from nm.shared.egress_contracts import DataClass, EgressRefused, Gatekeeper, Sink
 from nm.shared.egress_log_store import EgressLog, keep_days_from
@@ -180,9 +180,14 @@ class Application:
             data_classes=(DataClass.OPERATIONAL,))
         # Each account's usage of the paid AI service and the allowance it draws on (owner decision
         # O24, plan AN.17): content-free, beside the turn attempts.
-        self.usage = PolicedPort(inner=_DeferredAdapter(
-            lambda: FileUsage(storage / USAGE_FILE)),
+        usage = _DeferredAdapter(lambda: FileUsage(storage / USAGE_FILE))
+        self.usage = PolicedPort(inner=usage,
             gate=self._gate, port=UsagePort, sink=Sink.STORAGE, processor_id=STORAGE_PROCESSOR,
+            data_classes=(DataClass.OPERATIONAL,))
+        # Its retention (plan AN.53, 53h4h, D241: eight years, what goes carried), through a narrow port only the daily sweep is
+        # given.
+        self.usage_sweep = PolicedPort(inner=usage,
+            gate=self._gate, port=UsageSweepPort, sink=Sink.STORAGE, processor_id=STORAGE_PROCESSOR,
             data_classes=(DataClass.OPERATIONAL,))
         # One content-free line when each turn ends (plan AN.46, piece 46h; owner decision D120), in a sidecar of its own.
         turn_record = _DeferredAdapter(lambda: FileTurnEvents(storage / TURN_EVENTS_FILE))

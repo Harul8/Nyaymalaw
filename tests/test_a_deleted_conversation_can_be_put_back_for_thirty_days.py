@@ -140,7 +140,8 @@ def test_the_serving_process_sweeps_at_once_and_again_and_a_store_that_fails_is_
                                        directory=SimpleNamespace(sweep_expired=lambda now: {"registrations": 0, "resets": 0, "sign_ins": 0, "log_lines": 0}),
             turn_record_sweep=SimpleNamespace(sweep=lambda before: 0),
             turn_attempt_sweep=SimpleNamespace(sweep=lambda before: 0),
-            step_record_sweep=SimpleNamespace(sweep=lambda before: 0)),
+            step_record_sweep=SimpleNamespace(sweep=lambda before: 0),
+            usage_sweep=SimpleNamespace(sweep=lambda before: {"calls": 0, "grants": 0})),
                        every=0.05)
     assert again.wait(5), "a failed sweep is tried again"
     assert swept[0].utcoffset() is not None, "the sweep is asked with an aware moment"

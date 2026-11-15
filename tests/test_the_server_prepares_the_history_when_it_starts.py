@@ -47,7 +47,8 @@ def start(monkeypatch, store, prepare, log=None):
         directory=SimpleNamespace(sweep_expired=lambda now: {"registrations": 0, "resets": 0, "sign_ins": 0, "log_lines": 0}),
             turn_record_sweep=SimpleNamespace(sweep=lambda before: 0),
             turn_attempt_sweep=SimpleNamespace(sweep=lambda before: 0),
-            step_record_sweep=SimpleNamespace(sweep=lambda before: 0),  # plan AN.53 (D241): the serving process sweeps what was deleted
+            step_record_sweep=SimpleNamespace(sweep=lambda before: 0),
+            usage_sweep=SimpleNamespace(sweep=lambda before: {"calls": 0, "grants": 0}),  # plan AN.53 (D241): the serving process sweeps what was deleted
         environment={"NM_MATTER_STORE": str(store)}, root=store,
         turns_of_an_earlier_run_released=lambda: released.append(1) or 0))
     monkeypatch.setattr(main.api, "set_application", lambda application: None)
