@@ -472,14 +472,16 @@ class FileDirectory:
         self._replace_advocate(path, blob)
 
     def _replace_advocate(self, path: Path, blob: dict) -> None:
-        """Replace an account-control record without exposing a partial JSON write."""
+        """Replace an account-control record without exposing a partial JSON write. Put in place by
+        the one publish (plan AN.50, 50h1's sweep, D194), so a suspension, a new credential or a
+        setting the account was told of survives a power loss, and a reader on Windows is waited for."""
         temporary = path.with_name(f".{path.name}.{secrets.token_hex(8)}.tmp")
         try:
             with temporary.open("x", encoding="utf8") as handle:
                 handle.write(json.dumps(blob, indent=2))
                 handle.flush()
                 os.fsync(handle.fileno())
-            os.replace(temporary, path)
+            publish(temporary, path)
         finally:
             # The replace either happened or it did not; the temporary name
             # decides nothing either way, so its removal may not raise over a
@@ -729,7 +731,7 @@ class FileDirectory:
                 handle.write(sealed)
                 handle.flush()
                 os.fsync(handle.fileno())
-            os.replace(temporary, path)
+            publish(temporary, path)  # plan AN.50, 50h1's sweep: a link marked used stays used
         finally:
             discard(temporary)
 
@@ -1371,12 +1373,14 @@ class FileDirectory:
                 handle.write(now.isoformat())
                 handle.flush()
                 os.fsync(handle.fileno())
-            os.replace(temporary, path)
+            publish(temporary, path)
         except OSError as exc:
             # A LOST ACTIVITY WRITE SHORTENS A SESSION; IT NEVER LENGTHENS ONE,
             # so it must not fail the request that was entitled to run. On
-            # Windows a replace refuses while another request is reading the
-            # same file; the next request records it.
+            # Windows publish waits a bounded moment for another request
+            # reading the same file (plan AN.50, 50h1's sweep); one still
+            # refused after it, or a folder that cannot be flushed, is noted,
+            # and the next request records it.
             self._note(session.advocate_id, f"session activity not recorded: {type(exc).__name__}")
         finally:
             discard(temporary)
@@ -1440,7 +1444,7 @@ class FileDirectory:
                 handle.write(mark)
                 handle.flush()
                 os.fsync(handle.fileno())
-            os.replace(temporary, path)
+            publish(temporary, path)  # plan AN.50, 50h1's sweep
         except OSError:
             pass
         finally:
