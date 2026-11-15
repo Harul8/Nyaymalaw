@@ -86,11 +86,13 @@ class AdminDirectoryPort(Protocol):
 
 class AdminChangeRefused(Exception):
     """A change the Admin area was asked to make was refused for a reason an admin should be told in plain words (nothing was changed).
-    `status` is the HTTP status the edge answers with."""
+    `status` is the HTTP status the edge answers with. `outcome` is what the audit's second entry says: "not made", unless part of
+    the change was made before it stopped ("part-way", plan AN.53, 53h7: a closure cut off after it erased something), and the
+    detail then says what was."""
 
-    def __init__(self, status: int, detail: str):
+    def __init__(self, status: int, detail: str, *, outcome: str = "not made"):
         super().__init__(detail)
-        self.status, self.detail = status, detail
+        self.status, self.detail, self.outcome = status, detail, outcome
 
 
 class AdminAccountsPort(Protocol):

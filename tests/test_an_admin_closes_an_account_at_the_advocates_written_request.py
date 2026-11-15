@@ -132,3 +132,22 @@ def test_a_closure_without_a_reason_is_refused(ready):
     _suspend(admin)
     assert close(admin, reason="").status_code in (400, 422)
     assert _matters(served, ADVOCATE)
+
+
+def test_a_closure_whose_directory_step_fails_never_tells_the_admin_nothing_changed(ready, monkeypatch):
+    """The Admin area's words for a source it could not read say "Nothing has been changed": after the erasures that is untrue."""
+    from nm.arrive.admin_port import AdminUnavailable
+    served = ready
+    admin = served.login(ADMIN, confirmed=True)
+    _suspend(admin)
+
+    def failing(account_id, now):
+        raise AdminUnavailable("a sign-in could not be read")
+    monkeypatch.setattr(served.app.admin_accounts, "close", failing)
+    reply = close(admin)
+    assert reply.status_code == 503
+    said = reply.json()["detail"]
+    assert "part-way" in said and "Nothing has been changed" not in said and "Nothing was changed" not in said
+    assert _matters(served, ADVOCATE) == set()
+    assert [entry[1:] for entry in audit(served)][-2:] == [("close", ADVOCATE, REQUEST, "started"),
+                                                           ("close", ADVOCATE, REQUEST, "part-way")], "nor does the audit"

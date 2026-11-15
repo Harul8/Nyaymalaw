@@ -855,7 +855,7 @@ class Application:
         it did; the account is kept, suspended, and the closure is made again. Returns how many of each went, and which
         conversations, for the caller to let go of what it holds of them."""
         from nm.app.documents import _REFERENCE, space
-        from nm.arrive.admin_port import AdminChangeRefused
+        from nm.arrive.admin_port import AdminChangeRefused, AdminUnavailable
         from nm.arrive.advocate_contracts import canonical_id
         from nm.core_engine.conversation import shown_of
         advocate = canonical_id(account_id)
@@ -866,39 +866,51 @@ class Application:
             raise AdminChangeRefused(409, "This account's record cannot be read; it is not closed.")
         if not account.suspended:
             raise AdminChangeRefused(409, "Suspend this account first; then close it.")
-        matters = sorted({entry[0] for entry in self.store.saved_files_for(advocate)}
-                         | {said["matter_id"] for said in self.store.deleted_for(advocate)})
-        for matter_id in matters:
-            try:
-                held = shown_of(self.store.load_for(matter_id, advocate))
-            except (ValueError, StoredObjectUnreadable):
-                held = None
-            if held is not None and self.turn_running(advocate, held["turn_id"]):
-                raise AdminChangeRefused(409, "NM is working on one of this account's conversations. Close it once that turn "
-                                              "has stopped.")
-        erased = []
+        try:
+            matters = sorted({entry[0] for entry in self.store.saved_files_for(advocate)}
+                             | {said["matter_id"] for said in self.store.deleted_for(advocate)})
+            for matter_id in matters:
+                try:
+                    held = shown_of(self.store.load_for(matter_id, advocate))
+                except (ValueError, StoredObjectUnreadable):  # damaged, or no conversation's name: nothing works on it
+                    held = None
+                if held is not None and self.turn_running(advocate, held["turn_id"]):
+                    raise AdminChangeRefused(409, "NM is working on one of this account's conversations. Close it once that "
+                                                  "turn has stopped.")
+        except OSError as exc:
+            raise AdminChangeRefused(503, "This account's conversations could not all be read just now, so whether NM is "
+                                          "working on one cannot be known. Nothing was erased; close it again.") from exc
+        erased, papers = [], {"erased": []}
+
+        def stopped(status, why):
+            """From the first erasure on, a stop is part-way: it says what went, and the audit says so too."""
+            return AdminChangeRefused(status, f"The closure stopped part-way: {len(erased)} conversation(s) and "
+                                              f"{len(papers['erased'])} paper(s) were erased; {why} The account is kept, "
+                                              "suspended; close it again to finish.", outcome="part-way")
         for matter_id in matters:
             try:
                 receipt = self.store.erase(matter_id, advocate)
+            except ValueError:  # a file whose name is no conversation's: none of theirs to erase, as Erase now holds
+                continue
             except OSError as exc:
-                raise AdminChangeRefused(503, f"The closure stopped part-way: {len(erased)} conversation(s) were erased. The "
-                                              "account is kept, suspended; close it again to finish.") from exc
+                raise stopped(503, "the next conversation could not be erased just now.") from exc
             if receipt is not None:
                 erased.append(matter_id)
-        papers = {"erased": []}
         if self.documents is not None:
-            where = space(advocate)
-            stems = {found.group(1) for found in map(_REFERENCE.match, self.documents.texts.names(where)) if found}
             try:
+                stems = {found.group(1) for found in map(_REFERENCE.match, self.documents.texts.names(space(advocate)))
+                         if found}
                 papers = self.documents.erase(advocate, stems, lambda who, named: (frozenset(), 0))
-            except OSError:
-                papers = {"erased": [], "left": sorted(stems)}
-            if papers.get("left"):
-                raise AdminChangeRefused(503, f"The closure stopped part-way: {len(erased)} conversation(s) and "
-                                              f"{len(papers['erased'])} paper(s) were erased, {len(papers['left'])} paper(s) "
-                                              "could not all be removed. The account is kept, suspended; close it again to "
-                                              "finish.")
-        closed = self.admin_accounts.close(advocate, now)
+            except OSError as exc:
+                raise stopped(503, "their papers could not be listed or erased just now.") from exc
+            if papers["left"]:
+                raise stopped(503, f"{len(papers['left'])} paper(s) could not all be removed.")
+        try:
+            closed = self.admin_accounts.close(advocate, now)
+        except AdminUnavailable as exc:
+            raise stopped(503, "the account's sign-ins and record could not all be removed just now.") from exc
+        except AdminChangeRefused as exc:
+            raise stopped(exc.status, f"the account itself was not closed: {exc.detail}") from exc
         return {"conversations": len(erased), "papers": len(papers["erased"]), **closed, "erased": tuple(erased)}
 
     def browser_asset_paths(self):

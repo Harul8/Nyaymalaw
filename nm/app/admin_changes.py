@@ -10,7 +10,8 @@ stops at the first that is not met, having changed nothing:
   4. The audit log takes a first entry, "started". If it cannot be written the change is not made.
   5. The change is made.
   6. The audit log takes a second entry, "done" - or "not made" when the change was refused or failed, so the log never says a change
-     happened that did not.
+     happened that did not; or "part-way" when the refusal says part of it was made (a closure cut off after it erased something,
+     plan AN.53, 53h7), so the log never says a change did not happen that partly did.
 
 A change names its account by the id the directory knows it by and is refused for an account that is not there, so a typo can never
 make a record for someone who does not exist. Nothing here reads or writes a conversation, a matter, a file or a password.
@@ -65,8 +66,8 @@ def make_change(*, record: AdminRecordPort, level: Level | None, actor: str, ses
         raise AdminChangeRefused(503, RECORD_UNAVAILABLE) from exc
     try:
         result = do()
-    except AdminChangeRefused:
-        _close(record, now, actor, label, target, why, "not made")
+    except AdminChangeRefused as exc:
+        _close(record, now, actor, label, target, why, exc.outcome)
         raise
     except (AdminUnavailable, ValueError, OSError) as exc:
         _close(record, now, actor, label, target, why, "not made")

@@ -108,3 +108,67 @@ def test_a_closure_cut_off_part_way_says_what_it_did_and_keeps_the_account(two, 
     assert served.directory._advocate_path(OWNER).exists(), "the account kept, suspended, to be closed again"
     monkeypatch.setattr(served.store, "erase", real)
     assert served.app.close_account(OWNER, utcnow())["conversations"] >= 1, "made again, it finishes"
+
+
+def test_a_conversation_that_cannot_be_read_just_now_stops_the_closure_before_anything_goes(two, monkeypatch):
+    """Whether NM works on it cannot be known, so nothing is erased (an OSError is the disk's, not a damaged record's)."""
+    served = two
+
+    def unreadable(matter_id, advocate_id):
+        raise OSError("the disk refused")
+    monkeypatch.setattr(served.store, "load_for", unreadable)
+    before = _theirs(served, OWNER)
+    with pytest.raises(AdminChangeRefused) as refused:
+        served.app.close_account(OWNER, utcnow())
+    assert refused.value.status == 503 and "Nothing was erased" in refused.value.detail
+    assert _theirs(served, OWNER) == before and served.directory._advocate_path(OWNER).exists()
+
+
+def test_papers_that_cannot_be_listed_stop_the_closure_part_way_and_say_so(two, monkeypatch):
+    served = two
+    texts = served.app.documents.texts
+
+    def unlisted(where):
+        raise OSError("the disk refused")
+    monkeypatch.setattr(texts, "names", unlisted)
+    with pytest.raises(AdminChangeRefused) as refused:
+        served.app.close_account(OWNER, utcnow())
+    said = refused.value.detail
+    assert refused.value.status == 503 and "part-way" in said and "1 conversation(s)" in said and "close it again" in said
+    assert served.directory._advocate_path(OWNER).exists()
+
+
+def test_a_directory_that_fails_after_the_erasures_is_said_part_way_never_as_nothing_changed(two, monkeypatch):
+    from nm.arrive.admin_port import AdminUnavailable
+    served = two
+
+    def failing(account_id, now):
+        raise AdminUnavailable("a sign-in could not be read")
+    monkeypatch.setattr(served.app.admin_accounts, "close", failing)
+    with pytest.raises(AdminChangeRefused) as refused:
+        served.app.close_account(OWNER, utcnow())
+    said = refused.value.detail
+    assert refused.value.status == 503 and "part-way" in said and "1 paper(s)" in said and "close it again" in said
+    assert _theirs(served, OWNER) == (set(), ()), "what was erased is erased"
+
+
+def test_a_directory_that_refuses_after_the_erasures_says_what_was_erased(two, monkeypatch):
+    served = two
+
+    def refusing(account_id, now):
+        raise AdminChangeRefused(409, "Suspend this account first; then close it.")
+    monkeypatch.setattr(served.app.admin_accounts, "close", refusing)
+    with pytest.raises(AdminChangeRefused) as refused:
+        served.app.close_account(OWNER, utcnow())
+    said = refused.value.detail
+    assert refused.value.status == 409 and "were erased" in said and "Suspend this account first" in said
+
+
+def test_a_file_in_the_store_whose_name_is_no_conversations_does_not_stop_a_closure(two, monkeypatch):
+    """The store lists such a file as possibly the advocate's (its reading says why); it is no conversation to erase, as Erase
+    now holds, and every closure would otherwise stop on it."""
+    served = two
+    real = served.store.saved_files_for
+    monkeypatch.setattr(served.store, "saved_files_for", lambda who: real(who) + (("not a conversation's name", (0, 0), "", None),))
+    said = served.app.close_account(OWNER, utcnow())
+    assert said["conversations"] == 1 and not served.directory._advocate_path(OWNER).exists()
