@@ -30,6 +30,8 @@ from nm.shared.storage_errors_port import StoredObjectUnreadable
 CHUNK = 1024 * 1024
 #: Plan AN.53 (53h5, D241): the most papers one advocate keeps - each with its original and every record of its text.
 PAPERS_KEPT_MOST = 2000
+#: From how many the advocate is told, with each paper sent, how many are kept and what frees room (nine in ten): 53h5b.
+PAPERS_KEPT_TOLD = 1800
 _REFERENCE = re.compile(r"(doc_[0-9a-f]{24})-([0-9a-f]{64})")
 #: A paper's own name, wherever a conversation's saved record names it (plan AN.53, D244): the name the desk gives each paper.
 _PAPER = re.compile(r"(?<![0-9A-Za-z_])doc_[0-9a-f]{24}(?![0-9a-f])")

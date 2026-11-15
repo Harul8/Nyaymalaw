@@ -3032,7 +3032,19 @@ def _receive_document(advocate_id, request, name, data):
                                   'code': 'document_storage'}) from exc
     if not _session_current(request, advocate_id):
         raise HTTPException(401, 'not signed in')
-    return document_rules.summary(record)
+    shown = document_rules.summary(record)
+    # Plan AN.53 (53h5b, D241): from nine in ten of the papers one advocate keeps, each paper sent says how many are kept and what
+    # frees room, so that the refusal of the last is never the first an advocate hears of the count. Counted from names only.
+    from nm.app.documents import PAPERS_KEPT_MOST, PAPERS_KEPT_TOLD
+    try:
+        kept = _document_desk().papers_kept(advocate_id)
+    except OSError:
+        kept = None  # the paper is kept; only what would be said of the count is not known now
+    if kept is not None and kept >= PAPERS_KEPT_TOLD:
+        shown['kept'] = {'papers': kept, 'most': PAPERS_KEPT_MOST,
+                         'said': f'NM keeps {kept:,} of your papers; it keeps at most {PAPERS_KEPT_MOST:,} for one advocate. '
+                                 'Deleting a conversation you no longer need deletes its papers with it.'}
+    return shown
 
 
 _READING_FAILURES = (ModelPermissionRefused, UsageLimitReached, ModelError, document_rules.DocumentRefused, OSError)

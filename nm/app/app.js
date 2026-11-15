@@ -7076,6 +7076,12 @@ async function wavParts(file) {
 // How often the page asks after a reading of scanned pages (plan AN.25, P4).
 const READING_POLL_MS = 1000;
 
+// A paper's line beside the message box: how it stands, and - on a paper attached - what the server said of the papers kept.
+function chipStatus(item) {
+  const said = documentStatus(item);
+  return item.kept && !['failed', 'uploading', 'recording', 'converting'].includes(item.status) ? `${said}. ${item.kept}` : said;
+}
+
 function documentStatus(item) {
   if (item.status === 'recording') {
     const seconds = Math.floor((Date.now() - item.started) / 1000);
@@ -7122,7 +7128,7 @@ function renderAttachments() {
     name.textContent = item.name;
     const status = document.createElement('span');
     status.className = 'attachment-status';
-    status.textContent = documentStatus(item);
+    status.textContent = chipStatus(item);
     chip.append(name, status);
     if (item.status === 'recording') {
       const stop = document.createElement('button');
@@ -7221,6 +7227,9 @@ async function uploadAttachment(file) {
   } catch (error) {
     return settle('failed', error.message);
   }
+  // Plan AN.53 (53h5b, D241): what the server says of the papers kept - from nine in ten of the most - stays with this paper's
+  // line, apart from its note, which a reading of its pages writes afresh.
+  item.kept = (item.summary && item.summary.kept && typeof item.summary.kept.said === 'string') ? item.summary.kept.said : '';
   if (item.summary.state !== 'held' && item.summary.waiting_for_ai > 0 && wanted(item)) {
     await readWaiting(item);
     return;
