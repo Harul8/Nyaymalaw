@@ -27,7 +27,8 @@ from pathlib import Path
 from typing import Callable, Mapping
 
 from nm.arrive.admin_port import AdminChangeRefused, AdminUnavailable
-from nm.shared.names_contracts import discard_tree
+from nm.shared.names_contracts import discard, discard_tree
+from nm.shared.store_file_store import publish
 
 _log = logging.getLogger("nm.admin")
 MAX_FILES = 20
@@ -64,13 +65,21 @@ class AdminStaging:
             raise AdminUnavailable("a batch could not be read") from exc
 
     def _save(self, batch: dict) -> None:
+        """The batch's record, written whole and flushed, then put in place by the one publish (plan AN.50, 50h1's sweep, D194):
+        on Windows a reader is waited for a bounded moment, elsewhere the folder is flushed after the rename. A temporary is
+        never left beside the record, whether the write was made or not."""
         path = self._path(batch["id"]) / "batch.json"
         temporary = path.with_name(f".batch.{uuid.uuid4().hex}.tmp")
         try:
-            temporary.write_text(json.dumps(batch, indent=1), encoding="utf8")
-            os.replace(temporary, path)
+            with temporary.open("x", encoding="utf8") as handle:
+                handle.write(json.dumps(batch, indent=1))
+                handle.flush()
+                os.fsync(handle.fileno())
+            publish(temporary, path)
         except OSError as exc:
             raise AdminUnavailable("a batch could not be written") from exc
+        finally:
+            discard(temporary)
 
     def batches(self) -> list[dict]:
         """Every batch, newest first, each with its state recomputed against what the library holds now."""
