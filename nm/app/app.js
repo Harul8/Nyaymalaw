@@ -118,6 +118,14 @@ function draftHasWork(intent) {
       && Object.values(intent.fields || {}).some(value => String(value).trim()))));
 }
 
+// WHAT IS TRULY UNSENT: words typed, a message waiting to be sent or confirmed, the opening form's fields. An open conversation
+// alone is kept as a draft (draftHasWork), so the page can find its way back to it, but it is nothing unsent: Sign out asks about
+// unsent drafts only where there are some (found mending the browser journeys, 15 Nov 2026 - it asked after every conversation).
+function draftHasUnsentWork(intent) {
+  return Boolean(intent && (intent.text.trim() || intent.pending.length || intent.intake
+    || (intent.intakeOpen && Object.values(intent.fields || {}).some(value => String(value).trim()))));
+}
+
 async function saveProtectedDraft({previousKey = null} = {}) {
   if (!ownsIntent(activeIntent)) return;
   const held = activeIntent;
@@ -212,7 +220,7 @@ async function unlockDrafts() {
     const drafts = await vault.list();
     if (generation !== state.sessionGeneration) return;
     storedDraftCount = drafts.filter(saved => saved.intent.advocate === account
-      && saved.intent.workspace === workspace && draftHasWork(saved.intent)).length;
+      && saved.intent.workspace === workspace && draftHasUnsentWork(saved.intent)).length;
   } catch (error) {
     if (generation === state.sessionGeneration) {
       $('draft-status').textContent = 'Draft protection is unavailable. ' + error.message;
@@ -10681,7 +10689,7 @@ async function signOut() {
   await draftUnlock;
   if (generation !== state.sessionGeneration || !state.advocate) return;
   snapshotIntent();
-  if ((storedDraftCount || [...intentContexts.values()].some(draftHasWork))
+  if ((storedDraftCount || [...intentContexts.values()].some(draftHasUnsentWork))
       && !window.confirm('Sign out and discard this account’s unsent drafts on this device? Saved matters are not deleted.')) return;
   const btn = $('signout');
   btn.disabled = true;
