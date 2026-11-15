@@ -668,6 +668,21 @@
       buttons.push(el('button', { type: 'button', class: 'adm-button', text: 'Reinstate the account…', onclick: () => confirmChange({
         title: `Reinstate ${who}`, submit: 'Reinstate', fields: [], summary: `${who} will be shown as active again.`,
         run: async (v) => { await send(`/api/admin/users/${encodeURIComponent(u.id)}/reinstate`, { reason: v.reason }); return `${who} is active again.`; } }) }));
+      // Plan AN.53, 53h7d (D241, D246): the second step of a closure, offered only once the account is suspended; the address
+      // is typed, and the reason names the advocate's written request.
+      buttons.push(el('button', { type: 'button', class: 'adm-button adm-plain', text: 'Close the account…', onclick: () => confirmChange({
+        title: `Close ${who}’s account`, submit: 'Close the account',
+        summary: `Only at ${who}’s own written request. This erases every conversation of theirs, kept or deleted, and all the papers they sent, ` +
+          'then their account: they can no longer sign in, and none of it can be put back. It cannot be undone. ' +
+          'What they used of their allowance stays in the usage ledger, without their conversations.',
+        fields: [{ name: 'address', label: 'Type the account’s address to close it', maxlength: 320,
+          help: `${u.id}. In Why, name the written request: its date and how it came.` }],
+        run: async (v) => {
+          const done = await send(`/api/admin/users/${encodeURIComponent(u.id)}/close`, { address: v.address.trim(), reason: v.reason });
+          history.replaceState(null, '', '#users');
+          return `${who}’s account is closed: ${plural(done.conversations, 'conversation', 'conversations')} and ` +
+            `${plural(done.papers, 'paper', 'papers')} were erased, and ${plural(done.sign_ins, 'sign-in', 'sign-ins')} ended.`;
+        } }) }));
     } else {
       buttons.push(el('button', { type: 'button', class: 'adm-button adm-plain', text: 'Suspend the account…', onclick: () => confirmChange({
         title: `Suspend ${who}`, submit: 'Suspend', fields: [],
