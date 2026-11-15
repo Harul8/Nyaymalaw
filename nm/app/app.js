@@ -6318,7 +6318,7 @@ async function deliver(entry) {
     if (entry.refusal?.kept) {
       entry.state = 'stopped';
       entry.error = null;
-      refreshStopped(entry, entry.chatId || intent.chatId || entry.request?.chat_id);
+      refreshStopped(entry, stoppedChat(entry, intent));
       // Plan AN.48 (48c): a new question heard while the matter waits goes as the next message, once the matter is done.
       if (entry.refusal.heard && entry.refusal.heard.taken === 'question' && entry.lastSent
           && !(intent.queued || []).some((item) => item.text === entry.lastSent)) {
@@ -6332,7 +6332,7 @@ async function deliver(entry) {
       entry.goError = (entry.refusal && entry.refusal.why) || e.message;
       entry.state = 'stopped';
       entry.error = null;
-      refreshStopped(entry, entry.chatId || intent.chatId || entry.request?.chat_id);
+      refreshStopped(entry, stoppedChat(entry, intent));
     }
     // D73: no reply at all - the server is being restarted. The page waits for it and follows the answer, which NM continues.
     if (!e.status && !entry.cancelled && !(e.name === 'AbortError')) {
@@ -6409,6 +6409,13 @@ function pauseFor(ms, signal) {
     const timer = setTimeout(resolve, ms);
     if (signal) signal.addEventListener('abort', () => { clearTimeout(timer); aborted(); }, { once: true });
   });
+}
+
+// The conversation a stopped turn is kept in: the one it was sent in, or - for a new conversation's first message, which the page
+// learns only from the step's progress and a quick step can end before that is first asked - the one its stop names (found
+// mending the browser journeys, 15 Nov 2026).
+function stoppedChat(entry, intent) {
+  return entry.chatId || intent.chatId || entry.request?.chat_id || entry.refusal?.chat_id || null;
 }
 
 // PLAN AN.41 (D69, D70): WHY AN ANSWER STOPPED, AND WHAT IT FINISHED, as the conversation keeps it - never guessed by the page.

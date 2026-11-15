@@ -1654,12 +1654,12 @@ def _converted(run, req, *, signed_in, active):
     except ModelPermissionRefused as exc:
         if not signed_in():
             raise HTTPException(401, {'why': 'Sign in again before continuing.', 'code': 'signed_out',
-                                      'committed': 'not_committed', 'turn_id': req.turn_id, 'chat_id': req.chat_id,
+                                      'committed': 'not_committed', 'turn_id': req.turn_id, 'chat_id': _stop_chat(exc, req),
                                       'retryable': True, **({'kept': True} if getattr(exc, 'kept', False) else {})}) from exc
         # No receipt lookup is implied by permission refusal: an earlier attempt
         # with this request identity may already be saved.
         raise HTTPException(403, {'why': str(exc), 'code': 'model_permission_required',
-            'committed': 'unconfirmed', 'turn_id': req.turn_id, 'chat_id': req.chat_id,
+            'committed': 'unconfirmed', 'turn_id': req.turn_id, 'chat_id': _stop_chat(exc, req),
             'retryable': False, **({'kept': True} if getattr(exc, 'kept', False) else {})}) from exc
     if not signed_in():
         raise HTTPException(401, 'not signed in')
@@ -2283,8 +2283,15 @@ def _conversation_error(exc, req=None):
         # Plan AN.48 (48c): how NM took a message sent while the matter waited, where no step ran.
         detail['heard'] = exc.heard
     if req is not None:
-        detail.update(turn_id=req.turn_id, chat_id=req.chat_id)
+        detail.update(turn_id=req.turn_id, chat_id=_stop_chat(exc, req))
     return detail
+
+
+def _stop_chat(exc, req):
+    """The conversation a refusal concerns: the one its request named, or - where it kept what was finished, in a conversation
+    the request could not name because it was new - the one it was kept in, so the page can read its stop card (found mending
+    the browser journeys, 15 Nov 2026). A refusal that kept nothing names no conversation of its own."""
+    return req.chat_id or (getattr(exc, 'chat_id', None) if getattr(exc, 'kept', False) else None)
 
 
 #: The conversations this process has read and checked, each kept until its saved file changes

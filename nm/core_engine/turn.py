@@ -1319,8 +1319,10 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
 
     def stopped(code, exc, *, answered=None):
         """Plan AN.41 (D69): the turn stopped part-way; all it finished is kept with why, for Continue or Discard. Kept is said
-        only where it was written (plan AN.50, 50b3): a stop the store would not take is not shown as kept."""
+        only where it was written (plan AN.50, 50b3): a stop the store would not take is not shown as kept. It names the
+        conversation it was kept in, which for a new conversation the request could not."""
         exc.kept = bool(keeper.stop(code, answered=answered))
+        exc.chat_id = holder["context"].chat_id
     # Plan AN.48 (48c): a matter given words while it waited is understood again with them, as a steer is (D79).
     steered = rethought
     # Plan AN.48 (D175): a follow-up worked step by step, not yet understood, may start from the last saved answer's understanding.
@@ -1381,6 +1383,7 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
         refusal = ConversationRefused(STOPS["waiting"], status=409, code="waiting", retryable=True)
         refusal.kept = bool(keeper.stop("waiting", waiting=exc.after, timed=(estimated, time.monotonic() - began),
                                         rechecked=gate.rechecked))
+        refusal.chat_id = holder["context"].chat_id  # the conversation the stop was kept in, new or not
         finish("retryable", "waiting")
         refusal.metrics = calls.metrics()
         raise refusal from exc
