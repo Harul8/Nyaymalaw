@@ -846,6 +846,61 @@ class Application:
             return False
         return self.turn_progress.read(advocate_id, turn_id).get('state') == 'working'
 
+    def close_account(self, account_id, now):
+        """Close a suspended account at the advocate's written request (plan AN.53, 53h7b; D241, D246), in an order each step of
+        which is safe to repeat: every conversation of theirs, kept or deleted, erased as Erase now erases it, its own key first;
+        then every paper in their own space - a conversation that could still name one would be theirs too, so none is kept for
+        it; and only then the directory's close (53h7a), the record last. Nothing goes while NM works on one of their
+        conversations, or for an account not suspended. A closure cut off part-way raises AdminChangeRefused(503) saying what
+        it did; the account is kept, suspended, and the closure is made again. Returns how many of each went, and which
+        conversations, for the caller to let go of what it holds of them."""
+        from nm.app.documents import _REFERENCE, space
+        from nm.arrive.admin_port import AdminChangeRefused
+        from nm.arrive.advocate_contracts import canonical_id
+        from nm.core_engine.conversation import shown_of
+        advocate = canonical_id(account_id)
+        account = next((one for one in self.admin_directory.listing(now).accounts if one.id == advocate), None)
+        if account is None:
+            raise AdminChangeRefused(404, "There is no such account.")
+        if not account.readable:
+            raise AdminChangeRefused(409, "This account's record cannot be read; it is not closed.")
+        if not account.suspended:
+            raise AdminChangeRefused(409, "Suspend this account first; then close it.")
+        matters = sorted({entry[0] for entry in self.store.saved_files_for(advocate)}
+                         | {said["matter_id"] for said in self.store.deleted_for(advocate)})
+        for matter_id in matters:
+            try:
+                held = shown_of(self.store.load_for(matter_id, advocate))
+            except (ValueError, StoredObjectUnreadable):
+                held = None
+            if held is not None and self.turn_running(advocate, held["turn_id"]):
+                raise AdminChangeRefused(409, "NM is working on one of this account's conversations. Close it once that turn "
+                                              "has stopped.")
+        erased = []
+        for matter_id in matters:
+            try:
+                receipt = self.store.erase(matter_id, advocate)
+            except OSError as exc:
+                raise AdminChangeRefused(503, f"The closure stopped part-way: {len(erased)} conversation(s) were erased. The "
+                                              "account is kept, suspended; close it again to finish.") from exc
+            if receipt is not None:
+                erased.append(matter_id)
+        papers = {"erased": []}
+        if self.documents is not None:
+            where = space(advocate)
+            stems = {found.group(1) for found in map(_REFERENCE.match, self.documents.texts.names(where)) if found}
+            try:
+                papers = self.documents.erase(advocate, stems, lambda who, named: (frozenset(), 0))
+            except OSError:
+                papers = {"erased": [], "left": sorted(stems)}
+            if papers.get("left"):
+                raise AdminChangeRefused(503, f"The closure stopped part-way: {len(erased)} conversation(s) and "
+                                              f"{len(papers['erased'])} paper(s) were erased, {len(papers['left'])} paper(s) "
+                                              "could not all be removed. The account is kept, suspended; close it again to "
+                                              "finish.")
+        closed = self.admin_accounts.close(advocate, now)
+        return {"conversations": len(erased), "papers": len(papers["erased"]), **closed, "erased": tuple(erased)}
+
     def browser_asset_paths(self):
         return browser_assets(root=ROOT)
 
