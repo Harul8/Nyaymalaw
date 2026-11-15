@@ -73,6 +73,18 @@ WIDTHS = ((390, 844), (768, 1024), (1280, 900))
 
 # ------------------------------------------------------------- the fixtures ---
 
+def engine_doubles():
+    """The model and the law search the offline served tests drive the current engine with (tests/test_core_turn.py): the
+    harness's own default answers every call with one sentence, which the engine's steps cannot read, so every answer was
+    withheld and no conversation was saved - the journeys then failed before the page under test was reached. No call leaves
+    this machine: both are synthetic."""
+    from tests.test_core_turn import ScriptedModel, searcher
+
+    model = ScriptedModel(legal=True)
+    model.provider = "scripted"
+    return {"model": model, "search": searcher()}
+
+
 @pytest.fixture(scope="module")
 def journey(tmp_path_factory):
     """The product on a real port, with one enrolled advocate."""
@@ -84,7 +96,7 @@ def journey(tmp_path_factory):
     from assurance.journeys.served import PASSWORD, running
 
     root = tmp_path_factory.mktemp("journey")
-    with running(root) as (box, base):
+    with running(root, **engine_doubles()) as (box, base):
         advocate = box.enrol()
         yield {"box": box, "base": base, "advocate": advocate,
                "password": PASSWORD}
@@ -192,12 +204,21 @@ def _intake(page, client="Ramesh Traders", adverse="Kiran Steels",
 
 
 def _start_matter(page):
-    """Start a new matter the only way there is: Home's Start a matter (F-B-01)."""
-    if page.is_hidden("#pane-home"):
-        page.click("#tabs button[data-tab='home']")
-        page.wait_for_selector("#pane-home:not([hidden])", timeout=15000)
-    page.click("#home-start")
-    page.wait_for_selector("#intake:not([hidden])", timeout=15000)
+    """Start a new matter the way the page offers it: the top bar's New matter, which opens the conversation on its message
+    box. Since the owner's decisions of 15 and 16 Oct 2026 there are no tabs - the top bar holds a new matter and the
+    conversation history - and the intake form is no longer shown; _intake answers it only where a page still shows it."""
+    page.click("#top-new")
+    page.wait_for_selector("#message", state="visible", timeout=15000)
+
+
+#: Surfaces the owner's decisions of 15 and 16 Oct 2026 left in the page unreached ("The four places stay in the page, unreached,
+#: until their surfaces are retired", nm/app/index.html): a phase that needs one is skipped with that reason, never failed.
+RETIRED_SURFACES = {"home": "Home", "search": "the Legal library", "prepare": "Preparation"}
+
+
+def _retired(name):
+    pytest.skip(f"{RETIRED_SURFACES[name]} is not reached from the page since the owner's decisions of 15 and 16 Oct 2026 "
+                "(no tabs; the top bar holds a new matter and the conversation history)")
 
 
 def _advise(page, message: str):
@@ -217,53 +238,80 @@ def _advise(page, message: str):
     never a state transition and did not even match the Unicode ellipsis the
     page renders.
     """
+    answers = ".turn:not(.opening-note)"
+    before = page.locator(answers).count()
     page.fill("#message", message)
     page.click("#send")
-    page.wait_for_selector(".turn", timeout=60000)
-    page.wait_for_selector("#send:not([disabled])", timeout=90000)
-    assert page.inner_text("#send") == "Send"
+    page.wait_for_function(f"() => document.querySelectorAll('{answers}').length > {before}", timeout=60000)
+    _until_idle(page)
+    # EVERY MESSAGE IS WORKED STEP BY STEP (plan AN.48, D134): it stops after the understanding with the go-ahead card, and End
+    # to end runs the rest (D135) - as an advocate who wants the whole answer presses it.
+    whole = page.locator(".waiting-card button[data-choice='end_to_end']")
+    if page.locator("#thread .failure.stopped, #thread .waiting-card").count():
+        # The stop card is read from the conversation after the reply (D69), so it comes a moment after the red message.
+        try:
+            whole.last.wait_for(timeout=10000)
+        except playwright_api.TimeoutError:
+            pass  # a stop that is not a go-ahead: the phase reads it as it stands
+    if whole.count():
+        whole.last.click()
+        page.wait_for_function("() => !document.querySelector(\".waiting-card button[data-choice='end_to_end']\")",
+                               timeout=90000)
+        _until_idle(page)
+    assert page.get_attribute("#send", "aria-label") == "Send"
+
+
+def _until_idle(page):
+    """Send is drawn as an arrow, a ring while NM works (D74-D76, D173): the turn is finished when it is Send again."""
+    page.wait_for_function("() => { const send = document.getElementById('send');"
+                           " return send.dataset.state === 'send' && !send.disabled; }", timeout=90000)
 
 
 def _reach_rail(page, width):
     """Get the matter navigator on screen, however this width offers it.
 
-    THE RULE IS REACHABLE, NOT VISIBLE (BK-32). Below 820px the rail is a
-    drawer behind `#matters-toggle`; above it, it is simply there. A phase
-    that asserted the rail was visible would fail on a correct drawer, and a
-    phase that returned early when it WAS visible asserted nothing at desktop
-    -- which is what BK-47 was.
+    THE RULE IS REACHABLE, NOT VISIBLE (BK-32). The rail was once a drawer
+    below 820px behind a toggle; it is now the conversation history the top
+    bar opens at every width. A phase that returned early when the rail
+    happened to be on screen asserted nothing - which is what BK-47 was - so
+    this always goes through the control.
     """
-    # F-A-17/F-A-18. THE RAIL LIVES IN MY WORK, and a sign-in lands on Home, so
-    # the navigator is reached through the ribbon's My work tab first.
-    if page.is_hidden("#pane-advise"):
-        page.click("#tabs button[data-tab='advise']")
-        page.wait_for_selector("#pane-advise:not([hidden])", timeout=15000)
-    # ASK THE TOGGLE, NOT THE RAIL. `is_visible("#rail")` is TRUE at every
-    # width, because below 820px the drawer is moved off-screen rather than
-    # removed -- so this returned early at 390px and 768px and never opened
-    # anything. The narrow-width branch below had therefore never run, which
-    # makes BK-47 worse than it was recorded: not "asserts nothing at
-    # desktop" but asserts nothing at ANY width.
-    #
-    # `aria-expanded` is the product's own published state, and it is the
-    # accessible truth rather than a guess from geometry.
-    toggle = page.locator("#matters-toggle")
-    if toggle.count() and toggle.is_visible():
-        if toggle.get_attribute("aria-expanded") == "true":
-            return
-    elif page.is_visible("#rail"):
-        return                          # no drawer at this width; it is just there
-    assert toggle.is_visible(), (
-        f"at {width}px the rail is not shown and no control opens it, so an "
+    # THE TOP BAR'S CONVERSATION HISTORY (owner, 15 and 16 Oct 2026: no tabs, no drawer): at every width it is the control that
+    # opens the list of conversations, and the page publishes that it is open by marking it the current page. Ask that control,
+    # not the rail's geometry: a list moved off-screen would read as visible.
+    history = page.locator("#top-history")
+    assert history.is_visible(), (
+        f"at {width}px no control opens the conversation history, so an "
         f"advocate can work the matter they are in and reach no other one")
-    toggle.click()
+    if history.get_attribute("aria-current") != "page":
+        history.click()
+    page.wait_for_selector("#top-history[aria-current='page']", timeout=10000)
     page.wait_for_selector("#rail", state="visible", timeout=10000)
-    assert page.is_visible("#rail"), (
-        f"at {width}px the control opened nothing")
+    box = page.locator("#rail").bounding_box()
+    assert box and box["x"] + box["width"] > 0 and box["x"] < width, (
+        f"at {width}px the control opened a list that is not on the screen")
 
 
 def _visible_text(page) -> str:
     return page.inner_text("body")
+
+
+def _answer_drawn(page) -> str:
+    """The last answer of the open conversation, as it is drawn."""
+    return page.locator("#thread .turn:not(.opening-note)").last.inner_text()
+
+
+def _reopen(page, first_words):
+    """Open a conversation from the conversation history by the words its first message began with (the row keeps that
+    message as its own record of it), and wait until its answer is drawn."""
+    _reach_rail(page, page.viewport_size["width"])
+    row = page.locator(f'#rail-body .row[data-chat-id]:has(.r-title[title^="{first_words}"])')
+    row.first.wait_for(timeout=15000)
+    assert row.count() == 1, f"{row.count()} conversations begin with {first_words!r}"
+    row.first.click()
+    page.wait_for_function("words => document.getElementById('thread').innerText.includes(words)", arg=first_words,
+                           timeout=15000)
+    page.wait_for_selector("#thread .reply-head", timeout=15000)
 
 
 def _tab(page, name: str):
@@ -276,24 +324,33 @@ def _tab(page, name: str):
     render indistinguishable, which is the whole failure mode this repository
     keeps recording.
 
-    F-A-17. Home, My work, Legal library and Preparation are the ribbon's tabs.
     Case file and History belong to the matter that is open, and since F-B-04
     (owner, 28 September 2026) they are among its records under the file icon
     -- reached there, opening the first matter on the list when none is open,
-    as an advocate would have to.
+    as an advocate would have to. The ribbon's tabs (F-A-17) are gone since the
+    owner's decisions of 15 and 16 Oct 2026: My work is the top bar's
+    conversation history, and Home, the Legal library and Preparation are not
+    reached, so a phase that needs one is skipped with that reason.
     """
+    if name in RETIRED_SURFACES:
+        _retired(name)
     if name in ("casefile", "history"):
-        if page.is_hidden("#pane-advise"):
-            page.click("#tabs button[data-tab='advise']")
-            page.wait_for_selector("#pane-advise:not([hidden])", timeout=15000)
         if not page.is_visible("#files-toggle"):
             _reach_rail(page, page.viewport_size["width"])
-            page.locator("#rail-body .row[data-matter-id]").first.click()
+            page.wait_for_selector("#rail-body .row, #rail-body .rail-empty, #rail-body p", timeout=15000)
+            matters = page.locator("#rail-body .row[data-matter-id]")
+            if not matters.count():
+                # The file icon and its records belong to a matter saved before conversations; a conversation's records are its
+                # board and its files (owner, 16 and 17 Oct 2026; the icon is offered only for such a matter, app.js).
+                pytest.skip("a matter's Case file and History are reached only from a matter saved before conversations, and "
+                            "this store holds none")
+            matters.first.click()
             page.wait_for_selector("#files-toggle", state="visible", timeout=15000)
             page.wait_for_function("() => state.matterReady", timeout=15000)
         open_record(page, "Case file" if name == "casefile" else "History")
-    else:
-        page.click(f"#tabs button[data-tab='{name}']")
+    elif name == "advise":
+        _reach_rail(page, page.viewport_size["width"])
+        return
     page.wait_for_selector(f"#pane-{name}:not([hidden])", timeout=15000)
 
 
@@ -379,70 +436,58 @@ def test_phase_3_the_matter_navigator_is_reachable_at_every_width(
     # switch away from the matter it just worked. The ids on the rendered
     # rows are the observable identity: similar client names cannot make a
     # same-file click look like a switch.
-    _open_matter(page, journey, client=f"Width {width} First Traders",
-                 width=width, height=height)
-    _advise(page, BRIEF)
-    first = page.get_attribute("#pane-advise", "data-matter-id")
-    assert first, f"at {width}px the first matter has no rendered identity"
-
+    # CONVERSATIONS, NOT MATTERS (owner, 15 and 16 Oct 2026). A new matter is a conversation the top bar starts, found again
+    # in the conversation history by what its first message said - the row's own record of it - and its identity is the
+    # conversation's id on its row. Each conversation's first words are this phase's own, so no earlier phase's can be taken
+    # for them.
+    _sign_in(page, journey, width=width, height=height)
+    first, second = f"Width {width} first. {BRIEF}", f"Width {width} second. {BRIEF}"
     _start_matter(page)
-    _intake(page, client=f"Width {width} Second Traders")
-    _advise(page, BRIEF)
-    second = page.get_attribute("#pane-advise", "data-matter-id")
-    assert second and second != first, (
-        f"at {width}px two briefs resolved to the same matter: {second!r}")
+    _advise(page, first)
+    _start_matter(page)
+    _advise(page, second)
 
     # ---- 1. the navigator is REACHABLE, not necessarily VISIBLE ----------
-    # A drawer, a tab or a menu all satisfy the rule; the rail being on
-    # screen at 1280px is one way of many.
     _reach_rail(page, width)
 
-    # ---- 2. it LISTS files, and one of them OPENS --------------------
-    if page.is_visible("#back"):
-        page.click("#back")
-        page.wait_for_function(
-            "() => document.querySelector('#rail-title')"
-            ".textContent.trim() === 'Matters'", timeout=15000)
-
-    # WAIT FOR THE ROWS, NOT FOR THE TITLE. `showMatterList` sets
-    # `#rail-title` to "Matters" and THEN awaits `/api/matters`, so a phase
-    # that waited on the title asserted against a list still showing
-    # "Loading matters..." and reported an empty navigator on a product that
-    # was about to render one.
+    # ---- 2. it LISTS conversations, and the other one OPENS -----------------
+    # WAIT FOR THE ROWS. The list is asked for after the view is shown, so a phase that read it at once would report an empty
+    # navigator on a product about to render one.
     try:
-        page.wait_for_selector("#rail-body .row", timeout=15000)
+        page.wait_for_selector("#rail-body .row[data-chat-id]", timeout=15000)
     except Exception as exc:
         raise AssertionError(
-            f"at {width}px the navigator lists no files at all, so an "
-            f"advocate has no way to any matter but the one they are in: "
+            f"at {width}px the navigator lists no conversations at all, so an "
+            f"advocate has no way to any but the one they are in: "
             f"{page.inner_text('#rail-body')[:200]!r}") from exc
-    target = page.locator(f'#rail-body .row[data-matter-id="{first}"]')
-    assert target.count() == 1, (
-        f"at {width}px the first of two newly-created matters cannot be found")
-    target.scroll_into_view_if_needed()
-    target.click()
-    page.wait_for_function(
-        "() => document.querySelector('#rail-title')"
-        ".textContent.trim() === 'Matter board'", timeout=15000)
-    # `arg=`, BY KEYWORD. Playwright's Python API takes the argument by
-    # keyword only, and the positional form raised TypeError on every width
-    # the moment the installed version enforced it -- a harness failure that
-    # read, in the summary line, exactly like a product one.
-    page.wait_for_function(
-        "expected => document.querySelector('#pane-advise').dataset.matterId "
-        "=== expected", arg=first, timeout=15000)
-    assert page.get_attribute("#pane-advise", "data-matter-id") != second, (
-        f"at {width}px clicking another row left the same matter open")
-    page.wait_for_selector("#thread .el > p.body", timeout=30000)
-    assert f"Width {width} First Traders" in page.inner_text("#matter-heading")
+    rows = page.locator(f'#rail-body .row[data-chat-id]:has(.r-title[title^="Width {width} first."])')
+    assert rows.count() == 1, f"at {width}px the first of two new conversations cannot be found in the history"
+    chat = rows.get_attribute("data-chat-id")
+    others = page.locator(f'#rail-body .row[data-chat-id]:has(.r-title[title^="Width {width} second."])')
+    assert others.count() == 1 and others.get_attribute("data-chat-id") != chat, (
+        f"at {width}px two first messages resolved to the same conversation")
+    rows.scroll_into_view_if_needed()
+    rows.click()
+    page.wait_for_function("words => document.getElementById('thread').innerText.includes(words)",
+                           arg=f"Width {width} first.", timeout=15000)
+    assert f"Width {width} second." not in page.inner_text("#thread"), (
+        f"at {width}px clicking another row left the same conversation open")
     assert "Goods were supplied" in page.inner_text("#thread")
-    assert not page.errors, f"at {width}px opening a file threw: {page.errors}"
+    assert not page.errors, f"at {width}px opening a conversation threw: {page.errors}"
 
     # ---- 4. TRAVERSE the rest of the application at this width -----------
-    for tab in ("search", "history", "advise"):
-        _tab(page, tab)
-        assert not page.errors, (
-            f"at {width}px the page threw switching to {tab}: {page.errors}")
+    # A conversation's own surfaces - its board (behind a button on a phone, owner 16 Oct 2026) and its files - and back to the
+    # list. Its matter records, the Legal library and Preparation are not reached since the owner's decisions of 15-17 Oct 2026.
+    if page.is_visible("#board-toggle"):
+        page.click("#board-toggle")
+        page.wait_for_selector("#board-toggle[aria-expanded='true']", timeout=10000)
+    page.click("#board-files")
+    page.wait_for_selector("#brain-source-reader[open]", timeout=10000)
+    assert not page.errors, f"at {width}px the page threw opening the conversation's files: {page.errors}"
+    page.keyboard.press("Escape")
+    page.wait_for_selector("#brain-source-reader:not([open])", state="attached", timeout=10000)
+    _tab(page, "advise")
+    assert not page.errors, f"at {width}px the page threw returning to the conversation history: {page.errors}"
 
     # ---- 5. identity and the way out are both REACHABLE ------------------
     # F-A-17: in the person menu at every width (and beside it above 820px).
@@ -503,12 +548,10 @@ def test_phase_5b_the_answer_does_not_speak_engineering(page, journey):
     reason each gate fired included. A product that had simply stopped
     recording gate states would pass the first assertion and fail the second.
     """
-    _open_matter(page, journey)
-    with page.expect_response(lambda r: r.url.endswith('/api/turn')
-                              and r.request.method == 'POST') as returned:
-        _advise(page, BRIEF)
-    answer = returned.value.json()
-    page.wait_for_selector("#thread .el > p.body", timeout=30000)
+    _sign_in(page, journey)
+    _start_matter(page)
+    _advise(page, BRIEF)
+    page.wait_for_selector("#thread .reply-head", timeout=30000)
 
     # The whole document, folded or not -- `text_content` includes what a
     # closed disclosure hides.
@@ -517,32 +560,14 @@ def test_phase_5b_the_answer_does_not_speak_engineering(page, journey):
     assert not gate_ids, f"these gate ids are drawn in the conversation: {gate_ids}"
     for token in ("How this answer was made", "outcome ok", "latency", "tokens"):
         assert token not in drawn, f"{token!r} is drawn in the conversation"
-
-    # AND NOTHING WAS THROWN AWAY.
-    store = journey["box"].application.store
-    (kept,) = [row for row in store.transcripts_for(answer["matter_id"])
-               if row.get("turn_id") == answer["turn_id"]]
-    made = kept["how_made"]
-    assert made["gates_fired"] and all(g["gate"] and "detail" in g
-                                       for g in made["gates_fired"])
-    assert made["outcome"] and made["llm_calls"] == kept["llm_calls"]
-
+    # THE RECORD HALF (each gate's state in the turn's sealed `how_made`) belonged to the engine archived on 19 Oct 2026 (P24);
+    # the current engine's one check of each answer as it is saved (P46) is tested where it is made, not on this page.
 
 def test_phase_5c_the_answer_reads_as_a_brief_and_not_a_log(page, journey):
     """DG-14: ordered prose, every substantive element kept, no internal labels."""
-    _open_matter(page, journey)
-    with page.expect_response(lambda r: r.url.endswith('/api/turn')
-                              and r.request.method == 'POST') as returned:
-        _advise(page, BRIEF)
-    elements = returned.value.json()['elements']
-    assert len(elements) >= 2
-    paragraphs = page.locator('#thread .el > p.body').all_text_contents()
-    assert len(paragraphs) >= 2
-    assert elements[0]['kind'] in ('action', 'question')
-    assert paragraphs[0] == elements[0]['text'], 'the next step must still lead'
-    assert all(el['text'] in paragraphs for el in elements), 'a substantive element was lost'
-    assert page.locator('#thread h3.section, #thread .el .k').count() == 0
-
+    pytest.skip("DG-14's element list (an action or a question leading, each element one paragraph) was the earlier answer's "
+                "form; since rendering v18 an answer opens with In short and its disputes' sections, which its own renderer "
+                "tests cover")
 
 def test_phase_5d_the_masthead_is_not_a_configuration_dump(page, journey):
     """J-7's other half, and it is on every screen rather than one answer.
@@ -576,15 +601,12 @@ def test_phase_5d_the_masthead_is_not_a_configuration_dump(page, journey):
                   "manifest:"):
         assert token not in masthead, (
             f"{token!r} is in the masthead on every screen")
-    # F-A-17. THE LINE LIVES ON THE LEGAL LIBRARY PAGE, the page it is about.
-    _tab(page, "search")
-    library = page.inner_text("#pane-search")
+    # THE LINE ITSELF. F-A-17 put it on the Legal library page, which the owner's decisions of 15 and 16 Oct 2026 took off the
+    # page; it is checked where it is shown.
+    line = page.inner_text("#health")
     for token in ("fernet", "gpt-", "scripted-1", "not configured",
                   "manifest:"):
-        assert token not in library, f"{token!r} is on the Legal library page"
-    assert expected in library, (
-        "the Legal library says nothing about whether the corpus can be read, "
-        "which is the one thing on that line an advocate needs")
+        assert token not in line, f"{token!r} is on the library line"
     assert page.get_attribute("#health", "title") == (
         "Library availability does not establish legal coverage or currency.")
     assert ("bad" in (page.get_attribute("#health", "class") or "").split()) is (
@@ -717,76 +739,43 @@ def test_phase_8b_history_is_a_record_and_not_a_json_dump(page, journey):
     Forensic access belongs in a separately authorised operator audit view;
     this browser test does not claim that view has been built.
     """
-    _open_matter(page, journey, client="History Test Traders")
-    _advise(page, BRIEF)
-    matter_id = page.get_attribute('#pane-advise', 'data-matter-id')
-    original = page.locator('#thread .el > p.body').all_text_contents()
-    assert original
+    # A CONVERSATION IS REVIEWED BY REOPENING IT (owner, 16 Oct 2026; P46: picked up again exactly as saved). The matter
+    # records' History pane belongs to a matter saved before conversations (see _tab).
+    first = "History record test."
+    _sign_in(page, journey)
+    _start_matter(page)
+    _advise(page, f"{first} {BRIEF}")
+    original = _answer_drawn(page)
+    assert original.strip()
 
-    _tab(page, "history")
-    page.select_option("#history-matter", value=matter_id)
-    page.wait_for_selector("#pane-history .turn", timeout=30000)
-    page.wait_for_selector("#pane-history .el > p.body", timeout=30000)
-
-    shown = page.inner_text("#pane-history")
-    assert page.locator('#pane-history .el > p.body').all_text_contents() == original
-    assert page.locator('#pane-history h3.section, #pane-history .el .k').count() == 0
-    # The advocate's History is a released-answer projection, not a route to
-    # the diagnostic archive -- including material a closed <details> would
-    # conceal, which is why the whole pane's text is read, folded or not.
-    assert '"turn_id"' not in shown, "History initially exposed a raw turn id"
-    assert page.locator('#pane-history pre.recorded-raw').count() == 0
-    disclosed = page.locator('#pane-history').text_content()
-    for raw_key in ('"turn_id"', '"prompt"', '"model_calls"', '"how_made"',
-                    'How this answer was made'):
-        assert raw_key not in disclosed, (
-            f"advocate History exposed diagnostic field {raw_key}")
-
+    _start_matter(page)
+    _reopen(page, first)
+    assert _answer_drawn(page) == original, "the conversation reopened does not read as the advice it gave"
+    disclosed = page.locator("#thread").text_content()
+    for raw_key in ('"turn_id"', '"prompt"', '"model_calls"', '"how_made"', 'How this answer was made'):
+        assert raw_key not in disclosed, f"the reopened conversation exposes the diagnostic field {raw_key}"
+    assert page.locator('#thread pre.recorded-raw').count() == 0
+    assert not page.errors, f"the page threw: {page.errors}"
 
 def test_phase_9_reload_restores_the_matter(page, journey):
     """Closing a laptop is not a failure mode, it is Tuesday."""
-    mine = "Reload Test Traders"
-    _open_matter(page, journey, client=mine)
-    _advise(page, BRIEF)
-    before = _visible_text(page)
-    original = page.locator('#thread .el > p.body').all_text_contents()
-    assert original
-    assert "Goods were supplied" in before
+    first = "Reload test."
+    _sign_in(page, journey)
+    _start_matter(page)
+    _advise(page, f"{first} {BRIEF}")
+    original = _answer_drawn(page)
+    assert original.strip() and "Goods were supplied" in _visible_text(page)
 
     page.reload()
     page.wait_for_selector("#masthead:not([hidden])", timeout=15000)
-    page.get_by_role("button", name="My work", exact=True).click()
-    page.wait_for_selector("#rail-body .row[data-matter-id]", timeout=15000)
-
-    # THE CONVERSATION, NOT MERELY A NON-EMPTY PAGE. The first version of
-    # this phase asserted `len(after) > 40`, which the matter rail alone
-    # satisfies -- so it passed on exactly the defect BK-33 records: *"reload
-    # of a live authenticated session showed a blank Advise pane"*. An
-    # assertion that a page is not empty is not an assertion that the
-    # advocate's work came back.
-    # THIS PHASE'S OWN MATTER, by the name it gave at intake.
-    page.click(f"#rail-body .row:has-text('{mine}')")
-    # WAIT FOR WHAT THIS PHASE JUDGES, which is the restored ANSWER and not
-    # the card around it. `.turn` appears on the first repaint; the sections
-    # arrive with the elements, and reading between the two gave a page that
-    # had the brief and none of the advice -- the third time in this suite
-    # that waiting for a container rather than for the content reported a
-    # working product as broken.
-    page.wait_for_selector("#thread .el > p.body", timeout=30000)
+    _reopen(page, first)
     after = _visible_text(page)
-
     assert "Goods were supplied" in after, (
         "the brief the advocate wrote is not on the screen after a reload")
-    # AND WHAT THEY WERE TOLD, not only what they said. A transcript that
-    # restored the question and lost the answer would be the worse half.
-    assert page.locator('#thread .el > p.body').all_text_contents() == original
-    # A READ-BACK TURN IS SHOWN AS SERVED (owner, 28 September 2026): no
-    # notice, and no run numbers the read-back does not carry -- rendering
-    # zeros would show a measurement nobody made.
+    assert _answer_drawn(page) == original, "the answer reads differently after a reload"
     drawn = page.locator("#thread").text_content()
     for token in ("Recorded response", "How this answer was made", "latency"):
         assert token not in drawn, f"{token!r} is drawn on a read-back turn"
-
 
 def test_phase_10_an_expired_session_does_not_leave_a_signed_in_masthead(
         page, journey):
@@ -822,7 +811,9 @@ def test_phase_10_an_expired_session_does_not_leave_a_signed_in_masthead(
         "no session was ended, so this phase would go on to assert against a "
         "product that is still correctly signed in")
 
-    page.click("#tabs button[data-tab='prepare']")
+    # ANY CONTROL THAT ASKS THE SERVER: the conversation history reads the list of conversations, which meets the ended session.
+    # (This was the Preparation tab, which the owner's decisions of 15 and 16 Oct 2026 took off the page.)
+    page.click("#top-history")
     # WAIT FOR THE THING UNDER TEST, which is the masthead.
     #
     # This waited for the history pane to have TEXT, and that stopped being
@@ -878,7 +869,7 @@ def test_phase_13_a_send_that_fails_keeps_the_brief_and_offers_one_retry(
     # has to answer. `The turn was refused: HTTP 500` answered none of it.
     assert ("was NOT saved" in shown or "could not tell whether" in shown), (
         f"the failure does not say whether the brief was saved: {shown[:600]}")
-    assert "The response could not be received" in shown
+    assert "I couldn't confirm the response" in shown
     assert "The turn was refused" not in shown, "a lost response is not a known refusal"
 
 
@@ -896,26 +887,9 @@ def test_phase_13b_a_cancelled_turn_does_not_claim_it_was_not_saved(
     the honest state, and its retry is already safe because BK-36 gave it the
     same turn id.
     """
-    _open_matter(page, journey, client="Cancel Test Traders")
-    page.fill("#message", BRIEF)
-    page.click("#send")
-    page.wait_for_selector("button.cancel", timeout=30000)
-    page.click("button.cancel")
-    page.wait_for_selector(".failure", timeout=60000)
-
-    shown = _visible_text(page)
-    assert "You cancelled this turn" in shown
-    assert "The turn was refused" not in shown
-    assert "could not tell whether" in shown, (
-        "a cancelled turn claims to know whether the brief was saved")
-    assert "was NOT saved" not in shown, (
-        "cancelling asserts nothing was recorded, which the browser cannot "
-        "know -- the server may have committed before the abort landed")
-    assert "Send this brief again" in shown
-    # AND THE BRIEF IS STILL THERE. Cancelling must not cost them what they
-    # wrote any more than a failure does.
-    assert page.input_value("#message") == ""
-    assert page.locator('#thread .brief').last.inner_text() == BRIEF
+    pytest.skip("Cancel, which abandoned the browser's request, was replaced by Stop (plan AN.42, D74-D78): the ring stops NM "
+                "after the step in progress on the server and keeps what it finished; there is no request for the page to "
+                "abandon")
 
 
 @pytest.mark.parametrize("width,height", WIDTHS,
@@ -935,7 +909,14 @@ def test_phase_14_every_control_has_a_name_and_the_page_does_not_scroll_sideways
     than by any check. This is the check.
     """
     _sign_in(page, journey, width, height)
-    _tab(page, "search")
+    _check_names_and_width(page, width, "a new conversation", lambda: _start_matter(page))
+    _check_names_and_width(page, width, "the conversation history", lambda: _reach_rail(page, width))
+
+
+def _check_names_and_width(page, width, screen, open_it):
+    """Phase 14's two rules on one screen an advocate uses (the Legal library it once opened is not reached since the owner's
+    decisions of 15 and 16 Oct 2026)."""
+    open_it()
 
     # EVERY CONTROL HAS A NAME. Read from the accessibility tree rather than
     # from the markup, so a label that exists and is not associated fails.
@@ -953,14 +934,14 @@ def test_phase_14_every_control_has_a_name_and_the_page_does_not_scroll_sideways
       return bad;
     }""")
     assert not unnamed, (
-        f"at {width}px these controls have no accessible name, so a screen "
+        f"at {width}px on {screen} these controls have no accessible name, so a screen "
         f"reader announces them as their type and nothing else: {unnamed}")
 
     sideways = page.evaluate(
         "() => document.documentElement.scrollWidth > "
         "document.documentElement.clientWidth + 1")
     assert not sideways, (
-        f"the page scrolls sideways at {width}px, so content is off the "
+        f"{screen} scrolls sideways at {width}px, so content is off the "
         f"right edge of the screen")
 
 
@@ -1063,9 +1044,9 @@ def test_the_journey_is_actually_driving_a_browser(page, journey):
     # refused reads and tier downgrades are recorded. A control that asserted
     # on the outermost object would report the product's own instrumentation
     # as a billing risk.
-    wired = journey["box"].application.model
+    wired = journey["box"].application._model_adapter  # the adapter the composition root was given
     while hasattr(wired, "inner"):
         wired = wired.inner
-    assert type(wired).__name__ == "ScriptedModelAdapter", (
+    assert type(wired).__module__ in ("nm.shared.model_scripted", "tests.test_core_turn"), (
         f"the journey suite is driving {type(wired).__name__}, which may "
         f"reach a billed provider")
