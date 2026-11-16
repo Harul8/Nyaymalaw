@@ -1,10 +1,10 @@
 {
  "why": "Plan AN.48, D143: the strong pieces stay as they are; re-pinned only for an exception in AN.48's register (column 6).",
  "files": {
-  "nm/core_engine/research.py": "b12010dbb0d88d993dbd74bda93cc9468d286f161da5e16693d641d5ac392755",
+  "nm/core_engine/research.py": "1a5a063d8f6a4e6b460652f1f5336106ddeb3ef5042aaf4ceb0eeafdaee6eeea",
   "nm/core_engine/retrieval.py": "2416ef54c74d23021077ae537884030073302c57e82afacf04fd82ceafa46538",
   "nm/core_engine/citations.py": "7ada35e8590d07679f84219563ec6682611e5f7d90f0a0c5bec23202decc514d",
-  "nm/shared/citation_contracts.py": "09d32744352335cae4d9907d8c0622e16af73df234547238a5552ece2e5e015b",
+  "nm/shared/citation_contracts.py": "b9cc705bd1bee02bbc270e06fcf6085f58a571c016eba7e340b1248d932e8be8",
   "nm/core_engine/answer_sources.py": "2d104c03738fa72da79cf1ee4b9911cd41663d770c374bc16ae6abccbc6ffbdf",
   "nm/core_engine/response_authorities.py": "1cc23a12f04fa89351665b96b92cd9da4b719f485774440b458e2c2929b2e021",
   "nm/core_engine/response_review.py": "ae6b36e6a37f05a4a91d9d0aca0568007c4d30877259d1e89525e981cfedb70c",
@@ -36,6 +36,10 @@
   ],
   "4 (48i, plan AN.48 register)": [
    "nm/core_engine/research.py"
+  ],
+  "7 (53j(a), D225; plan AN.48 register, column 10)": [
+   "nm/core_engine/research.py",
+   "nm/shared/citation_contracts.py"
   ]
  }
 }

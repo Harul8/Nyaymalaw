@@ -99,10 +99,16 @@ CENTRAL_ACTS_NAMED_FOR_THE_STATE = frozenset(title.casefold() for title in (
 ))
 
 
+def without_listing_prefix(stored: str) -> str:
+    """A stored statute name with the store's listing prefix taken off, and nothing else changed. ONE COPY of that pattern
+    (plan AN.53, 53j, D225; AN.48 register item 7): what shows an Act's name to the advocate takes it from here."""
+    return _LISTING_PREFIX.sub("", stored or "")
+
+
 def statute_own_title(stored: str, act_id: str = "") -> str:
     """A held statute's own title: the store's listing prefix removed, and the year taken
     from its identifier when the stored name lacks it. No renaming."""
-    title = " ".join(_LISTING_PREFIX.sub("", stored or "").split())
+    title = " ".join(without_listing_prefix(stored).split())
     year = _ID_YEAR.search(act_id or "")
     if year and not _TITLE_YEAR.search(title):
         title = f"{title}, {year.group(1)}"

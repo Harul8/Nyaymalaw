@@ -26,7 +26,7 @@ from nm.core_engine.retrieval import SearchUnavailable, _digest, _valid_location
 from nm.core_engine.understanding import REFERENCE, TEXT, TYPOGRAPHY, advocate_messages, select, source_catalogue
 from nm.shared import clock_contracts
 from nm.core_engine.citations import IndexUnavailable, held_judgments
-from nm.shared.citation_contracts import find_reporter_citations, judgment_place, provision_references
+from nm.shared.citation_contracts import find_reporter_citations, judgment_place, provision_references, without_listing_prefix
 from nm.shared.model_port import (
     ModelError, OutputTruncated, Prompt, SchemaViolation, Tier, UsageLimitReached, canonical_schema_data, estimate_tokens,
     require_schema,
@@ -2929,12 +2929,12 @@ NM_JUDGES = "Let NM judge from the papers"
 WITHOUT_IT = "Go on without it"
 #: How many held Acts or judgments a question offers by name; the rest are left to NM's judgement.
 NAMED_CHOICES = 3
-_JURISDICTION_PREFIX = re.compile(r"^(?:[A-Za-z]+(?: [A-Za-z]+)*?) \d{4} \d+ ")
 
 
 def act_label(act_id, title):
-    """A held Act as the advocate reads it: its title without the store's prefix, and where it is not a central Act, whose."""
-    shown = _JURISDICTION_PREFIX.sub("", title or act_id or "").strip()
+    """A held Act as the advocate reads it: its title without the store's prefix (the pattern is citation_contracts', its one
+    owner: plan AN.53, 53j), and where it is not a central Act, whose."""
+    shown = without_listing_prefix(title or act_id or "").strip()
     whose = (act_id or "").split("_", 1)[0].title()
     return (shown if whose in ("", "Union Of India") else f"{shown} ({whose})")[:120]
 
