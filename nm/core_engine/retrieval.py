@@ -140,8 +140,8 @@ def _log_stage_failure(kind, stage, exc, query_id=None):
 # The index's own tokenisation has one owner, shared with the index builds: a
 # query cut differently from the built index silently stops meeting its words.
 from nm.shared.citation_contracts import (  # noqa: E402
-    act_alias_index, bm25_tokens, bind_provision_key, instrument_candidates, ProvisionKeyState, provision_key_binder,
-    provisions_named, statute_own_title,
+    act_alias_index, bm25_tokens, bind_provision_key, instrument_candidates, instruments_to_read, ProvisionKeyState,
+    provision_key_binder, provisions_named, statute_own_title,
 )
 
 
@@ -1435,7 +1435,9 @@ def offered(record):
 def _read_named(collection, wanted, returned, issues, aliases=None):
     """The sections a question's plan names, each read by its number from the held Act its name is (v11; plan AN.35, piece 35b):
     the Act by the instrument register's key for its name - every kept Act the name may be, never a near title chosen for it - and
-    the section by its explicit number within it (read_provision). Each entry says what became of it: read (the candidates, one
+    the section by its explicit number within it (read_provision). A name written with a year that no held Act of its title
+    carries reads nothing, and says so: a section's number in the Act of another year is not this one (plan AN.51, 51a, D195;
+    instruments_to_read owns the rule). Each entry says what became of it: read (the candidates, one
     already returned by search or read now, whole); not_held (no held Act is the name, or it holds no such provision); ambiguous
     (the name may be more than one held Act, or one holds the number twice: each reading is offered, the pick judges which is
     meant); unavailable (it could not be read). returned: the candidates search returned, by position. Returns (entries, the
@@ -1455,13 +1457,14 @@ def _read_named(collection, wanted, returned, issues, aliases=None):
         if not any(character.isdigit() for character in item["section"]):
             entries.append({**item, "state": "not_held", "found": [], "reason": "It names no provision by its number"})
             continue
+        readable, why_none = instruments_to_read(item["act"], held, aliases)
         try:
-            candidates = acts(instrument_candidates(item["act"], held, aliases))
+            candidates = acts(readable)
         except SearchUnavailable as exc:
             entries.append({**item, "state": "unavailable", "found": [], "reason": str(exc)})
             continue
         if not candidates:
-            entries.append({**item, "state": "not_held", "found": [], "reason": "No Act we hold is this name"})
+            entries.append({**item, "state": "not_held", "found": [], "reason": why_none or "No Act we hold is this name"})
             continue
         reads = [reader(act_id, item["section"]) for act_id in candidates]
         ids = []

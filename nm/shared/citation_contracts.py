@@ -176,10 +176,40 @@ def instrument_candidates(name: str, held_keys, aliases=None) -> tuple[str, ...]
     entry = aliases.get(key) or aliases.get(title)
     if not entry:
         return ()
-    closing = _KEY_YEAR.search(key)
-    written = int(closing.group().split()[0]) if closing else None
+    written = _written_year(key)
     return tuple(sorted({act["key"] for act in entry["acts"]
                          if act.get("key") in held_keys and (written is None or act.get("from") == written)}))
+
+
+def _written_year(key: str) -> int | None:
+    """The year a key closes on - the year written in an Act's name - or none. ONE COPY: the search's candidates, the reading of a
+    named section and the judgments' resolver all ask it."""
+    closing = _KEY_YEAR.search(key)
+    return int(closing.group().split()[0]) if closing else None
+
+
+#: Code's reason where a section is named in an Act of a year we do not hold while an Act of that title and another year is held.
+ANOTHER_YEAR_HELD = "We hold an Act of this name of another year, not of the year written"
+
+
+def instruments_to_read(name: str, held_keys, aliases=None) -> tuple[tuple[str, ...], str]:
+    """Held instruments a section named in this Act may be READ from by its number, and code's reason where it is none because
+    of the year (plan AN.51, 51a, D195; the review's F-02; AN.48 register item 8).
+
+    As instrument_candidates - the exact name, every held Act of the title where no year is written, a checked short form -
+    with ONE difference: a year written in the name that no held Act of that title carries reads nothing. The search may
+    still rank by the other year's Act (instrument_candidates is unchanged), but a section's number in the Act of one year is
+    not that number in the Act of another, so its words are never shown under the name written. The judgments' resolver
+    (ActResolver.resolve) answers a written year the same way; both read the year through _written_year.
+    """
+    key = instrument_key(name)
+    candidates = instrument_candidates(name, held_keys, aliases)
+    if not key or key in held_keys or _written_year(key) is None:
+        return candidates, ""
+    title = _KEY_YEAR.sub("", key)
+    if any(_KEY_YEAR.sub("", held) == title for held in held_keys):
+        return (), ANOTHER_YEAR_HELD
+    return candidates, ""
 
 
 def provision_label(act: str, unit: str) -> str:
@@ -1019,8 +1049,7 @@ class ActResolver:
 
     @staticmethod
     def _enacted(key):
-        found = _KEY_YEAR.search(key)
-        return int(found.group().split()[0]) if found else None
+        return _written_year(key)
 
     def resolve(self, words: str, year: int | None = None) -> dict:
         """The held Act(s) these words name. year: the year the judgment was decided. A checked alias is the owner's word for what a
