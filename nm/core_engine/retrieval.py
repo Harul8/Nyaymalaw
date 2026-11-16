@@ -1464,7 +1464,11 @@ def _read_named(collection, wanted, returned, issues, aliases=None):
             entries.append({**item, "state": "unavailable", "found": [], "reason": str(exc)})
             continue
         if not candidates:
-            entries.append({**item, "state": "not_held", "found": [], "reason": why_none or "No Act we hold is this name"})
+            # Plan AN.51 (51g, D204): with the checked short names unread, a name that finds no Act could be one of them - that is
+            # 'could not be checked', never 'not held'. A year no held Act carries is not held whatever the list says.
+            unchecked = not why_none and getattr(aliases, "unavailable", "")
+            entries.append({**item, "state": "unavailable" if unchecked else "not_held", "found": [],
+                            "reason": ALIASES_UNREAD if unchecked else why_none or "No Act we hold is this name"})
             continue
         reads = [reader(act_id, item["section"]) for act_id in candidates]
         ids = []
@@ -1508,15 +1512,29 @@ class SearchPort(Protocol):
         ...
 
 
+#: Code's reason where a name found no held Act while the checked short names could not be read (plan AN.51, 51g, D204).
+ALIASES_UNREAD = "The list of checked short names of Acts could not be read, so this name could not be checked against it"
+
+
+class UnreadAliases(dict):
+    """No short forms, BECAUSE THEIR LIST COULD NOT BE READ (plan AN.51, 51g, D204; the review's F-24). It is an empty index, so
+    every name still finds Acts as an exact name does; `unavailable` carries why, so that a name which then finds nothing is
+    recorded as could not be checked and not as an Act we do not hold."""
+
+    def __init__(self, reason):
+        super().__init__()
+        self.unavailable = reason
+
+
 def checked_aliases(path):
     """The owner's checked short forms of Act names, as an index (plan AN.47, D132): pipeline/act_aliases.json, checked entries only, a draft
     resolving nothing. A list that cannot be read, or is not of its schema, means no short forms: names find Acts as exact names
-    only, as before, with a warning - search never fails because of it."""
+    only, as before, with a warning - search never fails because of it. The index then says that it is unread (UnreadAliases)."""
     try:
         return act_alias_index(json.loads(Path(path).read_text(encoding="utf8")))
     except (OSError, ValueError) as exc:
         log.warning("The Act alias list cannot be used; short names find no Act: %s", exc)
-        return {}
+        return UnreadAliases(type(exc).__name__)
 
 
 class HybridSearcher:
@@ -1524,7 +1542,7 @@ class HybridSearcher:
     def __init__(self, collections, aliases=None):
         self.collections = collections
         # Plan AN.47 (D129): the owner's checked short forms propose candidate Acts where a name finds none; never a resolved identity.
-        self.aliases = aliases or {}
+        self.aliases = aliases if aliases is not None else {}
 
     @classmethod
     def local(cls, root=None, corpus_dir=None):
@@ -1659,6 +1677,8 @@ class HybridSearcher:
                     held = collection.instrument_keys()
                     named = [{"name": name, "candidates": list(instrument_candidates(name, held, self.aliases))} for name in names]
                     keys = {key for entry in named for key in entry["candidates"]}
+                    if getattr(self.aliases, "unavailable", "") and any(not entry["candidates"] for entry in named):
+                        issues.append({"kind": kind, "query_id": None, "stage": "instruments", "reason": ALIASES_UNREAD})
                     within = collection.instrument_positions(keys) if keys else frozenset()
                 except SearchUnavailable as exc:
                     _log_stage_failure(kind, "instruments", exc)
