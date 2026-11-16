@@ -485,8 +485,8 @@ def _dependencies(context, research_record, sources, draft, execution, *,
             or writer_notes and contract != WORDED_CONTRACT):
         raise ValueError("Review version differs from the piece it judges")
     # Plan AN.37 (D44, D50): the answers the advocate gives while the turn works are shown to the review with the conversation
-    # but bound no more than the writing's are (response_authorities): a section reviewed before they came and one after bind
-    # the same evidence, and the turn keeps the answers as asked.
+    # (review(), where its packet is made: plan AN.51, 51c) but bound no more than the writing's are (response_authorities): a
+    # section reviewed before they came and one after bind the same evidence, and the turn keeps the answers as asked.
     bound = {key: value for key, value in context.items() if key != "answers"}
     dependencies = {"original_context": deepcopy(bound), "research_record": deepcopy(research_record),
         "sources": deepcopy(sources), "draft": deepcopy(draft), "execution": deepcopy(execution)}
@@ -1022,7 +1022,11 @@ def review(model, context, research_record, sources, draft, execution=None, *,
     # Every ID the reviewer names is shown short: messages, document pages and reply
     # units as well as legal passages (16 Oct 2026); admission maps them back.
     shown.update({tag: alias for alias, tag in unit_aliases(draft).items()})
-    payload = {"original_context": answer_sources.shown_context(dependencies["original_context"], sources),
+    # Plan AN.51 (51c, D197; the review's F-18): THE REVIEWER IS SHOWN WHAT THE WRITER WAS SHOWN - the conversation with the
+    # answers the advocate gave while the turn worked. It was shown the copy bound above, which leaves them out, so a fact the
+    # advocate supplied in an answer was to the reviewer a fact nobody gave. That copy stays what the fingerprint binds; a turn
+    # in which nothing was answered sends exactly what it sent.
+    payload = {"original_context": answer_sources.shown_context(context, sources),
                "setting": clock_contracts.setting(),
         "research_proposal_and_results": research_context,
         "legal_sources": answer_sources.presentation(sources, aliased=True, compact=True, work_ids=work_ids),
