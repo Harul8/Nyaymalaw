@@ -827,7 +827,7 @@ class _Answering:
                     draft = response_writer.accept(
                         state["proposal"], self.context, sources, contract=self.writer,
                         parts=[{"dispute_id": self._dispute(section), "units": 1}], section=section, faults=[],
-                        left_out=state["left_out"], cut=state["cut"])
+                        left_out=state["left_out"], cut=state["cut"], limits=self.time_limits or {})
                 if state["items"]:
                     draft = response_writer.trim(draft, state["items"])
                 state["proposal"], state["undo"] = draft["proposal"], None

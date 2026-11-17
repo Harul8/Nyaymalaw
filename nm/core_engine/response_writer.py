@@ -18,7 +18,7 @@ from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 from datetime import date
 
-from nm.core_engine import answer_sources, checklist, copy_figures, figures, reasoning, research
+from nm.core_engine import answer_sources, checklist, copy_figures, figures, law_named, reasoning, research
 from nm.core_engine.understanding import REFERENCE, TEXT, renamed, source_catalogue
 from nm.shared import clock_contracts
 from nm.shared.model_port import (
@@ -1246,7 +1246,7 @@ def _prefix(context, section):
 
 
 def accept(proposal, context, sources, *, contract=CONTRACT, parts=None, whole=True, section=None,
-           faults=None, left_out=(), cut=None):
+           faults=None, left_out=(), cut=None, limits=None):
     """Check exact dependencies only; no keyword-based semantic certification.
 
     A malformed unit rejects the draft for the turn owner's bounded correction.
@@ -1258,6 +1258,11 @@ def accept(proposal, context, sources, *, contract=CONTRACT, parts=None, whole=T
     v14 (plan AN.28, D2): faults, a list, collects each paragraph's own fault instead, and UnitFaults
     is raised with them once every paragraph is checked; left_out (positions, 1, 2...) and cut
     ({position: sentences}) are what was blocked, which the draft records under its paragraphs' IDs.
+
+    Plan AN.51 (51d, 51f; D251): where faults are collected - a section being written or mended - code also reads each
+    paragraph's own words (_claims_checked) and, where limits is given, the law it names (_law_named_checked). limits: the
+    time limits code worked out, as the writer was shown them - an empty record where none were; a provision one of them
+    names is code's own and needs no passage. Only the writing of a section knows them, so only it gives them.
     """
     if (faults is not None or left_out or cut) and contract not in REPAIRS:
         raise ValueError("Only a v14 draft has its paragraphs' faults collected or blocked")
@@ -1281,7 +1286,7 @@ def accept(proposal, context, sources, *, contract=CONTRACT, parts=None, whole=T
     require_schema(data, schema)
     originals = source_catalogue(context)
     latest_id = context["latest"]["source_id"]
-    units, addresses_latest = [], False
+    units, addresses_latest, admitted_at = [], False, []
     left_out, cut = set(left_out), dict(cut or {})
     if any(type(position) is not int or not 1 <= position <= len(data["units"]) for position in (*left_out, *cut)) or (
             left_out & set(cut)):
@@ -1293,7 +1298,8 @@ def accept(proposal, context, sources, *, contract=CONTRACT, parts=None, whole=T
             item = _cut_item(item, cut[number], offered)
         try:
             unit = _unit(number, item, context=context, sources=sources, contract=contract, section=section,
-                         parts=parts, offered=offered, originals=originals, latest_id=latest_id)
+                         parts=parts, offered=offered, originals=originals, latest_id=latest_id,
+                         writing=faults is not None)
         except SchemaViolation as exc:
             if faults is None:
                 raise
@@ -1302,6 +1308,9 @@ def accept(proposal, context, sources, *, contract=CONTRACT, parts=None, whole=T
             continue
         addresses_latest |= any(address["source_id"] == latest_id for address in unit["addresses"])
         units.append(unit)
+        admitted_at.append(number)
+    if faults is not None and limits is not None and section != OVERVIEW:
+        _law_named_checked(list(zip(admitted_at, units)), sources, limits, faults)
     if faults:
         raise UnitFaults(faults, deepcopy(data))
     blocked_places = {data["units"][position - 1].get("place") for position in left_out}
@@ -1314,8 +1323,51 @@ def accept(proposal, context, sources, *, contract=CONTRACT, parts=None, whole=T
     return draft
 
 
-def _unit(number, item, *, context, sources, contract, section, parts, offered, originals, latest_id):
-    """One proposed paragraph admitted, or its own fault raised (plan AN.28: the loop of accept)."""
+#: Code's words to the writer where a paragraph says NM did something (plan AN.51, 51f, D203).
+EFFECT_CLAIMED = ("This paragraph says that NM did, saved, filed or will do something. What has been done is for code alone to "
+                  "say: say what the advocate, a party or the court did or should do, and leave out any statement that NM "
+                  "did it.")
+
+
+def _claims_checked(text):
+    """A paragraph, as it is written, may not say that NM did, saved or will do something (plan AN.51, 51f; D203, D251; the
+    review's F-33; AN.48 register item 11): the paragraph's own fault, for its second look, and its sentence is cut if it
+    still stands. law_named owns the rule."""
+    claimed = law_named.effect_claimed(text)
+    if claimed:
+        raise UnitFault(EFFECT_CLAIMED, words=claimed)
+
+
+def _law_named_checked(admitted, sources, limits, faults):
+    """Each provision a paragraph of a section names by its number, whatever kind the writer gave the paragraph, is found in
+    held law the section rests on (plan AN.51, 51d; D198, D251, D252; the review's F-04; AN.48 register item 11): a passage
+    the paragraph uses, a passage another paragraph of the same section uses (a line that sums the section up names what the
+    section sets out below), or a time limit code worked out. What is not is the paragraph's own fault, added to faults for
+    its second look. admitted: [(its place in the proposal, the admitted unit)]. law_named owns the rule."""
+    def used(unit):
+        out = []
+        for use in unit["uses"]:
+            source = sources[use["source_id"]]
+            out.extend([source, *(sources[identity] for identity in source.get("context_ids", ()) if identity in sources)])
+        return out
+    stated = (limits or {}) if isinstance(limits, dict) else {}
+    by_code = law_named.designations(*(entry.get(field) for key in ("worked_out", "not_assessed")
+                                       for entry in stated.get(key) or () if isinstance(entry, dict)
+                                       for field in ("what", "provision")))
+    in_the_section = law_named.held(source for _, unit in admitted for source in used(unit))
+    for number, unit in admitted:
+        unsourced = law_named.named_without_source(unit["kind"], unit["text"], used(unit), by_code | in_the_section)
+        if unsourced:
+            one = len(unsourced) == 1
+            faults.append({"position": number, "words": unsourced, "near": None, "reason": (
+                f"This paragraph names {', '.join(unsourced)}, and no held passage this section uses is or names "
+                f"{'it' if one else 'them'}. Rest what it says of {'that provision' if one else 'those provisions'} on a held "
+                "passage, among those offered, that is or names it; where none is offered, leave the statement out.")})
+
+
+def _unit(number, item, *, context, sources, contract, section, parts, offered, originals, latest_id, writing=False):
+    """One proposed paragraph admitted, or its own fault raised (plan AN.28: the loop of accept). writing: it is being admitted
+    as it is written (accept collects its faults), where code also reads its own words (_claims_checked)."""
     if True:
         text, links = _linked(item["text"], offered) if contract in LINKED else (item["text"], [])
         if not text.strip():
@@ -1384,6 +1436,8 @@ def _unit(number, item, *, context, sources, contract, section, parts, offered, 
             raise SchemaViolation("The overview rests on the sections shown and the advocate's own messages and "
                                   "documents: write it as " + ", ".join(kinds)
                                   + " paragraphs, citing no held law")
+        if writing:
+            _claims_checked(text)
         return {"id": _prefix(context, section) + f"b{number}",
                 "kind": item["kind"], "text": text,
                 "addresses": addresses, "uses": uses,
@@ -2028,7 +2082,7 @@ def write_section(model, context, research_record, sources, *, index, interpreta
                                                               else {})}]},
                   context, sources, contract=contract,
                   parts=[{"dispute_id": layout[index]["dispute_id"], "units": len(part["units"])}], section=index,
-                  **({"faults": []} if contract in REPAIRS else {}))
+                  **({"faults": [], "limits": time_limits or {}} if contract in REPAIRS else {}))
 
 
 OVERVIEW_SYSTEM = """Message: You receive the exact latest advocate message, the complete

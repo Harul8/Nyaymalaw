@@ -39,7 +39,7 @@ def code(tmp_path):
 
 
 def _files(folder):
-    return sorted(str(path.relative_to(folder)) for path in folder.rglob("*") if path.is_file())
+    return sorted(path.relative_to(folder).as_posix() for path in folder.rglob("*") if path.is_file())
 
 
 def _built(code, settings):
