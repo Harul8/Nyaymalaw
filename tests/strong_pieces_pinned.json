@@ -4,7 +4,7 @@
   "nm/core_engine/research.py": "1a5a063d8f6a4e6b460652f1f5336106ddeb3ef5042aaf4ceb0eeafdaee6eeea",
   "nm/core_engine/retrieval.py": "4f2b9945798e3802721a685576fe54f28dbf116681212ec18348f332393ee5a7",
   "nm/core_engine/citations.py": "7ada35e8590d07679f84219563ec6682611e5f7d90f0a0c5bec23202decc514d",
-  "nm/shared/citation_contracts.py": "3ab71819219f668642487d6f2720364e037a13e23943cea10a231937f7602cb1",
+  "nm/shared/citation_contracts.py": "5d4810a10619c06c11cf5fade33cb240849191ce9c9314a0e680968e44ee72f6",
   "nm/core_engine/answer_sources.py": "2d104c03738fa72da79cf1ee4b9911cd41663d770c374bc16ae6abccbc6ffbdf",
   "nm/core_engine/response_authorities.py": "1cc23a12f04fa89351665b96b92cd9da4b719f485774440b458e2c2929b2e021",
   "nm/core_engine/response_review.py": "2f0c81d6597d2bba15ba05946b9944d174970b6eab6d818d03568993d99dc5b9",
@@ -54,6 +54,9 @@
   "11 (51d and 51f, D198, D203; plan AN.48 register, column 10)": [
    "nm/core_engine/answer_sections.py",
    "nm/core_engine/response_writer.py"
+  ],
+  "16 (D227: the fold's words from their owner; plan AN.48 register, column 10)": [
+   "nm/shared/citation_contracts.py"
   ]
  }
 }

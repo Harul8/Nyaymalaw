@@ -32,6 +32,7 @@ from dataclasses import dataclass
 from enum import Enum
 
 from nm.shared.clock_contracts import FORUM
+from nm.shared.text_contracts import fold
 
 # The two guards, each learned by firing wrongly:
 #
@@ -148,7 +149,7 @@ def instrument_key(title: str) -> str:
     text = STATE_NAME.sub(" state ", text)
     text = TELANGANA.sub(" state ", text).lower()
     text = re.sub(r"\bthe\b", " ", text)
-    return " ".join(re.findall(r"[a-z0-9]+", text))
+    return fold(text)  # the words are text_contracts', their one owner (tests/test_one_fold.py)
 
 
 def instrument_candidates(name: str, held_keys, aliases=None) -> tuple[str, ...]:
