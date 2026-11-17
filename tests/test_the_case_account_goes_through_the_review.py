@@ -1,7 +1,7 @@
 """Plan AN.51 (D290, 17 Nov 2026; D202 decided as Claude recommended): the case account goes through the independent review, once,
 and what it faults is left out.
 
-After the account is made and checked, one call on the review tier (6.1 Terra, D289) reads it against the same material and names
+After the account is made and checked, one call on the review tier (the turn's own model, D294) reads it against the same material and names
 each item it finds wrong. Code leaves out of what is shown each item the review names, each requirement whose law is not in a held
 passage offered for the dispute (never shown to the review), and each thing to get left serving only what was left out; the record
 keeps them all, nothing is rewritten after the review, and the line on the account and the research note say what was left out and

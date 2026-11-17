@@ -114,7 +114,8 @@ PUBLISHED_RELEASES = frozenset({"gpt-6-luna", "gpt-6.1-sol", "gpt-6.1-terra"})
 #: The models an advocate may choose for a message, the server's own list (plan AN.58, D288; the owner, 17 Nov 2026: "lets put two
 #: choices for models also, Luna and Terra ( Luna for routine tasks which is defalut and Terra for complex matters"): each release ID,
 #: as the page names it with what it is for, and what it costs beside Luna (the owner, 1 Nov 2026: "Just say terra costs 8-10x
-#: more"; PRICES: Terra ten times). The chosen model writes the turn - every call of it but the review, which is TURN_REVIEWER's.
+#: more"; PRICES: Terra ten times). The chosen model writes and reviews the turn - every text call of it (plan AN.51, D294; the owner,
+#: 17 Nov 2026: "lets use Luna only, and use Terra sparringly in complex situtations that Luna may not handle properly").
 TURN_MODELS = (("gpt-6-luna", "6 Luna (routine work)", ""),
                ("gpt-6.1-terra", "6.1 Terra (complex matters)", "about 8-10x Luna's cost"))
 DEFAULT_TURN_MODEL = "gpt-6-luna"
@@ -130,14 +131,11 @@ EARLIER_TURN_CHOICES = ((AUTO_TURN, "Auto", "6 Luna, and 6.1 Terra where the wor
 #: Every choice a saved message may name, and every model a turn may be written on.
 KNOWN_TURN_CHOICES = (*TURN_CHOICES, *EARLIER_TURN_CHOICES)
 KNOWN_TURN_MODELS = frozenset(model for model, _, _ in (*TURN_MODELS, *EARLIER_TURN_MODELS))
-#: WHO REVIEWS (plan AN.51, D289; the owner, 17 Nov 2026: "D200 - Ok for Terra"): the review tier of every turn - each analysis's
-#: independent review and the check across the analyses - runs on 6.1 Terra whichever model the advocate chose to write it, as
-#: measured on 17 Nov 2026 (Terra found 9 of 9 planted errors, the writer's own model 7). Where Terra writes too it reviews its own
-#: writing, which needs NM_ALLOW_SAME_MODEL_REVIEW, and the line under the reply says who reviewed. Code's to name, not the
-#: installation's settings, so that the owner's decision holds wherever NM runs.
-TURN_REVIEWER = "gpt-6.1-terra"
-if not (KNOWN_TURN_MODELS | {TURN_REVIEWER} <= PUBLISHED_RELEASES and DEFAULT_TURN_MODEL == TURN_MODELS[0][0]):
-    raise RuntimeError("Every model an advocate may choose, and the reviewer, is a published release, the default first")
+#: WHO REVIEWS (plan AN.51, D294, which withdrew D289's fixed 6.1 Terra reviewer on the live run's cost - two to three times its
+#: estimate): the review tier runs on the model the turn is written on, 6 Luna unless the advocate chose 6.1 Terra for a complex
+#: matter. One model reviewing its own work needs NM_ALLOW_SAME_MODEL_REVIEW; the line under the reply says who reviewed.
+if not (KNOWN_TURN_MODELS <= PUBLISHED_RELEASES and DEFAULT_TURN_MODEL == TURN_MODELS[0][0]):
+    raise RuntimeError("Every model an advocate may choose is a published release, the default first")
 
 
 @dataclass(frozen=True)
@@ -292,27 +290,21 @@ def require_priced_snapshot(cfg: TierConfig, *, provider: str) -> TierConfig:
 @dataclass(frozen=True)
 class ModelConfig:
     tiers: dict[Tier, TierConfig]
-    #: Whether one model may review its own work on this installation (NM_ALLOW_SAME_MODEL_REVIEW): what lets a turn written on the
-    #: reviewer's own model be reviewed by it (plan AN.51, D289).
+    #: Whether one model may review its own work on this installation (NM_ALLOW_SAME_MODEL_REVIEW): what lets a turn run every
+    #: call, the review among them, on the one model it is written on (plan AN.33, D23; AN.51, D294).
     same_model_review: bool = False
 
     def with_text_model(self, model: str) -> "ModelConfig":
         """This configuration for one turn written on the model the advocate chose (plan AN.33, D23; D288): every text tier on that
-        model, with the provider, key and address it is configured with, but the review tier, which runs on TURN_REVIEWER (D289)
-        with the review tier's own provider, key and address - the routine tier's where none is configured; the embedding tier as
+        model, the review tier among them (D294), with the provider, key and address it is configured with; the embedding tier as
         it is. Refused for a model the server does not know (KNOWN_TURN_MODELS: a matter begun on one no longer offered goes on as
-        it was begun), and for the reviewer's own model where one model may not review its own work."""
+        it was begun), and where one model may not review its own work and a review tier is configured."""
         if model not in KNOWN_TURN_MODELS:
             raise ConfigurationError("Choose a model from the list NM offers.")
-        if model == TURN_REVIEWER and not self.same_model_review:
-            raise ConfigurationError(f"{TURN_REVIEWER} reviews every turn: a turn written on it too needs "
-                                     "NM_ALLOW_SAME_MODEL_REVIEW.")
-        tiers = {tier: cfg if tier is Tier.EMBED else replace(cfg, model=model)
-                 for tier, cfg in self.tiers.items() if tier is not Tier.JUDGE}
-        reviewing = self.tiers.get(Tier.JUDGE) or self.tiers.get(Tier.ROUTINE)
-        if reviewing is not None:
-            tiers[Tier.JUDGE] = replace(reviewing, tier=Tier.JUDGE, model=TURN_REVIEWER)
-        return ModelConfig(tiers=tiers, same_model_review=self.same_model_review)
+        if not self.same_model_review and Tier.JUDGE in self.tiers:
+            raise ConfigurationError("One model for every call of a turn needs NM_ALLOW_SAME_MODEL_REVIEW: the review is one of them.")
+        return ModelConfig(tiers={tier: cfg if tier is Tier.EMBED else replace(cfg, model=model) for tier, cfg in self.tiers.items()},
+                           same_model_review=self.same_model_review)
 
     def for_tier(self, tier: Tier) -> TierConfig:
         try:

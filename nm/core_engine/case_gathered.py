@@ -31,7 +31,7 @@ answer's case step calls assess here, and every saved case is checked by validat
 before as v1 or v2 by case_strength, exactly as before (P46).
 
 THE INDEPENDENT REVIEW OF THE ACCOUNT (plan AN.51, D290; 17 Nov 2026, before any answer was saved under v3 - D291 was not yet
-applied - so v3 is the account with its review): after the two calls, one call on the review tier (6.1 Terra, D289) reads the
+applied - so v3 is the account with its review): after the two calls, one call on the review tier (the turn's own model, D294) reads the
 account against the same material and names each item it finds wrong, with why. Nothing is rewritten after it, so nothing needs
 reviewing again. Code leaves out of what is shown each requirement whose law's words are not in a held passage offered for the
 dispute (they are not shown to the review), each item the review names, and each thing to get left serving only what was left out;

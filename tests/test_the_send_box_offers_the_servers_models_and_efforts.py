@@ -49,9 +49,10 @@ def test_a_model_or_an_effort_the_server_does_not_offer_is_refused_before_any_wo
     assert refused.status_code == 422 and len(served.model.calls) == calls
 
 
-def test_a_turn_with_no_choice_saved_is_bound_as_written_on_luna_so_that_terra_reviews_it(served, monkeypatch):
-    """Plan AN.51 (D289): a go-ahead takes the model from the saved request, which names no default; the turn is still bound as
-    written on 6 Luna, so that its review runs on the reviewer and never on the installation's own review setting."""
+def test_a_turn_with_no_choice_saved_is_bound_as_written_on_luna_and_reviewed_on_it(served, monkeypatch):
+    """Plan AN.51 (D289, kept by D294): a go-ahead takes the model from the saved request, which names no default; the turn is still
+    bound as written on 6 Luna, so that every call of it, the review among them, runs on Luna and never on the installation's own
+    tiers."""
     seen, binding = [], served.app._model_for
 
     def bound(advocate_id, **asked):
