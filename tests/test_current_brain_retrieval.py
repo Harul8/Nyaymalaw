@@ -9,6 +9,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from nm.core_engine.retrieval import StageUnavailable
 from nm.core_engine.retrieval import (
     DIMENSIONS, EMBED_MODEL, HybridSearcher, LocalCollection, SearchUnavailable,
     _digest, bm25_tokens, token_windows, validate_search,
@@ -68,14 +69,25 @@ def test_both_corpora_receive_every_query_and_same_chunk_id_never_joins_differen
     assert validate_search(result, QUERIES) == result
 
 
-@pytest.mark.parametrize("failure", ["lexical", "semantic", "rerank", "context", "read"])
+@pytest.mark.parametrize("failure", ["context", "read"])
 def test_independent_search_failure_keeps_useful_corpus_and_does_not_claim_complete(failure):
+    """A passage that cannot be read, or whose neighbours cannot, is that passage's gap: the search stays, and says partial."""
     result = search(failure)
     assert result["state"] == "partial" and result["issues"]
     assert any(c["kind"] == "judgment" for c in result["candidates"])
     if failure != "read": assert any(c["kind"] == "provision" for c in result["candidates"])
-    if failure == "rerank": assert all(c["score"] is None for c in result["candidates"] if c["kind"] == "provision")
     assert validate_search(result, QUERIES) == result
+
+
+@pytest.mark.parametrize("failure", ["lexical", "semantic", "rerank"])
+def test_a_stage_that_cannot_be_used_ends_the_search_and_nothing_stands_in_for_it(failure):
+    """Plan AN.52 (52b, D208): until 17 Nov 2026 the search went on - the other leg alone, or the shortlist unranked with no
+    score - and what came back looked like any ranked result. A stage that finds or orders the held law and cannot be used
+    is no search: nothing is returned, and the failure says which corpus, which stage and why."""
+    with pytest.raises(StageUnavailable) as stopped:
+        search(failure)
+    assert (stopped.value.kind, stopped.value.stage) == ("provision", failure)
+    assert "Nothing was taken from a partial search" in str(stopped.value)
 
 
 def test_judgment_role_metadata_is_preserved_without_becoming_a_holding_verdict():
@@ -196,12 +208,12 @@ def local(tmp_path, monkeypatch, missing="vector"):
 
 
 @pytest.mark.parametrize("missing",["vector","words"])
-def test_real_reader_surviving_index_does_not_depend_on_other_index_or_reranker(tmp_path,monkeypatch,missing):
+def test_a_real_reader_without_one_of_its_indexes_gives_no_result_from_the_other(tmp_path,monkeypatch,missing):
+    """Plan AN.52 (52b, D208): it used to return the surviving index's provisions, unranked, with a gap noted."""
     collection=local(tmp_path,monkeypatch,missing)
-    result=HybridSearcher({"provision":collection,"judgment":Collection("judgment")}).search(QUERIES[:1])
-    assert any(c["kind"]=="provision" for c in result["candidates"])
-    assert result["state"]=="partial" and any(i["stage"]=="rerank" for i in result["issues"])
-    assert validate_search(result,QUERIES[:1])==result
+    with pytest.raises(StageUnavailable) as stopped:
+        HybridSearcher({"provision":collection,"judgment":Collection("judgment")}).search(QUERIES[:1])
+    assert stopped.value.kind=="provision" and stopped.value.stage=={"vector":"semantic","words":"lexical"}[missing]
 
 
 def test_wal_commit_changes_revision_even_without_main_database_change(tmp_path,monkeypatch):

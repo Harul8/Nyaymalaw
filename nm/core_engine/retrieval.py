@@ -149,6 +149,27 @@ class SearchUnavailable(RuntimeError):
     """The local collection cannot be searched reliably."""
 
 
+class StageUnavailable(SearchUnavailable):
+    """A stage that finds or orders the held law could not be used, so this search gives NO result (plan AN.52, piece 52b;
+    D208, D238; the review's F-10; AN.48 register item 14).
+
+    The search used to go on without the stage: a failed reranking offered its shortlist in first-stage order, and a failed
+    leg left the others to stand in for it. What came back looked exactly like a ranked result, and an answer's authorities
+    were then chosen from it. A stage that cannot be used is not a smaller search; it is no search. The research step
+    records it for the question as it records any search that failed - no evidence admitted, the reason kept in code's words
+    - and the answer says so. kind: the corpus; stage: the leg or 'rerank'; cause: the failure's own name, for the record."""
+
+    _WHAT = {"lexical": "the search by words", "semantic": "the search by meaning",
+             "named_lexical": "the search by words inside the Acts named", "named_semantic": "the search by meaning inside the Acts named",
+             "rerank": "the ranking of what was found"}
+
+    def __init__(self, kind, stage, cause):
+        held = "Acts" if kind == "provision" else "judgments"
+        super().__init__(f"The held {held} could not be searched for this question: {self._WHAT.get(stage, stage)} could not "
+                         f"be used ({cause}). Nothing was taken from a partial search.")
+        self.kind, self.stage, self.cause = kind, stage, cause
+
+
 class _ContextGap(SearchUnavailable):
     """A readable, connected source survives incomplete or ambiguous neighbours."""
 
@@ -1737,9 +1758,9 @@ class HybridSearcher:
                         stages.append({"kind": kind, "query_id": query["query_id"], "stage": leg,
                                        "state": "evaluated", "hits": len(ranked)})
                     except Exception as exc:
+                        # Plan AN.52 (52b, D208): a leg that cannot be used ends the search; the others never stand in for it.
                         _log_stage_failure(kind, leg, exc, query["query_id"])
-                        issues.append({"kind": kind, "query_id": query["query_id"], "stage": leg,
-                                       "reason": type(exc).__name__})
+                        raise StageUnavailable(kind, leg, type(exc).__name__) from exc
                 for position, score in sorted(_rrf(legs).items(), key=lambda x: (-x[1], x[0]))[:PER_QUERY_POOL]:
                     pool[position] = pool.get(position, 0) + score
                     associations.setdefault(position, []).append(query["query_id"])
@@ -1832,9 +1853,9 @@ class HybridSearcher:
                     scored = _judgment_order(scored, rows, standing)
                 stages.append({"kind": kind, "query_id": None, "stage": "rerank", "state": "evaluated", "hits": len(usable)})
             except Exception as exc:
+                # Plan AN.52 (52b, D208): never the shortlist in first-stage order, offered as if it had been ranked.
                 _log_stage_failure(kind, "rerank", exc)
-                issues.append({"kind": kind, "query_id": None, "stage": "rerank", "reason": type(exc).__name__})
-                scored = [(position, None) for position in usable]
+                raise StageUnavailable(kind, "rerank", type(exc).__name__) from exc
             selected, groups = [], {}
             for position, score in scored:
                 row = rows[position]

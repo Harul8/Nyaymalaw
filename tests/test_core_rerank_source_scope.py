@@ -118,13 +118,10 @@ def test_oversized_identity_never_silently_truncates_body_or_escapes_search(tmp_
     collection = Collection()
     collection.rows[0]["act_name"] = "Document " * 490
     collection.rerank = local(tmp_path, model).rerank
-    result = retrieval.HybridSearcher({"provision": collection, "judgment": Collection("judgment")}).search(QUERIES)
-    assert result["state"] == "partial" and model.calls == []
-    assert len([c for c in result["candidates"] if c["kind"] == "provision"]) == 2
-    assert all(c["score"] is None for c in result["candidates"] if c["kind"] == "provision")
-    assert any(c["kind"] == "judgment" and c["score"] is not None for c in result["candidates"])
-    assert any(i["kind"] == "provision" and i["stage"] == "rerank" for i in result["issues"])
-    assert retrieval.validate_search(result, QUERIES) == result
+    # Plan AN.52 (52b, D208): the ranking that cannot be made ends the search; it used to offer the provisions unranked.
+    with pytest.raises(retrieval.StageUnavailable) as stopped:
+        retrieval.HybridSearcher({"provision": collection, "judgment": Collection("judgment")}).search(QUERIES)
+    assert (stopped.value.kind, stopped.value.stage) == ("provision", "rerank") and model.calls == []
 
 
 def previous_anchored_windows(text, tokenizer, capacity, anchor):
