@@ -39,7 +39,7 @@ from nm.core_engine.conversation import (CONTRACT as CONVERSATION_CONTRACT, HEAD
                                          TurnContext, asking_of, chat_matter_id, checked_rows, queued_of, shown_of, stored_chat,
                                          title_of)
 from nm.core_engine import documents as document_rules
-from nm.core_engine import research_note, voice
+from nm.core_engine import research_note, search_said, voice
 from nm.core_engine.response_rendering import unit_index
 from nm.core_engine.matter_board import board as matter_board
 from nm.core_engine.turn import AUTHORITY_CONTRACT as AUTHORITY_CORE_TURN, SECTIONED as SECTIONED_CORE_TURNS
@@ -2536,9 +2536,12 @@ def chat(chat_id: str, advocate_id: Advocate, request: Request, response: Respon
     matter, rows = _read_chat(chat_id, advocate_id, request)
     # The existing UI expects a boolean release projection. Do not change the
     # canonical saved receipt's string commitment or its original snapshot.
+    # Plan AN.51 (51e, D199, D253): with each answer, code's account of the limits of its search, read from the research it
+    # saved - not part of what is saved, so an answer saved before this piece carries it too.
     turns = [{**row['response'], 'message': row['message'], 'message_source': 'held',
               'committed': True, 'release_state': 'released',
-              'documents': [_sent_document(document) for document in row.get('documents', ())]}
+              'documents': [_sent_document(document) for document in row.get('documents', ())],
+              'search_said': search_said.said(row.get('activities'))}
              for row in rows]
     if not _session_current(request, advocate_id):
         raise HTTPException(401, 'not signed in')
@@ -2925,6 +2928,21 @@ def _research_note(chat_id, turn_id, advocate_id, request):
     if not _session_current(request, advocate_id):
         raise HTTPException(401, 'not signed in')
     return row, made
+
+
+@app.get('/api/chats/{chat_id}/turns/{turn_id}/search-said')
+def search_said_view(chat_id: str, turn_id: str, advocate_id: Advocate, request: Request, response: Response):
+    """Code's account of the limits of one saved answer's search (plan AN.51, 51e): what the page asks for an answer it has
+    just been given, since a conversation opened from the history carries it with each turn. Nothing where the turn searched
+    nothing."""
+    _, rows = _read_chat(chat_id, advocate_id, request)
+    row = next((item for item in rows if item['turn_id'] == turn_id), None)
+    if row is None:
+        raise HTTPException(404, 'Saved answer not available.')
+    if not _session_current(request, advocate_id):
+        raise HTTPException(401, 'not signed in')
+    response.headers['Cache-Control'] = 'no-store'
+    return {'search_said': search_said.said(row.get('activities'))}
 
 
 @app.get('/api/chats/{chat_id}/turns/{turn_id}/note')

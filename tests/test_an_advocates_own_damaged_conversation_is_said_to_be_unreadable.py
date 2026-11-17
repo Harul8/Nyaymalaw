@@ -18,7 +18,8 @@ DAMAGE = {
     "cut short": lambda blob: blob[: len(blob) // 2],
 }
 READS = ("/api/chats/{chat}", "/api/chats/{chat}/title", "/api/chats/{chat}/board", "/api/chats/{chat}/documents",
-         "/api/chats/{chat}/turns/{turn}/note", "/api/chats/{chat}/turns/{turn}/passages/p1")
+         "/api/chats/{chat}/turns/{turn}/note", "/api/chats/{chat}/turns/{turn}/passages/p1",
+         "/api/chats/{chat}/turns/{turn}/search-said")
 SAID = "This conversation could not be read reliably."
 
 

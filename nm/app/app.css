@@ -528,6 +528,9 @@ button.board-card:focus-visible { outline: 2px solid var(--accent); outline-offs
 .answer-checked { margin: 1.2rem 0 0.4rem; font-size: 0.9rem; color: var(--ink-2); border: 1px solid var(--rule-2);
   border-radius: 10px; padding: 0.6rem 0.9rem; background: var(--surface); }
 .answer-checked > summary { cursor: pointer; color: var(--ink-2); font-weight: 600; }
+.answer-search > summary { font-weight: 400; }
+.reply-foot > .answer-search { flex: 0 0 100%; margin: 0 0 0.5rem 0.45rem; }
+.answer-search .search-said-line { margin: 0.45rem 0 0; }
 /* Plan AN.33 (D23): the model and the effort for a message, in small words under the send box (D173, like Claude's); what was
    chosen, under a reply. */
 .turn-choice { font: inherit; font-size: 0.8rem; color: var(--ink-2); border: 0; border-radius: 6px; min-height: 2rem;

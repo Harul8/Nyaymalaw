@@ -46,6 +46,7 @@ const context = {
   $: (id) => nodes[id], state: {},
   api: async (path) => { asked.push(path); return offered; },
   replyIconButton: () => el('button'), rateControl: () => el('span'), noteAvailable: () => false, noteControl: () => el('span'),
+  searchSaid: () => null,  // plan AN.51 (51e): the search's limits, drawn by its own piece (tests/js/search_said.mjs)
   answeredAt: () => null, navigator: {}, setTimeout,
 };
 vm.createContext(context);

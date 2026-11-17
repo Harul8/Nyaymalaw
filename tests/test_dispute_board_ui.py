@@ -31,6 +31,8 @@ PAGE_TESTS = [
     "progress_told_by_the_server.mjs",
     # Plan AN.53 (D241, 53h3b): the conversation's own Delete, asked first; Recently deleted, to put one back or erase it now.
     "a_conversation_is_deleted.mjs",
+    # Plan AN.51 (51e, D199, D253): the limits of an answer's search, in code's words, folded under the answer.
+    "search_said.mjs",
 ]
 #: Run, with the cases it is given, by tests/test_the_screen_never_folds_a_disclosure.py.
 RUN_ELSEWHERE = {"render_turn_partition.mjs"}

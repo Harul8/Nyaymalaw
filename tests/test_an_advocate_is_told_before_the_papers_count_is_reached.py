@@ -61,7 +61,8 @@ def test_the_page_keeps_what_was_said_and_shows_it_on_the_papers_line():
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
-const source = fs.readFileSync('nm/app/app.js', 'utf8');
+// The script as its lines, whichever line endings this checkout gives it (a Windows checkout has CRLF; written on Linux).
+const source = fs.readFileSync('nm/app/app.js', 'utf8').replace(/\r\n/g, '\n');
 function slice(from, to) {
   const start = source.indexOf(from); const end = source.indexOf(to, start);
   assert.ok(start >= 0 && end > start, from); return source.slice(start, end);

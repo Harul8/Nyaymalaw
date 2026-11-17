@@ -2308,6 +2308,9 @@ function replyFooter(entry, copyText) {
   const status = document.createElement('span');
   status.className = 'reply-status';
   status.setAttribute('role', 'status');
+  // Plan AN.51 (51e, D199): how far this answer's search went, in code's words, on a line of its own above the foot's controls.
+  const searched = searchSaid(answer);
+  if (searched) foot.appendChild(searched);
   const copy = replyIconButton('copy', 'Copy this reply');
   copy.addEventListener('click', async () => {
     try {
@@ -2494,6 +2497,56 @@ async function printNote(answer, status) {
   frame.contentWindow.focus();
   frame.contentWindow.print();
   status.textContent = 'In the print window, choose “Save as PDF”.';
+}
+
+// THE LIMITS OF THE SEARCH (plan AN.51, piece 51e; D199, D253; AN.56 D262): under every answer that searched, code's own account
+// of how far the search went - what was searched and offered, what was incomplete or could not be searched, which of the Acts
+// and sections the matter named NM holds, and that currency is not checked. The server works it out from the research the
+// turn saved (nm/core_engine/search_said.py); the page only draws it, folded at the foot of the answer (replyFooter), with its
+// one-sentence summary on the fold. A
+// conversation opened from the history carries it with each turn; an answer just given is asked for once. Never a model's words.
+function searchSaidUrl(answer) {
+  return `/api/chats/${encodeURIComponent(answer.chat_id)}/turns/${encodeURIComponent(answer.turn_id)}/search-said`;
+}
+
+function fillSearchSaid(fold, said) {
+  fold.textContent = '';
+  const opener = document.createElement('summary');
+  opener.textContent = `How far NM searched: ${said.summary}`;
+  fold.appendChild(opener);
+  for (const line of said.lines || []) {
+    const row = document.createElement('p');
+    row.className = 'search-said-line';
+    row.textContent = line;
+    fold.appendChild(row);
+  }
+  fold.hidden = false;
+}
+
+// The fold for one answer, or null where the answer is not a saved one. Hidden until there is something to say.
+function searchSaid(answer) {
+  const saved = answer && answer.chat_id && answer.turn_id && !answer.blocked
+    && (answer.committed === true || answer.committed === 'committed');
+  if (!saved || answer.search_said === null) return null;
+  const fold = document.createElement('details');
+  fold.className = 'answer-checked answer-search';
+  fold.hidden = true;
+  if (answer.search_said && answer.search_said.summary) {
+    fillSearchSaid(fold, answer.search_said);
+    return fold;
+  }
+  api(searchSaidUrl(answer)).then((reply) => {
+    answer.search_said = (reply && reply.search_said) || null;
+    if (answer.search_said) fillSearchSaid(fold, answer.search_said);
+  }).catch(() => {
+    // Said, not passed over: the answer stands, and what is missing is only this account of its search.
+    fold.textContent = '';
+    const opener = document.createElement('summary');
+    opener.textContent = 'How far NM searched could not be shown just now. Open the conversation again to see it.';
+    fold.appendChild(opener);
+    fold.hidden = false;
+  });
+  return fold;
 }
 
 // LB-90. WHAT THIS MESSAGE CHANGED ON THE BOARD, and what waits for you
