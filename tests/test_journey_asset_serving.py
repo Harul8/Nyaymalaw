@@ -316,8 +316,10 @@ PUBLIC_ASSETS = {name: row for name, row in ASSETS.items() if not name.startswit
 @pytest.mark.parametrize("name", tuple(PUBLIC_ASSETS))
 def test_every_real_asset_get_retains_exact_bytes_media_and_cache_headers(http_boundary, name):
     path, media_type = ASSETS[name]
-    response = http_boundary.get(f"/static/{name}")
-    assert response.status_code == 200
+    # Asked for as it is: a browser that asks for gzip is sent the page's text files compressed (plan AN.58, 58a), which
+    # tests/test_the_pages_own_files_are_sent_compressed.py covers; the exact bytes and their length are this test's.
+    response = http_boundary.get(f"/static/{name}", headers={"accept-encoding": "identity"})
+    assert response.status_code == 200 and "content-encoding" not in response.headers
     assert response.content == (ROOT / path).read_bytes()
     # Text is declared UTF-8; a font is binary and carries no character set.
     assert response.headers["content-type"] == (

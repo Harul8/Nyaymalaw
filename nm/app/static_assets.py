@@ -6,6 +6,7 @@ that tree is a public static root, and request text never becomes a file path.
 
 from __future__ import annotations
 
+import gzip
 import stat
 from collections.abc import Callable, Mapping
 from pathlib import Path
@@ -41,6 +42,14 @@ SIGN_IN_ADDRESS = "/app#admin"
 # Reuse the framework's conditional-header semantics, not its path lookup or
 # serving entry point. This validator has no directory or package population.
 _REVALIDATION = StaticFiles()
+#: THE PAGE'S OWN FILES ARE SENT COMPRESSED (plan AN.58, piece 58a; D268; the second review of 17 Nov 2026): the page, its
+#: script and its styles are text, and the script alone is over half a megabyte - slow on a phone in a court corridor. Only
+#: these files, here at their one owner: no answer of the API is compressed (an answer carries an advocate's matter, and the
+#: progress stream must not be held back), and a font or an image is compressed already. A browser that does not ask for
+#: gzip is sent the file as it is.
+_COMPRESSED = frozenset({".html", ".js", ".css", ".svg"})
+#: A file smaller than this gains nothing worth a second copy in memory.
+_SMALLEST_COMPRESSED = 1024
 
 
 class BrowserAssetsRefused(ValueError):
@@ -67,6 +76,16 @@ def browser_assets_router(*, asset_paths: Callable[[], Mapping[str, Path]],
     """
     gates = MappingProxyType(dict(gated or {}))
     owned_root = root.resolve(strict=True)
+    packed: dict[str, tuple[tuple[int, int], bytes]] = {}
+
+    def compressed(name: str, path: Path, info) -> bytes:
+        """The file's bytes, gzipped, made once for each state of the file (its size and the time it was last written): a
+        changed file is compressed again, never served from the copy of what it was."""
+        state = (info.st_size, info.st_mtime_ns)
+        held = packed.get(name)
+        if held is None or held[0] != state:
+            held = packed[name] = (state, gzip.compress(path.read_bytes(), compresslevel=6, mtime=0))
+        return held[1]
     admitted_owner = None
     assets = MappingProxyType({})
     canonical = {}
@@ -133,6 +152,24 @@ def browser_assets_router(*, asset_paths: Callable[[], Mapping[str, Path]],
             media_type=MEDIA_TYPES[path.suffix],
             headers=_HEADERS,
         )
+        # A file sent in two forms tells every cache between that the form depends on what the browser accepts.
+        packable = path.suffix in _COMPRESSED and info.st_size >= _SMALLEST_COMPRESSED
+        if packable:
+            response.headers["vary"] = "Accept-Encoding"
+        accepted = {part.split(";")[0].strip().lower() for part in request.headers.get("accept-encoding", "").split(",")}
+        if packable and "gzip" in accepted:
+            try:
+                body = compressed(name, path, info)
+            except OSError:
+                raise HTTPException(status_code=404) from None
+            # The compressed form is another representation: it has its own validator, so a cache never answers a browser
+            # that wants one form with the other.
+            headers = {**_HEADERS, "vary": "Accept-Encoding", "content-encoding": "gzip",
+                       "etag": response.headers["etag"].rstrip('"') + '-gzip"',
+                       "last-modified": response.headers["last-modified"]}
+            response = Response(content=b"" if request.method == "HEAD" else body, media_type=MEDIA_TYPES[path.suffix],
+                                headers=headers)
+            response.headers["content-length"] = str(len(body))
         if _REVALIDATION.is_not_modified(response.headers, request.headers):
             response = NotModifiedResponse(response.headers)
             response.headers["x-content-type-options"] = "nosniff"
