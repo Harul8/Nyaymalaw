@@ -6,9 +6,11 @@ see before anything about the way of working changes. READ-ONLY on the workbook;
 What it writes:
   rows/<ID>.md         every row of the sheet, every non-empty cell under its column's name: nothing of the sheet is left out.
   decisions/<ID>.md    each decision record in a file of its own: the owner's words (O rows), the product decisions (P rows) and the
-                       decision register (Q rows) whole; and each D-numbered record, cut from the rows where it is written - a record
-                       runs from the line or sentence that opens with its number to the next that opens with a number. A record that
-                       opens with several numbers ("D229, D231, D232 ...") is filed under each of them.
+                       decision register (Q rows) whole; and each D-numbered record, cut from the AN rows where it is written - in
+                       the Description a record runs from the line or sentence that opens with its number to the next that opens
+                       with a number; in the evidence and register columns (6 onwards) only a line opens one (an evidence record
+                       titled by its decision); Status and 'Governs' are not cut. A record that opens with several numbers ("D229,
+                       D231, D232 ...") is filed under each of them.
   PIECES.md            one line a piece (the AN and SEQ rows): its status proposed from a closed list by the rule written at its
                        top, the status words the row uses in order, the decisions it holds, and a link to the row. With
                        --running (the commit the running server was started on), a row with commits - those it cites, and those
@@ -35,6 +37,7 @@ WHOLE = re.compile(r"^(O|P|Q)\d+$")
 PIECE = re.compile(r"^(AN|SEQ)\.\d+$")
 #: A record opens where a line, or a sentence, starts with a decision's number: "D12 (", "D229, D231", "D254. THE ...", "D3-D8".
 OPENS = re.compile(r"(?:(?<=\n)|^|(?<=\. ))(D\d{1,3}(?:\s*(?:,|and|-|–|to)\s*D\d{1,3})*)(?=[ .(:,;'’])")
+OPENS_LINE = re.compile(r"(?:(?<=\n)|^)(D\d{1,3}(?:\s*(?:,|and|-|–|to)\s*D\d{1,3})*)(?=[ .(:,;'’])")
 NUMBER = re.compile(r"D(\d{1,3})")
 #: The closed list of a piece's status, and the rule that proposes one from the status cell (column 5). The rule reads the words the
 #: plan writes in capitals; it cannot tell a piece built in whole from one built in part, which the owner's reading settles.
@@ -80,9 +83,9 @@ def numbers(opening):
     return [f"D{n}" for n in found]
 
 
-def records(text):
+def records(text, opens=OPENS):
     """The cell cut at each opening: (preamble, [(opening, segment)]). Joined back in order, the pieces are the cell exactly."""
-    marks = [m for m in OPENS.finditer(text)]
+    marks = [m for m in opens.finditer(text)]
     if not marks:
         return text, []
     preamble, cut = text[:marks[0].start()], []
@@ -190,9 +193,9 @@ def main():
                 f"{column_name(column)}:\n{text}" for column, text in sorted(cells.items()) if column > 1)))
         if name.startswith("AN."):
             for column, text in sorted(cells.items()):
-                if column < 3:
+                if column < 3 or column in (4, 5):
                     continue
-                preamble, cut = records(text)
+                preamble, cut = records(text, OPENS if column == 3 else OPENS_LINE)
                 if cut:
                     cut_cells += 1
                 if preamble + "".join(segment for _, segment in cut) != text:
