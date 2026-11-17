@@ -40,9 +40,9 @@ jobs:
   # THE BROWSER JOURNEYS ON EVERY PUSH (plan AN.57, piece 57a; D263; the second review of 17 Nov 2026). The page itself is driven in
   # the runner's own Chromium against a server started on a throwaway store, with stand-in models: no model is called and nothing
   # is paid. Until this job, the runner left every journey out, and nineteen of twenty-three journey checks had failed unseen
-  # (AN.54, 54b16-54b20). The journeys are the files that launch the browser or borrow the harness that does; they are found
-  # from the source, so a new journey file is run the day it is added. A job of its own, so a failing journey and a failing
-  # offline test are seen apart.
+  # (AN.54, 54b16-54b20). The journeys are the files that name the browser library or borrow, directly or through another file,
+  # from one that does; development_environment/developer_tooling/journey_files.py finds them from the source, so a new
+  # journey file is run the day it is added. A job of its own, so a failing journey and a failing offline test are seen apart.
   journeys:
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -62,7 +62,7 @@ jobs:
           python -m playwright install --with-deps chromium
       - name: The browser journeys
         run: |
-          files=$(grep -lE "playwright|test_the_journey_login_to_logout" tests/test_*.py)
+          files=$(python development_environment/developer_tooling/journey_files.py)
           echo "$files"
           # A journey that cannot find its browser here must fail, not skip: the job exists so that the page is watched.
           python -c "import playwright.sync_api"
