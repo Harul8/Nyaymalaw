@@ -20,13 +20,12 @@ def test_the_server_says_which_models_and_efforts_may_be_chosen_and_the_defaults
     offered = served.client.get("/api/turn-choices")
     assert offered.status_code == 200
     assert offered.json() == {
-        "models": [{"id": "gpt-6-luna", "label": "6 Luna", "cost": ""},
-                   # Plan AN.38 (D47): Auto, beside the models, 6 Luna still the default.
-                   {"id": "auto", "label": "Auto", "cost": "6 Luna, and 6.1 Terra where the work shows it needs it"},
-                   {"id": "gpt-6.1-terra", "label": "6.1 Terra", "cost": "about 8-10x Luna's cost"},
-                   {"id": "gpt-6.1-sol", "label": "6.1 Sol", "cost": "about 16-20x Luna's cost"}],
-        "efforts": [{"id": "low", "label": "Low"}, {"id": "medium", "label": "Medium"}, {"id": "high", "label": "High"},
-                    {"id": "max", "label": "Max"}],
+        # Plan AN.58 (D288): two models, each with what it is for; Auto and 6.1 Sol no longer offered.
+        "models": [{"id": "gpt-6-luna", "label": "6 Luna (routine work)", "cost": ""},
+                   {"id": "gpt-6.1-terra", "label": "6.1 Terra (complex matters)", "cost": "about 8-10x Luna's cost"}],
+        # How thorough NM is, in plain words, each the effort it was before.
+        "efforts": [{"id": "low", "label": "Quick"}, {"id": "medium", "label": "Standard"}, {"id": "high", "label": "Thorough"},
+                    {"id": "max", "label": "Most thorough"}],
         "default": {"model": "gpt-6-luna", "effort": "medium"}}
 
 
@@ -41,8 +40,24 @@ def test_a_message_carries_the_choice_to_the_turn_which_records_what_it_ran_with
     assert rows[1]["response"]["metrics"]["chosen"] == {"model": "gpt-6.1-terra", "effort": "high"}, "saved as it was sent"
 
 
-@pytest.mark.parametrize("change", [{"model": "gpt-5.1"}, {"effort": "extreme"}, {"model": ""}])
+@pytest.mark.parametrize("change", [{"model": "gpt-5.1"}, {"effort": "extreme"}, {"model": ""},
+                                    # D288: offered before, offered no longer - a new message may not name them.
+                                    {"model": "gpt-6.1-sol"}, {"model": "auto"}])
 def test_a_model_or_an_effort_the_server_does_not_offer_is_refused_before_any_work(served, change):
     calls = len(served.model.calls)
     refused = send(served, **change)
     assert refused.status_code == 422 and len(served.model.calls) == calls
+
+
+def test_a_turn_with_no_choice_saved_is_bound_as_written_on_luna_so_that_terra_reviews_it(served, monkeypatch):
+    """Plan AN.51 (D289): a go-ahead takes the model from the saved request, which names no default; the turn is still bound as
+    written on 6 Luna, so that its review runs on the reviewer and never on the installation's own review setting."""
+    seen, binding = [], served.app._model_for
+
+    def bound(advocate_id, **asked):
+        seen.append(asked.get("text_model"))
+        return binding(advocate_id, **asked)
+    monkeypatch.setattr(served.app, "_model_for", bound)
+    served.app.run_turn(advocate_id="core-owner@example.test", session_current=lambda: True,
+                        message="Inspect this reported account.", turn_id="turn-1")
+    assert seen and set(seen) == {"gpt-6-luna"}

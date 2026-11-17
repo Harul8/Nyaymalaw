@@ -79,6 +79,11 @@ def raised(level):
 #: setting of those releases (the adapter's). The choice resets to medium for each new conversation (the page).
 CHOICES = ("low", "medium", "high", "max")
 DEFAULT_CHOICE = "medium"
+#: How thorough NM is, as the advocate is asked it (plan AN.58, D288, from D270: the choice in plain words, which code maps to the
+#: effort): each effort's word, as the send box offers it and the line under a reply names it.
+CHOICE_WORDS = {"low": "Quick", "medium": "Standard", "high": "Thorough", "max": "Most thorough"}
+if tuple(CHOICE_WORDS) != CHOICES:
+    raise RuntimeError("Every effort an advocate may choose has its plain word, in order")
 #: The most any model an advocate may choose writes in one answer, its reasoning included. From D27 every call may write it, within
 #: its room, at every effort; what a call may write no longer grows with the choice (D23, contract (4), subsumed).
 MOST_OUTPUT = 128_000

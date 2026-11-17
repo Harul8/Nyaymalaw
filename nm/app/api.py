@@ -54,7 +54,7 @@ from nm.core_engine.retrieval import offered
 from nm.core_engine import checklist
 from nm.core_engine.retrieval import SearchUnavailable
 from nm.shared.citation_contracts import judgment_place, provision_label, statute_title
-from nm.core_engine.reasoning import CHOICES as EFFORT_CHOICES, DEFAULT_CHOICE as DEFAULT_EFFORT
+from nm.core_engine.reasoning import CHOICE_WORDS as EFFORT_WORDS, CHOICES as EFFORT_CHOICES, DEFAULT_CHOICE as DEFAULT_EFFORT
 from nm.shared.egress_contracts import EgressRefused
 from nm.shared.external_ai_contracts import ModelPermissionRefused
 from nm.shared.model_config import DEFAULT_TURN_MODEL, TURN_CHOICES
@@ -505,8 +505,8 @@ class TurnRequest(BaseModel):
     chat_id: str | None = Field(default=None, max_length=200)
     thread_id: str | None = Field(default=None, max_length=200)
     turn_id: str | None = Field(default=None, max_length=200)
-    #: The model and the effort the advocate chose for this message (plan AN.33, D23), from the server's own lists
-    #: (/api/turn-choices); 6 Luna and medium unless chosen.
+    #: The model and the effort the advocate chose for this message (plan AN.33, D23; AN.58, D288), from the server's own lists
+    #: (/api/turn-choices); 6 Luna and medium (Standard) unless chosen. A new message may name only a model offered now.
     model: str = DEFAULT_TURN_MODEL
     effort: str = DEFAULT_EFFORT
 
@@ -521,7 +521,7 @@ class TurnRequest(BaseModel):
     @classmethod
     def offered_effort(cls, value: str) -> str:
         if value not in EFFORT_CHOICES:
-            raise ValueError("Choose how hard NM reasons from the list it offers.")
+            raise ValueError("Choose how thorough NM is from the list it offers.")
         return value
     #: Documents sent with this message, by their exact references (owner decisions,
     #: 15 Oct 2026); each is read from the signed-in advocate's own space only.
@@ -786,10 +786,11 @@ def _usage_view(standing: dict) -> dict:
 
 @app.get("/api/turn-choices")
 def turn_choices(advocate_id: Advocate) -> dict:
-    """The models and the efforts an advocate may choose for a message, the server's own lists (plan AN.33, D23): each model with
-    what it costs beside 6 Luna, and the defaults each conversation opens with."""
+    """The models and the efforts an advocate may choose for a message, the server's own lists (plan AN.33, D23; AN.58, D288): each
+    model with what it is for and what it costs beside 6 Luna, each effort as how thorough NM is in plain words, and the defaults
+    each conversation opens with."""
     return {"models": [{"id": model, "label": label, "cost": cost} for model, label, cost in TURN_CHOICES],
-            "efforts": [{"id": effort, "label": effort.capitalize()} for effort in EFFORT_CHOICES],
+            "efforts": [{"id": effort, "label": EFFORT_WORDS[effort]} for effort in EFFORT_CHOICES],
             "default": {"model": DEFAULT_TURN_MODEL, "effort": DEFAULT_EFFORT}}
 
 

@@ -2328,13 +2328,20 @@ function replyFooter(entry, copyText) {
   if (noteAvailable(answer)) foot.appendChild(noteControl(answer, status, 'The full note, with every source:'));
   const at = answeredAt(answer);
   if (at) foot.appendChild(at);
-  // Plan AN.33 (D23): the model and the effort the answer ran with, as the turn recorded them.
+  // Plan AN.33 (D23): the model and the effort the answer ran with, as the turn recorded them; plan AN.58 (D288) the effort as how
+  // thorough, in the send box's plain word; plan AN.51 (D289) who reviewed, from the turn's own record of its review calls.
   const chosen = answer.metrics && answer.metrics.chosen;
   if (chosen && chosen.model) {
-    const names = { 'gpt-6-luna': '6 Luna', 'gpt-6.1-terra': '6.1 Terra', 'gpt-6.1-sol': '6.1 Sol' };
+    const names = { 'gpt-6-luna': '6 Luna', 'gpt-6.1-terra': '6.1 Terra', 'gpt-6.1-sol': '6.1 Sol', auto: 'Auto' };
+    const depths = { low: 'Quick', medium: 'Standard', high: 'Thorough', max: 'Most thorough' };
+    const effort = String(chosen.effort || 'medium');
+    const reviewing = ['core_response_review', 'core_response_cross_check'];
+    const reviewers = [...new Set(((answer.metrics.calls) || [])
+      .filter((call) => call && reviewing.includes(call.operation) && call.model).map((call) => names[call.model] || call.model))];
     const line = document.createElement('span');
     line.className = 'reply-chosen';
-    line.textContent = `${names[chosen.model] || chosen.model} · ${String(chosen.effort || 'medium').replace(/^./, (c) => c.toUpperCase())}`;
+    line.textContent = [names[chosen.model] || chosen.model, depths[effort] || effort,
+      ...(reviewers.length ? [`reviewed by ${reviewers.join(' and ')}`] : [])].join(' · ');
     foot.appendChild(line);
   }
   foot.appendChild(status);
@@ -8301,8 +8308,9 @@ function startMatter(chatId = null) {
 
 // THE MODEL AND THE EFFORT FOR A MESSAGE (plan AN.33, D23; owner, 1 Nov 2026: "6 Luna being the default model. And whenever the
 // user selects another model, that selected model will be used throughout", "Reset for new conversations"): the server's own
-// lists, beside the send box; 6 Luna and Medium each time a conversation opens; Terra and Sol said as a cost beside Luna's. What
-// differs from the defaults the server gave is kept in state.turnChoice, which the message carries.
+// lists, beside the send box; 6 Luna and Standard each time a conversation opens; Terra said as a cost beside Luna's. Plan AN.58
+// (D288): two models, each with what it is for, and the effort as how thorough NM is, in plain words. What differs from the
+// defaults the server gave is kept in state.turnChoice, which the message carries.
 let turnCosts = {};
 
 function rememberTurnChoice() {

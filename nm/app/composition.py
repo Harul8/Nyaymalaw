@@ -35,7 +35,7 @@ from nm.shared.names_contracts import discard
 from nm.shared.storage_errors_port import StoredObjectUnreadable
 from nm.shared.egress_policy import (CONTROLLED_LOCAL_PROCESSORS, INDEX_PROCESSOR, LOCAL_BASIS, OUTBOX_PROCESSOR,
                                      STORAGE_PROCESSOR, egress_policy)
-from nm.shared.model_config import AUTO_TURN, DEFAULT_TURN_MODEL, TURN_MODELS, load, load_dotenv
+from nm.shared.model_config import AUTO_TURN, DEFAULT_TURN_MODEL, KNOWN_TURN_MODELS, TURN_REVIEWER, load, load_dotenv
 from nm.shared.model_metered import MeteredModel
 from nm.shared.model_openai_adapter import OpenAIModelAdapter
 from nm.shared.model_policed import PolicedModel
@@ -246,9 +246,9 @@ class Application:
             if not isinstance(self._model_adapter, OpenAIModelAdapter):
                 raise ValueError('A live evaluation budget requires the OpenAI adapter.')
             from nm.shared.model_call_budget import SessionCallBudget
-            # Every model an advocate may choose for a turn may run in a bounded session too (plan AN.33, D23).
+            # Every model a turn may be written on, and its reviewer, may run in a bounded session too (plan AN.33, D23; D288-D289).
             models = tuple(dict.fromkeys([*(c.model for tier, c in self.config.tiers.items() if tier is not Tier.EMBED),
-                                          *(model for model, _, _ in TURN_MODELS)]))
+                                          *sorted(KNOWN_TURN_MODELS), TURN_REVIEWER]))
             self._model_adapter = self._model_adapter.with_call_budget(SessionCallBudget(
                 Path(budget_path), settings.get('NM_EVAL_MAX_USD', '25'), models=models))
         # Configuration is not corpus readiness; models and indices load on demand.
@@ -388,8 +388,9 @@ class Application:
 
     def run_turn(self, *, advocate_id, session_current, document_refs=(), model_choice=None, effort=None, steps=None, go=None,
                  **request):
-        """One turn for an advocate. model_choice and effort: what they chose for it (plan AN.33, D23) - the model every text call
-        of the turn runs on, and how hard each reasons; None: as configured, at the table's own levels. steps (plan AN.48, 48a):
+        """One turn for an advocate. model_choice and effort: what they chose for it (plan AN.33, D23) - the model the turn is
+        written on, and how hard each call reasons; None: 6 Luna, the default (a saved request names no default), at the table's
+        own levels. Its review runs on the reviewer whichever model writes (plan AN.51, D289). steps (plan AN.48, 48a):
         "interactive" - the message is worked step by step, stopping for the advocate's go-ahead after each step; anything else -
         end to end, as before. go: the go-ahead of a matter already worked step by step (go_turn, continue_turn)."""
         from nm.core_engine import routing, steps as stepwise, titles
@@ -412,8 +413,10 @@ class Application:
         # Plan AN.38 (D47-D49): Auto runs every call on 6 Luna and moves one to the stronger model where the turn's own evidence
         # says so; that model is bound, under the same permission and allowance, only if a call moves to it.
         auto = model_choice == AUTO_TURN
-        model = _DeferredAdapter(lambda: self._model_for(advocate_id, session_current=session_current,
-                                                         text_model=DEFAULT_TURN_MODEL if auto else model_choice))
+        # D289: a turn is always bound as written on a model - the default where none was chosen or saved - so that its review is
+        # the reviewer's, never the installation's review setting.
+        written = DEFAULT_TURN_MODEL if auto or model_choice is None else model_choice
+        model = _DeferredAdapter(lambda: self._model_for(advocate_id, session_current=session_current, text_model=written))
         stronger = (_DeferredAdapter(lambda: self._model_for(advocate_id, session_current=session_current,
                                                              text_model=routing.STRONGER)) if auto else None)
         turn_id, reported = request.get('turn_id'), []
@@ -597,7 +600,7 @@ class Application:
         else:
             choice = asked.get('model')
             model = self._model_for(advocate_id, session_current=session_current,
-                                    text_model=DEFAULT_TURN_MODEL if choice == AUTO_TURN else choice)
+                                    text_model=DEFAULT_TURN_MODEL if choice in (AUTO_TURN, None) else choice)
             try:
                 judgement = message_reader.read(model, held, message)
             except RequestRejected as exc:

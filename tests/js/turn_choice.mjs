@@ -1,7 +1,7 @@
 // The model and the effort for a message (plan AN.33, D23; piece 33n): the send box's lists filled from the server's own, 6 Luna and
-// Medium each time a conversation opens, Terra and Sol said as a cost beside Luna's, the choice in the message only where it is
-// not the default, and under a reply the model and the effort it ran with. Runs the page's own code from nm/app/app.js against a
-// stub DOM; not browser QA.
+// Standard each time a conversation opens, Terra said as a cost beside Luna's, the choice in the message only where it is not the
+// default, and under a reply the model, how thorough (plan AN.58, D288) and who reviewed it (plan AN.51, D289). Runs the page's own
+// code from nm/app/app.js against a stub DOM; not browser QA.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -35,10 +35,12 @@ const nodes = { 'turn-model': el('select'), 'turn-effort': el('select'), 'turn-c
 Object.assign(nodes['turn-model'], { value: 'gpt-6-luna', dataset: { default: 'gpt-6-luna' } });
 Object.assign(nodes['turn-effort'], { value: 'medium', dataset: { default: 'medium' } });
 const asked = [];
+// The server's lists as /api/turn-choices gives them (tests/test_the_send_box_offers_the_servers_models_and_efforts.py).
 const offered = {
-  models: [{ id: 'gpt-6-luna', label: '6 Luna', cost: '' }, { id: 'gpt-6.1-terra', label: '6.1 Terra', cost: "about 8-10x Luna's cost" },
-    { id: 'gpt-6.1-sol', label: '6.1 Sol', cost: "about 16-20x Luna's cost" }],
-  efforts: [{ id: 'low', label: 'Low' }, { id: 'medium', label: 'Medium' }, { id: 'high', label: 'High' }, { id: 'max', label: 'Max' }],
+  models: [{ id: 'gpt-6-luna', label: '6 Luna (routine work)', cost: '' },
+    { id: 'gpt-6.1-terra', label: '6.1 Terra (complex matters)', cost: "about 8-10x Luna's cost" }],
+  efforts: [{ id: 'low', label: 'Quick' }, { id: 'medium', label: 'Standard' }, { id: 'high', label: 'Thorough' },
+    { id: 'max', label: 'Most thorough' }],
   default: { model: 'gpt-6-luna', effort: 'medium' },
 };
 const context = {
@@ -57,20 +59,20 @@ const { resetTurnChoice, loadTurnChoices, replyFooter } = context.exported;
 await loadTurnChoices();
 assert.deepEqual(asked, ['/api/turn-choices']);
 assert.deepEqual(nodes['turn-model'].children.map((option) => [option.value, option.textContent]), [
-  ['gpt-6-luna', '6 Luna'], ['gpt-6.1-terra', "6.1 Terra · about 8-10x Luna's cost"], ['gpt-6.1-sol', "6.1 Sol · about 16-20x Luna's cost"]]);
-assert.deepEqual(nodes['turn-effort'].children.map((option) => option.textContent), ['Low', 'Medium', 'High', 'Max']);
+  ['gpt-6-luna', '6 Luna (routine work)'], ['gpt-6.1-terra', "6.1 Terra (complex matters) · about 8-10x Luna's cost"]]);
+assert.deepEqual(nodes['turn-effort'].children.map((option) => option.textContent), ['Quick', 'Standard', 'Thorough', 'Most thorough']);
 assert.equal(nodes['turn-model'].value, 'gpt-6-luna');
 assert.equal(nodes['turn-effort'].value, 'medium');
 
-// The defaults travel as nothing; a choice travels as itself, and Terra and Sol say their cost.
+// The defaults travel as nothing; a choice travels as itself, and Terra says its cost.
 assert.deepEqual({ ...context.state.turnChoice }, {});
-nodes['turn-model'].value = 'gpt-6.1-sol';
+nodes['turn-model'].value = 'gpt-6.1-terra';
 nodes['turn-model'].onchange();
-assert.equal(nodes['turn-cost'].textContent, "about 16-20x Luna's cost");
+assert.equal(nodes['turn-cost'].textContent, "about 8-10x Luna's cost");
 assert.equal(nodes['turn-cost'].hidden, false);
 nodes['turn-effort'].value = 'max';
 nodes['turn-effort'].onchange();
-assert.deepEqual({ ...context.state.turnChoice }, { model: 'gpt-6.1-sol', effort: 'max' });
+assert.deepEqual({ ...context.state.turnChoice }, { model: 'gpt-6.1-terra', effort: 'max' });
 assert.ok(app.includes('...(state.turnChoice || {}),'), 'the message carries what was chosen');
 
 // A conversation opened starts again at 6 Luna and Medium.
@@ -81,9 +83,17 @@ assert.equal(nodes['turn-effort'].value, 'medium');
 assert.equal(nodes['turn-cost'].hidden, true);
 assert.deepEqual({ ...context.state.turnChoice }, {});
 
-// Under a reply, what it ran with, where the turn recorded it.
-const foot = replyFooter({ answer: { metrics: { chosen: { model: 'gpt-6.1-terra', effort: 'high' } } } }, () => '');
-assert.ok(foot.children.some((kid) => kid.className === 'reply-chosen' && kid.textContent === '6.1 Terra · High'));
+// Under a reply, what it ran with, where the turn recorded it: the model, how thorough in the send box's word, and who reviewed it
+// - read from the turn's own record of its review calls, so that an answer saved before says the model that reviewed it then.
+const said = (answer) => replyFooter({ answer }, () => '').children.find((kid) => kid.className === 'reply-chosen').textContent;
+assert.equal(said({ metrics: { chosen: { model: 'gpt-6.1-terra', effort: 'high' } } }), '6.1 Terra · Thorough');
+const calls = [{ operation: 'core_response_writer', model: 'gpt-6-luna' }, { operation: 'core_response_review', model: 'gpt-6.1-terra' },
+  { operation: 'core_response_cross_check', model: 'gpt-6.1-terra' }];
+assert.equal(said({ metrics: { chosen: { model: 'gpt-6-luna', effort: 'medium' }, calls } }), '6 Luna · Standard · reviewed by 6.1 Terra');
+assert.equal(said({ metrics: { chosen: { model: 'gpt-6-luna', effort: 'low' },
+  calls: [{ operation: 'core_response_review', model: 'gpt-6-luna' }] } }), '6 Luna · Quick · reviewed by 6 Luna');
+assert.equal(said({ metrics: { chosen: { model: 'auto', effort: 'max' }, calls: [...calls,
+  { operation: 'core_response_review', model: 'gpt-6-luna' }] } }), 'Auto · Most thorough · reviewed by 6.1 Terra and 6 Luna');
 const older = replyFooter({ answer: { metrics: {} } }, () => '');
 assert.ok(!older.children.some((kid) => kid.className === 'reply-chosen'), 'an answer saved before says nothing');
 

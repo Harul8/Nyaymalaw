@@ -1040,7 +1040,7 @@ def process(model, store, searcher, *, advocate_id, message, turn_id, chat_id=No
         raise ConversationRefused("Sign in again before continuing.", status=401)
     effort = reasoning.DEFAULT_CHOICE if effort is None else effort
     if effort not in reasoning.CHOICES:
-        raise ConversationRefused("Choose how hard NM reasons from the list it offers.", status=422)
+        raise ConversationRefused("Choose how thorough NM is from the list it offers.", status=422)
     chosen = None if chosen_model is None and effort == reasoning.DEFAULT_CHOICE else {
         "model": chosen_model, "effort": effort}
     choice = tuple((name, value) for name, value, default in (

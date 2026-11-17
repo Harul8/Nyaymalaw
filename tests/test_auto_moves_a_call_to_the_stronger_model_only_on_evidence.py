@@ -1,6 +1,7 @@
 """Auto (plan AN.38, D47-D49): every step runs on 6 Luna, and a call moves to 6.1 Terra only on evidence code sees in the turn -
 a piece whose statements were found wrong twice (D51), an understanding still faulted after its revision, papers that differ before the time limits are worked
-out. Offline; scripted ports stand for the two models."""
+out. Offline; scripted ports stand for the two models. Plan AN.58 (D288, 17 Nov 2026): Auto is offered no longer - a new message may
+name 6 Luna or 6.1 Terra only - and a matter begun on Auto goes on under it."""
 from __future__ import annotations
 
 import pytest
@@ -8,7 +9,7 @@ import pytest
 from nm.core_engine import routing
 from nm.core_engine.calls import TurnCalls
 from nm.shared.budget_contracts import Completion
-from nm.shared.model_config import AUTO_TURN, DEFAULT_TURN_MODEL, TURN_CHOICES, TURN_MODELS
+from nm.shared.model_config import AUTO_TURN, DEFAULT_TURN_MODEL, KNOWN_TURN_CHOICES, TURN_CHOICES, TURN_MODELS
 from nm.shared.model_port import ModelResult, Prompt, Tier, Usage
 from tests.test_core_served import served  # noqa: F401 -- the fixture
 
@@ -120,25 +121,27 @@ def test_without_auto_no_call_ever_moves():
     assert not any(c.get("routed") for c in calls.calls)
 
 
-def test_auto_is_offered_beside_the_models_with_luna_the_default(served):
-    assert [model for model, _, _ in TURN_CHOICES] == ["gpt-6-luna", AUTO_TURN, "gpt-6.1-terra", "gpt-6.1-sol"]
-    assert TURN_MODELS[0][0] == DEFAULT_TURN_MODEL and AUTO_TURN not in {model for model, _, _ in TURN_MODELS}
+def test_auto_is_offered_no_longer_and_known_still_with_luna_the_default(served):
+    assert [model for model, _, _ in TURN_CHOICES] == ["gpt-6-luna", "gpt-6.1-terra"]
+    assert AUTO_TURN in {choice for choice, _, _ in KNOWN_TURN_CHOICES} - {model for model, _, _ in TURN_MODELS}
     offered = served.client.get("/api/turn-choices").json()
     assert [item["id"] for item in offered["models"]] == [model for model, _, _ in TURN_CHOICES]
     assert offered["default"]["model"] == DEFAULT_TURN_MODEL
 
 
-def test_a_turn_sent_on_auto_is_answered_and_saved_with_its_choice(served):
+def test_a_new_message_may_not_name_auto_and_a_matter_begun_on_auto_goes_on_under_it(served):
     from nm.core_engine import turn
     from nm.core_engine.conversation import chat_matter_id
-    reply = served.client.post("/api/turn", json={"message": "Inspect this reported account.", "turn_id": "turn-1",
-                                                   "model": AUTO_TURN})
-    assert reply.status_code == 200, reply.text
-    row = turn.saved_rows(served.store.load(chat_matter_id("core-owner@example.test", reply.json()["chat_id"])),
+    refused = served.client.post("/api/turn", json={"message": "Inspect this reported account.", "turn_id": "turn-1",
+                                                     "model": AUTO_TURN})
+    assert refused.status_code == 422 and refused.json()["detail"]["problems"][0]["loc"] == ["body", "model"]
+    # A matter begun on Auto before D288 is taken up again with the choice it was begun with.
+    reply = served.app.run_turn(advocate_id="core-owner@example.test", session_current=lambda: True,
+                                message="Inspect this reported account.", turn_id="turn-1", model_choice=AUTO_TURN)
+    row = turn.saved_rows(served.store.load(chat_matter_id("core-owner@example.test", reply["chat_id"])),
                           "core-owner@example.test")[0]
-    assert row["request"]["model"] == AUTO_TURN
-    assert reply.json()["metrics"]["chosen"]["model"] == AUTO_TURN
+    assert row["request"]["model"] == AUTO_TURN and reply["metrics"]["chosen"]["model"] == AUTO_TURN
     # Nothing in this plain turn moved a call.
-    assert not any(call.get("routed") for call in reply.json()["metrics"]["calls"])
+    assert not any(call.get("routed") for call in reply["metrics"]["calls"])
     refused = served.client.post("/api/turn", json={"message": "Inspect.", "turn_id": "turn-2", "model": "gpt-6.1-best"})
     assert refused.status_code == 422

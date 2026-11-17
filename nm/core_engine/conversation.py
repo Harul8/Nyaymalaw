@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 
 from nm.core_engine import questions, reasoning, steps as stepwise
 from nm.core_engine.documents import checked_material
-from nm.shared.model_config import DEFAULT_TURN_MODEL, TURN_CHOICES
+from nm.shared.model_config import DEFAULT_TURN_MODEL, KNOWN_TURN_CHOICES
 from nm.shared.store_port import StaleWrite
 from nm.work_the_file.matter_contracts import Matter
 
@@ -85,7 +85,7 @@ def _request(advocate_id, chat_id, turn_id, message, documents, choice=()):
 
 
 #: What a saved request may say the advocate chose for its turn (plan AN.33, D23): a model or an effort other than the default.
-_CHOSEN = {"model": frozenset(model for model, _, _ in TURN_CHOICES) - {DEFAULT_TURN_MODEL},
+_CHOSEN = {"model": frozenset(model for model, _, _ in KNOWN_TURN_CHOICES) - {DEFAULT_TURN_MODEL},
            "effort": frozenset(reasoning.CHOICES) - {reasoning.DEFAULT_CHOICE}}
 
 

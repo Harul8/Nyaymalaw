@@ -666,15 +666,15 @@
       <div class="composer-under">
         <span class="hint" id="hint">Enter to send · Shift+Enter for a new line</span>
         <span class="hint turn-cost" id="turn-cost" hidden></span>
-        <!-- PLAN AN.33 (D23): the model and the effort for this message, from the server's own lists; 6 Luna and Medium
-             each time a conversation opens. -->
+        <!-- PLAN AN.33 (D23), AN.58 (D288): the model and how thorough NM is for this message, from the server's own lists;
+             6 Luna and Standard each time a conversation opens. -->
         <label class="sr-only" for="turn-model">Model for this message</label>
         <select id="turn-model" class="turn-choice" aria-describedby="turn-cost" data-default="gpt-6-luna">
-          <option value="gpt-6-luna" selected>6 Luna</option>
+          <option value="gpt-6-luna" selected>6 Luna (routine work)</option>
         </select>
-        <label class="sr-only" for="turn-effort">How hard NM reasons for this message</label>
+        <label class="sr-only" for="turn-effort">How thorough NM is for this message</label>
         <select id="turn-effort" class="turn-choice" data-default="medium">
-          <option value="medium" selected>Medium</option>
+          <option value="medium" selected>Standard</option>
         </select>
       </div>
       <p id="dictation-state" class="dictation-state" role="status" aria-live="polite"></p>
