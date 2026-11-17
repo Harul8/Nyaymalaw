@@ -1,0 +1,189 @@
+# Working on Nyaymalaw
+
+## Authority and work queue
+
+Read AGENTS.md for standing build and release safeguards. The owner's current
+instruction determines authorised scope. Build coherent subactivities; the owner
+approved parallel agents on 10 October 2026. Record nonblocking deferrals.
+
+The facts that change - the working branch, which model does which step, the
+development spending limits, the servers and the state of the build - are in
+docs/CURRENT_STATE.md (D229). Correct it in the same commit as the change it
+records; this file keeps only the rules that do not date.
+
+Owner decisions P7 and P12 of 10 October 2026 establish these roles:
+
+| Source | Current role |
+|---|---|
+| Advocate build plan in docs/Nyaymalaw_Implementation_Plan.xlsx | One work queue: decisions, slice contracts, current status, evidence, model-call impact and remaining work. Record decisions before dependent implementation. |
+| docs/CURRENT_STATE.md | The branch, models, spending limits, servers and build state as they are today; corrected when they change. |
+| legal brain in the same workbook | Linked capability intent and detail. Earlier status notes are historical. |
+| AGENTS.md | Standing safeguards, prompt responsibilities, atomic changes and release rules. |
+| docs/BUILD_GUIDE.md and docs/playbooks/ | Proportionate Start, Build, Test and Sign-off method. |
+| docs/PROJECT_STRUCTURE.md | Code navigation. Verify actual source before changing behaviour. |
+| docs/BASELINE.md, docs/DEFECT_SHAPES.md, docs/GOLDEN_SET.md | Dated corpus measurements, defect mechanisms and evaluation materials; check present applicability. |
+
+Before Build and the Implementation Plan LB rows are historical. The earlier
+PRD/generated contracts, backlog registries, PLAN.md, older plan workbooks and
+the control-plane tools that read them were deleted on 19 October 2026 (owner
+decision P24) and remain in Git history. They do not choose current work or
+certify its completion, and historical status does not justify regenerating them.
+
+For each slice, use its plan row: trigger, original inputs, admitted output,
+decision owner, state effect, failure scope, bounded recovery and observable
+outcome. Reuse fitting contracts explicitly. Create no parallel tracker.
+
+## Current code and archive dependencies
+
+The app serves the new engine (how far it is accepted: docs/CURRENT_STATE.md). nm/app/api.py owns the authenticated
+HTTP boundary, nm/app/composition.py composes services and nm/app/main.py
+launches it. nm/core_engine/ owns context, interpretation, research, grounded response
+writing, independent review, rendering and the one check of each answer as it is saved.
+A saved conversation is picked up again exactly as saved, never reworked or rebuilt
+(owner decision P46); earlier conversations remain preserved and readable as saved.
+M1's unfinished candidate is kept in the private checkpoint named in the plan.
+
+The archived engines were deleted on 19 October 2026 (P24) with every file the
+production pipeline does not use; they remain in Git history. nm/Archives/legal_brain/
+keeps only the nine retrieval helpers and the citation contracts that the Act-store
+corpus jobs in pipeline/ import. Check actual imports before moving them.
+
+Before borrowing archived or Agentified NM code (that folder was deleted on 6 Nov 2026;
+its history is the NM-1.0 repository and a local bundle in .nm/archive), tell the owner exactly what
+will be reused, inspect its complete contract and validate current integration.
+Do not reinstate a whole engine or infer that its tests protect new code.
+Preserve unrelated edits, source documents and saved matters.
+
+Citation, provision-reference and frozen search-token patterns have one owner:
+nm/shared/citation_contracts.py. Reuse it instead of copying parsers.
+nm/shared/gates_contracts.py owns each registered gate's response, scope and
+recovery. Read actual rows and callers. A declared gate is not evidence it is
+wired; a local fallback cannot override its scope.
+
+## Building and verifying
+
+- Apply AGENTS' atomic rule: one prompt and one production file per repair piece,
+  with focused tests/documentation. Surface inseparable dependencies before
+  expanding scope. Integrate verified pieces before declaring a feature complete.
+- Name the general invariant. Separate measured cause from hypothesis, review
+  known defect shapes and enumerate affected callers from source.
+- Reuse one mechanism across the affected population. Remove redundant paths and
+  record dependent work rather than declaring a partial fix complete.
+- Observed matters are regression examples, never production keyword lists,
+  scenario branches, prompt exceptions or memorised legal answers.
+- Distinguish mechanical contracts from semantic/legal judgments. Preserve
+  independently valid work, meaningful unknowns and explicit coverage.
+- Catch expected service failures at their owner. Do not disguise programming
+  errors with broad model-error handlers. Preserve diagnostics without private data.
+- Sweep changed identities through callers. Use focused undefined-name and
+  conditional-variable checks where relevant; a renamed definition is insufficient.
+- Verify HTTP output and saved/reopened state. Browser acceptance examines the
+  actual response and sources against the full conversation. Valid JSON, a
+  reviewer verdict and isolated tests do not prove semantic accuracy.
+- Use actual preceding outputs for integration, not invented intermediate state.
+  Synthetic checks establish exercised invariants; bounded live runs measure
+  model behaviour. Say which evidence was obtained.
+- Keep failing tests guarding live behaviour. Archive by retired responsibility,
+  never merely because a test fails, cannot load or reduces the pass count.
+- Record evidence and limitations on Advocate build plan. Planning cleanup and a
+  paused engine cannot earn runtime or production acceptance.
+
+## Responses and model calls
+
+Owner standing instructions, 13 October 2026, for every model step:
+- Work in a reasoning loop, never one shot: the model thinks about the input,
+  does the work, checks its own result against the source, corrects it, and only
+  then moves on. Give reasoning time where the step needs judgement.
+- Do not write prompt rules that work against the models' natural capabilities.
+  State the purpose and needed outcome in plain language; leave understanding of
+  context, meaning, disputes, facts, rights and issues to the model; avoid
+  bookkeeping duties, artificial caps and rigid micro-rules; let code make the
+  mechanical checks (exact quotes, owned IDs, permissions) afterwards.
+
+P10 permits natural professional answers/summaries, grounded analysis, relevant
+limitations and proposed questions/next steps. S3 owns their admission contract.
+Code owns saved-effect, execution/completion claims, effect-only acknowledgements
+and service status, including inside a natural answer.
+
+Independent review sees the whole requested work, complete original conversation,
+current authorised records, admitted relevant evidence and complete draft.
+It checks additions, omissions, framing and contradictions, not just selected
+sentence/passage matches. Substantive rewrites are mechanically checked and
+independently reviewed again. Owned IDs, exact quotations, permission, source
+identity and confirmed persistence remain code checks.
+
+Which model does which step is the owner's decision, named in code
+(nm/shared/model_config.py) and listed in docs/CURRENT_STATE.md; so are the
+development spending limits. Separate calls on one model do not imply model
+diversity. Record normal/conditional calls, actual model IDs, cache reads/writes,
+tokens, latency and cost. Ask before every paid run the owner has not named, and
+keep each within its authorised spend. Push verified checkpoints every 10–15
+minutes and at logical milestones. Do not add calls merely to repeat a control.
+P16 imposes no product spending cap; recovery remains bounded and development
+experiments retain their explicitly authorised spend/run limits. A comparison does
+not promote its model.
+
+## Corpus discipline
+
+- legal_database/ is a gitignored folder inside the checkout (moved here from the
+  Agentified NM folder on 6 Nov 2026, owner's decision; no longer a junction). Never
+  move or delete it without the owner's word, never force-add corpus bytes, and use
+  dated manifests to establish coverage.
+- Originals, chunks, parents and indexes have different metadata. Identify the
+  store, version and filters inspected. One failed lookup cannot prove absence
+  from the corpus. Search tools that honour .gitignore skip it; search it explicitly.
+- Held corpus law is the product boundary. Availability, provenance, speaker,
+  court treatment, applicability, currency and binding force remain distinct.
+  Summarising an uploaded judgment does not admit it as governing authority.
+- Resolve named Acts/authorities by exact identity or checked canonical aliases.
+  Approximate matching proposes/ranks candidates; it never silently resolves
+  legal identity. Preserve ambiguity.
+- Unnamed candidate Acts still need identity/applicability checks. Topic keywords
+  and model memory cannot decide governing law.
+- Check index lineage, embedding model, dimensions and query processing.
+  Equal vector dimensions do not establish semantic compatibility.
+- Missing/unreadable indexes mean unavailable/not assessed, not no authority.
+  Never silently substitute an incompatible store or unbounded scan.
+- Ingestion, training, index builds and other long jobs require specific
+  authority. Explain effects and the intended command first.
+
+## Tooling and repository discipline
+
+Use available graph tools to narrow scope, then read exact source/tests.
+Stale graphs, untracked files, dynamic references and unsupported languages can
+hide code. Fall back to rg; never stage files or rebuild/embed a graph solely
+for read-only review. Structural and embedding freshness differ. Rank-fusion
+scores order results, not semantic confidence. A search_mode of none means no
+graph answer; hybrid includes semantic results and is not lexical degradation.
+
+Graph launcher: development_environment/developer_tooling/crg_serve.ps1.
+Keep credentials in approved local settings, never tracked configuration, logs or
+stdout. Stdio MCP stdout must remain protocol-clean. The launcher documents the
+process-local SSLKEYLOGFILE workaround; diagnose before blaming a library.
+Preserve required tooling extras when changing installations.
+
+Run from checkout root. Avoid editable installs that import another worktree.
+Preserve nm/source_layout.json roles, dependency boundaries and the closed
+browser-asset allowlist. nm/shared/source_layout.py owns the active source
+population and served assets; do not add a competing directory registry.
+Configure hooks by path.
+
+Use safe file-writing tools for escaped scripts. On Windows, inspect absolute
+paths and junction targets before moving/removing files; keep operations in one
+shell and never recurse into corpus targets.
+
+## Delivery
+
+Golden and served end-to-end evaluations need approval for the named bounded run.
+Existing explicit authority remains valid within scope. Paid calls, external
+processing, long jobs and destructive actions retain their own limits. Tests and
+technical review confer neither deployment authority nor legal sign-off.
+
+Commit and push each authorised verified milestone to the working branch named in
+docs/CURRENT_STATE.md, on the configured origin for
+https://github.com/Harul8/Nyaymalaw. Include only this task's
+changes, preserve concurrent work, never force-push, and state checks run and
+not run. Read-only, pause or no-commit instructions take precedence.
+
+Dated incident narratives remain in Git history, baseline/defect documents and
+archive evidence. Remeasure relevant claims before relying on them today.

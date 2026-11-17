@@ -11,8 +11,11 @@ Modes:
                      read one saved first message with one paper from the owner's store, READ-ONLY; seal its message and
                      material; make a throwaway store (store0) with one test account, AI permission and an allowance of $0.50.
   dry                the whole served turn path on a copy of store0 with a model that answers nothing (free): checks the wiring.
-  record [--again]   PAID: the same turn with the real model; every model call, search and held-law read recorded. Needs the
-                     graphics card to itself (the owner's server stopped) and the owner's word for the spend.
+  record [--again] [--cap-usd X]
+                     PAID: the same turn with the real model; every model call, search and held-law read recorded. Needs the
+                     graphics card to itself (the owner's server stopped) and the owner's word for the spend. --cap-usd raises
+                     the throwaway account's allowance in this run's own copy of store0 to X (store0 itself keeps $0.50): the
+                     product's allowance stops the turn there, so a run's spend is capped by the owner's word for it (D283).
   replay [--tag T] [--shift-day N]
                      FREE: the same turn with the recorded answers - each found by its exact request, whatever order the turn's
                      threads ask in - and the recorded searches, reads and date; no model call, no search, no graphics card.
@@ -780,6 +783,14 @@ def record(args):
     if (DATA / "recording.sealed").exists() and not args.again:
         sys.exit("A recording exists already; nothing sent (pass --again to make another, under the same cap).")
     run_dir = fresh_run_dir("record")
+    cap = CAP_MICRO
+    if args.cap_usd is not None:
+        from nm.arrive.store_usage import FileUsage
+        usage, cap = FileUsage(run_dir / "usage.sqlite"), int(round(args.cap_usd * 1e6))
+        granted = usage.standing(ADVOCATE)["granted"]
+        if cap > granted:
+            usage.grant(ADVOCATE, cap - granted, note=f"AN.48 baseline record under the owner's word for ${args.cap_usd:.2f} (D283)")
+        cap = usage.standing(ADVOCATE)["granted"]
     env = run_environment(run_dir)
     sink, book = ModelSink(), Book()
     search = SearchRecorder(HybridSearcher.local(root=HOME, corpus_dir=env.get("NM_CORPUS_DIR")), book)
@@ -790,7 +801,7 @@ def record(args):
     setting_before = clock_contracts.setting()
     stop, started = threading.Event(), time.time()
     threading.Thread(target=heartbeat, args=(stop, started), kwargs={"sink": sink, "book": book}, daemon=True).start()
-    print(f"recording into {run_dir} (allowance ${CAP_MICRO / 1e6:.2f})", flush=True)
+    print(f"recording into {run_dir} (allowance ${cap / 1e6:.2f})", flush=True)
     result, failure, seconds = run(app, inputs)
     stop.set()
     setting_after = clock_contracts.setting()
@@ -907,6 +918,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("mode", choices=("prepare", "dry", "record", "replay"))
     parser.add_argument("--again", action="store_true")
+    parser.add_argument("--cap-usd", type=float, help="record: the allowance of this run's throwaway account, in dollars (D283)")
     parser.add_argument("--recording")
     parser.add_argument("--tag")
     parser.add_argument("--shift-day", type=int, default=0)
