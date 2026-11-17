@@ -5,7 +5,7 @@ that change - the branch, the models, the spending limits and the state of the b
 that do not date. Correct it in the same commit as the change it records; the Advocate build plan stays the record of decisions
 and evidence (P7), and where the two disagree the plan is checked first.*
 
-As of 17 Nov 2026, evening.
+As of 17 Nov 2026, night.
 
 ## Branches and checkouts
 
@@ -13,23 +13,25 @@ As of 17 Nov 2026, evening.
 |---|---|
 | Working branch | `redesigned-architecture` (the AN.48 redesign, from 9 Nov 2026). Every piece is committed and pushed here. `s0-foundations`, origin's default, is an ancestor of it and has not moved since; nothing has been merged back. |
 | Hosting branch | `nyaymalaw-aws` (from 11 Nov 2026): the move to hosted machines, committed from a copy. The live checkout has never been switched to it. |
-| Live checkout | `C:\Users\rahul\Nyaymalaw`, on `redesigned-architecture` at `23210d04` - applied on 17 Nov 2026 by the owner's word (D284). Never checked out, stashed or reset over a live file; new code reaches it only by the owner's word. |
-| Build copy | `docs\NM-forensic-review` inside the live checkout: a checkout of its own on the same branch, where pieces are built and replayed before they are applied. It is ahead of the live checkout by the commits listed under "Built, not applied". |
+| Live checkout | `C:\Users\rahul\Nyaymalaw`, on `redesigned-architecture` at the branch's tip - the code applied on 17 Nov 2026, night, by the owner's word (D295), at `694bc758`; later commits change only the plan and these drafts. Never checked out, stashed or reset over a live file; new code reaches it only by the owner's word. |
+| Build copy | `docs\NM-forensic-review` inside the live checkout: a checkout of its own on the same branch, where pieces are built and replayed before they are applied. |
 
 ## Servers
 
 | Server | State |
 |---|---|
-| Pilot | Port 8000, `nm.app.main` from the live checkout, following the code on disk: an edit to `nm/` or `tests/` there restarts it and drops a turn in flight. Running on `23210d04`. |
-| Development server | Port 8071 (`start.ps1`). Not started on the new build: its first start runs D241's sweeps on the development store and erases 26 papers of one account, received over 30 days ago and named by no conversation (D244). Starting it is the owner's call; a copy of both stores is kept in `.nm/backups`. |
+| Pilot | Port 8000, `nm.app.main` from the live checkout without following code (`operations/pilot.ps1`). Not running since the evening of 17 Nov 2026 (its window was closed during a start); started again by the owner's own launcher, it runs the applied build. |
+| Development server | Port 8071 (`start.ps1`). Started by the owner at 14:45 on 17 Nov 2026 on `23210d04`; its first start ran D241's sweeps on the development store (D244). Not running now. |
+
+A copy of both stores from before each apply is kept in `.nm/backups` (never committed).
 
 ## Models
 
-| Step | Running code (`23210d04`) | Built, not applied |
-|---|---|---|
-| Writing the turn | The advocate's choice: 6 Luna (the default), Auto (Luna, moving a call to 6.1 Terra where the turn shows it needs it; AN.38), 6.1 Terra or 6.1 Sol | Two choices in plain words: 6 Luna for routine work (the default) and 6.1 Terra for complex matters (D270 as the owner decided it, D288); turns saved with Auto or Sol are shown as saved |
-| Independent review | The chosen model runs every call of the turn, the review too (same-model review allowed on this installation) | 6.1 Terra reviews every turn whichever model wrote it (D289) |
-| Embeddings | `text-embedding-3-large` | unchanged |
+| Step | Applied (`694bc758`) |
+|---|---|
+| Writing the turn | Two choices in plain words: 6 Luna for routine work (the default) and 6.1 Terra for complex matters (D270 as the owner decided it, D288); turns saved with Auto or Sol are shown as saved |
+| Independent review | The model the turn is written on: Luna unless the advocate chose Terra (D294, which withdrew D289's fixed Terra reviewer on the live run's cost; the owner: "lets use Luna only, and use Terra sparringly in complex situtations that Luna may not handle properly") |
+| Embeddings | `text-embedding-3-large` |
 
 Code names the models (`nm/shared/model_config.py`), not the installation's settings. Prices per million tokens, input/output:
 Luna $0.10/$0.50, Terra $1.00/$5.00, Sol $2.00/$10.00.
@@ -48,19 +50,16 @@ Luna $0.10/$0.50, Terra $1.00/$5.00, Sol $2.00/$10.00.
 What follows is a summary; each row of the plan holds the record, and `docs/proposed/D231/PIECES.md` lists every piece with a
 status proposed from git.
 
-- **Running (applied):** everything up to `23210d04` - AN.1-AN.47, AN.48's pieces 48a-48i, AN.49-AN.54 as far as built by the
-  morning of 17 Nov, AN.57 57a (browser journeys on every push), AN.58 58a (the page's files sent compressed).
-- **Built, not applied** (in the build copy, pushed; each replayed free against the recorded turn):
-  - 49d corrected (D285, D286) and wired: new answers gather the case under headings (D291);
-  - two models in plain words (D288) and Terra reviewing every turn (D289);
-  - every message step by step unless it asks otherwise (D287, the owner's D269);
-  - Search again offered at the stop, never done by itself (D282), with the step-record store's migration at first start;
-  - the case account through the independent review (D290);
-  - a finding that a piece misleads as a whole placed or said above it (D201).
-- **Held back:** D291 and D290 are not to be applied until D293 is settled - the live run found the case account leaves out a
-  requirement whose law rests on several passages even when every quotation is exact (AN.49).
-- **Waiting on the owner:** applying the commits above; D293 (several passages of law for one requirement; touches the frozen
-  board); the measured cost of Terra reviewing every turn (D289: about two to three times its estimate); D292 (the earlier-matter screens); D244 (the development server's first
-  start); D259 (the contact details the public pages give); D232 (the engineer who reviews before launch, and the person to call
-  when the server is down); D281 (the ten-matter run, once everything is ready); D229 and D231 themselves (these drafts).
-- **Open:** browser acceptance of the redesign (D141); live semantic acceptance; the hosting itself (`nyaymalaw-aws`).
+- **Applied:** everything up to `694bc758` - AN.1-AN.47, AN.48's pieces 48a-48i, AN.49 (49d corrected and wired: new answers
+  gather the case under headings, D285, D286, D291; a requirement's law a list of passages, D293), AN.50-AN.54 as built, AN.51's
+  D290 (the case account through the independent review), D201 and D294 (Luna only), AN.52's D282 (Search again offered at the
+  stop, never by itself), AN.57 57a, AN.58 58a, D287 (step by step unless a message asks otherwise) and D288 (two models).
+- **Built, not applied:** nothing.
+- **Decided, not built:** D292 (the screens of a matter saved before conversations, with the Legal library, Home and
+  Preparation screens, deleted with their skipped browser checks) - applied at the owner's next word once built and checked.
+- **Waiting on the owner:** starting the pilot; D259 (the contact details the public pages give); D232 (the engineer who
+  reviews before launch, and the person to call when the server is down); D281 (the ten-matter run, once everything is ready);
+  D229 and D231 themselves (these drafts).
+- **Open:** browser acceptance of the redesign (D141); live semantic acceptance - no served turn has yet made a gathered case,
+  and whether the model splits a requirement's law into its passages under D293 is measured only by a live run; the hosting
+  itself (`nyaymalaw-aws`).

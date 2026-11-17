@@ -26,6 +26,7 @@ AN.48 (D134-D135, 48f5 the progress stream); AN.33 (33n the model and effort cho
 ## Status
 
 PLANNED 17 Nov 2026 at the owner's instruction (column 3). BUILT and pushed 17 Nov 2026: 58a (the page's text files sent compressed - about 765 KB down to about 203 KB on a first visit; evidence in column 7, with the review's figure corrected: later visits already downloaded nothing). APPLIED 17 Nov 2026 with the rest of the build (D284, AN.48). DECIDED 17 Nov 2026 by the owner (column 3): D269 as D287 - every message step by step unless it asks for end to end or for one specific thing; D270 as D288 - two models, 6 Luna for routine work (the default) and 6.1 Terra for complex matters, and how thorough in plain words. BUILT and pushed 17 Nov 2026 in the build copy: D288 (eda8c515) and D287 (evidence in column 7); NOT applied to the owner's checkout, not seen in a browser, not run live.
+ APPLIED 17 Nov 2026 (night) with the rest of the build (D295; the owner's checkout at 694bc758, AN.48 column 11): D287 (step by step unless the message asks otherwise) and D288 (two models in plain words). Not seen in a browser.
 
 ## Notes
 
