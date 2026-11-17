@@ -2,10 +2,11 @@
 
 The owner, 12 Nov 2026, of the matter board: "consolidate and bring logically connected aspects into one bullet". Version 3 of the case
 step gives the account in a gathered shape from the same two calls: headings of the model's own choosing, each element under one,
-each thing to get from one person or place with every element it serves, each point of the other side with the heading it attacks,
-and what most decides the dispute. Code keeps only the mechanical rules, made again exactly on replay, and notes each element of the
-first account that the account kept does not carry. The module is not wired in (D234), so these tests drive it directly. The matter
-is invented.
+each thing to get from one person or place with every element it serves, each point of the other side with the elements it attacks
+(D285: code reads the heading from them), and what most decides the dispute. Code keeps only the mechanical rules, made again
+exactly on replay, and notes each element of the first account that the checked one no longer holds - by the number the check call
+gives each of its elements, since it rewords them (D286). The module is not wired in (D234), so these tests drive it directly. The
+matter is invented.
 """
 import json
 from copy import deepcopy
@@ -36,6 +37,11 @@ def other(attacks, relies_on="Their own entry in the record"):
             "answer": "It was made later.", "points": []}
 
 
+def kept(first):
+    """The check call's account where it keeps the first call's as it is: each element with the number it has there (D286)."""
+    return {**deepcopy(first), "elements": [{**item, "was": number} for number, item in enumerate(first["elements"], 1)]}
+
+
 def account(alias, words, located):
     """Headings: 1 holds two elements, 2 none, 3 has no name, 4 one; one element names a heading that is not in the list."""
     return {"headings": ["Possession", "Notice", "", "Title"],
@@ -46,7 +52,8 @@ def account(alias, words, located):
                          element(alias, "words no passage holds", 4, "weak", [], "Title of the predecessor")],
             "to_get": [ask([1, 3, 9]), ask([1], what="The sale deed"), ask([], what="A photograph"),
                        ask([3, 4, 3], what="The client's statement", from_whom="the client")],
-            "other_side": [other(1), other(2, "Their notice of an earlier year"), other(0, "Their tax receipts")],
+            "other_side": [other([1, 4, 1]), other([9], "Their notice of an earlier year"), other([], "Their tax receipts"),
+                           other([5, 2], "Their sale deed")],
             "decides": [{"what": "Whether possession was open", "why": "Everything turns on it.", "elements": [2, 7],
                          "other_side": [1, 5]},
                         {"what": "  ", "why": "No words.", "elements": [], "other_side": []}]}
@@ -55,7 +62,7 @@ def account(alias, words, located):
 def made(first=None, checked=None):
     ctx, record, sources, dispute, alias, words, located = setting()
     first = first or account(alias, words, located)
-    model = Scripted(first, first if checked is None else checked)
+    model = Scripted(first, kept(first) if checked is None else checked)
     case = case_gathered.assess(model, ctx, record, sources, dispute)
     return case, model, (ctx, record, sources, dispute)
 
@@ -89,26 +96,38 @@ def test_the_same_two_calls_give_the_gathered_account_and_code_keeps_only_the_me
                  "Ask 1 names element 9, which is not in the list: it is taken off the ask",
                  "Ask 2 is set aside: The papers already show every element it is for", "Ask 3 is set aside: It names no element of the list"):
         assert note in case["notes"], note
-    # An attack on a heading not shown stands as attacking none; a deciding item keeps its words, losing the numbers that name nothing.
-    assert [item["attacks"] for item in case["other_side"]] == [1, 0, 0]
-    assert "The other side's point 2 attacks heading 2, which is not a heading shown: it stands as attacking none" in case["notes"]
+    # A point of the other side names the elements it attacks (D285): those in the list are kept, once each, and its heading is the
+    # first of them's; a number that names no element is taken off, said so. A deciding item keeps its words, losing the numbers
+    # that name nothing.
+    assert [(item["against"], item["attacks"]) for item in case["other_side"]] == [([1, 4], 1), ([], 0), ([], 0), ([5, 2], 2)]
+    assert ("The other side's point 2 names element 9, which is not in the list: it is taken off what the point attacks"
+            in case["notes"])
     assert case["decides"] == [{"what": "Whether possession was open", "why": "Everything turns on it.", "elements": [2], "other_side": [1]}]
     assert "Deciding item 2 has no words: it is not shown" in case["notes"]
-    assert case["first"] == case["proposal"] and case["not_carried"] == []
+    assert case["proposal"] == kept(case["first"]) and case["not_carried"] == []
 
 
-def test_an_element_of_the_first_account_the_checked_one_does_not_carry_is_noted_in_the_record_only():
+def test_an_element_of_the_first_account_the_checked_one_no_longer_holds_is_noted_in_the_record_only():
+    """D286: the paid check of 17 Nov 2026 found the check call rewording every element, so that words named all of them as not
+    carried. The check call says which element of the first account each of its own is; an element reworded is carried, one added
+    is nobody's, and only one the checked account holds under no number is noted."""
     ctx, record, sources, dispute, alias, words, located = setting()
     first = account(alias, words, located)
-    checked = deepcopy(first)
-    checked["elements"][0]["element"] = "  possession FOR twelve   years "
+    checked = kept(first)
+    checked["elements"][0]["element"] = "The land was held as an owner holds it, for the whole of the period"
+    checked["elements"][1], checked["elements"][3] = checked["elements"][3], checked["elements"][1]  # put in another order
     del checked["elements"][2]
-    checked["elements"].append(element(alias, words, 1, "missing", [], "Possession that was peaceful"))
+    checked["elements"].append({**element(alias, words, 1, "missing", [], "Possession that was peaceful"), "was": 0})
     case = case_gathered.assess(Scripted(first, checked), ctx, record, sources, dispute)
     assert case["first"] == first and case["proposal"] == checked
-    assert case["not_carried"] == [{"number": 3, "element": "Notice before the suit"}], "the same words in other spacing or case carry"
+    assert case["not_carried"] == [{"number": 3, "element": "Notice before the suit"}], "reworded and reordered elements are carried"
     view = case_gathered.shown(case, ctx, record, sources)
-    assert "not_carried" not in view and "Notice before the suit" not in json.dumps(view), "shown only once the paid check has measured it"
+    assert "not_carried" not in view and "Notice before the suit" not in json.dumps(view), "in the record only until the owner says"
+    # The first call's account names no element of an earlier one, and one given so is not of its shape.
+    assert "was" not in case_gathered.ELEMENT["properties"] and "was" in case_gathered.ELEMENT_CHECKED["properties"]
+    asked = Scripted(first, checked)
+    case_gathered.assess(asked, ctx, record, sources, dispute)
+    assert "With each element give was" in " ".join(asked.seen[1].system.split())
 
 
 def test_a_failed_check_keeps_the_first_account_and_a_failed_first_call_leaves_the_case_unassessed():
@@ -166,7 +185,10 @@ def test_the_view_keeps_what_the_pages_read_today_and_adds_the_gathering():
     assert [(entry["for"], entry["serves"]) for entry in view["to_get"]] == [
         ("Notice before the suit", ["Notice before the suit"]),
         ("Notice before the suit", ["Notice before the suit", "Possession without the owner's leave"])]
-    assert [item["attacks"] for item in view["other_side"]] == [1, 0, 0] and view["decides"] == case["decides"]
+    assert [item["attacks"] for item in view["other_side"]] == [1, 0, 0, 2] and view["decides"] == case["decides"]
+    assert [item["against"] for item in view["other_side"]] == [
+        ["Possession for twelve years", "Possession without the owner's leave"], [], [],
+        ["Title of the predecessor", "Possession that was open"]], "each point with the requirements it attacks, by their words"
     # The note reads the view (D233's note piece): its headings with their counts, and each ask for every element it serves.
     said = [block["text"] for block in research_note._case_blocks({"text": "The boundary dispute", "case": view})]
     assert "Possession: 1 of 2 shown by the papers." in said and f"{OTHER}: 0 of 2 shown by the papers." in said
@@ -188,10 +210,12 @@ def test_the_step_is_asked_for_the_gathered_account_in_plain_words_and_in_a_loop
     for part in ("Message:", "Purpose:", "Look for:", "Outcome:", "Work in a loop",
                  "what must still be gathered from the client or elsewhere before the matter is argued",
                  "as many as this dispute needs", "that is one thing to get, serving each of them", "what it attacks",
+                 "attacks (the numbers of the elements in your list, from 1, that it attacks; none where it attacks none)",
                  "the few things that most decide this dispute as the papers stand", "Ask only for what the papers do not already show"):
         assert part in words, part
     check = " ".join(case_gathered.CASE_CHECK.split())
     for part in ("Message:", "Purpose:", "Outcome:", "Work in a loop",
                  "nothing may be asked of the client that the papers already prove",
-                 "no element of your colleague's account is lost in the gathering unless the law does not require it"):
+                 "no element of your colleague's account is lost in the gathering unless the law does not require it",
+                 "is of your own corrected lists"):
         assert part in check, part

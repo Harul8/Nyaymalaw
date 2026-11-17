@@ -5,22 +5,26 @@ Version 3 of the case step of nm/core_engine/case_strength.py, built beside it i
 D143; D234). The same two calls - the account and its check - read the same material and give the account in one gathered shape:
 the headings of the model's own choosing, as many as the dispute needs; each element as v2 gives it, with the number of its heading;
 each thing to get from one person or place, with the numbers of every element it serves; each thing the other side will rely on as
-v2 gives it, with the number of the heading it attacks (0 for none); and the few things that most decide the dispute as the papers
+v2 gives it, with the numbers of the elements it attacks (D285: the paid check found the check call naming elements where D233
+asked for a heading; code reads the heading from the element); and the few things that most decide the dispute as the papers
 stand. Gathering and deciding are judgments of meaning, left to the model. Code checks only what is mechanical, made again exactly
 on replay (P46):
 - every check of v2, by case_strength.admit itself: the law's exact words in a held passage offered for the dispute, the points of
   the papers' list, "shown" only with a point found on its page;
 - an element whose heading number names no heading with a name is put under code's own heading, 'Other things the law requires',
   and said so - never dropped; a heading no element sits under is not shown;
-- an attack that names no heading shown stands as attacking none;
+- a number of what a point of the other side attacks that names no element is taken off; the point's heading is that of the first
+  element it attacks, 0 where it attacks none;
 - an ask's numbers that name no element, or an element the papers already show, are taken off it; an ask left serving none is set
   aside, as v2 sets one aside;
 - a deciding item's numbers that name nothing are taken off and its words kept; one with no words is not shown;
-- nothing lost unremarked: the record keeps the first call's account, and code notes each element of it whose words are not among
-  the elements of the account kept. Whether that note is shown, and how an element reworded is told from one taken out, is for the
-  paid check (AN.49 point (b)) to measure first.
+- nothing lost unremarked (D286): the record keeps the first call's account; the check call says of each element it gives which
+  element of that account it is (its number there, 0 where the check added it), and code names each element of the first account
+  that the checked one no longer holds. The paid check (AN.49 point (b), 17 Nov 2026) measured that words cannot say this: the
+  check rewords every element. Whether the note is shown is the owner's.
 The view keeps each ask's 'for' (the first element it serves), so that what the pages draw today reads it as before, and adds
-'serves' (every element it serves), each element's heading, each attack and what decides the dispute.
+'serves' (every element it serves), each element's heading, each point's attack (the heading, as before, and 'against': the
+elements it attacks, by their words) and what decides the dispute.
 
 NOT WIRED IN (D234): no turn calls assess, and no saved case is read by validate_saved or shown_saved, until the owner approves the
 exception in AN.48's register together with the paid check.
@@ -53,13 +57,17 @@ _OTHER_SIDE = case_strength.OTHER_SIDE["properties"]
 ELEMENT = _object({"element": _ELEMENT["element"], "label": _ELEMENT["label"], "heading": NUMBER,
                    **{key: value for key, value in _ELEMENT.items() if key not in ("element", "label")}})
 TO_GET = _object({"what": STRING, "from_whom": STRING, "elements": NUMBERS, "why": STRING, "helps": STRING})
-OTHER_SIDE = _object({"relies_on": _OTHER_SIDE["relies_on"], "label": _OTHER_SIDE["label"], "attacks": NUMBER,
+OTHER_SIDE = _object({"relies_on": _OTHER_SIDE["relies_on"], "label": _OTHER_SIDE["label"], "attacks": NUMBERS,
                       **{key: value for key, value in _OTHER_SIDE.items() if key not in ("relies_on", "label")}})
 DECIDES = _object({"what": STRING, "why": STRING, "elements": NUMBERS, "other_side": NUMBERS})
 SCHEMA = _object({"headings": {"type": "array", "items": STRING}, "elements": {"type": "array", "items": ELEMENT},
                   "to_get": {"type": "array", "items": TO_GET}, "other_side": {"type": "array", "items": OTHER_SIDE},
                   "decides": {"type": "array", "items": DECIDES}})
 EMPTY = {"headings": [], "elements": [], "to_get": [], "other_side": [], "decides": []}
+#: What the check call gives (D286): the same account, each element with the number it has in the first call's account ("was"),
+#: 0 where the check added it.
+ELEMENT_CHECKED = _object({**ELEMENT["properties"], "was": NUMBER})
+SCHEMA_CHECKED = _object({**SCHEMA["properties"], "elements": {"type": "array", "items": ELEMENT_CHECKED}})
 
 CASE = """Message: You receive one dispute of an advocate's matter as our research has set it out: every point our reading of the papers set out, each with its ID, what it is, the papers' own words, the pages it stands on (or that its words were not found on a page) and how the weighing of the points weighed it; the advocate's own messages; the dispute, with its legal questions, the rights at stake, the relief sought and what is still missing; and the held law our research read for it - provisions of the Acts and paragraphs of judgments, each under its short ID (P1, J1 ...).
 
@@ -67,7 +75,7 @@ Purpose: Our client's case on this dispute is to be made as strong as the law an
 
 Look for: each element the governing provisions and the judgments' tests require for the client to succeed, or that the other side must establish against the client - said in plain words, with the provision's or the judgment's own words that set it (its short ID and those exact words), and who must prove it. For each, how the papers stand: shown (name the points that show it), weak (shown only in part, contested by another paper, or resting on the advocate's word alone - say why), or missing. For each element weak or missing, what would prove it - the document, record, certified copy, statement or witness - from whom it can be had, why the law needs it and how it would help; where one document or one person would prove several elements, that is one thing to get, serving each of them. What the other side will rely on, with the law's words or the points they would cite where there are any, what it attacks and what would answer it. And which few things most decide this dispute as the papers stand.
 
-Outcome: headings - the headings you gather the elements under, each named in a few words, as many as this dispute needs; elements - each with element, label (the element named in a few words, as the advocate's matter board lists it), heading (the number of its heading in your list, from 1), law (source_id and quote), proves (client or other_side), status (shown, weak or missing), points (the IDs of the points that show it or bear on it), why (a sentence or two); to_get - each thing to get from one person or place, with what, from_whom, elements (the numbers of every element in your list, from 1, that it would prove or help to prove), why and helps; other_side - each with relies_on, label (what they will rely on, in a few words), attacks (the number of the heading it attacks, or 0 where it attacks none), law (source_id and quote, or both empty where no held law is theirs), answer and points; decides - the few things that most decide this dispute as the papers stand, each with what (in a few words), why, elements (the numbers of the elements it concerns) and other_side (the numbers of the other side's points it concerns, from 1). Ask only for what the papers do not already show; leave out what the law does not require of this dispute.
+Outcome: headings - the headings you gather the elements under, each named in a few words, as many as this dispute needs; elements - each with element, label (the element named in a few words, as the advocate's matter board lists it), heading (the number of its heading in your list, from 1), law (source_id and quote), proves (client or other_side), status (shown, weak or missing), points (the IDs of the points that show it or bear on it), why (a sentence or two); to_get - each thing to get from one person or place, with what, from_whom, elements (the numbers of every element in your list, from 1, that it would prove or help to prove), why and helps; other_side - each with relies_on, label (what they will rely on, in a few words), attacks (the numbers of the elements in your list, from 1, that it attacks; none where it attacks none), law (source_id and quote, or both empty where no held law is theirs), answer and points; decides - the few things that most decide this dispute as the papers stand, each with what (in a few words), why, elements (the numbers of the elements it concerns) and other_side (the numbers of the other side's points it concerns, from 1). Ask only for what the papers do not already show; leave out what the law does not require of this dispute.
 
 Work in a loop: read the material, set out the elements and gather them, check each against the law's words and the points before you give it, correct what does not hold, then give the whole."""
 
@@ -75,7 +83,7 @@ CASE_CHECK = """Message: You receive the same material, and a colleague's accoun
 
 Purpose: The account goes to the advocate as the case's list of what to prove and what to gather, read on the matter board at a glance. Every element must be one the law requires, in its own words; every status must be what the papers actually show; nothing may be asked of the client that the papers already prove; each heading must hold what belongs together; and nothing the case needs may be missing from it - no element of your colleague's account is lost in the gathering unless the law does not require it.
 
-Outcome: the account again, corrected - the same where it is right; each heading, element, ask, point of the other side and deciding item as it should stand, each name in a few words fitting what it names; any element or ask it lacks, added; and what code could not check put right where the material allows (the passage's own words, the points that are in the list, the numbers of the account's own lists).
+Outcome: the account again, corrected - the same where it is right; each heading, element, ask, point of the other side and deciding item as it should stand, each name in a few words fitting what it names; any element or ask it lacks, added; and what code could not check put right where the material allows (the passage's own words, the points that are in the list, the numbers of the account's own lists). With each element give was: the number that element has in your colleague's account where yours is that element kept or corrected, and 0 where you added it - so that an element of your colleague's that your account no longer holds is known to have been taken out, and is not lost unremarked. Every other number you give - the elements an ask serves, those a point of the other side attacks, those a deciding item concerns - is of your own corrected lists.
 
 Work in a loop: check each item against the law and the points, correct it, check again, then give the whole."""
 
@@ -88,17 +96,17 @@ def _words(text):
     return _plain(text).casefold()
 
 
-def _call(model, operation, system, user, step):
+def _call(model, operation, system, user, step, schema=SCHEMA):
     """One call of the step, as case_strength makes its own (the same steps of the one reasoning policy, the same cache prefix),
     in the gathered shape."""
     receipt = model.structured(Prompt(system=system, user=user, operation=operation,
                                       effort=reasoning.effort(step, tokens=estimate_tokens(user)),
-                                      cache_through=case_strength.shared_through(user)), SCHEMA,
-                               Tier.ROUTINE, max_tokens=reasoning.room(model, Tier.ROUTINE, system, user, json.dumps(SCHEMA)))
+                                      cache_through=case_strength.shared_through(user)), schema,
+                               Tier.ROUTINE, max_tokens=reasoning.room(model, Tier.ROUTINE, system, user, json.dumps(schema)))
     if not receipt.usable or receipt.data is None:
         raise ModelError(f"The gathered case step {step} did not complete", usage=receipt.usage, latency_ms=receipt.latency_ms,
                          retries=receipt.retries)
-    return canonical_schema_data(receipt.data, SCHEMA)
+    return canonical_schema_data(receipt.data, schema)
 
 
 def admit(data, offered, points, sources):
@@ -131,10 +139,12 @@ def admit(data, offered, points, sources):
     for element, given in zip(elements, under):
         element["heading"] = renumber[given] if given is not None else other
     for number, (item, entry) in enumerate(zip(data["other_side"], other_side), 1):
-        entry["attacks"] = renumber.get(item["attacks"], 0)
-        if item["attacks"] and item["attacks"] not in renumber:
-            notes.append(f"The other side's point {number} attacks heading {item['attacks']}, which is not a heading shown: it "
-                         "stands as attacking none")
+        # D285: the elements the point attacks, by their numbers; its heading is the first of them's.
+        given = list(dict.fromkeys(item["attacks"]))
+        entry["against"] = [element for element in given if 1 <= element <= len(elements)]
+        entry["attacks"] = elements[entry["against"][0] - 1]["heading"] if entry["against"] else 0
+        notes += [f"The other side's point {number} names element {element}, which is not in the list: it is taken off what "
+                  "the point attacks" for element in given if not 1 <= element <= len(elements)]
     to_get, set_aside = [], []
     for number, item in enumerate(data["to_get"], 1):
         given = list(dict.fromkeys(item["elements"]))
@@ -172,19 +182,21 @@ def admit(data, offered, points, sources):
             "set_aside": set_aside, "notes": notes}
 
 
-def not_carried(first, kept):
-    """Each element of the first call's account whose words are not among the elements of the account kept, by its number there
-    (D181: nothing of the account lost unremarked between the first call and the gathered form). In the record only (D233)."""
-    if first is None or kept is None:
+def not_carried(first, kept, checked=True):
+    """Each element of the first call's account that the checked account no longer holds, by its number there (D181: nothing of the
+    account lost unremarked between the first call and the gathered form; D286: known by the number the check call gives each of
+    its elements, since it rewords them). None where the account kept is the first call's own (checked: whether the check call gave
+    it). In the record only (D233)."""
+    if first is None or kept is None or not checked:
         return []
-    words = {_words(item["element"]) for item in kept["elements"]}
+    held = {item.get("was") for item in kept["elements"]}
     return [{"number": number, "element": _plain(item["element"])} for number, item in enumerate(first["elements"], 1)
-            if _words(item["element"]) not in words]
+            if number not in held]
 
 
 def _admitted(record, offered, points, sources):
     return {**record, **admit(record["proposal"] or EMPTY, offered, points, sources),
-            "not_carried": not_carried(record["first"], record["proposal"])}
+            "not_carried": not_carried(record["first"], record["proposal"], record["checked"] == "checked")}
 
 
 def assess(model, context, part, sources, dispute):
@@ -205,7 +217,8 @@ def assess(model, context, part, sources, dispute):
     told = admit(first, offered, points, sources)["notes"]
     try:
         checked = _call(model, "core_case_check", CASE_CHECK, user + "\n\nYour colleague's account:\n" + json.dumps(first, ensure_ascii=False)
-                        + "\n\nWhat code could not check:\n" + (json.dumps(told, ensure_ascii=False) if told else "nothing"), "case_check")
+                        + "\n\nWhat code could not check:\n" + (json.dumps(told, ensure_ascii=False) if told else "nothing"), "case_check",
+                        SCHEMA_CHECKED)
         record.update(proposal=checked, checked="checked")
     except UsageLimitReached:
         raise
@@ -230,6 +243,7 @@ def shown(record, context, part, sources):
         entry["serves"] = [view["elements"][number - 1]["element"] for number in ask["elements"]]
     for entry, item in zip(view["other_side"], record["other_side"]):
         entry["attacks"] = item["attacks"]
+        entry["against"] = [view["elements"][number - 1]["element"] for number in item["against"]]
     return {"state": view["state"], "headings": list(record["headings"]), "elements": view["elements"], "to_get": view["to_get"],
             "other_side": view["other_side"], "decides": deepcopy(record["decides"])}
 
@@ -242,9 +256,9 @@ def validate(record, context, part, sources, dispute):
     _, offered, points = case_strength.material(context, part, sources, dispute)
     proposal, first = record.get("proposal"), record.get("first")
     try:
-        for given in (proposal, first):
+        for given, schema in ((proposal, SCHEMA_CHECKED if record.get("checked") == "checked" else SCHEMA), (first, SCHEMA)):
             if given is not None:
-                require_schema(given, SCHEMA)
+                require_schema(given, schema)
     except SchemaViolation as exc:
         raise ValueError("A saved case's answer is not of its contract's shape") from exc
     expected = _admitted({"contract": CONTRACT, "dispute_id": dispute["id"], "proposal": proposal, "first": first,
