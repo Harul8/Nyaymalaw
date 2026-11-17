@@ -205,7 +205,8 @@ class CaseSetOutAsNothing:
                                completion=Completion.COMPLETE)
         if prompt.operation not in ("core_case", "core_case_check") or getattr(self._model, "knows_the_case", False):
             return self._model.structured(prompt, schema, tier, **kwargs)
-        return ModelResult(None, {"elements": [], "to_get": [], "other_side": []}, tier, "synthetic", "fixture", Usage(1, 1, 0), 0,
+        # Every list the case's schema asks for, empty: v2's, and from plan AN.49 (D291) the gathered account's too.
+        return ModelResult(None, {key: [] for key in schema["required"]}, tier, "synthetic", "fixture", Usage(1, 1, 0), 0,
                            completion=Completion.COMPLETE)
 
 

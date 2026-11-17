@@ -26,8 +26,9 @@ The view keeps each ask's 'for' (the first element it serves), so that what the 
 'serves' (every element it serves), each element's heading, each point's attack (the heading, as before, and 'against': the
 elements it attacks, by their words) and what decides the dispute.
 
-NOT WIRED IN (D234): no turn calls assess, and no saved case is read by validate_saved or shown_saved, until the owner approves the
-exception in AN.48's register together with the paid check.
+WIRED IN 17 Nov 2026 (D291; AN.48's register item 15, approved by the owner's word with the paid check's result): every new
+answer's case step calls assess here, and every saved case is checked by validate_saved and shown by shown_saved - a case saved
+before as v1 or v2 by case_strength, exactly as before (P46).
 """
 from __future__ import annotations
 

@@ -43,7 +43,7 @@ import threading
 from copy import deepcopy
 
 from nm.core_engine import (
-    answer_sources, calculation, case_strength, replay_scope, research, response_authorities, response_review,
+    answer_sources, calculation, case_gathered, replay_scope, research, response_authorities, response_review,
     response_writer,
 )
 from nm.core_engine.calls import (
@@ -142,7 +142,7 @@ LOOKS = "looks"
 _SECTION = {"part", "dispute_id", "reviewed", "trims", "fallback", "edit"}
 #: From turn v10 (plan AN.35, D31; piece 35c2) each dispute's section also keeps what makes its case stronger (case_strength):
 #: what the law requires, how the papers stand on it, what to get and what the other side will rely on - or None where it was
-#: not made (a turn stopped before it).
+#: not made (a turn stopped before it). From 17 Nov 2026 (plan AN.49, D291) a new case is gathered under headings (case_gathered).
 CASE = "case"
 #: From turn v7 (P29) each section, correction and overview also keeps what code refused or never
 #: had checked: what the writer or the review returned that code refused, and a draft code
@@ -533,7 +533,8 @@ def case_shown(saved, context, record, sources):
     if saved.get(CASE) is None:
         return None
     part, part_sources, _ = _research_for(context, record, sources, None, response_writer.parts(record), saved["part"])
-    return case_strength.shown(saved[CASE], context, part, part_sources)
+    # Plan AN.49 (D291, register item 15): a case is shown as its version shows it - v3 gathered, v1 and v2 as before (P46).
+    return case_gathered.shown_saved(saved[CASE], context, part, part_sources)
 
 
 class _Answering:
@@ -1018,7 +1019,8 @@ class _Answering:
             return {**written, **({CASE: made} if cased else {})}
 
     def _case(self, index, researched, dispute, case_done):
-        made = case_strength.assess(self.calls, self.context, researched[0], researched[1], dispute)
+        # Plan AN.49 (D291, register item 15): each new answer's case is the account gathered under headings (49d).
+        made = case_gathered.assess(self.calls, self.context, researched[0], researched[1], dispute)
         if case_done is not None:
             case_done(index, made)
         return made
@@ -1466,7 +1468,7 @@ def validate(activity, context, record, sources, worked, *, kept=True, looked=Fa
                            None)
             if dispute is None:
                 raise ValueError("A saved case names no dispute of its research")
-            case_strength.validate(saved[CASE], context, part, part_sources, dispute)
+            case_gathered.validate_saved(saved[CASE], context, part, part_sources, dispute)
     if all(saved["fallback"] is not None and saved["fallback"]["reason"] in NOT_MADE
            for saved in sections):
         raise ValueError("A turn the service could not answer is not saved")

@@ -300,7 +300,8 @@ def test_the_matter_keeps_its_checklist_and_when_nm_first_asked():
 def test_a_saved_turn_keeps_its_disputes_case_as_records_and_the_board_and_the_answer_show_it(store):
     """From turn v10 (plan AN.35, D31; piece 35c3) the writer writes no checklist: what makes each dispute's case stronger, set out
     beside its section, is what the records keep (checklist v3), the board shows under the dispute and the answer shows beside the
-    section, with what to get under "What I need from you"."""
+    section, with what to get under "What I need from you". From plan AN.49 (D291) the case is the account gathered under
+    headings (case_gathered, v3), its view v2's with the headings, each ask's elements and what decides the dispute."""
     class Casing(ScriptedModel):
         knows_the_case = True
 
@@ -309,13 +310,15 @@ def test_a_saved_turn_keeps_its_disputes_case_as_records_and_the_board_and_the_a
                 return super().structured(prompt, schema, tier, **kwargs)
             shown = json.loads(prompt.user.split("\n\nYour colleague's account:")[0])
             passage = next(p for p in shown["held_law"]["passages"] if "Counsel submitted" in p["text"])
-            return ModelResult(None, {"elements": [{
-                "element": "Service of the notice", "label": "Service of the notice",
+            # The check names, for each element, which element of the first account it is (D286).
+            was = {"was": 1} if prompt.operation == "core_case_check" else {}
+            return ModelResult(None, {"headings": ["The notice"], "elements": [{
+                "element": "Service of the notice", "label": "Service of the notice", "heading": 1,
                 "law": {"source_id": passage["id"], "quote": "Counsel submitted"},
-                "proves": "client", "status": "missing", "points": [], "why": "Nothing yet shows when it was served."}],
-                "to_get": [{"what": "The postal receipt", "from_whom": "the client", "element": 1,
+                "proves": "client", "status": "missing", "points": [], "why": "Nothing yet shows when it was served.", **was}],
+                "to_get": [{"what": "The postal receipt", "from_whom": "the client", "elements": [1],
                             "why": "It proves the date of posting.", "helps": "It shows the notice was served in time."}],
-                "other_side": []}, tier, "synthetic", "fixture", Usage(1, 1, 0), 0, completion=Completion.COMPLETE)
+                "other_side": [], "decides": []}, tier, "synthetic", "fixture", Usage(1, 1, 0), 0, completion=Completion.COMPLETE)
 
     reply = run(store, Casing(legal=True), message="The notice was served on 2 March; I will send the postal receipt.")
     assert reply["committed"] == "committed"
@@ -332,7 +335,9 @@ def test_a_saved_turn_keeps_its_disputes_case_as_records_and_the_board_and_the_a
     assert (element["element"], element["status"], element["proves"]) == ("Service of the notice", "missing", "client")
     assert element["law"]["found"] is True and element["law"]["words"] == "Counsel submitted" and element["law"]["kind"] == "judgment"
     assert case["to_get"] == [{"what": "The postal receipt", "from_whom": "the client", "why": "It proves the date of posting.",
-                               "helps": "It shows the notice was served in time.", "for": "Service of the notice"}]
+                               "helps": "It shows the notice was served in time.", "for": "Service of the notice",
+                               "serves": ["Service of the notice"]}]
+    assert case["headings"] == ["The notice"] and element["heading"] == 1 and case["decides"] == []
     # The board shows it under the dispute, the law assessed by it.
     board = matter_board.board(rows)
     shown = board["disputes"][0]

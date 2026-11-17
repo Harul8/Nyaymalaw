@@ -17,7 +17,7 @@ from copy import deepcopy
 from dataclasses import replace
 from datetime import datetime, timezone
 
-from nm.core_engine import answer_sections, answer_sources, calculation, case_strength, checklist, estimates, follow_up, questions
+from nm.core_engine import answer_sections, answer_sources, calculation, case_gathered, checklist, estimates, follow_up, questions
 from nm.core_engine import reasoning, replay_scope, research, response_rendering, response_writer
 from nm.core_engine import steps as stepwise, tentative, titles, understanding
 from nm.core_engine.calls import CorrectionUnavailable, OwnRequestRejected, ReleaseWithheld, StopRequested, TurnCalls
@@ -337,7 +337,7 @@ def _kept(steps, context, report, *, plan=None, steered=False):
         if part is None or dispute_id not in disputes:
             continue
         try:
-            case_strength.validate(case, context, part, answer_sources.build(context, part), disputes[dispute_id])
+            case_gathered.validate_saved(case, context, part, answer_sources.build(context, part), disputes[dispute_id])
             kept["cases"][key] = case
         except _UNREADABLE as exc:
             log.warning("A dispute's saved case was not kept and is set out again: %s", type(exc).__name__)

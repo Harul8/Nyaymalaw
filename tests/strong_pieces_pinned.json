@@ -8,7 +8,7 @@
   "nm/core_engine/answer_sources.py": "2d104c03738fa72da79cf1ee4b9911cd41663d770c374bc16ae6abccbc6ffbdf",
   "nm/core_engine/response_authorities.py": "1cc23a12f04fa89351665b96b92cd9da4b719f485774440b458e2c2929b2e021",
   "nm/core_engine/response_review.py": "2f0c81d6597d2bba15ba05946b9944d174970b6eab6d818d03568993d99dc5b9",
-  "nm/core_engine/answer_sections.py": "1ba44a18bc02609f53b89ae83e0c4996086a4a1a9786ce73df4b3b8b810156a2",
+  "nm/core_engine/answer_sections.py": "e765ac32d59f3adbbd50387b5c075853a0bbe68ba9d1492edeeb3154b8fcf20c",
   "nm/core_engine/response_writer.py": "b6077f87cd4050c805dd903a494501440a20206e540cda7292db19c1e9e31358",
   "nm/core_engine/case_strength.py": "0548add0ede2a908d2a4c187e096ad9583b3bb9e99833bc11e48efbc850fb118",
   "nm/core_engine/response_rendering.py": "f2d90882ae8c30ac4a1313d3d8e762137ead39c2a8a4b1cbb0ebf386060413a9",
@@ -60,6 +60,9 @@
   ],
   "14 (52b, D208, D238; plan AN.48 register, column 10)": [
    "nm/core_engine/retrieval.py"
+  ],
+  "15 (49d's wiring, D291; plan AN.48 register, column 10)": [
+   "nm/core_engine/answer_sections.py"
   ]
  }
 }

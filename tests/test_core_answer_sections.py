@@ -803,7 +803,7 @@ def test_a_turn_whose_usage_runs_out_after_showing_part_of_its_answer_keeps_what
             first = len(cases) == 1
         if first:
             raise UsageLimitReached(USAGE_LIMIT_MESSAGE)
-        return _result({"elements": [], "to_get": [], "other_side": []}, tier)
+        return _result({key: [] for key in schema["required"]}, tier)  # nothing set out, in the case's own shape (D291: v3)
     model.structured = structured
     with pytest.raises(ConversationRefused) as stopped:
         run(store, model)
