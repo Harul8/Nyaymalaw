@@ -21,7 +21,7 @@ from nm.core_engine import answer_sources, checklist, reasoning, research, respo
 from nm.core_engine.understanding import REFERENCE, TEXT
 from nm.shared import clock_contracts
 from nm.shared.model_port import (
-    ContextOverflow, ModelError, Prompt, SchemaViolation, Tier,
+    ContentRefused, ContextOverflow, ModelError, OutputTruncated, Prompt, ProviderUnavailable, RateLimited, SchemaViolation, Tier,
     canonical_schema_data, require_schema,
 )
 
@@ -69,17 +69,25 @@ PRESENTED_CONTRACT = "core_response_review_v11"
 #: they stand, so that only those words need change or come out; and the review is told why the
 #: writer kept words an earlier check or review found at fault (writer_notes).
 WORDED_CONTRACT = "core_response_review_v12"
+#: v13 (plan AN.51, D201, 17 Nov 2026; the forensic review's F-06): v12, and where the review finds that the piece would mislead
+#: without naming any paragraph or checklist item, it is asked once, on the same tier, to name the paragraphs and words that carry
+#: it (PLACES). What it names is then at fault like any finding that names its place; what it still ties to none is shown above the
+#: piece under code's own notice that the review found it misleading as a whole. Its record keeps the answer ('placed'), or that
+#: the call did not complete, or None where nothing was asked; admission replays from both answers.
+PLACED_CONTRACT = "core_response_review_v13"
+#: The versions that copy the words that mislead (v12 on).
+WORDED = (WORDED_CONTRACT, PLACED_CONTRACT)
 #: The versions that read a piece as v10 does: what misleads, and what could be better.
-READ_AS_V10 = (MISLEADS_CONTRACT, PRESENTED_CONTRACT, WORDED_CONTRACT)
+READ_AS_V10 = (MISLEADS_CONTRACT, PRESENTED_CONTRACT, *WORDED)
 #: The versions that judge a section written for the advocate and placed (writer v13 on).
-PRESENTED = (PRESENTED_CONTRACT, WORDED_CONTRACT)
+PRESENTED = (PRESENTED_CONTRACT, *WORDED)
 #: The versions that judge one piece of an answer written dispute by dispute.
-_PIECES = (SECTION_CONTRACT, MISLEADS_CONTRACT, PRESENTED_CONTRACT, WORDED_CONTRACT)
+_PIECES = (SECTION_CONTRACT, MISLEADS_CONTRACT, PRESENTED_CONTRACT, *WORDED)
 #: The check across the sections of an answer for conflicts between them (P26, P27).
 CROSS_CONTRACT = "core_response_cross_check_v1"
 CONTRACTS = (LEGACY_CONTRACT, AUTHORITY_CONTRACT, ALIAS_CONTRACT, RESPECTED_CONTRACT, PARTS_CONTRACT,
              CHECKLIST_CONTRACT, ROWS_CONTRACT, CONTRACT, SECTION_CONTRACT, MISLEADS_CONTRACT, PRESENTED_CONTRACT,
-             WORDED_CONTRACT)
+             *WORDED)
 _CURRENT = (RESPECTED_CONTRACT, PARTS_CONTRACT, CHECKLIST_CONTRACT, ROWS_CONTRACT, CONTRACT, SECTION_CONTRACT)
 #: The versions that judge a checklist through findings alone.
 _FINDINGS = (ROWS_CONTRACT, CONTRACT, SECTION_CONTRACT)
@@ -461,6 +469,34 @@ _MISLEADING_V12 = SCHEMA_V12["properties"]["misleading"]["items"]
 SCHEMA_V12_ADMITTED = {**SCHEMA_V12, "required": [name for name in SCHEMA_V12["required"] if name != "missing"],
                        "properties": {**SCHEMA_V12["properties"], "misleading": {
     "type": "array", "items": {**_MISLEADING_V12, "required": [n for n in _MISLEADING_V12["required"] if n != "words"]}}}}
+#: v13 (D201): the one more look at what the review found misleading and tied to no paragraph.
+SYSTEM_PLACES = """Message: You receive what you received to review one piece of an advocate's answer - the conversation, the
+research, the held law and the complete piece, each paragraph and checklist item under its ID - then your review of it, and the
+findings of your review that say the piece would mislead the advocate without naming any paragraph or checklist item.
+
+Purpose: NM acts on what misleads paragraph by paragraph: what you name goes back to the writer, and what still misleads is cut or
+left out. A finding tied to no paragraph cannot be acted on; the piece is then shown under a notice that it may mislead as a
+whole, which tells the advocate little of what to distrust.
+
+Outcome: places - for each finding listed, by its number: where (the IDs of the paragraphs and checklist items that carry what
+misleads) and words (the words in them that mislead, each copied exactly as it stands: the shortest stretch that carries the
+problem). Give where empty for a finding that truly concerns the piece as a whole, one that no paragraph carries on its own.
+
+Work in a loop: read each finding again against the piece, find where it lives, check the IDs and the words against the piece,
+then give them."""
+PLACES_SCHEMA = _object({"places": {"type": "array", "items": _object({
+    "finding": {"type": "integer"}, "where": _PLACES, "words": {"type": "array", "items": _WORDS}})}})
+#: What a call that did not complete is to the one more look: its own failures, said so; a usage limit, a stop or a refusal of the
+#: release is not one of them, and stops the review as it stops any call.
+_NOT_PLACED = (RateLimited, ProviderUnavailable, OutputTruncated, ContextOverflow, ContentRefused, SchemaViolation)
+
+
+def _whole(findings):
+    """The findings that say the piece misleads without naming any paragraph, checklist item or time limit (v13, D201)."""
+    return [finding for finding in findings if finding["category"] not in (*SUGGESTIONS, LEFT_OUT)
+            and not finding["unit_ids"] and not finding["limits"]]
+
+
 _TIME_LIMIT = re.compile(r"T\d+")
 
 
@@ -475,14 +511,15 @@ def _dependencies(context, research_record, sources, draft, execution, *,
     # piece whose failing parts get a second look (writer v14) by v12, and only it is.
     piece = draft.get("contract") in response_writer.SECTIONS
     overview = piece and draft.get("section") == response_writer.OVERVIEW
-    judge = {response_writer.PRESENTED_CONTRACT: PRESENTED_CONTRACT,
-             response_writer.REPAIRED_CONTRACT: WORDED_CONTRACT,
-             response_writer.CASED_CONTRACT: WORDED_CONTRACT}.get(draft.get("contract"))
+    # v13 (D201): a piece of writer v15 is judged by v13 from 17 Nov 2026, and one saved before by v12, as it was.
+    judges = {response_writer.PRESENTED_CONTRACT: (PRESENTED_CONTRACT,),
+              response_writer.REPAIRED_CONTRACT: (WORDED_CONTRACT,),
+              response_writer.CASED_CONTRACT: WORDED}.get(draft.get("contract"), (None,))
     if ((contract in _PIECES) != piece
-            or piece and (contract if contract in PRESENTED else None) != judge
+            or piece and (contract if contract in PRESENTED else None) not in judges
             or (sections is not None or unanswered) and not overview
             or conflicts and (not piece or overview) or (held_back or shortened) and piece
-            or writer_notes and contract != WORDED_CONTRACT):
+            or writer_notes and contract not in WORDED):
         raise ValueError("Review version differs from the piece it judges")
     # Plan AN.37 (D44, D50): the answers the advocate gives while the turn works are shown to the review with the conversation
     # (review(), where its packet is made: plan AN.51, 51c) but bound no more than the writing's are (response_authorities): a
@@ -727,17 +764,19 @@ def _accept(proposal, dependencies, *, contract=LEGACY_CONTRACT):
             "bound_digest": _digest({"evidence": dependencies, "review_proposal": data})}
 
 
-def _accept_v10(returned, dependencies, contract=MISLEADS_CONTRACT):
+def _accept_v10(returned, dependencies, contract=MISLEADS_CONTRACT, again=None):
     """v10 (owner decision P29, 20 Oct 2026): a review of a piece, admitted for what code can
     use. Each misleading statement keeps the paragraphs and checklist items it names, the time
     limits it names and the words it points to that code can place; each could-be-better point
     keeps where it belongs. A slip - an ID that names nothing, words a source does not hold, a
     finding that says nothing - is set aside with why, never a reason to refuse what the review
     found; a finding that keeps no place is said beside the piece. Only output that does not
-    fit the schema at all is refused: a review with nothing usable."""
+    fit the schema at all is refused: a review with nothing usable. v13 (D201): again, the
+    record of the one more look at the findings tied to no place - its answer ('returned') gives
+    each the paragraphs and words it names, with the same checks; None where none was asked."""
     if "authority_evidence" not in dependencies:
         raise ValueError("Review version differs from its evidence contract")
-    schema = (SCHEMA_V12_ADMITTED if contract == WORDED_CONTRACT else SCHEMA_V11 if contract == PRESENTED_CONTRACT
+    schema = (SCHEMA_V12_ADMITTED if contract in WORDED else SCHEMA_V11 if contract == PRESENTED_CONTRACT
               else SCHEMA_V10)
     data = canonical_schema_data(returned, schema)
     require_schema(data, schema)
@@ -772,6 +811,18 @@ def _accept_v10(returned, dependencies, contract=MISLEADS_CONTRACT):
             else:
                 aside(where, f"names nothing in this piece: {value}" if value else "names an empty place")
         return list(dict.fromkeys(unit_ids)), list(dict.fromkeys(named_limits))
+
+    def worded(where, admitted_finding, given):
+        """v12: the words at fault placed in the paragraphs and items the finding names."""
+        for words in given:
+            place = next(((identity, found) for identity in admitted_finding["unit_ids"]
+                          for found in [response_writer.stands(written.get(identity, ""), words)] if found),
+                         None)
+            if place is None:
+                aside(where, f"its words are not found in the paragraph or item it names: {words!r}"
+                      if words.strip() else "gives empty words")
+            elif {"unit_id": place[0], "text": place[1]} not in admitted_finding["words"]:
+                admitted_finding["words"].append({"unit_id": place[0], "text": place[1]})
 
     def placed(where, reference):
         tag = offered.get(reference["source_id"].strip(), reference["source_id"].strip())
@@ -810,21 +861,33 @@ def _accept_v10(returned, dependencies, contract=MISLEADS_CONTRACT):
             continue
         admitted_finding = {"category": KINDS[finding["kind"]], "unit_ids": unit_ids, "limits": named_limits,
                             "sources": pointers, "mismatch": finding["why"].strip()}
-        if contract == WORDED_CONTRACT:
+        if contract in WORDED:
             # v12 (AN.28, D2): the words at fault, as they stand in a paragraph or item the finding
             # names; words found in none of them are set aside, and the finding is kept.
             admitted_finding["words"] = []
-            for words in finding.get("words", ()):
-                place = next(((identity, found) for identity in unit_ids
-                              for found in [response_writer.stands(written.get(identity, ""), words)] if found),
-                             None)
-                if place is None:
-                    aside(where, f"its words are not found in the paragraph or item it names: {words!r}"
-                          if words.strip() else "gives empty words")
-                elif {"unit_id": place[0], "text": place[1]} not in admitted_finding["words"]:
-                    admitted_finding["words"].append({"unit_id": place[0], "text": place[1]})
+            worded(where, admitted_finding, finding.get("words", ()))
         findings.append(admitted_finding)
-    if contract == WORDED_CONTRACT:
+    if contract == PLACED_CONTRACT and again is not None and "returned" in again:
+        # v13 (D201): what the one more look names for each finding tied to no place, by its number among them, checked as the
+        # review's own places and words are; a finding it still ties to none stays so.
+        whole, given = _whole(findings), canonical_schema_data(again["returned"], PLACES_SCHEMA)
+        require_schema(given, PLACES_SCHEMA)
+        done = set()
+        for index, entry in enumerate(given["places"]):
+            where = f"placing {index + 1}"
+            if not 1 <= entry["finding"] <= len(whole) or entry["finding"] in done:
+                aside(where, f"names no finding tied to no place: {entry['finding']}")
+                continue
+            unit_ids, named_limits = places(where, entry["where"])
+            for value in named_limits:
+                aside(where, f"a time limit, not a paragraph: {value}")
+            if not unit_ids:
+                continue
+            done.add(entry["finding"])
+            finding = whole[entry["finding"] - 1]
+            finding["unit_ids"] = unit_ids
+            worded(where, finding, entry["words"])
+    if contract in WORDED:
         # Stage 5: an item of coverage passed over in silence, said by what it is (its ID is code's, not the advocate's).
         listed = {item["id"]: item for item in response_writer.coverage_items(
             dependencies["research_record"], {tag: alias for alias, tag in offered.items()}, dependencies["original_context"])}
@@ -864,9 +927,11 @@ def _accept_v10(returned, dependencies, contract=MISLEADS_CONTRACT):
                     admitted["keep_shown"].append(identity)
             else:
                 aside(f"keep shown {index + 1}", f"not a paragraph placed under More on this: {value}")
+    looked = {"placed": deepcopy(again)} if contract == PLACED_CONTRACT else {}
     return {"contract": contract, "returned": deepcopy(returned), "proposal": admitted,
             "accepted": not findings,
-            "bound_digest": _digest({"evidence": dependencies, "returned": returned, "review_proposal": admitted})}
+            "bound_digest": _digest({"evidence": dependencies, "returned": returned, "review_proposal": admitted, **looked}),
+            **looked}
 
 
 def unit_aliases(draft):
@@ -1055,7 +1120,7 @@ def review(model, context, research_record, sources, draft, execution=None, *,
         papers = response_writer._chronology_shown(research_record, shown, context) if contract in PRESENTED else None
         # v12 (AN.28, stage 5): what the piece must take up or say why not, as its writer was shown it.
         coverage = (response_writer._coverage_shown(research_record, shown, context, compact=True)
-                    if contract == WORDED_CONTRACT else None)
+                    if contract in WORDED else None)
         if coverage:
             payload["coverage"] = coverage
         if papers:
@@ -1092,10 +1157,10 @@ def review(model, context, research_record, sources, draft, execution=None, *,
                                                for identity, count in shortened]
     # Full readbacks remain in durable binding; the source catalogue already holds
     # the exact legal passages. Present only their checks and remaining limits here.
-    system, schema = ((SYSTEM_V12, SCHEMA_V12) if contract == WORDED_CONTRACT
+    system, schema = ((SYSTEM_V12, SCHEMA_V12) if contract in WORDED
                       else (SYSTEM_V11, SCHEMA_V11) if contract == PRESENTED_CONTRACT
                       else (SYSTEM_V10, SCHEMA_V10) if contract == MISLEADS_CONTRACT else (SYSTEM, SCHEMA))
-    worded = contract == WORDED_CONTRACT
+    worded = contract in WORDED
     if worded:
         # v12 (AN.28, 6c): what every review of the turn carries alike leads, in one order, so that the provider may reuse it.
         payload = {**{key: payload[key] for key in response_writer.SHARED_KEYS if key in payload},
@@ -1118,27 +1183,61 @@ def review(model, context, research_record, sources, draft, execution=None, *,
         raise ModelError("Independent response review did not complete", usage=result.usage,
                          latency_ms=result.latency_ms, retries=result.retries)
     if contract in READ_AS_V10:
-        return _accept_v10(result.data, dependencies, contract)
+        admitted = _accept_v10(result.data, dependencies, contract)
+        whole = _whole(admitted["proposal"]["findings"]) if contract == PLACED_CONTRACT else []
+        if not whole:
+            return admitted
+        return _accept_v10(result.data, dependencies, contract,
+                           again=_place(model, prompt, result.data, whole, writes))
     return _accept(result.data, dependencies, contract=contract)
+
+
+def _place(model, prompt, returned, whole, writes):
+    """v13 (D201): the one more look - the reviewer, on the review tier, shown what it was shown, its review and the findings it
+    tied to no place, asked once to name where each lives. Its answer, or that it did not complete (why, in the failure's own
+    name)."""
+    user = (prompt.user + "\n\nYour review:\n" + json.dumps(returned, ensure_ascii=False)
+            + "\n\nWhat you found misleading and tied to no paragraph:\n"
+            + json.dumps([{"finding": number, "why": finding["mismatch"]} for number, finding in enumerate(whole, 1)],
+                         ensure_ascii=False))
+    try:
+        result = model.structured(Prompt(system=SYSTEM_PLACES, user=user, operation="core_response_review_places",
+                                         effort=reasoning.effort("review")), PLACES_SCHEMA, Tier.JUDGE, max_tokens=writes)
+        if not result.usable or result.data is None:
+            return {"failed": "incomplete"}
+        given = canonical_schema_data(result.data, PLACES_SCHEMA)
+        require_schema(given, PLACES_SCHEMA)
+    except _NOT_PLACED as exc:
+        return {"failed": type(exc).__name__}
+    return {"returned": given}
 
 
 def validate(record, context, research_record, sources, draft, execution=None, *,
              authority_evidence=None, time_limits=None, held_back=None, shortened=None, sections=None,
              unanswered=None, conflicts=None, writer_notes=None):
     if isinstance(record, dict) and record.get("contract") in READ_AS_V10:
-        # v10 to v12 replay their admission from the review's own output.
-        if (set(record) != {"contract", "returned", "proposal", "accepted", "bound_digest"}
+        # v10 to v13 replay their admission from the review's own output, v13 with its one more look's.
+        placing = record.get("contract") == PLACED_CONTRACT
+        if (set(record) != {"contract", "returned", "proposal", "accepted", "bound_digest", *(("placed",) if placing else ())}
                 or type(record.get("accepted")) is not bool):
+            raise ValueError("Unknown or malformed independent response review receipt")
+        placed = record.get("placed")
+        if placing and placed is not None and not (
+                isinstance(placed, dict) and (set(placed) == {"returned"} or set(placed) == {"failed"}
+                                              and isinstance(placed["failed"], str) and placed["failed"].strip())):
             raise ValueError("Unknown or malformed independent response review receipt")
         dependencies = _dependencies(context, research_record, sources, draft, execution,
             authority_evidence=authority_evidence, contract=record["contract"], time_limits=time_limits,
             held_back=held_back, shortened=shortened, sections=sections, unanswered=unanswered,
             conflicts=conflicts, writer_notes=writer_notes)
         try:
-            checked = _accept_v10(record["returned"], dependencies, record["contract"])
+            checked = _accept_v10(record["returned"], dependencies, record["contract"], again=placed)
+            # v13: the one more look was asked exactly where the review tied a misleading finding to no place.
+            asked = placing and bool(_whole(_accept_v10(record["returned"], dependencies, record["contract"])["proposal"]
+                                            ["findings"]))
         except SchemaViolation as exc:
             raise ValueError("A saved review's output does not fit its review contract") from exc
-        if checked != record:
+        if checked != record or placing and asked != (placed is not None):
             raise ValueError("Independent review does not bind this exact draft and evidence")
         return deepcopy(checked)
     if (not isinstance(record, dict) or set(record) != {

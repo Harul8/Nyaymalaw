@@ -1426,14 +1426,38 @@ def _by_when(piece, boxes):
             "days_label": _DAYS.get(standing["state"]), "as_of": rows.get("As of")}
 
 
+def _misleading_whole(piece):
+    """What the independent check found may mislead though it tied it to no one paragraph."""
+    return [finding for finding in answer_sections.beside(piece)
+            if finding["category"] not in (*response_review.SUGGESTIONS, response_review.LEFT_OUT)]
+
+
+def _placed(piece):
+    """Whether the piece's review asked once where such a finding lives (review v13; plan AN.51, D201)."""
+    return piece["review"]["contract"] == response_review.PLACED_CONTRACT
+
+
 def _misleads_beside(piece, where):
     """v18 (P39): what the independent check found may mislead though it tied it to no one
-    paragraph stays beside the piece, as v17 says it; its suggestions are folded at the end."""
+    paragraph stays beside the piece, as v17 says it; its suggestions are folded at the end.
+    A piece reviewed by v13 says it above the piece instead (_misleads_above)."""
+    if _placed(piece):
+        return []
     return [_notice("NOTE", f"The independent check found that {where} may mislead, in a way it did not tie to "
                     f"one paragraph, and the rewrites NM may make did not settle it: "
                     f"{_plainly(finding['mismatch'])} Read {where} with this in mind.")
-            for finding in answer_sections.beside(piece)
-            if finding["category"] not in (*response_review.SUGGESTIONS, response_review.LEFT_OUT)]
+            for finding in _misleading_whole(piece)]
+
+
+def _misleads_above(piece, where):
+    """Plan AN.51 (D201; the forensic review's F-06): a piece the independent review still finds misleading as a whole - asked
+    once where it lives, it named no paragraph - is shown under code's own notice above it, in the review's own words. Only for
+    a piece reviewed by v13; one reviewed before is shown as it was."""
+    if not _placed(piece):
+        return []
+    return [_notice("NOTE", f"NM's independent review found that {where} may mislead as a whole: asked where, it could not tie "
+                    f"this to any paragraph. {_plainly(finding['mismatch'])} Read {where} with this in mind.")
+            for finding in _misleading_whole(piece)]
 
 
 def _left_out_beside(piece, where):
@@ -1589,7 +1613,9 @@ def _render_presented(context, research_record, sources, *, sections, cross_chec
                                     f"{_UNSHOWN[overview['fallback']['reason']]}. Each dispute's section below was "
                                     "checked on its own."))
         elif opening is not None:
-            # The line on what to do first comes first under the rows, then what ties the disputes.
+            # The line on what to do first comes first under the rows, then what ties the disputes - under code's notice where
+            # the review found the opening misleading as a whole (D201).
+            elements.extend(_misleads_above(opening, "the opening"))
             units = list(enumerate(opening["draft"]["units"]))
             for place, kind in (("do_first", "DO_FIRST"), ("ties", "TIES"), ("ask", "ASK")):
                 for index, unit in units:
@@ -1624,6 +1650,8 @@ def _render_presented(context, research_record, sources, *, sections, cross_chec
         edited = answer_sections.edit_accepted(edit)
         if edited:
             elements.append(_edited(answer_sections.shown(saved, edited=False), conflicts, edit["conflicts"]))
+        # Plan AN.51 (D201): a section the review found misleading as a whole stands under code's notice.
+        elements.extend(_misleads_above(piece, where))
         # A folded paragraph the review says the advice depends on is shown with the advice (P41).
         kept = set(answer_sections.kept_shown(piece))
 

@@ -160,7 +160,9 @@ def test_four_actual_stage_calls_save_reopen_and_replay_without_reexecution(stor
     # No held Acts were given to this turn, so no time limit was worked out (item 9).
     assert rows[0]["activities"]["calculation"]["state"] == "not_needed"
     section, = rows[0]["activities"]["sections"]
-    assert section["reviewed"]["review"]["contract"] == "core_response_review_v12"
+    # Plan AN.51 (D201): a new section is reviewed by v13, which asks once where a finding tied to no paragraph lives.
+    assert section["reviewed"]["review"]["contract"] == "core_response_review_v13"
+    assert section["reviewed"]["review"]["placed"] is None, "nothing was tied to no paragraph, so nothing was asked"
     assert section["looks"] == [] and section["reviewed"]["writer_notes"] == []
     assert section["reviewed"]["authority_evidence"]["contract"] == "core_response_authorities_v1"
     assert section["trims"] == [] and section["fallback"] is None and section["edit"] is None

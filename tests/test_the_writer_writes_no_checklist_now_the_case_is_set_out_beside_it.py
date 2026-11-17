@@ -70,4 +70,6 @@ def test_writer_v15_is_repaired_and_reviewed_as_v14_is():
     from nm.core_engine import answer_sections, response_review
     assert response_writer.CASED_CONTRACT in response_writer.REPAIRS and response_writer.REPAIRED_CONTRACT in response_writer.REPAIRS
     assert response_writer.CASED_CONTRACT in response_writer.SECTIONS and response_writer.CASED_CONTRACT in response_writer.PRESENTED
-    assert answer_sections._judge({"contract": response_writer.CASED_CONTRACT}) == response_review.WORDED_CONTRACT
+    # Plan AN.51 (D201): reviewed by v13 from 17 Nov 2026 - v12 with one more look at a finding tied to no paragraph.
+    assert answer_sections._judge({"contract": response_writer.CASED_CONTRACT}) == response_review.PLACED_CONTRACT
+    assert response_review.WORDED == (response_review.WORDED_CONTRACT, response_review.PLACED_CONTRACT)

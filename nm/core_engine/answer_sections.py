@@ -341,9 +341,10 @@ def _wanted(piece):
 
 
 def _judge(draft):
-    """The review a draft is judged by: v12 for a v14 draft, v11 for v13, and v10 before (P29)."""
+    """The review a draft is judged by: v12 for a v14 draft, v11 for v13, and v10 before (P29); from plan AN.51 (D201) v13 for a
+    v15 draft, which asks the reviewer once where a finding it tied to no paragraph lives."""
     return {response_writer.REPAIRED_CONTRACT: response_review.WORDED_CONTRACT,
-            response_writer.CASED_CONTRACT: response_review.WORDED_CONTRACT,
+            response_writer.CASED_CONTRACT: response_review.PLACED_CONTRACT,
             response_writer.PRESENTED_CONTRACT: response_review.PRESENTED_CONTRACT}.get(draft["contract"], REVIEW)
 
 
@@ -1315,8 +1316,7 @@ def _piece_valid(piece, context, record, sources, execution, time_limits, sectio
     response_authorities.validate(piece["authority_evidence"], context, record, sources, draft)
     if (not isinstance(piece["review"], dict)
             or piece["review"].get("contract") not in (response_review.SECTION_CONTRACT, REVIEW,
-                                                       response_review.PRESENTED_CONTRACT,
-                                                       response_review.WORDED_CONTRACT)):
+                                                       response_review.PRESENTED_CONTRACT, *response_review.WORDED)):
         raise ValueError("A saved section is reviewed as a section")
     notes = piece.get("writer_notes") if repaired else None
     response_review.validate(piece["review"], context, record, sources, draft, execution,
